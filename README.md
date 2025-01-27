@@ -1,6 +1,6 @@
-## Projet Dinotofu !
+# Projet Dinotofu !
 
-# Ce Projet est en cours de réalisation
+## Ce Projet est en cours de réalisation
 
 ProjetDinotofu est un projet mis en place pour s'amuser et s'entrainer a coder en C++. 
 Ce projet est personelle, crée et inventé par Louis (Maitre du projet)
