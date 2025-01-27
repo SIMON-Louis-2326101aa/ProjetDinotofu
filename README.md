@@ -11,5 +11,7 @@ Le style de combat a été pensé tel ceux de pokemon : liste de choix possible 
 Il existe faiblesse, resistances, capacité, et meme des races et classes qui donnerons un coté unic a votre gameplay.
 Toute variables tel que les monstres, l'ordinateur, le nombre de degat, si le coup reussit ou non.... est fait celon L'ALEATOIRE tel un jeux de DND.
 
-Note du dévelopeur créateur :
+Note du dévelopeur créateur :\n
 J'espere que ce projet plairat a un grand nombre et laisseras de bons souvenirs et rires entre les joueurs.
+
+###Merci pour votre attention et votre soutien !
