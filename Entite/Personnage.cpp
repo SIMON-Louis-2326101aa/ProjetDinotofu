@@ -1,13 +1,17 @@
 #include <iostream>
 #include <stdlib.h>
 #include <unistd.h>
+#include "Entite.cpp"
 using namespace std;
 
-class Personnage
+class Personnage : Entite
 {
     private :
         int poV;
-        int poD;      
+        int poD;   
+
+    public :
+        Personnage(string nom, int pv, int atk) : Entite(nom, pv, atk) {}   
 };
 
 // Personnage(nom, class, pv, pvMax, dgtMin, dgtMax, dgtCrit, poV, poD)
