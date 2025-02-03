@@ -4,12 +4,16 @@
 #include <vector>
 #include <random>
 #include <math.h>
+
+#include "../Entite/Entite.cpp"
 #include "../Entite/Personnage.cpp"
-#include "../Entite/Monstre.cpp"
+#include "../Entite/Monstre/Monstre.cpp"
+
 using namespace std;
+
 class Affichage
 {
-    void afficherMonstres(const std::vector<Monstre> &monstres)
+    void afficherMonstres(const vector<Monstre> &monstres)
     {
         cout << "\nMonstres en combat :\n";
         for (size_t i = 0; i < monstres.size(); i++)
@@ -18,18 +22,21 @@ class Affichage
         }
     }
 
-    void afficherJoueur(const Personnage joueur)
+    void afficherJoueur(vector<Personnage> &joueur)
     {
-        cout << "\nJoueur : " << joueur.getNom() << endl;
-        cout << " (PV: " << joueur.getPV() << "/" << joueur.getPvMax() << ")\n";
+        for (size_t i = 0; i < joueur.size(); i++)
+        {
+        cout << "\nJoueur : " << joueur[i].getNom() << endl;
+        cout << " (PV: " << joueur[i].getPV() << "/" << joueur.getPvMax() << ")\n";
+        }
     }
 
-    void afficherStats()
+    void afficherStats(Entite)
     {
-        std::cout << "\n--- Stats du Joueur ---\n";
-        std::cout << "Nom: " << getNom() << "\n";
-        std::cout << "PV: " << getPV() << "\n";
-        std::cout << "Attaque: " << getAttaque() << "\n";
-        std::cout << "-----------------------\n";
+        cout << "\n--- Stats de Entite ---\n";
+        cout << "Nom: " << Entite.getNom() << "\n";
+        cout << "PV: " << Entite.getPV() << "\n";
+        cout << "Attaque: " << joueur.getDgtMin() << "\n";
+        cout << "-----------------------\n";
     }
 }

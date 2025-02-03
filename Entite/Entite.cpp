@@ -1,6 +1,7 @@
 #include <iostream>
 #include <stdlib.h>
 #include <unistd.h>
+
 using namespace std;
 
 class Entite
@@ -35,4 +36,5 @@ public:
         int setDgtMin(int newDgtMin) { dgtMin = newDgtMin; }
         int setDgtMax(int newDgtMax) { dgtMax = newDgtMax; }
         int setDgtCrit(int newDgtCrit) { dgtCrit = newDgtCrit; }
+        Entite(string nom, string race, string classe, int pv, int pvMax, int dgtMin, int dgtMax, int dgtCrit) {}
 };

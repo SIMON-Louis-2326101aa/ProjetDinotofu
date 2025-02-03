@@ -1,7 +1,9 @@
 #include <iostream>
 #include <stdlib.h>
 #include <unistd.h>
+
 #include "Entite.cpp"
+
 using namespace std;
 
 class Personnage : Entite
@@ -11,7 +13,7 @@ class Personnage : Entite
         int poD;   
 
     public :
-        Personnage(string nom, int pv, int atk) : Entite(nom, pv, atk) {}   
+        Personnage(string nom, string race, string classe, int pv, int pvMax, int dgtMin, int dgtMax, int dgtCrit) : Entite(nom, race, classe, pv, pvMax, dgtMin, dgtMax, dgtCrit) {}
 };
 
 // Personnage(nom, class, pv, pvMax, dgtMin, dgtMax, dgtCrit, poV, poD)
