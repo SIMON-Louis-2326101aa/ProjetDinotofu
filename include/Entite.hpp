@@ -18,14 +18,15 @@ private:
 
 public:
         // Getters
-        string getNom() const { return nom; }
-        string getRace() const { return race; }
+        inline string getNom() const { return nom; }
+        inline string getRace() const { return race; }
         string getClasse() const { return classe; }
         int getPV() const { return pv; }
         int getPvMax() const { return pvMax; }
         int getDgtMin() const { return dgtMin; }
         int getDgtMax() const { return dgtMax; }
         int getDgtCrit() const { return dgtCrit; }
+        
 
         // Setters
         string setNom(string newNom) { nom = newNom; }

@@ -2,19 +2,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "Entite.cpp"
-
 using namespace std;
 
-class Personnage : Entite
-{
-    private :
-        int poV;
-        int poD;   
 
-    public :
-        Personnage(string nom, string race, string classe, int pv, int pvMax, int dgtMin, int dgtMax, int dgtCrit) : Entite(nom, race, classe, pv, pvMax, dgtMin, dgtMax, dgtCrit) {}
-};
 
 // Personnage(nom, class, pv, pvMax, dgtMin, dgtMax, dgtCrit, poV, poD)
 //     Monstre(nom, race, class, pv, pvMax, dgtMin, dgtMax, dgtCrit, poV, poD)
