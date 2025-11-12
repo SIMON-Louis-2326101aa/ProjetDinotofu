@@ -1,0 +1,3 @@
+#include "entite/monstre/MonstreDefs.hpp"
+// ...
+Monstre m = MonstresCatalogue::creer(MonstresCatalogue::Defs[1]); // Garde de pierre
