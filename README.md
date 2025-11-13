@@ -14,4 +14,4 @@ Toute variables tel que les monstres, l'ordinateur, le nombre de degat, si le co
 Note du dévelopeur créateur : 
 J'espere que ce projet plairat a un grand nombre et laisseras de bons souvenirs et rires entre les joueurs. 
 
-###Merci pour votre attention et votre soutien !
+### Merci pour votre attention et votre soutien !
