@@ -1,8 +1,8 @@
 #include <iostream>
 #include "entite/Joueur.hpp"
 #include "entite/monstre/Monstre.hpp"
-#include "items/Arme.hpp"
-#include "items/Consommable.hpp"
+#include "items/arme/Arme.hpp"
+#include "items/consommable/Consommable.hpp"
 #include "action/Action.hpp"
 #include "combat/Combat.hpp"
 

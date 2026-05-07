@@ -1,8 +1,8 @@
 #include <iostream>
 #include <algorithm>
 #include "entite/Joueur.hpp"
-#include "items/Arme.hpp"
-#include "items/Consommable.hpp"
+#include "items/arme/Arme.hpp"
+#include "items/consommable/Consommable.hpp"
 
 Joueur::Joueur()
 : Entite("", "", "", 0, 0, 0, 0, 0),
