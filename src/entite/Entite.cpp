@@ -1,70 +1,223 @@
-#include <iostream>
 #include "entite/Entite.hpp"
 
-// --- Constructeurs ---
+#include <iostream>
+
 Entite::Entite()
-    : nom(""), race(""), classe(""),
-      pv(0), pvMax(0), dgtMin(0), dgtMax(0), dgtCrit(0) {}
+{
+    nom = "Inconnu";
+    type = "Aucun";
 
-Entite::Entite(const std::string& nom, const std::string& race, const std::string& classe,
-               int pv, int pvMax, int dgtMin, int dgtMax, int dgtCrit)
-    : nom(nom), race(race), classe(classe),
-      pv(pv), pvMax(pvMax), dgtMin(dgtMin), dgtMax(dgtMax), dgtCrit(dgtCrit) {}
+    pv = 100;
+    pvMax = 100;
 
-// --- Getters ---
-std::string Entite::getNom()   const { return nom; }
-std::string Entite::getRace()  const { return race; }
-std::string Entite::getClasse()const { return classe; }
-int Entite::getPV()            const { return pv; }
-int Entite::getPvMax()         const { return pvMax; }
-int Entite::getDgtMin()        const { return dgtMin; }
-int Entite::getDgtMax()        const { return dgtMax; }
-int Entite::getDgtCrit()       const { return dgtCrit; }
+    degatsMin = 1;
+    degatsMax = 5;
+    degatsCrit = 10;
 
-// --- Setters ---
-void Entite::setNom(const std::string& v)    { nom = v; }
-void Entite::setRace(const std::string& v)   { race = v; }
-void Entite::setClasse(const std::string& v) { classe = v; }
-
-void Entite::setPV(int newPV) {
-    pv = std::clamp(newPV, 0, pvMax);
+    potionsSoin = 0;
+    potionsDegats = 0;
 }
 
-void Entite::setPvMax(int newPvMax) {
-    pvMax = std::max(0, newPvMax);
-    if (pv > pvMax) pv = pvMax;
+Entite::Entite(
+    const std::string& nom,
+    const std::string& type,
+    int pvMax,
+    int degatsMin,
+    int degatsMax,
+    int degatsCrit,
+    int potionsSoin,
+    int potionsDegats
+)
+{
+    this->nom = nom;
+    this->type = type;
+
+    this->pv = pvMax;
+    this->pvMax = pvMax;
+
+    this->degatsMin = degatsMin;
+    this->degatsMax = degatsMax;
+    this->degatsCrit = degatsCrit;
+
+    this->potionsSoin = potionsSoin;
+    this->potionsDegats = potionsDegats;
 }
 
-void Entite::setDgtMin(int newDgtMin) {
-    dgtMin = newDgtMin;
-    if (dgtMax < dgtMin) dgtMax = dgtMin;
+std::string Entite::getNom() const
+{
+    return nom;
 }
 
-void Entite::setDgtMax(int newDgtMax) {
-    dgtMax = newDgtMax;
-    if (dgtMax < dgtMin) dgtMin = dgtMax;
+std::string Entite::getType() const
+{
+    return type;
 }
 
-void Entite::setDgtCrit(int newDgtCrit) { dgtCrit = newDgtCrit; }
-
-// --- Méthodes utilitaires ---
-bool Entite::estVivant() const { return pv > 0; }
-
-void Entite::prendreDegats(int v) {
-    if (v < 0) return;
-    pv = std::max(0, pv - v);
+int Entite::getPv() const
+{
+    return pv;
 }
 
-void Entite::soigner(int v) {
-    if (v < 0) return;
-    pv = std::min(pvMax, pv + v);
+int Entite::getPvMax() const
+{
+    return pvMax;
 }
 
-void Entite::afficher() const {
-    std::cout << "Nom: " << nom
-              << " | Race: " << race
-              << " | Classe: " << classe
-              << " | PV: " << pv << "/" << pvMax
-              << " | Dégâts: " << dgtMin << "-" << dgtMax
-              << " (Crit: " << dgtCrit << ")\n";
+int Entite::getDegatsMin() const
+{
+    return degatsMin;
+}
+
+int Entite::getDegatsMax() const
+{
+    return degatsMax;
+}
+
+int Entite::getDegatsCrit() const
+{
+    return degatsCrit;
+}
+
+int Entite::getPotionsSoin() const
+{
+    return potionsSoin;
+}
+
+int Entite::getPotionsDegats() const
+{
+    return potionsDegats;
+}
+
+bool Entite::estMort() const
+{
+    return pv <= 0;
+}
+
+void Entite::recevoirDegats(int degats)
+{
+    if (degats < 0)
+    {
+        return;
+    }
+
+    pv -= degats;
+
+    if (pv < 0)
+    {
+        pv = 0;
+    }
+}
+
+void Entite::soigner(int valeurSoin)
+{
+    if (valeurSoin <= 0)
+    {
+        return;
+    }
+
+    pv += valeurSoin;
+
+    if (pv > pvMax)
+    {
+        pv = pvMax;
+    }
+}
+
+void Entite::reduirePvMax(int valeur)
+{
+    if (valeur <= 0)
+    {
+        return;
+    }
+
+    pvMax -= valeur;
+
+    if (pvMax < 1)
+    {
+        pvMax = 1;
+    }
+
+    if (pv > pvMax)
+    {
+        pv = pvMax;
+    }
+}
+
+int Entite::attaquer(Random& random, bool& esquive, bool& critique, int bonusDegats)
+{
+    int resultat = random.lancerD20();
+
+    esquive = false;
+    critique = false;
+
+    if (resultat <= 3)
+    {
+        esquive = true;
+        return 0;
+    }
+
+    if (resultat <= 16)
+    {
+        return random.entre(degatsMin, degatsMax) + bonusDegats;
+    }
+
+    critique = true;
+    return degatsCrit + bonusDegats;
+}
+
+bool Entite::utiliserPotionSoin(int valeurSoin)
+{
+    if (potionsSoin <= 0)
+    {
+        return false;
+    }
+
+    potionsSoin--;
+    soigner(valeurSoin);
+
+    return true;
+}
+
+bool Entite::consommerPotionDegats()
+{
+    if (potionsDegats <= 0)
+    {
+        return false;
+    }
+
+    potionsDegats--;
+    return true;
+}
+
+void Entite::appliquerClasse(const ClasseJoueur& nouvelleClasse)
+{
+    type = nouvelleClasse.getNom();
+
+    pvMax = nouvelleClasse.getPvMax();
+    pv = pvMax;
+
+    degatsMin = nouvelleClasse.getDegatsMin();
+    degatsMax = nouvelleClasse.getDegatsMax();
+    degatsCrit = nouvelleClasse.getDegatsCrit();
+
+    potionsSoin = nouvelleClasse.getPotionsSoin();
+    potionsDegats = nouvelleClasse.getPotionsDegats();
+}
+
+bool Entite::statsVisibles() const
+{
+    return true;
+}
+
+void Entite::afficherStats() const
+{
+    std::cout << nom << std::endl;
+    std::cout << "Type : " << type << std::endl;
+    std::cout << "PV : " << pv << "/" << pvMax << std::endl;
+    std::cout << "Dégâts min : " << degatsMin << std::endl;
+    std::cout << "Dégâts max : " << degatsMax << std::endl;
+    std::cout << "Dégâts crit : " << degatsCrit << std::endl;
+    std::cout << "Potions de soin : " << potionsSoin << std::endl;
+    std::cout << "Potions de dégâts : " << potionsDegats << std::endl;
+    std::cout << std::endl;
 }

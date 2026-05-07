@@ -51,6 +51,7 @@ ProjetDinotofu/
 ├── include/         
 │   ├── core/      
 │   │   ├── Jeu.hpp        
+│   │   ├── ModeJeu.hpp     
 │   │   ├── Console.hpp      
 │   │   ├── Random.hpp       
 │   │   └── Config.hpp   

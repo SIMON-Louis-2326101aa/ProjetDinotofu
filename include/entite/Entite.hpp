@@ -2,52 +2,70 @@
 #define ENTITE_HPP
 
 #include <string>
-#include <algorithm> // std::clamp, std::max
+
+#include "core/Random.hpp"
+#include "classe/ClasseJoueur.hpp"
 
 class Entite
 {
-private:
+protected:
     std::string nom;
-    std::string race;
-    std::string classe;
+    std::string type;
+
     int pv;
     int pvMax;
-    int dgtMin;
-    int dgtMax;
-    int dgtCrit;
+
+    int degatsMin;
+    int degatsMax;
+    int degatsCrit;
+
+    int potionsSoin;
+    int potionsDegats;
 
 public:
-    // --- Constructeurs / Destructeur ---
-    Entite(); 
-    Entite(const std::string& nom, const std::string& race, const std::string& classe,
-           int pv, int pvMax, int dgtMin, int dgtMax, int dgtCrit);
-    virtual ~Entite() = default; // si héritage
+    Entite();
 
-    // --- Getters ---
+    Entite(
+        const std::string& nom,
+        const std::string& type,
+        int pvMax,
+        int degatsMin,
+        int degatsMax,
+        int degatsCrit,
+        int potionsSoin,
+        int potionsDegats
+    );
+
+    virtual ~Entite() = default;
+
     std::string getNom() const;
-    std::string getRace() const;
-    std::string getClasse() const;
-    int getPV() const;
+    std::string getType() const;
+
+    int getPv() const;
     int getPvMax() const;
-    int getDgtMin() const;
-    int getDgtMax() const;
-    int getDgtCrit() const;
 
-    // --- Setters (avec gardes minimales) ---
-    void setNom(const std::string& newNom);
-    void setRace(const std::string& newRace);
-    void setClasse(const std::string& newClasse);
-    void setPV(int newPV);          // clamp [0, pvMax]
-    void setPvMax(int newPvMax);    // >= 0 et ajuste pv si besoin
-    void setDgtMin(int newDgtMin);  // garde min <= max
-    void setDgtMax(int newDgtMax);  // garde min <= max
-    void setDgtCrit(int newDgtCrit);
+    int getDegatsMin() const;
+    int getDegatsMax() const;
+    int getDegatsCrit() const;
 
-    // --- Méthodes utilitaires ---
-    bool estVivant() const;
-    void prendreDegats(int v);  // clamp à 0
-    void soigner(int v);        // clamp à pvMax
-    void afficher() const;      // défini dans .cpp
+    int getPotionsSoin() const;
+    int getPotionsDegats() const;
+
+    bool estMort() const;
+
+    void recevoirDegats(int degats);
+    void soigner(int valeurSoin);
+    void reduirePvMax(int valeur);
+
+    int attaquer(Random& random, bool& esquive, bool& critique, int bonusDegats = 0);
+
+    bool utiliserPotionSoin(int valeurSoin);
+    bool consommerPotionDegats();
+
+    void appliquerClasse(const ClasseJoueur& nouvelleClasse);
+
+    virtual bool statsVisibles() const;
+    virtual void afficherStats() const;
 };
 
 #endif
