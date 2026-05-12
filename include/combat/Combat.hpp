@@ -29,6 +29,9 @@ private:
     void executerAttaque(Entite& attaquant, Entite& defenseur);
     bool executerPotionDegats(Entite& attaquant, Entite& defenseur, int bonusPotionDegats);
 
+    bool ouvrirInventaire(Joueur& joueur);
+    bool equiperArmeDepuisInventaire(Joueur& joueur);
+
     bool atlasBloqueAttaque(Entite& attaquant, Entite& defenseur, int degats);
     void appliquerVolDeVieDemonSiBesoin(Entite& attaquant, int degatsInfliges);
 

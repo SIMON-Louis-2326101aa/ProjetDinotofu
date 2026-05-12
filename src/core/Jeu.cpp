@@ -3,6 +3,9 @@
 #include "classe/CatalogueClasses.hpp"
 #include "combat/Combat.hpp"
 
+#include "objet/arme/CatalogueArmes.hpp"
+#include "objet/consommable/CatalogueConsommables.hpp"
+
 #include <iostream>
 
 Jeu::Jeu()
@@ -71,10 +74,21 @@ void Jeu::choisirClasseJoueur()
     ClasseJoueur classeChoisie = CatalogueClasses::creerClasseDeBase(choix);
     joueurPrincipal = Joueur(nomJoueur, classeChoisie);
 
+    joueurPrincipal.getInventaire().ajouterArme(CatalogueArmes::creerMainsNues());
+    joueurPrincipal.getInventaire().ajouterArme(CatalogueArmes::creerEpeeRouillee());
+
+    joueurPrincipal.equiperArme(1);
+
+    joueurPrincipal.getInventaire().ajouterConsommable(CatalogueConsommables::creerPotionSoinBasique());
+    joueurPrincipal.getInventaire().ajouterConsommable(CatalogueConsommables::creerPotionDegatsBasique());
+
+    joueurPrincipal.getInventaire().gagnerOr(50);;
+
     Console::clear();
 
     std::cout << nomJoueur << ", tu as choisi la classe : " << classeChoisie.getNom() << "." << std::endl;
     std::cout << "Tes statistiques ont été gravées dans l'arène avec succès." << std::endl;
+    std::cout << "Quelques objets de départ ont été ajoutés à ton inventaire." << std::endl;
     std::cout << std::endl;
 
     joueurPrincipal.afficherStats();

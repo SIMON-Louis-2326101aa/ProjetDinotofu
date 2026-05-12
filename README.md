@@ -91,8 +91,8 @@ ProjetDinotofu/
 │   │   ├── BuffDegats.hpp       
 │   │   └── ArmureSpeciale.hpp        
 │   │        
-│   ├── item/      
-│   │   ├── Item.hpp       
+│   ├── objet/      
+│   │   ├── Objet.hpp       
 │   │   ├── Inventaire.hpp     
 │   │   ├── arme/      
 │   │   │   ├── Arme.hpp      
@@ -191,23 +191,20 @@ ProjetDinotofu/
     │   ├── BuffDegats.cpp    
     │   └── ArmureSpeciale.cpp    
     │    
-    ├── item/    
-    │   ├── Item.cpp    
+    ├── objet/    
+    │   ├── Objet.cpp    
     │   ├── Inventaire.cpp    
     │   │    
     │   ├── arme/    
-    │   │   ├── Arme.cpp    
-    │   │   ├── TypeArme.cpp    
+    │   │   ├── Arme.cpp     
     │   │   └── CatalogueArmes.cpp    
     │   │    
     │   ├── armure/    
     │   │   ├── Armure.cpp    
-    │   │   ├── TypeArmure.cpp    
     │   │   └── CatalogueArmures.cpp    
     │   │    
     │   ├── consommable/    
     │   │   ├── Consommable.cpp    
-    │   │   ├── TypeConsommable.cpp    
     │   │   └── CatalogueConsommables.cpp    
     │   │    
     │   └── materiau/    

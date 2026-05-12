@@ -57,7 +57,7 @@ public:
     void soigner(int valeurSoin);
     void reduirePvMax(int valeur);
 
-    int attaquer(Random& random, bool& esquive, bool& critique, int bonusDegats = 0);
+    virtual int attaquer(Random& random, bool& esquive, bool& critique, int bonusDegats = 0);
 
     bool utiliserPotionSoin(int valeurSoin);
     bool consommerPotionDegats();

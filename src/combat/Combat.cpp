@@ -2,6 +2,7 @@
 #include "core/Console.hpp"
 #include "classe/CatalogueClasses.hpp"
 #include "boss/CatalogueBoss.hpp"
+#include "entite/Joueur.hpp"
 
 #include <iostream>
 
@@ -292,6 +293,7 @@ void Combat::afficherMenuTour(const Entite& entite) const
     std::cout << "0 : Stats                 1 : Attaque" << std::endl;
     std::cout << "2 : Potion de soin        3 : Potion de dégâts" << std::endl;
     std::cout << "4 : Manuel de potions     5 : Passer son tour" << std::endl;
+    std::cout << "6 : Inventaire            7 : Équiper une arme" << std::endl;
     std::cout << std::endl;
     std::cout << "> ";
 }
@@ -312,15 +314,14 @@ bool Combat::jouerTourHumain(Entite& attaquant, Entite& defenseur, int soinPotio
 
     int option = Console::demanderNombreEntre(
         0,
-        5,
-        "Option invalide. Choisis un chiffre entre 0 et 5."
+        7,
+        "Option invalide. Choisis un chiffre entre 0 et 7."
     );
 
     Console::clear();
 
     if (option == 0)
     {
-        defenseur.afficherStats();
         attaquant.afficherStats();
         return false;
     }
@@ -358,6 +359,35 @@ bool Combat::jouerTourHumain(Entite& attaquant, Entite& defenseur, int soinPotio
     {
         afficherManuelPotions(soinPotion, bonusPotionDegats);
         return false;
+    }
+
+    if (option == 6)
+    {
+        Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
+
+        if (joueur == nullptr)
+        {
+            std::cout << attaquant.getNom() << " n'a pas d'inventaire accessible." << std::endl;
+            std::cout << std::endl;
+            return false;
+        }
+
+        ouvrirInventaire(*joueur);
+        return false;
+    }   
+
+    if (option == 7)
+    {
+        Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
+
+        if (joueur == nullptr)
+        {   
+            std::cout << attaquant.getNom() << " ne peut pas équiper d'arme." << std::endl;
+            std::cout << std::endl;
+            return false;
+        }
+
+        return equiperArmeDepuisInventaire(*joueur);
     }
 
     std::cout << attaquant.getNom() << " hésite, oublie quoi faire, et met fin à son tour..." << std::endl;
@@ -603,6 +633,68 @@ bool Combat::executerPotionDegats(Entite& attaquant, Entite& defenseur, int bonu
 
     afficherPvApresAttaque(defenseur);
     return true;
+}
+
+bool Combat::ouvrirInventaire(Joueur& joueur)
+{
+    joueur.afficherInventaire();
+    return false;
+}
+
+bool Combat::equiperArmeDepuisInventaire(Joueur& joueur)
+{
+    if (joueur.getInventaire().getNombreArmes() <= 0)
+    {
+        std::cout << joueur.getNom() << " n'a aucune arme à équiper." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    joueur.getInventaire().afficherArmes();
+
+    std::cout << "Choisis l'arme à équiper." << std::endl;
+    std::cout << "Entre son numéro, ou -1 pour annuler." << std::endl;
+    std::cout << "> ";
+
+    int choix;
+    std::cin >> choix;
+
+    if (std::cin.fail())
+    {
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+
+        std::cout << "Choix invalide. L'équipement est annulé." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    if (choix == -1)
+    {
+        std::cout << "Changement d'arme annulé." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    if (!joueur.equiperArme(choix))
+    {
+        std::cout << "Cette arme n'existe pas dans ton inventaire." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    Arme armeEquipee = joueur.getArmeEquipee();
+
+    std::cout << joueur.getNom() << " équipe : " << armeEquipee.getNom() << "." << std::endl;
+
+    if (armeEquipee.estCassee())
+    {
+        std::cout << "Attention : cette arme est cassée, elle ne donnera aucun bonus." << std::endl;
+    }
+
+    std::cout << std::endl;
+
+    return false;
 }
 
 bool Combat::atlasBloqueAttaque(Entite& attaquant, Entite& defenseur, int degats)
