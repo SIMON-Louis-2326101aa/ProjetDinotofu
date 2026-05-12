@@ -34,6 +34,8 @@ void Combat::lancerPvpDeuxJoueurs(Joueur& joueur1)
 
     Joueur joueur2(nomJoueur2, CatalogueClasses::creerClasseDeBase(choixClasse));
 
+    joueur2.initialiserInventaireDeBase();
+
     Console::clear();
 
     std::cout << joueur2.getNom() << ", tes statistiques ont été gravées dans l'arène." << std::endl;
@@ -128,6 +130,8 @@ void Combat::lancerPvpIA(Joueur& joueur1)
     }
 
     Joueur ia("Matt", CatalogueClasses::creerClasseDeBase(choixClasseIA));
+
+    ia.initialiserInventaireDeBase();
 
     Console::clear();
 
@@ -334,20 +338,7 @@ bool Combat::jouerTourHumain(Entite& attaquant, Entite& defenseur, int soinPotio
 
     if (option == 2)
     {
-        if (attaquant.utiliserPotionSoin(soinPotion))
-        {
-            std::cout << attaquant.getNom() << " sent ses blessures se refermer et sa vitalité revenir." << std::endl;
-        }
-        else
-        {
-            std::cout << attaquant.getNom() << " fouille son équipement... mais il n'a plus aucune potion de soin." << std::endl;
-            std::cout << "Il peut encore tenter autre chose." << std::endl;
-            std::cout << std::endl;
-            return false;
-        }
-
-        std::cout << std::endl;
-        return true;
+        return executerPotionSoin(attaquant, soinPotion);
     }
 
     if (option == 3)
@@ -418,13 +409,7 @@ bool Combat::jouerTourIA(Entite& ia, Entite& defenseur, int soinPotion, int bonu
 
     if (option == 2)
     {
-        if (ia.utiliserPotionSoin(soinPotion))
-        {
-            std::cout << ia.getNom() << " recule un instant, boit une potion, et récupère une partie de sa vitalité." << std::endl;
-            std::cout << std::endl;
-        }
-
-        return true;
+        return executerPotionSoin(ia, soinPotion);
     }
 
     if (option == 3)
@@ -583,14 +568,81 @@ void Combat::executerAttaque(Entite& attaquant, Entite& defenseur)
     afficherPvApresAttaque(defenseur);
 }
 
+bool Combat::executerPotionSoin(Entite& entite, int soinPotion)
+{
+    Joueur* joueur = dynamic_cast<Joueur*>(&entite);
+
+    if (joueur != nullptr)
+    {
+        Consommable potion;
+
+        if (!joueur->getInventaire().utiliserPremierConsommable(TypeConsommable::Soin, potion))
+        {
+            std::cout << joueur->getNom() << " fouille son inventaire..." << std::endl;
+            std::cout << "Mais aucune potion de soin n'est disponible." << std::endl;
+            std::cout << "Il peut encore tenter autre chose." << std::endl;
+            std::cout << std::endl;
+            return false;
+        }
+
+        joueur->soigner(potion.getPuissance());
+
+        std::cout << joueur->getNom() << " utilise : " << potion.getNom() << "." << std::endl;
+        std::cout << "Ses blessures se referment, et il récupère "
+                  << potion.getPuissance() << " PV." << std::endl;
+        std::cout << joueur->getNom() << " possède maintenant "
+                  << joueur->getPv() << "/" << joueur->getPvMax() << " PV." << std::endl;
+        std::cout << std::endl;
+
+        return true;
+    }
+
+    if (entite.utiliserPotionSoin(soinPotion))
+    {
+        std::cout << entite.getNom() << " utilise une potion de soin." << std::endl;
+        std::cout << "Sa vitalité revient lentement." << std::endl;
+        std::cout << std::endl;
+        return true;
+    }
+
+    std::cout << entite.getNom() << " n'a plus aucune potion de soin." << std::endl;
+    std::cout << std::endl;
+
+    return false;
+}
+
 bool Combat::executerPotionDegats(Entite& attaquant, Entite& defenseur, int bonusPotionDegats)
 {
-    if (!attaquant.consommerPotionDegats())
+    int bonusUtilise = bonusPotionDegats;
+
+    Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
+
+    if (joueur != nullptr)
     {
-        std::cout << attaquant.getNom() << " cherche une potion de dégâts, mais sa rage est déjà épuisée." << std::endl;
-        std::cout << "Il peut encore tenter autre chose." << std::endl;
-        std::cout << std::endl;
-        return false;
+        Consommable potion;
+
+        if (!joueur->getInventaire().utiliserPremierConsommable(TypeConsommable::Degats, potion))
+        {
+            std::cout << joueur->getNom() << " cherche une potion de rage dans son inventaire..." << std::endl;
+            std::cout << "Mais aucune potion de dégâts n'est disponible." << std::endl;
+            std::cout << "Il peut encore tenter autre chose." << std::endl;
+            std::cout << std::endl;
+            return false;
+        }
+
+        bonusUtilise = potion.getPuissance();
+
+        std::cout << joueur->getNom() << " utilise : " << potion.getNom() << "." << std::endl;
+    }
+    else
+    {
+        if (!attaquant.consommerPotionDegats())
+        {
+            std::cout << attaquant.getNom() << " cherche une potion de dégâts, mais sa rage est déjà épuisée." << std::endl;
+            std::cout << "Il peut encore tenter autre chose." << std::endl;
+            std::cout << std::endl;
+            return false;
+        }
     }
 
     std::cout << attaquant.getNom() << " sent ses forces monter d'un coup." << std::endl;
@@ -602,7 +654,7 @@ bool Combat::executerPotionDegats(Entite& attaquant, Entite& defenseur, int bonu
     bool esquive = false;
     bool critique = false;
 
-    int degats = attaquant.attaquer(random, esquive, critique, bonusPotionDegats);
+    int degats = attaquant.attaquer(random, esquive, critique, bonusUtilise);
 
     if (esquive)
     {

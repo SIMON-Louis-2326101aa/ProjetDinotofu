@@ -34,6 +34,8 @@ public:
     bool equiperArme(int index);
     void desequiperArme();
 
+    void initialiserInventaireDeBase();
+
     void gagnerExperience(int quantite);
     void monterNiveau();
 

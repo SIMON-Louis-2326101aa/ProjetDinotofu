@@ -1,5 +1,9 @@
 #include "entite/Joueur.hpp"
 
+#include "objet/arme/CatalogueArmes.hpp"
+#include "objet/armure/CatalogueArmures.hpp"
+#include "objet/consommable/CatalogueConsommables.hpp"
+
 #include <iostream>
 
 Joueur::Joueur() : Entite()
@@ -82,6 +86,29 @@ bool Joueur::equiperArme(int index)
 void Joueur::desequiperArme()
 {
     indexArmeEquipee = -1;
+}
+
+void Joueur::initialiserInventaireDeBase()
+{
+    inventaire.ajouterArme(CatalogueArmes::creerMainsNues());
+    inventaire.ajouterArme(CatalogueArmes::creerEpeeRouillee());
+
+    equiperArme(1);
+
+    inventaire.ajouterArmure(CatalogueArmures::creerTenueSimple());
+    inventaire.ajouterArmure(CatalogueArmures::creerArmureCuirUsee());
+
+    for (int i = 0; i < potionsSoin; i++)
+    {
+        inventaire.ajouterConsommable(CatalogueConsommables::creerPotionSoinBasique());
+    }
+
+    for (int i = 0; i < potionsDegats; i++)
+    {
+        inventaire.ajouterConsommable(CatalogueConsommables::creerPotionDegatsBasique());
+    }
+
+    inventaire.gagnerOr(50);
 }
 
 void Joueur::gagnerExperience(int quantite)
@@ -215,8 +242,13 @@ void Joueur::afficherStats() const
         std::cout << "Critique : " << degatsCrit << std::endl;
     }
 
-    std::cout << "Potions de soin rapides : " << potionsSoin << std::endl;
-    std::cout << "Potions de dégâts rapides : " << potionsDegats << std::endl;
+    std::cout << "Potions de soin : "
+              << inventaire.compterConsommables(TypeConsommable::Soin)
+              << std::endl;
+
+    std::cout << "Potions de rage : "
+              << inventaire.compterConsommables(TypeConsommable::Degats)
+              << std::endl;
     std::cout << "Or : " << inventaire.getOr() << " pièces" << std::endl;
     std::cout << "==================" << std::endl;
     std::cout << std::endl;

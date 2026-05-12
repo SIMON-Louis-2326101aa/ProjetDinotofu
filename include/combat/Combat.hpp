@@ -27,6 +27,7 @@ private:
     int choisirActionBoss(const Boss& boss);
 
     void executerAttaque(Entite& attaquant, Entite& defenseur);
+    bool executerPotionSoin(Entite& entite, int soinPotion);
     bool executerPotionDegats(Entite& attaquant, Entite& defenseur, int bonusPotionDegats);
 
     bool ouvrirInventaire(Joueur& joueur);

@@ -3,9 +3,6 @@
 #include "classe/CatalogueClasses.hpp"
 #include "combat/Combat.hpp"
 
-#include "objet/arme/CatalogueArmes.hpp"
-#include "objet/consommable/CatalogueConsommables.hpp"
-
 #include <iostream>
 
 Jeu::Jeu()
@@ -74,15 +71,7 @@ void Jeu::choisirClasseJoueur()
     ClasseJoueur classeChoisie = CatalogueClasses::creerClasseDeBase(choix);
     joueurPrincipal = Joueur(nomJoueur, classeChoisie);
 
-    joueurPrincipal.getInventaire().ajouterArme(CatalogueArmes::creerMainsNues());
-    joueurPrincipal.getInventaire().ajouterArme(CatalogueArmes::creerEpeeRouillee());
-
-    joueurPrincipal.equiperArme(1);
-
-    joueurPrincipal.getInventaire().ajouterConsommable(CatalogueConsommables::creerPotionSoinBasique());
-    joueurPrincipal.getInventaire().ajouterConsommable(CatalogueConsommables::creerPotionDegatsBasique());
-
-    joueurPrincipal.getInventaire().gagnerOr(50);;
+    joueurPrincipal.initialiserInventaireDeBase();
 
     Console::clear();
 
