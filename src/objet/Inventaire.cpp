@@ -202,7 +202,7 @@ bool Inventaire::retirerConsommable(int index)
     return true;
 }
 
-void Inventaire::afficherArmes() const
+void Inventaire::afficherListeArmes() const
 {
     std::cout << "===== ARMES =====" << std::endl;
 
@@ -215,41 +215,25 @@ void Inventaire::afficherArmes() const
 
     for (int i = 0; i < static_cast<int>(armes.size()); i++)
     {
-        std::cout << "[" << i << "] " << armes[i].getNom() << std::endl;
-        std::cout << "    " << armes[i].getDescription() << std::endl;
-        std::cout << "    Bonus dégâts : +"
-                  << armes[i].getBonusDegatsMin()
-                  << " à +"
-                  << armes[i].getBonusDegatsMax()
-                  << std::endl;
-        std::cout << "    Bonus critique : +"
-                  << armes[i].getBonusCritique()
-                  << std::endl;
+        std::cout << "[" << i << "] " << armes[i].getNom();
 
-        if (armes[i].estIndestructible())
+        if (!armes[i].estIndestructible())
         {
-            std::cout << "    Durabilité : Indestructible" << std::endl;
-        }
-        else
-        {
-            std::cout << "    Durabilité : "
-                      << armes[i].getDurabilite()
-                      << "/"
-                      << armes[i].getDurabiliteMax()
-                      << std::endl;
-
-            if (armes[i].estCassee())
-            {
-                std::cout << "    État : Cassée, ses bonus ne s'appliquent plus." << std::endl;
-            }
+            std::cout << " (" << armes[i].getDurabilite() << "/" << armes[i].getDurabiliteMax() << ")";
         }
 
-        std::cout << "    Valeur : " << armes[i].getValeur() << " pièces" << std::endl;
+        if (armes[i].estCassee())
+        {
+            std::cout << " - Cassée";
+        }
+
         std::cout << std::endl;
     }
+
+    std::cout << std::endl;
 }
 
-void Inventaire::afficherArmures() const
+void Inventaire::afficherListeArmures() const
 {
     std::cout << "===== ARMURES =====" << std::endl;
 
@@ -262,35 +246,25 @@ void Inventaire::afficherArmures() const
 
     for (int i = 0; i < static_cast<int>(armures.size()); i++)
     {
-        std::cout << "[" << i << "] " << armures[i].getNom() << std::endl;
-        std::cout << "    " << armures[i].getDescription() << std::endl;
-        std::cout << "    Bonus PV max : +" << armures[i].getBonusPvMax() << std::endl;
-        std::cout << "    Réduction dégâts : " << armures[i].getReductionDegats() << std::endl;
+        std::cout << "[" << i << "] " << armures[i].getNom();
 
-        if (armures[i].estIndestructible())
+        if (!armures[i].estIndestructible())
         {
-            std::cout << "    Durabilité : Indestructible" << std::endl;
-        }
-        else
-        {
-            std::cout << "    Durabilité : "
-                      << armures[i].getDurabilite()
-                      << "/"
-                      << armures[i].getDurabiliteMax()
-                      << std::endl;
-
-            if (armures[i].estCassee())
-            {
-                std::cout << "    État : Cassée, ses bonus ne s'appliquent plus." << std::endl;
-            }
+            std::cout << " (" << armures[i].getDurabilite() << "/" << armures[i].getDurabiliteMax() << ")";
         }
 
-        std::cout << "    Valeur : " << armures[i].getValeur() << " pièces" << std::endl;
+        if (armures[i].estCassee())
+        {
+            std::cout << " - Cassée";
+        }
+
         std::cout << std::endl;
     }
+
+    std::cout << std::endl;
 }
 
-void Inventaire::afficherConsommables() const
+void Inventaire::afficherListeConsommables() const
 {
     std::cout << "===== CONSOMMABLES =====" << std::endl;
 
@@ -304,23 +278,131 @@ void Inventaire::afficherConsommables() const
     for (int i = 0; i < static_cast<int>(consommables.size()); i++)
     {
         std::cout << "[" << i << "] " << consommables[i].getNom() << std::endl;
-        std::cout << "    " << consommables[i].getDescription() << std::endl;
-        std::cout << "    Puissance : " << consommables[i].getPuissance() << std::endl;
-        std::cout << "    Valeur : " << consommables[i].getValeur() << " pièces" << std::endl;
-        std::cout << std::endl;
     }
+
+    std::cout << std::endl;
+}
+
+void Inventaire::afficherResume() const
+{
+    std::cout << "================ INVENTAIRE ================" << std::endl;
+    std::cout << "Or : " << or_ << " pièces" << std::endl;
+    std::cout << "Armes : " << getNombreArmes() << std::endl;
+    std::cout << "Armures : " << getNombreArmures() << std::endl;
+    std::cout << "Consommables : " << getNombreConsommables() << std::endl;
+    std::cout << "Potions de soin : " << compterConsommables(TypeConsommable::Soin) << std::endl;
+    std::cout << "Potions de rage : " << compterConsommables(TypeConsommable::Degats) << std::endl;
+    std::cout << "============================================" << std::endl;
+    std::cout << std::endl;
+}
+
+void Inventaire::inspecterArme(int index) const
+{
+    if (!possedeArme(index))
+    {
+        std::cout << "Cette arme n'existe pas." << std::endl;
+        std::cout << std::endl;
+        return;
+    }
+
+    const Arme& arme = armes[index];
+
+    std::cout << "========== ARME ==========" << std::endl;
+    std::cout << "Nom : " << arme.getNom() << std::endl;
+    std::cout << "Description : " << arme.getDescription() << std::endl;
+    std::cout << "Bonus dégâts : +" << arme.getBonusDegatsMin()
+              << " à +" << arme.getBonusDegatsMax() << std::endl;
+    std::cout << "Bonus critique : +" << arme.getBonusCritique() << std::endl;
+
+    if (arme.estIndestructible())
+    {
+        std::cout << "Durabilité : Indestructible" << std::endl;
+    }
+    else
+    {
+        std::cout << "Durabilité : " << arme.getDurabilite()
+                  << "/" << arme.getDurabiliteMax() << std::endl;
+    }
+
+    std::cout << "État : " << (arme.estCassee() ? "Cassée" : "Utilisable") << std::endl;
+    std::cout << "Valeur : " << arme.getValeur() << " pièces" << std::endl;
+    std::cout << "==========================" << std::endl;
+    std::cout << std::endl;
+}
+
+void Inventaire::inspecterArmure(int index) const
+{
+    if (!possedeArmure(index))
+    {
+        std::cout << "Cette armure n'existe pas." << std::endl;
+        std::cout << std::endl;
+        return;
+    }
+
+    const Armure& armure = armures[index];
+
+    std::cout << "========== ARMURE ==========" << std::endl;
+    std::cout << "Nom : " << armure.getNom() << std::endl;
+    std::cout << "Description : " << armure.getDescription() << std::endl;
+    std::cout << "Bonus PV max : +" << armure.getBonusPvMax() << std::endl;
+    std::cout << "Réduction dégâts : " << armure.getReductionDegats() << std::endl;
+
+    if (armure.estIndestructible())
+    {
+        std::cout << "Durabilité : Indestructible" << std::endl;
+    }
+    else
+    {
+        std::cout << "Durabilité : " << armure.getDurabilite()
+                  << "/" << armure.getDurabiliteMax() << std::endl;
+    }
+
+    std::cout << "État : " << (armure.estCassee() ? "Cassée" : "Utilisable") << std::endl;
+    std::cout << "Valeur : " << armure.getValeur() << " pièces" << std::endl;
+    std::cout << "============================" << std::endl;
+    std::cout << std::endl;
+}
+
+void Inventaire::inspecterConsommable(int index) const
+{
+    if (!possedeConsommable(index))
+    {
+        std::cout << "Ce consommable n'existe pas." << std::endl;
+        std::cout << std::endl;
+        return;
+    }
+
+    const Consommable& consommable = consommables[index];
+
+    std::cout << "======= CONSOMMABLE =======" << std::endl;
+    std::cout << "Nom : " << consommable.getNom() << std::endl;
+    std::cout << "Description : " << consommable.getDescription() << std::endl;
+    std::cout << "Puissance : " << consommable.getPuissance() << std::endl;
+    std::cout << "Valeur : " << consommable.getValeur() << " pièces" << std::endl;
+    std::cout << "===========================" << std::endl;
+    std::cout << std::endl;
+}
+
+void Inventaire::afficherArmes() const
+{
+    afficherListeArmes();
+}
+
+void Inventaire::afficherArmures() const
+{
+    afficherListeArmures();
+}
+
+void Inventaire::afficherConsommables() const
+{
+    afficherListeConsommables();
 }
 
 void Inventaire::afficher() const
 {
-    std::cout << "================ INVENTAIRE ================" << std::endl;
-    std::cout << "Or : " << or_ << " pièces" << std::endl;
-    std::cout << std::endl;
+    afficherResume();
 
-    afficherArmes();
-    afficherArmures();
-    afficherConsommables();
-
-    std::cout << "============================================" << std::endl;
-    std::cout << std::endl;
+    afficherListeArmes();
+    afficherListeArmures();
+    afficherListeConsommables();
 }

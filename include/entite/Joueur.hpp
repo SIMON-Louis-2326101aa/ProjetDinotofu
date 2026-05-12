@@ -13,6 +13,9 @@ private:
 
     Inventaire inventaire;
     int indexArmeEquipee;
+    int indexArmureEquipee;
+
+    int getBonusPvArmureEquipee() const;
 
 public:
     Joueur();
@@ -34,6 +37,12 @@ public:
     bool equiperArme(int index);
     void desequiperArme();
 
+    int getIndexArmureEquipee() const;
+    bool aUneArmureEquipee() const;
+    Armure getArmureEquipee() const;
+    bool equiperArmure(int index);
+    void desequiperArmure();
+
     void initialiserInventaireDeBase();
 
     void gagnerExperience(int quantite);
@@ -43,6 +52,8 @@ public:
 
     void afficherStats() const override;
     void afficherInventaire() const;
+    void afficherEquipementSimple() const;
+    void afficherEquipementDetaille() const;
 };
 
 #endif

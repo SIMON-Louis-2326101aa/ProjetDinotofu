@@ -58,6 +58,15 @@ public:
     void afficherArmures() const;
     void afficherConsommables() const;
     void afficher() const;
+
+    void afficherListeArmes() const;
+    void afficherListeArmures() const;
+    void afficherListeConsommables() const;
+    void afficherResume() const;
+
+    void inspecterArme(int index) const;
+    void inspecterArmure(int index) const;
+    void inspecterConsommable(int index) const;
 };
 
 #endif

@@ -297,7 +297,7 @@ void Combat::afficherMenuTour(const Entite& entite) const
     std::cout << "0 : Stats                 1 : Attaque" << std::endl;
     std::cout << "2 : Potion de soin        3 : Potion de dégâts" << std::endl;
     std::cout << "4 : Manuel de potions     5 : Passer son tour" << std::endl;
-    std::cout << "6 : Inventaire            7 : Équiper une arme" << std::endl;
+    std::cout << "6 : Inventaire            7 : Équipement" << std::endl;
     std::cout << std::endl;
     std::cout << "> ";
 }
@@ -363,8 +363,7 @@ bool Combat::jouerTourHumain(Entite& attaquant, Entite& defenseur, int soinPotio
             return false;
         }
 
-        ouvrirInventaire(*joueur);
-        return false;
+        return ouvrirInventaire(*joueur);
     }   
 
     if (option == 7)
@@ -372,13 +371,13 @@ bool Combat::jouerTourHumain(Entite& attaquant, Entite& defenseur, int soinPotio
         Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
 
         if (joueur == nullptr)
-        {   
-            std::cout << attaquant.getNom() << " ne peut pas équiper d'arme." << std::endl;
+        {
+            std::cout << attaquant.getNom() << " ne peut pas gérer d'équipement." << std::endl;
             std::cout << std::endl;
             return false;
         }
 
-        return equiperArmeDepuisInventaire(*joueur);
+        return ouvrirMenuEquipement(*joueur);
     }
 
     std::cout << attaquant.getNom() << " hésite, oublie quoi faire, et met fin à son tour..." << std::endl;
@@ -536,7 +535,7 @@ void Combat::executerAttaque(Entite& attaquant, Entite& defenseur)
     bool esquive = false;
     bool critique = false;
 
-    int degats = attaquant.attaquer(random, esquive, critique);
+    int degatsBruts = attaquant.attaquer(random, esquive, critique);
 
     if (esquive)
     {
@@ -546,24 +545,28 @@ void Combat::executerAttaque(Entite& attaquant, Entite& defenseur)
         return;
     }
 
-    if (atlasBloqueAttaque(attaquant, defenseur, degats))
+    if (atlasBloqueAttaque(attaquant, defenseur, degatsBruts))
     {
         return;
     }
 
-    defenseur.recevoirDegats(degats);
-    appliquerVolDeVieDemonSiBesoin(attaquant, degats);
-
     if (critique)
     {
         std::cout << attaquant.getNom() << " frappe avec une violence monstrueuse et inflige "
-                  << degats << " dégâts critiques." << std::endl;
+                  << degatsBruts << " dégâts bruts critiques." << std::endl;
     }
     else
     {
         std::cout << attaquant.getNom() << " attaque et inflige "
-                  << degats << " dégâts." << std::endl;
+                  << degatsBruts << " dégâts bruts." << std::endl;
     }
+
+    int degatsRecus = appliquerProtectionArmure(defenseur, degatsBruts);
+
+    defenseur.recevoirDegats(degatsRecus);
+    appliquerVolDeVieDemonSiBesoin(attaquant, degatsRecus);
+
+    std::cout << defenseur.getNom() << " reçoit " << degatsRecus << " dégâts." << std::endl;
 
     afficherPvApresAttaque(defenseur);
 }
@@ -654,7 +657,7 @@ bool Combat::executerPotionDegats(Entite& attaquant, Entite& defenseur, int bonu
     bool esquive = false;
     bool critique = false;
 
-    int degats = attaquant.attaquer(random, esquive, critique, bonusUtilise);
+    int degatsBruts = attaquant.attaquer(random, esquive, critique, bonusUtilise);
 
     if (esquive)
     {
@@ -664,32 +667,462 @@ bool Combat::executerPotionDegats(Entite& attaquant, Entite& defenseur, int bonu
         return true;
     }
 
-    if (atlasBloqueAttaque(attaquant, defenseur, degats))
+    if (atlasBloqueAttaque(attaquant, defenseur, degatsBruts))
     {
         return true;
     }
 
-    defenseur.recevoirDegats(degats);
-    appliquerVolDeVieDemonSiBesoin(attaquant, degats);
-
     if (critique)
     {
         std::cout << "La rage de " << attaquant.getNom() << " explose dans l'arène." << std::endl;
-        std::cout << "Il inflige " << degats << " dégâts monstrueux." << std::endl;
+        std::cout << "Il inflige " << degatsBruts << " dégâts bruts monstrueux." << std::endl;
     }
     else
     {
         std::cout << attaquant.getNom() << " attaque avec une puissance dévastatrice et inflige "
-                  << degats << " dégâts." << std::endl;
+                  << degatsBruts << " dégâts bruts." << std::endl;
     }
+
+    int degatsRecus = appliquerProtectionArmure(defenseur, degatsBruts);
+
+    defenseur.recevoirDegats(degatsRecus);
+    appliquerVolDeVieDemonSiBesoin(attaquant, degatsRecus);
+
+    std::cout << defenseur.getNom() << " reçoit " << degatsRecus << " dégâts." << std::endl;
 
     afficherPvApresAttaque(defenseur);
     return true;
 }
 
+int Combat::appliquerProtectionArmure(Entite& defenseur, int degatsBruts)
+{
+    Joueur* joueurDefenseur = dynamic_cast<Joueur*>(&defenseur);
+
+    if (joueurDefenseur == nullptr || !joueurDefenseur->aUneArmureEquipee())
+    {
+        return degatsBruts;
+    }
+
+    Armure* armure = joueurDefenseur->getInventaire().getArmureModifiable(
+        joueurDefenseur->getIndexArmureEquipee()
+    );
+
+    if (armure == nullptr || armure->estCassee())
+    {
+        return degatsBruts;
+    }
+
+    int absorption = armure->getReductionDegats();
+
+    if (absorption <= 0)
+    {
+        return degatsBruts;
+    }
+
+    if (absorption > degatsBruts)
+    {
+        absorption = degatsBruts;
+    }
+
+    armure->perdreDurabilite(1);
+
+    std::cout << "L'armure de " << defenseur.getNom() << " absorbe "
+              << absorption << " dégâts." << std::endl;
+
+    if (armure->estCassee())
+    {
+        std::cout << armure->getNom() << " se fissure sous l'impact et se brise." << std::endl;
+        std::cout << "Elle ne protégera plus son porteur tant qu'elle ne sera pas réparée." << std::endl;
+    }
+
+    return degatsBruts - absorption;
+}
+
 bool Combat::ouvrirInventaire(Joueur& joueur)
 {
-    joueur.afficherInventaire();
+    bool inventaireOuvert = true;
+
+    while (inventaireOuvert)
+    {
+        std::cout << "================ INVENTAIRE ================" << std::endl;
+        std::cout << "Que veux-tu consulter ?" << std::endl;
+        std::cout << std::endl;
+        std::cout << "1 : Voir tout" << std::endl;
+        std::cout << "2 : Voir les armes" << std::endl;
+        std::cout << "3 : Voir les armures" << std::endl;
+        std::cout << "4 : Voir les consommables" << std::endl;
+        std::cout << "5 : Équipement simple" << std::endl;
+        std::cout << "6 : Équipement détaillé" << std::endl;
+        std::cout << "0 : Retour" << std::endl;
+        std::cout << "============================================" << std::endl;
+        std::cout << "> ";
+
+        int choixMenu = Console::demanderNombreEntre(
+            0,
+            6,
+            "Choix invalide. Entre un chiffre entre 0 et 6."
+        );
+
+        Console::clear();
+
+        if (choixMenu == 0)
+        {
+            return false;
+        }
+
+        if (choixMenu == 1)
+        {
+            joueur.getInventaire().afficher();
+            continue;
+        }
+
+        if (choixMenu == 5)
+        {
+            joueur.afficherEquipementSimple();
+            continue;
+        }
+
+        if (choixMenu == 6)
+        {
+            joueur.afficherEquipementDetaille();
+            continue;
+        }
+
+        if (choixMenu == 2)
+        {
+            if (joueur.getInventaire().getNombreArmes() <= 0)
+            {
+                std::cout << "Tu n'as aucune arme dans ton inventaire." << std::endl;
+                std::cout << std::endl;
+                continue;
+            }
+
+            joueur.getInventaire().afficherListeArmes();
+
+            std::cout << "Sélectionne une arme, ou entre -1 pour revenir." << std::endl;
+            std::cout << "> ";
+
+            int index;
+            std::cin >> index;
+
+            if (std::cin.fail())
+            {
+                std::cin.clear();
+                std::cin.ignore(10000, '\n');
+
+                std::cout << "Entrée invalide." << std::endl;
+                std::cout << std::endl;
+                continue;
+            }
+
+            Console::clear();
+
+            if (index == -1)
+            {
+                continue;
+            }
+
+            if (!joueur.getInventaire().possedeArme(index))
+            {
+                std::cout << "Cette arme n'existe pas dans ton inventaire." << std::endl;
+                std::cout << std::endl;
+                continue;
+            }
+
+            std::cout << "Que veux-tu faire avec cette arme ?" << std::endl;
+            std::cout << "1 : Inspecter" << std::endl;
+            std::cout << "2 : Équiper" << std::endl;
+            std::cout << "0 : Retour" << std::endl;
+            std::cout << "> ";
+
+            int action = Console::demanderNombreEntre(
+                0,
+                2,
+                "Choix invalide. Entre 0, 1 ou 2."
+            );
+
+            Console::clear();
+
+            if (action == 1)
+            {
+                joueur.getInventaire().inspecterArme(index);
+                continue;
+            }
+
+            if (action == 2)
+            {
+                if (joueur.equiperArme(index))
+                {
+                    Arme arme = joueur.getArmeEquipee();
+
+                    std::cout << joueur.getNom() << " équipe : " << arme.getNom() << "." << std::endl;
+
+                    if (arme.estCassee())
+                    {
+                        std::cout << "Attention : cette arme est cassée, elle ne donnera aucun bonus." << std::endl;
+                    }
+
+                    std::cout << std::endl;
+                }
+                else
+                {
+                    std::cout << "Impossible d'équiper cette arme." << std::endl;
+                    std::cout << std::endl;
+                }
+
+                continue;
+            }
+
+            continue;
+        }
+
+        if (choixMenu == 3)
+        {
+            if (joueur.getInventaire().getNombreArmures() <= 0)
+            {
+                std::cout << "Tu n'as aucune armure dans ton inventaire." << std::endl;
+                std::cout << std::endl;
+                continue;
+            }
+
+            joueur.getInventaire().afficherListeArmures();
+
+            std::cout << "Sélectionne une armure, ou entre -1 pour revenir." << std::endl;
+            std::cout << "> ";
+
+            int index;
+            std::cin >> index;
+
+            if (std::cin.fail())
+            {
+                std::cin.clear();
+                std::cin.ignore(10000, '\n');
+
+                std::cout << "Entrée invalide." << std::endl;
+                std::cout << std::endl;
+                continue;
+            }
+
+            Console::clear();
+
+            if (index == -1)
+            {
+                continue;
+            }
+
+            if (!joueur.getInventaire().possedeArmure(index))
+            {
+                std::cout << "Cette armure n'existe pas dans ton inventaire." << std::endl;
+                std::cout << std::endl;
+                continue;
+            }
+
+            std::cout << "Que veux-tu faire avec cette armure ?" << std::endl;
+            std::cout << "1 : Inspecter" << std::endl;
+            std::cout << "2 : Équiper" << std::endl;
+            std::cout << "0 : Retour" << std::endl;
+            std::cout << "> ";
+
+            int action = Console::demanderNombreEntre(
+                0,
+                2,
+                "Choix invalide. Entre 0, 1 ou 2."
+            );
+
+            Console::clear();
+
+            if (action == 1)
+            {
+                joueur.getInventaire().inspecterArmure(index);
+                continue;
+            }
+
+            if (action == 2)
+            {
+                if (joueur.equiperArmure(index))
+                {
+                    Armure armure = joueur.getArmureEquipee();
+
+                    std::cout << joueur.getNom() << " équipe : " << armure.getNom() << "." << std::endl;
+
+                    if (armure.estCassee())
+                    {
+                        std::cout << "Attention : cette armure est cassée, elle ne donnera aucun bonus." << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "Ses protections sont maintenant actives." << std::endl;
+                    }
+
+                    std::cout << std::endl;
+                }
+                else
+                {
+                    std::cout << "Impossible d'équiper cette armure." << std::endl;
+                    std::cout << std::endl;
+                }
+
+                continue;
+            }
+
+            continue;
+        }
+
+        if (choixMenu == 4)
+        {
+            if (joueur.getInventaire().getNombreConsommables() <= 0)
+            {
+                std::cout << "Tu n'as aucun consommable dans ton inventaire." << std::endl;
+                std::cout << std::endl;
+                continue;
+            }
+
+            joueur.getInventaire().afficherListeConsommables();
+
+            std::cout << "Sélectionne un consommable, ou entre -1 pour revenir." << std::endl;
+            std::cout << "> ";
+
+            int index;
+            std::cin >> index;
+
+            if (std::cin.fail())
+            {
+                std::cin.clear();
+                std::cin.ignore(10000, '\n');
+
+                std::cout << "Entrée invalide." << std::endl;
+                std::cout << std::endl;
+                continue;
+            }
+
+            Console::clear();
+
+            if (index == -1)
+            {
+                continue;
+            }
+
+            if (!joueur.getInventaire().possedeConsommable(index))
+            {
+                std::cout << "Ce consommable n'existe pas dans ton inventaire." << std::endl;
+                std::cout << std::endl;
+                continue;
+            }
+
+            Consommable consommable = joueur.getInventaire().getConsommable(index);
+
+            std::cout << "Que veux-tu faire avec ce consommable ?" << std::endl;
+            std::cout << "1 : Inspecter" << std::endl;
+
+            if (consommable.getType() == TypeConsommable::Soin)
+            {
+                std::cout << "2 : Utiliser" << std::endl;
+            }
+            else
+            {
+                std::cout << "2 : Utiliser (indisponible ici)" << std::endl;
+            }
+
+            std::cout << "0 : Retour" << std::endl;
+            std::cout << "> ";
+
+            int action = Console::demanderNombreEntre(
+                0,
+                2,
+                "Choix invalide. Entre 0, 1 ou 2."
+            );
+
+            Console::clear();
+
+            if (action == 1)
+            {
+                joueur.getInventaire().inspecterConsommable(index);
+                continue;
+            }
+
+            if (action == 2)
+            {
+                if (consommable.getType() != TypeConsommable::Soin)
+                {
+                    std::cout << "Ce consommable demande une action spéciale." << std::endl;
+                    std::cout << "Pour une potion de rage, utilise l'option 3 du menu de combat." << std::endl;
+                    std::cout << std::endl;
+                    continue;
+                }
+
+                joueur.soigner(consommable.getPuissance());
+                joueur.getInventaire().retirerConsommable(index);
+
+                std::cout << joueur.getNom() << " utilise : " << consommable.getNom() << "." << std::endl;
+                std::cout << "Ses blessures se referment, et il récupère "
+                          << consommable.getPuissance() << " PV." << std::endl;
+                std::cout << joueur.getNom() << " possède maintenant "
+                          << joueur.getPv() << "/" << joueur.getPvMax() << " PV." << std::endl;
+                std::cout << std::endl;
+
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool Combat::ouvrirMenuEquipement(Joueur& joueur)
+{
+    bool menuOuvert = true;
+
+    while (menuOuvert)
+    {
+        std::cout << "================ ÉQUIPEMENT ================" << std::endl;
+        std::cout << "Que veux-tu faire ?" << std::endl;
+        std::cout << std::endl;
+        std::cout << "1 : Affichage simple" << std::endl;
+        std::cout << "2 : Affichage détaillé" << std::endl;
+        std::cout << "3 : Équiper une arme" << std::endl;
+        std::cout << "4 : Équiper une armure" << std::endl;
+        std::cout << "0 : Retour" << std::endl;
+        std::cout << "============================================" << std::endl;
+        std::cout << "> ";
+
+        int choix = Console::demanderNombreEntre(
+            0,
+            4,
+            "Choix invalide. Entre un chiffre entre 0 et 4."
+        );
+
+        Console::clear();
+
+        if (choix == 0)
+        {
+            return false;
+        }
+
+        if (choix == 1)
+        {
+            joueur.afficherEquipementSimple();
+            continue;
+        }
+
+        if (choix == 2)
+        {
+            joueur.afficherEquipementDetaille();
+            continue;
+        }
+
+        if (choix == 3)
+        {
+            equiperArmeDepuisInventaire(joueur);
+            continue;
+        }
+
+        if (choix == 4)
+        {
+            equiperArmureDepuisInventaire(joueur);
+            continue;
+        }
+    }
+
     return false;
 }
 
@@ -702,7 +1135,7 @@ bool Combat::equiperArmeDepuisInventaire(Joueur& joueur)
         return false;
     }
 
-    joueur.getInventaire().afficherArmes();
+    joueur.getInventaire().afficherListeArmes();
 
     std::cout << "Choisis l'arme à équiper." << std::endl;
     std::cout << "Entre son numéro, ou -1 pour annuler." << std::endl;
@@ -721,7 +1154,113 @@ bool Combat::equiperArmeDepuisInventaire(Joueur& joueur)
         return false;
     }
 
+    Console::clear();
+
     if (choix == -1)
+    {
+        std::cout << "Changement d'arme annulé." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    if (!joueur.getInventaire().possedeArme(choix))
+    {
+        std::cout << "Cette arme n'existe pas dans ton inventaire." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    Arme nouvelleArme = joueur.getInventaire().getArme(choix);
+
+    std::cout << "=========== COMPARAISON D'ARME ===========" << std::endl;
+
+    if (joueur.aUneArmeEquipee())
+    {
+        Arme armeActuelle = joueur.getArmeEquipee();
+
+        std::cout << "Arme actuelle : " << armeActuelle.getNom() << std::endl;
+        std::cout << "Dégâts bonus : +"
+                  << armeActuelle.getBonusDegatsMin()
+                  << " à +"
+                  << armeActuelle.getBonusDegatsMax()
+                  << std::endl;
+        std::cout << "Critique bonus : +" << armeActuelle.getBonusCritique() << std::endl;
+
+        if (armeActuelle.estIndestructible())
+        {
+            std::cout << "Durabilité : Indestructible" << std::endl;
+        }
+        else
+        {
+            std::cout << "Durabilité : "
+                      << armeActuelle.getDurabilite()
+                      << "/"
+                      << armeActuelle.getDurabiliteMax()
+                      << std::endl;
+        }
+
+        std::cout << std::endl;
+    }
+    else
+    {
+        std::cout << "Arme actuelle : Aucune" << std::endl;
+        std::cout << std::endl;
+    }
+
+    std::cout << "Nouvelle arme : " << nouvelleArme.getNom() << std::endl;
+    std::cout << "Dégâts bonus : +"
+              << nouvelleArme.getBonusDegatsMin()
+              << " à +"
+              << nouvelleArme.getBonusDegatsMax()
+              << std::endl;
+    std::cout << "Critique bonus : +" << nouvelleArme.getBonusCritique() << std::endl;
+
+    if (nouvelleArme.estIndestructible())
+    {
+        std::cout << "Durabilité : Indestructible" << std::endl;
+    }
+    else
+    {
+        std::cout << "Durabilité : "
+                  << nouvelleArme.getDurabilite()
+                  << "/"
+                  << nouvelleArme.getDurabiliteMax()
+                  << std::endl;
+    }
+
+    if (joueur.aUneArmeEquipee())
+    {
+        Arme armeActuelle = joueur.getArmeEquipee();
+
+        std::cout << std::endl;
+        std::cout << "Différence dégâts min : "
+                  << nouvelleArme.getBonusDegatsMin() - armeActuelle.getBonusDegatsMin()
+                  << std::endl;
+        std::cout << "Différence dégâts max : "
+                  << nouvelleArme.getBonusDegatsMax() - armeActuelle.getBonusDegatsMax()
+                  << std::endl;
+        std::cout << "Différence critique : "
+                  << nouvelleArme.getBonusCritique() - armeActuelle.getBonusCritique()
+                  << std::endl;
+    }
+
+    std::cout << "===========================================" << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Équiper cette arme ?" << std::endl;
+    std::cout << "1 : Oui" << std::endl;
+    std::cout << "0 : Non" << std::endl;
+    std::cout << "> ";
+
+    int confirmation = Console::demanderNombreEntre(
+        0,
+        1,
+        "Choix invalide. Entre 0 ou 1."
+    );
+
+    Console::clear();
+
+    if (confirmation == 0)
     {
         std::cout << "Changement d'arme annulé." << std::endl;
         std::cout << std::endl;
@@ -730,7 +1269,7 @@ bool Combat::equiperArmeDepuisInventaire(Joueur& joueur)
 
     if (!joueur.equiperArme(choix))
     {
-        std::cout << "Cette arme n'existe pas dans ton inventaire." << std::endl;
+        std::cout << "Impossible d'équiper cette arme." << std::endl;
         std::cout << std::endl;
         return false;
     }
@@ -743,6 +1282,172 @@ bool Combat::equiperArmeDepuisInventaire(Joueur& joueur)
     {
         std::cout << "Attention : cette arme est cassée, elle ne donnera aucun bonus." << std::endl;
     }
+    else
+    {
+        std::cout << "La prise en main est bonne. Cette arme est prête au combat." << std::endl;
+    }
+
+    std::cout << std::endl;
+
+    return false;
+}
+
+bool Combat::equiperArmureDepuisInventaire(Joueur& joueur)
+{
+    if (joueur.getInventaire().getNombreArmures() <= 0)
+    {
+        std::cout << joueur.getNom() << " n'a aucune armure à équiper." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    joueur.getInventaire().afficherListeArmures();
+
+    std::cout << "Choisis l'armure à équiper." << std::endl;
+    std::cout << "Entre son numéro, ou -1 pour annuler." << std::endl;
+    std::cout << "> ";
+
+    int choix;
+    std::cin >> choix;
+
+    if (std::cin.fail())
+    {
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+
+        std::cout << "Choix invalide. L'équipement est annulé." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    Console::clear();
+
+    if (choix == -1)
+    {
+        std::cout << "Changement d'armure annulé." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    if (!joueur.getInventaire().possedeArmure(choix))
+    {
+        std::cout << "Cette armure n'existe pas dans ton inventaire." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    Armure nouvelleArmure = joueur.getInventaire().getArmure(choix);
+
+    std::cout << "========== COMPARAISON D'ARMURE ==========" << std::endl;
+
+    if (joueur.aUneArmureEquipee())
+    {
+        Armure armureActuelle = joueur.getArmureEquipee();
+
+        std::cout << "Armure actuelle : " << armureActuelle.getNom() << std::endl;
+        std::cout << "Bonus PV max : +" << armureActuelle.getBonusPvMax() << std::endl;
+        std::cout << "Réduction dégâts : " << armureActuelle.getReductionDegats() << std::endl;
+
+        if (armureActuelle.estIndestructible())
+        {
+            std::cout << "Durabilité : Indestructible" << std::endl;
+        }
+        else
+        {
+            std::cout << "Durabilité : "
+                      << armureActuelle.getDurabilite()
+                      << "/"
+                      << armureActuelle.getDurabiliteMax()
+                      << std::endl;
+        }
+
+        std::cout << std::endl;
+    }
+    else
+    {
+        std::cout << "Armure actuelle : Aucune" << std::endl;
+        std::cout << std::endl;
+    }
+
+    std::cout << "Nouvelle armure : " << nouvelleArmure.getNom() << std::endl;
+    std::cout << "Bonus PV max : +" << nouvelleArmure.getBonusPvMax() << std::endl;
+    std::cout << "Réduction dégâts : " << nouvelleArmure.getReductionDegats() << std::endl;
+
+    if (nouvelleArmure.estIndestructible())
+    {
+        std::cout << "Durabilité : Indestructible" << std::endl;
+    }
+    else
+    {
+        std::cout << "Durabilité : "
+                  << nouvelleArmure.getDurabilite()
+                  << "/"
+                  << nouvelleArmure.getDurabiliteMax()
+                  << std::endl;
+    }
+
+    if (joueur.aUneArmureEquipee())
+    {
+        Armure armureActuelle = joueur.getArmureEquipee();
+
+        std::cout << std::endl;
+        std::cout << "Différence PV max : "
+                  << nouvelleArmure.getBonusPvMax() - armureActuelle.getBonusPvMax()
+                  << std::endl;
+        std::cout << "Différence réduction : "
+                  << nouvelleArmure.getReductionDegats() - armureActuelle.getReductionDegats()
+                  << std::endl;
+    }
+
+    std::cout << "===========================================" << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "Équiper cette armure ?" << std::endl;
+    std::cout << "1 : Oui" << std::endl;
+    std::cout << "0 : Non" << std::endl;
+    std::cout << "> ";
+
+    int confirmation = Console::demanderNombreEntre(
+        0,
+        1,
+        "Choix invalide. Entre 0 ou 1."
+    );
+
+    Console::clear();
+
+    if (confirmation == 0)
+    {
+        std::cout << "Changement d'armure annulé." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    if (!joueur.equiperArmure(choix))
+    {
+        std::cout << "Impossible d'équiper cette armure." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    Armure armureEquipee = joueur.getArmureEquipee();
+
+    std::cout << joueur.getNom() << " équipe : " << armureEquipee.getNom() << "." << std::endl;
+
+    if (armureEquipee.estCassee())
+    {
+        std::cout << "Attention : cette armure est cassée, elle ne donnera aucun bonus." << std::endl;
+    }
+    else
+    {
+        std::cout << "Ses protections sont maintenant actives." << std::endl;
+    }
+
+    std::cout << joueur.getNom() << " possède maintenant "
+              << joueur.getPv()
+              << "/"
+              << joueur.getPvMax()
+              << " PV."
+              << std::endl;
 
     std::cout << std::endl;
 

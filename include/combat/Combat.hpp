@@ -30,8 +30,13 @@ private:
     bool executerPotionSoin(Entite& entite, int soinPotion);
     bool executerPotionDegats(Entite& attaquant, Entite& defenseur, int bonusPotionDegats);
 
+    int appliquerProtectionArmure(Entite& defenseur, int degatsBruts);
+
     bool ouvrirInventaire(Joueur& joueur);
+    bool ouvrirMenuEquipement(Joueur& joueur);
+
     bool equiperArmeDepuisInventaire(Joueur& joueur);
+    bool equiperArmureDepuisInventaire(Joueur& joueur);
 
     bool atlasBloqueAttaque(Entite& attaquant, Entite& defenseur, int degats);
     void appliquerVolDeVieDemonSiBesoin(Entite& attaquant, int degatsInfliges);
