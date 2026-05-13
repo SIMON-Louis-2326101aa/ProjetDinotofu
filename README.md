@@ -69,10 +69,16 @@ ProjetDinotofu/
 │   │   └── CatalogueClasses.hpp      
 │   │       
 │   ├── combat/    
-│   │   ├── Combat.hpp       
-│   │   ├── Tour.hpp        
-│   │   ├── IA.hpp      
-│   │   └── Cible.hpp      
+│   │   ├── Combat.hpp
+│   │   ├── TourCombat.hpp
+│   │   ├── GestionnaireTours.hpp
+│   │   ├── IACombat.hpp
+│   │   ├── SystemeDegats.hpp
+│   │   ├── modes/
+│   │   │   ├── ModePvp.hpp
+│   │   │   ├── ModePvpIA.hpp
+│   │   │   ├── ModePveBoss.hpp
+│   │   │   └── ModePveMonstres.hpp      
 │   │      
 │   ├── action/      
 │   │   ├── Action.hpp      
@@ -140,7 +146,10 @@ ProjetDinotofu/
 │   ├── interface/    
 │   │   ├── Interface.hpp    
 │   │   ├── InterfaceTerminal.hpp    
-│   │   └── InterfaceGraphique.hpp    
+│   │   ├── InterfaceGraphique.hpp  
+│   │   ├── MenuCombat.hpp  
+│   │   ├── MenuInventaire.hpp  
+│   │   └── MenuEquipement.hpp    
 │   │    
 │   └── utils/    
 │       ├── Utils.hpp    
@@ -169,10 +178,16 @@ ProjetDinotofu/
     │   └── CatalogueClasses.cpp    
     │    
     ├── combat/    
-    │   ├── Combat.cpp    
-    │   ├── Tour.cpp    
-    │   ├── IA.cpp    
-    │   └── Cible.cpp    
+    │   ├── Combat.cpp
+    │   ├── TourCombat.cpp
+    │   ├── GestionnaireTours.cpp
+    │   ├── IACombat.cpp
+    │   ├── SystemeDegats.cpp
+    │   ├── modes/
+    │   │   ├── ModePvp.cpp
+    │   │   ├── ModePvpIA.cpp
+    │   │   ├── ModePveBoss.cpp
+    │   │   └── ModePveMonstres.cpp
     │    
     ├── action/    
     │   ├── Action.cpp    
@@ -238,7 +253,10 @@ ProjetDinotofu/
     ├── interface/    
     │   ├── Interface.cpp   
     │   ├── InterfaceTerminal.cpp    
-    │   └── InterfaceGraphique.cpp   
+    │   ├── InterfaceGraphique.cpp   
+    │   ├── MenuCombat.cpp   
+    │   ├── MenuInventaire.cpp   
+    │   └── MenuEquipement.cpp   
     │    
     └── utils/    
         ├── Utils.cpp    

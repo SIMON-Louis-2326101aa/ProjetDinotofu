@@ -11,6 +11,8 @@ public:
     static void attendreEntree();
 
     static int demanderNombreEntre(int min, int max, const std::string& messageErreur);
+
+    static void viderBufferEntreeDisponible();
 };
 
 #endif

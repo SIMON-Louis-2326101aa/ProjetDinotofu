@@ -5,6 +5,8 @@
 #include <thread>
 #include <iostream>
 #include <limits>
+#include <sstream>
+#include <string>
 
 void Console::clear()
 {
@@ -16,41 +18,72 @@ void Console::pauseSecondes(int secondes)
     std::this_thread::sleep_for(std::chrono::seconds(secondes));
 }
 
+void Console::viderBufferEntreeDisponible()
+{
+    while (std::cin.rdbuf()->in_avail() > 0)
+    {
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }
+}
+
 void Console::attendreEntree()
 {
+    viderBufferEntreeDisponible();
+
     std::cout << std::endl;
     std::cout << "Appuie sur Entrée pour continuer...";
     std::cout.flush();
 
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    std::cin.get();
+    std::string ligne;
+    std::getline(std::cin, ligne);
+
+    viderBufferEntreeDisponible();
 
     std::cout << std::endl;
 }
 
 int Console::demanderNombreEntre(int min, int max, const std::string& messageErreur)
 {
-    int choix;
-
     while (true)
     {
-        std::cin >> choix;
+        std::string ligne;
 
-        if (std::cin.fail())
+        if (!std::getline(std::cin >> std::ws, ligne))
         {
             std::cin.clear();
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             std::cout << messageErreur << std::endl;
             std::cout << "> ";
             continue;
         }
 
-        if (choix >= min && choix <= max)
+        std::istringstream flux(ligne);
+
+        int choix;
+        char caractereEnTrop;
+
+        if (!(flux >> choix))
         {
-            return choix;
+            std::cout << messageErreur << std::endl;
+            std::cout << "> ";
+            continue;
         }
 
-        std::cout << messageErreur << std::endl;
-        std::cout << "> ";
+        if (flux >> caractereEnTrop)
+        {
+            std::cout << messageErreur << std::endl;
+            std::cout << "> ";
+            continue;
+        }
+
+        if (choix < min || choix > max)
+        {
+            std::cout << messageErreur << std::endl;
+            std::cout << "> ";
+            continue;
+        }
+
+        viderBufferEntreeDisponible();
+
+        return choix;
     }
 }
