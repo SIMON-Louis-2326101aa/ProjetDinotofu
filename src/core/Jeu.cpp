@@ -4,6 +4,7 @@
 #include "combat/Combat.hpp"
 
 #include <iostream>
+#include <string>
 
 Jeu::Jeu()
 {
@@ -40,9 +41,20 @@ void Jeu::demanderNomJoueur()
 {
     std::cout << "Quel est ton nom ?" << std::endl;
     std::cout << "> ";
-    std::cin >> nomJoueur;
 
-    std::cout << std::endl;
+    std::getline(std::cin >> std::ws, nomJoueur);
+
+    while (nomJoueur.empty())
+    {
+        std::cout << "Un nom vide ? Même les gobelins ont plus de présence que ça." << std::endl;
+        std::cout << "Entre un vrai nom." << std::endl;
+        std::cout << "> ";
+
+        std::getline(std::cin >> std::ws, nomJoueur);
+    }
+
+    Console::clear();
+
     std::cout << "Très bien, " << nomJoueur << "." << std::endl;
     std::cout << "L'arène se souviendra peut-être de ce nom..." << std::endl;
     std::cout << std::endl;
@@ -100,7 +112,7 @@ void Jeu::choisirModeDeJeu()
     std::cout << std::endl;
 
     std::cout << "3 : PvE" << std::endl;
-    std::cout << "    Une vague d'ennemis... enfin, quand les bugs arrêteront de fuir." << std::endl;
+    std::cout << "    Une vague d'ennemis avance vers toi. Trois devant, les autres en file." << std::endl;
     std::cout << std::endl;
 
     std::cout << "4 : PvE Boss" << std::endl;
@@ -153,33 +165,30 @@ void Jeu::afficherModeSelectionne()
 
 void Jeu::lancerModeSelectionne()
 {
+    Combat combat;
+
     switch (modeSelectionne)
     {
         case ModeJeu::PvPIA:
         {
-            Combat combat;
             combat.lancerPvpIA(joueurPrincipal);
             break;
         }
 
         case ModeJeu::PvPDeuxJoueurs:
         {
-            Combat combat;
             combat.lancerPvpDeuxJoueurs(joueurPrincipal);
             break;
         }
 
         case ModeJeu::PvE:
-            joueurPrincipal.afficherStats();
-            std::cout << "Préparation de la vague d'ennemis..." << std::endl;
-            Console::pauseSecondes(2);
-            std::cout << "Ce mode n'est pas encore terminé." << std::endl;
-            std::cout << "Pour l'instant, tout le monde a fui face à la puissance des bugs." << std::endl;
+        {
+            combat.lancerPveMonstres(joueurPrincipal);
             break;
+        }
 
         case ModeJeu::PvEBoss:
         {
-            Combat combat;
             combat.lancerPveBoss(joueurPrincipal);
             break;
         }

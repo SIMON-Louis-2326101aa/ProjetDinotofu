@@ -13,6 +13,7 @@ public:
     void lancerPvpDeuxJoueurs(Joueur& joueur1);
     void lancerPvpIA(Joueur& joueur1);
     void lancerPveBoss(Joueur& joueur1);
+    void lancerPveMonstres(Joueur& joueur1);
 };
 
 #endif

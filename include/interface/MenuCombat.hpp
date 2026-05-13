@@ -7,9 +7,7 @@ class MenuCombat
 {
 public:
     static void afficherMenuTour(const Entite& entite);
-    static void afficherManuelPotions(int soinPotion, int bonusPotionDegats);
-    static void afficherPvApresAttaque(const Entite& defenseur);
-    static void afficherResultatCombat(const Entite& joueur1, const Entite& joueur2);
+    static void afficherOptionNonDisponible();
 };
 
 #endif

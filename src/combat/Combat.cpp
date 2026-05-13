@@ -3,6 +3,7 @@
 #include "combat/modes/ModePvp.hpp"
 #include "combat/modes/ModePvpIA.hpp"
 #include "combat/modes/ModePveBoss.hpp"
+#include "combat/modes/ModePveMonstres.hpp"
 
 void Combat::lancerPvpDeuxJoueurs(Joueur& joueur1)
 {
@@ -17,4 +18,9 @@ void Combat::lancerPvpIA(Joueur& joueur1)
 void Combat::lancerPveBoss(Joueur& joueur1)
 {
     ModePveBoss::lancer(joueur1, random);
+}
+
+void Combat::lancerPveMonstres(Joueur& joueur1)
+{
+    ModePveMonstres::lancer(joueur1, random);
 }

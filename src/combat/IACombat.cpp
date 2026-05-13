@@ -32,29 +32,55 @@ int IACombat::choisirActionIA(const Entite& ia, Random& random)
     bool soinDisponible = peutUtiliserPotionSoin(ia);
     bool degatsDisponible = peutUtiliserPotionDegats(ia);
 
-    if (ia.getPv() <= 60 && soinDisponible)
-    {
-        return 2;
-    }
+    int pourcentagePv = ia.getPv() * 100 / ia.getPvMax();
+    int tirage = random.entre(1, 100);
 
-    int option = random.entre(1, 100);
-
-    if (ia.getPv() <= 60 && !soinDisponible)
+    if (pourcentagePv <= 30)
     {
-        if (degatsDisponible && option <= 25)
+        if (soinDisponible && tirage <= 55)
+        {
+            return 2;
+        }
+
+        if (degatsDisponible && tirage <= 70)
         {
             return 3;
         }
 
-        return 1;
+        if (tirage <= 97)
+        {
+            return 1;
+        }
+
+        return 5;
     }
 
-    if (degatsDisponible && option <= 20)
+    if (pourcentagePv <= 60)
+    {
+        if (soinDisponible && tirage <= 30)
+        {
+            return 2;
+        }
+
+        if (degatsDisponible && tirage <= 45)
+        {
+            return 3;
+        }
+
+        if (tirage <= 95)
+        {
+            return 1;
+        }
+
+        return 5;
+    }
+
+    if (degatsDisponible && tirage <= 18)
     {
         return 3;
     }
 
-    if (option <= 85)
+    if (tirage <= 94)
     {
         return 1;
     }
@@ -64,29 +90,52 @@ int IACombat::choisirActionIA(const Entite& ia, Random& random)
 
 int IACombat::choisirActionBoss(const Boss& boss, Random& random)
 {
-    if (boss.getPv() <= (boss.getPvMax() / 4) && boss.getPotionsSoin() > 0)
-    {
-        return 2;
-    }
-
-    if (boss.peutUtiliserUltime())
-    {
-        return 4;
-    }
-
+    bool soinDisponible = boss.getPotionsSoin() > 0;
     bool degatsDisponible = boss.getPotionsDegats() > 0;
+    bool ultimeDisponible = boss.peutUtiliserUltime();
 
-    int option = random.entre(1, 100);
+    int pourcentagePv = boss.getPv() * 100 / boss.getPvMax();
+    int tirage = random.entre(1, 100);
 
-    if (degatsDisponible && option <= 20)
+    if (pourcentagePv <= 25)
+    {
+        if (soinDisponible && tirage <= 35)
+        {
+            return 2;
+        }
+
+        if (ultimeDisponible && tirage <= 70)
+        {
+            return 4;
+        }
+
+        if (degatsDisponible && tirage <= 82)
+        {
+            return 3;
+        }
+
+        return 1;
+    }
+
+    if (ultimeDisponible)
+    {
+        if (tirage <= 50)
+        {
+            return 4;
+        }
+
+        if (degatsDisponible && tirage <= 65)
+        {
+            return 3;
+        }
+
+        return 1;
+    }
+
+    if (degatsDisponible && tirage <= 18)
     {
         return 3;
     }
 
-    if (option <= 90)
-    {
-        return 1;
-    }
-
-    return 5;
+    return 1;
 }

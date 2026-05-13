@@ -1,16 +1,17 @@
 #include "combat/GestionnaireTours.hpp"
 
+#include "combat/ActionsCombat.hpp"
+#include "combat/BossCombat.hpp"
 #include "combat/IACombat.hpp"
-#include "combat/SystemeDegats.hpp"
+#include "combat/SystemeObservation.hpp"
+#include "combat/SystemeFuite.hpp"
 
 #include "core/Console.hpp"
 
 #include "interface/MenuCombat.hpp"
-#include "interface/MenuInventaire.hpp"
+#include "interface/MenuPotionsCombat.hpp"
 #include "interface/MenuEquipement.hpp"
-
-#include "objet/consommable/Consommable.hpp"
-#include "objet/consommable/TypeConsommable.hpp"
+#include "interface/MenuInventaire.hpp"
 
 #include <iostream>
 
@@ -22,82 +23,125 @@ bool GestionnaireTours::jouerTourHumain(
     int bonusPotionDegats
 )
 {
+    (void)soinPotion;
+
     MenuCombat::afficherMenuTour(attaquant);
 
     int option = Console::demanderNombreEntre(
         0,
         7,
-        "Option invalide. Choisis un chiffre entre 0 et 7."
+        "Choix invalide. Entre un chiffre entre 0 et 7."
     );
 
     Console::clear();
 
     if (option == 0)
     {
-        attaquant.afficherStats();
-        return false;
+        return ouvrirInterfaceObservation(attaquant, defenseur);
     }
 
     if (option == 1)
     {
-        executerAttaque(attaquant, defenseur, random);
+        ActionsCombat::executerAttaque(attaquant, defenseur, random);
         return true;
     }
 
     if (option == 2)
     {
-        return executerPotionSoin(attaquant, soinPotion);
+        Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
+
+        if (joueur == nullptr)
+        {
+            MenuCombat::afficherOptionNonDisponible();
+            return false;
+        }
+
+        return MenuPotionsCombat::ouvrirSoinRapide(*joueur);
     }
 
     if (option == 3)
-    {
-        return executerPotionDegats(attaquant, defenseur, random, bonusPotionDegats);
-    }
-
-    if (option == 4)
-    {
-        MenuCombat::afficherManuelPotions(soinPotion, bonusPotionDegats);
-        return false;
-    }
-
-    if (option == 5)
-    {
-        std::cout << attaquant.getNom() << " baisse sa garde et passe son tour." << std::endl;
-        std::cout << std::endl;
-        return true;
-    }
-
-    if (option == 6)
     {
         Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
 
         if (joueur == nullptr)
         {
-            std::cout << attaquant.getNom() << " n'a pas d'inventaire accessible." << std::endl;
-            std::cout << std::endl;
+            MenuCombat::afficherOptionNonDisponible();
+            return false;
+        }
+
+        return MenuPotionsCombat::ouvrirContreCibleUnique(
+            *joueur,
+            defenseur,
+            random,
+            bonusPotionDegats
+        );
+    }
+
+    if (option == 4)
+    {
+        Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
+
+        if (joueur == nullptr)
+        {
+            MenuCombat::afficherOptionNonDisponible();
+            return false;
+        }
+
+        MenuEquipement::ouvrir(*joueur);
+        return false;
+    }
+
+    if (option == 5)
+    {
+        Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
+
+        if (joueur == nullptr)
+        {
+            MenuCombat::afficherOptionNonDisponible();
             return false;
         }
 
         return MenuInventaire::ouvrir(*joueur);
     }
 
-    if (option == 7)
+    if (option == 6)
     {
-        Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
+        std::cout << attaquant.getNom() << " baisse sa garde et passe son tour." << std::endl;
+        std::cout << "Parfois, attendre le bon moment est déjà une décision." << std::endl;
+        std::cout << std::endl;
 
-        if (joueur == nullptr)
-        {
-            std::cout << attaquant.getNom() << " ne peut pas gérer d'équipement." << std::endl;
-            std::cout << std::endl;
-            return false;
-        }
-
-        return MenuEquipement::ouvrir(*joueur);
+        return true;
     }
 
-    std::cout << attaquant.getNom() << " hésite, oublie quoi faire, et met fin à son tour..." << std::endl;
-    std::cout << std::endl;
-    return true;
+    if (option == 7)
+    {
+        Boss* bossCible = dynamic_cast<Boss*>(&defenseur);
+
+        if (bossCible != nullptr)
+        {
+            Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
+
+            if (joueur != nullptr)
+            {
+                SystemeFuite::joueurTenteFuiteBoss(*joueur, *bossCible);
+            }
+            else
+            {
+                std::cout << "[la fuite est impossible durant ce combat]" << std::endl;
+                std::cout << std::endl;
+            }
+
+            return true;
+        }
+
+        std::cout << "[cette option n'est pas encore accessible pour ce mode]" << std::endl;
+        std::cout << "La fuite en duel sera gérée plus tard avec le poids, le niveau et les armes à distance." << std::endl;
+        std::cout << std::endl;
+
+        return false;
+    }
+
+    return false;
 }
 
 bool GestionnaireTours::jouerTourIA(
@@ -115,30 +159,30 @@ bool GestionnaireTours::jouerTourIA(
 
     int option = IACombat::choisirActionIA(ia, random);
 
-    if (option == 0)
+    if (option == 0 || option == 1)
     {
-        ia.afficherStats();
-        return false;
-    }
-
-    if (option == 1)
-    {
-        executerAttaque(ia, defenseur, random);
+        ActionsCombat::executerAttaque(ia, defenseur, random);
         return true;
     }
 
     if (option == 2)
     {
-        return executerPotionSoin(ia, soinPotion);
+        return ActionsCombat::executerPotionSoin(ia, soinPotion);
     }
 
     if (option == 3)
     {
-        return executerPotionDegats(ia, defenseur, random, bonusPotionDegats);
+        return ActionsCombat::executerPotionDegats(
+            ia,
+            defenseur,
+            random,
+            bonusPotionDegats
+        );
     }
 
-    std::cout << ia.getNom() << " bug mentalement, fixe le vide, et passe son tour." << std::endl;
+    std::cout << ia.getNom() << " hésite, fixe le vide, et passe son tour." << std::endl;
     std::cout << std::endl;
+
     return true;
 }
 
@@ -155,16 +199,10 @@ bool GestionnaireTours::jouerTourBoss(
 
     int option = IACombat::choisirActionBoss(boss, random);
 
-    if (option == 0)
+    if (option == 0 || option == 1)
     {
-        boss.afficherStats();
-        return false;
-    }
-
-    if (option == 1)
-    {
-        executerAttaque(boss, joueur, random);
-        return gererFinTourBoss(boss, joueur);
+        ActionsCombat::executerAttaque(boss, joueur, random);
+        return BossCombat::gererFinTourBoss(boss, joueur);
     }
 
     if (option == 2)
@@ -175,25 +213,73 @@ bool GestionnaireTours::jouerTourBoss(
             std::cout << std::endl;
         }
 
-        return gererFinTourBoss(boss, joueur);
+        return BossCombat::gererFinTourBoss(boss, joueur);
     }
 
     if (option == 3)
     {
-        executerPotionDegats(boss, joueur, random, 50);
-        return gererFinTourBoss(boss, joueur);
+        ActionsCombat::executerPotionDegats(boss, joueur, random, 50);
+        return BossCombat::gererFinTourBoss(boss, joueur);
     }
 
     if (option == 4)
     {
-        executerUltimeBoss(boss, joueur, random);
-        return gererFinTourBoss(boss, joueur);
+        BossCombat::executerUltimeBoss(boss, joueur, random);
+        return BossCombat::gererFinTourBoss(boss, joueur);
     }
 
-    std::cout << boss.getNom() << " reste immobile, comme s'il observait déjà ta fin." << std::endl;
+    std::cout << boss.getNom()
+              << " reste immobile, comme s'il observait déjà ta fin."
+              << std::endl;
     std::cout << std::endl;
 
-    return gererFinTourBoss(boss, joueur);
+    return BossCombat::gererFinTourBoss(boss, joueur);
+}
+
+bool GestionnaireTours::ouvrirInterfaceObservation(
+    Entite& joueurInterface,
+    Entite& cible
+)
+{
+    std::cout << "========== INTERFACE ==========" << std::endl;
+    std::cout << "0 : Retour" << std::endl;
+    std::cout << "1 : Voir mes statistiques" << std::endl;
+    std::cout << "2 : Inspecter l'adversaire" << std::endl;
+    std::cout << "===============================" << std::endl;
+    std::cout << std::endl;
+    std::cout << "> ";
+
+    int choix = Console::demanderNombreEntre(
+        0,
+        2,
+        "Choix invalide. Entre 0, 1 ou 2."
+    );
+
+    Console::clear();
+
+    if (choix == 0)
+    {
+        return false;
+    }
+
+    if (choix == 1)
+    {
+        joueurInterface.afficherStats();
+        return false;
+    }
+
+    if (choix == 2)
+    {
+        SystemeObservation::afficherStatsTerminal(cible);
+        return false;
+    }
+
+    return false;
+}
+
+void GestionnaireTours::verifierDecryptageBoss(Boss& boss)
+{
+    BossCombat::verifierDecryptageBoss(boss);
 }
 
 void GestionnaireTours::executerAttaque(
@@ -202,43 +288,7 @@ void GestionnaireTours::executerAttaque(
     Random& random
 )
 {
-    bool esquive = false;
-    bool critique = false;
-
-    int degatsBruts = attaquant.attaquer(random, esquive, critique);
-
-    if (esquive)
-    {
-        std::cout << attaquant.getNom() << " attaque, mais " << defenseur.getNom()
-                  << " esquive au dernier moment." << std::endl;
-        std::cout << std::endl;
-        return;
-    }
-
-    if (atlasBloqueAttaque(attaquant, defenseur, degatsBruts))
-    {
-        return;
-    }
-
-    if (critique)
-    {
-        std::cout << attaquant.getNom() << " frappe avec une violence monstrueuse et inflige "
-                  << degatsBruts << " dégâts bruts critiques." << std::endl;
-    }
-    else
-    {
-        std::cout << attaquant.getNom() << " attaque et inflige "
-                  << degatsBruts << " dégâts bruts." << std::endl;
-    }
-
-    int degatsRecus = SystemeDegats::appliquerProtectionArmure(defenseur, degatsBruts);
-
-    defenseur.recevoirDegats(degatsRecus);
-    appliquerVolDeVieDemonSiBesoin(attaquant, degatsRecus);
-
-    std::cout << defenseur.getNom() << " reçoit " << degatsRecus << " dégâts." << std::endl;
-
-    MenuCombat::afficherPvApresAttaque(defenseur);
+    ActionsCombat::executerAttaque(attaquant, defenseur, random);
 }
 
 bool GestionnaireTours::executerPotionSoin(
@@ -246,45 +296,7 @@ bool GestionnaireTours::executerPotionSoin(
     int soinPotion
 )
 {
-    Joueur* joueur = dynamic_cast<Joueur*>(&entite);
-
-    if (joueur != nullptr)
-    {
-        Consommable potion;
-
-        if (!joueur->getInventaire().utiliserPremierConsommable(TypeConsommable::Soin, potion))
-        {
-            std::cout << joueur->getNom() << " fouille son inventaire..." << std::endl;
-            std::cout << "Mais aucune potion de soin n'est disponible." << std::endl;
-            std::cout << "Il peut encore tenter autre chose." << std::endl;
-            std::cout << std::endl;
-            return false;
-        }
-
-        joueur->soigner(potion.getPuissance());
-
-        std::cout << joueur->getNom() << " utilise : " << potion.getNom() << "." << std::endl;
-        std::cout << "Ses blessures se referment, et il récupère "
-                  << potion.getPuissance() << " PV." << std::endl;
-        std::cout << joueur->getNom() << " possède maintenant "
-                  << joueur->getPv() << "/" << joueur->getPvMax() << " PV." << std::endl;
-        std::cout << std::endl;
-
-        return true;
-    }
-
-    if (entite.utiliserPotionSoin(soinPotion))
-    {
-        std::cout << entite.getNom() << " utilise une potion de soin." << std::endl;
-        std::cout << "Sa vitalité revient lentement." << std::endl;
-        std::cout << std::endl;
-        return true;
-    }
-
-    std::cout << entite.getNom() << " n'a plus aucune potion de soin." << std::endl;
-    std::cout << std::endl;
-
-    return false;
+    return ActionsCombat::executerPotionSoin(entite, soinPotion);
 }
 
 bool GestionnaireTours::executerPotionDegats(
@@ -294,309 +306,10 @@ bool GestionnaireTours::executerPotionDegats(
     int bonusPotionDegats
 )
 {
-    int bonusUtilise = bonusPotionDegats;
-
-    Joueur* joueur = dynamic_cast<Joueur*>(&attaquant);
-
-    if (joueur != nullptr)
-    {
-        Consommable potion;
-
-        if (!joueur->getInventaire().utiliserPremierConsommable(TypeConsommable::Degats, potion))
-        {
-            std::cout << joueur->getNom() << " cherche une potion de rage dans son inventaire..." << std::endl;
-            std::cout << "Mais aucune potion de dégâts n'est disponible." << std::endl;
-            std::cout << "Il peut encore tenter autre chose." << std::endl;
-            std::cout << std::endl;
-            return false;
-        }
-
-        bonusUtilise = potion.getPuissance();
-
-        std::cout << joueur->getNom() << " utilise : " << potion.getNom() << "." << std::endl;
-    }
-    else
-    {
-        if (!attaquant.consommerPotionDegats())
-        {
-            std::cout << attaquant.getNom() << " cherche une potion de dégâts, mais sa rage est déjà épuisée." << std::endl;
-            std::cout << "Il peut encore tenter autre chose." << std::endl;
-            std::cout << std::endl;
-            return false;
-        }
-    }
-
-    std::cout << attaquant.getNom() << " sent ses forces monter d'un coup." << std::endl;
-    std::cout << "Une rage brutale s'empare de lui..." << std::endl;
-    std::cout << std::endl;
-
-    Console::pauseSecondes(1);
-
-    bool esquive = false;
-    bool critique = false;
-
-    int degatsBruts = attaquant.attaquer(random, esquive, critique, bonusUtilise);
-
-    if (esquive)
-    {
-        std::cout << attaquant.getNom() << " attaque, mais sa puissance le paralyse un court instant." << std::endl;
-        std::cout << defenseur.getNom() << " évite l'assaut sans subir de dégâts." << std::endl;
-        std::cout << std::endl;
-        return true;
-    }
-
-    if (atlasBloqueAttaque(attaquant, defenseur, degatsBruts))
-    {
-        return true;
-    }
-
-    if (critique)
-    {
-        std::cout << "La rage de " << attaquant.getNom() << " explose dans l'arène." << std::endl;
-        std::cout << "Il inflige " << degatsBruts << " dégâts bruts monstrueux." << std::endl;
-    }
-    else
-    {
-        std::cout << attaquant.getNom() << " attaque avec une puissance dévastatrice et inflige "
-                  << degatsBruts << " dégâts bruts." << std::endl;
-    }
-
-    int degatsRecus = SystemeDegats::appliquerProtectionArmure(defenseur, degatsBruts);
-
-    defenseur.recevoirDegats(degatsRecus);
-    appliquerVolDeVieDemonSiBesoin(attaquant, degatsRecus);
-
-    std::cout << defenseur.getNom() << " reçoit " << degatsRecus << " dégâts." << std::endl;
-
-    MenuCombat::afficherPvApresAttaque(defenseur);
-
-    return true;
-}
-
-bool GestionnaireTours::atlasBloqueAttaque(
-    Entite& attaquant,
-    Entite& defenseur,
-    int degats
-)
-{
-    Boss* bossDefenseur = dynamic_cast<Boss*>(&defenseur);
-
-    if (bossDefenseur == nullptr)
-    {
-        return false;
-    }
-
-    if (bossDefenseur->getIdBoss() != 3 || !bossDefenseur->ultimeActif())
-    {
-        return false;
-    }
-
-    int degatsRenvoi = degats / 3;
-
-    attaquant.recevoirDegats(degatsRenvoi);
-
-    std::cout << attaquant.getNom() << " frappe de toutes ses forces..." << std::endl;
-    Console::pauseSecondes(1);
-
-    std::cout << "Mais l'armure d'" << bossDefenseur->getNom() << " absorbe l'impact." << std::endl;
-    std::cout << "Une partie de la puissance est renvoyée à " << attaquant.getNom()
-              << ", qui subit " << degatsRenvoi << " dégâts." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << attaquant.getNom() << " possède maintenant "
-              << attaquant.getPv() << "/" << attaquant.getPvMax() << " PV." << std::endl;
-    std::cout << std::endl;
-
-    return true;
-}
-
-void GestionnaireTours::appliquerVolDeVieDemonSiBesoin(
-    Entite& attaquant,
-    int degatsInfliges
-)
-{
-    Boss* bossAttaquant = dynamic_cast<Boss*>(&attaquant);
-
-    if (bossAttaquant == nullptr)
-    {
-        return;
-    }
-
-    if (bossAttaquant->getIdBoss() != 2 || !bossAttaquant->ultimeActif())
-    {
-        return;
-    }
-
-    if (bossAttaquant->getEffetSpecial() != 2 && bossAttaquant->getEffetSpecial() != 3)
-    {
-        return;
-    }
-
-    int soin = degatsInfliges * 50 / 100;
-
-    if (soin <= 0)
-    {
-        return;
-    }
-
-    bossAttaquant->soigner(soin);
-
-    std::cout << bossAttaquant->getNom() << " absorbe le sang de l'attaque et récupère "
-              << soin << " PV." << std::endl;
-    std::cout << std::endl;
-}
-
-void GestionnaireTours::verifierDecryptageBoss(Boss& boss)
-{
-    if (boss.doitDecrypterStats())
-    {
-        std::cout << "Très bien humain..." << std::endl;
-        Console::pauseSecondes(2);
-
-        std::cout << "Je vois que je t'ai sous-estimé." << std::endl;
-        std::cout << "Je me nomme " << boss.getNom() << ", et j'appartiens à la classe : "
-                  << boss.getType() << "." << std::endl;
-        std::cout << std::endl;
-
-        Console::pauseSecondes(3);
-
-        std::cout << "Pour récompenser tes efforts, je t'autorise à accéder à mes statistiques." << std::endl;
-        std::cout << "Décryptage en cours..." << std::endl;
-        std::cout << std::endl;
-
-        Console::pauseSecondes(3);
-
-        boss.decrypterStats();
-
-        std::cout << "Décryptage terminé." << std::endl;
-        std::cout << std::endl;
-
-        boss.afficherStats();
-
-        std::cout << "Maintenant que tu sais tout ça, je ne vais plus être si clément." << std::endl;
-        std::cout << std::endl;
-    }
-}
-
-void GestionnaireTours::executerUltimeBoss(
-    Boss& boss,
-    Entite& joueur,
-    Random& random
-)
-{
-    boss.activerUltime();
-
-    if (boss.getIdBoss() == 1)
-    {
-        std::cout << boss.getNom() << " déploie de grandes ailes dans son dos." << std::endl;
-        std::cout << "Des chaînes de lumière s'emparent de ton corps et t'immobilisent." << std::endl;
-        std::cout << "Tant que ces chaînes existeront, l'arène refusera de te rendre ton tour." << std::endl;
-        std::cout << std::endl;
-    }
-    else if (boss.getIdBoss() == 2)
-    {
-        int effet = random.entre(1, 3);
-        boss.setEffetSpecial(effet);
-
-        if (effet == 1)
-        {
-            std::cout << boss.getNom() << " libère une aura sombre qui dévore l'air autour de toi." << std::endl;
-            std::cout << "L'effet Corrosion t'est appliqué." << std::endl;
-            std::cout << "Tes PV maximum vont lentement diminuer, et tu subiras des dégâts chaque tour." << std::endl;
-        }
-        else if (effet == 2)
-        {
-            std::cout << "L'arme de " << boss.getNom() << " se teinte d'une couleur rouge sang." << std::endl;
-            std::cout << "L'effet Saignement t'est appliqué." << std::endl;
-            std::cout << boss.getNom() << " récupérera une partie des dégâts qu'il t'inflige." << std::endl;
-        }
-        else
-        {
-            std::cout << boss.getNom() << " libère une aura sombre, tandis que son arme devient rouge sang." << std::endl;
-            std::cout << "Les effets Corrosion et Saignement te sont appliqués en même temps." << std::endl;
-            std::cout << "Tes PV maximum diminuent, et chaque attaque réussie le régénère." << std::endl;
-        }
-
-        std::cout << std::endl;
-    }
-    else
-    {
-        std::cout << boss.getNom() << " se met en position de défense." << std::endl;
-        std::cout << "Son armure change de couleur et de matière." << std::endl;
-        std::cout << "Sa résistance semble désormais presque impénétrable." << std::endl;
-        std::cout << std::endl;
-    }
-
-    joueur.recevoirDegats(0);
-}
-
-bool GestionnaireTours::gererFinTourBoss(
-    Boss& boss,
-    Entite& joueur
-)
-{
-    if (boss.ultimeActif())
-    {
-        if (boss.getIdBoss() == 1)
-        {
-            boss.soigner(boss.getPvMax() * 5 / 100);
-
-            std::cout << boss.getNom() << " se régénère grâce à des esprits lumineux." << std::endl;
-            std::cout << "Les chaînes brillent encore autour de " << joueur.getNom() << "." << std::endl;
-            std::cout << std::endl;
-        }
-        else if (boss.getIdBoss() == 2)
-        {
-            if (boss.getEffetSpecial() == 1 || boss.getEffetSpecial() == 3)
-            {
-                int reductionPvMax = boss.getPvMax() * 2 / 100;
-
-                joueur.recevoirDegats(10);
-                joueur.reduirePvMax(reductionPvMax);
-
-                std::cout << joueur.getNom() << " subit les dégâts de Corrosion." << std::endl;
-                std::cout << "Ses PV maximum diminuent de " << reductionPvMax << "." << std::endl;
-                std::cout << joueur.getNom() << " possède maintenant "
-                          << joueur.getPv() << "/" << joueur.getPvMax() << " PV." << std::endl;
-                std::cout << std::endl;
-            }
-        }
-
-        boss.reduireUltime();
-
-        if (!boss.ultimeActif())
-        {
-            if (boss.getIdBoss() == 1)
-            {
-                std::cout << "Les ailes de " << boss.getNom() << " se rétractent." << std::endl;
-                std::cout << "Les chaînes de lumière disparaissent enfin." << std::endl;
-            }
-            else if (boss.getIdBoss() == 2)
-            {
-                std::cout << "L'aura sombre de " << boss.getNom() << " s'affaiblit." << std::endl;
-                std::cout << "Les miasmes quittent lentement l'arène." << std::endl;
-            }
-            else
-            {
-                std::cout << "L'armure d'" << boss.getNom() << " perd son éclat anormal." << std::endl;
-                std::cout << "Ses matériaux semblent revenir à leur état initial." << std::endl;
-            }
-
-            std::cout << std::endl;
-
-            boss.reinitialiserDelaiUltime();
-            return true;
-        }
-
-        if (boss.getIdBoss() == 1)
-        {
-            std::cout << joueur.getNom() << " tente de bouger, mais les chaînes le maintiennent au sol." << std::endl;
-            std::cout << boss.getNom() << " conserve son tour." << std::endl;
-            std::cout << std::endl;
-
-            return false;
-        }
-    }
-
-    return true;
+    return ActionsCombat::executerPotionDegats(
+        attaquant,
+        defenseur,
+        random,
+        bonusPotionDegats
+    );
 }

@@ -1,10 +1,11 @@
 #ifndef GESTIONNAIRE_TOURS_HPP
 #define GESTIONNAIRE_TOURS_HPP
 
+#include "core/Random.hpp"
+
 #include "entite/Entite.hpp"
 #include "entite/Joueur.hpp"
 #include "entite/Boss.hpp"
-#include "core/Random.hpp"
 
 class GestionnaireTours
 {
@@ -31,7 +32,8 @@ public:
         Random& random
     );
 
-private:
+    static void verifierDecryptageBoss(Boss& boss);
+
     static void executerAttaque(
         Entite& attaquant,
         Entite& defenseur,
@@ -50,28 +52,10 @@ private:
         int bonusPotionDegats
     );
 
-    static bool atlasBloqueAttaque(
-        Entite& attaquant,
-        Entite& defenseur,
-        int degats
-    );
-
-    static void appliquerVolDeVieDemonSiBesoin(
-        Entite& attaquant,
-        int degatsInfliges
-    );
-
-    static void verifierDecryptageBoss(Boss& boss);
-
-    static void executerUltimeBoss(
-        Boss& boss,
-        Entite& joueur,
-        Random& random
-    );
-
-    static bool gererFinTourBoss(
-        Boss& boss,
-        Entite& joueur
+private:
+    static bool ouvrirInterfaceObservation(
+        Entite& joueurInterface,
+        Entite& cible
     );
 };
 

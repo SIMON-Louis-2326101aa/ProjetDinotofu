@@ -18,137 +18,148 @@ J'espere que ce projet plairat a un grand nombre et laisseras de bons souvenirs 
             
 en voici plus ou moins l'architecture de base.         
          
-ProjetDinotofu/        
-├── Makefile        
-├── README.md        
-├── .gitignore        
-│         
-├── build/        
-│   └── (fichiers objets générés automatiquement)          
-│       
-├── output/       
-│   └── ProjetDinotofu        
-│       
-├── assets/      
-│   ├── textes/       
-│   │   ├── dialogues/      
-│   │   ├── descriptions/      
-│   │   └── lore/     
-│   │      
-│   ├── sauvegardes/       
-│   │   ├── campagnes/         
+ProjetDinotofu/    
+├── Makefile    
+├── README.md    
+├── .gitignore    
+│    
+├── build/    
+│   └── (fichiers objets générés automatiquement)    
+│    
+├── output/    
+│   └── ProjetDinotofu    
+│    
+├── assets/    
+│   ├── textes/    
+│   │   ├── dialogues/    
+│   │   ├── descriptions/    
+│   │   └── lore/    
+│   │    
+│   ├── sauvegardes/    
+│   │   ├── campagnes/    
 │   │   └── joueurs/    
 │   │    
 │   └── config/    
-│       ├── classes.json      
-│       ├── monstres.json       
-│       ├── boss.json       
+│       ├── classes.json    
+│       ├── monstres.json    
+│       ├── boss.json    
 │       ├── armes.json    
-│       ├── armures.json      
-│       ├── consommables.json      
-│       └── materiaux.json         
-│       
-├── include/         
-│   ├── core/      
-│   │   ├── Jeu.hpp        
-│   │   ├── ModeJeu.hpp     
-│   │   ├── Console.hpp      
-│   │   ├── Random.hpp       
-│   │   └── Config.hpp   
-│   │      
-│   ├── entite/       
-│   │   ├── Entite.hpp       
-│   │   ├── Joueur.hpp       
-│   │   ├── Monstre.hpp       
-│   │   ├── Boss.hpp       
-│   │   └── PNJ.hpp       
-│   │       
-│   ├── classe/      
-│   │   ├── ClasseJoueur.hpp       
-│   │   ├── EvolutionClasse.hpp     
-│   │   └── CatalogueClasses.hpp      
-│   │       
+│       ├── armures.json    
+│       ├── consommables.json    
+│       └── materiaux.json    
+│    
+├── include/    
+│   ├── core/    
+│   │   ├── Jeu.hpp    
+│   │   ├── ModeJeu.hpp    
+│   │   ├── Console.hpp    
+│   │   ├── Random.hpp    
+│   │   └── Config.hpp    
+│   │    
+│   ├── entite/    
+│   │   ├── Entite.hpp    
+│   │   ├── Joueur.hpp    
+│   │   ├── Monstre.hpp    
+│   │   ├── Boss.hpp    
+│   │   ├── PNJ.hpp    
+│   │   ├── Race.hpp    
+│   │   └── CatalogueMonstres.hpp    
+│   │    
+│   ├── classe/    
+│   │   ├── ClasseJoueur.hpp    
+│   │   ├── EvolutionClasse.hpp    
+│   │   └── CatalogueClasses.hpp    
+│   │    
 │   ├── combat/    
-│   │   ├── Combat.hpp
-│   │   ├── TourCombat.hpp
-│   │   ├── GestionnaireTours.hpp
-│   │   ├── IACombat.hpp
-│   │   ├── SystemeDegats.hpp
-│   │   ├── modes/
-│   │   │   ├── ModePvp.hpp
-│   │   │   ├── ModePvpIA.hpp
-│   │   │   ├── ModePveBoss.hpp
-│   │   │   └── ModePveMonstres.hpp      
-│   │      
-│   ├── action/      
-│   │   ├── Action.hpp      
-│   │   ├── Attaque.hpp      
-│   │   ├── Competence.hpp     
-│   │   ├── Ultime.hpp        
-│   │   ├── UtiliserObjet.hpp        
-│   │   └── PasserTour.hpp        
-│   │         
-│   ├── effet/        
-│   │   ├── Effet.hpp       
-│   │   ├── Saignement.hpp      
-│   │   ├── Corrosion.hpp       
-│   │   ├── Regeneration.hpp       
-│   │   ├── Immobilisation.hpp      
-│   │   ├── BuffDegats.hpp       
-│   │   └── ArmureSpeciale.hpp        
-│   │        
-│   ├── objet/      
-│   │   ├── Objet.hpp       
-│   │   ├── Inventaire.hpp     
-│   │   ├── arme/      
-│   │   │   ├── Arme.hpp      
-│   │   │   ├── TypeArme.hpp     
-│   │   │   └── CatalogueArmes.hpp       
-│   │   │        
-│   │   ├── armure/      
-│   │   │   ├── Armure.hpp     
-│   │   │   ├── TypeArmure.hpp        
-│   │   │   └── CatalogueArmures.hpp       
-│   │   │      
-│   │   ├── consommable/         
-│   │   │   ├── Consommable.hpp       
-│   │   │   ├── TypeConsommable.hpp       
-│   │   │   └── CatalogueConsommables.hpp        
-│   │   │         
-│   │   └── materiau/      
-│   │       ├── Materiau.hpp      
-│   │       └── CatalogueMateriaux.hpp      
-│   │        
-│   ├── progression/      
-│   │   ├── Niveau.hpp        
-│   │   ├── Experience.hpp       
-│   │   ├── Statistique.hpp      
-│   │   └── CaracteristiquesDnd.hpp       
-│   │        
-│   ├── economie/      
-│   │   ├── Argent.hpp      
+│   │   ├── Combat.hpp    
+│   │   ├── TourCombat.hpp    
+│   │   ├── GestionnaireTours.hpp    
+│   │   ├── ActionsCombat.hpp    
+│   │   ├── BossCombat.hpp    
+│   │   ├── IACombat.hpp    
+│   │   ├── SystemeDegats.hpp    
+│   │   ├── SystemeClassesCombat.hpp   
+│   │   ├── SystemeFuite.hpp   
+│   │   ├── SystemeObservation.hpp    
+│   │   ├── SystemeVagueCombat.hpp    
+│   │   ├── FileEnnemisCombat.hpp    
+│   │   └── modes/    
+│   │       ├── ModePvp.hpp    
+│   │       ├── ModePvpIA.hpp    
+│   │       ├── ModePveBoss.hpp    
+│   │       └── ModePveMonstres.hpp    
+│   │    
+│   ├── action/    
+│   │   ├── Action.hpp    
+│   │   ├── Attaque.hpp    
+│   │   ├── Competence.hpp    
+│   │   ├── Ultime.hpp    
+│   │   ├── UtiliserObjet.hpp    
+│   │   └── PasserTour.hpp    
+│   │    
+│   ├── effet/    
+│   │   ├── Effet.hpp    
+│   │   ├── Saignement.hpp    
+│   │   ├── Corrosion.hpp    
+│   │   ├── Regeneration.hpp    
+│   │   ├── Immobilisation.hpp    
+│   │   ├── BuffDegats.hpp    
+│   │   └── ArmureSpeciale.hpp    
+│   │    
+│   ├── objet/    
+│   │   ├── Objet.hpp    
+│   │   ├── Inventaire.hpp    
+│   │   ├── arme/    
+│   │   │   ├── Arme.hpp    
+│   │   │   ├── TypeArme.hpp    
+│   │   │   └── CatalogueArmes.hpp    
+│   │   │    
+│   │   ├── armure/    
+│   │   │   ├── Armure.hpp    
+│   │   │   ├── TypeArmure.hpp    
+│   │   │   └── CatalogueArmures.hpp    
+│   │   │    
+│   │   ├── consommable/    
+│   │   │   ├── Consommable.hpp    
+│   │   │   ├── TypeConsommable.hpp    
+│   │   │   └── CatalogueConsommables.hpp    
+│   │   │    
+│   │   └── materiau/    
+│   │       ├── Materiau.hpp    
+│   │       └── CatalogueMateriaux.hpp    
+│   │    
+│   ├── progression/    
+│   │   ├── Niveau.hpp    
+│   │   ├── Experience.hpp    
+│   │   ├── Statistique.hpp    
+│   │   └── CaracteristiquesDnd.hpp    
+│   │    
+│   ├── economie/    
+│   │   ├── Argent.hpp    
 │   │   └── Boutique.hpp    
-│   │     
-│   ├── sauvegarde/     
-│   │   ├── Sauvegarde.hpp     
-│   │   ├── SauvegardeJoueur.hpp        
-│   │   ├── SauvegardeCampagne.hpp      
-│   │   └── Compte.hpp       
-│   │      
-│   ├── histoire/         
-│   │   ├── Campagne.hpp      
-│   │   ├── Chapitre.hpp      
-│   │   ├── Dialogue.hpp      
-│   │   ├── Evenement.hpp            
-│   │   ├── Reputation.hpp         
+│   │    
+│   ├── sauvegarde/    
+│   │   ├── Sauvegarde.hpp    
+│   │   ├── SauvegardeJoueur.hpp    
+│   │   ├── SauvegardeCampagne.hpp    
+│   │   └── Compte.hpp    
+│   │    
+│   ├── histoire/    
+│   │   ├── Campagne.hpp    
+│   │   ├── Chapitre.hpp    
+│   │   ├── Dialogue.hpp    
+│   │   ├── Evenement.hpp    
+│   │   ├── Reputation.hpp    
 │   │   └── ChoixJoueur.hpp    
 │   │    
 │   ├── interface/    
 │   │   ├── Interface.hpp    
 │   │   ├── InterfaceTerminal.hpp    
-│   │   ├── InterfaceGraphique.hpp  
-│   │   ├── MenuCombat.hpp  
-│   │   ├── MenuInventaire.hpp  
+│   │   ├── InterfaceGraphique.hpp    
+│   │   ├── MenuCibleCombat.hpp   
+│   │   ├── MenuCombat.hpp    
+│   │   ├── MenuPotionsCombat.hpp   
+│   │   ├── MenuInventaire.hpp    
 │   │   └── MenuEquipement.hpp    
 │   │    
 │   └── utils/    
@@ -157,20 +168,21 @@ ProjetDinotofu/
 │       └── FileUtils.hpp    
 │    
 └── src/    
-    ├── main.cpp   
+    ├── main.cpp    
     │    
     ├── core/    
-    │   ├── Jeu.cpp   
-    │   ├── Console.cpp     
+    │   ├── Jeu.cpp    
+    │   ├── Console.cpp    
     │   ├── Random.cpp    
     │   └── Config.cpp    
     │    
-    ├── entite/   
-    │   ├── Entite.cpp     
-    │   ├── Joueur.cpp   
+    ├── entite/    
+    │   ├── Entite.cpp    
+    │   ├── Joueur.cpp    
     │   ├── Monstre.cpp    
-    │   ├── Boss.cpp   
-    │   └── PNJ.cpp     
+    │   ├── Boss.cpp    
+    │   ├── PNJ.cpp    
+    │   └── CatalogueMonstres.cpp    
     │    
     ├── classe/    
     │   ├── ClasseJoueur.cpp    
@@ -178,16 +190,23 @@ ProjetDinotofu/
     │   └── CatalogueClasses.cpp    
     │    
     ├── combat/    
-    │   ├── Combat.cpp
-    │   ├── TourCombat.cpp
-    │   ├── GestionnaireTours.cpp
-    │   ├── IACombat.cpp
-    │   ├── SystemeDegats.cpp
-    │   ├── modes/
-    │   │   ├── ModePvp.cpp
-    │   │   ├── ModePvpIA.cpp
-    │   │   ├── ModePveBoss.cpp
-    │   │   └── ModePveMonstres.cpp
+    │   ├── Combat.cpp    
+    │   ├── TourCombat.cpp    
+    │   ├── GestionnaireTours.cpp    
+    │   ├── ActionsCombat.cpp    
+    │   ├── BossCombat.cpp    
+    │   ├── IACombat.cpp    
+    │   ├── SystemeDegats.cpp   
+    │   ├── SystemeFuite.cpp   
+    │   ├── SystemeClassesCombat.cpp    
+    │   ├── SystemeObservation.cpp       
+    │   ├── SystemeVagueCombat.cpp    
+    │   ├── FileEnnemisCombat.cpp    
+    │   └── modes/    
+    │       ├── ModePvp.cpp    
+    │       ├── ModePvpIA.cpp    
+    │       ├── ModePveBoss.cpp    
+    │       └── ModePveMonstres.cpp    
     │    
     ├── action/    
     │   ├── Action.cpp    
@@ -211,7 +230,7 @@ ProjetDinotofu/
     │   ├── Inventaire.cpp    
     │   │    
     │   ├── arme/    
-    │   │   ├── Arme.cpp     
+    │   │   ├── Arme.cpp    
     │   │   └── CatalogueArmes.cpp    
     │   │    
     │   ├── armure/    
@@ -226,39 +245,41 @@ ProjetDinotofu/
     │       ├── Materiau.cpp    
     │       └── CatalogueMateriaux.cpp    
     │    
-    ├── progression/     
+    ├── progression/    
     │   ├── Niveau.cpp    
     │   ├── Experience.cpp    
-    │   ├── Statistique.cpp   
-    │   └── CaracteristiquesDnd.cpp   
+    │   ├── Statistique.cpp    
+    │   └── CaracteristiquesDnd.cpp    
     │    
     ├── economie/    
-    │   ├── Argent.cpp   
+    │   ├── Argent.cpp    
     │   └── Boutique.cpp    
-    │   
-    ├── sauvegarde/   
+    │    
+    ├── sauvegarde/    
     │   ├── Sauvegarde.cpp    
     │   ├── SauvegardeJoueur.cpp    
     │   ├── SauvegardeCampagne.cpp    
-    │   └── Compte.cpp     
-    │   
-    ├── histoire/   
+    │   └── Compte.cpp    
+    │    
+    ├── histoire/    
     │   ├── Campagne.cpp    
-    │   ├── Chapitre.cpp  
+    │   ├── Chapitre.cpp    
     │   ├── Dialogue.cpp    
     │   ├── Evenement.cpp    
     │   ├── Reputation.cpp    
-    │   └── ChoixJoueur.cpp   
-    │     
+    │   └── ChoixJoueur.cpp    
+    │    
     ├── interface/    
-    │   ├── Interface.cpp   
+    │   ├── Interface.cpp    
     │   ├── InterfaceTerminal.cpp    
-    │   ├── InterfaceGraphique.cpp   
-    │   ├── MenuCombat.cpp   
-    │   ├── MenuInventaire.cpp   
-    │   └── MenuEquipement.cpp   
+    │   ├── InterfaceGraphique.cpp    
+    │   ├── MenuCibleCombat.cpp   
+    │   ├── MenuCombat.cpp    
+    │   ├── MenuPotionsCombat.cpp    
+    │   ├── MenuInventaire.cpp    
+    │   └── MenuEquipement.cpp    
     │    
     └── utils/    
         ├── Utils.cpp    
-        ├── StringUtils.cpp     
+        ├── StringUtils.cpp    
         └── FileUtils.cpp    

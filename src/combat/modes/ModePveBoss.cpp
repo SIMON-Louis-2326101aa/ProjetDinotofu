@@ -109,6 +109,7 @@ void ModePveBoss::lancer(Joueur& joueur1, Random& random)
 
             if (tourTermine)
             {
+                GestionnaireTours::verifierDecryptageBoss(boss);
                 boss.reduireDelaiUltime();
                 tour = 2;
             }
