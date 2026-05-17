@@ -4,7 +4,7 @@
 
 #include "core/Console.hpp"
 #include "classe/CatalogueClasses.hpp"
-#include "interface/MenuCombat.hpp"
+#include "interface/AffichageCombat.hpp"
 
 #include <iostream>
 
@@ -88,5 +88,5 @@ void ModePvp::lancer(Joueur& joueur1, Random& random)
         }
     }
 
-    MenuCombat::afficherResultatCombat(joueur1, joueur2);
+    AffichageCombat::afficherResultatCombat(joueur1, joueur2);
 }
