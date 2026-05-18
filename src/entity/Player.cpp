@@ -6,6 +6,7 @@
 #include "item/weapon/WeaponCatalog.hpp"
 #include "item/armor/ArmorCatalog.hpp"
 #include "item/consumable/ConsumableCatalog.hpp"
+#include "progression/DifficultyRules.hpp"
 
 #include <iostream>
 
@@ -186,27 +187,97 @@ void Player::unequipArmor()
 
 void Player::initializeStarterInventory()
 {
+    initializeStarterInventory(DifficultyMode::Normal);
+}
+
+void Player::initializeStarterInventory(DifficultyMode difficulty)
+{
     inventory.addWeapon(WeaponCatalog::createBareHands());
     inventory.addWeapon(WeaponCatalog::createRustySword());
+
+    Weapon* rustySword = inventory.getMutableWeapon(1);
+
+    if (rustySword != nullptr)
+    {
+        rustySword->loseDurability(
+            DifficultyRules::getStarterWeaponDurabilityLoss(difficulty)
+        );
+    }
 
     equipWeapon(1);
 
     inventory.addArmor(ArmorCatalog::createSimpleOutfit());
     inventory.addArmor(ArmorCatalog::createWornLeatherArmor());
 
+    Armor* wornLeatherArmor = inventory.getMutableArmor(1);
+
+    if (wornLeatherArmor != nullptr)
+    {
+        wornLeatherArmor->loseDurability(
+            DifficultyRules::getStarterArmorDurabilityLoss(difficulty)
+        );
+    }
+
     equipArmor(0);
 
-    for (int i = 0; i < healingPotionCount; i++)
+    int starterHealingPotions =
+        DifficultyRules::getStarterHealingPotionCount(
+            healingPotionCount,
+            difficulty
+        );
+
+    int starterDamagePotions =
+        DifficultyRules::getStarterDamagePotionCount(
+            damagePotionCount,
+            difficulty
+        );
+
+    for (int i = 0; i < starterHealingPotions; i++)
     {
         inventory.addConsumable(ConsumableCatalog::createBasicHealingPotion());
     }
 
-    for (int i = 0; i < damagePotionCount; i++)
+    for (int i = 0; i < starterDamagePotions; i++)
     {
         inventory.addConsumable(ConsumableCatalog::createBasicDamagePotion());
     }
 
-    inventory.earnGold(50);
+    inventory.earnGold(
+        DifficultyRules::getStarterGold(difficulty)
+    );
+}
+
+bool Player::destroyEquippedWeapon()
+{
+    if (!hasEquippedWeapon())
+    {
+        return false;
+    }
+
+    int index = equippedWeaponIndex;
+    equippedWeaponIndex = -1;
+
+    return inventory.removeWeapon(index);
+}
+
+bool Player::destroyEquippedArmor()
+{
+    if (!hasEquippedArmor())
+    {
+        return false;
+    }
+
+    Armor armor = getEquippedArmor();
+
+    if (armor.getName() == "Tenue simple")
+    {
+        return false;
+    }
+
+    int index = equippedArmorIndex;
+    unequipArmor();
+
+    return inventory.removeArmor(index);
 }
 
 void Player::gainExperience(int amount)

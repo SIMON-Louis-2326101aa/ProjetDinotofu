@@ -3,6 +3,8 @@
 
 #include "combat/reward/CombatRewardSystem.hpp"
 
+#include "progression/DifficultyRules.hpp"
+
 #include <iostream>
 
 CombatReward CombatRewardSystem::calculateMonsterReward(const Monster& monster)
@@ -67,6 +69,27 @@ CombatReward CombatRewardSystem::calculateDamagedAliveEnemiesReward(const EnemyC
     return totalReward;
 }
 
+CombatReward CombatRewardSystem::calculateDamagedAliveEnemiesReward(
+    const EnemyCombatQueue& wave,
+    DifficultyMode difficulty
+)
+{
+    CombatReward totalReward;
+
+    for (int i = 0; i < wave.getDamagedAliveEnemyCount(); ++i)
+    {
+        CombatReward enemyReward = calculateMonsterReward(wave.getDamagedAliveEnemy(i));
+
+        totalReward.addReward(
+            enemyReward.getPercentage(
+                DifficultyRules::getPlayerPveEscapeDamagedAliveRewardPercentage(difficulty)
+            )
+        );
+    }
+
+    return totalReward;
+}
+
 CombatReward CombatRewardSystem::calculateWaveReward(const EnemyCombatQueue& wave)
 {
     CombatReward totalReward;
@@ -94,6 +117,28 @@ CombatReward CombatRewardSystem::calculatePlayerEscapeReward(const EnemyCombatQu
 
     totalReward.addReward(
         calculateDamagedAliveEnemiesReward(wave)
+    );
+
+    return totalReward;
+}
+
+CombatReward CombatRewardSystem::calculatePlayerEscapeReward(
+    const EnemyCombatQueue& wave,
+    DifficultyMode difficulty
+)
+{
+    CombatReward totalReward;
+
+    CombatReward defeatedReward = calculateDefeatedEnemiesReward(wave);
+
+    totalReward.addReward(
+        defeatedReward.getPercentage(
+            DifficultyRules::getPlayerPveEscapeDefeatedRewardPercentage(difficulty)
+        )
+    );
+
+    totalReward.addReward(
+        calculateDamagedAliveEnemiesReward(wave, difficulty)
     );
 
     return totalReward;

@@ -15,7 +15,8 @@ public:
     static DeathPenaltyResult applyNonLethalDeathPenalty(
         Player& player,
         DifficultyMode difficulty,
-        Random& random
+        Random& random,
+        bool canStealEquipment = false
     );
 
     static void displayNonLethalDeathPenalty(
@@ -24,6 +25,7 @@ public:
 
     static void displayLethalDeathCorruption();
     static void displayLethalCurrentDeathStatistic();
+    static void displayLethalSurvivalAnomaly();
 };
 
 #endif

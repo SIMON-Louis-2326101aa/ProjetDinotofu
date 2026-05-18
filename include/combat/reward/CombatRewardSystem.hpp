@@ -9,6 +9,7 @@
 
 #include "entity/Monster.hpp"
 #include "entity/Player.hpp"
+#include "progression/DifficultyMode.hpp"
 
 #include <string>
 
@@ -24,9 +25,17 @@ public:
     static CombatReward calculateDefeatedEnemiesReward(const EnemyCombatQueue& wave);
     static CombatReward calculateEscapedEnemiesReward(const EnemyCombatQueue& wave);
     static CombatReward calculateDamagedAliveEnemiesReward(const EnemyCombatQueue& wave);
+    static CombatReward calculateDamagedAliveEnemiesReward(
+        const EnemyCombatQueue& wave,
+        DifficultyMode difficulty
+    );
     static CombatReward calculateWaveReward(const EnemyCombatQueue& wave);
 
     static CombatReward calculatePlayerEscapeReward(const EnemyCombatQueue& wave);
+    static CombatReward calculatePlayerEscapeReward(
+        const EnemyCombatQueue& wave,
+        DifficultyMode difficulty
+    );
 
     static void giveRewardToPlayer(
         Player& player,

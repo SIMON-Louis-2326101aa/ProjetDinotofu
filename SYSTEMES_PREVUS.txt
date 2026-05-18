@@ -1,0 +1,147 @@
+DINOTOFU - SYSTÈMES PRÉVUS
+==========================
+
+Ce fichier sert de mémo général pour les idées déjà validées ou prévues.
+Il ne remplace pas le README : le README explique le projet, ce fichier garde la vision long terme.
+
+1. Difficultés
+--------------
+- La difficulté est choisie après le nom du joueur, avant la classe.
+- Elle influence le kit de départ : or, potions, durabilité de départ.
+- Difficultés prévues : Facile, Normal, Difficile, Cauchemar, Léthal.
+- Plus la difficulté augmente, plus les pénalités deviennent sévères.
+- En Léthal, la mort normale est définitive : le personnage doit être déplacé dans un registre des morts et retiré des personnages jouables.
+- Une anomalie de survie pourra exister en Léthal, mais seulement dans un contexte narratif spécial, probablement via une bénédiction débloquée.
+- En cas d'anomalie : survie à 1 PV, inventaire/stuff détruit ou perdu, toutes les bénédictions consommées.
+
+2. Mort non définitive
+----------------------
+- Perte partielle d'or.
+- Perte partielle d'expérience actuelle.
+- Perte partielle de consommables et, plus tard, de matériaux.
+- L'équipement équipé perd de la durabilité.
+- Par défaut, environ 50% de la durabilité actuelle peut être perdue.
+- En difficulté plus élevée, ce taux augmente légèrement.
+- L'équipement peut se casser totalement.
+- Un objet cassé peut devenir irréparable et se transformer en fragments/matériaux.
+- Les équipements incassables ne sont pas touchés.
+- Certains matériaux très solides pourront réduire fortement les dégâts de durabilité et le risque critique.
+- Les objets liés au corps, à l'âme ou au personnage pourront être protégés par exception.
+
+3. Vol d'équipement à la mort
+-----------------------------
+- En cas de mort non définitive, certains ennemis pourront voler l'équipement équipé.
+- Le vol doit seulement arriver contre des ennemis cohérents : humanoïdes, semi-humains hostiles, races intelligentes, voleurs, bandits, etc.
+- Pas de vol par défaut contre un monstre idiot ou un boss, sauf cas spécial.
+- Test séparé par équipement : arme équipée, armure équipée.
+- La tenue simple de base ne doit pas être volée.
+- Les chances restent faibles, mais augmentent légèrement avec la difficulté.
+
+4. Respawn
+----------
+- Facile : retour autour de 75% PV.
+- Normal : retour autour de 50% PV.
+- Difficile : retour autour de 30% PV.
+- Cauchemar : retour autour de 10% PV.
+- Léthal : normalement pas de respawn classique.
+- Plus tard, mana et autres ressources devront aussi être concernées.
+
+5. Récompenses et fuite
+-----------------------
+- En PvE monstres, une fuite réussie ne doit pas tout supprimer.
+- Les monstres déjà vaincus donnent une partie des récompenses selon la difficulté.
+- Les monstres encore en vie mais blessés donnent aussi une petite partie, actuellement pensée autour de 25% en Normal.
+- Les ennemis qui fuient donnent environ 75% de leur récompense pour éviter les abus.
+- En boss, la fuite reste impossible, mais le joueur peut tenter et perdre son tour.
+- En PvP / PvP IA, la fuite représente plutôt un abandon du combat.
+
+6. Bestiaire
+------------
+- Catégories prévues : allié, entité passive/alliée, entité hostile/ennemie, invocation, boss.
+- Les entités jamais rencontrées affichent ???.
+- Une entité rencontrée peut d'abord révéler seulement son apparence ou une description physique.
+- Plus le joueur combat une entité, plus les informations se débloquent.
+- Le nombre de fois où chaque entité a été tuée par le joueur doit être affiché.
+- Pour les boss, le nom ne doit apparaître que lorsqu'il est réellement appris.
+- Un boss peut révéler son nom en entrée de scène, à 50% PV, avant défaite, ou via une source fiable.
+- Des écrits/légendes peuvent donner des indices, mais pas forcément le nom exact.
+
+7. Statistiques
+---------------
+- Statistiques de personnage : temps de survie, morts, ennemis tués, alliés tués, boss vaincus, objets utilisés, fuites, etc.
+- Statistiques de compte : total global tous personnages confondus.
+- En Léthal, les statistiques de mort sont corrompues :
+  Morts du personnage : [STATISTIQUE CORROMPUE]
+  Vous ne deviez pas mourir.
+  Statut : personnage supprimé du registre des vivants.
+  Connais-tu quelqu'un capable d'échapper à la mort ? Moi non...
+- Avant la mort en Léthal :
+  Morts du personnage : [STATISTIQUE CORROMPUE]
+  But de mission : survivre.
+
+8. Matériaux
+------------
+- Les matériaux auront leur propre progression de connaissance.
+- Nombre récupéré.
+- Description.
+- Utilité découverte progressivement.
+- Certains matériaux ne pourront être récoltés qu'avec des équipements spéciaux, par exemple des gants.
+- Les matériaux pourront influencer la durabilité, les résistances, les faiblesses, la réparation et la casse irréparable.
+
+9. Équipement
+-------------
+- Armes : corps à corps, distance, magique, autre.
+- Armures : tissu, cuir, maille, plaque, magique, etc.
+- Raretés futures : commun, rare, héroïque, relique, unique, etc.
+- Effets spéciaux futurs : saignement, corrosion, brise-armure, élément, vol de vie, bénédiction, malédiction.
+- Les armes à distance consommeront des munitions.
+- Les armes magiques consommeront mana/charges.
+- Les armes cassées ne donnent plus leurs bonus.
+- Un équipement peut devenir irréparable si sa destruction est trop violente.
+
+10. Combat de groupe / coop / invocations
+-----------------------------------------
+- Prévoir de la coop.
+- Prévoir des alliés IA.
+- Prévoir des invocations.
+- Les règles doivent ressembler au PvE monstres : groupes, slots actifs, file d'attente.
+- L'ordre de tour pourra être d'abord simple, puis dépendre de l'initiative.
+- L'initiative dépendra fortement de la Dextérité plus tard.
+
+11. Personnages spéciaux semi-humains
+-------------------------------------
+- Ce ne sont pas des monstres.
+- Ils vivent selon les villes en harmonie avec les humains, comme dans un monde médiéval-fantastique / DND.
+- Ils peuvent apparaître avec un taux de chance spécial.
+- En dehors de ces apparitions, les rencontres utilisent plutôt des noms/personnes aléatoires.
+- Personnages prévus : Matt (PRO), Hazak, Mattzelda, Aoi, Kanadé, Fail, Trexof.
+- Matt (PRO) : référence à Matt de Wii Sports, bonus légers, IA correcte.
+- Hazak : assassin elfe noir.
+- Mattzelda : colosse humain.
+- Aoi : future mage flamme / invocatrice kitsune, katana, race kitsune.
+- Kanadé : mage semi-dragonne, sorts aléatoires liés aux 13 signes du zodiaque.
+- Fail : mage fou, race fée, sorts variés et parfois uniques.
+- Trexof : assassin humain, bonus légers, bêta testeur principal.
+
+12. Boss et panthéon
+--------------------
+- Plus tard, les boss et sous-boss pourront dépendre du panthéon.
+- Certains boss seront liés à une hiérarchie divine.
+- Certains types/classes de boss pourront dépendre directement d'un dieu, d'une lignée, d'une bénédiction ou d'une corruption.
+- Les boss doivent garder une part de mystère : stats cachées, nom non révélé immédiatement, dialogues à seuils.
+
+13. Sauvegardes JSON
+--------------------
+- Pas besoin d'une vraie base de données SQL pour l'instant.
+- Les données seront plutôt stockées en JSON.
+- Sauvegardes prévues : comptes, personnages jouables, personnages morts, bestiaire, matériaux, statistiques, campagne.
+- Les fichiers JSON permettront de garder une grosse base de données locale sans complexifier trop tôt.
+
+14. Menus futurs
+----------------
+- Menus de statistiques.
+- Menus de bestiaire.
+- Menus de matériaux.
+- Menus de compte.
+- Menus de personnage.
+- Comme l'inventaire : liste d'abord, puis inspection après sélection.

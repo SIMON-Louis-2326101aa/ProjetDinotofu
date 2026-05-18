@@ -8,6 +8,7 @@
 
 #include "entity/Player.hpp"
 #include "core/GameMode.hpp"
+#include "progression/DifficultyMode.hpp"
 
 class Game
 {
@@ -15,13 +16,17 @@ private:
     std::string playerName;
     Player mainPlayer;
     GameMode selectedMode;
+    DifficultyMode selectedDifficulty;
 
     void displayIntroduction();
     void askPlayerName();
+    void chooseDifficulty();
     void choosePlayerClass();
     void chooseGameMode();
     void displaySelectedMode();
     void launchSelectedMode();
+
+    std::string getDifficultyName() const;
 
 public:
     Game();

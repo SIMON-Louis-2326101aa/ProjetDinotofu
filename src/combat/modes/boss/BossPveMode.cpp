@@ -9,10 +9,17 @@
 #include "class_system/ClassCatalog.hpp"
 #include "boss/BossCatalog.hpp"
 #include "interface/CombatDisplay.hpp"
+#include "progression/DifficultyRules.hpp"
+#include "progression/death/DeathPenaltyResult.hpp"
+#include "progression/death/DeathPenaltySystem.hpp"
 
 #include <iostream>
 
-void BossPveMode::run(Player& player1, Random& random)
+void BossPveMode::run(
+    Player& player1,
+    Random& random,
+    DifficultyMode difficulty
+)
 {
     std::cout << "Vous sentez une aura maléfique autour de vous." << std::endl;
     Console::pauseSeconds(2);
@@ -133,4 +140,35 @@ void BossPveMode::run(Player& player1, Random& random)
     }
 
     CombatDisplay::displayCombatResult(player1, boss);
+
+    if (player1.isDead())
+    {
+        if (DifficultyRules::isPermanentDeath(difficulty))
+        {
+            DeathPenaltySystem::displayLethalDeathCorruption();
+            return;
+        }
+
+        DeathPenaltyResult deathPenalty = DeathPenaltySystem::applyNonLethalDeathPenalty(
+            player1,
+            difficulty,
+            random
+        );
+
+        DeathPenaltySystem::displayNonLethalDeathPenalty(deathPenalty);
+
+        player1.reviveWithHealthPercentage(
+            DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty)
+        );
+
+        std::cout << player1.getName()
+                  << " revient à lui avec "
+                  << player1.getHp()
+                  << "/"
+                  << player1.getMaxHp()
+                  << " PV."
+                  << std::endl;
+        std::cout << "Même vaincu, tu n'es pas encore sorti du registre des vivants." << std::endl;
+        std::cout << std::endl;
+    }
 }

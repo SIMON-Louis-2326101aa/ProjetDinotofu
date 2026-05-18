@@ -13,6 +13,7 @@ Game::Game()
 {
     playerName = "";
     selectedMode = GameMode::AIPvp;
+    selectedDifficulty = DifficultyMode::Normal;
 }
 
 void Game::run()
@@ -21,6 +22,7 @@ void Game::run()
 
     displayIntroduction();
     askPlayerName();
+    chooseDifficulty();
     choosePlayerClass();
     chooseGameMode();
     displaySelectedMode();
@@ -66,6 +68,74 @@ void Game::askPlayerName()
     Console::clear();
 }
 
+void Game::chooseDifficulty()
+{
+    std::cout << "Choisis la difficulté de ton personnage." << std::endl;
+    std::cout << "Ce choix influence le kit de départ, les récompenses, la mort et le respawn." << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "1 : Facile" << std::endl;
+    std::cout << "    Plus d'or, plus de sécurité, retour à 75% PV après une mort non définitive." << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "2 : Normal" << std::endl;
+    std::cout << "    L'expérience Dinotofu standard." << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "3 : Difficile" << std::endl;
+    std::cout << "    Moins de ressources, pénalités plus dures, retour à 30% PV." << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "4 : Cauchemar" << std::endl;
+    std::cout << "    Très punitif, retour à 10% PV, et la mort commence vraiment à avoir des dents." << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "5 : Léthal" << std::endl;
+    std::cout << "    Mort définitive prévue plus tard. Les statistiques de mort sont corrompues." << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "> ";
+
+    int choice = Console::askNumberBetween(
+        1,
+        5,
+        "Veuillez entrer un chiffre valide entre 1 et 5."
+    );
+
+    switch (choice)
+    {
+        case 1:
+            selectedDifficulty = DifficultyMode::Easy;
+            break;
+
+        case 3:
+            selectedDifficulty = DifficultyMode::Hard;
+            break;
+
+        case 4:
+            selectedDifficulty = DifficultyMode::Nightmare;
+            break;
+
+        case 5:
+            selectedDifficulty = DifficultyMode::Lethal;
+            break;
+
+        case 2:
+        default:
+            selectedDifficulty = DifficultyMode::Normal;
+            break;
+    }
+
+    Console::clear();
+
+    std::cout << "Difficulté sélectionnée : " << getDifficultyName() << "." << std::endl;
+    std::cout << "Ton départ sera ajusté en conséquence." << std::endl;
+    std::cout << std::endl;
+
+    Console::waitForEnter();
+    Console::clear();
+}
+
 void Game::choosePlayerClass()
 {
     std::cout << "Choisis ta classe et entre dans l'arène." << std::endl;
@@ -86,16 +156,18 @@ void Game::choosePlayerClass()
     PlayerClass chosenClass = ClassCatalog::createBaseClass(choice);
     mainPlayer = Player(playerName, chosenClass);
 
-    mainPlayer.initializeStarterInventory();
+    mainPlayer.initializeStarterInventory(selectedDifficulty);
 
     Console::clear();
 
     std::cout << playerName << ", tu as choisi la classe : " << chosenClass.getName() << "." << std::endl;
+    std::cout << "Difficulté : " << getDifficultyName() << "." << std::endl;
     std::cout << "Tes statistiques ont été gravées dans l'arène avec succès." << std::endl;
-    std::cout << "Quelques objets de départ ont été ajoutés à ton inventaire." << std::endl;
+    std::cout << "Ton équipement et tes ressources de départ ont été adaptés à la difficulté." << std::endl;
     std::cout << std::endl;
 
     mainPlayer.displayStats();
+    mainPlayer.displaySimpleEquipment();
 
     Console::waitForEnter();
     Console::clear();
@@ -160,6 +232,7 @@ void Game::displaySelectedMode()
     }
 
     std::cout << std::endl;
+    std::cout << "Difficulté : " << getDifficultyName() << std::endl;
     std::cout << std::endl;
 
     Console::waitForEnter();
@@ -186,16 +259,38 @@ void Game::launchSelectedMode()
 
         case GameMode::MonsterPve:
         {
-            combat.launchMonsterPve(mainPlayer);
+            combat.launchMonsterPve(mainPlayer, selectedDifficulty);
             break;
         }
 
         case GameMode::BossPve:
         {
-            combat.launchBossPve(mainPlayer);
+            combat.launchBossPve(mainPlayer, selectedDifficulty);
             break;
         }
     }
 
     std::cout << std::endl;
+}
+
+std::string Game::getDifficultyName() const
+{
+    switch (selectedDifficulty)
+    {
+        case DifficultyMode::Easy:
+            return "Facile";
+
+        case DifficultyMode::Hard:
+            return "Difficile";
+
+        case DifficultyMode::Nightmare:
+            return "Cauchemar";
+
+        case DifficultyMode::Lethal:
+            return "Léthal";
+
+        case DifficultyMode::Normal:
+        default:
+            return "Normal";
+    }
 }

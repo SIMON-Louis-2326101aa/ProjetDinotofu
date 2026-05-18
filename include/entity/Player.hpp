@@ -7,6 +7,7 @@
 #include "entity/Entity.hpp"
 #include "class_system/PlayerClass.hpp"
 #include "item/Inventory.hpp"
+#include "progression/DifficultyMode.hpp"
 
 class Player : public Entity
 {
@@ -47,6 +48,10 @@ public:
     void unequipArmor();
 
     void initializeStarterInventory();
+    void initializeStarterInventory(DifficultyMode difficulty);
+
+    bool destroyEquippedWeapon();
+    bool destroyEquippedArmor();
 
     void gainExperience(int amount);
     void loseExperience(int amount);

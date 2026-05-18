@@ -55,6 +55,8 @@ public:
     int findFirstConsumable(ConsumableType type) const;
     bool useFirstConsumable(ConsumableType type, Consumable& usedConsumable);
 
+    bool removeWeapon(int index);
+    bool removeArmor(int index);
     bool removeConsumable(int index);
 
     void displayWeapons() const;

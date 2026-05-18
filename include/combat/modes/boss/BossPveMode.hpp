@@ -6,6 +6,7 @@
 
 #include "entity/Player.hpp"
 #include "core/Random.hpp"
+#include "progression/DifficultyMode.hpp"
 
 class BossPveMode
 {
@@ -14,7 +15,11 @@ private:
     static constexpr int BOSS_POTION_DAMAGE_BONUS = 45;
 
 public:
-    static void run(Player& player1, Random& random);
+    static void run(
+        Player& player1,
+        Random& random,
+        DifficultyMode difficulty
+    );
 };
 
 #endif

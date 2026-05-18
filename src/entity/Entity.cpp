@@ -96,6 +96,28 @@ bool Entity::isDead() const
     return hp <= 0;
 }
 
+void Entity::reviveWithHealthPercentage(int percentage)
+{
+    if (percentage <= 0)
+    {
+        percentage = 1;
+    }
+
+    if (percentage > 100)
+    {
+        percentage = 100;
+    }
+
+    int restoredHp = maxHp * percentage / 100;
+
+    if (restoredHp <= 0)
+    {
+        restoredHp = 1;
+    }
+
+    hp = restoredHp;
+}
+
 void Entity::takeDamage(int damage)
 {
     if (damage < 0)

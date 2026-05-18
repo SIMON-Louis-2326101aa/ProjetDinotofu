@@ -56,6 +56,8 @@ public:
 
     bool isDead() const;
 
+    void reviveWithHealthPercentage(int percentage);
+
     void takeDamage(int damage);
     void heal(int healAmount);
     void reduceMaxHp(int value);

@@ -382,3 +382,23 @@ Si tu arrives à devenir une légende dans Dinotofu, bravo. Si tu meurs contre l
 Allez, entre dans l'arène. On va voir si tu joues vraiment bien, ou si tu parles juste fort sur Discord.   
    
 Je tiens à noter que lors de la vraie bêta ouverte, tu auras une chance d'être directement intégré au jeu de base si ta contribution le mérite. Alors prouve-moi que tu en vaux le coup. Bon courage d'ici là.   
+
+## Latest development notes   
+   
+This version adds a first real difficulty flow. The player now chooses difficulty after entering the name and before choosing the class. This matters because the starter kit can now depend on the difficulty: starter gold, potion counts, and starter equipment durability can change.   
+   
+Prepared difficulty levels are:   
+   
+- Easy   
+- Normal   
+- Hard   
+- Nightmare   
+- Lethal   
+   
+Monster PvE escape rewards can now use difficulty-dependent percentages. Easy is more generous, Normal stays balanced, and higher difficulties become harsher. Damaged enemies still alive can still give partial reward value, so escaping after doing most of the work does not feel like a complete punishment.   
+   
+Non-lethal death penalties now include prepared logic for gold loss, experience loss, consumable loss, equipped weapon durability loss, equipped armor durability loss, break chances, irreparable destruction chances, and future equipment theft conditions. Theft is only meant to be enabled later when the enemy logically has a reason to steal equipment.   
+   
+Lethal mode keeps its corrupted death identity. A future rare narrative exception is prepared through the survival anomaly idea: surviving at 1 HP after a special blessing-like event, losing blessings and suffering brutal consequences instead of a normal death.   
+   
+A second project planning file is available: `SYSTEMES_PREVUS.txt`. It contains the longer French roadmap for future systems, death rules, bestiary, statistics, materials, special semi-human characters, JSON saves, and pantheon-linked bosses.   

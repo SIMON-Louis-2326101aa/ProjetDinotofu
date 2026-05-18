@@ -194,6 +194,28 @@ bool Inventory::useFirstConsumable(ConsumableType type, Consumable& usedConsumab
     return true;
 }
 
+bool Inventory::removeWeapon(int index)
+{
+    if (!hasWeapon(index))
+    {
+        return false;
+    }
+
+    weapons.erase(weapons.begin() + index);
+    return true;
+}
+
+bool Inventory::removeArmor(int index)
+{
+    if (!hasArmor(index))
+    {
+        return false;
+    }
+
+    armors.erase(armors.begin() + index);
+    return true;
+}
+
 bool Inventory::removeConsumable(int index)
 {
     if (!hasConsumable(index))

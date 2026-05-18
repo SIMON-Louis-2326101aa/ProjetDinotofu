@@ -6,6 +6,7 @@
 
 #include "entity/Player.hpp"
 #include "core/Random.hpp"
+#include "progression/DifficultyMode.hpp"
 
 class Combat
 {
@@ -15,8 +16,16 @@ private:
 public:
     void launchTwoPlayerPvp(Player& player1);
     void launchAIPvp(Player& player1);
-    void launchBossPve(Player& player1);
-    void launchMonsterPve(Player& player1);
+
+    void launchBossPve(
+        Player& player1,
+        DifficultyMode difficulty
+    );
+
+    void launchMonsterPve(
+        Player& player1,
+        DifficultyMode difficulty
+    );
 };
 
 #endif

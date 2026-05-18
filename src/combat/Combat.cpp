@@ -18,12 +18,18 @@ void Combat::launchAIPvp(Player& player1)
     AIPvpMode::run(player1, random);
 }
 
-void Combat::launchBossPve(Player& player1)
+void Combat::launchBossPve(
+    Player& player1,
+    DifficultyMode difficulty
+)
 {
-    BossPveMode::run(player1, random);
+    BossPveMode::run(player1, random, difficulty);
 }
 
-void Combat::launchMonsterPve(Player& player1)
+void Combat::launchMonsterPve(
+    Player& player1,
+    DifficultyMode difficulty
+)
 {
-    MonsterPveMode::run(player1, random);
+    MonsterPveMode::run(player1, random, difficulty);
 }

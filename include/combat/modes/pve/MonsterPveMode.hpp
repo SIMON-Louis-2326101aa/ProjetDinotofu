@@ -6,11 +6,16 @@
 
 #include "core/Random.hpp"
 #include "entity/Player.hpp"
+#include "progression/DifficultyMode.hpp"
 
 class MonsterPveMode
 {
 public:
-    static void run(Player& player, Random& random);
+    static void run(
+        Player& player,
+        Random& random,
+        DifficultyMode difficulty
+    );
 };
 
 #endif

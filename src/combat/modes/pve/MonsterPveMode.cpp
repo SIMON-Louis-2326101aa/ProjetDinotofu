@@ -11,9 +11,17 @@
 #include "combat/turn/wave/PlayerWaveCombatTurn.hpp"
 #include "combat/turn/wave/MonsterWaveCombatTurn.hpp"
 
+#include "progression/DifficultyRules.hpp"
+#include "progression/death/DeathPenaltyResult.hpp"
+#include "progression/death/DeathPenaltySystem.hpp"
+
 #include <iostream>
 
-void MonsterPveMode::run(Player& player, Random& random)
+void MonsterPveMode::run(
+    Player& player,
+    Random& random,
+    DifficultyMode difficulty
+)
 {
     WaveCombatSystem::displayWaveIntroduction();
 
@@ -62,11 +70,14 @@ void MonsterPveMode::run(Player& player, Random& random)
         std::cout << "Tu ne récupéreras qu'une partie des récompenses liées à ce qui s'est réellement passé." << std::endl;
         std::cout << std::endl;
 
-        CombatReward reward = CombatRewardSystem::calculatePlayerEscapeReward(wave);
+        CombatReward reward = CombatRewardSystem::calculatePlayerEscapeReward(
+            wave,
+            difficulty
+        );
 
         CombatRewardSystem::displayPartialReward(
             reward,
-            "Fuite réussie : 50% des récompenses des ennemis vaincus sont récupérées, plus 25% pour les ennemis encore en vie déjà blessés."
+            "Fuite réussie : les récompenses sont calculées selon la difficulté, les ennemis vaincus, et les ennemis encore en vie déjà blessés."
         );
 
         CombatRewardSystem::giveRewardToPlayer(player, reward);
@@ -79,6 +90,35 @@ void MonsterPveMode::run(Player& player, Random& random)
         std::cout << player.getName() << " tombe face à la vague ennemie." << std::endl;
         std::cout << "L'arène se referme dans un silence brutal." << std::endl;
         std::cout << std::endl;
+
+        if (DifficultyRules::isPermanentDeath(difficulty))
+        {
+            DeathPenaltySystem::displayLethalDeathCorruption();
+            return;
+        }
+
+        DeathPenaltyResult deathPenalty = DeathPenaltySystem::applyNonLethalDeathPenalty(
+            player,
+            difficulty,
+            random
+        );
+
+        DeathPenaltySystem::displayNonLethalDeathPenalty(deathPenalty);
+
+        player.reviveWithHealthPercentage(
+            DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty)
+        );
+
+        std::cout << player.getName()
+                  << " revient à lui avec "
+                  << player.getHp()
+                  << "/"
+                  << player.getMaxHp()
+                  << " PV."
+                  << std::endl;
+        std::cout << "Tu as survécu, mais la mort a laissé sa trace." << std::endl;
+        std::cout << std::endl;
+
         return;
     }
 
