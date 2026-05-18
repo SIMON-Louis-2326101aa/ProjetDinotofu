@@ -225,6 +225,21 @@ void Player::gainExperience(int amount)
     }
 }
 
+void Player::loseExperience(int amount)
+{
+    if (amount <= 0)
+    {
+        return;
+    }
+
+    experience -= amount;
+
+    if (experience < 0)
+    {
+        experience = 0;
+    }
+}
+
 void Player::levelUp()
 {
     level++;

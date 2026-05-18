@@ -100,6 +100,131 @@ Monster MonsterCatalog::createMinorOrc()
     );
 }
 
+Monster MonsterCatalog::createCaveBat()
+{
+    return Monster(
+        "Chauve-souris des cavernes",
+        "Créature rapide",
+        Race::Bete,
+        1,
+        45,
+        7,
+        15,
+        20,
+        0,
+        0,
+        false,
+        false,
+        false
+    );
+}
+
+Monster MonsterCatalog::createWildBoar()
+{
+    return Monster(
+        "Sanglier sauvage",
+        "Bête résistante",
+        Race::Bete,
+        3,
+        95,
+        12,
+        21,
+        24,
+        0,
+        0,
+        false,
+        false,
+        false
+    );
+}
+
+Monster MonsterCatalog::createLostBandit()
+{
+    return Monster(
+        "Bandit perdu",
+        "Humain opportuniste",
+        Race::Humain,
+        4,
+        100,
+        14,
+        24,
+        30,
+        1,
+        0,
+        false,
+        false,
+        false
+    );
+}
+
+Monster MonsterCatalog::createRandomMonsterForLevel(int level, Random& random)
+{
+    if (level <= 1)
+    {
+        int choice = random.between(1, 2);
+
+        if (choice == 1)
+        {
+            return createScaredGoblin();
+        }
+
+        return createCaveBat();
+    }
+
+    if (level == 2)
+    {
+        int choice = random.between(1, 3);
+
+        if (choice == 1)
+        {
+            return createBrutalGoblin();
+        }
+
+        if (choice == 2)
+        {
+            return createStarvingWolf();
+        }
+
+        return createCaveBat();
+    }
+
+    if (level == 3)
+    {
+        int choice = random.between(1, 3);
+
+        if (choice == 1)
+        {
+            return createCrackedSkeleton();
+        }
+
+        if (choice == 2)
+        {
+            return createWildBoar();
+        }
+
+        return createBrutalGoblin();
+    }
+
+    int choice = random.between(1, 4);
+
+    if (choice == 1)
+    {
+        return createMinorOrc();
+    }
+
+    if (choice == 2)
+    {
+        return createLostBandit();
+    }
+
+    if (choice == 3)
+    {
+        return createCrackedSkeleton();
+    }
+
+    return createWildBoar();
+}
+
 void MonsterCatalog::displayAvailableMonsters()
 {
     std::cout << "========== MONSTRES DISPONIBLES ==========" << std::endl;
@@ -108,6 +233,9 @@ void MonsterCatalog::displayAvailableMonsters()
     std::cout << "3 : Loup affamé" << std::endl;
     std::cout << "4 : Squelette fissuré" << std::endl;
     std::cout << "5 : Orc mineur" << std::endl;
+    std::cout << "6 : Chauve-souris des cavernes" << std::endl;
+    std::cout << "7 : Sanglier sauvage" << std::endl;
+    std::cout << "8 : Bandit perdu" << std::endl;
     std::cout << "==========================================" << std::endl;
     std::cout << std::endl;
 }

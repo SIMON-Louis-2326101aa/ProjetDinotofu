@@ -5,6 +5,7 @@
 #define INCLUDE_ENTITY_MONSTERCATALOG_HPP
 
 #include "entity/Monster.hpp"
+#include "core/Random.hpp"
 
 class MonsterCatalog
 {
@@ -14,6 +15,11 @@ public:
     static Monster createStarvingWolf();
     static Monster createCrackedSkeleton();
     static Monster createMinorOrc();
+    static Monster createCaveBat();
+    static Monster createWildBoar();
+    static Monster createLostBandit();
+
+    static Monster createRandomMonsterForLevel(int level, Random& random);
 
     static void displayAvailableMonsters();
 };

@@ -52,6 +52,31 @@ int EnemyCombatQueue::getTotalRemainingEnemyCount() const
     return getActiveEnemyCount() + getWaitingEnemyCount();
 }
 
+int EnemyCombatQueue::getDefeatedEnemyCount() const
+{
+    return static_cast<int>(defeatedEnemies.size());
+}
+
+int EnemyCombatQueue::getEscapedEnemyCount() const
+{
+    return static_cast<int>(escapedEnemies.size());
+}
+
+int EnemyCombatQueue::getDamagedAliveEnemyCount() const
+{
+    int total = 0;
+
+    for (const Monster& monster : activeEnemies)
+    {
+        if (isDamagedAndAlive(monster))
+        {
+            ++total;
+        }
+    }
+
+    return total;
+}
+
 bool EnemyCombatQueue::isActiveIndexValid(int index) const
 {
     return index >= 0 && index < getActiveEnemyCount();
@@ -67,6 +92,36 @@ const Monster& EnemyCombatQueue::getActiveEnemy(int index) const
     return activeEnemies[index];
 }
 
+const Monster& EnemyCombatQueue::getDefeatedEnemy(int index) const
+{
+    return defeatedEnemies[index];
+}
+
+const Monster& EnemyCombatQueue::getEscapedEnemy(int index) const
+{
+    return escapedEnemies[index];
+}
+
+const Monster& EnemyCombatQueue::getDamagedAliveEnemy(int index) const
+{
+    int found = 0;
+
+    for (const Monster& monster : activeEnemies)
+    {
+        if (isDamagedAndAlive(monster))
+        {
+            if (found == index)
+            {
+                return monster;
+            }
+
+            ++found;
+        }
+    }
+
+    return activeEnemies.front();
+}
+
 void EnemyCombatQueue::removeActiveEnemy(int index)
 {
     if (!isActiveIndexValid(index))
@@ -74,6 +129,27 @@ void EnemyCombatQueue::removeActiveEnemy(int index)
         return;
     }
 
+    if (activeEnemies[index].isDead())
+    {
+        defeatedEnemies.push_back(activeEnemies[index]);
+    }
+
+    activeEnemies.erase(activeEnemies.begin() + index);
+
+    if (canAddActiveEnemy() && !waitingEnemies.empty())
+    {
+        bringNextEnemyIn();
+    }
+}
+
+void EnemyCombatQueue::removeActiveEnemyAsEscaped(int index)
+{
+    if (!isActiveIndexValid(index))
+    {
+        return;
+    }
+
+    escapedEnemies.push_back(activeEnemies[index]);
     activeEnemies.erase(activeEnemies.begin() + index);
 
     if (canAddActiveEnemy() && !waitingEnemies.empty())
@@ -137,6 +213,9 @@ void EnemyCombatQueue::displayQueueSummary() const
     std::cout << "========== ÉTAT DE LA VAGUE ==========" << std::endl;
     std::cout << "Ennemis actifs : " << getActiveEnemyCount() << std::endl;
     std::cout << "Ennemis en attente : " << getWaitingEnemyCount() << std::endl;
+    std::cout << "Ennemis blessés encore en vie : " << getDamagedAliveEnemyCount() << std::endl;
+    std::cout << "Ennemis vaincus : " << getDefeatedEnemyCount() << std::endl;
+    std::cout << "Ennemis en fuite : " << getEscapedEnemyCount() << std::endl;
     std::cout << "Total restant : " << getTotalRemainingEnemyCount() << std::endl;
     std::cout << "======================================" << std::endl;
     std::cout << std::endl;
@@ -163,4 +242,9 @@ void EnemyCombatQueue::bringNextEnemyIn()
               << " entre dans la première ligne."
               << std::endl;
     std::cout << std::endl;
+}
+
+bool EnemyCombatQueue::isDamagedAndAlive(const Monster& monster) const
+{
+    return !monster.isDead() && monster.getHp() < monster.getMaxHp();
 }

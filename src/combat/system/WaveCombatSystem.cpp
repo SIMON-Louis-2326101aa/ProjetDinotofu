@@ -3,33 +3,27 @@
 
 #include "combat/system/WaveCombatSystem.hpp"
 
+#include "combat/wave/WaveGenerator.hpp"
+
 #include "core/Console.hpp"
-#include "entity/MonsterCatalog.hpp"
 
 #include <iostream>
 
-EnemyCombatQueue WaveCombatSystem::createDemoWave()
+EnemyCombatQueue WaveCombatSystem::createWaveForPlayer(
+    const Player& player,
+    Random& random
+)
 {
-    EnemyCombatQueue wave;
-
-    wave.addWaitingEnemy(MonsterCatalog::createScaredGoblin());
-    wave.addWaitingEnemy(MonsterCatalog::createBrutalGoblin());
-    wave.addWaitingEnemy(MonsterCatalog::createStarvingWolf());
-    wave.addWaitingEnemy(MonsterCatalog::createCrackedSkeleton());
-    wave.addWaitingEnemy(MonsterCatalog::createMinorOrc());
-
-    wave.initializeFrontLine();
-
-    return wave;
+    return WaveGenerator::createWaveForPlayer(player, random);
 }
 
 void WaveCombatSystem::displayWaveIntroduction()
 {
     Console::clear();
 
-    std::cout << "Une vague de monstres approche." << std::endl;
-    std::cout << "Ils ne viennent pas tous en même temps..." << std::endl;
-    std::cout << "Mais tant que la file n'est pas vide, le combat continue." << std::endl;
+    std::cout << "Une nouvelle vague de monstres approche." << std::endl;
+    std::cout << "La composition change selon ton niveau, mais ils ne viennent pas tous en même temps..." << std::endl;
+    std::cout << "Tant que la file n'est pas vide, le combat continue." << std::endl;
     std::cout << std::endl;
 
     Console::pauseSeconds(2);

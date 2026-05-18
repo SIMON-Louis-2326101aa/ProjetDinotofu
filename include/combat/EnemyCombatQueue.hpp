@@ -26,12 +26,21 @@ public:
     int getWaitingEnemyCount() const;
     int getTotalRemainingEnemyCount() const;
 
+    int getDefeatedEnemyCount() const;
+    int getEscapedEnemyCount() const;
+    int getDamagedAliveEnemyCount() const;
+
     bool isActiveIndexValid(int index) const;
 
     Monster& getActiveEnemy(int index);
     const Monster& getActiveEnemy(int index) const;
 
+    const Monster& getDefeatedEnemy(int index) const;
+    const Monster& getEscapedEnemy(int index) const;
+    const Monster& getDamagedAliveEnemy(int index) const;
+
     void removeActiveEnemy(int index);
+    void removeActiveEnemyAsEscaped(int index);
     void removeDeadAndReplace();
 
     void displayActiveEnemies() const;
@@ -40,9 +49,13 @@ public:
 private:
     std::vector<Monster> activeEnemies;
     std::vector<Monster> waitingEnemies;
+    std::vector<Monster> defeatedEnemies;
+    std::vector<Monster> escapedEnemies;
 
     bool canAddActiveEnemy() const;
     void bringNextEnemyIn();
+
+    bool isDamagedAndAlive(const Monster& monster) const;
 };
 
 #endif

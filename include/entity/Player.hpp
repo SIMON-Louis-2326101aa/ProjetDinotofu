@@ -49,6 +49,7 @@ public:
     void initializeStarterInventory();
 
     void gainExperience(int amount);
+    void loseExperience(int amount);
     void levelUp();
 
     int attack(Random& random, bool& dodged, bool& critical, int damageBonus = 0) override;

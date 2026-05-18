@@ -43,7 +43,7 @@ void MonsterWaveCombatTurn::playMonsterTurns(
 
         if (EscapeSystem::monsterAttemptsEscape(monster, random))
         {
-            wave.removeActiveEnemy(i);
+            wave.removeActiveEnemyAsEscaped(i);
             continue;
         }
 

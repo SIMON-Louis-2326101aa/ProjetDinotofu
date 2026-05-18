@@ -165,6 +165,13 @@ Checked and stabilized points:
 - Monster wave target selection matches the displayed enemy numbers.   
 - Boss escape attempts correctly consume the turn while keeping escape impossible.   
 - Future save/progression folders are prepared for JSON-based systems.   
+- Monster PvE waves are generated from the player level.   
+- Monster PvE rewards now track defeated enemies and escaped enemies separately.   
+- Player escape in Monster PvE gives 50% of defeated enemy rewards, to avoid being too punitive after resource consumption.   
+- Player escape in Monster PvE also gives 25% of the reward value of damaged enemies still alive.   
+- Enemy escape in Monster PvE gives 75% of that enemy reward when the combat ends correctly.   
+- Future difficulty rules are prepared: Easy can go up to 90% reward recovery, Normal stays balanced, Hard and Lethal are harsher.   
+- Future non-lethal death penalties are prepared: gold, experience, consumables, and later materials can be partially lost, while weapons, armors, unique items, and relics stay protected.   
    
 ## Future systems prepared   
    
@@ -173,7 +180,7 @@ The project now contains placeholder folders and files for future systems:
 - `character/`: special semi-human characters and random character generation   
 - `combat/encounter/`: rare special encounters and encounter generation   
 - `combat/group/`: future coop, allied AI, summons, unit slots, turn order, and initiative   
-- `progression/`: statistics, bestiary, material knowledge, difficulty mode, and identity reveal states   
+- `progression/`: statistics, bestiary, material knowledge, difficulty mode, identity reveal states, and death penalties   
 - `save/`: future JSON save manager and save data models   
 - `interface/menu/progression/`: future menus for statistics, bestiary, materials, and account data   
 - `assets/saves/accounts/`: future account JSON saves   
@@ -181,6 +188,24 @@ The project now contains placeholder folders and files for future systems:
 - `assets/saves/characters/graveyard/`: future dead Lethal characters   
 - `assets/saves/bestiary/`: future bestiary knowledge saves   
 - `assets/saves/materials/`: future material knowledge saves   
+   
+## Future difficulty and death penalty notes   
+   
+Difficulty reward recovery should not be all-or-nothing. Easy mode can be generous, but even there 100% recovery is too high. The current prepared idea is closer to this:   
+   
+```text   
+Easy: around 90% reward recovery on PvE escape   
+Normal: around 50% reward recovery on defeated enemies, plus 25% on damaged living enemies   
+Hard: harsher recovery   
+Lethal: very harsh recovery or permanent consequences   
+```   
+   
+In non-lethal difficulty, death should still hurt. The future system is prepared to remove a coherent part of what the player carried or gained:   
+   
+```text   
+10% to 20% of gold, consumables, materials, or current experience can be lost.   
+Weapons, armors, very rare items, unique items, heroic items, and relics should not randomly disappear.   
+```   
    
 ## Future Lethal difficulty note   
    
@@ -242,8 +267,10 @@ Dinotofu/
 │   │   ├── encounter/   
 │   │   ├── group/   
 │   │   ├── modes/   
+│   │   ├── reward/   
 │   │   ├── system/   
-│   │   └── turn/   
+│   │   ├── turn/   
+│   │   └── wave/   
 │   ├── core/   
 │   ├── economy/   
 │   ├── effect/   
@@ -256,6 +283,7 @@ Dinotofu/
 │   │       └── progression/   
 │   ├── item/   
 │   ├── progression/   
+│   │   └── death/   
 │   ├── save/   
 │   ├── story/   
 │   └── utils/   

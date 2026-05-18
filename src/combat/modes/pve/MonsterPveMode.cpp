@@ -5,6 +5,8 @@
 
 #include "combat/EnemyCombatQueue.hpp"
 #include "combat/system/WaveCombatSystem.hpp"
+#include "combat/reward/CombatReward.hpp"
+#include "combat/reward/CombatRewardSystem.hpp"
 
 #include "combat/turn/wave/PlayerWaveCombatTurn.hpp"
 #include "combat/turn/wave/MonsterWaveCombatTurn.hpp"
@@ -15,7 +17,7 @@ void MonsterPveMode::run(Player& player, Random& random)
 {
     WaveCombatSystem::displayWaveIntroduction();
 
-    EnemyCombatQueue wave = WaveCombatSystem::createDemoWave();
+    EnemyCombatQueue wave = WaveCombatSystem::createWaveForPlayer(player, random);
 
     WaveCombatSystem::displayFrontLineArrival(wave);
 
@@ -59,6 +61,16 @@ void MonsterPveMode::run(Player& player, Random& random)
         std::cout << "Tu as quitté le combat." << std::endl;
         std::cout << "Tu ne récupéreras qu'une partie des récompenses liées à ce qui s'est réellement passé." << std::endl;
         std::cout << std::endl;
+
+        CombatReward reward = CombatRewardSystem::calculatePlayerEscapeReward(wave);
+
+        CombatRewardSystem::displayPartialReward(
+            reward,
+            "Fuite réussie : 50% des récompenses des ennemis vaincus sont récupérées, plus 25% pour les ennemis encore en vie déjà blessés."
+        );
+
+        CombatRewardSystem::giveRewardToPlayer(player, reward);
+
         return;
     }
 
@@ -73,4 +85,9 @@ void MonsterPveMode::run(Player& player, Random& random)
     std::cout << "Tous les monstres de la vague ont été vaincus." << std::endl;
     std::cout << player.getName() << " reste debout au milieu des corps et de la poussière." << std::endl;
     std::cout << std::endl;
+
+    CombatReward reward = CombatRewardSystem::calculateWaveReward(wave);
+
+    CombatRewardSystem::displayReward(reward);
+    CombatRewardSystem::giveRewardToPlayer(player, reward);
 }

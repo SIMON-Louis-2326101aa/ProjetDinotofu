@@ -1,12 +1,14 @@
-// English: This placeholder prepares a future Dinotofu system. Code identifiers stay in English; player-facing text can stay in French.
-// Français : Ce fichier prépare un futur système de Dinotofu. Les identifiants restent en anglais ; les textes affichés au joueur peuvent rester en français.
+// English: This file prepares the future difficulty system of Dinotofu.
+// Français : Ce fichier prépare le futur système de difficulté de Dinotofu.
 
 #ifndef INCLUDE_PROGRESSION_DIFFICULTYMODE_HPP
 #define INCLUDE_PROGRESSION_DIFFICULTYMODE_HPP
 
 enum class DifficultyMode
 {
+    Easy,
     Normal,
+    Hard,
     Lethal
 };
 
