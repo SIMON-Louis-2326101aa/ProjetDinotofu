@@ -235,6 +235,37 @@ A boss name should only be added to the bestiary when the boss says its own name
    
 Before that, the bestiary can show unknown, physical descriptions, clues, or suspected identities based on writings and legends already discovered by the player.   
    
+
+## Prepared future systems   
+   
+This version intentionally contains many future folders and placeholder files. They are not all active yet. Each placeholder file includes:   
+   
+```text   
+- the standard Dinotofu ownership comment   
+- a short file description   
+- a TODO explaining that the system will be implemented later   
+```   
+   
+Prepared systems include:   
+   
+```text   
+- JSON saves and registries   
+- playable/dead character registry   
+- account statistics   
+- character statistics   
+- death records and lethal-mode corruption   
+- bestiary knowledge progression   
+- boss identity reveal progression   
+- material knowledge and experimentation progression   
+- special semi-human encounters   
+- random character/name generation   
+- combat groups, units, slots and initiative   
+- summons   
+- loot tables   
+- future adventure, world and lore systems   
+- item rarity, ammunition, durability, repair and equipment materials   
+```   
+   
 ## Current architecture   
    
 ```text   
@@ -245,6 +276,10 @@ Dinotofu/
 │   
 ├── assets/   
 │   ├── config/   
+│   │   ├── difficulties/   
+│   │   ├── encounters/   
+│   │   ├── loot/   
+│   │   └── pantheon/   
 │   ├── saves/   
 │   │   ├── accounts/   
 │   │   ├── bestiary/   
@@ -252,11 +287,20 @@ Dinotofu/
 │   │   ├── characters/   
 │   │   │   ├── graveyard/   
 │   │   │   └── playable/   
+│   │   ├── encounters/   
+│   │   ├── lore/   
 │   │   ├── materials/   
-│   │   └── player/   
+│   │   ├── player/   
+│   │   └── statistics/   
 │   └── texts/   
+│       ├── bosses/   
+│       ├── descriptions/   
+│       ├── dialogues/   
+│       ├── lore/   
+│       └── special_characters/   
 │   
 ├── include/   
+│   ├── adventure/   
 │   ├── boss/   
 │   ├── character/   
 │   ├── class_system/   
@@ -264,12 +308,18 @@ Dinotofu/
 │   │   ├── action/   
 │   │   ├── ai/   
 │   │   ├── boss/   
+│   │   ├── death/   
 │   │   ├── encounter/   
+│   │   ├── escape/   
 │   │   ├── group/   
+│   │   ├── initiative/   
+│   │   ├── loot/   
 │   │   ├── modes/   
 │   │   ├── reward/   
+│   │   ├── summon/   
 │   │   ├── system/   
 │   │   ├── turn/   
+│   │   ├── unit/   
 │   │   └── wave/   
 │   ├── core/   
 │   ├── economy/   
@@ -280,13 +330,30 @@ Dinotofu/
 │   │       ├── equipment/   
 │   │       ├── inventory/   
 │   │       ├── potions/   
-│   │       └── progression/   
+│   │       ├── progression/   
+│   │       └── save/   
 │   ├── item/   
+│   │   ├── ammunition/   
+│   │   ├── armor/   
+│   │   ├── consumable/   
+│   │   ├── durability/   
+│   │   ├── effect/   
+│   │   ├── material/   
+│   │   ├── rarity/   
+│   │   └── weapon/   
+│   ├── lore/   
 │   ├── progression/   
-│   │   └── death/   
+│   │   ├── bestiary/   
+│   │   ├── death/   
+│   │   ├── difficulty/   
+│   │   ├── material/   
+│   │   └── statistics/   
 │   ├── save/   
+│   │   ├── json/   
+│   │   └── registry/   
 │   ├── story/   
-│   └── utils/   
+│   ├── utils/   
+│   └── world/   
 │   
 └── src/   
     └── same structure as include/, with .cpp implementation files   
