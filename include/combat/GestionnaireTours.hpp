@@ -51,12 +51,6 @@ public:
         Random& random,
         int bonusPotionDegats
     );
-
-private:
-    static bool ouvrirInterfaceObservation(
-        Entite& joueurInterface,
-        Entite& cible
-    );
 };
 
 #endif

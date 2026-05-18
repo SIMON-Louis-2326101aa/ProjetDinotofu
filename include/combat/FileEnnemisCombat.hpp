@@ -7,36 +7,39 @@
 
 class FileEnnemisCombat
 {
-private:
-    static constexpr int MAX_FILE = 10;
-    static constexpr int MAX_ACTIFS = 3;
-
-    std::vector<Monstre> fileAttente;
-    std::vector<Monstre> ennemisActifs;
-
 public:
+    static constexpr int NOMBRE_MAX_ENNEMIS_ACTIFS = 3;
+
     FileEnnemisCombat();
 
-    bool ajouterDansFile(const Monstre& monstre);
-    void remplirActifs();
+    void ajouterEnnemiEnAttente(const Monstre& monstre);
+    void initialiserPremiereLigne();
 
-    bool tousMorts() const;
     bool aEncoreDesEnnemis() const;
+    bool aDesEnnemisActifs() const;
+    bool aDesEnnemisEnAttente() const;
 
     int getNombreEnnemisActifs() const;
-    int getNombreEnFile() const;
-    int getNombreTotalEnnemis() const;
+    int getNombreEnnemisEnAttente() const;
+    int getNombreTotalEnnemisRestants() const;
+
+    bool indexActifValide(int index) const;
 
     Monstre& getEnnemiActif(int index);
     const Monstre& getEnnemiActif(int index) const;
 
-    bool indexActifValide(int index) const;
-
-    bool retirerEnnemiActif(int index);
+    void retirerEnnemiActif(int index);
     void retirerMortsEtRemplacer();
 
     void afficherEnnemisActifs() const;
     void afficherFileResume() const;
+
+private:
+    std::vector<Monstre> ennemisActifs;
+    std::vector<Monstre> ennemisEnAttente;
+
+    bool peutAjouterEnnemiActif() const;
+    void faireEntrerProchainEnnemi();
 };
 
 #endif

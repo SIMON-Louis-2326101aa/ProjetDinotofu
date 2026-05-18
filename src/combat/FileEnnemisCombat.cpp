@@ -6,34 +6,32 @@ FileEnnemisCombat::FileEnnemisCombat()
 {
 }
 
-bool FileEnnemisCombat::ajouterDansFile(const Monstre& monstre)
+void FileEnnemisCombat::ajouterEnnemiEnAttente(const Monstre& monstre)
 {
-    if (static_cast<int>(fileAttente.size() + ennemisActifs.size()) >= MAX_FILE)
-    {
-        return false;
-    }
-
-    fileAttente.push_back(monstre);
-    return true;
+    ennemisEnAttente.push_back(monstre);
 }
 
-void FileEnnemisCombat::remplirActifs()
+void FileEnnemisCombat::initialiserPremiereLigne()
 {
-    while (static_cast<int>(ennemisActifs.size()) < MAX_ACTIFS && !fileAttente.empty())
+    while (peutAjouterEnnemiActif() && !ennemisEnAttente.empty())
     {
-        ennemisActifs.push_back(fileAttente.front());
-        fileAttente.erase(fileAttente.begin());
+        faireEntrerProchainEnnemi();
     }
-}
-
-bool FileEnnemisCombat::tousMorts() const
-{
-    return ennemisActifs.empty() && fileAttente.empty();
 }
 
 bool FileEnnemisCombat::aEncoreDesEnnemis() const
 {
-    return !tousMorts();
+    return !ennemisActifs.empty() || !ennemisEnAttente.empty();
+}
+
+bool FileEnnemisCombat::aDesEnnemisActifs() const
+{
+    return !ennemisActifs.empty();
+}
+
+bool FileEnnemisCombat::aDesEnnemisEnAttente() const
+{
+    return !ennemisEnAttente.empty();
 }
 
 int FileEnnemisCombat::getNombreEnnemisActifs() const
@@ -41,81 +39,63 @@ int FileEnnemisCombat::getNombreEnnemisActifs() const
     return static_cast<int>(ennemisActifs.size());
 }
 
-int FileEnnemisCombat::getNombreEnFile() const
+int FileEnnemisCombat::getNombreEnnemisEnAttente() const
 {
-    return static_cast<int>(fileAttente.size());
+    return static_cast<int>(ennemisEnAttente.size());
 }
 
-int FileEnnemisCombat::getNombreTotalEnnemis() const
+int FileEnnemisCombat::getNombreTotalEnnemisRestants() const
 {
-    return static_cast<int>(ennemisActifs.size() + fileAttente.size());
-}
-
-Monstre& FileEnnemisCombat::getEnnemiActif(int index)
-{
-    return ennemisActifs.at(index);
-}
-
-const Monstre& FileEnnemisCombat::getEnnemiActif(int index) const
-{
-    return ennemisActifs.at(index);
+    return getNombreEnnemisActifs() + getNombreEnnemisEnAttente();
 }
 
 bool FileEnnemisCombat::indexActifValide(int index) const
 {
-    return index >= 0 && index < static_cast<int>(ennemisActifs.size());
+    return index >= 0 && index < getNombreEnnemisActifs();
 }
 
-bool FileEnnemisCombat::retirerEnnemiActif(int index)
+Monstre& FileEnnemisCombat::getEnnemiActif(int index)
+{
+    return ennemisActifs[index];
+}
+
+const Monstre& FileEnnemisCombat::getEnnemiActif(int index) const
+{
+    return ennemisActifs[index];
+}
+
+void FileEnnemisCombat::retirerEnnemiActif(int index)
 {
     if (!indexActifValide(index))
     {
-        return false;
+        return;
     }
 
     ennemisActifs.erase(ennemisActifs.begin() + index);
 
-    if (!fileAttente.empty())
+    if (peutAjouterEnnemiActif() && !ennemisEnAttente.empty())
     {
-        Monstre nouveau = fileAttente.front();
-        fileAttente.erase(fileAttente.begin());
-
-        std::cout << nouveau.getNom()
-                  << " surgit depuis l'arrière de la vague et prend sa place."
-                  << std::endl;
-
-        ennemisActifs.push_back(nouveau);
+        faireEntrerProchainEnnemi();
     }
-
-    std::cout << std::endl;
-
-    return true;
 }
 
 void FileEnnemisCombat::retirerMortsEtRemplacer()
 {
-    for (int i = static_cast<int>(ennemisActifs.size()) - 1; i >= 0; --i)
+    int i = 0;
+
+    while (i < getNombreEnnemisActifs())
     {
         if (ennemisActifs[i].estMort())
         {
-            std::cout << ennemisActifs[i].getNom() << " tombe au sol." << std::endl;
+            std::cout << ennemisActifs[i].getNom()
+                      << " disparaît de la première ligne."
+                      << std::endl;
 
-            ennemisActifs.erase(ennemisActifs.begin() + i);
-
-            if (!fileAttente.empty())
-            {
-                Monstre nouveau = fileAttente.front();
-                fileAttente.erase(fileAttente.begin());
-
-                std::cout << nouveau.getNom()
-                          << " surgit depuis l'arrière de la vague et prend sa place."
-                          << std::endl;
-
-                ennemisActifs.push_back(nouveau);
-            }
-
-            std::cout << std::endl;
+            retirerEnnemiActif(i);
+            continue;
         }
+
+        ++i;
     }
 }
 
@@ -133,32 +113,15 @@ void FileEnnemisCombat::afficherEnnemisActifs() const
         {
             const Monstre& monstre = ennemisActifs[i];
 
-            std::cout << i << " : " << monstre.getNom();
-
-            if (monstre.statsVisibles())
-            {
-                std::cout << " | PV : "
-                          << monstre.getPv()
-                          << "/"
-                          << monstre.getPvMax();
-            }
-            else
-            {
-                std::cout << " | PV : ???";
-            }
-
-            std::cout << " | Race : " << monstre.getRaceTexte();
-
-            if (monstre.estInvocation())
-            {
-                std::cout << " | Invocation";
-            }
-            else if (monstre.estElite())
-            {
-                std::cout << " | Élite";
-            }
-
-            std::cout << std::endl;
+            std::cout << i + 1
+                      << " : "
+                      << monstre.getNom()
+                      << " | "
+                      << monstre.getPv()
+                      << "/"
+                      << monstre.getPvMax()
+                      << " PV"
+                      << std::endl;
         }
     }
 
@@ -168,8 +131,33 @@ void FileEnnemisCombat::afficherEnnemisActifs() const
 
 void FileEnnemisCombat::afficherFileResume() const
 {
-    std::cout << "Ennemis actifs : " << ennemisActifs.size() << "/3" << std::endl;
-    std::cout << "Ennemis en attente : " << fileAttente.size() << std::endl;
-    std::cout << "Total restant : " << getNombreTotalEnnemis() << std::endl;
+    std::cout << "========== ÉTAT DE LA VAGUE ==========" << std::endl;
+    std::cout << "Ennemis actifs : " << getNombreEnnemisActifs() << std::endl;
+    std::cout << "Ennemis en attente : " << getNombreEnnemisEnAttente() << std::endl;
+    std::cout << "Total restant : " << getNombreTotalEnnemisRestants() << std::endl;
+    std::cout << "======================================" << std::endl;
+    std::cout << std::endl;
+}
+
+bool FileEnnemisCombat::peutAjouterEnnemiActif() const
+{
+    return getNombreEnnemisActifs() < NOMBRE_MAX_ENNEMIS_ACTIFS;
+}
+
+void FileEnnemisCombat::faireEntrerProchainEnnemi()
+{
+    if (ennemisEnAttente.empty())
+    {
+        return;
+    }
+
+    Monstre prochain = ennemisEnAttente.front();
+    ennemisEnAttente.erase(ennemisEnAttente.begin());
+
+    ennemisActifs.push_back(prochain);
+
+    std::cout << prochain.getNom()
+              << " entre dans la première ligne."
+              << std::endl;
     std::cout << std::endl;
 }

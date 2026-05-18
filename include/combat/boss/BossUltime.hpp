@@ -1,25 +1,18 @@
-#ifndef BOSS_COMBAT_HPP
-#define BOSS_COMBAT_HPP
+#ifndef BOSS_ULTIME_HPP
+#define BOSS_ULTIME_HPP
 
 #include "core/Random.hpp"
 
 #include "entite/Boss.hpp"
 #include "entite/Entite.hpp"
 
-class BossCombat
+class BossUltime
 {
 public:
-    static void verifierDecryptageBoss(Boss& boss);
-
     static void executerUltimeBoss(
         Boss& boss,
         Entite& joueur,
         Random& random
-    );
-
-    static bool gererFinTourBoss(
-        Boss& boss,
-        Entite& joueur
     );
 };
 

@@ -1,9 +1,9 @@
 #include "combat/Combat.hpp"
 
-#include "combat/modes/ModePvp.hpp"
-#include "combat/modes/ModePvpIA.hpp"
-#include "combat/modes/ModePveBoss.hpp"
-#include "combat/modes/ModePveMonstres.hpp"
+#include "combat/modes/pvp/ModePvp.hpp"
+#include "combat/modes/pvp/ModePvpIA.hpp"
+#include "combat/modes/boss/ModePveBoss.hpp"
+#include "combat/modes/pve/ModePveMonstres.hpp"
 
 void Combat::lancerPvpDeuxJoueurs(Joueur& joueur1)
 {
