@@ -1,34 +1,37 @@
+// English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
+// Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
+
 #include "combat/BossCombat.hpp"
 
-#include "combat/boss/BossDecryptage.hpp"
-#include "combat/boss/BossUltime.hpp"
-#include "combat/boss/BossFinTour.hpp"
+#include "combat/boss/BossDecryption.hpp"
+#include "combat/boss/BossUltimate.hpp"
+#include "combat/boss/BossEndTurn.hpp"
 
-void BossCombat::verifierDecryptageBoss(Boss& boss)
+void BossCombat::checkBossDecryption(Boss& boss)
 {
-    BossDecryptage::verifierDecryptageBoss(boss);
+    BossDecryption::checkBossDecryption(boss);
 }
 
-void BossCombat::executerUltimeBoss(
+void BossCombat::executeBossUltimate(
     Boss& boss,
-    Entite& joueur,
+    Entity& player,
     Random& random
 )
 {
-    BossUltime::executerUltimeBoss(
+    BossUltimate::executeBossUltimate(
         boss,
-        joueur,
+        player,
         random
     );
 }
 
-bool BossCombat::gererFinTourBoss(
+bool BossCombat::handleBossEndTurn(
     Boss& boss,
-    Entite& joueur
+    Entity& player
 )
 {
-    return BossFinTour::gererFinTourBoss(
+    return BossEndTurn::handleBossEndTurn(
         boss,
-        joueur
+        player
     );
 }

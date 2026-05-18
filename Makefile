@@ -1,34 +1,28 @@
 # =========================================================
-# PROJET DINOTOFU - MAKEFILE LINUX
+# DINOTOFU - LINUX MAKEFILE
+# DINOTOFU - MAKEFILE LINUX
 # =========================================================
 #
-# COMMANDES DISPONIBLES :
+# Available commands:
+# Commandes disponibles :
 #
-# Compiler le projet :
-#   make
+#   make                 Build the project / Compiler le projet
+#   make run             Build and run / Compiler et lancer
+#   make clean           Remove generated files / Supprimer les fichiers générés
+#   make rebuild         Clean then rebuild / Nettoyer puis recompiler
+#   make install-desktop Create a Linux desktop launcher / Créer un lanceur Linux
+#   make remove-desktop  Remove the Linux desktop launcher / Supprimer le lanceur Linux
 #
-# Lancer le jeu :
-#   make run
+# Direct launch after build:
+# Lancement direct après compilation :
 #
-# Nettoyer les fichiers générés :
-#   make clean
-#
-# Recompiler depuis zéro :
-#   make rebuild
-#
-# Créer un lanceur cliquable Linux :
-#   make install-desktop
-#
-# Supprimer le lanceur cliquable Linux :
-#   make remove-desktop
-#
-# Lancer directement l'exécutable après compilation :
-#   ./output/ProjetDinotofu
+#   ./output/Dinotofu
 #
 # =========================================================
 
 
 # =========================================================
+# CONFIGURATION
 # CONFIGURATION
 # =========================================================
 
@@ -40,12 +34,13 @@ SRC_DIR  := src
 OBJ_DIR  := build
 BIN_DIR  := output
 
-APP_NAME := ProjetDinotofu
+APP_NAME := Dinotofu
 TARGET   := $(BIN_DIR)/$(APP_NAME)
 
 
 # =========================================================
-# SOURCES / OBJETS
+# SOURCES / OBJECT FILES
+# SOURCES / FICHIERS OBJETS
 # =========================================================
 
 SRCS := $(shell find $(SRC_DIR) -type f -name "*.cpp")
@@ -54,6 +49,7 @@ DEPS := $(OBJS:.o=.d)
 
 
 # =========================================================
+# MAIN RULES
 # RÈGLES PRINCIPALES
 # =========================================================
 
@@ -77,6 +73,7 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 
 # =========================================================
+# USEFUL COMMANDS
 # COMMANDES UTILES
 # =========================================================
 
@@ -92,6 +89,7 @@ rebuild: clean all
 
 
 # =========================================================
+# CLICKABLE LINUX LAUNCHER
 # LANCEUR CLIQUABLE LINUX
 # =========================================================
 

@@ -1,3 +1,6 @@
+// English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
+// Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
+
 #include "core/Console.hpp"
 
 #include <cstdlib>
@@ -13,12 +16,12 @@ void Console::clear()
     system("clear");
 }
 
-void Console::pauseSecondes(int secondes)
+void Console::pauseSeconds(int seconds)
 {
-    std::this_thread::sleep_for(std::chrono::seconds(secondes));
+    std::this_thread::sleep_for(std::chrono::seconds(seconds));
 }
 
-void Console::viderBufferEntreeDisponible()
+void Console::flushAvailableInputBuffer()
 {
     while (std::cin.rdbuf()->in_avail() > 0)
     {
@@ -26,9 +29,9 @@ void Console::viderBufferEntreeDisponible()
     }
 }
 
-void Console::attendreEntree()
+void Console::waitForEnter()
 {
-    viderBufferEntreeDisponible();
+    flushAvailableInputBuffer();
 
     std::cout << std::endl;
     std::cout << "Appuie sur Entrée pour continuer...";
@@ -37,12 +40,12 @@ void Console::attendreEntree()
     std::string ligne;
     std::getline(std::cin, ligne);
 
-    viderBufferEntreeDisponible();
+    flushAvailableInputBuffer();
 
     std::cout << std::endl;
 }
 
-int Console::demanderNombreEntre(int min, int max, const std::string& messageErreur)
+int Console::askNumberBetween(int min, int max, const std::string& errorMessage)
 {
     while (true)
     {
@@ -51,39 +54,39 @@ int Console::demanderNombreEntre(int min, int max, const std::string& messageErr
         if (!std::getline(std::cin >> std::ws, ligne))
         {
             std::cin.clear();
-            std::cout << messageErreur << std::endl;
+            std::cout << errorMessage << std::endl;
             std::cout << "> ";
             continue;
         }
 
         std::istringstream flux(ligne);
 
-        int choix;
+        int choice;
         char caractereEnTrop;
 
-        if (!(flux >> choix))
+        if (!(flux >> choice))
         {
-            std::cout << messageErreur << std::endl;
+            std::cout << errorMessage << std::endl;
             std::cout << "> ";
             continue;
         }
 
         if (flux >> caractereEnTrop)
         {
-            std::cout << messageErreur << std::endl;
+            std::cout << errorMessage << std::endl;
             std::cout << "> ";
             continue;
         }
 
-        if (choix < min || choix > max)
+        if (choice < min || choice > max)
         {
-            std::cout << messageErreur << std::endl;
+            std::cout << errorMessage << std::endl;
             std::cout << "> ";
             continue;
         }
 
-        viderBufferEntreeDisponible();
+        flushAvailableInputBuffer();
 
-        return choix;
+        return choice;
     }
 }

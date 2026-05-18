@@ -1,285 +1,301 @@
-# Projet Dinotofu !
+# Dinotofu   
 
-## Ce Projet est en cours de réalisation
+Dinotofu is a C++17 terminal RPG / arena game.   
 
-ProjetDinotofu est un projet mis en place pour s'amuser et s'entrainer a coder en C++. 
-Ce projet est personelle, crée et inventé par Louis (Maitre du projet)
+The project is currently being rebuilt from an old single-file prototype into a cleaner object-oriented architecture. The game still runs entirely in the terminal for now, but the codebase is prepared for future systems such as campaign saves, class evolution, better inventory management, boss mechanics, enemy waves, and later coop / allied AI / summons.   
 
-Le monde de Dinotofu est un jeux vidéo basé sur l'univers medieval fantaisique ou regne combat, amusement, intrigue, decouverte et sentiments autant unic les uns que les autres. 
-il dispose de 5 mods differents : Joueur contre Joueur, Joueur contre Ordinateur, Joueur contre Boss, Joueur contre Monstre/Groupe de monstre et Une campagne unic (pas encore réalisé). 
-Le style de combat a été pensé tel ceux de pokemon : liste de choix possible : attaquer, boir une potion, fuir... Et les entitées possedent donc des PV, et des degats variants. 
-Il existe faiblesse, resistances, capacité, et meme des races et classes qui donnerons un coté unic a votre gameplay. 
-Toute variables tel que les monstres, l'ordinateur, le nombre de degat, si le coup reussit ou non.... est fait celon L'ALEATOIRE tel un jeux de DND. 
+## Current status   
 
-Note du dévelopeur créateur : 
-J'espere que ce projet plairat a un grand nombre et laisseras de bons souvenirs et rires entre les joueurs. 
+Dinotofu is still in development.   
 
-### Merci pour votre attention et votre soutien !          
-            
-en voici plus ou moins l'architecture de base.         
-         
-ProjetDinotofu/    
-├── Makefile    
-├── README.md    
-├── .gitignore    
-│    
-├── build/    
-│   └── (fichiers objets générés automatiquement)    
-│    
-├── output/    
-│   └── ProjetDinotofu    
-│    
-├── assets/    
-│   ├── textes/    
-│   │   ├── dialogues/    
-│   │   ├── descriptions/    
-│   │   └── lore/    
-│   │    
-│   ├── sauvegardes/    
-│   │   ├── campagnes/    
-│   │   └── joueurs/    
-│   │    
-│   └── config/    
-│       ├── classes.json    
-│       ├── monstres.json    
-│       ├── boss.json    
-│       ├── armes.json    
-│       ├── armures.json    
-│       ├── consommables.json    
-│       └── materiaux.json    
-│    
-├── include/    
-│   ├── core/    
-│   │   ├── Jeu.hpp    
-│   │   ├── ModeJeu.hpp    
-│   │   ├── Console.hpp    
-│   │   ├── Random.hpp    
-│   │   └── Config.hpp    
-│   │    
-│   ├── entite/    
-│   │   ├── Entite.hpp    
-│   │   ├── Joueur.hpp    
-│   │   ├── Monstre.hpp    
-│   │   ├── Boss.hpp    
-│   │   ├── PNJ.hpp    
-│   │   ├── Race.hpp    
-│   │   └── CatalogueMonstres.hpp    
-│   │    
-│   ├── classe/    
-│   │   ├── ClasseJoueur.hpp    
-│   │   ├── EvolutionClasse.hpp    
-│   │   └── CatalogueClasses.hpp    
-│   │    
-│   ├── combat/    
-│   │   ├── Combat.hpp    
-│   │   ├── TourCombat.hpp    
-│   │   ├── GestionnaireTours.hpp    
-│   │   ├── ActionsCombat.hpp    
-│   │   ├── BossCombat.hpp    
-│   │   ├── IACombat.hpp    
-│   │   ├── SystemeDegats.hpp    
-│   │   ├── SystemeClassesCombat.hpp   
-│   │   ├── SystemeFuite.hpp   
-│   │   ├── SystemeObservation.hpp    
-│   │   ├── SystemeVagueCombat.hpp    
-│   │   ├── FileEnnemisCombat.hpp    
-│   │   └── modes/    
-│   │       ├── ModePvp.hpp    
-│   │       ├── ModePvpIA.hpp    
-│   │       ├── ModePveBoss.hpp    
-│   │       └── ModePveMonstres.hpp    
-│   │    
-│   ├── action/    
-│   │   ├── Action.hpp    
-│   │   ├── Attaque.hpp    
-│   │   ├── Competence.hpp    
-│   │   ├── Ultime.hpp    
-│   │   ├── UtiliserObjet.hpp    
-│   │   └── PasserTour.hpp    
-│   │    
-│   ├── effet/    
-│   │   ├── Effet.hpp    
-│   │   ├── Saignement.hpp    
-│   │   ├── Corrosion.hpp    
-│   │   ├── Regeneration.hpp    
-│   │   ├── Immobilisation.hpp    
-│   │   ├── BuffDegats.hpp    
-│   │   └── ArmureSpeciale.hpp    
-│   │    
-│   ├── objet/    
-│   │   ├── Objet.hpp    
-│   │   ├── Inventaire.hpp    
-│   │   ├── arme/    
-│   │   │   ├── Arme.hpp    
-│   │   │   ├── TypeArme.hpp    
-│   │   │   └── CatalogueArmes.hpp    
-│   │   │    
-│   │   ├── armure/    
-│   │   │   ├── Armure.hpp    
-│   │   │   ├── TypeArmure.hpp    
-│   │   │   └── CatalogueArmures.hpp    
-│   │   │    
-│   │   ├── consommable/    
-│   │   │   ├── Consommable.hpp    
-│   │   │   ├── TypeConsommable.hpp    
-│   │   │   └── CatalogueConsommables.hpp    
-│   │   │    
-│   │   └── materiau/    
-│   │       ├── Materiau.hpp    
-│   │       └── CatalogueMateriaux.hpp    
-│   │    
-│   ├── progression/    
-│   │   ├── Niveau.hpp    
-│   │   ├── Experience.hpp    
-│   │   ├── Statistique.hpp    
-│   │   └── CaracteristiquesDnd.hpp    
-│   │    
-│   ├── economie/    
-│   │   ├── Argent.hpp    
-│   │   └── Boutique.hpp    
-│   │    
-│   ├── sauvegarde/    
-│   │   ├── Sauvegarde.hpp    
-│   │   ├── SauvegardeJoueur.hpp    
-│   │   ├── SauvegardeCampagne.hpp    
-│   │   └── Compte.hpp    
-│   │    
-│   ├── histoire/    
-│   │   ├── Campagne.hpp    
-│   │   ├── Chapitre.hpp    
-│   │   ├── Dialogue.hpp    
-│   │   ├── Evenement.hpp    
-│   │   ├── Reputation.hpp    
-│   │   └── ChoixJoueur.hpp    
-│   │    
-│   ├── interface/    
-│   │   ├── Interface.hpp    
-│   │   ├── InterfaceTerminal.hpp    
-│   │   ├── InterfaceGraphique.hpp    
-│   │   ├── MenuCibleCombat.hpp   
-│   │   ├── MenuCombat.hpp    
-│   │   ├── MenuPotionsCombat.hpp   
-│   │   ├── MenuInventaire.hpp    
-│   │   └── MenuEquipement.hpp    
-│   │    
-│   └── utils/    
-│       ├── Utils.hpp    
-│       ├── StringUtils.hpp    
-│       └── FileUtils.hpp    
-│    
-└── src/    
-    ├── main.cpp    
-    │    
-    ├── core/    
-    │   ├── Jeu.cpp    
-    │   ├── Console.cpp    
-    │   ├── Random.cpp    
-    │   └── Config.cpp    
-    │    
-    ├── entite/    
-    │   ├── Entite.cpp    
-    │   ├── Joueur.cpp    
-    │   ├── Monstre.cpp    
-    │   ├── Boss.cpp    
-    │   ├── PNJ.cpp    
-    │   └── CatalogueMonstres.cpp    
-    │    
-    ├── classe/    
-    │   ├── ClasseJoueur.cpp    
-    │   ├── EvolutionClasse.cpp    
-    │   └── CatalogueClasses.cpp    
-    │    
-    ├── combat/    
-    │   ├── Combat.cpp    
-    │   ├── TourCombat.cpp    
-    │   ├── GestionnaireTours.cpp    
-    │   ├── ActionsCombat.cpp    
-    │   ├── BossCombat.cpp    
-    │   ├── IACombat.cpp    
-    │   ├── SystemeDegats.cpp   
-    │   ├── SystemeFuite.cpp   
-    │   ├── SystemeClassesCombat.cpp    
-    │   ├── SystemeObservation.cpp       
-    │   ├── SystemeVagueCombat.cpp    
-    │   ├── FileEnnemisCombat.cpp    
-    │   └── modes/    
-    │       ├── ModePvp.cpp    
-    │       ├── ModePvpIA.cpp    
-    │       ├── ModePveBoss.cpp    
-    │       └── ModePveMonstres.cpp    
-    │    
-    ├── action/    
-    │   ├── Action.cpp    
-    │   ├── Attaque.cpp    
-    │   ├── Competence.cpp    
-    │   ├── Ultime.cpp    
-    │   ├── UtiliserObjet.cpp    
-    │   └── PasserTour.cpp    
-    │    
-    ├── effet/    
-    │   ├── Effet.cpp    
-    │   ├── Saignement.cpp    
-    │   ├── Corrosion.cpp    
-    │   ├── Regeneration.cpp    
-    │   ├── Immobilisation.cpp    
-    │   ├── BuffDegats.cpp    
-    │   └── ArmureSpeciale.cpp    
-    │    
-    ├── objet/    
-    │   ├── Objet.cpp    
-    │   ├── Inventaire.cpp    
-    │   │    
-    │   ├── arme/    
-    │   │   ├── Arme.cpp    
-    │   │   └── CatalogueArmes.cpp    
-    │   │    
-    │   ├── armure/    
-    │   │   ├── Armure.cpp    
-    │   │   └── CatalogueArmures.cpp    
-    │   │    
-    │   ├── consommable/    
-    │   │   ├── Consommable.cpp    
-    │   │   └── CatalogueConsommables.cpp    
-    │   │    
-    │   └── materiau/    
-    │       ├── Materiau.cpp    
-    │       └── CatalogueMateriaux.cpp    
-    │    
-    ├── progression/    
-    │   ├── Niveau.cpp    
-    │   ├── Experience.cpp    
-    │   ├── Statistique.cpp    
-    │   └── CaracteristiquesDnd.cpp    
-    │    
-    ├── economie/    
-    │   ├── Argent.cpp    
-    │   └── Boutique.cpp    
-    │    
-    ├── sauvegarde/    
-    │   ├── Sauvegarde.cpp    
-    │   ├── SauvegardeJoueur.cpp    
-    │   ├── SauvegardeCampagne.cpp    
-    │   └── Compte.cpp    
-    │    
-    ├── histoire/    
-    │   ├── Campagne.cpp    
-    │   ├── Chapitre.cpp    
-    │   ├── Dialogue.cpp    
-    │   ├── Evenement.cpp    
-    │   ├── Reputation.cpp    
-    │   └── ChoixJoueur.cpp    
-    │    
-    ├── interface/    
-    │   ├── Interface.cpp    
-    │   ├── InterfaceTerminal.cpp    
-    │   ├── InterfaceGraphique.cpp    
-    │   ├── MenuCibleCombat.cpp   
-    │   ├── MenuCombat.cpp    
-    │   ├── MenuPotionsCombat.cpp    
-    │   ├── MenuInventaire.cpp    
-    │   └── MenuEquipement.cpp    
-    │    
-    └── utils/    
-        ├── Utils.cpp    
-        ├── StringUtils.cpp    
-        └── FileUtils.cpp    
+The current playable combat modes are:   
+
+- PvP: player vs player   
+- PvP AI: player vs computer-controlled opponent   
+- PvE Monsters: enemy wave combat   
+- PvE Boss: boss arena combat   
+
+The campaign mode is planned but not fully implemented yet.   
+
+## Game concept   
+
+Dinotofu is designed as a medieval-fantasy terminal RPG with arena-style combat.   
+
+The combat flow is inspired by classic turn-based games: the player chooses actions such as attacking, using potions, checking equipment, opening the inventory, passing a turn, or trying to escape.   
+
+The game uses randomness, close to a DND feeling, for several actions such as damage rolls, turn order, AI choices, and escape attempts.   
+
+Planned long-term systems include:   
+
+- character creation and saves   
+- campaign progression   
+- unlocked monsters and bosses   
+- DND-like attributes: Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma   
+- class evolution based on stats   
+- damage types and resistances   
+- weapons, armor, materials, durability, special effects, heroic and relic equipment   
+- coop, allied AI, summons, and initiative-based group turns   
+
+## Build requirements   
+
+Required on Linux:   
+
+- `g++`   
+- `make`   
+- C++17 support   
+
+Example install command on Debian / Ubuntu:   
+
+```bash   
+sudo apt update   
+sudo apt install -y build-essential make g++   
+```   
+
+## Make commands   
+
+Compile the project:   
+
+```bash   
+make   
+```   
+
+Run the game:   
+
+```bash   
+make run   
+```   
+
+Clean generated files:   
+
+```bash   
+make clean   
+```   
+
+Rebuild from zero:   
+
+```bash   
+make rebuild   
+```   
+
+Create a clickable Linux desktop launcher:   
+
+```bash   
+make install-desktop   
+```   
+
+Remove the Linux desktop launcher:   
+
+```bash   
+make remove-desktop   
+```   
+
+## Launching on Linux   
+
+Recommended:   
+
+```bash   
+make run   
+```   
+
+Or compile, then run the executable directly:   
+
+```bash   
+make   
+./output/Dinotofu   
+```   
+
+## Launching on Windows   
+
+The Makefile is mainly made for Linux.   
+
+Recommended Windows options:   
+
+### Option 1: WSL   
+
+Install WSL, open the project inside a Linux terminal, then use:   
+
+```bash   
+make run   
+```   
+
+### Option 2: MSYS2 / MinGW   
+
+Install a MinGW toolchain and `make`, then run the project from an MSYS2 terminal:   
+
+```bash   
+make run   
+```   
+
+### Option 3: Manual g++ command   
+
+If all includes are correctly configured, a manual command can be used, but this is less comfortable than the Makefile:   
+
+```bash   
+g++ -std=c++17 -Wall -Wextra -Iinclude $(find src -name "*.cpp") -o output/Dinotofu   
+```   
+
+This direct command is mostly useful on Linux-like shells. On classic Windows CMD or PowerShell, use WSL or MSYS2 instead.   
+
+## Git notes   
+
+Generated folders must not be committed:   
+
+- `build/`   
+- `output/`   
+
+The real `Makefile` must stay in Git.   
+
+## Code organization   
+
+The project uses an `include/` and `src/` architecture.   
+
+Headers are placed in `include/`, implementation files are placed in `src/`, and both folders follow almost the same structure.   
+
+The code identifiers are now mostly written in English. Player-facing terminal text can remain in French.   
+
+## Current architecture   
+
+```text   
+Dinotofu/   
+├── Makefile   
+├── README.md   
+├── .gitignore   
+│   
+├── assets/   
+│   ├── config/   
+│   ├── sauvegardes/   
+│   └── textes/   
+│   
+├── include/   
+│   ├── boss/   
+│   │   └── BossCatalog.hpp   
+│   │   
+│   ├── class_system/   
+│   │   ├── ClassCatalog.hpp   
+│   │   ├── ClassEvolution.hpp   
+│   │   └── PlayerClass.hpp   
+│   │   
+│   ├── combat/   
+│   │   ├── ai/   
+│   │   │   ├── AIAction.hpp   
+│   │   │   └── CombatAI.hpp   
+│   │   ├── action/   
+│   │   │   ├── CombatAttack.hpp   
+│   │   │   ├── CombatPotion.hpp   
+│   │   │   └── SpecialCombatEffects.hpp   
+│   │   ├── boss/   
+│   │   │   ├── BossDecryption.hpp   
+│   │   │   ├── BossEndTurn.hpp   
+│   │   │   └── BossUltimate.hpp   
+│   │   ├── modes/   
+│   │   │   ├── boss/   
+│   │   │   │   └── BossPveMode.hpp   
+│   │   │   ├── pve/   
+│   │   │   │   └── MonsterPveMode.hpp   
+│   │   │   └── pvp/   
+│   │   │       ├── AiPvpMode.hpp   
+│   │   │       └── PvpMode.hpp   
+│   │   ├── system/   
+│   │   │   ├── CombatClassSystem.hpp   
+│   │   │   ├── DamageSystem.hpp   
+│   │   │   ├── EscapeSystem.hpp   
+│   │   │   ├── ObservationSystem.hpp   
+│   │   │   └── WaveCombatSystem.hpp   
+│   │   ├── turn/   
+│   │   │   ├── wave/   
+│   │   │   │   ├── MonsterWaveCombatTurn.hpp   
+│   │   │   │   └── PlayerWaveCombatTurn.hpp   
+│   │   │   ├── AICombatTurn.hpp   
+│   │   │   ├── BossCombatTurn.hpp   
+│   │   │   └── HumanCombatTurn.hpp   
+│   │   ├── BossCombat.hpp   
+│   │   ├── Combat.hpp   
+│   │   ├── CombatActions.hpp   
+│   │   ├── CombatTurn.hpp   
+│   │   ├── DamageReport.hpp   
+│   │   ├── EnemyCombatQueue.hpp   
+│   │   └── TurnManager.hpp   
+│   │   
+│   ├── core/   
+│   │   ├── Config.hpp   
+│   │   ├── Console.hpp   
+│   │   ├── Game.hpp   
+│   │   ├── GameMode.hpp   
+│   │   └── Random.hpp   
+│   │   
+│   ├── economy/   
+│   │   ├── Money.hpp   
+│   │   └── Shop.hpp   
+│   │   
+│   ├── effect/   
+│   │   ├── Bleeding.hpp   
+│   │   ├── Corrosion.hpp   
+│   │   ├── DamageBuff.hpp   
+│   │   ├── Effect.hpp   
+│   │   ├── Immobilization.hpp   
+│   │   ├── Regeneration.hpp   
+│   │   └── SpecialArmor.hpp   
+│   │   
+│   ├── entity/   
+│   │   ├── Boss.hpp   
+│   │   ├── Entity.hpp   
+│   │   ├── Monster.hpp   
+│   │   ├── MonsterCatalog.hpp   
+│   │   ├── NPC.hpp   
+│   │   ├── Player.hpp   
+│   │   └── Race.hpp   
+│   │   
+│   ├── interface/   
+│   │   ├── menu/   
+│   │   │   ├── equipment/   
+│   │   │   │   ├── EquipmentComparison.hpp   
+│   │   │   │   └── EquipmentDisplay.hpp   
+│   │   │   ├── inventory/   
+│   │   │   │   ├── InventoryDisplay.hpp   
+│   │   │   │   ├── InventorySelection.hpp   
+│   │   │   │   └── InventoryUtils.hpp   
+│   │   │   ├── potions/   
+│   │   │   │   ├── CombatPotionDisplay.hpp   
+│   │   │   │   ├── CombatPotionUse.hpp   
+│   │   │   │   └── CombatPotionUtils.hpp   
+│   │   │   ├── CombatMenu.hpp   
+│   │   │   ├── CombatPotionMenu.hpp   
+│   │   │   ├── CombatTargetMenu.hpp   
+│   │   │   ├── EquipmentMenu.hpp   
+│   │   │   └── InventoryMenu.hpp   
+│   │   ├── CombatDisplay.hpp   
+│   │   ├── GraphicalInterface.hpp   
+│   │   ├── Interface.hpp   
+│   │   └── TerminalInterface.hpp   
+│   │   
+│   ├── item/   
+│   │   ├── armor/   
+│   │   │   ├── Armor.hpp   
+│   │   │   ├── ArmorCatalog.hpp   
+│   │   │   └── ArmorType.hpp   
+│   │   ├── consumable/   
+│   │   │   ├── Consumable.hpp   
+│   │   │   ├── ConsumableCatalog.hpp   
+│   │   │   └── ConsumableType.hpp   
+│   │   ├── material/   
+│   │   │   ├── Material.hpp   
+│   │   │   └── MaterialCatalog.hpp   
+│   │   ├── weapon/   
+│   │   │   ├── Weapon.hpp   
+│   │   │   ├── WeaponCatalog.hpp   
+│   │   │   └── WeaponType.hpp   
+│   │   ├── Inventory.hpp   
+│   │   └── Item.hpp   
+│   │   
+│   ├── progression/   
+│   ├── save/   
+│   ├── story/   
+│   └── utils/   
+│   
+└── src/   
+    └── same structure as include/, with .cpp implementation files   
+```   
+
+## Developer note   
+
+This project is personal and experimental. The goal is to keep the fun prototype spirit while progressively making the code cleaner, easier to maintain, and ready for bigger systems.   

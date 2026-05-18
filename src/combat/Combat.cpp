@@ -1,26 +1,29 @@
+// English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
+// Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
+
 #include "combat/Combat.hpp"
 
-#include "combat/modes/pvp/ModePvp.hpp"
-#include "combat/modes/pvp/ModePvpIA.hpp"
-#include "combat/modes/boss/ModePveBoss.hpp"
-#include "combat/modes/pve/ModePveMonstres.hpp"
+#include "combat/modes/pvp/PvpMode.hpp"
+#include "combat/modes/pvp/AiPvpMode.hpp"
+#include "combat/modes/boss/BossPveMode.hpp"
+#include "combat/modes/pve/MonsterPveMode.hpp"
 
-void Combat::lancerPvpDeuxJoueurs(Joueur& joueur1)
+void Combat::launchTwoPlayerPvp(Player& player1)
 {
-    ModePvp::lancer(joueur1, random);
+    PvpMode::run(player1, random);
 }
 
-void Combat::lancerPvpIA(Joueur& joueur1)
+void Combat::launchAiPvp(Player& player1)
 {
-    ModePvpIA::lancer(joueur1, random);
+    AiPvpMode::run(player1, random);
 }
 
-void Combat::lancerPveBoss(Joueur& joueur1)
+void Combat::launchBossPve(Player& player1)
 {
-    ModePveBoss::lancer(joueur1, random);
+    BossPveMode::run(player1, random);
 }
 
-void Combat::lancerPveMonstres(Joueur& joueur1)
+void Combat::launchMonsterPve(Player& player1)
 {
-    ModePveMonstres::lancer(joueur1, random);
+    MonsterPveMode::run(player1, random);
 }

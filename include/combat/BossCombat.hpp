@@ -1,24 +1,27 @@
-#ifndef BOSS_COMBAT_HPP
-#define BOSS_COMBAT_HPP
+// English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
+// Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
+
+#ifndef INCLUDE_COMBAT_BOSSCOMBAT_HPP
+#define INCLUDE_COMBAT_BOSSCOMBAT_HPP
 
 #include "core/Random.hpp"
-#include "entite/Boss.hpp"
-#include "entite/Entite.hpp"
+#include "entity/Boss.hpp"
+#include "entity/Entity.hpp"
 
 class BossCombat
 {
 public:
-    static void verifierDecryptageBoss(Boss& boss);
+    static void checkBossDecryption(Boss& boss);
 
-    static void executerUltimeBoss(
+    static void executeBossUltimate(
         Boss& boss,
-        Entite& joueur,
+        Entity& player,
         Random& random
     );
 
-    static bool gererFinTourBoss(
+    static bool handleBossEndTurn(
         Boss& boss,
-        Entite& joueur
+        Entity& player
     );
 };
 

@@ -1,7 +1,10 @@
-#ifndef COMBAT_HPP
-#define COMBAT_HPP
+// English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
+// Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
-#include "entite/Joueur.hpp"
+#ifndef INCLUDE_COMBAT_COMBAT_HPP
+#define INCLUDE_COMBAT_COMBAT_HPP
+
+#include "entity/Player.hpp"
 #include "core/Random.hpp"
 
 class Combat
@@ -10,10 +13,10 @@ private:
     Random random;
 
 public:
-    void lancerPvpDeuxJoueurs(Joueur& joueur1);
-    void lancerPvpIA(Joueur& joueur1);
-    void lancerPveBoss(Joueur& joueur1);
-    void lancerPveMonstres(Joueur& joueur1);
+    void launchTwoPlayerPvp(Player& player1);
+    void launchAiPvp(Player& player1);
+    void launchBossPve(Player& player1);
+    void launchMonsterPve(Player& player1);
 };
 
 #endif

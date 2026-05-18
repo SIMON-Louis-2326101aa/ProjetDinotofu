@@ -1,0 +1,193 @@
+// English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
+// Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
+
+#include "combat/system/EscapeSystem.hpp"
+#include "combat/system/CombatClassSystem.hpp"
+
+#include "core/Console.hpp"
+
+#include <algorithm>
+#include <iostream>
+
+bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random)
+{
+    std::cout << player.getName() << " cherche une ouverture pour fuir le combat..." << std::endl;
+    std::cout << std::endl;
+
+    Console::pauseSeconds(1);
+
+    int chanceFuite = CombatClassSystem::getChanceFuiteBase(player);
+    int roll = random.between(1, 100);
+
+    if (roll <= chanceFuite)
+    {
+        std::cout << "Fuite réussie." << std::endl;
+        std::cout << player.getName()
+                  << " parvient à quitter l'affrontement avant d'être encerclé."
+                  << std::endl;
+        std::cout << std::endl;
+
+        return true;
+    }
+
+    std::cout << "Fuite échouée." << std::endl;
+    std::cout << "Les ennemis bloquent le passage. Ton tour est perdu." << std::endl;
+    std::cout << std::endl;
+
+    return false;
+}
+
+bool EscapeSystem::playerAttemptsBossEscape(const Player& player, const Boss& boss)
+{
+    std::cout << player.getName() << " cherche une issue..." << std::endl;
+    std::cout << std::endl;
+
+    Console::pauseSeconds(1);
+
+    std::cout << "L'air devient lourd." << std::endl;
+    std::cout << "L'arène semble se refermer comme une cage." << std::endl;
+    std::cout << std::endl;
+
+    Console::pauseSeconds(1);
+
+    std::cout << boss.getName() << " bloque toute échappatoire par sa seule présence." << std::endl;
+    std::cout << "Face à une entité de ce niveau, la fuite n'est plus une option." << std::endl;
+    std::cout << std::endl;
+
+    Console::pauseSeconds(1);
+
+    std::cout << "[la fuite est impossible durant ce combat]" << std::endl;
+    std::cout << "La tentative échoue. Ton tour est perdu." << std::endl;
+    std::cout << std::endl;
+
+    return false;
+}
+
+bool EscapeSystem::playerAttemptsDuelEscape(
+    Player& runner,
+    Entity& opponent,
+    Random& random
+)
+{
+    std::cout << runner.getName() << " cherche une ouverture pour quitter le duel..." << std::endl;
+    std::cout << "En duel, fuir revient à abandonner le combat." << std::endl;
+    std::cout << std::endl;
+
+    Console::pauseSeconds(1);
+
+    int chanceFuite = calculateDuelEscapeChance(runner, opponent);
+    int roll = random.between(1, 100);
+
+    if (roll <= chanceFuite)
+    {
+        std::cout << "Fuite réussie." << std::endl;
+        std::cout << runner.getName() << " sort de l'arène avant de se faire achever." << std::endl;
+        std::cout << opponent.getName() << " remporte l'affrontement." << std::endl;
+        std::cout << std::endl;
+
+        std::cout << "Répartition prévue des récompenses :" << std::endl;
+        std::cout << "- " << runner.getName() << " : 25%" << std::endl;
+        std::cout << "- " << opponent.getName() << " : 75%" << std::endl;
+        std::cout << std::endl;
+
+        endCombatBySurrender(runner);
+        return true;
+    }
+
+    std::cout << "Fuite échouée." << std::endl;
+    std::cout << opponent.getName()
+              << " coupe la trajectoire de "
+              << runner.getName()
+              << "."
+              << std::endl;
+    std::cout << "Le duel continue, mais le tour est perdu." << std::endl;
+    std::cout << std::endl;
+
+    return false;
+}
+
+bool EscapeSystem::monsterCanAttemptEscape(const Monster& monster)
+{
+    if (monster.estInvocation())
+    {
+        return false;
+    }
+
+    if (monster.estElite())
+    {
+        return false;
+    }
+
+    if (monster.getHealingPotions() > 0)
+    {
+        return false;
+    }
+
+    if (monster.getMaxHp() <= 0)
+    {
+        return false;
+    }
+
+    int hpPercentage = monster.getHp() * 100 / monster.getMaxHp();
+
+    return hpPercentage <= 10;
+}
+
+bool EscapeSystem::monsterAttemptsEscape(Monster& monster, Random& random)
+{
+    if (!monsterCanAttemptEscape(monster))
+    {
+        return false;
+    }
+
+    int roll = random.between(1, 100);
+
+    if (roll <= LOW_MONSTER_ESCAPE_CHANCE)
+    {
+        std::cout << monster.getName() << " panique et tente de fuir..." << std::endl;
+        Console::pauseSeconds(1);
+
+        std::cout << monster.getName()
+                  << " disparaît de l'affrontement avant de recevoir le coup fatal."
+                  << std::endl;
+        std::cout << std::endl;
+
+        return true;
+    }
+
+    return false;
+}
+
+int EscapeSystem::calculateDuelEscapeChance(
+    const Player& runner,
+    const Entity& opponent
+)
+{
+    int chance = CombatClassSystem::getChanceFuiteBase(runner);
+
+    const Player* joueurAdverse = dynamic_cast<const Player*>(&opponent);
+
+    if (joueurAdverse != nullptr)
+    {
+        int ecartNiveau = joueurAdverse->getLevel() - runner.getLevel();
+        chance -= ecartNiveau * 5;
+    }
+
+    int chanceAdversaire = CombatClassSystem::getChanceFuiteBase(opponent);
+
+    if (chanceAdversaire <= 35)
+    {
+        chance -= 10;
+    }
+    else if (chanceAdversaire >= 65)
+    {
+        chance += 5;
+    }
+
+    return std::max(15, std::min(chance, 85));
+}
+
+void EscapeSystem::endCombatBySurrender(Player& runner)
+{
+    runner.takeDamage(runner.getHp());
+}
