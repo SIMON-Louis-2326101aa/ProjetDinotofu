@@ -9,11 +9,11 @@
 class ConsumableCatalog
 {
 public:
-    static Consumable creerPotionSoinBasique();
-    static Consumable creerPotionDegatsBasique();
+    static Consumable createBasicHealingPotion();
+    static Consumable createBasicDamagePotion();
 
-    static Consumable creerPotionSoinRenforcee();
-    static Consumable creerPotionDegatsRenforcee();
+    static Consumable createReinforcedHealingPotion();
+    static Consumable createReinforcedDamagePotion();
 };
 
 #endif

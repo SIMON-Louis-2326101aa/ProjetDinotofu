@@ -69,20 +69,20 @@ void SpecialCombatEffects::applyDemonLifestealIfNeeded(
     int damageDealt
 )
 {
-    Boss* bossAttaquant = dynamic_cast<Boss*>(&attacker);
+    Boss* attackingBoss = dynamic_cast<Boss*>(&attacker);
 
-    if (bossAttaquant == nullptr)
+    if (attackingBoss == nullptr)
     {
         return;
     }
 
-    if (bossAttaquant->getBossId() != 2 || !bossAttaquant->isUltimateActive())
+    if (attackingBoss->getBossId() != 2 || !attackingBoss->isUltimateActive())
     {
         return;
     }
 
-    if (bossAttaquant->getSpecialEffect() != 2
-        && bossAttaquant->getSpecialEffect() != 3)
+    if (attackingBoss->getSpecialEffect() != 2
+        && attackingBoss->getSpecialEffect() != 3)
     {
         return;
     }
@@ -94,9 +94,9 @@ void SpecialCombatEffects::applyDemonLifestealIfNeeded(
         return;
     }
 
-    bossAttaquant->heal(healing);
+    attackingBoss->heal(healing);
 
-    std::cout << bossAttaquant->getName()
+    std::cout << attackingBoss->getName()
               << " absorbe le sang de l'attaque et récupère "
               << healing
               << " PV."

@@ -12,7 +12,7 @@
 
 #include <iostream>
 
-void MonsterWaveCombatTurn::jouerToursMonstres(
+void MonsterWaveCombatTurn::playMonsterTurns(
     Player& player,
     EnemyCombatQueue& wave,
     Random& random

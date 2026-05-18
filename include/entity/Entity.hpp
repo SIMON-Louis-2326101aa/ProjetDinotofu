@@ -22,8 +22,8 @@ protected:
     int maxDamage;
     int criticalDamage;
 
-    int healingPotions;
-    int damagePotions;
+    int healingPotionCount;
+    int damagePotionCount;
 
 public:
     Entity();
@@ -35,8 +35,8 @@ public:
         int minDamage,
         int maxDamage,
         int criticalDamage,
-        int healingPotions,
-        int damagePotions
+        int healingPotionCount,
+        int damagePotionCount
     );
 
     virtual ~Entity() = default;
@@ -51,8 +51,8 @@ public:
     int getMaxDamage() const;
     int getCriticalDamage() const;
 
-    int getHealingPotions() const;
-    int getDamagePotions() const;
+    int getHealingPotionCount() const;
+    int getDamagePotionCount() const;
 
     bool isDead() const;
 

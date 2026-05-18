@@ -12,11 +12,11 @@ EnemyCombatQueue WaveCombatSystem::createDemoWave()
 {
     EnemyCombatQueue wave;
 
-    wave.addWaitingEnemy(MonsterCatalog::creerGobelin());
-    wave.addWaitingEnemy(MonsterCatalog::creerGobelinBrutal());
-    wave.addWaitingEnemy(MonsterCatalog::creerLoupAffame());
-    wave.addWaitingEnemy(MonsterCatalog::creerSquelette());
-    wave.addWaitingEnemy(MonsterCatalog::creerOrcMineur());
+    wave.addWaitingEnemy(MonsterCatalog::createScaredGoblin());
+    wave.addWaitingEnemy(MonsterCatalog::createBrutalGoblin());
+    wave.addWaitingEnemy(MonsterCatalog::createStarvingWolf());
+    wave.addWaitingEnemy(MonsterCatalog::createCrackedSkeleton());
+    wave.addWaitingEnemy(MonsterCatalog::createMinorOrc());
 
     wave.initializeFrontLine();
 

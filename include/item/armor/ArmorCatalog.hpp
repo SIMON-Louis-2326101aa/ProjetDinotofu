@@ -9,9 +9,9 @@
 class ArmorCatalog
 {
 public:
-    static Armor creerTenueSimple();
-    static Armor creerArmureCuirUsee();
-    static Armor creerCotteMailleArene();
+    static Armor createSimpleOutfit();
+    static Armor createWornLeatherArmor();
+    static Armor createArenaChainmail();
 };
 
 #endif

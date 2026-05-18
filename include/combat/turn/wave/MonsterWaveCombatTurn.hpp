@@ -12,7 +12,7 @@
 class MonsterWaveCombatTurn
 {
 public:
-    static void jouerToursMonstres(
+    static void playMonsterTurns(
         Player& player,
         EnemyCombatQueue& wave,
         Random& random

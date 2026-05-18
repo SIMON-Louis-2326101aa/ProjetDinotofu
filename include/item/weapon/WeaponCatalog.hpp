@@ -9,9 +9,9 @@
 class WeaponCatalog
 {
 public:
-    static Weapon creerMainsNues();
-    static Weapon creerEpeeRouillee();
-    static Weapon creerLameArene();
+    static Weapon createBareHands();
+    static Weapon createRustySword();
+    static Weapon createArenaBlade();
 };
 
 #endif

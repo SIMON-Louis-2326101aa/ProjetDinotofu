@@ -12,7 +12,7 @@
 Game::Game()
 {
     playerName = "";
-    selectedMode = GameMode::PvPIA;
+    selectedMode = GameMode::AIPvp;
 }
 
 void Game::run()
@@ -72,7 +72,7 @@ void Game::choosePlayerClass()
     std::cout << "Trois voies s'offrent à toi :" << std::endl;
     std::cout << std::endl;
 
-    ClassCatalog::displayBaseClasses();
+    ClassCatalog::displayBasicClasses();
 
     std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
     std::cout << "> ";
@@ -83,7 +83,7 @@ void Game::choosePlayerClass()
         "Veuillez entrer un chiffre valide : 1, 2 ou 3."
     );
 
-    PlayerClass chosenClass = ClassCatalog::creerClasseDeBase(choice);
+    PlayerClass chosenClass = ClassCatalog::createBaseClass(choice);
     mainPlayer = Player(playerName, chosenClass);
 
     mainPlayer.initializeStarterInventory();
@@ -114,7 +114,7 @@ void Game::chooseGameMode()
     std::cout << "    Deux combattants, une arène, aucune excuse." << std::endl;
     std::cout << std::endl;
 
-    std::cout << "3 : PvE" << std::endl;
+    std::cout << "3 : PvE monstres" << std::endl;
     std::cout << "    Une vague d'ennemis avance vers toi. Trois devant, les autres en file." << std::endl;
     std::cout << std::endl;
 
@@ -142,19 +142,19 @@ void Game::displaySelectedMode()
 
     switch (selectedMode)
     {
-        case GameMode::PvPIA:
+        case GameMode::AIPvp:
             std::cout << "PvP IA";
             break;
 
-        case GameMode::PvPDeuxJoueurs:
+        case GameMode::TwoPlayerPvp:
             std::cout << "PvP 2 joueurs";
             break;
 
-        case GameMode::PvE:
-            std::cout << "PvE";
+        case GameMode::MonsterPve:
+            std::cout << "PvE monstres";
             break;
 
-        case GameMode::PvEBoss:
+        case GameMode::BossPve:
             std::cout << "PvE Boss";
             break;
     }
@@ -172,25 +172,25 @@ void Game::launchSelectedMode()
 
     switch (selectedMode)
     {
-        case GameMode::PvPIA:
+        case GameMode::AIPvp:
         {
-            combat.launchAiPvp(mainPlayer);
+            combat.launchAIPvp(mainPlayer);
             break;
         }
 
-        case GameMode::PvPDeuxJoueurs:
+        case GameMode::TwoPlayerPvp:
         {
             combat.launchTwoPlayerPvp(mainPlayer);
             break;
         }
 
-        case GameMode::PvE:
+        case GameMode::MonsterPve:
         {
             combat.launchMonsterPve(mainPlayer);
             break;
         }
 
-        case GameMode::PvEBoss:
+        case GameMode::BossPve:
         {
             combat.launchBossPve(mainPlayer);
             break;

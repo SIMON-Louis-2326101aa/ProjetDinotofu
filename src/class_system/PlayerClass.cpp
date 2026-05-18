@@ -10,8 +10,8 @@ PlayerClass::PlayerClass()
     minDamage = 1;
     maxDamage = 5;
     criticalDamage = 10;
-    healingPotions = 0;
-    damagePotions = 0;
+    healingPotionCount = 0;
+    damagePotionCount = 0;
 }
 
 PlayerClass::PlayerClass(
@@ -20,8 +20,8 @@ PlayerClass::PlayerClass(
     int minDamage,
     int maxDamage,
     int criticalDamage,
-    int healingPotions,
-    int damagePotions
+    int healingPotionCount,
+    int damagePotionCount
 )
 {
     this->name = name;
@@ -29,8 +29,8 @@ PlayerClass::PlayerClass(
     this->minDamage = minDamage;
     this->maxDamage = maxDamage;
     this->criticalDamage = criticalDamage;
-    this->healingPotions = healingPotions;
-    this->damagePotions = damagePotions;
+    this->healingPotionCount = healingPotionCount;
+    this->damagePotionCount = damagePotionCount;
 }
 
 std::string PlayerClass::getName() const
@@ -58,12 +58,12 @@ int PlayerClass::getCriticalDamage() const
     return criticalDamage;
 }
 
-int PlayerClass::getHealingPotions() const
+int PlayerClass::getHealingPotionCount() const
 {
-    return healingPotions;
+    return healingPotionCount;
 }
 
-int PlayerClass::getDamagePotions() const
+int PlayerClass::getDamagePotionCount() const
 {
-    return damagePotions;
+    return damagePotionCount;
 }

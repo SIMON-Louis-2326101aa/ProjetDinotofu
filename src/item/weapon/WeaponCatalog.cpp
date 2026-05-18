@@ -3,7 +3,7 @@
 
 #include "item/weapon/WeaponCatalog.hpp"
 
-Weapon WeaponCatalog::creerMainsNues()
+Weapon WeaponCatalog::createBareHands()
 {
     return Weapon(
         "Mains nues",
@@ -17,7 +17,7 @@ Weapon WeaponCatalog::creerMainsNues()
     );
 }
 
-Weapon WeaponCatalog::creerEpeeRouillee()
+Weapon WeaponCatalog::createRustySword()
 {
     return Weapon(
         "Épée rouillée",
@@ -31,7 +31,7 @@ Weapon WeaponCatalog::creerEpeeRouillee()
     );
 }
 
-Weapon WeaponCatalog::creerLameArene()
+Weapon WeaponCatalog::createArenaBlade()
 {
     return Weapon(
         "Lame d'arène",

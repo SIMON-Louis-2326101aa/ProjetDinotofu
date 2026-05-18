@@ -17,8 +17,8 @@ Entity::Entity()
     maxDamage = 5;
     criticalDamage = 10;
 
-    healingPotions = 0;
-    damagePotions = 0;
+    healingPotionCount = 0;
+    damagePotionCount = 0;
 }
 
 Entity::Entity(
@@ -28,8 +28,8 @@ Entity::Entity(
     int minDamage,
     int maxDamage,
     int criticalDamage,
-    int healingPotions,
-    int damagePotions
+    int healingPotionCount,
+    int damagePotionCount
 )
 {
     this->name = name;
@@ -42,8 +42,8 @@ Entity::Entity(
     this->maxDamage = maxDamage;
     this->criticalDamage = criticalDamage;
 
-    this->healingPotions = healingPotions;
-    this->damagePotions = damagePotions;
+    this->healingPotionCount = healingPotionCount;
+    this->damagePotionCount = damagePotionCount;
 }
 
 std::string Entity::getName() const
@@ -81,14 +81,14 @@ int Entity::getCriticalDamage() const
     return criticalDamage;
 }
 
-int Entity::getHealingPotions() const
+int Entity::getHealingPotionCount() const
 {
-    return healingPotions;
+    return healingPotionCount;
 }
 
-int Entity::getDamagePotions() const
+int Entity::getDamagePotionCount() const
 {
-    return damagePotions;
+    return damagePotionCount;
 }
 
 bool Entity::isDead() const
@@ -170,12 +170,12 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
 
 bool Entity::useHealingPotion(int healAmount)
 {
-    if (healingPotions <= 0)
+    if (healingPotionCount <= 0)
     {
         return false;
     }
 
-    healingPotions--;
+    healingPotionCount--;
     heal(healAmount);
 
     return true;
@@ -183,12 +183,12 @@ bool Entity::useHealingPotion(int healAmount)
 
 bool Entity::consumeDamagePotion()
 {
-    if (damagePotions <= 0)
+    if (damagePotionCount <= 0)
     {
         return false;
     }
 
-    damagePotions--;
+    damagePotionCount--;
     return true;
 }
 
@@ -203,8 +203,8 @@ void Entity::applyClass(const PlayerClass& newClass)
     maxDamage = newClass.getMaxDamage();
     criticalDamage = newClass.getCriticalDamage();
 
-    healingPotions = newClass.getHealingPotions();
-    damagePotions = newClass.getDamagePotions();
+    healingPotionCount = newClass.getHealingPotionCount();
+    damagePotionCount = newClass.getDamagePotionCount();
 }
 
 bool Entity::areStatsVisible() const
@@ -220,7 +220,7 @@ void Entity::displayStats() const
     std::cout << "Dégâts min : " << minDamage << std::endl;
     std::cout << "Dégâts max : " << maxDamage << std::endl;
     std::cout << "Dégâts crit : " << criticalDamage << std::endl;
-    std::cout << "Potions de soin : " << healingPotions << std::endl;
-    std::cout << "Potions de dégâts : " << damagePotions << std::endl;
+    std::cout << "Potions de soin : " << healingPotionCount << std::endl;
+    std::cout << "Potions de dégâts : " << damagePotionCount << std::endl;
     std::cout << std::endl;
 }

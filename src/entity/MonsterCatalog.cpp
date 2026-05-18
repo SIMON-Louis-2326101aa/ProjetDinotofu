@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-Monster MonsterCatalog::creerGobelin()
+Monster MonsterCatalog::createScaredGoblin()
 {
     return Monster(
         "Gobelin peureux",
@@ -24,7 +24,7 @@ Monster MonsterCatalog::creerGobelin()
     );
 }
 
-Monster MonsterCatalog::creerGobelinBrutal()
+Monster MonsterCatalog::createBrutalGoblin()
 {
     return Monster(
         "Gobelin brutal",
@@ -43,7 +43,7 @@ Monster MonsterCatalog::creerGobelinBrutal()
     );
 }
 
-Monster MonsterCatalog::creerLoupAffame()
+Monster MonsterCatalog::createStarvingWolf()
 {
     return Monster(
         "Loup affamé",
@@ -62,7 +62,7 @@ Monster MonsterCatalog::creerLoupAffame()
     );
 }
 
-Monster MonsterCatalog::creerSquelette()
+Monster MonsterCatalog::createCrackedSkeleton()
 {
     return Monster(
         "Squelette fissuré",
@@ -81,7 +81,7 @@ Monster MonsterCatalog::creerSquelette()
     );
 }
 
-Monster MonsterCatalog::creerOrcMineur()
+Monster MonsterCatalog::createMinorOrc()
 {
     return Monster(
         "Orc mineur",

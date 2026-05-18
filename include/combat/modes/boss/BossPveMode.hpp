@@ -10,8 +10,8 @@
 class BossPveMode
 {
 private:
-    static constexpr int SOIN_POTION_BOSS = 75;
-    static constexpr int BONUS_POTION_DEGATS_BOSS = 45;
+    static constexpr int BOSS_POTION_HEAL_AMOUNT = 75;
+    static constexpr int BOSS_POTION_DAMAGE_BONUS = 45;
 
 public:
     static void run(Player& player1, Random& random);

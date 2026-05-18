@@ -20,7 +20,7 @@ void BossCatalog::displayAvailableBosses()
     std::cout << std::endl;
 }
 
-Boss BossCatalog::creerBoss(int choice)
+Boss BossCatalog::createBoss(int choice)
 {
     if (choice == 1)
     {

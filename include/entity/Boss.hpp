@@ -28,8 +28,8 @@ public:
         int minDamage,
         int maxDamage,
         int criticalDamage,
-        int healingPotions,
-        int damagePotions,
+        int healingPotionCount,
+        int damagePotionCount,
         int maxUltimateTurns,
         int maxUltimateCooldown
     );

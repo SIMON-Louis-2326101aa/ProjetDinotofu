@@ -23,7 +23,7 @@ void BossPveMode::run(Player& player1, Random& random)
 
     Console::pauseSeconds(2);
 
-    PlayerClass evolvedClass = ClassCatalog::creerClasseEvolueeDepuisClasse(player1.getType());
+    PlayerClass evolvedClass = ClassCatalog::createEvolvedClassFromClass(player1.getType());
     player1.applyClass(evolvedClass);
 
     std::cout << player1.getName() << ", ta classe évolue en : " << player1.getType() << "." << std::endl;
@@ -42,17 +42,17 @@ void BossPveMode::run(Player& player1, Random& random)
     std::cout << std::endl;
     std::cout << "> ";
 
-    int choixTypeBoss = Console::askNumberBetween(
+    int bossChoiceType = Console::askNumberBetween(
         1,
         2,
         "Veuillez entrer un chiffre valide : 1 ou 2."
     );
 
-    int choixBoss;
+    int bossChoice;
 
-    if (choixTypeBoss == 1)
+    if (bossChoiceType == 1)
     {
-        choixBoss = random.between(1, 3);
+        bossChoice = random.between(1, 3);
     }
     else
     {
@@ -68,14 +68,14 @@ void BossPveMode::run(Player& player1, Random& random)
         std::cout << std::endl;
         std::cout << "> ";
 
-        choixBoss = Console::askNumberBetween(
+        bossChoice = Console::askNumberBetween(
             1,
             3,
             "Veuillez entrer un chiffre valide : 1, 2 ou 3."
         );
     }
 
-    Boss boss = BossCatalog::creerBoss(choixBoss);
+    Boss boss = BossCatalog::createBoss(bossChoice);
 
     Console::clear();
 
@@ -98,19 +98,19 @@ void BossPveMode::run(Player& player1, Random& random)
 
     while (!player1.isDead() && !boss.isDead())
     {
-        bool tourTermine = false;
+        bool turnFinished = false;
 
         if (turn == 1)
         {
-            tourTermine = TurnManager::playHumanTurn(
+            turnFinished = TurnManager::playHumanTurn(
                 player1,
                 boss,
                 random,
-                SOIN_POTION_BOSS,
-                BONUS_POTION_DEGATS_BOSS
+                BOSS_POTION_HEAL_AMOUNT,
+                BOSS_POTION_DAMAGE_BONUS
             );
 
-            if (tourTermine)
+            if (turnFinished)
             {
                 TurnManager::checkBossDecryption(boss);
                 boss.reduceUltimateCooldown();
@@ -119,13 +119,13 @@ void BossPveMode::run(Player& player1, Random& random)
         }
         else
         {
-            tourTermine = TurnManager::playBossTurn(
+            turnFinished = TurnManager::playBossTurn(
                 boss,
                 player1,
                 random
             );
 
-            if (tourTermine)
+            if (turnFinished)
             {
                 turn = 1;
             }

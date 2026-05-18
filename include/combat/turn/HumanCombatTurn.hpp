@@ -11,7 +11,7 @@
 class HumanCombatTurn
 {
 public:
-    static bool jouer(
+    static bool play(
         Entity& attacker,
         Entity& defender,
         Random& random,
@@ -21,11 +21,11 @@ public:
 
 private:
     static bool openObservationInterface(
-        Entity& joueurInterface,
+        Entity& interfacePlayer,
         Entity& target
     );
 
-    static bool gererFuite(
+    static bool handleEscape(
         Entity& attacker,
         Entity& defender,
         Random& random

@@ -17,7 +17,7 @@ public:
         Random& random
     );
 
-    static bool ouvrirPourPotionDegats(
+    static bool openForDamagePotion(
         Player& player,
         EnemyCombatQueue& wave,
         Random& random,
@@ -34,7 +34,7 @@ public:
 private:
     static int chooseTarget(const EnemyCombatQueue& wave);
 
-    static bool ouvrirMenuCible(
+    static bool openTargetMenu(
         Player& player,
         EnemyCombatQueue& wave,
         Random& random,

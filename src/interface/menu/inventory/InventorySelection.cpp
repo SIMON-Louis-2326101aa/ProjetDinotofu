@@ -72,11 +72,11 @@ bool InventorySelection::openWeapons(Player& player)
     {
         if (player.equipWeapon(index))
         {
-            Weapon armeEquipee = player.getEquippedWeapon();
+            Weapon equippedWeapon = player.getEquippedWeapon();
 
-            std::cout << player.getName() << " équipe : " << armeEquipee.getName() << "." << std::endl;
+            std::cout << player.getName() << " équipe : " << equippedWeapon.getName() << "." << std::endl;
 
-            if (armeEquipee.isBroken())
+            if (equippedWeapon.isBroken())
             {
                 std::cout << "Attention : cette arme est cassée, elle ne donnera aucun bonus." << std::endl;
             }
@@ -152,11 +152,11 @@ bool InventorySelection::openArmors(Player& player)
     {
         if (player.equipArmor(index))
         {
-            Armor armureEquipee = player.getEquippedArmor();
+            Armor equippedArmor = player.getEquippedArmor();
 
-            std::cout << player.getName() << " équipe : " << armureEquipee.getName() << "." << std::endl;
+            std::cout << player.getName() << " équipe : " << equippedArmor.getName() << "." << std::endl;
 
-            if (armureEquipee.isBroken())
+            if (equippedArmor.isBroken())
             {
                 std::cout << "Attention : cette armure est cassée, elle ne donnera aucun bonus." << std::endl;
             }
@@ -192,13 +192,13 @@ bool InventorySelection::openConsumables(Player& player)
         return false;
     }
 
-    std::vector<GroupeConsommable> groups = InventoryUtils::grouperConsommables(player);
+    std::vector<ConsumableGroup> groups = InventoryUtils::groupConsumables(player);
 
     std::cout << "============ CONSOMMABLES ============" << std::endl;
 
     for (int i = 0; i < static_cast<int>(groups.size()); ++i)
     {
-        const GroupeConsommable& group = groups[i];
+        const ConsumableGroup& group = groups[i];
 
         std::cout << i + 1
                   << " : "
@@ -206,7 +206,7 @@ bool InventorySelection::openConsumables(Player& player)
                   << " x"
                   << group.amount
                   << " | "
-                  << InventoryUtils::typeConsommableVersTexte(group.type)
+                  << InventoryUtils::consumableTypeToText(group.type)
                   << " | Puissance : "
                   << group.power
                   << std::endl;

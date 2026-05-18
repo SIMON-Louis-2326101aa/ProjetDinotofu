@@ -12,7 +12,7 @@
 class PlayerWaveCombatTurn
 {
 public:
-    static bool jouer(
+    static bool play(
         Player& player,
         EnemyCombatQueue& wave,
         Random& random,
@@ -20,7 +20,7 @@ public:
     );
 
 private:
-    static constexpr int BONUS_POTION_DEGATS_PVE = 25;
+    static constexpr int PVE_POTION_DAMAGE_BONUS = 25;
 
     static bool openWaveInterface(
         Player& player,

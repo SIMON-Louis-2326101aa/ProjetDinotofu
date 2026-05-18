@@ -19,7 +19,7 @@
 
 #include <iostream>
 
-bool HumanCombatTurn::jouer(
+bool HumanCombatTurn::play(
     Entity& attacker,
     Entity& defender,
     Random& random,
@@ -119,14 +119,14 @@ bool HumanCombatTurn::jouer(
 
     if (option == 7)
     {
-        return gererFuite(attacker, defender, random);
+        return handleEscape(attacker, defender, random);
     }
 
     return false;
 }
 
 bool HumanCombatTurn::openObservationInterface(
-    Entity& joueurInterface,
+    Entity& interfacePlayer,
     Entity& target
 )
 {
@@ -153,7 +153,7 @@ bool HumanCombatTurn::openObservationInterface(
 
     if (choice == 1)
     {
-        joueurInterface.displayStats();
+        interfacePlayer.displayStats();
         return false;
     }
 
@@ -166,21 +166,21 @@ bool HumanCombatTurn::openObservationInterface(
     return false;
 }
 
-bool HumanCombatTurn::gererFuite(
+bool HumanCombatTurn::handleEscape(
     Entity& attacker,
     Entity& defender,
     Random& random
 )
 {
-    Boss* bossCible = dynamic_cast<Boss*>(&defender);
+    Boss* targetBoss = dynamic_cast<Boss*>(&defender);
 
-    if (bossCible != nullptr)
+    if (targetBoss != nullptr)
     {
         Player* player = dynamic_cast<Player*>(&attacker);
 
         if (player != nullptr)
         {
-            EscapeSystem::playerAttemptsBossEscape(*player, *bossCible);
+            EscapeSystem::playerAttemptsBossEscape(*player, *targetBoss);
         }
         else
         {

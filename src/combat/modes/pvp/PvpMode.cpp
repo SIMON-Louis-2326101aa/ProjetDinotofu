@@ -26,7 +26,7 @@ void PvpMode::run(Player& player1, Random& random)
     std::cout << "Choisis ta classe et entre dans l'arène." << std::endl;
     std::cout << std::endl;
 
-    ClassCatalog::displayBaseClasses();
+    ClassCatalog::displayBasicClasses();
 
     std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
     std::cout << "> ";
@@ -37,7 +37,7 @@ void PvpMode::run(Player& player1, Random& random)
         "Veuillez entrer un chiffre valide : 1, 2 ou 3."
     );
 
-    Player player2(player2Name, ClassCatalog::creerClasseDeBase(classChoice));
+    Player player2(player2Name, ClassCatalog::createBaseClass(classChoice));
     player2.initializeStarterInventory();
 
     Console::clear();
@@ -57,34 +57,34 @@ void PvpMode::run(Player& player1, Random& random)
 
     while (!player1.isDead() && !player2.isDead())
     {
-        bool tourTermine = false;
+        bool turnFinished = false;
 
         if (turn == 1)
         {
-            tourTermine = TurnManager::playHumanTurn(
+            turnFinished = TurnManager::playHumanTurn(
                 player1,
                 player2,
                 random,
-                SOIN_POTION,
-                BONUS_POTION_DEGATS
+                POTION_HEAL_AMOUNT,
+                POTION_DAMAGE_BONUS
             );
 
-            if (tourTermine)
+            if (turnFinished)
             {
                 turn = 2;
             }
         }
         else
         {
-            tourTermine = TurnManager::playHumanTurn(
+            turnFinished = TurnManager::playHumanTurn(
                 player2,
                 player1,
                 random,
-                SOIN_POTION,
-                BONUS_POTION_DEGATS
+                POTION_HEAL_AMOUNT,
+                POTION_DAMAGE_BONUS
             );
 
-            if (tourTermine)
+            if (turnFinished)
             {
                 turn = 1;
             }

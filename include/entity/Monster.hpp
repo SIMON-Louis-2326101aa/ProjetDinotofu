@@ -15,7 +15,7 @@ private:
 
     bool invocation;
     bool elite;
-    bool statsCachees;
+    bool hiddenStats;
 
 public:
     Monster();
@@ -29,22 +29,22 @@ public:
         int minDamage,
         int maxDamage,
         int criticalDamage,
-        int healingPotions,
-        int damagePotions,
+        int healingPotionCount,
+        int damagePotionCount,
         bool invocation = false,
         bool elite = false,
-        bool statsCachees = false
+        bool hiddenStats = false
     );
 
     int getLevel() const;
     Race getRace() const;
-    std::string getRaceTexte() const;
+    std::string getRaceText() const;
 
-    bool estInvocation() const;
-    bool estElite() const;
+    bool isInvocation() const;
+    bool isElite() const;
 
     bool areStatsVisible() const override;
-    void revelerStats();
+    void revealStats();
 
     void displayStats() const override;
 };

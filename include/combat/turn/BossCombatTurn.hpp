@@ -12,7 +12,7 @@
 class BossCombatTurn
 {
 public:
-    static bool jouer(
+    static bool play(
         Boss& boss,
         Entity& player,
         Random& random

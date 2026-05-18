@@ -11,7 +11,7 @@
 
 #include <iostream>
 
-bool AICombatTurn::jouer(
+bool AICombatTurn::play(
     Entity& ai,
     Entity& defender,
     Random& random,

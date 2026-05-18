@@ -34,8 +34,8 @@ void CombatPotionDisplay::displayQuickHealing(
 
     for (int i = 0; i < static_cast<int>(indices.size()); ++i)
     {
-        int indexInventaire = indices[i];
-        Consumable potion = player.getInventory().getConsumable(indexInventaire);
+        int inventoryIndex = indices[i];
+        Consumable potion = player.getInventory().getConsumable(inventoryIndex);
 
         std::cout << i + 1
                   << " : "
@@ -121,8 +121,8 @@ void CombatPotionDisplay::displayFilteredPotions(
 
     for (int i = 0; i < static_cast<int>(indices.size()); ++i)
     {
-        int indexInventaire = indices[i];
-        Consumable potion = player.getInventory().getConsumable(indexInventaire);
+        int inventoryIndex = indices[i];
+        Consumable potion = player.getInventory().getConsumable(inventoryIndex);
 
         std::cout << i + 1
                   << " : "

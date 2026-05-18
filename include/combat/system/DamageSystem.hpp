@@ -10,10 +10,10 @@
 class DamageSystem
 {
 public:
-    static DamageReport calculerDegatsRecus(Entity& defender, int rawDamage);
+    static DamageReport calculateReceivedDamage(Entity& defender, int rawDamage);
     static void displayDamageReport(const Entity& defender, const DamageReport& rapport);
 
-    static int appliquerProtectionArmure(Entity& defender, int rawDamage);
+    static int applyArmorProtection(Entity& defender, int rawDamage);
 };
 
 #endif

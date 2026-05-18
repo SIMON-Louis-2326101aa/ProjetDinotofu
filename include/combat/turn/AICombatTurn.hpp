@@ -11,7 +11,7 @@
 class AICombatTurn
 {
 public:
-    static bool jouer(
+    static bool play(
         Entity& ai,
         Entity& defender,
         Random& random,

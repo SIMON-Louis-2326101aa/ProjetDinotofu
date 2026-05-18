@@ -1,7 +1,7 @@
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
-#include "combat/modes/pvp/AiPvpMode.hpp"
+#include "combat/modes/pvp/AIPvpMode.hpp"
 
 #include "combat/TurnManager.hpp"
 
@@ -11,7 +11,7 @@
 
 #include <iostream>
 
-void AiPvpMode::run(Player& player1, Random& random)
+void AIPvpMode::run(Player& player1, Random& random)
 {
     std::cout << "Préparation de l'IA..." << std::endl;
     std::cout << std::endl;
@@ -30,17 +30,17 @@ void AiPvpMode::run(Player& player1, Random& random)
     std::cout << std::endl;
     std::cout << "> ";
 
-    int choixTypeClasse = Console::askNumberBetween(
+    int classChoiceType = Console::askNumberBetween(
         1,
         2,
         "Veuillez entrer un chiffre valide : 1 ou 2."
     );
 
-    int choixClasseIA;
+    int aiClassChoice;
 
-    if (choixTypeClasse == 1)
+    if (classChoiceType == 1)
     {
-        choixClasseIA = random.between(1, 3);
+        aiClassChoice = random.between(1, 3);
     }
     else
     {
@@ -50,19 +50,19 @@ void AiPvpMode::run(Player& player1, Random& random)
         std::cout << "Pas très fair-play, mais l'arène accepte ce genre de petit caprice." << std::endl;
         std::cout << std::endl;
 
-        ClassCatalog::displayBaseClasses();
+        ClassCatalog::displayBasicClasses();
 
         std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
         std::cout << "> ";
 
-        choixClasseIA = Console::askNumberBetween(
+        aiClassChoice = Console::askNumberBetween(
             1,
             3,
             "Veuillez entrer un chiffre valide : 1, 2 ou 3."
         );
     }
 
-    Player ai("Matt", ClassCatalog::creerClasseDeBase(choixClasseIA));
+    Player ai("Matt", ClassCatalog::createBaseClass(aiClassChoice));
     ai.initializeStarterInventory();
 
     Console::clear();
@@ -82,34 +82,34 @@ void AiPvpMode::run(Player& player1, Random& random)
 
     while (!player1.isDead() && !ai.isDead())
     {
-        bool tourTermine = false;
+        bool turnFinished = false;
 
         if (turn == 1)
         {
-            tourTermine = TurnManager::playHumanTurn(
+            turnFinished = TurnManager::playHumanTurn(
                 player1,
                 ai,
                 random,
-                SOIN_POTION,
-                BONUS_POTION_DEGATS
+                POTION_HEAL_AMOUNT,
+                POTION_DAMAGE_BONUS
             );
 
-            if (tourTermine)
+            if (turnFinished)
             {
                 turn = 2;
             }
         }
         else
         {
-            tourTermine = TurnManager::playAITurn(
+            turnFinished = TurnManager::playAITurn(
                 ai,
                 player1,
                 random,
-                SOIN_POTION,
-                BONUS_POTION_DEGATS
+                POTION_HEAL_AMOUNT,
+                POTION_DAMAGE_BONUS
             );
 
-            if (tourTermine)
+            if (turnFinished)
             {
                 turn = 1;
             }

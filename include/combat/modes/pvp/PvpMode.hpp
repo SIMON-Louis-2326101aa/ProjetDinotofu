@@ -10,8 +10,8 @@
 class PvpMode
 {
 private:
-    static constexpr int SOIN_POTION = 55;
-    static constexpr int BONUS_POTION_DEGATS = 25;
+    static constexpr int POTION_HEAL_AMOUNT = 55;
+    static constexpr int POTION_DAMAGE_BONUS = 25;
 
 public:
     static void run(Player& player1, Random& random);

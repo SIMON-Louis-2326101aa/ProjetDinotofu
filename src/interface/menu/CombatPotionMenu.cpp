@@ -121,7 +121,7 @@ bool CombatPotionMenu::openAgainstSingleTarget(
 
         if (choice == 2)
         {
-            return ouvrirCategorie(
+            return openCategory(
                 player,
                 ConsumableType::Healing,
                 &target,
@@ -139,7 +139,7 @@ bool CombatPotionMenu::openAgainstSingleTarget(
 
         if (choice == 4)
         {
-            return ouvrirCategorie(
+            return openCategory(
                 player,
                 ConsumableType::Damage,
                 &target,
@@ -151,7 +151,7 @@ bool CombatPotionMenu::openAgainstSingleTarget(
 
         if (choice == 5)
         {
-            return ouvrirCategorie(
+            return openCategory(
                 player,
                 ConsumableType::Buff,
                 &target,
@@ -163,7 +163,7 @@ bool CombatPotionMenu::openAgainstSingleTarget(
 
         if (choice == 6)
         {
-            return ouvrirCategorie(
+            return openCategory(
                 player,
                 ConsumableType::Debuff,
                 &target,
@@ -207,7 +207,7 @@ bool CombatPotionMenu::openAgainstWave(
 
         if (choice == 2)
         {
-            return ouvrirCategorie(
+            return openCategory(
                 player,
                 ConsumableType::Healing,
                 nullptr,
@@ -225,7 +225,7 @@ bool CombatPotionMenu::openAgainstWave(
 
         if (choice == 4)
         {
-            return ouvrirCategorie(
+            return openCategory(
                 player,
                 ConsumableType::Damage,
                 nullptr,
@@ -237,7 +237,7 @@ bool CombatPotionMenu::openAgainstWave(
 
         if (choice == 5)
         {
-            return ouvrirCategorie(
+            return openCategory(
                 player,
                 ConsumableType::Buff,
                 nullptr,
@@ -249,7 +249,7 @@ bool CombatPotionMenu::openAgainstWave(
 
         if (choice == 6)
         {
-            return ouvrirCategorie(
+            return openCategory(
                 player,
                 ConsumableType::Debuff,
                 nullptr,
@@ -261,7 +261,7 @@ bool CombatPotionMenu::openAgainstWave(
     }
 }
 
-bool CombatPotionMenu::ouvrirCategorie(
+bool CombatPotionMenu::openCategory(
     Player& player,
     ConsumableType type,
     Entity* target,
@@ -286,7 +286,7 @@ bool CombatPotionMenu::ouvrirCategorie(
         return false;
     }
 
-    return ouvrirSelectionPotion(
+    return openPotionSelection(
         player,
         indices,
         type,
@@ -297,7 +297,7 @@ bool CombatPotionMenu::ouvrirCategorie(
     );
 }
 
-bool CombatPotionMenu::ouvrirSelectionPotion(
+bool CombatPotionMenu::openPotionSelection(
     Player& player,
     const std::vector<int>& indices,
     ConsumableType type,

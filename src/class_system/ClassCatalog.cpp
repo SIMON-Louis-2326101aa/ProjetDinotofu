@@ -5,7 +5,7 @@
 
 #include <iostream>
 
-void ClassCatalog::displayBaseClasses()
+void ClassCatalog::displayBasicClasses()
 {
     std::cout << "1 : Chevalier" << std::endl;
     std::cout << "    PV : 200" << std::endl;
@@ -29,7 +29,7 @@ void ClassCatalog::displayBaseClasses()
     std::cout << std::endl;
 }
 
-PlayerClass ClassCatalog::creerClasseDeBase(int choice)
+PlayerClass ClassCatalog::createBaseClass(int choice)
 {
     if (choice == 1)
     {
@@ -44,14 +44,14 @@ PlayerClass ClassCatalog::creerClasseDeBase(int choice)
     return PlayerClass("Classe Lourde", 400, 5, 12, 20, 2, 5);
 }
 
-PlayerClass ClassCatalog::creerClasseEvolueeDepuisClasse(const std::string& classeActuelle)
+PlayerClass ClassCatalog::createEvolvedClassFromClass(const std::string& currentClass)
 {
-    if (classeActuelle == "Chevalier")
+    if (currentClass == "Chevalier")
     {
         return PlayerClass("Paladin", 500, 5, 20, 30, 6, 5);
     }
 
-    if (classeActuelle == "Classe Légère")
+    if (currentClass == "Classe Légère")
     {
         return PlayerClass("Assassin", 400, 10, 30, 45, 7, 4);
     }

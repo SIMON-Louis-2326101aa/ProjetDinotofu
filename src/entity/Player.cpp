@@ -27,8 +27,8 @@ Player::Player(
         playerClass.getMinDamage(),
         playerClass.getMaxDamage(),
         playerClass.getCriticalDamage(),
-        playerClass.getHealingPotions(),
-        playerClass.getDamagePotions()
+        playerClass.getHealingPotionCount(),
+        playerClass.getDamagePotionCount()
     )
 {
     level = 1;
@@ -137,15 +137,15 @@ bool Player::equipArmor(int index)
         return false;
     }
 
-    int ancienBonusPv = getEquippedArmorMaxHpBonus();
+    int oldMaxHealthBonus = getEquippedArmorMaxHpBonus();
 
     equippedArmorIndex = index;
 
-    int nouveauBonusPv = getEquippedArmorMaxHpBonus();
-    int differencePvMax = nouveauBonusPv - ancienBonusPv;
+    int newMaxHealthBonus = getEquippedArmorMaxHpBonus();
+    int maxHealthDifference = newMaxHealthBonus - oldMaxHealthBonus;
 
-    maxHp += differencePvMax;
-    hp += differencePvMax;
+    maxHp += maxHealthDifference;
+    hp += maxHealthDifference;
 
     if (maxHp < 1)
     {
@@ -167,11 +167,11 @@ bool Player::equipArmor(int index)
 
 void Player::unequipArmor()
 {
-    int ancienBonusPv = getEquippedArmorMaxHpBonus();
+    int oldMaxHealthBonus = getEquippedArmorMaxHpBonus();
 
     equippedArmorIndex = -1;
 
-    maxHp -= ancienBonusPv;
+    maxHp -= oldMaxHealthBonus;
 
     if (maxHp < 1)
     {
@@ -186,24 +186,24 @@ void Player::unequipArmor()
 
 void Player::initializeStarterInventory()
 {
-    inventory.addWeapon(WeaponCatalog::creerMainsNues());
-    inventory.addWeapon(WeaponCatalog::creerEpeeRouillee());
+    inventory.addWeapon(WeaponCatalog::createBareHands());
+    inventory.addWeapon(WeaponCatalog::createRustySword());
 
     equipWeapon(1);
 
-    inventory.addArmor(ArmorCatalog::creerTenueSimple());
-    inventory.addArmor(ArmorCatalog::creerArmureCuirUsee());
+    inventory.addArmor(ArmorCatalog::createSimpleOutfit());
+    inventory.addArmor(ArmorCatalog::createWornLeatherArmor());
 
     equipArmor(0);
 
-    for (int i = 0; i < healingPotions; i++)
+    for (int i = 0; i < healingPotionCount; i++)
     {
-        inventory.addConsumable(ConsumableCatalog::creerPotionSoinBasique());
+        inventory.addConsumable(ConsumableCatalog::createBasicHealingPotion());
     }
 
-    for (int i = 0; i < damagePotions; i++)
+    for (int i = 0; i < damagePotionCount; i++)
     {
-        inventory.addConsumable(ConsumableCatalog::creerPotionDegatsBasique());
+        inventory.addConsumable(ConsumableCatalog::createBasicDamagePotion());
     }
 
     inventory.earnGold(50);
@@ -252,13 +252,13 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     int bonusMax = 0;
     int criticalBonus = 0;
 
-    Weapon* armeEquipee = inventory.getMutableWeapon(equippedWeaponIndex);
+    Weapon* equippedWeapon = inventory.getMutableWeapon(equippedWeaponIndex);
 
-    if (armeEquipee != nullptr && !armeEquipee->isBroken())
+    if (equippedWeapon != nullptr && !equippedWeapon->isBroken())
     {
-        bonusMin = armeEquipee->getMinDamageBonus();
-        bonusMax = armeEquipee->getMaxDamageBonus();
-        criticalBonus = armeEquipee->getCriticalBonus();
+        bonusMin = equippedWeapon->getMinDamageBonus();
+        bonusMax = equippedWeapon->getMaxDamageBonus();
+        criticalBonus = equippedWeapon->getCriticalBonus();
     }
 
     if (resultat <= 3)
@@ -267,15 +267,15 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         return 0;
     }
 
-    if (armeEquipee != nullptr)
+    if (equippedWeapon != nullptr)
     {
-        armeEquipee->loseDurability(1);
+        equippedWeapon->loseDurability(1);
     }
 
-    if (armeEquipee != nullptr && armeEquipee->isBroken())
+    if (equippedWeapon != nullptr && equippedWeapon->isBroken())
     {
         std::cout << "L'arme de " << name << " s'abîme sous le choc..." << std::endl;
-        std::cout << armeEquipee->getName() << " est maintenant cassée et ne donnera plus ses bonus." << std::endl;
+        std::cout << equippedWeapon->getName() << " est maintenant cassée et ne donnera plus ses bonus." << std::endl;
         std::cout << std::endl;
     }
 

@@ -18,7 +18,7 @@ bool TurnManager::playHumanTurn(
     int potionDamageBonus
 )
 {
-    return HumanCombatTurn::jouer(
+    return HumanCombatTurn::play(
         attacker,
         defender,
         random,
@@ -35,7 +35,7 @@ bool TurnManager::playAITurn(
     int potionDamageBonus
 )
 {
-    return AICombatTurn::jouer(
+    return AICombatTurn::play(
         ai,
         defender,
         random,
@@ -50,7 +50,7 @@ bool TurnManager::playBossTurn(
     Random& random
 )
 {
-    return BossCombatTurn::jouer(
+    return BossCombatTurn::play(
         boss,
         player,
         random

@@ -16,10 +16,10 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random)
 
     Console::pauseSeconds(1);
 
-    int chanceFuite = CombatClassSystem::getChanceFuiteBase(player);
+    int escapeChance = CombatClassSystem::getBaseEscapeChance(player);
     int roll = random.between(1, 100);
 
-    if (roll <= chanceFuite)
+    if (roll <= escapeChance)
     {
         std::cout << "Fuite réussie." << std::endl;
         std::cout << player.getName()
@@ -75,10 +75,10 @@ bool EscapeSystem::playerAttemptsDuelEscape(
 
     Console::pauseSeconds(1);
 
-    int chanceFuite = calculateDuelEscapeChance(runner, opponent);
+    int escapeChance = calculateDuelEscapeChance(runner, opponent);
     int roll = random.between(1, 100);
 
-    if (roll <= chanceFuite)
+    if (roll <= escapeChance)
     {
         std::cout << "Fuite réussie." << std::endl;
         std::cout << runner.getName() << " sort de l'arène avant de se faire achever." << std::endl;
@@ -108,17 +108,17 @@ bool EscapeSystem::playerAttemptsDuelEscape(
 
 bool EscapeSystem::monsterCanAttemptEscape(const Monster& monster)
 {
-    if (monster.estInvocation())
+    if (monster.isInvocation())
     {
         return false;
     }
 
-    if (monster.estElite())
+    if (monster.isElite())
     {
         return false;
     }
 
-    if (monster.getHealingPotions() > 0)
+    if (monster.getHealingPotionCount() > 0)
     {
         return false;
     }
@@ -163,17 +163,17 @@ int EscapeSystem::calculateDuelEscapeChance(
     const Entity& opponent
 )
 {
-    int chance = CombatClassSystem::getChanceFuiteBase(runner);
+    int chance = CombatClassSystem::getBaseEscapeChance(runner);
 
-    const Player* joueurAdverse = dynamic_cast<const Player*>(&opponent);
+    const Player* opposingPlayer = dynamic_cast<const Player*>(&opponent);
 
-    if (joueurAdverse != nullptr)
+    if (opposingPlayer != nullptr)
     {
-        int ecartNiveau = joueurAdverse->getLevel() - runner.getLevel();
+        int ecartNiveau = opposingPlayer->getLevel() - runner.getLevel();
         chance -= ecartNiveau * 5;
     }
 
-    int chanceAdversaire = CombatClassSystem::getChanceFuiteBase(opponent);
+    int chanceAdversaire = CombatClassSystem::getBaseEscapeChance(opponent);
 
     if (chanceAdversaire <= 35)
     {

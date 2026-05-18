@@ -151,7 +151,24 @@ The project uses an `include/` and `src/` architecture.
 
 Headers are placed in `include/`, implementation files are placed in `src/`, and both folders follow almost the same structure.   
 
-The code identifiers are now mostly written in English. Player-facing terminal text can remain in French.   
+The code identifiers and folders are now written in English. Player-facing terminal text can remain in French.   
+
+## Current stabilization pass   
+
+This version includes a safety pass after the English refactor.   
+
+Checked and stabilized points:   
+
+- `make clean` and `make rebuild` work correctly.   
+- `build/` and `output/` are ignored by Git.   
+- No old root `action/` folder is required anymore.   
+- `combat/action/` is kept because it contains real combat action logic.   
+- The four current combat modes use the shared combat menu structure.   
+- Equipment and inventory menus can be opened without consuming the combat turn.   
+- Failed potion actions do not consume the combat turn.   
+- Offensive potions use the real potion power instead of a fixed hardcoded value.   
+- Monster wave target selection now matches the displayed enemy numbers.   
+- Boss escape attempts correctly consume the turn while keeping escape impossible.   
 
 ## Current architecture   
 
@@ -163,8 +180,10 @@ Dinotofu/
 │   
 ├── assets/   
 │   ├── config/   
-│   ├── sauvegardes/   
-│   └── textes/   
+│   ├── saves/   
+│   │   ├── campaign/   
+│   │   └── player/   
+│   └── texts/   
 │   
 ├── include/   
 │   ├── boss/   
@@ -193,7 +212,7 @@ Dinotofu/
 │   │   │   ├── pve/   
 │   │   │   │   └── MonsterPveMode.hpp   
 │   │   │   └── pvp/   
-│   │   │       ├── AiPvpMode.hpp   
+│   │   │       ├── AIPvpMode.hpp   
 │   │   │       └── PvpMode.hpp   
 │   │   ├── system/   
 │   │   │   ├── CombatClassSystem.hpp   
@@ -299,3 +318,23 @@ Dinotofu/
 ## Developer note   
 
 This project is personal and experimental. The goal is to keep the fun prototype spirit while progressively making the code cleaner, easier to maintain, and ready for bigger systems.   
+
+## Note Spéciale   
+
+Toi qui lis ça, oui, c'est bien moi, le dev, qui te parle. Ce jeu est encore en chantier, il a sûrement deux-trois boulons qui tremblent, des monstres qui font les malins, et des boss qui pensent vraiment être les personnages principaux. Mais justement : viens tester.   
+
+Ton objectif est simple : survivre, comprendre les menus, trouver les meilleures décisions, et surtout prouver que tu n'es pas juste là pour te faire plier par un gobelin random. Si tu perds contre Matt, je ne juge pas... enfin si, un peu quand même.   
+
+Défi numéro un : gagner un combat sans paniquer dans l'inventaire comme si tu cherchais tes clés un lundi matin.   
+
+Défi numéro deux : battre un boss sans dire que le jeu triche. Spoiler : parfois il triche peut-être, mais avec style.   
+
+Défi numéro trois : trouver une stratégie qui casse le jeu, me la montrer, et me laisser faire semblant que c'était prévu depuis le début.   
+
+Ce projet existe surtout pour être essayé, critiqué, vanné, amélioré, puis retesté. Donc joue sérieusement, mais pas trop. Râle si tu veux, propose des idées, insulte poliment les boss, et surtout dis-moi ce qui te donne envie de continuer.   
+
+Si tu arrives à devenir une légende dans Dinotofu, bravo. Si tu meurs contre les premiers ennemis, bravo aussi, mais différemment.   
+
+Allez, entre dans l'arène. On va voir si tu joues vraiment bien, ou si tu parles juste fort sur Discord.   
+
+Je tiens à noter que lors de la vraie bêta ouverte, tu auras une chance d'être directement intégré au jeu de base si ta contribution le mérite. Alors prouve-moi que tu en vaux le coup. Bon courage d'ici là.   

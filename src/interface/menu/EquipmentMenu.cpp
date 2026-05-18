@@ -43,19 +43,19 @@ bool EquipmentMenu::open(Player& player)
 
         if (choice == 3)
         {
-            equiperArmeDepuisInventaire(player);
+            equipWeaponFromInventory(player);
             continue;
         }
 
         if (choice == 4)
         {
-            equiperArmureDepuisInventaire(player);
+            equipArmorFromInventory(player);
             continue;
         }
     }
 }
 
-bool EquipmentMenu::equiperArmeDepuisInventaire(Player& player)
+bool EquipmentMenu::equipWeaponFromInventory(Player& player)
 {
     if (player.getInventory().getWeaponCount() <= 0)
     {
@@ -122,11 +122,11 @@ bool EquipmentMenu::equiperArmeDepuisInventaire(Player& player)
         return false;
     }
 
-    Weapon armeEquipee = player.getEquippedWeapon();
+    Weapon equippedWeapon = player.getEquippedWeapon();
 
-    std::cout << player.getName() << " équipe : " << armeEquipee.getName() << "." << std::endl;
+    std::cout << player.getName() << " équipe : " << equippedWeapon.getName() << "." << std::endl;
 
-    if (armeEquipee.isBroken())
+    if (equippedWeapon.isBroken())
     {
         std::cout << "Attention : cette arme est cassée, elle ne donnera aucun bonus." << std::endl;
     }
@@ -140,7 +140,7 @@ bool EquipmentMenu::equiperArmeDepuisInventaire(Player& player)
     return false;
 }
 
-bool EquipmentMenu::equiperArmureDepuisInventaire(Player& player)
+bool EquipmentMenu::equipArmorFromInventory(Player& player)
 {
     if (player.getInventory().getArmorCount() <= 0)
     {
@@ -207,11 +207,11 @@ bool EquipmentMenu::equiperArmureDepuisInventaire(Player& player)
         return false;
     }
 
-    Armor armureEquipee = player.getEquippedArmor();
+    Armor equippedArmor = player.getEquippedArmor();
 
-    std::cout << player.getName() << " équipe : " << armureEquipee.getName() << "." << std::endl;
+    std::cout << player.getName() << " équipe : " << equippedArmor.getName() << "." << std::endl;
 
-    if (armureEquipee.isBroken())
+    if (equippedArmor.isBroken())
     {
         std::cout << "Attention : cette armure est cassée, elle ne donnera aucun bonus." << std::endl;
     }

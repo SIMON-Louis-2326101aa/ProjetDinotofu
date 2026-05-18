@@ -15,7 +15,7 @@
 
 #include <iostream>
 
-bool PlayerWaveCombatTurn::jouer(
+bool PlayerWaveCombatTurn::play(
     Player& player,
     EnemyCombatQueue& wave,
     Random& random,
@@ -57,7 +57,7 @@ bool PlayerWaveCombatTurn::jouer(
             player,
             wave,
             random,
-            BONUS_POTION_DEGATS_PVE
+            PVE_POTION_DAMAGE_BONUS
         );
     }
 

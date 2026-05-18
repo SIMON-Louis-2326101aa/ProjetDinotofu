@@ -3,7 +3,7 @@
 
 #include "item/armor/ArmorCatalog.hpp"
 
-Armor ArmorCatalog::creerTenueSimple()
+Armor ArmorCatalog::createSimpleOutfit()
 {
     return Armor(
         "Tenue simple",
@@ -16,7 +16,7 @@ Armor ArmorCatalog::creerTenueSimple()
     );
 }
 
-Armor ArmorCatalog::creerArmureCuirUsee()
+Armor ArmorCatalog::createWornLeatherArmor()
 {
     return Armor(
         "Armure en cuir usée",
@@ -29,7 +29,7 @@ Armor ArmorCatalog::creerArmureCuirUsee()
     );
 }
 
-Armor ArmorCatalog::creerCotteMailleArene()
+Armor ArmorCatalog::createArenaChainmail()
 {
     return Armor(
         "Cotte de maille d'arène",

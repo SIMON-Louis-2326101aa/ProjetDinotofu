@@ -3,7 +3,7 @@
 
 #include "item/consumable/ConsumableCatalog.hpp"
 
-Consumable ConsumableCatalog::creerPotionSoinBasique()
+Consumable ConsumableCatalog::createBasicHealingPotion()
 {
     return Consumable(
         "Potion de soin",
@@ -14,7 +14,7 @@ Consumable ConsumableCatalog::creerPotionSoinBasique()
     );
 }
 
-Consumable ConsumableCatalog::creerPotionDegatsBasique()
+Consumable ConsumableCatalog::createBasicDamagePotion()
 {
     return Consumable(
         "Potion de rage",
@@ -25,7 +25,7 @@ Consumable ConsumableCatalog::creerPotionDegatsBasique()
     );
 }
 
-Consumable ConsumableCatalog::creerPotionSoinRenforcee()
+Consumable ConsumableCatalog::createReinforcedHealingPotion()
 {
     return Consumable(
         "Potion de soin renforcée",
@@ -36,7 +36,7 @@ Consumable ConsumableCatalog::creerPotionSoinRenforcee()
     );
 }
 
-Consumable ConsumableCatalog::creerPotionDegatsRenforcee()
+Consumable ConsumableCatalog::createReinforcedDamagePotion()
 {
     return Consumable(
         "Potion de rage supérieure",

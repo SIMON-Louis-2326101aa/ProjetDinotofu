@@ -18,7 +18,7 @@ bool CombatTargetMenu::openForAttack(
     Random& random
 )
 {
-    return ouvrirMenuCible(
+    return openTargetMenu(
         player,
         wave,
         random,
@@ -27,7 +27,7 @@ bool CombatTargetMenu::openForAttack(
     );
 }
 
-bool CombatTargetMenu::ouvrirPourPotionDegats(
+bool CombatTargetMenu::openForDamagePotion(
     Player& player,
     EnemyCombatQueue& wave,
     Random& random,
@@ -49,7 +49,7 @@ bool CombatTargetMenu::openForBoostedAttack(
     int damageBonus
 )
 {
-    return ouvrirMenuCible(
+    return openTargetMenu(
         player,
         wave,
         random,
@@ -63,17 +63,24 @@ int CombatTargetMenu::chooseTarget(const EnemyCombatQueue& wave)
     wave.displayActiveEnemies();
 
     std::cout << "Choisis une cible." << std::endl;
-    std::cout << "Entre le numéro de l'ennemi à sélectionner." << std::endl;
+    std::cout << "Entre le numéro de l'ennemi à sélectionner, ou 0 pour revenir." << std::endl;
     std::cout << "> ";
 
-    return Console::askNumberBetween(
+    int choice = Console::askNumberBetween(
         0,
-        wave.getActiveEnemyCount() - 1,
-        "Cible invalide. Choisis un ennemi actif."
+        wave.getActiveEnemyCount(),
+        "Cible invalide. Choisis un ennemi actif, ou 0 pour revenir."
     );
+
+    if (choice == 0)
+    {
+        return -1;
+    }
+
+    return choice - 1;
 }
 
-bool CombatTargetMenu::ouvrirMenuCible(
+bool CombatTargetMenu::openTargetMenu(
     Player& player,
     EnemyCombatQueue& wave,
     Random& random,
@@ -83,32 +90,37 @@ bool CombatTargetMenu::ouvrirMenuCible(
 {
     while (wave.hasEnemiesLeft())
     {
-        int indexCible = chooseTarget(wave);
+        int targetIndex = chooseTarget(wave);
 
         Console::clear();
 
-        if (!wave.isActiveIndexValid(indexCible))
+        if (targetIndex == -1)
+        {
+            return false;
+        }
+
+        if (!wave.isActiveIndexValid(targetIndex))
         {
             std::cout << "Cette cible n'est plus disponible." << std::endl;
             std::cout << std::endl;
             return false;
         }
 
-        Monster& target = wave.getActiveEnemy(indexCible);
+        Monster& target = wave.getActiveEnemy(targetIndex);
 
-        bool resterSurCetteCible = true;
+        bool stayOnThisTarget = true;
 
-        while (resterSurCetteCible && !target.isDead())
+        while (stayOnThisTarget && !target.isDead())
         {
             std::cout << "========== CIBLE SÉLECTIONNÉE ==========" << std::endl;
             std::cout << "Cible : " << target.getName() << std::endl;
-            std::cout << "Race : " << target.getRaceTexte() << std::endl;
+            std::cout << "Race : " << target.getRaceText() << std::endl;
 
-            if (target.estInvocation())
+            if (target.isInvocation())
             {
                 std::cout << "Statut : Invocation" << std::endl;
             }
-            else if (target.estElite())
+            else if (target.isElite())
             {
                 std::cout << "Statut : Élite" << std::endl;
             }
@@ -177,7 +189,7 @@ bool CombatTargetMenu::ouvrirMenuCible(
 
             if (choice == 3)
             {
-                resterSurCetteCible = false;
+                stayOnThisTarget = false;
             }
         }
     }

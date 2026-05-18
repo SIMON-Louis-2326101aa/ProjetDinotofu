@@ -12,7 +12,7 @@
 
 #include <iostream>
 
-bool BossCombatTurn::jouer(
+bool BossCombatTurn::play(
     Boss& boss,
     Entity& player,
     Random& random

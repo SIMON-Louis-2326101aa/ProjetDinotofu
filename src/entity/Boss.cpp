@@ -24,8 +24,8 @@ Boss::Boss(
     int minDamage,
     int maxDamage,
     int criticalDamage,
-    int healingPotions,
-    int damagePotions,
+    int healingPotionCount,
+    int damagePotionCount,
     int maxUltimateTurns,
     int maxUltimateCooldown
 ) : Entity(
@@ -35,8 +35,8 @@ Boss::Boss(
         minDamage,
         maxDamage,
         criticalDamage,
-        healingPotions,
-        damagePotions
+        healingPotionCount,
+        damagePotionCount
     )
 {
     this->bossId = bossId;
@@ -154,8 +154,8 @@ void Boss::displayStats() const
     std::cout << "PV : " << hp << "/" << maxHp << std::endl;
     std::cout << "Dégâts : " << minDamage << " - " << maxDamage << std::endl;
     std::cout << "Critique : " << criticalDamage << std::endl;
-    std::cout << "Potions de soin : " << healingPotions << std::endl;
-    std::cout << "Potions de dégâts : " << damagePotions << std::endl;
+    std::cout << "Potions de soin : " << healingPotionCount << std::endl;
+    std::cout << "Potions de dégâts : " << damagePotionCount << std::endl;
     std::cout << "Ultime restant : " << remainingUltimateTurns << std::endl;
     std::cout << "Délai ultime : " << ultimateCooldown << std::endl;
 

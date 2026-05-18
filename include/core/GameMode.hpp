@@ -6,10 +6,10 @@
 
 enum class GameMode
 {
-    PvPIA = 1,
-    PvPDeuxJoueurs = 2,
-    PvE = 3,
-    PvEBoss = 4
+    AIPvp = 1,
+    TwoPlayerPvp = 2,
+    MonsterPve = 3,
+    BossPve = 4
 };
 
 #endif

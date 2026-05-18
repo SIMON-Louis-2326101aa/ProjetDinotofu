@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-struct GroupeConsommable
+struct ConsumableGroup
 {
     int firstIndex;
     int amount;
@@ -21,18 +21,18 @@ struct GroupeConsommable
     ConsumableType type;
     int power;
 
-    GroupeConsommable();
+    ConsumableGroup();
 };
 
 class InventoryUtils
 {
 public:
-    static std::string typeConsommableVersTexte(ConsumableType type);
+    static std::string consumableTypeToText(ConsumableType type);
 
     static std::string weaponDurabilityText(const Weapon& weapon);
     static std::string armorDurabilityText(const Armor& armor);
 
-    static std::vector<GroupeConsommable> grouperConsommables(const Player& player);
+    static std::vector<ConsumableGroup> groupConsumables(const Player& player);
 };
 
 #endif

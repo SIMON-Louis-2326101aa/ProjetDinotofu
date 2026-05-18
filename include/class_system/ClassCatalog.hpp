@@ -9,10 +9,10 @@
 class ClassCatalog
 {
 public:
-    static void displayBaseClasses();
+    static void displayBasicClasses();
 
-    static PlayerClass creerClasseDeBase(int choice);
-    static PlayerClass creerClasseEvolueeDepuisClasse(const std::string& classeActuelle);
+    static PlayerClass createBaseClass(int choice);
+    static PlayerClass createEvolvedClassFromClass(const std::string& currentClass);
 };
 
 #endif

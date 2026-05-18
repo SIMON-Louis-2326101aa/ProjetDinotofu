@@ -11,11 +11,11 @@
 class CombatClassSystem
 {
 public:
-    static int getChanceFuiteBase(const Entity& entity);
-    static int getReductionDegatsBasePourcentage(const Entity& entity);
+    static int getBaseEscapeChance(const Entity& entity);
+    static int getBaseDamageReductionPercentage(const Entity& entity);
 
 private:
-    static std::string normalizeClassText(const std::string& texteClasse);
+    static std::string normalizeClassText(const std::string& classText);
 };
 
 #endif

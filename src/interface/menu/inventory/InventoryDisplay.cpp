@@ -71,15 +71,15 @@ void InventoryDisplay::displaySimpleFullInventory(const Player& player)
     std::cout << std::endl;
     std::cout << "Consommables : " << inventory.getConsumableCount() << std::endl;
 
-    std::vector<GroupeConsommable> groups = InventoryUtils::grouperConsommables(player);
+    std::vector<ConsumableGroup> groups = InventoryUtils::groupConsumables(player);
 
     for (int i = 0; i < static_cast<int>(groups.size()); ++i)
     {
-        const GroupeConsommable& group = groups[i];
+        const ConsumableGroup& group = groups[i];
 
         std::cout << "[" << i << "] " << group.name
                   << " x" << group.amount
-                  << " | " << InventoryUtils::typeConsommableVersTexte(group.type)
+                  << " | " << InventoryUtils::consumableTypeToText(group.type)
                   << " | Puissance : " << group.power
                   << std::endl;
     }
@@ -118,7 +118,7 @@ void InventoryDisplay::displaySelectedConsumable(const Consumable& consumable)
 {
     std::cout << "========== CONSOMMABLE SÉLECTIONNÉ ==========" << std::endl;
     std::cout << "Consommable : " << consumable.getName() << std::endl;
-    std::cout << "Type : " << InventoryUtils::typeConsommableVersTexte(consumable.getType()) << std::endl;
+    std::cout << "Type : " << InventoryUtils::consumableTypeToText(consumable.getType()) << std::endl;
     std::cout << "Puissance : " << consumable.getPower() << std::endl;
     std::cout << "=============================================" << std::endl;
     std::cout << "0 : Retour" << std::endl;

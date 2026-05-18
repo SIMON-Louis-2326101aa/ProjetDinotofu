@@ -14,8 +14,8 @@ private:
     int minDamage;
     int maxDamage;
     int criticalDamage;
-    int healingPotions;
-    int damagePotions;
+    int healingPotionCount;
+    int damagePotionCount;
 
 public:
     PlayerClass();
@@ -26,8 +26,8 @@ public:
         int minDamage,
         int maxDamage,
         int criticalDamage,
-        int healingPotions,
-        int damagePotions
+        int healingPotionCount,
+        int damagePotionCount
     );
 
     std::string getName() const;
@@ -35,8 +35,8 @@ public:
     int getMinDamage() const;
     int getMaxDamage() const;
     int getCriticalDamage() const;
-    int getHealingPotions() const;
-    int getDamagePotions() const;
+    int getHealingPotionCount() const;
+    int getDamagePotionCount() const;
 };
 
 #endif

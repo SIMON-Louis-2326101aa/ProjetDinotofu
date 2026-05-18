@@ -14,7 +14,7 @@ private:
 
 public:
     void launchTwoPlayerPvp(Player& player1);
-    void launchAiPvp(Player& player1);
+    void launchAIPvp(Player& player1);
     void launchBossPve(Player& player1);
     void launchMonsterPve(Player& player1);
 };

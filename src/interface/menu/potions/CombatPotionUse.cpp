@@ -3,8 +3,6 @@
 
 #include "interface/menu/potions/CombatPotionUse.hpp"
 
-#include "combat/CombatActions.hpp"
-
 #include "combat/action/CombatAttack.hpp"
 
 #include "interface/menu/CombatTargetMenu.hpp"

@@ -11,7 +11,7 @@ Monster::Monster()
       race(Race::Unknown),
       invocation(false),
       elite(false),
-      statsCachees(false)
+      hiddenStats(false)
 {
 }
 
@@ -24,11 +24,11 @@ Monster::Monster(
     int minDamage,
     int maxDamage,
     int criticalDamage,
-    int healingPotions,
-    int damagePotions,
+    int healingPotionCount,
+    int damagePotionCount,
     bool invocation,
     bool elite,
-    bool statsCachees
+    bool hiddenStats
 )
     : Entity(
           name,
@@ -37,14 +37,14 @@ Monster::Monster(
           minDamage,
           maxDamage,
           criticalDamage,
-          healingPotions,
-          damagePotions
+          healingPotionCount,
+          damagePotionCount
       ),
       level(level),
       race(race),
       invocation(invocation),
       elite(elite),
-      statsCachees(statsCachees)
+      hiddenStats(hiddenStats)
 {
 }
 
@@ -58,29 +58,29 @@ Race Monster::getRace() const
     return race;
 }
 
-std::string Monster::getRaceTexte() const
+std::string Monster::getRaceText() const
 {
     return raceVersTexte(race);
 }
 
-bool Monster::estInvocation() const
+bool Monster::isInvocation() const
 {
     return invocation;
 }
 
-bool Monster::estElite() const
+bool Monster::isElite() const
 {
     return elite;
 }
 
 bool Monster::areStatsVisible() const
 {
-    return !statsCachees;
+    return !hiddenStats;
 }
 
-void Monster::revelerStats()
+void Monster::revealStats()
 {
-    statsCachees = false;
+    hiddenStats = false;
 }
 
 void Monster::displayStats() const
@@ -89,7 +89,7 @@ void Monster::displayStats() const
     {
         std::cout << "========== DONNÉES BROUILLÉES ==========" << std::endl;
         std::cout << "Nom : " << name << std::endl;
-        std::cout << "Race : " << getRaceTexte() << std::endl;
+        std::cout << "Race : " << getRaceText() << std::endl;
         std::cout << "Type : " << type << std::endl;
         std::cout << "Niveau : ???" << std::endl;
         std::cout << "PV : ???" << std::endl;
@@ -102,7 +102,7 @@ void Monster::displayStats() const
 
     std::cout << "========== STATS MONSTRE ==========" << std::endl;
     std::cout << "Nom : " << name << std::endl;
-    std::cout << "Race : " << getRaceTexte() << std::endl;
+    std::cout << "Race : " << getRaceText() << std::endl;
     std::cout << "Type : " << type << std::endl;
     std::cout << "Niveau : " << level << std::endl;
     std::cout << "PV : " << hp << "/" << maxHp << std::endl;

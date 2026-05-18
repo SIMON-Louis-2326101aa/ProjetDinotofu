@@ -4,7 +4,7 @@
 #include "combat/Combat.hpp"
 
 #include "combat/modes/pvp/PvpMode.hpp"
-#include "combat/modes/pvp/AiPvpMode.hpp"
+#include "combat/modes/pvp/AIPvpMode.hpp"
 #include "combat/modes/boss/BossPveMode.hpp"
 #include "combat/modes/pve/MonsterPveMode.hpp"
 
@@ -13,9 +13,9 @@ void Combat::launchTwoPlayerPvp(Player& player1)
     PvpMode::run(player1, random);
 }
 
-void Combat::launchAiPvp(Player& player1)
+void Combat::launchAIPvp(Player& player1)
 {
-    AiPvpMode::run(player1, random);
+    AIPvpMode::run(player1, random);
 }
 
 void Combat::launchBossPve(Player& player1)

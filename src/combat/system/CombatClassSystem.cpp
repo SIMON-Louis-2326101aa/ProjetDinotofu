@@ -7,9 +7,9 @@
 #include <cctype>
 #include <string>
 
-std::string CombatClassSystem::normalizeClassText(const std::string& texteClasse)
+std::string CombatClassSystem::normalizeClassText(const std::string& classText)
 {
-    std::string resultat = texteClasse;
+    std::string resultat = classText;
 
     std::transform(
         resultat.begin(),
@@ -24,7 +24,7 @@ std::string CombatClassSystem::normalizeClassText(const std::string& texteClasse
     return resultat;
 }
 
-int CombatClassSystem::getChanceFuiteBase(const Entity& entity)
+int CombatClassSystem::getBaseEscapeChance(const Entity& entity)
 {
     std::string className = normalizeClassText(entity.getType());
 
@@ -50,7 +50,7 @@ int CombatClassSystem::getChanceFuiteBase(const Entity& entity)
     return 50;
 }
 
-int CombatClassSystem::getReductionDegatsBasePourcentage(const Entity& entity)
+int CombatClassSystem::getBaseDamageReductionPercentage(const Entity& entity)
 {
     std::string className = normalizeClassText(entity.getType());
 

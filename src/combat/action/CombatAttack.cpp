@@ -85,7 +85,7 @@ void CombatAttack::executeBoostedAttack(
                   << std::endl;
     }
 
-    DamageReport rapport = DamageSystem::calculerDegatsRecus(
+    DamageReport rapport = DamageSystem::calculateReceivedDamage(
         defender,
         rawDamage
     );

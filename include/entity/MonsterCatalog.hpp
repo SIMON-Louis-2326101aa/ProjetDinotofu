@@ -9,11 +9,11 @@
 class MonsterCatalog
 {
 public:
-    static Monster creerGobelin();
-    static Monster creerGobelinBrutal();
-    static Monster creerLoupAffame();
-    static Monster creerSquelette();
-    static Monster creerOrcMineur();
+    static Monster createScaredGoblin();
+    static Monster createBrutalGoblin();
+    static Monster createStarvingWolf();
+    static Monster createCrackedSkeleton();
+    static Monster createMinorOrc();
 
     static void displayAvailableMonsters();
 };

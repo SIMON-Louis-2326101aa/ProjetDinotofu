@@ -8,34 +8,34 @@
 
 #include <iostream>
 
-DamageReport DamageSystem::calculerDegatsRecus(Entity& defender, int rawDamage)
+DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDamage)
 {
     DamageReport rapport;
     rapport.rawDamage = rawDamage;
 
-    int degatsRestants = rawDamage;
+    int remainingDamage = rawDamage;
 
-    Player* joueurDefenseur = dynamic_cast<Player*>(&defender);
+    Player* defendingPlayer = dynamic_cast<Player*>(&defender);
 
-    if (joueurDefenseur != nullptr && joueurDefenseur->hasEquippedArmor())
+    if (defendingPlayer != nullptr && defendingPlayer->hasEquippedArmor())
     {
-        Armor* armor = joueurDefenseur->getInventory().getMutableArmor(
-            joueurDefenseur->getEquippedArmorIndex()
+        Armor* armor = defendingPlayer->getInventory().getMutableArmor(
+            defendingPlayer->getEquippedArmorIndex()
         );
 
         if (armor != nullptr && !armor->isBroken())
         {
-            int absorptionArmure = armor->getDamageReduction();
+            int armorAbsorption = armor->getDamageReduction();
 
-            if (absorptionArmure > degatsRestants)
+            if (armorAbsorption > remainingDamage)
             {
-                absorptionArmure = degatsRestants;
+                armorAbsorption = remainingDamage;
             }
 
-            if (absorptionArmure > 0)
+            if (armorAbsorption > 0)
             {
                 rapport.armorUsed = true;
-                rapport.armorAbsorbedDamage = absorptionArmure;
+                rapport.armorAbsorbedDamage = armorAbsorption;
 
                 armor->loseDurability(1);
 
@@ -44,36 +44,36 @@ DamageReport DamageSystem::calculerDegatsRecus(Entity& defender, int rawDamage)
                     rapport.armorBrokenDuringImpact = true;
                 }
 
-                degatsRestants -= absorptionArmure;
+                remainingDamage -= armorAbsorption;
             }
         }
     }
 
-    int reductionClassePourcentage =
-        CombatClassSystem::getReductionDegatsBasePourcentage(defender);
+    int classReductionPercentage =
+        CombatClassSystem::getBaseDamageReductionPercentage(defender);
 
-    if (reductionClassePourcentage > 0 && degatsRestants > 0)
+    if (classReductionPercentage > 0 && remainingDamage > 0)
     {
-        int reductionClasse = degatsRestants * reductionClassePourcentage / 100;
+        int classReduction = remainingDamage * classReductionPercentage / 100;
 
-        if (reductionClasse > degatsRestants)
+        if (classReduction > remainingDamage)
         {
-            reductionClasse = degatsRestants;
+            classReduction = remainingDamage;
         }
 
-        if (reductionClasse > 0)
+        if (classReduction > 0)
         {
-            rapport.classReducedDamage = reductionClasse;
-            degatsRestants -= reductionClasse;
+            rapport.classReducedDamage = classReduction;
+            remainingDamage -= classReduction;
         }
     }
 
-    if (degatsRestants < 0)
+    if (remainingDamage < 0)
     {
-        degatsRestants = 0;
+        remainingDamage = 0;
     }
 
-    rapport.receivedDamage = degatsRestants;
+    rapport.receivedDamage = remainingDamage;
 
     return rapport;
 }
@@ -111,9 +111,9 @@ void DamageSystem::displayDamageReport(const Entity& defender, const DamageRepor
     }
 }
 
-int DamageSystem::appliquerProtectionArmure(Entity& defender, int rawDamage)
+int DamageSystem::applyArmorProtection(Entity& defender, int rawDamage)
 {
-    DamageReport rapport = calculerDegatsRecus(defender, rawDamage);
+    DamageReport rapport = calculateReceivedDamage(defender, rawDamage);
     displayDamageReport(defender, rapport);
 
     return rapport.receivedDamage;

@@ -10,7 +10,7 @@ class BossCatalog
 {
 public:
     static void displayAvailableBosses();
-    static Boss creerBoss(int choice);
+    static Boss createBoss(int choice);
 };
 
 #endif

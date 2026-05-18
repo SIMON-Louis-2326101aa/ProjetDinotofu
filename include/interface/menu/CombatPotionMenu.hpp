@@ -35,7 +35,7 @@ public:
     );
 
 private:
-    static bool ouvrirCategorie(
+    static bool openCategory(
         Player& player,
         ConsumableType type,
         Entity* target,
@@ -44,7 +44,7 @@ private:
         int potionDamageBonus
     );
 
-    static bool ouvrirSelectionPotion(
+    static bool openPotionSelection(
         Player& player,
         const std::vector<int>& indices,
         ConsumableType type,

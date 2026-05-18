@@ -30,7 +30,7 @@ void MonsterPveMode::run(Player& player, Random& random)
             && wave.hasEnemiesLeft()
             && !escapeSucceeded)
         {
-            playerTurnFinished = PlayerWaveCombatTurn::jouer(
+            playerTurnFinished = PlayerWaveCombatTurn::play(
                 player,
                 wave,
                 random,
@@ -46,7 +46,7 @@ void MonsterPveMode::run(Player& player, Random& random)
 
         if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
         {
-            MonsterWaveCombatTurn::jouerToursMonstres(
+            MonsterWaveCombatTurn::playMonsterTurns(
                 player,
                 wave,
                 random

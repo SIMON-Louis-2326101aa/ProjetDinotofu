@@ -17,7 +17,7 @@ bool CombatAI::canUseHealingPotion(const Entity& entity)
         return player->getInventory().countConsumables(ConsumableType::Healing) > 0;
     }
 
-    return entity.getHealingPotions() > 0;
+    return entity.getHealingPotionCount() > 0;
 }
 
 bool CombatAI::canUseDamagePotion(const Entity& entity)
@@ -29,7 +29,7 @@ bool CombatAI::canUseDamagePotion(const Entity& entity)
         return player->getInventory().countConsumables(ConsumableType::Damage) > 0;
     }
 
-    return entity.getDamagePotions() > 0;
+    return entity.getDamagePotionCount() > 0;
 }
 
 int CombatAI::calculateHpPercentage(const Entity& entity)
@@ -76,8 +76,8 @@ AIAction CombatAI::chooseAIAction(const Entity& ai, Random& random)
 
 AIAction CombatAI::chooseBossAction(const Boss& boss, Random& random)
 {
-    bool healingAvailable = boss.getHealingPotions() > 0;
-    bool damageAvailable = boss.getDamagePotions() > 0;
+    bool healingAvailable = boss.getHealingPotionCount() > 0;
+    bool damageAvailable = boss.getDamagePotionCount() > 0;
     bool ultimateAvailable = boss.canUseUltimate();
 
     int hpPercentage = calculateHpPercentage(boss);

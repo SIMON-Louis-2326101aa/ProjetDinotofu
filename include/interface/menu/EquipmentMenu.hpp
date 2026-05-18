@@ -11,8 +11,8 @@ class EquipmentMenu
 public:
     static bool open(Player& player);
 
-    static bool equiperArmeDepuisInventaire(Player& player);
-    static bool equiperArmureDepuisInventaire(Player& player);
+    static bool equipWeaponFromInventory(Player& player);
+    static bool equipArmorFromInventory(Player& player);
 };
 
 #endif

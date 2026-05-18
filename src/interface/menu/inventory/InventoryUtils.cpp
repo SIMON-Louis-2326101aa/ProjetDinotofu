@@ -6,7 +6,7 @@
 #include "item/Inventory.hpp"
 #include "item/consumable/Consumable.hpp"
 
-GroupeConsommable::GroupeConsommable()
+ConsumableGroup::ConsumableGroup()
     : firstIndex(-1),
       amount(0),
       name(""),
@@ -15,7 +15,7 @@ GroupeConsommable::GroupeConsommable()
 {
 }
 
-std::string InventoryUtils::typeConsommableVersTexte(ConsumableType type)
+std::string InventoryUtils::consumableTypeToText(ConsumableType type)
 {
     switch (type)
     {
@@ -59,9 +59,9 @@ std::string InventoryUtils::armorDurabilityText(const Armor& armor)
     return std::to_string(armor.getDurability()) + "/" + std::to_string(armor.getMaxDurability());
 }
 
-std::vector<GroupeConsommable> InventoryUtils::grouperConsommables(const Player& player)
+std::vector<ConsumableGroup> InventoryUtils::groupConsumables(const Player& player)
 {
-    std::vector<GroupeConsommable> groups;
+    std::vector<ConsumableGroup> groups;
     const std::vector<Consumable>& consumables = player.getInventory().getConsumables();
 
     for (int i = 0; i < static_cast<int>(consumables.size()); ++i)
@@ -69,7 +69,7 @@ std::vector<GroupeConsommable> InventoryUtils::grouperConsommables(const Player&
         const Consumable& consumable = consumables[i];
         bool trouve = false;
 
-        for (GroupeConsommable& group : groups)
+        for (ConsumableGroup& group : groups)
         {
             if (group.name == consumable.getName()
                 && group.type == consumable.getType()
@@ -83,7 +83,7 @@ std::vector<GroupeConsommable> InventoryUtils::grouperConsommables(const Player&
 
         if (!trouve)
         {
-            GroupeConsommable group;
+            ConsumableGroup group;
             group.firstIndex = i;
             group.amount = 1;
             group.name = consumable.getName();
