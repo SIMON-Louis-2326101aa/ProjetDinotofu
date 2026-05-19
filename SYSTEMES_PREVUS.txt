@@ -145,3 +145,21 @@ Il ne remplace pas le README : le README explique le projet, ce fichier garde la
 - Menus de compte.
 - Menus de personnage.
 - Comme l'inventaire : liste d'abord, puis inspection après sélection.
+
+============================================================
+PERSONNAGES SPECIAUX / CHEATS / BENEDICTIONS
+============================================================
+
+Cette base prépare aussi les systèmes suivants :
+
+- personnages spéciaux protégés ;
+- validation par date spéciale ;
+- bonus natif de classe ;
+- statut Altéré pour les personnages ayant utilisé des cheats ;
+- codes de triche et secrets créateur ;
+- séquence cachée de combat 13023131302313 ;
+- système limité d'annulation d'action avec helpmerefundmyaction ;
+- bénédictions et anomalie de survie en Léthal ;
+- fichiers JSON de préparation dans assets/config/cheat_codes.json et assets/config/special_characters.json.
+
+Le détail complet est dans SPECIAL_CHARACTERS_AND_CHEATS.txt.

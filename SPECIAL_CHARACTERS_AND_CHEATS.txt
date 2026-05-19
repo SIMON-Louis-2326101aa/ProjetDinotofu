@@ -1,0 +1,384 @@
+DINOTOFU - PERSONNAGES SPECIAUX, CODES ET SYSTEMES PREVUS
+==========================================================
+
+Ce fichier regroupe les idées validées autour des personnages spéciaux, des identités protégées, des codes de triche, du statut Altéré, des bénédictions et des mécaniques de secours.
+Il sert de mémoire de design pour la suite du développement.
+
+----------------------------------------------------------
+1. PERSONNAGES SPECIAUX PREVUS
+----------------------------------------------------------
+
+Principe général :
+- Ces personnages ne sont pas des monstres.
+- Ils sont plutôt des IA / semi-humains / personnages spéciaux.
+- Ils peuvent apparaître avec un taux de chance dans l'histoire, l'arène ou certains modes.
+- En dehors de ces apparitions spéciales, les rencontres doivent utiliser des personnages aléatoires avec des noms aléatoires.
+- Les semi-humains vivent selon les villes en harmonie avec les humains, dans une logique médiéval-fantastique / DND.
+
+Liste actuelle :
+
+Matt (PRO)
+- Référence directe à Matt de Wii Sports.
+- Personnage spécial non jouable.
+- Doit avoir de légers bonus de base.
+- IA correcte / adversaire référence.
+
+Hazak
+- Assassin elfe noir.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+- Classe native prévue : Assassin.
+
+Mattzelda
+- Colosse humain.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+- Classe native prévue : Colosse.
+
+Aoi
+- Future mage flame / invocatrice kitsune.
+- Race : kitsune.
+- Possède aussi un katana.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+
+Kanadé
+- Mage semi-dragonne.
+- Sorts très aléatoires liés aux 13 signes du zodiaque.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+
+Fail
+- Mage fou.
+- Race : fée.
+- Possède des sorts très variés et parfois des sorts uniques.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+
+Trexof
+- Assassin humain.
+- Possède de légers bonus.
+- Bêta testeur principal.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+
+Skuro
+- Tank.
+- Arme prévue : épée lourde à deux mains.
+- Attaques à faible réussite, mais dégâts très lourds.
+- Gameplay basé sur le risque : peu de coups, mais chaque coup peut faire très mal.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+
+Sanctus
+- Tank / semi-mage.
+- Attaques de base plutôt simples.
+- Capacités principales : protection, entrave, soutien défensif.
+- Se sert des croyances liées à un dieu de la lumière.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+
+Hestia
+- Stats presque nulles sauf la magie.
+- Plus elle utilise la magie, même en cas d'échec, plus le sort devient puissant.
+- Possède dès le début un sort niveau max : dôme de protection.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+
+Fire Flight
+- Personnage/dev.
+- Stats globalement très basiques.
+- Sous 50% PV : esquive beaucoup mieux et touche presque toujours en critique.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+
+Louis
+- Artificier.
+- Très bonne précision.
+- Attaques avec plusieurs projectiles d'un coup.
+- Personnage spécial jouable seulement avec validation de date spéciale.
+
+Règle future : quand un nouveau personnage spécial est ajouté, demander s'il doit avoir une date spéciale de validation ou non.
+
+----------------------------------------------------------
+2. IDENTITES PROTEGEES / ANTI-USURPATION
+----------------------------------------------------------
+
+Quand le joueur entre un nom correspondant à un personnage spécial, sans tenir compte des majuscules :
+
+1. Le jeu détecte que le nom est protégé.
+2. Le jeu affiche un avertissement.
+3. Le joueur peut confirmer ou revenir au choix du nom.
+4. S'il confirme, il doit entrer la date spéciale au format DD/MM/YYYY.
+5. Si la date est correcte, le personnage devient jouable.
+6. Si la date est incorrecte, le personnage refuse l'appel.
+7. Matt (PRO) reste non jouable, même avec validation.
+
+Dialogue proposé :
+
+"Ce nom ne t'appartient pas vraiment.
+
+[Nom] possède déjà son histoire, ses cicatrices, ses choix et ses fautes.
+Usurper son identité n'est pas une simple fantaisie.
+
+Si tu es réellement lié à ce personnage, prouve-le.
+Entre sa date spéciale au format DD/MM/YYYY."
+
+En cas de réussite :
+
+"Identité reconnue.
+Tu ne joues pas une copie.
+Tu réveilles une histoire déjà commencée."
+
+En cas d'échec :
+
+"Date incorrecte.
+Ce personnage refuse de répondre à ton appel.
+Choisis un autre nom."
+
+Classe native / bonus natif :
+- Même si une identité spéciale est validée, le joueur peut choisir la classe qu'il veut.
+- La classe prévue pour le bot/personnage affiche "bonus natif" à côté.
+- Si le joueur choisit cette classe, le personnage reçoit un bonus natif.
+- Si le joueur choisit une autre classe, il peut jouer le personnage sans ce bonus.
+
+Exemple :
+1 : Chevalier
+2 : Assassin [bonus natif]
+3 : Colosse
+
+----------------------------------------------------------
+3. STATUT ALTERE ET CODES DE TRICHE
+----------------------------------------------------------
+
+Principe :
+- Les codes de triche existent, mais ils marquent le personnage.
+- Le premier code activé demande confirmation.
+- Après confirmation, le personnage reçoit le statut : Altéré.
+- Un personnage altéré pourra plus tard être exclu de certains records officiels ou événements.
+- Certains codes purement narratifs peuvent rester à part selon leur effet.
+
+Warning avant le premier code :
+
+"Une règle ancienne vient d'être touchée.
+
+Attention : activer un code peut altérer votre expérience,
+vos statistiques, vos souvenirs, et la trace laissée par ce personnage.
+
+Un personnage altéré ne sera peut-être plus considéré comme officiel
+dans certains classements, records ou événements futurs.
+
+Voulez-vous vraiment procéder à l'activation ?
+1 : Oui, altérer ce personnage
+0 : Non, revenir en arrière"
+
+Après chaque activation :
+- Afficher le code reconnu.
+- Afficher les effets.
+- Afficher : "Statut du personnage : Altéré" si applicable.
+- Afficher : "État : activé".
+
+----------------------------------------------------------
+4. CODES DE TRICHE VALIDES
+----------------------------------------------------------
+
+idontwanttodie
+- Active un god mode.
+- Impossible de perdre des PV.
+
+infinituseforeverything
+- Les consommables de l'inventaire ne diminuent plus.
+
+bedrockequipment
+- Les équipements deviennent indestructibles.
+
+myweaponandnotother
+- Empêche la perte et le vol d'équipement.
+
+skipallstory
+- Débloque tout le bestiaire / toute la connaissance prévue.
+
+skipalllevels
+- Donne le niveau maximum.
+
+1302313
+- Code personnel du créateur.
+- Déclenche un message spécial du créateur.
+
+13023131302313
+- Séquence cachée en combat.
+- Peut être saisie via les choix de menu, par exemple une suite 1 puis 3 puis 0, etc.
+- Déclenche une scène spéciale.
+- Propose d'invoquer une divinité pour aider.
+- Si accepté : one-shot de l'ennemi et soin complet.
+- Accepter ou refuser rend l'événement impossible à retrouver avec le personnage actuel.
+
+iamnotgoblinfood
+- Les gobelins ont peur du personnage pendant un combat ou une rencontre.
+
+letmecook
+- Augmente les chances de critique pendant un combat.
+
+whereismyplotarmor
+- Donne une bénédiction temporaire anti-mort ou une protection narrative.
+
+talktothedev
+- Affiche une note méta du créateur.
+
+oopsallbosses
+- Remplace les vagues par des mini-boss aléatoires ou prépare un mode chaos.
+
+randomizemyfate
+- Donne une classe, une arme et un inventaire totalement random.
+
+resetmycharacter
+- Réinitialise complètement le personnage.
+- Version courte possible : détruire et recréer le personnage.
+- Doit demander une confirmation forte, par exemple taper RESET.
+
+switchmyclassandweapon
+- Permet de choisir une autre classe.
+- Donne un équipement correspondant plus ou moins à la progression actuelle.
+- Sert de debug et prépare le futur changement/évolution de classe via missions, style de gameplay ou niveau.
+
+helpmerefundmyaction
+- Permet d'annuler une action involontaire ou une vente accidentelle.
+- Maximum 3 fois par personnage.
+- Sert de secours en cas d'erreur de joueur.
+
+givemesomegolds
+- Donne entre 100 et 1000 pièces d'or.
+- Réutilisable.
+
+givemealevel
+- Donne un niveau supplémentaire.
+- Réutilisable.
+
+----------------------------------------------------------
+5. SYSTEME DE REFUND / ANNULATION D'ACTION
+----------------------------------------------------------
+
+Code : helpmerefundmyaction
+
+Objectif :
+- Aider en cas d'erreur réelle.
+- Exemple : vente involontaire d'un objet.
+- Exemple : mauvaise action choisie par erreur.
+
+Règles prévues :
+- Maximum 3 utilisations par personnage.
+- Le système doit garder une trace de la dernière action annulable.
+- Les actions trop anciennes ou trop importantes peuvent ne pas être annulables.
+- Le personnage devient probablement Altéré, sauf si le code est traité comme assistance/accessibilité.
+
+----------------------------------------------------------
+6. BENEDICTIONS ET ANOMALIE DE SURVIE
+----------------------------------------------------------
+
+Idée validée :
+- En difficulté Léthal, la mort est normalement définitive.
+- Cependant, un événement spécial peut empêcher une mort officielle.
+- Ce n'est pas un respawn gratuit.
+- Il faut probablement une bénédiction débloquée.
+- Toutes les bénédictions sont perdues au déclenchement.
+
+Texte validé :
+
+"La mort t'a trouvé.
+Puis elle a reculé.
+
+Quelqu'un, quelque part, a payé le prix à ta place.
+
+Tu ouvres les yeux avec 1 PV.
+Ton équipement a disparu.
+Ton inventaire n'est plus qu'un souvenir.
+
+Statut : anomalie de survie.
+
+Tes bénédictions se sont consumées.
+Mais ton nom existe encore.
+Pour l'instant."
+
+Effet prévu :
+- Survie à 1 PV.
+- Statut : Anomalie de survie.
+- Stuff/inventaire détruit, perdu ou très lourdement puni.
+- Toutes les bénédictions sont consommées.
+- Ce n'est pas compté comme une mort classique.
+
+----------------------------------------------------------
+7. DIFFICULTE ET PENALITES
+----------------------------------------------------------
+
+Difficultés prévues :
+- Facile
+- Normal
+- Difficile
+- Cauchemar
+- Léthal
+
+Règle générale :
+- Plus la difficulté monte, plus les taux de pénalité augmentent.
+- Même si l'écart est parfois léger, il doit être présent.
+
+Pénalités concernées :
+- perte d'or
+- perte d'XP
+- perte de consommables
+- perte de matériaux
+- perte/dégâts de durabilité
+- vol d'équipement
+- casse irréparable
+- respawn avec moins de PV/mana
+
+Respawn non létal prévu :
+- Facile : environ 75% PV / mana
+- Normal : environ 50% PV / mana
+- Difficile : environ 30% PV / mana
+- Cauchemar : environ 10% PV / mana
+- Léthal : pas de respawn normal
+
+Objets rares / reliques / uniques :
+- En Facile/Normal, ils sont très protégés.
+- En Difficile, ils commencent à pouvoir subir des problèmes.
+- En Cauchemar/Léthal, ils peuvent subir des problèmes proches des objets courants.
+- Exception : objet lié au corps, à l'âme ou au personnage.
+
+Durabilité infinie :
+- Doit être rare.
+- Moins présente en difficultés hautes.
+- Préférer des objets "très résistants" plutôt que vraiment indestructibles.
+
+----------------------------------------------------------
+8. MORT NON DEFINITIVE : VOL, CASSE, IRREPARABLE
+----------------------------------------------------------
+
+Vol d'équipement :
+- Possible lors d'une mort non définitive.
+- Test séparé pour chaque équipement équipé.
+- Jamais sur la tenue de base.
+- Seulement contre ennemis cohérents : bandit, voleur, humanoïde, semi-humain hostile, gobelin intelligent, orc pillard, etc.
+- Pas contre tous les monstres.
+- Pas contre les boss par défaut, sauf boss spécial prévu pour ça.
+
+Casse irréparable :
+- Si un équipement tombe à 0 durabilité, il peut devenir définitivement irréparable.
+- Dans ce cas, il ne reste qu'un petit matériau/fragment.
+- Le reste est perdu, jeté ou détruit.
+
+Exemples :
+- Épée rouillée détruite -> Fragment de métal rouillé x1
+- Armure en cuir détruite -> Morceau de cuir abîmé x1
+- Bâton magique détruit -> Éclat arcanique instable x1
+
+----------------------------------------------------------
+9. FICHIERS PREPARES DANS CETTE BASE
+----------------------------------------------------------
+
+Dossiers/fichiers préparés pour la suite :
+- include/cheat/
+- src/cheat/
+- include/progression/blessing/
+- src/progression/blessing/
+- include/interface/menu/cheat/
+- src/interface/menu/cheat/
+- fichiers de garde d'identité spéciale dans include/character/ et src/character/
+- assets/config/cheat_codes.json
+- assets/config/special_characters.json
+- assets/texts/cheats/
+- assets/texts/special_characters/
+- assets/texts/blessings/
+- assets/saves/cheats/
+- assets/saves/blessings/
+
+Ces fichiers sont volontairement vides ou presque vides pour préparer la suite sans casser la compilation.

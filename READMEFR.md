@@ -335,3 +335,23 @@ Si tu arrives à devenir une légende dans Dinotofu, bravo. Si tu meurs contre l
 Allez, entre dans l'arène. On va voir si tu joues vraiment bien, ou si tu parles juste fort sur Discord.   
    
 Je tiens à noter que lors de la vraie bêta ouverte, tu auras une chance d'être directement intégré au jeu de base si ta contribution le mérite. Alors prouve-moi que tu en vaux le coup. Bon courage d'ici là.   
+
+## Systèmes préparés : personnages spéciaux et codes de triche   
+
+Cette version prépare aussi les prochains systèmes de Dinotofu sans les activer complètement pour l’instant.   
+Le but est de garder le projet compilable tout en rendant l’architecture future visible.   
+
+Systèmes de personnages spéciaux préparés :   
+- identités spéciales protégées comme Hazak, Aoi, Trexof, Skuro, Sanctus, Hestia, Fire Flight et Louis ;   
+- future validation par date spéciale au format `DD/MM/YYYY` ;   
+- affichage futur du bonus natif sur la classe prévue du personnage ;   
+- rencontres spéciales séparées des monstres classiques.   
+
+Systèmes de codes de triche préparés :   
+- statut `Altéré` après activation d’un code ;   
+- avertissement avant le premier code ;   
+- codes réutilisables et codes à usage unique ;   
+- secrets du créateur et séquence cachée en combat ;   
+- futur système d’annulation d’action avec utilisations limitées par personnage.   
+
+Le résumé complet est disponible dans `SPECIAL_CHARACTERS_AND_CHEATS.txt`.   

@@ -1,0 +1,18 @@
+{
+    "title": "Dinotofu special characters",
+    "note": "Prepared data file. Special dates will be filled later by the creator.",
+    "characters": [
+        { "name": "Matt (PRO)", "playable": false, "role": "Reference AI", "race": "Human", "nativeClass": "Special", "description": "Direct reference to Matt from Wii Sports, with small base bonuses and decent AI." },
+        { "name": "Hazak", "playable": true, "requiresSpecialDate": true, "race": "Dark Elf", "nativeClass": "Assassin", "description": "Protected special identity. Dark elf assassin." },
+        { "name": "Mattzelda", "playable": true, "requiresSpecialDate": true, "race": "Human", "nativeClass": "Colossus", "description": "Protected special identity. Human colossus." },
+        { "name": "Aoi", "playable": true, "requiresSpecialDate": true, "race": "Kitsune", "nativeClass": "Flame Mage / Summoner", "description": "Future flame mage, kitsune summoner, also uses a katana." },
+        { "name": "Kanade", "playable": true, "requiresSpecialDate": true, "race": "Half-dragon", "nativeClass": "Mage", "description": "Random zodiac spell mage linked to the 13 zodiac signs." },
+        { "name": "Fail", "playable": true, "requiresSpecialDate": true, "race": "Fairy", "nativeClass": "Mad Mage", "description": "Mad fairy mage with many spell types and some unique spells." },
+        { "name": "Trexof", "playable": true, "requiresSpecialDate": true, "race": "Human", "nativeClass": "Assassin", "description": "Human assassin with slight bonuses; main beta tester." },
+        { "name": "Skuro", "playable": true, "requiresSpecialDate": true, "race": "Unknown", "nativeClass": "Tank", "description": "Tank with heavy two-handed sword. Low accuracy, huge damage." },
+        { "name": "Sanctus", "playable": true, "requiresSpecialDate": true, "race": "Unknown", "nativeClass": "Tank / Semi-mage", "description": "Protection and hindrance specialist using beliefs linked to a god of light." },
+        { "name": "Hestia", "playable": true, "requiresSpecialDate": true, "race": "Unknown", "nativeClass": "Mage", "description": "Almost everything is null except magic. Magic grows stronger every use, hit or miss. Starts with max-level protection dome." },
+        { "name": "Fire Flight", "playable": true, "requiresSpecialDate": true, "race": "Creator", "nativeClass": "Developer", "description": "Basic stats, but under 50% HP gains much better dodge and almost guaranteed critical hits." },
+        { "name": "Louis", "playable": true, "requiresSpecialDate": true, "race": "Human", "nativeClass": "Artificer", "description": "Precise artificer using multiple projectiles per attack." }
+    ]
+}

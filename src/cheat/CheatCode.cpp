@@ -1,0 +1,6 @@
+// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
+// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
+// Description: Future enum-like helpers for every known cheat code string, including debug, secret and recovery codes.
+// TODO: Implement this future system when its feature block becomes active.
+
+#include "cheat/CheatCode.hpp"

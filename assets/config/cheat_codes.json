@@ -1,0 +1,25 @@
+{
+    "title": "Dinotofu cheat codes",
+    "note": "Prepared data file. Effects are not fully connected yet.",
+    "codes": [
+        { "code": "idontwanttodie", "category": "debug", "effect": "God mode: HP loss blocked.", "reusable": false, "marksAltered": true },
+        { "code": "infinituseforeverything", "category": "debug", "effect": "Consumables no longer decrease.", "reusable": false, "marksAltered": true },
+        { "code": "bedrockequipment", "category": "debug", "effect": "Equipment becomes indestructible.", "reusable": false, "marksAltered": true },
+        { "code": "myweaponandnotother", "category": "debug", "effect": "Equipment cannot be stolen or lost.", "reusable": false, "marksAltered": true },
+        { "code": "skipallstory", "category": "debug", "effect": "Unlock all bestiary/story knowledge.", "reusable": false, "marksAltered": true },
+        { "code": "skipalllevels", "category": "debug", "effect": "Set character to max level.", "reusable": false, "marksAltered": true },
+        { "code": "1302313", "category": "secret", "effect": "Creator message.", "reusable": false, "marksAltered": false },
+        { "code": "13023131302313", "category": "combat_sequence", "effect": "Creator/divinity scene, enemy one-shot and full heal if accepted.", "reusable": false, "marksAltered": true },
+        { "code": "iamnotgoblinfood", "category": "fun", "effect": "Goblins fear the character for a future encounter/fight.", "reusable": false, "marksAltered": true },
+        { "code": "letmecook", "category": "fun", "effect": "Temporary critical chance boost.", "reusable": false, "marksAltered": true },
+        { "code": "whereismyplotarmor", "category": "fun", "effect": "Temporary anti-death blessing.", "reusable": false, "marksAltered": true },
+        { "code": "talktothedev", "category": "secret", "effect": "Meta creator note.", "reusable": false, "marksAltered": false },
+        { "code": "oopsallbosses", "category": "chaos", "effect": "Future boss-heavy mode or wave replacement.", "reusable": false, "marksAltered": true },
+        { "code": "randomizemyfate", "category": "chaos", "effect": "Random class, weapon and inventory.", "reusable": false, "marksAltered": true },
+        { "code": "resetmycharacter", "category": "danger", "effect": "Reset or destroy and recreate the current character.", "reusable": false, "marksAltered": true },
+        { "code": "switchmyclassandweapon", "category": "debug", "effect": "Change class and give progression-appropriate equipment.", "reusable": false, "marksAltered": true },
+        { "code": "helpmerefundmyaction", "category": "recovery", "effect": "Undo accidental action or sale. Max 3 per character.", "reusable": true, "maxUsesPerCharacter": 3, "marksAltered": true },
+        { "code": "givemesomegolds", "category": "debug", "effect": "Give 100 to 1000 gold.", "reusable": true, "marksAltered": true },
+        { "code": "givemealevel", "category": "debug", "effect": "Give one level.", "reusable": true, "marksAltered": true }
+    ]
+}

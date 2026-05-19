@@ -402,3 +402,23 @@ Non-lethal death penalties now include prepared logic for gold loss, experience 
 Lethal mode keeps its corrupted death identity. A future rare narrative exception is prepared through the survival anomaly idea: surviving at 1 HP after a special blessing-like event, losing blessings and suffering brutal consequences instead of a normal death.   
    
 A second project planning file is available: `SYSTEMES_PREVUS.txt`. It contains the longer French roadmap for future systems, death rules, bestiary, statistics, materials, special semi-human characters, JSON saves, and pantheon-linked bosses.   
+
+## Prepared Systems: Special Characters and Cheat Codes   
+
+This version also prepares the next Dinotofu systems without fully activating them yet.   
+The goal is to keep the project compiling while making the future architecture visible.   
+
+Prepared special-character systems:   
+- protected special identities such as Hazak, Aoi, Trexof, Skuro, Sanctus, Hestia, Fire Flight and Louis;   
+- future special-date validation using `DD/MM/YYYY`;   
+- native class bonus markers for protected characters;   
+- random special-character encounters separated from normal monsters.   
+
+Prepared cheat systems:   
+- altered-character state after cheat activation;   
+- first-cheat warning before altering a character;   
+- reusable and single-use cheat codes;   
+- creator secret codes and hidden combat input sequence;   
+- future action refund system with limited uses per character.   
+
+A full French design summary is available in `SPECIAL_CHARACTERS_AND_CHEATS.txt`.   
