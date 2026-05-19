@@ -4,238 +4,214 @@
 #include "entity/MonsterCatalog.hpp"
 
 #include <iostream>
+#include <vector>
+
+namespace
+{
+    Monster createMonster(
+        const std::string& name,
+        const std::string& type,
+        Race race,
+        int level,
+        int maxHp,
+        int minDamage,
+        int maxDamage,
+        int criticalDamage,
+        int healingPotionCount = 0,
+        int damagePotionCount = 0,
+        bool invocation = false,
+        bool elite = false,
+        bool hiddenStats = false
+    )
+    {
+        return Monster(
+            name,
+            type,
+            race,
+            level,
+            maxHp,
+            minDamage,
+            maxDamage,
+            criticalDamage,
+            healingPotionCount,
+            damagePotionCount,
+            invocation,
+            elite,
+            hiddenStats
+        );
+    }
+
+    std::vector<Monster> createTierOneMonsters()
+    {
+        return {
+            createMonster("Gobelin peureux", "Assassin primitif", Race::Gobelin, 1, 55, 8, 14, 18),
+            createMonster("Chauve-souris des cavernes", "Créature rapide", Race::Bete, 1, 45, 7, 15, 20),
+            createMonster("Rat géant", "Bête nuisible", Race::Bete, 1, 50, 6, 13, 18),
+            createMonster("Slime fragile", "Gelée vivante", Race::Slime, 1, 60, 4, 12, 16),
+            createMonster("Racine agitée", "Plante hostile", Race::Plante, 1, 70, 5, 14, 18),
+            createMonster("Kobold paniqué", "Petit draconide", Race::Draconide, 1, 58, 7, 15, 20)
+        };
+    }
+
+    std::vector<Monster> createTierTwoMonsters()
+    {
+        return {
+            createMonster("Gobelin brutal", "Bagarreur sauvage", Race::Gobelin, 2, 75, 10, 18, 22),
+            createMonster("Loup affamé", "Prédateur rapide", Race::Bete, 2, 65, 9, 20, 25),
+            createMonster("Araignée venimeuse", "Insectoïde toxique", Race::Insectoide, 2, 70, 8, 19, 24),
+            createMonster("Bandit maladroit", "Humain hostile", Race::Humain, 2, 80, 9, 18, 24, 1, 0),
+            createMonster("Squelette instable", "Mort-vivant fragile", Race::MortVivant, 2, 78, 10, 19, 24),
+            createMonster("Méphaïte de braise", "Petit élémentaire", Race::Elementaire, 2, 72, 9, 21, 26)
+        };
+    }
+
+    std::vector<Monster> createTierThreeMonsters()
+    {
+        return {
+            createMonster("Squelette fissuré", "Mort-vivant fragile", Race::MortVivant, 3, 80, 12, 22, 24),
+            createMonster("Sanglier sauvage", "Bête résistante", Race::Bete, 3, 95, 12, 21, 24),
+            createMonster("Gobelin pillard", "Voleur opportuniste", Race::Gobelin, 3, 90, 11, 22, 30, 1, 0),
+            createMonster("Goule affamée", "Mort-vivant agressif", Race::MortVivant, 3, 105, 12, 24, 30),
+            createMonster("Esprit mineur", "Entité flottante", Race::Esprit, 3, 85, 10, 25, 32, 0, 1),
+            createMonster("Alchimiste renégat", "Humain dangereux", Race::Humain, 3, 88, 6, 18, 28, 1, 2)
+        };
+    }
+
+    std::vector<Monster> createTierFourMonsters()
+    {
+        return {
+            createMonster("Orc mineur", "Combattant lourd", Race::Orc, 4, 120, 15, 26, 28, 0, 0, false, true),
+            createMonster("Bandit perdu", "Humain opportuniste", Race::Humain, 4, 100, 14, 24, 30, 1, 0),
+            createMonster("Orc éclaireur", "Pillard mobile", Race::Orc, 4, 115, 14, 27, 34),
+            createMonster("Mage renégat", "Humain arcanique", Race::Humain, 4, 92, 10, 30, 44, 1, 2),
+            createMonster("Chevalier corrompu", "Humain en armure", Race::Humain, 4, 135, 13, 25, 34, 1, 0, false, true),
+            createMonster("Anomalie arcanique instable", "Erreur magique", Race::AnomalieArcanique, 4, 110, 12, 32, 46, 0, 1, false, false, true)
+        };
+    }
+
+    std::vector<Monster> createTierFivePlusMonsters()
+    {
+        return {
+            createMonster("Ours brun", "Bête massive", Race::Bete, 5, 160, 18, 34, 42, 0, 0, false, true),
+            createMonster("Orc berserker", "Briseur sauvage", Race::Orc, 5, 170, 20, 38, 50, 0, 1, false, true),
+            createMonster("Revenant silencieux", "Mort-vivant tenace", Race::MortVivant, 5, 145, 16, 33, 45, 0, 0, false, true, true),
+            createMonster("Démon mineur", "Créature infernale", Race::Demon, 5, 150, 18, 36, 48, 0, 1, false, true, true),
+            createMonster("Élémentaire instable", "Énergie condensée", Race::Elementaire, 5, 140, 16, 39, 52, 0, 1, false, true, true),
+            createMonster("Chevalier sans âme", "Armure morte", Race::MortVivant, 6, 190, 18, 35, 48, 0, 0, false, true, true),
+            createMonster("Colosse sauvage", "Bête humanoïde", Race::Aberration, 7, 260, 22, 46, 60, 0, 1, false, true, true),
+            createMonster("Dragon mineur", "Jeune menace draconique", Race::Dragon, 8, 320, 25, 55, 75, 0, 2, false, true, true)
+        };
+    }
+
+    Monster chooseFromList(const std::vector<Monster>& monsters, Random& random)
+    {
+        int index = random.between(0, static_cast<int>(monsters.size()) - 1);
+        return monsters[index];
+    }
+}
 
 Monster MonsterCatalog::createScaredGoblin()
 {
-    return Monster(
-        "Gobelin peureux",
-        "Assassin primitif",
-        Race::Gobelin,
-        1,
-        55,
-        8,
-        14,
-        18,
-        0,
-        0,
-        false,
-        false,
-        false
-    );
+    return createMonster("Gobelin peureux", "Assassin primitif", Race::Gobelin, 1, 55, 8, 14, 18);
 }
 
 Monster MonsterCatalog::createBrutalGoblin()
 {
-    return Monster(
-        "Gobelin brutal",
-        "Bagarreur sauvage",
-        Race::Gobelin,
-        2,
-        75,
-        10,
-        18,
-        22,
-        0,
-        0,
-        false,
-        false,
-        false
-    );
+    return createMonster("Gobelin brutal", "Bagarreur sauvage", Race::Gobelin, 2, 75, 10, 18, 22);
 }
 
 Monster MonsterCatalog::createStarvingWolf()
 {
-    return Monster(
-        "Loup affamé",
-        "Prédateur rapide",
-        Race::Bete,
-        2,
-        65,
-        9,
-        20,
-        25,
-        0,
-        0,
-        false,
-        false,
-        false
-    );
+    return createMonster("Loup affamé", "Prédateur rapide", Race::Bete, 2, 65, 9, 20, 25);
 }
 
 Monster MonsterCatalog::createCrackedSkeleton()
 {
-    return Monster(
-        "Squelette fissuré",
-        "Mort-vivant fragile",
-        Race::MortVivant,
-        3,
-        80,
-        12,
-        22,
-        24,
-        0,
-        0,
-        false,
-        false,
-        false
-    );
+    return createMonster("Squelette fissuré", "Mort-vivant fragile", Race::MortVivant, 3, 80, 12, 22, 24);
 }
 
 Monster MonsterCatalog::createMinorOrc()
 {
-    return Monster(
-        "Orc mineur",
-        "Combattant lourd",
-        Race::Orc,
-        4,
-        120,
-        15,
-        26,
-        28,
-        0,
-        0,
-        false,
-        true,
-        false
-    );
+    return createMonster("Orc mineur", "Combattant lourd", Race::Orc, 4, 120, 15, 26, 28, 0, 0, false, true);
 }
 
 Monster MonsterCatalog::createCaveBat()
 {
-    return Monster(
-        "Chauve-souris des cavernes",
-        "Créature rapide",
-        Race::Bete,
-        1,
-        45,
-        7,
-        15,
-        20,
-        0,
-        0,
-        false,
-        false,
-        false
-    );
+    return createMonster("Chauve-souris des cavernes", "Créature rapide", Race::Bete, 1, 45, 7, 15, 20);
 }
 
 Monster MonsterCatalog::createWildBoar()
 {
-    return Monster(
-        "Sanglier sauvage",
-        "Bête résistante",
-        Race::Bete,
-        3,
-        95,
-        12,
-        21,
-        24,
-        0,
-        0,
-        false,
-        false,
-        false
-    );
+    return createMonster("Sanglier sauvage", "Bête résistante", Race::Bete, 3, 95, 12, 21, 24);
 }
 
 Monster MonsterCatalog::createLostBandit()
 {
-    return Monster(
-        "Bandit perdu",
-        "Humain opportuniste",
-        Race::Humain,
-        4,
-        100,
-        14,
-        24,
-        30,
-        1,
-        0,
-        false,
-        false,
-        false
-    );
+    return createMonster("Bandit perdu", "Humain opportuniste", Race::Humain, 4, 100, 14, 24, 30, 1, 0);
 }
 
 Monster MonsterCatalog::createRandomMonsterForLevel(int level, Random& random)
 {
     if (level <= 1)
     {
-        int choice = random.between(1, 2);
-
-        if (choice == 1)
-        {
-            return createScaredGoblin();
-        }
-
-        return createCaveBat();
+        return chooseFromList(createTierOneMonsters(), random);
     }
 
     if (level == 2)
     {
-        int choice = random.between(1, 3);
-
-        if (choice == 1)
-        {
-            return createBrutalGoblin();
-        }
-
-        if (choice == 2)
-        {
-            return createStarvingWolf();
-        }
-
-        return createCaveBat();
+        return chooseFromList(createTierTwoMonsters(), random);
     }
 
     if (level == 3)
     {
-        int choice = random.between(1, 3);
+        return chooseFromList(createTierThreeMonsters(), random);
+    }
 
-        if (choice == 1)
+    if (level == 4)
+    {
+        return chooseFromList(createTierFourMonsters(), random);
+    }
+
+    return chooseFromList(createTierFivePlusMonsters(), random);
+}
+
+std::vector<Monster> MonsterCatalog::createAllPreviewMonsters()
+{
+    std::vector<Monster> allMonsters;
+
+    std::vector<std::vector<Monster>> tiers = {
+        createTierOneMonsters(),
+        createTierTwoMonsters(),
+        createTierThreeMonsters(),
+        createTierFourMonsters(),
+        createTierFivePlusMonsters()
+    };
+
+    for (const std::vector<Monster>& tier : tiers)
+    {
+        for (const Monster& monster : tier)
         {
-            return createCrackedSkeleton();
+            allMonsters.push_back(monster);
         }
-
-        if (choice == 2)
-        {
-            return createWildBoar();
-        }
-
-        return createBrutalGoblin();
     }
 
-    int choice = random.between(1, 4);
-
-    if (choice == 1)
-    {
-        return createMinorOrc();
-    }
-
-    if (choice == 2)
-    {
-        return createLostBandit();
-    }
-
-    if (choice == 3)
-    {
-        return createCrackedSkeleton();
-    }
-
-    return createWildBoar();
+    return allMonsters;
 }
 
 void MonsterCatalog::displayAvailableMonsters()
 {
-    std::cout << "========== MONSTRES DISPONIBLES ==========" << std::endl;
-    std::cout << "1 : Gobelin peureux" << std::endl;
-    std::cout << "2 : Gobelin brutal" << std::endl;
-    std::cout << "3 : Loup affamé" << std::endl;
-    std::cout << "4 : Squelette fissuré" << std::endl;
-    std::cout << "5 : Orc mineur" << std::endl;
-    std::cout << "6 : Chauve-souris des cavernes" << std::endl;
-    std::cout << "7 : Sanglier sauvage" << std::endl;
-    std::cout << "8 : Bandit perdu" << std::endl;
-    std::cout << "==========================================" << std::endl;
+    std::vector<Monster> monsters = createAllPreviewMonsters();
+
+    std::cout << "========== MONSTRES PRÉPARÉS ==========" << std::endl;
+
+    for (std::size_t i = 0; i < monsters.size(); ++i)
+    {
+        std::cout << (i + 1) << " : " << monsters[i].getName()
+                  << " | Race : " << monsters[i].getRaceText()
+                  << " | Niveau : " << monsters[i].getLevel()
+                  << std::endl;
+    }
+
+    std::cout << "=======================================" << std::endl;
     std::cout << std::endl;
 }

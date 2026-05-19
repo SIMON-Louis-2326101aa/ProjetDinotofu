@@ -9,6 +9,9 @@
 #include "entity/Entity.hpp"
 #include "entity/Player.hpp"
 #include "entity/Boss.hpp"
+#include "combat/summon/Summon.hpp"
+
+#include <vector>
 
 class TurnManager
 {
@@ -16,6 +19,15 @@ public:
     static bool playHumanTurn(
         Entity& attacker,
         Entity& defender,
+        Random& random,
+        int potionHealAmount,
+        int potionDamageBonus
+    );
+
+    static bool playHumanTurnWithEnemySummons(
+        Entity& attacker,
+        Entity& defender,
+        std::vector<Summon>& enemySummons,
         Random& random,
         int potionHealAmount,
         int potionDamageBonus

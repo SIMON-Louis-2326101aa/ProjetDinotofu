@@ -4,6 +4,7 @@
 #include "combat/action/CombatPotion.hpp"
 
 #include "combat/action/CombatAttack.hpp"
+#include "combat/threat/ThreatSystem.hpp"
 
 #include "core/Console.hpp"
 
@@ -41,6 +42,7 @@ bool CombatPotion::executeHealingPotion(
         }
 
         player->heal(potion.getPower());
+        ThreatSystem::markSelfHealingAction(*player);
 
         std::cout << player->getName()
                   << " utilise : "
@@ -68,6 +70,8 @@ bool CombatPotion::executeHealingPotion(
 
     if (entity.useHealingPotion(potionHealAmount))
     {
+        ThreatSystem::markSelfHealingAction(entity);
+
         std::cout << entity.getName()
                   << " utilise une potion de soin."
                   << std::endl;

@@ -185,7 +185,7 @@ The project now contains placeholder folders and files for future systems:
 - `interface/menu/progression/`: future menus for statistics, bestiary, materials, and account data   
 - `assets/saves/accounts/`: future account JSON saves   
 - `assets/saves/characters/playable/`: future playable character JSON saves   
-- `assets/saves/characters/graveyard/`: future dead Lethal characters   
+- `assets/saves/characters/dead/`: future dead Lethal characters   
 - `assets/saves/bestiary/`: future bestiary knowledge saves   
 - `assets/saves/materials/`: future material knowledge saves   
    
@@ -422,3 +422,66 @@ Prepared cheat systems:
 - future action refund system with limited uses per character.   
 
 A full French design summary is available in `SPECIAL_CHARACTERS_AND_CHEATS.txt`.   
+
+## Prepared local account and save system   
+
+The game now prepares an `assets/saves/` directory automatically.   
+At startup, the player can select an existing local account or create/use a new one. If the account name is left empty, the `local` account is used.   
+After the account step, the player can select an existing playable character for that account or create a new one.   
+A JSON snapshot of the character is saved after character creation and after a combat session.   
+The current loader restores the main character identity and progression data: name, race, class, difficulty, level, experience, HP, gold and equipped starter equipment indexes.   
+Full inventory serialization is still planned later, so loaded characters rebuild their base inventory from class and difficulty for now.   
+
+This system prepares the foundation for future account saves, character saves, dead character archives, bestiary progress, material progress, statistics, blessings and cheat states.   
+
+## Current combat targeting note   
+
+A first threat system now exists in `combat/threat`.   
+When a character heals, enemies can mark that healer as a priority target for the next attack.   
+Tank-like characters can also create provocation, forcing hostile attention back onto them instead of letting enemies freely attack summons.   
+Sanctus currently has stronger passive provocation hooks because his identity is built around protection, restraint, and the future Sanctus/Skuro split.   
+
+This is still a first pass: the future version should use full combat slots, better enemy intelligence, active tank skills, healer roles, and boss-specific resistance to provocation.   
+
+## Recent update: threat, healing, and combat slots   
+
+The threat system now separates self-healing from ally-healing.   
+Healing yourself does not increase healer threat anymore.   
+Healing an ally can later make intelligent enemies prioritize the healer.   
+
+A first combat slot foundation is also ready for future group fights: player, allies, enemies, summons, and bosses.   
+
+## Recent update: visible combat groups and role actions   
+   
+This version adds a first real bridge between the old combat system and the future slot-based group combat system.   
+PvP AI and PvE now display visible combat groups built from the player, enemies and active summons.   
+A new `CombatGroupBuilder` prepares the future target selection system without breaking the old menus.   
+   
+A new `CombatRoleActionSystem` also prepares active role behaviours, especially tank provocation and future threat reduction.   
+Special character effects are now also applied when an entity attacks a summon, so summons interact better with characters like Skuro, Louis, Hestia or Fire Flight.   
+   
+Next logical steps: migrate target selection to combat slots, add a real skill/role menu, create ally-healing actions, then continue toward full inventory saves and real cheat activation.   
+
+## Recent update: role menu and slot target selection   
+
+The combat interface now includes a first active role menu. Tanks can manually use provocation, assassins can reduce their immediate threat, and future ally protection/healing actions are already visible as locked options.   
+
+Target selection in duels against summoned enemies now starts using `CombatGroup` and `CombatUnitSlot`, making the project closer to the future group-combat structure.   
+
+Next steps: migrate PvE wave targeting to slots, add true allies, connect ally healing/protection, then continue with inventory saving, real cheat activation, and the global bestiary.   
+
+## Combat interface
+
+The main combat menu keeps `0 : Interface`.   
+This option is used to understand the current situation without necessarily performing an offensive action.   
+
+It can display character stats, quick equipment summary, combat state, role skills, target observation, bestiary lookup, future ally orders and future summon control.   
+
+The `Equipment` menu stays separate because it is meant to manage gear: detailed view, weapon swap, outfit swap, and later more equipment actions.   
+
+## Planned Shops
+
+Shops are now planned before the full global bestiary.  
+They will be able to refresh after each fight, even outside story mode.  
+Planned shop types include monster materials, materials, plants, armor, weapons, consumables and library knowledge.  
+The library will later sell common information and magic knowledge, preparing the future bestiary system.  

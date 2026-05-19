@@ -9,22 +9,29 @@
 #include "entity/Player.hpp"
 #include "core/GameMode.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "character/CharacterRace.hpp"
 
 class Game
 {
 private:
+    std::string accountName;
     std::string playerName;
     Player mainPlayer;
     GameMode selectedMode;
     DifficultyMode selectedDifficulty;
+    CharacterRace selectedRace;
+    bool characterLoaded;
 
     void displayIntroduction();
+    void askAccountName();
     void askPlayerName();
     void chooseDifficulty();
+    void choosePlayerRace();
     void choosePlayerClass();
     void chooseGameMode();
     void displaySelectedMode();
     void launchSelectedMode();
+    void saveCurrentProgress(const std::string& reason) const;
 
     std::string getDifficultyName() const;
 

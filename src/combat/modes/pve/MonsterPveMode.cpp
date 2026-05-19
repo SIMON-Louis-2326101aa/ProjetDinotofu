@@ -4,9 +4,14 @@
 #include "combat/modes/pve/MonsterPveMode.hpp"
 
 #include "combat/EnemyCombatQueue.hpp"
+#include "combat/encounter/AdventurerGroupEncounter.hpp"
+#include "combat/summon/SummonCombatSystem.hpp"
 #include "combat/system/WaveCombatSystem.hpp"
 #include "combat/reward/CombatReward.hpp"
 #include "combat/reward/CombatRewardSystem.hpp"
+#include "combat/group/CombatGroupBuilder.hpp"
+#include "combat/group/CombatUnitKind.hpp"
+#include "combat/role/CombatRoleActionSystem.hpp"
 
 #include "combat/turn/wave/PlayerWaveCombatTurn.hpp"
 #include "combat/turn/wave/MonsterWaveCombatTurn.hpp"
@@ -14,8 +19,10 @@
 #include "progression/DifficultyRules.hpp"
 #include "progression/death/DeathPenaltyResult.hpp"
 #include "progression/death/DeathPenaltySystem.hpp"
+#include "core/Console.hpp"
 
 #include <iostream>
+#include <vector>
 
 void MonsterPveMode::run(
     Player& player,
@@ -23,11 +30,68 @@ void MonsterPveMode::run(
     DifficultyMode difficulty
 )
 {
-    WaveCombatSystem::displayWaveIntroduction();
+    Console::clear();
 
-    EnemyCombatQueue wave = WaveCombatSystem::createWaveForPlayer(player, random);
+    std::cout << "Choisis le type de rencontre PvE." << std::endl;
+    std::cout << std::endl;
+    std::cout << "1 : Vague de monstres" << std::endl;
+    std::cout << "    Une file d'ennemis classiques, avec maximum trois ennemis actifs." << std::endl;
+    std::cout << std::endl;
+    std::cout << "2 : Groupe d'aventuriers aléatoire" << std::endl;
+    std::cout << "    Humains, semi-humains ou groupe spécial. Normalement pas un combat à mort, sauf cas dangereux." << std::endl;
+    std::cout << std::endl;
+    std::cout << "> ";
+
+    int encounterChoice = Console::askNumberBetween(
+        1,
+        2,
+        "Veuillez entrer 1 ou 2."
+    );
+
+    EnemyCombatQueue wave;
+
+    if (encounterChoice == 2)
+    {
+        AdventurerGroupEncounter::displayGroupEncounterIntroduction();
+        wave = AdventurerGroupEncounter::createRandomGroupForPlayer(player, random);
+    }
+    else
+    {
+        WaveCombatSystem::displayWaveIntroduction();
+        wave = WaveCombatSystem::createWaveForPlayer(player, random);
+    }
 
     WaveCombatSystem::displayFrontLineArrival(wave);
+
+    CombatGroup enemyFrontPreview = CombatGroupBuilder::buildSideFromWave(
+        wave,
+        CombatSide::EnemySide
+    );
+
+    CombatGroupBuilder::displayGroup(
+        enemyFrontPreview,
+        "LIGNE ENNEMIE ACTIVE"
+    );
+
+    std::vector<Summon> playerSummons = SummonCombatSystem::createInitialSummonsFor(player);
+    SummonCombatSystem::displaySummonArrival(player, playerSummons);
+
+    CombatGroup playerGroupPreview = CombatGroupBuilder::buildSideFromEntityAndSummons(
+        player,
+        playerSummons,
+        CombatSide::PlayerSide,
+        CombatUnitKind::MainFighter
+    );
+
+    CombatGroupBuilder::displayGroup(
+        playerGroupPreview,
+        "GROUPE DU JOUEUR"
+    );
+
+    CombatRoleActionSystem::displayRoleIdentity(player);
+
+    SummonControlMode playerSummonControlMode =
+        SummonCombatSystem::askPlayerSummonControlMode(player, playerSummons);
 
     bool escapeSucceeded = false;
 
@@ -54,11 +118,25 @@ void MonsterPveMode::run(
             }
         }
 
+        if (!player.isDead()
+            && wave.hasEnemiesLeft()
+            && !escapeSucceeded
+            && SummonCombatSystem::hasActiveSummons(playerSummons))
+        {
+            SummonCombatSystem::playPlayerSummonTurnsAgainstWave(
+                playerSummons,
+                wave,
+                random,
+                playerSummonControlMode
+            );
+        }
+
         if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
         {
             MonsterWaveCombatTurn::playMonsterTurns(
                 player,
                 wave,
+                playerSummons,
                 random
             );
         }

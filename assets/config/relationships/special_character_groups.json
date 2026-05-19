@@ -1,0 +1,142 @@
+{
+    "description": "Roadmap data for special character groups, relationships and future encounter intent rules.",
+    "specialGroupSpawnChancePercent": 25,
+    "classicRandomGroupChancePercent": 75,
+    "groups": [
+        {
+            "id": "hazak_henrique",
+            "members": [
+                "Hazak",
+                "Henrique"
+            ],
+            "relationship": "best_friends",
+            "defaultCombatIntent": "serious_duel",
+            "notes": "Hazak and Henrique are best friends. Hazak is also a strong leader and can make the encounter more dangerous depending on context."
+        },
+        {
+            "id": "mattzelda_louis_trexof",
+            "members": [
+                "Mattzelda",
+                "Louis",
+                "Trexof"
+            ],
+            "relationship": "best_friends",
+            "defaultCombatIntent": "friendly_duel",
+            "notes": "The friendship group is Mattzelda, Louis and Trexof. It is usually a challenge or rivalry fight, not a death match by default."
+        },
+        {
+            "id": "aoi_kanade_sanctus",
+            "members": [
+                "Aoi",
+                "Kanadé",
+                "Sanctus"
+            ],
+            "relationship": "close_friends",
+            "defaultCombatIntent": "training_or_defensive_fight",
+            "notes": "Aoi protects her incantations, Kanadé complains but keeps going, Sanctus protects the group."
+        },
+        {
+            "id": "hazak_hestia",
+            "members": [
+                "Hazak",
+                "Hestia"
+            ],
+            "relationship": "rescuer_and_protected",
+            "defaultCombatIntent": "serious_fight_not_death_match",
+            "notes": "Hestia was once a divinity but lost her memories. Hazak saved her and avoids death matches when she is present."
+        },
+        {
+            "id": "fail_hazak",
+            "members": [
+                "Fail",
+                "Hazak"
+            ],
+            "relationship": "non_aggression_contract",
+            "defaultCombatIntent": "unstable_experimental_fight",
+            "notes": "Fail has a non-aggression contract with Hazak. Hazak tolerates the danger only as long as the contract still has meaning."
+        },
+        {
+            "id": "skuro_one_special",
+            "members": [
+                "Skuro",
+                "RANDOM_SKURO_COMPATIBLE_SPECIAL"
+            ],
+            "relationship": "dangerous_temporary_group",
+            "defaultCombatIntent": "dangerous_fight",
+            "notes": "Skuro can appear with one compatible special character only: Hazak, Henrique, Aoi, Fail or Kanadé. His presence increases brutality.",
+            "allowedRandomMembers": [
+                "Hazak",
+                "Henrique",
+                "Aoi",
+                "Fail",
+                "Kanadé"
+            ]
+        },
+        {
+            "id": "skuro_two_specials",
+            "members": [
+                "Skuro",
+                "RANDOM_SKURO_COMPATIBLE_SPECIAL",
+                "RANDOM_SKURO_COMPATIBLE_SPECIAL"
+            ],
+            "relationship": "dangerous_temporary_group",
+            "defaultCombatIntent": "very_dangerous_fight",
+            "notes": "Skuro can appear with two compatible special characters only, without duplicate. This is one of the most unstable group patterns.",
+            "allowedRandomMembers": [
+                "Hazak",
+                "Henrique",
+                "Aoi",
+                "Fail",
+                "Kanadé"
+            ]
+        },
+        {
+            "id": "fire_flight_matt_pro",
+            "members": [
+                "Fire Flight",
+                "Matt (PRO)"
+            ],
+            "relationship": "commander_and_reference_opponent",
+            "defaultCombatIntent": "command_test",
+            "notes": "Fire Flight leads like a commander. Matt (PRO) is silent, respectful and dangerous. Matt (PRO) can also appear alone outside this duo."
+        },
+        {
+            "id": "classic_random_adventurer_group",
+            "members": [
+                "RANDOM_ADVENTURER",
+                "RANDOM_ADVENTURER",
+                "OPTIONAL_RANDOM_ADVENTURER"
+            ],
+            "relationship": "none",
+            "defaultCombatIntent": "random_adventurer_duel",
+            "notes": "Normal random adventurer group. Names and races are random. No special character can appear here."
+        }
+    ],
+    "notes": [
+        "Matt (PRO) can appear alone in AI combat and can also appear through the normal special arena draw.",
+        "Matt (PRO) does not talk directly: he fights silently and treats the opponent with respect.",
+        "Skuro can only appear with Hazak, Henrique, Aoi, Fail or Kanadé for now.",
+        "Sanctus and Skuro are the same person in the story. Sanctus can later transform into Skuro after taking or dealing a huge hit.",
+        "Skuro was born from Sanctus breaking after cutting his first head."
+    ],
+    "soloSpecials": [
+        {
+            "id": "matt_pro_solo",
+            "members": [
+                "Matt (PRO)"
+            ],
+            "notes": "Available as a direct AI combat choice and also possible through special arena random draw."
+        }
+    ],
+    "futureTransformations": [
+        {
+            "from": "Sanctus",
+            "to": "Skuro",
+            "triggerIdeas": [
+                "takes huge damage in one hit",
+                "deals huge damage in one hit"
+            ],
+            "notes": "Same person. Sanctus breaks into Skuro when the protective light fails or violence takes over."
+        }
+    ]
+}

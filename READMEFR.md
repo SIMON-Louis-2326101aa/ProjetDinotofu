@@ -184,7 +184,7 @@ Le projet contient maintenant des dossiers et fichiers placeholder pour les syst
 - `interface/menu/progression/` : futurs menus de statistiques, bestiaire, matériaux et compte   
 - `assets/saves/accounts/` : futures sauvegardes JSON de compte   
 - `assets/saves/characters/playable/` : futurs personnages jouables   
-- `assets/saves/characters/graveyard/` : futurs personnages morts en Léthal   
+- `assets/saves/characters/dead/` : futurs personnages morts en Léthal   
 - `assets/saves/bestiary/` : futures sauvegardes de connaissance du bestiaire   
 - `assets/saves/materials/` : futures sauvegardes de connaissance des matériaux   
    
@@ -355,3 +355,66 @@ Systèmes de codes de triche préparés :
 - futur système d’annulation d’action avec utilisations limitées par personnage.   
 
 Le résumé complet est disponible dans `SPECIAL_CHARACTERS_AND_CHEATS.txt`.   
+
+## Système de compte et sauvegarde locale préparé   
+
+Le jeu prépare maintenant automatiquement un dossier `assets/saves/`.   
+Au démarrage, le joueur peut choisir un compte local existant ou créer/utiliser un nouveau compte. Si rien n'est écrit, le compte `local` est utilisé.   
+Après le choix du compte, le joueur peut sélectionner un personnage jouable existant lié à ce compte ou créer un nouveau personnage.   
+Un snapshot JSON du personnage est sauvegardé après la création du personnage et après une session de combat.   
+Le chargement actuel restaure les données principales : nom, race, classe, difficulté, niveau, expérience, PV, or et index d'équipement de départ équipé.   
+La sérialisation complète de l'inventaire viendra plus tard, donc les personnages chargés reconstruisent encore leur inventaire de base selon la classe et la difficulté.   
+
+Ce système prépare la base des futures sauvegardes de compte, personnage, archives de morts, bestiaire, matériaux, statistiques, bénédictions et codes de triche.   
+
+## Note actuelle sur le ciblage en combat   
+
+Un premier système de menace existe maintenant dans `combat/threat`.   
+Quand un personnage se soigne, les ennemis peuvent marquer ce soigneur comme cible prioritaire pour la prochaine attaque.   
+Les personnages de type tank peuvent aussi créer une provocation, ce qui force l'attention ennemie à revenir sur eux au lieu de laisser les ennemis viser librement les invocations.   
+Sanctus possède actuellement des accroches de provocation plus fortes, car son identité tourne autour de la protection, de l'entrave et de la future séparation Sanctus/Skuro.   
+
+C'est encore une première passe : la version future devra utiliser de vrais slots de combat, une meilleure intelligence ennemie, des compétences actives de tank, des rôles de soigneur, et des boss capables de résister ou d'ignorer certaines provocations.   
+
+## Mise à jour récente : menace, soin et slots de combat   
+
+Le système de menace distingue maintenant un soin personnel d'un soin d'allié.   
+Se soigner soi-même ne rend pas le personnage prioritaire pour les ennemis.   
+Soigner un allié pourra, en revanche, attirer l'attention des ennemis intelligents.   
+
+Une première base de slots de combat est aussi prête pour les futurs combats de groupe : joueur, alliés, ennemis, invocations et boss.   
+
+## Mise à jour récente : groupes visibles et actions de rôle   
+   
+Cette version ajoute un vrai pont entre l'ancien système de combat et le futur système de combat par slots.   
+Le PvP IA et le PvE affichent maintenant des groupes visibles construits avec le joueur, les ennemis et les invocations actives.   
+Le nouveau `CombatGroupBuilder` prépare la future sélection de cible sans casser les anciens menus.   
+   
+Un nouveau `CombatRoleActionSystem` prépare aussi les comportements de rôle actifs, surtout la provocation des tanks et la future réduction de menace.   
+Les effets spéciaux des personnages spéciaux s'appliquent maintenant aussi quand une entité attaque une invocation, donc les invocations interagissent mieux avec Skuro, Louis, Hestia, Fire Flight, etc.   
+   
+Suite logique : migrer la sélection de cible vers les slots, ajouter un vrai menu de compétences/rôles, créer un soin d'allié réel, puis continuer vers la sauvegarde complète de l'inventaire et l'activation réelle des codes de triche.   
+
+## Mise à jour récente : menu de rôle et ciblage par slots   
+
+L'interface de combat contient maintenant un premier menu de rôle actif. Les tanks peuvent utiliser Provocation manuellement, les assassins peuvent réduire leur menace immédiate, et les futures actions de protection / soin d'allié sont déjà visibles mais verrouillées.   
+
+La sélection de cible en duel contre des invocations commence maintenant à utiliser `CombatGroup` et `CombatUnitSlot`, ce qui rapproche le projet du futur système de combat de groupe.   
+
+Suite logique : migrer le ciblage des vagues PvE vers les slots, ajouter de vrais alliés, connecter le soin/protection d'allié, puis continuer avec la sauvegarde d'inventaire, les vrais cheats et le bestiaire global.   
+
+## Interface de combat
+
+Le menu principal de combat garde une option `0 : Interface`.   
+Cette option sert à comprendre la situation sans forcément consommer d'action offensive.   
+
+Elle peut afficher les statistiques du personnage, le résumé d'équipement, l'état du combat, les compétences de rôle, l'observation d'une cible, le bestiaire, les ordres aux alliés et le contrôle futur des invocations.   
+
+Le menu `Équipement` reste séparé, car lui sert à gérer le stuff : voir le détail, changer d'arme, changer de tenue, etc.   
+
+## Boutiques prévues
+
+Les boutiques sont prévues avant le bestiaire global.  
+Elles pourront se renouveler après chaque combat, même hors mode histoire.  
+Les types prévus sont : boutique de monstres, matériaux, plantes, armures, armes, consommables et bibliothèque.  
+La bibliothèque servira notamment à acheter des renseignements communs et des bases de magie, ce qui préparera le futur bestiaire.  

@@ -1,0 +1,111 @@
+{
+    "title": "Dinotofu playable races",
+    "note": "Design roadmap. The C++ RaceCatalog is currently the source used by the game.",
+    "races": [
+        {
+            "id": "human",
+            "name": "Humain",
+            "identity": "polyvalence",
+            "startingBonus": { "maxHp": 5, "minDamage": 0, "maxDamage": 0, "criticalDamage": 0 },
+            "futureRules": ["bonus d'expérience ou d'or possible", "bonne compatibilité avec toutes les classes"]
+        },
+        {
+            "id": "elf",
+            "name": "Elfe",
+            "identity": "précision / esquive future",
+            "startingBonus": { "maxHp": 0, "minDamage": 0, "maxDamage": 2, "criticalDamage": 1 },
+            "futureRules": ["bonus précision", "affinité arc et magie fine", "moins résistant physiquement"]
+        },
+        {
+            "id": "dark_elf",
+            "name": "Elfe noir",
+            "identity": "critique / furtivité future",
+            "startingBonus": { "maxHp": -5, "minDamage": 1, "maxDamage": 1, "criticalDamage": 3 },
+            "futureRules": ["bonus furtivité", "affinité assassin/poison/ombre", "faiblesse lumière/sacré possible"]
+        },
+        {
+            "id": "dwarf",
+            "name": "Nain",
+            "identity": "résistance / durabilité future",
+            "startingBonus": { "maxHp": 15, "minDamage": 0, "maxDamage": 0, "criticalDamage": 0 },
+            "futureRules": ["meilleure durabilité équipement", "bonne résistance", "fuite/esquive plus faible"]
+        },
+        {
+            "id": "gnome",
+            "name": "Gnome",
+            "identity": "artificier / magie technique",
+            "startingBonus": { "maxHp": -5, "minDamage": 0, "maxDamage": 1, "criticalDamage": 2 },
+            "futureRules": ["bonus inventions", "affinité artificier/alchimiste"]
+        },
+        {
+            "id": "halfling",
+            "name": "Halfelin",
+            "identity": "chance / discrétion",
+            "startingBonus": { "maxHp": 0, "minDamage": 0, "maxDamage": 1, "criticalDamage": 2 },
+            "futureRules": ["bonus chance", "prix de vente légèrement meilleurs dans certaines villes"]
+        },
+        {
+            "id": "tiefling",
+            "name": "Tieffelin",
+            "identity": "magie sombre / pactes",
+            "startingBonus": { "maxHp": 0, "minDamage": 1, "maxDamage": 2, "criticalDamage": 2 },
+            "futureRules": ["affinité pactisant/occultiste", "commerce parfois défavorable"]
+        },
+        {
+            "id": "aasimar",
+            "name": "Aasimar",
+            "identity": "lumière / protection",
+            "startingBonus": { "maxHp": 10, "minDamage": 0, "maxDamage": 1, "criticalDamage": 1 },
+            "futureRules": ["résistance lumière", "affinité paladin/prêtre/tank sacré"]
+        },
+        {
+            "id": "kitsune",
+            "name": "Kitsune",
+            "identity": "illusion / feu spirituel / invocation",
+            "startingBonus": { "maxHp": -5, "minDamage": 0, "maxDamage": 2, "criticalDamage": 3 },
+            "futureRules": ["bonus illusion", "affinité feu spirituel", "affinité invocation"]
+        },
+        {
+            "id": "fairy",
+            "name": "Fée",
+            "identity": "magie pure / fragilité",
+            "startingBonus": { "maxHp": -10, "minDamage": 0, "maxDamage": 2, "criticalDamage": 5 },
+            "futureRules": ["énorme affinité magique", "faible résistance physique"]
+        },
+        {
+            "id": "half_dragon",
+            "name": "Semi-dragon",
+            "identity": "élémentaire / puissance hybride",
+            "startingBonus": { "maxHp": 10, "minDamage": 1, "maxDamage": 2, "criticalDamage": 1 },
+            "futureRules": ["résistance élémentaire", "potentiel magique et physique"]
+        },
+        {
+            "id": "orc",
+            "name": "Orc",
+            "identity": "force physique / brutalité",
+            "startingBonus": { "maxHp": 10, "minDamage": 3, "maxDamage": 0, "criticalDamage": 0 },
+            "futureRules": ["bonus dégâts physiques", "affinité armes lourdes"]
+        },
+        {
+            "id": "vampire",
+            "name": "Vampire",
+            "identity": "vol de vie futur / nuit",
+            "startingBonus": { "maxHp": 5, "minDamage": 1, "maxDamage": 1, "criticalDamage": 2 },
+            "futureRules": ["vol de vie", "faiblesse lumière/sacré", "bonus de nuit"]
+        },
+        {
+            "id": "demon",
+            "name": "Démon",
+            "identity": "puissance sombre / commerce difficile",
+            "startingBonus": { "maxHp": 5, "minDamage": 2, "maxDamage": 2, "criticalDamage": 2 },
+            "futureRules": ["bonus magie sombre", "résistance ténèbres", "certaines ventes ou achats peuvent coûter plus cher que la norme"]
+        },
+        {
+            "id": "semi_human",
+            "name": "Semi-humain",
+            "identity": "adaptation / identité mixte",
+            "startingBonus": { "maxHp": 5, "minDamage": 1, "maxDamage": 1, "criticalDamage": 1 },
+            "futureRules": ["bonus selon sous-type futur", "bon lien avec les villes mixtes"]
+        }
+    ]
+}

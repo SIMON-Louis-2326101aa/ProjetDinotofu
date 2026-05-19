@@ -24,6 +24,7 @@ public:
     Inventory();
 
     int getGold() const;
+    void setGold(int amount);
     void earnGold(int amount);
     bool spendGold(int amount);
 

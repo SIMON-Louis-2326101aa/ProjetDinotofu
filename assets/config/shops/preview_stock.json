@@ -1,0 +1,32 @@
+{
+    "note": "Preview stock only. Real shops will later be generated, refreshed and saved.",
+    "items": [
+        {
+            "id": "mountain_blue_flower",
+            "name": "Fleur bleue de montagne",
+            "shop": "plant_shop",
+            "category": "plant",
+            "buyPrice": 35,
+            "sellPrice": 10,
+            "stock": 2
+        },
+        {
+            "id": "common_goblin_notes",
+            "name": "Notes communes sur les gobelins",
+            "shop": "library",
+            "category": "information",
+            "buyPrice": 40,
+            "sellPrice": 0,
+            "stock": 1
+        },
+        {
+            "id": "basic_healing_potion",
+            "name": "Potion de soin",
+            "shop": "consumable_shop",
+            "category": "consumable",
+            "buyPrice": 25,
+            "sellPrice": 8,
+            "stock": 5
+        }
+    ]
+}

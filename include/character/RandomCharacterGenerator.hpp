@@ -1,14 +1,33 @@
-// English: This placeholder prepares a future Dinotofu system. Code identifiers stay in English; player-facing text can stay in French.
-// Français : Ce fichier prépare un futur système de Dinotofu. Les identifiants restent en anglais ; les textes affichés au joueur peuvent rester en français.
+// English: This file prepares random human and semi-human AI opponents for Dinotofu.
+// Français : Ce fichier prépare les adversaires IA humains et semi-humains aléatoires de Dinotofu.
 
 #ifndef INCLUDE_CHARACTER_RANDOMCHARACTERGENERATOR_HPP
 #define INCLUDE_CHARACTER_RANDOMCHARACTERGENERATOR_HPP
 
+#include "character/CharacterRace.hpp"
+#include "class_system/PlayerClass.hpp"
+#include "core/Random.hpp"
+#include "entity/Player.hpp"
+
 class RandomCharacterGenerator
 {
 public:
-    // Future random human and semi-human character generator.
-    // Futur générateur de personnages humains et semi-humains aléatoires.
+    static constexpr int SPECIAL_ARENA_SPAWN_PERCENTAGE = 25;
+
+    static CharacterRace generateRace(Random& random);
+
+    static Player generateClassicOpponent(Random& random);
+    static Player generateClassicOpponentWithClass(
+        const PlayerClass& playerClass,
+        Random& random
+    );
+
+    static Player generateSpecialOpponent(Random& random);
+    static Player generateArenaOpponent(Random& random);
+
+    // English: Kept for compatibility with older calls. It never spawns a special character.
+    // Français : Conservé pour compatibilité avec les anciens appels. Ne génère jamais de personnage spécial.
+    static Player generateRandomOpponent(Random& random);
 };
 
 #endif

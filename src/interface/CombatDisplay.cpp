@@ -3,6 +3,8 @@
 
 #include "interface/CombatDisplay.hpp"
 
+#include "character/SpecialCharacterDialogueCatalog.hpp"
+
 #include <iostream>
 
 void CombatDisplay::displayCombatResult(
@@ -22,11 +24,17 @@ void CombatDisplay::displayCombatResult(
     {
         std::cout << combattant1.getName() << " tombe au sol." << std::endl;
         std::cout << combattant2.getName() << " remporte le duel." << std::endl;
+
+        SpecialCharacterDialogueCatalog::displayVictoryDialogue(combattant2.getName());
+        SpecialCharacterDialogueCatalog::displayDefeatDialogue(combattant1.getName());
     }
     else if (combattant2.isDead())
     {
         std::cout << combattant2.getName() << " tombe au sol." << std::endl;
         std::cout << combattant1.getName() << " remporte le duel." << std::endl;
+
+        SpecialCharacterDialogueCatalog::displayVictoryDialogue(combattant1.getName());
+        SpecialCharacterDialogueCatalog::displayDefeatDialogue(combattant2.getName());
     }
     else
     {

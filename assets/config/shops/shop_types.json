@@ -1,0 +1,48 @@
+{
+    "note": "Future shop families. Shops refresh after combat in free modes and in towns where appropriate.",
+    "refreshAfterCombat": true,
+    "shops": [
+        {
+            "id": "monster_material_shop",
+            "name": "Boutique de monstres",
+            "purpose": "Achat et revente de matériaux de monstres.",
+            "categories": ["monster_material"]
+        },
+        {
+            "id": "material_shop",
+            "name": "Boutique de matériaux",
+            "purpose": "Matériaux généraux, fragments, minerais, fibres, composants de réparation.",
+            "categories": ["material"]
+        },
+        {
+            "id": "plant_shop",
+            "name": "Herboristerie",
+            "purpose": "Plantes, remèdes, ingrédients d'alchimie.",
+            "categories": ["plant"]
+        },
+        {
+            "id": "armor_shop",
+            "name": "Armurerie défensive",
+            "purpose": "Armures, tenues, protections et réparation défensive.",
+            "categories": ["armor"]
+        },
+        {
+            "id": "weapon_shop",
+            "name": "Forge d'armes",
+            "purpose": "Armes, améliorations et futures munitions.",
+            "categories": ["weapon"]
+        },
+        {
+            "id": "consumable_shop",
+            "name": "Boutique de consommables",
+            "purpose": "Potions, objets rapides, buffs et debuffs.",
+            "categories": ["consumable"]
+        },
+        {
+            "id": "library",
+            "name": "Bibliothèque",
+            "purpose": "Renseignements communs, magie, livres et futures informations de bestiaire.",
+            "categories": ["information", "spell", "book"]
+        }
+    ]
+}

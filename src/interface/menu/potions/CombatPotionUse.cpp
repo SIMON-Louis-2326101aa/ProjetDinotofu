@@ -4,6 +4,7 @@
 #include "interface/menu/potions/CombatPotionUse.hpp"
 
 #include "combat/action/CombatAttack.hpp"
+#include "combat/threat/ThreatSystem.hpp"
 
 #include "interface/menu/CombatTargetMenu.hpp"
 
@@ -25,6 +26,7 @@ bool CombatPotionUse::useHealingPotion(
     }
 
     player.heal(potion.getPower());
+    ThreatSystem::markSelfHealingAction(player);
     player.getInventory().removeConsumable(consumableIndex);
 
     std::cout << player.getName()

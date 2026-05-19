@@ -15,11 +15,12 @@ void InventoryDisplay::displayMainMenu()
 {
     std::cout << "================ INVENTAIRE ================" << std::endl;
     std::cout << "0 : Retour" << std::endl;
-    std::cout << "1 : Voir tout" << std::endl;
-    std::cout << "2 : Voir les armes" << std::endl;
-    std::cout << "3 : Voir les armures" << std::endl;
-    std::cout << "4 : Voir les consommables" << std::endl;
-    std::cout << "5 : Voir les matériaux" << std::endl;
+    std::cout << "1 : Bestiaire (objet spécial)" << std::endl;
+    std::cout << "2 : Voir tout" << std::endl;
+    std::cout << "3 : Voir les armes" << std::endl;
+    std::cout << "4 : Voir les armures" << std::endl;
+    std::cout << "5 : Voir les consommables" << std::endl;
+    std::cout << "6 : Voir les matériaux" << std::endl;
     std::cout << "============================================" << std::endl;
     std::cout << std::endl;
     std::cout << "> ";
@@ -31,6 +32,7 @@ void InventoryDisplay::displaySimpleFullInventory(const Player& player)
 
     std::cout << "================ INVENTAIRE ================" << std::endl;
     std::cout << "Or : " << inventory.getGold() << " pièces" << std::endl;
+    std::cout << "Objet spécial : Bestiaire" << std::endl;
     std::cout << std::endl;
 
     std::cout << "Armes : " << inventory.getWeaponCount() << std::endl;
@@ -98,6 +100,7 @@ void InventoryDisplay::displaySelectedWeapon(const Weapon& weapon)
     std::cout << "0 : Retour" << std::endl;
     std::cout << "1 : Inspecter" << std::endl;
     std::cout << "2 : Équiper" << std::endl;
+    std::cout << "3 : Voir dans le bestiaire" << std::endl;
     std::cout << std::endl;
     std::cout << "> ";
 }
@@ -110,6 +113,7 @@ void InventoryDisplay::displaySelectedArmor(const Armor& armor)
     std::cout << "0 : Retour" << std::endl;
     std::cout << "1 : Inspecter" << std::endl;
     std::cout << "2 : Équiper" << std::endl;
+    std::cout << "3 : Voir dans le bestiaire" << std::endl;
     std::cout << std::endl;
     std::cout << "> ";
 }
@@ -133,6 +137,7 @@ void InventoryDisplay::displaySelectedConsumable(const Consumable& consumable)
         std::cout << "2 : Utiliser (à faire depuis le menu Potions en combat)" << std::endl;
     }
 
+    std::cout << "3 : Voir dans le bestiaire" << std::endl;
     std::cout << std::endl;
     std::cout << "> ";
 }

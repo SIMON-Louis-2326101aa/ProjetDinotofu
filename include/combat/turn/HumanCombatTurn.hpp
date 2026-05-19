@@ -7,6 +7,9 @@
 #include "core/Random.hpp"
 
 #include "entity/Entity.hpp"
+#include "combat/summon/Summon.hpp"
+
+#include <vector>
 
 class HumanCombatTurn
 {
@@ -19,10 +22,32 @@ public:
         int potionDamageBonus
     );
 
+    static bool playWithEnemySummons(
+        Entity& attacker,
+        Entity& defender,
+        std::vector<Summon>& enemySummons,
+        Random& random,
+        int potionHealAmount,
+        int potionDamageBonus
+    );
+
 private:
     static bool openObservationInterface(
         Entity& interfacePlayer,
         Entity& target
+    );
+
+    static bool chooseAndExecuteAttack(
+        Entity& attacker,
+        Entity& defender,
+        std::vector<Summon>& enemySummons,
+        Random& random
+    );
+
+    static bool inspectCombatTarget(
+        Entity& interfacePlayer,
+        Entity& target,
+        const std::vector<Summon>& enemySummons
     );
 
     static bool handleEscape(

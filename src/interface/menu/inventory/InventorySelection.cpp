@@ -3,10 +3,13 @@
 
 #include "interface/menu/inventory/InventorySelection.hpp"
 
+#include "combat/threat/ThreatSystem.hpp"
+
 #include "core/Console.hpp"
 
 #include "interface/menu/inventory/InventoryDisplay.hpp"
 #include "interface/menu/inventory/InventoryUtils.hpp"
+#include "interface/menu/progression/BestiaryMenu.hpp"
 
 #include "item/Inventory.hpp"
 #include "item/weapon/Weapon.hpp"
@@ -56,8 +59,8 @@ bool InventorySelection::openWeapons(Player& player)
 
     int action = Console::askNumberBetween(
         0,
-        2,
-        "Choix invalide. Entre 0, 1 ou 2."
+        3,
+        "Choix invalide. Entre 0, 1, 2 ou 3."
     );
 
     Console::clear();
@@ -65,6 +68,12 @@ bool InventorySelection::openWeapons(Player& player)
     if (action == 1)
     {
         player.getInventory().inspectWeapon(index);
+        return false;
+    }
+
+    if (action == 3)
+    {
+        BestiaryMenu::displayObjectEntry(weapon.getName());
         return false;
     }
 
@@ -136,8 +145,8 @@ bool InventorySelection::openArmors(Player& player)
 
     int action = Console::askNumberBetween(
         0,
-        2,
-        "Choix invalide. Entre 0, 1 ou 2."
+        3,
+        "Choix invalide. Entre 0, 1, 2 ou 3."
     );
 
     Console::clear();
@@ -145,6 +154,12 @@ bool InventorySelection::openArmors(Player& player)
     if (action == 1)
     {
         player.getInventory().inspectArmor(index);
+        return false;
+    }
+
+    if (action == 3)
+    {
+        BestiaryMenu::displayObjectEntry(armor.getName());
         return false;
     }
 
@@ -244,8 +259,8 @@ bool InventorySelection::openConsumables(Player& player)
 
     int action = Console::askNumberBetween(
         0,
-        2,
-        "Choix invalide. Entre 0, 1 ou 2."
+        3,
+        "Choix invalide. Entre 0, 1, 2 ou 3."
     );
 
     Console::clear();
@@ -253,6 +268,12 @@ bool InventorySelection::openConsumables(Player& player)
     if (action == 1)
     {
         player.getInventory().inspectConsumable(index);
+        return false;
+    }
+
+    if (action == 3)
+    {
+        BestiaryMenu::displayObjectEntry(consumable.getName());
         return false;
     }
 
@@ -267,6 +288,7 @@ bool InventorySelection::openConsumables(Player& player)
         }
 
         player.heal(consumable.getPower());
+        ThreatSystem::markSelfHealingAction(player);
         player.getInventory().removeConsumable(index);
 
         std::cout << player.getName() << " utilise : " << consumable.getName() << "." << std::endl;

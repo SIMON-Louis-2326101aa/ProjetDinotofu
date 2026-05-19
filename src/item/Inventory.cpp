@@ -15,6 +15,16 @@ int Inventory::getGold() const
     return or_;
 }
 
+void Inventory::setGold(int amount)
+{
+    if (amount < 0)
+    {
+        amount = 0;
+    }
+
+    or_ = amount;
+}
+
 void Inventory::earnGold(int amount)
 {
     if (amount <= 0)

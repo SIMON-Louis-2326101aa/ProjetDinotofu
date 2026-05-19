@@ -1,0 +1,26 @@
+{
+  "saveVersion": 2,
+  "account": "Fire",
+  "difficulty": "Normal",
+  "character": {
+    "name": "Fire Flight",
+    "race": "Humain",
+    "class": "Assassin",
+    "level": 1,
+    "experience": 0,
+    "hp": 0,
+    "maxHp": 155,
+    "gold": 50,
+    "equippedWeaponIndex": 1,
+    "equippedWeaponName": "Épée rouillée",
+    "equippedArmorIndex": 0,
+    "equippedArmorName": "Tenue simple"
+  },
+  "futureData": {
+    "inventoryFullSerialization": "prepared",
+    "bestiary": "prepared",
+    "materials": "prepared",
+    "cheats": "prepared",
+    "blessings": "prepared"
+  }
+}

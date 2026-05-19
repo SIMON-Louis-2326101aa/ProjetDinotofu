@@ -51,6 +51,29 @@ void CombatAttack::executeBoostedAttack(
         return;
     }
 
+    if (SpecialCombatEffects::specialCharacterMissesBeforeDamage(
+        attacker,
+        random
+    ))
+    {
+        return;
+    }
+
+    SpecialCombatEffects::applySpecialCharacterAttackBonus(
+        attacker,
+        random,
+        rawDamage,
+        critical
+    );
+
+    if (SpecialCombatEffects::specialCharacterDodgesBeforeDamage(
+        defender,
+        random
+    ))
+    {
+        return;
+    }
+
     if (SpecialCombatEffects::atlasBlocksAttack(
         attacker,
         defender,
@@ -97,8 +120,21 @@ void CombatAttack::executeBoostedAttack(
 
     defender.takeDamage(rapport.receivedDamage);
 
+    SpecialCombatEffects::applySpecialCharacterAfterReceivingDamage(
+        defender,
+        rapport.receivedDamage,
+        random
+    );
+
     SpecialCombatEffects::applyDemonLifestealIfNeeded(
         attacker,
+        rapport.receivedDamage
+    );
+
+    SpecialCombatEffects::applySpecialCharacterAfterDamage(
+        attacker,
+        defender,
+        random,
         rapport.receivedDamage
     );
 

@@ -12,6 +12,8 @@
 #include "interface/menu/EquipmentMenu.hpp"
 #include "interface/menu/InventoryMenu.hpp"
 #include "interface/menu/CombatPotionMenu.hpp"
+#include "interface/menu/CombatRoleMenu.hpp"
+#include "interface/menu/progression/BestiaryMenu.hpp"
 
 #include <iostream>
 
@@ -97,17 +99,22 @@ bool PlayerWaveCombatTurn::openWaveInterface(
 {
     std::cout << "========== INTERFACE ==========" << std::endl;
     std::cout << "0 : Retour" << std::endl;
-    std::cout << "1 : Voir mes statistiques" << std::endl;
-    std::cout << "2 : Inspecter les adversaires" << std::endl;
-    std::cout << "3 : Voir l'état du combat" << std::endl;
+    std::cout << "1 : Voir l'état du combat" << std::endl;
+    std::cout << "2 : Voir mes statistiques" << std::endl;
+    std::cout << "3 : Résumé équipement" << std::endl;
+    std::cout << "4 : Compétences de rôle" << std::endl;
+    std::cout << "5 : Observer / analyser les adversaires" << std::endl;
+    std::cout << "6 : Voir un adversaire dans le bestiaire" << std::endl;
+    std::cout << "7 : Ordres aux alliés" << std::endl;
+    std::cout << "8 : Contrôle des invocations" << std::endl;
     std::cout << "===============================" << std::endl;
     std::cout << std::endl;
     std::cout << "> ";
 
     int interfaceChoice = Console::askNumberBetween(
         0,
-        3,
-        "Choix invalide. Entre un chiffre entre 0 et 3."
+        8,
+        "Choix invalide. Entre un chiffre entre 0 et 8."
     );
 
     Console::clear();
@@ -119,20 +126,81 @@ bool PlayerWaveCombatTurn::openWaveInterface(
 
     if (interfaceChoice == 1)
     {
-        player.displayStats();
+        wave.displayActiveEnemies();
+        wave.displayQueueSummary();
         return false;
     }
 
     if (interfaceChoice == 2)
+    {
+        player.displayStats();
+        return false;
+    }
+
+    if (interfaceChoice == 3)
+    {
+        player.displaySimpleEquipment();
+        return false;
+    }
+
+    if (interfaceChoice == 4)
+    {
+        return CombatRoleMenu::open(player);
+    }
+
+    if (interfaceChoice == 5)
     {
         wave.displayActiveEnemies();
         wave.displayQueueSummary();
         return false;
     }
 
-    if (interfaceChoice == 3)
+    if (interfaceChoice == 6)
     {
-        wave.displayQueueSummary();
+        if (!wave.hasActiveEnemies())
+        {
+            std::cout << "Aucun adversaire actif à consulter dans le bestiaire." << std::endl;
+            std::cout << std::endl;
+            return false;
+        }
+
+        wave.displayActiveEnemies();
+        std::cout << "Choisis l'adversaire à rechercher dans le bestiaire." << std::endl;
+        std::cout << "0 : Retour" << std::endl;
+        std::cout << "> ";
+
+        int targetChoice = Console::askNumberBetween(
+            0,
+            wave.getActiveEnemyCount(),
+            "Choix invalide."
+        );
+
+        Console::clear();
+
+        if (targetChoice == 0)
+        {
+            return false;
+        }
+
+        BestiaryMenu::displayObjectEntry(
+            wave.getActiveEnemy(targetChoice - 1).getName()
+        );
+
+        return false;
+    }
+
+    if (interfaceChoice == 7)
+    {
+        std::cout << "Les ordres aux alliés seront disponibles quand les alliés permanents seront branchés." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    if (interfaceChoice == 8)
+    {
+        std::cout << "Le contrôle des invocations se choisit déjà au début du combat si tu possèdes des invocations." << std::endl;
+        std::cout << "Plus tard, cette option permettra de changer les ordres pendant le combat." << std::endl;
+        std::cout << std::endl;
         return false;
     }
 

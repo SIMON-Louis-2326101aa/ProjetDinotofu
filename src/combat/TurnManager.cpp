@@ -27,6 +27,25 @@ bool TurnManager::playHumanTurn(
     );
 }
 
+bool TurnManager::playHumanTurnWithEnemySummons(
+    Entity& attacker,
+    Entity& defender,
+    std::vector<Summon>& enemySummons,
+    Random& random,
+    int potionHealAmount,
+    int potionDamageBonus
+)
+{
+    return HumanCombatTurn::playWithEnemySummons(
+        attacker,
+        defender,
+        enemySummons,
+        random,
+        potionHealAmount,
+        potionDamageBonus
+    );
+}
+
 bool TurnManager::playAITurn(
     Entity& ai,
     Entity& defender,

@@ -1,14 +1,26 @@
-// English: This placeholder prepares a future Dinotofu system. Code identifiers stay in English; player-facing text can stay in French.
-// Français : Ce fichier prépare un futur système de Dinotofu. Les identifiants restent en anglais ; les textes affichés au joueur peuvent rester en français.
+// English: This file prepares special semi-human characters for Dinotofu.
+// Français : Ce fichier prépare les personnages spéciaux semi-humains de Dinotofu.
 
 #ifndef INCLUDE_CHARACTER_SPECIALCHARACTERCATALOG_HPP
 #define INCLUDE_CHARACTER_SPECIALCHARACTERCATALOG_HPP
 
+#include "character/SpecialCharacter.hpp"
+#include "core/Random.hpp"
+
+#include <string>
+#include <vector>
+
 class SpecialCharacterCatalog
 {
 public:
-    // Future special semi-human characters: Matt (PRO), Hazak, Mattzelda, Aoi, Kanadé, Fail, Trexof.
-    // Futurs personnages spéciaux semi-humains : Matt (PRO), Hazak, Mattzelda, Aoi, Kanadé, Fail, Trexof.
+    static std::vector<SpecialCharacter> getAllSpecialCharacters();
+    static bool isProtectedName(const std::string& name);
+    static bool findByName(const std::string& name, SpecialCharacter& result);
+    static SpecialCharacter createRandomSpecialOpponent(Random& random);
+    static void displaySpecialCharactersRoadmap();
+
+private:
+    static std::string normalizeName(const std::string& name);
 };
 
 #endif

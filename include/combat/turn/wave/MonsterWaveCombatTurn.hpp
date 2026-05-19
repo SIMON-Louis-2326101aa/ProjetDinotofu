@@ -8,6 +8,9 @@
 
 #include "entity/Player.hpp"
 #include "combat/EnemyCombatQueue.hpp"
+#include "combat/summon/Summon.hpp"
+
+#include <vector>
 
 class MonsterWaveCombatTurn
 {
@@ -15,6 +18,13 @@ public:
     static void playMonsterTurns(
         Player& player,
         EnemyCombatQueue& wave,
+        Random& random
+    );
+
+    static void playMonsterTurns(
+        Player& player,
+        EnemyCombatQueue& wave,
+        std::vector<Summon>& playerSummons,
         Random& random
     );
 };

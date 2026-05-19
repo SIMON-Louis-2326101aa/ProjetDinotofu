@@ -25,6 +25,10 @@ protected:
     int healingPotionCount;
     int damagePotionCount;
 
+    bool healingThreatMarked;
+    bool provocationActive;
+    int provocationTurns;
+
 public:
     Entity();
 
@@ -55,6 +59,15 @@ public:
     int getDamagePotionCount() const;
 
     bool isDead() const;
+
+    bool hasHealingThreat() const;
+    bool isProvoking() const;
+    int getProvocationTurns() const;
+    void markHealingThreat();
+    void clearHealingThreat();
+    void startProvocation(int turns);
+    void decreaseProvocationTurn();
+    void clearProvocation();
 
     void reviveWithHealthPercentage(int percentage);
 

@@ -7,6 +7,8 @@
 #include "entity/Monster.hpp"
 #include "core/Random.hpp"
 
+#include <vector>
+
 class MonsterCatalog
 {
 public:
@@ -20,6 +22,7 @@ public:
     static Monster createLostBandit();
 
     static Monster createRandomMonsterForLevel(int level, Random& random);
+    static std::vector<Monster> createAllPreviewMonsters();
 
     static void displayAvailableMonsters();
 };

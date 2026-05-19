@@ -19,6 +19,10 @@ Entity::Entity()
 
     healingPotionCount = 0;
     damagePotionCount = 0;
+
+    healingThreatMarked = false;
+    provocationActive = false;
+    provocationTurns = 0;
 }
 
 Entity::Entity(
@@ -44,6 +48,10 @@ Entity::Entity(
 
     this->healingPotionCount = healingPotionCount;
     this->damagePotionCount = damagePotionCount;
+
+    healingThreatMarked = false;
+    provocationActive = false;
+    provocationTurns = 0;
 }
 
 std::string Entity::getName() const
@@ -94,6 +102,61 @@ int Entity::getDamagePotionCount() const
 bool Entity::isDead() const
 {
     return hp <= 0;
+}
+
+bool Entity::hasHealingThreat() const
+{
+    return healingThreatMarked;
+}
+
+bool Entity::isProvoking() const
+{
+    return provocationActive && provocationTurns > 0;
+}
+
+int Entity::getProvocationTurns() const
+{
+    return provocationTurns;
+}
+
+void Entity::markHealingThreat()
+{
+    healingThreatMarked = true;
+}
+
+void Entity::clearHealingThreat()
+{
+    healingThreatMarked = false;
+}
+
+void Entity::startProvocation(int turns)
+{
+    if (turns <= 0)
+    {
+        return;
+    }
+
+    provocationActive = true;
+    provocationTurns = turns;
+}
+
+void Entity::decreaseProvocationTurn()
+{
+    if (provocationTurns > 0)
+    {
+        provocationTurns--;
+    }
+
+    if (provocationTurns <= 0)
+    {
+        clearProvocation();
+    }
+}
+
+void Entity::clearProvocation()
+{
+    provocationActive = false;
+    provocationTurns = 0;
 }
 
 void Entity::reviveWithHealthPercentage(int percentage)

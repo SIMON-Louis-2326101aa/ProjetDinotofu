@@ -1,0 +1,57 @@
+{
+    "title": "Dinotofu future plants and materials",
+    "note": "Prepared roadmap file. Not connected to gameplay yet.",
+    "plants": [
+        {
+            "id": "blue_mountain_flower",
+            "name": "Fleur bleue de montagne",
+            "inspiration": "Fleur bleue lumineuse dans l'esprit de Zelda BOTW.",
+            "rarity": "common_to_uncommon",
+            "futureUses": ["potion de soin légère", "potion d'endurance future", "recette alchimiste de départ"]
+        },
+        {
+            "id": "moonleaf",
+            "name": "Feuille de lune",
+            "rarity": "uncommon",
+            "futureUses": ["potion de mana", "rituel lunaire", "soin nocturne"]
+        },
+        {
+            "id": "ember_root",
+            "name": "Racine braise",
+            "rarity": "uncommon",
+            "futureUses": ["potion de rage", "résistance au froid", "craft pyromancien"]
+        },
+        {
+            "id": "silent_moss",
+            "name": "Mousse silencieuse",
+            "rarity": "rare",
+            "futureUses": ["potion de discrétion", "outil d'assassin", "quête de forêt"]
+        }
+    ],
+    "materials": [
+        {
+            "id": "rusted_metal_fragment",
+            "name": "Fragment de métal rouillé",
+            "source": "équipement métallique détruit ou irréparable",
+            "futureUses": ["réparation basique", "recyclage", "craft pauvre"]
+        },
+        {
+            "id": "damaged_leather_piece",
+            "name": "Morceau de cuir abîmé",
+            "source": "armure en cuir détruite ou irréparable",
+            "futureUses": ["réparation légère", "craft d'armure simple"]
+        },
+        {
+            "id": "arcane_shard",
+            "name": "Éclat arcanique instable",
+            "source": "objets magiques brisés",
+            "futureUses": ["sorts", "armes magiques", "rituels"]
+        },
+        {
+            "id": "solid_core_ore",
+            "name": "Minerai à noyau solide",
+            "source": "gisements spéciaux récoltables avec équipement adapté",
+            "futureUses": ["armes très résistantes", "armures durables", "réduction du risque de casse critique"]
+        }
+    ]
+}

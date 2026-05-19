@@ -1,0 +1,85 @@
+{
+    "title": "Dinotofu special character dialogues",
+    "note": "Prepared dialogue design file. Code currently displays entrance, victory and defeat lines for special arena opponents. Group dialogue and Sanctus/Skuro transformation notes have been added to prepare future story reactions.",
+    "characters": {
+        "Hazak": {
+            "personality": "Dark, efficient assassin. Direct, arrogant, focused on winning.",
+            "entrance": "Je vais faire simple. Tu respires encore, donc le travail n'est pas terminé."
+        },
+        "Skuro": {
+            "personality": "Greedy for clean cuts and decapitation. Loves when his blade enters matter.",
+            "entrance": "J'espère que ta tête tient bien. J'aime quand le tranchant entre dans la matière."
+        },
+        "Kanadé": {
+            "personality": "Rageful complainer, complains about everything but remains determined.",
+            "entrance": "Évidemment que ça tombe sur moi... Bon. Je vais gagner, mais je vais me plaindre tout du long."
+        },
+        "Aoi": {
+            "personality": "Shy kitsune caster, but fiercely protects her incantations.",
+            "entrance": "Je... je ne voulais pas forcément me battre. Mais si tu approches de mes incantations, je te repousse."
+        },
+        "Sanctus": {
+            "personality": "Protector and hindrance specialist.",
+            "entrance": "Je protège ce qui doit l'être. Si tu te places sur mon chemin, je te repousserai aussi.",
+            "transformation": "Can later become Skuro after taking a huge hit or dealing a huge hit. Sanctus and Skuro are the same person in the story."
+        },
+        "Fail": {
+            "personality": "Experiments, improves, and eradicates threats in spectacular ways.",
+            "entrance": "Parfait. Une menace, un terrain, deux ou trois explosions... on va apprendre quelque chose."
+        },
+        "Hestia": {
+            "personality": "Fearful mage who would avoid combat if possible.",
+            "entrance": "Je ne veux pas faire ça... mais si je fonce assez vite, peut-être que la peur restera derrière moi."
+        },
+        "Fire Flight": {
+            "personality": "Commander and leader who struggles to accept hostile humans and semi-humans.",
+            "entrance": "Je préfère mener que détruire. Mais si tu forces la ligne, je ferai pleuvoir les projectiles."
+        },
+        "Louis": {
+            "personality": "Naive, friendly artificer looking for friends.",
+            "entrance": "On peut se battre proprement, hein ? Après, si tu veux, on peut même devenir amis. Enfin... si tu survis."
+        },
+        "Mattzelda": {
+            "personality": "Big joker with colossus energy.",
+            "entrance": "T'inquiète, je vais y aller doucement. Enfin... doucement pour moi, pas forcément pour toi."
+        },
+        "Henrique": {
+            "personality": "Frontal knight able to return once from death later.",
+            "entrance": "Je tombe peut-être une fois. Mais si tu crois que ça suffit à m'arrêter, tu vas être déçu."
+        },
+        "Matt (PRO)": {
+            "personality": "Silent and respectful opponent. He does not talk directly: he fights."
+        }
+    },
+    "groups": {
+        "Hazak / Henrique": [
+            "Hazak: Ne tombe pas trop vite.",
+            "Henrique: Je te retourne le conseil."
+        ],
+        "Mattzelda / Louis / Trexof": [
+            "Louis: On peut rester amis après, hein ?",
+            "Trexof: D’abord on teste. Après on négocie."
+        ],
+        "Aoi / Kanadé / Sanctus": [
+            "Sanctus protects the group.",
+            "Kanadé complains while staying determined.",
+            "Aoi protects her incantations."
+        ],
+        "Hazak / Hestia": [
+            "Hazak refuses to turn this into a massacre when Hestia is present.",
+            "Hestia does not want to see humans or semi-humans assassinated."
+        ],
+        "Fail / Hazak": [
+            "Fail respects the non-aggression contract with Hazak.",
+            "Hazak tolerates Fail as long as the contract still means something."
+        ],
+        "Skuro groups": [
+            "Skuro can only appear with Hazak, Henrique, Aoi, Fail or Kanadé.",
+            "His presence makes the encounter dangerous."
+        ],
+        "Fire Flight / Matt (PRO)": [
+            "Fire Flight leads.",
+            "Matt (PRO) stays silent and fights respectfully."
+        ]
+    }
+}

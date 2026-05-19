@@ -7,6 +7,7 @@
 #include "item/armor/ArmorCatalog.hpp"
 #include "item/consumable/ConsumableCatalog.hpp"
 #include "progression/DifficultyRules.hpp"
+#include "character/RaceCatalog.hpp"
 
 #include <iostream>
 
@@ -16,6 +17,7 @@ Player::Player() : Entity()
     experience = 0;
     equippedWeaponIndex = -1;
     equippedArmorIndex = -1;
+    race = CharacterRace::Human;
 }
 
 Player::Player(
@@ -36,6 +38,44 @@ Player::Player(
     experience = 0;
     equippedWeaponIndex = -1;
     equippedArmorIndex = -1;
+    race = CharacterRace::Human;
+}
+
+void Player::applyRaceStartingBonus(CharacterRace selectedRace)
+{
+    RaceStartingBonus bonus = RaceCatalog::getStartingBonus(selectedRace);
+
+    maxHp += bonus.maxHpBonus;
+    hp += bonus.maxHpBonus;
+
+    minDamage += bonus.minDamageBonus;
+    maxDamage += bonus.maxDamageBonus;
+    criticalDamage += bonus.criticalDamageBonus;
+
+    if (maxHp < 1)
+    {
+        maxHp = 1;
+    }
+
+    if (hp < 1)
+    {
+        hp = 1;
+    }
+
+    if (minDamage < 0)
+    {
+        minDamage = 0;
+    }
+
+    if (maxDamage < minDamage)
+    {
+        maxDamage = minDamage;
+    }
+
+    if (criticalDamage < maxDamage)
+    {
+        criticalDamage = maxDamage;
+    }
 }
 
 int Player::getEquippedArmorMaxHpBonus() const
@@ -63,6 +103,95 @@ int Player::getLevel() const
 int Player::getExperience() const
 {
     return experience;
+}
+
+CharacterRace Player::getRace() const
+{
+    return race;
+}
+
+std::string Player::getRaceText() const
+{
+    return characterRaceToText(race);
+}
+
+void Player::setRace(CharacterRace selectedRace)
+{
+    race = selectedRace;
+    applyRaceStartingBonus(selectedRace);
+}
+
+
+void Player::setLoadedProgress(int loadedLevel, int loadedExperience, int loadedHp)
+{
+    if (loadedLevel < 1)
+    {
+        loadedLevel = 1;
+    }
+
+    if (loadedLevel > MAX_LEVEL)
+    {
+        loadedLevel = MAX_LEVEL;
+    }
+
+    if (loadedExperience < 0)
+    {
+        loadedExperience = 0;
+    }
+
+    if (loadedHp < 1)
+    {
+        loadedHp = 1;
+    }
+
+    if (loadedHp > maxHp)
+    {
+        loadedHp = maxHp;
+    }
+
+    level = loadedLevel;
+    experience = loadedExperience;
+    hp = loadedHp;
+}
+
+void Player::applyFlatStatBonus(
+    int maxHpBonus,
+    int minDamageBonus,
+    int maxDamageBonus,
+    int criticalDamageBonus
+)
+{
+    maxHp += maxHpBonus;
+    hp += maxHpBonus;
+
+    minDamage += minDamageBonus;
+    maxDamage += maxDamageBonus;
+    this->criticalDamage += criticalDamageBonus;
+
+    if (maxHp < 1)
+    {
+        maxHp = 1;
+    }
+
+    if (hp < 1)
+    {
+        hp = 1;
+    }
+
+    if (minDamage < 0)
+    {
+        minDamage = 0;
+    }
+
+    if (maxDamage < minDamage)
+    {
+        maxDamage = minDamage;
+    }
+
+    if (this->criticalDamage < maxDamage)
+    {
+        this->criticalDamage = maxDamage;
+    }
 }
 
 Inventory& Player::getInventory()
@@ -289,10 +418,16 @@ void Player::gainExperience(int amount)
 
     experience += amount;
 
-    while (experience >= 100)
+    while (experience >= 100 && level < MAX_LEVEL)
     {
         experience -= 100;
         levelUp();
+    }
+
+    if (level >= MAX_LEVEL)
+    {
+        level = MAX_LEVEL;
+        experience = 0;
     }
 }
 
@@ -313,6 +448,17 @@ void Player::loseExperience(int amount)
 
 void Player::levelUp()
 {
+    if (level >= MAX_LEVEL)
+    {
+        level = MAX_LEVEL;
+        experience = 0;
+
+        std::cout << name << " est déjà au niveau maximum : 255." << std::endl;
+        std::cout << "Tous les bits sont à 1. Plus haut, ce serait de la triche... enfin presque." << std::endl;
+        std::cout << std::endl;
+        return;
+    }
+
     level++;
 
     maxHp += 20;
@@ -381,6 +527,7 @@ void Player::displayStats() const
 {
     std::cout << "===== STATS JOUEUR =====" << std::endl;
     std::cout << "Nom : " << name << std::endl;
+    std::cout << "Race : " << getRaceText() << std::endl;
     std::cout << "Classe : " << type << std::endl;
     std::cout << "Niveau : " << level << std::endl;
     std::cout << "Expérience : " << experience << "/100" << std::endl;

@@ -1,0 +1,29 @@
+{
+    "note": "Future purchasable common knowledge. Buying these entries will unlock or improve bestiary/common lore data.",
+    "entries": [
+        {
+            "id": "common_goblin_notes",
+            "targetId": "goblin_common_family",
+            "targetType": "bestiary_enemy_family",
+            "name": "Notes communes sur les gobelins",
+            "knowledgeGain": 1,
+            "price": 40
+        },
+        {
+            "id": "common_wolf_notes",
+            "targetId": "wolf_common_family",
+            "targetType": "bestiary_enemy_family",
+            "name": "Notes communes sur les loups",
+            "knowledgeGain": 1,
+            "price": 35
+        },
+        {
+            "id": "basic_plant_manual",
+            "targetId": "basic_plants",
+            "targetType": "material_and_plant_journal",
+            "name": "Petit guide des plantes communes",
+            "knowledgeGain": 1,
+            "price": 45
+        }
+    ]
+}

@@ -5,15 +5,22 @@
 #include "core/Console.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "combat/Combat.hpp"
+#include "character/RaceCatalog.hpp"
+#include "character/SpecialCharacterNativeBonus.hpp"
+#include "save/SaveManager.hpp"
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 Game::Game()
 {
+    accountName = "local";
     playerName = "";
     selectedMode = GameMode::AIPvp;
     selectedDifficulty = DifficultyMode::Normal;
+    selectedRace = CharacterRace::Human;
+    characterLoaded = false;
 }
 
 void Game::run()
@@ -21,9 +28,16 @@ void Game::run()
     Console::clear();
 
     displayIntroduction();
+    askAccountName();
     askPlayerName();
-    chooseDifficulty();
-    choosePlayerClass();
+
+    if (!characterLoaded)
+    {
+        chooseDifficulty();
+        choosePlayerRace();
+        choosePlayerClass();
+    }
+
     chooseGameMode();
     displaySelectedMode();
     launchSelectedMode();
@@ -42,8 +56,126 @@ void Game::displayIntroduction()
     Console::clear();
 }
 
+
+void Game::askAccountName()
+{
+    std::vector<AccountSaveSummary> accounts = SaveManager::listAccounts();
+
+    std::cout << "===== COMPTE LOCAL =====" << std::endl;
+    std::cout << "0 : Créer / utiliser un nouveau compte" << std::endl;
+
+    for (int i = 0; i < static_cast<int>(accounts.size()); i++)
+    {
+        std::cout << (i + 1) << " : " << accounts[i].accountName << std::endl;
+    }
+
+    std::cout << "========================" << std::endl;
+    std::cout << std::endl;
+    std::cout << "> ";
+
+    int choice = Console::askNumberBetween(
+        0,
+        static_cast<int>(accounts.size()),
+        "Veuillez choisir un compte affiché, ou 0 pour en créer un."
+    );
+
+    if (choice == 0)
+    {
+        std::cout << std::endl;
+        std::cout << "Nom du compte local ?" << std::endl;
+        std::cout << "Tu peux laisser vide pour utiliser le compte local par défaut." << std::endl;
+        std::cout << "> ";
+
+        std::getline(std::cin >> std::ws, accountName);
+
+        if (accountName.empty())
+        {
+            accountName = "local";
+        }
+    }
+    else
+    {
+        accountName = accounts[choice - 1].accountName;
+    }
+
+    Console::clear();
+
+    std::cout << "Compte actif : " << accountName << "." << std::endl;
+    std::cout << "Les sauvegardes sont rangées dans assets/saves/." << std::endl;
+    std::cout << std::endl;
+
+    if (!SaveManager::saveAccountSnapshot(accountName))
+    {
+        std::cout << "Attention : impossible de préparer la sauvegarde du compte pour le moment." << std::endl;
+        std::cout << std::endl;
+    }
+
+    Console::waitForEnter();
+    Console::clear();
+}
+
 void Game::askPlayerName()
 {
+    std::vector<CharacterSaveSummary> characters = SaveManager::listPlayableCharacters(accountName);
+
+    std::cout << "===== PERSONNAGE =====" << std::endl;
+    std::cout << "0 : Créer un nouveau personnage" << std::endl;
+
+    for (int i = 0; i < static_cast<int>(characters.size()); i++)
+    {
+        std::cout << (i + 1) << " : "
+                  << characters[i].characterName
+                  << " | " << characters[i].raceName
+                  << " / " << characters[i].className
+                  << " | Niveau " << characters[i].level
+                  << std::endl;
+    }
+
+    std::cout << "======================" << std::endl;
+    std::cout << std::endl;
+    std::cout << "> ";
+
+    int choice = Console::askNumberBetween(
+        0,
+        static_cast<int>(characters.size()),
+        "Veuillez choisir un personnage affiché, ou 0 pour en créer un."
+    );
+
+    if (choice > 0)
+    {
+        if (SaveManager::loadPlayerSnapshot(characters[choice - 1], mainPlayer, selectedDifficulty))
+        {
+            playerName = mainPlayer.getName();
+            selectedRace = mainPlayer.getRace();
+            characterLoaded = true;
+
+            Console::clear();
+
+            std::cout << "Personnage chargé : " << playerName << "." << std::endl;
+            std::cout << "Race : " << mainPlayer.getRaceText() << std::endl;
+            std::cout << "Classe : " << mainPlayer.getType() << std::endl;
+            std::cout << "Difficulté : " << getDifficultyName() << std::endl;
+            std::cout << std::endl;
+            std::cout << "Note : pour le moment, la sauvegarde restaure surtout l'identité,"
+                      << " la progression simple, l'or et l'équipement de départ reconstruit." << std::endl;
+            std::cout << "L'inventaire complet sera sérialisé proprement plus tard." << std::endl;
+            std::cout << std::endl;
+
+            mainPlayer.displayStats();
+            mainPlayer.displaySimpleEquipment();
+
+            Console::waitForEnter();
+            Console::clear();
+            return;
+        }
+
+        Console::clear();
+        std::cout << "Impossible de charger ce personnage. On va en créer un nouveau." << std::endl;
+        std::cout << std::endl;
+    }
+
+    characterLoaded = false;
+
     std::cout << "Quel est ton nom ?" << std::endl;
     std::cout << "> ";
 
@@ -136,38 +268,120 @@ void Game::chooseDifficulty()
     Console::clear();
 }
 
-void Game::choosePlayerClass()
+void Game::choosePlayerRace()
 {
-    std::cout << "Choisis ta classe et entre dans l'arène." << std::endl;
-    std::cout << "Trois voies s'offrent à toi :" << std::endl;
+    std::cout << "Choisis ta race." << std::endl;
+    std::cout << "Chaque race apporte une petite identité de départ." << std::endl;
+    std::cout << "Plus tard, elle pourra aussi influencer les dialogues, les ventes, les résistances et certaines quêtes." << std::endl;
     std::cout << std::endl;
 
-    ClassCatalog::displayBasicClasses();
+    RaceCatalog::displayPlayableRaces();
 
     std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
     std::cout << "> ";
 
     int choice = Console::askNumberBetween(
         1,
-        3,
-        "Veuillez entrer un chiffre valide : 1, 2 ou 3."
+        RaceCatalog::getPlayableRaceCount(),
+        "Veuillez entrer un chiffre correspondant à une race affichée."
     );
 
-    PlayerClass chosenClass = ClassCatalog::createBaseClass(choice);
+    selectedRace = RaceCatalog::getPlayableRaceByChoice(choice);
+
+    Console::clear();
+
+    std::cout << "Race sélectionnée : " << characterRaceToText(selectedRace) << "." << std::endl;
+    std::cout << RaceCatalog::getShortDescription(selectedRace) << std::endl;
+
+    if (selectedRace == CharacterRace::Demon)
+    {
+        std::cout << std::endl;
+        std::cout << "Note commerce : certains marchands risquent de serrer les dents en te voyant arriver." << std::endl;
+        std::cout << "Les prix pourront être plus élevés que la norme, surtout dans les villes peu habituées aux démons." << std::endl;
+    }
+
+    std::cout << std::endl;
+
+    Console::waitForEnter();
+    Console::clear();
+}
+
+void Game::choosePlayerClass()
+{
+    std::cout << "Choisis la famille de classe qui t'intéresse." << std::endl;
+    std::cout << "Comme il commence à y avoir pas mal de choix, l'arène range maintenant les classes par style." << std::endl;
+    std::cout << std::endl;
+
+    ClassCatalog::displayClassCategories();
+
+    std::cout << std::endl;
+    std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
+    std::cout << "> ";
+
+    int categoryChoice = Console::askNumberBetween(
+        1,
+        ClassCatalog::getClassCategoryCount(),
+        "Veuillez entrer un chiffre correspondant à une famille affichée."
+    );
+
+    Console::clear();
+
+    std::cout << "Famille sélectionnée : "
+              << ClassCatalog::getClassCategoryNameByChoice(categoryChoice)
+              << "."
+              << std::endl;
+    std::cout << "Choisis maintenant ta classe." << std::endl;
+    std::cout << std::endl;
+
+    ClassCatalog::displayClassesByCategoryChoice(categoryChoice);
+
+    int maxClassChoice = ClassCatalog::getPlayableClassCountByCategoryChoice(categoryChoice);
+
+    std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
+    std::cout << "> ";
+
+    int classChoice = Console::askNumberBetween(
+        1,
+        maxClassChoice,
+        "Veuillez entrer un chiffre correspondant à une classe affichée."
+    );
+
+    PlayerClass chosenClass = ClassCatalog::createClassByCategoryChoice(
+        categoryChoice,
+        classChoice
+    );
+
     mainPlayer = Player(playerName, chosenClass);
+    mainPlayer.setRace(selectedRace);
+
+    bool nativeBonusApplied = SpecialCharacterNativeBonus::applyIfNativeMatch(mainPlayer);
 
     mainPlayer.initializeStarterInventory(selectedDifficulty);
 
     Console::clear();
 
-    std::cout << playerName << ", tu as choisi la classe : " << chosenClass.getName() << "." << std::endl;
+    std::cout << playerName << ", tu as choisi : "
+              << characterRaceToText(selectedRace)
+              << " / "
+              << chosenClass.getName()
+              << "."
+              << std::endl;
+    std::cout << "Famille : " << ClassCatalog::getClassCategoryNameByChoice(categoryChoice) << "." << std::endl;
     std::cout << "Difficulté : " << getDifficultyName() << "." << std::endl;
     std::cout << "Tes statistiques ont été gravées dans l'arène avec succès." << std::endl;
     std::cout << "Ton équipement et tes ressources de départ ont été adaptés à la difficulté." << std::endl;
+
+    if (nativeBonusApplied)
+    {
+        std::cout << "Bonus natif : actif." << std::endl;
+    }
+
     std::cout << std::endl;
 
     mainPlayer.displayStats();
     mainPlayer.displaySimpleEquipment();
+
+    saveCurrentProgress("Création du personnage");
 
     Console::waitForEnter();
     Console::clear();
@@ -270,7 +484,31 @@ void Game::launchSelectedMode()
         }
     }
 
+    saveCurrentProgress("Fin de session");
+
     std::cout << std::endl;
+}
+
+void Game::saveCurrentProgress(const std::string& reason) const
+{
+    if (mainPlayer.getName().empty() || mainPlayer.getName() == "Inconnu")
+    {
+        return;
+    }
+
+    if (SaveManager::savePlayerSnapshot(mainPlayer, accountName, selectedDifficulty))
+    {
+        std::cout << "Sauvegarde préparée : " << reason << "." << std::endl;
+        std::cout << "Chemin : "
+                  << SaveManager::getCharacterSavePath(accountName, mainPlayer.getName())
+                  << std::endl;
+        std::cout << std::endl;
+    }
+    else
+    {
+        std::cout << "Sauvegarde impossible pour le moment." << std::endl;
+        std::cout << std::endl;
+    }
 }
 
 std::string Game::getDifficultyName() const

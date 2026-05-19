@@ -57,14 +57,20 @@ Il ne remplace pas le README : le README explique le projet, ce fichier garde la
 
 6. Bestiaire
 ------------
-- Catégories prévues : allié, entité passive/alliée, entité hostile/ennemie, invocation, boss.
+- Le bestiaire est un objet spécial de base du personnage.
+- Il doit apparaître tout en haut de l'inventaire comme un choix séparé après avoir sélectionné Inventaire.
+- Il sera accessible à beaucoup d'endroits du jeu, pas seulement dans un menu isolé.
+- Catégories prévues : races, alliés, entités passives/alliées, entités hostiles/ennemies, invocations, boss, personnages spéciaux, matériaux et plantes.
 - Les entités jamais rencontrées affichent ???.
 - Une entité rencontrée peut d'abord révéler seulement son apparence ou une description physique.
-- Plus le joueur combat une entité, plus les informations se débloquent.
-- Le nombre de fois où chaque entité a été tuée par le joueur doit être affiché.
+- Plus le joueur combat, observe ou expérimente une entité, plus les informations se débloquent.
+- Le nombre de fois où chaque entité précise a été tuée par le joueur doit être affiché.
 - Pour les boss, le nom ne doit apparaître que lorsqu'il est réellement appris.
 - Un boss peut révéler son nom en entrée de scène, à 50% PV, avant défaite, ou via une source fiable.
 - Des écrits/légendes peuvent donner des indices, mais pas forcément le nom exact.
+- Le joueur pourra acheter des informations sur des choses communes : races connues, plantes courantes, matériaux simples, monstres répandus.
+- Les secrets importants, boss inconnus, noms mythiques ou identités spéciales ne doivent pas être simplement achetables.
+- Quand une action Inspecter existe, une action Voir dans le bestiaire doit aussi être proposée si le contexte s'y prête.
 
 7. Statistiques
 ---------------
@@ -163,3 +169,528 @@ Cette base prépare aussi les systèmes suivants :
 - fichiers JSON de préparation dans assets/config/cheat_codes.json et assets/config/special_characters.json.
 
 Le détail complet est dans SPECIAL_CHARACTERS_AND_CHEATS.txt.
+
+============================================================
+CLASSES PAR CATÉGORIES
+============================================================
+
+Le catalogue de classes est maintenant organisé par familles :
+- Corps à corps
+- Distance
+- Magie
+- Invocation
+- Support
+- Hybride
+- Artisanat / technique
+
+Objectif : éviter un menu de 40 classes en colonne, tout en gardant une grosse liberté.
+Les classes peuvent ensuite recevoir des règles plus profondes : armes préférées, munitions,
+mana, invocations, évolutions, résistances, faiblesses, et synergies avec les races.
+
+============================================================
+PLANTES / MATÉRIAUX À PRÉVOIR POUR LE BESTIAIRE GLOBAL
+============================================================
+
+Le bestiaire final ne sera pas seulement un catalogue de monstres. Il devra aussi couvrir :
+- races
+- monstres
+- boss
+- personnages spéciaux
+- invocations
+- matériaux
+- plantes
+- objets ou fragments importants
+- connaissances progressives du monde
+
+Un fichier de préparation existe : assets/config/plants_and_materials_future.json
+Il contient notamment une Fleur bleue de montagne, inspirée de la fleur bleue de Zelda BOTW,
+prévue pour les premières recettes d'alchimie et de soin.
+
+============================================================
+PVP IA, RANDOMS ET INVOCATIONS
+============================================================
+
+Le mode PvP IA doit distinguer clairement :
+- Matt (PRO), choix séparé, sans spécialité de classe, mais meilleur dans toutes les classes.
+- Tirage d'arène aléatoire, avec environ 25% de chance d'appeler un personnage spécial.
+- Adversaire classique par catégorie/classe, où le joueur choisit seulement le style de combat. Le nom et la race sont générés aléatoirement, sans personnage spécial.
+
+Les personnages spéciaux doivent apparaître via les tirages aléatoires d'arène, pas via la création manuelle d'un adversaire.
+
+Un duel contre un invocateur pourra plus tard basculer en combat de groupe :
+- invocations alliées de l'adversaire,
+- slots actifs,
+- règles proches du PvE,
+- initiative plus tard basée sur la Dextérité.
+
+============================================================
+DIALOGUES DES PERSONNAGES SPÉCIAUX
+============================================================
+
+Les personnages spéciaux doivent avoir des dialogues propres :
+- entrée en scène ;
+- bas PV ;
+- victoire ;
+- défaite ;
+- événements d'histoire ;
+- réactions spécifiques selon boss, race, classe, dieu, lieu ou bestiaire.
+
+Un premier catalogue C++ existe : SpecialCharacterDialogueCatalog.
+Un fichier de mémoire existe aussi : assets/texts/special_characters/dialogues.json
+
+À prévoir plus tard :
+- dialogues différents selon le contexte ;
+- dialogues si le joueur joue lui-même une identité spéciale ;
+- dialogues si deux personnages spéciaux se rencontrent ;
+- lignes spéciales pour les invocations ;
+- dialogues liés aux dieux et au panthéon ;
+- phrases déclenchées à 50% PV, à la première mort, ou à l'activation d'une bénédiction.
+
+Henrique est ajouté comme personnage spécial : chevalier frontal capable de revenir une fois à la vie plus tard.
+
+============================================================
+RENCONTRES DE GROUPES D'AVENTURIERS - AJOUT ACTUEL
+============================================================
+
+Le mode PvE propose désormais deux types de rencontres :
+1. Vague de monstres classique.
+2. Groupe d'aventuriers aléatoire.
+
+Le groupe d'aventuriers peut être :
+- un groupe totalement random, avec noms, races et classes générés ;
+- un groupe spécial lié au lore.
+
+Groupes spéciaux préparés :
+- Hazak / Henrique.
+- Mattzelda / Louis / Trexof.
+- Aoi / Kanadé / Sanctus.
+- Hazak / Hestia.
+- Fail / Hazak.
+- Skuro / X personnage spécial ou Skuro / X spécial / X spécial.
+- Fire Flight / Matt (PRO).
+- Groupe aléatoire d'aventuriers normaux random.
+
+Règles d'intention prévues :
+- Un groupe spécial ne veut pas forcément tuer le joueur.
+- Les groupes spéciaux représentent environ 25% des tirages de groupes d'aventuriers ; le reste est du random normal.
+- Les combats peuvent être amicaux, sérieux, défensifs, expérimentaux ou dangereux.
+- Hazak est aussi un meneur plutôt bon ; Hazak et Skuro peuvent pousser le combat vers quelque chose de plus mortel.
+- Hazak avec Hestia force une limite morale : pas de combat à mort par défaut.
+
+Le fichier assets/config/relationships/special_character_groups.json garde ces relations en données préparées.
+
+----------------------------------------------------------
+SPECIAL GROUP INTENT / DIALOGUES / TRANSFORMATIONS
+----------------------------------------------------------
+
+Systèmes préparés :
+- CombatIntent : FriendlyDuel, Training, Warning, SeriousFight, ExperimentalFight, DangerousFight, DeathMatch, StoryLocked.
+- SpecialEncounterRules : décide l'intention d'un groupe spécial et si le combat peut devenir mortel.
+- SpecialCharacterGroupDialogueCatalog : dialogues de groupe selon les membres présents.
+- SpecialCharacterTransformationRules : règles futures pour Sanctus qui peut devenir Skuro.
+
+Règles importantes :
+- Matt (PRO) peut apparaître seul en Combat IA et aussi via les tirages spéciaux.
+- Matt (PRO) ne parle pas directement : il respecte l'adversaire et combat.
+- Skuro ne peut être accompagné que par Hazak, Henrique, Aoi, Fail ou Kanadé.
+- Sanctus et Skuro sont la même personne : Skuro est la version sombre après rupture.
+- Les groupes d'aventuriers normaux random n'ont pas de personnage spécial.
+- Les intentions de combat devront plus tard influencer les récompenses, la fuite, la mort et les dialogues.
+
+============================================================
+EFFETS SPÉCIAUX ACTIFS - PASSE ACTUELLE
+============================================================
+
+Des hooks de combat existent maintenant dans SpecialCombatEffects.
+Ils ne remplacent pas encore un vrai système de compétences, mais ils rendent plusieurs personnages spéciaux visibles en combat.
+
+Effets branchés ou préparés :
+- Fire Flight : sous 50% PV, peut esquiver beaucoup mieux et obtenir des critiques renforcés.
+- Henrique : peut revenir une fois à la vie pendant un combat.
+- Hestia : ses incantations se renforcent à chaque attaque lancée.
+- Skuro : faible fiabilité, mais dégâts lourds quand son coup touche.
+- Kanadé : bonus aléatoire lié aux 13 signes du zodiaque.
+- Fail : effet expérimental instable, parfois très bon, parfois raté.
+- Louis : projectiles secondaires après une attaque réussie.
+- Hazak : chance de trouver une ouverture propre et brutale.
+- Sanctus : affiche les premiers signes de bascule vers Skuro s'il prend ou inflige un choc trop violent.
+- Aoi : réactions de protection d'incantation préparées.
+
+Ces effets restent volontairement simples pour éviter de casser le système de combat actuel.
+Plus tard, ils devront devenir de vraies compétences avec cooldown, ressources, conditions et descriptions dans le bestiaire.
+
+============================================================
+INVOCATIONS - PRÉPARATION CONCRÈTE
+============================================================
+
+Les fichiers Summon, SummonCatalog et SummonRules ont été remplis.
+But futur : permettre à certains duels 1v1 de devenir des combats façon PvE si une classe d'invocation appelle des renforts.
+
+Classes concernées :
+- Invocateur.
+- Nécromancien.
+- Dompteur.
+- Pactisant.
+
+Invocations préparées :
+- Esprit mineur.
+- Serviteur osseux.
+- Flamme kitsune.
+- Bête arcanique.
+
+Pour le moment, le système affiche surtout l'avertissement et garde les données prêtes.
+La prochaine vraie étape sera de brancher les invocations dans les slots actifs / EnemyCombatQueue.
+
+============================================================
+SAUVEGARDE - PREMIÈRE BASE TECHNIQUE
+============================================================
+
+SaveManager contient maintenant une première base minimale :
+- création des dossiers assets/saves ;
+- sauvegarde snapshot d'un personnage en format JSON simple ;
+- noms de fichiers sécurisés ;
+- emplacement prévu pour personnage, compte, bestiaire, matériaux, cheats et bénédictions.
+
+Ce n'est pas encore le système complet de chargement/sauvegarde.
+La prochaine étape sera de choisir où appeler SaveManager dans le menu principal ou après la création de personnage.
+
+============================================================
+SAUVEGARDE - BRANCHEMENT MINIMAL EN JEU
+============================================================
+
+Le jeu demande maintenant un nom de compte local au démarrage.
+Si le joueur laisse vide, le compte "local" est utilisé.
+
+SaveManager est appelé à trois moments :
+- préparation du compte local ;
+- après la création du personnage ;
+- après la fin d'un mode lancé.
+
+Données actuellement sauvegardées dans un snapshot JSON simple :
+- nom du compte ;
+- nom du personnage ;
+- race ;
+- classe ;
+- niveau ;
+- expérience ;
+- PV / PV max ;
+- or ;
+- index de l'arme équipée ;
+- index de l'armure équipée ;
+- emplacements préparés pour bestiaire, matériaux, cheats et bénédictions.
+
+Le jeu possède maintenant un vrai premier menu de compte / personnage :
+- choisir un compte existant ;
+- créer ou utiliser un nouveau compte ;
+- lister les personnages jouables du compte ;
+- charger un personnage jouable ;
+- créer un nouveau personnage si aucun chargement n'est choisi.
+
+Données actuellement restaurées au chargement :
+- nom ;
+- race ;
+- classe ;
+- difficulté ;
+- niveau ;
+- expérience ;
+- PV ;
+- or ;
+- index de l'arme équipée ;
+- index de l'armure équipée.
+
+Limite actuelle volontaire :
+- l'inventaire complet n'est pas encore sérialisé objet par objet ;
+- au chargement, le jeu reconstruit encore le kit de départ selon la classe et la difficulté ;
+- les prochaines étapes côté sauvegarde seront l'inventaire complet, les personnages morts, les cheats, les bénédictions, le bestiaire et les matériaux.
+
+============================================================
+INVOCATIONS - PREMIER BRANCHEMENT ACTIF
+============================================================
+
+Les classes d'invocation peuvent maintenant faire apparaître des invocations simples au début de certains combats.
+
+Classes concernées :
+- Invocateur ;
+- Nécromancien ;
+- Pactisant ;
+- Dompteur.
+
+Cas spécial :
+- Aoi peut préparer une Flamme kitsune.
+
+Fonctionnement actuel :
+- les invocations apparaissent au début du combat ;
+- elles attaquent automatiquement après le tour de leur propriétaire ;
+- elles peuvent frapper une entité en duel ou un ennemi actif dans une vague ;
+- elles ont une durée limitée en tours ;
+- lorsqu'elles expirent, elles se dissipent.
+
+Limites volontaires de cette première version :
+- les invocations ne peuvent pas encore être ciblées directement ;
+- elles n'ont pas encore de compétences avancées ;
+- il n'y a pas encore de coût en mana ;
+- le nombre d'invocations actives n'utilise pas encore les règles complètes de cases de combat.
+
+Suite prévue :
+- rendre les invocations ciblables ;
+- ajouter les cases alliées / ennemies / bonus invocation ;
+- ajouter la mana ou les charges arcaniques ;
+- ajouter des invocations spécifiques par classe et personnage spécial ;
+- brancher les invocations dans les combats de groupe avec initiative.
+
+## Mise à jour - contrôle des invocations
+
+Les invocations du joueur peuvent maintenant être gérées de deux manières :
+- attaque automatique après le tour du joueur ;
+- contrôle manuel, où le joueur donne aussi un ordre à chaque invocation.
+
+En contrôle manuel :
+- contre une cible unique, l'invocation peut attaquer ou rester en retrait ;
+- contre une vague, l'invocation peut choisir une cible active ;
+- passer l'action consomme quand même un tour de durée d'invocation, car le lien magique continue de se consumer.
+
+Limites actuelles :
+- les invocations ne sont pas encore ciblables directement par les ennemis ;
+- elles n'ont pas encore de compétences spéciales complexes ;
+- elles ne sont pas encore intégrées au futur vrai système de slots alliés / ennemis / invocation bonus.
+
+Suite prévue :
+- rendre les invocations ciblables ;
+- gérer les slots de combat ;
+- permettre aux invocations d'avoir des rôles : tank, attaque, protection, soin, entrave ;
+- brancher l'initiative/dextérité plus tard.
+
+============================================================
+INVOCATIONS CIBLABLES - PREMIÈRE PASSE ACTIVE
+============================================================
+
+- Les invocations adverses peuvent maintenant être ciblées dans un duel contre IA.
+- Quand l'adversaire possède des invocations, l'action Attaquer permet de choisir :
+  - adversaire principal ;
+  - invocation ciblable.
+- L'interface d'observation peut afficher les invocations adverses.
+- Les invocations du joueur peuvent être attaquées par l'IA en duel.
+- En PvE vague / groupe d'aventuriers, les monstres peuvent parfois viser les invocations du joueur.
+- Les invocations détruites ou expirées disparaissent automatiquement.
+- Les potions offensives ne ciblent pas encore les invocations : elles restent liées à l'adversaire principal pour éviter de casser le menu actuel.
+
+Objectif futur : remplacer progressivement cette logique par un vrai système de slots de combat avec joueur, alliés, invocations, ennemis, boss et initiative.
+
+============================================================
+MISE À JOUR - MENACE, SOIGNEUR ET PROVOCATION
+============================================================
+
+Première passe ajoutée :
+- Un soigneur qui utilise une potion de soin marque maintenant une menace de soin.
+- Les ennemis attentifs peuvent viser le soigneur à leur prochaine attaque au lieu de s'éparpiller sur les invocations.
+- Un système ThreatSystem existe maintenant dans combat/threat.
+- La provocation existe comme état temporaire sur Entity.
+- Sanctus possède une provocation naturelle plus forte.
+- Les classes de type tank, gardien, chevalier, colosse ou paladin peuvent activer une provocation passive simple.
+- Sanctus peut aussi provoquer après un choc violent reçu ou après avoir infligé un coup particulièrement violent.
+
+À améliorer plus tard :
+- Ajouter une vraie compétence active "Provocation" dans le menu de combat.
+- Gérer une table de menace complète par groupe au lieu d'un simple état sur l'entité principale.
+- Séparer la logique selon l'intelligence des ennemis : bête sauvage, humanoïde, boss, invocation, etc.
+- Faire que certains boss ignorent ou brisent la provocation.
+- Permettre aux assassins et aux mages furtifs de réduire leur menace.
+- Connecter le système avec les vrais slots de combat alliés/ennemis/invocations.
+
+============================================================
+ORDRE DE DÉVELOPPEMENT PRÉFÉRÉ
+============================================================
+
+1. Menace / ciblage / provocation.
+2. Vrais slots de combat alliés, ennemis et invocations.
+3. Rôles actifs : tank, healer, DPS, assassin, invocateur.
+4. Effets spéciaux plus propres des personnages spéciaux.
+5. Sauvegarde plus complète.
+6. Cheats réels.
+7. Bestiaire global propre.
+8. Boutiques / économie.
+
+Note : l'économie et les boutiques passent après le bestiaire, car le bestiaire et l'achat d'informations doivent exister avant de rendre les achats vraiment importants.
+
+============================================================
+MISE À JOUR - CORRECTION SOIN, SLOTS ET RÔLES
+============================================================
+
+Correction importante :
+- Se soigner soi-même ne génère plus de menace de soigneur.
+- La menace de soigneur doit venir d'un soin appliqué à un allié.
+- ThreatSystem contient maintenant :
+  - markSelfHealingAction(...) : affiche que la menace ne change pas vraiment ;
+  - markAllyHealingAction(...) : marque le soigneur comme cible prioritaire.
+
+Première passe technique des slots de combat :
+- CombatSide prépare les côtés joueur / ennemi / neutre.
+- CombatUnitKind prépare les types d'unités : combattant principal, allié, ennemi, invocation, boss.
+- CombatUnitSlot peut maintenant représenter une entité ou une invocation ciblable.
+- CombatGroup peut stocker plusieurs slots actifs et retirer les slots morts ou expirés.
+
+Première passe technique des rôles :
+- CombatRole prépare les rôles Tank, Soigneur, DPS, Assassin, Invocateur, Support, Hybride.
+- CombatRoleSystem infère un rôle depuis le nom/type de l'entité.
+- ThreatSystem utilise maintenant CombatRoleSystem pour reconnaître les tanks/provocateurs.
+
+Limites actuelles :
+- Les slots existent, compilent et sont prêts, mais les anciens combats ne sont pas encore entièrement migrés dessus.
+- Les rôles existent, mais ne donnent pas encore tous des compétences actives.
+- Les soins d'alliés sont préparés, mais les vraies compétences de heal allié arriveront avec les vrais combats de groupe.
+
+Suite directe recommandée :
+1. Migrer progressivement les combats de groupe vers CombatGroup / CombatUnitSlot.
+2. Ajouter des actions de rôle : Provocation active, protection, soin d'allié, réduction de menace.
+3. Rendre les effets spéciaux des personnages spéciaux compatibles avec les slots.
+4. Compléter la sauvegarde.
+5. Brancher les cheats réels.
+6. Construire le bestiaire global propre.
+7. Faire boutiques / économie.
+
+============================================================
+MISE À JOUR - GROUPES VISIBLES, RÔLES ACTIFS ET INVOCATIONS
+============================================================
+
+Ajout effectué :
+- CombatGroupBuilder peut construire un groupe visible depuis :
+  - une entité principale + ses invocations ;
+  - une ligne active de vague PvE.
+- Le mode PvP IA affiche maintenant un aperçu du groupe du joueur et du groupe adverse.
+- Le mode PvE affiche maintenant un aperçu de la ligne ennemie active et du groupe du joueur.
+- CombatRoleActionSystem prépare les actions de rôle :
+  - provocation automatique des tanks ;
+  - provocation manuelle prête pour le futur menu de compétences ;
+  - réduction de menace future pour les assassins.
+- Les effets spéciaux des personnages spéciaux sont maintenant aussi appliqués quand une entité attaque une invocation.
+  Exemple : Skuro peut rater son énorme coup contre une invocation, Louis peut garder son bonus de projectiles, etc.
+
+Limites actuelles :
+- Les groupes sont affichés et construits, mais la sélection de cible n'est pas encore entièrement basée sur CombatGroup.
+- Provocation active existe côté système, mais elle n'est pas encore proposée dans un vrai menu de compétences.
+- Les invocations restent ciblables via l'ancien système, avec une transition progressive vers les slots.
+
+Suite recommandée :
+1. Créer un vrai menu de compétences/rôles dans le menu combat.
+2. Migrer la sélection des cibles vers CombatGroupBuilder / CombatUnitSlot.
+3. Ajouter un soin d'allié réel pour tester la menace de soigneur.
+4. Ajouter des invocations ennemies plus nombreuses et des groupes alliés non-joueur.
+5. Brancher progressivement la sauvegarde complète de l'inventaire.
+6. Brancher les cheats réels.
+7. Commencer le bestiaire global quand races/classes/matériaux/boss seront assez stables.
+
+## Mise à jour - menu de rôle et sélection par slots
+
+Cette passe commence à rendre les systèmes précédents réellement utilisables en combat.
+
+Ajouts :
+- `CombatRoleMenu` permet d'accéder à des compétences de rôle depuis l'interface de combat.
+- Les tanks peuvent maintenant utiliser une Provocation manuelle.
+- Les assassins peuvent utiliser une action pour réduire leur menace immédiate.
+- Les actions de protection / soin d'allié sont visibles mais restent verrouillées tant que les vrais alliés de groupe ne sont pas complètement migrés.
+- `CombatGroupTargetMenu` commence à utiliser les `CombatGroup` / `CombatUnitSlot` pour choisir une cible en duel contre un adversaire avec invocations.
+- En duel, l'attaque peut maintenant passer par une logique de slots : cible principale ou invocation adverse.
+- L'interface de combat en duel et en vague donne accès aux compétences de rôle via le sous-menu Interface.
+
+À faire ensuite :
+1. Migrer progressivement les vagues PvE vers une sélection de cible entièrement basée sur les slots.
+2. Ajouter de vrais alliés contrôlés / IA dans le groupe du joueur.
+3. Brancher le vrai soin d'allié pour tester la menace de soigneur dans des conditions normales.
+4. Ajouter la protection d'allié pour les tanks et supports, notamment Sanctus.
+5. Rendre les boss capables d'ignorer ou de résister à certaines provocations selon leur personnalité.
+6. Continuer vers la sauvegarde complète de l'inventaire.
+7. Brancher les codes de triche réels.
+8. Préparer le bestiaire global propre avant les boutiques.
+
+## Mise à jour - interface de combat enrichie
+
+Cette passe rend le sous-menu `Interface` plus utile et plus cohérent avec la séparation voulue :
+
+- `Interface` sert à comprendre la situation.
+- `Équipement` sert à gérer et modifier le stuff.
+- `Inventaire` sert à gérer les objets.
+
+Ajouts :
+- En duel, l'interface affiche maintenant :
+  - état du combat ;
+  - statistiques du joueur ;
+  - résumé équipement ;
+  - compétences de rôle ;
+  - observation / analyse de l'adversaire ;
+  - recherche de l'adversaire dans le bestiaire ;
+  - ordres aux alliés, préparés mais verrouillés ;
+  - contrôle des invocations, préparé pour changement d'ordres en combat.
+- En duel avec invocations adverses, l'interface affiche aussi les invocations adverses.
+- En PvE vague, l'interface affiche maintenant :
+  - état de la vague ;
+  - statistiques du joueur ;
+  - résumé équipement ;
+  - compétences de rôle ;
+  - observation des adversaires ;
+  - recherche d'un adversaire actif dans le bestiaire ;
+  - ordres aux alliés, préparés mais verrouillés ;
+  - contrôle des invocations, préparé pour plus tard.
+
+Limites :
+- Les ordres aux alliés sont seulement préparés, car les alliés permanents ne sont pas encore branchés.
+- Le contrôle des invocations se choisit encore au début du combat. L'option existe dans Interface pour préparer un changement d'ordre pendant le combat.
+- Le bestiaire affiche encore des fiches temporaires tant que la progression réelle du bestiaire n'est pas branchée.
+
+À faire ensuite :
+1. Migrer progressivement les vagues PvE vers une sélection de cible entièrement basée sur les slots.
+2. Ajouter de vrais alliés contrôlés / IA dans le groupe du joueur.
+3. Brancher le vrai soin d'allié pour tester la menace de soigneur.
+4. Ajouter la protection d'allié pour les tanks et supports, surtout Sanctus.
+5. Rendre certains boss capables d'ignorer ou de résister à la provocation.
+6. Compléter la sauvegarde d'inventaire.
+7. Brancher les codes de triche réels.
+8. Faire les boutiques / économie.
+9. Faire le bestiaire global propre.
+
+
+## Mise à jour - boutiques avant bestiaire
+
+Décision de design validée : les boutiques arriveront finalement juste avant le bestiaire global.
+
+Raison :
+- Même hors mode histoire, le joueur pourra gagner des niveaux et refaire des combats.
+- Les boutiques permettront de renouveler le stock de potions, matériaux, armes et armures entre les combats.
+- Les boutiques pourront changer leurs ventes après chaque combat.
+- La bibliothèque pourra vendre des renseignements communs, ce qui préparera directement le futur bestiaire global.
+
+Types de boutiques prévus :
+- Boutique de monstres : achat/revente de matériaux de monstres.
+- Boutique de matériaux : minerais, fragments, fibres, composants de réparation.
+- Herboristerie : plantes, remèdes, ingrédients d'alchimie.
+- Armurerie défensive : armures, protections, réparation défensive.
+- Forge d'armes : armes, améliorations, futures munitions.
+- Boutique de consommables : potions, buffs, debuffs, objets rapides.
+- Bibliothèque : renseignements, magie, livres, informations communes de bestiaire.
+
+Ajout technique préparatoire :
+- economy/shop/ShopType
+- economy/shop/ShopItemCategory
+- economy/shop/ShopItem
+- economy/shop/ShopInventory
+- economy/shop/ShopCatalog
+- economy/shop/ShopPriceRules
+- economy/shop/ShopRotationSystem
+- economy/shop/LibraryInformationCatalog
+- interface/menu/shop/ShopMenu
+- assets/config/shops/shop_types.json
+- assets/config/shops/preview_stock.json
+- assets/config/library/common_information.json
+
+Règles prévues :
+- Les boutiques se renouvellent après chaque combat.
+- Les stocks pourront dépendre de la difficulté, du niveau, de la zone et de la progression.
+- Les démons peuvent subir des prix d'achat plus chers et des prix de revente moins favorables.
+- Les informations communes pourront être achetées à la bibliothèque pour améliorer le futur bestiaire.
+
+Ordre de développement mis à jour :
+1. Migrer les vagues PvE vers les slots.
+2. Ajouter vrais alliés / soin allié / protection alliée.
+3. Sauvegarde d'inventaire.
+4. Cheats réels.
+5. Boutiques / économie.
+6. Bestiaire global propre.

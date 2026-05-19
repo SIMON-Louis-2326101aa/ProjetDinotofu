@@ -8,9 +8,13 @@
 #include "class_system/PlayerClass.hpp"
 #include "item/Inventory.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "character/CharacterRace.hpp"
 
 class Player : public Entity
 {
+public:
+    static const int MAX_LEVEL = 255;
+
 private:
     int level;
     int experience;
@@ -18,8 +22,10 @@ private:
     Inventory inventory;
     int equippedWeaponIndex;
     int equippedArmorIndex;
+    CharacterRace race;
 
     int getEquippedArmorMaxHpBonus() const;
+    void applyRaceStartingBonus(CharacterRace selectedRace);
 
 public:
     Player();
@@ -31,6 +37,12 @@ public:
 
     int getLevel() const;
     int getExperience() const;
+
+    CharacterRace getRace() const;
+    std::string getRaceText() const;
+    void setRace(CharacterRace selectedRace);
+    void applyFlatStatBonus(int maxHpBonus, int minDamageBonus, int maxDamageBonus, int criticalDamageBonus);
+    void setLoadedProgress(int loadedLevel, int loadedExperience, int loadedHp);
 
     Inventory& getInventory();
     const Inventory& getInventory() const;

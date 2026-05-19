@@ -1,0 +1,56 @@
+{
+    "title": "Dinotofu class catalog",
+    "note": "Design roadmap. The C++ ClassCatalog is currently the source used by the game.",
+    "categories": [
+        {
+            "id": "melee",
+            "name": "Corps à corps",
+            "identity": "armes réelles, présence physique, duel, tanking ou burst direct",
+            "classes": ["Chevalier", "Assassin", "Colosse", "Barbare", "Guerrier", "Moine", "Duelliste", "Berserker", "Lancier", "Briseur lourd"]
+        },
+        {
+            "id": "distance",
+            "name": "Distance",
+            "identity": "précision, mobilité, projectiles, munitions futures",
+            "classes": ["Archer", "Rôdeur", "Arbalétrier", "Chasseur", "Lanceur de dagues", "Tireur"]
+        },
+        {
+            "id": "magic",
+            "name": "Magie",
+            "identity": "mana future, dégâts magiques, éléments, sorts instables ou spécialisés",
+            "classes": ["Mage", "Ensorceleur", "Sorcier", "Magicien", "Pyromancien", "Cryomancien", "Arcaniste", "Occultiste", "Mage fou", "Mage flame", "Mage zodiacal"]
+        },
+        {
+            "id": "invocation",
+            "name": "Invocation",
+            "identity": "alliés invoqués, pactes, créatures, morts-vivants ou compagnons",
+            "classes": ["Invocateur", "Nécromancien", "Dompteur", "Pactisant"]
+        },
+        {
+            "id": "support",
+            "name": "Support",
+            "identity": "soin, protection, entrave, lumière, buffs et défense d'équipe",
+            "classes": ["Barde", "Clerc", "Prêtre", "Paladin", "Gardien", "Templier", "Tank sacré"]
+        },
+        {
+            "id": "hybrid",
+            "name": "Hybride",
+            "identity": "mélange arme/magie/nature/esprits, très utile pour les personnages atypiques",
+            "classes": ["Druide", "Chevalier runique", "Ombrelame", "Mage-lame", "Shaman"]
+        },
+        {
+            "id": "craft",
+            "name": "Artisanat / technique",
+            "identity": "objets, potions, inventions, gadgets, projectiles et effets préparés",
+            "classes": ["Artificier", "Alchimiste"]
+        }
+    ],
+    "futureRules": [
+        "Chaque classe pourra recevoir une famille d'arme préférée.",
+        "Les classes de distance utiliseront des munitions plus tard.",
+        "Les classes magiques utiliseront de la mana ou des charges arcaniques plus tard.",
+        "Les classes d'invocation utiliseront mana + limite d'invocations.",
+        "Les classes support auront plus tard des actions de protection, entrave, buff et debuff.",
+        "Les évolutions de classe dépendront des stats DND investies et/ou des paliers de niveau."
+    ]
+}

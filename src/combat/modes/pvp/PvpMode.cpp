@@ -23,21 +23,43 @@ void PvpMode::run(Player& player1, Random& random)
     Console::clear();
 
     std::cout << "Très bien, " << player2Name << "." << std::endl;
-    std::cout << "Choisis ta classe et entre dans l'arène." << std::endl;
+    std::cout << "Choisis d'abord ta famille de classe." << std::endl;
     std::cout << std::endl;
 
-    ClassCatalog::displayBasicClasses();
+    ClassCatalog::displayClassCategories();
+
+    std::cout << std::endl;
+    std::cout << "> ";
+
+    int categoryChoice = Console::askNumberBetween(
+        1,
+        ClassCatalog::getClassCategoryCount(),
+        "Veuillez entrer un chiffre correspondant à une famille affichée."
+    );
+
+    Console::clear();
+
+    std::cout << "Famille sélectionnée : "
+              << ClassCatalog::getClassCategoryNameByChoice(categoryChoice)
+              << "."
+              << std::endl;
+    std::cout << "Choisis maintenant ta classe." << std::endl;
+    std::cout << std::endl;
+
+    ClassCatalog::displayClassesByCategoryChoice(categoryChoice);
+
+    int maxClassChoice = ClassCatalog::getPlayableClassCountByCategoryChoice(categoryChoice);
 
     std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
     std::cout << "> ";
 
     int classChoice = Console::askNumberBetween(
         1,
-        3,
-        "Veuillez entrer un chiffre valide : 1, 2 ou 3."
+        maxClassChoice,
+        "Veuillez entrer un chiffre correspondant à une classe affichée."
     );
 
-    Player player2(player2Name, ClassCatalog::createBaseClass(classChoice));
+    Player player2(player2Name, ClassCatalog::createClassByCategoryChoice(categoryChoice, classChoice));
     player2.initializeStarterInventory();
 
     Console::clear();

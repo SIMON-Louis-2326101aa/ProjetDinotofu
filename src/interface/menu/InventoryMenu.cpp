@@ -7,6 +7,7 @@
 
 #include "interface/menu/inventory/InventoryDisplay.hpp"
 #include "interface/menu/inventory/InventorySelection.hpp"
+#include "interface/menu/progression/BestiaryMenu.hpp"
 
 bool InventoryMenu::open(Player& player)
 {
@@ -16,8 +17,8 @@ bool InventoryMenu::open(Player& player)
 
         int menuChoice = Console::askNumberBetween(
             0,
-            5,
-            "Choix invalide. Entre un chiffre entre 0 et 5."
+            6,
+            "Choix invalide. Entre un chiffre entre 0 et 6."
         );
 
         Console::clear();
@@ -29,23 +30,29 @@ bool InventoryMenu::open(Player& player)
 
         if (menuChoice == 1)
         {
-            InventoryDisplay::displaySimpleFullInventory(player);
+            BestiaryMenu::open();
             continue;
         }
 
         if (menuChoice == 2)
         {
-            InventorySelection::openWeapons(player);
+            InventoryDisplay::displaySimpleFullInventory(player);
             continue;
         }
 
         if (menuChoice == 3)
         {
-            InventorySelection::openArmors(player);
+            InventorySelection::openWeapons(player);
             continue;
         }
 
         if (menuChoice == 4)
+        {
+            InventorySelection::openArmors(player);
+            continue;
+        }
+
+        if (menuChoice == 5)
         {
             bool turnConsumed = InventorySelection::openConsumables(player);
 
@@ -57,7 +64,7 @@ bool InventoryMenu::open(Player& player)
             continue;
         }
 
-        if (menuChoice == 5)
+        if (menuChoice == 6)
         {
             InventorySelection::openMaterials(player);
             continue;
