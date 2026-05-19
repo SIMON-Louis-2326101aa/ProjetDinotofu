@@ -25,11 +25,9 @@ bool CombatPotion::executeHealingPotion(
     if (player != nullptr)
     {
         Consumable potion;
+        int potionIndex = player->getInventory().findFirstConsumable(ConsumableType::Healing);
 
-        if (!player->getInventory().useFirstConsumable(
-            ConsumableType::Healing,
-            potion
-        ))
+        if (potionIndex == -1)
         {
             std::cout << player->getName()
                       << " fouille son inventaire..."
@@ -39,6 +37,13 @@ bool CombatPotion::executeHealingPotion(
             std::cout << std::endl;
 
             return false;
+        }
+
+        potion = player->getInventory().getConsumable(potionIndex);
+
+        if (!player->hasInfiniteConsumables())
+        {
+            player->getInventory().removeConsumable(potionIndex);
         }
 
         player->heal(potion.getPower());
@@ -103,11 +108,9 @@ bool CombatPotion::executeDamagePotion(
     if (player != nullptr)
     {
         Consumable potion;
+        int potionIndex = player->getInventory().findFirstConsumable(ConsumableType::Damage);
 
-        if (!player->getInventory().useFirstConsumable(
-            ConsumableType::Damage,
-            potion
-        ))
+        if (potionIndex == -1)
         {
             std::cout << player->getName()
                       << " cherche une potion de rage dans son inventaire..."
@@ -117,6 +120,13 @@ bool CombatPotion::executeDamagePotion(
             std::cout << std::endl;
 
             return false;
+        }
+
+        potion = player->getInventory().getConsumable(potionIndex);
+
+        if (!player->hasInfiniteConsumables())
+        {
+            player->getInventory().removeConsumable(potionIndex);
         }
 
         usedBonus = potion.getPower();

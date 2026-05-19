@@ -27,7 +27,11 @@ bool CombatPotionUse::useHealingPotion(
 
     player.heal(potion.getPower());
     ThreatSystem::markSelfHealingAction(player);
-    player.getInventory().removeConsumable(consumableIndex);
+
+    if (!player.hasInfiniteConsumables())
+    {
+        player.getInventory().removeConsumable(consumableIndex);
+    }
 
     std::cout << player.getName()
               << " boit "
@@ -83,7 +87,7 @@ bool CombatPotionUse::useSelectedPotion(
                 totalBonus
             );
 
-            if (attackLaunched)
+            if (attackLaunched && !player.hasInfiniteConsumables())
             {
                 player.getInventory().removeConsumable(consumableIndex);
             }
@@ -93,7 +97,10 @@ bool CombatPotionUse::useSelectedPotion(
 
         if (target != nullptr)
         {
-            player.getInventory().removeConsumable(consumableIndex);
+            if (!player.hasInfiniteConsumables())
+            {
+                player.getInventory().removeConsumable(consumableIndex);
+            }
 
             std::cout << player.getName()
                       << " utilise "

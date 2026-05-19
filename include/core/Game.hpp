@@ -21,6 +21,7 @@ private:
     DifficultyMode selectedDifficulty;
     CharacterRace selectedRace;
     bool characterLoaded;
+    bool specialIdentityValidated;
 
     void displayIntroduction();
     void askAccountName();
@@ -31,6 +32,7 @@ private:
     void chooseGameMode();
     void displaySelectedMode();
     void launchSelectedMode();
+    bool openPostCombatMenu();
     void saveCurrentProgress(const std::string& reason) const;
 
     std::string getDifficultyName() const;

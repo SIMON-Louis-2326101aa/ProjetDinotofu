@@ -7,6 +7,7 @@
 #include "item/armor/ArmorCatalog.hpp"
 #include "item/consumable/ConsumableCatalog.hpp"
 #include "progression/DifficultyRules.hpp"
+#include "progression/Level.hpp"
 #include "character/RaceCatalog.hpp"
 
 #include <iostream>
@@ -18,6 +19,38 @@ Player::Player() : Entity()
     equippedWeaponIndex = -1;
     equippedArmorIndex = -1;
     race = CharacterRace::Human;
+    unspentAttributePoints = 0;
+
+    combatsStarted = 0;
+    victories = 0;
+    defeats = 0;
+    escapes = 0;
+    deaths = 0;
+    enemiesKilled = 0;
+    bossesKilled = 0;
+
+    alteredByCheats = false;
+    godModeEnabled = false;
+    infiniteConsumablesEnabled = false;
+    indestructibleEquipmentEnabled = false;
+    equipmentProtectionEnabled = false;
+    storySkipEnabled = false;
+
+    godModeKnown = false;
+    infiniteConsumablesKnown = false;
+    indestructibleEquipmentKnown = false;
+    equipmentProtectionKnown = false;
+    storySkipKnown = false;
+    creatorMessageKnown = false;
+
+    goldCheatUseCount = 0;
+    levelCheatUseCount = 0;
+    maxLevelCheatUseCount = 0;
+    refundCheatUseCount = 0;
+    resetCheatUseCount = 0;
+    switchClassCheatUseCount = 0;
+
+    refundUsesRemaining = 3;
 }
 
 Player::Player(
@@ -39,6 +72,38 @@ Player::Player(
     equippedWeaponIndex = -1;
     equippedArmorIndex = -1;
     race = CharacterRace::Human;
+    unspentAttributePoints = 0;
+
+    combatsStarted = 0;
+    victories = 0;
+    defeats = 0;
+    escapes = 0;
+    deaths = 0;
+    enemiesKilled = 0;
+    bossesKilled = 0;
+
+    alteredByCheats = false;
+    godModeEnabled = false;
+    infiniteConsumablesEnabled = false;
+    indestructibleEquipmentEnabled = false;
+    equipmentProtectionEnabled = false;
+    storySkipEnabled = false;
+
+    godModeKnown = false;
+    infiniteConsumablesKnown = false;
+    indestructibleEquipmentKnown = false;
+    equipmentProtectionKnown = false;
+    storySkipKnown = false;
+    creatorMessageKnown = false;
+
+    goldCheatUseCount = 0;
+    levelCheatUseCount = 0;
+    maxLevelCheatUseCount = 0;
+    refundCheatUseCount = 0;
+    resetCheatUseCount = 0;
+    switchClassCheatUseCount = 0;
+
+    refundUsesRemaining = 3;
 }
 
 void Player::applyRaceStartingBonus(CharacterRace selectedRace)
@@ -105,6 +170,16 @@ int Player::getExperience() const
     return experience;
 }
 
+int Player::getUnspentAttributePoints() const
+{
+    return unspentAttributePoints;
+}
+
+const DndAttributes& Player::getAttributes() const
+{
+    return attributes;
+}
+
 CharacterRace Player::getRace() const
 {
     return race;
@@ -152,6 +227,515 @@ void Player::setLoadedProgress(int loadedLevel, int loadedExperience, int loaded
     level = loadedLevel;
     experience = loadedExperience;
     hp = loadedHp;
+}
+
+void Player::setLoadedAttributes(const DndAttributes& loadedAttributes, int loadedUnspentPoints)
+{
+    attributes = loadedAttributes;
+
+    if (loadedUnspentPoints < 0)
+    {
+        loadedUnspentPoints = 0;
+    }
+
+    unspentAttributePoints = loadedUnspentPoints;
+}
+
+bool Player::spendAttributePoint(int attributeChoice)
+{
+    if (unspentAttributePoints <= 0)
+    {
+        return false;
+    }
+
+    if (!attributes.increaseByChoice(attributeChoice))
+    {
+        return false;
+    }
+
+    unspentAttributePoints--;
+
+    if (attributeChoice == 1)
+    {
+        minDamage += 1;
+        maxDamage += 1;
+    }
+    else if (attributeChoice == 2)
+    {
+        criticalDamage += 2;
+    }
+    else if (attributeChoice == 3)
+    {
+        maxHp += 5;
+        hp += 5;
+    }
+
+    if (maxDamage < minDamage)
+    {
+        maxDamage = minDamage;
+    }
+
+    if (criticalDamage < maxDamage)
+    {
+        criticalDamage = maxDamage;
+    }
+
+    if (hp > maxHp)
+    {
+        hp = maxHp;
+    }
+
+    return true;
+}
+
+void Player::displayAttributes() const
+{
+    std::cout << "===== ATTRIBUTS =====" << std::endl;
+    std::cout << "Force : " << attributes.getStrength() << std::endl;
+    std::cout << "Dextérité : " << attributes.getDexterity() << std::endl;
+    std::cout << "Constitution : " << attributes.getConstitution() << std::endl;
+    std::cout << "Intelligence : " << attributes.getIntelligence() << std::endl;
+    std::cout << "Sagesse : " << attributes.getWisdom() << std::endl;
+    std::cout << "Charisme : " << attributes.getCharisma() << std::endl;
+    std::cout << "Points disponibles : " << unspentAttributePoints << std::endl;
+    std::cout << "=====================" << std::endl;
+    std::cout << std::endl;
+}
+
+
+int Player::getCombatsStarted() const
+{
+    return combatsStarted;
+}
+
+int Player::getVictories() const
+{
+    return victories;
+}
+
+int Player::getDefeats() const
+{
+    return defeats;
+}
+
+int Player::getEscapes() const
+{
+    return escapes;
+}
+
+int Player::getDeaths() const
+{
+    return deaths;
+}
+
+int Player::getEnemiesKilled() const
+{
+    return enemiesKilled;
+}
+
+int Player::getBossesKilled() const
+{
+    return bossesKilled;
+}
+
+void Player::setLoadedStatistics(
+    int loadedCombatsStarted,
+    int loadedVictories,
+    int loadedDefeats,
+    int loadedEscapes,
+    int loadedDeaths,
+    int loadedEnemiesKilled,
+    int loadedBossesKilled
+)
+{
+    combatsStarted = loadedCombatsStarted < 0 ? 0 : loadedCombatsStarted;
+    victories = loadedVictories < 0 ? 0 : loadedVictories;
+    defeats = loadedDefeats < 0 ? 0 : loadedDefeats;
+    escapes = loadedEscapes < 0 ? 0 : loadedEscapes;
+    deaths = loadedDeaths < 0 ? 0 : loadedDeaths;
+    enemiesKilled = loadedEnemiesKilled < 0 ? 0 : loadedEnemiesKilled;
+    bossesKilled = loadedBossesKilled < 0 ? 0 : loadedBossesKilled;
+}
+
+void Player::recordCombatStarted()
+{
+    combatsStarted++;
+}
+
+void Player::recordVictory()
+{
+    victories++;
+}
+
+void Player::recordDefeat()
+{
+    defeats++;
+}
+
+void Player::recordEscape()
+{
+    escapes++;
+}
+
+void Player::recordDeath()
+{
+    deaths++;
+}
+
+void Player::recordEnemyKills(int amount)
+{
+    if (amount <= 0)
+    {
+        return;
+    }
+
+    enemiesKilled += amount;
+}
+
+void Player::recordBossKill()
+{
+    bossesKilled++;
+}
+
+void Player::displayCareerStatistics(DifficultyMode difficulty) const
+{
+    std::cout << "===== STATISTIQUES DE PARCOURS =====" << std::endl;
+    std::cout << "Combats lancés : " << combatsStarted << std::endl;
+    std::cout << "Victoires : " << victories << std::endl;
+    std::cout << "Défaites : " << defeats << std::endl;
+    std::cout << "Fuites : " << escapes << std::endl;
+
+    if (difficulty == DifficultyMode::Lethal)
+    {
+        std::cout << "Morts du personnage : [STATISTIQUE CORROMPUE]" << std::endl;
+        std::cout << "But de mission : survivre." << std::endl;
+        std::cout << "Vous ne deviez pas mourir." << std::endl;
+    }
+    else
+    {
+        std::cout << "Morts du personnage : " << deaths << std::endl;
+    }
+
+    std::cout << "Ennemis tués : " << enemiesKilled << std::endl;
+    std::cout << "Boss vaincus : " << bossesKilled << std::endl;
+    std::cout << "====================================" << std::endl;
+    std::cout << std::endl;
+}
+
+bool Player::isAlteredByCheats() const
+{
+    return alteredByCheats;
+}
+
+bool Player::isGodModeEnabled() const
+{
+    return godModeEnabled;
+}
+
+bool Player::hasInfiniteConsumables() const
+{
+    return infiniteConsumablesEnabled;
+}
+
+bool Player::hasIndestructibleEquipment() const
+{
+    return indestructibleEquipmentEnabled;
+}
+
+bool Player::hasEquipmentProtection() const
+{
+    return equipmentProtectionEnabled;
+}
+
+bool Player::hasStorySkip() const
+{
+    return storySkipEnabled;
+}
+
+int Player::getRefundUsesRemaining() const
+{
+    return refundUsesRemaining;
+}
+
+
+bool Player::isGodModeKnown() const
+{
+    return godModeKnown;
+}
+
+bool Player::isInfiniteConsumablesKnown() const
+{
+    return infiniteConsumablesKnown;
+}
+
+bool Player::isIndestructibleEquipmentKnown() const
+{
+    return indestructibleEquipmentKnown;
+}
+
+bool Player::isEquipmentProtectionKnown() const
+{
+    return equipmentProtectionKnown;
+}
+
+bool Player::isStorySkipKnown() const
+{
+    return storySkipKnown;
+}
+
+bool Player::isCreatorMessageKnown() const
+{
+    return creatorMessageKnown;
+}
+
+int Player::getGoldCheatUseCount() const
+{
+    return goldCheatUseCount;
+}
+
+int Player::getLevelCheatUseCount() const
+{
+    return levelCheatUseCount;
+}
+
+int Player::getMaxLevelCheatUseCount() const
+{
+    return maxLevelCheatUseCount;
+}
+
+int Player::getRefundCheatUseCount() const
+{
+    return refundCheatUseCount;
+}
+
+int Player::getResetCheatUseCount() const
+{
+    return resetCheatUseCount;
+}
+
+int Player::getSwitchClassCheatUseCount() const
+{
+    return switchClassCheatUseCount;
+}
+
+void Player::setCheatState(
+    bool altered,
+    bool godMode,
+    bool infiniteConsumables,
+    bool indestructibleEquipment,
+    bool equipmentProtection,
+    bool storySkip,
+    int refundUses
+)
+{
+    alteredByCheats = altered;
+    godModeEnabled = godMode;
+    infiniteConsumablesEnabled = infiniteConsumables;
+    indestructibleEquipmentEnabled = indestructibleEquipment;
+    equipmentProtectionEnabled = equipmentProtection;
+    storySkipEnabled = storySkip;
+
+    if (godMode)
+    {
+        godModeKnown = true;
+    }
+
+    if (infiniteConsumables)
+    {
+        infiniteConsumablesKnown = true;
+    }
+
+    if (indestructibleEquipment)
+    {
+        indestructibleEquipmentKnown = true;
+    }
+
+    if (equipmentProtection)
+    {
+        equipmentProtectionKnown = true;
+    }
+
+    if (storySkip)
+    {
+        storySkipKnown = true;
+    }
+
+    if (refundUses < 0)
+    {
+        refundUses = 0;
+    }
+
+    if (refundUses > 3)
+    {
+        refundUses = 3;
+    }
+
+    refundUsesRemaining = refundUses;
+}
+
+void Player::markAsAlteredByCheats()
+{
+    alteredByCheats = true;
+}
+
+bool Player::toggleGodMode()
+{
+    alteredByCheats = true;
+    godModeKnown = true;
+    godModeEnabled = !godModeEnabled;
+    return godModeEnabled;
+}
+
+bool Player::toggleInfiniteConsumables()
+{
+    alteredByCheats = true;
+    infiniteConsumablesKnown = true;
+    infiniteConsumablesEnabled = !infiniteConsumablesEnabled;
+    return infiniteConsumablesEnabled;
+}
+
+bool Player::toggleIndestructibleEquipment()
+{
+    alteredByCheats = true;
+    indestructibleEquipmentKnown = true;
+    indestructibleEquipmentEnabled = !indestructibleEquipmentEnabled;
+    return indestructibleEquipmentEnabled;
+}
+
+bool Player::toggleEquipmentProtection()
+{
+    alteredByCheats = true;
+    equipmentProtectionKnown = true;
+    equipmentProtectionEnabled = !equipmentProtectionEnabled;
+    return equipmentProtectionEnabled;
+}
+
+bool Player::toggleStorySkip()
+{
+    alteredByCheats = true;
+    storySkipKnown = true;
+    storySkipEnabled = !storySkipEnabled;
+    return storySkipEnabled;
+}
+
+void Player::enableGodMode()
+{
+    alteredByCheats = true;
+    godModeKnown = true;
+    godModeEnabled = true;
+}
+
+void Player::enableInfiniteConsumables()
+{
+    alteredByCheats = true;
+    infiniteConsumablesKnown = true;
+    infiniteConsumablesEnabled = true;
+}
+
+void Player::enableIndestructibleEquipment()
+{
+    alteredByCheats = true;
+    indestructibleEquipmentKnown = true;
+    indestructibleEquipmentEnabled = true;
+}
+
+void Player::enableEquipmentProtection()
+{
+    alteredByCheats = true;
+    equipmentProtectionKnown = true;
+    equipmentProtectionEnabled = true;
+}
+
+void Player::enableStorySkip()
+{
+    alteredByCheats = true;
+    storySkipKnown = true;
+    storySkipEnabled = true;
+}
+
+void Player::markCreatorMessageSeen()
+{
+    alteredByCheats = true;
+    creatorMessageKnown = true;
+}
+
+void Player::recordGoldCheatUse()
+{
+    alteredByCheats = true;
+    goldCheatUseCount++;
+}
+
+void Player::recordLevelCheatUse()
+{
+    alteredByCheats = true;
+    levelCheatUseCount++;
+}
+
+void Player::recordMaxLevelCheatUse()
+{
+    alteredByCheats = true;
+    maxLevelCheatUseCount++;
+}
+
+void Player::recordRefundCheatUse()
+{
+    alteredByCheats = true;
+    refundCheatUseCount++;
+}
+
+void Player::recordResetCheatUse()
+{
+    alteredByCheats = true;
+    resetCheatUseCount++;
+}
+
+void Player::recordSwitchClassCheatUse()
+{
+    alteredByCheats = true;
+    switchClassCheatUseCount++;
+}
+
+bool Player::consumeRefundUse()
+{
+    alteredByCheats = true;
+
+    if (refundUsesRemaining <= 0)
+    {
+        return false;
+    }
+
+    refundUsesRemaining--;
+    return true;
+}
+
+void Player::forceLevelToMaximum()
+{
+    alteredByCheats = true;
+
+    while (level < MAX_LEVEL)
+    {
+        levelUp();
+    }
+
+    experience = 0;
+}
+
+void Player::gainOneLevelByCheat()
+{
+    alteredByCheats = true;
+    levelUp();
+}
+
+void Player::takeDamage(int damage)
+{
+    if (godModeEnabled && damage > 0)
+    {
+        std::cout << name << " devrait perdre " << damage << " PV, mais le mode god refuse la réalité." << std::endl;
+        std::cout << std::endl;
+        return;
+    }
+
+    Entity::takeDamage(damage);
 }
 
 void Player::applyFlatStatBonus(
@@ -418,9 +1002,16 @@ void Player::gainExperience(int amount)
 
     experience += amount;
 
-    while (experience >= 100 && level < MAX_LEVEL)
+    while (level < MAX_LEVEL)
     {
-        experience -= 100;
+        int experienceRequired = Level::getExperienceRequiredForNextLevel(level);
+
+        if (experienceRequired <= 0 || experience < experienceRequired)
+        {
+            break;
+        }
+
+        experience -= experienceRequired;
         levelUp();
     }
 
@@ -470,6 +1061,7 @@ void Player::levelUp()
 
     std::cout << name << " monte au niveau " << level << " !" << std::endl;
     std::cout << "Ses blessures se referment, et sa puissance augmente." << std::endl;
+    std::cout << "Les attributs avancés sont préparés, mais pas encore actifs dans cette version." << std::endl;
     std::cout << std::endl;
 }
 
@@ -499,7 +1091,7 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         return 0;
     }
 
-    if (equippedWeapon != nullptr)
+    if (equippedWeapon != nullptr && !indestructibleEquipmentEnabled)
     {
         equippedWeapon->loseDurability(1);
     }
@@ -530,10 +1122,25 @@ void Player::displayStats() const
     std::cout << "Race : " << getRaceText() << std::endl;
     std::cout << "Classe : " << type << std::endl;
     std::cout << "Niveau : " << level << std::endl;
-    std::cout << "Expérience : " << experience << "/100" << std::endl;
+    int nextLevelExperience = Level::getExperienceRequiredForNextLevel(level);
+
+    if (nextLevelExperience > 0)
+    {
+        std::cout << "Expérience : " << experience << "/" << nextLevelExperience << std::endl;
+    }
+    else
+    {
+        std::cout << "Expérience : niveau maximum" << std::endl;
+    }
     std::cout << "PV : " << hp << "/" << maxHp << std::endl;
     std::cout << "Dégâts de base : " << minDamage << " - " << maxDamage << std::endl;
     std::cout << "Critique de base : " << criticalDamage << std::endl;
+
+    if (alteredByCheats)
+    {
+        std::cout << "Statut : Altéré" << std::endl;
+        std::cout << "Les souvenirs de ce personnage portent déjà une trace anormale." << std::endl;
+    }
 
     std::cout << "Potions de soin : "
               << inventory.countConsumables(ConsumableType::Healing)

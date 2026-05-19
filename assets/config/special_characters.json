@@ -1,6 +1,6 @@
 {
     "title": "Dinotofu special characters",
-    "note": "Prepared data file. Special dates will be filled later by the creator. Matt (PRO) is a separate non-playable reference AI; other special characters can appear through arena random draws.",
+    "note": "Prepared data file. Special dates are now configured for protected playable identities. Matt (PRO) stays non-playable, but can still appear as a special arena opponent.",
     "characters": [
         {
             "name": "Matt (PRO)",
@@ -11,7 +11,8 @@
             "description": "Direct reference to Matt from Wii Sports. Separate non-playable reference AI, no class specialty, globally better in every class.",
             "appearsThrough": "Dedicated Matt (PRO) option, not manual opponent creation.",
             "personality": "Reference opponent; also part of special arena draw. No native class speciality, globally better in every class.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "none"
         },
         {
             "name": "Hazak",
@@ -22,7 +23,9 @@
             "description": "Protected special identity. Dark elf assassin.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Dark, efficient assassin. Direct, arrogant, focused on winning.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Mattzelda",
@@ -33,7 +36,9 @@
             "description": "Protected special identity. Human colossus.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Big joker with colossus energy.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Aoi",
@@ -44,7 +49,9 @@
             "description": "Future flame mage, kitsune summoner, also uses a katana.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Shy kitsune caster, but fiercely protects her incantations.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Kanadé",
@@ -55,7 +62,9 @@
             "description": "Random zodiac spell mage linked to the 13 zodiac signs.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Rageful complainer, complains about everything but remains determined.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Fail",
@@ -66,7 +75,9 @@
             "description": "Mad fairy mage with many spell types and some unique spells.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Experiments, improves, and eradicates threats in the most spectacular way possible.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Trexof",
@@ -77,7 +88,9 @@
             "description": "Human assassin with slight bonuses; main beta tester.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Human assassin, main beta tester, focused and dangerous.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Skuro",
@@ -88,7 +101,9 @@
             "description": "Tank with heavy two-handed sword. Low accuracy, huge damage.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Greedy for clean cuts and decapitation. Loves when his blade enters matter.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Sanctus",
@@ -99,7 +114,9 @@
             "description": "Protection and hindrance specialist using beliefs linked to a god of light.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Protector and hindrance specialist. Defends himself if someone blocks his path.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Hestia",
@@ -110,7 +127,9 @@
             "description": "Almost everything is null except magic. Magic grows stronger every use, hit or miss. Starts with max-level protection dome.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Fearful mage. Charges in with eyes closed because she is scared, and would avoid combat if possible.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Fire Flight",
@@ -121,7 +140,9 @@
             "description": "Basic stats, but under 50% HP gains much better dodge and almost guaranteed critical hits.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Commander and leader. Struggles to understand that humans and semi-humans can be hostile. Likes projectile rain.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Louis",
@@ -132,7 +153,9 @@
             "description": "Precise artificer using multiple projectiles per attack.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
             "personality": "Naive, friendly artificer looking for friends.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         },
         {
             "name": "Henrique",
@@ -143,7 +166,9 @@
             "description": "Special knight able to come back to life once in future systems. Charges straight into danger.",
             "personality": "Frontal knight. Rushes into battle and can return once from death later.",
             "appearsThrough": "Arena random draw only, unless unlocked as a protected playable identity with special date.",
-            "dialoguesPrepared": true
+            "dialoguesPrepared": true,
+            "specialDate": "configured",
+            "specialDateFormat": "DD/MM/YYYY"
         }
     ]
 }

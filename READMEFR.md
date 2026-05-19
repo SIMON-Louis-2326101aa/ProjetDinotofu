@@ -386,6 +386,14 @@ Une première base de slots de combat est aussi prête pour les futurs combats d
 
 ## Mise à jour récente : groupes visibles et actions de rôle   
    
+## Système de compte et personnages locaux   
+
+Au lancement, le joueur peut choisir un compte existant ou créer / utiliser un nouveau compte. Si le nom est vide, le compte `local` est utilisé.   
+Quand un compte existant est sélectionné, le jeu propose maintenant `Se connecter`, `Supprimer` ou `Retour`. Supprimer un compte supprime aussi tous les personnages liés à ce compte.   
+Après le choix du compte, le joueur peut choisir un personnage existant ou en créer un nouveau.   
+Quand un personnage existant est sélectionné, le jeu propose maintenant `Incarner`, `Supprimer` ou `Retour`.   
+La sauvegarde recharge actuellement l'identité, la progression simple, l'or, l'équipement, les armes, armures, consommables et matériaux / renseignements empilables.   
+
 Cette version ajoute un vrai pont entre l'ancien système de combat et le futur système de combat par slots.   
 Le PvP IA et le PvE affichent maintenant des groupes visibles construits avec le joueur, les ennemis et les invocations actives.   
 Le nouveau `CombatGroupBuilder` prépare la future sélection de cible sans casser les anciens menus.   
@@ -418,3 +426,35 @@ Les boutiques sont prévues avant le bestiaire global.
 Elles pourront se renouveler après chaque combat, même hors mode histoire.  
 Les types prévus sont : boutique de monstres, matériaux, plantes, armures, armes, consommables et bibliothèque.  
 La bibliothèque servira notamment à acheter des renseignements communs et des bases de magie, ce qui préparera le futur bestiaire.  
+
+## Mise à jour récente : codes cachés et données altérées   
+
+Les codes ne sont plus affichés ouvertement pour un personnage propre.   
+Hors combat, le joueur peut entrer une commande cachée à la place d'un choix numérique.   
+Si la commande est reconnue, l'avertissement de première altération apparaît et le personnage devient définitivement `Altéré` si le joueur accepte.   
+
+Une fois le personnage altéré, le menu après-combat révèle `6 : Données altérées`.   
+Ce menu liste les altérations connues, leurs effets, leur état actif/inactif, et permet d'entrer une nouvelle commande.   
+Les altérations à bascule peuvent être entrées une nouvelle fois pour être désactivées, puis encore une fois pour être réactivées.   
+Le personnage reste altéré pour toujours, même si toutes les altérations sont désactivées.   
+
+Le menu après-combat contient maintenant aussi :   
+- `0 : Continuer`, pour revenir au choix du mode de jeu ;   
+- `4 : Sauvegarde rapide`, pour sauvegarder sans quitter ;   
+- `5 : Sauvegarder et quitter`, pour sauvegarder puis terminer la session.   
+
+## Mise à jour récente : dates spéciales et bestiaire persistant   
+
+Les identités spéciales protégées peuvent maintenant être validées à la création du personnage avec une date spéciale au format `DD/MM/YYYY`. Matt (PRO) reste non jouable. Les autres personnages protégés demandent une confirmation, puis une date correcte. Si l'identité est reconnue, la race est verrouillée par l'histoire du personnage, mais la classe reste sélectionnable.   
+
+Le bestiaire de session est aussi sauvegardé dans la sauvegarde du personnage : rencontres, ennemis tués et renseignements achetés peuvent maintenant revenir après chargement. Ce n'est pas encore le bestiaire final complet, mais la base persistante est branchée.   
+
+
+## Mise à jour - Progression des attributs   
+
+- Chaque montée de niveau donne maintenant 2 points d'attribut.   
+- Le menu après-combat contient maintenant un menu pour améliorer les attributs.   
+- Les attributs sont inspirés de DND : Force, Dextérité, Constitution, Intelligence, Sagesse et Charisme.   
+- Force, Dextérité et Constitution donnent déjà de petits bonus directs en combat.   
+- Intelligence, Sagesse et Charisme sont sauvegardés et préparés pour les futurs systèmes de magie, invocations, dialogues, pactes et évolutions de classe.   
+- Les valeurs d'attributs et les points non dépensés sont sauvegardés et rechargés avec le personnage.   

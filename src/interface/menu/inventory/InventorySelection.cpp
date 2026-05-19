@@ -289,7 +289,11 @@ bool InventorySelection::openConsumables(Player& player)
 
         player.heal(consumable.getPower());
         ThreatSystem::markSelfHealingAction(player);
-        player.getInventory().removeConsumable(index);
+
+        if (!player.hasInfiniteConsumables())
+        {
+            player.getInventory().removeConsumable(index);
+        }
 
         std::cout << player.getName() << " utilise : " << consumable.getName() << "." << std::endl;
         std::cout << "Ses blessures se referment, et il récupère "

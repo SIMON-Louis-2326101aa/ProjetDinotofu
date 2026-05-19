@@ -427,10 +427,11 @@ A full French design summary is available in `SPECIAL_CHARACTERS_AND_CHEATS.txt`
 
 The game now prepares an `assets/saves/` directory automatically.   
 At startup, the player can select an existing local account or create/use a new one. If the account name is left empty, the `local` account is used.   
+When an existing account is selected, the player can now choose `Log in`, `Delete`, or `Back`. Deleting an account also deletes every linked character save.   
 After the account step, the player can select an existing playable character for that account or create a new one.   
+When an existing character is selected, the player can now choose `Play as`, `Delete`, or `Back`.   
 A JSON snapshot of the character is saved after character creation and after a combat session.   
-The current loader restores the main character identity and progression data: name, race, class, difficulty, level, experience, HP, gold and equipped starter equipment indexes.   
-Full inventory serialization is still planned later, so loaded characters rebuild their base inventory from class and difficulty for now.   
+The current loader restores the main character identity and progression data: name, race, class, difficulty, level, experience, HP, gold, equipped items, weapons, armors, consumables and stackable materials/information items.   
 
 This system prepares the foundation for future account saves, character saves, dead character archives, bestiary progress, material progress, statistics, blessings and cheat states.   
 
@@ -485,3 +486,35 @@ Shops are now planned before the full global bestiary.
 They will be able to refresh after each fight, even outside story mode.  
 Planned shop types include monster materials, materials, plants, armor, weapons, consumables and library knowledge.  
 The library will later sell common information and magic knowledge, preparing the future bestiary system.  
+
+## Recent update: hidden altered data system   
+
+Cheat codes are no longer shown openly to a clean character.   
+Outside combat, the player can enter a hidden command instead of a numeric menu choice.   
+If the command is recognized, the first alteration warning appears and the character becomes permanently `Altered` if the player accepts.   
+
+Once the character is altered, the post-combat menu reveals `6 : Données altérées`.   
+This menu lists known alterations, their effects, their active/inactive state, and lets the player enter another command.   
+Toggle-based alterations can be entered again to disable them, then entered again to enable them.   
+The character remains altered forever, even if every alteration is disabled.   
+
+The post-combat menu now also has:   
+- `0 : Continuer`, returning to game mode selection;   
+- `4 : Sauvegarde rapide`, saving without leaving;   
+- `5 : Sauvegarder et quitter`, saving then ending the current session.   
+
+## Recent update: special dates and persistent bestiary   
+
+Protected special identities can now be validated during character creation with a special date using the `DD/MM/YYYY` format. Matt (PRO) remains non-playable. Other protected characters ask for confirmation and then require the correct special date. When the identity is recognized, the character race is locked by story identity, but the class can still be selected.   
+
+The runtime bestiary is now also saved inside the character snapshot: encounters, kills and bought information can be restored after loading. This is not the final full bestiary yet, but the persistent base is connected.   
+
+
+## Update - Attribute Progression   
+
+- Level up now grants 2 attribute points.   
+- The post-combat menu now includes an attribute menu.   
+- Attributes are DND-inspired: Strength, Dexterity, Constitution, Intelligence, Wisdom and Charisma.   
+- Strength, Dexterity and Constitution already give small direct combat benefits.   
+- Intelligence, Wisdom and Charisma are saved and prepared for future magic, summons, dialogue, pact and class evolution systems.   
+- Attribute values and unused points are saved and restored with the character.   

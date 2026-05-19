@@ -694,3 +694,173 @@ Ordre de développement mis à jour :
 4. Cheats réels.
 5. Boutiques / économie.
 6. Bestiaire global propre.
+
+## Mise à jour - premier passage boutiques utilisables
+
+État actuel :
+- Un menu d'après-combat existe maintenant.
+- Après un combat, le joueur peut ouvrir les boutiques avant de quitter la session.
+- Les boutiques signalent quand elles viennent d'être renouvelées après combat.
+- Les prix utilisent déjà les règles de race prévues, notamment le malus commercial des races démoniaques.
+- Les achats réels branchés pour le moment sont :
+  - Potion de soin.
+  - Potion de rage.
+  - Épée rouillée.
+  - Armure en cuir usée.
+- Les plantes, matériaux, livres et informations de bibliothèque restent visibles, mais indiquent clairement qu'ils sont préparés pour plus tard et ne dépensent pas d'or.
+- Les sauvegardes de personnage écrivent maintenant aussi un snapshot lisible de l'inventaire : armes, armures et consommables.
+
+Important :
+- Le snapshot d'inventaire est sauvegardé pour lecture/debug, mais le chargement complet de l'inventaire n'est pas encore branché.
+- La prochaine vraie étape logique sera donc de charger cet inventaire au lieu de reconstruire seulement le kit de départ.
+
+Nouvel ordre conseillé :
+1. Charger réellement l'inventaire sauvegardé.
+2. Ajouter les matériaux/plantes comme vrais objets empilables.
+3. Brancher l'achat des matériaux/plantes/informations de bibliothèque.
+4. Ajouter la revente simple, avec prudence pour éviter de vendre l'équipement équipé par erreur.
+5. Ensuite seulement, commencer le bestiaire global propre.
+
+## Mise à jour - gestion compte/personnage
+
+État actuel :
+- Lorsqu'un compte existant est sélectionné, le joueur peut choisir : Se connecter, Supprimer, Retour.
+- Supprimer un compte supprime aussi les personnages liés à ce compte.
+- Lorsqu'un personnage existant est sélectionné, le joueur peut choisir : Incarner, Supprimer, Retour.
+- Les suppressions demandent une confirmation en tapant SUPPRIMER pour éviter les erreurs idiotes.
+- La sauvegarde écrit et recharge maintenant aussi les matériaux, plantes, livres et renseignements empilables.
+
+Ce qu'il faudra améliorer plus tard :
+- Ajouter une corbeille / archive optionnelle si on veut éviter les pertes définitives accidentelles.
+- Afficher plus de détails sur un personnage avant suppression : difficulté, temps joué, morts, statut altéré, etc.
+- Relier les personnages morts en Léthal à un historique consultable depuis le compte.
+
+## Mise à jour - données altérées cachées
+
+État actuel :
+- Les codes de triche ne sont plus affichés à un personnage non altéré.
+- Hors combat, une commande peut être entrée discrètement à la place d'un chiffre de menu.
+- Le premier code reconnu affiche un avertissement avant de marquer le personnage comme Altéré.
+- Le statut Altéré reste définitif.
+- Après altération, le menu après-combat affiche `6 : Données altérées`.
+- Ce menu permet de voir les altérations connues et d'entrer une autre commande.
+- Les codes à bascule peuvent passer activé -> désactivé -> activé.
+- Les codes instantanés sont comptés comme utilisés.
+- Le menu après-combat possède maintenant Continuer, Sauvegarde rapide, Sauvegarder et quitter.
+
+À améliorer plus tard :
+- Étendre l'entrée cachée à d'autres menus hors combat, pas seulement l'après-combat.
+- Ajouter une interface plus jolie pour les commandes instantanées utilisées.
+- Brancher la séquence spéciale en combat séparément des codes textuels.
+- Ajouter un vrai historique d'altération dans les statistiques du personnage.
+
+============================================================
+PASSAGE AJOUTÉ - Difficultés, loots, bestiaire
+============================================================
+
+- Les difficultés doivent maintenant influencer plus concrètement :
+  - le kit de départ ;
+  - le respawn après mort non définitive ;
+  - les pertes de mort ;
+  - les récompenses de victoire PvE ;
+  - les chances de loot de matériaux.
+
+- Le mode Léthal doit conserver le personnage mort dans le registre des morts et le retirer des personnages jouables quand la mort définitive est déclenchée.
+
+- Les loots de monstres commencent avec des matériaux simples :
+  - oreille de gobelin ;
+  - croc / morceau de bête ;
+  - fragment de métal rouillé ;
+  - feuille de soin amère ;
+  - cuir usé.
+
+- Le bestiaire devient une vraie première interface navigable :
+  - catégories ;
+  - liste simple ;
+  - fiche détaillée ;
+  - nombre de tués préparé ;
+  - règles de noms inconnus pour les boss.
+
+- Le vrai système futur devra encore sauvegarder les découvertes, rencontres, tués, descriptions débloquées et informations achetées.
+
+## Passe ajoutée : loot, niveau, bestiaire en session
+
+- Courbe de niveau centralisée dans `progression/Level`.
+- Niveau maximum confirmé : 255.
+- Le joueur n'est plus bloqué sur un simple `100 XP` fixe : l'expérience nécessaire augmente avec le niveau.
+- Les loots de monstres peuvent maintenant donner plusieurs exemplaires selon :
+  - difficulté ;
+  - niveau du monstre ;
+  - statut élite.
+- Le bestiaire reçoit une première progression en session :
+  - une rencontre ajoute une trace ;
+  - une entité vaincue ajoute un kill ;
+  - l'achat d'informations communes à la bibliothèque débloque des entrées de bestiaire en session.
+- La vraie sauvegarde persistante complète du bestiaire reste à brancher plus tard dans les fichiers de compte/personnage.
+
+## Reste important à faire après cette passe
+
+1. Sauvegarder réellement le bestiaire par compte/personnage au lieu de seulement garder la progression en session.
+2. Relier les statistiques globales du compte aux kills, morts, temps de survie et actions importantes.
+3. Faire évoluer les boutiques avec rotations plus riches et stocks plus variés.
+4. Brancher plus de matériaux, plantes, recettes et réparations.
+5. Ajouter les vraies récompenses de niveau : points DND, évolution de classe, nouvelles compétences.
+6. Continuer les invocations : compétences propres, mana, limites, ciblage avancé.
+7. Finir les boss plus tard avec identité progressive, dialogues et unlock bestiaire.
+
+----------------------------------------------------------
+MISE A JOUR - DATES SPECIALES IMPLEMENTEES
+----------------------------------------------------------
+
+Dates spéciales configurées :
+- Trexof : 09/09/2005
+- Fail : 10/10/2024
+- Skuro : 06/12/2024
+- Sanctus : 06/12/2024
+- Hazak : 08/11/2024
+- Kanadé : 06/12/2024
+- Aoi : 01/12/2024
+- Mattzelda : 15/07/2005
+- Fire Flight / FireFlight : 01/02/2005
+- Louis : 01/02/2005
+- Henrique : 29/11/2024
+- Hestia : 11/11/1111
+
+Implémentation actuelle :
+- Si un joueur entre un nom protégé à la création du personnage, le jeu affiche un avertissement d'identité.
+- Matt (PRO) reste non jouable.
+- Les autres identités protégées demandent une confirmation puis la date spéciale au format DD/MM/YYYY.
+- Si la date est correcte, la race de l'identité est verrouillée par son histoire.
+- Le joueur peut quand même choisir sa classe.
+- Si la classe choisie correspond à la classe native prévue, le bonus natif peut s'activer.
+
+----------------------------------------------------------
+MISE A JOUR - BESTIAIRE SAUVEGARDE
+----------------------------------------------------------
+- Le bestiaire runtime peut maintenant être exporté dans la sauvegarde du personnage.
+- Au chargement d'un personnage, les rencontres, kills et renseignements achetés sont réimportés en session.
+- Ce n'est pas encore le bestiaire final ultra complet, mais la base persistante existe maintenant.
+
+
+## Mise à jour - Attributs mis en attente   
+
+- Les fichiers d'attributs DND restent préparés dans le projet.   
+- Les attributs sont inspirés de DND : Force, Dextérité, Constitution, Intelligence, Sagesse et Charisme.   
+- Ils sont sauvegardés et rechargeables techniquement, mais le menu d'amélioration est retiré pour le moment.   
+- Les montées de niveau donnent maintenant surtout des bonus simples : PV, dégâts et critique.   
+- Objectif : éviter de trop charger le gameplay tant que les classes, monstres, boutiques, bestiaire et sauvegardes ne sont pas totalement stables.   
+- Les attributs reviendront plus tard pour la magie, les invocations, l'initiative, les dialogues, les pactes et les évolutions de classe.   
+
+## Mise à jour - Statistiques de personnage actives   
+
+- Le joueur possède maintenant des statistiques de parcours sauvegardées : combats lancés, victoires, défaites, fuites, morts, ennemis tués et boss vaincus.   
+- Le menu après-combat affiche maintenant les statistiques de base puis les statistiques de parcours.   
+- En difficulté Léthal, le nombre de morts est affiché en version corrompue : le jeu rappelle que le but de mission est de survivre.   
+- Les kills PvE, les victoires de vague, les fuites et les défaites contre les monstres sont comptabilisés.   
+- Les victoires/défaites contre les boss sont aussi comptabilisées.   
+
+## Mise à jour - Bestiaire plus lisible   
+
+- Les listes du bestiaire affichent maintenant surtout le nom, le statut et le nombre de tués.   
+- Les descriptions longues restent dans la fiche détaillée après sélection.   
+- Plusieurs personnages spéciaux ont été ajoutés aux entrées préparées du bestiaire.   

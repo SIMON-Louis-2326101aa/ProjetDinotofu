@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <cctype>
 #include <iostream>
+#include <utility>
+#include <vector>
 
 std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
 {
@@ -29,7 +31,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Hazak possède déjà son histoire, ses cicatrices et son rapport étrange avec la mort.",
             true,
             false,
-            "",
+            "08/11/2024",
             5
         ),
         SpecialCharacter(
@@ -40,7 +42,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Mattzelda transforme l'arène en mur. Le contourner est souvent plus réaliste que le briser.",
             true,
             false,
-            "",
+            "15/07/2005",
             4
         ),
         SpecialCharacter(
@@ -51,7 +53,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Aoi mélange flammes, invocations, agilité kitsune et une lame qu'il vaut mieux ne pas ignorer.",
             true,
             false,
-            "",
+            "01/12/2024",
             4
         ),
         SpecialCharacter(
@@ -62,7 +64,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Kanadé ne contrôle pas toujours ce qui tombe du ciel, mais le ciel répond quand même.",
             true,
             false,
-            "",
+            "06/12/2024",
             4
         ),
         SpecialCharacter(
@@ -73,7 +75,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Fail peut rater un plan, réussir une catastrophe et appeler ça une stratégie.",
             true,
             false,
-            "",
+            "10/10/2024",
             4
         ),
         SpecialCharacter(
@@ -84,7 +86,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Trexof est fait pour apparaître rarement, tester les limites et rappeler que les humains peuvent aussi être dangereux.",
             true,
             false,
-            "",
+            "09/09/2005",
             5
         ),
         SpecialCharacter(
@@ -95,7 +97,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Skuro ne frappe pas souvent. Le problème, c'est quand il touche.",
             true,
             false,
-            "",
+            "06/12/2024",
             4
         ),
         SpecialCharacter(
@@ -106,7 +108,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Sanctus ne vient pas seulement gagner. Il vient imposer une foi, un mur et un jugement.",
             true,
             false,
-            "",
+            "06/12/2024",
             4
         ),
         SpecialCharacter(
@@ -117,7 +119,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Hestia semble fragile jusqu'au moment où la magie commence à apprendre à travers elle.",
             true,
             false,
-            "",
+            "11/11/1111",
             3
         ),
         SpecialCharacter(
@@ -128,7 +130,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Fire Flight n'est pas le plus fort sur le papier. Malheureusement, le papier ne code pas les règles.",
             true,
             false,
-            "",
+            "01/02/2005",
             2
         ),
         SpecialCharacter(
@@ -139,7 +141,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Louis cherche surtout des alliés. Il est naïf, gentil de base, mais ses projectiles n'attendent pas toujours la fin de la discussion.",
             true,
             false,
-            "",
+            "01/02/2005",
             4
         ),
         SpecialCharacter(
@@ -150,7 +152,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Henrique fonce dans le tas avec une foi simple : tomber une fois n'est pas une raison suffisante pour s'arrêter.",
             true,
             false,
-            "",
+            "29/11/2024",
             4
         )
     };
@@ -253,12 +255,35 @@ std::string SpecialCharacterCatalog::normalizeName(const std::string& name)
         }
     );
 
-    std::string::size_type position = 0;
-    while ((position = normalized.find("é", position)) != std::string::npos)
+    const std::vector<std::pair<std::string, std::string>> replacements = {
+        {"é", "e"}, {"è", "e"}, {"ê", "e"}, {"ë", "e"},
+        {"à", "a"}, {"â", "a"}, {"ä", "a"},
+        {"î", "i"}, {"ï", "i"},
+        {"ô", "o"}, {"ö", "o"},
+        {"ù", "u"}, {"û", "u"}, {"ü", "u"},
+        {"ç", "c"}
+    };
+
+    for (const auto& replacement : replacements)
     {
-        normalized.replace(position, 2, "e");
-        position += 1;
+        std::string::size_type position = 0;
+
+        while ((position = normalized.find(replacement.first, position)) != std::string::npos)
+        {
+            normalized.replace(position, replacement.first.size(), replacement.second);
+            position += replacement.second.size();
+        }
     }
 
-    return normalized;
+    std::string compact;
+
+    for (unsigned char character : normalized)
+    {
+        if (std::isalnum(character))
+        {
+            compact += static_cast<char>(character);
+        }
+    }
+
+    return compact;
 }

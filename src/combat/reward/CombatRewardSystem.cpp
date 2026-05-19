@@ -105,6 +105,20 @@ CombatReward CombatRewardSystem::calculateWaveReward(const EnemyCombatQueue& wav
     return totalReward;
 }
 
+
+CombatReward CombatRewardSystem::calculateWaveReward(
+    const EnemyCombatQueue& wave,
+    DifficultyMode difficulty
+)
+{
+    CombatReward baseReward = calculateWaveReward(wave);
+
+    return baseReward.getModified(
+        DifficultyRules::getVictoryExperienceRewardPercentage(difficulty),
+        DifficultyRules::getVictoryGoldRewardPercentage(difficulty)
+    );
+}
+
 CombatReward CombatRewardSystem::calculatePlayerEscapeReward(const EnemyCombatQueue& wave)
 {
     CombatReward totalReward;

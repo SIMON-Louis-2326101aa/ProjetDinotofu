@@ -9,6 +9,7 @@
 #include "item/Inventory.hpp"
 #include "progression/DifficultyMode.hpp"
 #include "character/CharacterRace.hpp"
+#include "progression/DndAttributes.hpp"
 
 class Player : public Entity
 {
@@ -23,6 +24,39 @@ private:
     int equippedWeaponIndex;
     int equippedArmorIndex;
     CharacterRace race;
+    DndAttributes attributes;
+    int unspentAttributePoints;
+
+    int combatsStarted;
+    int victories;
+    int defeats;
+    int escapes;
+    int deaths;
+    int enemiesKilled;
+    int bossesKilled;
+
+    bool alteredByCheats;
+    bool godModeEnabled;
+    bool infiniteConsumablesEnabled;
+    bool indestructibleEquipmentEnabled;
+    bool equipmentProtectionEnabled;
+    bool storySkipEnabled;
+
+    bool godModeKnown;
+    bool infiniteConsumablesKnown;
+    bool indestructibleEquipmentKnown;
+    bool equipmentProtectionKnown;
+    bool storySkipKnown;
+    bool creatorMessageKnown;
+
+    int goldCheatUseCount;
+    int levelCheatUseCount;
+    int maxLevelCheatUseCount;
+    int refundCheatUseCount;
+    int resetCheatUseCount;
+    int switchClassCheatUseCount;
+
+    int refundUsesRemaining;
 
     int getEquippedArmorMaxHpBonus() const;
     void applyRaceStartingBonus(CharacterRace selectedRace);
@@ -37,12 +71,103 @@ public:
 
     int getLevel() const;
     int getExperience() const;
+    int getUnspentAttributePoints() const;
+    const DndAttributes& getAttributes() const;
 
     CharacterRace getRace() const;
     std::string getRaceText() const;
     void setRace(CharacterRace selectedRace);
     void applyFlatStatBonus(int maxHpBonus, int minDamageBonus, int maxDamageBonus, int criticalDamageBonus);
     void setLoadedProgress(int loadedLevel, int loadedExperience, int loadedHp);
+    void setLoadedAttributes(const DndAttributes& loadedAttributes, int loadedUnspentPoints);
+    bool spendAttributePoint(int attributeChoice);
+    void displayAttributes() const;
+
+    int getCombatsStarted() const;
+    int getVictories() const;
+    int getDefeats() const;
+    int getEscapes() const;
+    int getDeaths() const;
+    int getEnemiesKilled() const;
+    int getBossesKilled() const;
+
+    void setLoadedStatistics(
+        int loadedCombatsStarted,
+        int loadedVictories,
+        int loadedDefeats,
+        int loadedEscapes,
+        int loadedDeaths,
+        int loadedEnemiesKilled,
+        int loadedBossesKilled
+    );
+
+    void recordCombatStarted();
+    void recordVictory();
+    void recordDefeat();
+    void recordEscape();
+    void recordDeath();
+    void recordEnemyKills(int amount);
+    void recordBossKill();
+    void displayCareerStatistics(DifficultyMode difficulty) const;
+
+    bool isAlteredByCheats() const;
+    bool isGodModeEnabled() const;
+    bool hasInfiniteConsumables() const;
+    bool hasIndestructibleEquipment() const;
+    bool hasEquipmentProtection() const;
+    bool hasStorySkip() const;
+    int getRefundUsesRemaining() const;
+
+    bool isGodModeKnown() const;
+    bool isInfiniteConsumablesKnown() const;
+    bool isIndestructibleEquipmentKnown() const;
+    bool isEquipmentProtectionKnown() const;
+    bool isStorySkipKnown() const;
+    bool isCreatorMessageKnown() const;
+
+    int getGoldCheatUseCount() const;
+    int getLevelCheatUseCount() const;
+    int getMaxLevelCheatUseCount() const;
+    int getRefundCheatUseCount() const;
+    int getResetCheatUseCount() const;
+    int getSwitchClassCheatUseCount() const;
+
+    void setCheatState(
+        bool altered,
+        bool godMode,
+        bool infiniteConsumables,
+        bool indestructibleEquipment,
+        bool equipmentProtection,
+        bool storySkip,
+        int refundUses
+    );
+
+    void markAsAlteredByCheats();
+
+    bool toggleGodMode();
+    bool toggleInfiniteConsumables();
+    bool toggleIndestructibleEquipment();
+    bool toggleEquipmentProtection();
+    bool toggleStorySkip();
+
+    void enableGodMode();
+    void enableInfiniteConsumables();
+    void enableIndestructibleEquipment();
+    void enableEquipmentProtection();
+    void enableStorySkip();
+
+    void markCreatorMessageSeen();
+    void recordGoldCheatUse();
+    void recordLevelCheatUse();
+    void recordMaxLevelCheatUse();
+    void recordRefundCheatUse();
+    void recordResetCheatUse();
+    void recordSwitchClassCheatUse();
+    bool consumeRefundUse();
+    void forceLevelToMaximum();
+    void gainOneLevelByCheat();
+
+    void takeDamage(int damage) override;
 
     Inventory& getInventory();
     const Inventory& getInventory() const;

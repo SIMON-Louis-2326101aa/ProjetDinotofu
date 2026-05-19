@@ -47,6 +47,51 @@ int DifficultyRules::getPlayerPveEscapeDamagedAliveRewardPercentage(DifficultyMo
     }
 }
 
+
+int DifficultyRules::getVictoryExperienceRewardPercentage(DifficultyMode difficulty)
+{
+    switch (difficulty)
+    {
+        case DifficultyMode::Easy:
+            return 90;
+
+        case DifficultyMode::Hard:
+            return 115;
+
+        case DifficultyMode::Nightmare:
+            return 130;
+
+        case DifficultyMode::Lethal:
+            return 150;
+
+        case DifficultyMode::Normal:
+        default:
+            return 100;
+    }
+}
+
+int DifficultyRules::getVictoryGoldRewardPercentage(DifficultyMode difficulty)
+{
+    switch (difficulty)
+    {
+        case DifficultyMode::Easy:
+            return 110;
+
+        case DifficultyMode::Hard:
+            return 90;
+
+        case DifficultyMode::Nightmare:
+            return 75;
+
+        case DifficultyMode::Lethal:
+            return 65;
+
+        case DifficultyMode::Normal:
+        default:
+            return 100;
+    }
+}
+
 int DifficultyRules::getNonLethalDeathInventoryLossPercentage(DifficultyMode difficulty)
 {
     switch (difficulty)

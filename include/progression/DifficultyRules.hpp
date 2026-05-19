@@ -11,6 +11,8 @@ class DifficultyRules
 public:
     static int getPlayerPveEscapeDefeatedRewardPercentage(DifficultyMode difficulty);
     static int getPlayerPveEscapeDamagedAliveRewardPercentage(DifficultyMode difficulty);
+    static int getVictoryExperienceRewardPercentage(DifficultyMode difficulty);
+    static int getVictoryGoldRewardPercentage(DifficultyMode difficulty);
 
     static int getNonLethalDeathInventoryLossPercentage(DifficultyMode difficulty);
     static int getNonLethalDeathGoldLossPercentage(DifficultyMode difficulty);

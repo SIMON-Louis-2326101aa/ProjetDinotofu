@@ -30,6 +30,10 @@ public:
         DifficultyMode difficulty
     );
     static CombatReward calculateWaveReward(const EnemyCombatQueue& wave);
+    static CombatReward calculateWaveReward(
+        const EnemyCombatQueue& wave,
+        DifficultyMode difficulty
+    );
 
     static CombatReward calculatePlayerEscapeReward(const EnemyCombatQueue& wave);
     static CombatReward calculatePlayerEscapeReward(

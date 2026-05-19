@@ -1,17 +1,15 @@
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
-// English: Displays the shop menu shown between fights and in towns.
-// Français : Affiche le menu de boutique visible entre les combats et dans les villes.
+// Description: Lets the player spend DND-inspired attribute points after leveling up.
 
-#ifndef INCLUDE_INTERFACE_MENU_SHOP_SHOPMENU_HPP
-#define INCLUDE_INTERFACE_MENU_SHOP_SHOPMENU_HPP
+#ifndef INCLUDE_INTERFACE_MENU_PROGRESSION_ATTRIBUTEMENU_HPP
+#define INCLUDE_INTERFACE_MENU_PROGRESSION_ATTRIBUTEMENU_HPP
 
 #include "entity/Player.hpp"
 
-class ShopMenu
+class AttributeMenu
 {
 public:
-    static void displayPreview();
     static void open(Player& player);
 };
 

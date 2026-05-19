@@ -66,6 +66,18 @@ int Inventory::getConsumableCount() const
     return static_cast<int>(consumables.size());
 }
 
+int Inventory::getMaterialCount() const
+{
+    int total = 0;
+
+    for (const Material& material : materials)
+    {
+        total += material.getQuantity();
+    }
+
+    return total;
+}
+
 int Inventory::countConsumables(ConsumableType type) const
 {
     int total = 0;
@@ -96,6 +108,11 @@ const std::vector<Consumable>& Inventory::getConsumables() const
     return consumables;
 }
 
+const std::vector<Material>& Inventory::getMaterials() const
+{
+    return materials;
+}
+
 void Inventory::addWeapon(const Weapon& weapon)
 {
     weapons.push_back(weapon);
@@ -111,6 +128,25 @@ void Inventory::addConsumable(const Consumable& consumable)
     consumables.push_back(consumable);
 }
 
+void Inventory::addMaterial(const Material& material)
+{
+    if (material.getQuantity() <= 0)
+    {
+        return;
+    }
+
+    for (Material& existingMaterial : materials)
+    {
+        if (existingMaterial.getId() == material.getId())
+        {
+            existingMaterial.addQuantity(material.getQuantity());
+            return;
+        }
+    }
+
+    materials.push_back(material);
+}
+
 bool Inventory::hasWeapon(int index) const
 {
     return index >= 0 && index < static_cast<int>(weapons.size());
@@ -124,6 +160,11 @@ bool Inventory::hasArmor(int index) const
 bool Inventory::hasConsumable(int index) const
 {
     return index >= 0 && index < static_cast<int>(consumables.size());
+}
+
+bool Inventory::hasMaterial(int index) const
+{
+    return index >= 0 && index < static_cast<int>(materials.size());
 }
 
 Weapon Inventory::getWeapon(int index) const
@@ -174,6 +215,26 @@ Consumable Inventory::getConsumable(int index) const
     }
 
     return consumables[index];
+}
+
+Material Inventory::getMaterial(int index) const
+{
+    if (!hasMaterial(index))
+    {
+        return Material();
+    }
+
+    return materials[index];
+}
+
+Material* Inventory::getMutableMaterial(int index)
+{
+    if (!hasMaterial(index))
+    {
+        return nullptr;
+    }
+
+    return &materials[index];
 }
 
 int Inventory::findFirstConsumable(ConsumableType type) const
@@ -235,6 +296,35 @@ bool Inventory::removeConsumable(int index)
 
     consumables.erase(consumables.begin() + index);
     return true;
+}
+
+bool Inventory::removeMaterialQuantity(int index, int quantity)
+{
+    if (!hasMaterial(index) || quantity <= 0)
+    {
+        return false;
+    }
+
+    if (!materials[index].removeQuantity(quantity))
+    {
+        return false;
+    }
+
+    if (materials[index].getQuantity() <= 0)
+    {
+        materials.erase(materials.begin() + index);
+    }
+
+    return true;
+}
+
+void Inventory::clearAll()
+{
+    weapons.clear();
+    armors.clear();
+    consumables.clear();
+    materials.clear();
+    or_ = 0;
 }
 
 void Inventory::displayWeaponList() const
@@ -318,6 +408,29 @@ void Inventory::displayConsumableList() const
     std::cout << std::endl;
 }
 
+void Inventory::displayMaterialList() const
+{
+    std::cout << "===== MATÉRIAUX / PLANTES / INFOS =====" << std::endl;
+
+    if (materials.empty())
+    {
+        std::cout << "Aucun matériau, plante ou renseignement stocké." << std::endl;
+        std::cout << std::endl;
+        return;
+    }
+
+    for (int i = 0; i < static_cast<int>(materials.size()); i++)
+    {
+        std::cout << "[" << i << "] "
+                  << materials[i].getName()
+                  << " x" << materials[i].getQuantity()
+                  << " | " << materials[i].getCategory()
+                  << std::endl;
+    }
+
+    std::cout << std::endl;
+}
+
 void Inventory::displaySummary() const
 {
     std::cout << "================ INVENTAIRE ================" << std::endl;
@@ -325,6 +438,7 @@ void Inventory::displaySummary() const
     std::cout << "Armes : " << getWeaponCount() << std::endl;
     std::cout << "Armures : " << getArmorCount() << std::endl;
     std::cout << "Consommables : " << getConsumableCount() << std::endl;
+    std::cout << "Matériaux / plantes / infos : " << getMaterialCount() << std::endl;
     std::cout << "Potions de soin : " << countConsumables(ConsumableType::Healing) << std::endl;
     std::cout << "Potions de rage : " << countConsumables(ConsumableType::Damage) << std::endl;
     std::cout << "============================================" << std::endl;
@@ -418,6 +532,18 @@ void Inventory::inspectConsumable(int index) const
     std::cout << std::endl;
 }
 
+void Inventory::inspectMaterial(int index) const
+{
+    if (!hasMaterial(index))
+    {
+        std::cout << "Cette entrée n'existe pas." << std::endl;
+        std::cout << std::endl;
+        return;
+    }
+
+    materials[index].display();
+}
+
 void Inventory::displayWeapons() const
 {
     displayWeaponList();
@@ -431,6 +557,12 @@ void Inventory::displayArmors() const
 void Inventory::displayConsumables() const
 {
     displayConsumableList();
+    displayMaterialList();
+}
+
+void Inventory::displayMaterials() const
+{
+    displayMaterialList();
 }
 
 void Inventory::display() const
@@ -440,4 +572,5 @@ void Inventory::display() const
     displayWeaponList();
     displayArmorList();
     displayConsumableList();
+    displayMaterialList();
 }

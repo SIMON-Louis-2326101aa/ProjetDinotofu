@@ -37,7 +37,10 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
                 rapport.armorUsed = true;
                 rapport.armorAbsorbedDamage = armorAbsorption;
 
-                armor->loseDurability(1);
+                if (!defendingPlayer->hasIndestructibleEquipment())
+                {
+                    armor->loseDurability(1);
+                }
 
                 if (armor->isBroken())
                 {

@@ -38,7 +38,7 @@ void SpecialCharacterNameGuard::displayIdentityWarning(const SpecialCharacter& c
     else
     {
         std::cout << "Si tu es réellement lié à ce personnage, il faudra le prouver." << std::endl;
-        std::cout << "Entre sa date spéciale au format DD/MM/YYYY lorsque le système sera activé." << std::endl;
+        std::cout << "La date spéciale peut déverrouiller cette identité." << std::endl;
     }
 
     std::cout << std::endl;

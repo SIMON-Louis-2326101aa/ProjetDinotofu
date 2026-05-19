@@ -18,6 +18,7 @@ public:
     void addReward(const CombatReward& reward);
 
     CombatReward getPercentage(int percentage) const;
+    CombatReward getModified(int experiencePercentage, int goldPercentage) const;
 
 private:
     int experience;

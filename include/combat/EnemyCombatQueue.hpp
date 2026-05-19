@@ -34,6 +34,7 @@ public:
 
     Monster& getActiveEnemy(int index);
     const Monster& getActiveEnemy(int index) const;
+    const Monster& getWaitingEnemy(int index) const;
 
     const Monster& getDefeatedEnemy(int index) const;
     const Monster& getEscapedEnemy(int index) const;

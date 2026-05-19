@@ -64,3 +64,21 @@ CombatReward CombatReward::getPercentage(int percentage) const
         gold * percentage / 100
     );
 }
+
+CombatReward CombatReward::getModified(int experiencePercentage, int goldPercentage) const
+{
+    if (experiencePercentage < 0)
+    {
+        experiencePercentage = 0;
+    }
+
+    if (goldPercentage < 0)
+    {
+        goldPercentage = 0;
+    }
+
+    return CombatReward(
+        experience * experiencePercentage / 100,
+        gold * goldPercentage / 100
+    );
+}

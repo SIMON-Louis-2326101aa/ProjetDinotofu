@@ -143,6 +143,9 @@ void BossPveMode::run(
 
     if (player1.isDead())
     {
+        player1.recordDefeat();
+        player1.recordDeath();
+
         if (DifficultyRules::isPermanentDeath(difficulty))
         {
             DeathPenaltySystem::displayLethalDeathCorruption();
@@ -170,5 +173,13 @@ void BossPveMode::run(
                   << std::endl;
         std::cout << "Même vaincu, tu n'es pas encore sorti du registre des vivants." << std::endl;
         std::cout << std::endl;
+
+        return;
+    }
+
+    if (boss.isDead())
+    {
+        player1.recordVictory();
+        player1.recordBossKill();
     }
 }

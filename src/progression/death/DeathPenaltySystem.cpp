@@ -95,7 +95,7 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
         }
     }
 
-    if (player.hasEquippedWeapon())
+    if (player.hasEquippedWeapon() && !player.hasEquipmentProtection())
     {
         Weapon weaponSnapshot = player.getEquippedWeapon();
         Weapon* weapon = player.getInventory().getMutableWeapon(player.getEquippedWeaponIndex());
@@ -117,13 +117,19 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
                     DifficultyRules::getDeathEquipmentDurabilityLossPercentage(difficulty)
                 );
 
-                weapon->loseDurability(durabilityLoss);
-                result.addWeaponDurabilityLost(durabilityLoss);
+                if (!player.hasIndestructibleEquipment())
+                {
+                    weapon->loseDurability(durabilityLoss);
+                    result.addWeaponDurabilityLost(durabilityLoss);
+                }
 
                 if (rollChance(random, DifficultyRules::getDeathEquipmentForcedBreakChance(difficulty)))
                 {
-                    weapon->loseDurability(weapon->getDurability());
-                    result.markWeaponBroken();
+                    if (!player.hasIndestructibleEquipment())
+                    {
+                        weapon->loseDurability(weapon->getDurability());
+                        result.markWeaponBroken();
+                    }
                 }
 
                 if (weapon->isBroken()
@@ -143,7 +149,7 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
         }
     }
 
-    if (player.hasEquippedArmor())
+    if (player.hasEquippedArmor() && !player.hasEquipmentProtection())
     {
         Armor* armor = player.getInventory().getMutableArmor(player.getEquippedArmorIndex());
 
@@ -164,13 +170,19 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
                     DifficultyRules::getDeathEquipmentDurabilityLossPercentage(difficulty)
                 );
 
-                armor->loseDurability(durabilityLoss);
-                result.addArmorDurabilityLost(durabilityLoss);
+                if (!player.hasIndestructibleEquipment())
+                {
+                    armor->loseDurability(durabilityLoss);
+                    result.addArmorDurabilityLost(durabilityLoss);
+                }
 
                 if (rollChance(random, DifficultyRules::getDeathEquipmentForcedBreakChance(difficulty)))
                 {
-                    armor->loseDurability(armor->getDurability());
-                    result.markArmorBroken();
+                    if (!player.hasIndestructibleEquipment())
+                    {
+                        armor->loseDurability(armor->getDurability());
+                        result.markArmorBroken();
+                    }
                 }
 
                 if (armor->isBroken()

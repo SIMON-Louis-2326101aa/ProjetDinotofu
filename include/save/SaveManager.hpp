@@ -54,6 +54,13 @@ public:
         DifficultyMode& difficulty
     );
 
+    static bool movePlayableCharacterToDead(
+        const std::string& accountName,
+        const std::string& characterName
+    );
+    static bool deletePlayableCharacter(const CharacterSaveSummary& summary);
+    static bool deleteAccountAndLinkedCharacters(const std::string& accountName);
+
     static std::string buildSafeFileName(const std::string& value);
     static std::string getAccountSavePath(const std::string& accountName);
     static std::string getCharacterSavePath(const std::string& accountName, const std::string& characterName);

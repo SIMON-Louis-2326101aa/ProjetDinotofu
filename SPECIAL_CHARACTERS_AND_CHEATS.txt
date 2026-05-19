@@ -96,6 +96,28 @@ Henrique
 
 Règle future : quand un nouveau personnage spécial est ajouté, demander s'il doit avoir une date spéciale de validation ou non.
 
+Dates spéciales configurées :
+- Trexof : 09/09/2005
+- Fail : 10/10/2024
+- Skuro : 06/12/2024
+- Sanctus : 06/12/2024
+- Hazak : 08/11/2024
+- Kanadé : 06/12/2024
+- Aoi : 01/12/2024
+- Mattzelda : 15/07/2005
+- Fire Flight / FireFlight : 01/02/2005
+- Louis : 01/02/2005
+- Henrique : 29/11/2024
+- Hestia : 11/11/1111
+
+Implémentation actuelle :
+- Si un joueur entre un nom protégé à la création du personnage, le jeu affiche un avertissement d'identité.
+- Matt (PRO) reste non jouable.
+- Les autres identités protégées demandent une confirmation puis la date spéciale au format DD/MM/YYYY.
+- Si la date est correcte, la race de l'identité est verrouillée par son histoire.
+- Le joueur peut quand même choisir sa classe.
+- Si la classe choisie correspond à la classe native prévue, le bonus natif peut s'activer.
+
 ----------------------------------------------------------
 1B. DIALOGUES ET PERSONNALITES DES PERSONNAGES SPECIAUX
 ----------------------------------------------------------

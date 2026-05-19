@@ -92,6 +92,11 @@ const Monster& EnemyCombatQueue::getActiveEnemy(int index) const
     return activeEnemies[index];
 }
 
+const Monster& EnemyCombatQueue::getWaitingEnemy(int index) const
+{
+    return waitingEnemies[index];
+}
+
 const Monster& EnemyCombatQueue::getDefeatedEnemy(int index) const
 {
     return defeatedEnemies[index];

@@ -8,10 +8,18 @@
 #include "character/RaceCatalog.hpp"
 #include "character/SpecialCharacterNativeBonus.hpp"
 #include "save/SaveManager.hpp"
+#include "save/menu/AccountMenu.hpp"
+#include "save/menu/CharacterMenu.hpp"
+#include "economy/shop/ShopRotationSystem.hpp"
+#include "interface/menu/shop/ShopMenu.hpp"
+#include "cheat/CheatManager.hpp"
+#include "progression/DifficultyRules.hpp"
+#include "progression/death/DeathPenaltySystem.hpp"
 
 #include <iostream>
 #include <string>
 #include <vector>
+#include <sstream>
 
 Game::Game()
 {
@@ -21,6 +29,7 @@ Game::Game()
     selectedDifficulty = DifficultyMode::Normal;
     selectedRace = CharacterRace::Human;
     characterLoaded = false;
+    specialIdentityValidated = false;
 }
 
 void Game::run()
@@ -34,7 +43,12 @@ void Game::run()
     if (!characterLoaded)
     {
         chooseDifficulty();
-        choosePlayerRace();
+
+        if (!specialIdentityValidated)
+        {
+            choosePlayerRace();
+        }
+
         choosePlayerClass();
     }
 
@@ -59,145 +73,27 @@ void Game::displayIntroduction()
 
 void Game::askAccountName()
 {
-    std::vector<AccountSaveSummary> accounts = SaveManager::listAccounts();
-
-    std::cout << "===== COMPTE LOCAL =====" << std::endl;
-    std::cout << "0 : Créer / utiliser un nouveau compte" << std::endl;
-
-    for (int i = 0; i < static_cast<int>(accounts.size()); i++)
-    {
-        std::cout << (i + 1) << " : " << accounts[i].accountName << std::endl;
-    }
-
-    std::cout << "========================" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
-
-    int choice = Console::askNumberBetween(
-        0,
-        static_cast<int>(accounts.size()),
-        "Veuillez choisir un compte affiché, ou 0 pour en créer un."
-    );
-
-    if (choice == 0)
-    {
-        std::cout << std::endl;
-        std::cout << "Nom du compte local ?" << std::endl;
-        std::cout << "Tu peux laisser vide pour utiliser le compte local par défaut." << std::endl;
-        std::cout << "> ";
-
-        std::getline(std::cin >> std::ws, accountName);
-
-        if (accountName.empty())
-        {
-            accountName = "local";
-        }
-    }
-    else
-    {
-        accountName = accounts[choice - 1].accountName;
-    }
-
-    Console::clear();
-
-    std::cout << "Compte actif : " << accountName << "." << std::endl;
-    std::cout << "Les sauvegardes sont rangées dans assets/saves/." << std::endl;
-    std::cout << std::endl;
-
-    if (!SaveManager::saveAccountSnapshot(accountName))
-    {
-        std::cout << "Attention : impossible de préparer la sauvegarde du compte pour le moment." << std::endl;
-        std::cout << std::endl;
-    }
-
-    Console::waitForEnter();
-    Console::clear();
+    accountName = AccountMenu::open();
 }
 
 void Game::askPlayerName()
 {
-    std::vector<CharacterSaveSummary> characters = SaveManager::listPlayableCharacters(accountName);
+    CharacterMenuResult result = CharacterMenu::open(accountName, mainPlayer);
 
-    std::cout << "===== PERSONNAGE =====" << std::endl;
-    std::cout << "0 : Créer un nouveau personnage" << std::endl;
+    characterLoaded = result.characterLoaded;
+    specialIdentityValidated = result.specialIdentityValidated;
+    playerName = result.playerName;
 
-    for (int i = 0; i < static_cast<int>(characters.size()); i++)
+    if (result.specialIdentityValidated)
     {
-        std::cout << (i + 1) << " : "
-                  << characters[i].characterName
-                  << " | " << characters[i].raceName
-                  << " / " << characters[i].className
-                  << " | Niveau " << characters[i].level
-                  << std::endl;
+        selectedRace = result.forcedRace;
     }
 
-    std::cout << "======================" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
-
-    int choice = Console::askNumberBetween(
-        0,
-        static_cast<int>(characters.size()),
-        "Veuillez choisir un personnage affiché, ou 0 pour en créer un."
-    );
-
-    if (choice > 0)
+    if (characterLoaded)
     {
-        if (SaveManager::loadPlayerSnapshot(characters[choice - 1], mainPlayer, selectedDifficulty))
-        {
-            playerName = mainPlayer.getName();
-            selectedRace = mainPlayer.getRace();
-            characterLoaded = true;
-
-            Console::clear();
-
-            std::cout << "Personnage chargé : " << playerName << "." << std::endl;
-            std::cout << "Race : " << mainPlayer.getRaceText() << std::endl;
-            std::cout << "Classe : " << mainPlayer.getType() << std::endl;
-            std::cout << "Difficulté : " << getDifficultyName() << std::endl;
-            std::cout << std::endl;
-            std::cout << "Note : pour le moment, la sauvegarde restaure surtout l'identité,"
-                      << " la progression simple, l'or et l'équipement de départ reconstruit." << std::endl;
-            std::cout << "L'inventaire complet sera sérialisé proprement plus tard." << std::endl;
-            std::cout << std::endl;
-
-            mainPlayer.displayStats();
-            mainPlayer.displaySimpleEquipment();
-
-            Console::waitForEnter();
-            Console::clear();
-            return;
-        }
-
-        Console::clear();
-        std::cout << "Impossible de charger ce personnage. On va en créer un nouveau." << std::endl;
-        std::cout << std::endl;
+        selectedDifficulty = result.difficulty;
+        selectedRace = mainPlayer.getRace();
     }
-
-    characterLoaded = false;
-
-    std::cout << "Quel est ton nom ?" << std::endl;
-    std::cout << "> ";
-
-    std::getline(std::cin >> std::ws, playerName);
-
-    while (playerName.empty())
-    {
-        std::cout << "Un nom vide ? Même les gobelins ont plus de présence que ça." << std::endl;
-        std::cout << "Entre un vrai nom." << std::endl;
-        std::cout << "> ";
-
-        std::getline(std::cin >> std::ws, playerName);
-    }
-
-    Console::clear();
-
-    std::cout << "Très bien, " << playerName << "." << std::endl;
-    std::cout << "L'arène se souviendra peut-être de ce nom..." << std::endl;
-    std::cout << std::endl;
-
-    Console::waitForEnter();
-    Console::clear();
 }
 
 void Game::chooseDifficulty()
@@ -262,6 +158,12 @@ void Game::chooseDifficulty()
 
     std::cout << "Difficulté sélectionnée : " << getDifficultyName() << "." << std::endl;
     std::cout << "Ton départ sera ajusté en conséquence." << std::endl;
+
+    if (specialIdentityValidated)
+    {
+        std::cout << "Identité spéciale reconnue : le choix de race est verrouillé par son histoire." << std::endl;
+        std::cout << "Race imposée : " << characterRaceToText(selectedRace) << "." << std::endl;
+    }
     std::cout << std::endl;
 
     Console::waitForEnter();
@@ -457,6 +359,8 @@ void Game::launchSelectedMode()
 {
     Combat combat;
 
+    mainPlayer.recordCombatStarted();
+
     switch (selectedMode)
     {
         case GameMode::AIPvp:
@@ -484,9 +388,156 @@ void Game::launchSelectedMode()
         }
     }
 
+    ShopRotationSystem::markShopsDirtyAfterCombat();
+
+    if (mainPlayer.isDead() && DifficultyRules::isPermanentDeath(selectedDifficulty))
+    {
+        saveCurrentProgress("Mort définitive");
+
+        if (SaveManager::movePlayableCharacterToDead(accountName, mainPlayer.getName()))
+        {
+            std::cout << "Le personnage a été déplacé dans le registre des morts." << std::endl;
+            std::cout << "Il ne sera plus disponible dans les personnages jouables." << std::endl;
+        }
+        else
+        {
+            std::cout << "Impossible de déplacer automatiquement le personnage dans le registre des morts." << std::endl;
+            std::cout << "La sauvegarde de mort a tout de même été tentée." << std::endl;
+        }
+
+        std::cout << std::endl;
+        DeathPenaltySystem::displayLethalDeathCorruption();
+        Console::waitForEnter();
+        return;
+    }
+
+    saveCurrentProgress("Fin de combat");
+
+    bool continuePlaying = openPostCombatMenu();
+
+    if (continuePlaying)
+    {
+        chooseGameMode();
+        displaySelectedMode();
+        launchSelectedMode();
+        return;
+    }
+
     saveCurrentProgress("Fin de session");
 
     std::cout << std::endl;
+}
+
+bool Game::openPostCombatMenu()
+{
+    bool menuOpen = true;
+
+    while (menuOpen)
+    {
+        int maxChoice = mainPlayer.isAlteredByCheats() ? 6 : 5;
+
+        std::cout << "========== APRÈS-COMBAT ==========" << std::endl;
+        std::cout << "0 : Continuer" << std::endl;
+        std::cout << "1 : Ouvrir les boutiques" << std::endl;
+        std::cout << "2 : Voir mes statistiques" << std::endl;
+        std::cout << "3 : Voir mon équipement" << std::endl;
+        std::cout << "4 : Sauvegarde rapide" << std::endl;
+        std::cout << "5 : Sauvegarder et quitter" << std::endl;
+
+        if (mainPlayer.isAlteredByCheats())
+        {
+            std::cout << "6 : Données altérées" << std::endl;
+        }
+
+        std::cout << "==================================" << std::endl;
+        std::cout << std::endl;
+        std::cout << "> ";
+
+        std::string input;
+        std::getline(std::cin >> std::ws, input);
+
+        std::istringstream stream(input);
+        int choice = -1;
+        char extraCharacter;
+
+        bool isCleanNumber = false;
+
+        if (stream >> choice)
+        {
+            isCleanNumber = !(stream >> extraCharacter);
+        }
+
+        if (!isCleanNumber)
+        {
+            Console::clear();
+
+            if (CheatManager::tryActivateHiddenCode(mainPlayer, selectedDifficulty, input))
+            {
+                saveCurrentProgress("Altération cachée");
+                Console::waitForEnter();
+                Console::clear();
+            }
+            else
+            {
+                std::cout << "Entrée invalide." << std::endl;
+                std::cout << std::endl;
+            }
+
+            continue;
+        }
+
+        Console::clear();
+
+        if (choice < 0 || choice > maxChoice)
+        {
+            std::cout << "Veuillez choisir une option affichée." << std::endl;
+            std::cout << std::endl;
+            continue;
+        }
+
+        if (choice == 0)
+        {
+            return true;
+        }
+        else if (choice == 1)
+        {
+            ShopMenu::open(mainPlayer);
+            saveCurrentProgress("Passage en boutique");
+        }
+        else if (choice == 2)
+        {
+            mainPlayer.displayStats();
+            mainPlayer.displayCareerStatistics(selectedDifficulty);
+            Console::waitForEnter();
+            Console::clear();
+        }
+        else if (choice == 3)
+        {
+            mainPlayer.displaySimpleEquipment();
+            Console::waitForEnter();
+            Console::clear();
+        }
+        else if (choice == 4)
+        {
+            saveCurrentProgress("Sauvegarde rapide");
+            Console::waitForEnter();
+            Console::clear();
+        }
+        else if (choice == 5)
+        {
+            saveCurrentProgress("Sauvegarder et quitter");
+            std::cout << "Progression sauvegardée. Fermeture de Dinotofu." << std::endl;
+            std::cout << std::endl;
+            return false;
+        }
+        else if (choice == 6 && mainPlayer.isAlteredByCheats())
+        {
+            CheatManager::openAlteredDataMenu(mainPlayer, selectedDifficulty);
+            saveCurrentProgress("Données altérées");
+        }
+    }
+
+    return false;
 }
 
 void Game::saveCurrentProgress(const std::string& reason) const
