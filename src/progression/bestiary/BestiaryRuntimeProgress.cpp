@@ -1,3 +1,5 @@
+// EN: BestiaryRuntimeProgress.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: BestiaryRuntimeProgress.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 // English: Implements a small in-session bestiary progression layer before full account persistence.
@@ -15,6 +17,8 @@ namespace
         return data;
     }
 
+    // EN: findRecord declares or implements a focused behavior used by this module.
+    // FR: findRecord déclare ou implémente un comportement précis utilisé par ce module.
     BestiaryRuntimeRecord* findRecord(const std::string& name)
     {
         for (BestiaryRuntimeRecord& record : records())
@@ -84,11 +88,15 @@ namespace
 }
 
 
+// EN: clear declares or implements a focused behavior used by this module.
+// FR: clear déclare ou implémente un comportement précis utilisé par ce module.
 void BestiaryRuntimeProgress::clear()
 {
     records().clear();
 }
 
+// EN: importRecord declares or implements a focused behavior used by this module.
+// FR: importRecord déclare ou implémente un comportement précis utilisé par ce module.
 void BestiaryRuntimeProgress::importRecord(const BestiaryRuntimeRecord& importedRecord)
 {
     if (importedRecord.name.empty())
@@ -148,6 +156,8 @@ void BestiaryRuntimeProgress::recordKill(
     }
 }
 
+// EN: unlockCommonInformation declares or implements a focused behavior used by this module.
+// FR: unlockCommonInformation déclare ou implémente un comportement précis utilisé par ce module.
 void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informationId)
 {
     if (informationId == "common_goblin_notes")
@@ -207,21 +217,134 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
             "Races",
             "Manuel acheté : la magie de base dépendra plus tard de l'intelligence, de la sagesse, du mana et parfois de la race."
         );
+        return;
     }
+
+    if (informationId == "special_adventurer_notes")
+    {
+        unlockEntry(
+            "Groupes spéciaux",
+            "Entités passives / alliées",
+            "Notes achetées : certains groupes ne cherchent pas forcément la mort du joueur. Hazak protège Hestia, Fail respecte un contrat avec Hazak, et Skuro rend souvent le combat plus dangereux."
+        );
+        unlockEntry(
+            "Mattzelda / Louis / Trexof",
+            "Entités passives / alliées",
+            "Notes achetées : trio de potes. Mattzelda encaisse, Louis improvise, Trexof analyse le combat comme un test d'équilibrage."
+        );
+        unlockEntry(
+            "Aoi / Kanadé / Sanctus",
+            "Entités passives / alliées",
+            "Notes achetées : groupe proche. Sanctus protège, Aoi stabilise ses flammes, Kanadé déteste perdre et lance une magie très variable."
+        );
+        return;
+    }
+
+    if (informationId == "summoning_notes")
+    {
+        unlockEntry(
+            "Invocations",
+            "Invocations",
+            "Manuel acheté : les invocations utilisent déjà des slots. Les futures versions ajouteront mana, évolution, sacrifices et ombres de Hazak."
+        );
+        unlockEntry(
+            "Ombres de Hazak",
+            "Invocations",
+            "Indice acheté : Hazak pourra plus tard relever l'ombre d'un ennemi vaincu avec une partie de ses compétences d'origine."
+        );
+        return;
+    }
+
+    if (informationId == "boss_identity_scrap")
+    {
+        unlockEntry(
+            "Identité des boss",
+            "Boss",
+            "Fragment acheté : un boss reste officiellement en ??? tant qu'il n'a pas révélé son nom par une entrée, une phrase à 50%, ou une phrase avant sa défaite."
+        );
+        unlockEntry(
+            "Fragments de boss",
+            "Matériaux et plantes",
+            "Indice acheté : Fitoria peut laisser une plume lumineuse, Zelef du sang démoniaque, et Atlas une plaque brisée. Ces matériaux sont rares et liés aux futures reliques."
+        );
+        return;
+    }
+
+    if (informationId == "potion_recipe_page")
+    {
+        unlockEntry(
+            "Recettes de potions simples",
+            "Matériaux et plantes",
+            "Page lue : 2 Feuilles amères + 1 Résidu de slime donnent une Potion de soin. 1 Fleur bleue + 1 Poussière arcanique donnent une Potion de soin renforcée. Les crocs, os et poussières alimentent les potions de rage."
+        );
+        return;
+    }
+
+    if (informationId == "repair_recipe_page")
+    {
+        unlockEntry(
+            "Réparation de fortune",
+            "Matériaux et plantes",
+            "Page lue : 2 Fragments de métal rouillé, 1 Morceau de cuir abîmé et 1 Résidu de slime peuvent être assemblés en Kit de réparation faible. Le kit autorise la réparation autonome à +25% environ, coûte des matériaux, et perd 1 durabilité après chaque réparation."
+        );
+        unlockEntry(
+            "Évolution des kits de réparation",
+            "Matériaux et plantes",
+            "Les kits progressent ainsi : faible +25%, moyen +50%, gros kit +75%, kit complet du bricoleur +95%. Les armes demandent surtout du métal ; les armures demandent surtout du cuir et parfois de la peau robuste. Chaque réparation consomme aussi 1 durabilité du kit. Le Forgeron ne répare pas magiquement sans forge, mais il a une chance de ne pas user le kit grâce à son savoir-faire."
+        );
+        return;
+    }
+
+    if (informationId == "advanced_monster_notes")
+    {
+        unlockEntry(
+            "Loots de monstres avancés",
+            "Entités hostiles / ennemis",
+            "Notes lues : les humanoïdes peuvent laisser des insignes, les morts-vivants des os fissurés, les slimes des résidus et certains mages de la poussière arcanique."
+        );
+        unlockEntry(
+            "Matériaux rares de race",
+            "Matériaux et plantes",
+            "Notes lues : certaines races ou profils spéciaux peuvent laisser des composants rares : peau robuste, fil d'ombre, braise kitsune, écaille draconique ou noyau instable."
+        );
+        unlockEntry(
+            "Fragments de boss",
+            "Matériaux et plantes",
+            "Notes lues : les boss vaincus peuvent laisser un fragment unique. Ces fragments ne servent pas encore à une relique complète, mais sont déjà utilisables comme base de craft rare."
+        );
+        return;
+    }
+
+    if (informationId == "necromancy_warning")
+    {
+        unlockEntry(
+            "Nécromancie instable",
+            "Invocations",
+            "Avertissement lu : relever une ombre ne devra pas être gratuit. Les os, le mana, les morts récents et la stabilité mentale du personnage pourront compter plus tard."
+        );
+        return;
+    }
+
 }
 
+// EN: getEncounterCount declares or implements a focused behavior used by this module.
+// FR: getEncounterCount déclare ou implémente un comportement précis utilisé par ce module.
 int BestiaryRuntimeProgress::getEncounterCount(const std::string& name)
 {
     BestiaryRuntimeRecord* record = findRecord(name);
     return record == nullptr ? 0 : record->encounters;
 }
 
+// EN: getKillCount declares or implements a focused behavior used by this module.
+// FR: getKillCount déclare ou implémente un comportement précis utilisé par ce module.
 int BestiaryRuntimeProgress::getKillCount(const std::string& name)
 {
     BestiaryRuntimeRecord* record = findRecord(name);
     return record == nullptr ? 0 : record->kills;
 }
 
+// EN: hasBoughtInformation declares or implements a focused behavior used by this module.
+// FR: hasBoughtInformation déclare ou implémente un comportement précis utilisé par ce module.
 bool BestiaryRuntimeProgress::hasBoughtInformation(const std::string& name)
 {
     BestiaryRuntimeRecord* record = findRecord(name);

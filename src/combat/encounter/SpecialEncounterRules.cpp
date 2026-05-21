@@ -1,3 +1,5 @@
+// EN: SpecialEncounterRules.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: SpecialEncounterRules.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
 // Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
 // Description: Implements future rules for special encounter intent and lethal combat permissions.
@@ -6,6 +8,8 @@
 
 #include <algorithm>
 
+// EN: getIntentForSpecialGroup declares or implements a focused behavior used by this module.
+// FR: getIntentForSpecialGroup déclare ou implémente un comportement précis utilisé par ce module.
 CombatIntent SpecialEncounterRules::getIntentForSpecialGroup(const std::vector<std::string>& names)
 {
     bool hasHazak = containsName(names, "Hazak");
@@ -70,6 +74,33 @@ std::string SpecialEncounterRules::getIntentText(
     bool hasFail = containsName(names, "Fail");
     bool hasFireFlight = containsName(names, "Fire Flight");
     bool hasMattPro = containsName(names, "Matt (PRO)");
+    bool hasMattzelda = containsName(names, "Mattzelda");
+    bool hasLouis = containsName(names, "Louis");
+    bool hasTrexof = containsName(names, "Trexof");
+    bool hasAoi = containsName(names, "Aoi");
+    bool hasKanade = containsName(names, "Kanadé");
+    bool hasSanctus = containsName(names, "Sanctus");
+    bool hasHenrique = containsName(names, "Henrique");
+
+    if (hasHazak && hasHestia && hasSanctus)
+    {
+        return "Intention : protection sacrée. Hazak refuse le massacre, Sanctus absorbe la menace, Hestia ne doit pas revivre son pire souvenir.";
+    }
+
+    if (hasFail && hasAoi && hasKanade)
+    {
+        return "Intention : laboratoire magique. Fail teste, Kanadé surcharge, Aoi stabilise juste assez pour éviter la catastrophe totale.";
+    }
+
+    if (hasLouis && hasFireFlight && hasTrexof)
+    {
+        return "Intention : test de créateur entre amis. Fire Flight commande, Louis improvise, Trexof cherche la faille utile.";
+    }
+
+    if (hasHenrique && hasMattzelda && hasSkuro)
+    {
+        return "Intention : charge instable. Henrique tient debout, Mattzelda attire l'attention, Skuro rend chaque erreur dangereuse.";
+    }
 
     if (hasHazak && hasHestia)
     {
@@ -125,6 +156,8 @@ std::string SpecialEncounterRules::getIntentText(
     }
 }
 
+// EN: canBecomeDeathMatch declares or implements a focused behavior used by this module.
+// FR: canBecomeDeathMatch déclare ou implémente un comportement précis utilisé par ce module.
 bool SpecialEncounterRules::canBecomeDeathMatch(const std::vector<std::string>& names)
 {
     bool hasHazak = containsName(names, "Hazak");

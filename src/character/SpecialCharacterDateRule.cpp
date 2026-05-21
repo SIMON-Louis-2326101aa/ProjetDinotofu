@@ -1,3 +1,5 @@
+// EN: SpecialCharacterDateRule.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: SpecialCharacterDateRule.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
 // Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
 // Description: Implements special-date validation for protected playable identities.
@@ -21,6 +23,8 @@ std::string SpecialCharacterDateRule::normalizeDateInput(const std::string& inpu
     return cleaned;
 }
 
+// EN: hasValidDateFormat declares or implements a focused behavior used by this module.
+// FR: hasValidDateFormat déclare ou implémente un comportement précis utilisé par ce module.
 bool SpecialCharacterDateRule::hasValidDateFormat(const std::string& input)
 {
     std::string date = normalizeDateInput(input);

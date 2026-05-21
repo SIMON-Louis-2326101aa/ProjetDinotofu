@@ -1,3 +1,5 @@
+// EN: ShopTransactionSystem.hpp briefly defines this Dinotofu module and its responsibilities.
+// FR: ShopTransactionSystem.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 // English: Applies shop purchases and safe resale rules to the player inventory.
@@ -13,11 +15,13 @@
 class ShopTransactionSystem
 {
 public:
+    // EN: canBeBoughtNow declares or implements a focused behavior used by this module.
+    // FR: canBeBoughtNow déclare ou implémente un comportement précis utilisé par ce module.
     static bool canBeBoughtNow(const ShopItem& item);
 
     static bool buyItem(
         Player& player,
-        const ShopItem& item,
+        ShopItem& item,
         int finalPrice
     );
 
@@ -50,6 +54,8 @@ public:
         ShopType shopType
     );
 
+    // EN: displayUnsupportedPurchaseMessage declares or implements a focused behavior used by this module.
+    // FR: displayUnsupportedPurchaseMessage déclare ou implémente un comportement précis utilisé par ce module.
     static void displayUnsupportedPurchaseMessage(const ShopItem& item);
 };
 

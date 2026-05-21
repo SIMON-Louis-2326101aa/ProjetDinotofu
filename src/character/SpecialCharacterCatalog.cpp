@@ -1,3 +1,5 @@
+// EN: SpecialCharacterCatalog.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: SpecialCharacterCatalog.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file prepares special semi-human characters for Dinotofu.
 // Français : Ce fichier prépare les personnages spéciaux semi-humains de Dinotofu.
 
@@ -158,12 +160,16 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
     };
 }
 
+// EN: isProtectedName declares or implements a focused behavior used by this module.
+// FR: isProtectedName déclare ou implémente un comportement précis utilisé par ce module.
 bool SpecialCharacterCatalog::isProtectedName(const std::string& name)
 {
     SpecialCharacter unused;
     return findByName(name, unused);
 }
 
+// EN: findByName declares or implements a focused behavior used by this module.
+// FR: findByName déclare ou implémente un comportement précis utilisé par ce module.
 bool SpecialCharacterCatalog::findByName(const std::string& name, SpecialCharacter& result)
 {
     std::string normalizedInput = normalizeName(name);
@@ -180,6 +186,8 @@ bool SpecialCharacterCatalog::findByName(const std::string& name, SpecialCharact
     return false;
 }
 
+// EN: createRandomSpecialOpponent declares or implements a focused behavior used by this module.
+// FR: createRandomSpecialOpponent déclare ou implémente un comportement précis utilisé par ce module.
 SpecialCharacter SpecialCharacterCatalog::createRandomSpecialOpponent(Random& random)
 {
     std::vector<SpecialCharacter> characters = getAllSpecialCharacters();
@@ -213,6 +221,8 @@ SpecialCharacter SpecialCharacterCatalog::createRandomSpecialOpponent(Random& ra
     return characters.front();
 }
 
+// EN: displaySpecialCharactersRoadmap declares or implements a focused behavior used by this module.
+// FR: displaySpecialCharactersRoadmap déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterCatalog::displaySpecialCharactersRoadmap()
 {
     std::cout << "========== PERSONNAGES SPÉCIAUX ==========" << std::endl;
@@ -249,6 +259,8 @@ std::string SpecialCharacterCatalog::normalizeName(const std::string& name)
         normalized.begin(),
         normalized.end(),
         normalized.begin(),
+        // EN: [] declares or implements a focused behavior used by this module.
+        // FR: [] déclare ou implémente un comportement précis utilisé par ce module.
         [](unsigned char character)
         {
             return static_cast<char>(std::tolower(character));

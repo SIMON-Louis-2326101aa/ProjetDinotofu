@@ -1,3 +1,5 @@
+// EN: AttributeMenu.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: AttributeMenu.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 // Description: Lets the player spend DND-inspired attribute points after leveling up.
@@ -9,6 +11,8 @@
 
 #include <iostream>
 
+// EN: open declares or implements a focused behavior used by this module.
+// FR: open déclare ou implémente un comportement précis utilisé par ce module.
 void AttributeMenu::open(Player& player)
 {
     bool menuOpen = true;
@@ -69,4 +73,15 @@ void AttributeMenu::open(Player& player)
         Console::waitForEnter();
         Console::clear();
     }
+}
+
+// EN: displayLockedDevelopmentMessage declares or implements a focused behavior used by this module.
+// FR: displayLockedDevelopmentMessage déclare ou implémente un comportement précis utilisé par ce module.
+void AttributeMenu::displayLockedDevelopmentMessage()
+{
+    std::cout << "Tu sens que ton potentiel pourrait encore grandir..." << std::endl;
+    std::cout << "Mais ce système n'est pas encore stabilisé." << std::endl;
+    std::cout << std::endl;
+    std::cout << "[action en cours de développement]" << std::endl;
+    std::cout << std::endl;
 }

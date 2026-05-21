@@ -1,3 +1,5 @@
+// EN: DamageSystem.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: DamageSystem.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -8,6 +10,8 @@
 
 #include <iostream>
 
+// EN: calculateReceivedDamage declares or implements a focused behavior used by this module.
+// FR: calculateReceivedDamage déclare ou implémente un comportement précis utilisé par ce module.
 DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDamage)
 {
     DamageReport rapport;
@@ -17,7 +21,7 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
 
     Player* defendingPlayer = dynamic_cast<Player*>(&defender);
 
-    if (defendingPlayer != nullptr && defendingPlayer->hasEquippedArmor())
+    if (defendingPlayer != nullptr && defendingPlayer->hasEquippedArmor() && !defendingPlayer->hasBossEquipmentSeal())
     {
         Armor* armor = defendingPlayer->getInventory().getMutableArmor(
             defendingPlayer->getEquippedArmorIndex()
@@ -52,6 +56,13 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
         }
     }
 
+    if (defendingPlayer != nullptr && defendingPlayer->hasEquippedArmor() && defendingPlayer->hasBossEquipmentSeal())
+    {
+        std::cout << "Le sceau de boss empêche l'armure de " << defendingPlayer->getName()
+                  << " de répondre correctement." << std::endl;
+        std::cout << std::endl;
+    }
+
     int classReductionPercentage =
         CombatClassSystem::getBaseDamageReductionPercentage(defender);
 
@@ -81,6 +92,8 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
     return rapport;
 }
 
+// EN: displayDamageReport declares or implements a focused behavior used by this module.
+// FR: displayDamageReport déclare ou implémente un comportement précis utilisé par ce module.
 void DamageSystem::displayDamageReport(const Entity& defender, const DamageReport& rapport)
 {
     if (rapport.armorAbsorbedDamage > 0)
@@ -114,6 +127,8 @@ void DamageSystem::displayDamageReport(const Entity& defender, const DamageRepor
     }
 }
 
+// EN: applyArmorProtection declares or implements a focused behavior used by this module.
+// FR: applyArmorProtection déclare ou implémente un comportement précis utilisé par ce module.
 int DamageSystem::applyArmorProtection(Entity& defender, int rawDamage)
 {
     DamageReport rapport = calculateReceivedDamage(defender, rawDamage);

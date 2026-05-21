@@ -1,3 +1,5 @@
+// EN: SpecialCharacterNativeBonus.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: SpecialCharacterNativeBonus.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
 // Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
 // Description: Applies native bonuses for special characters when their intended identity/class is used.
@@ -10,6 +12,8 @@
 #include <cctype>
 #include <iostream>
 
+// EN: applyIfNativeMatch declares or implements a focused behavior used by this module.
+// FR: applyIfNativeMatch déclare ou implémente un comportement précis utilisé par ce module.
 bool SpecialCharacterNativeBonus::applyIfNativeMatch(Player& player)
 {
     SpecialCharacter character;
@@ -100,6 +104,8 @@ bool SpecialCharacterNativeBonus::applyForSpecialCharacter(
     return true;
 }
 
+// EN: displayNativeBonusApplied declares or implements a focused behavior used by this module.
+// FR: displayNativeBonusApplied déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterNativeBonus::displayNativeBonusApplied(const SpecialCharacter& character)
 {
     std::cout << "Bonus natif reconnu : " << character.getName() << "." << std::endl;
@@ -123,6 +129,8 @@ std::string SpecialCharacterNativeBonus::normalize(const std::string& value)
         normalized.begin(),
         normalized.end(),
         normalized.begin(),
+        // EN: [] declares or implements a focused behavior used by this module.
+        // FR: [] déclare ou implémente un comportement précis utilisé par ce module.
         [](unsigned char character)
         {
             return static_cast<char>(std::tolower(character));

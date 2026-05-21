@@ -1,3 +1,5 @@
+// EN: CharacterRace.hpp briefly defines this Dinotofu module and its responsibilities.
+// FR: CharacterRace.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file prepares playable and semi-human races for Dinotofu.
 // Français : Ce fichier prépare les races jouables et semi-humaines de Dinotofu.
 

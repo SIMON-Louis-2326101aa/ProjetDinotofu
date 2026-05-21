@@ -1,3 +1,5 @@
+// EN: CombatTargetMenu.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: CombatTargetMenu.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -7,10 +9,31 @@
 #include "combat/CombatActions.hpp"
 #include "combat/action/CombatAttack.hpp"
 #include "combat/system/ObservationSystem.hpp"
+#include "combat/threat/ThreatSystem.hpp"
 
 #include "core/Console.hpp"
 
 #include <iostream>
+
+namespace
+{
+    // EN: findForcedTargetIndex declares or implements a focused behavior used by this module.
+    // FR: findForcedTargetIndex déclare ou implémente un comportement précis utilisé par ce module.
+    int findForcedTargetIndex(const EnemyCombatQueue& wave)
+    {
+        for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+        {
+            const Monster& enemy = wave.getActiveEnemy(i);
+
+            if (enemy.isProvoking() || enemy.hasHealingThreat())
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+}
 
 bool CombatTargetMenu::openForAttack(
     Player& player,
@@ -58,6 +81,8 @@ bool CombatTargetMenu::openForBoostedAttack(
     );
 }
 
+// EN: chooseTarget declares or implements a focused behavior used by this module.
+// FR: chooseTarget déclare ou implémente un comportement précis utilisé par ce module.
 int CombatTargetMenu::chooseTarget(const EnemyCombatQueue& wave)
 {
     wave.displayActiveEnemies();
@@ -102,6 +127,29 @@ bool CombatTargetMenu::openTargetMenu(
         if (!wave.isActiveIndexValid(targetIndex))
         {
             std::cout << "Cette cible n'est plus disponible." << std::endl;
+            std::cout << std::endl;
+            return false;
+        }
+
+        int forcedTargetIndex = findForcedTargetIndex(wave);
+
+        if (forcedTargetIndex >= 0 && forcedTargetIndex != targetIndex)
+        {
+            const Monster& forcedTarget = wave.getActiveEnemy(forcedTargetIndex);
+
+            if (forcedTarget.isProvoking())
+            {
+                std::cout << forcedTarget.getName()
+                          << " bloque la ligne. Sa provocation t'empêche d'ignorer sa présence."
+                          << std::endl;
+            }
+            else
+            {
+                std::cout << forcedTarget.getName()
+                          << " vient de soigner un allié. Ton attention se fixe sur le soigneur."
+                          << std::endl;
+            }
+
             std::cout << std::endl;
             return false;
         }
@@ -170,12 +218,14 @@ bool CombatTargetMenu::openTargetMenu(
                         damageBonus
                     );
 
+                    ThreatSystem::consumeForcedTargetIfNeeded(target);
                     wave.removeDeadAndReplace();
 
                     return true;
                 }
 
                 TurnManager::executeAttack(player, target, random);
+                ThreatSystem::consumeForcedTargetIfNeeded(target);
 
                 wave.removeDeadAndReplace();
 

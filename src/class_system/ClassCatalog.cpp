@@ -1,3 +1,5 @@
+// EN: ClassCatalog.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: ClassCatalog.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 // Description: Central catalog for playable classes. It keeps the old direct index access, while adding category menus.
@@ -25,6 +27,8 @@ namespace
         ClassCategory category;
     };
 
+    // EN: getClassTemplates declares or implements a focused behavior used by this module.
+    // FR: getClassTemplates déclare ou implémente un comportement précis utilisé par ce module.
     const std::vector<ClassTemplate>& getClassTemplates()
     {
         static const std::vector<ClassTemplate> classes = {
@@ -78,12 +82,15 @@ namespace
             {"Shaman", 180, 7, 24, 36, 5, 4, "esprits, rituels et soutien", ClassCategory::Hybrid},
 
             {"Artificier", 175, 8, 24, 36, 4, 4, "gadgets, précision et projectiles", ClassCategory::Craft},
+            {"Forgeron", 185, 14, 28, 38, 3, 2, "force, forge et économie d'usure des kits", ClassCategory::Craft},
             {"Alchimiste", 165, 5, 18, 28, 6, 5, "potions, mélanges et effets instables", ClassCategory::Craft}
         };
 
         return classes;
     }
 
+    // EN: displayClassTemplate declares or implements a focused behavior used by this module.
+    // FR: displayClassTemplate déclare ou implémente un comportement précis utilisé par ce module.
     void displayClassTemplate(std::size_t displayedIndex, const ClassTemplate& currentClass)
     {
         std::cout << displayedIndex << " : " << currentClass.name << std::endl;
@@ -112,6 +119,8 @@ namespace
         return filteredClasses;
     }
 
+    // EN: createPlayerClassFromTemplate declares or implements a focused behavior used by this module.
+    // FR: createPlayerClassFromTemplate déclare ou implémente un comportement précis utilisé par ce module.
     PlayerClass createPlayerClassFromTemplate(const ClassTemplate& selectedClass)
     {
         return PlayerClass(
@@ -126,6 +135,8 @@ namespace
     }
 }
 
+// EN: displayBasicClasses declares or implements a focused behavior used by this module.
+// FR: displayBasicClasses déclare ou implémente un comportement précis utilisé par ce module.
 void ClassCatalog::displayBasicClasses()
 {
     const std::vector<ClassTemplate>& classes = getClassTemplates();
@@ -136,6 +147,8 @@ void ClassCatalog::displayBasicClasses()
     }
 }
 
+// EN: displayClassCategories declares or implements a focused behavior used by this module.
+// FR: displayClassCategories déclare ou implémente un comportement précis utilisé par ce module.
 void ClassCatalog::displayClassCategories()
 {
     std::vector<ClassCategory> categories = getClassCategories();
@@ -150,6 +163,8 @@ void ClassCatalog::displayClassCategories()
     }
 }
 
+// EN: displayClassesByCategory declares or implements a focused behavior used by this module.
+// FR: displayClassesByCategory déclare ou implémente un comportement précis utilisé par ce module.
 void ClassCatalog::displayClassesByCategory(ClassCategory category)
 {
     std::vector<const ClassTemplate*> classes = getClassesByCategory(category);
@@ -160,26 +175,36 @@ void ClassCatalog::displayClassesByCategory(ClassCategory category)
     }
 }
 
+// EN: displayClassesByCategoryChoice declares or implements a focused behavior used by this module.
+// FR: displayClassesByCategoryChoice déclare ou implémente un comportement précis utilisé par ce module.
 void ClassCatalog::displayClassesByCategoryChoice(int categoryChoice)
 {
     displayClassesByCategory(getClassCategoryByChoice(categoryChoice));
 }
 
+// EN: getPlayableClassCount declares or implements a focused behavior used by this module.
+// FR: getPlayableClassCount déclare ou implémente un comportement précis utilisé par ce module.
 int ClassCatalog::getPlayableClassCount()
 {
     return static_cast<int>(getClassTemplates().size());
 }
 
+// EN: getClassCategoryCount declares or implements a focused behavior used by this module.
+// FR: getClassCategoryCount déclare ou implémente un comportement précis utilisé par ce module.
 int ClassCatalog::getClassCategoryCount()
 {
     return static_cast<int>(getClassCategories().size());
 }
 
+// EN: getPlayableClassCountByCategory declares or implements a focused behavior used by this module.
+// FR: getPlayableClassCountByCategory déclare ou implémente un comportement précis utilisé par ce module.
 int ClassCatalog::getPlayableClassCountByCategory(ClassCategory category)
 {
     return static_cast<int>(getClassesByCategory(category).size());
 }
 
+// EN: getPlayableClassCountByCategoryChoice declares or implements a focused behavior used by this module.
+// FR: getPlayableClassCountByCategoryChoice déclare ou implémente un comportement précis utilisé par ce module.
 int ClassCatalog::getPlayableClassCountByCategoryChoice(int categoryChoice)
 {
     return getPlayableClassCountByCategory(getClassCategoryByChoice(categoryChoice));
@@ -210,6 +235,8 @@ std::vector<ClassCategory> ClassCatalog::getClassCategories()
     };
 }
 
+// EN: getClassCategoryByChoice declares or implements a focused behavior used by this module.
+// FR: getClassCategoryByChoice déclare ou implémente un comportement précis utilisé par ce module.
 ClassCategory ClassCatalog::getClassCategoryByChoice(int categoryChoice)
 {
     std::vector<ClassCategory> categories = getClassCategories();
@@ -227,6 +254,8 @@ std::string ClassCatalog::getClassCategoryNameByChoice(int categoryChoice)
     return classCategoryToText(getClassCategoryByChoice(categoryChoice));
 }
 
+// EN: createBaseClass declares or implements a focused behavior used by this module.
+// FR: createBaseClass déclare ou implémente un comportement précis utilisé par ce module.
 PlayerClass ClassCatalog::createBaseClass(int choice)
 {
     const std::vector<ClassTemplate>& classes = getClassTemplates();
@@ -239,6 +268,8 @@ PlayerClass ClassCatalog::createBaseClass(int choice)
     return createPlayerClassFromTemplate(classes[choice - 1]);
 }
 
+// EN: createClassByCategoryChoice declares or implements a focused behavior used by this module.
+// FR: createClassByCategoryChoice déclare ou implémente un comportement précis utilisé par ce module.
 PlayerClass ClassCatalog::createClassByCategoryChoice(int categoryChoice, int classChoice)
 {
     ClassCategory category = getClassCategoryByChoice(categoryChoice);
@@ -257,11 +288,15 @@ PlayerClass ClassCatalog::createClassByCategoryChoice(int categoryChoice, int cl
     return createPlayerClassFromTemplate(*classes[classChoice - 1]);
 }
 
+// EN: createClassByName declares or implements a focused behavior used by this module.
+// FR: createClassByName déclare ou implémente un comportement précis utilisé par ce module.
 PlayerClass ClassCatalog::createClassByName(const std::string& className)
 {
     return createClassFromNormalizedName(normalizeClassName(className));
 }
 
+// EN: createEvolvedClassFromClass declares or implements a focused behavior used by this module.
+// FR: createEvolvedClassFromClass déclare ou implémente un comportement précis utilisé par ce module.
 PlayerClass ClassCatalog::createEvolvedClassFromClass(const std::string& currentClass)
 {
     std::string normalizedName = normalizeClassName(currentClass);
@@ -299,6 +334,8 @@ PlayerClass ClassCatalog::createEvolvedClassFromClass(const std::string& current
     return createClassByName("Chevalier runique");
 }
 
+// EN: createClassFromNormalizedName declares or implements a focused behavior used by this module.
+// FR: createClassFromNormalizedName déclare ou implémente un comportement précis utilisé par ce module.
 PlayerClass ClassCatalog::createClassFromNormalizedName(const std::string& normalizedName)
 {
     const std::vector<ClassTemplate>& classes = getClassTemplates();
@@ -322,6 +359,8 @@ std::string ClassCatalog::normalizeClassName(const std::string& className)
         normalized.begin(),
         normalized.end(),
         normalized.begin(),
+        // EN: [] declares or implements a focused behavior used by this module.
+        // FR: [] déclare ou implémente un comportement précis utilisé par ce module.
         [](unsigned char character)
         {
             return static_cast<char>(std::tolower(character));

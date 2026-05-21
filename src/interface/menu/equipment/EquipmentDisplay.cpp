@@ -1,3 +1,5 @@
+// EN: EquipmentDisplay.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: EquipmentDisplay.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -6,6 +8,8 @@
 #include <iostream>
 #include <string>
 
+// EN: displayMainMenu declares or implements a focused behavior used by this module.
+// FR: displayMainMenu déclare ou implémente un comportement précis utilisé par ce module.
 void EquipmentDisplay::displayMainMenu()
 {
     std::cout << "========== ÉQUIPEMENT ==========" << std::endl;
@@ -19,6 +23,8 @@ void EquipmentDisplay::displayMainMenu()
     std::cout << "> ";
 }
 
+// EN: displayWeaponList declares or implements a focused behavior used by this module.
+// FR: displayWeaponList déclare ou implémente un comportement précis utilisé par ce module.
 void EquipmentDisplay::displayWeaponList(const Player& player)
 {
     std::cout << "========== CHANGER ARME ==========" << std::endl;
@@ -35,6 +41,8 @@ void EquipmentDisplay::displayWeaponList(const Player& player)
     std::cout << "> ";
 }
 
+// EN: displayArmorList declares or implements a focused behavior used by this module.
+// FR: displayArmorList déclare ou implémente un comportement précis utilisé par ce module.
 void EquipmentDisplay::displayArmorList(const Player& player)
 {
     std::cout << "========== CHANGER TENUE ==========" << std::endl;
@@ -51,6 +59,8 @@ void EquipmentDisplay::displayArmorList(const Player& player)
     std::cout << "> ";
 }
 
+// EN: displaySelectedWeapon declares or implements a focused behavior used by this module.
+// FR: displaySelectedWeapon déclare ou implémente un comportement précis utilisé par ce module.
 void EquipmentDisplay::displaySelectedWeapon(const Weapon& weapon)
 {
     std::cout << "========== ARME SÉLECTIONNÉE ==========" << std::endl;
@@ -65,6 +75,8 @@ void EquipmentDisplay::displaySelectedWeapon(const Weapon& weapon)
     std::cout << "> ";
 }
 
+// EN: displaySelectedArmor declares or implements a focused behavior used by this module.
+// FR: displaySelectedArmor déclare ou implémente un comportement précis utilisé par ce module.
 void EquipmentDisplay::displaySelectedArmor(const Armor& armor)
 {
     std::cout << "========== ARMURE SÉLECTIONNÉE ==========" << std::endl;
@@ -79,6 +91,8 @@ void EquipmentDisplay::displaySelectedArmor(const Armor& armor)
     std::cout << "> ";
 }
 
+// EN: displayWeaponSummary declares or implements a focused behavior used by this module.
+// FR: displayWeaponSummary déclare ou implémente un comportement précis utilisé par ce module.
 void EquipmentDisplay::displayWeaponSummary(const Weapon& weapon, int index)
 {
     std::cout << index << " : " << weapon.getName()
@@ -95,6 +109,8 @@ void EquipmentDisplay::displayWeaponSummary(const Weapon& weapon, int index)
     std::cout << std::endl;
 }
 
+// EN: displayArmorSummary declares or implements a focused behavior used by this module.
+// FR: displayArmorSummary déclare ou implémente un comportement précis utilisé par ce module.
 void EquipmentDisplay::displayArmorSummary(const Armor& armor, int index)
 {
     std::cout << index << " : " << armor.getName()

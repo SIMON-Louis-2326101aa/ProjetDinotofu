@@ -1,3 +1,5 @@
+// EN: CombatRewardSystem.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: CombatRewardSystem.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -7,22 +9,71 @@
 
 #include <iostream>
 
+namespace
+{
+    // EN: givesNormalGoldReward declares or implements a focused behavior used by this module.
+    // FR: givesNormalGoldReward déclare ou implémente un comportement précis utilisé par ce module.
+    bool givesNormalGoldReward(Race race)
+    {
+        switch (race)
+        {
+            case Race::Humain:
+            case Race::SemiHumain:
+            case Race::Elfe:
+            case Race::ElfeNoir:
+            case Race::Nain:
+            case Race::Gnome:
+            case Race::Halfelin:
+            case Race::Tieffelin:
+            case Race::Aasimar:
+            case Race::Kitsune:
+            case Race::Fee:
+            case Race::SemiDragon:
+            case Race::Gobelin:
+            case Race::Hobgobelin:
+            case Race::Orc:
+            case Race::Demon:
+            case Race::Ange:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+}
+
+// EN: calculateMonsterReward declares or implements a focused behavior used by this module.
+// FR: calculateMonsterReward déclare ou implémente un comportement précis utilisé par ce module.
 CombatReward CombatRewardSystem::calculateMonsterReward(const Monster& monster)
 {
     int monsterLevel = monster.getLevel();
 
-    int experience = 12 + monsterLevel * 8;
-    int gold = 3 + monsterLevel * 2;
+    int experience = 18 + monsterLevel * 10;
+    int gold = givesNormalGoldReward(monster.getRace())
+        ? 5 + monsterLevel * 3
+        : monsterLevel / 2;
 
     if (monster.isElite())
     {
-        experience += monsterLevel * 10;
-        gold += monsterLevel * 4;
+        experience += 12 + monsterLevel * 13;
+        gold += givesNormalGoldReward(monster.getRace())
+            ? 10 + monsterLevel * 5
+            : 1 + monsterLevel;
+    }
+
+    if (monster.isEvolved())
+    {
+        experience += 20 + monsterLevel * 8;
+        gold += givesNormalGoldReward(monster.getRace())
+            ? 8 + monsterLevel * 4
+            : 1 + monsterLevel;
     }
 
     return CombatReward(experience, gold);
 }
 
+// EN: calculateDefeatedEnemiesReward declares or implements a focused behavior used by this module.
+// FR: calculateDefeatedEnemiesReward déclare ou implémente un comportement précis utilisé par ce module.
 CombatReward CombatRewardSystem::calculateDefeatedEnemiesReward(const EnemyCombatQueue& wave)
 {
     CombatReward totalReward;
@@ -37,6 +88,8 @@ CombatReward CombatRewardSystem::calculateDefeatedEnemiesReward(const EnemyComba
     return totalReward;
 }
 
+// EN: calculateEscapedEnemiesReward declares or implements a focused behavior used by this module.
+// FR: calculateEscapedEnemiesReward déclare ou implémente un comportement précis utilisé par ce module.
 CombatReward CombatRewardSystem::calculateEscapedEnemiesReward(const EnemyCombatQueue& wave)
 {
     CombatReward totalReward;
@@ -53,6 +106,8 @@ CombatReward CombatRewardSystem::calculateEscapedEnemiesReward(const EnemyCombat
     return totalReward;
 }
 
+// EN: calculateDamagedAliveEnemiesReward declares or implements a focused behavior used by this module.
+// FR: calculateDamagedAliveEnemiesReward déclare ou implémente un comportement précis utilisé par ce module.
 CombatReward CombatRewardSystem::calculateDamagedAliveEnemiesReward(const EnemyCombatQueue& wave)
 {
     CombatReward totalReward;
@@ -90,6 +145,8 @@ CombatReward CombatRewardSystem::calculateDamagedAliveEnemiesReward(
     return totalReward;
 }
 
+// EN: calculateWaveReward declares or implements a focused behavior used by this module.
+// FR: calculateWaveReward déclare ou implémente un comportement précis utilisé par ce module.
 CombatReward CombatRewardSystem::calculateWaveReward(const EnemyCombatQueue& wave)
 {
     CombatReward totalReward;
@@ -119,6 +176,8 @@ CombatReward CombatRewardSystem::calculateWaveReward(
     );
 }
 
+// EN: calculatePlayerEscapeReward declares or implements a focused behavior used by this module.
+// FR: calculatePlayerEscapeReward déclare ou implémente un comportement précis utilisé par ce module.
 CombatReward CombatRewardSystem::calculatePlayerEscapeReward(const EnemyCombatQueue& wave)
 {
     CombatReward totalReward;

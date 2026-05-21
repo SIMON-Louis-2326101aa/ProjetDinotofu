@@ -1,3 +1,5 @@
+// EN: Console.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: Console.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -11,16 +13,22 @@
 #include <sstream>
 #include <string>
 
+// EN: clear declares or implements a focused behavior used by this module.
+// FR: clear déclare ou implémente un comportement précis utilisé par ce module.
 void Console::clear()
 {
     system("clear");
 }
 
+// EN: pauseSeconds declares or implements a focused behavior used by this module.
+// FR: pauseSeconds déclare ou implémente un comportement précis utilisé par ce module.
 void Console::pauseSeconds(int seconds)
 {
     std::this_thread::sleep_for(std::chrono::seconds(seconds));
 }
 
+// EN: flushAvailableInputBuffer declares or implements a focused behavior used by this module.
+// FR: flushAvailableInputBuffer déclare ou implémente un comportement précis utilisé par ce module.
 void Console::flushAvailableInputBuffer()
 {
     while (std::cin.rdbuf()->in_avail() > 0)
@@ -29,6 +37,8 @@ void Console::flushAvailableInputBuffer()
     }
 }
 
+// EN: waitForEnter declares or implements a focused behavior used by this module.
+// FR: waitForEnter déclare ou implémente un comportement précis utilisé par ce module.
 void Console::waitForEnter()
 {
     flushAvailableInputBuffer();
@@ -45,6 +55,8 @@ void Console::waitForEnter()
     std::cout << std::endl;
 }
 
+// EN: askNumberBetween declares or implements a focused behavior used by this module.
+// FR: askNumberBetween déclare ou implémente un comportement précis utilisé par ce module.
 int Console::askNumberBetween(int min, int max, const std::string& errorMessage)
 {
     while (true)

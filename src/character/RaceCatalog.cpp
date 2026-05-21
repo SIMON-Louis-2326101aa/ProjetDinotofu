@@ -1,3 +1,5 @@
+// EN: RaceCatalog.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: RaceCatalog.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
 // Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
 // Description: Playable race catalog, racial starting bonuses and future trade modifiers.
@@ -27,11 +29,15 @@ std::vector<CharacterRace> RaceCatalog::getPlayableRaces()
     };
 }
 
+// EN: getPlayableRaceCount declares or implements a focused behavior used by this module.
+// FR: getPlayableRaceCount déclare ou implémente un comportement précis utilisé par ce module.
 int RaceCatalog::getPlayableRaceCount()
 {
     return static_cast<int>(getPlayableRaces().size());
 }
 
+// EN: getPlayableRaceByChoice declares or implements a focused behavior used by this module.
+// FR: getPlayableRaceByChoice déclare ou implémente un comportement précis utilisé par ce module.
 CharacterRace RaceCatalog::getPlayableRaceByChoice(int choice)
 {
     std::vector<CharacterRace> races = getPlayableRaces();
@@ -44,6 +50,8 @@ CharacterRace RaceCatalog::getPlayableRaceByChoice(int choice)
     return races[choice - 1];
 }
 
+// EN: displayPlayableRaces declares or implements a focused behavior used by this module.
+// FR: displayPlayableRaces déclare ou implémente un comportement précis utilisé par ce module.
 void RaceCatalog::displayPlayableRaces()
 {
     std::vector<CharacterRace> races = getPlayableRaces();
@@ -71,6 +79,8 @@ void RaceCatalog::displayPlayableRaces()
     }
 }
 
+// EN: getStartingBonus declares or implements a focused behavior used by this module.
+// FR: getStartingBonus déclare ou implémente un comportement précis utilisé par ce module.
 RaceStartingBonus RaceCatalog::getStartingBonus(CharacterRace race)
 {
     switch (race)
@@ -221,6 +231,8 @@ std::string RaceCatalog::getGameplayIdentity(CharacterRace race)
     }
 }
 
+// EN: getMerchantPurchasePricePercentage declares or implements a focused behavior used by this module.
+// FR: getMerchantPurchasePricePercentage déclare ou implémente un comportement précis utilisé par ce module.
 int RaceCatalog::getMerchantPurchasePricePercentage(CharacterRace race)
 {
     if (race == CharacterRace::Demon)
@@ -241,6 +253,8 @@ int RaceCatalog::getMerchantPurchasePricePercentage(CharacterRace race)
     return 100;
 }
 
+// EN: getMerchantSalePricePercentage declares or implements a focused behavior used by this module.
+// FR: getMerchantSalePricePercentage déclare ou implémente un comportement précis utilisé par ce module.
 int RaceCatalog::getMerchantSalePricePercentage(CharacterRace race)
 {
     if (race == CharacterRace::Demon)

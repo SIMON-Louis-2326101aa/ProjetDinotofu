@@ -1,3 +1,5 @@
+// EN: ShopMenu.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: ShopMenu.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 // English: Displays the first usable shop menu, with some real purchases and prepared future categories.
@@ -17,6 +19,8 @@
 
 namespace
 {
+    // EN: displayShopList declares or implements a focused behavior used by this module.
+    // FR: displayShopList déclare ou implémente un comportement précis utilisé par ce module.
     void displayShopList(const std::vector<ShopInventory>& shops)
     {
         std::cout << "========== BOUTIQUES ==========" << std::endl;
@@ -31,6 +35,8 @@ namespace
         std::cout << std::endl;
     }
 
+    // EN: displayShopStock declares or implements a focused behavior used by this module.
+    // FR: displayShopStock déclare ou implémente un comportement précis utilisé par ce module.
     void displayShopStock(const ShopInventory& shop, const Player& player)
     {
         const std::vector<ShopItem>& items = shop.getItems();
@@ -50,7 +56,8 @@ namespace
         {
             int finalPrice = ShopPriceRules::applyBuyModifier(
                 items[i].getBuyPrice(),
-                player.getRaceText()
+                player.getRaceText(),
+                player.getType()
             );
 
             std::cout << i + 1 << " : "
@@ -64,7 +71,11 @@ namespace
                 std::cout << " | Stock : " << items[i].getStock();
             }
 
-            if (!ShopTransactionSystem::canBeBoughtNow(items[i]))
+            if (items[i].isSoldOut())
+            {
+                std::cout << " | Épuisé";
+            }
+            else if (!ShopTransactionSystem::canBeBoughtNow(items[i]))
             {
                 std::cout << " | Prévu plus tard";
             }
@@ -76,16 +87,20 @@ namespace
         std::cout << std::endl;
     }
 
+    // EN: inspectShopItem declares or implements a focused behavior used by this module.
+    // FR: inspectShopItem déclare ou implémente un comportement précis utilisé par ce module.
     void inspectShopItem(const ShopItem& item, const Player& player)
     {
         int finalBuyPrice = ShopPriceRules::applyBuyModifier(
             item.getBuyPrice(),
-            player.getRaceText()
+            player.getRaceText(),
+            player.getType()
         );
 
         int finalSellPrice = ShopPriceRules::applySellModifier(
             item.getSellPrice(),
-            player.getRaceText()
+            player.getRaceText(),
+            player.getType()
         );
 
         std::cout << "========== ARTICLE ==========" << std::endl;
@@ -100,6 +115,11 @@ namespace
             std::cout << "Note : ton apparence démoniaque influence déjà certains prix." << std::endl;
         }
 
+        if (ShopPriceRules::hasCraftClassTradeBonus(player.getType()))
+        {
+            std::cout << "Note : ta classe d'artisanat négocie légèrement mieux les prix." << std::endl;
+        }
+
         if (!ShopTransactionSystem::canBeBoughtNow(item))
         {
             std::cout << "Statut : article préparé, mais pas encore stocké réellement dans l'inventaire." << std::endl;
@@ -110,6 +130,8 @@ namespace
     }
 
 
+    // EN: openSellMenu declares or implements a focused behavior used by this module.
+    // FR: openSellMenu déclare ou implémente un comportement précis utilisé par ce module.
     void openSellMenu(Player& player, const ShopInventory& shop)
     {
         bool selling = true;
@@ -195,7 +217,9 @@ namespace
         }
     }
 
-    void openSingleShop(Player& player, const ShopInventory& shop)
+    // EN: openSingleShop declares or implements a focused behavior used by this module.
+    // FR: openSingleShop déclare ou implémente un comportement précis utilisé par ce module.
+    void openSingleShop(Player& player, ShopInventory& shop)
     {
         bool stayInShop = true;
 
@@ -227,7 +251,7 @@ namespace
                 continue;
             }
 
-            const ShopItem& item = shop.getItems()[itemChoice - 1];
+            ShopItem& item = shop.getMutableItems()[itemChoice - 1];
             bool itemMenuOpen = true;
 
             while (itemMenuOpen)
@@ -254,7 +278,8 @@ namespace
                 {
                     int finalPrice = ShopPriceRules::applyBuyModifier(
                         item.getBuyPrice(),
-                        player.getRaceText()
+                        player.getRaceText(),
+                        player.getType()
                     );
 
                     ShopTransactionSystem::buyItem(player, item, finalPrice);
@@ -270,6 +295,8 @@ namespace
     }
 }
 
+// EN: displayPreview declares or implements a focused behavior used by this module.
+// FR: displayPreview déclare ou implémente un comportement précis utilisé par ce module.
 void ShopMenu::displayPreview()
 {
     std::vector<ShopInventory> shops = ShopCatalog::createAllPreviewShops();
@@ -287,6 +314,8 @@ void ShopMenu::displayPreview()
     std::cout << std::endl;
 }
 
+// EN: open declares or implements a focused behavior used by this module.
+// FR: open déclare ou implémente un comportement précis utilisé par ce module.
 void ShopMenu::open(Player& player)
 {
     std::vector<ShopInventory> shops = ShopCatalog::createAllPreviewShops();

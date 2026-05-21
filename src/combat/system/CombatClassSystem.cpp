@@ -1,3 +1,5 @@
+// EN: CombatClassSystem.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: CombatClassSystem.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -15,6 +17,8 @@ std::string CombatClassSystem::normalizeClassText(const std::string& classText)
         resultat.begin(),
         resultat.end(),
         resultat.begin(),
+        // EN: [] declares or implements a focused behavior used by this module.
+        // FR: [] déclare ou implémente un comportement précis utilisé par ce module.
         [](unsigned char caractere)
         {
             return static_cast<char>(std::tolower(caractere));
@@ -24,6 +28,8 @@ std::string CombatClassSystem::normalizeClassText(const std::string& classText)
     return resultat;
 }
 
+// EN: getBaseEscapeChance declares or implements a focused behavior used by this module.
+// FR: getBaseEscapeChance déclare ou implémente un comportement précis utilisé par ce module.
 int CombatClassSystem::getBaseEscapeChance(const Entity& entity)
 {
     std::string className = normalizeClassText(entity.getType());
@@ -50,6 +56,8 @@ int CombatClassSystem::getBaseEscapeChance(const Entity& entity)
     return 50;
 }
 
+// EN: getBaseDamageReductionPercentage declares or implements a focused behavior used by this module.
+// FR: getBaseDamageReductionPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int CombatClassSystem::getBaseDamageReductionPercentage(const Entity& entity)
 {
     std::string className = normalizeClassText(entity.getType());

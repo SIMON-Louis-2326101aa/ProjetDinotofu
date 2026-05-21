@@ -1,9 +1,13 @@
+// EN: PlayerWaveCombatTurn.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: PlayerWaveCombatTurn.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "combat/turn/wave/PlayerWaveCombatTurn.hpp"
 
 #include "combat/system/EscapeSystem.hpp"
+#include "combat/system/DefensePostureSystem.hpp"
+#include "combat/role/CombatRoleActionSystem.hpp"
 
 #include "core/Console.hpp"
 
@@ -14,6 +18,7 @@
 #include "interface/menu/CombatPotionMenu.hpp"
 #include "interface/menu/CombatRoleMenu.hpp"
 #include "interface/menu/progression/BestiaryMenu.hpp"
+#include "interface/menu/progression/StatisticsMenu.hpp"
 
 #include <iostream>
 
@@ -21,22 +26,31 @@ bool PlayerWaveCombatTurn::play(
     Player& player,
     EnemyCombatQueue& wave,
     Random& random,
-    bool& escapeSucceeded
+    bool& escapeSucceeded,
+    DifficultyMode difficulty
 )
 {
+    for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+    {
+        CombatRoleActionSystem::tryActivateAutomaticRoleReaction(
+            wave.getActiveEnemy(i),
+            random
+        );
+    }
+
     CombatMenu::displayTurnMenu(player);
 
     int choice = Console::askNumberBetween(
         0,
-        7,
-        "Choix invalide. Entre un chiffre entre 0 et 7."
+        8,
+        "Choix invalide. Entre un chiffre entre 0 et 8."
     );
 
     Console::clear();
 
     if (choice == 0)
     {
-        return openWaveInterface(player, wave);
+        return openWaveInterface(player, wave, difficulty);
     }
 
     if (choice == 1)
@@ -76,6 +90,12 @@ bool PlayerWaveCombatTurn::play(
 
     if (choice == 6)
     {
+        DefensePostureSystem::enterDefensePosture(player);
+        return true;
+    }
+
+    if (choice == 7)
+    {
         std::cout << player.getName() << " choisit de ne rien faire ce tour-ci." << std::endl;
         std::cout << "Parfois, survivre commence par attendre le bon moment." << std::endl;
         std::cout << std::endl;
@@ -83,9 +103,9 @@ bool PlayerWaveCombatTurn::play(
         return true;
     }
 
-    if (choice == 7)
+    if (choice == 8)
     {
-        escapeSucceeded = EscapeSystem::playerAttemptsEscape(player, random);
+        escapeSucceeded = EscapeSystem::playerAttemptsEscape(player, random, difficulty);
         return true;
     }
 
@@ -94,7 +114,8 @@ bool PlayerWaveCombatTurn::play(
 
 bool PlayerWaveCombatTurn::openWaveInterface(
     Player& player,
-    EnemyCombatQueue& wave
+    EnemyCombatQueue& wave,
+    DifficultyMode difficulty
 )
 {
     std::cout << "========== INTERFACE ==========" << std::endl;
@@ -133,7 +154,7 @@ bool PlayerWaveCombatTurn::openWaveInterface(
 
     if (interfaceChoice == 2)
     {
-        player.displayStats();
+        StatisticsMenu::open(player, difficulty);
         return false;
     }
 

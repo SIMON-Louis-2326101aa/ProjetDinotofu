@@ -1,3 +1,5 @@
+// EN: InventoryMenu.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: InventoryMenu.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -8,7 +10,10 @@
 #include "interface/menu/inventory/InventoryDisplay.hpp"
 #include "interface/menu/inventory/InventorySelection.hpp"
 #include "interface/menu/progression/BestiaryMenu.hpp"
+#include "interface/menu/quest/QuestMenu.hpp"
 
+// EN: open declares or implements a focused behavior used by this module.
+// FR: open déclare ou implémente un comportement précis utilisé par ce module.
 bool InventoryMenu::open(Player& player)
 {
     while (true)
@@ -17,8 +22,8 @@ bool InventoryMenu::open(Player& player)
 
         int menuChoice = Console::askNumberBetween(
             0,
-            6,
-            "Choix invalide. Entre un chiffre entre 0 et 6."
+            8,
+            "Choix invalide. Entre un chiffre entre 0 et 8."
         );
 
         Console::clear();
@@ -67,6 +72,18 @@ bool InventoryMenu::open(Player& player)
         if (menuChoice == 6)
         {
             InventorySelection::openMaterials(player);
+            continue;
+        }
+
+        if (menuChoice == 7)
+        {
+            InventorySelection::openCraft(player);
+            continue;
+        }
+
+        if (menuChoice == 8)
+        {
+            QuestMenu::consultOnly(player);
             continue;
         }
     }

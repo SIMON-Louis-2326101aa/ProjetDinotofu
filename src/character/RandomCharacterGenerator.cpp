@@ -1,3 +1,5 @@
+// EN: RandomCharacterGenerator.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: RandomCharacterGenerator.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file prepares random human and semi-human AI opponents for Dinotofu.
 // Français : Ce fichier prépare les adversaires IA humains et semi-humains aléatoires de Dinotofu.
 
@@ -9,6 +11,8 @@
 #include "class_system/ClassCatalog.hpp"
 #include "progression/DifficultyMode.hpp"
 
+// EN: generateRace declares or implements a focused behavior used by this module.
+// FR: generateRace déclare ou implémente un comportement précis utilisé par ce module.
 CharacterRace RandomCharacterGenerator::generateRace(Random& random)
 {
     int roll = random.between(1, 100);
@@ -76,6 +80,8 @@ CharacterRace RandomCharacterGenerator::generateRace(Random& random)
     return CharacterRace::HalfDragon;
 }
 
+// EN: generateClassicOpponent declares or implements a focused behavior used by this module.
+// FR: generateClassicOpponent déclare ou implémente un comportement précis utilisé par ce module.
 Player RandomCharacterGenerator::generateClassicOpponent(Random& random)
 {
     int classChoice = random.between(1, ClassCatalog::getPlayableClassCount());
@@ -102,6 +108,8 @@ Player RandomCharacterGenerator::generateClassicOpponentWithClass(
     return opponent;
 }
 
+// EN: generateSpecialOpponent declares or implements a focused behavior used by this module.
+// FR: generateSpecialOpponent déclare ou implémente un comportement précis utilisé par ce module.
 Player RandomCharacterGenerator::generateSpecialOpponent(Random& random)
 {
     SpecialCharacter specialCharacter = SpecialCharacterCatalog::createRandomSpecialOpponent(random);
@@ -122,6 +130,8 @@ Player RandomCharacterGenerator::generateSpecialOpponent(Random& random)
     return opponent;
 }
 
+// EN: generateArenaOpponent declares or implements a focused behavior used by this module.
+// FR: generateArenaOpponent déclare ou implémente un comportement précis utilisé par ce module.
 Player RandomCharacterGenerator::generateArenaOpponent(Random& random)
 {
     int roll = random.between(1, 100);
@@ -134,6 +144,8 @@ Player RandomCharacterGenerator::generateArenaOpponent(Random& random)
     return generateClassicOpponent(random);
 }
 
+// EN: generateRandomOpponent declares or implements a focused behavior used by this module.
+// FR: generateRandomOpponent déclare ou implémente un comportement précis utilisé par ce module.
 Player RandomCharacterGenerator::generateRandomOpponent(Random& random)
 {
     return generateClassicOpponent(random);

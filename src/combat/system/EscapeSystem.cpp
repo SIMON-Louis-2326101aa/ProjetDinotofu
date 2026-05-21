@@ -1,23 +1,41 @@
+// EN: EscapeSystem.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: EscapeSystem.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "combat/system/EscapeSystem.hpp"
 #include "combat/system/CombatClassSystem.hpp"
+#include "progression/DifficultyRules.hpp"
 
 #include "core/Console.hpp"
 
 #include <algorithm>
 #include <iostream>
 
+// EN: playerAttemptsEscape declares or implements a focused behavior used by this module.
+// FR: playerAttemptsEscape déclare ou implémente un comportement précis utilisé par ce module.
 bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random)
+{
+    return playerAttemptsEscape(player, random, DifficultyMode::Normal);
+}
+
+// EN: playerAttemptsEscape declares or implements a focused behavior used by this module.
+// FR: playerAttemptsEscape déclare ou implémente un comportement précis utilisé par ce module.
+bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, DifficultyMode difficulty)
 {
     std::cout << player.getName() << " cherche une ouverture pour fuir le combat..." << std::endl;
     std::cout << std::endl;
 
     Console::pauseSeconds(1);
 
-    int escapeChance = CombatClassSystem::getBaseEscapeChance(player);
+    int escapeChance = CombatClassSystem::getBaseEscapeChance(player)
+        + DifficultyRules::getPlayerEscapeChanceModifier(difficulty);
+
+    escapeChance = std::max(10, std::min(escapeChance, 90));
     int roll = random.between(1, 100);
+
+    std::cout << "Chance estimée de fuite : " << escapeChance << "%" << std::endl;
+    std::cout << std::endl;
 
     if (roll <= escapeChance)
     {
@@ -37,6 +55,8 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random)
     return false;
 }
 
+// EN: playerAttemptsBossEscape declares or implements a focused behavior used by this module.
+// FR: playerAttemptsBossEscape déclare ou implémente un comportement précis utilisé par ce module.
 bool EscapeSystem::playerAttemptsBossEscape(const Player& player, const Boss& boss)
 {
     std::cout << player.getName() << " cherche une issue..." << std::endl;
@@ -51,12 +71,14 @@ bool EscapeSystem::playerAttemptsBossEscape(const Player& player, const Boss& bo
     Console::pauseSeconds(1);
 
     std::cout << boss.getName() << " bloque toute échappatoire par sa seule présence." << std::endl;
-    std::cout << "Face à une entité de ce niveau, la fuite n'est plus une option." << std::endl;
+    std::cout << "L'arène ne possède plus de sortie : elle n'attend qu'un vainqueur, ou un corps." << std::endl;
     std::cout << std::endl;
 
     Console::pauseSeconds(1);
 
-    std::cout << "[la fuite est impossible durant ce combat]" << std::endl;
+    std::cout << "Tu fais un pas vers la fuite." << std::endl;
+    std::cout << boss.getName() << " tourne lentement la tête vers toi." << std::endl;
+    std::cout << "Même le silence te repousse vers le centre du combat." << std::endl;
     std::cout << "La tentative échoue. Ton tour est perdu." << std::endl;
     std::cout << std::endl;
 
@@ -106,6 +128,8 @@ bool EscapeSystem::playerAttemptsDuelEscape(
     return false;
 }
 
+// EN: monsterCanAttemptEscape declares or implements a focused behavior used by this module.
+// FR: monsterCanAttemptEscape déclare ou implémente un comportement précis utilisé par ce module.
 bool EscapeSystem::monsterCanAttemptEscape(const Monster& monster)
 {
     if (monster.isInvocation())
@@ -133,6 +157,8 @@ bool EscapeSystem::monsterCanAttemptEscape(const Monster& monster)
     return hpPercentage <= 10;
 }
 
+// EN: monsterAttemptsEscape declares or implements a focused behavior used by this module.
+// FR: monsterAttemptsEscape déclare ou implémente un comportement précis utilisé par ce module.
 bool EscapeSystem::monsterAttemptsEscape(Monster& monster, Random& random)
 {
     if (!monsterCanAttemptEscape(monster))
@@ -187,6 +213,8 @@ int EscapeSystem::calculateDuelEscapeChance(
     return std::max(15, std::min(chance, 85));
 }
 
+// EN: endCombatBySurrender declares or implements a focused behavior used by this module.
+// FR: endCombatBySurrender déclare ou implémente un comportement précis utilisé par ce module.
 void EscapeSystem::endCombatBySurrender(Player& runner)
 {
     runner.takeDamage(runner.getHp());

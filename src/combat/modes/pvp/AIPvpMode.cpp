@@ -1,9 +1,12 @@
+// EN: AIPvpMode.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: AIPvpMode.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "combat/modes/pvp/AIPvpMode.hpp"
 
 #include "combat/TurnManager.hpp"
+#include "combat/ai/CombatAI.hpp"
 #include "combat/summon/SummonRules.hpp"
 #include "combat/summon/SummonCombatSystem.hpp"
 #include "combat/threat/ThreatSystem.hpp"
@@ -12,7 +15,9 @@
 #include "combat/role/CombatRoleActionSystem.hpp"
 
 #include "character/RandomCharacterGenerator.hpp"
+#include "character/SpecialCharacterCatalog.hpp"
 #include "character/SpecialCharacterDialogueCatalog.hpp"
+#include "character/SpecialCharacterNativeBonus.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "core/Console.hpp"
 #include "interface/CombatDisplay.hpp"
@@ -23,6 +28,8 @@
 
 namespace
 {
+    // EN: askClassManually declares or implements a focused behavior used by this module.
+    // FR: askClassManually déclare ou implémente un comportement précis utilisé par ce module.
     PlayerClass askClassManually(const std::string& targetName)
     {
         Console::clear();
@@ -68,6 +75,8 @@ namespace
         return ClassCatalog::createClassByCategoryChoice(categoryChoice, classChoice);
     }
 
+    // EN: applyMattProUniversalBonus declares or implements a focused behavior used by this module.
+    // FR: applyMattProUniversalBonus déclare ou implémente un comportement précis utilisé par ce module.
     void applyMattProUniversalBonus(Player& matt)
     {
         matt.applyFlatStatBonus(
@@ -78,6 +87,8 @@ namespace
         );
     }
 
+    // EN: createMattOpponent declares or implements a focused behavior used by this module.
+    // FR: createMattOpponent déclare ou implémente un comportement précis utilisé par ce module.
     Player createMattOpponent(Random& random)
     {
         std::cout << "Matt (PRO) est entré dans l'arène." << std::endl;
@@ -122,6 +133,63 @@ namespace
         return ai;
     }
 
+    // EN: createChosenSpecialOpponent declares or implements a focused behavior used by this module.
+    // FR: createChosenSpecialOpponent déclare ou implémente un comportement précis utilisé par ce module.
+    Player createChosenSpecialOpponent()
+    {
+        Console::clear();
+
+        std::vector<SpecialCharacter> characters = SpecialCharacterCatalog::getAllSpecialCharacters();
+
+        std::cout << "========== PERSONNAGES SPÉCIAUX ==========" << std::endl;
+        std::cout << "Le code a ouvert une porte que l'arène garde normalement rare." << std::endl;
+        std::cout << "Tu peux provoquer un personnage spécial précis, y compris Matt (PRO)." << std::endl;
+        std::cout << std::endl;
+
+        for (std::size_t index = 0; index < characters.size(); ++index)
+        {
+            const SpecialCharacter& character = characters[index];
+            std::cout << index + 1 << " : " << character.getName()
+                      << " | Race : " << character.getRaceText()
+                      << " | Classe native : " << character.getNativeClass()
+                      << std::endl;
+            std::cout << "    " << character.getCombatStyle() << std::endl;
+        }
+
+        std::cout << std::endl;
+        std::cout << "> ";
+
+        int choice = Console::askNumberBetween(
+            1,
+            static_cast<int>(characters.size()),
+            "Veuillez choisir un personnage spécial affiché."
+        );
+
+        const SpecialCharacter& selected = characters[static_cast<std::size_t>(choice - 1)];
+
+        Player opponent(
+            selected.getName(),
+            ClassCatalog::createClassByName(selected.getNativeClass())
+        );
+
+        opponent.setRace(selected.getRace());
+        opponent.initializeStarterInventory();
+
+        SpecialCharacterNativeBonus::applyForSpecialCharacter(
+            opponent,
+            selected
+        );
+
+        Console::clear();
+        std::cout << selected.getName() << " a été appelé directement par le registre altéré." << std::endl;
+        std::cout << "Ce n'est plus une rencontre rare : c'est un défi provoqué." << std::endl;
+        std::cout << std::endl;
+
+        return opponent;
+    }
+
+    // EN: createClassicOpponentFromChosenClass declares or implements a focused behavior used by this module.
+    // FR: createClassicOpponentFromChosenClass déclare ou implémente un comportement précis utilisé par ce module.
     Player createClassicOpponentFromChosenClass(Random& random)
     {
         Console::clear();
@@ -144,6 +212,8 @@ namespace
     }
 }
 
+// EN: run declares or implements a focused behavior used by this module.
+// FR: run déclare ou implémente un comportement précis utilisé par ce module.
 void AIPvpMode::run(Player& player1, Random& random)
 {
     std::cout << "Préparation de l'IA..." << std::endl;
@@ -166,12 +236,24 @@ void AIPvpMode::run(Player& player1, Random& random)
     std::cout << "    Tu choisis le style de combat, mais le nom et la race restent aléatoires." << std::endl;
     std::cout << "    Aucun personnage spécial ne peut apparaître avec cette option." << std::endl;
     std::cout << std::endl;
+
+    int maxOpponentChoice = 3;
+
+    if (player1.hasSpecialChallengeAccess())
+    {
+        maxOpponentChoice = 4;
+        std::cout << "4 : Spéciaux" << std::endl;
+        std::cout << "    Liste tous les personnages spéciaux et permet d'en provoquer un directement." << std::endl;
+        std::cout << "    Cette option vient d'une donnée altérée." << std::endl;
+        std::cout << std::endl;
+    }
+
     std::cout << "> ";
 
     int opponentChoice = Console::askNumberBetween(
         1,
-        3,
-        "Veuillez entrer un chiffre valide entre 1 et 3."
+        maxOpponentChoice,
+        "Veuillez entrer un chiffre valide affiché."
     );
 
     Player ai;
@@ -184,9 +266,13 @@ void AIPvpMode::run(Player& player1, Random& random)
     {
         ai = RandomCharacterGenerator::generateArenaOpponent(random);
     }
-    else
+    else if (opponentChoice == 3)
     {
         ai = createClassicOpponentFromChosenClass(random);
+    }
+    else
+    {
+        ai = createChosenSpecialOpponent();
     }
 
     Console::clear();
@@ -297,10 +383,11 @@ void AIPvpMode::run(Player& player1, Random& random)
                 ThreatSystem::notifyForcedTarget(player1, ai.getName());
             }
             else if (SummonCombatSystem::hasTargetableSummons(playerSummons)
-                && random.between(1, 100) <= 35)
+                && random.between(1, 100) <= CombatAI::getSummonTargetPriorityChance(ai))
             {
-                int summonIndex = SummonCombatSystem::chooseRandomTargetableSummonIndex(
+                int summonIndex = SummonCombatSystem::chooseStrategicTargetableSummonIndex(
                     playerSummons,
+                    ai,
                     random
                 );
 
@@ -355,4 +442,17 @@ void AIPvpMode::run(Player& player1, Random& random)
     }
 
     CombatDisplay::displayCombatResult(player1, ai);
+
+    if (SpecialCharacterDialogueCatalog::hasDialogueFor(ai.getName()))
+    {
+        if (ai.isDead())
+        {
+            SpecialCharacterDialogueCatalog::displayDefeatDialogue(ai.getName());
+        }
+        else if (player1.isDead())
+        {
+            SpecialCharacterDialogueCatalog::displayVictoryDialogue(ai.getName());
+        }
+    }
 }
+

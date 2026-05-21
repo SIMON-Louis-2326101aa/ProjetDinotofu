@@ -1,102 +1,13 @@
-DINOTOFU - PERSONNAGES SPECIAUX, CODES ET SYSTEMES PREVUS
-==========================================================
+PERSONNAGES SPÉCIAUX ET CHEATS - DINOTOFU
 
-Ce fichier regroupe les idées validées autour des personnages spéciaux, des identités protégées, des codes de triche, du statut Altéré, des bénédictions et des mécaniques de secours.
-Il sert de mémoire de design pour la suite du développement.
+Règle générale :
+- Les personnages spéciaux ont des noms protégés.
+- Si le joueur entre un nom spécial à la création, le jeu demande une date spéciale.
+- Si la date est correcte, la race est verrouillée selon le personnage, mais la classe reste choisissable.
+- Une classe native peut donner un bonus natif.
+- Matt (PRO) n'est pas jouable normalement.
 
-----------------------------------------------------------
-1. PERSONNAGES SPECIAUX PREVUS
-----------------------------------------------------------
-
-Principe général :
-- Ces personnages ne sont pas des monstres.
-- Ils sont plutôt des IA / semi-humains / personnages spéciaux.
-- Ils peuvent apparaître avec un taux de chance dans l'histoire, l'arène ou certains modes.
-- En dehors de ces apparitions spéciales, les rencontres doivent utiliser des personnages aléatoires avec des noms aléatoires.
-- Les semi-humains vivent selon les villes en harmonie avec les humains, dans une logique médiéval-fantastique / DND.
-
-Liste actuelle :
-
-Matt (PRO)
-- Référence directe à Matt de Wii Sports.
-- Personnage spécial non jouable.
-- Doit avoir de légers bonus de base.
-- IA correcte / adversaire référence.
-
-Hazak
-- Assassin elfe noir.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-- Classe native prévue : Assassin.
-
-Mattzelda
-- Colosse humain.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-- Classe native prévue : Colosse.
-
-Aoi
-- Future mage flame / invocatrice kitsune.
-- Race : kitsune.
-- Possède aussi un katana.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-
-Kanadé
-- Mage semi-dragonne.
-- Sorts très aléatoires liés aux 13 signes du zodiaque.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-
-Fail
-- Mage fou.
-- Race : fée.
-- Possède des sorts très variés et parfois des sorts uniques.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-
-Trexof
-- Assassin humain.
-- Possède de légers bonus.
-- Bêta testeur principal.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-
-Skuro
-- Tank.
-- Arme prévue : épée lourde à deux mains.
-- Attaques à faible réussite, mais dégâts très lourds.
-- Gameplay basé sur le risque : peu de coups, mais chaque coup peut faire très mal.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-
-Sanctus
-- Tank / semi-mage.
-- Attaques de base plutôt simples.
-- Capacités principales : protection, entrave, soutien défensif.
-- Se sert des croyances liées à un dieu de la lumière.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-
-Hestia
-- Stats presque nulles sauf la magie.
-- Plus elle utilise la magie, même en cas d'échec, plus le sort devient puissant.
-- Possède dès le début un sort niveau max : dôme de protection.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-
-Fire Flight
-- Personnage/dev.
-- Stats globalement très basiques.
-- Sous 50% PV : esquive beaucoup mieux et touche presque toujours en critique.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-
-Louis
-- Artificier.
-- Très bonne précision.
-- Attaques avec plusieurs projectiles d'un coup.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-
-Henrique
-- Chevalier.
-- Capacité future : revenir une fois à la vie.
-- Fonce dans le tas globalement.
-- Personnage spécial jouable seulement avec validation de date spéciale.
-
-Règle future : quand un nouveau personnage spécial est ajouté, demander s'il doit avoir une date spéciale de validation ou non.
-
-Dates spéciales configurées :
+Dates spéciales :
 - Trexof : 09/09/2005
 - Fail : 10/10/2024
 - Skuro : 06/12/2024
@@ -105,565 +16,102 @@ Dates spéciales configurées :
 - Kanadé : 06/12/2024
 - Aoi : 01/12/2024
 - Mattzelda : 15/07/2005
-- Fire Flight / FireFlight : 01/02/2005
+- FireFlight / Fire Flight : 01/02/2005
 - Louis : 01/02/2005
 - Henrique : 29/11/2024
 - Hestia : 11/11/1111
-
-Implémentation actuelle :
-- Si un joueur entre un nom protégé à la création du personnage, le jeu affiche un avertissement d'identité.
-- Matt (PRO) reste non jouable.
-- Les autres identités protégées demandent une confirmation puis la date spéciale au format DD/MM/YYYY.
-- Si la date est correcte, la race de l'identité est verrouillée par son histoire.
-- Le joueur peut quand même choisir sa classe.
-- Si la classe choisie correspond à la classe native prévue, le bonus natif peut s'activer.
-
-----------------------------------------------------------
-1B. DIALOGUES ET PERSONNALITES DES PERSONNAGES SPECIAUX
-----------------------------------------------------------
-
-Principe :
-- Les personnages spéciaux doivent avoir des dialogues propres.
-- Ces dialogues peuvent apparaître à l'entrée en scène, à bas PV, en victoire, en défaite, ou pendant des événements d'histoire.
-- Le fichier assets/texts/special_characters/dialogues.json sert de mémoire locale pour ces dialogues.
-
-Personnalités validées :
-
-Hazak
-- Sombre, efficace et direct.
-- Assassin qui prend les gens de haut et cherche surtout à gagner.
-
-Skuro
-- Avare du découpage de tête.
-- Aime quand son tranchant entre dans “la matière”.
-
-Kanadé
-- Rageuse, râle pour beaucoup de choses.
-- Déterminée malgré tout.
-
-Aoi
-- Timide.
-- N'hésite pas à protéger ses incantations.
-
-Sanctus
-- Protecteur.
-- Si quelqu'un se met sur son chemin, il se défend.
-- Lié aux croyances d'un dieu de la lumière.
-
-Fail
-- Expérimente, s'améliore et cherche à éradiquer la menace de la manière la plus spectaculaire possible.
-
-Hestia
-- Peureuse.
-- Fonce parfois les yeux fermés parce qu'elle a peur.
-- Si elle pouvait éviter le combat, elle le ferait sans hésiter.
-
-Fire Flight
-- Commandant / meneur.
-- A du mal à comprendre que des humains et semi-humains puissent être hostiles.
-- Aime beaucoup les pluies de projectiles sur ses ennemis.
-
-Louis
-- Cherche des amis.
-- Assez naïf, sympathique de base.
-
-Mattzelda
-- Gros blagueur.
-
-Henrique
-- Chevalier frontal.
-- Capacité future : revenir une fois à la vie.
-- Fonce dans le tas.
-
-----------------------------------------------------------
-2. IDENTITES PROTEGEES / ANTI-USURPATION
-----------------------------------------------------------
-
-Quand le joueur entre un nom correspondant à un personnage spécial, sans tenir compte des majuscules :
-
-1. Le jeu détecte que le nom est protégé.
-2. Le jeu affiche un avertissement.
-3. Le joueur peut confirmer ou revenir au choix du nom.
-4. S'il confirme, il doit entrer la date spéciale au format DD/MM/YYYY.
-5. Si la date est correcte, le personnage devient jouable.
-6. Si la date est incorrecte, le personnage refuse l'appel.
-7. Matt (PRO) reste non jouable, même avec validation.
-
-Dialogue proposé :
-
-"Ce nom ne t'appartient pas vraiment.
-
-[Nom] possède déjà son histoire, ses cicatrices, ses choix et ses fautes.
-Usurper son identité n'est pas une simple fantaisie.
-
-Si tu es réellement lié à ce personnage, prouve-le.
-Entre sa date spéciale au format DD/MM/YYYY."
-
-En cas de réussite :
-
-"Identité reconnue.
-Tu ne joues pas une copie.
-Tu réveilles une histoire déjà commencée."
-
-En cas d'échec :
-
-"Date incorrecte.
-Ce personnage refuse de répondre à ton appel.
-Choisis un autre nom."
-
-Classe native / bonus natif :
-- Même si une identité spéciale est validée, le joueur peut choisir la classe qu'il veut.
-- La classe prévue pour le bot/personnage affiche "bonus natif" à côté.
-- Si le joueur choisit cette classe, le personnage reçoit un bonus natif.
-- Si le joueur choisit une autre classe, il peut jouer le personnage sans ce bonus.
-
-Exemple :
-1 : Chevalier
-2 : Assassin [bonus natif]
-3 : Colosse
-
-----------------------------------------------------------
-3. STATUT ALTERE ET CODES DE TRICHE
-----------------------------------------------------------
-
-Principe :
-- Les codes de triche existent, mais ils marquent le personnage.
-- Le premier code activé demande confirmation.
-- Après confirmation, le personnage reçoit le statut : Altéré.
-- Un personnage altéré pourra plus tard être exclu de certains records officiels ou événements.
-- Certains codes purement narratifs peuvent rester à part selon leur effet.
-
-Warning avant le premier code :
-
-"Une règle ancienne vient d'être touchée.
-
-Attention : activer un code peut altérer votre expérience,
-vos statistiques, vos souvenirs, et la trace laissée par ce personnage.
-
-Un personnage altéré ne sera peut-être plus considéré comme officiel
-dans certains classements, records ou événements futurs.
-
-Voulez-vous vraiment procéder à l'activation ?
-1 : Oui, altérer ce personnage
-0 : Non, revenir en arrière"
-
-Après chaque activation :
-- Afficher le code reconnu.
-- Afficher les effets.
-- Afficher : "Statut du personnage : Altéré" si applicable.
-- Afficher : "État : activé".
-
-----------------------------------------------------------
-4. CODES DE TRICHE VALIDES
-----------------------------------------------------------
-
-idontwanttodie
-- Active un god mode.
-- Impossible de perdre des PV.
-
-infinituseforeverything
-- Les consommables de l'inventaire ne diminuent plus.
-
-bedrockequipment
-- Les équipements deviennent indestructibles.
-
-myweaponandnotother
-- Empêche la perte et le vol d'équipement.
-
-skipallstory
-- Débloque tout le bestiaire / toute la connaissance prévue.
-
-skipalllevels
-- Donne le niveau maximum.
-- Niveau maximum prévu : 255, en référence à un octet dont tous les bits sont à 1.
-
-1302313
-- Code personnel du créateur.
-- Déclenche un message spécial du créateur.
-
-13023131302313
-- Séquence cachée en combat.
-- Peut être saisie via les choix de menu, par exemple une suite 1 puis 3 puis 0, etc.
-- Déclenche une scène spéciale.
-- Propose d'invoquer une divinité pour aider.
-- Si accepté : one-shot de l'ennemi et soin complet.
-- Accepter ou refuser rend l'événement impossible à retrouver avec le personnage actuel.
-
-iamnotgoblinfood
-- Les gobelins ont peur du personnage pendant un combat ou une rencontre.
-
-letmecook
-- Augmente les chances de critique pendant un combat.
-
-whereismyplotarmor
-- Donne une bénédiction temporaire anti-mort ou une protection narrative.
-
-talktothedev
-- Affiche une note méta du créateur.
-
-oopsallbosses
-- Remplace les vagues par des mini-boss aléatoires ou prépare un mode chaos.
-
-randomizemyfate
-- Donne une classe, une arme et un inventaire totalement random.
-
-resetmycharacter
-- Réinitialise complètement le personnage.
-- Version courte possible : détruire et recréer le personnage.
-- Doit demander une confirmation forte, par exemple taper RESET.
-
-switchmyclassandweapon
-- Permet de choisir une autre classe.
-- Donne un équipement correspondant plus ou moins à la progression actuelle.
-- Sert de debug et prépare le futur changement/évolution de classe via missions, style de gameplay ou niveau.
-
-helpmerefundmyaction
-- Permet d'annuler une action involontaire ou une vente accidentelle.
-- Maximum 3 fois par personnage.
-- Sert de secours en cas d'erreur de joueur.
-
-givemesomegolds
-- Donne entre 100 et 1000 pièces d'or.
-- Réutilisable.
-
-givemealevel
-- Donne un niveau supplémentaire.
-- Réutilisable.
-
-----------------------------------------------------------
-5. SYSTEME DE REFUND / ANNULATION D'ACTION
-----------------------------------------------------------
-
-Code : helpmerefundmyaction
-
-Objectif :
-- Aider en cas d'erreur réelle.
-- Exemple : vente involontaire d'un objet.
-- Exemple : mauvaise action choisie par erreur.
-
-Règles prévues :
-- Maximum 3 utilisations par personnage.
-- Le système doit garder une trace de la dernière action annulable.
-- Les actions trop anciennes ou trop importantes peuvent ne pas être annulables.
-- Le personnage devient probablement Altéré, sauf si le code est traité comme assistance/accessibilité.
-
-----------------------------------------------------------
-6. BENEDICTIONS ET ANOMALIE DE SURVIE
-----------------------------------------------------------
-
-Idée validée :
-- En difficulté Léthal, la mort est normalement définitive.
-- Cependant, un événement spécial peut empêcher une mort officielle.
-- Ce n'est pas un respawn gratuit.
-- Il faut probablement une bénédiction débloquée.
-- Toutes les bénédictions sont perdues au déclenchement.
-
-Texte validé :
-
-"La mort t'a trouvé.
-Puis elle a reculé.
-
-Quelqu'un, quelque part, a payé le prix à ta place.
-
-Tu ouvres les yeux avec 1 PV.
-Ton équipement a disparu.
-Ton inventaire n'est plus qu'un souvenir.
-
-Statut : anomalie de survie.
-
-Tes bénédictions se sont consumées.
-Mais ton nom existe encore.
-Pour l'instant."
-
-Effet prévu :
-- Survie à 1 PV.
-- Statut : Anomalie de survie.
-- Stuff/inventaire détruit, perdu ou très lourdement puni.
-- Toutes les bénédictions sont consommées.
-- Ce n'est pas compté comme une mort classique.
-
-----------------------------------------------------------
-7. DIFFICULTE ET PENALITES
-----------------------------------------------------------
-
-Difficultés prévues :
-- Facile
-- Normal
-- Difficile
-- Cauchemar
-- Léthal
-
-Règle générale :
-- Plus la difficulté monte, plus les taux de pénalité augmentent.
-- Même si l'écart est parfois léger, il doit être présent.
-
-Pénalités concernées :
-- perte d'or
-- perte d'XP
-- perte de consommables
-- perte de matériaux
-- perte/dégâts de durabilité
-- vol d'équipement
-- casse irréparable
-- respawn avec moins de PV/mana
-
-Respawn non létal prévu :
-- Facile : environ 75% PV / mana
-- Normal : environ 50% PV / mana
-- Difficile : environ 30% PV / mana
-- Cauchemar : environ 10% PV / mana
-- Léthal : pas de respawn normal
-
-Objets rares / reliques / uniques :
-- En Facile/Normal, ils sont très protégés.
-- En Difficile, ils commencent à pouvoir subir des problèmes.
-- En Cauchemar/Léthal, ils peuvent subir des problèmes proches des objets courants.
-- Exception : objet lié au corps, à l'âme ou au personnage.
-
-Durabilité infinie :
-- Doit être rare.
-- Moins présente en difficultés hautes.
-- Préférer des objets "très résistants" plutôt que vraiment indestructibles.
-
-----------------------------------------------------------
-8. MORT NON DEFINITIVE : VOL, CASSE, IRREPARABLE
-----------------------------------------------------------
-
-Vol d'équipement :
-- Possible lors d'une mort non définitive.
-- Test séparé pour chaque équipement équipé.
-- Jamais sur la tenue de base.
-- Seulement contre ennemis cohérents : bandit, voleur, humanoïde, semi-humain hostile, gobelin intelligent, orc pillard, etc.
-- Pas contre tous les monstres.
-- Pas contre les boss par défaut, sauf boss spécial prévu pour ça.
-
-Casse irréparable :
-- Si un équipement tombe à 0 durabilité, il peut devenir définitivement irréparable.
-- Dans ce cas, il ne reste qu'un petit matériau/fragment.
-- Le reste est perdu, jeté ou détruit.
-
-Exemples :
-- Épée rouillée détruite -> Fragment de métal rouillé x1
-- Armure en cuir détruite -> Morceau de cuir abîmé x1
-- Bâton magique détruit -> Éclat arcanique instable x1
-
-----------------------------------------------------------
-9. FICHIERS PREPARES DANS CETTE BASE
-----------------------------------------------------------
-
-Dossiers/fichiers préparés pour la suite :
-- include/cheat/
-- src/cheat/
-- include/progression/blessing/
-- src/progression/blessing/
-- include/interface/menu/cheat/
-- src/interface/menu/cheat/
-- fichiers de garde d'identité spéciale dans include/character/ et src/character/
-- assets/config/cheat_codes.json
-- assets/config/special_characters.json
-- assets/texts/cheats/
-- assets/texts/special_characters/
-- assets/texts/blessings/
-- assets/saves/cheats/
-- assets/saves/blessings/
-
-Ces fichiers sont volontairement vides ou presque vides pour préparer la suite sans casser la compilation.
-
-----------------------------------------------------------
-10. AJOUTS DE CETTE PASSE : RACES, CLASSES, MONSTRES, SPECIAUX
-----------------------------------------------------------
-
-Races préparées :
-- Humain, semi-humain, elfe, elfe noir, nain, gnome, halfelin, tieffelin, aasimar, kitsune, fée, semi-dragon.
-- Races de monstres/entités : gobelin, hobgobelin, orc, mort-vivant, démon, ange, bête, dragon, draconide, esprit, élémentaire, slime, plante, insectoïde, construction, aberration, anomalie arcanique, invocation.
-
-Classes ajoutées au catalogue jouable :
-- Base/DND : Barbare, Barde, Clerc, Druide, Guerrier, Moine, Paladin, Rôdeur, Roublard, Ensorceleur, Sorcier, Magicien, Artificier.
-- Extensions Dinotofu : Alchimiste, Duelliste, Berserker, Lancier, Archer, Arbalétrier, Chasseur, Lanceur de dagues, Pyromancien, Cryomancien, Arcaniste, Prêtre, Occultiste, Nécromancien, Invocateur, Dompteur, Pactisant, Chevalier runique, Ombrelame, Mage-lame, Gardien, Templier, Shaman, Mage fou, Mage flame, Mage zodiacal, Tank sacré, Briseur lourd.
-
-Monstres ajoutés/préparés :
-- Rat géant, Slime fragile, Racine agitée, Kobold paniqué, Araignée venimeuse, Bandit maladroit, Squelette instable, Méphaïte de braise, Gobelin pillard, Goule affamée, Esprit mineur, Alchimiste renégat, Orc éclaireur, Mage renégat, Chevalier corrompu, Anomalie arcanique instable, Ours brun, Orc berserker, Revenant silencieux, Démon mineur, Élémentaire instable, Chevalier sans âme, Colosse sauvage, Dragon mineur.
-
-IA / personnages spéciaux :
-- Le mode PvP IA propose Matt (PRO), un tirage d'arène aléatoire avec environ 25% de chance de personnage spécial, ou un adversaire classique par classe choisie.
-- Matt (PRO) existe toujours comme choix séparé pour garder le délire d'origine, sans spécialité de classe mais avec un bonus universel.
-- Les dates spéciales ne sont pas encore configurées : la structure est prête, mais les vraies dates seront ajoutées plus tard.
-
-----------------------------------------------------------
-7. RACES JOUABLES ET PARTICULARITES RACIALES
-----------------------------------------------------------
-
-Les races ne doivent pas être seulement décoratives.
-Chaque race donne une petite identité de départ, puis plus tard des effets plus profonds : dialogues, commerce, résistance, fuite, magie, affinités de classe, réputation ou quêtes.
-
-Règle actuelle en jeu :
-- Le joueur choisit sa race après la difficulté et avant la classe.
-- La race est affichée dans les statistiques du personnage.
-- La race applique déjà un petit bonus de départ aux PV, dégâts min/max ou critique.
-
-Races actuellement préparées :
-- Humain : polyvalent, petit bonus PV, futur bonus XP/or possible.
-- Elfe : précision, esquive future, affinité arc et magie fine.
-- Elfe noir : critique, furtivité future, assassin/ombre/poison.
-- Nain : PV, résistance, durabilité future.
-- Gnome : magie technique, artificier, alchimiste.
-- Halfelin : chance, discrétion, commerce potentiellement favorable.
-- Tieffelin : magie sombre, pactes, commerce parfois défavorable.
-- Aasimar : lumière, protection, foi, paladin/prêtre/tank sacré.
-- Kitsune : illusion, feu spirituel, invocation.
-- Fée : magie pure, très fragile physiquement.
-- Semi-dragon : puissance hybride et résistances élémentaires futures.
-- Orc : force physique, armes lourdes, brutalité.
-- Vampire : vol de vie futur, bonus de nuit, faiblesse lumière/sacré.
-- Démon : puissance sombre, mais certaines ventes/achats pourront être plus chers que la norme.
-- Semi-humain : identité mixte, adaptation, sous-types futurs.
-
-Commerce démoniaque prévu :
-- Un démon pourra payer plus cher chez certains marchands.
-- Certains marchands pourront aussi racheter moins cher ses objets.
-- Ce malus ne doit pas être universel : certaines villes, cultes ou marchands sombres pourront au contraire mieux traiter les démons.
-
-============================================================
-PRÉCISION PVP IA / TIRAGES SPÉCIAUX
-============================================================
-
-- Les personnages spéciaux ne sont pas des monstres.
-- Ils doivent être considérés comme des IA, semi-humains, humains, ou entités civilisées selon leur race.
-- Un personnage spécial ne doit jamais être choisi directement comme un adversaire classique.
-- Si le joueur choisit un adversaire par catégorie/classe, il choisit seulement son style de combat.
-- Le nom et la race de cet adversaire classique sont générés aléatoirement.
-- Cette création classique ne peut pas déclencher de personnage spécial.
-- Si le joueur choisit un tirage aléatoire d'arène, alors il existe environ 25% de chance de tomber sur un personnage spécial.
-- Matt (PRO) reste un choix séparé pour pouvoir l'affronter volontairement.
-- Matt (PRO) fait aussi partie du tirage spécial des 25% en arène aléatoire.
-- Matt (PRO) n'a pas de spécialité de classe.
-- Matt (PRO) doit être meilleur globalement dans toutes les classes, avec un bonus universel léger.
-
-Invocation et 1v1 :
-- Un combat censé être un 1v1 peut devenir un combat de groupe si une classe d'invocation est impliquée.
-- Exemple : Invocateur, Nécromancien, Dompteur ou Pactisant.
-- Dans ce cas, le duel peut basculer vers des règles proches du PvE : unités actives, slots, invocations et ordre de tour.
-- Ce système sera branché plus tard avec le système combat/group et combat/summon.
-
-============================================================
-PRÉCISION BESTIAIRE / INVENTAIRE
-============================================================
-
-- Le bestiaire est un objet spécial de base du personnage.
-- Dans l'inventaire, il doit apparaître tout en haut comme une entrée séparée.
-- Le joueur sélectionne Inventaire, puis peut ouvrir Bestiaire avant les armes, armures, consommables et matériaux.
-- Le bestiaire doit proposer des catégories, puis une liste simple, puis une fiche détaillée après sélection.
-- Les informations communes pourront être achetées auprès de marchands, archives ou érudits.
-- Les informations secrètes ne doivent pas être achetables facilement : boss inconnus, vrais noms, divinités, identités spéciales, etc.
-- Quand le jeu propose Inspecter sur un objet, une personne, un monstre ou une chose importante, il faut aussi prévoir Voir dans le bestiaire.
-- Cette action affiche uniquement ce que le personnage sait déjà, pas forcément la vérité complète.
-
-============================================================
-GROUPES SPECIAUX ET RENCONTRES D'AVENTURIERS
-============================================================
-
-- Hazak et Henrique sont meilleurs amis.
-- Mattzelda, Louis et Trexof sont meilleurs potes.
-- Aoi, Kanadé et Sanctus forment un groupe proche.
-- Hestia a été sauvée par Hazak.
-- Hestia était à la base une divinité, mais elle a perdu ses souvenirs ; pour l'instant, elle vit comme une humaine fragile.
-- Fail possède un contrat de non-agression avec Hazak.
-- Skuro est peu apprécié, sauf par Hazak qui s'en fiche assez pour le tolérer.
-
-Rencontres :
-- En PvE, le joueur peut maintenant choisir une rencontre contre un groupe d'aventuriers aléatoire.
-- Ces groupes utilisent la logique de file PvE : plusieurs adversaires, maximum trois actifs.
-- Le groupe peut être totalement random ou spécial. Les personnages spéciaux ne sortent que dans le tirage spécial, pas dans le groupe random normal.
-- Les combats de groupe ne sont normalement pas des combats à mort.
-- Exceptions dangereuses : Hazak ou Skuro peuvent rendre le combat beaucoup plus brutal.
-- Exception à l'exception : si Hazak est avec Hestia, il évite le combat à mort pour ne pas la traumatiser.
-
-Bonus natifs :
-- Les personnages spéciaux reçoivent maintenant un bonus natif si leur identité et leur classe prévue correspondent.
-- Matt (PRO) n'a pas de spécialité de classe : son bonus est universel.
-
-----------------------------------------------------------
-AJOUT - REGLES DE GROUPES SPECIAUX ET TRANSFORMATION
-----------------------------------------------------------
-
-Matt (PRO)
-- Peut apparaître seul en Combat IA.
-- Peut aussi apparaître dans les 25% de tirage spécial d'arène.
-- Peut apparaître avec Fire Flight dans un duo spécial.
-- Ne parle pas directement : il combat en silence et traite son adversaire avec respect.
-- Il n'a pas de spécialité de classe : il est meilleur globalement, peu importe sa classe.
-
-Skuro
-- Ne peut apparaître en groupe qu'avec certains personnages spéciaux précis : Hazak, Henrique, Aoi, Fail ou Kanadé.
-- Peut apparaître avec un seul de ces personnages, ou avec deux d'entre eux.
-- Sa présence rend un combat plus brutal et potentiellement dangereux.
-
-Sanctus / Skuro
-- Sanctus et Skuro sont la même personne dans l'histoire.
-- Skuro correspond à la bascule sombre de Sanctus après sa première décapitation.
-- Plus tard, Sanctus pourra se transformer en Skuro s'il prend trop cher d'un coup ou s'il inflige lui-même un coup beaucoup trop violent.
-- Cette transformation devra être rare, marquante, et probablement accompagnée d'un dialogue spécial.
-
-Groupes spéciaux actuels :
+- Matt (PRO) : non jouable.
+
+Personnages spéciaux :
+- Hazak : assassin elfe noir, sombre, efficace, direct, meilleur ami d'Henrique, a sauvé Hestia, contrat de non-agression avec Fail.
+- Skuro : tank violent à épée lourde, forme sombre liée à Sanctus.
+- Sanctus : tank/semi-mage protecteur, lumière, provocation, posture défensive, lien direct avec Skuro.
+- Kanadé : mage semi-dragonne, magie liée aux signes du zodiaque, rageuse.
+- Aoi : kitsune, mage flame/invocatrice avec katana, timide, protège ses incantations.
+- Fail : mage fou, fée, expérimente pour éliminer la menace.
+- Hestia : ancienne divinité amnésique, humaine actuelle, peureuse, magie très forte, dôme protecteur unique.
+- FireFlight : dev/commandant/créateur, sous 50% PV il esquive mieux et critique presque toujours.
+- Louis : artificier précis, projectiles multiples, naïf, cherche des amis.
+- Mattzelda : colosse humain, blagueur.
+- Trexof : assassin humain, bêta-testeur principal.
+- Henrique : chevalier, fonce dans le tas, peut revenir une fois à la vie.
+- Matt (PRO) : adversaire spécial très fort, respectueux, silencieux.
+
+Relations et groupes :
 - Hazak / Henrique.
 - Mattzelda / Louis / Trexof.
 - Aoi / Kanadé / Sanctus.
 - Hazak / Hestia.
 - Fail / Hazak.
-- Skuro / personnage spécial compatible.
-- Skuro / deux personnages spéciaux compatibles.
-- Fire Flight / Matt (PRO).
-- Groupe aléatoire d'aventuriers normaux random.
+- Skuro avec personnages compatibles.
+- FireFlight / Matt (PRO).
 
-Système préparé :
-- CombatIntent : intention narrative du combat.
-- SpecialEncounterRules : règles futures de dangerosité, combat à mort ou entraînement.
-- SpecialCharacterGroupDialogueCatalog : dialogues d'entrée de groupe.
-- SpecialCharacterTransformationRules : préparation de la transformation Sanctus -> Skuro.
+Règles spéciales de groupe :
+- Hazak protège davantage Hestia et peut punir une attaque contre elle.
+- Hazak et Henrique ont une coordination offensive.
+- Aoi et Kanadé se renforcent, Sanctus stabilise et protège.
+- Mattzelda, Louis et Trexof ont des synergies de trio.
+- Fail profite de son contrat de non-agression avec Hazak pour mieux viser.
+- Si Hazak ou Skuro est présent, un combat peut devenir très dangereux selon le contexte.
+- Si Hazak est avec Hestia, il évite normalement de transformer le combat en massacre pour ne pas la traumatiser.
 
-============================================================
-EFFETS SPÉCIAUX EN COMBAT - MÉMOIRE
-============================================================
-
-Cette passe ajoute des effets visibles mais encore simples :
-- Hazak : ouverture brutale, bonus ponctuel.
-- Skuro : peut rater lourdement, mais tape très fort quand il touche.
-- Kanadé : sort aléatoire lié aux 13 signes.
-- Aoi : protection d'incantation préparée.
-- Sanctus : peut montrer des signes de rupture vers Skuro.
-- Fail : expérience instable.
-- Hestia : magie qui devient plus puissante à chaque incantation.
-- Fire Flight : sous 50% PV, esquive et critique renforcés.
-- Louis : projectiles secondaires.
+Effets spéciaux en combat :
+- Hazak : ouverture brutale, contrat de silence, pression froide.
+- Skuro : attaques lourdes à faible réussite mais dégâts très élevés.
+- Kanadé : magie zodiacale aléatoire, treizième signe dans les moments critiques.
+- Aoi : cercle des flammes kitsune et protection d'incantation.
+- Sanctus : provocation, posture défensive, rempart de croyance.
+- Fail : prototype interdit et expériences instables.
+- Hestia : dôme protecteur unique, magie croissante.
+- FireFlight : comportement de boss/dev, esquive/critique sous seuil critique.
+- Louis : salves et projectiles secondaires.
 - Henrique : retour unique à la vie.
-- Matt (PRO) : reste surtout silencieux, respectueux, et très fort globalement.
+- Mattzelda : résistance, humour, posture.
+- Matt (PRO) : puissance globale très élevée.
 
-Important : ces effets sont des premières versions.
-Plus tard, ils doivent devenir des compétences propres avec textes, conditions, cooldowns et interactions de groupe.
+Cheats et données altérées :
+- Les cheats sont cachés hors combat.
+- Au premier cheat accepté, le personnage devient Altéré définitivement.
+- Un personnage Altéré ne peut pas agir en JcJ réel et ne peut pas échanger de vraies ressources.
+- Les altérations peuvent parfois être désactivées, mais le statut Altéré reste.
+- En Léthal, les cheats sont bloqués et déclenchent un événement de punition temporaire.
 
-============================================================
-INVOCATIONS ET PERSONNAGES SPÉCIAUX
-============================================================
+Codes connus :
+- idontwanttodie
+- infinituseforeverything
+- bedrockequipment
+- myweaponandnotother
+- skipallstory
+- skipalllevels
+- 1302313
+- helpmerefundmyaction
+- givemesomegolds
+- givemealevel
+- resetmycharacter
+- switchmyclassandweapon
+- iamnotgoblinfood
+- letmecook
+- whereismyplotarmor
+- talktothedev
+- oopsallbosses
+- randomizemyfate
+- fuckgrindinggimifight
 
-Aoi :
-- peut être liée à la Flamme kitsune ;
-- l'invocation est encore simple, mais prépare son futur style mage flame / kitsune.
+Effet du code anti-grind :
+- Marque le personnage comme Altéré.
+- Débloque une option Spéciaux en PvP IA pour choisir directement un personnage spécial, y compris Matt (PRO).
+- Révèle les boss non finaux dans le registre.
+- Ne débloque pas FireFlight, qui reste le boss final secret.
 
-Hestia :
-- son système principal reste la magie qui devient plus puissante à chaque utilisation ;
-- ses protections divines perdues pourront plus tard influencer les invocations ou dômes de protection.
+Cheat spécial de combat :
+- Une séquence liée à 1302313 peut déclencher une scène divine spéciale.
+- Elle peut permettre un one-shot et une guérison complète si les conditions sont acceptées.
+- Elle doit rester limitée pour éviter les abus.
 
-Fail :
-- pourra plus tard créer des invocations expérimentales instables.
-
-Hazak :
-- n'est pas invocateur de base, mais ses liens avec Hestia et Fail peuvent influencer des scènes spéciales.
-
-## Note - invocations contrôlables
-
-Quand le personnage joueur possède une invocation au début du combat, il peut choisir :
-- attaque automatique ;
-- contrôle manuel.
-
-Aoi profite directement de ce système avec sa Flamme kitsune.
-Les classes comme Invocateur, Nécromancien, Pactisant et Dompteur sont aussi concernées.
+Cheat en Léthal :
+- Refus de l'activation.
+- Perte temporaire importante de PV actuels.
+- Perte d'or.
+- Malus temporaire de PV max.
+- Ajout de notes brouillées dans le bestiaire.
+- Réactions futures possibles de Lexior, Moiran, l'Anomalie, Obérion et FireFlight.

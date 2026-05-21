@@ -1,399 +1,188 @@
+// EN: DifficultyRules.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: DifficultyRules.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file prepares difficulty-dependent balancing rules.
 // Français : Ce fichier prépare les règles d'équilibrage dépendantes de la difficulté.
 
 #include "progression/DifficultyRules.hpp"
+#include "progression/difficulty/DifficultyProfile.hpp"
 
+// EN: getPlayerPveEscapeDefeatedRewardPercentage declares or implements a focused behavior used by this module.
+// FR: getPlayerPveEscapeDefeatedRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getPlayerPveEscapeDefeatedRewardPercentage(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 90;
-
-        case DifficultyMode::Hard:
-            return 35;
-
-        case DifficultyMode::Nightmare:
-            return 25;
-
-        case DifficultyMode::Lethal:
-            return 25;
-
-        case DifficultyMode::Normal:
-        default:
-            return 50;
-    }
+    return DifficultyProfile::forMode(difficulty).playerPveEscapeDefeatedRewardPercentage;
 }
 
+// EN: getPlayerPveEscapeDamagedAliveRewardPercentage declares or implements a focused behavior used by this module.
+// FR: getPlayerPveEscapeDamagedAliveRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getPlayerPveEscapeDamagedAliveRewardPercentage(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 35;
-
-        case DifficultyMode::Hard:
-            return 20;
-
-        case DifficultyMode::Nightmare:
-            return 10;
-
-        case DifficultyMode::Lethal:
-            return 10;
-
-        case DifficultyMode::Normal:
-        default:
-            return 25;
-    }
+    return DifficultyProfile::forMode(difficulty).playerPveEscapeDamagedAliveRewardPercentage;
 }
 
-
+// EN: getVictoryExperienceRewardPercentage declares or implements a focused behavior used by this module.
+// FR: getVictoryExperienceRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getVictoryExperienceRewardPercentage(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 90;
-
-        case DifficultyMode::Hard:
-            return 115;
-
-        case DifficultyMode::Nightmare:
-            return 130;
-
-        case DifficultyMode::Lethal:
-            return 150;
-
-        case DifficultyMode::Normal:
-        default:
-            return 100;
-    }
+    return DifficultyProfile::forMode(difficulty).victoryExperienceRewardPercentage;
 }
 
+// EN: getVictoryGoldRewardPercentage declares or implements a focused behavior used by this module.
+// FR: getVictoryGoldRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getVictoryGoldRewardPercentage(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 110;
-
-        case DifficultyMode::Hard:
-            return 90;
-
-        case DifficultyMode::Nightmare:
-            return 75;
-
-        case DifficultyMode::Lethal:
-            return 65;
-
-        case DifficultyMode::Normal:
-        default:
-            return 100;
-    }
+    return DifficultyProfile::forMode(difficulty).victoryGoldRewardPercentage;
 }
 
+// EN: getPlayerEscapeChanceModifier declares or implements a focused behavior used by this module.
+// FR: getPlayerEscapeChanceModifier déclare ou implémente un comportement précis utilisé par ce module.
+int DifficultyRules::getPlayerEscapeChanceModifier(DifficultyMode difficulty)
+{
+    return DifficultyProfile::forMode(difficulty).playerEscapeChanceModifier;
+}
+
+// EN: getMonsterHealthPercentage declares or implements a focused behavior used by this module.
+// FR: getMonsterHealthPercentage déclare ou implémente un comportement précis utilisé par ce module.
+int DifficultyRules::getMonsterHealthPercentage(DifficultyMode difficulty)
+{
+    return DifficultyProfile::forMode(difficulty).monsterHealthPercentage;
+}
+
+// EN: getMonsterDamagePercentage declares or implements a focused behavior used by this module.
+// FR: getMonsterDamagePercentage déclare ou implémente un comportement précis utilisé par ce module.
+int DifficultyRules::getMonsterDamagePercentage(DifficultyMode difficulty)
+{
+    return DifficultyProfile::forMode(difficulty).monsterDamagePercentage;
+}
+
+// EN: getEvolvedMonsterChanceModifier declares or implements a focused behavior used by this module.
+// FR: getEvolvedMonsterChanceModifier déclare ou implémente un comportement précis utilisé par ce module.
+int DifficultyRules::getEvolvedMonsterChanceModifier(DifficultyMode difficulty)
+{
+    return DifficultyProfile::forMode(difficulty).evolvedMonsterChanceModifier;
+}
+
+// EN: getLootChancePercentage declares or implements a focused behavior used by this module.
+// FR: getLootChancePercentage déclare ou implémente un comportement précis utilisé par ce module.
+int DifficultyRules::getLootChancePercentage(DifficultyMode difficulty)
+{
+    return DifficultyProfile::forMode(difficulty).lootChancePercentage;
+}
+
+// EN: getLootQuantityBonusChance declares or implements a focused behavior used by this module.
+// FR: getLootQuantityBonusChance déclare ou implémente un comportement précis utilisé par ce module.
+int DifficultyRules::getLootQuantityBonusChance(DifficultyMode difficulty)
+{
+    return DifficultyProfile::forMode(difficulty).lootQuantityBonusChance;
+}
+
+// EN: getNonLethalDeathInventoryLossPercentage declares or implements a focused behavior used by this module.
+// FR: getNonLethalDeathInventoryLossPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getNonLethalDeathInventoryLossPercentage(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 10;
-
-        case DifficultyMode::Hard:
-            return 20;
-
-        case DifficultyMode::Nightmare:
-            return 25;
-
-        case DifficultyMode::Lethal:
-            return 0;
-
-        case DifficultyMode::Normal:
-        default:
-            return 15;
-    }
+    return DifficultyProfile::forMode(difficulty).nonLethalDeathInventoryLossPercentage;
 }
 
+// EN: getNonLethalDeathGoldLossPercentage declares or implements a focused behavior used by this module.
+// FR: getNonLethalDeathGoldLossPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getNonLethalDeathGoldLossPercentage(DifficultyMode difficulty)
 {
-    return getNonLethalDeathInventoryLossPercentage(difficulty);
+    return DifficultyProfile::forMode(difficulty).nonLethalDeathGoldLossPercentage;
 }
 
+// EN: getNonLethalDeathExperienceLossPercentage declares or implements a focused behavior used by this module.
+// FR: getNonLethalDeathExperienceLossPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getNonLethalDeathExperienceLossPercentage(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 5;
-
-        case DifficultyMode::Hard:
-            return 15;
-
-        case DifficultyMode::Nightmare:
-            return 20;
-
-        case DifficultyMode::Lethal:
-            return 0;
-
-        case DifficultyMode::Normal:
-        default:
-            return 10;
-    }
+    return DifficultyProfile::forMode(difficulty).nonLethalDeathExperienceLossPercentage;
 }
 
+// EN: getNonLethalRespawnHealthPercentage declares or implements a focused behavior used by this module.
+// FR: getNonLethalRespawnHealthPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getNonLethalRespawnHealthPercentage(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 75;
-
-        case DifficultyMode::Hard:
-            return 30;
-
-        case DifficultyMode::Nightmare:
-            return 10;
-
-        case DifficultyMode::Lethal:
-            return 1;
-
-        case DifficultyMode::Normal:
-        default:
-            return 50;
-    }
+    return DifficultyProfile::forMode(difficulty).nonLethalRespawnHealthPercentage;
 }
 
+// EN: getStarterGold declares or implements a focused behavior used by this module.
+// FR: getStarterGold déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getStarterGold(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 75;
-
-        case DifficultyMode::Hard:
-            return 30;
-
-        case DifficultyMode::Nightmare:
-            return 20;
-
-        case DifficultyMode::Lethal:
-            return 15;
-
-        case DifficultyMode::Normal:
-        default:
-            return 50;
-    }
+    return DifficultyProfile::forMode(difficulty).starterGold;
 }
 
-int DifficultyRules::getStarterHealingPotionCount(
-    int baseCount,
-    DifficultyMode difficulty
-)
+// EN: getStarterHealingPotionCount declares or implements a focused behavior used by this module.
+// FR: getStarterHealingPotionCount déclare ou implémente un comportement précis utilisé par ce module.
+int DifficultyRules::getStarterHealingPotionCount(int baseCount, DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return baseCount + 1;
-
-        case DifficultyMode::Hard:
-            return clampMinimum(baseCount - 1, 0);
-
-        case DifficultyMode::Nightmare:
-            return clampMinimum(baseCount - 2, 0);
-
-        case DifficultyMode::Lethal:
-            return clampMinimum(baseCount - 2, 0);
-
-        case DifficultyMode::Normal:
-        default:
-            return baseCount;
-    }
+    return clampMinimum(baseCount + DifficultyProfile::forMode(difficulty).starterHealingPotionBonus, 0);
 }
 
-int DifficultyRules::getStarterDamagePotionCount(
-    int baseCount,
-    DifficultyMode difficulty
-)
+// EN: getStarterDamagePotionCount declares or implements a focused behavior used by this module.
+// FR: getStarterDamagePotionCount déclare ou implémente un comportement précis utilisé par ce module.
+int DifficultyRules::getStarterDamagePotionCount(int baseCount, DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return baseCount;
-
-        case DifficultyMode::Hard:
-            return clampMinimum(baseCount - 1, 0);
-
-        case DifficultyMode::Nightmare:
-            return clampMinimum(baseCount - 1, 0);
-
-        case DifficultyMode::Lethal:
-            return clampMinimum(baseCount - 1, 0);
-
-        case DifficultyMode::Normal:
-        default:
-            return baseCount;
-    }
+    return clampMinimum(baseCount + DifficultyProfile::forMode(difficulty).starterDamagePotionBonus, 0);
 }
 
+// EN: getStarterWeaponDurabilityLoss declares or implements a focused behavior used by this module.
+// FR: getStarterWeaponDurabilityLoss déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getStarterWeaponDurabilityLoss(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 0;
-
-        case DifficultyMode::Hard:
-            return 20;
-
-        case DifficultyMode::Nightmare:
-            return 30;
-
-        case DifficultyMode::Lethal:
-            return 35;
-
-        case DifficultyMode::Normal:
-        default:
-            return 0;
-    }
+    return DifficultyProfile::forMode(difficulty).starterWeaponDurabilityLoss;
 }
 
+// EN: getStarterArmorDurabilityLoss declares or implements a focused behavior used by this module.
+// FR: getStarterArmorDurabilityLoss déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getStarterArmorDurabilityLoss(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 0;
-
-        case DifficultyMode::Hard:
-            return 25;
-
-        case DifficultyMode::Nightmare:
-            return 35;
-
-        case DifficultyMode::Lethal:
-            return 45;
-
-        case DifficultyMode::Normal:
-        default:
-            return 0;
-    }
+    return DifficultyProfile::forMode(difficulty).starterArmorDurabilityLoss;
 }
 
+// EN: getDeathEquipmentDurabilityLossPercentage declares or implements a focused behavior used by this module.
+// FR: getDeathEquipmentDurabilityLossPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getDeathEquipmentDurabilityLossPercentage(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 35;
-
-        case DifficultyMode::Hard:
-            return 55;
-
-        case DifficultyMode::Nightmare:
-            return 65;
-
-        case DifficultyMode::Lethal:
-            return 100;
-
-        case DifficultyMode::Normal:
-        default:
-            return 50;
-    }
+    return DifficultyProfile::forMode(difficulty).deathEquipmentDurabilityLossPercentage;
 }
 
+// EN: getDeathEquipmentForcedBreakChance declares or implements a focused behavior used by this module.
+// FR: getDeathEquipmentForcedBreakChance déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getDeathEquipmentForcedBreakChance(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 10;
-
-        case DifficultyMode::Hard:
-            return 25;
-
-        case DifficultyMode::Nightmare:
-            return 30;
-
-        case DifficultyMode::Lethal:
-            return 40;
-
-        case DifficultyMode::Normal:
-        default:
-            return 20;
-    }
+    return DifficultyProfile::forMode(difficulty).deathEquipmentForcedBreakChance;
 }
 
+// EN: getDeathEquipmentIrreparableChance declares or implements a focused behavior used by this module.
+// FR: getDeathEquipmentIrreparableChance déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getDeathEquipmentIrreparableChance(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 5;
-
-        case DifficultyMode::Hard:
-            return 12;
-
-        case DifficultyMode::Nightmare:
-            return 18;
-
-        case DifficultyMode::Lethal:
-            return 25;
-
-        case DifficultyMode::Normal:
-        default:
-            return 10;
-    }
+    return DifficultyProfile::forMode(difficulty).deathEquipmentIrreparableChance;
 }
 
+// EN: getDeathWeaponTheftChance declares or implements a focused behavior used by this module.
+// FR: getDeathWeaponTheftChance déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getDeathWeaponTheftChance(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 2;
-
-        case DifficultyMode::Hard:
-            return 5;
-
-        case DifficultyMode::Nightmare:
-            return 7;
-
-        case DifficultyMode::Lethal:
-            return 9;
-
-        case DifficultyMode::Normal:
-        default:
-            return 4;
-    }
+    return DifficultyProfile::forMode(difficulty).deathWeaponTheftChance;
 }
 
+// EN: getDeathArmorTheftChance declares or implements a focused behavior used by this module.
+// FR: getDeathArmorTheftChance déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getDeathArmorTheftChance(DifficultyMode difficulty)
 {
-    switch (difficulty)
-    {
-        case DifficultyMode::Easy:
-            return 1;
-
-        case DifficultyMode::Hard:
-            return 3;
-
-        case DifficultyMode::Nightmare:
-            return 5;
-
-        case DifficultyMode::Lethal:
-            return 7;
-
-        case DifficultyMode::Normal:
-        default:
-            return 2;
-    }
+    return DifficultyProfile::forMode(difficulty).deathArmorTheftChance;
 }
 
+// EN: isPermanentDeath declares or implements a focused behavior used by this module.
+// FR: isPermanentDeath déclare ou implémente un comportement précis utilisé par ce module.
 bool DifficultyRules::isPermanentDeath(DifficultyMode difficulty)
 {
     return difficulty == DifficultyMode::Lethal;
 }
 
+// EN: clampMinimum declares or implements a focused behavior used by this module.
+// FR: clampMinimum déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::clampMinimum(int value, int minimum)
 {
     if (value < minimum)

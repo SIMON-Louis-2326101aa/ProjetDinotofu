@@ -1,3 +1,5 @@
+// EN: Consumable.hpp briefly defines this Dinotofu module and its responsibilities.
+// FR: Consumable.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -14,6 +16,8 @@ private:
     int power;
 
 public:
+    // EN: Consumable declares or implements a focused behavior used by this module.
+    // FR: Consumable déclare ou implémente un comportement précis utilisé par ce module.
     Consumable();
 
     Consumable(
@@ -24,12 +28,22 @@ public:
         int power
     );
 
+    // EN: getType declares or implements a focused behavior used by this module.
+    // FR: getType déclare ou implémente un comportement précis utilisé par ce module.
     ConsumableType getType() const;
+    // EN: getPower declares or implements a focused behavior used by this module.
+    // FR: getPower déclare ou implémente un comportement précis utilisé par ce module.
     int getPower() const;
 
+    // EN: isHealing declares or implements a focused behavior used by this module.
+    // FR: isHealing déclare ou implémente un comportement précis utilisé par ce module.
     bool isHealing() const;
+    // EN: isDamage declares or implements a focused behavior used by this module.
+    // FR: isDamage déclare ou implémente un comportement précis utilisé par ce module.
     bool isDamage() const;
 
+    // EN: display declares or implements a focused behavior used by this module.
+    // FR: display déclare ou implémente un comportement précis utilisé par ce module.
     void display() const override;
 };
 

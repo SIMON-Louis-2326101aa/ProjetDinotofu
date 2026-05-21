@@ -1,3 +1,5 @@
+// EN: SpecialCharacterDialogueCatalog.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: SpecialCharacterDialogueCatalog.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
 // Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
 // Description: Implementation of personality-based dialogue lines for special characters.
@@ -9,27 +11,44 @@
 #include <cctype>
 #include <iostream>
 
+// EN: hasDialogueFor declares or implements a focused behavior used by this module.
+// FR: hasDialogueFor déclare ou implémente un comportement précis utilisé par ce module.
 bool SpecialCharacterDialogueCatalog::hasDialogueFor(const std::string& characterName)
 {
     std::string normalizedName = normalizeName(characterName);
     return !getEntranceLines(normalizedName).empty();
 }
 
+// EN: displayEntranceDialogue declares or implements a focused behavior used by this module.
+// FR: displayEntranceDialogue déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterDialogueCatalog::displayEntranceDialogue(const std::string& characterName)
 {
     displayLines(characterName, getEntranceLines(normalizeName(characterName)));
 }
 
+// EN: displayLowHealthDialogue declares or implements a focused behavior used by this module.
+// FR: displayLowHealthDialogue déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterDialogueCatalog::displayLowHealthDialogue(const std::string& characterName)
 {
     displayLines(characterName, getLowHealthLines(normalizeName(characterName)));
 }
 
+// EN: displayCombatActionDialogue declares or implements a focused behavior used by this module.
+// FR: displayCombatActionDialogue déclare ou implémente un comportement précis utilisé par ce module.
+void SpecialCharacterDialogueCatalog::displayCombatActionDialogue(const std::string& characterName, const std::string& actionLabel)
+{
+    displayLines(characterName, getCombatActionLines(normalizeName(characterName), actionLabel));
+}
+
+// EN: displayVictoryDialogue declares or implements a focused behavior used by this module.
+// FR: displayVictoryDialogue déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterDialogueCatalog::displayVictoryDialogue(const std::string& characterName)
 {
     displayLines(characterName, getVictoryLines(normalizeName(characterName)));
 }
 
+// EN: displayDefeatDialogue declares or implements a focused behavior used by this module.
+// FR: displayDefeatDialogue déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterDialogueCatalog::displayDefeatDialogue(const std::string& characterName)
 {
     displayLines(characterName, getDefeatLines(normalizeName(characterName)));
@@ -43,6 +62,8 @@ std::string SpecialCharacterDialogueCatalog::normalizeName(const std::string& na
         normalized.begin(),
         normalized.end(),
         normalized.begin(),
+        // EN: [] declares or implements a focused behavior used by this module.
+        // FR: [] déclare ou implémente un comportement précis utilisé par ce module.
         [](unsigned char character)
         {
             return static_cast<char>(std::tolower(character));
@@ -192,6 +213,73 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getLowHealthLines(cons
         return {"Henrique vacille, puis plante le pied au sol.", "Pas encore. Il me reste au moins une promesse à tenir."};
     }
 
+    if (normalizedName == "aoi")
+    {
+        return {"Aoi recule d'un pas, ses flammes tremblent autour d'elle.", "Je... je dois finir l'incantation avant qu'il soit trop tard."};
+    }
+
+    if (normalizedName == "kanade")
+    {
+        return {"Kanadé essuie le sang au coin de sa bouche.", "Ça y est, ça m'énerve. Vraiment."};
+    }
+
+    if (normalizedName == "sanctus")
+    {
+        return {"Sanctus encaisse en silence, puis resserre sa garde.", "Une protection fissurée reste une protection."};
+    }
+
+    if (normalizedName == "skuro")
+    {
+        return {"Skuro rit d'une voix basse.", "La douleur rend la coupe plus propre."};
+    }
+
+    if (normalizedName == "louis")
+    {
+        return {"Louis recule, surpris que ses gadgets n'aient pas suffi.", "Okay... note pour plus tard : améliorer tout. Vraiment tout."};
+    }
+
+    if (normalizedName == "trexof")
+    {
+        return {"Trexof change sa prise sur son arme.", "Limite trouvée. Maintenant, on voit si elle casse."};
+    }
+
+    if (normalizedName == "mattzelda")
+    {
+        return {"Mattzelda sourit encore, mais ses appuis deviennent sérieux.", "Ah ouais ? Là tu m'obliges à arrêter les blagues deux secondes."};
+    }
+
+    return {};
+}
+
+std::vector<std::string> SpecialCharacterDialogueCatalog::getCombatActionLines(
+    const std::string& normalizedName,
+    const std::string& actionLabel
+)
+{
+    if (actionLabel == "healing")
+    {
+        if (normalizedName == "hestia") return {"Hestia cherche instinctivement à refermer ses blessures avant de paniquer davantage."};
+        if (normalizedName == "sanctus") return {"Sanctus transforme son soin en serment : il ne tombera pas tant qu'il protège encore quelque chose."};
+        if (normalizedName == "hazak") return {"Hazak se soigne sans fierté inutile. Survivre fait partie du meurtre."};
+    }
+
+    if (actionLabel == "damage")
+    {
+        if (normalizedName == "skuro") return {"Skuro renforce son prochain coup. La lame réclame un angle plus violent."};
+        if (normalizedName == "fail") return {"Fail ajoute un réactif de trop. Évidemment."};
+        if (normalizedName == "louis") return {"Louis arme un projectile supplémentaire avec un sourire beaucoup trop innocent."};
+    }
+
+    if (actionLabel == "attack")
+    {
+        if (normalizedName == "matt (pro)") return {"Matt attaque sans annonce. Propre, direct, presque vexant."};
+        if (normalizedName == "aoi") return {"Aoi frappe surtout pour garder la distance et protéger ses incantations."};
+        if (normalizedName == "kanade") return {"Kanadé attaque en râlant, comme si chaque coup était la faute de l'arène."};
+        if (normalizedName == "trexof") return {"Trexof vise une ouverture précise, plus testeur que bourrin."};
+        if (normalizedName == "henrique") return {"Henrique charge comme si reculer était une erreur de traduction."};
+        if (normalizedName == "fire flight") return {"Fire Flight donne l'impression de commander une salve entière, même seul."};
+    }
+
     return {};
 }
 
@@ -212,6 +300,16 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getVictoryLines(const 
         return {"Fail prend mentalement des notes au milieu des dégâts.", "Conclusion : spectaculaire, mais améliorable. On recommence quand ?"};
     }
 
+    if (normalizedName == "matt (pro)") return {"Matt baisse sa garde. Pas de provocation. Juste le silence d'un adversaire qui a fait son travail."};
+    if (normalizedName == "aoi") return {"Aoi laisse ses flammes disparaître.", "Je suis désolée... mais je devais me protéger."};
+    if (normalizedName == "kanade") return {"Kanadé souffle bruyamment.", "Voilà. J'ai gagné. Et oui, je vais quand même me plaindre."};
+    if (normalizedName == "sanctus") return {"Sanctus ne célèbre pas. Il vérifie seulement que personne derrière lui n'est tombé."};
+    if (normalizedName == "hestia") return {"Hestia ouvre un œil, surprise d'être encore debout.", "C'est... fini ?"};
+    if (normalizedName == "louis") return {"Louis range ses outils avec soulagement.", "On peut être amis maintenant ? Non ? Trop tôt ?"};
+    if (normalizedName == "trexof") return {"Trexof hoche la tête.", "Test concluant. Tu étais plus solide que prévu."};
+    if (normalizedName == "henrique") return {"Henrique souffle, droit malgré les impacts.", "Un pas de plus. Toujours."};
+    if (normalizedName == "fire flight") return {"Fire Flight abaisse son arme.", "La ligne a tenu. C'était le seul objectif."};
+
     return {};
 }
 
@@ -231,6 +329,16 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getDefeatLines(const s
     {
         return {"Skuro crache sur le côté.", "Ma lame n'a pas fini de manger. Retenir son tranchant ne veut pas dire l'arrêter."};
     }
+
+    if (normalizedName == "matt (pro)") return {"Matt accepte la défaite sans un mot. C'est presque plus stressant que s'il parlait."};
+    if (normalizedName == "hazak") return {"Hazak pose un genou au sol, furieux surtout contre lui-même.", "Profite. Une erreur ne devient pas une habitude."};
+    if (normalizedName == "aoi") return {"Aoi serre son focus contre elle.", "Je n'ai pas réussi à finir l'incantation..."};
+    if (normalizedName == "sanctus") return {"Sanctus baisse son arme, mais pas son regard.", "Même au sol, je reste entre toi et ceux que je protège."};
+    if (normalizedName == "hestia") return {"Hestia reste immobile, comme si la peur avait gagné avant la douleur.", "Je... je veux juste que ça s'arrête."};
+    if (normalizedName == "mattzelda") return {"Mattzelda grimace, puis tente quand même une blague.", "Bon. Celle-là, je la note comme échauffement raté."};
+    if (normalizedName == "trexof") return {"Trexof expire lentement.", "Limite dépassée. Bien joué."};
+    if (normalizedName == "henrique") return {"Henrique tombe lourdement, mais son regard reste vivant.", "Je t'avais dit qu'une fois ne suffisait pas toujours."};
+    if (normalizedName == "fire flight") return {"Fire Flight baisse les yeux, inquiet plus que vaincu.", "J'espère seulement que cette hostilité avait une raison."};
 
     return {};
 }

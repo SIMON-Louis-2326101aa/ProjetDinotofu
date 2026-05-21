@@ -1,3 +1,5 @@
+// EN: WaveGenerator.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: WaveGenerator.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -5,10 +7,98 @@
 
 #include "combat/wave/WaveRules.hpp"
 #include "entity/MonsterCatalog.hpp"
+#include "progression/DifficultyRules.hpp"
+
+#include <algorithm>
+
+namespace
+{
+    // EN: evolvedMonsterChanceForPlayerLevel declares or implements a focused behavior used by this module.
+    // FR: evolvedMonsterChanceForPlayerLevel déclare ou implémente un comportement précis utilisé par ce module.
+    int evolvedMonsterChanceForPlayerLevel(int playerLevel)
+    {
+        if (playerLevel <= 2) return 6;
+        if (playerLevel <= 4) return 12;
+        if (playerLevel <= 7) return 18;
+        return 24;
+    }
+
+    bool shouldCreateEvolvedMonster(
+        const Player& player,
+        int monsterLevel,
+        Random& random,
+        DifficultyMode difficulty
+    )
+    {
+        int chance = evolvedMonsterChanceForPlayerLevel(player.getLevel())
+            + DifficultyRules::getEvolvedMonsterChanceModifier(difficulty);
+
+        if (monsterLevel > player.getLevel())
+        {
+            chance += 5;
+        }
+
+        if (player.getLevel() >= 10)
+        {
+            chance += 3;
+        }
+
+        chance = std::max(0, std::min(chance, 45));
+
+        return random.between(1, 100) <= chance;
+    }
+
+    // EN: applyPercentage declares or implements a focused behavior used by this module.
+    // FR: applyPercentage déclare ou implémente un comportement précis utilisé par ce module.
+    int applyPercentage(int value, int percentage)
+    {
+        int modified = value * percentage / 100;
+        return std::max(1, modified);
+    }
+
+    // EN: scaleMonsterForDifficulty declares or implements a focused behavior used by this module.
+    // FR: scaleMonsterForDifficulty déclare ou implémente un comportement précis utilisé par ce module.
+    Monster scaleMonsterForDifficulty(const Monster& monster, DifficultyMode difficulty)
+    {
+        int hpPercentage = DifficultyRules::getMonsterHealthPercentage(difficulty);
+        int damagePercentage = DifficultyRules::getMonsterDamagePercentage(difficulty);
+
+        if (hpPercentage == 100 && damagePercentage == 100)
+        {
+            return monster;
+        }
+
+        return Monster(
+            monster.getName(),
+            monster.getType(),
+            monster.getRace(),
+            monster.getLevel(),
+            applyPercentage(monster.getMaxHp(), hpPercentage),
+            applyPercentage(monster.getMinDamage(), damagePercentage),
+            applyPercentage(monster.getMaxDamage(), damagePercentage),
+            applyPercentage(monster.getCriticalDamage(), damagePercentage),
+            monster.getHealingPotionCount(),
+            monster.getDamagePotionCount(),
+            monster.isInvocation(),
+            monster.isElite(),
+            !monster.areStatsVisible(),
+            monster.isEvolved()
+        );
+    }
+}
 
 EnemyCombatQueue WaveGenerator::createWaveForPlayer(
     const Player& player,
     Random& random
+)
+{
+    return createWaveForPlayer(player, random, DifficultyMode::Normal);
+}
+
+EnemyCombatQueue WaveGenerator::createWaveForPlayer(
+    const Player& player,
+    Random& random,
+    DifficultyMode difficulty
 )
 {
     EnemyCombatQueue wave;
@@ -24,9 +114,16 @@ EnemyCombatQueue WaveGenerator::createWaveForPlayer(
             levelVariation
         );
 
-        wave.addWaitingEnemy(
-            MonsterCatalog::createRandomMonsterForLevel(monsterLevel, random)
-        );
+        Monster monster = MonsterCatalog::createRandomMonsterForLevel(monsterLevel, random);
+
+        if (shouldCreateEvolvedMonster(player, monsterLevel, random, difficulty))
+        {
+            monster = MonsterCatalog::createEvolvedVariant(monster, random);
+        }
+
+        monster = scaleMonsterForDifficulty(monster, difficulty);
+
+        wave.addWaitingEnemy(monster);
     }
 
     wave.initializeFrontLine();

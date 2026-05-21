@@ -1,3 +1,5 @@
+// EN: CharacterMenu.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: CharacterMenu.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 // Description: Handles playable character selection, loading, deletion and protected special identity validation.
@@ -17,6 +19,8 @@
 
 namespace
 {
+    // EN: createEmptyResult declares or implements a focused behavior used by this module.
+    // FR: createEmptyResult déclare ou implémente un comportement précis utilisé par ce module.
     CharacterMenuResult createEmptyResult()
     {
         CharacterMenuResult result;
@@ -28,6 +32,8 @@ namespace
         return result;
     }
 
+    // EN: askYesNo declares or implements a focused behavior used by this module.
+    // FR: askYesNo déclare ou implémente un comportement précis utilisé par ce module.
     bool askYesNo(const std::string& question)
     {
         std::cout << question << std::endl;
@@ -118,6 +124,8 @@ namespace
     }
 }
 
+// EN: open declares or implements a focused behavior used by this module.
+// FR: open déclare ou implémente un comportement précis utilisé par ce module.
 CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& player)
 {
     while (true)
@@ -134,6 +142,7 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
                       << " | " << characters[i].raceName
                       << " / " << characters[i].className
                       << " | Niveau " << characters[i].level
+                      << (characters[i].clone ? " | CLONE" : "")
                       << std::endl;
         }
 
@@ -190,17 +199,23 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
         std::cout << "Personnage sélectionné : " << selectedCharacter.characterName << std::endl;
         std::cout << "Race / classe : " << selectedCharacter.raceName << " / " << selectedCharacter.className << std::endl;
         std::cout << "Niveau : " << selectedCharacter.level << std::endl;
+        if (selectedCharacter.clone)
+        {
+            std::cout << "Statut : CLONE — JcJ amical uniquement." << std::endl;
+        }
         std::cout << std::endl;
         std::cout << "0 : Retour" << std::endl;
         std::cout << "1 : Incarner" << std::endl;
-        std::cout << "2 : Supprimer ce personnage" << std::endl;
+        std::cout << "2 : Extraire / transférer ce personnage" << std::endl;
+        std::cout << "3 : Extraire un clone du personnage" << std::endl;
+        std::cout << "4 : Supprimer ce personnage" << std::endl;
         std::cout << std::endl;
         std::cout << "> ";
 
         int characterAction = Console::askNumberBetween(
             0,
-            2,
-            "Veuillez choisir 0, 1 ou 2."
+            4,
+            "Veuillez choisir 0, 1, 2, 3 ou 4."
         );
 
         if (characterAction == 0)
@@ -239,6 +254,58 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
 
             Console::clear();
             std::cout << "Impossible de charger ce personnage. Il faudra en choisir un autre ou en créer un nouveau." << std::endl;
+            std::cout << std::endl;
+            Console::waitForEnter();
+            Console::clear();
+            continue;
+        }
+
+        if (characterAction == 2)
+        {
+            Console::clear();
+            std::string exportedPath;
+
+            std::cout << selectedCharacter.characterName << " part en voyage." << std::endl;
+            std::cout << "L'extraction transfère le personnage : il quitte ce compte local." << std::endl;
+            std::cout << "Le compte reste présent, mais ce personnage ne sera plus jouable ici tant qu'il n'est pas réimporté." << std::endl;
+            std::cout << std::endl;
+
+            if (SaveManager::exportCharacterPackage(selectedCharacter, exportedPath))
+            {
+                std::cout << "Personnage extrait avec succès." << std::endl;
+                std::cout << "Dossier portable : " << exportedPath << std::endl;
+            }
+            else
+            {
+                std::cout << "Extraction impossible pour ce personnage." << std::endl;
+            }
+
+            std::cout << std::endl;
+            Console::waitForEnter();
+            Console::clear();
+            continue;
+        }
+
+        if (characterAction == 3)
+        {
+            Console::clear();
+            std::string exportedPath;
+
+            std::cout << "Création d'un clone portable de " << selectedCharacter.characterName << "." << std::endl;
+            std::cout << "Le personnage original reste ici." << std::endl;
+            std::cout << "Le clone sera marqué CLONE et limité aux combats JcJ amicaux." << std::endl;
+            std::cout << std::endl;
+
+            if (SaveManager::exportCharacterClonePackage(selectedCharacter, exportedPath))
+            {
+                std::cout << "Clone extrait avec succès." << std::endl;
+                std::cout << "Dossier portable : " << exportedPath << std::endl;
+            }
+            else
+            {
+                std::cout << "Extraction du clone impossible." << std::endl;
+            }
+
             std::cout << std::endl;
             Console::waitForEnter();
             Console::clear();

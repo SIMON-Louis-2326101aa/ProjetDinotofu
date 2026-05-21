@@ -1,3 +1,5 @@
+// EN: ShopTransactionSystem.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: ShopTransactionSystem.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 // English: Implements shop purchases and safe resale rules.
@@ -9,22 +11,92 @@
 #include "item/armor/ArmorCatalog.hpp"
 #include "item/consumable/ConsumableCatalog.hpp"
 #include "item/material/MaterialCatalog.hpp"
+#include "item/material/Material.hpp"
 #include "item/weapon/WeaponCatalog.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 
 #include <iostream>
+#include <random>
 
 namespace
 {
+    // EN: isMaterialShop declares or implements a focused behavior used by this module.
+    // FR: isMaterialShop déclare ou implémente un comportement précis utilisé par ce module.
     bool isMaterialShop(ShopType type)
     {
         return type == ShopType::MonsterMaterial
             || type == ShopType::Material
             || type == ShopType::Plant
-            || type == ShopType::Library;
+            || type == ShopType::Library
+            || type == ShopType::Blacksmith
+            || type == ShopType::Alchemist;
+    }
+
+    // EN: rollShopPercent declares or implements a focused behavior used by this module.
+    // FR: rollShopPercent déclare ou implémente un comportement précis utilisé par ce module.
+    bool rollShopPercent(int percent)
+    {
+        // EN: generator declares or implements a focused behavior used by this module.
+        // FR: generator déclare ou implémente un comportement précis utilisé par ce module.
+        static std::mt19937 generator(std::random_device{}());
+        std::uniform_int_distribution<int> distribution(1, 100);
+        return distribution(generator) <= percent;
+    }
+
+    // EN: canRareQualityBeSoldByShop declares or implements a focused behavior used by this module.
+    // FR: canRareQualityBeSoldByShop déclare ou implémente un comportement précis utilisé par ce module.
+    bool canRareQualityBeSoldByShop(const std::string& id)
+    {
+        return id == "goblin_ear"
+            || id == "wolf_fang"
+            || id == "rusted_metal_fragment"
+            || id == "worn_leather_piece"
+            || id == "mountain_blue_flower"
+            || id == "bitter_healing_leaf"
+            || id == "cracked_bone"
+            || id == "arcane_dust"
+            || id == "slime_residue"
+            || id == "battle_torn_badge"
+            || id == "beast_hide"
+            || id == "shadow_thread"
+            || id == "kitsune_ember"
+            || id == "draconic_scale_fragment"
+            || id == "unstable_core";
+    }
+
+    // EN: prefersPureQuality declares or implements a focused behavior used by this module.
+    // FR: prefersPureQuality déclare ou implémente un comportement précis utilisé par ce module.
+    bool prefersPureQuality(const std::string& id)
+    {
+        return id == "goblin_ear"
+            || id == "wolf_fang"
+            || id == "cracked_bone"
+            || id == "slime_residue"
+            || id == "battle_torn_badge"
+            || id == "beast_hide"
+            || id == "shadow_thread"
+            || id == "kitsune_ember"
+            || id == "draconic_scale_fragment"
+            || id == "unstable_core";
+    }
+
+    // EN: createShopMaterialWithPossibleRareQuality declares or implements a focused behavior used by this module.
+    // FR: createShopMaterialWithPossibleRareQuality déclare ou implémente un comportement précis utilisé par ce module.
+    Material createShopMaterialWithPossibleRareQuality(const ShopItem& item)
+    {
+        Material material = MaterialCatalog::createById(item.getId(), 1);
+
+        if (canRareQualityBeSoldByShop(item.getId()) && rollShopPercent(4))
+        {
+            material.setQuality(prefersPureQuality(item.getId()) ? "pure" : "high");
+        }
+
+        return material;
     }
 }
 
+// EN: canBeBoughtNow declares or implements a focused behavior used by this module.
+// FR: canBeBoughtNow déclare ou implémente un comportement précis utilisé par ce module.
 bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
 {
     const std::string id = item.getId();
@@ -42,18 +114,52 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "common_goblin_notes"
         || id == "common_wolf_notes"
         || id == "basic_plant_manual"
-        || id == "basic_magic_manual";
+        || id == "basic_magic_manual"
+        || id == "cracked_bone"
+        || id == "arcane_dust"
+        || id == "slime_residue"
+        || id == "battle_torn_badge"
+        || id == "weak_repair_kit"
+        || id == "medium_repair_kit"
+        || id == "big_repair_kit"
+        || id == "tinkerer_complete_repair_kit"
+        || id == "small_repair_kit"
+        || id == "reinforced_repair_kit"
+        || id == "special_adventurer_notes"
+        || id == "summoning_notes"
+        || id == "boss_identity_scrap"
+        || id == "potion_recipe_page"
+        || id == "repair_recipe_page"
+        || id == "advanced_monster_notes"
+        || id == "necromancy_warning"
+        || id == "beast_hide"
+        || id == "shadow_thread"
+        || id == "kitsune_ember"
+        || id == "draconic_scale_fragment"
+        || id == "unstable_core"
+        || id == "precision_harvest_tools"
+        || id == "preservation_vials"
+        || id == "clean_harvest_manual"
+        || id == "monster_dissection_guide";
 }
 
 bool ShopTransactionSystem::buyItem(
     Player& player,
-    const ShopItem& item,
+    ShopItem& item,
     int finalPrice
 )
 {
     if (!canBeBoughtNow(item))
     {
         displayUnsupportedPurchaseMessage(item);
+        return false;
+    }
+
+    if (item.isSoldOut())
+    {
+        std::cout << "Stock épuisé pour " << item.getName() << "." << std::endl;
+        std::cout << "Il faudra attendre une nouvelle rotation de boutique." << std::endl;
+        std::cout << std::endl;
         return false;
     }
 
@@ -89,14 +195,33 @@ bool ShopTransactionSystem::buyItem(
     }
     else
     {
-        player.getInventory().addMaterial(MaterialCatalog::createById(item.getId(), 1));
+        Material boughtMaterial = createShopMaterialWithPossibleRareQuality(item);
+        player.getInventory().addMaterial(boughtMaterial);
+
+        if (boughtMaterial.hasSpecialQuality())
+        {
+            std::cout << "Trouvaille rare en boutique : qualité "
+                      << boughtMaterial.getQualityLabel()
+                      << "." << std::endl;
+            std::cout << "Les objets exceptionnels restent impossibles à acheter : il faut les récupérer ou les fabriquer." << std::endl;
+        }
     }
+
+    item.consumeOneStock();
 
     std::cout << "Achat réussi : " << item.getName() << "." << std::endl;
     std::cout << "Or restant : "
               << player.getInventory().getGold()
               << " pièces."
               << std::endl;
+
+    if (item.getStock() >= 0)
+    {
+        std::cout << "Stock restant chez le marchand : "
+                  << item.getStock()
+                  << "."
+                  << std::endl;
+    }
 
     if (item.isCommonInformation())
     {
@@ -192,7 +317,8 @@ int ShopTransactionSystem::getSellPriceForEntry(
     }
     else if (isMaterialShop(shopType) && player.getInventory().hasMaterial(index))
     {
-        basePrice = player.getInventory().getMaterial(index).getValue();
+        const Material& material = player.getInventory().getMaterial(index);
+        basePrice = material.getValue() * material.getQualityPricePercent() / 100;
     }
 
     if (basePrice < 1)
@@ -200,7 +326,7 @@ int ShopTransactionSystem::getSellPriceForEntry(
         basePrice = 1;
     }
 
-    return ShopPriceRules::applySellModifier(basePrice, player.getRaceText());
+    return ShopPriceRules::applySellModifier(basePrice, player.getRaceText(), player.getType());
 }
 
 bool ShopTransactionSystem::sellInventoryEntry(
@@ -238,7 +364,12 @@ bool ShopTransactionSystem::sellInventoryEntry(
     }
     else if (isMaterialShop(shopType))
     {
-        soldName = player.getInventory().getMaterial(index).getName();
+        Material soldMaterial = player.getInventory().getMaterial(index);
+        soldName = soldMaterial.getName();
+        if (soldMaterial.hasSpecialQuality())
+        {
+            soldName += " [" + soldMaterial.getQualityLabel() + "]";
+        }
         removed = player.getInventory().removeMaterialQuantity(index, 1);
     }
 
@@ -274,7 +405,7 @@ void ShopTransactionSystem::displaySellableEntries(
 
     for (int i = 0; i < count; ++i)
     {
-        std::cout << i << " : ";
+        std::cout << i + 1 << " : ";
 
         if (shopType == ShopType::Weapon)
         {
@@ -309,6 +440,8 @@ void ShopTransactionSystem::displaySellableEntries(
     }
 }
 
+// EN: displayUnsupportedPurchaseMessage declares or implements a focused behavior used by this module.
+// FR: displayUnsupportedPurchaseMessage déclare ou implémente un comportement précis utilisé par ce module.
 void ShopTransactionSystem::displayUnsupportedPurchaseMessage(const ShopItem& item)
 {
     std::cout << item.getName() << " existe dans la boutique," << std::endl;

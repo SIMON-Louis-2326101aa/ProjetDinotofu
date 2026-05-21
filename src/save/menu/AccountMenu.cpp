@@ -1,3 +1,5 @@
+// EN: AccountMenu.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: AccountMenu.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 // Description: Handles local account selection, creation and deletion menus.
@@ -20,6 +22,7 @@ std::string AccountMenu::open()
 
         std::cout << "===== COMPTES LOCAUX =====" << std::endl;
         std::cout << "0 : Créer / utiliser un nouveau compte" << std::endl;
+        std::cout << "-1 : Importer un compte extrait" << std::endl;
 
         for (int i = 0; i < static_cast<int>(accounts.size()); i++)
         {
@@ -31,10 +34,41 @@ std::string AccountMenu::open()
         std::cout << "> ";
 
         int choice = Console::askNumberBetween(
-            0,
+            -1,
             static_cast<int>(accounts.size()),
-            "Veuillez choisir un compte affiché, ou 0 pour en créer un."
+            "Veuillez choisir un compte affiché, 0 pour créer, ou -1 pour importer."
         );
+
+        if (choice == -1)
+        {
+            std::string packagePath;
+
+            std::cout << std::endl;
+            std::cout << "Chemin du dossier de compte extrait ?" << std::endl;
+            std::cout << "Exemple : assets/saves/import_accounts/mon-compte_dinotofu_account" << std::endl;
+            std::cout << "> ";
+
+            std::getline(std::cin >> std::ws, packagePath);
+
+            std::string importedAccountName;
+            Console::clear();
+
+            if (SaveManager::importAccountPackage(packagePath, importedAccountName))
+            {
+                std::cout << "Compte importé : " << importedAccountName << "." << std::endl;
+                std::cout << "Tu peux maintenant le sélectionner dans la liste des comptes." << std::endl;
+            }
+            else
+            {
+                std::cout << "Import impossible." << std::endl;
+                std::cout << "Vérifie que le dossier contient bien accounts/ et les fichiers exportés." << std::endl;
+            }
+
+            std::cout << std::endl;
+            Console::waitForEnter();
+            Console::clear();
+            continue;
+        }
 
         if (choice == 0)
         {
@@ -75,14 +109,15 @@ std::string AccountMenu::open()
         std::cout << std::endl;
         std::cout << "0 : Retour" << std::endl;
         std::cout << "1 : Se connecter" << std::endl;
-        std::cout << "2 : Supprimer ce compte" << std::endl;
+        std::cout << "2 : Extraire / transférer ce compte" << std::endl;
+        std::cout << "3 : Supprimer ce compte" << std::endl;
         std::cout << std::endl;
         std::cout << "> ";
 
         int accountAction = Console::askNumberBetween(
             0,
-            2,
-            "Veuillez choisir 0, 1 ou 2."
+            3,
+            "Veuillez choisir 0, 1, 2 ou 3."
         );
 
         if (accountAction == 0)
@@ -109,6 +144,35 @@ std::string AccountMenu::open()
             Console::waitForEnter();
             Console::clear();
             return accountName;
+        }
+
+        if (accountAction == 2)
+        {
+            std::string exportedPath;
+
+            Console::clear();
+
+            std::cout << "Attention : l'extraction fonctionne comme un transfert." << std::endl;
+            std::cout << "Les personnages et donnees liees partiront en voyage dans le dossier portable." << std::endl;
+            std::cout << "Le compte local restera visible, mais sans les personnages transferes." << std::endl;
+            std::cout << std::endl;
+
+            if (SaveManager::exportAccountPackage(selectedAccount.accountName, exportedPath))
+            {
+                std::cout << "Compte extrait avec succès." << std::endl;
+                std::cout << "Dossier portable : " << exportedPath << std::endl;
+                std::cout << "Tu peux copier ce dossier sur clé USB, puis l'importer sur une autre installation." << std::endl;
+            }
+            else
+            {
+                std::cout << "Extraction impossible." << std::endl;
+                std::cout << "Vérifie que le compte existe et que assets/saves/ est accessible." << std::endl;
+            }
+
+            std::cout << std::endl;
+            Console::waitForEnter();
+            Console::clear();
+            continue;
         }
 
         std::cout << std::endl;

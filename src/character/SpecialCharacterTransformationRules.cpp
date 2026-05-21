@@ -1,3 +1,5 @@
+// EN: SpecialCharacterTransformationRules.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: SpecialCharacterTransformationRules.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
 // Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
 // Description: Implements future transformation rules for special characters, especially Sanctus becoming Skuro.
@@ -18,6 +20,8 @@ namespace
             normalized.begin(),
             normalized.end(),
             normalized.begin(),
+            // EN: [] declares or implements a focused behavior used by this module.
+            // FR: [] déclare ou implémente un comportement précis utilisé par ce module.
             [](unsigned char character)
             {
                 return static_cast<char>(std::tolower(character));
@@ -28,6 +32,8 @@ namespace
     }
 }
 
+// EN: canTransformIntoSkuro declares or implements a focused behavior used by this module.
+// FR: canTransformIntoSkuro déclare ou implémente un comportement précis utilisé par ce module.
 bool SpecialCharacterTransformationRules::canTransformIntoSkuro(const std::string& characterName)
 {
     return normalize(characterName) == "sanctus";
@@ -59,6 +65,8 @@ bool SpecialCharacterTransformationRules::shouldSanctusTransformAfterDamageDealt
     return damageDealt * 100 >= targetMaxHp * 40;
 }
 
+// EN: displaySanctusToSkuroForeshadowing declares or implements a focused behavior used by this module.
+// FR: displaySanctusToSkuroForeshadowing déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterTransformationRules::displaySanctusToSkuroForeshadowing()
 {
     std::cout << "Quelque chose se fissure derrière la lumière de Sanctus." << std::endl;

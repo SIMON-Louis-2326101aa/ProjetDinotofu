@@ -1,3 +1,5 @@
+// EN: EquipmentMenu.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: EquipmentMenu.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -10,6 +12,8 @@
 
 #include <iostream>
 
+// EN: open declares or implements a focused behavior used by this module.
+// FR: open déclare ou implémente un comportement précis utilisé par ce module.
 bool EquipmentMenu::open(Player& player)
 {
     while (true)
@@ -55,6 +59,8 @@ bool EquipmentMenu::open(Player& player)
     }
 }
 
+// EN: equipWeaponFromInventory declares or implements a focused behavior used by this module.
+// FR: equipWeaponFromInventory déclare ou implémente un comportement précis utilisé par ce module.
 bool EquipmentMenu::equipWeaponFromInventory(Player& player)
 {
     if (player.getInventory().getWeaponCount() <= 0)
@@ -140,6 +146,8 @@ bool EquipmentMenu::equipWeaponFromInventory(Player& player)
     return false;
 }
 
+// EN: equipArmorFromInventory declares or implements a focused behavior used by this module.
+// FR: equipArmorFromInventory déclare ou implémente un comportement précis utilisé par ce module.
 bool EquipmentMenu::equipArmorFromInventory(Player& player)
 {
     if (player.getInventory().getArmorCount() <= 0)

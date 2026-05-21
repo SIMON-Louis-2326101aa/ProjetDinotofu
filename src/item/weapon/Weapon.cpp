@@ -1,3 +1,5 @@
+// EN: Weapon.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: Weapon.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -5,6 +7,8 @@
 
 #include <iostream>
 
+// EN: Weapon declares or implements a focused behavior used by this module.
+// FR: Weapon déclare ou implémente un comportement précis utilisé par ce module.
 Weapon::Weapon() : Item()
 {
     type = WeaponType::BareHands;
@@ -26,6 +30,8 @@ Weapon::Weapon(
     int maxDamageBonus,
     int criticalBonus,
     int maxDurability
+// EN: Item declares or implements a focused behavior used by this module.
+// FR: Item déclare ou implémente un comportement précis utilisé par ce module.
 ) : Item(name, description, value)
 {
     this->type = type;
@@ -38,36 +44,50 @@ Weapon::Weapon(
     this->durability = maxDurability;
 }
 
+// EN: getType declares or implements a focused behavior used by this module.
+// FR: getType déclare ou implémente un comportement précis utilisé par ce module.
 WeaponType Weapon::getType() const
 {
     return type;
 }
 
+// EN: getMinDamageBonus declares or implements a focused behavior used by this module.
+// FR: getMinDamageBonus déclare ou implémente un comportement précis utilisé par ce module.
 int Weapon::getMinDamageBonus() const
 {
     return minDamageBonus;
 }
 
+// EN: getMaxDamageBonus declares or implements a focused behavior used by this module.
+// FR: getMaxDamageBonus déclare ou implémente un comportement précis utilisé par ce module.
 int Weapon::getMaxDamageBonus() const
 {
     return maxDamageBonus;
 }
 
+// EN: getCriticalBonus declares or implements a focused behavior used by this module.
+// FR: getCriticalBonus déclare ou implémente un comportement précis utilisé par ce module.
 int Weapon::getCriticalBonus() const
 {
     return criticalBonus;
 }
 
+// EN: getDurability declares or implements a focused behavior used by this module.
+// FR: getDurability déclare ou implémente un comportement précis utilisé par ce module.
 int Weapon::getDurability() const
 {
     return durability;
 }
 
+// EN: getMaxDurability declares or implements a focused behavior used by this module.
+// FR: getMaxDurability déclare ou implémente un comportement précis utilisé par ce module.
 int Weapon::getMaxDurability() const
 {
     return maxDurability;
 }
 
+// EN: isBroken declares or implements a focused behavior used by this module.
+// FR: isBroken déclare ou implémente un comportement précis utilisé par ce module.
 bool Weapon::isBroken() const
 {
     if (isIndestructible())
@@ -78,11 +98,15 @@ bool Weapon::isBroken() const
     return durability <= 0;
 }
 
+// EN: isIndestructible declares or implements a focused behavior used by this module.
+// FR: isIndestructible déclare ou implémente un comportement précis utilisé par ce module.
 bool Weapon::isIndestructible() const
 {
     return maxDurability < 0;
 }
 
+// EN: loseDurability declares or implements a focused behavior used by this module.
+// FR: loseDurability déclare ou implémente un comportement précis utilisé par ce module.
 void Weapon::loseDurability(int amount)
 {
     if (isIndestructible() || amount <= 0)
@@ -98,6 +122,8 @@ void Weapon::loseDurability(int amount)
     }
 }
 
+// EN: repair declares or implements a focused behavior used by this module.
+// FR: repair déclare ou implémente un comportement précis utilisé par ce module.
 void Weapon::repair(int amount)
 {
     if (isIndestructible() || amount <= 0)
@@ -113,6 +139,8 @@ void Weapon::repair(int amount)
     }
 }
 
+// EN: fullyRepair declares or implements a focused behavior used by this module.
+// FR: fullyRepair déclare ou implémente un comportement précis utilisé par ce module.
 void Weapon::fullyRepair()
 {
     if (isIndestructible())
@@ -123,6 +151,8 @@ void Weapon::fullyRepair()
     durability = maxDurability;
 }
 
+// EN: display declares or implements a focused behavior used by this module.
+// FR: display déclare ou implémente un comportement précis utilisé par ce module.
 void Weapon::display() const
 {
     std::cout << "===== ARME =====" << std::endl;

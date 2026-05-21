@@ -1,3 +1,5 @@
+// EN: DeathPenaltySystem.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: DeathPenaltySystem.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file prepares future death penalties for non-lethal runs.
 // Français : Ce fichier prépare les futures pénalités de mort pour les parties non létales.
 
@@ -12,6 +14,8 @@
 
 namespace
 {
+    // EN: rollChance declares or implements a focused behavior used by this module.
+    // FR: rollChance déclare ou implémente un comportement précis utilisé par ce module.
     bool rollChance(Random& random, int percentage)
     {
         if (percentage <= 0)
@@ -27,6 +31,8 @@ namespace
         return random.between(1, 100) <= percentage;
     }
 
+    // EN: calculateDurabilityLoss declares or implements a focused behavior used by this module.
+    // FR: calculateDurabilityLoss déclare ou implémente un comportement précis utilisé par ce module.
     int calculateDurabilityLoss(int currentDurability, int percentage)
     {
         int loss = currentDurability * percentage / 100;
@@ -39,11 +45,15 @@ namespace
         return loss;
     }
 
+    // EN: isBaseWeapon declares or implements a focused behavior used by this module.
+    // FR: isBaseWeapon déclare ou implémente un comportement précis utilisé par ce module.
     bool isBaseWeapon(const Weapon& weapon)
     {
         return weapon.getName() == "Mains nues";
     }
 
+    // EN: isBaseArmor declares or implements a focused behavior used by this module.
+    // FR: isBaseArmor déclare ou implémente un comportement précis utilisé par ce module.
     bool isBaseArmor(const Armor& armor)
     {
         return armor.getName() == "Tenue simple";
@@ -103,6 +113,8 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
         if (weapon != nullptr && !weapon->isIndestructible() && !isBaseWeapon(*weapon))
         {
             if (canStealEquipment
+                // EN: rollChance declares or implements a focused behavior used by this module.
+                // FR: rollChance déclare ou implémente un comportement précis utilisé par ce module.
                 && rollChance(random, DifficultyRules::getDeathWeaponTheftChance(difficulty)))
             {
                 if (player.destroyEquippedWeapon())
@@ -133,6 +145,8 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
                 }
 
                 if (weapon->isBroken()
+                    // EN: rollChance declares or implements a focused behavior used by this module.
+                    // FR: rollChance déclare ou implémente un comportement précis utilisé par ce module.
                     && rollChance(random, DifficultyRules::getDeathEquipmentIrreparableChance(difficulty)))
                 {
                     if (player.destroyEquippedWeapon())
@@ -156,6 +170,8 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
         if (armor != nullptr && !armor->isIndestructible() && !isBaseArmor(*armor))
         {
             if (canStealEquipment
+                // EN: rollChance declares or implements a focused behavior used by this module.
+                // FR: rollChance déclare ou implémente un comportement précis utilisé par ce module.
                 && rollChance(random, DifficultyRules::getDeathArmorTheftChance(difficulty)))
             {
                 if (player.destroyEquippedArmor())
@@ -186,6 +202,8 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
                 }
 
                 if (armor->isBroken()
+                    // EN: rollChance declares or implements a focused behavior used by this module.
+                    // FR: rollChance déclare ou implémente un comportement précis utilisé par ce module.
                     && rollChance(random, DifficultyRules::getDeathEquipmentIrreparableChance(difficulty)))
                 {
                     if (player.destroyEquippedArmor())
@@ -256,6 +274,8 @@ void DeathPenaltySystem::displayNonLethalDeathPenalty(
     std::cout << std::endl;
 }
 
+// EN: displayLethalDeathCorruption declares or implements a focused behavior used by this module.
+// FR: displayLethalDeathCorruption déclare ou implémente un comportement précis utilisé par ce module.
 void DeathPenaltySystem::displayLethalDeathCorruption()
 {
     std::cout << "Morts du personnage : [STATISTIQUE CORROMPUE]" << std::endl;
@@ -265,6 +285,8 @@ void DeathPenaltySystem::displayLethalDeathCorruption()
     std::cout << std::endl;
 }
 
+// EN: displayLethalCurrentDeathStatistic declares or implements a focused behavior used by this module.
+// FR: displayLethalCurrentDeathStatistic déclare ou implémente un comportement précis utilisé par ce module.
 void DeathPenaltySystem::displayLethalCurrentDeathStatistic()
 {
     std::cout << "Morts du personnage : [STATISTIQUE CORROMPUE]" << std::endl;
@@ -272,6 +294,8 @@ void DeathPenaltySystem::displayLethalCurrentDeathStatistic()
     std::cout << std::endl;
 }
 
+// EN: displayLethalSurvivalAnomaly declares or implements a focused behavior used by this module.
+// FR: displayLethalSurvivalAnomaly déclare ou implémente un comportement précis utilisé par ce module.
 void DeathPenaltySystem::displayLethalSurvivalAnomaly()
 {
     std::cout << "La mort t'a trouvé." << std::endl;

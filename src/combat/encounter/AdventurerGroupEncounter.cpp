@@ -1,3 +1,5 @@
+// EN: AdventurerGroupEncounter.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: AdventurerGroupEncounter.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file prepares random adventurer group encounters for PvE-like battles.
 // Français : Ce fichier prépare les rencontres de groupes d'aventuriers aléatoires pour les combats façon PvE.
 // Description: Creates human and semi-human opponent groups using random fighters or special character groups.
@@ -12,6 +14,7 @@
 #include "character/SpecialCharacterNativeBonus.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "combat/encounter/SpecialEncounterRules.hpp"
+#include "combat/action/SpecialCombatEffects.hpp"
 #include "core/Console.hpp"
 #include "entity/Race.hpp"
 #include "progression/DifficultyMode.hpp"
@@ -21,6 +24,8 @@
 
 namespace
 {
+    // EN: convertCharacterRaceToEntityRace declares or implements a focused behavior used by this module.
+    // FR: convertCharacterRaceToEntityRace déclare ou implémente un comportement précis utilisé par ce module.
     Race convertCharacterRaceToEntityRace(CharacterRace race)
     {
         switch (race)
@@ -60,26 +65,36 @@ namespace
         }
     }
 
+    // EN: scaleMaxHp declares or implements a focused behavior used by this module.
+    // FR: scaleMaxHp déclare ou implémente un comportement précis utilisé par ce module.
     int scaleMaxHp(int baseMaxHp, int encounterLevel)
     {
         return baseMaxHp + ((encounterLevel - 1) * 12);
     }
 
+    // EN: scaleMinDamage declares or implements a focused behavior used by this module.
+    // FR: scaleMinDamage déclare ou implémente un comportement précis utilisé par ce module.
     int scaleMinDamage(int baseMinDamage, int encounterLevel)
     {
         return baseMinDamage + ((encounterLevel - 1) / 2);
     }
 
+    // EN: scaleMaxDamage declares or implements a focused behavior used by this module.
+    // FR: scaleMaxDamage déclare ou implémente un comportement précis utilisé par ce module.
     int scaleMaxDamage(int baseMaxDamage, int encounterLevel)
     {
         return baseMaxDamage + (encounterLevel - 1);
     }
 
+    // EN: scaleCriticalDamage declares or implements a focused behavior used by this module.
+    // FR: scaleCriticalDamage déclare ou implémente un comportement précis utilisé par ce module.
     int scaleCriticalDamage(int baseCriticalDamage, int encounterLevel)
     {
         return baseCriticalDamage + ((encounterLevel - 1) * 2);
     }
 
+    // EN: containsName declares or implements a focused behavior used by this module.
+    // FR: containsName déclare ou implémente un comportement précis utilisé par ce module.
     bool containsName(const std::vector<std::string>& names, const std::string& expectedName)
     {
         return std::find(names.begin(), names.end(), expectedName) != names.end();
@@ -150,6 +165,8 @@ EnemyCombatQueue AdventurerGroupEncounter::createRandomGroupForPlayer(
     return createClassicRandomGroup(player, random);
 }
 
+// EN: displayGroupEncounterIntroduction declares or implements a focused behavior used by this module.
+// FR: displayGroupEncounterIntroduction déclare ou implémente un comportement précis utilisé par ce module.
 void AdventurerGroupEncounter::displayGroupEncounterIntroduction()
 {
     Console::clear();
@@ -192,7 +209,7 @@ EnemyCombatQueue AdventurerGroupEncounter::createSpecialGroup(
 {
     EnemyCombatQueue queue;
     int encounterLevel = player.getLevel();
-    int groupChoice = random.between(1, 8);
+    int groupChoice = random.between(1, 12);
     std::vector<std::string> names;
 
     switch (groupChoice)
@@ -229,16 +246,34 @@ EnemyCombatQueue AdventurerGroupEncounter::createSpecialGroup(
             break;
 
         case 8:
-        default:
             names = {"Fire Flight", "Matt (PRO)"};
+            break;
+
+        case 9:
+            names = {"Hestia", "Sanctus", "Hazak"};
+            break;
+
+        case 10:
+            names = {"Fail", "Aoi", "Kanadé"};
+            break;
+
+        case 11:
+            names = {"Louis", "Fire Flight", "Trexof"};
+            break;
+
+        case 12:
+        default:
+            names = {"Henrique", "Mattzelda", "Skuro"};
             break;
     }
 
     announceSpecialGroup(names);
+    announceRelationshipBonus(names);
+    SpecialCombatEffects::registerSpecialGroupContext(names);
 
     for (const std::string& name : names)
     {
-        addSpecialCharacterAsOpponent(queue, name, encounterLevel);
+        addSpecialCharacterAsOpponent(queue, name, encounterLevel, names);
     }
 
     queue.initializeFrontLine();
@@ -273,7 +308,8 @@ void AdventurerGroupEncounter::addPlayerAsOpponent(
 void AdventurerGroupEncounter::addSpecialCharacterAsOpponent(
     EnemyCombatQueue& queue,
     const std::string& characterName,
-    int encounterLevel
+    int encounterLevel,
+    const std::vector<std::string>& groupNames
 )
 {
     SpecialCharacter character;
@@ -296,9 +332,132 @@ void AdventurerGroupEncounter::addSpecialCharacterAsOpponent(
         character
     );
 
+    applyRelationshipBonus(opponent, characterName, groupNames);
+
     addPlayerAsOpponent(queue, opponent, encounterLevel);
 }
 
+void AdventurerGroupEncounter::applyRelationshipBonus(
+    Player& opponent,
+    const std::string& characterName,
+    const std::vector<std::string>& groupNames
+)
+{
+    bool hasHazak = containsName(groupNames, "Hazak");
+    bool hasHestia = containsName(groupNames, "Hestia");
+    bool hasHenrique = containsName(groupNames, "Henrique");
+    bool hasMattzelda = containsName(groupNames, "Mattzelda");
+    bool hasLouis = containsName(groupNames, "Louis");
+    bool hasTrexof = containsName(groupNames, "Trexof");
+    bool hasAoi = containsName(groupNames, "Aoi");
+    bool hasKanade = containsName(groupNames, "Kanadé");
+    bool hasSanctus = containsName(groupNames, "Sanctus");
+    bool hasFail = containsName(groupNames, "Fail");
+    bool hasSkuro = containsName(groupNames, "Skuro");
+
+    if (hasHazak && hasHestia)
+    {
+        if (characterName == "Hazak") opponent.applyFlatStatBonus(24, 2, 4, 6);
+        if (characterName == "Hestia") opponent.applyFlatStatBonus(14, 0, 2, 4);
+    }
+
+    if (hasHazak && hasHenrique)
+    {
+        if (characterName == "Hazak") opponent.applyFlatStatBonus(8, 2, 3, 4);
+        if (characterName == "Henrique") opponent.applyFlatStatBonus(28, 1, 3, 2);
+    }
+
+    if (hasMattzelda && hasLouis && hasTrexof)
+    {
+        if (characterName == "Mattzelda") opponent.applyFlatStatBonus(30, 1, 3, 0);
+        if (characterName == "Louis") opponent.applyFlatStatBonus(12, 1, 4, 2);
+        if (characterName == "Trexof") opponent.applyFlatStatBonus(8, 3, 5, 6);
+    }
+
+    if (hasAoi && hasKanade && hasSanctus)
+    {
+        if (characterName == "Sanctus") opponent.applyFlatStatBonus(34, 0, 2, 0);
+        if (characterName == "Aoi") opponent.applyFlatStatBonus(10, 1, 4, 4);
+        if (characterName == "Kanadé") opponent.applyFlatStatBonus(6, 2, 6, 7);
+    }
+
+    if (hasAoi && hasKanade && hasFail)
+    {
+        if (characterName == "Fail") opponent.applyFlatStatBonus(8, 1, 8, 9);
+        if (characterName == "Aoi") opponent.applyFlatStatBonus(8, 1, 5, 5);
+        if (characterName == "Kanadé") opponent.applyFlatStatBonus(8, 2, 7, 8);
+    }
+
+    if (hasHazak && hasHestia && hasSanctus)
+    {
+        if (characterName == "Hazak") opponent.applyFlatStatBonus(18, 2, 5, 6);
+        if (characterName == "Hestia") opponent.applyFlatStatBonus(24, 0, 3, 8);
+        if (characterName == "Sanctus") opponent.applyFlatStatBonus(42, 0, 2, 2);
+    }
+
+    if (hasHazak && hasFail)
+    {
+        if (characterName == "Hazak") opponent.applyFlatStatBonus(6, 2, 4, 5);
+        if (characterName == "Fail") opponent.applyFlatStatBonus(8, 2, 7, 8);
+    }
+
+    if (hasSkuro)
+    {
+        if (characterName == "Skuro") opponent.applyFlatStatBonus(-10, 4, 8, 10);
+        else opponent.applyFlatStatBonus(4, 0, 2, 1);
+    }
+}
+
+void AdventurerGroupEncounter::announceRelationshipBonus(
+    const std::vector<std::string>& groupNames
+)
+{
+    if (containsName(groupNames, "Hazak") && containsName(groupNames, "Hestia"))
+    {
+        std::cout << "Relation active : Hazak protège Hestia. Ses attaques deviennent plus précises, mais le combat reste non-massacre." << std::endl;
+    }
+    else if (containsName(groupNames, "Aoi") && containsName(groupNames, "Kanadé") && containsName(groupNames, "Sanctus"))
+    {
+        std::cout << "Relation active : Sanctus tient la ligne pendant qu'Aoi et Kanadé préparent leurs sorts." << std::endl;
+    }
+    else if (containsName(groupNames, "Mattzelda") && containsName(groupNames, "Louis") && containsName(groupNames, "Trexof"))
+    {
+        std::cout << "Relation active : trio de potes. Tanking, improvisation et test d'équilibrage se mélangent." << std::endl;
+    }
+    else if (containsName(groupNames, "Skuro"))
+    {
+        std::cout << "Relation active : Skuro rend le groupe plus dangereux, mais aussi plus instable." << std::endl;
+    }
+    else if (containsName(groupNames, "Hestia") && containsName(groupNames, "Sanctus") && containsName(groupNames, "Hazak"))
+    {
+        std::cout << "Relation active : protection sacrée. Sanctus tient la ligne, Hazak refuse le massacre, Hestia survit par réflexe divin." << std::endl;
+    }
+    else if (containsName(groupNames, "Fail") && containsName(groupNames, "Aoi") && containsName(groupNames, "Kanadé"))
+    {
+        std::cout << "Relation active : laboratoire vivant. Fail expérimente pendant qu'Aoi stabilise et que Kanadé surcharge les sorts." << std::endl;
+    }
+    else if (containsName(groupNames, "Louis") && containsName(groupNames, "Fire Flight") && containsName(groupNames, "Trexof"))
+    {
+        std::cout << "Relation active : pluie de projectiles. Louis veut aider, Fire Flight commande, Trexof teste les limites." << std::endl;
+    }
+    else if (containsName(groupNames, "Hazak") && containsName(groupNames, "Henrique"))
+    {
+        std::cout << "Relation active : Hazak et Henrique se connaissent trop bien pour laisser l'autre tomber facilement." << std::endl;
+    }
+    else if (containsName(groupNames, "Hazak") && containsName(groupNames, "Fail"))
+    {
+        std::cout << "Relation active : contrat de non-agression. Fail expérimente, Hazak surveille." << std::endl;
+    }
+    else
+    {
+        return;
+    }
+
+    std::cout << std::endl;
+}
+
+// EN: announceSpecialGroup declares or implements a focused behavior used by this module.
+// FR: announceSpecialGroup déclare ou implémente un comportement précis utilisé par ce module.
 void AdventurerGroupEncounter::announceSpecialGroup(const std::vector<std::string>& names)
 {
     std::cout << "Un groupe spécial répond à l'appel de l'arène." << std::endl;

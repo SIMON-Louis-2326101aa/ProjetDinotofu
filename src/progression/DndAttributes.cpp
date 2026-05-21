@@ -1,9 +1,13 @@
+// EN: DndAttributes.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: DndAttributes.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 // Description: Stores the six DND-inspired attributes used by future progression systems.
 
 #include "progression/DndAttributes.hpp"
 
+// EN: DndAttributes declares or implements a focused behavior used by this module.
+// FR: DndAttributes déclare ou implémente un comportement précis utilisé par ce module.
 DndAttributes::DndAttributes()
 {
     strength = 10;
@@ -14,31 +18,43 @@ DndAttributes::DndAttributes()
     charisma = 10;
 }
 
+// EN: getStrength declares or implements a focused behavior used by this module.
+// FR: getStrength déclare ou implémente un comportement précis utilisé par ce module.
 int DndAttributes::getStrength() const
 {
     return strength;
 }
 
+// EN: getDexterity declares or implements a focused behavior used by this module.
+// FR: getDexterity déclare ou implémente un comportement précis utilisé par ce module.
 int DndAttributes::getDexterity() const
 {
     return dexterity;
 }
 
+// EN: getConstitution declares or implements a focused behavior used by this module.
+// FR: getConstitution déclare ou implémente un comportement précis utilisé par ce module.
 int DndAttributes::getConstitution() const
 {
     return constitution;
 }
 
+// EN: getIntelligence declares or implements a focused behavior used by this module.
+// FR: getIntelligence déclare ou implémente un comportement précis utilisé par ce module.
 int DndAttributes::getIntelligence() const
 {
     return intelligence;
 }
 
+// EN: getWisdom declares or implements a focused behavior used by this module.
+// FR: getWisdom déclare ou implémente un comportement précis utilisé par ce module.
 int DndAttributes::getWisdom() const
 {
     return wisdom;
 }
 
+// EN: getCharisma declares or implements a focused behavior used by this module.
+// FR: getCharisma déclare ou implémente un comportement précis utilisé par ce module.
 int DndAttributes::getCharisma() const
 {
     return charisma;
@@ -68,6 +84,8 @@ void DndAttributes::setValues(
     if (charisma < 1) charisma = 1;
 }
 
+// EN: increaseByChoice declares or implements a focused behavior used by this module.
+// FR: increaseByChoice déclare ou implémente un comportement précis utilisé par ce module.
 bool DndAttributes::increaseByChoice(int choice)
 {
     switch (choice)
@@ -101,6 +119,8 @@ bool DndAttributes::increaseByChoice(int choice)
     }
 }
 
+// EN: getChoiceCount declares or implements a focused behavior used by this module.
+// FR: getChoiceCount déclare ou implémente un comportement précis utilisé par ce module.
 int DndAttributes::getChoiceCount()
 {
     return 6;

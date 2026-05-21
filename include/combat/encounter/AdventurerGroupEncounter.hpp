@@ -1,3 +1,5 @@
+// EN: AdventurerGroupEncounter.hpp briefly defines this Dinotofu module and its responsibilities.
+// FR: AdventurerGroupEncounter.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file prepares random adventurer group encounters for PvE-like battles.
 // Français : Ce fichier prépare les rencontres de groupes d'aventuriers aléatoires pour les combats façon PvE.
 // Description: Creates human and semi-human opponent groups using random fighters or special character groups.
@@ -20,6 +22,8 @@ public:
         Random& random
     );
 
+    // EN: displayGroupEncounterIntroduction declares or implements a focused behavior used by this module.
+    // FR: displayGroupEncounterIntroduction déclare ou implémente un comportement précis utilisé par ce module.
     static void displayGroupEncounterIntroduction();
 
 private:
@@ -42,9 +46,22 @@ private:
     static void addSpecialCharacterAsOpponent(
         EnemyCombatQueue& queue,
         const std::string& characterName,
-        int encounterLevel
+        int encounterLevel,
+        const std::vector<std::string>& groupNames
     );
 
+    static void applyRelationshipBonus(
+        Player& opponent,
+        const std::string& characterName,
+        const std::vector<std::string>& groupNames
+    );
+
+    static void announceRelationshipBonus(
+        const std::vector<std::string>& groupNames
+    );
+
+    // EN: announceSpecialGroup declares or implements a focused behavior used by this module.
+    // FR: announceSpecialGroup déclare ou implémente un comportement précis utilisé par ce module.
     static void announceSpecialGroup(const std::vector<std::string>& names);
 };
 

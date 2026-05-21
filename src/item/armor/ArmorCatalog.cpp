@@ -1,8 +1,12 @@
+// EN: ArmorCatalog.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: ArmorCatalog.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "item/armor/ArmorCatalog.hpp"
 
+// EN: createSimpleOutfit declares or implements a focused behavior used by this module.
+// FR: createSimpleOutfit déclare ou implémente un comportement précis utilisé par ce module.
 Armor ArmorCatalog::createSimpleOutfit()
 {
     return Armor(
@@ -16,6 +20,8 @@ Armor ArmorCatalog::createSimpleOutfit()
     );
 }
 
+// EN: createWornLeatherArmor declares or implements a focused behavior used by this module.
+// FR: createWornLeatherArmor déclare ou implémente un comportement précis utilisé par ce module.
 Armor ArmorCatalog::createWornLeatherArmor()
 {
     return Armor(
@@ -29,6 +35,8 @@ Armor ArmorCatalog::createWornLeatherArmor()
     );
 }
 
+// EN: createArenaChainmail declares or implements a focused behavior used by this module.
+// FR: createArenaChainmail déclare ou implémente un comportement précis utilisé par ce module.
 Armor ArmorCatalog::createArenaChainmail()
 {
     return Armor(

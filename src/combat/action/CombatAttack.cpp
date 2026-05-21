@@ -1,3 +1,5 @@
+// EN: CombatAttack.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: CombatAttack.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -5,6 +7,7 @@
 
 #include "combat/DamageReport.hpp"
 #include "combat/system/DamageSystem.hpp"
+#include "combat/system/DefensePostureSystem.hpp"
 #include "combat/action/SpecialCombatEffects.hpp"
 
 #include <iostream>
@@ -48,6 +51,7 @@ void CombatAttack::executeBoostedAttack(
                   << " esquive au dernier moment."
                   << std::endl;
         std::cout << std::endl;
+        DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
         return;
     }
 
@@ -116,6 +120,11 @@ void CombatAttack::executeBoostedAttack(
     DamageSystem::displayDamageReport(
         defender,
         rapport
+    );
+
+    rapport.receivedDamage = DefensePostureSystem::reduceIncomingDamage(
+        defender,
+        rapport.receivedDamage
     );
 
     defender.takeDamage(rapport.receivedDamage);

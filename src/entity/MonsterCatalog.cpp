@@ -1,3 +1,5 @@
+// EN: MonsterCatalog.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: MonsterCatalog.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -5,6 +7,7 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 namespace
 {
@@ -21,7 +24,8 @@ namespace
         int damagePotionCount = 0,
         bool invocation = false,
         bool elite = false,
-        bool hiddenStats = false
+        bool hiddenStats = false,
+        bool evolved = false
     )
     {
         return Monster(
@@ -37,7 +41,8 @@ namespace
             damagePotionCount,
             invocation,
             elite,
-            hiddenStats
+            hiddenStats,
+            evolved
         );
     }
 
@@ -103,6 +108,42 @@ namespace
         };
     }
 
+
+    std::string evolvedNameFor(const Monster& monster, Random& random)
+    {
+        std::vector<std::string> prefixes = {
+            "Évolué - ",
+            "Ancien - ",
+            "Muté - ",
+            "Marqué - ",
+            "Alpha - "
+        };
+
+        std::vector<std::string> suffixes = {
+            " renforcé",
+            " éveillé",
+            " instable",
+            " survivant",
+            " à variation"
+        };
+
+        if (random.between(1, 100) <= 55)
+        {
+            return prefixes[random.between(0, static_cast<int>(prefixes.size()) - 1)] + monster.getName();
+        }
+
+        return monster.getName() + suffixes[random.between(0, static_cast<int>(suffixes.size()) - 1)];
+    }
+
+    // EN: scaledValue declares or implements a focused behavior used by this module.
+    // FR: scaledValue déclare ou implémente un comportement précis utilisé par ce module.
+    int scaledValue(int value, int percent)
+    {
+        return std::max(1, value * percent / 100);
+    }
+
+    // EN: chooseFromList declares or implements a focused behavior used by this module.
+    // FR: chooseFromList déclare ou implémente un comportement précis utilisé par ce module.
     Monster chooseFromList(const std::vector<Monster>& monsters, Random& random)
     {
         int index = random.between(0, static_cast<int>(monsters.size()) - 1);
@@ -110,46 +151,64 @@ namespace
     }
 }
 
+// EN: createScaredGoblin declares or implements a focused behavior used by this module.
+// FR: createScaredGoblin déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createScaredGoblin()
 {
     return createMonster("Gobelin peureux", "Assassin primitif", Race::Gobelin, 1, 55, 8, 14, 18);
 }
 
+// EN: createBrutalGoblin declares or implements a focused behavior used by this module.
+// FR: createBrutalGoblin déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createBrutalGoblin()
 {
     return createMonster("Gobelin brutal", "Bagarreur sauvage", Race::Gobelin, 2, 75, 10, 18, 22);
 }
 
+// EN: createStarvingWolf declares or implements a focused behavior used by this module.
+// FR: createStarvingWolf déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createStarvingWolf()
 {
     return createMonster("Loup affamé", "Prédateur rapide", Race::Bete, 2, 65, 9, 20, 25);
 }
 
+// EN: createCrackedSkeleton declares or implements a focused behavior used by this module.
+// FR: createCrackedSkeleton déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createCrackedSkeleton()
 {
     return createMonster("Squelette fissuré", "Mort-vivant fragile", Race::MortVivant, 3, 80, 12, 22, 24);
 }
 
+// EN: createMinorOrc declares or implements a focused behavior used by this module.
+// FR: createMinorOrc déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createMinorOrc()
 {
     return createMonster("Orc mineur", "Combattant lourd", Race::Orc, 4, 120, 15, 26, 28, 0, 0, false, true);
 }
 
+// EN: createCaveBat declares or implements a focused behavior used by this module.
+// FR: createCaveBat déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createCaveBat()
 {
     return createMonster("Chauve-souris des cavernes", "Créature rapide", Race::Bete, 1, 45, 7, 15, 20);
 }
 
+// EN: createWildBoar declares or implements a focused behavior used by this module.
+// FR: createWildBoar déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createWildBoar()
 {
     return createMonster("Sanglier sauvage", "Bête résistante", Race::Bete, 3, 95, 12, 21, 24);
 }
 
+// EN: createLostBandit declares or implements a focused behavior used by this module.
+// FR: createLostBandit déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createLostBandit()
 {
     return createMonster("Bandit perdu", "Humain opportuniste", Race::Humain, 4, 100, 14, 24, 30, 1, 0);
 }
 
+// EN: createRandomMonsterForLevel declares or implements a focused behavior used by this module.
+// FR: createRandomMonsterForLevel déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createRandomMonsterForLevel(int level, Random& random)
 {
     if (level <= 1)
@@ -175,6 +234,36 @@ Monster MonsterCatalog::createRandomMonsterForLevel(int level, Random& random)
     return chooseFromList(createTierFivePlusMonsters(), random);
 }
 
+
+// EN: createEvolvedVariant declares or implements a focused behavior used by this module.
+// FR: createEvolvedVariant déclare ou implémente un comportement précis utilisé par ce module.
+Monster MonsterCatalog::createEvolvedVariant(const Monster& baseMonster, Random& random)
+{
+    int levelBonus = random.between(1, 2);
+    int hpPercent = baseMonster.isElite() ? random.between(130, 150) : random.between(120, 140);
+    int damagePercent = baseMonster.isElite() ? random.between(120, 135) : random.between(112, 128);
+
+    bool hiddenStats = !baseMonster.areStatsVisible() || random.between(1, 100) <= 18;
+    bool elite = true;
+
+    return createMonster(
+        evolvedNameFor(baseMonster, random),
+        baseMonster.getType() + " / créature évoluée",
+        baseMonster.getRace(),
+        baseMonster.getLevel() + levelBonus,
+        scaledValue(baseMonster.getMaxHp(), hpPercent),
+        scaledValue(baseMonster.getMinDamage(), damagePercent),
+        scaledValue(baseMonster.getMaxDamage(), damagePercent),
+        scaledValue(baseMonster.getCriticalDamage(), damagePercent + 5),
+        baseMonster.getHealingPotionCount() + (random.between(1, 100) <= 25 ? 1 : 0),
+        baseMonster.getDamagePotionCount() + (random.between(1, 100) <= 35 ? 1 : 0),
+        baseMonster.isInvocation(),
+        elite,
+        hiddenStats,
+        true
+    );
+}
+
 std::vector<Monster> MonsterCatalog::createAllPreviewMonsters()
 {
     std::vector<Monster> allMonsters;
@@ -198,6 +287,8 @@ std::vector<Monster> MonsterCatalog::createAllPreviewMonsters()
     return allMonsters;
 }
 
+// EN: displayAvailableMonsters declares or implements a focused behavior used by this module.
+// FR: displayAvailableMonsters déclare ou implémente un comportement précis utilisé par ce module.
 void MonsterCatalog::displayAvailableMonsters()
 {
     std::vector<Monster> monsters = createAllPreviewMonsters();

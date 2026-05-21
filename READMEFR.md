@@ -1,460 +1,221 @@
-# Dinotofu   
-   
-Dinotofu est un RPG / jeu d'arène en terminal développé en C++17.   
-   
-Le projet est actuellement reconstruit à partir d'un ancien prototype en un seul gros fichier, vers une architecture plus propre en orienté objet. Le jeu reste entièrement en terminal pour l'instant, mais la base du code prépare déjà des systèmes futurs comme les sauvegardes de campagne, l'évolution de classe, une meilleure gestion d'inventaire, les mécaniques de boss, les vagues d'ennemis, la coop, les alliés IA, les invocations, le bestiaire progressif, les statistiques de compte et les sauvegardes JSON.   
-   
-## État actuel   
-   
-Dinotofu est encore en développement.   
-   
-Les modes de combat actuellement jouables sont :   
-   
-- PvP : joueur contre joueur   
-- PvP IA : joueur contre adversaire contrôlé par l'ordinateur   
-- PvE monstres : combat contre des vagues d'ennemis   
-- PvE Boss : combat d'arène contre un boss   
-   
-Le mode campagne est prévu, mais pas encore entièrement implémenté.   
-   
-## Concept du jeu   
-   
-Dinotofu est pensé comme un RPG médiéval-fantastique en terminal, avec des combats de type arène.   
-   
-Le combat fonctionne dans un esprit tour par tour : le joueur choisit des actions comme attaquer, utiliser des potions, consulter son équipement, ouvrir son inventaire, passer son tour ou tenter de fuir.   
-   
-Le jeu utilise beaucoup d'aléatoire, dans un esprit proche du JDR / DND, pour les dégâts, les choix de l'IA, les tentatives de fuite, la future initiative et les rencontres spéciales.   
-   
-Systèmes prévus sur le long terme :   
-   
-- création de personnage et sauvegardes JSON   
-- progression de campagne   
-- monstres et boss débloqués progressivement   
-- attributs façon DND : Force, Dextérité, Constitution, Intelligence, Sagesse, Charisme   
-- évolution de classe selon les statistiques   
-- types de dégâts et résistances   
-- armes, armures, matériaux, durabilité, effets spéciaux, équipements héroïques et reliques   
-- bestiaire et connaissance progressive des matériaux   
-- statistiques globales de compte, tous personnages confondus   
-- difficulté Léthal avec mort définitive du personnage   
-- coop, alliés IA, invocations, groupes de combat et initiative   
-- personnages spéciaux semi-humains avec chances d'apparition rares   
-   
-## Prérequis de compilation   
-   
-Requis sur Linux :   
-   
-- `g++`   
-- `make`   
-- support C++17   
-   
-Commande d'installation exemple sur Debian / Ubuntu :   
-   
-```bash   
-sudo apt update   
-sudo apt install -y build-essential make g++   
-```   
-   
-## Commandes Make   
-   
-Compiler le projet :   
-   
-```bash   
-make   
-```   
-Lancer le jeu :   
-   
-```bash   
-make run   
-```   
-Nettoyer les fichiers générés :   
-   
-```bash   
-make clean   
-```   
-Reconstruire depuis zéro :   
-   
-```bash   
-make rebuild   
-```   
-Créer un lanceur Linux cliquable :   
-   
-```bash   
-make install-desktop   
-```   
-Supprimer le lanceur Linux :   
-   
-```bash   
-make remove-desktop   
-```   
-   
-## Lancement sur Linux   
-   
-Méthode recommandée :   
-   
-```bash   
-make run   
-```   
-Ou compiler puis lancer l'exécutable directement :   
-   
-```bash   
-make   
-./output/Dinotofu   
-```   
-   
-## Lancement sur Windows   
-   
-Le Makefile est principalement prévu pour Linux.   
-   
-Options recommandées sur Windows :   
-   
-### Option 1 : WSL   
-   
-Installer WSL, ouvrir le projet dans un terminal Linux, puis utiliser :   
-   
-```bash   
-make run   
-```   
-### Option 2 : MSYS2 / MinGW   
-   
-Installer une toolchain MinGW et `make`, puis lancer le projet depuis un terminal MSYS2 :   
-   
-```bash   
-make run   
-```   
-### Option 3 : commande g++ manuelle   
-   
-Si tous les includes sont correctement configurés, une commande manuelle peut être utilisée, mais c'est moins confortable que le Makefile :   
-   
-```bash   
-g++ -std=c++17 -Wall -Wextra -Iinclude $(find src -name "*.cpp") -o output/Dinotofu   
-```   
-Cette commande directe est surtout pratique dans un shell de type Linux. Sur Windows CMD ou PowerShell classique, WSL ou MSYS2 restent préférables.   
-   
-## Notes Git   
-   
-Les dossiers générés ne doivent pas être commit :   
-   
-- `build/`   
-- `output/`   
-   
-Le vrai `Makefile` doit rester dans Git.   
-   
-## Organisation du code   
-   
-Le projet utilise une architecture `include/` et `src/`.   
-   
-Les headers sont dans `include/`, les fichiers d'implémentation sont dans `src/`, et les deux dossiers suivent presque la même structure.   
-   
-Les identifiants de code et les dossiers sont écrits en anglais. Les textes affichés au joueur peuvent rester en français.   
-   
-Le nom préféré est `item/`, pas `object/`. Le projet ne doit plus contenir d'ancien dossier racine `action/`. Le dossier `combat/action/` est conservé car il contient une vraie logique d'actions de combat.   
-   
-## Passe de stabilisation actuelle   
-   
-Points vérifiés et stabilisés :   
-   
-- `make clean` et `make rebuild` fonctionnent correctement.   
-- `build/` et `output/` sont ignorés par Git.   
-- L'ancien dossier racine `action/` n'est plus nécessaire.   
-- `combat/action/` est gardé car il contient la logique réelle d'actions de combat.   
-- Les quatre modes de combat actuels utilisent une structure de menu de combat partagée.   
-- Les menus équipement et inventaire peuvent être ouverts sans consommer le tour de combat.   
-- Les actions de potion ratées ne consomment pas le tour de combat.   
-- Les potions offensives utilisent la vraie puissance de la potion au lieu d'une valeur fixe codée en dur.   
-- La sélection de cible en PvE monstres correspond aux numéros affichés.   
-- Les tentatives de fuite contre un boss consomment correctement le tour tout en gardant la fuite impossible.   
-- Les dossiers futurs de sauvegarde/progression sont préparés pour les systèmes JSON.   
-- Les vagues PvE monstres sont générées selon le niveau du joueur.   
-- Les récompenses PvE monstres distinguent les ennemis vaincus et les ennemis en fuite.   
-- La fuite du joueur en PvE monstres donne une récompense partielle selon la difficulté.   
-- Les ennemis encore en vie mais déjà blessés peuvent donner une petite partie de récompense.   
-- Les pénalités de mort non définitive sont préparées : or, expérience, consommables, durabilité d'équipement, casse, destruction irréparable et vol futur selon contexte.   
-- La difficulté est maintenant sélectionnée avant la classe et peut modifier le kit de départ.   
-   
-## Systèmes futurs préparés   
-   
-Le projet contient maintenant des dossiers et fichiers placeholder pour les systèmes futurs :   
-   
-- `character/` : personnages spéciaux semi-humains et génération aléatoire de personnages   
-- `combat/encounter/` : rencontres spéciales rares et génération de rencontres   
-- `combat/group/` : future coop, alliés IA, invocations, slots d'unités, ordre de tour et initiative   
-- `progression/` : statistiques, bestiaire, connaissance des matériaux, difficulté, révélation d'identité et pénalités de mort   
-- `save/` : futur gestionnaire de sauvegarde JSON et modèles de sauvegarde   
-- `interface/menu/progression/` : futurs menus de statistiques, bestiaire, matériaux et compte   
-- `assets/saves/accounts/` : futures sauvegardes JSON de compte   
-- `assets/saves/characters/playable/` : futurs personnages jouables   
-- `assets/saves/characters/dead/` : futurs personnages morts en Léthal   
-- `assets/saves/bestiary/` : futures sauvegardes de connaissance du bestiaire   
-- `assets/saves/materials/` : futures sauvegardes de connaissance des matériaux   
-   
-## Difficulté et mort   
-   
-Les récompenses en cas de fuite ne doivent pas être tout ou rien. Le mode Facile peut être généreux, Normal reste équilibré, et les difficultés plus élevées deviennent plus dures.   
-   
-La mort non définitive doit quand même faire mal : perte d'or, d'expérience, de consommables, de matériaux plus tard, et dégâts sur l'équipement équipé.   
-   
-En difficulté Léthal, les statistiques de mort deviennent corrompues au lieu d'afficher un compteur normal :   
-   
-```text   
-Morts du personnage : [STATISTIQUE CORROMPUE]   
-Vous ne deviez pas mourir.   
-Statut : personnage supprimé du registre des vivants.   
-Connais-tu quelqu’un capable d’échapper à la mort ? Moi non...   
-```   
-   
-Même avant de mourir, l'affichage de statistiques en Léthal doit prévenir le joueur :   
-   
-```text   
-Morts du personnage : [STATISTIQUE CORROMPUE]   
-But de mission : survivre.   
-```   
-   
-## Règle de connaissance des boss   
-   
-Rencontrer un boss ne suffit pas à l'identifier complètement.   
-   
-Le nom d'un boss ne doit être ajouté au bestiaire que lorsque le boss dit son propre nom, lorsqu'un personnage fiable le nomme, lorsqu'un seuil narratif comme 50% PV le révèle, ou lorsqu'une phrase avant défaite donne assez d'informations.   
-   
-Avant ça, le bestiaire peut afficher inconnu, une description physique, des indices ou des identités supposées liées à des écrits et légendes déjà découverts.   
-   
-## Prepared future systems   
-   
-   
-```text   
-Dinotofu/   
-├── Makefile   
-├── README.md   
-├── .gitignore   
-│   
-├── assets/   
-│   ├── config/   
-│   │   ├── difficulties/   
-│   │   ├── encounters/   
-│   │   ├── loot/   
-│   │   └── pantheon/   
-│   ├── saves/   
-│   │   ├── accounts/   
-│   │   ├── bestiary/   
-│   │   ├── campaign/   
-│   │   ├── characters/   
-│   │   │   ├── graveyard/   
-│   │   │   └── playable/   
-│   │   ├── encounters/   
-│   │   ├── lore/   
-│   │   ├── materials/   
-│   │   ├── player/   
-│   │   └── statistics/   
-│   └── texts/   
-│       ├── bosses/   
-│       ├── descriptions/   
-│       ├── dialogues/   
-│       ├── lore/   
-│       └── special_characters/   
-│   
-├── include/   
-│   ├── adventure/   
-│   ├── boss/   
-│   ├── character/   
-│   ├── class_system/   
-│   ├── combat/   
-│   │   ├── action/   
-│   │   ├── ai/   
-│   │   ├── boss/   
-│   │   ├── death/   
-│   │   ├── encounter/   
-│   │   ├── escape/   
-│   │   ├── group/   
-│   │   ├── initiative/   
-│   │   ├── loot/   
-│   │   ├── modes/   
-│   │   ├── reward/   
-│   │   ├── summon/   
-│   │   ├── system/   
-│   │   ├── turn/   
-│   │   ├── unit/   
-│   │   └── wave/   
-│   ├── core/   
-│   ├── economy/   
-│   ├── effect/   
-│   ├── entity/   
-│   ├── interface/   
-│   │   └── menu/   
-│   │       ├── equipment/   
-│   │       ├── inventory/   
-│   │       ├── potions/   
-│   │       ├── progression/   
-│   │       └── save/   
-│   ├── item/   
-│   │   ├── ammunition/   
-│   │   ├── armor/   
-│   │   ├── consumable/   
-│   │   ├── durability/   
-│   │   ├── effect/   
-│   │   ├── material/   
-│   │   ├── rarity/   
-│   │   └── weapon/   
-│   ├── lore/   
-│   ├── progression/   
-│   │   ├── bestiary/   
-│   │   ├── death/   
-│   │   ├── difficulty/   
-│   │   ├── material/   
-│   │   └── statistics/   
-│   ├── save/   
-│   │   ├── json/   
-│   │   └── registry/   
-│   ├── story/   
-│   ├── utils/   
-│   └── world/   
-│   
-└── src/   
-    └── same structure as include/, with .cpp implementation files   
-```   
-   
-## Note développeur   
-   
-Ce projet est personnel et expérimental. Le but est de garder l'esprit fun du prototype tout en rendant progressivement le code plus propre, plus maintenable et prêt pour des systèmes plus grands.   
-   
-## Note Spéciale   
-   
-Toi qui lis ça, oui, c'est bien moi, le dev, qui te parle. Ce jeu est encore en chantier, il a sûrement deux-trois boulons qui tremblent, des monstres qui font les malins, et des boss qui pensent vraiment être les personnages principaux. Mais justement : viens tester.   
-   
-Ton objectif est simple : survivre, comprendre les menus, trouver les meilleures décisions, et surtout prouver que tu n'es pas juste là pour te faire plier par un gobelin random. Si tu perds contre Matt, je ne juge pas... enfin si, un peu quand même.   
-   
-Défi numéro un : gagner un combat sans paniquer dans l'inventaire comme si tu cherchais tes clés un lundi matin.   
-   
-Défi numéro deux : battre un boss sans dire que le jeu triche. Spoiler : parfois il triche peut-être, mais avec style.   
-   
-Défi numéro trois : trouver une stratégie qui casse le jeu, me la montrer, et me laisser faire semblant que c'était prévu depuis le début.   
-   
-Ce projet existe surtout pour être essayé, critiqué, vanné, amélioré, puis retesté. Donc joue sérieusement, mais pas trop. Râle si tu veux, propose des idées, insulte poliment les boss, et surtout dis-moi ce qui te donne envie de continuer.   
-   
-Si tu arrives à devenir une légende dans Dinotofu, bravo. Si tu meurs contre les premiers ennemis, bravo aussi, mais différemment.   
-   
-Allez, entre dans l'arène. On va voir si tu joues vraiment bien, ou si tu parles juste fort sur Discord.   
-   
-Je tiens à noter que lors de la vraie bêta ouverte, tu auras une chance d'être directement intégré au jeu de base si ta contribution le mérite. Alors prouve-moi que tu en vaux le coup. Bon courage d'ici là.   
+# Dinotofu
 
-## Systèmes préparés : personnages spéciaux et codes de triche   
+Dinotofu est un RPG / jeu d'arène en terminal développé en C++17. Il mélange création de personnage, progression, combats tactiques, exploration, quêtes, craft, boutiques, boss, personnages spéciaux, bestiaire et sauvegardes de comptes/personnages.
 
-Cette version prépare aussi les prochains systèmes de Dinotofu sans les activer complètement pour l’instant.   
-Le but est de garder le projet compilable tout en rendant l’architecture future visible.   
+Le projet vient d'un ancien prototype en un seul gros fichier et il est progressivement reconstruit avec une architecture orientée objet plus propre. Le jeu reste volontairement en terminal pour le moment : la priorité est de stabiliser les systèmes RPG, puis les systèmes inspirés DND, puis de préparer une interface graphique, et seulement ensuite de construire le vrai mode histoire complet.
 
-Systèmes de personnages spéciaux préparés :   
-- identités spéciales protégées comme Hazak, Aoi, Trexof, Skuro, Sanctus, Hestia, Fire Flight et Louis ;   
-- future validation par date spéciale au format `DD/MM/YYYY` ;   
-- affichage futur du bonus natif sur la classe prévue du personnage ;   
-- rencontres spéciales séparées des monstres classiques.   
+## Ce qu'on peut faire dans le jeu
 
-Systèmes de codes de triche préparés :   
-- statut `Altéré` après activation d’un code ;   
-- avertissement avant le premier code ;   
-- codes réutilisables et codes à usage unique ;   
-- secrets du créateur et séquence cachée en combat ;   
-- futur système d’annulation d’action avec utilisations limitées par personnage.   
+Dinotofu permet déjà de jouer ou de tester plusieurs activités :
 
-Le résumé complet est disponible dans `SPECIAL_CHARACTERS_AND_CHEATS.txt`.   
+- créer, charger et sauvegarder des comptes et personnages ;
+- choisir une race, une classe, une difficulté et certaines identités spéciales protégées ;
+- combattre en PvP IA, PvP deux joueurs, PvE monstres et PvE boss ;
+- explorer des biomes avec ressources, événements, coffres, pièges, lieux dangereux, mini-boss et traces rares ;
+- suivre des quêtes de guilde, de clients, d'exploration, de combat, de livraison ou liées au bestiaire ;
+- visiter des boutiques et lieux comme la forge, l'herboristerie, la boutique de monstres, les équipements, les consommables et la bibliothèque ;
+- gérer inventaire, armes, armures, consommables, matériaux, kits de réparation, qualités et durabilité ;
+- fabriquer des objets à partir de recettes et de matériaux de différentes qualités ;
+- consulter le bestiaire, le journal des matériaux, le journal des invocations, les objets rares et le lore ;
+- rencontrer ou affronter des personnages spéciaux et des groupes spéciaux ;
+- utiliser ou subir les systèmes cachés de données altérées ;
+- progresser vers des compétences durables selon la manière de jouer, la classe, la race, le personnage et les armes utilisées ;
+- suivre les statistiques du personnage, du combat, des boss, du JcJ, de l'équipement utilisé et des états spéciaux.
 
-## Système de compte et sauvegarde locale préparé   
+Le mode Histoire est visible, mais il reste volontairement en attente. La vraie histoire arrivera beaucoup plus tard, après les systèmes terminal et après l'interface graphique.
 
-Le jeu prépare maintenant automatiquement un dossier `assets/saves/`.   
-Au démarrage, le joueur peut choisir un compte local existant ou créer/utiliser un nouveau compte. Si rien n'est écrit, le compte `local` est utilisé.   
-Après le choix du compte, le joueur peut sélectionner un personnage jouable existant lié à ce compte ou créer un nouveau personnage.   
-Un snapshot JSON du personnage est sauvegardé après la création du personnage et après une session de combat.   
-Le chargement actuel restaure les données principales : nom, race, classe, difficulté, niveau, expérience, PV, or et index d'équipement de départ équipé.   
-La sérialisation complète de l'inventaire viendra plus tard, donc les personnages chargés reconstruisent encore leur inventaire de base selon la classe et la difficulté.   
+## Activités principales
 
-Ce système prépare la base des futures sauvegardes de compte, personnage, archives de morts, bestiaire, matériaux, statistiques, bénédictions et codes de triche.   
+Le menu principal est organisé autour des activités suivantes :
 
-## Note actuelle sur le ciblage en combat   
+1. Histoire
+2. Combats
+3. Exploration
+4. Quêtes
+5. Boutiques / lieux visitables
+6. PNJ notables
+7. Échange / don
+8. Information sur toutes les options
+0. Sauvegarder et quitter
 
-Un premier système de menace existe maintenant dans `combat/threat`.   
-Quand un personnage se soigne, les ennemis peuvent marquer ce soigneur comme cible prioritaire pour la prochaine attaque.   
-Les personnages de type tank peuvent aussi créer une provocation, ce qui force l'attention ennemie à revenir sur eux au lieu de laisser les ennemis viser librement les invocations.   
-Sanctus possède actuellement des accroches de provocation plus fortes, car son identité tourne autour de la protection, de l'entrave et de la future séparation Sanctus/Skuro.   
+L'option d'information sert à expliquer clairement ce que chaque activité fait et ce qui est prévu ensuite.
 
-C'est encore une première passe : la version future devra utiliser de vrais slots de combat, une meilleure intelligence ennemie, des compétences actives de tank, des rôles de soigneur, et des boss capables de résister ou d'ignorer certaines provocations.   
+## Combat
 
-## Mise à jour récente : menace, soin et slots de combat   
+Les combats sont au tour par tour. Selon le mode, le joueur peut attaquer, utiliser des potions, gérer son équipement, prendre une posture de défense, provoquer en tank, ouvrir l'inventaire ou le bestiaire, contrôler des invocations, utiliser des actions d'interface/rôle, tenter de fuir quand le mode l'autorise, ou passer son tour.
 
-Le système de menace distingue maintenant un soin personnel d'un soin d'allié.   
-Se soigner soi-même ne rend pas le personnage prioritaire pour les ennemis.   
-Soigner un allié pourra, en revanche, attirer l'attention des ennemis intelligents.   
+En combat de boss, la fuite est impossible. Ce refus doit être présenté avec un texte de lore et non comme un simple message technique. Les ultimes de boss se débloquent seulement après le passage sous le seuil des 50% PV.
 
-Une première base de slots de combat est aussi prête pour les futurs combats de groupe : joueur, alliés, ennemis, invocations et boss.   
+## Boss
 
-## Mise à jour récente : groupes visibles et actions de rôle   
-   
-## Système de compte et personnages locaux   
+Dinotofu possède un grand roster de boss validés. Les trois premiers boss sont visibles par nom dès le départ, tandis que les entités suivantes apparaissent souvent comme des variations d'énergie inconnues jusqu'à leur découverte.
 
-Au lancement, le joueur peut choisir un compte existant ou créer / utiliser un nouveau compte. Si le nom est vide, le compte `local` est utilisé.   
-Quand un compte existant est sélectionné, le jeu propose maintenant `Se connecter`, `Supprimer` ou `Retour`. Supprimer un compte supprime aussi tous les personnages liés à ce compte.   
-Après le choix du compte, le joueur peut choisir un personnage existant ou en créer un nouveau.   
-Quand un personnage existant est sélectionné, le jeu propose maintenant `Incarner`, `Supprimer` ou `Retour`.   
-La sauvegarde recharge actuellement l'identité, la progression simple, l'or, l'équipement, les armes, armures, consommables et matériaux / renseignements empilables.   
+FireFlight est le boss final. Son entrée reste verrouillée jusqu'à ce que le personnage ait suffisamment prouvé sa valeur dans la progression des boss. Il possède des dialogues méta/dev, réagit aux personnages altérés et reconnaît certains personnages spéciaux.
 
-Cette version ajoute un vrai pont entre l'ancien système de combat et le futur système de combat par slots.   
-Le PvP IA et le PvE affichent maintenant des groupes visibles construits avec le joueur, les ennemis et les invocations actives.   
-Le nouveau `CombatGroupBuilder` prépare la future sélection de cible sans casser les anciens menus.   
-   
-Un nouveau `CombatRoleActionSystem` prépare aussi les comportements de rôle actifs, surtout la provocation des tanks et la future réduction de menace.   
-Les effets spéciaux des personnages spéciaux s'appliquent maintenant aussi quand une entité attaque une invocation, donc les invocations interagissent mieux avec Skuro, Louis, Hestia, Fire Flight, etc.   
-   
-Suite logique : migrer la sélection de cible vers les slots, ajouter un vrai menu de compétences/rôles, créer un soin d'allié réel, puis continuer vers la sauvegarde complète de l'inventaire et l'activation réelle des codes de triche.   
+## Exploration
 
-## Mise à jour récente : menu de rôle et ciblage par slots   
+L'exploration est une activité principale séparée du combat volontaire. Le joueur choisit un biome et peut y trouver plantes, matériaux, trésors, événements, traces, PNJ, mini-boss ou lieux dangereux. Certains événements peuvent lancer un combat, mais l'exploration doit surtout donner l'impression de chercher et découvrir.
 
-L'interface de combat contient maintenant un premier menu de rôle actif. Les tanks peuvent utiliser Provocation manuellement, les assassins peuvent réduire leur menace immédiate, et les futures actions de protection / soin d'allié sont déjà visibles mais verrouillées.   
+Les directions de biomes prévues incluent forêt ancienne, montagne froide, marais trouble, route commerciale, ruines effondrées et plaine sauvage.
 
-La sélection de cible en duel contre des invocations commence maintenant à utiliser `CombatGroup` et `CombatUnitSlot`, ce qui rapproche le projet du futur système de combat de groupe.   
+## Quêtes
 
-Suite logique : migrer le ciblage des vagues PvE vers les slots, ajouter de vrais alliés, connecter le soin/protection d'allié, puis continuer avec la sauvegarde d'inventaire, les vrais cheats et le bestiaire global.   
+Les quêtes sont séparées entre quêtes de guilde et quêtes personnelles / clients / événements.
 
-## Interface de combat
+Les quêtes de guilde sont limitées et se gèrent à la guilde. Les quêtes personnelles peuvent venir de PNJ, clients, exploration, boutiques ou événements de combat. Les objectifs peuvent demander du combat, de l'exploration, de la livraison, des ressources ou des connaissances de bestiaire.
 
-Le menu principal de combat garde une option `0 : Interface`.   
-Cette option sert à comprendre la situation sans forcément consommer d'action offensive.   
+## Inventaire, craft et économie
 
-Elle peut afficher les statistiques du personnage, le résumé d'équipement, l'état du combat, les compétences de rôle, l'observation d'une cible, le bestiaire, les ordres aux alliés et le contrôle futur des invocations.   
+L'inventaire gère armes, armures, consommables, matériaux, kits de réparation, objets spéciaux, recettes de craft et accès au bestiaire. Les matériaux et plantes peuvent avoir plusieurs qualités : faible qualité, normal, haute qualité, impur, pur ou exceptionnel. Deux qualités différentes ne se stackent pas ensemble.
 
-Le menu `Équipement` reste séparé, car lui sert à gérer le stuff : voir le détail, changer d'arme, changer de tenue, etc.   
+Le craft prend en compte les recettes, les matériaux requis, leur qualité et certains bonus de métier. Les matériaux exceptionnels pourront donner des particularités spéciales aux objets fabriqués.
 
-## Boutiques prévues
+Les boutiques et lieux visitables préparent l'économie longue durée : achat, vente, stock tournant, rareté, réparation, informations, livres et quêtes de PNJ.
 
-Les boutiques sont prévues avant le bestiaire global.  
-Elles pourront se renouveler après chaque combat, même hors mode histoire.  
-Les types prévus sont : boutique de monstres, matériaux, plantes, armures, armes, consommables et bibliothèque.  
-La bibliothèque servira notamment à acheter des renseignements communs et des bases de magie, ce qui préparera le futur bestiaire.  
+## Bestiaire et connaissance
 
-## Mise à jour récente : codes cachés et données altérées   
+Le bestiaire n'est pas seulement une liste de monstres. Il sert aussi pour les boss, invocations, matériaux, plantes, races, personnages spéciaux, objets rares, divinités et lore.
 
-Les codes ne sont plus affichés ouvertement pour un personnage propre.   
-Hors combat, le joueur peut entrer une commande cachée à la place d'un choix numérique.   
-Si la commande est reconnue, l'avertissement de première altération apparaît et le personnage devient définitivement `Altéré` si le joueur accepte.   
+La connaissance est progressive : le joueur peut rencontrer une entité, la vaincre, acheter des informations, lire du lore, trouver une trace rare ou débloquer des détails par l'exploration et le combat.
 
-Une fois le personnage altéré, le menu après-combat révèle `6 : Données altérées`.   
-Ce menu liste les altérations connues, leurs effets, leur état actif/inactif, et permet d'entrer une nouvelle commande.   
-Les altérations à bascule peuvent être entrées une nouvelle fois pour être désactivées, puis encore une fois pour être réactivées.   
-Le personnage reste altéré pour toujours, même si toutes les altérations sont désactivées.   
+## Invocations et alliés
 
-Le menu après-combat contient maintenant aussi :   
-- `0 : Continuer`, pour revenir au choix du mode de jeu ;   
-- `4 : Sauvegarde rapide`, pour sauvegarder sans quitter ;   
-- `5 : Sauvegarder et quitter`, pour sauvegarder puis terminer la session.   
+Les invocations utilisent une base avec slots et lien d'invocation. Certaines peuvent être maintenues manuellement ou sacrifiées. Ce système prépare plus tard le mana, le maintien, les sacrifices avancés, l'IA alliée, les ombres liées à Hazak, les groupes complets et l'évolution des invocations.
 
-## Mise à jour récente : dates spéciales et bestiaire persistant   
+## Compétences durables
 
-Les identités spéciales protégées peuvent maintenant être validées à la création du personnage avec une date spéciale au format `DD/MM/YYYY`. Matt (PRO) reste non jouable. Les autres personnages protégés demandent une confirmation, puis une date correcte. Si l'identité est reconnue, la race est verrouillée par l'histoire du personnage, mais la classe reste sélectionnable.   
+Dinotofu distingue les compétences passives et actives.
 
-Le bestiaire de session est aussi sauvegardé dans la sauvegarde du personnage : rencontres, ennemis tués et renseignements achetés peuvent maintenant revenir après chargement. Ce n'est pas encore le bestiaire final complet, mais la base persistante est branchée.   
+Les compétences passives progressent ou se débloquent naturellement selon la façon de jouer. Par exemple, enchaîner des kills à la dague peut mener vers une compétence active comme Enchaînement, tandis que les kills à l'arc peuvent progresser vers Œil de rôdeur. Les mains nues, le bâton, la race, la classe et certains personnages peuvent aussi influencer cette progression.
 
+Les compétences actives auront un délai de réutilisation et de vrais effets en combat. La base actuelle suit déjà des déblocages et de la progression, mais le vrai menu de compétences en combat et la gestion complète des délais restent à enrichir.
 
-## Mise à jour - Progression des attributs   
+À terme, certaines compétences viendront du gameplay, des montées de niveau, de la race, du personnage, de la classe, des armes les plus utilisées et de défis ou conditions cachées.
 
-- Chaque montée de niveau donne maintenant 2 points d'attribut.   
-- Le menu après-combat contient maintenant un menu pour améliorer les attributs.   
-- Les attributs sont inspirés de DND : Force, Dextérité, Constitution, Intelligence, Sagesse et Charisme.   
-- Force, Dextérité et Constitution donnent déjà de petits bonus directs en combat.   
-- Intelligence, Sagesse et Charisme sont sauvegardés et préparés pour les futurs systèmes de magie, invocations, dialogues, pactes et évolutions de classe.   
-- Les valeurs d'attributs et les points non dépensés sont sauvegardés et rechargés avec le personnage.   
+## Personnages spéciaux
+
+Des personnages spéciaux protégés existent avec validation d'identité, race native, comportements particuliers, relations de groupe et moments uniques en combat. Certains sont liés aux personnages DND ou amis du créateur, et FireFlight possède des dialogues spéciaux pour eux.
+
+Matt (PRO) reste un adversaire spécial et n'est pas destiné à être une identité jouable normale.
+
+## Codes cachés et données altérées
+
+Certaines commandes cachées peuvent marquer un personnage comme Altéré. Un personnage altéré garde ce statut même si les effets actifs sont désactivés plus tard.
+
+En difficulté Léthal, les cheats sont bloqués. Une tentative déclenche un événement de lore, des pénalités temporaires et des réactions d'entités liées à la justice, au destin, à l'anomalie, à l'origine ou au côté développeur du monde.
+
+Certains codes servent au test, à l'anti-grind ou à des interactions cachées, mais les utiliser change l'identité du personnage.
+
+## Difficultés
+
+Les difficultés prévues sont Facile, Normal, Difficile, Cauchemar et Léthal.
+
+La difficulté peut influencer ressources de départ, récompenses, durabilité, fuite, mort, respawn, loot et boutiques. Le Léthal est le mode sérieux : la mort y est pensée comme définitive, sauf très rares exceptions narratives futures.
+
+## Sauvegardes et Git
+
+Le projet utilise des sauvegardes JSON pour les comptes et personnages. Les sauvegardes personnelles ne doivent pas être envoyées sur Git.
+
+Les dossiers de sauvegarde restent présents grâce aux `.gitkeep`, tandis que les fichiers générés de sauvegarde sont ignorés.
+
+## Prérequis
+
+Nécessaire sous Linux :
+
+- `g++`
+- `make`
+- support C++17
+
+Installation possible sur Debian / Ubuntu :
+
+```bash
+sudo apt update
+sudo apt install -y build-essential make g++
+```
+
+## Commandes
+
+Compiler :
+
+```bash
+make
+```
+
+Lancer le jeu :
+
+```bash
+make run
+```
+
+Nettoyer les fichiers générés :
+
+```bash
+make clean
+```
+
+Reconstruire depuis zéro :
+
+```bash
+make rebuild
+```
+
+Créer un lanceur Linux cliquable :
+
+```bash
+make desktop
+```
+
+## Structure du projet
+
+Le projet est organisé autour de dossiers comme :
+
+- `src/core/`
+- `src/combat/`
+- `src/combat/modes/`
+- `src/combat/boss/`
+- `src/character/`
+- `src/entity/`
+- `src/item/`
+- `src/weapon/`
+- `src/armor/`
+- `src/consumable/`
+- `src/material/`
+- `src/interface/`
+- `src/menu/`
+- `src/progression/`
+- `src/death/`
+- `src/bestiary/`
+- `src/attribute/`
+- `src/economy/`
+- `src/shop/`
+- `src/save/`
+- `src/cheat/`
+- `assets/config/`
+- `assets/saves/`
+
+## Direction de développement
+
+Les priorités actuelles sont :
+
+1. Enrichir les compétences durables avec progression passive, compétences actives et délais.
+2. Continuer à nettoyer l'interface terminal sans cacher les options utiles.
+3. Polir le craft et l'économie.
+4. Compléter les attributs inspirés DND quand les autres systèmes seront stables.
+5. Préparer une interface graphique.
+6. Construire le vrai mode Histoire après l'interface graphique.
+
+## Note personnelle
+
+Défi numéro un : survivre assez longtemps pour comprendre ce qu'il se passe.
+
+Défi numéro deux : battre un boss sans dire que le jeu triche. Spoiler : parfois il triche peut-être, mais au moins il le fait avec style.
+
+Défi numéro trois : trouver une stratégie qui casse le jeu, me la montrer, et me laisser faire semblant que c'était prévu depuis le début.
+
+Ce projet existe pour être joué, critiqué, trollé, amélioré et retesté. Jouez sérieusement, mais pas trop sérieusement. Plaignez-vous si besoin, proposez des idées, insultez poliment les boss, et surtout dites-moi ce qui vous donne envie de continuer.
+
+Si vous arrivez à devenir une légende dans Dinotofu, félicitations. Si vous mourez contre les premiers ennemis, félicitations aussi, mais différemment.
+
+Entrez dans l'arène. On verra si vous jouez vraiment bien, ou si vous parlez juste fort sur Discord.
+
+Pendant la vraie bêta ouverte, vous aurez peut-être même une chance d'être directement intégré au jeu de base si votre contribution le mérite. Prouvez que vous en valez la peine. Bonne chance jusque-là.

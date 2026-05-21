@@ -1,0 +1,59 @@
+BOSS / AVATARS VALIDÉS - DINOTOFU
+
+Règles globales :
+- En combat de boss, la fuite est impossible. Le jeu doit l'expliquer avec une phrase de lore liée au boss ou à l'arène.
+- Les vrais dieux, déesses et divinités ne sont jamais affrontés à pleine puissance.
+- Quand une entité porte une appellation divine, utiliser une forme affaiblie : avatar, fragment, écho, reflet, copie, manifestation instable ou vestige.
+- Les trois premiers boss visibles dès le départ sont Fitoria, Zelef et Atlas.
+- Les autres boss apparaissent d'abord comme ??? ou variations d'énergie anormale jusqu'à découverte.
+- Les ultimes de boss ne se débloquent qu'après le passage sous le seuil des 50% PV.
+- FireFlight est le boss final et doit rester verrouillé tant que le personnage n'a pas assez prouvé sa valeur.
+
+Boss de base :
+1. Fitoria - Ange lumineux, jugement, chaînes, soin contrôlé, Sentence céleste.
+2. Zelef - Démon brutal, corruption, saignement, vol de vie, Coeur démoniaque, Corrosion présente si le boss gagne.
+3. Atlas - Protecteur universel déchu, plaques d'armure, fissures, contre-garde, Dernier rempart.
+
+Boss et concepts validés :
+4. Écho de Lyknir - meute, traque, marque de proie, instinct de prédateur, Chasse sans lune.
+5. Grinka - reine gobeline, avarice, dette, taxe, vol, enchère gobeline, Dette royale.
+6. Avatar d'Azelanos - ténèbres, puissance grandissante avec la durée, couronne obscure.
+7. Fragment de Thamarys - dragon, phases, écailles adaptatives, souffle élémentaire.
+8. Mojo - esprit mythique de la forêt, boss-épreuve, mémoire de la forêt, victoire alternative respectueuse.
+9. Reflet d'Inakari - kitsune, illusions, clones, fausses récompenses, tromperie.
+10. Le Jugement Silencieux - justice muette, ombre volée, malédiction sociale.
+11. L'Horloge des Chuchotements - temps, blessures retardées, souvenirs, réécriture de décision.
+12. L'Enfant des Os Enfouis - désert, ancienneté, profanation, golem d'os et de sable à bas PV.
+13. Avatar de Boros - guerre, duel, brutalité, jauge de conflit, Hymne du carnage.
+14. Avatar d'Anastasia - amour, liens, attachement, morts totales du personnage, Serment qui saigne.
+15. Avatar de Lexior - justice, jugement des actions passées, blocage du stuff le plus utilisé, Verdict des actes répétés.
+16. Fragment de Luna / Onyrae - lune, rêves, illusions, rêve/cauchemar, Éclipse onirique.
+17. Fragment de Syvaranelya - phases Feu/Terre/Eau/Vent, fusion ou séparation élémentaire.
+18. Écho d'Hitogami - adaptation humaine, compassion envers les humains, hostilité envers gobelins et races non humaines, relève unique.
+19. Écho de Sérendys - chance consciente, paris, relance du destin, inversion rare/commun.
+20. Le Gardien du Seuil - boss d'épreuve, réactions aux situations, verrous de progression.
+21. Le Roi Sans Salle - roi oublié, cour invisible, ordres fantômes, Couronnement des ruines.
+22. La Bête qui n'avait pas de nom - identité instable, descriptions variables, instinct, Hurlement sans nom.
+23. Aldebaroth - démon né du négatif du monde, pression démoniaque, rancœur, abîme des fautes.
+24. Asterion / Nihilon - création et destruction, duo lié, compte à rebours fatal si un seul reste debout.
+25. Écho fragmenté d'Obérion - origine, autorité cosmique, combat ramené aux poings et sans armure après le seuil critique.
+26. Le Souffle sans Visage - perte d'identité, respiration, asphyxie, visage emprunté.
+27. La Marionnette aux Mille Clous - douleur, fils, clous, mouvement forcé, théâtre des douleurs.
+28. Manifestation de Moiran - destin, lignes possibles, conséquences, réactions aux cheats et tentatives en Léthal.
+29. Le Cerf des Âmes Égarées - âmes-lanternes, confession, repos des morts, procession funéraire.
+30. Gorvald - roi des Orcs, fureur royale, duel brutal, honneur guerrier.
+31. Serana - reine Vampire, soif royale, vol de vie, charme, banquet de sang.
+32. Draiite - reine Araignée, toiles, cocons, poison, contrôle de terrain.
+33. Les Jumelles du Miroir Fendu - vérité/mensonge, désir, reflet corrompu, futur trompeur.
+34. L'Anomalie - anti-interface, glitch, options mensongères, ordre d'actions déplacé, race temporaire, stats corrigées.
+35. FireFlight - créateur/dev/aventurier, boss final, interface instable, quatrième mur, test final.
+
+Règles spéciales importantes :
+- La Bête sans nom doit changer de description d'un combat à l'autre pour donner l'impression d'une créature jamais totalement identique.
+- L'Anomalie peut afficher des options impossibles, corrompre l'interface, mentir sur les textes d'action ou déplacer les règles avec avertissement.
+- Obérion, Lexior, l'Anomalie, Moiran et FireFlight peuvent réagir aux personnages altérés ou aux tentatives de cheat en Léthal.
+- Aldebaroth ne doit pas être lié aux altérations : son thème est la négativité du monde, pas la triche.
+- FireFlight doit reconnaître certains personnages spéciaux et ajouter une couche de dialogue s'ils sont altérés.
+- FireFlight déclenche un test final après sa chute : plusieurs fragments d'ultimes s'abattent pendant trois cycles, avec interface volontairement chaotique.
+
+Boss considérés comme clôturés côté roster principal. Les futurs ajouts doivent être du polish, de l'équilibrage ou de nouveaux boss explicitement validés.

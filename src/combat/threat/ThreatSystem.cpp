@@ -1,3 +1,5 @@
+// EN: ThreatSystem.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: ThreatSystem.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
 // Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
 // Description: Handles simple threat rules such as ally healers becoming priority targets and tanks using provocation.
@@ -18,6 +20,8 @@ namespace
             value.begin(),
             value.end(),
             value.begin(),
+            // EN: [] declares or implements a focused behavior used by this module.
+            // FR: [] déclare ou implémente un comportement précis utilisé par ce module.
             [](unsigned char character)
             {
                 return static_cast<char>(std::tolower(character));
@@ -28,6 +32,8 @@ namespace
     }
 }
 
+// EN: markAllyHealingAction declares or implements a focused behavior used by this module.
+// FR: markAllyHealingAction déclare ou implémente un comportement précis utilisé par ce module.
 void ThreatSystem::markAllyHealingAction(Entity& healer, const Entity& healedAlly)
 {
     healer.markHealingThreat();
@@ -40,6 +46,8 @@ void ThreatSystem::markAllyHealingAction(Entity& healer, const Entity& healedAll
     std::cout << std::endl;
 }
 
+// EN: markSelfHealingAction declares or implements a focused behavior used by this module.
+// FR: markSelfHealingAction déclare ou implémente un comportement précis utilisé par ce module.
 void ThreatSystem::markSelfHealingAction(const Entity& healer)
 {
     std::cout << healer.getName()
@@ -48,6 +56,8 @@ void ThreatSystem::markSelfHealingAction(const Entity& healer)
     std::cout << std::endl;
 }
 
+// EN: tryActivatePassiveProvocation declares or implements a focused behavior used by this module.
+// FR: tryActivatePassiveProvocation déclare ou implémente un comportement précis utilisé par ce module.
 void ThreatSystem::tryActivatePassiveProvocation(Entity& entity, Random& random)
 {
     if (!isNaturalProvoker(entity))
@@ -127,6 +137,8 @@ void ThreatSystem::notifyForcedTarget(
     }
 }
 
+// EN: consumeForcedTargetIfNeeded declares or implements a focused behavior used by this module.
+// FR: consumeForcedTargetIfNeeded déclare ou implémente un comportement précis utilisé par ce module.
 void ThreatSystem::consumeForcedTargetIfNeeded(Entity& target)
 {
     if (target.hasHealingThreat())
@@ -140,6 +152,8 @@ void ThreatSystem::consumeForcedTargetIfNeeded(Entity& target)
     }
 }
 
+// EN: isNaturalProvoker declares or implements a focused behavior used by this module.
+// FR: isNaturalProvoker déclare ou implémente un comportement précis utilisé par ce module.
 bool ThreatSystem::isNaturalProvoker(const Entity& entity)
 {
     std::string name = toLower(entity.getName());

@@ -1,3 +1,5 @@
+// EN: HumanCombatTurn.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: HumanCombatTurn.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -6,6 +8,7 @@
 #include "combat/CombatActions.hpp"
 #include "combat/system/EscapeSystem.hpp"
 #include "combat/system/ObservationSystem.hpp"
+#include "combat/system/DefensePostureSystem.hpp"
 #include "combat/summon/SummonCombatSystem.hpp"
 
 #include "core/Console.hpp"
@@ -20,6 +23,7 @@
 #include "interface/menu/CombatRoleMenu.hpp"
 #include "interface/menu/CombatGroupTargetMenu.hpp"
 #include "interface/menu/progression/BestiaryMenu.hpp"
+#include "interface/menu/progression/StatisticsMenu.hpp"
 
 #include <iostream>
 
@@ -37,8 +41,8 @@ bool HumanCombatTurn::play(
 
     int option = Console::askNumberBetween(
         0,
-        7,
-        "Choix invalide. Entre un chiffre entre 0 et 7."
+        8,
+        "Choix invalide. Entre un chiffre entre 0 et 8."
     );
 
     Console::clear();
@@ -114,6 +118,12 @@ bool HumanCombatTurn::play(
 
     if (option == 6)
     {
+        DefensePostureSystem::enterDefensePosture(attacker);
+        return true;
+    }
+
+    if (option == 7)
+    {
         std::cout << attacker.getName() << " baisse sa garde et passe son tour." << std::endl;
         std::cout << "Parfois, attendre le bon moment est déjà une décision." << std::endl;
         std::cout << std::endl;
@@ -121,7 +131,7 @@ bool HumanCombatTurn::play(
         return true;
     }
 
-    if (option == 7)
+    if (option == 8)
     {
         return handleEscape(attacker, defender, random);
     }
@@ -152,8 +162,8 @@ bool HumanCombatTurn::playWithEnemySummons(
 
     int option = Console::askNumberBetween(
         0,
-        7,
-        "Choix invalide. Entre un chiffre entre 0 et 7."
+        8,
+        "Choix invalide. Entre un chiffre entre 0 et 8."
     );
 
     Console::clear();
@@ -232,6 +242,12 @@ bool HumanCombatTurn::playWithEnemySummons(
 
     if (option == 6)
     {
+        DefensePostureSystem::enterDefensePosture(attacker);
+        return true;
+    }
+
+    if (option == 7)
+    {
         std::cout << attacker.getName() << " baisse sa garde et passe son tour." << std::endl;
         std::cout << "Parfois, attendre le bon moment est déjà une décision." << std::endl;
         std::cout << std::endl;
@@ -239,7 +255,7 @@ bool HumanCombatTurn::playWithEnemySummons(
         return true;
     }
 
-    if (option == 7)
+    if (option == 8)
     {
         return handleEscape(attacker, defender, random);
     }
@@ -295,7 +311,15 @@ bool HumanCombatTurn::openObservationInterface(
 
     if (choice == 2)
     {
-        interfacePlayer.displayStats();
+        Player* player = dynamic_cast<Player*>(&interfacePlayer);
+
+        if (player == nullptr)
+        {
+            interfacePlayer.displayStats();
+            return false;
+        }
+
+        StatisticsMenu::open(*player);
         return false;
     }
 
@@ -421,7 +445,15 @@ bool HumanCombatTurn::inspectCombatTarget(
 
     if (choice == 2)
     {
-        interfacePlayer.displayStats();
+        Player* player = dynamic_cast<Player*>(&interfacePlayer);
+
+        if (player == nullptr)
+        {
+            interfacePlayer.displayStats();
+            return false;
+        }
+
+        StatisticsMenu::open(*player);
         return false;
     }
 
@@ -507,7 +539,7 @@ bool HumanCombatTurn::handleEscape(
         }
         else
         {
-            std::cout << "[la fuite est impossible durant ce combat]" << std::endl;
+            std::cout << "L'arène du boss se referme. Aucune sortie ne répond à ton mouvement." << std::endl;
             std::cout << std::endl;
         }
 

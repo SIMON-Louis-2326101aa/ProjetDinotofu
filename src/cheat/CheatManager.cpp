@@ -1,3 +1,5 @@
+// EN: CheatManager.cpp briefly defines this Dinotofu module and its responsibilities.
+// FR: CheatManager.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
 // Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
 // Description: Recognizes, confirms and activates hidden cheat alterations on the current character.
@@ -5,12 +7,90 @@
 
 #include "cheat/CheatManager.hpp"
 
+#include "boss/BossCatalog.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "core/Console.hpp"
 #include "core/Random.hpp"
+#include "progression/bestiary/BestiaryRuntimeProgress.hpp"
+#include "progression/DifficultyRules.hpp"
 
 #include <cctype>
 #include <iostream>
+
+
+namespace
+{
+    // EN: isKnownCheatCommand declares or implements a focused behavior used by this module.
+    // FR: isKnownCheatCommand déclare ou implémente un comportement précis utilisé par ce module.
+    bool isKnownCheatCommand(const std::string& normalizedCode)
+    {
+        return normalizedCode == "1302313" ||
+            normalizedCode == "idontwanttodie" ||
+            normalizedCode == "infinituseforeverything" ||
+            normalizedCode == "bedrockequipment" ||
+            normalizedCode == "myweaponandnotother" ||
+            normalizedCode == "skipallstory" ||
+            normalizedCode == "skipalllevels" ||
+            normalizedCode == "givemesomegolds" ||
+            normalizedCode == "givemealevel" ||
+            normalizedCode == "helpmerefundmyaction" ||
+            normalizedCode == "resetmycharacter" ||
+            normalizedCode == "switchmyclassandweapon" ||
+            normalizedCode == "fuckgrindinggimifight";
+    }
+
+    std::string knownOrUnknownVoice(const Player& player, int bossId, const std::string& knownName, const std::string& unknownLabel)
+    {
+        return player.isBossUnlocked(bossId) ? knownName : unknownLabel;
+    }
+
+    // EN: recordLethalCheatVoice declares or implements a focused behavior used by this module.
+    // FR: recordLethalCheatVoice déclare ou implémente un comportement précis utilisé par ce module.
+    void recordLethalCheatVoice(const std::string& entityName, const std::string& note)
+    {
+        BestiaryRuntimeProgress::recordEncounter(
+            entityName,
+            "Divinités / lore",
+            note
+        );
+    }
+
+    // EN: triggerLethalCheatEvent declares or implements a focused behavior used by this module.
+    // FR: triggerLethalCheatEvent déclare ou implémente un comportement précis utilisé par ce module.
+    void triggerLethalCheatEvent(Player& player)
+    {
+        std::string justiceVoice = knownOrUnknownVoice(player, 16, "Avatar de Lexior", "Voix inconnue 1");
+        std::string anomalyVoice = knownOrUnknownVoice(player, 11, "L'Anomalie", "Voix inconnue 2");
+        std::string moiranVoice = knownOrUnknownVoice(player, 30, "Manifestation de Moiran", "Voix inconnue 3");
+        std::string oberionVoice = knownOrUnknownVoice(player, 26, "Écho fragmenté d'Obérion", "Voix inconnue 4");
+        std::string fireVoice = knownOrUnknownVoice(player, 27, "Avatar affaibli de FireFlight", "Voix inconnue 5");
+
+        player.applyLethalCheatAttemptPenalty();
+
+        std::cout << "========== ÉVÉNEMENT LÉTHAL ==========" << std::endl;
+        std::cout << "Le code n'entre pas." << std::endl;
+        std::cout << "Il cogne contre quelque chose de plus ancien que le menu." << std::endl;
+        std::cout << std::endl;
+        std::cout << justiceVoice << " : La tentative est notée." << std::endl;
+        std::cout << anomalyVoice << " : Tu as essayé d'écrire dans une page qui te regarde déjà." << std::endl;
+        std::cout << moiranVoice << " : Tu as tenté de sortir de ta propre fin. Même les chemins interdits laissent des traces." << std::endl;
+        std::cout << oberionVoice << " : Une simulation peut tricher. Une vie ne négocie pas son poids." << std::endl;
+        std::cout << fireVoice << " : Non. Pas en Léthal. Pas avec un vrai personnage." << std::endl;
+        std::cout << std::endl;
+        std::cout << "Malus appliqués :" << std::endl;
+        std::cout << "- PV actuels divisés environ par deux, sans te tuer directement." << std::endl;
+        std::cout << "- 25% de ton or disparaît." << std::endl;
+        std::cout << "- 15% de PV maximum sont retenus pendant 3 combats." << std::endl;
+        std::cout << "======================================" << std::endl;
+        std::cout << std::endl;
+
+        recordLethalCheatVoice("Avatar de Lexior", "Note brouillée : une voix de justice a réagi à une tentative de triche en mode Léthal.");
+        recordLethalCheatVoice("L'Anomalie", "Note brouillée : une anomalie a ri devant une tentative de triche en mode Léthal.");
+        recordLethalCheatVoice("Manifestation de Moiran", "Note brouillée : le Destin a reconnu une tentative de sortie de ligne en mode Léthal.");
+        recordLethalCheatVoice("Écho fragmenté d'Obérion", "Note brouillée : une autorité primordiale a refusé de mélanger simulation et vie réelle.");
+        recordLethalCheatVoice("Avatar affaibli de FireFlight", "Note brouillée : le créateur limité a bloqué une commande interdite en mode Léthal.");
+    }
+}
 
 std::string CheatManager::normalizeCode(const std::string& code)
 {
@@ -27,6 +107,8 @@ std::string CheatManager::normalizeCode(const std::string& code)
     return normalized;
 }
 
+// EN: confirmFirstAlteration declares or implements a focused behavior used by this module.
+// FR: confirmFirstAlteration déclare ou implémente un comportement précis utilisé par ce module.
 bool CheatManager::confirmFirstAlteration(Player& player)
 {
     if (player.isAlteredByCheats())
@@ -55,6 +137,8 @@ bool CheatManager::confirmFirstAlteration(Player& player)
     return choice == 1;
 }
 
+// EN: displayToggleResult declares or implements a focused behavior used by this module.
+// FR: displayToggleResult déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::displayToggleResult(const std::string& effectText, bool enabled)
 {
     std::cout << "Effet : " << effectText << std::endl;
@@ -62,6 +146,8 @@ void CheatManager::displayToggleResult(const std::string& effectText, bool enabl
     std::cout << std::endl;
 }
 
+// EN: displayInstantResult declares or implements a focused behavior used by this module.
+// FR: displayInstantResult déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::displayInstantResult(const std::string& effectText)
 {
     std::cout << "Effet : " << effectText << std::endl;
@@ -69,6 +155,8 @@ void CheatManager::displayInstantResult(const std::string& effectText)
     std::cout << std::endl;
 }
 
+// EN: resetCharacter declares or implements a focused behavior used by this module.
+// FR: resetCharacter déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::resetCharacter(Player& player, DifficultyMode difficulty)
 {
     std::string name = player.getName();
@@ -78,10 +166,12 @@ void CheatManager::resetCharacter(Player& player, DifficultyMode difficulty)
     player = Player(name, playerClass);
     player.setRace(race);
     player.initializeStarterInventory(difficulty);
-    player.setCheatState(true, false, false, false, false, false, 3);
+    player.setCheatState(true, false, false, false, false, false, false, 3);
     player.recordResetCheatUse();
 }
 
+// EN: switchClassAndStarterEquipment declares or implements a focused behavior used by this module.
+// FR: switchClassAndStarterEquipment déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::switchClassAndStarterEquipment(Player& player, DifficultyMode difficulty)
 {
     std::cout << "Choisis la nouvelle famille de classe." << std::endl;
@@ -125,10 +215,12 @@ void CheatManager::switchClassAndStarterEquipment(Player& player, DifficultyMode
     player.initializeStarterInventory(difficulty);
     player.setLoadedProgress(oldLevel, oldExperience, player.getMaxHp());
     player.getInventory().earnGold(oldGold);
-    player.setCheatState(true, false, false, false, false, false, 3);
+    player.setCheatState(true, false, false, false, false, false, false, 3);
     player.recordSwitchClassCheatUse();
 }
 
+// EN: displayKnownAlterations declares or implements a focused behavior used by this module.
+// FR: displayKnownAlterations déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::displayKnownAlterations(const Player& player)
 {
     std::cout << "========== ALTÉRATIONS CONNUES ==========" << std::endl;
@@ -212,6 +304,14 @@ void CheatManager::displayKnownAlterations(const Player& player)
         std::cout << "  Effet : change la classe et recalcule l'équipement." << std::endl;
     }
 
+    if (player.isSpecialChallengeAccessKnown())
+    {
+        hasSomething = true;
+        std::cout << "- fuckgrindinggimifight | accès spécial "
+                  << (player.hasSpecialChallengeAccess() ? "débloqué" : "connu") << std::endl;
+        std::cout << "  Effet : ouvre la sélection directe des personnages spéciaux et révèle les boss non finaux." << std::endl;
+    }
+
     if (player.isCreatorMessageKnown())
     {
         hasSomething = true;
@@ -231,6 +331,8 @@ void CheatManager::displayKnownAlterations(const Player& player)
     std::cout << std::endl;
 }
 
+// EN: openAlteredDataMenu declares or implements a focused behavior used by this module.
+// FR: openAlteredDataMenu déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty)
 {
     bool menuOpen = true;
@@ -277,11 +379,15 @@ void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty
     }
 }
 
+// EN: tryActivateHiddenCode declares or implements a focused behavior used by this module.
+// FR: tryActivateHiddenCode déclare ou implémente un comportement précis utilisé par ce module.
 bool CheatManager::tryActivateHiddenCode(Player& player, DifficultyMode difficulty, const std::string& code)
 {
     return activateCode(player, difficulty, code, false);
 }
 
+// EN: activateCode declares or implements a focused behavior used by this module.
+// FR: activateCode déclare ou implémente un comportement précis utilisé par ce module.
 bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const std::string& code, bool displayUnknownMessage)
 {
     std::string normalizedCode = normalizeCode(code);
@@ -289,6 +395,12 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
     if (normalizedCode.empty())
     {
         return false;
+    }
+
+    if (DifficultyRules::isPermanentDeath(difficulty) && isKnownCheatCommand(normalizedCode))
+    {
+        triggerLethalCheatEvent(player);
+        return true;
     }
 
     if (normalizedCode == "1302313")
@@ -308,17 +420,7 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
         return true;
     }
 
-    if (normalizedCode != "idontwanttodie" &&
-        normalizedCode != "infinituseforeverything" &&
-        normalizedCode != "bedrockequipment" &&
-        normalizedCode != "myweaponandnotother" &&
-        normalizedCode != "skipallstory" &&
-        normalizedCode != "skipalllevels" &&
-        normalizedCode != "givemesomegolds" &&
-        normalizedCode != "givemealevel" &&
-        normalizedCode != "helpmerefundmyaction" &&
-        normalizedCode != "resetmycharacter" &&
-        normalizedCode != "switchmyclassandweapon")
+    if (!isKnownCheatCommand(normalizedCode))
     {
         if (displayUnknownMessage)
         {
@@ -427,6 +529,19 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
     {
         switchClassAndStarterEquipment(player, difficulty);
         displayInstantResult("classe changée et équipement de départ recalculé.");
+        return true;
+    }
+
+    if (normalizedCode == "fuckgrindinggimifight")
+    {
+        player.unlockSpecialChallengeAccess();
+        player.unlockBossRegistryExceptFinal(BossCatalog::getMaximumBossId(), 27);
+
+        std::cout << "Effet : l'arène arrête de te faire grinder les rencontres spéciales." << std::endl;
+        std::cout << "État : accès aux personnages spéciaux débloqué." << std::endl;
+        std::cout << "État : toutes les variations de boss non finales sont détectées." << std::endl;
+        std::cout << "Note : FireFlight reste verrouillé. Un vrai boss final ne s'ouvre pas avec un raccourci." << std::endl;
+        std::cout << std::endl;
         return true;
     }
 
