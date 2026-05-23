@@ -63,7 +63,7 @@ namespace
         Player* concretePlayer = dynamic_cast<Player*>(&player);
         if (concretePlayer == nullptr || !concretePlayer->isAlteredByCheats()) return;
 
-        if ((boss.getBossId() == 11 || boss.getBossId() == 16 || boss.getBossId() == 26 || boss.getBossId() == 27) && random.between(1, 100) <= 35)
+        if ((boss.getBossId() == 11 || boss.getBossId() == 16 || boss.getBossId() == 26 || boss.getBossId() == 27) && random.between(1, 100) <= 25)
         {
             int punishment = 8 + concretePlayer->getLevel() / 2;
             if (concretePlayer->isGodModeEnabled()) punishment += 10;
@@ -135,7 +135,7 @@ namespace
     // FR: executeNewBossPassiveAction déclare ou implémente un comportement précis utilisé par ce module.
     void executeNewBossPassiveAction(Boss& boss, Entity& player, Random& random)
     {
-        if (boss.getBossId() == 1 && random.between(1, 100) <= 30)
+        if (boss.getBossId() == 1 && random.between(1, 100) <= 22)
         {
             int judgment = boss.getSpecialEffect() + 1;
             if (judgment > 5) judgment = 5;
@@ -147,7 +147,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 2 && random.between(1, 100) <= 35)
+        if (boss.getBossId() == 2 && random.between(1, 100) <= 25)
         {
             int corruption = boss.getSpecialEffect();
             if (corruption < 1) corruption = 1;
@@ -163,7 +163,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 3 && random.between(1, 100) <= 35)
+        if (boss.getBossId() == 3 && random.between(1, 100) <= 25)
         {
             int fissures = boss.getSpecialEffect() + 1;
             if (fissures > 5) fissures = 5;
@@ -175,7 +175,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 4 && random.between(1, 100) <= 35)
+        if (boss.getBossId() == 4 && random.between(1, 100) <= 25)
         {
             int mark = boss.getSpecialEffect() + 1;
             if (mark > 5) mark = 5;
@@ -197,7 +197,7 @@ namespace
             }
         }
 
-        if (boss.getBossId() == 5 && random.between(1, 100) <= 40)
+        if (boss.getBossId() == 5 && random.between(1, 100) <= 29)
         {
             int addedDebt = random.between(8, 18);
             int debt = boss.getSpecialEffect() + addedDebt;
@@ -210,7 +210,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 6 && random.between(1, 100) <= 30)
+        if (boss.getBossId() == 6 && random.between(1, 100) <= 22)
         {
             int darkness = boss.getSpecialEffect() + random.between(1, 2);
             boss.setSpecialEffect(darkness);
@@ -221,7 +221,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 7 && random.between(1, 100) <= 35)
+        if (boss.getBossId() == 7 && random.between(1, 100) <= 25)
         {
             int scales = boss.getSpecialEffect() + 1;
             if (scales > 5) scales = 5;
@@ -233,7 +233,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 8 && random.between(1, 100) <= 40)
+        if (boss.getBossId() == 8 && random.between(1, 100) <= 29)
         {
             int memory = boss.getSpecialEffect();
 
@@ -257,7 +257,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 9 && random.between(1, 100) <= 38)
+        if (boss.getBossId() == 9 && random.between(1, 100) <= 28)
         {
             int mirrors = boss.getSpecialEffect() + 1;
             if (mirrors > 5) mirrors = 5;
@@ -270,7 +270,7 @@ namespace
         }
 
 
-        if (boss.getBossId() == 10 && random.between(1, 100) <= 38)
+        if (boss.getBossId() == 10 && random.between(1, 100) <= 28)
         {
             int judgment = boss.getSpecialEffect() + 1;
             if (judgment > 6) judgment = 6;
@@ -282,7 +282,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 11 && random.between(1, 100) <= 45)
+        if (boss.getBossId() == 11 && random.between(1, 100) <= 32)
         {
             int corruption = boss.getSpecialEffect() + random.between(1, 2);
             if (corruption > 9) corruption = 9;
@@ -306,7 +306,7 @@ namespace
             }
         }
 
-        if (boss.getBossId() == 12 && random.between(1, 100) <= 40)
+        if (boss.getBossId() == 12 && random.between(1, 100) <= 29)
         {
             int delayedWounds = boss.getSpecialEffect() + random.between(2, 5);
             if (delayedWounds > 24) delayedWounds = 24;
@@ -335,7 +335,7 @@ namespace
                 std::cout << "Un second ultime vient d'être débloqué." << std::endl;
                 std::cout << std::endl;
             }
-            else if (random.between(1, 100) <= 40)
+            else if (random.between(1, 100) <= 29)
             {
                 int baseProfanation = golemAwakened ? profanation - 100 : profanation;
                 if (player.isInDefensePosture())
@@ -357,7 +357,7 @@ namespace
             }
         }
 
-        if (boss.getBossId() == 14 && random.between(1, 100) <= 42)
+        if (boss.getBossId() == 14 && random.between(1, 100) <= 22)
         {
             int warGauge = boss.getSpecialEffect() + random.between(1, 3);
             if (warGauge > 12) warGauge = 12;
@@ -369,7 +369,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 15 && random.between(1, 100) <= 42)
+        if (boss.getBossId() == 15 && random.between(1, 100) <= 22)
         {
             int links = boss.getSpecialEffect() + 1;
             if (links > 10) links = 10;
@@ -395,7 +395,7 @@ namespace
                 std::cout << std::endl;
             }
 
-            if (random.between(1, 100) <= 42)
+            if (random.between(1, 100) <= 22)
             {
                 int verdict = boss.getSpecialEffect() + 1;
                 if (verdict > 8) verdict = 8;
@@ -406,7 +406,7 @@ namespace
             }
         }
 
-        if (boss.getBossId() == 17 && random.between(1, 100) <= 42)
+        if (boss.getBossId() == 17 && random.between(1, 100) <= 22)
         {
             int dreamPressure = boss.getSpecialEffect() + random.between(1, 2);
             if (dreamPressure > 10) dreamPressure = 10;
@@ -417,7 +417,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 18 && random.between(1, 100) <= 45)
+        if (boss.getBossId() == 18 && random.between(1, 100) <= 32)
         {
             int elementalState = boss.getSpecialEffect() + 1;
             if (elementalState > 12) elementalState = 12;
@@ -434,7 +434,7 @@ namespace
             Player* concretePlayer = dynamic_cast<Player*>(&player);
             int adaptation = boss.getSpecialEffect();
 
-            if (random.between(1, 100) <= 45)
+            if (random.between(1, 100) <= 32)
             {
                 adaptation += 1;
 
@@ -468,7 +468,7 @@ namespace
             }
         }
 
-        if (boss.getBossId() == 20 && random.between(1, 100) <= 45)
+        if (boss.getBossId() == 20 && random.between(1, 100) <= 32)
         {
             int luck = boss.getSpecialEffect() + random.between(1, 3);
             if (luck > 12) luck = 12;
@@ -476,7 +476,7 @@ namespace
 
             std::cout << "Sérendys lance un dé qu'elle ne regarde même pas tomber." << std::endl;
             std::cout << "Oh... cette version-là était presque belle." << std::endl;
-            if (random.between(1, 100) <= 30)
+            if (random.between(1, 100) <= 22)
             {
                 std::cout << "Elle relance une issue qui ne l'arrangeait pas." << std::endl;
                 boss.heal(8 + luck);
@@ -485,7 +485,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 21 && random.between(1, 100) <= 38)
+        if (boss.getBossId() == 21 && random.between(1, 100) <= 28)
         {
             int threshold = boss.getSpecialEffect();
             int score = 0;
@@ -556,14 +556,14 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 22 && random.between(1, 100) <= 42)
+        if (boss.getBossId() == 22 && random.between(1, 100) <= 22)
         {
             int authority = boss.getSpecialEffect() + random.between(1, 2);
             if (authority > 12) authority = 12;
             boss.setSpecialEffect(authority);
 
             std::cout << "Le Roi Sans Salle donne un ordre à une cour qui n'existe plus." << std::endl;
-            if (random.between(1, 100) <= 50)
+            if (random.between(1, 100) <= 25)
             {
                 std::cout << "Ordre royal : Défendez le trône absent." << std::endl;
                 boss.heal(8 + authority);
@@ -577,7 +577,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 23 && random.between(1, 100) <= 50)
+        if (boss.getBossId() == 23 && random.between(1, 100) <= 25)
         {
             int instinct = boss.getSpecialEffect() + random.between(1, 3);
             if (instinct > 14) instinct = 14;
@@ -601,7 +601,7 @@ namespace
         }
 
 
-        if (boss.getBossId() == 24 && random.between(1, 100) <= 44)
+        if (boss.getBossId() == 24 && random.between(1, 100) <= 31)
         {
             int abyss = boss.getSpecialEffect() + random.between(1, 3);
             if (abyss > 14) abyss = 14;
@@ -655,7 +655,7 @@ namespace
                     std::cout << std::endl;
                 }
             }
-            else if (random.between(1, 100) <= 40)
+            else if (random.between(1, 100) <= 29)
             {
                 twinState += random.between(1, 2);
                 if (twinState > 12) twinState = 12;
@@ -683,7 +683,7 @@ namespace
                 std::cout << std::endl;
             }
 
-            if (random.between(1, 100) <= 42)
+            if (random.between(1, 100) <= 22)
             {
                 authority += random.between(1, 2);
                 if (authority > 15) authority = 15;
@@ -695,7 +695,7 @@ namespace
             }
         }
 
-        if (boss.getBossId() == 27 && random.between(1, 100) <= 45)
+        if (boss.getBossId() == 27 && random.between(1, 100) <= 32)
         {
             int authority = boss.getSpecialEffect() + random.between(1, 2);
             if (authority > 14) authority = 14;
@@ -703,7 +703,7 @@ namespace
 
             std::cout << "FireFlight regarde une règle invisible dans l'air." << std::endl;
             std::cout << "Tu appelles ça une faille. Moi, j'appelle ça une décision de conception." << std::endl;
-            if (random.between(1, 100) <= 35)
+            if (random.between(1, 100) <= 25)
             {
                 std::cout << "========== MENU COMBAT ==========" << std::endl;
                 std::cout << "1 : Attaquer" << std::endl;
@@ -726,7 +726,7 @@ namespace
         }
 
 
-        if (boss.getBossId() == 28 && random.between(1, 100) <= 45)
+        if (boss.getBossId() == 28 && random.between(1, 100) <= 32)
         {
             int breath = boss.getSpecialEffect() + random.between(1, 3);
             if (breath > 14) breath = 14;
@@ -748,7 +748,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 29 && random.between(1, 100) <= 43)
+        if (boss.getBossId() == 29 && random.between(1, 100) <= 22)
         {
             int nails = boss.getSpecialEffect() + random.between(1, 2);
             if (nails > 12) nails = 12;
@@ -770,7 +770,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 30 && random.between(1, 100) <= 45)
+        if (boss.getBossId() == 30 && random.between(1, 100) <= 32)
         {
             Player* concretePlayer = dynamic_cast<Player*>(&player);
             int line = boss.getSpecialEffect() + random.between(1, 2);
@@ -790,7 +790,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 31 && random.between(1, 100) <= 42)
+        if (boss.getBossId() == 31 && random.between(1, 100) <= 22)
         {
             int souls = boss.getSpecialEffect() + random.between(1, 2);
             if (souls > 12) souls = 12;
@@ -814,7 +814,7 @@ namespace
         }
 
 
-        if (boss.getBossId() == 32 && random.between(1, 100) <= 45)
+        if (boss.getBossId() == 32 && random.between(1, 100) <= 32)
         {
             int fury = boss.getSpecialEffect() + random.between(1, 3);
             if (player.isInDefensePosture()) fury += 1;
@@ -831,7 +831,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 33 && random.between(1, 100) <= 45)
+        if (boss.getBossId() == 33 && random.between(1, 100) <= 32)
         {
             int thirst = boss.getSpecialEffect() + random.between(1, 2);
             if (thirst > 15) thirst = 15;
@@ -850,7 +850,7 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 34 && random.between(1, 100) <= 45)
+        if (boss.getBossId() == 34 && random.between(1, 100) <= 32)
         {
             int web = boss.getSpecialEffect() + random.between(1, 3);
             if (player.isInDefensePosture()) web += 1;
@@ -873,14 +873,14 @@ namespace
             std::cout << std::endl;
         }
 
-        if (boss.getBossId() == 35 && random.between(1, 100) <= 45)
+        if (boss.getBossId() == 35 && random.between(1, 100) <= 32)
         {
             int mirror = boss.getSpecialEffect() + random.between(1, 2);
             if (mirror > 15) mirror = 15;
             boss.setSpecialEffect(mirror);
 
             std::cout << "Les Jumelles parlent ensemble, mais une seule phrase est vraie." << std::endl;
-            if (random.between(1, 100) <= 50)
+            if (random.between(1, 100) <= 25)
             {
                 std::cout << "La prochaine attaque sera faible. La prochaine attaque sera mortelle." << std::endl;
                 if (!player.isInDefensePosture())

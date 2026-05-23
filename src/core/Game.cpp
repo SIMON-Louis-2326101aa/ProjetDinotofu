@@ -6,6 +6,7 @@
 #include "core/Game.hpp"
 #include "core/Console.hpp"
 #include "core/Random.hpp"
+#include "core/VersionInfo.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "combat/Combat.hpp"
 #include "character/RaceCatalog.hpp"
@@ -33,6 +34,7 @@
 #include <vector>
 #include <sstream>
 #include <cstdlib>
+#include <set>
 
 
 namespace
@@ -185,6 +187,7 @@ void Game::run()
         choosePlayerClass();
     }
 
+    configurePartyMode();
     chooseGameMode();
     displaySelectedMode();
     launchSelectedMode();
@@ -194,6 +197,8 @@ void Game::run()
 // FR: displayIntroduction déclare ou implémente un comportement précis utilisé par ce module.
 void Game::displayIntroduction()
 {
+    std::cout << "Lancement de Dinotofu V" << VersionInfo::currentVersion() << std::endl;
+    std::cout << std::endl;
     std::cout << "Bonjour voyageur, et bienvenue dans Dinotofu." << std::endl;
     Console::pauseSeconds(1);
 
@@ -417,6 +422,10 @@ void Game::choosePlayerClass()
     std::cout << "Difficulté : " << getDifficultyName() << "." << std::endl;
     std::cout << "Tes statistiques ont été gravées dans l'arène avec succès." << std::endl;
     std::cout << "Ton équipement et tes ressources de départ ont été adaptés à la difficulté." << std::endl;
+    std::cout << "Créé le " << mainPlayer.getCreatedAtText()
+              << " V" << mainPlayer.getCreatedForVersion() << std::endl;
+    std::cout << "Dernière adaptation faite pour la V"
+              << mainPlayer.getLastAdaptedVersion() << std::endl;
 
     if (nativeBonusApplied)
     {
@@ -430,6 +439,245 @@ void Game::choosePlayerClass()
 
     saveCurrentProgress("Création du personnage");
 
+    Console::waitForEnter();
+    Console::clear();
+}
+
+
+
+bool Game::isMultiplayerSession() const
+{
+    return partyPlayers.size() > 1;
+}
+
+std::vector<Player*> Game::getActivePartyPointers()
+{
+    std::vector<Player*> party;
+    party.push_back(&mainPlayer);
+    for (Player& player : partyPlayers)
+    {
+        party.push_back(&player);
+    }
+    return party;
+}
+
+void Game::savePartyProgress(const std::string& reason) const
+{
+    if (mainPlayer.isDead() && DifficultyRules::isPermanentDeath(selectedDifficulty))
+    {
+        SaveManager::savePlayerSnapshot(mainPlayer, accountName, selectedDifficulty);
+        if (SaveManager::movePlayableCharacterToDead(accountName, mainPlayer.getName()))
+        {
+            std::cout << "Le registre Léthal retire " << mainPlayer.getName()
+                      << " des personnages jouables de " << accountName << "." << std::endl;
+        }
+        return;
+    }
+
+    saveCurrentProgress(reason);
+
+    for (std::size_t i = 0; i < partyPlayers.size(); ++i)
+    {
+        if (i >= partyAccountNames.size() || i >= partyDifficulties.size())
+        {
+            continue;
+        }
+
+        const Player& partyPlayer = partyPlayers[i];
+        const std::string& ownerAccount = partyAccountNames[i];
+        DifficultyMode playerDifficulty = partyDifficulties[i];
+
+        if (partyPlayer.isDead() && DifficultyRules::isPermanentDeath(playerDifficulty))
+        {
+            SaveManager::savePlayerSnapshot(partyPlayer, ownerAccount, playerDifficulty);
+            if (SaveManager::movePlayableCharacterToDead(ownerAccount, partyPlayer.getName()))
+            {
+                std::cout << "Le registre Léthal retire " << partyPlayer.getName()
+                          << " des personnages jouables de " << ownerAccount << "." << std::endl;
+            }
+            else
+            {
+                std::cout << "Impossible de déplacer automatiquement " << partyPlayer.getName()
+                          << " dans le registre des morts." << std::endl;
+            }
+            continue;
+        }
+
+        SaveManager::savePlayerSnapshot(partyPlayer, ownerAccount, playerDifficulty);
+    }
+}
+
+bool Game::addSecondaryPlayerToParty(int playerNumber)
+{
+    std::vector<AccountSaveSummary> accounts = SaveManager::listAccounts();
+    std::vector<AccountSaveSummary> availableAccounts;
+
+    for (const AccountSaveSummary& account : accounts)
+    {
+        if (account.accountName == accountName)
+        {
+            continue;
+        }
+
+        bool alreadyUsed = false;
+        for (const std::string& usedAccount : partyAccountNames)
+        {
+            if (usedAccount == account.accountName)
+            {
+                alreadyUsed = true;
+                break;
+            }
+        }
+
+        if (!alreadyUsed)
+        {
+            availableAccounts.push_back(account);
+        }
+    }
+
+    if (availableAccounts.empty())
+    {
+        std::cout << "Aucun autre compte local disponible pour le joueur " << playerNumber << "." << std::endl;
+        std::cout << "La coop nécessite des comptes différents, et donc des personnages différents." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    std::cout << "========== JOUEUR " << playerNumber << " ==========" << std::endl;
+    std::cout << "Choisis le compte du joueur " << playerNumber << "." << std::endl;
+    std::cout << "0 : Annuler" << std::endl;
+
+    for (int i = 0; i < static_cast<int>(availableAccounts.size()); ++i)
+    {
+        std::cout << (i + 1) << " : " << availableAccounts[i].accountName << std::endl;
+    }
+
+    std::cout << "> ";
+    int accountChoice = Console::askNumberBetween(0, static_cast<int>(availableAccounts.size()), "Choisis un compte affiché.");
+
+    if (accountChoice == 0)
+    {
+        Console::clear();
+        return false;
+    }
+
+    std::string secondaryAccount = availableAccounts[accountChoice - 1].accountName;
+    std::vector<CharacterSaveSummary> characters = SaveManager::listPlayableCharacters(secondaryAccount);
+
+    Console::clear();
+
+    if (characters.empty())
+    {
+        std::cout << "Ce compte n'a aucun personnage jouable." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    std::cout << "========== PERSONNAGE JOUEUR " << playerNumber << " ==========" << std::endl;
+    std::cout << "0 : Annuler" << std::endl;
+
+    for (int i = 0; i < static_cast<int>(characters.size()); ++i)
+    {
+        std::cout << (i + 1) << " : "
+                  << characters[i].characterName
+                  << " | " << characters[i].raceName
+                  << " / " << characters[i].className
+                  << " | Niveau " << characters[i].level
+                  << " | Maître : " << characters[i].currentOwnerAccountName
+                  << std::endl;
+    }
+
+    std::cout << "> ";
+    int characterChoice = Console::askNumberBetween(0, static_cast<int>(characters.size()), "Choisis un personnage affiché.");
+
+    if (characterChoice == 0)
+    {
+        Console::clear();
+        return false;
+    }
+
+    CharacterSaveSummary summary = characters[characterChoice - 1];
+
+    if (summary.currentOwnerAccountName != secondaryAccount || summary.accountName != secondaryAccount)
+    {
+        std::cout << "Le fil de maîtrise refuse ce chargement." << std::endl;
+        std::cout << "Un personnage n'a qu'un seul maître." << std::endl;
+        std::cout << "Maître inscrit : " << summary.currentOwnerAccountName << std::endl;
+        std::cout << "Compte choisi : " << secondaryAccount << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    Player secondaryPlayer;
+    DifficultyMode secondaryDifficulty = DifficultyMode::Normal;
+
+    if (!SaveManager::loadPlayerSnapshot(summary, secondaryPlayer, secondaryDifficulty))
+    {
+        std::cout << "Impossible de charger ce personnage." << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    partyAccountNames.push_back(secondaryAccount);
+    partyDifficulties.push_back(secondaryDifficulty);
+    partyPlayers.push_back(secondaryPlayer);
+
+    std::cout << "Joueur " << playerNumber << " ajouté : " << secondaryPlayer.getName()
+              << " (" << secondaryAccount << ")." << std::endl;
+    std::cout << std::endl;
+    return true;
+}
+
+void Game::configurePartyMode()
+{
+    partyPlayers.clear();
+    partyAccountNames.clear();
+    partyDifficulties.clear();
+
+    std::cout << "========== SESSION ==========" << std::endl;
+    std::cout << "1 : Solo" << std::endl;
+    std::cout << "2 : Multi local - 2 joueurs" << std::endl;
+    std::cout << "3 : Multi local - 3 joueurs" << std::endl;
+    std::cout << "=============================" << std::endl;
+    std::cout << "> ";
+
+    int choice = Console::askNumberBetween(1, 3, "Choisis 1, 2 ou 3.");
+    Console::clear();
+
+    if (choice == 1)
+    {
+        std::cout << "Session solo sélectionnée." << std::endl;
+        std::cout << std::endl;
+        Console::waitForEnter();
+        Console::clear();
+        return;
+    }
+
+    std::cout << "Session coop sélectionnée." << std::endl;
+    std::cout << "Le joueur 1 reste le point d'ancrage : voyage, boss, niveau de session, événements et monstres." << std::endl;
+    std::cout << "Les autres joueurs interviennent surtout en combat, avec leur inventaire et leurs récompenses individuelles." << std::endl;
+    std::cout << std::endl;
+
+    for (int playerNumber = 2; playerNumber <= choice; ++playerNumber)
+    {
+        if (!addSecondaryPlayerToParty(playerNumber))
+        {
+            std::cout << "La session repasse sur les joueurs déjà validés." << std::endl;
+            std::cout << std::endl;
+            break;
+        }
+    }
+
+    if (partyPlayers.empty())
+    {
+        std::cout << "Aucun joueur secondaire validé. Session solo conservée." << std::endl;
+    }
+    else
+    {
+        std::cout << "Groupe actif : " << (partyPlayers.size() + 1) << " joueurs." << std::endl;
+    }
+
+    std::cout << std::endl;
     Console::waitForEnter();
     Console::clear();
 }
@@ -732,13 +980,29 @@ void Game::launchSelectedMode()
 
             case GameMode::MonsterPve:
             {
-                combat.launchMonsterPve(mainPlayer, selectedDifficulty);
+                if (isMultiplayerSession())
+                {
+                    std::vector<Player*> party = getActivePartyPointers();
+                    combat.launchMonsterPveTeam(party, selectedDifficulty);
+                }
+                else
+                {
+                    combat.launchMonsterPve(mainPlayer, selectedDifficulty);
+                }
                 break;
             }
 
             case GameMode::BossPve:
             {
-                combat.launchBossPve(mainPlayer, selectedDifficulty);
+                if (isMultiplayerSession())
+                {
+                    std::vector<Player*> party = getActivePartyPointers();
+                    combat.launchBossPveTeam(party, selectedDifficulty);
+                }
+                else
+                {
+                    combat.launchBossPve(mainPlayer, selectedDifficulty);
+                }
                 break;
             }
 
@@ -774,9 +1038,9 @@ void Game::launchSelectedMode()
             return;
         }
 
-        saveCurrentProgress("Fin de combat");
+        savePartyProgress("Fin de combat");
         QuestMenu::maybeOfferRandomInterception(mainPlayer);
-        saveCurrentProgress("Événement de quête éventuel");
+        savePartyProgress("Événement de quête éventuel");
     }
 
     bool continuePlaying = openPostCombatMenu();
@@ -789,7 +1053,7 @@ void Game::launchSelectedMode()
         return;
     }
 
-    saveCurrentProgress("Fin de session");
+    savePartyProgress("Fin de session");
 
     std::cout << std::endl;
 }

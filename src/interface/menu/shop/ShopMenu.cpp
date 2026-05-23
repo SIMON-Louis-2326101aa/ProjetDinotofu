@@ -13,12 +13,44 @@
 #include "economy/shop/ShopPriceRules.hpp"
 #include "economy/shop/ShopRotationSystem.hpp"
 #include "economy/shop/ShopTransactionSystem.hpp"
+#include "interface/menu/quest/QuestMenu.hpp"
 
 #include <iostream>
+#include <string>
 #include <vector>
 
 namespace
 {
+
+    std::string getVendorNameForShop(ShopType type)
+    {
+        switch (type)
+        {
+            case ShopType::MonsterMaterial:
+                return "Vendeur de composants";
+            case ShopType::Material:
+                return "Vendeur de matériaux";
+            case ShopType::Plant:
+                return "Herboriste";
+            case ShopType::Armor:
+                return "Armurier";
+            case ShopType::Weapon:
+                return "Vendeur d'armes";
+            case ShopType::Consumable:
+                return "Vendeur de consommables";
+            case ShopType::Library:
+                return "Bibliothécaire";
+            case ShopType::Blacksmith:
+                return "Forgeron";
+            case ShopType::Alchemist:
+                return "Alchimiste";
+            case ShopType::BlackMarket:
+                return "Contact du marché noir";
+            default:
+                return "Marchand inquiet";
+        }
+    }
+
     // EN: displayShopList declares or implements a focused behavior used by this module.
     // FR: displayShopList déclare ou implémente un comportement précis utilisé par ce module.
     void displayShopList(const std::vector<ShopInventory>& shops)
@@ -226,28 +258,63 @@ namespace
         while (stayInShop)
         {
             Console::clear();
-            displayShopStock(shop, player);
-
-            int maxChoice = static_cast<int>(shop.getItems().size()) + 1;
-            std::cout << shop.getItems().size() + 1 << " : Vendre un objet compatible" << std::endl;
-            std::cout << std::endl;
+            std::cout << "========== " << shop.getName() << " ==========" << std::endl;
+            std::cout << "Or disponible : " << player.getInventory().getGold() << " pièces" << std::endl;
+            std::cout << "0 : Retour" << std::endl;
+            std::cout << "1 : Acheter" << std::endl;
+            std::cout << "2 : Vendre" << std::endl;
+            std::cout << "3 : Discuter avec " << getVendorNameForShop(shop.getType()) << std::endl;
+            std::cout << "4 : Quêtes de " << getVendorNameForShop(shop.getType()) << std::endl;
+            std::cout << "================================" << std::endl;
             std::cout << "> ";
 
-            int itemChoice = Console::askNumberBetween(
+            int shopChoice = Console::askNumberBetween(
                 0,
-                maxChoice,
-                "Veuillez choisir un article affiché, vendre, ou 0 pour revenir."
+                4,
+                "Veuillez choisir acheter, vendre, discuter, quêtes, ou 0 pour revenir."
             );
 
-            if (itemChoice == 0)
+            if (shopChoice == 0)
             {
                 stayInShop = false;
                 continue;
             }
 
-            if (itemChoice == static_cast<int>(shop.getItems().size()) + 1)
+            if (shopChoice == 2)
             {
                 openSellMenu(player, shop);
+                continue;
+            }
+
+            if (shopChoice == 3)
+            {
+                Console::clear();
+                std::cout << getVendorNameForShop(shop.getType()) << " prend quelques secondes pour parler boutique, rumeurs et besoins du moment." << std::endl;
+                std::cout << "S'il a une vraie demande, utilise l'option de quêtes juste en dessous." << std::endl;
+                std::cout << std::endl;
+                Console::waitForEnter();
+                continue;
+            }
+
+            if (shopChoice == 4)
+            {
+                Console::clear();
+                QuestMenu::talkToClient(player, getVendorNameForShop(shop.getType()));
+                continue;
+            }
+
+            Console::clear();
+            displayShopStock(shop, player);
+            std::cout << "> ";
+
+            int itemChoice = Console::askNumberBetween(
+                0,
+                static_cast<int>(shop.getItems().size()),
+                "Veuillez choisir un article affiché, ou 0 pour revenir."
+            );
+
+            if (itemChoice == 0)
+            {
                 continue;
             }
 
@@ -323,7 +390,7 @@ void ShopMenu::open(Player& player)
     if (ShopRotationSystem::shouldRefreshShops())
     {
         std::cout << "Les marchands changent leurs étals après ton dernier combat." << std::endl;
-        std::cout << "Certaines ventes seront plus variées lorsque la rotation complète sera branchée." << std::endl;
+        std::cout << "De nouveaux articles peuvent apparaître, disparaître ou revenir plus cher." << std::endl;
         std::cout << std::endl;
         ShopRotationSystem::markShopsRefreshed();
         Console::waitForEnter();
@@ -337,8 +404,9 @@ void ShopMenu::open(Player& player)
         displayShopList(shops);
 
         std::cout << "Or : " << player.getInventory().getGold() << " pièces" << std::endl;
-        std::cout << "Note : consommables, armes, armures, matériaux, plantes et infos simples sont achetables." << std::endl;
+        std::cout << "Note : les stocks changent après les combats, et certaines ventes sont rares." << std::endl;
         std::cout << "La revente protège l’équipement porté et les objets de base." << std::endl;
+        std::cout << "Le marché noir vend parfois des composants interdits, expérimentaux ou instables." << std::endl;
         std::cout << std::endl;
         std::cout << "> ";
 

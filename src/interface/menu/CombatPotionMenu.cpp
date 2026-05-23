@@ -137,8 +137,14 @@ bool CombatPotionMenu::openAgainstSingleTarget(
 
         if (choice == 3)
         {
-            CombatMenu::displayUnavailableOption();
-            return false;
+            return openCategory(
+                player,
+                ConsumableType::Buff,
+                &target,
+                nullptr,
+                random,
+                potionDamageBonus
+            );
         }
 
         if (choice == 4)
@@ -223,8 +229,14 @@ bool CombatPotionMenu::openAgainstWave(
 
         if (choice == 3)
         {
-            CombatMenu::displayUnavailableOption();
-            return false;
+            return openCategory(
+                player,
+                ConsumableType::Buff,
+                nullptr,
+                &wave,
+                random,
+                potionDamageBonus
+            );
         }
 
         if (choice == 4)

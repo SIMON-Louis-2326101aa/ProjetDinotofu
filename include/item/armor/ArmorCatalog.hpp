@@ -8,6 +8,8 @@
 
 #include "item/armor/Armor.hpp"
 
+#include <string>
+
 class ArmorCatalog
 {
 public:
@@ -17,6 +19,10 @@ public:
     // EN: createWornLeatherArmor declares or implements a focused behavior used by this module.
     // FR: createWornLeatherArmor déclare ou implémente un comportement précis utilisé par ce module.
     static Armor createWornLeatherArmor();
+    static Armor createApprenticeRobe();
+    static Armor createPaddedVest();
+    static Armor createHeavyPaddedArmor();
+    static Armor createStarterArmorForClass(const std::string& className);
     // EN: createArenaChainmail declares or implements a focused behavior used by this module.
     // FR: createArenaChainmail déclare ou implémente un comportement précis utilisé par ce module.
     static Armor createArenaChainmail();

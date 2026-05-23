@@ -9,9 +9,11 @@
 #include "combat/EnemyCombatQueue.hpp"
 #include "combat/reward/CombatReward.hpp"
 
+#include "entity/Boss.hpp"
 #include "entity/Monster.hpp"
 #include "entity/Player.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "core/Random.hpp"
 
 #include <string>
 
@@ -24,7 +26,13 @@ public:
 
     // EN: calculateMonsterReward declares or implements a focused behavior used by this module.
     // FR: calculateMonsterReward déclare ou implémente un comportement précis utilisé par ce module.
-    static CombatReward calculateMonsterReward(const Monster& monster);
+    static CombatReward calculateMonsterReward(const Monster& monster, Random* random = nullptr);
+    static CombatReward calculateBossReward(
+        const Boss& boss,
+        DifficultyMode difficulty,
+        int damageReceived,
+        int turnCount
+    );
 
     // EN: calculateDefeatedEnemiesReward declares or implements a focused behavior used by this module.
     // FR: calculateDefeatedEnemiesReward déclare ou implémente un comportement précis utilisé par ce module.
@@ -45,6 +53,21 @@ public:
     static CombatReward calculateWaveReward(
         const EnemyCombatQueue& wave,
         DifficultyMode difficulty
+    );
+    static CombatReward calculateWaveReward(
+        const EnemyCombatQueue& wave,
+        DifficultyMode difficulty,
+        const Player& player,
+        int initialPlayerHp,
+        int turnCount
+    );
+    static CombatReward calculateWaveReward(
+        const EnemyCombatQueue& wave,
+        DifficultyMode difficulty,
+        const Player& player,
+        int initialPlayerHp,
+        int turnCount,
+        Random& random
     );
 
     // EN: calculatePlayerEscapeReward declares or implements a focused behavior used by this module.

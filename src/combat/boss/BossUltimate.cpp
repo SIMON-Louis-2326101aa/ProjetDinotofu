@@ -12,6 +12,24 @@ namespace
 {
     // EN: applyDirectDamage declares or implements a focused behavior used by this module.
     // FR: applyDirectDamage déclare ou implémente un comportement précis utilisé par ce module.
+
+    void displayUltimateStart(const Boss& boss)
+    {
+        std::cout << "========== ULTIME DE BOSS ==========" << std::endl;
+        std::cout << "L'aura de l'entité change brutalement : un ultime vient de commencer." << std::endl;
+        if (boss.getMaxUltimateTurns() > 1)
+        {
+            std::cout << "Durée estimée : " << boss.getMaxUltimateTurns() << " tours de boss." << std::endl;
+            std::cout << "Tant que l'effet reste actif, la fin de tour du boss peut déclencher une pression supplémentaire." << std::endl;
+        }
+        else
+        {
+            std::cout << "Effet estimé : décharge immédiate." << std::endl;
+        }
+        std::cout << "====================================" << std::endl;
+        std::cout << std::endl;
+    }
+
     void applyDirectDamage(Entity& target, int damage)
     {
         if (damage <= 0)
@@ -34,6 +52,7 @@ void BossUltimate::executeBossUltimate(
 )
 {
     boss.activateUltimate();
+    displayUltimateStart(boss);
 
     if (boss.getBossId() == 1)
     {

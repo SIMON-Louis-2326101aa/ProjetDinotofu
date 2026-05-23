@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 
+class Player;
+
 class CombatGroupBuilder
 {
 public:
@@ -27,10 +29,20 @@ public:
         CombatUnitKind mainKind
     );
 
+    static CombatGroup buildSideFromPlayersAndSummons(
+        std::vector<Player*>& players,
+        std::vector<Summon>& summons,
+        CombatSide side
+    );
+
     static CombatGroup buildSideFromWave(
         EnemyCombatQueue& wave,
         CombatSide side
     );
+
+    static std::string getFormationSlotLabel(int slotIndex);
+
+    static void displayFormationRules();
 
     static void displayGroup(
         const CombatGroup& group,

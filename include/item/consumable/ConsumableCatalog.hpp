@@ -20,10 +20,20 @@ public:
 
     // EN: createReinforcedHealingPotion declares or implements a focused behavior used by this module.
     // FR: createReinforcedHealingPotion déclare ou implémente un comportement précis utilisé par ce module.
+    static Consumable createMinorHealingPotion();
     static Consumable createReinforcedHealingPotion();
+    static Consumable createGreaterHealingPotion();
+    static Consumable createMajorHealingPotion();
     // EN: createReinforcedDamagePotion declares or implements a focused behavior used by this module.
     // FR: createReinforcedDamagePotion déclare ou implémente un comportement précis utilisé par ce module.
+    static Consumable createMinorDamagePotion();
     static Consumable createReinforcedDamagePotion();
+    static Consumable createGreaterDamagePotion();
+    static Consumable createExperimentalDamagePotion();
+    static Consumable createDefensivePotion();
+    static Consumable createGreaterDefensivePotion();
+    static Consumable createPrecisionPotion();
+    static Consumable createWeakeningDebuffPotion();
 };
 
 #endif

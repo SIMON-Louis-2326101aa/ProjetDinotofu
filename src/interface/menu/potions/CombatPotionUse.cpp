@@ -7,11 +7,15 @@
 
 #include "combat/action/CombatAttack.hpp"
 #include "combat/threat/ThreatSystem.hpp"
+#include "combat/system/DefensePostureSystem.hpp"
+#include "combat/system/DamageSystem.hpp"
+#include "combat/DamageReport.hpp"
 
 #include "interface/menu/CombatTargetMenu.hpp"
 
 #include "item/Inventory.hpp"
 
+#include <algorithm>
 #include <iostream>
 
 bool CombatPotionUse::useHealingPotion(
@@ -126,12 +130,61 @@ bool CombatPotionUse::useSelectedPotion(
         return false;
     }
 
-    if (type == ConsumableType::Buff || type == ConsumableType::Debuff)
+    if (type == ConsumableType::Buff)
     {
-        std::cout << "[cette option n'est pas encore accessible pour ce mode]" << std::endl;
-        std::cout << "La potion existe, mais son effet n'est pas encore codé." << std::endl;
+        if (!player.hasInfiniteConsumables())
+        {
+            player.getInventory().removeConsumable(consumableIndex);
+        }
+
+        int stabilisation = std::max(1, potion.getPower() / 3);
+        player.heal(stabilisation);
+        DefensePostureSystem::enterDefensePosture(player);
+
+        std::cout << player.getName() << " utilise " << potion.getName() << "." << std::endl;
+        std::cout << "Son corps se stabilise : +" << stabilisation << " PV et posture défensive immédiate." << std::endl;
+        std::cout << "Ce n'est pas encore un buff long, mais ce n'est plus une potion décorative." << std::endl;
         std::cout << std::endl;
-        return false;
+        return true;
+    }
+
+    if (type == ConsumableType::Debuff)
+    {
+        Entity* debuffTarget = target;
+
+        if (debuffTarget == nullptr && wave != nullptr && wave->hasActiveEnemies())
+        {
+            debuffTarget = &wave->getActiveEnemy(0);
+        }
+
+        if (debuffTarget == nullptr)
+        {
+            std::cout << "Aucune cible n'est assez proche pour recevoir cette fiole." << std::endl;
+            std::cout << std::endl;
+            return false;
+        }
+
+        if (!player.hasInfiniteConsumables())
+        {
+            player.getInventory().removeConsumable(consumableIndex);
+        }
+
+        int rawDamage = potion.getPower();
+        DamageReport report = DamageSystem::calculateReceivedDamage(*debuffTarget, rawDamage);
+        DamageSystem::displayDamageReport(*debuffTarget, report);
+        debuffTarget->takeDamage(report.receivedDamage);
+
+        std::cout << player.getName() << " lance " << potion.getName() << " sur " << debuffTarget->getName() << "." << std::endl;
+        std::cout << "La cible est affaiblie et reçoit " << report.receivedDamage << " dégâts chimiques." << std::endl;
+        std::cout << debuffTarget->getName() << " possède maintenant " << debuffTarget->getHp() << "/" << debuffTarget->getMaxHp() << " PV." << std::endl;
+        std::cout << std::endl;
+
+        if (wave != nullptr)
+        {
+            wave->removeDeadAndReplace();
+        }
+
+        return true;
     }
 
     std::cout << "[cette option n'est pas encore accessible pour ce mode]" << std::endl;

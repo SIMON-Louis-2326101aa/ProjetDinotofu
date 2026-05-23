@@ -105,7 +105,12 @@ bool PlayerWaveCombatTurn::play(
 
     if (choice == 8)
     {
-        escapeSucceeded = EscapeSystem::playerAttemptsEscape(player, random, difficulty);
+        escapeSucceeded = EscapeSystem::playerAttemptsEscape(
+            player,
+            random,
+            difficulty,
+            wave.getTotalRemainingEnemyCount()
+        );
         return true;
     }
 

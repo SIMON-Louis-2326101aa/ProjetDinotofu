@@ -9,7 +9,7 @@
 class WaveRules
 {
 public:
-    static constexpr int MIN_WAVE_SIZE = 3;
+    static constexpr int MIN_WAVE_SIZE = 2;
     static constexpr int MAX_WAVE_SIZE = 10;
 
     // EN: getWaveSizeForPlayerLevel declares or implements a focused behavior used by this module.

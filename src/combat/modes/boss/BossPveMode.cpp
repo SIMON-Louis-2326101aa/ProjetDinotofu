@@ -15,12 +15,20 @@
 #include "progression/death/DeathPenaltyResult.hpp"
 #include "progression/death/DeathPenaltySystem.hpp"
 #include "combat/loot/LootGenerator.hpp"
+#include "combat/reward/CombatRewardSystem.hpp"
+#include "interface/menu/potions/CombatPotionUtils.hpp"
+#include "combat/group/CombatGroupBuilder.hpp"
+#include "combat/system/CombatClassSystem.hpp"
+#include "combat/summon/SummonCombatSystem.hpp"
+#include "combat/summon/SummonControlMode.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <iostream>
 #include <string>
 #include <vector>
+#include <memory>
+#include <numeric>
 
 
 namespace
@@ -40,6 +48,42 @@ namespace
         int bossScore;
         int ratioPercent;
         BossPowerRisk risk;
+    };
+
+    struct TemporaryClassGuard
+    {
+        Player& player;
+        PlayerClass baseClass;
+        bool active;
+
+        TemporaryClassGuard(Player& target)
+            : player(target),
+              baseClass(
+                  target.getType(),
+                  target.getMaxHp(),
+                  target.getMinDamage(),
+                  target.getMaxDamage(),
+                  target.getCriticalDamage(),
+                  target.getHealingPotionCount(),
+                  target.getDamagePotionCount()
+              ),
+              active(false)
+        {
+        }
+
+        void markActive()
+        {
+            active = true;
+        }
+
+        ~TemporaryClassGuard()
+        {
+            if (active)
+            {
+                int currentHp = player.getHp();
+                player.restoreClassState(baseClass, currentHp);
+            }
+        }
     };
 
     std::string toLowerAscii(std::string value)
@@ -493,7 +537,7 @@ namespace
             std::cout << "Si tu meurs ici, ce personnage peut devenir une simple trace dans le registre des morts." << std::endl;
         }
 
-        if (boss.getName() == "???")
+        if (!boss.isIdentityRevealed())
         {
             std::cout << std::endl;
             std::cout << "Le nom reste brouillé, mais sa pression suffit déjà à salir les pages du registre." << std::endl;
@@ -760,6 +804,444 @@ namespace
         int confirmation = Console::askNumberBetween(0, 1, "Choix invalide.");
         return confirmation == 1;
     }
+
+    int countAliveBossParty(const std::vector<Player*>& party)
+    {
+        int alive = 0;
+        for (Player* player : party)
+        {
+            if (player != nullptr && !player->isDead())
+            {
+                ++alive;
+            }
+        }
+        return alive;
+    }
+
+    struct BossCoopContribution
+    {
+        int turnsTaken = 0;
+        int damageDealt = 0;
+        int healingDone = 0;
+        int damageTaken = 0;
+        int supportActions = 0;
+        bool wasDowned = false;
+    };
+
+    std::vector<bool> extractBossDownedFlags(const std::vector<BossCoopContribution>& contributions)
+    {
+        std::vector<bool> flags;
+        for (const BossCoopContribution& contribution : contributions) flags.push_back(contribution.wasDowned);
+        return flags;
+    }
+
+    int scoreBossTargetThreat(Player& player, const BossCoopContribution& contribution)
+    {
+        if (player.isProvoking()) return 10000 + player.getProvocationTurns() * 100;
+
+        int score = 20;
+        if (player.hasHealingThreat()) score += 130;
+        score += std::min(180, contribution.damageDealt / 2);
+        score += std::min(120, contribution.healingDone);
+        score += std::min(80, contribution.damageTaken / 3);
+
+        if (player.getMaxHp() > 0)
+        {
+            int missingPercent = (player.getMaxHp() - player.getHp()) * 100 / player.getMaxHp();
+            if (missingPercent >= 70) score += 45;
+            else if (missingPercent >= 40) score += 25;
+        }
+
+        std::string type = CombatClassSystem::normalizeClassText(player.getType());
+        if (type.find("clerc") != std::string::npos || type.find("pretre") != std::string::npos || type.find("prêtre") != std::string::npos || type.find("alchimiste") != std::string::npos) score += 50;
+        if (type.find("gardien") != std::string::npos || type.find("tank") != std::string::npos || type.find("colosse") != std::string::npos || player.isInDefensePosture()) score += 25;
+
+        return score;
+    }
+
+    Player* chooseAliveBossTarget(std::vector<Player*>& party, Random& random, const std::vector<BossCoopContribution>* contributions = nullptr)
+    {
+        std::vector<Player*> candidates;
+        std::vector<int> scores;
+
+        for (std::size_t i = 0; i < party.size(); ++i)
+        {
+            Player* player = party[i];
+            if (player == nullptr || player->isDead()) continue;
+
+            BossCoopContribution empty;
+            const BossCoopContribution& contribution = (contributions != nullptr && i < contributions->size()) ? (*contributions)[i] : empty;
+            candidates.push_back(player);
+            scores.push_back(scoreBossTargetThreat(*player, contribution));
+        }
+
+        if (candidates.empty()) return nullptr;
+
+        int totalScore = std::accumulate(scores.begin(), scores.end(), 0);
+        int roll = random.between(1, std::max(1, totalScore));
+        int cursor = 0;
+        for (std::size_t i = 0; i < candidates.size(); ++i)
+        {
+            cursor += scores[i];
+            if (roll <= cursor) return candidates[i];
+        }
+        return candidates.back();
+    }
+
+    void scaleBossForCoop(Boss& boss, int partySize)
+    {
+        if (partySize <= 1) return;
+
+        int hpPercent = 100 + (partySize - 1) * 55;
+        int damagePercent = 100 + (partySize - 1) * 12;
+        boss.scaleCombatStats(hpPercent, damagePercent);
+
+        std::cout << "Stabilisation coop : le boss adapte son enveloppe." << std::endl;
+        std::cout << "PV x" << hpPercent << "% | puissance x" << damagePercent << "% selon le nombre de joueurs réels." << std::endl;
+        std::cout << "Le but est d'éviter que la coop transforme un boss en sac de frappe gratuit." << std::endl;
+        std::cout << std::endl;
+    }
+
+    void displayBossCoopPartyStatus(const std::vector<Player*>& party, const std::vector<bool>& wasDowned)
+    {
+        std::cout << "========== ÉTAT DU GROUPE ==========" << std::endl;
+        for (std::size_t i = 0; i < party.size(); ++i)
+        {
+            Player* player = party[i];
+            if (player == nullptr)
+            {
+                continue;
+            }
+
+            std::cout << "J" << (i + 1) << " ["
+                      << CombatGroupBuilder::getFormationSlotLabel(static_cast<int>(i))
+                      << "] - " << player->getName()
+                      << " : " << player->getHp() << "/" << player->getMaxHp() << " PV";
+            if (player->isDead())
+            {
+                std::cout << " [au sol]";
+            }
+            else if (i < wasDowned.size() && wasDowned[i])
+            {
+                std::cout << " [a déjà chuté]";
+            }
+            std::cout << std::endl;
+        }
+        std::cout << "====================================" << std::endl;
+        std::cout << std::endl;
+    }
+
+    bool tryUseBossHealingPotionOnAlly(Player& healer, std::vector<Player*>& party, int& healingDone)
+    {
+        bool hasTarget = false;
+        for (Player* ally : party)
+        {
+            if (ally != nullptr && ally != &healer && (ally->isDead() || ally->getHp() < ally->getMaxHp()))
+            {
+                hasTarget = true;
+                break;
+            }
+        }
+
+        if (!hasTarget)
+        {
+            return false;
+        }
+
+        std::vector<int> potionIndices = CombatPotionUtils::getPotionIndices(healer, ConsumableType::Healing);
+        if (potionIndices.empty())
+        {
+            return false;
+        }
+
+        std::cout << "Action de soutien disponible pour " << healer.getName() << "." << std::endl;
+        std::cout << "0 : Jouer normalement" << std::endl;
+        std::cout << "1 : Utiliser une potion de soin sur un allié" << std::endl;
+        std::cout << "> ";
+
+        int supportChoice = Console::askNumberBetween(0, 1, "Choisis 0 ou 1.");
+        Console::clear();
+
+        if (supportChoice == 0)
+        {
+            return false;
+        }
+
+        std::vector<Player*> targets;
+        std::cout << "Choisis l'allié à soigner ou réveiller." << std::endl;
+        std::cout << "0 : Annuler" << std::endl;
+
+        for (Player* ally : party)
+        {
+            if (ally != nullptr && ally != &healer && (ally->isDead() || ally->getHp() < ally->getMaxHp()))
+            {
+                targets.push_back(ally);
+                std::cout << targets.size() << " : " << ally->getName();
+                if (ally->isDead())
+                {
+                    std::cout << " [au sol]";
+                }
+                std::cout << " (" << ally->getHp() << "/" << ally->getMaxHp() << " PV)" << std::endl;
+            }
+        }
+
+        std::cout << "> ";
+        int targetChoice = Console::askNumberBetween(0, static_cast<int>(targets.size()), "Choisis une cible affichée.");
+        Console::clear();
+
+        if (targetChoice == 0)
+        {
+            return false;
+        }
+
+        Player* target = targets[targetChoice - 1];
+
+        std::cout << "Choisis la potion à utiliser." << std::endl;
+        std::cout << "0 : Annuler" << std::endl;
+        for (int i = 0; i < static_cast<int>(potionIndices.size()); ++i)
+        {
+            Consumable potion = healer.getInventory().getConsumable(potionIndices[i]);
+            std::cout << (i + 1) << " : " << potion.getName()
+                      << " | soin " << potion.getPower()
+                      << std::endl;
+        }
+
+        std::cout << "> ";
+        int potionChoice = Console::askNumberBetween(0, static_cast<int>(potionIndices.size()), "Choisis une potion affichée.");
+        Console::clear();
+
+        if (potionChoice == 0)
+        {
+            return false;
+        }
+
+        int consumableIndex = potionIndices[potionChoice - 1];
+        if (!healer.getInventory().hasConsumable(consumableIndex))
+        {
+            std::cout << "Cette potion n'est plus disponible." << std::endl;
+            std::cout << std::endl;
+            return false;
+        }
+
+        Consumable potion = healer.getInventory().getConsumable(consumableIndex);
+        bool revivedTarget = target->isDead();
+        if (revivedTarget)
+        {
+            target->reviveWithHealthPercentage(1);
+            if (target->getHp() <= 0)
+            {
+                target->heal(1);
+            }
+        }
+        int beforeHealHp = target->getHp();
+        target->heal(potion.getPower());
+        healingDone += std::max(0, target->getHp() - beforeHealHp);
+        healer.markHealingThreat();
+
+        if (!healer.hasInfiniteConsumables())
+        {
+            healer.getInventory().removeConsumable(consumableIndex);
+        }
+
+        std::cout << healer.getName() << " devient soigneur ce tour-ci et utilise "
+                  << potion.getName() << " sur " << target->getName() << "." << std::endl;
+        if (revivedTarget)
+        {
+            std::cout << target->getName() << " est réveillé à 1 PV avant de recevoir le soin." << std::endl;
+        }
+        std::cout << target->getName() << " possède maintenant "
+                  << target->getHp() << "/" << target->getMaxHp() << " PV." << std::endl;
+        std::cout << "Le tour de " << healer.getName() << " est consommé." << std::endl;
+        std::cout << std::endl;
+        return true;
+    }
+
+    void resolveBossLethalGroupDeathSave(Player& player, Random& random)
+    {
+        if (!player.isDead())
+        {
+            return;
+        }
+
+        int green = 0;
+        int red = 0;
+
+        std::cout << "Léthal coop boss : " << player.getName() << " est au sol." << std::endl;
+        std::cout << "3 pastilles vertes le ramènent. 3 rouges le rayent du registre, sauf divination future." << std::endl;
+        std::cout << std::endl;
+
+        while (green < 3 && red < 3)
+        {
+            int roll = random.between(1, 20);
+            std::cout << "Dé de survie : " << roll << std::endl;
+
+            if (roll == 20)
+            {
+                player.reviveWithHealthPercentage(1);
+                if (player.getHp() <= 0) player.heal(1);
+                std::cout << "20 naturel : " << player.getName() << " se relève immédiatement à 1 PV et pourra rejouer." << std::endl;
+                std::cout << std::endl;
+                return;
+            }
+
+            if (roll == 1)
+            {
+                red += 2;
+                std::cout << "1 naturel : deux pastilles rouges apparaissent d'un coup." << std::endl;
+            }
+            else if (roll >= 11)
+            {
+                ++green;
+                std::cout << "Pastille verte : " << green << "/3." << std::endl;
+            }
+            else
+            {
+                ++red;
+                std::cout << "Pastille rouge : " << red << "/3." << std::endl;
+            }
+        }
+
+        if (green >= 3)
+        {
+            player.reviveWithHealthPercentage(1);
+            if (player.getHp() <= 0) player.heal(1);
+            std::cout << player.getName() << " revient à 1 PV. La mort n'est pas comptée." << std::endl;
+            std::cout << std::endl;
+            return;
+        }
+
+        player.recordDeath();
+        std::cout << player.getName() << " reçoit trois pastilles rouges : mort définitive prévue, sauf exception divine/divination." << std::endl;
+        std::cout << std::endl;
+    }
+
+    bool isBossUnlockedForWholeParty(const std::vector<Player*>& party, int bossId)
+    {
+        for (Player* player : party)
+        {
+            if (player == nullptr || !player->isBossUnlocked(bossId))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void displayBossLockForParty(const std::vector<Player*>& party, int bossId)
+    {
+        std::cout << "Ce boss ne peut pas être stabilisé en coop." << std::endl;
+        std::cout << "Tous les joueurs doivent l'avoir débloqué." << std::endl;
+        std::cout << "Joueurs qui bloquent l'accès :" << std::endl;
+        for (std::size_t i = 0; i < party.size(); ++i)
+        {
+            Player* player = party[i];
+            if (player == nullptr || !player->isBossUnlocked(bossId))
+            {
+                std::cout << "- J" << (i + 1) << " : "
+                          << (player == nullptr ? "slot vide" : player->getName())
+                          << std::endl;
+            }
+        }
+        std::cout << std::endl;
+    }
+
+    CombatReward buildIndividualBossCoopReward(
+        const CombatReward& baseReward,
+        const Player& player,
+        const Player& leader,
+        const BossCoopContribution& contribution
+    )
+    {
+        int participation = contribution.turnsTaken > 0 ? 35 : 0;
+        participation += std::min(45, contribution.damageDealt / 10);
+        participation += std::min(30, contribution.healingDone / 6);
+        participation += std::min(20, contribution.damageTaken / 10);
+        participation += contribution.supportActions * 8;
+        if (contribution.wasDowned)
+        {
+            participation = std::max(15, participation - 25);
+        }
+
+        int levelGap = leader.getLevel() - player.getLevel();
+        if (levelGap >= 30) participation = std::min(participation, 25);
+        else if (levelGap >= 20) participation = std::min(participation, 45);
+        else if (levelGap >= 12) participation = std::min(participation, 70);
+
+        participation = std::max(0, std::min(100, participation));
+        return baseReward.getPercentage(participation);
+    }
+
+    bool bossCanTargetAnySummon(const std::vector<std::vector<Summon>>& partySummons)
+    {
+        for (const std::vector<Summon>& summons : partySummons)
+        {
+            if (SummonCombatSystem::hasTargetableSummons(summons))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool tryBossAttackPartySummon(
+        Boss& boss,
+        std::vector<std::vector<Summon>>& partySummons,
+        std::vector<BossCoopContribution>& contributions,
+        Random& random
+    )
+    {
+        if (!bossCanTargetAnySummon(partySummons) || random.between(1, 100) > 25)
+        {
+            return false;
+        }
+
+        std::vector<std::size_t> ownerIndexes;
+        for (std::size_t i = 0; i < partySummons.size(); ++i)
+        {
+            if (SummonCombatSystem::hasTargetableSummons(partySummons[i]))
+            {
+                ownerIndexes.push_back(i);
+            }
+        }
+
+        if (ownerIndexes.empty())
+        {
+            return false;
+        }
+
+        std::size_t ownerIndex = ownerIndexes[random.between(0, static_cast<int>(ownerIndexes.size()) - 1)];
+        int summonIndex = SummonCombatSystem::chooseStrategicTargetableSummonIndex(
+            partySummons[ownerIndex],
+            boss,
+            random
+        );
+
+        if (summonIndex < 0)
+        {
+            return false;
+        }
+
+        std::cout << boss.getName()
+                  << " sent le lien d'invocation et tente de couper le soutien avant le joueur."
+                  << std::endl;
+
+        SummonCombatSystem::entityAttacksSummon(
+            boss,
+            partySummons[ownerIndex][static_cast<std::size_t>(summonIndex)],
+            random
+        );
+        SummonCombatSystem::removeInactiveSummons(partySummons[ownerIndex]);
+
+        if (ownerIndex < contributions.size())
+        {
+            contributions[ownerIndex].damageTaken += 4;
+            contributions[ownerIndex].supportActions++;
+        }
+
+        return true;
+    }
+
 }
 
 void BossPveMode::run(
@@ -864,6 +1346,7 @@ void BossPveMode::run(
 
     Boss boss = BossCatalog::createBoss(bossChoice);
 
+    TemporaryClassGuard temporaryClassGuard(player1);
     PlayerClass evolvedClass = ClassCatalog::createEvolvedClassFromClass(player1.getType());
     Player simulatedPlayer = player1;
     simulatedPlayer.applyClass(evolvedClass);
@@ -886,10 +1369,11 @@ void BossPveMode::run(
     Console::clear();
 
     player1.applyClass(evolvedClass);
+    temporaryClassGuard.markActive();
 
-    std::cout << player1.getName() << ", ta classe évolue en : " << player1.getType() << "." << std::endl;
+    std::cout << player1.getName() << ", ta classe évolue temporairement en : " << player1.getType() << "." << std::endl;
     std::cout << "Tes PV et tes objets ont été renforcés pour ce combat." << std::endl;
-    std::cout << "Tes dégâts, eux, restent bloqués : même l'arène semble avoir ses limites." << std::endl;
+    std::cout << "Après le combat, cette forme devra se dissiper et ta classe réelle reviendra." << std::endl;
     std::cout << std::endl;
 
     player1.displayStats();
@@ -898,6 +1382,7 @@ void BossPveMode::run(
 
     if (boss.getBossId() == 27)
     {
+        boss.revealIdentity();
         displayFireFlightFirstEntrance(player1);
         Console::pauseSeconds(3);
     }
@@ -952,6 +1437,8 @@ void BossPveMode::run(
     std::cout << std::endl;
 
     int playerMaxHpBeforeBossFight = player1.getMaxHp();
+    int playerHpBeforeBossFight = player1.getHp();
+    int bossCombatTurnCount = 0;
     bool hitogamiAlreadyRevived = false;
 
     while (!player1.isDead() && !boss.isDead())
@@ -970,6 +1457,7 @@ void BossPveMode::run(
 
             if (turnFinished)
             {
+                ++bossCombatTurnCount;
                 maybeReviveHitogamiOnce(boss, hitogamiAlreadyRevived, difficulty);
                 TurnManager::checkBossDecryption(boss);
                 boss.reduceUltimateCooldown();
@@ -986,9 +1474,15 @@ void BossPveMode::run(
 
             if (turnFinished)
             {
+                ++bossCombatTurnCount;
                 turn = 1;
             }
         }
+    }
+
+    if (boss.isDead() && !boss.isIdentityRevealed())
+    {
+        boss.revealIdentity();
     }
 
     CombatDisplay::displayCombatResult(player1, boss);
@@ -1102,6 +1596,423 @@ void BossPveMode::run(
             std::cout << "Effet retiré : Volé par un boss." << std::endl;
         }
 
+        CombatReward bossReward = CombatRewardSystem::calculateBossReward(
+            boss,
+            difficulty,
+            std::max(0, playerHpBeforeBossFight - player1.getHp()),
+            bossCombatTurnCount
+        );
+        CombatRewardSystem::displayReward(bossReward);
+        CombatRewardSystem::giveRewardToPlayer(player1, bossReward);
+
         LootGenerator::giveDefeatedBossLoot(player1, boss, random, difficulty);
+    }
+}
+
+void BossPveMode::runTeam(
+    std::vector<Player*>& party,
+    Random& random,
+    DifficultyMode difficulty
+)
+{
+    if (party.empty() || party[0] == nullptr)
+    {
+        return;
+    }
+
+    Player& leader = *party[0];
+
+    Console::clear();
+    std::cout << "========== BOSS COOP ==========" << std::endl;
+    std::cout << "Joueur principal : " << leader.getName() << std::endl;
+    std::cout << "Les données de boss, niveau de session et validation d'arène suivent le joueur 1." << std::endl;
+    std::cout << "Mais l'accès au boss exige que tous les joueurs l'aient débloqué." << std::endl;
+    std::cout << "Les récompenses resteront individuelles selon participation, niveau et survie." << std::endl;
+    std::cout << std::endl;
+
+    std::cout << leader.getName() << ", choisis le type d'apparition du boss :" << std::endl;
+    std::cout << "1 : Boss aléatoire compatible avec tout le groupe" << std::endl;
+    std::cout << "2 : Choisir le boss toi-même" << std::endl;
+    std::cout << "> ";
+
+    int bossChoiceType = Console::askNumberBetween(1, 2, "Veuillez entrer 1 ou 2.");
+
+    std::vector<int> leaderAvailableBossIds = leader.getAvailableBossIds();
+    if (!hasAllInvitationsBeforeFireFlight(leader))
+    {
+        leaderAvailableBossIds.erase(
+            std::remove(leaderAvailableBossIds.begin(), leaderAvailableBossIds.end(), 27),
+            leaderAvailableBossIds.end()
+        );
+    }
+
+    std::vector<int> coopAvailableBossIds;
+    for (int id : leaderAvailableBossIds)
+    {
+        if (isBossUnlockedForWholeParty(party, id))
+        {
+            coopAvailableBossIds.push_back(id);
+        }
+    }
+
+    if (coopAvailableBossIds.empty())
+    {
+        std::cout << "Aucun boss commun n'est disponible pour ce groupe." << std::endl;
+        std::cout << "Un joueur secondaire bloque probablement l'accès à tous les boss accessibles au joueur 1." << std::endl;
+        std::cout << "Faites progresser les registres de boss des personnages secondaires, ou lancez un boss déjà commun." << std::endl;
+        std::cout << std::endl;
+        Console::waitForEnter();
+        return;
+    }
+
+    int bossChoice = 0;
+
+    if (bossChoiceType == 1)
+    {
+        int index = random.between(0, static_cast<int>(coopAvailableBossIds.size()) - 1);
+        bossChoice = coopAvailableBossIds[index];
+    }
+    else
+    {
+        Console::clear();
+        std::cout << "Sélectionne l'entité que le groupe veut affronter :" << std::endl;
+        std::cout << std::endl;
+        BossCatalog::displayAvailableBosses(leader.getUnlockedBossIds());
+        std::cout << "En coop, le boss choisi doit aussi être débloqué par J2/J3." << std::endl;
+        std::cout << "> ";
+
+        bossChoice = Console::askNumberBetween(
+            1,
+            BossCatalog::getMaximumBossId(),
+            "Veuillez entrer un identifiant de boss valide."
+        );
+
+        if (!leader.isBossUnlocked(bossChoice))
+        {
+            std::cout << "Cette entité n'est pas encore détectée dans le registre du joueur principal." << std::endl;
+            std::cout << std::endl;
+            Console::waitForEnter();
+            return;
+        }
+
+        if (leader.isBossRecentlyDefeated(bossChoice))
+        {
+            std::cout << "Cette entité vient d'être affrontée par le joueur principal." << std::endl;
+            std::cout << "Le registre refuse de la stabiliser tout de suite." << std::endl;
+            std::cout << std::endl;
+            Console::waitForEnter();
+            return;
+        }
+
+        if (bossChoice == 27 && !hasAllInvitationsBeforeFireFlight(leader))
+        {
+            displayFireFlightLockedGate();
+            Console::waitForEnter();
+            return;
+        }
+
+        if (!isBossUnlockedForWholeParty(party, bossChoice))
+        {
+            displayBossLockForParty(party, bossChoice);
+            Console::waitForEnter();
+            return;
+        }
+    }
+
+    Boss boss = BossCatalog::createBoss(bossChoice);
+
+    std::vector<std::unique_ptr<TemporaryClassGuard>> classGuards;
+    std::vector<int> initialHp;
+    std::vector<BossCoopContribution> contributions(party.size());
+    std::vector<std::vector<Summon>> partySummons(party.size());
+    std::vector<SummonControlMode> summonControlModes(party.size(), SummonControlMode::Automatic);
+
+    for (std::size_t partyIndex = 0; partyIndex < party.size(); ++partyIndex)
+    {
+        Player* player = party[partyIndex];
+        if (player == nullptr)
+        {
+            initialHp.push_back(0);
+            continue;
+        }
+
+        classGuards.push_back(std::make_unique<TemporaryClassGuard>(*player));
+        PlayerClass evolvedClass = ClassCatalog::createEvolvedClassFromClass(player->getType());
+        player->applyClass(evolvedClass);
+        classGuards.back()->markActive();
+        initialHp.push_back(player->getHp());
+        partySummons[partyIndex] = SummonCombatSystem::createInitialSummonsFor(*player);
+    }
+
+    Console::clear();
+
+    Player simulatedLeader = leader;
+    simulatedLeader.applyClass(ClassCatalog::createEvolvedClassFromClass(leader.getType()));
+    scaleBossForCoop(boss, static_cast<int>(party.size()));
+    BossPowerAnalysis powerAnalysis = analyzeBossPower(simulatedLeader, boss, difficulty);
+    displayBossPowerAnalysis(simulatedLeader, boss, difficulty, powerAnalysis);
+
+    std::cout << "Analyse coop : le boss reste calibré depuis le joueur principal, mais il pourra cibler n'importe quel allié vivant." << std::endl;
+    std::cout << "Si un joueur secondaire n'aide presque pas, son registre ne progressera pas vraiment." << std::endl;
+    std::cout << std::endl;
+
+    if (!askBossFightConfirmation(powerAnalysis))
+    {
+        std::cout << "Le groupe recule avant que la faille ne se referme sur lui." << std::endl;
+        std::cout << std::endl;
+        Console::waitForEnter();
+        return;
+    }
+
+    Console::clear();
+
+    if (boss.getBossId() == 27)
+    {
+        boss.revealIdentity();
+        displayFireFlightFirstEntrance(leader);
+        Console::pauseSeconds(3);
+    }
+
+    std::cout << "Préparation du boss coop..." << std::endl;
+    Console::pauseSeconds(1);
+    std::cout << boss.getName() << " est entré dans l'arène." << std::endl;
+    std::cout << boss.getName() << " est de type : " << boss.getType() << "." << std::endl;
+    std::cout << "Chaque joueur a temporairement évolué selon sa classe, puis reviendra à son état réel après le combat." << std::endl;
+    std::cout << "Les invocations actives peuvent maintenant aider en boss coop, mais restent en dernière priorité de placement." << std::endl;
+    std::cout << std::endl;
+
+    for (std::size_t i = 0; i < party.size(); ++i)
+    {
+        if (party[i] != nullptr && !partySummons[i].empty())
+        {
+            SummonCombatSystem::displaySummonArrival(*party[i], partySummons[i]);
+            summonControlModes[i] = SummonCombatSystem::askPlayerSummonControlMode(*party[i], partySummons[i]);
+        }
+    }
+
+    int round = 1;
+    int bossCombatTurnCount = 0;
+    bool hitogamiAlreadyRevived = false;
+
+    while (countAliveBossParty(party) > 0 && !boss.isDead())
+    {
+        std::cout << "========== TOUR DE GROUPE BOSS " << round << " ==========" << std::endl;
+        std::cout << boss.getName() << " : " << boss.getHp() << "/" << boss.getMaxHp() << " PV." << std::endl;
+        std::cout << std::endl;
+        displayBossCoopPartyStatus(party, extractBossDownedFlags(contributions));
+
+        for (std::size_t i = 0; i < party.size(); ++i)
+        {
+            Player* player = party[i];
+            if (player == nullptr || player->isDead() || boss.isDead())
+            {
+                continue;
+            }
+
+            std::cout << "Tour de " << player->getName() << " [J" << (i + 1) << "]." << std::endl;
+            std::cout << std::endl;
+
+            int healingDoneThisTurn = 0;
+            int bossHpBeforeTurn = boss.getHp();
+            bool finished = tryUseBossHealingPotionOnAlly(*player, party, healingDoneThisTurn);
+            while (!finished && !player->isDead() && !boss.isDead())
+            {
+                finished = TurnManager::playHumanTurn(
+                    *player,
+                    boss,
+                    random,
+                    BOSS_POTION_HEAL_AMOUNT,
+                    BOSS_POTION_DAMAGE_BONUS
+                );
+            }
+
+            if (finished)
+            {
+                if (!boss.isDead() && SummonCombatSystem::hasActiveSummons(partySummons[i]))
+                {
+                    int bossHpBeforeSummons = boss.getHp();
+                    SummonCombatSystem::playPlayerSummonTurnsAgainstEntity(
+                        partySummons[i],
+                        boss,
+                        random,
+                        summonControlModes[i]
+                    );
+                    if (bossHpBeforeSummons > boss.getHp())
+                    {
+                        contributions[i].supportActions++;
+                    }
+                }
+
+                contributions[i].turnsTaken++;
+                contributions[i].damageDealt += std::max(0, bossHpBeforeTurn - boss.getHp());
+                contributions[i].healingDone += healingDoneThisTurn;
+                if (healingDoneThisTurn > 0) contributions[i].supportActions++;
+                ++bossCombatTurnCount;
+                maybeReviveHitogamiOnce(boss, hitogamiAlreadyRevived, difficulty);
+                TurnManager::checkBossDecryption(boss);
+            }
+        }
+
+        if (boss.isDead() || countAliveBossParty(party) == 0)
+        {
+            break;
+        }
+
+        if (tryBossAttackPartySummon(boss, partySummons, contributions, random))
+        {
+            boss.reduceUltimateCooldown();
+            ++round;
+            continue;
+        }
+
+        Player* target = chooseAliveBossTarget(party, random, &contributions);
+        if (target == nullptr)
+        {
+            break;
+        }
+
+        std::cout << "Tour de " << boss.getName() << " : cible " << target->getName() << "." << std::endl;
+        int targetHpBeforeBossTurn = target->getHp();
+        bool bossTurnFinished = false;
+        while (!bossTurnFinished && !target->isDead())
+        {
+            bossTurnFinished = TurnManager::playBossTurn(boss, *target, random);
+        }
+
+        for (std::size_t i = 0; i < party.size(); ++i)
+        {
+            if (party[i] == target)
+            {
+                contributions[i].damageTaken += std::max(0, targetHpBeforeBossTurn - target->getHp());
+            }
+            if (party[i] != nullptr && party[i]->isDead())
+            {
+                contributions[i].wasDowned = true;
+            }
+        }
+
+        boss.reduceUltimateCooldown();
+        ++round;
+    }
+
+    if (boss.isDead() && !boss.isIdentityRevealed())
+    {
+        boss.revealIdentity();
+    }
+
+    std::cout << "========== RÉSULTAT BOSS COOP ==========" << std::endl;
+    std::cout << boss.getName() << " : " << (boss.isDead() ? "vaincu" : "encore debout") << "." << std::endl;
+    std::cout << std::endl;
+
+    for (Player* player : party)
+    {
+        if (player != nullptr)
+        {
+            player->clearBossEquipmentSeal();
+        }
+    }
+
+    if (!boss.isDead())
+    {
+        std::cout << "Le groupe a été brisé par le boss." << std::endl;
+        std::cout << std::endl;
+
+        for (Player* player : party)
+        {
+            if (player == nullptr) continue;
+            player->recordDefeat();
+
+            if (player->isDead())
+            {
+                if (DifficultyRules::isPermanentDeath(difficulty))
+                {
+                    resolveBossLethalGroupDeathSave(*player, random);
+                }
+                else
+                {
+                    player->recordDeath();
+                    player->reviveWithHealthPercentage(DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty));
+                    std::cout << player->getName() << " est réveillé après la défaite du groupe. Mort comptabilisée." << std::endl;
+                }
+            }
+        }
+
+        Console::waitForEnter();
+        return;
+    }
+
+    CombatReward baseReward = CombatRewardSystem::calculateBossReward(
+        boss,
+        difficulty,
+        std::max(0, initialHp.empty() ? 0 : initialHp[0] - leader.getHp()),
+        bossCombatTurnCount
+    );
+
+    std::cout << "========== RÉCOMPENSES INDIVIDUELLES BOSS COOP ==========" << std::endl;
+
+    for (std::size_t i = 0; i < party.size(); ++i)
+    {
+        Player* player = party[i];
+        if (player == nullptr)
+        {
+            continue;
+        }
+
+        if (player->isDead())
+        {
+            if (DifficultyRules::isPermanentDeath(difficulty))
+            {
+                resolveBossLethalGroupDeathSave(*player, random);
+                if (player->isDead())
+                {
+                    std::cout << player->getName() << " reste au sol : aucune récompense supplémentaire après sa chute." << std::endl;
+                    continue;
+                }
+            }
+            else
+            {
+                player->recordDeath();
+                player->reviveWithHealthPercentage(DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty));
+                std::cout << player->getName() << " est réveillé à la fin du combat. La mort est comptabilisée." << std::endl;
+            }
+        }
+
+        CombatReward individualReward = buildIndividualBossCoopReward(
+            baseReward,
+            *player,
+            leader,
+            contributions[i]
+        );
+
+        std::cout << player->getName() << " :" << std::endl;
+        if (contributions[i].turnsTaken <= 0)
+        {
+            std::cout << "Participation insuffisante : le registre ne donne presque rien." << std::endl;
+        }
+        CombatRewardSystem::displayReward(individualReward);
+        CombatRewardSystem::giveRewardToPlayer(*player, individualReward);
+        std::cout << "Participation boss : tours " << contributions[i].turnsTaken
+                  << ", dégâts " << contributions[i].damageDealt
+                  << ", soins " << contributions[i].healingDone
+                  << ", dégâts encaissés " << contributions[i].damageTaken << "." << std::endl;
+
+        if (contributions[i].turnsTaken > 0)
+        {
+            player->recordVictory();
+            player->recordBossKill();
+            bool newEntityDetected = player->recordBossVictoryInRegistry(boss.getBossId());
+            if (newEntityDetected)
+            {
+                std::cout << "Registre de " << player->getName() << " : une nouvelle entité est devenue détectable." << std::endl;
+            }
+
+            LootGenerator::giveDefeatedBossLoot(*player, boss, random, difficulty);
+        }
+        else
+        {
+            std::cout << "Aucun loot de boss : le personnage n'a pas réellement participé." << std::endl;
+        }
+
+        std::cout << std::endl;
     }
 }

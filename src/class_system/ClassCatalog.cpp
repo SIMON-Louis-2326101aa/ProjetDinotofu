@@ -33,18 +33,18 @@ namespace
     {
         static const std::vector<ClassTemplate> classes = {
             {"Chevalier", 200, 5, 20, 30, 4, 3, "équilibré, simple et fiable", ClassCategory::Melee},
-            {"Assassin", 150, 10, 30, 45, 5, 2, "rapide, fragile, gros critique", ClassCategory::Melee},
-            {"Colosse", 400, 5, 12, 20, 2, 5, "très tanky, lent, lourd", ClassCategory::Melee},
+            {"Assassin", 150, 11, 31, 48, 6, 2, "rapide, fragile, gros critique", ClassCategory::Melee},
+            {"Colosse", 400, 4, 10, 18, 2, 1, "très tanky, lent, lourd", ClassCategory::Melee},
             {"Barbare", 260, 12, 28, 38, 3, 3, "brutal, violent, peu subtil", ClassCategory::Melee},
             {"Guerrier", 230, 9, 24, 34, 4, 3, "maîtrise des armes", ClassCategory::Melee},
             {"Moine", 175, 9, 25, 36, 5, 2, "esquive, discipline et poings", ClassCategory::Melee},
             {"Duelliste", 170, 12, 27, 43, 4, 2, "1v1, style et précision", ClassCategory::Melee},
             {"Berserker", 240, 14, 34, 46, 2, 4, "énormes dégâts, défense discutable", ClassCategory::Melee},
-            {"Lancier", 210, 9, 25, 36, 4, 3, "portée, contrôle et contre-attaque", ClassCategory::Melee},
-            {"Briseur lourd", 300, 18, 45, 65, 2, 3, "faible précision future, dégâts énormes", ClassCategory::Melee},
+            {"Lancier", 210, 10, 27, 39, 4, 3, "portée, contrôle et contre-attaque", ClassCategory::Melee},
+            {"Briseur lourd", 300, 15, 38, 58, 2, 2, "faible précision future, dégâts énormes", ClassCategory::Melee},
 
-            {"Archer", 160, 10, 28, 42, 4, 3, "distance, précision et mobilité", ClassCategory::Distance},
-            {"Rôdeur", 180, 9, 26, 38, 4, 3, "distance, pistage et survie", ClassCategory::Distance},
+            {"Archer", 160, 10, 29, 44, 5, 3, "distance, précision et mobilité", ClassCategory::Distance},
+            {"Rôdeur", 180, 9, 27, 40, 5, 3, "distance, pistage et survie", ClassCategory::Distance},
             {"Arbalétrier", 175, 12, 32, 46, 3, 3, "tir lourd, plus lent mais puissant", ClassCategory::Distance},
             {"Chasseur", 190, 9, 24, 37, 4, 3, "traque, pièges et survie", ClassCategory::Distance},
             {"Lanceur de dagues", 150, 11, 26, 44, 5, 2, "distance courte, multi-projectiles", ClassCategory::Distance},
@@ -71,9 +71,9 @@ namespace
             {"Clerc", 220, 6, 17, 26, 6, 2, "soin, foi et protection", ClassCategory::Support},
             {"Prêtre", 205, 5, 18, 28, 7, 2, "soin, lumière et soutien", ClassCategory::Support},
             {"Paladin", 280, 8, 22, 34, 5, 3, "tank sacré, protection et lumière", ClassCategory::Support},
-            {"Gardien", 320, 5, 16, 24, 5, 2, "protection pure, très défensif", ClassCategory::Support},
+            {"Gardien", 320, 4, 14, 22, 4, 1, "protection pure, très défensif", ClassCategory::Support},
             {"Templier", 260, 7, 22, 33, 5, 3, "foi martiale et anti-magie", ClassCategory::Support},
-            {"Tank sacré", 340, 4, 18, 28, 6, 2, "mur vivant, entrave et lumière", ClassCategory::Support},
+            {"Tank sacré", 340, 4, 15, 24, 4, 1, "mur vivant, entrave et lumière", ClassCategory::Support},
 
             {"Druide", 190, 7, 20, 30, 5, 3, "nature, survie et magie sauvage", ClassCategory::Hybrid},
             {"Chevalier runique", 240, 8, 26, 39, 4, 4, "arme lourde et magie gravée", ClassCategory::Hybrid},
@@ -303,20 +303,20 @@ PlayerClass ClassCatalog::createEvolvedClassFromClass(const std::string& current
 
     if (normalizedName == normalizeClassName("Chevalier"))
     {
-        return createClassByName("Paladin");
+        return PlayerClass("Chevalier éveillé", 300, 9, 28, 42, 5, 3);
     }
 
     if (normalizedName == normalizeClassName("Assassin")
         || normalizedName == normalizeClassName("Classe Légère")
         || normalizedName == normalizeClassName("Roublard"))
     {
-        return createClassByName("Ombrelame");
+        return PlayerClass("Assassin éveillé", 210, 13, 34, 55, 6, 2);
     }
 
     if (normalizedName == normalizeClassName("Colosse")
         || normalizedName == normalizeClassName("Classe Lourde"))
     {
-        return createClassByName("Gardien");
+        return PlayerClass("Colosse éveillé", 500, 7, 18, 30, 2, 3);
     }
 
     if (normalizedName == normalizeClassName("Mage flame")
@@ -331,7 +331,36 @@ PlayerClass ClassCatalog::createEvolvedClassFromClass(const std::string& current
         return createClassByName("Paladin");
     }
 
-    return createClassByName("Chevalier runique");
+    if (normalizedName == normalizeClassName("Lancier"))
+    {
+        return PlayerClass("Maître de la hampe", 290, 12, 32, 48, 4, 3);
+    }
+
+    if (normalizedName == normalizeClassName("Archer")
+        || normalizedName == normalizeClassName("Rôdeur")
+        || normalizedName == normalizeClassName("Chasseur"))
+    {
+        return PlayerClass("Tireur éveillé", 230, 12, 34, 50, 4, 3);
+    }
+
+    if (normalizedName == normalizeClassName("Mage")
+        || normalizedName == normalizeClassName("Magicien")
+        || normalizedName == normalizeClassName("Ensorceleur")
+        || normalizedName == normalizeClassName("Sorcier"))
+    {
+        return PlayerClass("Mage éveillé", 210, 9, 36, 58, 4, 5);
+    }
+
+    PlayerClass baseClass = createClassByName(currentClass);
+    return PlayerClass(
+        baseClass.getName() + " éveillé",
+        baseClass.getMaxHp() + 70,
+        baseClass.getMinDamage() + 2,
+        baseClass.getMaxDamage() + 6,
+        baseClass.getCriticalDamage() + 10,
+        baseClass.getHealingPotionCount(),
+        baseClass.getDamagePotionCount()
+    );
 }
 
 // EN: createClassFromNormalizedName declares or implements a focused behavior used by this module.

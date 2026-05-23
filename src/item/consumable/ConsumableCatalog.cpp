@@ -7,6 +7,17 @@
 
 // EN: createBasicHealingPotion declares or implements a focused behavior used by this module.
 // FR: createBasicHealingPotion déclare ou implémente un comportement précis utilisé par ce module.
+Consumable ConsumableCatalog::createMinorHealingPotion()
+{
+    return Consumable(
+        "Petite potion de soin",
+        "Un soin faible, souvent utilisé quand on n\'a pas mieux.",
+        12,
+        ConsumableType::Healing,
+        28
+    );
+}
+
 Consumable ConsumableCatalog::createBasicHealingPotion()
 {
     return Consumable(
@@ -20,6 +31,17 @@ Consumable ConsumableCatalog::createBasicHealingPotion()
 
 // EN: createBasicDamagePotion declares or implements a focused behavior used by this module.
 // FR: createBasicDamagePotion déclare ou implémente un comportement précis utilisé par ce module.
+Consumable ConsumableCatalog::createMinorDamagePotion()
+{
+    return Consumable(
+        "Petite potion de rage",
+        "Une poussée offensive faible, mais parfois suffisante pour finir un ennemi.",
+        15,
+        ConsumableType::Damage,
+        14
+    );
+}
+
 Consumable ConsumableCatalog::createBasicDamagePotion()
 {
     return Consumable(
@@ -54,5 +76,93 @@ Consumable ConsumableCatalog::createReinforcedDamagePotion()
         70,
         ConsumableType::Damage,
         45
+    );
+}
+
+Consumable ConsumableCatalog::createGreaterHealingPotion()
+{
+    return Consumable(
+        "Potion de soin supérieure",
+        "Une potion plus propre, plus dense, utile quand les ennemis commencent à frapper sérieusement.",
+        105,
+        ConsumableType::Healing,
+        110
+    );
+}
+
+Consumable ConsumableCatalog::createMajorHealingPotion()
+{
+    return Consumable(
+        "Potion de soin majeure",
+        "Une potion rare capable de sauver un personnage qui aurait dû tomber.",
+        210,
+        ConsumableType::Healing,
+        175
+    );
+}
+
+Consumable ConsumableCatalog::createGreaterDamagePotion()
+{
+    return Consumable(
+        "Potion de rage majeure",
+        "Une rage concentrée, chère, brutale, à ne pas boire pour impressionner quelqu'un.",
+        145,
+        ConsumableType::Damage,
+        72
+    );
+}
+
+Consumable ConsumableCatalog::createExperimentalDamagePotion()
+{
+    return Consumable(
+        "Potion de rage expérimentale",
+        "Un produit instable de marché noir. Très puissant, mais clairement pas homologué par une guilde saine.",
+        320,
+        ConsumableType::Damage,
+        105
+    );
+}
+
+Consumable ConsumableCatalog::createDefensivePotion()
+{
+    return Consumable(
+        "Potion défensive",
+        "Potion de préparation défensive. Le vrai effet défensif sera branché avec les buffs complets.",
+        45,
+        ConsumableType::Buff,
+        18
+    );
+}
+
+Consumable ConsumableCatalog::createGreaterDefensivePotion()
+{
+    return Consumable(
+        "Potion défensive supérieure",
+        "Version plus dense d'une potion défensive, pensée pour les tanks et gardiens.",
+        115,
+        ConsumableType::Buff,
+        34
+    );
+}
+
+Consumable ConsumableCatalog::createPrecisionPotion()
+{
+    return Consumable(
+        "Potion de précision",
+        "Potion de buff pour tirs, dagues et gestes minutieux. Les bonus actifs viendront avec les techniques.",
+        70,
+        ConsumableType::Buff,
+        24
+    );
+}
+
+Consumable ConsumableCatalog::createWeakeningDebuffPotion()
+{
+    return Consumable(
+        "Fiole d'affaiblissement",
+        "Potion offensive/debuff à lancer sur une cible. Prévue pour le futur sous-menu de potions offensives.",
+        85,
+        ConsumableType::Debuff,
+        22
     );
 }

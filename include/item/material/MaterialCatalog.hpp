@@ -88,6 +88,15 @@ public:
     static Material createPreservationVials(int quantity = 1);
     static Material createCleanHarvestManual(int quantity = 1);
     static Material createMonsterDissectionGuide(int quantity = 1);
+    static Material createTrainingArrows(int quantity = 1);
+    static Material createTrainingBolts(int quantity = 1);
+    static Material createTrainingThrowingKnives(int quantity = 1);
+    static Material createBarbedArrows(int quantity = 1);
+    static Material createPiercingBolts(int quantity = 1);
+    static Material createBalancedThrowingKnives(int quantity = 1);
+    static Material createAshArrows(int quantity = 1);
+    static Material createFrozenBolts(int quantity = 1);
+    static Material createConductiveKnives(int quantity = 1);
 };
 
 #endif

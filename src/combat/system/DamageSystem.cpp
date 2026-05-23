@@ -7,6 +7,7 @@
 #include "combat/system/CombatClassSystem.hpp"
 
 #include "entity/Player.hpp"
+#include "entity/Monster.hpp"
 
 #include <iostream>
 
@@ -65,6 +66,35 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
 
     int classReductionPercentage =
         CombatClassSystem::getBaseDamageReductionPercentage(defender);
+
+    Monster* defendingMonster = dynamic_cast<Monster*>(&defender);
+    if (defendingMonster != nullptr)
+    {
+        const std::string raceText = defendingMonster->getRaceText();
+        const std::string typeText = defendingMonster->getType();
+
+        if (raceText.find("Slime") != std::string::npos)
+        {
+            classReductionPercentage += 6;
+        }
+        else if (raceText.find("Plante") != std::string::npos || typeText.find("résistante") != std::string::npos)
+        {
+            classReductionPercentage += 4;
+        }
+        else if (raceText.find("Mort-vivant") != std::string::npos)
+        {
+            classReductionPercentage += 5;
+        }
+        else if (raceText.find("Dragon") != std::string::npos || raceText.find("Draconide") != std::string::npos)
+        {
+            classReductionPercentage += 8;
+        }
+
+        if (defendingMonster->isElite())
+        {
+            classReductionPercentage += 3;
+        }
+    }
 
     if (classReductionPercentage > 0 && remainingDamage > 0)
     {

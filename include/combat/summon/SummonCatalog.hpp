@@ -36,6 +36,9 @@ public:
     // EN: createZodiacWisp declares or implements a focused behavior used by this module.
     // FR: createZodiacWisp déclare ou implémente un comportement précis utilisé par ce module.
     static Summon createZodiacWisp(const std::string& ownerName);
+    static Summon createGuardianTotem(const std::string& ownerName);
+    static Summon createRavenFamiliar(const std::string& ownerName);
+    static Summon createMirrorShard(const std::string& ownerName);
 
     static std::vector<Summon> createStarterSummonsForClass(
         const std::string& ownerName,

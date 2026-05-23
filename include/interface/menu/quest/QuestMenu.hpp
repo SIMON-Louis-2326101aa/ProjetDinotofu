@@ -19,18 +19,12 @@ private:
     // EN: openGuild declares or implements a focused behavior used by this module.
     // FR: openGuild déclare ou implémente un comportement précis utilisé par ce module.
     static void openGuild(Player& player);
-    // EN: talkToClient declares or implements a focused behavior used by this module.
-    // FR: talkToClient déclare ou implémente un comportement précis utilisé par ce module.
-    static void talkToClient(Player& player, const std::string& clientName);
     // EN: acceptGuildQuest declares or implements a focused behavior used by this module.
     // FR: acceptGuildQuest déclare ou implémente un comportement précis utilisé par ce module.
     static void acceptGuildQuest(Player& player);
     // EN: completeQuestAtClient declares or implements a focused behavior used by this module.
     // FR: completeQuestAtClient déclare ou implémente un comportement précis utilisé par ce module.
     static void completeQuestAtClient(Player& player, const std::string& clientName);
-    // EN: simulateQuestProgress declares or implements a focused behavior used by this module.
-    // FR: simulateQuestProgress déclare ou implémente un comportement précis utilisé par ce module.
-    static void simulateQuestProgress(Player& player);
     // EN: openExplorationMenu declares or implements a focused behavior used by this module.
     // FR: openExplorationMenu déclare ou implémente un comportement précis utilisé par ce module.
     static void openExplorationMenu(Player& player);
@@ -39,6 +33,9 @@ public:
     // EN: openQuestHub declares or implements a focused behavior used by this module.
     // FR: openQuestHub déclare ou implémente un comportement précis utilisé par ce module.
     static void openQuestHub(Player& player);
+    // EN: talkToClient opens a precise vendor/client quest dialogue from a shop.
+    // FR: talkToClient ouvre un dialogue de quêtes précis depuis une boutique.
+    static void talkToClient(Player& player, const std::string& clientName);
     // EN: consultOnly declares or implements a focused behavior used by this module.
     // FR: consultOnly déclare ou implémente un comportement précis utilisé par ce module.
     static void consultOnly(const Player& player);

@@ -9,6 +9,7 @@
 #include "core/Random.hpp"
 #include "quest/QuestCatalog.hpp"
 #include "item/material/MaterialCatalog.hpp"
+#include "entity/MonsterCatalog.hpp"
 
 #include <iostream>
 #include <vector>
@@ -82,6 +83,10 @@ namespace
         std::string style;
         std::string commonMaterialId;
         std::string rareMaterialId;
+        int minLevel;
+        int maxLevel;
+        std::string commonMonsters;
+        std::string rareMonsters;
     };
 
     struct ExplorationIntensity
@@ -94,6 +99,108 @@ namespace
         int carefulBonus;
     };
 
+    struct QuestSearchHint
+    {
+        bool hasAny = false;
+        bool wantsMaterial = false;
+        bool wantsCombat = false;
+        bool wantsExploration = false;
+        bool wantsBestiary = false;
+    };
+
+    int biomeEvolutionTriggerMargin(const Player& player)
+    {
+        // EN: Late game waits a little longer before old zones adapt too strongly.
+        // FR: En fin de jeu, les anciennes zones attendent un peu plus avant de se réadapter.
+        return player.getLevel() >= 80 ? 15 : 10;
+    }
+
+    int biomeEvolutionDangerBonus(const ExplorationBiome& biome)
+    {
+        if (biome.name == "Ruines effondrées") return 16;
+        if (biome.name == "Marais trouble") return 14;
+        if (biome.name == "Montagne froide") return 11;
+        if (biome.name == "Forêt ancienne") return 9;
+        if (biome.name == "Route commerciale") return 7;
+        return 5;
+    }
+
+    bool isBiomeEvolvedForPlayer(const Player& player, const ExplorationBiome& biome)
+    {
+        return player.getLevel() > biome.maxLevel + biomeEvolutionTriggerMargin(player);
+    }
+
+    int evolvedBiomeMinLevel(const Player& player, const ExplorationBiome& biome)
+    {
+        if (!isBiomeEvolvedForPlayer(player, biome))
+        {
+            return biome.minLevel;
+        }
+
+        const int playerLevel = player.getLevel();
+        const int gapWithNaturalMax = std::max(0, playerLevel - biome.maxLevel);
+        const int dynamicFloor = biome.maxLevel + gapWithNaturalMax / 2;
+
+        // EN: Old zones should become relevant again without erasing their easier identity.
+        // FR: Les anciennes zones redeviennent utiles sans perdre leur identité plus accessible.
+        return std::max(biome.maxLevel + 1, dynamicFloor);
+    }
+
+    int evolvedBiomeMaxLevel(const Player& player, const ExplorationBiome& biome)
+    {
+        if (!isBiomeEvolvedForPlayer(player, biome))
+        {
+            return biome.maxLevel;
+        }
+
+        const int playerLevel = player.getLevel();
+        const int dangerBonus = biomeEvolutionDangerBonus(biome);
+        const int ceiling = playerLevel + dangerBonus;
+
+        return std::max(evolvedBiomeMinLevel(player, biome) + 3, ceiling);
+    }
+
+    std::string evolvedBiomeRangeText(const Player& player, const ExplorationBiome& biome)
+    {
+        const int minLevel = evolvedBiomeMinLevel(player, biome);
+        const int maxLevel = evolvedBiomeMaxLevel(player, biome);
+
+        if (!isBiomeEvolvedForPlayer(player, biome))
+        {
+            return "niv. " + std::to_string(biome.minLevel) + "-" + std::to_string(biome.maxLevel);
+        }
+
+        return "niv. " + std::to_string(biome.minLevel) + "-" + std::to_string(biome.maxLevel)
+            + " -> zone évoluée " + std::to_string(minLevel) + "-" + std::to_string(maxLevel);
+    }
+
+    Monster createExplorationMonsterForBiome(const Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity)
+    {
+        int level = random.between(evolvedBiomeMinLevel(player, biome), evolvedBiomeMaxLevel(player, biome));
+
+        if (!isBiomeEvolvedForPlayer(player, biome) && level > player.getLevel() + 15)
+        {
+            level = player.getLevel() + 15;
+        }
+
+        if (intensity.name == "Sortie prudente" && level > player.getLevel() + 6)
+        {
+            level = player.getLevel() + 6;
+        }
+
+        if (intensity.name == "Sortie audacieuse")
+        {
+            level += random.between(0, 2);
+        }
+
+        if (level < 1)
+        {
+            level = 1;
+        }
+
+        return MonsterCatalog::createRandomMonsterForBiome(biome.name, level, random);
+    }
+
     std::string lowerCopy(std::string value)
     {
         std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
@@ -101,6 +208,116 @@ namespace
         });
 
         return value;
+    }
+
+    bool textContainsInsensitive(const std::string& value, const std::string& needle)
+    {
+        if (needle.empty())
+        {
+            return false;
+        }
+
+        return lowerCopy(value).find(lowerCopy(needle)) != std::string::npos;
+    }
+
+    bool questTextMentionsBiome(const Quest& quest, const std::string& biomeName)
+    {
+        return textContainsInsensitive(quest.location, biomeName)
+            || textContainsInsensitive(quest.targetFamily, biomeName)
+            || textContainsInsensitive(quest.objective, biomeName);
+    }
+
+    bool questCanUseBiomeMaterials(const Quest& quest, const ExplorationBiome& biome)
+    {
+        if (quest.requiredMaterialId.empty())
+        {
+            return false;
+        }
+
+        return quest.requiredMaterialId == biome.commonMaterialId
+            || quest.requiredMaterialId == biome.rareMaterialId;
+    }
+
+    bool questLooksRelevantForBiome(const Quest& quest, const ExplorationBiome& biome)
+    {
+        if (quest.turnedIn || quest.completed || !quest.accepted)
+        {
+            return false;
+        }
+
+        if (questTextMentionsBiome(quest, biome.name) || questCanUseBiomeMaterials(quest, biome))
+        {
+            return true;
+        }
+
+        if (quest.objectiveType == "livraison")
+        {
+            if ((quest.targetFamily == "Plantes" || textContainsInsensitive(quest.targetFamily, "consommable"))
+                && (biome.commonMaterialId == "bitter_healing_leaf" || biome.rareMaterialId == "mountain_blue_flower" || biome.commonMaterialId == "slime_residue"))
+            {
+                return true;
+            }
+
+            if ((textContainsInsensitive(quest.targetFamily, "forge") || textContainsInsensitive(quest.targetFamily, "arme") || textContainsInsensitive(quest.targetFamily, "armure") || textContainsInsensitive(quest.targetFamily, "matériaux"))
+                && (biome.commonMaterialId == "rusted_metal_fragment" || biome.commonMaterialId == "worn_leather_piece" || biome.rareMaterialId == "arcane_dust"))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    QuestSearchHint getQuestSearchHintForBiome(const Player& player, const ExplorationBiome& biome)
+    {
+        QuestSearchHint hint;
+
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (!questLooksRelevantForBiome(quest, biome))
+            {
+                continue;
+            }
+
+            hint.hasAny = true;
+            if (quest.objectiveType == "livraison") hint.wantsMaterial = true;
+            if (quest.objectiveType == "combat") hint.wantsCombat = true;
+            if (quest.objectiveType == "exploration") hint.wantsExploration = true;
+            if (quest.objectiveType == "bestiaire") hint.wantsBestiary = true;
+        }
+
+        return hint;
+    }
+
+    int adjustExplorationRollForActiveQuests(int roll, Random& random, const QuestSearchHint& hint)
+    {
+        if (!hint.hasAny)
+        {
+            return roll;
+        }
+
+        // Bonus léger : environ 15% de chances de transformer une sortie neutre en piste liée à une quête.
+        if (random.between(1, 100) > 15)
+        {
+            return roll;
+        }
+
+        if (hint.wantsCombat)
+        {
+            return random.between(67, 91);
+        }
+
+        if (hint.wantsExploration || hint.wantsBestiary)
+        {
+            return random.between(25, 37);
+        }
+
+        if (hint.wantsMaterial)
+        {
+            return random.between(1, 24);
+        }
+
+        return roll;
     }
 
     std::string miniBossNameForBiome(const ExplorationBiome& biome, bool evolved)
@@ -201,7 +418,7 @@ namespace
 
         if (clientName == "Alchimiste" || clientName == "Herboriste" || clientName == "Vendeur de consommables")
         {
-            std::vector<std::string> biomes = {"Forêt ancienne", "Marais trouble", "Montagne froide", "Plaine sauvage"};
+            std::vector<std::string> biomes = {"Forêt ancienne", "Mares gélatineuses", "Marais trouble", "Montagne froide", "Plaine sauvage"};
             return biomes[random.between(0, static_cast<int>(biomes.size()) - 1)];
         }
 
@@ -213,17 +430,17 @@ namespace
 
         if (clientName == "Vendeur de composants" || clientName == "Villageois nerveux")
         {
-            std::vector<std::string> biomes = {"Forêt ancienne", "Marais trouble", "Route commerciale", "Ruines effondrées", "Plaine sauvage"};
+            std::vector<std::string> biomes = {"Forêt ancienne", "Mares gélatineuses", "Marais trouble", "Route commerciale", "Ruines effondrées", "Plaine sauvage"};
             return biomes[random.between(0, static_cast<int>(biomes.size()) - 1)];
         }
 
         if (clientName == "Bibliothécaire")
         {
-            std::vector<std::string> biomes = {"Forêt ancienne", "Montagne froide", "Marais trouble", "Ruines effondrées"};
+            std::vector<std::string> biomes = {"Forêt ancienne", "Mares gélatineuses", "Montagne froide", "Marais trouble", "Ruines effondrées"};
             return biomes[random.between(0, static_cast<int>(biomes.size()) - 1)];
         }
 
-        std::vector<std::string> biomes = {"Forêt ancienne", "Montagne froide", "Marais trouble", "Route commerciale", "Ruines effondrées", "Plaine sauvage"};
+        std::vector<std::string> biomes = {"Forêt ancienne", "Mares gélatineuses", "Montagne froide", "Marais trouble", "Route commerciale", "Ruines effondrées", "Plaine sauvage"};
         return biomes[random.between(0, static_cast<int>(biomes.size()) - 1)];
     }
 
@@ -246,6 +463,12 @@ namespace
             std::cout << " [" << preview.getQualityLabel() << "]";
         }
         std::cout << " x" << quantity << std::endl;
+    }
+
+
+    bool hasPotentialQuestForBiome(const Player& player, const ExplorationBiome& biome)
+    {
+        return getQuestSearchHintForBiome(player, biome).hasAny;
     }
 
     // EN: progressExplorationQuests declares or implements a focused behavior used by this module.
@@ -294,13 +517,17 @@ namespace
     // FR: simulateUnexpectedExplorationFight déclare ou implémente un comportement précis utilisé par ce module.
     void simulateUnexpectedExplorationFight(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity)
     {
-        int damage = random.between(4 + player.getLevel(), 12 + player.getLevel() * 2);
+        Monster localMonster = createExplorationMonsterForBiome(player, random, biome, intensity);
+        int damage = random.between(localMonster.getMinDamage(), localMonster.getMaxDamage() + player.getLevel());
         int actualDamage = std::min(damage, std::max(0, player.getHp() - 1));
-        int experience = 12 + player.getLevel() * 5 + random.between(0, 12);
+        int experience = 10 + localMonster.getLevel() * 6 + random.between(0, 12);
         std::string quality = chooseExplorationQuality(random, false);
 
         std::cout << "Un mouvement anormal coupe ta fouille." << std::endl;
-        std::cout << "Un ennemi surgit sans prévenir : ce n'était pas une sortie de combat volontaire." << std::endl;
+        std::cout << "Un ennemi surgit sans prévenir : " << localMonster.getName()
+                  << " [niveau " << localMonster.getLevel() << "]." << std::endl;
+        std::cout << "Zone : " << biome.name << " | Présences communes : " << biome.commonMonsters
+                  << " | Rares/élites : " << biome.rareMonsters << "." << std::endl;
 
         if (actualDamage > 0)
         {
@@ -843,11 +1070,11 @@ void QuestMenu::openQuestHub(Player& player)
         std::cout << "0 : Retour" << std::endl;
         std::cout << "1 : Consulter le journal de quêtes" << std::endl;
         std::cout << "2 : Aller à la guilde" << std::endl;
-        std::cout << "3 : Faire avancer une quête active" << std::endl;
+        std::cout << "Note : les quêtes progressent maintenant en combattant, explorant, récupérant des ressources ou battant les bonnes cibles." << std::endl;
         std::cout << "============================" << std::endl;
         std::cout << "> ";
 
-        int choice = Console::askNumberBetween(0, 3, "Choix invalide.");
+        int choice = Console::askNumberBetween(0, 2, "Choix invalide.");
         Console::clear();
 
         if (choice == 0)
@@ -864,10 +1091,6 @@ void QuestMenu::openQuestHub(Player& player)
         else if (choice == 2)
         {
             openGuild(player);
-        }
-        else if (choice == 3)
-        {
-            simulateQuestProgress(player);
         }
     }
 }
@@ -1502,12 +1725,13 @@ void QuestMenu::maybeOfferRandomInterception(Player& player)
 void QuestMenu::openExplorationMenu(Player& player)
 {
     std::vector<ExplorationBiome> biomes = {
-        {"Forêt ancienne", "biome végétal, humide, propice aux plantes et aux bêtes discrètes", "bitter_healing_leaf", "mountain_blue_flower"},
-        {"Montagne froide", "biome rocheux, dur, avec minerais, fleurs rares et vents coupants", "rusted_metal_fragment", "mountain_blue_flower"},
-        {"Marais trouble", "biome sale, collant, parfait pour les résidus étranges et les mauvaises surprises", "slime_residue", "arcane_dust"},
-        {"Route commerciale", "biome de passage, traces de voyageurs, caisses perdues et arnaques au sol", "battle_torn_badge", "worn_leather_piece"},
-        {"Ruines effondrées", "biome ancien, instable, avec os, poussière arcanique et coffres suspects", "cracked_bone", "arcane_dust"},
-        {"Plaine sauvage", "biome ouvert, plus calme, mais jamais totalement sûr", "worn_leather_piece", "wolf_fang"}
+        {"Plaine sauvage", "biome ouvert, accessible aux débutants, mais jamais totalement sûr", "worn_leather_piece", "wolf_fang", 1, 10, "bêtes faibles, sangliers, loups isolés", "alphas jeunes, ours errants"},
+        {"Route commerciale", "biome de passage accessible, avec voyageurs, bandits faibles et caisses perdues", "battle_torn_badge", "worn_leather_piece", 1, 14, "bandits, gobelins, humanoïdes opportunistes", "pilleurs vétérans, embuscades organisées"},
+        {"Mares gélatineuses", "zone connue pour ses slimes : beaucoup de couleurs, peu de logique humaine, beaucoup de résidus", "slime_residue", "arcane_dust", 3, 18, "slimes verts, bleus, jaunes, rouges, ambrés et gris", "slimes chromatiques, dorés ou noirs anciens"},
+        {"Forêt ancienne", "biome végétal plus sérieux, humide, propice aux plantes et aux bêtes discrètes", "bitter_healing_leaf", "mountain_blue_flower", 5, 20, "loups, racines, plantes hostiles", "alphas de mousse, gardiens de ronces"},
+        {"Montagne froide", "biome rocheux intermédiaire, dur, avec minerais, fleurs rares et vents coupants", "rusted_metal_fragment", "mountain_blue_flower", 7, 24, "bêtes de givre, élémentaires, briseurs", "yétis, draconides froids, élites rocheuses"},
+        {"Marais trouble", "biome dangereux, sale, collant et difficile d'accès en début de partie", "slime_residue", "arcane_dust", 12, 32, "slimes corrosifs, noyés, insectoïdes, prédateurs de boue", "slimes couronnés, mages putrides, noyés anciens"},
+        {"Ruines effondrées", "biome ancien dangereux, instable, avec os, poussière arcanique et coffres suspects", "cracked_bone", "arcane_dust", 14, 36, "squelettes, goules, esprits, armures fissurées", "revenants, armures mortes, anomalies"}
     };
 
     std::vector<ExplorationIntensity> intensities = {
@@ -1523,11 +1747,44 @@ void QuestMenu::openExplorationMenu(Player& player)
         std::cout << "Exploration = recherche passive : plantes, matériaux, traces, trésors, coffres ou événements." << std::endl;
         std::cout << "Tu ne lances pas volontairement un combat, mais un combat inattendu peut arriver." << std::endl;
         std::cout << std::endl;
+
+        bool hasEvolvedBiome = false;
+        for (const ExplorationBiome& biome : biomes)
+        {
+            if (isBiomeEvolvedForPlayer(player, biome))
+            {
+                if (!hasEvolvedBiome)
+                {
+                    std::cout << "Zones qui ont évolué avec ton niveau :" << std::endl;
+                    hasEvolvedBiome = true;
+                }
+
+                std::cout << "- " << biome.name << " : "
+                          << biome.minLevel << "-" << biome.maxLevel
+                          << " devient " << evolvedBiomeMinLevel(player, biome)
+                          << "-" << evolvedBiomeMaxLevel(player, biome)
+                          << " autour de toi." << std::endl;
+            }
+        }
+
+        if (hasEvolvedBiome)
+        {
+            std::cout << "Le monde ne t'attend pas immobile : les anciennes zones peuvent attirer des menaces adaptées." << std::endl;
+            std::cout << std::endl;
+        }
+
         std::cout << "0 : Retour" << std::endl;
 
         for (int i = 0; i < static_cast<int>(biomes.size()); ++i)
         {
-            std::cout << i + 1 << " : " << biomes[i].name << " — " << biomes[i].style << std::endl;
+            std::cout << i + 1 << " : " << biomes[i].name
+                      << " (" << evolvedBiomeRangeText(player, biomes[i]) << ")"
+                      << " — " << biomes[i].style;
+            if (hasPotentialQuestForBiome(player, biomes[i]))
+            {
+                std::cout << " [Objectif de quête probable]";
+            }
+            std::cout << std::endl;
         }
 
         std::cout << "=================================" << std::endl;
@@ -1565,12 +1822,28 @@ void QuestMenu::openExplorationMenu(Player& player)
 
         const ExplorationIntensity& intensity = intensities[intensityChoice - 1];
         Random random;
+        QuestSearchHint questHint = getQuestSearchHintForBiome(player, biome);
         int roll = adjustExplorationEventRoll(random.between(1, 100), intensity);
+        roll = adjustExplorationRollForActiveQuests(roll, random, questHint);
         bool carefulRecovery = chooseCarefulRecovery(random, intensity);
 
         std::cout << "========== " << biome.name << " ==========" << std::endl;
         std::cout << "Style : " << biome.style << "." << std::endl;
+        std::cout << "Niveaux locaux : " << biome.minLevel << "-" << biome.maxLevel << "." << std::endl;
+        if (isBiomeEvolvedForPlayer(player, biome))
+        {
+            std::cout << "Adaptation de zone : ton niveau attire maintenant des menaces plus fortes ici." << std::endl;
+            std::cout << "Niveaux effectifs actuels : " << evolvedBiomeMinLevel(player, biome)
+                      << "-" << evolvedBiomeMaxLevel(player, biome) << "." << std::endl;
+            std::cout << "Les récompenses suivent mieux ce danger, car les rencontres générées montent aussi en niveau." << std::endl;
+        }
+        std::cout << "Monstres surtout présents : " << biome.commonMonsters << "." << std::endl;
+        std::cout << "Rares / élites typiques : " << biome.rareMonsters << "." << std::endl;
         std::cout << "Approche : " << intensity.name << "." << std::endl;
+        if (questHint.hasAny)
+        {
+            std::cout << "Ton journal réagit légèrement : cette zone peut aider une quête active, sans garantir la trouvaille." << std::endl;
+        }
         std::cout << std::endl;
 
         if (roll <= 24)
@@ -1640,98 +1913,4 @@ void QuestMenu::openExplorationMenu(Player& player)
         Console::waitForEnter();
         Console::clear();
     }
-}
-
-// EN: simulateQuestProgress declares or implements a focused behavior used by this module.
-// FR: simulateQuestProgress déclare ou implémente un comportement précis utilisé par ce module.
-void QuestMenu::simulateQuestProgress(Player& player)
-{
-    std::vector<Quest>& quests = player.getQuestLog().getQuests();
-    std::vector<int> activeIndexes;
-
-    for (int i = 0; i < static_cast<int>(quests.size()); ++i)
-    {
-        if (quests[i].accepted && !quests[i].completed && !quests[i].turnedIn
-            // EN: quests[i].requiredMaterialId.empty declares or implements a focused behavior used by this module.
-            // FR: quests[i].requiredMaterialId.empty déclare ou implémente un comportement précis utilisé par ce module.
-            && quests[i].requiredMaterialId.empty())
-        {
-            activeIndexes.push_back(i);
-        }
-    }
-
-    if (activeIndexes.empty())
-    {
-        std::cout << "Aucune quête active à faire avancer." << std::endl;
-        std::cout << "Accepte une quête à la guilde ou auprès d'un PNJ client." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
-        return;
-    }
-
-    std::cout << "========== FAIRE AVANCER UNE QUÊTE ==========" << std::endl;
-    std::cout << "Cette option simule une sortie courte en attendant les vraies zones." << std::endl;
-    std::cout << "Les quêtes de livraison ne sont pas listées ici : elles se rendent avec les ressources demandées." << std::endl;
-    std::cout << "0 : Retour" << std::endl;
-
-    for (int i = 0; i < static_cast<int>(activeIndexes.size()); ++i)
-    {
-        const Quest& quest = quests[activeIndexes[i]];
-        std::cout << i + 1 << " : [Rang " << quest.rank << "] " << quest.title
-                  << " | " << (quest.targetFamily.empty() ? "Objectif" : quest.targetFamily)
-                  << " | " << quest.progress << "/" << quest.target
-                  << std::endl;
-    }
-
-    std::cout << "=============================================" << std::endl;
-    std::cout << "> ";
-
-    int choice = Console::askNumberBetween(0, static_cast<int>(activeIndexes.size()), "Choix invalide.");
-    Console::clear();
-
-    if (choice == 0)
-    {
-        return;
-    }
-
-    Quest& quest = quests[activeIndexes[choice - 1]];
-    Random random;
-    int roll = random.rollD20();
-    int progressGain = 1;
-
-    if (roll >= 18)
-    {
-        progressGain = 3;
-    }
-    else if (roll >= 14)
-    {
-        progressGain = 2;
-    }
-
-    quest.progress += progressGain;
-
-    if (quest.progress >= quest.target)
-    {
-        quest.progress = quest.target;
-        quest.completed = true;
-    }
-
-    std::cout << "Sortie liée à : " << quest.title << std::endl;
-    std::cout << "Cible : " << (quest.targetFamily.empty() ? "objectif général" : quest.targetFamily) << std::endl;
-    std::cout << "Jet d'exécution : " << roll << "/20" << std::endl;
-    std::cout << "Progression gagnée : +" << progressGain << std::endl;
-
-    if (quest.completed)
-    {
-        std::cout << "Objectif terminé. Retourne voir le client : " << quest.client << "." << std::endl;
-    }
-    else
-    {
-        std::cout << "Progression actuelle : " << quest.progress << "/" << quest.target << std::endl;
-    }
-
-    std::cout << std::endl;
-    Console::waitForEnter();
-    Console::clear();
 }

@@ -9,6 +9,7 @@
 #include "entity/Player.hpp"
 #include "core/Random.hpp"
 #include "progression/DifficultyMode.hpp"
+#include <vector>
 
 class Combat
 {
@@ -28,8 +29,18 @@ public:
         DifficultyMode difficulty
     );
 
+    void launchBossPveTeam(
+        std::vector<Player*>& party,
+        DifficultyMode difficulty
+    );
+
     void launchMonsterPve(
         Player& player1,
+        DifficultyMode difficulty
+    );
+
+    void launchMonsterPveTeam(
+        std::vector<Player*>& party,
         DifficultyMode difficulty
     );
 };

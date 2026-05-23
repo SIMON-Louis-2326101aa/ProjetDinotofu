@@ -332,7 +332,7 @@ AIAction CombatAI::chooseDangerBossAction(
         return AIAction::HealingPotion;
     }
 
-    if (ultimateAvailable && roll <= 75)
+    if (ultimateAvailable && roll <= 55)
     {
         return AIAction::Ultimate;
     }
@@ -350,7 +350,7 @@ AIAction CombatAI::chooseBossActionWithUltimateAvailable(
     int roll
 )
 {
-    if (roll <= 55)
+    if (roll <= 38)
     {
         return AIAction::Ultimate;
     }

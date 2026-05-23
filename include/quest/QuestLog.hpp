@@ -8,6 +8,7 @@
 
 #include "quest/Quest.hpp"
 #include "item/Inventory.hpp"
+#include "entity/Monster.hpp"
 
 #include <string>
 #include <vector>
@@ -53,6 +54,7 @@ public:
     // EN: progressCombatQuestsByFamily declares or implements a focused behavior used by this module.
     // FR: progressCombatQuestsByFamily déclare ou implémente un comportement précis utilisé par ce module.
     int progressCombatQuestsByFamily(int defeatedEnemyCount, const std::string& encounterFamily);
+    int progressCombatQuestsForMonster(const Monster& monster, int amount = 1);
     // EN: refreshMaterialDeliveryQuests declares or implements a focused behavior used by this module.
     // FR: refreshMaterialDeliveryQuests déclare ou implémente un comportement précis utilisé par ce module.
     int refreshMaterialDeliveryQuests(const class Inventory& inventory);

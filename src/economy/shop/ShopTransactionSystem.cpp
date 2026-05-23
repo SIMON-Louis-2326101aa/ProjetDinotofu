@@ -29,7 +29,8 @@ namespace
             || type == ShopType::Plant
             || type == ShopType::Library
             || type == ShopType::Blacksmith
-            || type == ShopType::Alchemist;
+            || type == ShopType::Alchemist
+            || type == ShopType::BlackMarket;
     }
 
     // EN: rollShopPercent declares or implements a focused behavior used by this module.
@@ -61,7 +62,8 @@ namespace
             || id == "shadow_thread"
             || id == "kitsune_ember"
             || id == "draconic_scale_fragment"
-            || id == "unstable_core";
+            || id == "unstable_core"
+            || id == "anomaly_glitch_fragment";
     }
 
     // EN: prefersPureQuality declares or implements a focused behavior used by this module.
@@ -77,14 +79,43 @@ namespace
             || id == "shadow_thread"
             || id == "kitsune_ember"
             || id == "draconic_scale_fragment"
-            || id == "unstable_core";
+            || id == "unstable_core"
+            || id == "anomaly_glitch_fragment";
     }
 
     // EN: createShopMaterialWithPossibleRareQuality declares or implements a focused behavior used by this module.
     // FR: createShopMaterialWithPossibleRareQuality déclare ou implémente un comportement précis utilisé par ce module.
+    bool looksLikeBlackMarketItem(const ShopItem& item)
+    {
+        const std::string name = item.getName();
+        return name.find("interdit") != std::string::npos
+            || name.find("noir") != std::string::npos
+            || name.find("glitch") != std::string::npos
+            || name.find("non déclarée") != std::string::npos
+            || name.find("expérimental") != std::string::npos;
+    }
+
     Material createShopMaterialWithPossibleRareQuality(const ShopItem& item)
     {
         Material material = MaterialCatalog::createById(item.getId(), 1);
+
+        if (looksLikeBlackMarketItem(item))
+        {
+            if (rollShopPercent(18))
+            {
+                material.setQuality("exceptional");
+            }
+            else if (rollShopPercent(45))
+            {
+                material.setQuality(prefersPureQuality(item.getId()) ? "pure" : "high");
+            }
+            else if (rollShopPercent(20))
+            {
+                material.setQuality("impure");
+            }
+
+            return material;
+        }
 
         if (canRareQualityBeSoldByShop(item.getId()) && rollShopPercent(4))
         {
@@ -101,8 +132,20 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
 {
     const std::string id = item.getId();
 
-    return id == "basic_healing_potion"
+    return id == "minor_healing_potion"
+        || id == "basic_healing_potion"
+        || id == "reinforced_healing_potion"
+        || id == "greater_healing_potion"
+        || id == "major_healing_potion"
+        || id == "minor_damage_potion"
         || id == "basic_damage_potion"
+        || id == "reinforced_damage_potion"
+        || id == "greater_damage_potion"
+        || id == "experimental_damage_potion"
+        || id == "defensive_potion"
+        || id == "greater_defensive_potion"
+        || id == "precision_potion"
+        || id == "weakening_debuff_potion"
         || id == "rusty_sword"
         || id == "worn_leather_armor"
         || id == "goblin_ear"
@@ -139,6 +182,7 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "unstable_core"
         || id == "precision_harvest_tools"
         || id == "preservation_vials"
+        || id == "anomaly_glitch_fragment"
         || id == "clean_harvest_manual"
         || id == "monster_dissection_guide";
 }
@@ -177,13 +221,61 @@ bool ShopTransactionSystem::buyItem(
         return false;
     }
 
-    if (item.getId() == "basic_healing_potion")
+    if (item.getId() == "minor_healing_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createMinorHealingPotion());
+    }
+    else if (item.getId() == "basic_healing_potion")
     {
         player.getInventory().addConsumable(ConsumableCatalog::createBasicHealingPotion());
+    }
+    else if (item.getId() == "reinforced_healing_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createReinforcedHealingPotion());
+    }
+    else if (item.getId() == "greater_healing_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createGreaterHealingPotion());
+    }
+    else if (item.getId() == "major_healing_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createMajorHealingPotion());
+    }
+    else if (item.getId() == "minor_damage_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createMinorDamagePotion());
     }
     else if (item.getId() == "basic_damage_potion")
     {
         player.getInventory().addConsumable(ConsumableCatalog::createBasicDamagePotion());
+    }
+    else if (item.getId() == "reinforced_damage_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createReinforcedDamagePotion());
+    }
+    else if (item.getId() == "greater_damage_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createGreaterDamagePotion());
+    }
+    else if (item.getId() == "experimental_damage_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createExperimentalDamagePotion());
+    }
+    else if (item.getId() == "defensive_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createDefensivePotion());
+    }
+    else if (item.getId() == "greater_defensive_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createGreaterDefensivePotion());
+    }
+    else if (item.getId() == "precision_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createPrecisionPotion());
+    }
+    else if (item.getId() == "weakening_debuff_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createWeakeningDebuffPotion());
     }
     else if (item.getId() == "rusty_sword")
     {
@@ -203,7 +295,14 @@ bool ShopTransactionSystem::buyItem(
             std::cout << "Trouvaille rare en boutique : qualité "
                       << boughtMaterial.getQualityLabel()
                       << "." << std::endl;
-            std::cout << "Les objets exceptionnels restent impossibles à acheter : il faut les récupérer ou les fabriquer." << std::endl;
+            if (boughtMaterial.getQuality() == "exceptional")
+            {
+                std::cout << "Le marché noir vient de te vendre quelque chose qui ne devrait normalement pas être achetable." << std::endl;
+            }
+            else
+            {
+                std::cout << "Les objets exceptionnels restent normalement impossibles à acheter hors circuits douteux." << std::endl;
+            }
         }
     }
 

@@ -32,10 +32,26 @@ void Combat::launchBossPve(
     BossPveMode::run(player1, random, difficulty);
 }
 
+void Combat::launchBossPveTeam(
+    std::vector<Player*>& party,
+    DifficultyMode difficulty
+)
+{
+    BossPveMode::runTeam(party, random, difficulty);
+}
+
 void Combat::launchMonsterPve(
     Player& player1,
     DifficultyMode difficulty
 )
 {
     MonsterPveMode::run(player1, random, difficulty);
+}
+
+void Combat::launchMonsterPveTeam(
+    std::vector<Player*>& party,
+    DifficultyMode difficulty
+)
+{
+    MonsterPveMode::runTeam(party, random, difficulty);
 }

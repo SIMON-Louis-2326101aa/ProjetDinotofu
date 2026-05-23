@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <vector>
 
 namespace
 {
@@ -17,6 +18,99 @@ namespace
         });
 
         return value;
+    }
+
+
+    std::vector<std::string> monsterQuestFamilies(const Monster& monster)
+    {
+        std::vector<std::string> families;
+
+        families.push_back("Créatures locales");
+        families.push_back(monster.getRaceText());
+        families.push_back(monster.getType());
+
+        if (monster.isEvolved())
+        {
+            families.push_back("Créature évoluée");
+            families.push_back("Mini-boss / menace évoluée");
+        }
+
+        if (monster.isElite())
+        {
+            families.push_back("Élite / menace");
+            families.push_back("Menace avancée");
+        }
+
+        switch (monster.getRace())
+        {
+            case Race::Gobelin:
+            case Race::Hobgobelin:
+            case Race::Orc:
+            case Race::Humain:
+            case Race::SemiHumain:
+            case Race::Elfe:
+            case Race::ElfeNoir:
+            case Race::Nain:
+            case Race::Gnome:
+            case Race::Halfelin:
+            case Race::Tieffelin:
+            case Race::Aasimar:
+            case Race::Kitsune:
+            case Race::Fee:
+            case Race::SemiDragon:
+                families.push_back("Humanoïdes / embuscades");
+                break;
+            case Race::Bete:
+            case Race::Plante:
+            case Race::Insectoide:
+            case Race::Slime:
+            case Race::Draconide:
+                families.push_back("Créatures faibles");
+                families.push_back("Créatures naturelles");
+                break;
+            case Race::MortVivant:
+                families.push_back("Morts-vivants et reliques");
+                families.push_back("Ruines effondrées");
+                break;
+            case Race::Dragon:
+            case Race::Demon:
+            case Race::Aberration:
+            case Race::AnomalieArcanique:
+                families.push_back("Menace avancée");
+                break;
+            case Race::Elementaire:
+            case Race::Esprit:
+                families.push_back("Bestiaire / observation");
+                families.push_back("Variation d'énergie");
+                break;
+            default:
+                break;
+        }
+
+        std::string name = normalizeQuestText(monster.getName());
+        if (name.find("loup") != std::string::npos || name.find("sanglier") != std::string::npos || name.find("ours") != std::string::npos)
+        {
+            families.push_back("Forêt ancienne / créatures naturelles");
+            families.push_back("Plaine sauvage / créatures locales");
+        }
+        if (name.find("slime") != std::string::npos)
+        {
+            families.push_back("Marais trouble / slimes et noyés");
+        }
+        if (name.find("gobelin") != std::string::npos || name.find("bandit") != std::string::npos || name.find("pillard") != std::string::npos)
+        {
+            families.push_back("Route commerciale / humanoïdes et embuscades");
+        }
+        if (name.find("squelette") != std::string::npos || name.find("goule") != std::string::npos || name.find("revenant") != std::string::npos)
+        {
+            families.push_back("Ruines effondrées / morts-vivants et reliques");
+        }
+        if (name.find("yéti") != std::string::npos || name.find("roche") != std::string::npos || name.find("givre") != std::string::npos)
+        {
+            families.push_back("Montagne froide / bêtes de givre");
+        }
+
+        return families;
     }
 
     // EN: questTargetMatchesEncounter declares or implements a focused behavior used by this module.
@@ -232,7 +326,7 @@ int QuestLog::progressCombatQuestsByFamily(int defeatedEnemyCount, const std::st
             continue;
         }
 
-        if (quest.objectiveType != "combat" && quest.objectiveType != "exploration" && quest.objectiveType != "bestiaire")
+        if (quest.objectiveType != "combat" && quest.objectiveType != "bestiaire")
         {
             continue;
         }
@@ -243,6 +337,63 @@ int QuestLog::progressCombatQuestsByFamily(int defeatedEnemyCount, const std::st
         }
 
         quest.progress += defeatedEnemyCount;
+
+        if (quest.progress >= quest.target)
+        {
+            quest.progress = quest.target;
+            quest.completed = true;
+        }
+
+        updated++;
+    }
+
+    return updated;
+}
+
+
+int QuestLog::progressCombatQuestsForMonster(const Monster& monster, int amount)
+{
+    if (amount <= 0)
+    {
+        return 0;
+    }
+
+    int updated = 0;
+    std::vector<std::string> families = monsterQuestFamilies(monster);
+
+    for (Quest& quest : quests)
+    {
+        if (!quest.accepted || quest.completed || quest.turnedIn)
+        {
+            continue;
+        }
+
+        if (!quest.requiredMaterialId.empty() && quest.requiredMaterialQuantity > 0)
+        {
+            continue;
+        }
+
+        if (quest.objectiveType != "combat" && quest.objectiveType != "bestiaire")
+        {
+            continue;
+        }
+
+        bool matches = false;
+        for (const std::string& family : families)
+        {
+            if (questTargetMatchesEncounter(quest, family))
+            {
+                matches = true;
+                break;
+            }
+        }
+
+        if (!matches)
+        {
+            continue;
+        }
+
+        quest.progress += amount;
 
         if (quest.progress >= quest.target)
         {

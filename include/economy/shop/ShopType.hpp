@@ -19,6 +19,7 @@ enum class ShopType
     Library,
     Blacksmith,
     Alchemist,
+    BlackMarket,
     Unknown
 };
 

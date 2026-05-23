@@ -10,6 +10,7 @@
 #include "core/Random.hpp"
 
 #include <vector>
+#include <string>
 
 class MonsterCatalog
 {
@@ -42,6 +43,7 @@ public:
     // EN: createRandomMonsterForLevel declares or implements a focused behavior used by this module.
     // FR: createRandomMonsterForLevel déclare ou implémente un comportement précis utilisé par ce module.
     static Monster createRandomMonsterForLevel(int level, Random& random);
+    static Monster createRandomMonsterForBiome(const std::string& biomeName, int level, Random& random);
     // EN: createEvolvedVariant declares or implements a focused behavior used by this module.
     // FR: createEvolvedVariant déclare ou implémente un comportement précis utilisé par ce module.
     static Monster createEvolvedVariant(const Monster& baseMonster, Random& random);

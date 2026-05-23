@@ -25,6 +25,24 @@ public:
         int damageBonus
     );
 
+    static void executeWeaponTechnique(
+        Entity& attacker,
+        Entity& defender,
+        Random& random
+    );
+
+    static void executeHeavyAttack(
+        Entity& attacker,
+        Entity& defender,
+        Random& random
+    );
+
+    static void executeQuickAttack(
+        Entity& attacker,
+        Entity& defender,
+        Random& random
+    );
+
     static bool executeHealingPotion(
         Entity& entity,
         int potionHealAmount

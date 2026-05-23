@@ -22,12 +22,18 @@ struct AccountSaveSummary
 struct CharacterSaveSummary
 {
     std::string accountName;
+    std::string creatorAccountName;
+    std::string currentOwnerAccountName;
     std::string characterName;
     std::string raceName;
     std::string className;
     DifficultyMode difficulty;
     int level;
     bool clone;
+    std::string gameVersion;
+    std::string createdAt;
+    std::string createdForVersion;
+    std::string lastAdaptedVersion;
     std::string path;
 };
 
@@ -81,6 +87,7 @@ public:
     static bool exportAccountPackage(const std::string& accountName, std::string& exportedPath);
     // EN: exportCharacterPackage declares or implements a focused behavior used by this module.
     // FR: exportCharacterPackage déclare ou implémente un comportement précis utilisé par ce module.
+    static bool transferCharacterOwnership(const CharacterSaveSummary& summary, const std::string& targetAccountName);
     static bool exportCharacterPackage(const CharacterSaveSummary& summary, std::string& exportedPath);
     // EN: exportCharacterClonePackage declares or implements a focused behavior used by this module.
     // FR: exportCharacterClonePackage déclare ou implémente un comportement précis utilisé par ce module.

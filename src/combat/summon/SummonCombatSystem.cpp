@@ -939,7 +939,10 @@ bool SummonCombatSystem::hasSpecialAbility(const Summon& summon)
         || summon.getName() == "Bête arcanique"
         || summon.getName() == "Esprit mineur"
         || summon.getName() == "Ombre récente"
-        || summon.getName() == "Éclat zodiacal";
+        || summon.getName() == "Éclat zodiacal"
+        || summon.getName() == "Totem gardien"
+        || summon.getName() == "Corbeau familier"
+        || summon.getName() == "Éclat de miroir";
 }
 
 void SummonCombatSystem::executeSummonAttack(
@@ -1117,6 +1120,37 @@ bool SummonCombatSystem::executeSummonSpecialAbility(
                   << damage
                   << " dégâts."
                   << std::endl;
+        return true;
+    }
+
+    if (summon.getName() == "Totem gardien")
+    {
+        int damage = random.between(summon.getMinDamage(), summon.getMaxDamage() + 2);
+        target.takeDamage(damage);
+        summon.heal(5);
+        summon.decreaseDuration();
+        std::cout << "Le Totem gardien absorbe une partie du choc et pulse vers la cible." << std::endl;
+        std::cout << target.getName() << " subit " << damage << " dégâts. Le totem consolide son ancrage." << std::endl;
+        return true;
+    }
+
+    if (summon.getName() == "Corbeau familier")
+    {
+        int damage = random.between(summon.getMinDamage() + 1, summon.getMaxDamage() + 5);
+        target.takeDamage(damage);
+        summon.decreaseDuration();
+        std::cout << "Le Corbeau familier pique les yeux de la cible et ouvre une fenêtre d'attaque." << std::endl;
+        std::cout << target.getName() << " subit " << damage << " dégâts précis." << std::endl;
+        return true;
+    }
+
+    if (summon.getName() == "Éclat de miroir")
+    {
+        int damage = random.between(summon.getMinDamage(), summon.getMaxDamage() + 8);
+        target.takeDamage(damage);
+        if (random.between(1, 100) <= 40) summon.extendDuration(1); else summon.decreaseDuration();
+        std::cout << "L'Éclat de miroir renvoie une image brisée de l'attaque future." << std::endl;
+        std::cout << target.getName() << " subit " << damage << " dégâts instables." << std::endl;
         return true;
     }
 

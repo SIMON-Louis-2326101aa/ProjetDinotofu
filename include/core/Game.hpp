@@ -7,6 +7,7 @@
 #define INCLUDE_CORE_GAME_HPP
 
 #include <string>
+#include <vector>
 
 #include "entity/Player.hpp"
 #include "core/GameMode.hpp"
@@ -24,6 +25,9 @@ private:
     CharacterRace selectedRace;
     bool characterLoaded;
     bool specialIdentityValidated;
+    std::vector<Player> partyPlayers;
+    std::vector<std::string> partyAccountNames;
+    std::vector<DifficultyMode> partyDifficulties;
 
     // EN: displayIntroduction declares or implements a focused behavior used by this module.
     // FR: displayIntroduction déclare ou implémente un comportement précis utilisé par ce module.
@@ -46,6 +50,11 @@ private:
     // EN: chooseGameMode declares or implements a focused behavior used by this module.
     // FR: chooseGameMode déclare ou implémente un comportement précis utilisé par ce module.
     void chooseGameMode();
+    void configurePartyMode();
+    bool addSecondaryPlayerToParty(int playerNumber);
+    bool isMultiplayerSession() const;
+    std::vector<Player*> getActivePartyPointers();
+    void savePartyProgress(const std::string& reason) const;
     // EN: displaySelectedMode declares or implements a focused behavior used by this module.
     // FR: displaySelectedMode déclare ou implémente un comportement précis utilisé par ce module.
     void displaySelectedMode();

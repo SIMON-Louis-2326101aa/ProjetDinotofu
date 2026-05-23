@@ -36,6 +36,15 @@ protected:
     int defenseCounterChance;
     std::string defensePostureLabel;
 
+    int burningTurns;
+    int burningDamage;
+    int poisonTurns;
+    int poisonDamage;
+    int frostTurns;
+    int shockTurns;
+    int bleedingTurns;
+    int bleedingDamage;
+
 public:
     // EN: Entity declares or implements a focused behavior used by this module.
     // FR: Entity déclare ou implémente un comportement précis utilisé par ce module.
@@ -54,8 +63,8 @@ public:
 
     virtual ~Entity() = default;
 
-    std::string getName() const;
-    std::string getType() const;
+    virtual std::string getName() const;
+    virtual std::string getType() const;
 
     // EN: getHp declares or implements a focused behavior used by this module.
     // FR: getHp déclare ou implémente un comportement précis utilisé par ce module.
@@ -127,6 +136,14 @@ public:
     // FR: clearProvocation déclare ou implémente un comportement précis utilisé par ce module.
     void clearProvocation();
 
+    void applyBurning(int turns, int damage);
+    void applyPoison(int turns, int damage);
+    void applyFrost(int turns);
+    void applyShock(int turns);
+    void applyBleeding(int turns, int damage);
+    bool hasActiveCombatStatus() const;
+    void processStatusTickAtTurnStart();
+
     // EN: reviveWithHealthPercentage declares or implements a focused behavior used by this module.
     // FR: reviveWithHealthPercentage déclare ou implémente un comportement précis utilisé par ce module.
     void reviveWithHealthPercentage(int percentage);
@@ -140,6 +157,7 @@ public:
     // EN: reduceMaxHp declares or implements a focused behavior used by this module.
     // FR: reduceMaxHp déclare ou implémente un comportement précis utilisé par ce module.
     void reduceMaxHp(int value);
+    void scaleCombatStats(int hpPercent, int damagePercent);
 
     virtual int attack(Random& random, bool& dodged, bool& critical, int damageBonus = 0);
 
@@ -153,6 +171,7 @@ public:
     // EN: applyClass declares or implements a focused behavior used by this module.
     // FR: applyClass déclare ou implémente un comportement précis utilisé par ce module.
     void applyClass(const PlayerClass& newClass);
+    void restoreClassState(const PlayerClass& baseClass, int currentHp);
 
     // EN: areStatsVisible declares or implements a focused behavior used by this module.
     // FR: areStatsVisible déclare ou implémente un comportement précis utilisé par ce module.

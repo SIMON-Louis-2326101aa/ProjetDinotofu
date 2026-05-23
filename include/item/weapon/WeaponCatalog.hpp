@@ -8,6 +8,8 @@
 
 #include "item/weapon/Weapon.hpp"
 
+#include <string>
+
 class WeaponCatalog
 {
 public:
@@ -17,6 +19,15 @@ public:
     // EN: createRustySword declares or implements a focused behavior used by this module.
     // FR: createRustySword déclare ou implémente un comportement précis utilisé par ce module.
     static Weapon createRustySword();
+    static Weapon createTrainingDagger();
+    static Weapon createTrainingSpear();
+    static Weapon createTrainingBow();
+    static Weapon createTrainingCrossbow();
+    static Weapon createTrainingThrowingBandolier();
+    static Weapon createTrainingStaff();
+    static Weapon createHeavyTrainingAxe();
+    static Weapon createEmergencyWoodKnife();
+    static Weapon createStarterWeaponForClass(const std::string& className);
     // EN: createArenaBlade declares or implements a focused behavior used by this module.
     // FR: createArenaBlade déclare ou implémente un comportement précis utilisé par ce module.
     static Weapon createArenaBlade();

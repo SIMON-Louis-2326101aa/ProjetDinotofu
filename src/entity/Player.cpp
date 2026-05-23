@@ -4,10 +4,12 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "entity/Player.hpp"
+#include "core/VersionInfo.hpp"
 
 #include "item/weapon/WeaponCatalog.hpp"
 #include "item/armor/ArmorCatalog.hpp"
 #include "item/consumable/ConsumableCatalog.hpp"
+#include "item/material/MaterialCatalog.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "progression/Level.hpp"
 #include "character/RaceCatalog.hpp"
@@ -18,6 +20,59 @@
 
 namespace
 {
+    bool isDistanceStarterClass(const std::string& className)
+    {
+        std::string normalized = className;
+        std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        return normalized.find("archer") != std::string::npos
+            || normalized.find("rôdeur") != std::string::npos
+            || normalized.find("rodeur") != std::string::npos
+            || normalized.find("arbal") != std::string::npos
+            || normalized.find("chasseur") != std::string::npos
+            || normalized.find("lanceur de dagues") != std::string::npos
+            || normalized.find("tireur") != std::string::npos
+            || normalized.find("artificier") != std::string::npos;
+    }
+
+    bool usesStarterAmmunition(const std::string& className)
+    {
+        std::string normalized = className;
+        std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        return normalized.find("archer") != std::string::npos
+            || normalized.find("rôdeur") != std::string::npos
+            || normalized.find("rodeur") != std::string::npos
+            || normalized.find("arbal") != std::string::npos
+            || normalized.find("chasseur") != std::string::npos
+            || normalized.find("lanceur de dagues") != std::string::npos
+            || normalized.find("tireur") != std::string::npos
+            || normalized.find("artificier") != std::string::npos;
+    }
+
+    bool inventoryHasWeaponNamed(const Inventory& inventory, const std::string& name)
+    {
+        for (const Weapon& weapon : inventory.getWeapons())
+        {
+            if (weapon.getName() == name) return true;
+        }
+        return false;
+    }
+
+    bool inventoryHasArmorNamed(const Inventory& inventory, const std::string& name)
+    {
+        for (const Armor& armor : inventory.getArmors())
+        {
+            if (armor.getName() == name) return true;
+        }
+        return false;
+    }
+
+    bool inventoryHasMaterialId(const Inventory& inventory, const std::string& id)
+    {
+        return inventory.countMaterialById(id) > 0;
+    }
+
     std::string playerSkillDisplayName(const std::string& skillId)
     {
         if (skillId == "night_vision") return "Vision nocturne";
@@ -122,6 +177,13 @@ Player::Player() : Entity()
     worldGazeMaxHpPenalty = 0;
 
     refundUsesRemaining = 3;
+    createdAtText = VersionInfo::currentDateText();
+    createdForVersion = VersionInfo::currentVersion();
+    lastAdaptedVersion = VersionInfo::currentVersion();
+    creatorAccountName = "";
+    currentOwnerAccountName = "";
+    nextAmmunitionChoiceId = "";
+    lastConsumedAmmunitionId = "";
 }
 
 Player::Player(
@@ -201,6 +263,106 @@ Player::Player(
     worldGazeMaxHpPenalty = 0;
 
     refundUsesRemaining = 3;
+    createdAtText = VersionInfo::currentDateText();
+    createdForVersion = VersionInfo::currentVersion();
+    lastAdaptedVersion = VersionInfo::currentVersion();
+    creatorAccountName = "";
+    currentOwnerAccountName = "";
+    nextAmmunitionChoiceId = "";
+    lastConsumedAmmunitionId = "";
+}
+
+
+void Player::setNextAmmunitionChoice(const std::string& ammunitionId)
+{
+    nextAmmunitionChoiceId = ammunitionId;
+}
+
+std::string Player::getNextAmmunitionChoice() const
+{
+    return nextAmmunitionChoiceId;
+}
+
+void Player::clearNextAmmunitionChoice()
+{
+    nextAmmunitionChoiceId.clear();
+}
+
+void Player::setLastConsumedAmmunition(const std::string& ammunitionId)
+{
+    lastConsumedAmmunitionId = ammunitionId;
+}
+
+std::string Player::getLastConsumedAmmunition() const
+{
+    return lastConsumedAmmunitionId;
+}
+
+void Player::clearLastConsumedAmmunition()
+{
+    lastConsumedAmmunitionId.clear();
+}
+
+const std::string& Player::getCreatedAtText() const
+{
+    return createdAtText;
+}
+
+const std::string& Player::getCreatorAccountName() const
+{
+    return creatorAccountName;
+}
+
+const std::string& Player::getCurrentOwnerAccountName() const
+{
+    return currentOwnerAccountName;
+}
+
+void Player::setOwnershipMetadata(const std::string& creatorAccount, const std::string& currentOwnerAccount)
+{
+    creatorAccountName = creatorAccount;
+    currentOwnerAccountName = currentOwnerAccount;
+}
+
+
+const std::string& Player::getCreatedForVersion() const
+{
+    return createdForVersion;
+}
+
+const std::string& Player::getLastAdaptedVersion() const
+{
+    return lastAdaptedVersion;
+}
+
+void Player::setVersionMetadata(const std::string& createdAt, const std::string& createdFor, const std::string& lastAdapted)
+{
+    createdAtText = createdAt.empty() ? "Inconnue" : createdAt;
+    createdForVersion = createdFor.empty() ? "inconnue" : createdFor;
+    lastAdaptedVersion = lastAdapted.empty() ? createdForVersion : lastAdapted;
+}
+
+void Player::markAdaptedToCurrentVersion()
+{
+    lastAdaptedVersion = VersionInfo::currentVersion();
+}
+
+const std::vector<std::string>& Player::getStarterKitLog() const
+{
+    return starterKitLog;
+}
+
+void Player::setLoadedStarterKitLog(const std::vector<std::string>& log)
+{
+    starterKitLog = log;
+}
+
+void Player::recordStarterKitEntry(const std::string& entry)
+{
+    if (!entry.empty())
+    {
+        starterKitLog.push_back(entry);
+    }
 }
 
 // EN: applyRaceStartingBonus declares or implements a focused behavior used by this module.
@@ -2147,32 +2309,73 @@ void Player::initializeStarterInventory()
 void Player::initializeStarterInventory(DifficultyMode difficulty)
 {
     inventory.addWeapon(WeaponCatalog::createBareHands());
-    inventory.addWeapon(WeaponCatalog::createRustySword());
+    recordStarterKitEntry("Arme de base : Mains nues");
 
-    Weapon* rustySword = inventory.getMutableWeapon(1);
+    Weapon classStarterWeapon = WeaponCatalog::createStarterWeaponForClass(type);
+    inventory.addWeapon(classStarterWeapon);
+    recordStarterKitEntry("Arme de classe : " + classStarterWeapon.getName());
 
-    if (rustySword != nullptr)
+    if (isDistanceStarterClass(type))
     {
-        rustySword->loseDurability(
+        Weapon emergencyKnife = WeaponCatalog::createEmergencyWoodKnife();
+        inventory.addWeapon(emergencyKnife);
+        recordStarterKitEntry("Défense urgente : " + emergencyKnife.getName());
+        std::cout << "Équipement de secours : classe à distance détectée, petit couteau de bois ajouté." << std::endl;
+    }
+
+    if (usesStarterAmmunition(type))
+    {
+        if (type.find("Arbal") != std::string::npos || type.find("arbal") != std::string::npos)
+        {
+            inventory.addMaterial(MaterialCatalog::createById("training_bolts", 14));
+            recordStarterKitEntry("Munitions de départ : carreaux d'entraînement x14");
+            std::cout << "Munitions de départ : carreaux d'entraînement x14." << std::endl;
+        }
+        else if (type.find("dagues") != std::string::npos || type.find("Dagues") != std::string::npos)
+        {
+            inventory.addMaterial(MaterialCatalog::createById("training_throwing_knives", 10));
+            recordStarterKitEntry("Munitions de départ : couteaux de lancer émoussés x10");
+            std::cout << "Munitions de départ : couteaux de lancer émoussés x10." << std::endl;
+        }
+        else
+        {
+            inventory.addMaterial(MaterialCatalog::createById("training_arrows", 18));
+            recordStarterKitEntry("Munitions de départ : flèches d'entraînement x18");
+            std::cout << "Munitions de départ : flèches d'entraînement x18." << std::endl;
+        }
+
+        std::cout << "Les recettes de munitions et munitions spéciales seront apprises plus tard par exploration, level up ou expérimentation." << std::endl;
+    }
+
+    Weapon* starterWeapon = inventory.getMutableWeapon(1);
+
+    if (starterWeapon != nullptr)
+    {
+        starterWeapon->loseDurability(
             DifficultyRules::getStarterWeaponDurabilityLoss(difficulty)
         );
     }
 
     equipWeapon(1);
 
-    inventory.addArmor(ArmorCatalog::createSimpleOutfit());
-    inventory.addArmor(ArmorCatalog::createWornLeatherArmor());
+    Armor simpleOutfit = ArmorCatalog::createSimpleOutfit();
+    inventory.addArmor(simpleOutfit);
+    recordStarterKitEntry("Tenue de base : " + simpleOutfit.getName());
 
-    Armor* wornLeatherArmor = inventory.getMutableArmor(1);
+    Armor classStarterArmor = ArmorCatalog::createStarterArmorForClass(type);
+    inventory.addArmor(classStarterArmor);
+    recordStarterKitEntry("Protection de classe : " + classStarterArmor.getName());
 
-    if (wornLeatherArmor != nullptr)
+    Armor* starterArmor = inventory.getMutableArmor(1);
+
+    if (starterArmor != nullptr)
     {
-        wornLeatherArmor->loseDurability(
+        starterArmor->loseDurability(
             DifficultyRules::getStarterArmorDurabilityLoss(difficulty)
         );
     }
 
-    equipArmor(0);
+    equipArmor(1);
 
     int starterHealingPotions =
         DifficultyRules::getStarterHealingPotionCount(
@@ -2190,15 +2393,114 @@ void Player::initializeStarterInventory(DifficultyMode difficulty)
     {
         inventory.addConsumable(ConsumableCatalog::createBasicHealingPotion());
     }
+    if (starterHealingPotions > 0)
+    {
+        recordStarterKitEntry("Potions de soin de départ x" + std::to_string(starterHealingPotions));
+    }
 
     for (int i = 0; i < starterDamagePotions; i++)
     {
         inventory.addConsumable(ConsumableCatalog::createBasicDamagePotion());
     }
+    if (starterDamagePotions > 0)
+    {
+        recordStarterKitEntry("Potions de rage de départ x" + std::to_string(starterDamagePotions));
+    }
 
-    inventory.earnGold(
-        DifficultyRules::getStarterGold(difficulty)
-    );
+    int starterGold = DifficultyRules::getStarterGold(difficulty);
+    inventory.earnGold(starterGold);
+    if (starterGold > 0)
+    {
+        recordStarterKitEntry("Or de départ : " + std::to_string(starterGold));
+    }
+}
+
+
+std::vector<std::string> Player::applyHeavyVersionAdaptation(DifficultyMode difficulty)
+{
+    std::vector<std::string> changes;
+
+    if (starterKitLog.empty())
+    {
+        starterKitLog.push_back("Kit de départ original inconnu : sauvegarde créée avant le journal de départ.");
+        changes.push_back("Journal du kit de départ initialisé en mode sauvegarde ancienne.");
+    }
+
+    if (!inventoryHasWeaponNamed(inventory, "Mains nues"))
+    {
+        inventory.addWeapon(WeaponCatalog::createBareHands());
+        changes.push_back("Mains nues restaurées comme base de secours.");
+    }
+
+    if (isDistanceStarterClass(type) && !inventoryHasWeaponNamed(inventory, "Couteau de bois d'urgence"))
+    {
+        inventory.addWeapon(WeaponCatalog::createEmergencyWoodKnife());
+        changes.push_back("Couteau de bois d'urgence ajouté pour classe à distance.");
+    }
+
+    if (usesStarterAmmunition(type))
+    {
+        if ((type.find("Arbal") != std::string::npos || type.find("arbal") != std::string::npos)
+            && !inventoryHasMaterialId(inventory, "training_bolts"))
+        {
+            inventory.addMaterial(MaterialCatalog::createById("training_bolts", 8));
+            changes.push_back("Carreaux d'entraînement x8 ajoutés pour adaptation.");
+        }
+        else if ((type.find("dagues") != std::string::npos || type.find("Dagues") != std::string::npos)
+            && !inventoryHasMaterialId(inventory, "training_throwing_knives"))
+        {
+            inventory.addMaterial(MaterialCatalog::createById("training_throwing_knives", 6));
+            changes.push_back("Couteaux de lancer émoussés x6 ajoutés pour adaptation.");
+        }
+        else if (!inventoryHasMaterialId(inventory, "training_arrows"))
+        {
+            inventory.addMaterial(MaterialCatalog::createById("training_arrows", 10));
+            changes.push_back("Flèches d'entraînement x10 ajoutées pour adaptation.");
+        }
+    }
+
+    Armor expectedArmor = ArmorCatalog::createStarterArmorForClass(type);
+    if (inventory.getArmorCount() == 0)
+    {
+        inventory.addArmor(ArmorCatalog::createSimpleOutfit());
+        inventory.addArmor(expectedArmor);
+        equipArmor(1);
+        changes.push_back("Protection de classe ajoutée car aucune armure n'était présente.");
+    }
+    else if (equippedArmorIndex < 0 && !inventoryHasArmorNamed(inventory, expectedArmor.getName()))
+    {
+        inventory.addArmor(expectedArmor);
+        changes.push_back("Protection de classe ajoutée sans remplacer l'équipement existant.");
+    }
+
+    if (inventory.getWeaponCount() <= 1)
+    {
+        Weapon expectedWeapon = WeaponCatalog::createStarterWeaponForClass(type);
+        if (!inventoryHasWeaponNamed(inventory, expectedWeapon.getName()))
+        {
+            inventory.addWeapon(expectedWeapon);
+            changes.push_back("Arme de classe basique ajoutée car l'arsenal était presque vide.");
+        }
+    }
+
+    if (inventory.countConsumables(ConsumableType::Healing) == 0)
+    {
+        inventory.addConsumable(ConsumableCatalog::createBasicHealingPotion());
+        changes.push_back("Potion de soin ajoutée pour éviter une ancienne sauvegarde sans sécurité.");
+    }
+
+    if (changes.empty())
+    {
+        changes.push_back("Aucun objet ajouté : l'équipement actuel semblait déjà compatible.");
+    }
+
+    for (const std::string& change : changes)
+    {
+        starterKitLog.push_back("Adaptation V" + VersionInfo::currentVersion() + " : " + change);
+    }
+
+    markAdaptedToCurrentVersion();
+    return changes;
 }
 
 // EN: destroyEquippedWeapon declares or implements a focused behavior used by this module.
@@ -2332,12 +2634,108 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     int criticalBonus = 0;
 
     Weapon* equippedWeapon = inventory.getMutableWeapon(equippedWeaponIndex);
+    clearLastConsumedAmmunition();
+
+    bool bowWithoutAmmo = false;
 
     if (equippedWeapon != nullptr && !equippedWeapon->isBroken() && !bossEquipmentSealActive)
     {
         bonusMin = equippedWeapon->getMinDamageBonus();
         bonusMax = equippedWeapon->getMaxDamageBonus();
         criticalBonus = equippedWeapon->getCriticalBonus();
+
+        if (equippedWeapon->getType() == WeaponType::Bow)
+        {
+            std::string ammoId = "training_arrows";
+            std::string weaponText = equippedWeapon->getName();
+            std::transform(weaponText.begin(), weaponText.end(), weaponText.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+            std::string specialAmmoId = "barbed_arrows";
+            std::string elementalAmmoId = "ash_arrows";
+            if (weaponText.find("arbal") != std::string::npos || weaponText.find("carreau") != std::string::npos)
+            {
+                ammoId = "training_bolts";
+                specialAmmoId = "piercing_bolts";
+                elementalAmmoId = "frozen_bolts";
+            }
+            else if (weaponText.find("lancer") != std::string::npos || weaponText.find("couteau") != std::string::npos || weaponText.find("bandouli") != std::string::npos)
+            {
+                ammoId = "training_throwing_knives";
+                specialAmmoId = "balanced_throwing_knives";
+                elementalAmmoId = "conductive_knives";
+            }
+
+            std::string consumedAmmoId = ammoId;
+            bool specialAmmo = false;
+
+            bool forcedNoAmmo = false;
+
+            if (!nextAmmunitionChoiceId.empty())
+            {
+                if (nextAmmunitionChoiceId == "__cancel_attack__")
+                {
+                    clearNextAmmunitionChoice();
+                    dodged = true;
+                    std::cout << name << " annule son tir et garde sa munition." << std::endl;
+                    return 0;
+                }
+
+                if (nextAmmunitionChoiceId == "__no_ammo__" || nextAmmunitionChoiceId == "__emergency_defense__")
+                {
+                    forcedNoAmmo = true;
+                }
+                else
+                {
+                    consumedAmmoId = nextAmmunitionChoiceId;
+                    specialAmmo = consumedAmmoId != ammoId;
+                }
+            }
+
+            clearNextAmmunitionChoice();
+
+            if (!forcedNoAmmo && inventory.countMaterialById(consumedAmmoId) > 0)
+            {
+                if (!infiniteConsumablesEnabled)
+                {
+                    inventory.removeMaterialQuantityById(consumedAmmoId, 1);
+                }
+
+                setLastConsumedAmmunition(consumedAmmoId);
+
+                if (specialAmmo)
+                {
+                    if (consumedAmmoId == elementalAmmoId)
+                    {
+                        bonusMin += 3;
+                        bonusMax += 5;
+                        criticalBonus += 4;
+                        std::cout << name << " consomme une munition élémentaire choisie pour attaquer à distance." << std::endl;
+                    }
+                    else
+                    {
+                        bonusMin += 2;
+                        bonusMax += 4;
+                        criticalBonus += 5;
+                        std::cout << name << " consomme une munition spéciale choisie pour attaquer à distance." << std::endl;
+                    }
+                }
+                else
+                {
+                    std::cout << name << " consomme une munition d'entraînement pour attaquer à distance." << std::endl;
+                }
+            }
+            else
+            {
+                bowWithoutAmmo = true;
+                bonusMin = 0;
+                bonusMax = 1;
+                criticalBonus = 0;
+
+                setLastConsumedAmmunition("__emergency_defense__");
+                std::cout << name << " n'a pas de munition adaptée pour ce tir." << std::endl;
+                std::cout << "Défense d'urgence : aucun projectile n'est tiré. Les dégâts représentent seulement un coup de poignée, de branche ou de crosse à très courte portée." << std::endl;
+            }
+        }
     }
 
     if (equippedWeapon != nullptr && !equippedWeapon->isBroken() && bossEquipmentSealActive)
@@ -2370,14 +2768,28 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
 
     if (resultat <= 16)
     {
-        return random.between(
+        int dealtDamage = random.between(
             minDamage + bonusMin,
             maxDamage + bonusMax
         ) + damageBonus;
+
+        if (bowWithoutAmmo)
+        {
+            dealtDamage = std::max(1, dealtDamage / 2);
+        }
+
+        return dealtDamage;
     }
 
     critical = true;
-    return criticalDamage + criticalBonus + damageBonus;
+    int criticalResult = criticalDamage + criticalBonus + damageBonus;
+
+    if (bowWithoutAmmo)
+    {
+        criticalResult = std::max(1, criticalResult / 2);
+    }
+
+    return criticalResult;
 }
 
 // EN: displayStats declares or implements a focused behavior used by this module.
@@ -2452,6 +2864,11 @@ void Player::displayStats() const
     std::cout << "Potions de rage : "
               << inventory.countConsumables(ConsumableType::Damage)
               << std::endl;
+
+    std::cout << "Créé le : " << createdAtText
+              << " | V" << createdForVersion << std::endl;
+    std::cout << "Dernière adaptation faite pour la V"
+              << lastAdaptedVersion << std::endl;
 
     std::cout << "========================" << std::endl;
     std::cout << std::endl;

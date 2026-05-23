@@ -5,6 +5,8 @@
 
 #include "entity/Entity.hpp"
 
+#include <algorithm>
+
 #include <iostream>
 
 // EN: Entity declares or implements a focused behavior used by this module.
@@ -31,6 +33,14 @@ Entity::Entity()
     defenseReductionPercent = 0;
     defenseCounterChance = 0;
     defensePostureLabel = "";
+    burningTurns = 0;
+    burningDamage = 0;
+    poisonTurns = 0;
+    poisonDamage = 0;
+    frostTurns = 0;
+    shockTurns = 0;
+    bleedingTurns = 0;
+    bleedingDamage = 0;
 }
 
 Entity::Entity(
@@ -64,6 +74,14 @@ Entity::Entity(
     defenseReductionPercent = 0;
     defenseCounterChance = 0;
     defensePostureLabel = "";
+    burningTurns = 0;
+    burningDamage = 0;
+    poisonTurns = 0;
+    poisonDamage = 0;
+    frostTurns = 0;
+    shockTurns = 0;
+    bleedingTurns = 0;
+    bleedingDamage = 0;
 }
 
 std::string Entity::getName() const
@@ -253,6 +271,123 @@ void Entity::clearDefensePosture()
     defenseReductionPercent = 0;
     defenseCounterChance = 0;
     defensePostureLabel = "";
+    burningTurns = 0;
+    burningDamage = 0;
+    poisonTurns = 0;
+    poisonDamage = 0;
+    frostTurns = 0;
+    shockTurns = 0;
+    bleedingTurns = 0;
+    bleedingDamage = 0;
+}
+
+
+void Entity::applyBurning(int turns, int damage)
+{
+    if (turns <= 0 || damage <= 0) return;
+    burningTurns = std::max(burningTurns, turns);
+    burningDamage = std::max(burningDamage, damage);
+}
+
+void Entity::applyPoison(int turns, int damage)
+{
+    if (turns <= 0 || damage <= 0) return;
+    poisonTurns = std::max(poisonTurns, turns);
+    poisonDamage = std::max(poisonDamage, damage);
+}
+
+void Entity::applyFrost(int turns)
+{
+    if (turns <= 0) return;
+    frostTurns = std::max(frostTurns, turns);
+}
+
+void Entity::applyShock(int turns)
+{
+    if (turns <= 0) return;
+    shockTurns = std::max(shockTurns, turns);
+}
+
+void Entity::applyBleeding(int turns, int damage)
+{
+    if (turns <= 0 || damage <= 0) return;
+    bleedingTurns = std::max(bleedingTurns, turns);
+    bleedingDamage = std::max(bleedingDamage, damage);
+}
+
+bool Entity::hasActiveCombatStatus() const
+{
+    return burningTurns > 0 || poisonTurns > 0 || frostTurns > 0 || shockTurns > 0 || bleedingTurns > 0;
+}
+
+void Entity::processStatusTickAtTurnStart()
+{
+    if (hp <= 0) return;
+
+    int totalDamage = 0;
+
+    if (burningTurns > 0)
+    {
+        totalDamage += burningDamage;
+        std::cout << name << " subit une brûlure persistante (" << burningDamage << " dégâts)." << std::endl;
+        burningTurns--;
+        if (burningTurns <= 0)
+        {
+            burningDamage = 0;
+            std::cout << "La brûlure de " << name << " s'éteint." << std::endl;
+        }
+    }
+
+    if (poisonTurns > 0)
+    {
+        totalDamage += poisonDamage;
+        std::cout << name << " subit le poison (" << poisonDamage << " dégâts)." << std::endl;
+        poisonTurns--;
+        if (poisonTurns <= 0)
+        {
+            poisonDamage = 0;
+            std::cout << "Le poison quitte enfin le corps de " << name << "." << std::endl;
+        }
+    }
+
+    if (bleedingTurns > 0)
+    {
+        totalDamage += bleedingDamage;
+        std::cout << name << " perd du sang (" << bleedingDamage << " dégâts)." << std::endl;
+        bleedingTurns--;
+        if (bleedingTurns <= 0)
+        {
+            bleedingDamage = 0;
+            std::cout << "Le saignement de " << name << " se calme." << std::endl;
+        }
+    }
+
+    if (frostTurns > 0)
+    {
+        std::cout << name << " reste ralenti par le froid." << std::endl;
+        frostTurns--;
+        if (frostTurns <= 0)
+        {
+            std::cout << name << " retrouve une mobilité normale." << std::endl;
+        }
+    }
+
+    if (shockTurns > 0)
+    {
+        std::cout << "Des arcs électriques perturbent encore " << name << "." << std::endl;
+        shockTurns--;
+        if (shockTurns <= 0)
+        {
+            std::cout << "L'électricité autour de " << name << " se dissipe." << std::endl;
+        }
+    }
+
+    if (totalDamage > 0)
+    {
+        takeDamage(totalDamage);
+        std::cout << name << " possède maintenant " << hp << "/" << maxHp << " PV après les statuts." << std::endl;
+        std::cout << std::endl;
+    }
 }
 
 // EN: reviveWithHealthPercentage declares or implements a focused behavior used by this module.
@@ -337,6 +472,26 @@ void Entity::reduceMaxHp(int value)
 
 // EN: attack declares or implements a focused behavior used by this module.
 // FR: attack déclare ou implémente un comportement précis utilisé par ce module.
+
+void Entity::scaleCombatStats(int hpPercent, int damagePercent)
+{
+    if (hpPercent < 1) hpPercent = 1;
+    if (damagePercent < 1) damagePercent = 1;
+
+    int oldMaxHp = maxHp;
+    maxHp = std::max(1, maxHp * hpPercent / 100);
+    minDamage = std::max(1, minDamage * damagePercent / 100);
+    maxDamage = std::max(minDamage, maxDamage * damagePercent / 100);
+    criticalDamage = std::max(maxDamage, criticalDamage * damagePercent / 100);
+
+    if (oldMaxHp > 0)
+    {
+        hp = std::max(1, hp * maxHp / oldMaxHp);
+    }
+
+    if (hp > maxHp) hp = maxHp;
+}
+
 int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus)
 {
     int resultat = random.rollD20();
@@ -402,6 +557,31 @@ void Entity::applyClass(const PlayerClass& newClass)
 
     healingPotionCount = newClass.getHealingPotionCount();
     damagePotionCount = newClass.getDamagePotionCount();
+}
+
+void Entity::restoreClassState(const PlayerClass& baseClass, int currentHp)
+{
+    type = baseClass.getName();
+
+    maxHp = baseClass.getMaxHp();
+    minDamage = baseClass.getMinDamage();
+    maxDamage = baseClass.getMaxDamage();
+    criticalDamage = baseClass.getCriticalDamage();
+
+    healingPotionCount = baseClass.getHealingPotionCount();
+    damagePotionCount = baseClass.getDamagePotionCount();
+
+    if (currentHp < 0)
+    {
+        currentHp = 0;
+    }
+
+    hp = currentHp;
+
+    if (hp > maxHp)
+    {
+        hp = maxHp;
+    }
 }
 
 // EN: areStatsVisible declares or implements a focused behavior used by this module.

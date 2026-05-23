@@ -7,6 +7,7 @@
 #include "combat/group/CombatGroupBuilder.hpp"
 
 #include "entity/Monster.hpp"
+#include "entity/Player.hpp"
 
 #include <iostream>
 
@@ -46,6 +47,83 @@ CombatGroup CombatGroupBuilder::buildSideFromEntityAndSummons(
         );
 
         slotIndex++;
+    }
+
+    return group;
+}
+
+
+CombatGroup CombatGroupBuilder::buildSideFromPlayersAndSummons(
+    std::vector<Player*>& players,
+    std::vector<Summon>& summons,
+    CombatSide side
+)
+{
+    CombatGroup group(3, 2);
+
+    // Placement allié validé : centre = joueur principal, deux côtés = joueurs/personnages,
+    // extrémités = invocations uniquement. Les joueurs restent prioritaires sur les alliés IA.
+    const int playerSlots[3] = {0, 1, 2};
+    int placedPlayers = 0;
+
+    for (Player* player : players)
+    {
+        if (player == nullptr)
+        {
+            continue;
+        }
+
+        if (placedPlayers >= 3)
+        {
+            std::cout << player->getName()
+                      << " ne peut pas entrer dans la ligne active : les trois emplacements de personnage sont déjà pris."
+                      << std::endl;
+            continue;
+        }
+
+        CombatUnitKind kind = placedPlayers == 0
+            ? CombatUnitKind::MainFighter
+            : CombatUnitKind::Ally;
+
+        group.addSlot(
+            CombatUnitSlot::createEntitySlot(
+                playerSlots[placedPlayers],
+                side,
+                kind,
+                *player
+            )
+        );
+
+        placedPlayers++;
+    }
+
+    const int summonSlots[2] = {3, 4};
+    int placedSummons = 0;
+
+    for (Summon& summon : summons)
+    {
+        if (summon.isDead() || summon.isExpired())
+        {
+            continue;
+        }
+
+        if (placedSummons >= 2)
+        {
+            std::cout << summon.getName()
+                      << " reste en retrait : les extrémités réservées aux invocations sont déjà occupées."
+                      << std::endl;
+            continue;
+        }
+
+        group.addSlot(
+            CombatUnitSlot::createSummonSlot(
+                summonSlots[placedSummons],
+                side,
+                summon
+            )
+        );
+
+        placedSummons++;
     }
 
     return group;
@@ -109,7 +187,8 @@ void CombatGroupBuilder::displayGroup(
             continue;
         }
 
-        std::cout << "[" << slot.getSlotIndex() << "] "
+        std::cout << "[" << slot.getSlotIndex() << " - "
+                  << getFormationSlotLabel(slot.getSlotIndex()) << "] "
                   << slot.getDisplayName();
 
         if (!slot.isAlive())
@@ -142,5 +221,29 @@ void CombatGroupBuilder::displayGroup(
     }
 
     std::cout << "========================================" << std::endl;
+    std::cout << std::endl;
+}
+
+
+std::string CombatGroupBuilder::getFormationSlotLabel(int slotIndex)
+{
+    switch (slotIndex)
+    {
+        case 0: return "centre";
+        case 1: return "côté gauche";
+        case 2: return "côté droit";
+        case 3: return "extrémité gauche / invocation";
+        case 4: return "extrémité droite / invocation";
+        default: return "hors formation";
+    }
+}
+
+void CombatGroupBuilder::displayFormationRules()
+{
+    std::cout << "Formation alliée :" << std::endl;
+    std::cout << "- centre : joueur principal ;" << std::endl;
+    std::cout << "- côtés : joueurs secondaires ou personnages alliés ;" << std::endl;
+    std::cout << "- extrémités : invocations uniquement ;" << std::endl;
+    std::cout << "- priorité : joueurs > personnages alliés > invocations." << std::endl;
     std::cout << std::endl;
 }

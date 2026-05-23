@@ -9,12 +9,19 @@
 #include "core/Random.hpp"
 #include "entity/Player.hpp"
 #include "progression/DifficultyMode.hpp"
+#include <vector>
 
 class MonsterPveMode
 {
 public:
     static void run(
         Player& player,
+        Random& random,
+        DifficultyMode difficulty
+    );
+
+    static void runTeam(
+        std::vector<Player*>& party,
         Random& random,
         DifficultyMode difficulty
     );

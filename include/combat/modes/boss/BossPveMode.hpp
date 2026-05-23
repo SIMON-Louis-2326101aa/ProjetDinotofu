@@ -9,6 +9,7 @@
 #include "entity/Player.hpp"
 #include "core/Random.hpp"
 #include "progression/DifficultyMode.hpp"
+#include <vector>
 
 class BossPveMode
 {
@@ -19,6 +20,12 @@ private:
 public:
     static void run(
         Player& player1,
+        Random& random,
+        DifficultyMode difficulty
+    );
+
+    static void runTeam(
+        std::vector<Player*>& party,
         Random& random,
         DifficultyMode difficulty
     );

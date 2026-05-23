@@ -21,6 +21,7 @@ public:
     // FR: playerAttemptsEscape déclare ou implémente un comportement précis utilisé par ce module.
     static bool playerAttemptsEscape(Player& player, Random& random);
     static bool playerAttemptsEscape(Player& player, Random& random, DifficultyMode difficulty);
+    static bool playerAttemptsEscape(Player& player, Random& random, DifficultyMode difficulty, int enemyCount);
     // EN: playerAttemptsBossEscape declares or implements a focused behavior used by this module.
     // FR: playerAttemptsBossEscape déclare ou implémente un comportement précis utilisé par ce module.
     static bool playerAttemptsBossEscape(const Player& player, const Boss& boss);

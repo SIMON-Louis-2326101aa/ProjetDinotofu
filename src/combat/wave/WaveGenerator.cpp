@@ -107,12 +107,29 @@ EnemyCombatQueue WaveGenerator::createWaveForPlayer(
 
     for (int i = 0; i < waveSize; ++i)
     {
-        int levelVariation = random.between(-1, 1);
+        int allowedVariation = player.getLevel() >= 20 ? 15 : 10;
+        int levelVariation = random.between(-allowedVariation, allowedVariation);
 
         int monsterLevel = WaveRules::getMonsterLevelForPlayerLevel(
             player.getLevel(),
             levelVariation
         );
+
+        if (monsterLevel < 1)
+        {
+            monsterLevel = 1;
+        }
+
+        int maximumRandomLevel = player.getLevel() + allowedVariation;
+        if (maximumRandomLevel > Player::MAX_LEVEL)
+        {
+            maximumRandomLevel = Player::MAX_LEVEL;
+        }
+
+        if (monsterLevel > maximumRandomLevel)
+        {
+            monsterLevel = maximumRandomLevel;
+        }
 
         Monster monster = MonsterCatalog::createRandomMonsterForLevel(monsterLevel, random);
 

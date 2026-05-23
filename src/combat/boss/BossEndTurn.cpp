@@ -244,6 +244,13 @@ bool BossEndTurn::handleBossEndTurn(
         }
 
         boss.reduceUltimate();
+        if (boss.isUltimateActive())
+        {
+            std::cout << "Effet ultime encore actif : " << boss.getRemainingUltimateTurns()
+                      << " tour(s) de boss restant(s)." << std::endl;
+            std::cout << std::endl;
+        }
+
         if (!boss.isUltimateActive())
         {
             if (boss.getBossId() == 1)
@@ -258,12 +265,11 @@ bool BossEndTurn::handleBossEndTurn(
                 boss.setSpecialEffect(0);
             }
             else if (boss.getBossId() == 3)
-        {
-            int stored = boss.getSpecialEffect();
-            std::cout << "Atlas transforme les coups encaissés en onde de rempart." << std::endl;
-            dealOngoingDamage(player, 5 + stored * 5);
-        }
-        else if (boss.getBossId() == 4)
+            {
+                std::cout << "L'armure d'Atlas s'ouvre à nouveau." << std::endl;
+                std::cout << "Le dernier rempart retombe, mais ses fissures restent dangereuses." << std::endl;
+            }
+            else if (boss.getBossId() == 4)
             {
                 std::cout << "La nuit de Lyknir recule, mais la meute garde ton odeur." << std::endl;
                 boss.setSpecialEffect(1);
@@ -376,11 +382,6 @@ bool BossEndTurn::handleBossEndTurn(
             else if (boss.getBossId() == 31)
             {
                 std::cout << "Les âmes égarées baissent leurs lanternes." << std::endl;
-            }
-            else if (boss.getBossId() == 3)
-            {
-                std::cout << "L'armure d'Atlas s'ouvre à nouveau." << std::endl;
-                std::cout << "Le dernier rempart retombe, mais ses fissures restent dangereuses." << std::endl;
             }
             else
             {

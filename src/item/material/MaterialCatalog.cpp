@@ -172,6 +172,15 @@ Material MaterialCatalog::createById(const std::string& id, int quantity, const 
     if (normalized == "preservation_vials") return withQuality(createPreservationVials(quantity), quality);
     if (normalized == "clean_harvest_manual") return withQuality(createCleanHarvestManual(quantity), quality);
     if (normalized == "monster_dissection_guide") return withQuality(createMonsterDissectionGuide(quantity), quality);
+    if (normalized == "training_arrows") return withQuality(createTrainingArrows(quantity), quality);
+    if (normalized == "training_bolts") return withQuality(createTrainingBolts(quantity), quality);
+    if (normalized == "training_throwing_knives") return withQuality(createTrainingThrowingKnives(quantity), quality);
+    if (normalized == "barbed_arrows") return withQuality(createBarbedArrows(quantity), quality);
+    if (normalized == "piercing_bolts") return withQuality(createPiercingBolts(quantity), quality);
+    if (normalized == "balanced_throwing_knives") return withQuality(createBalancedThrowingKnives(quantity), quality);
+    if (normalized == "ash_arrows") return withQuality(createAshArrows(quantity), quality);
+    if (normalized == "frozen_bolts") return withQuality(createFrozenBolts(quantity), quality);
+    if (normalized == "conductive_knives") return withQuality(createConductiveKnives(quantity), quality);
 
     return Material(
         id,
@@ -689,4 +698,49 @@ Material MaterialCatalog::createCleanHarvestManual(int quantity)
 Material MaterialCatalog::createMonsterDissectionGuide(int quantity)
 {
     return Material("monster_dissection_guide", "Technique passive : dissection de monstre", "Guide pratique pour éviter les oreilles trouées, les peaux mal arrachées et les composants brûlés. Améliore les loots de monstres.", "Livre", 120, quantity);
+}
+
+Material MaterialCatalog::createTrainingArrows(int quantity)
+{
+    return Material("training_arrows", "Flèches d'entraînement", "Munitions basiques fournies aux classes à arc. Le craft de munitions spéciales sera appris plus tard.", "Munition", 1, quantity);
+}
+
+Material MaterialCatalog::createTrainingBolts(int quantity)
+{
+    return Material("training_bolts", "Carreaux d'entraînement", "Munitions basiques pour arbalète ou arme de tir lourde. Leur système actif viendra avec les armes à munitions.", "Munition", 2, quantity);
+}
+
+Material MaterialCatalog::createTrainingThrowingKnives(int quantity)
+{
+    return Material("training_throwing_knives", "Couteaux de lancer émoussés", "Projectiles pauvres mais utiles pour une défense à distance courte.", "Munition", 2, quantity);
+}
+
+Material MaterialCatalog::createBarbedArrows(int quantity)
+{
+    return Material("barbed_arrows", "Flèches barbelées", "Munitions spéciales artisanales. Elles infligeront plus tard des effets de saignement ; pour l'instant elles comptent comme munitions avancées.", "Munition spéciale", 5, quantity);
+}
+
+Material MaterialCatalog::createPiercingBolts(int quantity)
+{
+    return Material("piercing_bolts", "Carreaux perforants", "Munitions d'arbalète renforcées, pensées pour armures et monstres épais. Effets avancés prévus avec les armes à munitions.", "Munition spéciale", 6, quantity);
+}
+
+Material MaterialCatalog::createBalancedThrowingKnives(int quantity)
+{
+    return Material("balanced_throwing_knives", "Couteaux de lancer équilibrés", "Projectiles courts, mieux équilibrés que les couteaux émoussés de départ. Recette utile aux classes mobiles.", "Munition spéciale", 6, quantity);
+}
+
+Material MaterialCatalog::createAshArrows(int quantity)
+{
+    return Material("ash_arrows", "Flèches de cendre", "Munitions expérimentales noircies par alchimie. Elles préparent le futur système de brûlure sans l'activer partout trop tôt.", "Munition élémentaire", 8, quantity);
+}
+
+Material MaterialCatalog::createFrozenBolts(int quantity)
+{
+    return Material("frozen_bolts", "Carreaux givrés", "Carreaux traités au froid. Ils serviront aux futures interactions de ralentissement, glace et armures gelées.", "Munition élémentaire", 9, quantity);
+}
+
+Material MaterialCatalog::createConductiveKnives(int quantity)
+{
+    return Material("conductive_knives", "Couteaux conducteurs", "Projectiles métalliques préparés pour les futures réactions électriques, surtout contre les cibles équipées de métal.", "Munition élémentaire", 9, quantity);
 }

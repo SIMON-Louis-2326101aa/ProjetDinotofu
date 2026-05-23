@@ -5,6 +5,7 @@
 // Description: Minimal JSON-like save manager for accounts, playable characters, future bestiary and materials.
 
 #include "save/SaveManager.hpp"
+#include "core/VersionInfo.hpp"
 
 #include "character/CharacterRace.hpp"
 #include "class_system/ClassCatalog.hpp"
@@ -129,6 +130,76 @@ namespace
 
         std::string updated = content;
         updated.insert(openingBrace + 1, "\n    " + replacement + ",");
+        return updated;
+    }
+
+    std::string withJsonStringField(
+        const std::string& content,
+        const std::string& key,
+        const std::string& value,
+        bool insideCharacter
+    )
+    {
+        std::string pattern = "\"" + key + "\"";
+        std::size_t keyPosition = content.find(pattern);
+        std::string replacement = "\"" + key + "\": \"" + escapeJson(value) + "\"";
+
+        if (keyPosition != std::string::npos)
+        {
+            std::size_t colonPosition = content.find(':', keyPosition);
+            if (colonPosition == std::string::npos) return content;
+
+            std::size_t valueStart = content.find_first_not_of(" \t\r\n", colonPosition + 1);
+            if (valueStart == std::string::npos) return content;
+
+            std::size_t valueEnd = valueStart;
+            bool quoted = content[valueStart] == '"';
+            if (quoted)
+            {
+                valueEnd = content.find('"', valueStart + 1);
+                if (valueEnd == std::string::npos) return content;
+                ++valueEnd;
+            }
+            else
+            {
+                while (valueEnd < content.size()
+                       && content[valueEnd] != ','
+                       && content[valueEnd] != '\n'
+                       && content[valueEnd] != '}')
+                {
+                    ++valueEnd;
+                }
+            }
+
+            std::string updated = content;
+            updated.replace(keyPosition, valueEnd - keyPosition, replacement);
+            return updated;
+        }
+
+        std::string updated = content;
+
+        if (insideCharacter)
+        {
+            std::string characterPattern = "\"character\"";
+            std::size_t characterPosition = updated.find(characterPattern);
+            std::size_t openingBrace = updated.find('{', characterPosition);
+
+            if (characterPosition == std::string::npos || openingBrace == std::string::npos)
+            {
+                return content;
+            }
+
+            updated.insert(openingBrace + 1, "\n    " + replacement + ",");
+            return updated;
+        }
+
+        std::size_t openingBrace = updated.find('{');
+        if (openingBrace == std::string::npos)
+        {
+            return content;
+        }
+
+        updated.insert(openingBrace + 1, "\n  " + replacement + ",");
         return updated;
     }
 
@@ -415,6 +486,14 @@ namespace
 
         if (normalized == normalizeText("Mains nues")) return WeaponCatalog::createBareHands();
         if (normalized == normalizeText("Épée rouillée")) return WeaponCatalog::createRustySword();
+        if (normalized == normalizeText("Dague d'entraînement")) return WeaponCatalog::createTrainingDagger();
+        if (normalized == normalizeText("Lance d'entraînement")) return WeaponCatalog::createTrainingSpear();
+        if (normalized == normalizeText("Arc d'entraînement")) return WeaponCatalog::createTrainingBow();
+        if (normalized == normalizeText("Arbalète d'entraînement")) return WeaponCatalog::createTrainingCrossbow();
+        if (normalized == normalizeText("Bandoulière de lancer")) return WeaponCatalog::createTrainingThrowingBandolier();
+        if (normalized == normalizeText("Couteau de bois d'urgence")) return WeaponCatalog::createEmergencyWoodKnife();
+        if (normalized == normalizeText("Bâton d'apprenti")) return WeaponCatalog::createTrainingStaff();
+        if (normalized == normalizeText("Hache lourde émoussée")) return WeaponCatalog::createHeavyTrainingAxe();
         if (normalized == normalizeText("Lame d'arène")) return WeaponCatalog::createArenaBlade();
         if (normalized.find(normalizeText("Lame de récupération")) != std::string::npos)
         {
@@ -455,6 +534,9 @@ namespace
 
         if (normalized == normalizeText("Tenue simple")) return ArmorCatalog::createSimpleOutfit();
         if (normalized == normalizeText("Armure en cuir usée")) return ArmorCatalog::createWornLeatherArmor();
+        if (normalized == normalizeText("Robe d'apprenti renforcée")) return ArmorCatalog::createApprenticeRobe();
+        if (normalized == normalizeText("Veste matelassée de départ")) return ArmorCatalog::createPaddedVest();
+        if (normalized == normalizeText("Armure lourde rafistolée")) return ArmorCatalog::createHeavyPaddedArmor();
         if (normalized == normalizeText("Cotte de maille d'arène")) return ArmorCatalog::createArenaChainmail();
         if (normalized.find(normalizeText("Armure de chasseur rafistolée")) != std::string::npos)
         {
@@ -491,10 +573,20 @@ namespace
     {
         std::string normalized = normalizeText(name);
 
+        if (normalized == normalizeText("Petite potion de soin")) return ConsumableCatalog::createMinorHealingPotion();
         if (normalized == normalizeText("Potion de soin")) return ConsumableCatalog::createBasicHealingPotion();
-        if (normalized == normalizeText("Potion de rage")) return ConsumableCatalog::createBasicDamagePotion();
         if (normalized == normalizeText("Potion de soin renforcée")) return ConsumableCatalog::createReinforcedHealingPotion();
+        if (normalized == normalizeText("Potion de soin supérieure")) return ConsumableCatalog::createGreaterHealingPotion();
+        if (normalized == normalizeText("Potion de soin majeure")) return ConsumableCatalog::createMajorHealingPotion();
+        if (normalized == normalizeText("Petite potion de rage")) return ConsumableCatalog::createMinorDamagePotion();
+        if (normalized == normalizeText("Potion de rage")) return ConsumableCatalog::createBasicDamagePotion();
         if (normalized == normalizeText("Potion de rage supérieure")) return ConsumableCatalog::createReinforcedDamagePotion();
+        if (normalized == normalizeText("Potion de rage majeure")) return ConsumableCatalog::createGreaterDamagePotion();
+        if (normalized == normalizeText("Potion de rage expérimentale")) return ConsumableCatalog::createExperimentalDamagePotion();
+        if (normalized == normalizeText("Potion défensive")) return ConsumableCatalog::createDefensivePotion();
+        if (normalized == normalizeText("Potion défensive supérieure")) return ConsumableCatalog::createGreaterDefensivePotion();
+        if (normalized == normalizeText("Potion de précision")) return ConsumableCatalog::createPrecisionPotion();
+        if (normalized == normalizeText("Fiole d'affaiblissement")) return ConsumableCatalog::createWeakeningDebuffPotion();
 
         if (normalized.find(normalizeText("particularité stable")) != std::string::npos)
         {
@@ -674,12 +766,18 @@ namespace
         CharacterSaveSummary summary;
         summary.path = path;
         summary.accountName = extractStringValue(content, "account", "local");
+        summary.creatorAccountName = extractStringValue(content, "creatorAccount", summary.accountName);
+        summary.currentOwnerAccountName = extractStringValue(content, "currentOwnerAccount", summary.accountName);
         summary.characterName = extractStringValue(content, "name", "Inconnu");
         summary.raceName = extractStringValue(content, "race", "Humain");
         summary.className = extractStringValue(content, "class", "Chevalier");
         summary.difficulty = difficultyFromText(extractStringValue(content, "difficulty", "Normal"));
         summary.level = extractIntValue(content, "level", 1);
         summary.clone = extractBoolValue(content, "clone", false);
+        summary.gameVersion = extractStringValue(content, "gameVersion", "inconnue");
+        summary.createdAt = extractStringValue(content, "createdAt", "Inconnue");
+        summary.createdForVersion = extractStringValue(content, "createdForVersion", "inconnue");
+        summary.lastAdaptedVersion = extractStringValue(content, "lastAdaptedVersion", summary.createdForVersion);
 
         return summary;
     }
@@ -733,7 +831,9 @@ bool SaveManager::saveAccountSnapshot(
     }
 
     file << "{\n";
-    file << "  \"saveVersion\": 13,\n";
+    file << "  \"saveVersion\": 14,\n";
+    file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
+    file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
     file << "  \"accountName\": \"" << escapeJson(accountName) << "\",\n";
     file << "  \"status\": \"active\",\n";
@@ -777,13 +877,25 @@ bool SaveManager::savePlayerSnapshot(
 
     Weapon weapon = player.getEquippedWeapon();
     Armor armor = player.getEquippedArmor();
+    std::string creatorAccount = player.getCreatorAccountName().empty()
+        ? accountName
+        : player.getCreatorAccountName();
 
     file << "{\n";
-    file << "  \"saveVersion\": 13,\n";
+    file << "  \"saveVersion\": 14,\n";
+    file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
+    file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
     file << "  \"account\": \"" << escapeJson(accountName) << "\",\n";
+    file << "  \"creatorAccount\": \"" << escapeJson(creatorAccount) << "\",\n";
+    file << "  \"currentOwnerAccount\": \"" << escapeJson(accountName) << "\",\n";
     file << "  \"difficulty\": \"" << escapeJson(difficultyToText(difficulty)) << "\",\n";
     file << "  \"character\": {\n";
+    file << "    \"createdAt\": \"" << escapeJson(player.getCreatedAtText()) << "\",\n";
+    file << "    \"creatorAccount\": \"" << escapeJson(creatorAccount) << "\",\n";
+    file << "    \"currentOwnerAccount\": \"" << escapeJson(accountName) << "\",\n";
+    file << "    \"createdForVersion\": \"" << escapeJson(player.getCreatedForVersion()) << "\",\n";
+    file << "    \"lastAdaptedVersion\": \"" << escapeJson(player.getLastAdaptedVersion()) << "\",\n";
     file << "    \"name\": \"" << escapeJson(player.getName()) << "\",\n";
     file << "    \"race\": \"" << escapeJson(player.getRaceText()) << "\",\n";
     file << "    \"class\": \"" << escapeJson(player.getType()) << "\",\n";
@@ -831,6 +943,23 @@ bool SaveManager::savePlayerSnapshot(
         file << "    {\"label\": \"" << escapeJson(lethalEliminations[i]) << "\"}";
 
         if (i + 1 < lethalEliminations.size())
+        {
+            file << ",";
+        }
+
+        file << "\n";
+    }
+
+    file << "  ],\n";
+
+    file << "  \"starterKitSnapshot\": [\n";
+    const std::vector<std::string>& starterKitLog = player.getStarterKitLog();
+
+    for (std::size_t i = 0; i < starterKitLog.size(); i++)
+    {
+        file << "    {\"label\": \"" << escapeJson(starterKitLog[i]) << "\"}";
+
+        if (i + 1 < starterKitLog.size())
         {
             file << ",";
         }
@@ -1235,6 +1364,12 @@ bool SaveManager::loadPlayerSnapshot(
     std::string characterName = extractStringValue(content, "name", summary.characterName);
     std::string className = extractStringValue(content, "class", summary.className);
     std::string raceName = extractStringValue(content, "race", summary.raceName);
+    std::string createdAt = extractStringValue(content, "createdAt", "Inconnue");
+    std::string createdForVersion = extractStringValue(content, "createdForVersion", "inconnue");
+    std::string lastAdaptedVersion = extractStringValue(content, "lastAdaptedVersion", createdForVersion);
+    std::string saveAccountName = extractStringValue(content, "account", summary.accountName);
+    std::string creatorAccountName = extractStringValue(content, "creatorAccount", saveAccountName);
+    std::string currentOwnerAccountName = extractStringValue(content, "currentOwnerAccount", saveAccountName);
 
     int level = extractIntValue(content, "level", 1);
     int experience = extractIntValue(content, "experience", 0);
@@ -1267,6 +1402,8 @@ bool SaveManager::loadPlayerSnapshot(
 
     PlayerClass loadedClass = ClassCatalog::createClassByName(className);
     player = Player(characterName, loadedClass);
+    player.setVersionMetadata(createdAt, createdForVersion, lastAdaptedVersion);
+    player.setOwnershipMetadata(creatorAccountName, currentOwnerAccountName);
     player.setRace(raceFromText(raceName));
     player.initializeStarterInventory(difficulty);
     player.setClone(extractBoolValue(content, "clone", false));
@@ -1278,6 +1415,7 @@ bool SaveManager::loadPlayerSnapshot(
     std::vector<std::string> bestiaryObjects = extractObjectsFromArray(content, "bestiaryRuntimeSnapshot");
     std::vector<std::string> questObjects = extractObjectsFromArray(content, "questLogSnapshot");
     std::vector<std::string> lethalEliminationObjects = extractObjectsFromArray(content, "pvpLethalEliminations");
+    std::vector<std::string> starterKitObjects = extractObjectsFromArray(content, "starterKitSnapshot");
     std::vector<std::string> recentEquipmentUsageObjects = extractObjectsFromArray(content, "recentCombatEquipmentUsage");
     std::vector<std::string> passiveSkillObjects = extractObjectsFromArray(content, "unlockedPassiveSkills");
     std::vector<std::string> activeSkillObjects = extractObjectsFromArray(content, "unlockedActiveSkills");
@@ -1346,6 +1484,13 @@ bool SaveManager::loadPlayerSnapshot(
             player.getInventory().addMaterial(MaterialCatalog::createById(id, quantity, quality));
         }
     }
+
+    std::vector<std::string> loadedStarterKitLog;
+    for (const std::string& object : starterKitObjects)
+    {
+        loadedStarterKitLog.push_back(extractStringValue(object, "label", "Entrée de départ inconnue"));
+    }
+    player.setLoadedStarterKitLog(loadedStarterKitLog);
 
     player.getInventory().setGold(gold);
     player.setLoadedProgress(level, experience, hp);
@@ -1856,6 +2001,70 @@ bool SaveManager::exportAccountPackage(const std::string& accountName, std::stri
         }
 
         exportedPath = packageRoot;
+        return true;
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+
+
+bool SaveManager::transferCharacterOwnership(const CharacterSaveSummary& summary, const std::string& targetAccountName)
+{
+    if (!ensureSaveDirectories())
+    {
+        return false;
+    }
+
+    if (targetAccountName.empty() || summary.path.empty() || !std::filesystem::exists(summary.path))
+    {
+        return false;
+    }
+
+    if (buildSafeFileName(targetAccountName) == buildSafeFileName(summary.accountName))
+    {
+        return false;
+    }
+
+    std::string safeTargetAccount = buildSafeFileName(targetAccountName);
+    std::string safeCharacter = buildSafeFileName(summary.characterName);
+    std::string destination = SAVE_ROOT + "/characters/playable/" + safeTargetAccount + "__" + safeCharacter + ".json";
+
+    if (std::filesystem::exists(destination))
+    {
+        return false;
+    }
+
+    try
+    {
+        saveAccountSnapshot(targetAccountName);
+
+        std::string content = readFileContent(summary.path);
+        if (content.empty())
+        {
+            return false;
+        }
+
+        std::string creator = extractStringValue(content, "creatorAccount", summary.creatorAccountName.empty() ? summary.accountName : summary.creatorAccountName);
+        if (creator.empty())
+        {
+            creator = summary.accountName;
+        }
+
+        content = withJsonStringField(content, "account", targetAccountName, false);
+        content = withJsonStringField(content, "creatorAccount", creator, false);
+        content = withJsonStringField(content, "currentOwnerAccount", targetAccountName, false);
+        content = withJsonStringField(content, "creatorAccount", creator, true);
+        content = withJsonStringField(content, "currentOwnerAccount", targetAccountName, true);
+        content = withJsonStringField(content, "lastTransferNote", "Maitrise transferee de maniere irreversible vers " + targetAccountName, true);
+
+        if (!writeFileContent(destination, content))
+        {
+            return false;
+        }
+
+        std::filesystem::remove(summary.path);
         return true;
     }
     catch (...)

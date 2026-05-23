@@ -155,3 +155,196 @@ Interface terminal :
 - Vérifier les chemins.
 - Ajouter pagination quand un écran devient trop long.
 - Affichages simple / détaillé pour stats, inventaire, équipement, bestiaire et compétences.
+
+VERSIONING / COMPATIBILITÉ DES PERSONNAGES
+------------------------------------------
+Version actuelle de développement : 1.32.03
+
+Logique X.Y.Z :
+- X : grande phase du jeu.
+  - 0 : base incomplète ou non fonctionnelle.
+  - 1 : base refonctionnelle et systèmes principaux stabilisés.
+  - 2 : gros ajouts de roleplay, statistiques, gameplay et systèmes durables.
+  - 3 : interface graphique fonctionnelle.
+  - 4 : mode histoire et chapitres principaux.
+- Y : changement majeur dans la phase actuelle, ajout ou modification qui peut changer la façon de jouer.
+- Z : petit patch, correctif ou ajustement mineur.
+
+À la sélection d'un personnage, le jeu peut afficher :
+- un conseil de recréer le personnage si la sauvegarde vient d'une version trop ancienne ou inconnue ;
+- un avertissement de différences possibles si la mise à jour est moyenne ;
+- aucun avertissement si la différence est seulement un petit patch.
+
+Chaque personnage sauvegarde :
+- la date de création ;
+- la version de création ;
+- la dernière version d'adaptation connue.
+
+---
+
+## Migration / adaptation des anciennes sauvegardes
+
+Depuis la version 1.32.03, les personnages sauvegardent aussi un `starterKitSnapshot`, c'est-à-dire la trace de ce qu'ils ont reçu au départ : arme de classe, équipement de secours, munitions, armure, potions et or. Cette trace sert à comprendre l'origine du personnage sans supposer qu'il possède encore ces objets, car il a pu les vendre, les casser, les perdre ou les donner.
+
+Si une version ancienne ou inconnue est détectée après sélection d'un personnage, le jeu recommande de recréer le personnage. Le joueur peut alors choisir :
+
+- procéder au rituel d'oubli contrôlé, donc recréer proprement le personnage pour la version actuelle ;
+- subir une adaptation lourde, qui ajoute seulement les sécurités manquantes sans remplacer les objets gagnés normalement ;
+- revenir au menu.
+
+L'adaptation lourde ne doit pas réinitialiser l'inventaire et ne doit pas remplacer les objets rares, héroïques, reliques, boss ou obtenus normalement. Elle sert seulement à éviter qu'une ancienne sauvegarde soit injouable à cause d'un système ajouté plus tard.
+
+## Tables de spawn par biome et fuite PvE de groupe
+
+Les rencontres d'exploration utilisent maintenant des tables de spawn liées au biome :
+- 70% de monstres typiques de la zone.
+- 20% de monstres compatibles mais moins fréquents.
+- 10% de rares / élites propres au biome.
+
+Chaque biome garde son identité même quand la zone évolue : une plaine évoluée génère surtout des prédateurs de plaine renforcés, pas des morts-vivants de ruines sans raison.
+Les rares et élites sont beaucoup plus liés à leur zone naturelle : slimes couronnés dans le marais, revenants et anomalies dans les ruines, embuscades sur la route commerciale, etc.
+
+En PvE vague directe, le nombre d'ennemis est maintenant encadré entre 2 et 10.
+La fuite dépend du nombre d'adversaires restants :
+- minimum 1 réussite de fuite ;
+- sinon réussites nécessaires = nombre d'adversaires / 3, arrondi au plus proche avec .5 vers le haut.
+
+Exemples :
+- 2 à 4 ennemis : 1 réussite.
+- 5 à 7 ennemis : 2 réussites.
+- 8 à 10 ennemis : 3 réussites.
+
+Toutes les ouvertures doivent réussir sur la même tentative de fuite. Plus le groupe ennemi est nombreux, plus il devient logique et difficile de s'extraire de l'encerclement.
+
+## Patch combat - techniques, munitions et potions actives
+
+- Le sous-menu Attaquer n'est plus uniquement décoratif :
+  - Attaque simple : comportement standard.
+  - Technique d'arme : bonus dépendant de l'arme équipée (dague, lance, arc, bâton, arme lourde, épée, mains nues).
+  - Attaque lourde : coup plus violent avec bonus fixe, moins subtil mais utile.
+  - Attaque rapide : premier coup plus léger avec une chance d'enchaîner un second geste.
+
+- Les armes de type arc consomment maintenant une munition à chaque attaque :
+  - Archer / rôdeur / chasseur : flèches d'entraînement.
+  - Arbalétrier / tireur : carreaux d'entraînement.
+  - Lanceur de dagues : couteaux de lancer émoussés.
+  - Sans munition adaptée, l'attaque reste possible mais devient très faible, comme une défense improvisée.
+
+- Les potions de buff et de debuff ne sont plus de simples WIP :
+  - Potion défensive / buff : soigne légèrement et active immédiatement une posture défensive.
+  - Fiole de debuff : inflige des dégâts chimiques à une cible et peut tuer/remplacer un ennemi en vague.
+
+Ces systèmes restent volontairement simples pour cette version : les vrais buffs persistants, cooldowns, crafts de munitions et munitions spéciales viendront dans une passe dédiée.
+
+## Patch sauvegarde - maître unique des personnages
+
+- Chaque sauvegarde de personnage écrit maintenant deux informations distinctes :
+  - `creatorAccount` : le compte créateur historique du personnage ;
+  - `currentOwnerAccount` : le joueur / maître actuel autorisé à l'incarner.
+
+- À la sélection d'un personnage, ces deux informations sont affichées :
+  - Créateur : ...
+  - Joueur / maître actuel : ...
+
+- Si un fichier de personnage est déplacé ou renommé dans le dossier d'un autre compte sans passer par le jeu, le chargement est refusé avec un dialogue spécial : un personnage n'a qu'un seul maître.
+
+- Une nouvelle action permet de donner un personnage à un autre compte local :
+  - le transfert est volontaire et confirmé par `TRANSFERER` ;
+  - le fichier quitte l'ancien compte ;
+  - le compte destinataire devient le nouveau maître ;
+  - le créateur reste conservé dans la sauvegarde.
+
+- L'ancien export portable reste disponible séparément, tout comme l'export de clone. Le clone reste limité aux usages amicaux et ne remplace pas le vrai transfert de maîtrise.
+
+## Coop boss et soutien allié - ajout 1.32.03
+
+- Le mode multi local est branché sur les boss : le joueur 1 reste la référence pour l'arène, mais tous les joueurs doivent avoir débloqué le boss choisi.
+- Si un joueur secondaire bloque l'accès, le jeu affiche quels joueurs empêchent l'ouverture du boss.
+- Les boss aléatoires coop sont pris dans la liste commune accessible à tout le groupe.
+- Chaque joueur agit pendant le tour de groupe, puis le boss cible un joueur vivant.
+- Les potions de soin peuvent maintenant réveiller un allié au sol en PvE coop et en boss coop, puis le soigner.
+- Les récompenses de boss coop sont individuelles : participation, chute au combat et écart de niveau avec le joueur 1 réduisent la récompense.
+- Un joueur qui n'a pas réellement joué de tour ne progresse pas dans le registre de boss et ne reçoit pas de loot de boss.
+- En Léthal coop boss, les personnages au sol utilisent les jets de survie type DND : 11+ vert, 10- rouge, 20 réveil direct à 1 PV, 1 double rouge.
+
+COOP - REGLES VALIDEES / EN COURS
+---------------------------------
+- Le mode multi local doit être disponible depuis tous les modes du jeu.
+- Le joueur 1 reste la référence pour le voyage, les événements, le niveau de session, les monstres et les boss.
+- Les joueurs 2 et 3 interviennent surtout en combat avec leur inventaire, leur état et leurs récompenses individuelles.
+- Un personnage peut alterner librement entre solo et coop.
+- Les récompenses coop sont individuelles : participation, niveau, chance, survie, soins et danger réel devront compter de plus en plus.
+- Un joueur trop bas niveau ne doit pas recevoir du loot endgame juste parce qu'un joueur haut niveau l'accompagne.
+- En boss coop, tous les joueurs doivent avoir débloqué le boss pour l'affronter.
+- Les joueurs secondaires peuvent progresser dans les déblocages de boss s'ils participent réellement au combat.
+- Les potions de soin doivent pouvoir être utilisées sur joueurs alliés et IA alliées.
+- Un personnage tombé cesse de générer des récompenses supplémentaires après sa chute, mais garde ce qu'il a mérité avant.
+- En Léthal coop, un personnage au sol lance des dés de survie : 11+ vert, 10- rouge, 20 réveil immédiat à 1 PV, 1 deux rouges. Trois rouges signifient mort définitive sauf exception/divination future. Trois verts réveillent à 1 PV sans compter la mort.
+- Les personnages secondaires morts définitivement en coop doivent être retirés des personnages jouables de leur compte et placés dans le registre des morts.
+
+=== FORMATION ALLIÉE / COOP / INVOCATIONS ===
+
+Règle validée pour les combats de groupe :
+- Le joueur principal occupe le centre de la formation.
+- Les deux emplacements latéraux peuvent recevoir des joueurs secondaires ou des personnages alliés.
+- Les deux extrémités sont réservées aux invocations.
+- Si plus de trois alliés non-invocations sont disponibles, les joueurs prennent toujours la priorité sur les personnages alliés.
+- Les personnages alliés prennent toujours la priorité sur les invocations lors du placement/remplacement d'équipe.
+- Les invocations sont donc la dernière priorité et ne doivent pas voler une place centrale ou latérale à un joueur/personnage.
+
+Placement logique actuel :
+- Slot 0 : centre, joueur principal.
+- Slot 1 : côté gauche, joueur secondaire ou allié.
+- Slot 2 : côté droit, joueur secondaire ou allié.
+- Slot 3 : extrémité gauche, invocation uniquement.
+- Slot 4 : extrémité droite, invocation uniquement.
+
+## Ajustement IA soin / munitions - passe actuelle
+
+- Les ennemis ne doivent pas devenir des soigneurs par défaut parce qu'ils possèdent une potion.
+- Une bête classique, un loup, un mort-vivant basique ou un monstre sans logique de soin ne sait pas utiliser de potion ni de sort de soin, sauf exception explicite de lore.
+- En PvE coop, seuls les profils précis capables de comprendre le soin peuvent utiliser une potion/technique de soin sur un allié ou eux-mêmes : soigneur, prêtre/clerc, chaman, alchimiste, sorcier, mage putride, chef bandit ou pilleur vétéran.
+- Quand un tel ennemi soigne, la priorité est de sauver un allié blessé. Le soin personnel existe, mais il représente seulement une survie de secours et reste moins prioritaire.
+- Les IA alliées devront suivre la même logique plus tard : elles pourront soigner joueurs/alliés/IA selon leur personnalité, leur rôle, leur inventaire et leur volonté réelle d'aider.
+- Les munitions spéciales ne sont plus consommées automatiquement : pour chaque tir avec une arme à munitions, le joueur choisit la munition à utiliser et voit le nombre restant.
+
+============================================================
+TÂCHE PRÉVUE - VARIANTES DE MONSTRES ET ÉLÉMENTS
+============================================================
+
+Objectif : augmenter fortement la variété du bestiaire même avant que toutes les variantes possèdent des mécaniques uniques.
+
+Règles validées :
+- Un monstre simple ne sait pas forcément utiliser des potions, techniques ou sorts.
+- Exemple : un gobelin classique ne soigne pas, mais un gobelin shaman peut le faire.
+- Les soigneurs ennemis doivent surtout soigner leurs alliés ; le soin personnel reste une survie de secours.
+- Les bêtes classiques comme loups, sangliers ou rats ne doivent pas utiliser de potions, sauf variante spéciale justifiée par le lore.
+- Les slimes pourront avoir des couleurs et règles dédiées : vert, bleu, rouge, violet, noir, doré, etc.
+- Certaines variantes peuvent être presque inutiles volontairement pour donner du relief au monde et remplir le bestiaire.
+- Les évolutions/variantes doivent exister progressivement, même si leurs effets spéciaux arrivent plus tard.
+
+Tâche future élémentaire :
+- Ajouter des dégâts élémentaires : feu, poison, glace, électricité, etc.
+- Ajouter des statuts sur la durée : brûlure, poison, gel, électrocution.
+- Électricité : prévoir une interaction spéciale avec armes/armures en fer. Si arme en fer équipée ou armure en fer équipée : dégâts supplémentaires ; si les deux : pénalité doublée ou aggravée.
+- Les monstres élémentaires et certaines variantes rares utiliseront ces statuts.
+
+[2026-05-23] Passe gameplay classes / armes à munitions / variantes
+- Les tirs ne sont plus décidés par la classe seule : le menu de munition se base sur l'arme équipée.
+- Les armes à distance sans munition utilisent une défense d'urgence justifiée : coup de poignée / branche / crosse à très courte portée, pas un projectile magique.
+- Ajout d'armes de départ compatibles : arbalète d'entraînement et bandoulière de lancer.
+- Ajout de variantes de slimes par zone, sans utiliser de noms non lore comme “pion” ou “inutile”.
+- Les évolutions de slimes et de gobelins ont maintenant des noms plus spécifiques.
+- Les invocations ont gagné de nouveaux profils : Totem gardien, Corbeau familier, Éclat de miroir.
+- La coop PvE prend maintenant en compte les invocations du joueur concerné après son tour, avec contribution individuelle.
+- Les boutiques vendent plus souvent des munitions basiques/spéciales, avec marché noir pour munitions interdites ou volées.
+
+[2026-05-23] Passe continuation boss coop / munitions élémentaires / variantes
+- Les invocations peuvent maintenant agir aussi en boss coop après le tour de leur propriétaire.
+- En boss coop, le boss peut parfois sentir le lien d'invocation et frapper une invocation au lieu d'un joueur vivant.
+- Les dégâts des invocations en boss coop comptent dans la participation du propriétaire.
+- Ajout de munitions élémentaires préparatoires : Flèches de cendre, Carreaux givrés, Couteaux conducteurs.
+- Ajout de recettes de craft pour ces munitions élémentaires, en attendant le vrai système complet de statuts élémentaires.
+- Le marché noir et certaines boutiques peuvent proposer ces munitions élémentaires selon la rotation.
+- Ajout de nouvelles variantes de slimes par biome : rouge tiède, doré minuscule, vert ancien, blanc poudreux, vert putride jeune, gris gravé.
+- Les monstres gagnent une première couche de spécialités supplémentaires : slimes, plantes et insectoïdes ont des réactions d'attaque plus distinctes.

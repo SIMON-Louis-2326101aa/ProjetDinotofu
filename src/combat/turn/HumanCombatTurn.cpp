@@ -54,8 +54,46 @@ bool HumanCombatTurn::play(
 
     if (option == 1)
     {
-        CombatActions::executeAttack(attacker, defender, random);
-        return true;
+        std::cout << "========== TYPE D'ATTAQUE ==========" << std::endl;
+        std::cout << "0 : Retour" << std::endl;
+        std::cout << "1 : Attaque simple" << std::endl;
+        std::cout << "2 : Technique d'arme" << std::endl;
+        std::cout << "3 : Attaque lourde" << std::endl;
+        std::cout << "4 : Attaque rapide" << std::endl;
+        std::cout << "====================================" << std::endl;
+        std::cout << "> ";
+
+        int attackChoice = Console::askNumberBetween(0, 4, "Choix invalide.");
+        Console::clear();
+
+        if (attackChoice == 0)
+        {
+            return false;
+        }
+
+        if (attackChoice == 1)
+        {
+            CombatActions::executeAttack(attacker, defender, random);
+            return true;
+        }
+
+        if (attackChoice == 2)
+        {
+            CombatActions::executeWeaponTechnique(attacker, defender, random);
+            return true;
+        }
+
+        if (attackChoice == 3)
+        {
+            CombatActions::executeHeavyAttack(attacker, defender, random);
+            return true;
+        }
+
+        if (attackChoice == 4)
+        {
+            CombatActions::executeQuickAttack(attacker, defender, random);
+            return true;
+        }
     }
 
     if (option == 2)

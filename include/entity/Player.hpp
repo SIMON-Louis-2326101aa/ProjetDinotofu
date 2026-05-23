@@ -84,6 +84,9 @@ private:
     bool specialChallengeAccessKnown;
     bool creatorMessageKnown;
 
+    std::string nextAmmunitionChoiceId;
+    std::string lastConsumedAmmunitionId;
+
     int goldCheatUseCount;
     int levelCheatUseCount;
     int maxLevelCheatUseCount;
@@ -95,6 +98,13 @@ private:
     int worldGazeMaxHpPenalty;
 
     int refundUsesRemaining;
+
+    std::string createdAtText;
+    std::string createdForVersion;
+    std::string lastAdaptedVersion;
+    std::string creatorAccountName;
+    std::string currentOwnerAccountName;
+    std::vector<std::string> starterKitLog;
     // EN: reduceWorldGazeDurationAfterCombat declares or implements a focused behavior used by this module.
     // FR: reduceWorldGazeDurationAfterCombat déclare ou implémente un comportement précis utilisé par ce module.
     void reduceWorldGazeDurationAfterCombat();
@@ -133,6 +143,18 @@ public:
     // FR: getRace déclare ou implémente un comportement précis utilisé par ce module.
     CharacterRace getRace() const;
     std::string getRaceText() const;
+    const std::string& getCreatedAtText() const;
+    const std::string& getCreatedForVersion() const;
+    const std::string& getLastAdaptedVersion() const;
+    void setVersionMetadata(const std::string& createdAt, const std::string& createdFor, const std::string& lastAdapted);
+    void markAdaptedToCurrentVersion();
+    const std::string& getCreatorAccountName() const;
+    const std::string& getCurrentOwnerAccountName() const;
+    void setOwnershipMetadata(const std::string& creatorAccount, const std::string& currentOwnerAccount);
+    const std::vector<std::string>& getStarterKitLog() const;
+    void setLoadedStarterKitLog(const std::vector<std::string>& log);
+    void recordStarterKitEntry(const std::string& entry);
+    std::vector<std::string> applyHeavyVersionAdaptation(DifficultyMode difficulty);
     // EN: setRace declares or implements a focused behavior used by this module.
     // FR: setRace déclare ou implémente un comportement précis utilisé par ce module.
     void setRace(CharacterRace selectedRace);
@@ -589,6 +611,13 @@ public:
     // EN: getEquippedWeapon declares or implements a focused behavior used by this module.
     // FR: getEquippedWeapon déclare ou implémente un comportement précis utilisé par ce module.
     Weapon getEquippedWeapon() const;
+
+    void setNextAmmunitionChoice(const std::string& ammunitionId);
+    std::string getNextAmmunitionChoice() const;
+    void clearNextAmmunitionChoice();
+    void setLastConsumedAmmunition(const std::string& ammunitionId);
+    std::string getLastConsumedAmmunition() const;
+    void clearLastConsumedAmmunition();
     // EN: equipWeapon declares or implements a focused behavior used by this module.
     // FR: equipWeapon déclare ou implémente un comportement précis utilisé par ce module.
     bool equipWeapon(int index);

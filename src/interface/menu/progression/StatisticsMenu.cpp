@@ -235,7 +235,12 @@ void StatisticsMenu::displayEquipmentUsage(const Player& player)
 // FR: displaySkillStats affiche les compétences débloquées et leur progression.
 void StatisticsMenu::displaySkillStats(const Player& player)
 {
-    player.displaySkillProgress();
+    (void)player;
+    MenuFrame::title("COMPÉTENCES");
+    std::cout << "Les compétences déjà débloquées restent visibles dans le résumé complet du personnage." << std::endl;
+    std::cout << "Les conditions exactes, compteurs et checklists de déblocage sont volontairement cachés." << std::endl;
+    std::cout << "Ton style de combat commence à laisser une trace, mais le monde ne te donnera pas une liste de courses." << std::endl;
+    std::cout << std::endl;
 }
 
 // EN: displaySpecialStates prints altered, clone and boss consequence states.

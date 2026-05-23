@@ -12,6 +12,22 @@
 #include <algorithm>
 #include <iostream>
 
+namespace
+{
+    int requiredEscapeSuccessesForEnemyCount(int enemyCount)
+    {
+        if (enemyCount <= 3)
+        {
+            return 1;
+        }
+
+        // EN: Rounded to nearest for enemyCount / 3.0, with .5 and above rounded up.
+        // FR: Arrondi au plus proche pour nbAdversaires / 3.0, avec .5 et plus vers le haut.
+        int required = (enemyCount + 1) / 3;
+        return std::max(1, required);
+    }
+}
+
 // EN: playerAttemptsEscape declares or implements a focused behavior used by this module.
 // FR: playerAttemptsEscape déclare ou implémente un comportement précis utilisé par ce module.
 bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random)
@@ -23,6 +39,11 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random)
 // FR: playerAttemptsEscape déclare ou implémente un comportement précis utilisé par ce module.
 bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, DifficultyMode difficulty)
 {
+    return playerAttemptsEscape(player, random, difficulty, 1);
+}
+
+bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, DifficultyMode difficulty, int enemyCount)
+{
     std::cout << player.getName() << " cherche une ouverture pour fuir le combat..." << std::endl;
     std::cout << std::endl;
 
@@ -32,27 +53,49 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, Difficul
         + DifficultyRules::getPlayerEscapeChanceModifier(difficulty);
 
     escapeChance = std::max(10, std::min(escapeChance, 90));
-    int roll = random.between(1, 100);
 
-    std::cout << "Chance estimée de fuite : " << escapeChance << "%" << std::endl;
-    std::cout << std::endl;
-
-    if (roll <= escapeChance)
+    if (enemyCount < 1)
     {
-        std::cout << "Fuite réussie." << std::endl;
-        std::cout << player.getName()
-                  << " parvient à quitter l'affrontement avant d'être encerclé."
-                  << std::endl;
-        std::cout << std::endl;
-
-        return true;
+        enemyCount = 1;
     }
 
-    std::cout << "Fuite échouée." << std::endl;
-    std::cout << "Les ennemis bloquent le passage. Ton tour est perdu." << std::endl;
+    int requiredSuccesses = requiredEscapeSuccessesForEnemyCount(enemyCount);
+
+    std::cout << "Adversaires encore capables de te bloquer : " << enemyCount << std::endl;
+    std::cout << "Réussites de fuite nécessaires : " << requiredSuccesses << std::endl;
+    std::cout << "Chance estimée par ouverture : " << escapeChance << "%" << std::endl;
     std::cout << std::endl;
 
-    return false;
+    int successes = 0;
+
+    for (int attempt = 1; attempt <= requiredSuccesses; ++attempt)
+    {
+        int roll = random.between(1, 100);
+
+        if (roll <= escapeChance)
+        {
+            ++successes;
+            std::cout << "Ouverture " << attempt << "/" << requiredSuccesses << " : réussie." << std::endl;
+            continue;
+        }
+
+        std::cout << "Ouverture " << attempt << "/" << requiredSuccesses << " : bloquée." << std::endl;
+        std::cout << std::endl;
+        std::cout << "Fuite échouée." << std::endl;
+        std::cout << "Trop de présences ferment ta trajectoire. Ton tour est perdu." << std::endl;
+        std::cout << std::endl;
+
+        return false;
+    }
+
+    std::cout << std::endl;
+    std::cout << "Fuite réussie." << std::endl;
+    std::cout << player.getName()
+              << " enchaîne assez d'ouvertures pour quitter l'affrontement avant d'être encerclé."
+              << std::endl;
+    std::cout << std::endl;
+
+    return successes >= requiredSuccesses;
 }
 
 // EN: playerAttemptsBossEscape declares or implements a focused behavior used by this module.

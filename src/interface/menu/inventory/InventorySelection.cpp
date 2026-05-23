@@ -1144,6 +1144,25 @@ namespace
         return consumeRecipeIngredient(player, id, quantity, false);
     }
 
+    bool consumeRecipeIngredients(Player& player, const std::vector<RecipeIngredient>& ingredients, const std::string& recipeName)
+    {
+        for (const RecipeIngredient& ingredient : ingredients)
+        {
+            if (!hasRecipeIngredients(player, ingredient.id, ingredient.quantity))
+            {
+                std::cout << "Il manque des composants pour : " << recipeName << "." << std::endl << std::endl;
+                return false;
+            }
+        }
+
+        bool exceptionalMajority = recipeUsesExceptionalMajority(player, ingredients);
+        for (const RecipeIngredient& ingredient : ingredients)
+        {
+            consumeRecipeIngredient(player, ingredient.id, ingredient.quantity, exceptionalMajority);
+        }
+        return true;
+    }
+
     // EN: craftBasicHealingPotion declares or implements a focused behavior used by this module.
     // FR: craftBasicHealingPotion déclare ou implémente un comportement précis utilisé par ce module.
     bool craftBasicHealingPotion(Player& player)
@@ -1919,6 +1938,61 @@ namespace
     }
 
 
+
+    bool craftBarbedArrows(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"wolf_fang", 1}, {"worn_leather_piece", 1}}, "Flèches barbelées")) return false;
+        player.getInventory().addMaterial(MaterialCatalog::createById("barbed_arrows", 8));
+        MaterialExperimentLog::recordCraft("Flèches barbelées", 8);
+        std::cout << "Tu fabriques 8 flèches barbelées. Les effets spéciaux complets viendront avec le système de munitions avancées." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftPiercingBolts(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"rusted_metal_fragment", 2}, {"arcane_dust", 1}}, "Carreaux perforants")) return false;
+        player.getInventory().addMaterial(MaterialCatalog::createById("piercing_bolts", 6));
+        MaterialExperimentLog::recordCraft("Carreaux perforants", 6);
+        std::cout << "Tu fabriques 6 carreaux perforants. C'est cher, mais pensé pour les cibles solides." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftBalancedThrowingKnives(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"rusted_metal_fragment", 2}, {"worn_leather_piece", 1}}, "Couteaux de lancer équilibrés")) return false;
+        player.getInventory().addMaterial(MaterialCatalog::createById("balanced_throwing_knives", 5));
+        MaterialExperimentLog::recordCraft("Couteaux de lancer équilibrés", 5);
+        std::cout << "Tu fabriques 5 couteaux de lancer équilibrés. Les classes mobiles devraient mieux les rentabiliser." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftAshArrows(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"training_arrows", 6}, {"arcane_dust", 1}}, "Flèches de cendre")) return false;
+        player.getInventory().addMaterial(MaterialCatalog::createById("ash_arrows", 6));
+        MaterialExperimentLog::recordCraft("Flèches de cendre", 6);
+        std::cout << "Tu transformes 6 flèches en flèches de cendre. Effet élémentaire complet prévu avec la tâche statuts." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftFrozenBolts(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"training_bolts", 5}, {"mountain_blue_flower", 1}}, "Carreaux givrés")) return false;
+        player.getInventory().addMaterial(MaterialCatalog::createById("frozen_bolts", 5));
+        MaterialExperimentLog::recordCraft("Carreaux givrés", 5);
+        std::cout << "Tu fabriques 5 carreaux givrés. Pour l'instant, ils existent surtout comme munition élémentaire rare." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftConductiveKnives(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"training_throwing_knives", 5}, {"rusted_metal_fragment", 2}, {"arcane_dust", 1}}, "Couteaux conducteurs")) return false;
+        player.getInventory().addMaterial(MaterialCatalog::createById("conductive_knives", 5));
+        MaterialExperimentLog::recordCraft("Couteaux conducteurs", 5);
+        std::cout << "Tu fabriques 5 couteaux conducteurs. Le futur système électrique les rendra beaucoup plus intéressants." << std::endl << std::endl;
+        return true;
+    }
+
     struct CraftRecipe
     {
         std::string name;
@@ -2045,6 +2119,12 @@ namespace
         // EN: recipes.push_back declares or implements a focused behavior used by this module.
         // FR: recipes.push_back déclare ou implémente un comportement précis utilisé par ce module.
         recipes.push_back({"Technique passive : dissection de monstre", "Livre / technique", {{"goblin_ear", 2}, {"wolf_fang", 2}, {"battle_torn_badge", 1}}, false, false, craftMonsterDissectionGuide});
+        recipes.push_back({"Flèches barbelées x8", "Munition", {{"wolf_fang", 1}, {"worn_leather_piece", 1}}, false, false, craftBarbedArrows});
+        recipes.push_back({"Carreaux perforants x6", "Munition avancée", {{"rusted_metal_fragment", 2}, {"arcane_dust", 1}}, false, true, craftPiercingBolts});
+        recipes.push_back({"Couteaux de lancer équilibrés x5", "Munition", {{"rusted_metal_fragment", 2}, {"worn_leather_piece", 1}}, false, true, craftBalancedThrowingKnives});
+        recipes.push_back({"Flèches de cendre x6", "Munition élémentaire", {{"training_arrows", 6}, {"arcane_dust", 1}}, false, false, craftAshArrows});
+        recipes.push_back({"Carreaux givrés x5", "Munition élémentaire", {{"training_bolts", 5}, {"mountain_blue_flower", 1}}, false, false, craftFrozenBolts});
+        recipes.push_back({"Couteaux conducteurs x5", "Munition élémentaire", {{"training_throwing_knives", 5}, {"rusted_metal_fragment", 2}, {"arcane_dust", 1}}, false, true, craftConductiveKnives});
 
         return recipes;
     }

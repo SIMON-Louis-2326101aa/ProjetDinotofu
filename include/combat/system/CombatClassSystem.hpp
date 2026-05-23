@@ -19,11 +19,11 @@ public:
     // EN: getBaseDamageReductionPercentage declares or implements a focused behavior used by this module.
     // FR: getBaseDamageReductionPercentage déclare ou implémente un comportement précis utilisé par ce module.
     static int getBaseDamageReductionPercentage(const Entity& entity);
+    static int getOutgoingDamagePercent(const Entity& entity);
+    static int getOutgoingFlatBonus(const Entity& entity);
+    static std::string normalizeClassText(const std::string& classText);
 
 private:
-    // EN: normalizeClassText declares or implements a focused behavior used by this module.
-    // FR: normalizeClassText déclare ou implémente un comportement précis utilisé par ce module.
-    static std::string normalizeClassText(const std::string& classText);
 };
 
 #endif

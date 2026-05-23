@@ -12,6 +12,7 @@
 Boss::Boss() : Entity()
 {
     bossId = 0;
+    identityRevealed = true;
     remainingUltimateTurns = 0;
     maxUltimateTurns = 0;
     ultimateCooldown = 0;
@@ -45,6 +46,7 @@ Boss::Boss(
     )
 {
     this->bossId = bossId;
+    this->identityRevealed = bossId <= 3;
 
     this->remainingUltimateTurns = 0;
     this->maxUltimateTurns = maxUltimateTurns;
@@ -62,6 +64,36 @@ Boss::Boss(
 int Boss::getBossId() const
 {
     return bossId;
+}
+
+std::string Boss::getName() const
+{
+    if (!identityRevealed)
+    {
+        return "???";
+    }
+
+    return name;
+}
+
+std::string Boss::getType() const
+{
+    if (!identityRevealed)
+    {
+        return "Type brouillé";
+    }
+
+    return type;
+}
+
+bool Boss::isIdentityRevealed() const
+{
+    return identityRevealed;
+}
+
+void Boss::revealIdentity()
+{
+    identityRevealed = true;
 }
 
 // EN: getRemainingUltimateTurns declares or implements a focused behavior used by this module.
@@ -198,6 +230,7 @@ bool Boss::mustDecryptStats() const
 void Boss::decryptStats()
 {
     decryptedStats = true;
+    revealIdentity();
 }
 
 // EN: displayStats declares or implements a focused behavior used by this module.
@@ -213,8 +246,8 @@ void Boss::displayStats() const
     }
 
     std::cout << "===== STATISTIQUES DE L'ENTITÉ =====" << std::endl;
-    std::cout << "Nom : " << name << std::endl;
-    std::cout << "Type d'entité : " << type << std::endl;
+    std::cout << "Nom : " << getName() << std::endl;
+    std::cout << "Type d'entité : " << getType() << std::endl;
     std::cout << "PV : " << hp << "/" << maxHp << std::endl;
     std::cout << "Dégâts : " << minDamage << " - " << maxDamage << std::endl;
     std::cout << "Critique : " << criticalDamage << std::endl;

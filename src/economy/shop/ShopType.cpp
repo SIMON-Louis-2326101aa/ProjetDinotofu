@@ -40,6 +40,9 @@ const char* shopTypeToText(ShopType type)
         case ShopType::Alchemist:
             return "Alchimiste PNJ";
 
+        case ShopType::BlackMarket:
+            return "Marché noir";
+
         case ShopType::Unknown:
         default:
             return "Boutique inconnue";

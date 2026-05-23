@@ -12,6 +12,7 @@ class Boss : public Entity
 {
 private:
     int bossId;
+    bool identityRevealed;
     int remainingUltimateTurns;
     int maxUltimateTurns;
     int ultimateCooldown;
@@ -43,6 +44,10 @@ public:
     // EN: getBossId declares or implements a focused behavior used by this module.
     // FR: getBossId déclare ou implémente un comportement précis utilisé par ce module.
     int getBossId() const;
+    std::string getName() const override;
+    std::string getType() const override;
+    bool isIdentityRevealed() const;
+    void revealIdentity();
 
     // EN: getRemainingUltimateTurns declares or implements a focused behavior used by this module.
     // FR: getRemainingUltimateTurns déclare ou implémente un comportement précis utilisé par ce module.

@@ -7,7 +7,10 @@
 
 #include "progression/DifficultyRules.hpp"
 
+#include <algorithm>
 #include <iostream>
+#include <functional>
+#include <string>
 
 namespace
 {
@@ -40,25 +43,106 @@ namespace
                 return false;
         }
     }
+
+
+    int calculateRareScavengedGold(const Monster& monster, Random* random)
+    {
+        if (givesNormalGoldReward(monster.getRace()))
+        {
+            return 0;
+        }
+
+        int chancePercent = 4;
+        if (monster.isElite()) chancePercent += 3;
+        if (monster.isEvolved()) chancePercent += 2;
+        if (monster.getLevel() >= 8) chancePercent += 1;
+
+        bool foundCoins = false;
+        if (random != nullptr)
+        {
+            foundCoins = random->between(1, 100) <= chancePercent;
+        }
+        else
+        {
+            std::size_t signature = std::hash<std::string>{}(monster.getName())
+                ^ (static_cast<std::size_t>(monster.getLevel()) << 4)
+                ^ (static_cast<std::size_t>(monster.getMaxHp()) << 1);
+            foundCoins = static_cast<int>(signature % 100) < chancePercent;
+        }
+
+        if (!foundCoins)
+        {
+            return 0;
+        }
+
+        int gold = 1 + monster.getLevel() / 4;
+        if (monster.isElite()) gold += 1;
+        if (monster.isEvolved()) gold += 1;
+        return std::max(1, std::min(8, gold));
+    }
+
+    int difficultySurvivalPercent(DifficultyMode difficulty)
+    {
+        switch (difficulty)
+        {
+            case DifficultyMode::Easy:
+                return 80;
+            case DifficultyMode::Hard:
+                return 120;
+            case DifficultyMode::Nightmare:
+                return 145;
+            case DifficultyMode::Lethal:
+                return 160;
+            case DifficultyMode::Normal:
+            default:
+                return 100;
+        }
+    }
+
+    CombatReward calculateCombatEffortReward(
+        const Player& player,
+        int initialPlayerHp,
+        int turnCount,
+        DifficultyMode difficulty,
+        int baseExperienceDivider,
+        int baseGoldDivider
+    )
+    {
+        int damageReceived = std::max(0, initialPlayerHp - player.getHp());
+        int enduranceExperience = damageReceived / baseExperienceDivider;
+        int durationExperience = std::max(0, turnCount - 1) * std::max(1, player.getLevel() / 2 + 1);
+
+        int experience = (enduranceExperience + durationExperience)
+            * difficultySurvivalPercent(difficulty)
+            / 100;
+
+        int gold = 0;
+        if (damageReceived > 0 && baseGoldDivider > 0)
+        {
+            gold = std::min(35, damageReceived / baseGoldDivider);
+        }
+
+        return CombatReward(experience, gold);
+    }
 }
 
 // EN: calculateMonsterReward declares or implements a focused behavior used by this module.
 // FR: calculateMonsterReward déclare ou implémente un comportement précis utilisé par ce module.
-CombatReward CombatRewardSystem::calculateMonsterReward(const Monster& monster)
+CombatReward CombatRewardSystem::calculateMonsterReward(const Monster& monster, Random* random)
 {
     int monsterLevel = monster.getLevel();
 
     int experience = 18 + monsterLevel * 10;
     int gold = givesNormalGoldReward(monster.getRace())
         ? 5 + monsterLevel * 3
-        : monsterLevel / 2;
+        : calculateRareScavengedGold(monster, random);
 
     if (monster.isElite())
     {
         experience += 12 + monsterLevel * 13;
         gold += givesNormalGoldReward(monster.getRace())
             ? 10 + monsterLevel * 5
-            : 1 + monsterLevel;
+            : 0;
     }
 
     if (monster.isEvolved())
@@ -66,10 +150,41 @@ CombatReward CombatRewardSystem::calculateMonsterReward(const Monster& monster)
         experience += 20 + monsterLevel * 8;
         gold += givesNormalGoldReward(monster.getRace())
             ? 8 + monsterLevel * 4
-            : 1 + monsterLevel;
+            : 0;
     }
 
     return CombatReward(experience, gold);
+}
+
+
+CombatReward CombatRewardSystem::calculateBossReward(
+    const Boss& boss,
+    DifficultyMode difficulty,
+    int damageReceived,
+    int turnCount
+)
+{
+    int bossId = std::max(1, boss.getBossId());
+    int bossPower = boss.getMaxHp() / 4 + boss.getMaxDamage() * 6 + boss.getCriticalDamage() * 3;
+
+    int experience = 180 + bossId * 18 + bossPower;
+    int gold = 80 + bossId * 7 + boss.getMaxHp() / 12;
+
+    if (turnCount >= 8)
+    {
+        experience += (turnCount - 7) * 12;
+    }
+
+    if (damageReceived > 0)
+    {
+        experience += damageReceived / 2;
+    }
+
+    CombatReward reward(experience, gold);
+    return reward.getModified(
+        DifficultyRules::getVictoryExperienceRewardPercentage(difficulty),
+        DifficultyRules::getVictoryGoldRewardPercentage(difficulty)
+    );
 }
 
 // EN: calculateDefeatedEnemiesReward declares or implements a focused behavior used by this module.
@@ -87,6 +202,32 @@ CombatReward CombatRewardSystem::calculateDefeatedEnemiesReward(const EnemyComba
 
     return totalReward;
 }
+
+namespace
+{
+    CombatReward calculateDefeatedEnemiesRewardWithRandom(const EnemyCombatQueue& wave, Random& random)
+    {
+        CombatReward totalReward;
+
+        for (int i = 0; i < wave.getDefeatedEnemyCount(); ++i)
+        {
+            totalReward.addReward(
+                CombatRewardSystem::calculateMonsterReward(wave.getDefeatedEnemy(i), &random)
+            );
+        }
+
+        return totalReward;
+    }
+
+    CombatReward calculateWaveRewardWithRandom(const EnemyCombatQueue& wave, Random& random)
+    {
+        CombatReward totalReward;
+        totalReward.addReward(calculateDefeatedEnemiesRewardWithRandom(wave, random));
+        totalReward.addReward(CombatRewardSystem::calculateEscapedEnemiesReward(wave));
+        return totalReward;
+    }
+}
+
 
 // EN: calculateEscapedEnemiesReward declares or implements a focused behavior used by this module.
 // FR: calculateEscapedEnemiesReward déclare ou implémente un comportement précis utilisé par ce module.
@@ -174,6 +315,58 @@ CombatReward CombatRewardSystem::calculateWaveReward(
         DifficultyRules::getVictoryExperienceRewardPercentage(difficulty),
         DifficultyRules::getVictoryGoldRewardPercentage(difficulty)
     );
+}
+
+
+CombatReward CombatRewardSystem::calculateWaveReward(
+    const EnemyCombatQueue& wave,
+    DifficultyMode difficulty,
+    const Player& player,
+    int initialPlayerHp,
+    int turnCount
+)
+{
+    CombatReward totalReward = calculateWaveReward(wave, difficulty);
+    totalReward.addReward(
+        calculateCombatEffortReward(
+            player,
+            initialPlayerHp,
+            turnCount,
+            difficulty,
+            5,
+            18
+        )
+    );
+
+    return totalReward;
+}
+
+CombatReward CombatRewardSystem::calculateWaveReward(
+    const EnemyCombatQueue& wave,
+    DifficultyMode difficulty,
+    const Player& player,
+    int initialPlayerHp,
+    int turnCount,
+    Random& random
+)
+{
+    CombatReward totalReward = calculateWaveRewardWithRandom(wave, random).getModified(
+        DifficultyRules::getVictoryExperienceRewardPercentage(difficulty),
+        DifficultyRules::getVictoryGoldRewardPercentage(difficulty)
+    );
+
+    totalReward.addReward(
+        calculateCombatEffortReward(
+            player,
+            initialPlayerHp,
+            turnCount,
+            difficulty,
+            5,
+            18
+        )
+    );
+
+    return totalReward;
 }
 
 // EN: calculatePlayerEscapeReward declares or implements a focused behavior used by this module.
