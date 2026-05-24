@@ -39,6 +39,56 @@ std::vector<ShopItem> LibraryInformationCatalog::createCommonInformationOffers()
             0,
             1,
             true
+        ),
+        ShopItem(
+            "class_identity_manual",
+            "Manuel des styles de classe",
+            "Explique pourquoi deux classes ne doivent pas se jouer pareil : posture, arme, risque et rôle.",
+            ShopItemCategory::Information,
+            85,
+            0,
+            1,
+            true
+        ),
+        ShopItem(
+            "biome_field_notes",
+            "Carnet de terrain des biomes",
+            "Ajoute des notes sur les zones, les évolutions de niveau et les rencontres locales.",
+            ShopItemCategory::Information,
+            95,
+            0,
+            1,
+            true
         )
-    };
+,
+        ShopItem(
+            "slime_color_codex",
+            "Codex des couleurs de slimes",
+            "Rassemble les règles de base des couleurs de slimes et de leurs comportements.",
+            ShopItemCategory::Information,
+            110,
+            0,
+            1,
+            true
+        ),
+        ShopItem(
+            "monster_family_evolution_notes",
+            "Dossier des familles de monstres",
+            "Explique les variantes, évolutions et rôles crédibles de plusieurs familles de monstres.",
+            ShopItemCategory::Information,
+            125,
+            0,
+            1,
+            true
+        ),
+        ShopItem(
+            "weapon_training_notes",
+            "Notes d'entraînement aux techniques",
+            "Prépare les compétences débloquées par niveau, arme et expérimentation.",
+            ShopItemCategory::Information,
+            135,
+            0,
+            1,
+            true
+        )    };
 }

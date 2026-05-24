@@ -132,6 +132,17 @@ sudo apt update
 sudo apt install -y build-essential make g++
 ```
 
+WSL installation for Windows:
+
+```bash
+wsl --install
+# If Windows asks for a distribution, choose Ubuntu.
+wsl
+sudo apt update
+sudo apt install build-essential
+sudo apt install cmake
+```
+
 ## Commands
 
 Compile the project:
@@ -140,11 +151,27 @@ Compile the project:
 make
 ```
 
-Run the game:
+Run the game directly after compilation:
 
 ```bash
 make run
 ```
+
+Run with automatic version/build check:
+
+```bash
+./run_dinotofu.sh
+# or
+make launch
+```
+
+On Windows, double-click:
+
+```bash
+run_dinotofu_windows.bat
+```
+
+This launcher calls WSL, checks whether the build version changed, rebuilds when needed, clears the screen, then starts the game.
 
 Clean generated files:
 
@@ -162,7 +189,11 @@ Create a clickable Linux desktop launcher:
 
 ```bash
 make desktop
+# or
+make install-desktop
 ```
+
+The smart launcher also creates a desktop shortcut when possible.
 
 ## Project structure
 

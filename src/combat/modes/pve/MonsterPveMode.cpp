@@ -59,6 +59,36 @@ namespace
             description += " Des signes d'évolution anormale sont visibles : masse renforcée, instincts plus nets, énergie plus dense.";
         }
 
+        std::string traits = monster.getName() + " " + monster.getType();
+        std::transform(traits.begin(), traits.end(), traits.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+
+        if (traits.find("slime") != std::string::npos)
+        {
+            description += " Famille slime : la couleur influence souvent le danger, le statut possible et la zone préférée.";
+        }
+        if (traits.find("rouge") != std::string::npos || traits.find("chaud") != std::string::npos)
+        {
+            description += " Teinte rouge/chaude : risque de brûlure.";
+        }
+        if (traits.find("violet") != std::string::npos || traits.find("toxique") != std::string::npos || traits.find("putride") != std::string::npos)
+        {
+            description += " Teinte toxique : risque de poison.";
+        }
+        if (traits.find("bleu") != std::string::npos || traits.find("blanc") != std::string::npos || traits.find("givre") != std::string::npos)
+        {
+            description += " Teinte froide : risque de ralentissement par le givre.";
+        }
+        if (traits.find("jaune") != std::string::npos || traits.find("orage") != std::string::npos)
+        {
+            description += " Teinte électrique : risque de choc, dangereux avec équipement métallique.";
+        }
+        if (traits.find("shaman") != std::string::npos || traits.find("chamane") != std::string::npos || traits.find("oracle") != std::string::npos)
+        {
+            description += " Profil soigneur/support : peut parfois prioriser un allié blessé plutôt qu'attaquer.";
+        }
+
         if (!monster.areStatsVisible())
         {
             description += " Certaines statistiques restent troubles pour le moment.";
@@ -430,6 +460,216 @@ void MonsterPveMode::run(
             std::cout << std::endl;
         }
     }
+}
+
+
+bool MonsterPveMode::runExplorationWave(
+    Player& player,
+    Random& random,
+    DifficultyMode difficulty,
+    const std::vector<Monster>& monsters,
+    const std::string& title
+)
+{
+    Console::clear();
+
+    EnemyCombatQueue wave;
+    for (const Monster& monster : monsters)
+    {
+        wave.addWaitingEnemy(monster);
+    }
+    wave.initializeFrontLine();
+
+    std::cout << "========== ÉVÉNEMENT D'EXPLORATION ==========" << std::endl;
+    std::cout << title << std::endl;
+    std::cout << "Cette fois, ce n'est pas un simple test de réussite : le combat se joue vraiment." << std::endl;
+    std::cout << std::endl;
+
+    WaveCombatSystem::displayFrontLineArrival(wave);
+    recordWaveEncountersInBestiary(wave);
+
+    CombatGroup enemyFrontPreview = CombatGroupBuilder::buildSideFromWave(
+        wave,
+        CombatSide::EnemySide
+    );
+
+    CombatGroupBuilder::displayGroup(
+        enemyFrontPreview,
+        "LIGNE ENNEMIE ACTIVE"
+    );
+
+    std::vector<Summon> playerSummons = SummonCombatSystem::createInitialSummonsFor(player);
+    SummonCombatSystem::displaySummonArrival(player, playerSummons);
+
+    CombatGroup playerGroupPreview = CombatGroupBuilder::buildSideFromEntityAndSummons(
+        player,
+        playerSummons,
+        CombatSide::PlayerSide,
+        CombatUnitKind::MainFighter
+    );
+
+    CombatGroupBuilder::displayGroup(
+        playerGroupPreview,
+        "GROUPE DU JOUEUR"
+    );
+
+    CombatRoleActionSystem::displayRoleIdentity(player);
+
+    SummonControlMode playerSummonControlMode =
+        SummonCombatSystem::askPlayerSummonControlMode(player, playerSummons);
+
+    bool escapeSucceeded = false;
+    int initialPlayerHp = player.getHp();
+    int combatTurnCount = 0;
+
+    while (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
+    {
+        bool playerTurnFinished = false;
+
+        while (!playerTurnFinished
+            && !player.isDead()
+            && wave.hasEnemiesLeft()
+            && !escapeSucceeded)
+        {
+            playerTurnFinished = PlayerWaveCombatTurn::play(
+                player,
+                wave,
+                random,
+                escapeSucceeded,
+                difficulty
+            );
+
+            if (playerTurnFinished)
+            {
+                ++combatTurnCount;
+            }
+
+            if (!playerTurnFinished && !escapeSucceeded)
+            {
+                std::cout << "Ton tour n'est pas encore consommé." << std::endl;
+                std::cout << std::endl;
+            }
+        }
+
+        if (!player.isDead()
+            && wave.hasEnemiesLeft()
+            && !escapeSucceeded
+            && SummonCombatSystem::hasActiveSummons(playerSummons))
+        {
+            SummonCombatSystem::playPlayerSummonTurnsAgainstWave(
+                playerSummons,
+                wave,
+                random,
+                playerSummonControlMode
+            );
+        }
+
+        if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
+        {
+            MonsterWaveCombatTurn::playMonsterTurns(
+                player,
+                wave,
+                playerSummons,
+                random
+            );
+        }
+    }
+
+    if (escapeSucceeded)
+    {
+        std::cout << "Tu as fui l'événement d'exploration." << std::endl;
+        std::cout << "Les récompenses sont limitées à ce qui a réellement été accompli." << std::endl;
+        std::cout << std::endl;
+
+        CombatReward reward = CombatRewardSystem::calculatePlayerEscapeReward(
+            wave,
+            difficulty
+        );
+
+        CombatRewardSystem::displayPartialReward(
+            reward,
+            "Fuite d'exploration : seules les actions réelles comptent."
+        );
+
+        CombatRewardSystem::giveRewardToPlayer(player, reward);
+        player.recordEscape();
+        player.recordEnemyKills(wave.getDefeatedEnemyCount());
+        recordWaveKillsInBestiary(wave);
+        return false;
+    }
+
+    if (player.isDead())
+    {
+        std::cout << player.getName() << " tombe pendant l'événement d'exploration." << std::endl;
+        std::cout << "La zone ne faisait pas que menacer : elle a vraiment frappé." << std::endl;
+        std::cout << std::endl;
+
+        player.recordDefeat();
+        player.recordDeath();
+
+        if (DifficultyRules::isPermanentDeath(difficulty))
+        {
+            DeathPenaltySystem::displayLethalDeathCorruption();
+            return false;
+        }
+
+        DeathPenaltyResult deathPenalty = DeathPenaltySystem::applyNonLethalDeathPenalty(
+            player,
+            difficulty,
+            random
+        );
+
+        DeathPenaltySystem::displayNonLethalDeathPenalty(deathPenalty);
+        displaySpecialVictoryDialogues(wave);
+
+        player.reviveWithHealthPercentage(
+            DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty)
+        );
+
+        std::cout << player.getName()
+                  << " revient à lui avec "
+                  << player.getHp()
+                  << "/"
+                  << player.getMaxHp()
+                  << " PV."
+                  << std::endl;
+        std::cout << std::endl;
+        return false;
+    }
+
+    displaySpecialDefeatDialogues(wave);
+
+    std::cout << "L'événement d'exploration est terminé : les ennemis sont vaincus." << std::endl;
+    std::cout << std::endl;
+
+    CombatReward reward = CombatRewardSystem::calculateWaveReward(
+        wave,
+        difficulty,
+        player,
+        initialPlayerHp,
+        combatTurnCount,
+        random
+    );
+
+    CombatRewardSystem::displayReward(reward);
+    CombatRewardSystem::giveRewardToPlayer(player, reward);
+    player.recordVictory();
+    player.recordEnemyKills(wave.getDefeatedEnemyCount());
+    recordWaveKillsInBestiary(wave);
+    LootGenerator::giveDefeatedWaveLoot(player, wave, random, difficulty);
+
+    int evolvedKilled = countDefeatedEvolvedMonsters(wave);
+    if (evolvedKilled > 0)
+    {
+        int updated = player.getQuestLog().progressCombatQuestsByFamily(evolvedKilled, "Créature évoluée");
+        if (updated > 0)
+        {
+            std::cout << "Le bestiaire et les quêtes liées aux créatures évoluées progressent." << std::endl;
+            std::cout << std::endl;
+        }
+    }
+
+    return true;
 }
 
 

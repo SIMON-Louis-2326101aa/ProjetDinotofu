@@ -146,7 +146,19 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "greater_defensive_potion"
         || id == "precision_potion"
         || id == "weakening_debuff_potion"
+        || id == "antidote_potion"
+        || id == "burn_salve_potion"
+        || id == "frost_resistance_potion"
+        || id == "shock_resistance_potion"
+        || id == "smoke_escape_vial"
         || id == "rusty_sword"
+        || id == "training_dagger"
+        || id == "training_spear"
+        || id == "training_bow"
+        || id == "training_crossbow"
+        || id == "training_throwing_bandolier"
+        || id == "training_staff"
+        || id == "heavy_training_axe"
         || id == "worn_leather_armor"
         || id == "goblin_ear"
         || id == "wolf_fang"
@@ -157,6 +169,8 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "common_goblin_notes"
         || id == "common_wolf_notes"
         || id == "basic_plant_manual"
+        || id == "class_identity_manual"
+        || id == "biome_field_notes"
         || id == "basic_magic_manual"
         || id == "cracked_bone"
         || id == "arcane_dust"
@@ -184,7 +198,22 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "preservation_vials"
         || id == "anomaly_glitch_fragment"
         || id == "clean_harvest_manual"
-        || id == "monster_dissection_guide";
+        || id == "monster_dissection_guide"
+        || id == "training_arrows"
+        || id == "training_bolts"
+        || id == "training_throwing_knives"
+        || id == "barbed_arrows"
+        || id == "piercing_bolts"
+        || id == "balanced_throwing_knives"
+        || id == "ash_arrows"
+        || id == "frozen_bolts"
+        || id == "conductive_knives"
+        || id == "venom_arrows"
+        || id == "shock_bolts"
+        || id == "smoke_knives"
+        || id == "slime_color_codex"
+        || id == "monster_family_evolution_notes"
+        || id == "weapon_training_notes";
 }
 
 bool ShopTransactionSystem::buyItem(
@@ -277,9 +306,57 @@ bool ShopTransactionSystem::buyItem(
     {
         player.getInventory().addConsumable(ConsumableCatalog::createWeakeningDebuffPotion());
     }
+    else if (item.getId() == "antidote_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createAntidotePotion());
+    }
+    else if (item.getId() == "burn_salve_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createBurnSalvePotion());
+    }
+    else if (item.getId() == "frost_resistance_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createFrostResistancePotion());
+    }
+    else if (item.getId() == "shock_resistance_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createShockResistancePotion());
+    }
+    else if (item.getId() == "smoke_escape_vial")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createSmokeEscapeVial());
+    }
     else if (item.getId() == "rusty_sword")
     {
         player.getInventory().addWeapon(WeaponCatalog::createRustySword());
+    }
+    else if (item.getId() == "training_dagger")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createTrainingDagger());
+    }
+    else if (item.getId() == "training_spear")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createTrainingSpear());
+    }
+    else if (item.getId() == "training_bow")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createTrainingBow());
+    }
+    else if (item.getId() == "training_crossbow")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createTrainingCrossbow());
+    }
+    else if (item.getId() == "training_throwing_bandolier")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createTrainingThrowingBandolier());
+    }
+    else if (item.getId() == "training_staff")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createTrainingStaff());
+    }
+    else if (item.getId() == "heavy_training_axe")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createHeavyTrainingAxe());
     }
     else if (item.getId() == "worn_leather_armor")
     {

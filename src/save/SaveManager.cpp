@@ -587,6 +587,11 @@ namespace
         if (normalized == normalizeText("Potion défensive supérieure")) return ConsumableCatalog::createGreaterDefensivePotion();
         if (normalized == normalizeText("Potion de précision")) return ConsumableCatalog::createPrecisionPotion();
         if (normalized == normalizeText("Fiole d'affaiblissement")) return ConsumableCatalog::createWeakeningDebuffPotion();
+        if (normalized == normalizeText("Antidote simple")) return ConsumableCatalog::createAntidotePotion();
+        if (normalized == normalizeText("Baume anti-brûlure")) return ConsumableCatalog::createBurnSalvePotion();
+        if (normalized == normalizeText("Potion tiède anti-givre")) return ConsumableCatalog::createFrostResistancePotion();
+        if (normalized == normalizeText("Potion isolante")) return ConsumableCatalog::createShockResistancePotion();
+        if (normalized == normalizeText("Fiole de fumée de secours")) return ConsumableCatalog::createSmokeEscapeVial();
 
         if (normalized.find(normalizeText("particularité stable")) != std::string::npos)
         {

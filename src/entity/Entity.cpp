@@ -271,14 +271,6 @@ void Entity::clearDefensePosture()
     defenseReductionPercent = 0;
     defenseCounterChance = 0;
     defensePostureLabel = "";
-    burningTurns = 0;
-    burningDamage = 0;
-    poisonTurns = 0;
-    poisonDamage = 0;
-    frostTurns = 0;
-    shockTurns = 0;
-    bleedingTurns = 0;
-    bleedingDamage = 0;
 }
 
 
@@ -314,6 +306,50 @@ void Entity::applyBleeding(int turns, int damage)
     bleedingTurns = std::max(bleedingTurns, turns);
     bleedingDamage = std::max(bleedingDamage, damage);
 }
+
+bool Entity::cureBurning()
+{
+    if (burningTurns <= 0) return false;
+    burningTurns = 0;
+    burningDamage = 0;
+    return true;
+}
+
+bool Entity::curePoison()
+{
+    if (poisonTurns <= 0) return false;
+    poisonTurns = 0;
+    poisonDamage = 0;
+    return true;
+}
+
+bool Entity::cureFrost()
+{
+    if (frostTurns <= 0) return false;
+    frostTurns = 0;
+    return true;
+}
+
+bool Entity::cureShock()
+{
+    if (shockTurns <= 0) return false;
+    shockTurns = 0;
+    return true;
+}
+
+bool Entity::cureBleeding()
+{
+    if (bleedingTurns <= 0) return false;
+    bleedingTurns = 0;
+    bleedingDamage = 0;
+    return true;
+}
+
+bool Entity::hasBurning() const { return burningTurns > 0; }
+bool Entity::hasPoison() const { return poisonTurns > 0; }
+bool Entity::hasFrost() const { return frostTurns > 0; }
+bool Entity::hasShock() const { return shockTurns > 0; }
+bool Entity::hasBleeding() const { return bleedingTurns > 0; }
 
 bool Entity::hasActiveCombatStatus() const
 {
@@ -499,19 +535,48 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     dodged = false;
     critical = false;
 
-    if (resultat <= 3)
+    if (shockTurns > 0 && random.between(1, 100) <= 18)
+    {
+        dodged = true;
+        std::cout << name << " est perturbé par le choc électrique et rate son geste." << std::endl;
+        return 0;
+    }
+
+    int dodgeThreshold = 3;
+    int normalHitThreshold = 16;
+    int frostDamagePercent = 100;
+
+    if (frostTurns > 0)
+    {
+        dodgeThreshold += 1;
+        normalHitThreshold += 1;
+        frostDamagePercent = 85;
+        std::cout << name << " attaque avec des mouvements ralentis par le froid." << std::endl;
+    }
+
+    if (resultat <= dodgeThreshold)
     {
         dodged = true;
         return 0;
     }
 
-    if (resultat <= 16)
+    if (resultat <= normalHitThreshold)
     {
-        return random.between(minDamage, maxDamage) + damageBonus;
+        int dealtDamage = random.between(minDamage, maxDamage) + damageBonus;
+        if (frostDamagePercent < 100)
+        {
+            dealtDamage = std::max(1, dealtDamage * frostDamagePercent / 100);
+        }
+        return dealtDamage;
     }
 
     critical = true;
-    return criticalDamage + damageBonus;
+    int criticalResult = criticalDamage + damageBonus;
+    if (frostDamagePercent < 100)
+    {
+        criticalResult = std::max(1, criticalResult * frostDamagePercent / 100);
+    }
+    return criticalResult;
 }
 
 // EN: useHealingPotion declares or implements a focused behavior used by this module.

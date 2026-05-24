@@ -181,6 +181,9 @@ Material MaterialCatalog::createById(const std::string& id, int quantity, const 
     if (normalized == "ash_arrows") return withQuality(createAshArrows(quantity), quality);
     if (normalized == "frozen_bolts") return withQuality(createFrozenBolts(quantity), quality);
     if (normalized == "conductive_knives") return withQuality(createConductiveKnives(quantity), quality);
+    if (normalized == "venom_arrows") return withQuality(createVenomArrows(quantity), quality);
+    if (normalized == "shock_bolts") return withQuality(createShockBolts(quantity), quality);
+    if (normalized == "smoke_knives") return withQuality(createSmokeKnives(quantity), quality);
 
     return Material(
         id,
@@ -743,4 +746,19 @@ Material MaterialCatalog::createFrozenBolts(int quantity)
 Material MaterialCatalog::createConductiveKnives(int quantity)
 {
     return Material("conductive_knives", "Couteaux conducteurs", "Projectiles métalliques préparés pour les futures réactions électriques, surtout contre les cibles équipées de métal.", "Munition élémentaire", 9, quantity);
+}
+
+Material MaterialCatalog::createVenomArrows(int quantity)
+{
+    return Material("venom_arrows", "Flèches enduites de venin", "Munitions de chasse préparées avec venin et résidus. Elles peuvent accrocher un poison léger si le tir blesse réellement.", "Munition élémentaire", 10, quantity);
+}
+
+Material MaterialCatalog::createShockBolts(int quantity)
+{
+    return Material("shock_bolts", "Carreaux à pointe conductrice", "Carreaux expérimentaux pensés pour transmettre une décharge courte, surtout contre métal et armures lourdes.", "Munition élémentaire", 11, quantity);
+}
+
+Material MaterialCatalog::createSmokeKnives(int quantity)
+{
+    return Material("smoke_knives", "Couteaux fumigènes", "Projectiles de secours : peu létaux, mais conçus pour gêner la cible et préparer une fuite ou une défense urgente.", "Munition spéciale", 10, quantity);
 }

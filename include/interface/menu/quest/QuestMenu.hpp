@@ -7,6 +7,7 @@
 #define INCLUDE_INTERFACE_MENU_QUEST_QUESTMENU_HPP
 
 #include "entity/Player.hpp"
+#include "progression/DifficultyMode.hpp"
 
 #include <string>
 
@@ -27,7 +28,7 @@ private:
     static void completeQuestAtClient(Player& player, const std::string& clientName);
     // EN: openExplorationMenu declares or implements a focused behavior used by this module.
     // FR: openExplorationMenu déclare ou implémente un comportement précis utilisé par ce module.
-    static void openExplorationMenu(Player& player);
+    static void openExplorationMenu(Player& player, DifficultyMode difficulty);
 
 public:
     // EN: openQuestHub declares or implements a focused behavior used by this module.
@@ -41,7 +42,7 @@ public:
     static void consultOnly(const Player& player);
     // EN: openExploration declares or implements a focused behavior used by this module.
     // FR: openExploration déclare ou implémente un comportement précis utilisé par ce module.
-    static void openExploration(Player& player);
+    static void openExploration(Player& player, DifficultyMode difficulty);
     // EN: openLocations declares or implements a focused behavior used by this module.
     // FR: openLocations déclare ou implémente un comportement précis utilisé par ce module.
     static void openLocations(Player& player);
@@ -50,7 +51,7 @@ public:
     static void openNotableNpcMenu(Player& player);
     // EN: maybeOfferRandomInterception declares or implements a focused behavior used by this module.
     // FR: maybeOfferRandomInterception déclare ou implémente un comportement précis utilisé par ce module.
-    static void maybeOfferRandomInterception(Player& player);
+    static void maybeOfferRandomInterception(Player& player, DifficultyMode difficulty);
 };
 
 #endif

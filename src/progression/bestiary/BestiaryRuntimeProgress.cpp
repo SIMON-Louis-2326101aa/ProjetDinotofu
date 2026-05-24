@@ -8,6 +8,7 @@
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 
 #include <algorithm>
+#include <sstream>
 
 namespace
 {
@@ -68,6 +69,57 @@ namespace
 
         records().push_back(record);
         return records().back();
+    }
+
+    std::string observationStatusFor(const BestiaryRuntimeRecord& record)
+    {
+        if (record.informationBought)
+        {
+            return "Renseignement acheté";
+        }
+
+        if (record.kills >= 10 || record.encounters >= 18)
+        {
+            return "Maîtrise de terrain";
+        }
+
+        if (record.kills >= 4 || record.encounters >= 8)
+        {
+            return "Étudié";
+        }
+
+        if (record.kills >= 1 || record.encounters >= 3)
+        {
+            return "Observé";
+        }
+
+        return "Rencontré";
+    }
+
+    std::string enrichDescriptionWithProgress(
+        const BestiaryRuntimeRecord& record,
+        const std::string& baseDescription
+    )
+    {
+        std::ostringstream output;
+        output << baseDescription;
+
+        if (record.encounters >= 3 || record.kills >= 1)
+        {
+            output << " Observation : le comportement commence à être reconnaissable.";
+        }
+
+        if (record.encounters >= 8 || record.kills >= 4)
+        {
+            output << " Analyse : les réactions, faiblesses supposées et habitudes deviennent plus lisibles.";
+        }
+
+        if (record.encounters >= 18 || record.kills >= 10)
+        {
+            output << " Maîtrise : cette entrée est assez connue pour préparer ses rencontres avec beaucoup moins d'incertitude.";
+        }
+
+        return output.str();
     }
 
     void unlockEntry(
@@ -132,7 +184,8 @@ void BestiaryRuntimeProgress::recordEncounter(
 
     if (!record.informationBought)
     {
-        record.status = "Rencontré";
+        record.status = observationStatusFor(record);
+        record.description = enrichDescriptionWithProgress(record, description.empty() ? record.description : description);
     }
 }
 
@@ -152,7 +205,8 @@ void BestiaryRuntimeProgress::recordKill(
 
     if (!record.informationBought)
     {
-        record.status = "Combattu";
+        record.status = observationStatusFor(record);
+        record.description = enrichDescriptionWithProgress(record, description.empty() ? record.description : description);
     }
 }
 
@@ -206,6 +260,38 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
             "Feuille amère de soin",
             "Matériaux et plantes",
             "Guide acheté : plante basique pouvant entrer dans de futures recettes de soin."
+        );
+        return;
+    }
+
+
+
+    if (informationId == "class_identity_manual")
+    {
+        unlockEntry(
+            "Différences de classes",
+            "Races",
+            "Manuel acheté : l'Assassin cherche saignement et précision, le Colosse encaisse et s'ancre, le Mage applique des statuts, le Rôdeur dépend vraiment d'une arme à distance, le Lancier profite de la portée, le Berserker devient dangereux blessé, et l'Artificier/Alchimiste transforme ses outils en effets instables."
+        );
+        unlockEntry(
+            "Armes et classes",
+            "Matériaux et plantes",
+            "Note achetée : une classe à distance ne tire pas avec une épée. Les tirs spéciaux vérifient l'arme équipée. Les armes à distance gardent une défense d'urgence au petit couteau si les munitions compatibles manquent."
+        );
+        return;
+    }
+
+    if (informationId == "biome_field_notes")
+    {
+        unlockEntry(
+            "Évolution des zones",
+            "Divinités / lore",
+            "Carnet lu : si le personnage dépasse trop le niveau maximum d'une zone, la zone attire des menaces plus fortes. L'entrée d'exploration signale les biomes déjà réajustés, et les récompenses suivent mieux le danger."
+        );
+        unlockEntry(
+            "Biomes et présences locales",
+            "Entités hostiles / ennemis",
+            "Carnet lu : les monstres peuvent exister partout, mais chaque biome favorise certaines familles. Les slimes dominent les mares gélatineuses, le marais et les ruines deviennent plus dangereux, et les variantes rares apparaissent surtout là où le lieu leur donne une raison d'exister."
         );
         return;
     }
@@ -311,6 +397,66 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
             "Fragments de boss",
             "Matériaux et plantes",
             "Notes lues : les boss vaincus peuvent laisser un fragment unique. Ces fragments ne servent pas encore à une relique complète, mais sont déjà utilisables comme base de craft rare."
+        );
+        unlockEntry(
+            "Variantes de slimes",
+            "Entités hostiles / ennemis",
+            "Notes lues : les mares gélatineuses peuvent contenir presque toutes les couleurs connues. Vert = classique, rouge = brûlure, violet/noir = poison, bleu/blanc = froid, jaune = choc, ambré = colle/ralentit, rose = rebonds imprévisibles, chromatique/prisme/miroir = réactions instables. Certaines couleurs apparaissent aussi ailleurs si le lieu les attire."
+        );
+        unlockEntry(
+            "Monstres soigneurs",
+            "Entités hostiles / ennemis",
+            "Notes lues : toutes les créatures ne savent pas soigner. Un loup ou un slime classique n'utilise pas une potion. Les soigneurs crédibles sont des profils précis : shaman, chamane, oracle, mage ou créature spéciale avec une vraie raison lore."
+        );
+        unlockEntry(
+            "Affinités élémentaires faibles",
+            "Entités hostiles / ennemis",
+            "Notes lues : certains monstres peuvent déclencher brûlure, poison, givre ou choc. L'électricité devient plus dangereuse contre les armes et armures métalliques. Les potions anti-statut existent maintenant : antidote, baume anti-brûlure, anti-givre et isolante."
+        );
+        return;
+    }
+
+    if (informationId == "slime_color_codex")
+    {
+        unlockEntry(
+            "Codex des slimes colorés",
+            "Entités hostiles / ennemis",
+            "Codex acheté : vert = base stable, bleu/blanc = ralentissement froid, rouge = brûlure, violet/noir/putride = poison, jaune/orage = choc, ambré = colle, rose = rebond, doré = attiré par ce qui brille, chromatique/prisme = réaction instable. Les mares gélatineuses restent leur vrai terrain de diversité."
+        );
+        unlockEntry(
+            "Slime doré et objets brillants",
+            "Entités hostiles / ennemis",
+            "Note achetée : les slimes dorés ne sont pas forcément intelligents, mais ils peuvent avaler des pièces ou objets brillants. C'est une justification rare, pas une source fiable d'or."
+        );
+        return;
+    }
+
+    if (informationId == "monster_family_evolution_notes")
+    {
+        unlockEntry(
+            "Évolutions gobelines",
+            "Entités hostiles / ennemis",
+            "Dossier acheté : gobelin ramasseur, frondeur, rapiéceur, shaman, grand shaman et hobgobelin n'ont pas le même rôle. Les shamans peuvent soigner car ils ont une raison lore ; le gobelin basique ne sait pas devenir médecin par miracle."
+        );
+        unlockEntry(
+            "Familles de monstres",
+            "Entités hostiles / ennemis",
+            "Dossier acheté : les loups doivent rester prédateurs, les morts-vivants tenaces ou froids, les plantes entravantes, les insectes toxiques/rapides, les constructions défensives et les anomalies imprévisibles."
+        );
+        return;
+    }
+
+    if (informationId == "weapon_training_notes")
+    {
+        unlockEntry(
+            "Techniques débloquables",
+            "Races",
+            "Manuel acheté : les techniques doivent venir de la classe, de l'arme équipée, du niveau et de l'expérimentation. À partir des premiers niveaux, certaines classes déclenchent déjà des passifs plus visibles : saignement, garde, soutien sacré, instabilité magique ou rage blessée."
+        );
+        unlockEntry(
+            "Apprentissage par usage",
+            "Matériaux et plantes",
+            "Note achetée : plus tard, utiliser souvent une arme ou crafter des munitions pourra apprendre des recettes/gestes. Pour l'instant, les paliers de niveau préparent cette logique sans bloquer le jeu."
         );
         return;
     }

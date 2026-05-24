@@ -16,6 +16,7 @@
 #include <iostream>
 #include <vector>
 #include <cctype>
+#include <algorithm>
 
 
 namespace
@@ -57,6 +58,8 @@ namespace
         std::string specialLabel = "Flèches barbelées";
         std::string elementalId = "ash_arrows";
         std::string elementalLabel = "Flèches de cendre";
+        std::string specialistId = "venom_arrows";
+        std::string specialistLabel = "Flèches enduites de venin";
 
         if (weaponName.find("arbal") != std::string::npos || weaponName.find("carreau") != std::string::npos)
         {
@@ -66,6 +69,8 @@ namespace
             specialLabel = "Carreaux perforants";
             elementalId = "frozen_bolts";
             elementalLabel = "Carreaux givrés";
+            specialistId = "shock_bolts";
+            specialistLabel = "Carreaux à pointe conductrice";
         }
         else if (weaponName.find("lancer") != std::string::npos || weaponName.find("couteau") != std::string::npos || weaponName.find("bandouli") != std::string::npos)
         {
@@ -75,12 +80,15 @@ namespace
             specialLabel = "Couteaux de lancer équilibrés";
             elementalId = "conductive_knives";
             elementalLabel = "Couteaux conducteurs";
+            specialistId = "smoke_knives";
+            specialistLabel = "Couteaux fumigènes";
         }
 
         std::vector<AmmunitionChoice> choices;
         choices.push_back({trainingId, trainingLabel, player.getInventory().countMaterialById(trainingId), false});
         choices.push_back({specialId, specialLabel, player.getInventory().countMaterialById(specialId), true});
         choices.push_back({elementalId, elementalLabel, player.getInventory().countMaterialById(elementalId), true});
+        choices.push_back({specialistId, specialistLabel, player.getInventory().countMaterialById(specialistId), true});
         return choices;
     }
 
@@ -293,14 +301,101 @@ void CombatActions::executeWeaponTechnique(
         techniqueName += " / garde lourde";
         attacker.startDefensePosture(20, 5, "Technique de garde lourde");
     }
-    else if (className.find("clerc") != std::string::npos || className.find("prêtre") != std::string::npos || className.find("pretre") != std::string::npos)
+    else if (className.find("clerc") != std::string::npos || className.find("prêtre") != std::string::npos || className.find("pretre") != std::string::npos || className.find("paladin") != std::string::npos)
     {
         bonus += 2;
         techniqueName += " / frappe protectrice";
     }
+    else if (className.find("alchim") != std::string::npos || className.find("artific") != std::string::npos)
+    {
+        bonus += 4;
+        techniqueName += " / dosage instable";
+    }
+    else if (className.find("nécro") != std::string::npos || className.find("necro") != std::string::npos)
+    {
+        bonus += 3;
+        techniqueName += " / dette des morts";
+    }
+    else if (className.find("invoc") != std::string::npos || className.find("dresseur") != std::string::npos)
+    {
+        bonus += 1;
+        techniqueName += " / ordre de soutien";
+        attacker.startDefensePosture(8, 3, "Ordre de soutien");
+    }
+    else if (className.find("duelliste") != std::string::npos || className.find("moine") != std::string::npos)
+    {
+        bonus += 4;
+        techniqueName += " / lecture du rythme";
+    }
 
     std::cout << attacker.getName() << " utilise : " << techniqueName << "." << std::endl;
-    std::cout << "La technique dépend de l'arme équipée et donne un premier vrai feeling de gameplay." << std::endl;
+    std::cout << "La technique dépend de l'arme équipée et de la classe : certaines classes ajoutent maintenant une vraie intention de gameplay." << std::endl;
+
+    if (className.find("assassin") != std::string::npos || className.find("ombrelame") != std::string::npos)
+    {
+        defender.applyBleeding(1, 2 + std::max(1, attacker.getMaxDamage() / 18));
+        std::cout << "L'angle mort prépare un petit saignement si la cible survit." << std::endl;
+    }
+    else if (className.find("mage") != std::string::npos || className.find("sorcier") != std::string::npos || className.find("arcaniste") != std::string::npos)
+    {
+        int elementalRoll = random.between(1, 3);
+        if (elementalRoll == 1)
+        {
+            defender.applyBurning(1, 2 + std::max(1, attacker.getMaxDamage() / 20));
+            std::cout << "La surcharge laisse une brûlure arcanique faible." << std::endl;
+        }
+        else if (elementalRoll == 2)
+        {
+            defender.applyFrost(2);
+            std::cout << "La surcharge refroidit la cible et prépare un ralentissement." << std::endl;
+        }
+        else
+        {
+            defender.applyShock(2);
+            std::cout << "La surcharge perturbe la cible avec une décharge instable." << std::endl;
+        }
+    }
+    else if (className.find("clerc") != std::string::npos || className.find("prêtre") != std::string::npos || className.find("pretre") != std::string::npos || className.find("paladin") != std::string::npos)
+    {
+        int selfHeal = std::max(2, attacker.getMaxHp() / 25);
+        attacker.heal(selfHeal);
+        std::cout << "La frappe protectrice rend " << selfHeal << " PV au lanceur." << std::endl;
+    }
+    else if (className.find("alchim") != std::string::npos || className.find("artific") != std::string::npos)
+    {
+        int effectRoll = random.between(1, 3);
+        if (effectRoll == 1)
+        {
+            defender.applyPoison(2, 2 + std::max(1, attacker.getMaxDamage() / 18));
+            std::cout << "Le dosage instable accroche un poison faible." << std::endl;
+        }
+        else if (effectRoll == 2)
+        {
+            defender.applyShock(1);
+            std::cout << "Le mécanisme bricolé produit une petite décharge." << std::endl;
+        }
+        else
+        {
+            attacker.startDefensePosture(10, 4, "Couverture d'artificier");
+            std::cout << "Le bricolage crée une petite couverture défensive." << std::endl;
+        }
+    }
+    else if (className.find("nécro") != std::string::npos || className.find("necro") != std::string::npos)
+    {
+        defender.applyBleeding(2, 2 + std::max(1, attacker.getMaxDamage() / 20));
+        std::cout << "La dette des morts laisse une trace sombre, proche d'un saignement." << std::endl;
+    }
+    else if (className.find("duelliste") != std::string::npos || className.find("moine") != std::string::npos)
+    {
+        attacker.startDefensePosture(8, 10, "Lecture du rythme");
+        std::cout << "Le rythme lu prépare une petite fenêtre de contre." << std::endl;
+    }
+    else if (className.find("lancier") != std::string::npos)
+    {
+        attacker.startDefensePosture(12, 4, "Allonge de lancier");
+        std::cout << "Le lancier garde l'ennemi à distance après sa technique." << std::endl;
+    }
+
     std::cout << std::endl;
 
     executeBoostedAttack(attacker, defender, random, bonus);

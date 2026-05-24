@@ -8,7 +8,9 @@
 
 #include "core/Random.hpp"
 #include "entity/Player.hpp"
+#include "entity/Monster.hpp"
 #include "progression/DifficultyMode.hpp"
+#include <string>
 #include <vector>
 
 class MonsterPveMode
@@ -24,6 +26,14 @@ public:
         std::vector<Player*>& party,
         Random& random,
         DifficultyMode difficulty
+    );
+
+    static bool runExplorationWave(
+        Player& player,
+        Random& random,
+        DifficultyMode difficulty,
+        const std::vector<Monster>& monsters,
+        const std::string& title
     );
 };
 

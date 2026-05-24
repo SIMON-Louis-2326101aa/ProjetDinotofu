@@ -2418,6 +2418,8 @@ void Player::initializeStarterInventory(DifficultyMode difficulty)
 
 std::vector<std::string> Player::applyHeavyVersionAdaptation(DifficultyMode difficulty)
 {
+    (void)difficulty;
+
     std::vector<std::string> changes;
 
     if (starterKitLog.empty())
@@ -2629,6 +2631,27 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     dodged = false;
     critical = false;
 
+    if (shockTurns > 0 && random.between(1, 100) <= 18)
+    {
+        dodged = true;
+        clearLastConsumedAmmunition();
+        clearNextAmmunitionChoice();
+        std::cout << name << " est perturbé par le choc électrique et rate son geste." << std::endl;
+        return 0;
+    }
+
+    int dodgeThreshold = 3;
+    int normalHitThreshold = 16;
+    int frostDamagePercent = 100;
+
+    if (frostTurns > 0)
+    {
+        dodgeThreshold += 1;
+        normalHitThreshold += 1;
+        frostDamagePercent = 85;
+        std::cout << name << " attaque avec des gestes ralentis par le froid." << std::endl;
+    }
+
     int bonusMin = 0;
     int bonusMax = 0;
     int criticalBonus = 0;
@@ -2748,7 +2771,7 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         std::cout << std::endl;
     }
 
-    if (resultat <= 3)
+    if (resultat <= dodgeThreshold)
     {
         dodged = true;
         return 0;
@@ -2766,7 +2789,7 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         std::cout << std::endl;
     }
 
-    if (resultat <= 16)
+    if (resultat <= normalHitThreshold)
     {
         int dealtDamage = random.between(
             minDamage + bonusMin,
@@ -2778,6 +2801,11 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
             dealtDamage = std::max(1, dealtDamage / 2);
         }
 
+        if (frostDamagePercent < 100)
+        {
+            dealtDamage = std::max(1, dealtDamage * frostDamagePercent / 100);
+        }
+
         return dealtDamage;
     }
 
@@ -2787,6 +2815,11 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     if (bowWithoutAmmo)
     {
         criticalResult = std::max(1, criticalResult / 2);
+    }
+
+    if (frostDamagePercent < 100)
+    {
+        criticalResult = std::max(1, criticalResult * frostDamagePercent / 100);
     }
 
     return criticalResult;

@@ -24,6 +24,7 @@ void CombatPotionDisplay::displayMainMenu()
     std::cout << "4 : Utiliser une potion offensive" << std::endl;
     std::cout << "5 : Utiliser une potion de buff" << std::endl;
     std::cout << "6 : Utiliser une potion de debuff" << std::endl;
+    std::cout << "7 : Utiliser une potion spéciale" << std::endl;
     std::cout << "============================" << std::endl;
     std::cout << std::endl;
     std::cout << "> ";

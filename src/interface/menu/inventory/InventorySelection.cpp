@@ -1217,6 +1217,43 @@ namespace
         return true;
     }
 
+
+    bool craftAntidotePotion(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"slime_residue", 1}, {"bitter_healing_leaf", 1}}, "Antidote simple")) return false;
+        addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createAntidotePotion(), false);
+        maybeRestoreAlchemistCatalyst(player, "slime_residue", "le résidu de slime");
+        std::cout << "Tu filtres le résidu et obtiens un Antidote simple contre les poisons faibles." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftBurnSalvePotion(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"bitter_healing_leaf", 1}, {"slime_residue", 1}, {"arcane_dust", 1}}, "Baume anti-brûlure")) return false;
+        addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createBurnSalvePotion(), false);
+        maybeRestoreAlchemistCatalyst(player, "arcane_dust", "la poussière arcanique");
+        std::cout << "Tu obtiens un Baume anti-brûlure, assez stable pour stopper une brûlure faible." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftFrostResistancePotion(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"mountain_blue_flower", 1}, {"slime_residue", 1}}, "Potion tiède anti-givre")) return false;
+        addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createFrostResistancePotion(), false);
+        maybeRestoreAlchemistCatalyst(player, "slime_residue", "le résidu de slime");
+        std::cout << "Tu obtiens une Potion tiède anti-givre, utile contre les ralentissements froids." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftShockResistancePotion(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"rusted_metal_fragment", 1}, {"arcane_dust", 1}, {"slime_residue", 1}}, "Potion isolante")) return false;
+        addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createShockResistancePotion(), false);
+        maybeRestoreAlchemistCatalyst(player, "arcane_dust", "la poussière arcanique");
+        std::cout << "Tu obtiens une Potion isolante, pensée pour couper les décharges avant le prochain geste raté." << std::endl << std::endl;
+        return true;
+    }
+
     // EN: craftDamagePotion declares or implements a focused behavior used by this module.
     // FR: craftDamagePotion déclare ou implémente un comportement précis utilisé par ce module.
     bool craftDamagePotion(Player& player)
@@ -1944,7 +1981,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"wolf_fang", 1}, {"worn_leather_piece", 1}}, "Flèches barbelées")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("barbed_arrows", 8));
         MaterialExperimentLog::recordCraft("Flèches barbelées", 8);
-        std::cout << "Tu fabriques 8 flèches barbelées. Les effets spéciaux complets viendront avec le système de munitions avancées." << std::endl << std::endl;
+        std::cout << "Tu fabriques 8 flèches barbelées. Elles peuvent maintenant provoquer du saignement sur une attaque réussie." << std::endl << std::endl;
         return true;
     }
 
@@ -1971,7 +2008,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"training_arrows", 6}, {"arcane_dust", 1}}, "Flèches de cendre")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("ash_arrows", 6));
         MaterialExperimentLog::recordCraft("Flèches de cendre", 6);
-        std::cout << "Tu transformes 6 flèches en flèches de cendre. Effet élémentaire complet prévu avec la tâche statuts." << std::endl << std::endl;
+        std::cout << "Tu transformes 6 flèches en flèches de cendre. Elles peuvent maintenant accrocher une brûlure faible sur une attaque réussie." << std::endl << std::endl;
         return true;
     }
 
@@ -1980,7 +2017,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"training_bolts", 5}, {"mountain_blue_flower", 1}}, "Carreaux givrés")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("frozen_bolts", 5));
         MaterialExperimentLog::recordCraft("Carreaux givrés", 5);
-        std::cout << "Tu fabriques 5 carreaux givrés. Pour l'instant, ils existent surtout comme munition élémentaire rare." << std::endl << std::endl;
+        std::cout << "Tu fabriques 5 carreaux givrés. Ils peuvent maintenant ralentir une cible avec du givre." << std::endl << std::endl;
         return true;
     }
 
@@ -1989,7 +2026,34 @@ namespace
         if (!consumeRecipeIngredients(player, {{"training_throwing_knives", 5}, {"rusted_metal_fragment", 2}, {"arcane_dust", 1}}, "Couteaux conducteurs")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("conductive_knives", 5));
         MaterialExperimentLog::recordCraft("Couteaux conducteurs", 5);
-        std::cout << "Tu fabriques 5 couteaux conducteurs. Le futur système électrique les rendra beaucoup plus intéressants." << std::endl << std::endl;
+        std::cout << "Tu fabriques 5 couteaux conducteurs. Ils peuvent maintenant infliger un choc, surtout contre l'équipement métallique." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftVenomArrows(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"training_arrows", 6}, {"slime_residue", 1}, {"goblin_ear", 1}}, "Flèches enduites de venin")) return false;
+        player.getInventory().addMaterial(MaterialCatalog::createById("venom_arrows", 6));
+        MaterialExperimentLog::recordCraft("Flèches enduites de venin", 6);
+        std::cout << "Tu fabriques 6 flèches enduites de venin. Elles sont sales, pas nobles, mais efficaces si le tir blesse vraiment." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftShockBolts(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"training_bolts", 5}, {"rusted_metal_fragment", 3}, {"arcane_dust", 2}}, "Carreaux à pointe conductrice")) return false;
+        player.getInventory().addMaterial(MaterialCatalog::createById("shock_bolts", 5));
+        MaterialExperimentLog::recordCraft("Carreaux à pointe conductrice", 5);
+        std::cout << "Tu fabriques 5 carreaux conducteurs. Très utile contre les ennemis équipés de métal." << std::endl << std::endl;
+        return true;
+    }
+
+    bool craftSmokeKnives(Player& player)
+    {
+        if (!consumeRecipeIngredients(player, {{"training_throwing_knives", 5}, {"slime_residue", 1}, {"arcane_dust", 1}}, "Couteaux fumigènes")) return false;
+        player.getInventory().addMaterial(MaterialCatalog::createById("smoke_knives", 5));
+        MaterialExperimentLog::recordCraft("Couteaux fumigènes", 5);
+        std::cout << "Tu fabriques 5 couteaux fumigènes. Ce n'est pas magique : le projectile éclate une petite poudre qui gêne l'ennemi." << std::endl << std::endl;
         return true;
     }
 
@@ -2072,6 +2136,10 @@ namespace
         // FR: recipes.push_back déclare ou implémente un comportement précis utilisé par ce module.
         recipes.push_back({"Potion de soin", "Potion", {{"bitter_healing_leaf", 2}, {"slime_residue", 1}}, false, false, craftBasicHealingPotion});
         recipes.push_back({"Potion de soin renforcée", "Potion avancée", {{"mountain_blue_flower", 1}, {"arcane_dust", 1}}, true, false, craftReinforcedHealingPotion});
+        recipes.push_back({"Antidote simple", "Potion anti-statut", {{"slime_residue", 1}, {"bitter_healing_leaf", 1}}, false, false, craftAntidotePotion});
+        recipes.push_back({"Baume anti-brûlure", "Potion anti-statut", {{"bitter_healing_leaf", 1}, {"slime_residue", 1}, {"arcane_dust", 1}}, true, false, craftBurnSalvePotion});
+        recipes.push_back({"Potion tiède anti-givre", "Potion anti-statut", {{"mountain_blue_flower", 1}, {"slime_residue", 1}}, false, false, craftFrostResistancePotion});
+        recipes.push_back({"Potion isolante", "Potion anti-statut", {{"rusted_metal_fragment", 1}, {"arcane_dust", 1}, {"slime_residue", 1}}, true, false, craftShockResistancePotion});
         // EN: recipes.push_back declares or implements a focused behavior used by this module.
         // FR: recipes.push_back déclare ou implémente un comportement précis utilisé par ce module.
         recipes.push_back({"Potion de rage", "Potion", {{"wolf_fang", 1}, {"arcane_dust", 1}}, false, false, craftDamagePotion});
@@ -2125,6 +2193,9 @@ namespace
         recipes.push_back({"Flèches de cendre x6", "Munition élémentaire", {{"training_arrows", 6}, {"arcane_dust", 1}}, false, false, craftAshArrows});
         recipes.push_back({"Carreaux givrés x5", "Munition élémentaire", {{"training_bolts", 5}, {"mountain_blue_flower", 1}}, false, false, craftFrozenBolts});
         recipes.push_back({"Couteaux conducteurs x5", "Munition élémentaire", {{"training_throwing_knives", 5}, {"rusted_metal_fragment", 2}, {"arcane_dust", 1}}, false, true, craftConductiveKnives});
+        recipes.push_back({"Flèches enduites de venin x6", "Munition toxique", {{"training_arrows", 6}, {"slime_residue", 1}, {"goblin_ear", 1}}, false, false, craftVenomArrows});
+        recipes.push_back({"Carreaux à pointe conductrice x5", "Munition électrique", {{"training_bolts", 5}, {"rusted_metal_fragment", 3}, {"arcane_dust", 2}}, false, true, craftShockBolts});
+        recipes.push_back({"Couteaux fumigènes x5", "Munition utilitaire", {{"training_throwing_knives", 5}, {"slime_residue", 1}, {"arcane_dust", 1}}, false, false, craftSmokeKnives});
 
         return recipes;
     }

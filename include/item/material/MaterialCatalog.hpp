@@ -97,6 +97,9 @@ public:
     static Material createAshArrows(int quantity = 1);
     static Material createFrozenBolts(int quantity = 1);
     static Material createConductiveKnives(int quantity = 1);
+    static Material createVenomArrows(int quantity = 1);
+    static Material createShockBolts(int quantity = 1);
+    static Material createSmokeKnives(int quantity = 1);
 };
 
 #endif

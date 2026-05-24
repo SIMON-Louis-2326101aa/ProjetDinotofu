@@ -34,6 +34,11 @@ public:
     static Consumable createGreaterDefensivePotion();
     static Consumable createPrecisionPotion();
     static Consumable createWeakeningDebuffPotion();
+    static Consumable createAntidotePotion();
+    static Consumable createBurnSalvePotion();
+    static Consumable createFrostResistancePotion();
+    static Consumable createShockResistancePotion();
+    static Consumable createSmokeEscapeVial();
 };
 
 #endif

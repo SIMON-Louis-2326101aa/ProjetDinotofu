@@ -16,7 +16,55 @@
 #include "item/Inventory.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <iostream>
+#include <string>
+
+
+namespace
+{
+    std::string normalizePotionText(std::string value)
+    {
+        for (char& c : value)
+        {
+            c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        }
+        return value;
+    }
+
+    bool potionNameContains(const Consumable& potion, const std::string& text)
+    {
+        return normalizePotionText(potion.getName()).find(normalizePotionText(text)) != std::string::npos;
+    }
+
+    bool applyCurativeStatusEffect(Player& player, const Consumable& potion)
+    {
+        bool cured = false;
+
+        if (potionNameContains(potion, "antidote"))
+        {
+            cured = player.curePoison();
+            if (cured) std::cout << "Le poison est neutralisé." << std::endl;
+        }
+        else if (potionNameContains(potion, "anti-br") || potionNameContains(potion, "brûl") || potionNameContains(potion, "brul"))
+        {
+            cured = player.cureBurning();
+            if (cured) std::cout << "La brûlure est apaisée avant de continuer à ronger les chairs." << std::endl;
+        }
+        else if (potionNameContains(potion, "givre") || potionNameContains(potion, "tiède") || potionNameContains(potion, "tiede"))
+        {
+            cured = player.cureFrost();
+            if (cured) std::cout << "Le froid quitte les articulations et les gestes redeviennent plus fluides." << std::endl;
+        }
+        else if (potionNameContains(potion, "isolante") || potionNameContains(potion, "décharge") || potionNameContains(potion, "decharge"))
+        {
+            cured = player.cureShock();
+            if (cured) std::cout << "La conduction électrique est coupée avant de perturber un nouveau geste." << std::endl;
+        }
+
+        return cured;
+    }
+}
 
 bool CombatPotionUse::useHealingPotion(
     Player& player,
@@ -31,6 +79,7 @@ bool CombatPotionUse::useHealingPotion(
         return false;
     }
 
+    bool curedStatus = applyCurativeStatusEffect(player, potion);
     player.heal(potion.getPower());
     ThreatSystem::markSelfHealingAction(player);
 
@@ -46,6 +95,12 @@ bool CombatPotionUse::useHealingPotion(
               << potion.getPower()
               << " PV."
               << std::endl;
+
+    if (!curedStatus && player.hasActiveCombatStatus())
+    {
+        std::cout << "La potion soigne les PV, mais elle n'est pas adaptée aux statuts encore actifs." << std::endl;
+    }
+
     std::cout << std::endl;
 
     return true;
@@ -138,12 +193,20 @@ bool CombatPotionUse::useSelectedPotion(
         }
 
         int stabilisation = std::max(1, potion.getPower() / 3);
+        bool curedStatus = applyCurativeStatusEffect(player, potion);
         player.heal(stabilisation);
         DefensePostureSystem::enterDefensePosture(player);
 
         std::cout << player.getName() << " utilise " << potion.getName() << "." << std::endl;
         std::cout << "Son corps se stabilise : +" << stabilisation << " PV et posture défensive immédiate." << std::endl;
-        std::cout << "Ce n'est pas encore un buff long, mais ce n'est plus une potion décorative." << std::endl;
+        if (curedStatus)
+        {
+            std::cout << "La potion avait aussi le bon effet pour purger un statut actif." << std::endl;
+        }
+        else
+        {
+            std::cout << "Ce n'est pas encore un buff long, mais ce n'est plus une potion décorative." << std::endl;
+        }
         std::cout << std::endl;
         return true;
     }
@@ -185,6 +248,25 @@ bool CombatPotionUse::useSelectedPotion(
         }
 
         return true;
+    }
+
+    if (type == ConsumableType::Special)
+    {
+        if (potionNameContains(potion, "fumée") || potionNameContains(potion, "fumee"))
+        {
+            if (!player.hasInfiniteConsumables())
+            {
+                player.getInventory().removeConsumable(consumableIndex);
+            }
+
+            DefensePostureSystem::enterDefensePosture(player);
+            player.clearProvocation();
+            std::cout << player.getName() << " brise une " << potion.getName() << "." << std::endl;
+            std::cout << "La fumée ne téléporte pas et ne garantit pas la fuite, mais elle casse la pression immédiate." << std::endl;
+            std::cout << "Effet actuel : posture défensive et provocation annulée." << std::endl;
+            std::cout << std::endl;
+            return true;
+        }
     }
 
     std::cout << "[cette option n'est pas encore accessible pour ce mode]" << std::endl;

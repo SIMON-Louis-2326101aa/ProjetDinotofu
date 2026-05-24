@@ -10,6 +10,7 @@
 #include "quest/QuestCatalog.hpp"
 #include "item/material/MaterialCatalog.hpp"
 #include "entity/MonsterCatalog.hpp"
+#include "combat/modes/pve/MonsterPveMode.hpp"
 
 #include <iostream>
 #include <vector>
@@ -515,39 +516,33 @@ namespace
 
     // EN: simulateUnexpectedExplorationFight declares or implements a focused behavior used by this module.
     // FR: simulateUnexpectedExplorationFight déclare ou implémente un comportement précis utilisé par ce module.
-    void simulateUnexpectedExplorationFight(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity)
+    void simulateUnexpectedExplorationFight(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity, DifficultyMode difficulty)
     {
         Monster localMonster = createExplorationMonsterForBiome(player, random, biome, intensity);
-        int damage = random.between(localMonster.getMinDamage(), localMonster.getMaxDamage() + player.getLevel());
-        int actualDamage = std::min(damage, std::max(0, player.getHp() - 1));
-        int experience = 10 + localMonster.getLevel() * 6 + random.between(0, 12);
-        std::string quality = chooseExplorationQuality(random, false);
 
         std::cout << "Un mouvement anormal coupe ta fouille." << std::endl;
         std::cout << "Un ennemi surgit sans prévenir : " << localMonster.getName()
                   << " [niveau " << localMonster.getLevel() << "]." << std::endl;
         std::cout << "Zone : " << biome.name << " | Présences communes : " << biome.commonMonsters
                   << " | Rares/élites : " << biome.rareMonsters << "." << std::endl;
+        std::cout << std::endl;
 
-        if (actualDamage > 0)
-        {
-            player.takeDamage(actualDamage);
-            std::cout << "Tu repousses la menace, mais tu reçois " << actualDamage << " dégâts." << std::endl;
-        }
-        else
-        {
-            std::cout << "Tu repousses la menace de justesse, sans pouvoir encaisser davantage." << std::endl;
-        }
+        bool victory = MonsterPveMode::runExplorationWave(
+            player,
+            random,
+            difficulty,
+            std::vector<Monster>{localMonster},
+            "Rencontre imprévue de " + biome.name
+        );
 
-        player.gainExperience(experience);
-        player.recordCombatStarted();
-        player.recordVictory();
-        player.recordEnemyKills(1);
-        std::cout << "XP gagnée : " << experience << std::endl;
+        if (!victory)
+        {
+            return;
+        }
 
         if (random.between(1, 100) <= 70)
         {
-            addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), quality);
+            addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, false));
         }
 
         int updated = player.getQuestLog().progressCombatQuestsByFamily(1, "Créatures locales");
@@ -559,7 +554,7 @@ namespace
 
     // EN: openExplorationChest declares or implements a focused behavior used by this module.
     // FR: openExplorationChest déclare ou implémente un comportement précis utilisé par ce module.
-    void openExplorationChest(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity)
+    void openExplorationChest(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity, DifficultyMode difficulty)
     {
         std::cout << "Un coffre est posé là, presque trop calmement." << std::endl;
         std::cout << "1 : Ouvrir le coffre" << std::endl;
@@ -590,7 +585,7 @@ namespace
         else if (roll <= 28)
         {
             std::cout << "Le coffre se déplie d'un coup. Ce n'était pas un coffre. Mimic." << std::endl;
-            simulateUnexpectedExplorationFight(player, random, biome, intensity);
+            simulateUnexpectedExplorationFight(player, random, biome, intensity, difficulty);
             player.getInventory().earnGold(random.between(8, 24 + player.getLevel() * 2));
             std::cout << "Dans les restes visqueux, tu récupères quelques pièces." << std::endl;
         }
@@ -618,7 +613,7 @@ namespace
 
     // EN: triggerRareExplorationDiscovery declares or implements a focused behavior used by this module.
     // FR: triggerRareExplorationDiscovery déclare ou implémente un comportement précis utilisé par ce module.
-    void triggerRareExplorationDiscovery(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity)
+    void triggerRareExplorationDiscovery(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity, DifficultyMode difficulty)
     {
         int roll = random.between(1, 100);
 
@@ -691,15 +686,22 @@ namespace
         }
 
         std::cout << "Découverte rarissime : quelque chose t'a vu avant que tu ne le voies." << std::endl;
-        std::cout << "Ton instinct refuse de rester. Tu récupères ce que tu peux avant de reculer." << std::endl;
-        int damage = std::min(random.between(6 + player.getLevel(), 18 + player.getLevel() * 2), std::max(0, player.getHp() - 1));
-        if (damage > 0)
+        std::cout << "Ton instinct refuse de rester, mais la chose est déjà trop proche : il faut vraiment se battre." << std::endl;
+
+        Monster hunter = createExplorationMonsterForBiome(player, random, biome, intensity);
+        bool victory = MonsterPveMode::runExplorationWave(
+            player,
+            random,
+            difficulty,
+            std::vector<Monster>{hunter},
+            "Découverte rarissime : prédateur de " + biome.name
+        );
+
+        if (victory)
         {
-            player.takeDamage(damage);
-            std::cout << "La pression te laisse " << damage << " dégâts, sans t'achever." << std::endl;
+            addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), "exceptional");
+            progressExplorationQuests(player, biome.name, 3);
         }
-        addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), "exceptional");
-        progressExplorationQuests(player, biome.name, 3);
     }
 
     Quest buildNpcQuestByRoll(Player& player, int roll, std::string& intro, const std::string& biomeName = "")
@@ -867,41 +869,36 @@ namespace
 
     // EN: simulateExplorationMiniBoss declares or implements a focused behavior used by this module.
     // FR: simulateExplorationMiniBoss déclare ou implémente un comportement précis utilisé par ce module.
-    void simulateExplorationMiniBoss(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity)
+    void simulateExplorationMiniBoss(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity, DifficultyMode difficulty)
     {
         bool evolved = random.between(1, 100) <= 45;
-        int damage = random.between(10 + player.getLevel() * 2, 24 + player.getLevel() * 4);
-        int actualDamage = std::min(damage, std::max(0, player.getHp() - 1));
-        int experience = 45 + player.getLevel() * 12 + (evolved ? 25 : 0);
-        int gold = applyExplorationGoldBonus(random.between(15 + player.getLevel() * 3, 45 + player.getLevel() * 6) + (evolved ? 25 : 0), intensity);
-
         std::string miniBossName = miniBossNameForBiome(biome, evolved);
         std::string questFamily = miniBossQuestFamilyForBiome(biome, evolved);
 
+        Monster miniBoss = createExplorationMonsterForBiome(player, random, biome, intensity);
+
         std::cout << "L'air se tasse autour de toi." << std::endl;
         std::cout << "Mini-boss d'exploration : " << miniBossName << "." << std::endl;
+        std::cout << "Forme rencontrée : " << miniBoss.getName()
+                  << " [niveau " << miniBoss.getLevel() << "]." << std::endl;
         if (evolved)
         {
             std::cout << "Cette chose ressemble à une version évoluée d'un monstre local." << std::endl;
         }
+        std::cout << std::endl;
 
-        if (actualDamage > 0)
-        {
-            player.takeDamage(actualDamage);
-            std::cout << "Tu finis par la repousser, mais tu reçois " << actualDamage << " dégâts." << std::endl;
-        }
-        else
-        {
-            std::cout << "Tu remportes l'échange de justesse, déjà trop proche de tomber." << std::endl;
-        }
+        bool victory = MonsterPveMode::runExplorationWave(
+            player,
+            random,
+            difficulty,
+            std::vector<Monster>{miniBoss},
+            "Mini-boss d'exploration : " + miniBossName
+        );
 
-        player.gainExperience(experience);
-        player.getInventory().earnGold(gold);
-        player.recordCombatStarted();
-        player.recordVictory();
-        player.recordEnemyKills(1);
-        std::cout << "XP gagnée : " << experience << std::endl;
-        std::cout << "Or récupéré : " << gold << std::endl;
+        if (!victory)
+        {
+            return;
+        }
 
         addExplorationMaterial(player, evolved ? biome.rareMaterialId : biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, evolved));
 
@@ -914,50 +911,80 @@ namespace
 
     // EN: simulateAfterCombatMiniBoss declares or implements a focused behavior used by this module.
     // FR: simulateAfterCombatMiniBoss déclare ou implémente un comportement précis utilisé par ce module.
-    void simulateAfterCombatMiniBoss(Player& player, Random& random)
+    void simulateAfterCombatMiniBoss(Player& player, Random& random, DifficultyMode difficulty)
     {
         bool evolved = random.between(1, 100) <= 35;
         std::string miniBossName = evolved ? "forme évoluée attirée par le sang" : "menace opportuniste";
         std::string questFamily = evolved ? "Mini-boss / menace évoluée" : "Élite / menace";
-        int damage = random.between(8 + player.getLevel() * 2, 20 + player.getLevel() * 3);
-        int actualDamage = std::min(damage, std::max(0, player.getHp() - 1));
-        int experience = 35 + player.getLevel() * 10 + (evolved ? 35 : 0);
-        int gold = random.between(10 + player.getLevel() * 2, 35 + player.getLevel() * 5) + (evolved ? 30 : 0);
+
+        int enemyCount = evolved ? random.between(1, 2) : 1;
+        std::vector<Monster> monsters;
+
+        for (int i = 0; i < enemyCount; ++i)
+        {
+            int levelOffset = evolved ? random.between(1, 4) : random.between(-1, 2);
+            Monster monster = MonsterCatalog::createRandomMonsterForLevel(
+                std::max(1, player.getLevel() + levelOffset),
+                random
+            );
+
+            if (evolved)
+            {
+                monster = MonsterCatalog::createEvolvedVariant(monster, random);
+            }
+
+            monsters.push_back(monster);
+        }
 
         std::cout << "========== ÉVÉNEMENT APRÈS-COMBAT ==========" << std::endl;
         std::cout << "Tu pensais pouvoir souffler, mais quelque chose a suivi le bruit du combat." << std::endl;
         std::cout << "Mini-boss détecté : " << miniBossName << "." << std::endl;
+        std::cout << "Cette fois, l'événement n'est pas résolu par un simple texte : il faut vraiment survivre." << std::endl;
         std::cout << std::endl;
+        std::cout << "1 : Affronter la menace" << std::endl;
+        std::cout << "0 : Tenter de l'éviter avant contact" << std::endl;
+        std::cout << "> ";
 
-        if (actualDamage > 0)
+        int choice = Console::askNumberBetween(0, 1, "Choix invalide.");
+        Console::clear();
+
+        if (choice == 0)
         {
-            player.takeDamage(actualDamage);
-            std::cout << "Tu repousses l'apparition, mais elle te laisse " << actualDamage << " dégâts." << std::endl;
+            int escapeChance = evolved ? 45 : 65;
+            if (random.between(1, 100) <= escapeChance)
+            {
+                std::cout << "Tu t'éloignes avant que la menace ne verrouille vraiment ta position." << std::endl;
+                std::cout << "L'événement est évité, mais aucune récompense supplémentaire n'est obtenue." << std::endl;
+                return;
+            }
+
+            std::cout << "Trop tard. La menace a déjà senti ta fatigue." << std::endl;
+            std::cout << std::endl;
         }
-        else
+
+        bool victory = MonsterPveMode::runExplorationWave(
+            player,
+            random,
+            difficulty,
+            monsters,
+            "Événement après-combat : " + miniBossName
+        );
+
+        if (!victory)
         {
-            std::cout << "Tu repousses l'apparition sans pouvoir vraiment encaisser davantage." << std::endl;
+            return;
         }
-
-        player.recordCombatStarted();
-        player.recordVictory();
-        player.recordEnemyKills(1);
-        player.gainExperience(experience);
-        player.getInventory().earnGold(gold);
-
-        std::cout << "XP gagnée : " << experience << std::endl;
-        std::cout << "Or récupéré : " << gold << std::endl;
 
         int updated = player.getQuestLog().progressCombatQuestsByFamily(evolved ? 2 : 1, questFamily);
         if (updated > 0)
         {
-            std::cout << "Des quêtes de combat progressent grâce à ce mini-boss." << std::endl;
+            std::cout << "Des quêtes de combat progressent grâce à ce vrai événement après-combat." << std::endl;
         }
     }
 
     // EN: openDangerousExplorationSite declares or implements a focused behavior used by this module.
     // FR: openDangerousExplorationSite déclare ou implémente un comportement précis utilisé par ce module.
-    void openDangerousExplorationSite(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity)
+    void openDangerousExplorationSite(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity, DifficultyMode difficulty)
     {
         std::cout << "Tu remarques un passage récent vers un lieu qui n'a clairement pas envie d'être visité." << std::endl;
         std::cout << "Lieu repéré : " << dangerousSiteNameForBiome(biome) << "." << std::endl;
@@ -998,23 +1025,26 @@ namespace
                 return;
             }
 
-            int damage = random.between(18 + player.getLevel() * 3, 42 + player.getLevel() * 5);
-            int actualDamage = std::min(damage, std::max(0, player.getHp() - 1));
-            int experience = 80 + player.getLevel() * 18;
-            int gold = applyExplorationGoldBonus(random.between(30 + player.getLevel() * 5, 90 + player.getLevel() * 8), intensity);
+            std::vector<Monster> monsters;
+            int enemyCount = random.between(2, 4);
+            for (int i = 0; i < enemyCount; ++i)
+            {
+                monsters.push_back(createExplorationMonsterForBiome(player, random, biome, intensity));
+            }
 
-            player.takeDamage(actualDamage);
-            player.recordCombatStarted();
-            player.recordVictory();
-            player.recordEnemyKills(random.between(2, 4));
-            player.gainExperience(experience);
-            player.getInventory().earnGold(gold);
+            bool victory = MonsterPveMode::runExplorationWave(
+                player,
+                random,
+                difficulty,
+                monsters,
+                "Lieu dangereux : vague de " + biome.name
+            );
 
-            std::cout << "Tu survis à la vague, mais tu encaisses " << actualDamage << " dégâts." << std::endl;
-            std::cout << "XP gagnée : " << experience << std::endl;
-            std::cout << "Or récupéré : " << gold << std::endl;
-            addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
-            player.getQuestLog().progressCombatQuestsByFamily(3, "Menace avancée");
+            if (victory)
+            {
+                addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
+                player.getQuestLog().progressCombatQuestsByFamily(3, "Menace avancée");
+            }
             return;
         }
 
@@ -1056,6 +1086,265 @@ namespace
         }
 
         progressExplorationQuests(player, biome.name, 2);
+    }
+
+
+    std::vector<Monster> createExplorationGroup(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity, int minCount, int maxCount, bool allowEvolved)
+    {
+        int count = random.between(minCount, maxCount);
+        std::vector<Monster> monsters;
+
+        for (int i = 0; i < count; ++i)
+        {
+            Monster monster = createExplorationMonsterForBiome(player, random, biome, intensity);
+            if (allowEvolved && random.between(1, 100) <= 22)
+            {
+                monster = MonsterCatalog::createEvolvedVariant(monster, random);
+            }
+            monsters.push_back(monster);
+        }
+
+        return monsters;
+    }
+
+    void triggerActiveExplorationEvent(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity, DifficultyMode difficulty)
+    {
+        int eventRoll = random.between(1, 100);
+
+        std::cout << "========== ÉVÉNEMENT D'EXPLORATION ==========" << std::endl;
+
+        if (eventRoll <= 18)
+        {
+            std::cout << "Tu découvres un camp abandonné. Le feu est éteint, mais les cendres sont encore tièdes." << std::endl;
+            std::cout << "1 : Fouiller vite" << std::endl;
+            std::cout << "2 : Inspecter prudemment les traces" << std::endl;
+            std::cout << "0 : Quitter le camp" << std::endl;
+            std::cout << "> ";
+
+            int choice = Console::askNumberBetween(0, 2, "Choix invalide.");
+            Console::clear();
+
+            if (choice == 0)
+            {
+                std::cout << "Tu quittes le camp. Certains silences ne méritent pas d'être ouverts." << std::endl;
+                return;
+            }
+
+            if (choice == 1 || random.between(1, 100) <= 45)
+            {
+                std::cout << "Des silhouettes reviennent vers le camp. Ce n'était pas si abandonné." << std::endl;
+                bool victory = MonsterPveMode::runExplorationWave(
+                    player,
+                    random,
+                    difficulty,
+                    createExplorationGroup(player, random, biome, intensity, 2, 3, false),
+                    "Camp abandonné : retour des occupants"
+                );
+
+                if (!victory)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                std::cout << "Tu lis correctement les traces et évites l'embuscade avant qu'elle ne se referme." << std::endl;
+                progressExplorationQuests(player, biome.name, 1);
+            }
+
+            int gold = applyExplorationGoldBonus(random.between(12, 38 + player.getLevel() * 2), intensity);
+            player.getInventory().earnGold(gold);
+            std::cout << "Tu récupères dans le camp : " << gold << " pièces." << std::endl;
+            addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
+            return;
+        }
+
+        if (eventRoll <= 35)
+        {
+            std::cout << "Tu tombes sur un nid / repaire local. Il y a des ressources dedans, mais aussi des propriétaires." << std::endl;
+            std::cout << "1 : Nettoyer le repaire" << std::endl;
+            std::cout << "0 : Ne pas provoquer la zone" << std::endl;
+            std::cout << "> ";
+
+            int choice = Console::askNumberBetween(0, 1, "Choix invalide.");
+            Console::clear();
+
+            if (choice == 0)
+            {
+                std::cout << "Tu marques mentalement le lieu, mais tu ne vas pas mourir pour trois bouts de cuir." << std::endl;
+                progressExplorationQuests(player, biome.name, 1);
+                return;
+            }
+
+            bool victory = MonsterPveMode::runExplorationWave(
+                player,
+                random,
+                difficulty,
+                createExplorationGroup(player, random, biome, intensity, 2, 5, isBiomeEvolvedForPlayer(player, biome)),
+                "Repaire local : " + biome.name
+            );
+
+            if (victory)
+            {
+                addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(random.between(1, 2), intensity), chooseExplorationQuality(random, true));
+                if (random.between(1, 100) <= 45)
+                {
+                    addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
+                }
+                player.getQuestLog().progressCombatQuestsByFamily(2, "Créatures locales");
+            }
+            return;
+        }
+
+        if (eventRoll <= 50)
+        {
+            std::cout << "Un marchand clandestin a caché une caisse sous des marques trop propres." << std::endl;
+            std::cout << "Ce n'est pas une boutique complète, plutôt une cache suspecte." << std::endl;
+            std::cout << "1 : Ouvrir la cache" << std::endl;
+            std::cout << "0 : La laisser tranquille" << std::endl;
+            std::cout << "> ";
+
+            int choice = Console::askNumberBetween(0, 1, "Choix invalide.");
+            Console::clear();
+
+            if (choice == 0)
+            {
+                std::cout << "Tu refuses de voler quelqu'un qui vend probablement déjà des choses volées." << std::endl;
+                return;
+            }
+
+            if (random.between(1, 100) <= 55)
+            {
+                std::cout << "La cache était surveillée. Des gardes privés ou voleurs reviennent la défendre." << std::endl;
+                bool victory = MonsterPveMode::runExplorationWave(
+                    player,
+                    random,
+                    difficulty,
+                    createExplorationGroup(player, random, biome, intensity, 1, 3, false),
+                    "Cache clandestine : défenseurs du marché noir"
+                );
+
+                if (!victory)
+                {
+                    return;
+                }
+            }
+
+            std::vector<std::string> illegalFinds = {
+                "barbed_arrows", "piercing_bolts", "balanced_throwing_knives", "ash_arrows", "frozen_bolts", "conductive_knives", "unstable_core", "shadow_thread"
+            };
+            std::string found = illegalFinds[random.between(0, static_cast<int>(illegalFinds.size()) - 1)];
+            addExplorationMaterial(player, found, random.between(1, 3), chooseExplorationQuality(random, true));
+            return;
+        }
+
+        if (eventRoll <= 66)
+        {
+            std::cout << "La zone change de rythme : plusieurs créatures semblent fuir quelque chose... vers toi." << std::endl;
+            std::cout << "Ce n'est pas un texte d'ambiance : c'est une vraie vague." << std::endl;
+
+            bool victory = MonsterPveMode::runExplorationWave(
+                player,
+                random,
+                difficulty,
+                createExplorationGroup(player, random, biome, intensity, 3, 6, isBiomeEvolvedForPlayer(player, biome)),
+                "Vague forcée par la zone : " + biome.name
+            );
+
+            if (victory)
+            {
+                addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, false));
+                progressExplorationQuests(player, biome.name, 2);
+            }
+            return;
+        }
+
+        if (eventRoll <= 82)
+        {
+            std::cout << "Tu trouves un autel / signe ancien lié au biome." << std::endl;
+            std::cout << "1 : Étudier le signe" << std::endl;
+            std::cout << "2 : Tenter de prélever un fragment" << std::endl;
+            std::cout << "0 : Ne pas toucher" << std::endl;
+            std::cout << "> ";
+
+            int choice = Console::askNumberBetween(0, 2, "Choix invalide.");
+            Console::clear();
+
+            if (choice == 0)
+            {
+                std::cout << "Tu respectes l'endroit. Le registre note quand même la position." << std::endl;
+                progressExplorationQuests(player, biome.name, 1);
+                return;
+            }
+
+            if (choice == 1)
+            {
+                std::cout << "Tu prends des notes. Ce genre d'information fera vivre le bestiaire plus tard." << std::endl;
+                progressExplorationQuests(player, biome.name, 3);
+                if (random.between(1, 100) <= 35)
+                {
+                    addExplorationMaterial(player, "variation_residue", 1, chooseExplorationQuality(random, true));
+                }
+                return;
+            }
+
+            std::cout << "Le fragment refuse d'être prélevé gratuitement." << std::endl;
+            bool victory = MonsterPveMode::runExplorationWave(
+                player,
+                random,
+                difficulty,
+                createExplorationGroup(player, random, biome, intensity, 1, 2, true),
+                "Autel instable : réaction de " + biome.name
+            );
+
+            if (victory)
+            {
+                addExplorationMaterial(player, "variation_residue", applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
+                addExplorationMaterial(player, biome.rareMaterialId, 1, chooseExplorationQuality(random, true));
+            }
+            return;
+        }
+
+        std::cout << "Tu entends un appel humain ou semi-humain, blessé, quelque part hors du chemin." << std::endl;
+        std::cout << "1 : Porter secours" << std::endl;
+        std::cout << "0 : Rester concentré sur ta survie" << std::endl;
+        std::cout << "> ";
+
+        int choice = Console::askNumberBetween(0, 1, "Choix invalide.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            std::cout << "Tu continues ta route. Ce monde punit parfois les héros trop confiants." << std::endl;
+            return;
+        }
+
+        bool ambush = random.between(1, 100) <= 50;
+        if (ambush)
+        {
+            std::cout << "L'appel était un piège, ou la personne était déjà suivie." << std::endl;
+            bool victory = MonsterPveMode::runExplorationWave(
+                player,
+                random,
+                difficulty,
+                createExplorationGroup(player, random, biome, intensity, 2, 4, false),
+                "Secours dangereux : embuscade"
+            );
+
+            if (!victory)
+            {
+                return;
+            }
+        }
+        else
+        {
+            std::cout << "Cette fois, ce n'était pas un piège. Une personne te doit probablement la vie." << std::endl;
+        }
+
+        int gold = applyExplorationGoldBonus(random.between(18, 55 + player.getLevel() * 2), intensity);
+        player.getInventory().earnGold(gold);
+        std::cout << "Récompense improvisée : " << gold << " pièces." << std::endl;
+        offerExplorationNpcQuest(player, random, biome);
     }
 
 }
@@ -1292,9 +1581,9 @@ void QuestMenu::acceptGuildQuest(Player& player)
 
 // EN: openExploration declares or implements a focused behavior used by this module.
 // FR: openExploration déclare ou implémente un comportement précis utilisé par ce module.
-void QuestMenu::openExploration(Player& player)
+void QuestMenu::openExploration(Player& player, DifficultyMode difficulty)
 {
-    openExplorationMenu(player);
+    openExplorationMenu(player, difficulty);
 }
 
 // EN: openLocations declares or implements a focused behavior used by this module.
@@ -1694,7 +1983,7 @@ void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientN
 
 // EN: maybeOfferRandomInterception declares or implements a focused behavior used by this module.
 // FR: maybeOfferRandomInterception déclare ou implémente un comportement précis utilisé par ce module.
-void QuestMenu::maybeOfferRandomInterception(Player& player)
+void QuestMenu::maybeOfferRandomInterception(Player& player, DifficultyMode difficulty)
 {
     Random random;
 
@@ -1705,7 +1994,7 @@ void QuestMenu::maybeOfferRandomInterception(Player& player)
 
     if (random.between(1, 100) <= 25)
     {
-        simulateAfterCombatMiniBoss(player, random);
+        simulateAfterCombatMiniBoss(player, random, difficulty);
     }
     else
     {
@@ -1722,7 +2011,7 @@ void QuestMenu::maybeOfferRandomInterception(Player& player)
 
 // EN: openExplorationMenu declares or implements a focused behavior used by this module.
 // FR: openExplorationMenu déclare ou implémente un comportement précis utilisé par ce module.
-void QuestMenu::openExplorationMenu(Player& player)
+void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty)
 {
     std::vector<ExplorationBiome> biomes = {
         {"Plaine sauvage", "biome ouvert, accessible aux débutants, mais jamais totalement sûr", "worn_leather_piece", "wolf_fang", 1, 10, "bêtes faibles, sangliers, loups isolés", "alphas jeunes, ours errants"},
@@ -1885,27 +2174,31 @@ void QuestMenu::openExplorationMenu(Player& player)
         }
         else if (roll <= 66)
         {
-            openExplorationChest(player, random, biome, intensity);
+            openExplorationChest(player, random, biome, intensity, difficulty);
         }
         else if (roll <= 78)
         {
-            simulateUnexpectedExplorationFight(player, random, biome, intensity);
+            simulateUnexpectedExplorationFight(player, random, biome, intensity, difficulty);
         }
         else if (roll <= 87)
         {
-            simulateExplorationMiniBoss(player, random, biome, intensity);
+            simulateExplorationMiniBoss(player, random, biome, intensity, difficulty);
         }
-        else if (roll <= 94)
+        else if (roll <= 91)
         {
             offerExplorationNpcQuest(player, random, biome);
         }
-        else if (roll <= 97)
+        else if (roll <= 96)
         {
-            openDangerousExplorationSite(player, random, biome, intensity);
+            triggerActiveExplorationEvent(player, random, biome, intensity, difficulty);
+        }
+        else if (roll <= 98)
+        {
+            openDangerousExplorationSite(player, random, biome, intensity, difficulty);
         }
         else
         {
-            triggerRareExplorationDiscovery(player, random, biome, intensity);
+            triggerRareExplorationDiscovery(player, random, biome, intensity, difficulty);
         }
 
         player.getQuestLog().refreshMaterialDeliveryQuests(player.getInventory());

@@ -106,8 +106,8 @@ bool CombatPotionMenu::openAgainstSingleTarget(
 
         int choice = Console::askNumberBetween(
             0,
-            6,
-            "Choix invalide. Entre un chiffre entre 0 et 6."
+            7,
+            "Choix invalide. Entre un chiffre entre 0 et 7."
         );
 
         Console::clear();
@@ -176,6 +176,18 @@ bool CombatPotionMenu::openAgainstSingleTarget(
             return openCategory(
                 player,
                 ConsumableType::Debuff,
+                &target,
+                nullptr,
+                random,
+                potionDamageBonus
+            );
+        }
+
+        if (choice == 7)
+        {
+            return openCategory(
+                player,
+                ConsumableType::Special,
                 &target,
                 nullptr,
                 random,
@@ -198,8 +210,8 @@ bool CombatPotionMenu::openAgainstWave(
 
         int choice = Console::askNumberBetween(
             0,
-            6,
-            "Choix invalide. Entre un chiffre entre 0 et 6."
+            7,
+            "Choix invalide. Entre un chiffre entre 0 et 7."
         );
 
         Console::clear();
@@ -268,6 +280,18 @@ bool CombatPotionMenu::openAgainstWave(
             return openCategory(
                 player,
                 ConsumableType::Debuff,
+                nullptr,
+                &wave,
+                random,
+                potionDamageBonus
+            );
+        }
+
+        if (choice == 7)
+        {
+            return openCategory(
+                player,
+                ConsumableType::Special,
                 nullptr,
                 &wave,
                 random,

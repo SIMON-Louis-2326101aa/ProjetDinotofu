@@ -105,11 +105,49 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
 
         case ShopType::Armor:
             shop.addItem(ShopItem("worn_leather_armor", "Armure en cuir usée", "Une protection légère qui a déjà vécu.", ShopItemCategory::Armor, 70, 22, 1));
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("worn_leather_piece", "Renforts de cuir usé", "Pas une vraie armure, mais parfait pour réparer ou renforcer du cuir.", ShopItemCategory::Material, 24, 5, 3));
+            }
+            if (rotation % 3 == 1)
+            {
+                shop.addItem(ShopItem("rusted_metal_fragment", "Plaques rouillées de récupération", "Plaques imparfaites pour bricoler une protection métallique.", ShopItemCategory::Material, 28, 3, 4));
+            }
+            if (rotation % 4 == 2)
+            {
+                shop.addItem(ShopItem("weak_repair_kit", "Kit de réparation d'armurier", "Petit kit gardé pour les clients qui cassent tout trop vite.", ShopItemCategory::Material, 58, 18, 1));
+            }
             break;
 
         case ShopType::Weapon:
             shop.addItem(ShopItem("rusty_sword", "Épée rouillée", "Une arme modeste, mais mieux que les mains nues.", ShopItemCategory::Weapon, 60, 18, 1));
             shop.addItem(ShopItem("training_bow", "Arc d'entraînement", "Arme à distance simple. Les tirs demandent maintenant des munitions compatibles.", ShopItemCategory::Weapon, 85, 24, 1));
+            if (rotation % 5 == 0)
+            {
+                shop.addItem(ShopItem("training_crossbow", "Arbalète d'occasion", "Une arbalète simple, pas luxueuse, mais légale.", ShopItemCategory::Weapon, 118, 30, 1));
+            }
+            if (rotation % 5 == 3)
+            {
+                shop.addItem(ShopItem("training_throwing_bandolier", "Bandoulière de lancer usée", "Matériel de jet de seconde main, encore utilisable.", ShopItemCategory::Weapon, 102, 26, 1));
+            }
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("training_spear", "Lance d'entraînement", "Lance simple pour garder l'ennemi à distance sans prétendre être un héros.", ShopItemCategory::Weapon, 78, 22, 1));
+                shop.addItem(ShopItem("training_dagger", "Dague d'entraînement", "Petite lame correcte pour classes rapides et défense de secours.", ShopItemCategory::Weapon, 68, 20, 1));
+            }
+            else
+            {
+                shop.addItem(ShopItem("training_crossbow", "Arbalète d'entraînement", "Arme à distance lente mais stable, compatible avec les carreaux.", ShopItemCategory::Weapon, 105, 30, 1));
+                shop.addItem(ShopItem("training_throwing_bandolier", "Bandoulière de lancer", "Équipement de jet pour utiliser des couteaux de lancer.", ShopItemCategory::Weapon, 92, 26, 1));
+            }
+            if (rotation % 3 == 0)
+            {
+                shop.addItem(ShopItem("training_staff", "Bâton d'apprenti", "Bâton simple pour mages, voyageurs et combats prudents.", ShopItemCategory::Weapon, 72, 18, 1));
+            }
+            if (rotation % 4 == 2)
+            {
+                shop.addItem(ShopItem("heavy_training_axe", "Hache lourde émoussée", "Arme lourde de débutant, lente mais cohérente pour les briseurs.", ShopItemCategory::Weapon, 115, 32, 1));
+            }
             if (rotation % 2 == 0)
             {
                 shop.addItem(ShopItem("training_arrows", "Flèches d'entraînement", "Munitions basiques pour arcs.", ShopItemCategory::Material, 12, 2, 12));
@@ -136,6 +174,15 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             shop.addItem(ShopItem("minor_healing_potion", "Petite potion de soin", "Restaure peu de PV, mais coûte peu.", ShopItemCategory::Consumable, 12, 4, 4 + rotation % 3));
             shop.addItem(ShopItem("basic_healing_potion", "Potion de soin", "Restaure une quantité simple de PV.", ShopItemCategory::Consumable, 25, 8, 3 + rotation % 3));
             shop.addItem(ShopItem("basic_damage_potion", "Potion de rage", "Renforce une attaque offensive.", ShopItemCategory::Consumable, 30, 10, 2 + rotation % 2));
+            shop.addItem(ShopItem("antidote_potion", "Antidote simple", "Petit stock permanent : les slimes violets et marais ne préviennent pas.", ShopItemCategory::Consumable, 42, 12, 1 + rotation % 2));
+            if (rotation % 2 == 1)
+            {
+                shop.addItem(ShopItem("antidote_potion", "Antidote simple", "Potion utile contre les poisons faibles des marais et slimes violets.", ShopItemCategory::Consumable, 40, 12, 2));
+            }
+            if (rotation % 3 == 2)
+            {
+                shop.addItem(ShopItem("burn_salve_potion", "Baume anti-brûlure", "Soin de terrain contre les petites brûlures et attaques de feu.", ShopItemCategory::Consumable, 42, 12, 2));
+            }
             if (rotation % 2 == 0)
             {
                 shop.addItem(ShopItem("defensive_potion", "Potion défensive", "Buff défensif préparé pour le futur sous-menu Potions.", ShopItemCategory::Consumable, 45, 15, 2));
@@ -175,6 +222,14 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 7 == 4)
             {
                 shop.addItem(ShopItem("frozen_bolts", "Carreaux givrés", "Munitions froides rarement proposées hors montagne.", ShopItemCategory::Material, 82, 9, 2));
+            }
+            if (rotation % 6 == 1)
+            {
+                shop.addItem(ShopItem("balanced_throwing_knives", "Couteaux de lancer équilibrés", "Petit lot utile aux profils mobiles qui veulent une option plus propre que les couteaux de base.", ShopItemCategory::Material, 64, 6, 3));
+            }
+            if (rotation % 8 == 3)
+            {
+                shop.addItem(ShopItem("venom_arrows", "Flèches enduites de venin", "Petit lot toxique très limité : légalement discutable, mais pas encore marché noir.", ShopItemCategory::Material, 96, 10, 2));
             }
             if (rotation % 4 == 2)
             {
@@ -233,6 +288,26 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("clean_harvest_manual", "Technique passive : récolte propre", "Méthode simple pour récolter avant de découper n'importe comment.", ShopItemCategory::Information, 115, 0, 1, true));
             }
+            if (rotation % 5 == 2)
+            {
+                shop.addItem(ShopItem("advanced_monster_notes", "Dossier : couleurs de slimes", "Ajoute des rappels sur les variantes de slimes et leurs statuts possibles.", ShopItemCategory::Information, 90, 0, 1, true));
+            }
+            if (rotation % 5 == 3)
+            {
+                shop.addItem(ShopItem("advanced_monster_notes", "Dossier : soigneurs crédibles", "Explique pourquoi seuls certains profils peuvent soigner leurs alliés.", ShopItemCategory::Information, 88, 0, 1, true));
+            }
+            if (rotation % 6 == 0)
+            {
+                shop.addItem(ShopItem("slime_color_codex", "Codex des couleurs de slimes", "Règles de terrain sur les couleurs de slimes, surtout dans les mares gélatineuses.", ShopItemCategory::Information, 110, 0, 1, true));
+            }
+            if (rotation % 6 == 2)
+            {
+                shop.addItem(ShopItem("monster_family_evolution_notes", "Dossier des familles de monstres", "Variantes, évolutions, rôles et comportements crédibles par famille.", ShopItemCategory::Information, 125, 0, 1, true));
+            }
+            if (rotation % 6 == 4)
+            {
+                shop.addItem(ShopItem("weapon_training_notes", "Notes d'entraînement aux techniques", "Première couche de compétences de classe/arme débloquées par niveau.", ShopItemCategory::Information, 135, 0, 1, true));
+            }
             break;
 
 
@@ -262,6 +337,20 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             shop.addItem(ShopItem("minor_healing_potion", "Petite potion de soin", "Petit soin courant préparé sur place.", ShopItemCategory::Consumable, 13, 4, 5));
             shop.addItem(ShopItem("basic_healing_potion", "Potion de soin", "Restaure une quantité simple de PV.", ShopItemCategory::Consumable, 28, 8, 3));
             shop.addItem(ShopItem("basic_damage_potion", "Potion de rage", "Boost offensif simple, vendu par alchimiste prudent.", ShopItemCategory::Consumable, 34, 10, 2));
+            shop.addItem(ShopItem("antidote_potion", "Antidote simple", "Réponse classique aux poisons faibles.", ShopItemCategory::Consumable, 42, 12, 3));
+            shop.addItem(ShopItem("burn_salve_potion", "Baume anti-brûlure", "Le minimum vital quand un slime rouge ou une flèche de cendre passe par là.", ShopItemCategory::Consumable, 44, 12, 2));
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("burn_salve_potion", "Baume anti-brûlure", "Utile après une mauvaise rencontre avec du feu ou un slime rouge.", ShopItemCategory::Consumable, 44, 12, 2));
+            }
+            if (rotation % 3 == 2)
+            {
+                shop.addItem(ShopItem("frost_resistance_potion", "Potion tiède anti-givre", "Protection expérimentale contre le froid.", ShopItemCategory::Consumable, 82, 22, 1));
+            }
+            if (rotation % 4 == 3)
+            {
+                shop.addItem(ShopItem("shock_resistance_potion", "Potion isolante", "Protection chère contre les décharges, surtout avec équipement métallique.", ShopItemCategory::Consumable, 98, 24, 1));
+            }
             if (rotation % 2 == 0)
             {
                 shop.addItem(ShopItem("reinforced_healing_potion", "Potion de soin renforcée", "Potion plus chère mais beaucoup plus sûre.", ShopItemCategory::Consumable, 65, 18, 2));
@@ -302,6 +391,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 2 == 0)
             {
                 shop.addItem(ShopItem("experimental_damage_potion", "Potion de rage expérimentale", "Potion illégale, puissante et instable. Évidemment hors de prix.", ShopItemCategory::Consumable, 520, 90, 1));
+                shop.addItem(ShopItem("smoke_escape_vial", "Fiole de fumée de secours", "Outil de fuite instable vendu sans garantie, parfait pour gens désespérés.", ShopItemCategory::Consumable, 310, 40, 1));
             }
             else
             {
@@ -356,6 +446,52 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 3 == 2)
             {
                 shop.addItem(ShopItem("conductive_knives", "Couteaux conducteurs interdits", "Projectiles métalliques préparés pour futures réactions électriques.", ShopItemCategory::Material, 300, 9, 5));
+            }
+            if (rotation % 5 == 1)
+            {
+                shop.addItem(ShopItem("venom_arrows", "Flèches empoisonnées sans étiquette", "Munitions toxiques vendues trop cher par quelqu'un qui sourit trop.", ShopItemCategory::Material, 340, 10, 5));
+            }
+            if (rotation % 5 == 2)
+            {
+                shop.addItem(ShopItem("shock_bolts", "Carreaux conducteurs expérimentaux", "Très dangereux contre métal. Très cher. Très probablement volé.", ShopItemCategory::Material, 390, 11, 4));
+            }
+            if (rotation % 5 == 3)
+            {
+                shop.addItem(ShopItem("smoke_knives", "Couteaux fumigènes de fuite", "Pas faits pour tuer, mais parfaits pour survivre quand ça tourne mal.", ShopItemCategory::Material, 310, 10, 4));
+            }
+            if (rotation % 9 == 6)
+            {
+                shop.addItem(ShopItem("slime_color_codex", "Feuillet volé : slimes rares", "Renseignement de bibliothèque revendu illégalement, probablement recopié trop vite.", ShopItemCategory::Information, 240, 0, 1, true));
+            }
+            if (rotation % 9 == 7)
+            {
+                shop.addItem(ShopItem("weapon_training_notes", "Carnet d'entraînement volé", "Notes sales sur des techniques observées en arène. Trop cher, mais utile.", ShopItemCategory::Information, 280, 0, 1, true));
+            }
+            if (rotation % 4 == 3)
+            {
+                shop.addItem(ShopItem("training_crossbow", "Arbalète volée presque neuve", "Arme de contrebande : utilisable, chère, et vendue sans question.", ShopItemCategory::Weapon, 240, 30, 1));
+            }
+            if (rotation % 5 == 4)
+            {
+                shop.addItem(ShopItem("training_throwing_bandolier", "Bandoulière de lancer trafiquée", "Équipement de jet volé, utile aux profils furtifs ou désespérés.", ShopItemCategory::Weapon, 210, 26, 1));
+            }
+            if (rotation % 2 == 1)
+            {
+                shop.addItem(ShopItem("shock_resistance_potion", "Potion isolante volée", "Très utile si tu portes du métal et que la zone commence à grésiller.", ShopItemCategory::Consumable, 190, 24, 1));
+                shop.addItem(ShopItem("frost_resistance_potion", "Potion anti-givre de contrebande", "Préparation froide mal étiquetée, mais efficace contre le givre.", ShopItemCategory::Consumable, 175, 22, 1));
+            }
+            if (rotation % 6 == 0)
+            {
+                shop.addItem(ShopItem("major_healing_potion", "Potion majeure sous scellé noir", "Trop rare pour une boutique normale, donc évidemment trop chère.", ShopItemCategory::Consumable, 620, 80, 1));
+            }
+            if (rotation % 7 == 3)
+            {
+                shop.addItem(ShopItem("tinkerer_complete_repair_kit", "Kit complet sans numéro de série", "Presque introuvable légalement. Le vendeur jure qu'il n'a rien volé.", ShopItemCategory::Material, 980, 160, 1));
+            }
+            if (rotation % 6 == 2)
+            {
+                shop.addItem(ShopItem("experimental_damage_potion", "Lot expérimental : rage instable", "Le vendeur refuse de promettre que la fiole ne te mordra pas en retour.", ShopItemCategory::Consumable, 690, 90, 1));
+                shop.addItem(ShopItem("smoke_escape_vial", "Fiole de fuite trafiquée", "Très chère pour un plan B, mais certains survivants paient sans négocier.", ShopItemCategory::Consumable, 430, 40, 1));
             }
             break;
 

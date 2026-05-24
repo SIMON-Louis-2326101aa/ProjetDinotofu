@@ -141,6 +141,16 @@ public:
     void applyFrost(int turns);
     void applyShock(int turns);
     void applyBleeding(int turns, int damage);
+    bool cureBurning();
+    bool curePoison();
+    bool cureFrost();
+    bool cureShock();
+    bool cureBleeding();
+    bool hasBurning() const;
+    bool hasPoison() const;
+    bool hasFrost() const;
+    bool hasShock() const;
+    bool hasBleeding() const;
     bool hasActiveCombatStatus() const;
     void processStatusTickAtTurnStart();
 

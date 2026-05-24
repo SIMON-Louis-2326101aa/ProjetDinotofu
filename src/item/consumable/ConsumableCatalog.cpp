@@ -166,3 +166,59 @@ Consumable ConsumableCatalog::createWeakeningDebuffPotion()
         22
     );
 }
+
+
+Consumable ConsumableCatalog::createAntidotePotion()
+{
+    return Consumable(
+        "Antidote simple",
+        "Neutralise les poisons faibles en combat et rend quelques PV.",
+        40,
+        ConsumableType::Healing,
+        20
+    );
+}
+
+Consumable ConsumableCatalog::createBurnSalvePotion()
+{
+    return Consumable(
+        "Baume anti-brûlure",
+        "Apaise une brûlure faible en combat et rend quelques PV.",
+        42,
+        ConsumableType::Healing,
+        18
+    );
+}
+
+Consumable ConsumableCatalog::createFrostResistancePotion()
+{
+    return Consumable(
+        "Potion tiède anti-givre",
+        "Réchauffe le corps, retire un ralentissement de givre et donne une stabilisation défensive.",
+        75,
+        ConsumableType::Buff,
+        22
+    );
+}
+
+Consumable ConsumableCatalog::createShockResistancePotion()
+{
+    return Consumable(
+        "Potion isolante",
+        "Coupe un choc électrique actif et donne une stabilisation défensive, surtout utile avec du métal équipé.",
+        90,
+        ConsumableType::Buff,
+        24
+    );
+}
+
+Consumable ConsumableCatalog::createSmokeEscapeVial()
+{
+    return Consumable(
+        "Fiole de fumée de secours",
+        "Outil instable : ne garantit pas la fuite, mais casse la pression immédiate et donne une posture défensive.",
+        180,
+        ConsumableType::Special,
+        1
+    );
+}

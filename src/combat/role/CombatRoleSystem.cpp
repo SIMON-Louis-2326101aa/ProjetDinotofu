@@ -67,7 +67,10 @@ CombatRole CombatRoleSystem::getRole(const Entity& entity)
         || contains(type, "healer")
         // EN: contains declares or implements a focused behavior used by this module.
         // FR: contains déclare ou implémente un comportement précis utilisé par ce module.
-        || contains(type, "soigneur"))
+        || contains(type, "soigneur")
+        || contains(name, "shaman")
+        || contains(name, "chamane")
+        || contains(name, "oracle"))
     {
         return CombatRole::Healer;
     }
@@ -104,6 +107,7 @@ CombatRole CombatRoleSystem::getRole(const Entity& entity)
         // FR: contains déclare ou implémente un comportement précis utilisé par ce module.
         || contains(type, "barde")
         || contains(type, "support")
+        || contains(type, "soutien")
         // EN: contains declares or implements a focused behavior used by this module.
         // FR: contains déclare ou implémente un comportement précis utilisé par ce module.
         || contains(type, "alchimiste"))

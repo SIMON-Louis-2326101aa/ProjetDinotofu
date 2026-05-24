@@ -348,3 +348,20 @@ Tâche future élémentaire :
 - Le marché noir et certaines boutiques peuvent proposer ces munitions élémentaires selon la rotation.
 - Ajout de nouvelles variantes de slimes par biome : rouge tiède, doré minuscule, vert ancien, blanc poudreux, vert putride jeune, gris gravé.
 - Les monstres gagnent une première couche de spécialités supplémentaires : slimes, plantes et insectoïdes ont des réactions d'attaque plus distinctes.
+
+## Événements d'exploration réellement joués
+
+Les événements aléatoires d'exploration qui annoncent un combat ne doivent plus être de simples textes avec un résultat automatique.
+Quand l'exploration déclenche une rencontre, un mimic, un mini-boss local ou une vague dangereuse, le jeu lance maintenant un vrai combat via le système PvE.
+Les récompenses, la fuite, les morts, les invocations, les munitions, les potions, les statuts et le bestiaire passent donc par les règles de combat réelles.
+
+Règle validée : si l'événement implique un affrontement, le joueur doit jouer l'affrontement, pas seulement lire "réussi/échoué".
+
+[2026-05-24] Passe événements actifs / boutiques corrigées
+- Ajout d'une couche d'événements actifs en exploration : camp abandonné, repaire local, cache clandestine, vague forcée, autel instable, appel au secours.
+- Ces événements proposent des choix et peuvent lancer de vrais combats PvE au lieu d'un simple résultat textuel.
+- Les récompenses de ces événements passent par l'inventaire réel : or, matériaux du biome, matériaux rares, munitions spéciales ou composants douteux.
+- Les zones évoluées peuvent produire des groupes plus dangereux dans ces événements.
+- Correction des achats de potions anti-statut / utilitaires : antidote, baume anti-brûlure, potion anti-givre, potion isolante et fiole de fumée sont maintenant reconnues comme achetables.
+- Les boutiques ont plus de contenu rotatif : armurerie défensive, forge d'armes, consommables, alchimiste et marché noir.
+- Le marché noir propose davantage de stock cher, instable, volé ou expérimental, sans rendre les boutiques normales trop fortes.

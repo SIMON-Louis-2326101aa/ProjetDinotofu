@@ -942,7 +942,7 @@ void Game::launchSelectedMode()
     }
     else if (selectedMode == GameMode::Exploration)
     {
-        QuestMenu::openExploration(mainPlayer);
+        QuestMenu::openExploration(mainPlayer, selectedDifficulty);
         saveCurrentProgress("Exploration");
     }
     else if (selectedMode == GameMode::Locations)
@@ -1039,7 +1039,7 @@ void Game::launchSelectedMode()
         }
 
         savePartyProgress("Fin de combat");
-        QuestMenu::maybeOfferRandomInterception(mainPlayer);
+        QuestMenu::maybeOfferRandomInterception(mainPlayer, selectedDifficulty);
         savePartyProgress("Événement de quête éventuel");
     }
 

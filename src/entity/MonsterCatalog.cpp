@@ -117,7 +117,7 @@ namespace
             return monster.getName() + slimeSuffixes[random.between(0, static_cast<int>(slimeSuffixes.size()) - 1)];
         }
 
-        if (monster.getRace() == Race::Gobelin && monster.getName().find("shaman") == std::string::npos && random.between(1, 100) <= 30)
+        if (monster.getRace() == Race::Gobelin && monster.getName().find("shaman") == std::string::npos && monster.getName().find("shaman") == std::string::npos && random.between(1, 100) <= 30)
         {
             return "Gobelin shaman issu de " + monster.getName();
         }
@@ -177,7 +177,13 @@ namespace
                 createMonster("Slime jaune curieux", "Gelée nerveuse attirée par le mouvement", Race::Slime, 2, 62, 6, 14, 18),
                 createMonster("Slime rouge tiède", "Gelée rouge encore peu dangereuse", Race::Slime, 2, 66, 7, 15, 20),
                 createMonster("Rat des hautes herbes", "Bête nuisible", Race::Bete, 1, 50, 6, 13, 18),
-                createMonster("Gobelin trouillard", "Gobelin désorganisé", Race::Gobelin, 1, 42, 3, 8, 12)
+                createMonster("Gobelin trouillard", "Gobelin désorganisé", Race::Gobelin, 1, 42, 3, 8, 12),
+                createMonster("Gobelin ramasseur", "Gobelin attiré par ce qui brille mais mauvais combattant", Race::Gobelin, 1, 46, 4, 10, 14),
+                createMonster("Gobelin maladroit", "Gobelin nerveux, plus bruyant que dangereux", Race::Gobelin, 1, 40, 2, 7, 10),
+                createMonster("Gobelin éclaireur de talus", "Gobelin prudent qui préfère prévenir les siens", Race::Gobelin, 2, 58, 5, 13, 18),
+                createMonster("Lapin cornu nerveux", "Petite bête territoriale", Race::Bete, 1, 38, 4, 11, 16),
+                createMonster("Racine sèche errante", "Plante presque passive mais accrocheuse", Race::Plante, 2, 78, 3, 12, 16),
+                createMonster("Slime clair dormant", "Gelée presque passive qui gêne plus qu'elle ne tue", Race::Slime, 1, 64, 3, 9, 12)
             };
         }
 
@@ -189,7 +195,9 @@ namespace
                 createMonster("Slime jaune vibrant", "Gelée nerveuse et lumineuse", Race::Slime, 4, 105, 9, 22, 30),
                 createMonster("Slime rouge chaud", "Gelée rouge irritante", Race::Slime, 5, 124, 11, 26, 35),
                 createMonster("Slime ambré collant", "Gelée qui aime les zones riches en sève", Race::Slime, 5, 132, 8, 24, 32),
-                createMonster("Slime gris de vase", "Gelée lourde chargée de poussière", Race::Slime, 6, 148, 9, 27, 36)
+                createMonster("Slime gris de vase", "Gelée lourde chargée de poussière", Race::Slime, 6, 148, 9, 27, 36),
+                createMonster("Slime rose nerveux", "Gelée vive qui bondit sans comprendre ce qu'elle fait", Race::Slime, 5, 112, 10, 25, 34),
+                createMonster("Slime translucide", "Gelée presque invisible dans l'eau stagnante", Race::Slime, 6, 130, 8, 28, 38, 0, 0, false, false, true)
             };
         }
 
@@ -264,20 +272,11 @@ namespace
             return {
                 createMonster("Gobelin éclaireur", "Petit pillard perdu", Race::Gobelin, 3, 86, 11, 22, 28),
                 createMonster("Gobelin lance-cailloux", "Petit harceleur opportuniste", Race::Gobelin, 3, 72, 8, 20, 28),
+                createMonster("Gobelin shaman débutant", "Petit soigneur paniqué", Race::Gobelin, 4, 82, 6, 16, 22, 2, 0, false, true),
+                createMonster("Gobelin garde-boue", "Petit défenseur qui protège mal mais longtemps", Race::Gobelin, 4, 118, 6, 14, 20, 0, 0, false, true),
+                createMonster("Gobelin frondeur", "Harceleur prudent qui garde ses distances", Race::Gobelin, 4, 76, 10, 26, 36, 0, 0, false, true),
                 createMonster("Plante agressive isolée", "Végétal errant", Race::Plante, 3, 98, 8, 20, 25),
                 createMonster("Chauve-souris de passage", "Créature rapide", Race::Bete, 2, 62, 8, 19, 26)
-            };
-        }
-
-        if (biomeName == "Mares gélatineuses")
-        {
-            return {
-                createMonster("Slime vert limpide", "Gelée verte classique", Race::Slime, 3, 92, 7, 18, 24),
-                createMonster("Slime bleu flottant", "Gelée bleue souple", Race::Slime, 4, 118, 6, 19, 25),
-                createMonster("Slime jaune vibrant", "Gelée nerveuse et lumineuse", Race::Slime, 4, 105, 9, 22, 30),
-                createMonster("Slime rouge chaud", "Gelée rouge irritante", Race::Slime, 5, 124, 11, 26, 35),
-                createMonster("Slime ambré collant", "Gelée qui aime les zones riches en sève", Race::Slime, 5, 132, 8, 24, 32),
-                createMonster("Slime gris de vase", "Gelée lourde chargée de poussière", Race::Slime, 6, 148, 9, 27, 36)
             };
         }
 
@@ -288,7 +287,13 @@ namespace
                 createMonster("Slime blanc froid", "Gelée refroidie par une nappe souterraine", Race::Slime, 8, 168, 13, 33, 44, 0, 0, false, true),
                 createMonster("Slime noir poisseux", "Gelée dense qui colle aux bottes", Race::Slime, 9, 190, 13, 35, 48, 0, 0, false, true, true),
                 createMonster("Slime rouge irritant majeur", "Gelée chaude et agressive", Race::Slime, 9, 184, 17, 39, 52, 0, 1, false, true),
-                createMonster("Slime vert putride naissant", "Gelée contaminée mais encore instable", Race::Slime, 10, 205, 15, 38, 52, 0, 0, false, true, true)
+                createMonster("Slime vert putride naissant", "Gelée contaminée mais encore instable", Race::Slime, 10, 205, 15, 38, 52, 0, 0, false, true, true),
+                createMonster("Slime jaune d'orage", "Gelée vibrante chargée de petites décharges", Race::Slime, 10, 198, 16, 42, 58, 0, 1, false, true, true),
+                createMonster("Slime ambré royal", "Gelée collante qui immobilise les imprudents", Race::Slime, 11, 235, 14, 40, 56, 0, 0, false, true, true),
+                createMonster("Slime rose bondissant", "Gelée qui attaque par rebonds imprévisibles", Race::Slime, 10, 188, 18, 43, 58, 0, 0, false, true),
+                createMonster("Slime nacré sensible", "Gelée rare qui réagit violemment aux gestes brusques", Race::Slime, 11, 210, 13, 44, 62, 0, 1, false, true, true),
+                createMonster("Slime vert régénérant", "Gelée calme qui se recompose lentement", Race::Slime, 10, 245, 10, 34, 48, 0, 0, false, true, true),
+                createMonster("Slime rouge bouillonnant", "Gelée brûlante qui punit les contacts directs", Race::Slime, 11, 220, 18, 46, 64, 0, 1, false, true, true)
             };
         }
 
@@ -299,7 +304,11 @@ namespace
                 createMonster("Archer embusqué", "Tireur de route", Race::Humain, 5, 125, 18, 36, 48, 1, 0, false, true),
                 createMonster("Gobelin shaman novice", "Chaman gobelin soigneur", Race::Gobelin, 6, 122, 10, 30, 44, 2, 1, false, true, true),
                 createMonster("Gobelin rapiéceur", "Soutien gobelin maladroit", Race::Gobelin, 5, 115, 9, 24, 34, 1, 0, false, true),
-                createMonster("Hobgobelin receleur", "Organisateur de pillage", Race::Hobgobelin, 6, 160, 18, 34, 46, 1, 1, false, true)
+                createMonster("Hobgobelin receleur", "Organisateur de pillage", Race::Hobgobelin, 6, 160, 18, 34, 46, 1, 1, false, true),
+                createMonster("Gobelin shaman de route", "Chaman gobelin qui soigne surtout ses alliés", Race::Gobelin, 7, 140, 11, 34, 48, 2, 1, false, true, true),
+                createMonster("Hobgobelin tambour", "Support de bande qui galvanise les autres sans être un vrai mage", Race::Hobgobelin, 7, 175, 14, 32, 44, 1, 1, false, true),
+                createMonster("Gobelin tireur nerveux", "Harceleur à distance qui préfère blesser puis fuir", Race::Gobelin, 6, 118, 13, 35, 48, 1, 0, false, true),
+                createMonster("Bandit apothicaire", "Humain de route avec quelques fioles douteuses", Race::Humain, 7, 132, 12, 31, 46, 2, 2, false, true)
             };
         }
 
@@ -308,7 +317,11 @@ namespace
             return {
                 createMonster("Dryade corrompue", "Esprit végétal", Race::Esprit, 6, 155, 15, 35, 48, 0, 1, false, true, true),
                 createMonster("Sanglier ancien", "Bête massive", Race::Bete, 7, 210, 19, 36, 46, 0, 0, false, true),
-                createMonster("Araignée de mousse", "Insectoïde forestier", Race::Insectoide, 6, 145, 16, 34, 44, 0, 1, false, true)
+                createMonster("Araignée de mousse", "Insectoïde forestier", Race::Insectoide, 6, 145, 16, 34, 44, 0, 1, false, true),
+                createMonster("Mante-feuille", "Insectoïde camouflé dans les branches", Race::Insectoide, 7, 135, 19, 39, 52, 0, 1, false, true),
+                createMonster("Racine veilleuse", "Plante ancienne qui protège son sol", Race::Plante, 7, 190, 14, 34, 46, 0, 1, false, true),
+                createMonster("Champignon hurleur", "Fonge vivante qui attire parfois d'autres dangers", Race::Plante, 8, 165, 12, 36, 50, 0, 1, false, true, true),
+                createMonster("Cerf moussu inquiet", "Bête ancienne rarement agressive mais dangereuse acculée", Race::Bete, 8, 230, 17, 38, 52, 0, 0, false, true)
             };
         }
 
@@ -317,7 +330,9 @@ namespace
             return {
                 createMonster("Golem fissuré", "Construction rocheuse", Race::Construction, 10, 300, 22, 44, 58, 0, 0, false, true, true),
                 createMonster("Chasseur des cimes", "Humanoïde montagnard", Race::Humain, 9, 190, 21, 42, 56, 1, 1, false, true),
-                createMonster("Méphaïte de givre", "Petit élémentaire", Race::Elementaire, 8, 160, 18, 41, 54, 0, 1, false, true, true)
+                createMonster("Méphaïte de givre", "Petit élémentaire", Race::Elementaire, 8, 160, 18, 41, 54, 0, 1, false, true, true),
+                createMonster("Bouc des neiges agressif", "Bête de falaise qui charge plus qu'elle ne réfléchit", Race::Bete, 9, 205, 21, 43, 58, 0, 0, false, true),
+                createMonster("Golem d'éboulis", "Construction instable qui frappe fort mais se fissure", Race::Construction, 11, 335, 25, 50, 66, 0, 0, false, true, true)
             };
         }
 
@@ -328,7 +343,10 @@ namespace
                 createMonster("Sangsue géante", "Insectoïde parasite", Race::Insectoide, 15, 255, 22, 45, 58, 0, 1, false, true),
                 createMonster("Slime rouge irritant", "Gelée rouge agressive", Race::Slime, 16, 270, 25, 50, 66, 0, 1, false, true),
                 createMonster("Slime vert putride", "Gelée de marais à relents toxiques", Race::Slime, 16, 292, 20, 48, 64, 0, 1, false, true, true),
-                createMonster("Sorcier putride novice", "Humain corrompu", Race::Humain, 17, 250, 18, 54, 74, 1, 2, false, true, true)
+                createMonster("Sorcier putride novice", "Humain corrompu", Race::Humain, 17, 250, 18, 54, 74, 1, 2, false, true, true),
+                createMonster("Chamane de vase", "Soigneur toxique du marais", Race::Humain, 18, 265, 16, 50, 70, 2, 1, false, true, true),
+                createMonster("Grenouille géante venimeuse", "Bête amphibie toxique", Race::Bete, 16, 305, 24, 52, 70, 0, 1, false, true, true),
+                createMonster("Moustique sanguin majeur", "Insectoïde de marais attiré par les blessés", Race::Insectoide, 17, 210, 28, 58, 76, 0, 1, false, true, true)
             };
         }
 
@@ -338,6 +356,7 @@ namespace
                 createMonster("Spectre errant", "Esprit des ruines", Race::Esprit, 18, 270, 23, 55, 72, 0, 1, false, true, true),
                 createMonster("Armure morte", "Armure hantée", Race::MortVivant, 19, 360, 24, 50, 66, 0, 0, false, true, true),
                 createMonster("Anomalie mineure", "Erreur arcanique", Race::AnomalieArcanique, 18, 295, 22, 58, 78, 0, 2, false, true, true),
+                createMonster("Squelette archer rouillé", "Mort-vivant à distance aux gestes mécaniques", Race::MortVivant, 18, 245, 24, 60, 80, 0, 0, false, true, true),
                 createMonster("Slime gris poussiéreux", "Gelée nourrie par les pierres mortes", Race::Slime, 17, 285, 20, 52, 70, 0, 0, false, true, true)
             };
         }
@@ -359,21 +378,12 @@ namespace
         if (biomeName == "Mares gélatineuses")
         {
             return {
-                createMonster("Slime vert limpide", "Gelée verte classique", Race::Slime, 3, 92, 7, 18, 24),
-                createMonster("Slime bleu flottant", "Gelée bleue souple", Race::Slime, 4, 118, 6, 19, 25),
-                createMonster("Slime jaune vibrant", "Gelée nerveuse et lumineuse", Race::Slime, 4, 105, 9, 22, 30),
-                createMonster("Slime rouge chaud", "Gelée rouge irritante", Race::Slime, 5, 124, 11, 26, 35),
-                createMonster("Slime ambré collant", "Gelée qui aime les zones riches en sève", Race::Slime, 5, 132, 8, 24, 32),
-                createMonster("Slime gris de vase", "Gelée lourde chargée de poussière", Race::Slime, 6, 148, 9, 27, 36)
-            };
-        }
-
-        if (biomeName == "Mares gélatineuses")
-        {
-            return {
                 createMonster("Slime chromatique", "Gelée rare instable", Race::Slime, 14, 330, 22, 56, 76, 0, 2, false, true, true),
                 createMonster("Slime doré avaleur", "Gelée attirée par l'or et les objets brillants", Race::Slime, 15, 350, 20, 58, 84, 0, 0, false, true, true),
-                createMonster("Slime noir ancien", "Gelée profonde presque intelligente", Race::Slime, 16, 390, 24, 62, 88, 0, 1, false, true, true)
+                createMonster("Slime noir ancien", "Gelée profonde presque intelligente", Race::Slime, 16, 390, 24, 62, 88, 0, 1, false, true, true),
+                createMonster("Slime prisme instable", "Gelée rarissime qui change de réaction selon la lumière", Race::Slime, 17, 405, 26, 68, 96, 0, 2, false, true, true),
+                createMonster("Noyau de ruche gélatineuse", "Masse centrale entourée de petits slimes", Race::Slime, 18, 470, 22, 64, 90, 0, 1, false, true, true),
+                createMonster("Slime miroir ancien", "Gelée ancienne qui semble copier la pression autour d'elle", Race::Slime, 19, 455, 28, 72, 102, 0, 2, false, true, true)
             };
         }
 
@@ -382,7 +392,9 @@ namespace
             return {
                 createMonster("Chef bandit", "Commandant de route", Race::Humain, 9, 250, 25, 50, 65, 2, 1, false, true),
                 createMonster("Pilleur vétéran", "Humanoïde organisé", Race::Humain, 10, 270, 26, 52, 68, 1, 1, false, true),
-                createMonster("Chasseur de primes rouillé", "Traqueur illégal", Race::Humain, 11, 255, 30, 60, 80, 1, 2, false, true, true)
+                createMonster("Chasseur de primes rouillé", "Traqueur illégal", Race::Humain, 11, 255, 30, 60, 80, 1, 2, false, true, true),
+                createMonster("Gobelin grand shaman", "Évolution rare d'un shaman gobelin, capable de maintenir une petite bande", Race::Gobelin, 12, 260, 22, 62, 84, 4, 2, false, true, true),
+                createMonster("Hobgobelin garde du marché noir", "Protecteur brutal engagé pour ne pas poser de questions", Race::Hobgobelin, 13, 360, 30, 66, 88, 1, 1, false, true, true)
             };
         }
 
@@ -410,6 +422,7 @@ namespace
                 createMonster("Slime couronné", "Gelée dominante", Race::Slime, 24, 560, 36, 76, 98, 0, 1, false, true, true),
                 createMonster("Slime doré engloutisseur", "Gelée rare attirée par ce qui brille", Race::Slime, 23, 500, 28, 72, 100, 0, 0, false, true, true),
                 createMonster("Mage putride", "Sorcier des eaux sales", Race::Humain, 25, 430, 30, 90, 125, 2, 3, false, true, true),
+                createMonster("Grand chamane de vase", "Soigneur marécageux capable de maintenir ses alliés debout", Race::Humain, 26, 455, 24, 84, 118, 3, 2, false, true, true),
                 createMonster("Noyé ancien", "Mort-vivant de profondeur", Race::MortVivant, 26, 620, 39, 82, 105, 0, 0, false, true, true)
             };
         }
@@ -419,7 +432,10 @@ namespace
             return {
                 createMonster("Revenant ancien", "Mort-vivant noble", Race::MortVivant, 28, 620, 42, 88, 116, 0, 1, false, true, true),
                 createMonster("Gardien ancien", "Sentinelle oubliée", Race::Construction, 30, 760, 44, 92, 120, 0, 0, false, true, true),
-                createMonster("Anomalie instable", "Faille vivante", Race::AnomalieArcanique, 30, 650, 40, 105, 145, 0, 3, false, true, true)
+                createMonster("Anomalie instable", "Faille vivante", Race::AnomalieArcanique, 30, 650, 40, 105, 145, 0, 3, false, true, true),
+                createMonster("Oracle fissuré", "Support arcanique des ruines", Race::Esprit, 29, 560, 34, 100, 138, 3, 2, false, true, true),
+                createMonster("Scribe mort des ruines", "Mort-vivant faible mais chargé de runes dangereuses", Race::MortVivant, 24, 390, 24, 74, 102, 0, 2, false, true, true),
+                createMonster("Sentinelle brisée", "Construction abîmée, lente, presque facile à lire mais très dure à casser", Race::Construction, 25, 780, 28, 72, 95, 0, 0, false, true, true)
             };
         }
 
