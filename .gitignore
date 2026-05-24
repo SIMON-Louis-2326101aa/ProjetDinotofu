@@ -7,6 +7,8 @@ output/
 *.d
 *.out
 *.exe
+dinotofu
+dinotofu.exe
 
 # =========================
 # CMake éventuel plus tard
@@ -15,6 +17,26 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile.cmake
+
+# =========================
+# Saves / comptes / personnages privés
+# =========================
+assets/saves/**
+!assets/saves/
+!assets/saves/**/
+!assets/saves/**/.gitkeep
+
+saves/**
+accounts/**
+characters/**
+exported_accounts/**
+import_accounts/**
+
+*.save
+*.sav
+*.autosave
+*.dinotofu_account
+*_dinotofu_account/
 
 # =========================
 # Logs / debug
