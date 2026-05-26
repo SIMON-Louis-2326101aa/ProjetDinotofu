@@ -357,7 +357,7 @@ Ajout 1.32.30 :
 - Reworked more PvP/PvE AI, exploration and special dialogue screens through shared MenuScreen/MessageScreen models.
 - Boss ultimate start/damage feedback now goes through shared message screens.
 
-## Version 1.35.19
+## Version 1.35.20
 - Windows installer/launcher pass: ASCII-only Windows scripts to avoid broken console accents.
 - Default installation folder is now `Downloads/ProjetDinotofu`; the player can choose another parent folder, but the final folder is always `ProjetDinotofu`.
 - Windows launcher does not use WSL; Windows releases must include `Dinotofu.exe`.

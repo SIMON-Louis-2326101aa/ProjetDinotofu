@@ -229,6 +229,7 @@ jobs:
       - name: Publish or update GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ needs.prepare-release.outputs.tag }}
           RELEASE_VERSION: ${{ needs.prepare-release.outputs.version }}
           RELEASE_REASON: ${{ needs.prepare-release.outputs.reason }}
@@ -256,11 +257,12 @@ jobs:
           - dinotofu_source_${RELEASE_VERSION}_no_exe.zip : source propre sans executable.
           EOF
 
-          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release upload "${RELEASE_TAG}" "${files[@]}" --clobber
-            gh release edit "${RELEASE_TAG}" --title "Dinotofu ${RELEASE_TAG}" --notes-file release_notes.md
+          if gh release view "${RELEASE_TAG}" --repo "${GH_REPO}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" "${files[@]}" --clobber --repo "${GH_REPO}"
+            gh release edit "${RELEASE_TAG}" --title "Dinotofu ${RELEASE_TAG}" --notes-file release_notes.md --repo "${GH_REPO}"
           else
             gh release create "${RELEASE_TAG}" "${files[@]}" \
               --title "Dinotofu ${RELEASE_TAG}" \
-              --notes-file release_notes.md
+              --notes-file release_notes.md \
+              --repo "${GH_REPO}"
           fi
