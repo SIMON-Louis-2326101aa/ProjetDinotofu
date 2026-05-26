@@ -18,6 +18,9 @@
 #include "combat/role/CombatRoleActionSystem.hpp"
 #include "combat/TurnManager.hpp"
 #include "interface/menu/potions/CombatPotionUtils.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 #include "combat/turn/wave/PlayerWaveCombatTurn.hpp"
 #include "combat/turn/wave/MonsterWaveCombatTurn.hpp"
@@ -235,19 +238,25 @@ void MonsterPveMode::run(
 {
     Console::clear();
 
-    std::cout << "Choisis le type de rencontre PvE." << std::endl;
-    std::cout << std::endl;
-    std::cout << "1 : Vague de monstres" << std::endl;
-    std::cout << "    Une file d'ennemis classiques, avec maximum trois ennemis actifs." << std::endl;
-    std::cout << std::endl;
-    std::cout << "2 : Groupe d'aventuriers aléatoire" << std::endl;
-    std::cout << "    Humains, semi-humains ou groupe spécial. Normalement pas un combat à mort, sauf cas dangereux." << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
-
-    int encounterChoice = Console::askNumberBetween(
+    MenuScreen encounterScreen("RENCONTRE PVE", "combat.pve.encounter_type");
+    encounterScreen.addLine("Choisis le type de rencontre PvE.");
+    encounterScreen.addOption(
         1,
+        "Vague de monstres",
+        "Une file d'ennemis classiques, avec maximum trois ennemis actifs.",
+        true,
+        "pve.encounter.wave"
+    );
+    encounterScreen.addOption(
         2,
+        "Groupe d'aventuriers aléatoire",
+        "Humains, semi-humains ou groupe spécial. Normalement pas un combat à mort, sauf cas dangereux.",
+        true,
+        "pve.encounter.adventurers"
+    );
+
+    int encounterChoice = TerminalInterface::askMenuChoiceFromOptions(
+        encounterScreen,
         "Veuillez entrer 1 ou 2."
     );
 
@@ -364,9 +373,15 @@ void MonsterPveMode::run(
 
     if (escapeSucceeded)
     {
-        std::cout << "Tu as quitté le combat." << std::endl;
-        std::cout << "Tu ne récupéreras qu'une partie des récompenses liées à ce qui s'est réellement passé." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "FUITE RÉUSSIE",
+            "combat.pve.escape.success",
+            {
+                "Tu as quitté le combat.",
+                "Tu ne récupéreras qu'une partie des récompenses liées à ce qui s'est réellement passé."
+            },
+            false
+        );
 
         CombatReward reward = CombatRewardSystem::calculatePlayerEscapeReward(
             wave,
@@ -388,9 +403,15 @@ void MonsterPveMode::run(
 
     if (player.isDead())
     {
-        std::cout << player.getName() << " tombe face à la vague ennemie." << std::endl;
-        std::cout << "L'arène se referme dans un silence brutal." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "DÉFAITE",
+            "combat.pve.defeat",
+            {
+                player.getName() + " tombe face à la vague ennemie.",
+                "L'arène se referme dans un silence brutal."
+            },
+            false
+        );
 
         player.recordDefeat();
         player.recordDeath();
@@ -415,24 +436,30 @@ void MonsterPveMode::run(
             DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty)
         );
 
-        std::cout << player.getName()
-                  << " revient à lui avec "
-                  << player.getHp()
-                  << "/"
-                  << player.getMaxHp()
-                  << " PV."
-                  << std::endl;
-        std::cout << "Tu as survécu, mais la mort a laissé sa trace." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "RETOUR À LA VIE",
+            "combat.pve.revive",
+            {
+                player.getName() + " revient à lui avec " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + " PV.",
+                "Tu as survécu, mais la mort a laissé sa trace."
+            },
+            false
+        );
 
         return;
     }
 
     displaySpecialDefeatDialogues(wave);
 
-    std::cout << "Tous les monstres de la vague ont été vaincus." << std::endl;
-    std::cout << player.getName() << " reste debout au milieu des corps et de la poussière." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "VICTOIRE PVE",
+        "combat.pve.victory",
+        {
+            "Tous les monstres de la vague ont été vaincus.",
+            player.getName() + " reste debout au milieu des corps et de la poussière."
+        },
+        false
+    );
 
     CombatReward reward = CombatRewardSystem::calculateWaveReward(
         wave,
@@ -482,7 +509,7 @@ bool MonsterPveMode::runExplorationWave(
 
     std::cout << "========== ÉVÉNEMENT D'EXPLORATION ==========" << std::endl;
     std::cout << title << std::endl;
-    std::cout << "Cette fois, ce n'est pas un simple test de réussite : le combat se joue vraiment." << std::endl;
+    std::cout << "La rencontre se referme autour de toi : il faut tenir la ligne." << std::endl;
     std::cout << std::endl;
 
     WaveCombatSystem::displayFrontLineArrival(wave);
@@ -639,8 +666,14 @@ bool MonsterPveMode::runExplorationWave(
 
     displaySpecialDefeatDialogues(wave);
 
-    std::cout << "L'événement d'exploration est terminé : les ennemis sont vaincus." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "ÉVÉNEMENT TERMINÉ",
+        "exploration.wave.victory",
+        {
+            "L'événement d'exploration est terminé : les ennemis sont vaincus."
+        },
+        false
+    );
 
     CombatReward reward = CombatRewardSystem::calculateWaveReward(
         wave,
@@ -869,7 +902,7 @@ namespace
         }
 
         std::cout << monster.getName() << " utilise une potion de secours sur lui-même." << std::endl;
-        std::cout << "Ici, ce n'est pas un vrai rôle de soigneur : c'est seulement de la survie personnelle." << std::endl;
+        std::cout << "Ce geste ne protège personne d'autre : c'est un pur réflexe de survie." << std::endl;
         monster.useHealingPotion(healAmount);
         std::cout << std::endl;
         return true;
@@ -1127,7 +1160,7 @@ namespace
         }
 
         player.recordDeath();
-        std::cout << player.getName() << " reçoit trois pastilles rouges : mort définitive prévue, sauf exception divine/divination." << std::endl;
+        std::cout << player.getName() << " reçoit trois pastilles rouges : mort définitive en approche, sauf exception divine ou divination." << std::endl;
         std::cout << std::endl;
     }
 }

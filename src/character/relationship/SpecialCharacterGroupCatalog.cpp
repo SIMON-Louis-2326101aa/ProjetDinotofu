@@ -27,7 +27,7 @@ void SpecialCharacterGroupCatalog::displayRoadmap()
     std::cout << "Henrique / Mattzelda / Skuro : charge instable, humour, endurance et violence lourde." << std::endl;
     std::cout << "Matt (PRO) peut aussi apparaître seul en Combat IA ou via un tirage spécial d'arène." << std::endl;
     std::cout << "Groupe aléatoire normal : aventuriers random sans personnage spécial." << std::endl;
-    std::cout << "Sanctus et Skuro sont liés : même personne, bascule sombre future selon gros choc reçu ou infligé." << std::endl;
+    std::cout << "Sanctus et Skuro sont liés : même âme, deux réponses possibles face à la violence." << std::endl;
     std::cout << "======================================" << std::endl;
     std::cout << std::endl;
 }

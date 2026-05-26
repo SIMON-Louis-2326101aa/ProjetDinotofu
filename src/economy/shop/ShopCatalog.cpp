@@ -38,7 +38,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             shop.addItem(ShopItem("wolf_fang", "Croc de loup", "Matériau utile pour de petites améliorations d'armes.", ShopItemCategory::MonsterMaterial, 18, 6, 2 + rotation % 3));
             if (rotation % 3 == 1)
             {
-                shop.addItem(ShopItem("cracked_bone", "Os fissuré", "Matériau sombre lié aux morts-vivants et à la future nécromancie.", ShopItemCategory::MonsterMaterial, 22, 7, 2));
+                shop.addItem(ShopItem("cracked_bone", "Os fissuré", "Matériau sombre lié aux morts-vivants et aux rites nécromantiques.", ShopItemCategory::MonsterMaterial, 22, 7, 2));
             }
             if (rotation % 3 == 2)
             {
@@ -46,15 +46,15 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 4 == 0)
             {
-                shop.addItem(ShopItem("battle_torn_badge", "Insigne abîmé d'aventurier", "Trophée utile pour les futures guildes et contrats.", ShopItemCategory::MonsterMaterial, 34, 15, 1));
+                shop.addItem(ShopItem("battle_torn_badge", "Insigne abîmé d'aventurier", "Trophée utile pour les guildes et les contrats douteux.", ShopItemCategory::MonsterMaterial, 34, 15, 1));
             }
             if (rotation % 5 == 2)
             {
-                shop.addItem(ShopItem("beast_hide", "Peau de bête robuste", "Matériau plus solide pour armures, réparation épaisse et futur craft tank.", ShopItemCategory::MonsterMaterial, 44, 16, 1));
+                shop.addItem(ShopItem("beast_hide", "Peau de bête robuste", "Matériau plus solide pour armures lourdes et réparations épaisses.", ShopItemCategory::MonsterMaterial, 44, 16, 1));
             }
             if (rotation % 6 == 3)
             {
-                shop.addItem(ShopItem("shadow_thread", "Fil d'ombre", "Composant sombre très rare, lié aux assassins et aux futures ombres.", ShopItemCategory::MonsterMaterial, 95, 32, 1));
+                shop.addItem(ShopItem("shadow_thread", "Fil d'ombre", "Composant sombre très rare, lié aux assassins et aux ombres.", ShopItemCategory::MonsterMaterial, 95, 32, 1));
             }
             if (rotation % 5 == 4)
             {
@@ -166,7 +166,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 8 == 1)
             {
-                shop.addItem(ShopItem("draconic_scale_fragment", "Fragment d'écaille draconique", "Matériau très rare pour protections futures.", ShopItemCategory::Material, 180, 45, 1));
+                shop.addItem(ShopItem("draconic_scale_fragment", "Fragment d'écaille draconique", "Matériau très rare pour protections anciennes.", ShopItemCategory::Material, 180, 45, 1));
             }
             break;
 
@@ -185,7 +185,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 2 == 0)
             {
-                shop.addItem(ShopItem("defensive_potion", "Potion défensive", "Buff défensif préparé pour le futur sous-menu Potions.", ShopItemCategory::Consumable, 45, 15, 2));
+                shop.addItem(ShopItem("defensive_potion", "Potion défensive", "Potion défensive instable, utile avant de prendre un mauvais coup.", ShopItemCategory::Consumable, 45, 15, 2));
             }
             if (rotation % 3 == 0)
             {
@@ -205,7 +205,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 5 == 3)
             {
-                shop.addItem(ShopItem("precision_potion", "Potion de précision", "Buff futur pour tirs, dagues et gestes minutieux.", ShopItemCategory::Consumable, 70, 20, 1));
+                shop.addItem(ShopItem("precision_potion", "Potion de précision", "Buff de précision pour tirs, dagues et gestes minutieux.", ShopItemCategory::Consumable, 70, 20, 1));
             }
             if (rotation % 6 == 4)
             {
@@ -233,7 +233,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 4 == 2)
             {
-                shop.addItem(ShopItem("unstable_core", "Noyau instable", "Composant dangereux pour alchimie et invocations futures.", ShopItemCategory::Material, 120, 40, 1));
+                shop.addItem(ShopItem("unstable_core", "Noyau instable", "Composant dangereux pour alchimie et invocations instables.", ShopItemCategory::Material, 120, 40, 1));
             }
             if (rotation % 5 == 0)
             {
@@ -251,18 +251,42 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("basic_plant_manual", "Petit guide des plantes communes", "Débloque des informations de bestiaire sur les plantes basiques.", ShopItemCategory::Information, 45, 0, 1, true));
             }
-            shop.addItem(ShopItem("basic_magic_manual", "Manuel de magie basique", "Prépare la future progression magique et les sorts de départ.", ShopItemCategory::Book, 80, 10, 1, true));
+            shop.addItem(ShopItem("basic_magic_manual", "Manuel de magie basique", "Introduit les bases de la progression magique et des sorts simples.", ShopItemCategory::Book, 80, 10, 1, true));
+            if (rotation % 4 == 1)
+            {
+                shop.addItem(ShopItem("magic_learning_notes", "Notes sur supports magiques", "Explique pourquoi certains sorts existent en grimoire, en parchemin, ou seulement dans l'un des deux.", ShopItemCategory::Information, 52, 0, 1, true));
+            }
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("arcane_spark_scroll", "Parchemin d'étincelle arcanique", "Sort scellé à usage unique : même un non-mage peut le déclencher, mais le papier sera perdu.", ShopItemCategory::Spell, 110, 0, 2));
+                shop.addItem(ShopItem("wandering_ember_scroll", "Parchemin de braise errante", "Parchemin sans grimoire stable équivalent : puissant pour son prix, mais plus capricieux.", ShopItemCategory::Spell, 140, 0, 1));
+                shop.addItem(ShopItem("minor_purification_scroll", "Parchemin de purification mineure", "Magie jetable : utile aux mages comme aux non-mages quand une altération devient trop lourde.", ShopItemCategory::Spell, 125, 0, 1));
+                shop.addItem(ShopItem("crawling_venom_scroll", "Parchemin de venin rampant", "Sort jetable sans grimoire stable courant : empoisonne et fatigue la cible avant de brûler avec le papier.", ShopItemCategory::Spell, 150, 0, 1));
+            }
+            if (rotation % 3 == 0)
+            {
+                shop.addItem(ShopItem("arcane_binding_grimoire", "Grimoire d'entrave arcanique", "Apprentissage magique limité aux vrais profils capables de canaliser.", ShopItemCategory::Book, 165, 20, 1));
+            }
+            if (rotation % 3 == 1)
+            {
+                shop.addItem(ShopItem("elemental_ward_scroll", "Parchemin de voile élémentaire", "Protection magique à usage unique, chère mais accessible hors classe.", ShopItemCategory::Spell, 155, 0, 1));
+                shop.addItem(ShopItem("elemental_ward_grimoire", "Grimoire du voile élémentaire", "Version étudiable du voile, réservée aux mages assez stables.", ShopItemCategory::Book, 210, 25, 1));
+                shop.addItem(ShopItem("frost_needle_grimoire", "Grimoire d'aiguille de givre", "Sort apprenable sans parchemin courant : précis, froid, et réservé aux vrais canalisateurs.", ShopItemCategory::Book, 260, 28, 1));
+            }
             if (rotation % 3 == 0)
             {
                 shop.addItem(ShopItem("special_adventurer_notes", "Notes sur les groupes spéciaux", "Débloque des notes de bestiaire sur les groupes de personnages spéciaux.", ShopItemCategory::Information, 95, 0, 1, true));
             }
             if (rotation % 3 == 1)
             {
-                shop.addItem(ShopItem("summoning_notes", "Manuel d'invocations instables", "Ajoute des notes sur les invocations, les slots et les ombres futures.", ShopItemCategory::Book, 90, 12, 1, true));
+                shop.addItem(ShopItem("summoning_notes", "Manuel d'invocations instables", "Ajoute des notes sur les invocations, les places actives et les ombres anciennes.", ShopItemCategory::Book, 90, 12, 1, true));
             }
             if (rotation % 3 == 2)
             {
                 shop.addItem(ShopItem("boss_identity_scrap", "Fragment d'identité de boss", "Rappelle la règle lore : un boss doit révéler son nom lui-même.", ShopItemCategory::Information, 120, 0, 1, true));
+                shop.addItem(ShopItem("elemental_weakness_notes", "Notes sur faiblesses élémentaires", "Récapitulatif de terrain sur résistances, faiblesses, races, classes et équipement.", ShopItemCategory::Information, 70, 0, 1, true));
+                shop.addItem(ShopItem("mana_suture_grimoire", "Grimoire de suture de mana", "Sort apprenable sans parchemin courant : soin lent, exigeant et impossible à stabiliser sur papier simple.", ShopItemCategory::Book, 310, 34, 1));
+                shop.addItem(ShopItem("occult_bramble_grimoire", "Grimoire des ronces occultes", "Sort apprenable sans parchemin courant : contrôle végétal sombre, venin et entrave légère.", ShopItemCategory::Book, 285, 32, 1));
             }
             if (rotation % 4 == 0)
             {
@@ -278,7 +302,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 4 == 3)
             {
-                shop.addItem(ShopItem("necromancy_warning", "Avertissement nécromantique", "Prépare les futures ombres de Hazak sans révéler tout le système.", ShopItemCategory::Information, 100, 0, 1, true));
+                shop.addItem(ShopItem("necromancy_warning", "Avertissement nécromantique", "Évoque les ombres de Hazak sans révéler tout le rituel.", ShopItemCategory::Information, 100, 0, 1, true));
             }
             if (rotation % 5 == 0)
             {
@@ -351,6 +375,10 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("shock_resistance_potion", "Potion isolante", "Protection chère contre les décharges, surtout avec équipement métallique.", ShopItemCategory::Consumable, 98, 24, 1));
             }
+            if (rotation % 5 == 4)
+            {
+                shop.addItem(ShopItem("elemental_ward_potion", "Potion de voile élémentaire", "Voile court contre les brûlures, poisons, givre et décharges.", ShopItemCategory::Consumable, 135, 30, 1));
+            }
             if (rotation % 2 == 0)
             {
                 shop.addItem(ShopItem("reinforced_healing_potion", "Potion de soin renforcée", "Potion plus chère mais beaucoup plus sûre.", ShopItemCategory::Consumable, 65, 18, 2));
@@ -361,7 +389,11 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 3 == 1)
             {
-                shop.addItem(ShopItem("weakening_debuff_potion", "Fiole d'affaiblissement", "Debuff offensif préparé pour les futurs lancers de potion.", ShopItemCategory::Consumable, 85, 25, 1));
+                shop.addItem(ShopItem("weakening_debuff_potion", "Fiole d'affaiblissement", "Fiole offensive instable à lancer sur une cible.", ShopItemCategory::Consumable, 85, 25, 1));
+            }
+            if (rotation % 4 == 1)
+            {
+                shop.addItem(ShopItem("fragility_debuff_potion", "Fiole de fragilisation", "Fiole plus rare qui ouvre une faille dans la défense adverse.", ShopItemCategory::Consumable, 118, 32, 1));
             }
             shop.addItem(ShopItem("bitter_healing_leaf", "Feuille amère de soin", "Base de potions simples.", ShopItemCategory::Plant, 17, 5, 5 + rotation % 3));
             shop.addItem(ShopItem("slime_residue", "Résidu de slime", "Liant instable pour potions et kits.", ShopItemCategory::MonsterMaterial, 15, 4, 3));
@@ -445,7 +477,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 3 == 2)
             {
-                shop.addItem(ShopItem("conductive_knives", "Couteaux conducteurs interdits", "Projectiles métalliques préparés pour futures réactions électriques.", ShopItemCategory::Material, 300, 9, 5));
+                shop.addItem(ShopItem("conductive_knives", "Couteaux conducteurs interdits", "Projectiles métalliques capables d'attirer des réactions électriques.", ShopItemCategory::Material, 300, 9, 5));
             }
             if (rotation % 5 == 1)
             {
@@ -479,6 +511,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("shock_resistance_potion", "Potion isolante volée", "Très utile si tu portes du métal et que la zone commence à grésiller.", ShopItemCategory::Consumable, 190, 24, 1));
                 shop.addItem(ShopItem("frost_resistance_potion", "Potion anti-givre de contrebande", "Préparation froide mal étiquetée, mais efficace contre le givre.", ShopItemCategory::Consumable, 175, 22, 1));
+                shop.addItem(ShopItem("elemental_ward_potion", "Voile élémentaire sous faux sceau", "Le vendeur dit que ça protège de presque tout. Il évite de dire combien de temps.", ShopItemCategory::Consumable, 260, 35, 1));
             }
             if (rotation % 6 == 0)
             {
@@ -492,6 +525,16 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("experimental_damage_potion", "Lot expérimental : rage instable", "Le vendeur refuse de promettre que la fiole ne te mordra pas en retour.", ShopItemCategory::Consumable, 690, 90, 1));
                 shop.addItem(ShopItem("smoke_escape_vial", "Fiole de fuite trafiquée", "Très chère pour un plan B, mais certains survivants paient sans négocier.", ShopItemCategory::Consumable, 430, 40, 1));
+            }
+            if (rotation % 4 == 0)
+            {
+                shop.addItem(ShopItem("resistance_rift_scroll", "Parchemin de faille fragile", "Sort offensif à usage unique : ouvre une défense sans demander une vraie formation de mage.", ShopItemCategory::Spell, 360, 0, 1));
+                shop.addItem(ShopItem("minor_purification_scroll", "Parchemin de purification volé", "Même effet qu'un parchemin honnête, mais l'origine est volontairement oubliée.", ShopItemCategory::Spell, 240, 0, 1));
+                shop.addItem(ShopItem("crawling_venom_scroll", "Parchemin de venin rampant interdit", "Le même tracé que la bibliothèque refuse de garantir : efficace, sale, et impossible à rendre après lecture.", ShopItemCategory::Spell, 260, 0, 1));
+            }
+            if (rotation % 8 == 5)
+            {
+                shop.addItem(ShopItem("resistance_rift_grimoire", "Grimoire de faille de résistance", "Ouvrage volé et dangereux. Un non-mage n'en tirera qu'un mal de crâne.", ShopItemCategory::Book, 620, 35, 1));
             }
             break;
 

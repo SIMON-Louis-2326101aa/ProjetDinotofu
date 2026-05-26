@@ -12,6 +12,9 @@
 #include "interface/menu/inventory/InventoryDisplay.hpp"
 #include "interface/menu/inventory/InventoryUtils.hpp"
 #include "interface/menu/common/MenuFrame.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/model/MenuScreen.hpp"
 #include "interface/menu/progression/BestiaryMenu.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "progression/material/MaterialExperimentLog.hpp"
@@ -27,6 +30,8 @@
 #include <algorithm>
 #include <functional>
 #include <iostream>
+#include <cstddef>
+#include <sstream>
 #include <random>
 #include <string>
 #include <vector>
@@ -486,41 +491,6 @@ namespace
         return !getRepairKitChoices(player).empty();
     }
 
-    // EN: displayRepairKitsAsConsumables declares or implements a focused behavior used by this module.
-    // FR: displayRepairKitsAsConsumables déclare ou implémente un comportement précis utilisé par ce module.
-    void displayRepairKitsAsConsumables(const Player& player)
-    {
-        std::vector<RepairKitChoice> kits = getRepairKitChoices(player);
-
-        if (kits.empty())
-        {
-            return;
-        }
-
-        std::cout << std::endl;
-        std::cout << "--- Kits de réparation ---" << std::endl;
-
-        for (const RepairKitChoice& kit : kits)
-        {
-            std::cout << "- " << kit.label;
-
-            if (isUsedRepairKitId(kit.id))
-            {
-                std::cout << " entamé [" << kit.currentDurability << "/" << kit.maxDurability << "]";
-            }
-            else
-            {
-                std::cout << " intact [" << kit.maxDurability << "/" << kit.maxDurability << "]";
-            }
-
-            std::cout << " x" << kit.quantity
-                      << " | réparation max : +" << kit.thresholdPercent << "%"
-                      << std::endl;
-        }
-
-        std::cout << "Pour les utiliser : sélectionne une arme ou une armure, puis choisis Réparer." << std::endl;
-    }
-
     // EN: chooseRepairKit declares or implements a focused behavior used by this module.
     // FR: chooseRepairKit déclare ou implémente un comportement précis utilisé par ce module.
     int chooseRepairKit(Player& player)
@@ -798,87 +768,87 @@ namespace
         }
         else if (material.getId() == "rusted_metal_fragment" || material.getId() == "worn_leather_piece")
         {
-            std::cout << "Usage prévu : craft basique, réparation et amélioration d'équipement commun." << std::endl;
+            std::cout << "Usages connus : craft basique, réparation et amélioration d'équipement commun." << std::endl;
         }
         else if (material.getId() == "wolf_fang" || material.getId() == "goblin_ear" || material.getId() == "cracked_bone")
         {
-            std::cout << "Usage prévu : trophées, recettes de monstres, contrats de guilde et artisanat spécialisé." << std::endl;
+            std::cout << "Usages connus : trophées, recettes de monstres, contrats de guilde et artisanat spécialisé." << std::endl;
         }
         else if (material.getId() == "arcane_dust")
         {
-            std::cout << "Usage prévu : enchantements, catalyseurs de sorts et équipements magiques." << std::endl;
+            std::cout << "Usages connus : enchantements, catalyseurs de sorts et équipements magiques." << std::endl;
         }
         else if (material.getId() == "slime_residue")
         {
-            std::cout << "Usage prévu : colle, pièges, potions et réparations de fortune." << std::endl;
+            std::cout << "Usages connus : colle, pièges, potions et réparations de fortune." << std::endl;
         }
         else if (material.getCategory() == "Plante")
         {
-            std::cout << "Usage prévu : potions, remèdes, quêtes botaniques et expériences." << std::endl;
+            std::cout << "Usages connus : potions, remèdes, quêtes botaniques et expériences." << std::endl;
         }
         else if (material.getCategory() == "Livre" || material.getCategory() == "Renseignement")
         {
-            std::cout << "Usage prévu : lecture pour débloquer ou renforcer une entrée de bestiaire." << std::endl;
+            std::cout << "Usages connus : lecture, recoupement d'archives et progression du bestiaire." << std::endl;
         }
         else if (material.getId() == "cracked_bone")
         {
-            std::cout << "Usage prévu : nécromancie, rage supérieure, invocations sombres et futurs crafts d'os." << std::endl;
+            std::cout << "Usage supposé : nécromancie, rage supérieure, invocations sombres et artisanat d'os." << std::endl;
         }
         else if (material.getId() == "battle_torn_badge")
         {
-            std::cout << "Usage prévu : guildes, contrats, réputation et rencontres d'aventuriers." << std::endl;
+            std::cout << "Usages connus : guildes, contrats, réputation et rencontres d'aventuriers." << std::endl;
         }
         else if (material.getId() == "beast_hide")
         {
-            std::cout << "Usage prévu : armures, réparations épaisses, futurs crafts de tanks et équipements de survie." << std::endl;
+            std::cout << "Usage supposé : armures, réparations épaisses, équipements lourds et survie." << std::endl;
         }
         else if (material.getId() == "shadow_thread")
         {
-            std::cout << "Usage prévu : ombres de Hazak, objets d'assassin, nécromancie et améliorations furtives." << std::endl;
+            std::cout << "Usages connus : ombres de Hazak, objets d'assassin, nécromancie et améliorations furtives." << std::endl;
         }
         else if (material.getId() == "kitsune_ember")
         {
-            std::cout << "Usage prévu : flammes kitsune, invocations d'Aoi, potions avancées et enchantements feu." << std::endl;
+            std::cout << "Usages connus : flammes kitsune, invocations d'Aoi, potions avancées et enchantements feu." << std::endl;
         }
         else if (material.getId() == "draconic_scale_fragment")
         {
-            std::cout << "Usage prévu : protections rares, armures lourdes et crafts semi-dragons." << std::endl;
+            std::cout << "Usages connus : protections rares, armures lourdes et crafts semi-dragons." << std::endl;
         }
         else if (material.getId() == "unstable_core")
         {
-            std::cout << "Usage prévu : alchimie risquée, expériences de Fail, invocations instables et futurs objets explosifs." << std::endl;
+            std::cout << "Usage supposé : alchimie risquée, expériences de Fail, invocations instables et objets explosifs." << std::endl;
         }
         else if (material.getId() == "fitoria_feather")
         {
-            std::cout << "Usage prévu : bénédictions, soins rares, équipements de lumière et futures reliques angéliques." << std::endl;
+            std::cout << "Usage supposé : bénédictions, soins rares, équipements de lumière et reliques angéliques." << std::endl;
         }
         else if (material.getId() == "zelef_demon_blood")
         {
-            std::cout << "Usage prévu : alchimie dangereuse, armes démoniaques, malédictions et contrats sombres." << std::endl;
+            std::cout << "Usages connus : alchimie dangereuse, armes démoniaques, malédictions et contrats sombres." << std::endl;
         }
         else if (material.getId() == "atlas_broken_plate")
         {
-            std::cout << "Usage prévu : armures lourdes, réparation extrême, reliques défensives et forge de haut niveau." << std::endl;
+            std::cout << "Usages connus : armures lourdes, réparation extrême, reliques défensives et forge de haut niveau." << std::endl;
         }
         else if (material.getId() == "precision_harvest_tools")
         {
-            std::cout << "Usage prévu : bonus passif de récupération. Tant que tu les possèdes, tu récupères plus proprement certains matériaux." << std::endl;
+            std::cout << "Usages connus : bonus passif de récupération. Tant que tu les possèdes, tu récupères plus proprement certains matériaux." << std::endl;
         }
         else if (material.getId() == "preservation_vials")
         {
-            std::cout << "Usage prévu : bonus passif de conservation. Réduit les chances d'abîmer liquides, braises, résidus et composants instables." << std::endl;
+            std::cout << "Usages connus : bonus passif de conservation. Réduit les chances d'abîmer liquides, braises, résidus et composants instables." << std::endl;
         }
         else if (material.getId() == "clean_harvest_manual")
         {
-            std::cout << "Usage prévu : technique passive. La lecture confirme l'apprentissage, et posséder le manuel augmente la récupération propre." << std::endl;
+            std::cout << "Usages connus : technique passive. La lecture confirme l'apprentissage, et posséder le manuel augmente la récupération propre." << std::endl;
         }
         else if (material.getId() == "monster_dissection_guide")
         {
-            std::cout << "Usage prévu : technique passive. Aide à récupérer les composants de monstres sans trop les dégrader." << std::endl;
+            std::cout << "Usages connus : technique passive. Aide à récupérer les composants de monstres sans trop les dégrader." << std::endl;
         }
         else
         {
-            std::cout << "Usage prévu : système de craft/réparation futur." << std::endl;
+            std::cout << "Usage supposé : craft, réparation ou expérimentation artisanale." << std::endl;
         }
 
         std::cout << "====================================" << std::endl;
@@ -891,8 +861,8 @@ namespace
     {
         if (material.getCategory() != "Livre" && material.getCategory() != "Renseignement")
         {
-            std::cout << "Tu manipules " << material.getName() << ", mais son vrai système d'utilisation n'est pas encore stabilisé." << std::endl;
-            std::cout << "[action en cours de développement]" << std::endl;
+            std::cout << "Tu manipules " << material.getName() << ", mais tu ne trouves pas comment l'utiliser sans risque." << std::endl;
+            std::cout << "[rien ne se passe]" << std::endl;
             std::cout << std::endl;
             return false;
         }
@@ -2109,24 +2079,30 @@ namespace
         return std::max(0, maxCrafts);
     }
 
-    // EN: displayRecipeIngredients declares or implements a focused behavior used by this module.
-    // FR: displayRecipeIngredients déclare ou implémente un comportement précis utilisé par ce module.
-    void displayRecipeIngredients(Player& player, const CraftRecipe& recipe)
+    std::vector<std::string> buildRecipeIngredientLines(Player& player, const CraftRecipe& recipe)
     {
+        std::vector<std::string> lines;
+
         for (const RecipeIngredient& ingredient : recipe.ingredients)
         {
             int requiredPoints = ingredient.quantity * 2;
             int ownedPoints = player.getInventory().countMaterialQualityPointsById(ingredient.id);
             int ownedEquivalent = ownedPoints / 2;
 
-            std::cout << "- " << materialNameById(ingredient.id)
-                      << " x" << ingredient.quantity
-                      << " (possédé : " << player.getInventory().countMaterialById(ingredient.id)
-                      << ", équiv. qualité normale : " << ownedEquivalent
-                      << ", points : " << ownedPoints << "/" << requiredPoints
-                      << ")" << std::endl;
+            std::ostringstream line;
+            line << "- " << materialNameById(ingredient.id)
+                 << " x" << ingredient.quantity
+                 << " (possédé : " << player.getInventory().countMaterialById(ingredient.id)
+                 << ", équiv. qualité normale : " << ownedEquivalent
+                 << ", points : " << ownedPoints << "/" << requiredPoints
+                 << ")";
+
+            lines.push_back(line.str());
         }
+
+        return lines;
     }
+
 
     std::vector<CraftRecipe> buildCraftRecipes()
     {
@@ -2239,7 +2215,7 @@ namespace
             if (!isAlchemist(player))
             {
                 std::cout << "Cette fleur demande une vraie main d'Alchimiste pour devenir une potion stable." << std::endl;
-                std::cout << "[recette avancée réservée à l'Alchimiste pour l'instant]" << std::endl;
+                std::cout << "[recette avancée réservée à l'Alchimiste]" << std::endl;
                 std::cout << std::endl;
                 return false;
             }
@@ -2263,7 +2239,7 @@ namespace
             }
             else
             {
-                std::cout << "2 : Recettes avancées [réservées à l'Alchimiste pour l'instant]" << std::endl;
+                std::cout << "2 : Recettes avancées [réservées à l'Alchimiste]" << std::endl;
                 maxChoice = 2;
             }
 
@@ -2312,7 +2288,7 @@ namespace
             if (!isAlchemist(player))
             {
                 std::cout << "Ce composant est trop instable sans vraie maîtrise d'Alchimiste." << std::endl;
-                std::cout << "Tu pourrais le garder pour une recette avancée plus tard." << std::endl;
+                std::cout << "Tu pourrais le garder pour une recette avancée." << std::endl;
                 std::cout << std::endl;
                 return false;
             }
@@ -2364,8 +2340,8 @@ namespace
             return false;
         }
 
-        std::cout << "Tu manipules " << material.getName() << ", mais son vrai système d'utilisation n'est pas encore stabilisé." << std::endl;
-        std::cout << "[action en cours de développement]" << std::endl;
+        std::cout << "Tu manipules " << material.getName() << ", mais tu ne trouves pas comment l'utiliser sans risque." << std::endl;
+        std::cout << "[rien ne se passe]" << std::endl;
         std::cout << std::endl;
         return false;
     }
@@ -2381,86 +2357,137 @@ bool InventorySelection::openWeapons(Player& player)
         return false;
     }
 
-    player.getInventory().displayWeaponList();
+    constexpr std::size_t itemsPerPage = 10;
+    std::size_t pageIndex = 0;
 
-    std::cout << "Sélectionne une arme, ou entre -1 pour revenir." << std::endl;
-    std::cout << "> ";
-
-    int index = Console::askNumberBetween(
-        -1,
-        player.getInventory().getWeaponCount() - 1,
-        "Choix invalide. Entre un numéro d'arme valide, ou -1 pour revenir."
-    );
-
-    Console::clear();
-
-    if (index == -1)
+    while (true)
     {
-        return false;
-    }
+        const std::size_t totalItems = static_cast<std::size_t>(player.getInventory().getWeaponCount());
+        const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
 
-    if (!player.getInventory().hasWeapon(index))
-    {
-        std::cout << "Cette arme n'existe pas dans ton inventaire." << std::endl;
-        std::cout << std::endl;
-        return false;
-    }
+        MenuScreen screen("ARMES", "inventory.weapons.page");
+        screen.addSubtitle(PagedMenu::pageInfoText(pageIndex, totalPages, totalItems));
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
 
-    Weapon weapon = player.getInventory().getWeapon(index);
-    InventoryDisplay::displaySelectedWeapon(weapon);
-
-    int action = Console::askNumberBetween(
-        0,
-        4,
-        "Choix invalide. Entre 0, 1, 2, 3 ou 4."
-    );
-
-    Console::clear();
-
-    if (action == 1)
-    {
-        player.getInventory().inspectWeapon(index);
-        return false;
-    }
-
-    if (action == 3)
-    {
-        BestiaryMenu::displayObjectEntry(weapon.getName());
-        return false;
-    }
-
-    if (action == 4)
-    {
-        return repairSelectedWeapon(player, index);
-    }
-
-    if (action == 2)
-    {
-        if (player.equipWeapon(index))
+        for (std::size_t i = first; i < last; ++i)
         {
-            Weapon equippedWeapon = player.getEquippedWeapon();
+            Weapon weapon = player.getInventory().getWeapon(static_cast<int>(i));
+            std::ostringstream label;
+            label << weapon.getName()
+                  << " | Durabilité : " << InventoryUtils::weaponDurabilityText(weapon);
 
-            std::cout << player.getName() << " équipe : " << equippedWeapon.getName() << "." << std::endl;
-
-            if (equippedWeapon.isBroken())
+            if (weapon.isBroken())
             {
-                std::cout << "Attention : cette arme est cassée, elle ne donnera aucun bonus." << std::endl;
+                label << " | Cassée";
+            }
+
+            screen.addOption(
+                static_cast<int>(i - first + 1),
+                label.str(),
+                "",
+                true,
+                "inventory.weapon.select"
+            );
+        }
+
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+        screen.addFooterLine("Sélectionne une arme affichée.");
+
+        int choice = TerminalInterface::askMenuChoice(screen, 0, 99, "Choix invalide.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return false;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const int visibleCount = static_cast<int>(last - first);
+        if (choice < 1 || choice > visibleCount)
+        {
+            std::cout << "Ce numéro ne correspond à aucune arme affichée." << std::endl;
+            std::cout << std::endl;
+            continue;
+        }
+
+        int index = static_cast<int>(first) + choice - 1;
+
+        if (!player.getInventory().hasWeapon(index))
+        {
+            std::cout << "Cette arme n'existe plus dans ton inventaire." << std::endl;
+            std::cout << std::endl;
+            continue;
+        }
+
+        Weapon weapon = player.getInventory().getWeapon(index);
+        InventoryDisplay::displaySelectedWeapon(weapon);
+
+        int action = Console::askNumberBetween(
+            0,
+            4,
+            "Choix invalide. Entre 0, 1, 2, 3 ou 4."
+        );
+
+        Console::clear();
+
+        if (action == 1)
+        {
+            player.getInventory().inspectWeapon(index);
+            return false;
+        }
+
+        if (action == 3)
+        {
+            BestiaryMenu::displayObjectEntry(weapon.getName());
+            return false;
+        }
+
+        if (action == 4)
+        {
+            return repairSelectedWeapon(player, index);
+        }
+
+        if (action == 2)
+        {
+            if (player.equipWeapon(index))
+            {
+                Weapon equippedWeapon = player.getEquippedWeapon();
+
+                std::cout << player.getName() << " équipe : " << equippedWeapon.getName() << "." << std::endl;
+
+                if (equippedWeapon.isBroken())
+                {
+                    std::cout << "Attention : cette arme est cassée, elle ne donnera aucun bonus." << std::endl;
+                }
+                else
+                {
+                    std::cout << "La prise en main est bonne. Cette arme est prête au combat." << std::endl;
+                }
+
+                std::cout << std::endl;
             }
             else
             {
-                std::cout << "La prise en main est bonne. Cette arme est prête au combat." << std::endl;
+                std::cout << "Impossible d'équiper cette arme." << std::endl;
+                std::cout << std::endl;
             }
+        }
 
-            std::cout << std::endl;
-        }
-        else
-        {
-            std::cout << "Impossible d'équiper cette arme." << std::endl;
-            std::cout << std::endl;
-        }
+        return false;
     }
-
-    return false;
 }
 
 // EN: openArmors declares or implements a focused behavior used by this module.
@@ -2474,92 +2501,143 @@ bool InventorySelection::openArmors(Player& player)
         return false;
     }
 
-    player.getInventory().displayArmorList();
+    constexpr std::size_t itemsPerPage = 10;
+    std::size_t pageIndex = 0;
 
-    std::cout << "Sélectionne une armure, ou entre -1 pour revenir." << std::endl;
-    std::cout << "> ";
-
-    int index = Console::askNumberBetween(
-        -1,
-        player.getInventory().getArmorCount() - 1,
-        "Choix invalide. Entre un numéro d'armure valide, ou -1 pour revenir."
-    );
-
-    Console::clear();
-
-    if (index == -1)
+    while (true)
     {
-        return false;
-    }
+        const std::size_t totalItems = static_cast<std::size_t>(player.getInventory().getArmorCount());
+        const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
 
-    if (!player.getInventory().hasArmor(index))
-    {
-        std::cout << "Cette armure n'existe pas dans ton inventaire." << std::endl;
-        std::cout << std::endl;
-        return false;
-    }
+        MenuScreen screen("ARMURES", "inventory.armors.page");
+        screen.addSubtitle(PagedMenu::pageInfoText(pageIndex, totalPages, totalItems));
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
 
-    Armor armor = player.getInventory().getArmor(index);
-    InventoryDisplay::displaySelectedArmor(armor);
-
-    int action = Console::askNumberBetween(
-        0,
-        4,
-        "Choix invalide. Entre 0, 1, 2, 3 ou 4."
-    );
-
-    Console::clear();
-
-    if (action == 1)
-    {
-        player.getInventory().inspectArmor(index);
-        return false;
-    }
-
-    if (action == 3)
-    {
-        BestiaryMenu::displayObjectEntry(armor.getName());
-        return false;
-    }
-
-    if (action == 4)
-    {
-        return repairSelectedArmor(player, index);
-    }
-
-    if (action == 2)
-    {
-        if (player.equipArmor(index))
+        for (std::size_t i = first; i < last; ++i)
         {
-            Armor equippedArmor = player.getEquippedArmor();
+            Armor armor = player.getInventory().getArmor(static_cast<int>(i));
+            std::ostringstream label;
+            label << armor.getName()
+                  << " | Durabilité : " << InventoryUtils::armorDurabilityText(armor);
 
-            std::cout << player.getName() << " équipe : " << equippedArmor.getName() << "." << std::endl;
-
-            if (equippedArmor.isBroken())
+            if (armor.isBroken())
             {
-                std::cout << "Attention : cette armure est cassée, elle ne donnera aucun bonus." << std::endl;
+                label << " | Cassée";
+            }
+
+            screen.addOption(
+                static_cast<int>(i - first + 1),
+                label.str(),
+                "",
+                true,
+                "inventory.armor.select"
+            );
+        }
+
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+        screen.addFooterLine("Sélectionne une armure affichée.");
+
+        int choice = TerminalInterface::askMenuChoice(screen, 0, 99, "Choix invalide.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return false;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const int visibleCount = static_cast<int>(last - first);
+        if (choice < 1 || choice > visibleCount)
+        {
+            std::cout << "Ce numéro ne correspond à aucune armure affichée." << std::endl;
+            std::cout << std::endl;
+            continue;
+        }
+
+        int index = static_cast<int>(first) + choice - 1;
+
+        if (!player.getInventory().hasArmor(index))
+        {
+            std::cout << "Cette armure n'existe plus dans ton inventaire." << std::endl;
+            std::cout << std::endl;
+            continue;
+        }
+
+        Armor armor = player.getInventory().getArmor(index);
+        InventoryDisplay::displaySelectedArmor(armor);
+
+        int action = Console::askNumberBetween(
+            0,
+            4,
+            "Choix invalide. Entre 0, 1, 2, 3 ou 4."
+        );
+
+        Console::clear();
+
+        if (action == 1)
+        {
+            player.getInventory().inspectArmor(index);
+            return false;
+        }
+
+        if (action == 3)
+        {
+            BestiaryMenu::displayObjectEntry(armor.getName());
+            return false;
+        }
+
+        if (action == 4)
+        {
+            return repairSelectedArmor(player, index);
+        }
+
+        if (action == 2)
+        {
+            if (player.equipArmor(index))
+            {
+                Armor equippedArmor = player.getEquippedArmor();
+
+                std::cout << player.getName() << " équipe : " << equippedArmor.getName() << "." << std::endl;
+
+                if (equippedArmor.isBroken())
+                {
+                    std::cout << "Attention : cette armure est cassée, elle ne donnera aucun bonus." << std::endl;
+                }
+                else
+                {
+                    std::cout << "Ses protections sont maintenant actives." << std::endl;
+                }
+
+                std::cout << player.getName() << " possède maintenant "
+                          << player.getHp()
+                          << "/"
+                          << player.getMaxHp()
+                          << " PV."
+                          << std::endl;
+                std::cout << std::endl;
             }
             else
             {
-                std::cout << "Ses protections sont maintenant actives." << std::endl;
+                std::cout << "Impossible d'équiper cette armure." << std::endl;
+                std::cout << std::endl;
             }
+        }
 
-            std::cout << player.getName() << " possède maintenant "
-                      << player.getHp()
-                      << "/"
-                      << player.getMaxHp()
-                      << " PV."
-                      << std::endl;
-            std::cout << std::endl;
-        }
-        else
-        {
-            std::cout << "Impossible d'équiper cette armure." << std::endl;
-            std::cout << std::endl;
-        }
+        return false;
     }
-
-    return false;
 }
 
 // EN: openConsumables declares or implements a focused behavior used by this module.
@@ -2577,124 +2655,153 @@ bool InventorySelection::openConsumables(Player& player)
     }
 
     std::vector<ConsumableGroup> groups = InventoryUtils::groupConsumables(player);
+    constexpr std::size_t itemsPerPage = 10;
+    std::size_t pageIndex = 0;
 
-    std::cout << "============ CONSOMMABLES ============" << std::endl;
-
-    for (int i = 0; i < static_cast<int>(groups.size()); ++i)
+    while (true)
     {
-        const ConsumableGroup& group = groups[i];
+        const std::size_t totalItems = groups.size();
+        const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
 
-        std::cout << i + 1
-                  << " : "
-                  << group.name
-                  << " x"
-                  << group.amount
-                  << " | "
-                  << InventoryUtils::consumableTypeToText(group.type)
-                  << " | Puissance : "
-                  << group.power
-                  << std::endl;
-    }
+        MenuScreen screen("CONSOMMABLES", "inventory.consumables.page");
+        screen.addSubtitle(PagedMenu::pageInfoText(pageIndex, totalPages, totalItems));
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
 
-    displayRepairKitsAsConsumables(player);
-
-    std::cout << "=======================================" << std::endl;
-
-    if (groups.empty())
-    {
-        std::cout << "Aucun consommable utilisable directement ici." << std::endl;
-        std::cout << "Les kits se lancent depuis l'équipement à réparer." << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "> ";
-        Console::askNumberBetween(0, 0, "Entre 0 pour revenir.");
-        Console::clear();
-        return false;
-    }
-
-    std::cout << "Sélectionne un consommable, ou entre 0 pour revenir." << std::endl;
-    std::cout << "> ";
-
-    int choice = Console::askNumberBetween(
-        0,
-        static_cast<int>(groups.size()),
-        "Choix invalide. Sélectionne un consommable affiché, ou 0 pour revenir."
-    );
-
-    Console::clear();
-
-    if (choice == 0)
-    {
-        return false;
-    }
-
-    int index = groups[choice - 1].firstIndex;
-
-    if (!player.getInventory().hasConsumable(index))
-    {
-        std::cout << "Ce consommable n'existe plus dans ton inventaire." << std::endl;
-        std::cout << std::endl;
-        return false;
-    }
-
-    Consumable consumable = player.getInventory().getConsumable(index);
-
-    InventoryDisplay::displaySelectedConsumable(consumable);
-
-    int action = Console::askNumberBetween(
-        0,
-        3,
-        "Choix invalide. Entre 0, 1, 2 ou 3."
-    );
-
-    Console::clear();
-
-    if (action == 1)
-    {
-        player.getInventory().inspectConsumable(index);
-        return false;
-    }
-
-    if (action == 3)
-    {
-        BestiaryMenu::displayObjectEntry(consumable.getName());
-        return false;
-    }
-
-    if (action == 2)
-    {
-        if (consumable.getType() != ConsumableType::Healing)
+        for (std::size_t i = first; i < last; ++i)
         {
-            std::cout << "Ce consommable demande une cible ou un effet spécial." << std::endl;
-            std::cout << "Utilise plutôt l'option Potions du menu de combat." << std::endl;
-            std::cout << std::endl;
+            const ConsumableGroup& group = groups[i];
+            std::ostringstream label;
+            label << group.name
+                  << " x" << group.amount
+                  << " | " << InventoryUtils::consumableTypeToText(group.type)
+                  << " | Puissance : " << group.power;
+
+            screen.addOption(
+                static_cast<int>(i - first + 1),
+                label.str(),
+                "",
+                true,
+                "inventory.consumable.select"
+            );
+        }
+
+        if (hasRepairKits)
+        {
+            screen.addFooterLine("Kits de réparation : visibles avec les consommables, utilisables depuis l'équipement à réparer.");
+        }
+
+        if (groups.empty())
+        {
+            screen.addLine("Aucun consommable utilisable directement ici.");
+            screen.addLine("Les kits se lancent depuis l'équipement à réparer.");
+            screen.addBackOption();
+            TerminalInterface::askMenuChoice(screen, 0, 0, "Entre 0 pour revenir.");
+            Console::clear();
             return false;
         }
 
-        player.heal(consumable.getPower());
-        ThreatSystem::markSelfHealingAction(player);
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+        screen.addFooterLine("Sélectionne un consommable affiché.");
 
-        if (!player.hasInfiniteConsumables())
+        int choice = TerminalInterface::askMenuChoice(screen, 0, 99, "Choix invalide.");
+        Console::clear();
+
+        if (choice == 0)
         {
-            player.getInventory().removeConsumable(index);
+            return false;
         }
 
-        std::cout << player.getName() << " utilise : " << consumable.getName() << "." << std::endl;
-        std::cout << "Ses blessures se referment, et il récupère "
-                  << consumable.getPower()
-                  << " PV."
-                  << std::endl;
-        std::cout << player.getName() << " possède maintenant "
-                  << player.getHp()
-                  << "/"
-                  << player.getMaxHp()
-                  << " PV."
-                  << std::endl;
-        std::cout << std::endl;
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
 
-        return true;
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const int visibleCount = static_cast<int>(last - first);
+        if (choice < 1 || choice > visibleCount)
+        {
+            std::cout << "Ce numéro ne correspond à aucun consommable affiché." << std::endl;
+            std::cout << std::endl;
+            continue;
+        }
+
+        int index = groups[first + static_cast<std::size_t>(choice - 1)].firstIndex;
+
+        if (!player.getInventory().hasConsumable(index))
+        {
+            std::cout << "Ce consommable n'existe plus dans ton inventaire." << std::endl;
+            std::cout << std::endl;
+            continue;
+        }
+
+        Consumable consumable = player.getInventory().getConsumable(index);
+
+        InventoryDisplay::displaySelectedConsumable(consumable);
+
+        int action = Console::askNumberBetween(
+            0,
+            3,
+            "Choix invalide. Entre 0, 1, 2 ou 3."
+        );
+
+        Console::clear();
+
+        if (action == 1)
+        {
+            player.getInventory().inspectConsumable(index);
+            return false;
+        }
+
+        if (action == 3)
+        {
+            BestiaryMenu::displayObjectEntry(consumable.getName());
+            return false;
+        }
+
+        if (action == 2)
+        {
+            if (consumable.getType() != ConsumableType::Healing)
+            {
+                std::cout << "Ce consommable demande une cible ou un effet spécial." << std::endl;
+                std::cout << "Utilise plutôt l'option Potions du menu de combat." << std::endl;
+                std::cout << std::endl;
+                return false;
+            }
+
+            player.heal(consumable.getPower());
+            ThreatSystem::markSelfHealingAction(player);
+
+            if (!player.hasInfiniteConsumables())
+            {
+                player.getInventory().removeConsumable(index);
+            }
+
+            std::cout << player.getName() << " utilise : " << consumable.getName() << "." << std::endl;
+            std::cout << "Ses blessures se referment, et il récupère "
+                      << consumable.getPower()
+                      << " PV."
+                      << std::endl;
+            std::cout << player.getName() << " possède maintenant "
+                      << player.getHp()
+                      << "/"
+                      << player.getMaxHp()
+                      << " PV."
+                      << std::endl;
+            std::cout << std::endl;
+
+            return true;
+        }
+
+        return false;
     }
-
-    return false;
 }
 
 // EN: openMaterials declares or implements a focused behavior used by this module.
@@ -2709,136 +2816,47 @@ bool InventorySelection::openMaterials(Player& player)
         return false;
     }
 
-    player.getInventory().displayMaterialList();
-
-    std::cout << "Sélectionne une entrée, ou entre -1 pour revenir." << std::endl;
-    std::cout << "> ";
-
-    int index = Console::askNumberBetween(
-        -1,
-        static_cast<int>(player.getInventory().getMaterials().size()) - 1,
-        "Choix invalide. Entre un numéro valide, ou -1 pour revenir."
-    );
-
-    Console::clear();
-
-    if (index == -1)
-    {
-        return false;
-    }
-
-    if (!player.getInventory().hasMaterial(index))
-    {
-        std::cout << "Cette entrée n'existe pas dans ton inventaire." << std::endl;
-        std::cout << std::endl;
-        return false;
-    }
-
-    Material material = player.getInventory().getMaterial(index);
-    InventoryDisplay::displaySelectedMaterial(material);
-
-    int action = Console::askNumberBetween(
-        0,
-        4,
-        "Choix invalide. Entre 0, 1, 2, 3 ou 4."
-    );
-
-    Console::clear();
-
-    if (action == 1)
-    {
-        player.getInventory().inspectMaterial(index);
-        return false;
-    }
-
-    if (action == 2)
-    {
-        BestiaryMenu::displayObjectEntry(material.getName());
-        return false;
-    }
-
-    if (action == 3)
-    {
-        displayMaterialUtility(material);
-        return false;
-    }
-
-    if (action == 4)
-    {
-        return useMaterialIfPossible(player, material);
-    }
-
-    return false;
-}
-// EN: openCraft declares or implements a focused behavior used by this module.
-// FR: openCraft déclare ou implémente un comportement précis utilisé par ce module.
-bool InventorySelection::openCraft(Player& player)
-{
-    int page = 0;
-    const int recipesPerPage = 8;
+    constexpr std::size_t itemsPerPage = 12;
+    std::size_t pageIndex = 0;
 
     while (true)
     {
-        std::vector<CraftRecipe> recipes = buildCraftRecipes();
-        int pageCount = static_cast<int>((recipes.size() + recipesPerPage - 1) / recipesPerPage);
+        const std::vector<Material>& materials = player.getInventory().getMaterials();
+        const std::size_t totalItems = materials.size();
+        const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
 
-        if (pageCount <= 0)
+        MenuScreen screen("MATÉRIAUX / PLANTES / INFOS", "inventory.materials.page");
+        screen.addSubtitle(PagedMenu::pageInfoText(pageIndex, totalPages, totalItems));
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
+
+        for (std::size_t i = first; i < last; ++i)
         {
-            std::cout << "Aucun schéma de craft n'est disponible." << std::endl;
-            std::cout << std::endl;
-            return false;
-        }
+            Material material = player.getInventory().getMaterial(static_cast<int>(i));
+            std::ostringstream label;
+            label << material.getName() << " x" << material.getQuantity();
 
-        if (page < 0) page = 0;
-        if (page >= pageCount) page = pageCount - 1;
-
-        int firstIndex = page * recipesPerPage;
-        int lastIndex = std::min(firstIndex + recipesPerPage, static_cast<int>(recipes.size()));
-
-        MenuFrame::title("CRAFT / SCHÉMAS");
-        std::cout << "Page " << page + 1 << "/" << pageCount << std::endl;
-        MenuFrame::separator();
-        MenuFrame::backOption("Retour");
-
-        for (int i = firstIndex; i < lastIndex; ++i)
-        {
-            int visibleChoice = i - firstIndex + 1;
-            int maxCrafts = maxCraftsForRecipe(player, recipes[i]);
-
-            std::cout << visibleChoice << " : " << recipes[i].name
-                      << " | " << recipes[i].category
-                      << " | max : " << maxCrafts;
-
-            if (recipes[i].alchemistOnly && !isAlchemist(player))
+            if (material.hasSpecialQuality())
             {
-                std::cout << " | réservé Alchimiste";
-            }
-            else if (recipes[i].blacksmithHint && isBlacksmith(player))
-            {
-                std::cout << " | maîtrise Forgeron";
+                label << " | " << material.getQualityLabel();
             }
 
-            std::cout << std::endl;
+            label << " | " << material.getCategory();
+
+            screen.addOption(
+                static_cast<int>(i - first + 1),
+                label.str(),
+                "",
+                true,
+                "inventory.material.select"
+            );
         }
 
-        if (pageCount > 1)
-        {
-            MenuFrame::separator();
-            std::cout << "9 : Page suivante" << std::endl;
-            std::cout << "-1 : Page précédente" << std::endl;
-        }
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+        screen.addFooterLine("Sélectionne une entrée affichée.");
 
-        MenuFrame::end();
-        std::cout << "Les max utilisent l'équivalence de qualité : faible/impur compte moins, pur/haute qualité/exceptionnel compte plus." << std::endl;
-        MenuFrame::prompt();
-
-        int maxVisibleChoice = lastIndex - firstIndex;
-        int choice = Console::askNumberBetween(
-            pageCount > 1 ? -1 : 0,
-            pageCount > 1 ? 9 : maxVisibleChoice,
-            "Choix invalide. Sélectionne un schéma affiché, une page, ou 0 pour revenir."
-        );
-
+        int choice = TerminalInterface::askMenuChoice(screen, 0, 99, "Choix invalide.");
         Console::clear();
 
         if (choice == 0)
@@ -2846,53 +2864,205 @@ bool InventorySelection::openCraft(Player& player)
             return false;
         }
 
-        if (pageCount > 1 && choice == 9)
+        if (choice == 98 && pageIndex > 0)
         {
-            page = (page + 1) % pageCount;
+            --pageIndex;
             continue;
         }
 
-        if (pageCount > 1 && choice == -1)
+        if (choice == 99 && pageIndex + 1 < totalPages)
         {
-            page = (page - 1 + pageCount) % pageCount;
+            ++pageIndex;
             continue;
         }
 
-        if (choice < 1 || choice > maxVisibleChoice)
+        const int visibleCount = static_cast<int>(last - first);
+        if (choice < 1 || choice > visibleCount)
+        {
+            std::cout << "Ce numéro ne correspond à aucune entrée affichée." << std::endl;
+            std::cout << std::endl;
+            continue;
+        }
+
+        int index = static_cast<int>(first) + choice - 1;
+
+        if (!player.getInventory().hasMaterial(index))
+        {
+            std::cout << "Cette entrée n'existe plus dans ton inventaire." << std::endl;
+            std::cout << std::endl;
+            continue;
+        }
+
+        Material material = player.getInventory().getMaterial(index);
+        InventoryDisplay::displaySelectedMaterial(material);
+
+        int action = Console::askNumberBetween(
+            0,
+            4,
+            "Choix invalide. Entre 0, 1, 2, 3 ou 4."
+        );
+
+        Console::clear();
+
+        if (action == 1)
+        {
+            player.getInventory().inspectMaterial(index);
+            return false;
+        }
+
+        if (action == 2)
+        {
+            BestiaryMenu::displayObjectEntry(material.getName());
+            return false;
+        }
+
+        if (action == 3)
+        {
+            displayMaterialUtility(material);
+            return false;
+        }
+
+        if (action == 4)
+        {
+            return useMaterialIfPossible(player, material);
+        }
+
+        return false;
+    }
+}
+// EN: openCraft declares or implements a focused behavior used by this module.
+// FR: openCraft déclare ou implémente un comportement précis utilisé par ce module.
+bool InventorySelection::openCraft(Player& player)
+{
+    std::size_t pageIndex = 0;
+    constexpr std::size_t recipesPerPage = 8;
+
+    while (true)
+    {
+        std::vector<CraftRecipe> recipes = buildCraftRecipes();
+        const std::size_t totalItems = recipes.size();
+        const std::size_t totalPages = PagedMenu::pageCount(totalItems, recipesPerPage);
+
+        if (recipes.empty())
+        {
+            MenuScreen emptyScreen("CRAFT / SCHÉMAS", "inventory.craft.empty");
+            emptyScreen.addLine("Aucun schéma de craft n'est disponible.");
+            TerminalInterface::renderMenuScreen(emptyScreen, false);
+            Console::waitForEnter();
+            Console::clear();
+            return false;
+        }
+
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages - 1;
+        }
+
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, recipesPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, recipesPerPage);
+
+        MenuScreen screen("CRAFT / SCHÉMAS", "inventory.craft.page");
+        screen.addSubtitle(PagedMenu::pageInfoText(pageIndex, totalPages, totalItems));
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
+
+        for (std::size_t i = first; i < last; ++i)
+        {
+            const CraftRecipe& recipe = recipes[i];
+            int maxCrafts = maxCraftsForRecipe(player, recipe);
+
+            std::ostringstream label;
+            label << recipe.name << " | " << recipe.category << " | max : " << maxCrafts;
+
+            std::string hint;
+            if (recipe.alchemistOnly && !isAlchemist(player))
+            {
+                hint = "Réservé à l'Alchimiste, mais consultable pour préparer les composants.";
+            }
+            else if (recipe.blacksmithHint && isBlacksmith(player))
+            {
+                hint = "Maîtrise Forgeron : tu comprends mieux cette fabrication.";
+            }
+            else if (maxCrafts <= 0)
+            {
+                hint = "Composants insuffisants pour l'instant.";
+            }
+
+            screen.addOption(
+                static_cast<int>(i - first + 1),
+                label.str(),
+                hint,
+                true,
+                "inventory.craft.recipe.select"
+            );
+        }
+
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+        screen.addFooterLine("Les max utilisent l'équivalence de qualité : faible/impur compte moins, pur/haute qualité/exceptionnel compte plus.");
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Sélectionne un schéma affiché, une page, ou 0 pour revenir."
+        );
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return false;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const int visibleCount = static_cast<int>(last - first);
+        if (choice < 1 || choice > visibleCount)
         {
             std::cout << "Ce numéro ne correspond à aucun schéma sur cette page." << std::endl;
             std::cout << std::endl;
             continue;
         }
 
-        CraftRecipe recipe = recipes[firstIndex + choice - 1];
+        CraftRecipe recipe = recipes[first + static_cast<std::size_t>(choice - 1)];
         int maxCrafts = maxCraftsForRecipe(player, recipe);
 
-        MenuFrame::title("SCHÉMA DE CRAFT");
-        std::cout << "Schéma : " << recipe.name << std::endl;
-        std::cout << "Catégorie : " << recipe.category << std::endl;
-        std::cout << "Nombre maximum possible : " << maxCrafts << std::endl;
+        MenuScreen detailScreen("SCHÉMA DE CRAFT", "inventory.craft.detail");
+        detailScreen.addLine("Schéma : " + recipe.name);
+        detailScreen.addLine("Catégorie : " + recipe.category);
+        detailScreen.addLine("Nombre maximum possible : " + std::to_string(maxCrafts));
 
         if (recipe.alchemistOnly && !isAlchemist(player))
         {
-            std::cout << "Condition : réservé à l'Alchimiste pour l'instant." << std::endl;
+            detailScreen.addLine("Condition : réservé à l'Alchimiste.");
         }
 
         if (recipe.blacksmithHint && isBlacksmith(player))
         {
-            std::cout << "Bonus métier : le Forgeron comprend mieux cette fabrication." << std::endl;
+            detailScreen.addLine("Bonus métier : le Forgeron comprend mieux cette fabrication.");
         }
 
-        std::cout << std::endl;
-        std::cout << "Matériaux nécessaires pour 1 craft :" << std::endl;
-        displayRecipeIngredients(player, recipe);
-        MenuFrame::end();
-        std::cout << std::endl;
+        detailScreen.addLine("Matériaux nécessaires pour 1 craft :");
+        for (const std::string& line : buildRecipeIngredientLines(player, recipe))
+        {
+            detailScreen.addLine(line);
+        }
+
+        TerminalInterface::renderMenuScreen(detailScreen, false);
 
         if (maxCrafts <= 0)
         {
+            std::cout << std::endl;
             std::cout << "Tu ne peux pas fabriquer ce schéma pour le moment." << std::endl;
             std::cout << std::endl;
+            Console::waitForEnter();
+            Console::clear();
             continue;
         }
 
@@ -2900,9 +3070,22 @@ bool InventorySelection::openCraft(Player& player)
 
         if (maxCrafts > 1)
         {
-            std::cout << "Combien de fois veux-tu fabriquer ce schéma ?" << std::endl;
+            MenuScreen quantityScreen("QUANTITÉ DE CRAFT", "inventory.craft.quantity");
+            quantityScreen.addLine("Schéma : " + recipe.name);
+            quantityScreen.addLine("Maximum possible : " + std::to_string(maxCrafts));
+            quantityScreen.addBackOption("Annuler");
+            quantityScreen.addOption(1, "Choisir une quantité", "Entre ensuite un nombre entre 1 et " + std::to_string(maxCrafts) + ".", true, "inventory.craft.quantity.custom");
+
+            int quantityChoice = TerminalInterface::askMenuChoiceFromOptions(quantityScreen, "Choisis une option affichée.");
+            Console::clear();
+
+            if (quantityChoice == 0)
+            {
+                continue;
+            }
+
+            std::cout << "Quantité à fabriquer (1-" << maxCrafts << ")" << std::endl;
             std::cout << "0 : Annuler" << std::endl;
-            std::cout << "1-" << maxCrafts << " : Quantité à fabriquer" << std::endl;
             std::cout << "> ";
 
             quantityToCraft = Console::askNumberBetween(0, maxCrafts, "Quantité invalide.");
@@ -2910,17 +3093,19 @@ bool InventorySelection::openCraft(Player& player)
 
             if (quantityToCraft == 0)
             {
+                Console::clear();
                 continue;
             }
         }
 
-        std::cout << "Confirmer la fabrication : " << recipe.name << " x" << quantityToCraft << " ?" << std::endl;
-        std::cout << "1 : Confirmer" << std::endl;
-        std::cout << "0 : Annuler" << std::endl;
-        std::cout << "> ";
+        MenuScreen confirmScreen("CONFIRMATION CRAFT", "inventory.craft.confirm");
+        confirmScreen.addLine("Schéma : " + recipe.name);
+        confirmScreen.addLine("Quantité : " + std::to_string(quantityToCraft));
+        confirmScreen.addBackOption("Annuler");
+        confirmScreen.addOption(1, "Confirmer la fabrication", "Les composants seront consommés.", true, "inventory.craft.confirm.accept");
 
-        int confirm = Console::askNumberBetween(0, 1, "Choix invalide.");
-        std::cout << std::endl;
+        int confirm = TerminalInterface::askMenuChoiceFromOptions(confirmScreen, "Choisis une option affichée.");
+        Console::clear();
 
         if (confirm == 0)
         {
@@ -2944,7 +3129,12 @@ bool InventorySelection::openCraft(Player& player)
             MaterialExperimentLog::recordCraft(recipe.name, crafted);
         }
 
-        std::cout << "Résumé craft : " << crafted << "/" << quantityToCraft << " fabrication(s) réussie(s)." << std::endl;
-        std::cout << std::endl;
+        MenuScreen resultScreen("RÉSUMÉ CRAFT", "inventory.craft.result");
+        resultScreen.addLine("Schéma : " + recipe.name);
+        resultScreen.addLine("Fabrication(s) réussie(s) : " + std::to_string(crafted) + "/" + std::to_string(quantityToCraft) + ".");
+        TerminalInterface::renderMenuScreen(resultScreen, false);
+        Console::waitForEnter();
+        Console::clear();
     }
 }
+

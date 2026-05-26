@@ -294,7 +294,7 @@ bool SpecialCombatEffects::specialCharacterDodgesBeforeDamage(
 
     if (isName(defender, "Trexof") && isUnderHalfHp(defender) && random.between(1, 100) <= 18)
     {
-        std::cout << "Trexof recule d'un pas : réflexe de bêta testeur, bug évité." << std::endl;
+        std::cout << "Trexof recule d'un pas : réflexe de testeur, piège évité." << std::endl;
         std::cout << std::endl;
         return true;
     }
@@ -438,7 +438,7 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         {
             markSpecialUltimateUsed(attacker);
             rawDamage += 36;
-            std::cout << "Ultime spécial - Fail : Prototype interdit." << std::endl;
+            std::cout << "Ultime spécial - Fail : Expérience interdite." << std::endl;
             std::cout << "Fail : Si ça explose, c'est que ça prouve quelque chose." << std::endl;
         }
         else if (experiment <= 20)
@@ -508,7 +508,7 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         if (testRoll <= 22)
         {
             rawDamage += 14;
-            std::cout << "Trexof repère une faille d'équilibrage et l'exploite proprement : +14 dégâts bruts." << std::endl;
+            std::cout << "Trexof repère une faille de garde et l'exploite proprement : +14 dégâts bruts." << std::endl;
         }
         else if (testRoll <= 30)
         {
@@ -809,7 +809,7 @@ void SpecialCombatEffects::applySpecialCharacterAfterReceivingDamage(
     if (isName(defender, "Aoi") && random.between(1, 100) <= 20)
     {
         std::cout << "Aoi recule, timide, mais protège instinctivement ses incantations." << std::endl;
-        std::cout << "Son prochain système de protection magique sera branché avec les sorts." << std::endl;
+        std::cout << "Un cercle de protection incomplet tremble autour d'elle, sans parvenir à se fermer." << std::endl;
         std::cout << std::endl;
     }
 }

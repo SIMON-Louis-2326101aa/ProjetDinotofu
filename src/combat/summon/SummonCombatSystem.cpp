@@ -263,7 +263,7 @@ SummonControlMode SummonCombatSystem::askPlayerSummonControlMode(
         return SummonControlMode::Manual;
     }
 
-    std::cout << "Attaque automatique activée pour tes invocations." << std::endl;
+    std::cout << "Tes invocations choisissent leurs cibles selon leur instinct." << std::endl;
     std::cout << "Elles agiront seules après ton tour." << std::endl;
     std::cout << std::endl;
 
@@ -1149,7 +1149,7 @@ bool SummonCombatSystem::executeSummonSpecialAbility(
         int damage = random.between(summon.getMinDamage(), summon.getMaxDamage() + 8);
         target.takeDamage(damage);
         if (random.between(1, 100) <= 40) summon.extendDuration(1); else summon.decreaseDuration();
-        std::cout << "L'Éclat de miroir renvoie une image brisée de l'attaque future." << std::endl;
+        std::cout << "L'Éclat de miroir renvoie une image brisée de l'attaque à venir." << std::endl;
         std::cout << target.getName() << " subit " << damage << " dégâts instables." << std::endl;
         return true;
     }

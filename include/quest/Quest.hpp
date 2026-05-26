@@ -19,17 +19,21 @@ struct Quest
     std::string objective;
     std::string objectiveType;
     std::string targetFamily;
-    int rewardExperience;
-    int rewardGold;
+    int rewardExperience = 0;
+    int rewardGold = 0;
+    std::string rewardMaterialId;
+    std::string rewardMaterialName;
+    int rewardMaterialQuantity = 0;
+    std::string rewardNote;
     std::string requiredMaterialId;
     std::string requiredMaterialName;
-    int requiredMaterialQuantity;
-    int progress;
-    int target;
-    bool guildQuest;
-    bool accepted;
-    bool completed;
-    bool turnedIn;
+    int requiredMaterialQuantity = 0;
+    int progress = 0;
+    int target = 0;
+    bool guildQuest = false;
+    bool accepted = false;
+    bool completed = false;
+    bool turnedIn = false;
 };
 
 #endif

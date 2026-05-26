@@ -62,7 +62,7 @@ std::string SummonRules::getSummonWarningText(const std::string& className)
 {
     if (!classCanSummon(className))
     {
-        return "Cette classe ne transforme pas encore le duel en combat d'invocations.";
+        return "Cette classe ne possède pas de lien d'invocation assez fort pour ouvrir la meute.";
     }
 
     return "Cette classe transforme déjà certains combats en mini-groupe grâce aux invocations actives.";

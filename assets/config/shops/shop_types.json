@@ -1,5 +1,5 @@
 {
-    "note": "Future shop families. Shops refresh after combat in free modes and in towns where appropriate.",
+    "note": "Shop families. Shops refresh after combat in free modes and in towns where appropriate.",
     "refreshAfterCombat": true,
     "shops": [
         {

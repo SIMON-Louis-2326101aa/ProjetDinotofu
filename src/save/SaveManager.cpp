@@ -587,11 +587,21 @@ namespace
         if (normalized == normalizeText("Potion défensive supérieure")) return ConsumableCatalog::createGreaterDefensivePotion();
         if (normalized == normalizeText("Potion de précision")) return ConsumableCatalog::createPrecisionPotion();
         if (normalized == normalizeText("Fiole d'affaiblissement")) return ConsumableCatalog::createWeakeningDebuffPotion();
+        if (normalized == normalizeText("Fiole de fragilisation")) return ConsumableCatalog::createFragilityDebuffPotion();
         if (normalized == normalizeText("Antidote simple")) return ConsumableCatalog::createAntidotePotion();
         if (normalized == normalizeText("Baume anti-brûlure")) return ConsumableCatalog::createBurnSalvePotion();
         if (normalized == normalizeText("Potion tiède anti-givre")) return ConsumableCatalog::createFrostResistancePotion();
         if (normalized == normalizeText("Potion isolante")) return ConsumableCatalog::createShockResistancePotion();
+        if (normalized == normalizeText("Potion de voile élémentaire")) return ConsumableCatalog::createElementalWardPotion();
         if (normalized == normalizeText("Fiole de fumée de secours")) return ConsumableCatalog::createSmokeEscapeVial();
+        if (normalized == normalizeText("Parchemin d'étincelle arcanique")) return ConsumableCatalog::createArcaneSparkScroll();
+        if (normalized == normalizeText("Parchemin de voile élémentaire")) return ConsumableCatalog::createElementalWardScroll();
+        if (normalized == normalizeText("Parchemin de faille fragile")) return ConsumableCatalog::createResistanceRiftScroll();
+        if (normalized == normalizeText("Parchemin de braise errante")) return ConsumableCatalog::createWanderingEmberScroll();
+        if (normalized == normalizeText("Parchemin de purification mineure")) return ConsumableCatalog::createMinorPurificationScroll();
+        if (normalized == normalizeText("Parchemin de purification volé")) return ConsumableCatalog::createMinorPurificationScroll();
+        if (normalized == normalizeText("Parchemin de venin rampant")) return ConsumableCatalog::createCrawlingVenomScroll();
+        if (normalized == normalizeText("Parchemin de venin rampant interdit")) return ConsumableCatalog::createCrawlingVenomScroll();
 
         if (normalized.find(normalizeText("particularité stable")) != std::string::npos)
         {
@@ -836,7 +846,7 @@ bool SaveManager::saveAccountSnapshot(
     }
 
     file << "{\n";
-    file << "  \"saveVersion\": 14,\n";
+    file << "  \"saveVersion\": 15,\n";
     file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
     file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
@@ -887,7 +897,7 @@ bool SaveManager::savePlayerSnapshot(
         : player.getCreatorAccountName();
 
     file << "{\n";
-    file << "  \"saveVersion\": 14,\n";
+    file << "  \"saveVersion\": 15,\n";
     file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
     file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
@@ -1011,7 +1021,11 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"daggerKillProgress\": " << player.getDaggerKillProgress() << ",\n";
     file << "    \"bowKillProgress\": " << player.getBowKillProgress() << ",\n";
     file << "    \"bareHandKillProgress\": " << player.getBareHandKillProgress() << ",\n";
-    file << "    \"staffKillProgress\": " << player.getStaffKillProgress() << "\n";
+    file << "    \"staffKillProgress\": " << player.getStaffKillProgress() << ",\n";
+    file << "    \"swordKillProgress\": " << player.getSwordKillProgress() << ",\n";
+    file << "    \"axeKillProgress\": " << player.getAxeKillProgress() << ",\n";
+    file << "    \"hammerKillProgress\": " << player.getHammerKillProgress() << ",\n";
+    file << "    \"spearKillProgress\": " << player.getSpearKillProgress() << "\n";
     file << "  },\n";
 
     file << "  \"bossRegistry\": {\n";
@@ -1206,6 +1220,12 @@ bool SaveManager::savePlayerSnapshot(
              << "\", \"name\": \"" << escapeJson(record.name)
              << "\", \"description\": \"" << escapeJson(record.description)
              << "\", \"status\": \"" << escapeJson(record.status)
+             << "\", \"habitat\": \"" << escapeJson(record.habitat)
+             << "\", \"weaknesses\": \"" << escapeJson(record.weaknesses)
+             << "\", \"resistances\": \"" << escapeJson(record.resistances)
+             << "\", \"drops\": \"" << escapeJson(record.drops)
+             << "\", \"strategy\": \"" << escapeJson(record.strategy)
+             << "\", \"dangerRank\": \"" << escapeJson(record.dangerRank)
              << "\", \"encounters\": " << record.encounters
              << ", \"kills\": " << record.kills
              << ", \"informationBought\": " << (record.informationBought ? "true" : "false")
@@ -1221,15 +1241,8 @@ bool SaveManager::savePlayerSnapshot(
 
     file << "  ],\n";
 
-    file << "  \"questLogSnapshot\": [\n";
-
-    const std::vector<Quest>& quests = player.getQuestLog().getQuests();
-
-    for (std::size_t i = 0; i < quests.size(); i++)
-    {
-        const Quest& quest = quests[i];
-
-        file << "    {\"id\": \"" << escapeJson(quest.id)
+    auto writeQuestSnapshotEntry = [&file](const Quest& quest, const std::string& indent) {
+        file << indent << "{\"id\": \"" << escapeJson(quest.id)
              << "\", \"rank\": \"" << escapeJson(quest.rank)
              << "\", \"title\": \"" << escapeJson(quest.title)
              << "\", \"origin\": \"" << escapeJson(quest.origin)
@@ -1240,6 +1253,11 @@ bool SaveManager::savePlayerSnapshot(
              << "\", \"targetFamily\": \"" << escapeJson(quest.targetFamily)
              << "\", \"rewardExperience\": " << quest.rewardExperience
              << ", \"rewardGold\": " << quest.rewardGold
+             << ", \"rewardMaterialId\": \"" << escapeJson(quest.rewardMaterialId)
+             << "\", \"rewardMaterialName\": \"" << escapeJson(quest.rewardMaterialName)
+             << "\", \"rewardMaterialQuantity\": " << quest.rewardMaterialQuantity
+             << ", \"rewardNote\": \"" << escapeJson(quest.rewardNote)
+             << "\""
              << ", \"requiredMaterialId\": \"" << escapeJson(quest.requiredMaterialId)
              << "\", \"requiredMaterialName\": \"" << escapeJson(quest.requiredMaterialName)
              << "\", \"requiredMaterialQuantity\": " << quest.requiredMaterialQuantity
@@ -1250,6 +1268,35 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"completed\": " << (quest.completed ? "true" : "false")
              << ", \"turnedIn\": " << (quest.turnedIn ? "true" : "false")
              << "}";
+    };
+
+    file << "  \"guildBoardState\": {\n";
+    file << "    \"createdAtCombat\": " << player.getQuestLog().getGuildBoardCreatedAtCombat() << ",\n";
+    file << "    \"targetSize\": " << player.getQuestLog().getGuildBoardTargetSize() << ",\n";
+    file << "    \"pendingReplacements\": " << player.getQuestLog().getGuildBoardPendingReplacements() << ",\n";
+    file << "    \"replacementDueAtCombat\": " << player.getQuestLog().getGuildBoardReplacementDueAtCombat() << "\n";
+    file << "  },\n";
+
+    file << "  \"guildBoardSnapshot\": [\n";
+    const std::vector<Quest>& guildBoardOffers = player.getQuestLog().getGuildBoardOffers();
+    for (std::size_t i = 0; i < guildBoardOffers.size(); i++)
+    {
+        writeQuestSnapshotEntry(guildBoardOffers[i], "    ");
+        if (i + 1 < guildBoardOffers.size())
+        {
+            file << ",";
+        }
+        file << "\n";
+    }
+    file << "  ],\n";
+
+    file << "  \"questLogSnapshot\": [\n";
+
+    const std::vector<Quest>& quests = player.getQuestLog().getQuests();
+
+    for (std::size_t i = 0; i < quests.size(); i++)
+    {
+        writeQuestSnapshotEntry(quests[i], "    ");
 
         if (i + 1 < quests.size())
         {
@@ -1267,6 +1314,7 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"materials\": \"saved_and_reloaded_by_id_including_used_repair_kits\",\n";
     file << "    \"cheats\": \"states_and_known_codes_saved_and_reloaded\",\n";
     file << "    \"quests\": \"guild_and_personal_quest_log_saved_and_reloaded\",\n";
+    file << "    \"guildBoard\": \"persistent_offers_refresh_after_three_combats_replace_taken_after_one\",\n";
     file << "    \"pvpStatistics\": \"victories_defeats_lethal_eliminations_and_clone_status_saved_and_reloaded\",\n";
     file << "    \"skills\": \"passive_active_unlocks_and_weapon_progress_saved_and_reloaded\",\n";
     file << "    \"blessings\": \"prepared\"\n";
@@ -1419,6 +1467,7 @@ bool SaveManager::loadPlayerSnapshot(
     std::vector<std::string> materialObjects = extractObjectsFromArray(content, "materials");
     std::vector<std::string> bestiaryObjects = extractObjectsFromArray(content, "bestiaryRuntimeSnapshot");
     std::vector<std::string> questObjects = extractObjectsFromArray(content, "questLogSnapshot");
+    std::vector<std::string> guildBoardObjects = extractObjectsFromArray(content, "guildBoardSnapshot");
     std::vector<std::string> lethalEliminationObjects = extractObjectsFromArray(content, "pvpLethalEliminations");
     std::vector<std::string> starterKitObjects = extractObjectsFromArray(content, "starterKitSnapshot");
     std::vector<std::string> recentEquipmentUsageObjects = extractObjectsFromArray(content, "recentCombatEquipmentUsage");
@@ -1563,7 +1612,11 @@ bool SaveManager::loadPlayerSnapshot(
         extractIntValue(content, "daggerKillProgress", 0),
         extractIntValue(content, "bowKillProgress", 0),
         extractIntValue(content, "bareHandKillProgress", 0),
-        extractIntValue(content, "staffKillProgress", 0)
+        extractIntValue(content, "staffKillProgress", 0),
+        extractIntValue(content, "swordKillProgress", 0),
+        extractIntValue(content, "axeKillProgress", 0),
+        extractIntValue(content, "hammerKillProgress", 0),
+        extractIntValue(content, "spearKillProgress", 0)
     );
 
     std::vector<int> loadedUnlockedBossIds;
@@ -1744,6 +1797,12 @@ bool SaveManager::loadPlayerSnapshot(
         record.name = extractStringValue(object, "name", "");
         record.description = extractStringValue(object, "description", "Entrée sauvegardée.");
         record.status = extractStringValue(object, "status", "Rencontré");
+        record.habitat = extractStringValue(object, "habitat", "");
+        record.weaknesses = extractStringValue(object, "weaknesses", "");
+        record.resistances = extractStringValue(object, "resistances", "");
+        record.drops = extractStringValue(object, "drops", "");
+        record.strategy = extractStringValue(object, "strategy", "");
+        record.dangerRank = extractStringValue(object, "dangerRank", "");
         record.encounters = extractIntValue(object, "encounters", 0);
         record.kills = extractIntValue(object, "kills", 0);
         record.informationBought = extractBoolValue(object, "informationBought", false);
@@ -1753,8 +1812,7 @@ bool SaveManager::loadPlayerSnapshot(
 
     player.getQuestLog().clear();
 
-    for (const std::string& object : questObjects)
-    {
+    auto loadQuestSnapshotEntry = [](const std::string& object) {
         Quest quest;
         quest.id = extractStringValue(object, "id", "unknown_quest");
         quest.rank = extractStringValue(object, "rank", "F");
@@ -1765,6 +1823,10 @@ bool SaveManager::loadPlayerSnapshot(
         quest.objective = extractStringValue(object, "objective", "Objectif sauvegardé.");
         quest.rewardExperience = extractIntValue(object, "rewardExperience", 0);
         quest.rewardGold = extractIntValue(object, "rewardGold", 0);
+        quest.rewardMaterialId = extractStringValue(object, "rewardMaterialId", "");
+        quest.rewardMaterialName = extractStringValue(object, "rewardMaterialName", "");
+        quest.rewardMaterialQuantity = extractIntValue(object, "rewardMaterialQuantity", 0);
+        quest.rewardNote = extractStringValue(object, "rewardNote", "");
         quest.requiredMaterialId = extractStringValue(object, "requiredMaterialId", "");
         quest.requiredMaterialName = extractStringValue(object, "requiredMaterialName", "");
         quest.requiredMaterialQuantity = extractIntValue(object, "requiredMaterialQuantity", 0);
@@ -1776,9 +1838,27 @@ bool SaveManager::loadPlayerSnapshot(
         quest.accepted = extractBoolValue(object, "accepted", true);
         quest.completed = extractBoolValue(object, "completed", false);
         quest.turnedIn = extractBoolValue(object, "turnedIn", false);
+        return quest;
+    };
 
-        player.getQuestLog().getQuests().push_back(quest);
+    for (const std::string& object : questObjects)
+    {
+        player.getQuestLog().getQuests().push_back(loadQuestSnapshotEntry(object));
     }
+
+    std::vector<Quest> loadedGuildBoardOffers;
+    for (const std::string& object : guildBoardObjects)
+    {
+        loadedGuildBoardOffers.push_back(loadQuestSnapshotEntry(object));
+    }
+
+    player.getQuestLog().setLoadedGuildBoardState(
+        loadedGuildBoardOffers,
+        extractIntValue(content, "createdAtCombat", -1),
+        extractIntValue(content, "targetSize", static_cast<int>(loadedGuildBoardOffers.size())),
+        extractIntValue(content, "pendingReplacements", 0),
+        extractIntValue(content, "replacementDueAtCombat", -1)
+    );
 
     return true;
 }

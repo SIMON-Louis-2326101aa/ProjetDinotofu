@@ -44,6 +44,16 @@ protected:
     int shockTurns;
     int bleedingTurns;
     int bleedingDamage;
+    int weakeningTurns;
+    int weakeningDamagePenaltyPercent;
+    int vulnerabilityTurns;
+    int vulnerabilityDamageTakenPercent;
+    int elementalWardTurns;
+    int elementalWardResistancePercent;
+    int regenerationTurns;
+    int regenerationPerTurn;
+
+    int classSkillCooldownTurns;
 
 public:
     // EN: Entity declares or implements a focused behavior used by this module.
@@ -141,18 +151,35 @@ public:
     void applyFrost(int turns);
     void applyShock(int turns);
     void applyBleeding(int turns, int damage);
+    void applyWeakening(int turns, int damagePenaltyPercent);
+    void applyVulnerability(int turns, int damageTakenPercent);
+    void applyElementalWard(int turns, int resistancePercent);
+    void applyRegeneration(int turns, int healPerTurn);
     bool cureBurning();
     bool curePoison();
     bool cureFrost();
     bool cureShock();
     bool cureBleeding();
+    bool cureWeakening();
+    bool cureVulnerability();
     bool hasBurning() const;
     bool hasPoison() const;
     bool hasFrost() const;
     bool hasShock() const;
     bool hasBleeding() const;
+    bool hasWeakening() const;
+    bool hasVulnerability() const;
+    bool hasElementalWard() const;
+    bool hasRegeneration() const;
+    int getElementalWardResistancePercent() const;
     bool hasActiveCombatStatus() const;
     void processStatusTickAtTurnStart();
+
+    int getClassSkillCooldownTurns() const;
+    bool isClassSkillReady() const;
+    void startClassSkillCooldown(int turns);
+    void reduceClassSkillCooldown();
+    void resetClassSkillCooldown();
 
     // EN: reviveWithHealthPercentage declares or implements a focused behavior used by this module.
     // FR: reviveWithHealthPercentage déclare ou implémente un comportement précis utilisé par ce module.

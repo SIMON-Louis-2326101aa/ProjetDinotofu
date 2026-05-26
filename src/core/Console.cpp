@@ -17,7 +17,18 @@
 // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
 void Console::clear()
 {
-    system("clear");
+#if defined(_WIN32)
+    system("cls");
+#else
+    const char* term = std::getenv("TERM");
+    if (term != nullptr && std::string(term).empty() == false && std::string(term) != "dumb")
+    {
+        system("clear");
+        return;
+    }
+
+    std::cout << std::string(60, '\n');
+#endif
 }
 
 // EN: pauseSeconds declares or implements a focused behavior used by this module.
@@ -66,9 +77,9 @@ int Console::askNumberBetween(int min, int max, const std::string& errorMessage)
         if (!std::getline(std::cin >> std::ws, ligne))
         {
             std::cin.clear();
-            std::cout << errorMessage << std::endl;
-            std::cout << "> ";
-            continue;
+            int fallbackChoice = (min <= 0 && 0 <= max) ? 0 : min;
+            std::cout << "Entrée interrompue. Choix de secours appliqué." << std::endl;
+            return fallbackChoice;
         }
 
         std::istringstream flux(ligne);

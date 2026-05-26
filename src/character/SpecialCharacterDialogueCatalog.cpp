@@ -9,6 +9,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include "interface/menu/common/MessageScreen.hpp"
+
 #include <iostream>
 
 // EN: hasDialogueFor declares or implements a focused behavior used by this module.
@@ -235,7 +237,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getLowHealthLines(cons
 
     if (normalizedName == "louis")
     {
-        return {"Louis recule, surpris que ses gadgets n'aient pas suffi.", "Okay... note pour plus tard : améliorer tout. Vraiment tout."};
+        return {"Louis recule, surpris que ses gadgets n'aient pas suffi.", "Okay... note personnelle : améliorer tout. Vraiment tout."};
     }
 
     if (normalizedName == "trexof")
@@ -306,7 +308,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getVictoryLines(const 
     if (normalizedName == "sanctus") return {"Sanctus ne célèbre pas. Il vérifie seulement que personne derrière lui n'est tombé."};
     if (normalizedName == "hestia") return {"Hestia ouvre un œil, surprise d'être encore debout.", "C'est... fini ?"};
     if (normalizedName == "louis") return {"Louis range ses outils avec soulagement.", "On peut être amis maintenant ? Non ? Trop tôt ?"};
-    if (normalizedName == "trexof") return {"Trexof hoche la tête.", "Test concluant. Tu étais plus solide que prévu."};
+    if (normalizedName == "trexof") return {"Trexof hoche la tête.", "Test concluant. Tu étais plus solide que je pensais."};
     if (normalizedName == "henrique") return {"Henrique souffle, droit malgré les impacts.", "Un pas de plus. Toujours."};
     if (normalizedName == "fire flight") return {"Fire Flight abaisse son arme.", "La ligne a tenu. C'était le seul objectif."};
 
@@ -353,13 +355,10 @@ void SpecialCharacterDialogueCatalog::displayLines(
         return;
     }
 
-    std::cout << "========== DIALOGUE SPÉCIAL : " << characterName << " ==========" << std::endl;
-
-    for (const std::string& line : lines)
-    {
-        std::cout << line << std::endl;
-    }
-
-    std::cout << "====================================================" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "DIALOGUE SPÉCIAL : " + characterName,
+        "dialogue.special." + normalizeName(characterName),
+        lines,
+        false
+    );
 }

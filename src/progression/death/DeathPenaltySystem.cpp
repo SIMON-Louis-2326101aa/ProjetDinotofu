@@ -9,8 +9,11 @@
 #include "item/armor/Armor.hpp"
 #include "item/weapon/Weapon.hpp"
 #include "progression/DifficultyRules.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 #include <iostream>
+#include <string>
 
 namespace
 {
@@ -223,54 +226,52 @@ void DeathPenaltySystem::displayNonLethalDeathPenalty(
     const DeathPenaltyResult& result
 )
 {
-    std::cout << "========== CONSÉQUENCES DE LA MORT ==========" << std::endl;
-    std::cout << "Ton personnage survit, mais la mort ne repart jamais les mains vides." << std::endl;
-    std::cout << std::endl;
-    std::cout << "Or perdu : " << result.getLostGold() << " pièces" << std::endl;
-    std::cout << "Expérience perdue : " << result.getLostExperience() << std::endl;
-    std::cout << "Consommables perdus : " << result.getLostConsumables() << std::endl;
-    std::cout << "Durabilité perdue sur l'arme équipée : " << result.getWeaponDurabilityLost() << std::endl;
-    std::cout << "Durabilité perdue sur l'armure équipée : " << result.getArmorDurabilityLost() << std::endl;
+    MenuScreen screen("CONSÉQUENCES DE LA MORT", "death.non_lethal.penalty");
+    screen.addLine("Ton personnage survit, mais la mort ne repart jamais les mains vides.");
+    screen.addLine("");
+    screen.addLine("Or perdu : " + std::to_string(result.getLostGold()) + " pièces");
+    screen.addLine("Expérience perdue : " + std::to_string(result.getLostExperience()));
+    screen.addLine("Consommables perdus : " + std::to_string(result.getLostConsumables()));
+    screen.addLine("Durabilité perdue sur l'arme équipée : " + std::to_string(result.getWeaponDurabilityLost()));
+    screen.addLine("Durabilité perdue sur l'armure équipée : " + std::to_string(result.getArmorDurabilityLost()));
 
     if (result.wasWeaponBroken())
     {
-        std::cout << "Arme équipée : brisée par le choc." << std::endl;
+        screen.addLine("Arme équipée : brisée par le choc.");
     }
 
     if (result.wasArmorBroken())
     {
-        std::cout << "Armure équipée : brisée par le choc." << std::endl;
+        screen.addLine("Armure équipée : brisée par le choc.");
     }
 
     if (result.wasWeaponIrreparable())
     {
-        std::cout << "Arme équipée : détruite au point de devenir irréparable." << std::endl;
+        screen.addLine("Arme équipée : détruite au point de devenir irréparable.");
     }
 
     if (result.wasArmorIrreparable())
     {
-        std::cout << "Armure équipée : détruite au point de devenir irréparable." << std::endl;
+        screen.addLine("Armure équipée : détruite au point de devenir irréparable.");
     }
 
     if (result.wasWeaponStolen())
     {
-        std::cout << "Arme équipée : volée pendant l'effondrement du combat." << std::endl;
+        screen.addLine("Arme équipée : volée pendant l'effondrement du combat.");
     }
 
     if (result.wasArmorStolen())
     {
-        std::cout << "Armure équipée : volée pendant l'effondrement du combat." << std::endl;
+        screen.addLine("Armure équipée : volée pendant l'effondrement du combat.");
     }
 
     if (result.getRecoveredMaterialFragments() > 0)
     {
-        std::cout << "Fragments récupérables générés : "
-                  << result.getRecoveredMaterialFragments()
-                  << std::endl;
+        screen.addLine("Fragments récupérables générés : " + std::to_string(result.getRecoveredMaterialFragments()));
     }
 
-    std::cout << "Objets liés au corps, à l'âme ou au personnage : protégés par règle spéciale future." << std::endl;
-    std::cout << "=============================================" << std::endl;
+    screen.addFooterLine("Objets liés au corps, à l'âme ou au personnage : une marque profonde les protège.");
+    TerminalInterface::renderMenuScreen(screen, false);
     std::cout << std::endl;
 }
 
@@ -278,10 +279,12 @@ void DeathPenaltySystem::displayNonLethalDeathPenalty(
 // FR: displayLethalDeathCorruption déclare ou implémente un comportement précis utilisé par ce module.
 void DeathPenaltySystem::displayLethalDeathCorruption()
 {
-    std::cout << "Morts du personnage : [STATISTIQUE CORROMPUE]" << std::endl;
-    std::cout << "Vous ne deviez pas mourir." << std::endl;
-    std::cout << "Statut : personnage supprimé du registre des vivants." << std::endl;
-    std::cout << "Connais-tu quelqu'un capable d'échapper à la mort ? Moi non..." << std::endl;
+    MenuScreen screen("MORT LÉTHALE", "death.lethal.corruption");
+    screen.addLine("Morts du personnage : [STATISTIQUE CORROMPUE]");
+    screen.addLine("Vous ne deviez pas mourir.");
+    screen.addLine("Statut : personnage supprimé du registre des vivants.");
+    screen.addLine("Connais-tu quelqu'un capable d'échapper à la mort ? Moi non...");
+    TerminalInterface::renderMenuScreen(screen, false);
     std::cout << std::endl;
 }
 
@@ -289,8 +292,10 @@ void DeathPenaltySystem::displayLethalDeathCorruption()
 // FR: displayLethalCurrentDeathStatistic déclare ou implémente un comportement précis utilisé par ce module.
 void DeathPenaltySystem::displayLethalCurrentDeathStatistic()
 {
-    std::cout << "Morts du personnage : [STATISTIQUE CORROMPUE]" << std::endl;
-    std::cout << "But de mission : survivre." << std::endl;
+    MenuScreen screen("STATISTIQUE CORROMPUE", "death.lethal.current_statistic");
+    screen.addLine("Morts du personnage : [STATISTIQUE CORROMPUE]");
+    screen.addLine("But de mission : survivre.");
+    TerminalInterface::renderMenuScreen(screen, false);
     std::cout << std::endl;
 }
 
@@ -298,19 +303,21 @@ void DeathPenaltySystem::displayLethalCurrentDeathStatistic()
 // FR: displayLethalSurvivalAnomaly déclare ou implémente un comportement précis utilisé par ce module.
 void DeathPenaltySystem::displayLethalSurvivalAnomaly()
 {
-    std::cout << "La mort t'a trouvé." << std::endl;
-    std::cout << "Puis elle a reculé." << std::endl;
-    std::cout << std::endl;
-    std::cout << "Quelqu'un, quelque part, a payé le prix à ta place." << std::endl;
-    std::cout << std::endl;
-    std::cout << "Tu ouvres les yeux avec 1 PV." << std::endl;
-    std::cout << "Ton équipement a disparu." << std::endl;
-    std::cout << "Ton inventaire n'est plus qu'un souvenir." << std::endl;
-    std::cout << std::endl;
-    std::cout << "Statut : anomalie de survie." << std::endl;
-    std::cout << std::endl;
-    std::cout << "Tes bénédictions se sont consumées." << std::endl;
-    std::cout << "Mais ton nom existe encore." << std::endl;
-    std::cout << "Pour l'instant." << std::endl;
+    MenuScreen screen("ANOMALIE DE SURVIE", "death.lethal.survival_anomaly");
+    screen.addLine("La mort t'a trouvé.");
+    screen.addLine("Puis elle a reculé.");
+    screen.addLine("");
+    screen.addLine("Quelqu'un, quelque part, a payé le prix à ta place.");
+    screen.addLine("");
+    screen.addLine("Tu ouvres les yeux avec 1 PV.");
+    screen.addLine("Ton équipement a disparu.");
+    screen.addLine("Ton inventaire n'est plus qu'un souvenir.");
+    screen.addLine("");
+    screen.addLine("Statut : anomalie de survie.");
+    screen.addLine("");
+    screen.addLine("Tes bénédictions se sont consumées.");
+    screen.addLine("Mais ton nom existe encore.");
+    screen.addLine("Mais le registre continue de te regarder.");
+    TerminalInterface::renderMenuScreen(screen, false);
     std::cout << std::endl;
 }

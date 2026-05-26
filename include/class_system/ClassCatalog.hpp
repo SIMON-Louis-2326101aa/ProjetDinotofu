@@ -14,6 +14,19 @@
 #include <string>
 #include <vector>
 
+struct ClassOptionInfo
+{
+    std::string name;
+    std::string role;
+    std::string categoryName;
+    int maxHp = 0;
+    int minDamage = 0;
+    int maxDamage = 0;
+    int criticalDamage = 0;
+    int healingPotionCount = 0;
+    int damagePotionCount = 0;
+};
+
 class ClassCatalog
 {
 public:
@@ -56,6 +69,8 @@ public:
     // EN: getClassCategoryNameByChoice declares or implements a focused behavior used by this module.
     // FR: getClassCategoryNameByChoice déclare ou implémente un comportement précis utilisé par ce module.
     static std::string getClassCategoryNameByChoice(int categoryChoice);
+
+    static std::vector<ClassOptionInfo> getClassOptionsByCategoryChoice(int categoryChoice);
 
     // EN: createBaseClass declares or implements a focused behavior used by this module.
     // FR: createBaseClass déclare ou implémente un comportement précis utilisé par ce module.

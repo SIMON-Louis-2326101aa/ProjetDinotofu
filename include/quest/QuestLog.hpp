@@ -17,8 +17,14 @@ class QuestLog
 {
 private:
     std::vector<Quest> quests;
+    std::vector<Quest> guildBoardOffers;
+    int guildBoardCreatedAtCombat;
+    int guildBoardTargetSize;
+    int guildBoardPendingReplacements;
+    int guildBoardReplacementDueAtCombat;
 
 public:
+    QuestLog();
     // EN: getQuests declares or implements a focused behavior used by this module.
     // FR: getQuests déclare ou implémente un comportement précis utilisé par ce module.
     const std::vector<Quest>& getQuests() const;
@@ -66,6 +72,24 @@ public:
     bool hasTurnInReadyQuestForClient(const std::string& client) const;
     // EN: clear declares or implements a focused behavior used by this module.
     // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
+    const std::vector<Quest>& getGuildBoardOffers() const;
+    std::vector<Quest>& getGuildBoardOffers();
+    void ensureGuildBoardReady(int playerLevel, int currentCombatsStarted);
+    bool removeGuildBoardOfferAt(int offerIndex, int currentCombatsStarted);
+    int getGuildBoardCombatsBeforeRefresh(int currentCombatsStarted) const;
+    int getGuildBoardPendingReplacements() const;
+    int getGuildBoardTargetSize() const;
+    int getGuildBoardCreatedAtCombat() const;
+    int getGuildBoardReplacementDueAtCombat() const;
+    int getClientQuestCount(const std::string& client) const;
+    bool hasRecommendedClientCapacity(const std::string& client) const;
+    void setLoadedGuildBoardState(
+        const std::vector<Quest>& offers,
+        int createdAtCombat,
+        int targetSize,
+        int pendingReplacements,
+        int replacementDueAtCombat
+    );
     void clear();
 };
 

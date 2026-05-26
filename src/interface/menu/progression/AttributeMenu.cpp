@@ -80,8 +80,8 @@ void AttributeMenu::open(Player& player)
 void AttributeMenu::displayLockedDevelopmentMessage()
 {
     std::cout << "Tu sens que ton potentiel pourrait encore grandir..." << std::endl;
-    std::cout << "Mais ce système n'est pas encore stabilisé." << std::endl;
+    std::cout << "Mais les registres refusent encore de graver ce choix définitivement." << std::endl;
     std::cout << std::endl;
-    std::cout << "[action en cours de développement]" << std::endl;
+    std::cout << "[les runes restent muettes]" << std::endl;
     std::cout << std::endl;
 }

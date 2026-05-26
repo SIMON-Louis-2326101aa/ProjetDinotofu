@@ -117,7 +117,12 @@ namespace
             return monster.getName() + slimeSuffixes[random.between(0, static_cast<int>(slimeSuffixes.size()) - 1)];
         }
 
-        if (monster.getRace() == Race::Gobelin && monster.getName().find("shaman") == std::string::npos && monster.getName().find("shaman") == std::string::npos && random.between(1, 100) <= 30)
+        if (monster.getRace() == Race::Gobelin
+            && monster.getName().find("shaman") == std::string::npos
+            && monster.getName().find("chamane") == std::string::npos
+            && monster.getName().find("Shaman") == std::string::npos
+            && monster.getName().find("Chamane") == std::string::npos
+            && random.between(1, 100) <= 30)
         {
             return "Gobelin shaman issu de " + monster.getName();
         }
@@ -183,7 +188,8 @@ namespace
                 createMonster("Gobelin éclaireur de talus", "Gobelin prudent qui préfère prévenir les siens", Race::Gobelin, 2, 58, 5, 13, 18),
                 createMonster("Lapin cornu nerveux", "Petite bête territoriale", Race::Bete, 1, 38, 4, 11, 16),
                 createMonster("Racine sèche errante", "Plante presque passive mais accrocheuse", Race::Plante, 2, 78, 3, 12, 16),
-                createMonster("Slime clair dormant", "Gelée presque passive qui gêne plus qu'elle ne tue", Race::Slime, 1, 64, 3, 9, 12)
+                createMonster("Slime clair dormant", "Gelée presque passive qui gêne plus qu'elle ne tue", Race::Slime, 1, 64, 3, 9, 12),
+                createMonster("Renard fouilleur", "Petite bête attirée par les sacs mal fermés", Race::Bete, 2, 52, 6, 16, 22)
             };
         }
 
@@ -197,7 +203,8 @@ namespace
                 createMonster("Slime ambré collant", "Gelée qui aime les zones riches en sève", Race::Slime, 5, 132, 8, 24, 32),
                 createMonster("Slime gris de vase", "Gelée lourde chargée de poussière", Race::Slime, 6, 148, 9, 27, 36),
                 createMonster("Slime rose nerveux", "Gelée vive qui bondit sans comprendre ce qu'elle fait", Race::Slime, 5, 112, 10, 25, 34),
-                createMonster("Slime translucide", "Gelée presque invisible dans l'eau stagnante", Race::Slime, 6, 130, 8, 28, 38, 0, 0, false, false, true)
+                createMonster("Slime translucide", "Gelée presque invisible dans l'eau stagnante", Race::Slime, 6, 130, 8, 28, 38, 0, 0, false, false, true),
+                createMonster("Mini-ruche gélatineuse", "Petit amas de slimes faibles qui se déplacent ensemble", Race::Slime, 6, 150, 7, 24, 34, 0, 0, false, true)
             };
         }
 
@@ -210,7 +217,8 @@ namespace
                 createMonster("Orc éclaireur de route", "Pillard mobile", Race::Orc, 4, 115, 14, 27, 34),
                 createMonster("Coursier louche", "Humain fuyant", Race::Humain, 2, 62, 6, 16, 24, 0, 0),
                 createMonster("Gobelin porteur", "Gobelin chargé de sacs", Race::Gobelin, 2, 88, 7, 16, 22),
-                createMonster("Slime doré minuscule", "Gelée brillante attirée par les pièces perdues", Race::Slime, 3, 74, 5, 17, 24)
+                createMonster("Slime doré minuscule", "Gelée brillante attirée par les pièces perdues", Race::Slime, 3, 74, 5, 17, 24),
+                createMonster("Apprenti receleur", "Humain nerveux avec une fiole et trop d'excuses", Race::Humain, 3, 78, 8, 19, 28, 1, 1)
             };
         }
 
@@ -248,6 +256,18 @@ namespace
                 createMonster("Noyé du marais", "Mort-vivant humide", Race::MortVivant, 13, 235, 19, 38, 50, 0, 0, false, true, true),
                 createMonster("Insectoïde des eaux sales", "Prédateur toxique", Race::Insectoide, 12, 205, 18, 40, 52, 0, 1, false, true),
                 createMonster("Plante toxique", "Végétal venimeux", Race::Plante, 14, 240, 16, 42, 56, 0, 1, false, true, true)
+            };
+        }
+
+        if (biomeName == "Cimetière oublié")
+        {
+            return {
+                createMonster("Squelette de fosse", "Mort-vivant fragile", Race::MortVivant, 10, 175, 17, 34, 44, 0, 0, false, true, true),
+                createMonster("Corbeau charognard", "Bête attirée par les tombes", Race::Bete, 9, 135, 18, 38, 52, 0, 0, false, false, true),
+                createMonster("Goule de caveau", "Mort-vivant affamé", Race::MortVivant, 11, 205, 20, 42, 56, 0, 0, false, true, true),
+                createMonster("Lanterne d'âme faible", "Esprit errant lumineux", Race::Esprit, 10, 155, 16, 44, 60, 0, 1, false, true, true),
+                createMonster("Rat de tombe", "Bête nuisible contaminée", Race::Bete, 9, 150, 16, 34, 46, 0, 0, false, false, true),
+                createMonster("Ossements rassemblés", "Amas instable de morts", Race::MortVivant, 11, 240, 15, 36, 48, 0, 0, false, true, true)
             };
         }
 
@@ -321,7 +341,8 @@ namespace
                 createMonster("Mante-feuille", "Insectoïde camouflé dans les branches", Race::Insectoide, 7, 135, 19, 39, 52, 0, 1, false, true),
                 createMonster("Racine veilleuse", "Plante ancienne qui protège son sol", Race::Plante, 7, 190, 14, 34, 46, 0, 1, false, true),
                 createMonster("Champignon hurleur", "Fonge vivante qui attire parfois d'autres dangers", Race::Plante, 8, 165, 12, 36, 50, 0, 1, false, true, true),
-                createMonster("Cerf moussu inquiet", "Bête ancienne rarement agressive mais dangereuse acculée", Race::Bete, 8, 230, 17, 38, 52, 0, 0, false, true)
+                createMonster("Cerf moussu inquiet", "Bête ancienne rarement agressive mais dangereuse acculée", Race::Bete, 8, 230, 17, 38, 52, 0, 0, false, true),
+                createMonster("Liane guetteuse", "Plante fine qui préfère immobiliser avant de blesser", Race::Plante, 7, 150, 11, 33, 45, 0, 1, false, true)
             };
         }
 
@@ -350,6 +371,18 @@ namespace
             };
         }
 
+
+        if (biomeName == "Cimetière oublié")
+        {
+            return {
+                createMonster("Veilleur sans sépulture", "Mort-vivant gardien", Race::MortVivant, 15, 300, 24, 52, 68, 0, 0, false, true, true),
+                createMonster("Ombre de fossoyeur", "Esprit discret et rancunier", Race::Esprit, 14, 245, 22, 58, 78, 0, 1, false, true, true),
+                createMonster("Goule à griffes noires", "Mort-vivant agressif", Race::MortVivant, 15, 280, 28, 56, 74, 0, 0, false, true, true),
+                createMonster("Squelette porte-bannière", "Support mort-vivant de vieille guerre", Race::MortVivant, 16, 260, 20, 50, 70, 1, 1, false, true, true),
+                createMonster("Lanterne funéraire", "Esprit qui attire les vivants", Race::Esprit, 16, 250, 22, 64, 86, 0, 2, false, true, true),
+                createMonster("Chien de tombe", "Bête maigre dressée par l'odeur des morts", Race::Bete, 14, 270, 27, 55, 72, 0, 0, false, true, true)
+            };
+        }
         if (biomeName == "Ruines effondrées")
         {
             return {
@@ -371,7 +404,9 @@ namespace
             return {
                 createMonster("Loup alpha jeune", "Alpha de plaine", Race::Bete, 6, 180, 18, 36, 48, 0, 0, false, true),
                 createMonster("Ours errant", "Bête massive", Race::Bete, 7, 230, 21, 42, 54, 0, 0, false, true),
-                createMonster("Slime brillant avaleur", "Gelée attirée par l'or", Race::Slime, 6, 170, 12, 32, 42, 0, 0, false, true)
+                createMonster("Slime brillant avaleur", "Gelée attirée par l'or", Race::Slime, 6, 170, 12, 32, 42, 0, 0, false, true),
+                createMonster("Sanglier cuirassé jeune", "Bête de plaine dont la peau commence à durcir", Race::Bete, 8, 255, 23, 45, 58, 0, 0, false, true),
+                createMonster("Renard chapardeur", "Petite bête maligne attirée par les sacs ouverts", Race::Bete, 6, 145, 17, 38, 50, 0, 0, false, true)
             };
         }
 
@@ -394,7 +429,9 @@ namespace
                 createMonster("Pilleur vétéran", "Humanoïde organisé", Race::Humain, 10, 270, 26, 52, 68, 1, 1, false, true),
                 createMonster("Chasseur de primes rouillé", "Traqueur illégal", Race::Humain, 11, 255, 30, 60, 80, 1, 2, false, true, true),
                 createMonster("Gobelin grand shaman", "Évolution rare d'un shaman gobelin, capable de maintenir une petite bande", Race::Gobelin, 12, 260, 22, 62, 84, 4, 2, false, true, true),
-                createMonster("Hobgobelin garde du marché noir", "Protecteur brutal engagé pour ne pas poser de questions", Race::Hobgobelin, 13, 360, 30, 66, 88, 1, 1, false, true, true)
+                createMonster("Hobgobelin garde du marché noir", "Protecteur brutal engagé pour ne pas poser de questions", Race::Hobgobelin, 13, 360, 30, 66, 88, 1, 1, false, true, true),
+                createMonster("Médecin de bande douteux", "Support humain capable de sauver un allié mais pas toujours proprement", Race::Humain, 12, 235, 18, 52, 70, 4, 2, false, true, true),
+                createMonster("Gobelin chef de sacs", "Gobelin organisé qui protège surtout le butin", Race::Gobelin, 11, 245, 24, 54, 72, 1, 1, false, true, true)
             };
         }
 
@@ -403,7 +440,9 @@ namespace
             return {
                 createMonster("Gardien de ronces", "Protecteur végétal", Race::Plante, 12, 340, 25, 54, 70, 0, 1, false, true, true),
                 createMonster("Esprit sylvestre", "Mémoire de forêt", Race::Esprit, 12, 290, 23, 60, 78, 0, 2, false, true, true),
-                createMonster("Alpha de mousse", "Prédateur ancien", Race::Bete, 13, 360, 28, 56, 72, 0, 0, false, true)
+                createMonster("Alpha de mousse", "Prédateur ancien", Race::Bete, 13, 360, 28, 56, 72, 0, 0, false, true),
+                createMonster("Loup couvert de lichen", "Prédateur de forêt presque confondu avec le sol", Race::Bete, 12, 310, 27, 58, 76, 0, 0, false, true, true),
+                createMonster("Racine étrangleuse", "Plante rare qui ralentit avant de frapper", Race::Plante, 13, 335, 22, 56, 74, 0, 1, false, true, true)
             };
         }
 
@@ -427,6 +466,17 @@ namespace
             };
         }
 
+
+        if (biomeName == "Cimetière oublié")
+        {
+            return {
+                createMonster("Chevalier du dernier serment", "Mort-vivant lourd et honorable", Race::MortVivant, 22, 560, 36, 78, 102, 0, 0, false, true, true),
+                createMonster("Oracle de pierre tombale", "Support spectral qui comprend trop de choses", Race::Esprit, 23, 440, 28, 92, 128, 3, 2, false, true, true),
+                createMonster("Ossuaire rampant", "Construction d'os assemblés", Race::Construction, 24, 700, 34, 76, 100, 0, 0, false, true, true),
+                createMonster("Ombre de nom perdu", "Esprit rare lié aux identités effacées", Race::Esprit, 25, 500, 38, 105, 145, 0, 3, false, true, true),
+                createMonster("Goule couronnée de poussière", "Prédateur mort-vivant de caveau noble", Race::MortVivant, 24, 620, 42, 88, 116, 0, 1, false, true, true)
+            };
+        }
         if (biomeName == "Ruines effondrées")
         {
             return {
@@ -663,6 +713,7 @@ std::vector<Monster> MonsterCatalog::createAllPreviewMonsters()
         "Forêt ancienne",
         "Montagne froide",
         "Marais trouble",
+        "Cimetière oublié",
         "Ruines effondrées"
     };
 

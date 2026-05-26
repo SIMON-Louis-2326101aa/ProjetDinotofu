@@ -17,6 +17,9 @@
 
 #include <iostream>
 #include <random>
+#include <algorithm>
+#include <cctype>
+#include <string>
 
 namespace
 {
@@ -95,6 +98,138 @@ namespace
             || name.find("expérimental") != std::string::npos;
     }
 
+    std::string normalizeShopLearningText(std::string value)
+    {
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return value;
+    }
+
+    bool isMagicStudyCompatible(const Player& player)
+    {
+        const std::string className = normalizeShopLearningText(player.getType());
+        return className.find("mage") != std::string::npos
+            || className.find("magicien") != std::string::npos
+            || className.find("ensorc") != std::string::npos
+            || className.find("sorc") != std::string::npos
+            || className.find("arcan") != std::string::npos
+            || className.find("pyrom") != std::string::npos
+            || className.find("cryo") != std::string::npos
+            || className.find("occult") != std::string::npos
+            || className.find("invoc") != std::string::npos
+            || className.find("nécro") != std::string::npos
+            || className.find("necro") != std::string::npos
+            || className.find("pact") != std::string::npos
+            || className.find("clerc") != std::string::npos
+            || className.find("prêtre") != std::string::npos
+            || className.find("pretre") != std::string::npos
+            || className.find("paladin") != std::string::npos
+            || className.find("druide") != std::string::npos
+            || className.find("shaman") != std::string::npos
+            || className.find("templier") != std::string::npos;
+    }
+
+    void applyMagicLearningEffect(Player& player, const ShopItem& item)
+    {
+        const std::string id = item.getId();
+
+        if (id != "basic_magic_manual"
+            && id != "arcane_binding_grimoire"
+            && id != "elemental_ward_grimoire"
+            && id != "resistance_rift_grimoire"
+            && id != "frost_needle_grimoire"
+            && id != "mana_suture_grimoire"
+            && id != "occult_bramble_grimoire")
+        {
+            return;
+        }
+
+        if (!isMagicStudyCompatible(player))
+        {
+            std::cout << "Le texte est conservé, mais il ne suffit pas à transformer un non-mage en lanceur de sorts." << std::endl;
+            std::cout << "Pour utiliser une magie hors classe, il faudra plutôt compter sur des parchemins à usage unique." << std::endl;
+            return;
+        }
+
+        if (id == "basic_magic_manual")
+        {
+            if (player.getLevel() < 3)
+            {
+                std::cout << "Le manuel est compris en partie, mais il faudra atteindre le niveau 3 pour stabiliser la première marque." << std::endl;
+                return;
+            }
+            player.unlockActiveSkill("learned_arcane_mark", "Marque élémentaire étudiée");
+            return;
+        }
+
+        if (id == "arcane_binding_grimoire")
+        {
+            if (player.getLevel() < 5)
+            {
+                std::cout << "Les chaînes arcaniques restent trop lourdes à former. Niveau 5 requis pour les comprendre vraiment." << std::endl;
+                return;
+            }
+            player.unlockActiveSkill("learned_arcane_binding", "Entrave arcanique étudiée");
+            return;
+        }
+
+        if (id == "elemental_ward_grimoire")
+        {
+            if (player.getLevel() < 6)
+            {
+                std::cout << "Le voile répond, mais trop faiblement. Niveau 6 requis pour le tenir en combat." << std::endl;
+                return;
+            }
+            player.unlockActiveSkill("learned_elemental_ward", "Voile élémentaire étudié");
+            return;
+        }
+
+        if (id == "resistance_rift_grimoire")
+        {
+            if (player.getLevel() < 9)
+            {
+                std::cout << "La faille décrite dans le grimoire tire trop fort sur le corps. Niveau 9 requis." << std::endl;
+                return;
+            }
+            player.unlockActiveSkill("learned_resistance_rift", "Faille de résistance étudiée");
+            return;
+        }
+
+        if (id == "frost_needle_grimoire")
+        {
+            if (player.getLevel() < 4)
+            {
+                std::cout << "Les aiguilles de givre se brisent dans la paume. Niveau 4 requis pour les former proprement." << std::endl;
+                return;
+            }
+            player.unlockActiveSkill("learned_frost_needle", "Aiguille de givre étudiée");
+            return;
+        }
+
+        if (id == "mana_suture_grimoire")
+        {
+            if (player.getLevel() < 7)
+            {
+                std::cout << "Le fil de mana casse avant de refermer la blessure. Niveau 7 requis pour l'étudier sans danger." << std::endl;
+                return;
+            }
+            player.unlockActiveSkill("learned_mana_suture", "Suture de mana étudiée");
+            return;
+        }
+
+        if (id == "occult_bramble_grimoire")
+        {
+            if (player.getLevel() < 5)
+            {
+                std::cout << "Les ronces se dessinent, mais elles cassent avant de saisir une cible. Niveau 5 requis." << std::endl;
+                return;
+            }
+            player.unlockActiveSkill("learned_occult_bramble", "Ronces occultes étudiées");
+            return;
+        }
+    }
+
     Material createShopMaterialWithPossibleRareQuality(const ShopItem& item)
     {
         Material material = MaterialCatalog::createById(item.getId(), 1);
@@ -146,11 +281,19 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "greater_defensive_potion"
         || id == "precision_potion"
         || id == "weakening_debuff_potion"
+        || id == "fragility_debuff_potion"
         || id == "antidote_potion"
         || id == "burn_salve_potion"
         || id == "frost_resistance_potion"
         || id == "shock_resistance_potion"
+        || id == "elemental_ward_potion"
         || id == "smoke_escape_vial"
+        || id == "arcane_spark_scroll"
+        || id == "elemental_ward_scroll"
+        || id == "resistance_rift_scroll"
+        || id == "wandering_ember_scroll"
+        || id == "minor_purification_scroll"
+        || id == "crawling_venom_scroll"
         || id == "rusty_sword"
         || id == "training_dagger"
         || id == "training_spear"
@@ -172,6 +315,12 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "class_identity_manual"
         || id == "biome_field_notes"
         || id == "basic_magic_manual"
+        || id == "arcane_binding_grimoire"
+        || id == "elemental_ward_grimoire"
+        || id == "resistance_rift_grimoire"
+        || id == "frost_needle_grimoire"
+        || id == "mana_suture_grimoire"
+        || id == "occult_bramble_grimoire"
         || id == "cracked_bone"
         || id == "arcane_dust"
         || id == "slime_residue"
@@ -213,7 +362,9 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "smoke_knives"
         || id == "slime_color_codex"
         || id == "monster_family_evolution_notes"
-        || id == "weapon_training_notes";
+        || id == "weapon_training_notes"
+        || id == "magic_learning_notes"
+        || id == "elemental_weakness_notes";
 }
 
 bool ShopTransactionSystem::buyItem(
@@ -306,6 +457,10 @@ bool ShopTransactionSystem::buyItem(
     {
         player.getInventory().addConsumable(ConsumableCatalog::createWeakeningDebuffPotion());
     }
+    else if (item.getId() == "fragility_debuff_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createFragilityDebuffPotion());
+    }
     else if (item.getId() == "antidote_potion")
     {
         player.getInventory().addConsumable(ConsumableCatalog::createAntidotePotion());
@@ -322,9 +477,37 @@ bool ShopTransactionSystem::buyItem(
     {
         player.getInventory().addConsumable(ConsumableCatalog::createShockResistancePotion());
     }
+    else if (item.getId() == "elemental_ward_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createElementalWardPotion());
+    }
     else if (item.getId() == "smoke_escape_vial")
     {
         player.getInventory().addConsumable(ConsumableCatalog::createSmokeEscapeVial());
+    }
+    else if (item.getId() == "arcane_spark_scroll")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createArcaneSparkScroll());
+    }
+    else if (item.getId() == "elemental_ward_scroll")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createElementalWardScroll());
+    }
+    else if (item.getId() == "resistance_rift_scroll")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createResistanceRiftScroll());
+    }
+    else if (item.getId() == "wandering_ember_scroll")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createWanderingEmberScroll());
+    }
+    else if (item.getId() == "minor_purification_scroll")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createMinorPurificationScroll());
+    }
+    else if (item.getId() == "crawling_venom_scroll")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createCrawlingVenomScroll());
     }
     else if (item.getId() == "rusty_sword")
     {
@@ -374,7 +557,7 @@ bool ShopTransactionSystem::buyItem(
                       << "." << std::endl;
             if (boughtMaterial.getQuality() == "exceptional")
             {
-                std::cout << "Le marché noir vient de te vendre quelque chose qui ne devrait normalement pas être achetable." << std::endl;
+                std::cout << "Le marché noir te glisse quelque chose qu'aucun vendeur honnête n'aurait posé sur un comptoir." << std::endl;
             }
             else
             {
@@ -404,6 +587,8 @@ bool ShopTransactionSystem::buyItem(
         BestiaryRuntimeProgress::unlockCommonInformation(item.getId());
         std::cout << "Renseignement ajouté au bestiaire pour cette session." << std::endl;
     }
+
+    applyMagicLearningEffect(player, item);
 
     std::cout << std::endl;
 
@@ -471,6 +656,25 @@ bool ShopTransactionSystem::canShopBuyInventoryEntry(
     return false;
 }
 
+int ShopTransactionSystem::getMaxSellQuantityForEntry(
+    const Player& player,
+    ShopType shopType,
+    int index
+)
+{
+    if (!canShopBuyInventoryEntry(player, shopType, index))
+    {
+        return 0;
+    }
+
+    if (isMaterialShop(shopType) && player.getInventory().hasMaterial(index))
+    {
+        return player.getInventory().getMaterial(index).getQuantity();
+    }
+
+    return 1;
+}
+
 int ShopTransactionSystem::getSellPriceForEntry(
     const Player& player,
     ShopType shopType,
@@ -503,6 +707,63 @@ int ShopTransactionSystem::getSellPriceForEntry(
     }
 
     return ShopPriceRules::applySellModifier(basePrice, player.getRaceText(), player.getType());
+}
+
+bool ShopTransactionSystem::sellInventoryEntryQuantity(
+    Player& player,
+    ShopType shopType,
+    int index,
+    int finalSellPrice,
+    int quantity
+)
+{
+    if (quantity <= 0)
+    {
+        std::cout << "Quantité invalide." << std::endl << std::endl;
+        return false;
+    }
+
+    int maxQuantity = getMaxSellQuantityForEntry(player, shopType, index);
+    if (maxQuantity <= 0 || quantity > maxQuantity)
+    {
+        std::cout << "Quantité impossible à vendre." << std::endl;
+        std::cout << "Maximum vendable : " << maxQuantity << "." << std::endl << std::endl;
+        return false;
+    }
+
+    if (quantity == 1)
+    {
+        return sellInventoryEntry(player, shopType, index, finalSellPrice);
+    }
+
+    if (!isMaterialShop(shopType))
+    {
+        std::cout << "Le comptoir refuse les lots pour cet objet. Vente d'un seul exemplaire." << std::endl;
+        return sellInventoryEntry(player, shopType, index, finalSellPrice);
+    }
+
+    Material soldMaterial = player.getInventory().getMaterial(index);
+    std::string soldName = soldMaterial.getName();
+    if (soldMaterial.hasSpecialQuality())
+    {
+        soldName += " [" + soldMaterial.getQualityLabel() + "]";
+    }
+
+    if (!player.getInventory().removeMaterialQuantity(index, quantity))
+    {
+        std::cout << "La vente a échoué. Rien n'a été perdu." << std::endl << std::endl;
+        return false;
+    }
+
+    int totalSellPrice = finalSellPrice * quantity;
+    player.getInventory().earnGold(totalSellPrice);
+
+    std::cout << "Vente réussie : " << soldName << " x" << quantity << "." << std::endl;
+    std::cout << "+" << totalSellPrice << " pièces d'or." << std::endl;
+    std::cout << "Or actuel : " << player.getInventory().getGold() << " pièces." << std::endl;
+    std::cout << std::endl;
+
+    return true;
 }
 
 bool ShopTransactionSystem::sellInventoryEntry(
@@ -610,6 +871,12 @@ void ShopTransactionSystem::displaySellableEntries(
             std::cout << " | Revente : "
                       << getSellPriceForEntry(player, shopType, i)
                       << " or";
+
+            int maxQuantity = getMaxSellQuantityForEntry(player, shopType, i);
+            if (maxQuantity > 1)
+            {
+                std::cout << " | Max : x" << maxQuantity;
+            }
         }
 
         std::cout << std::endl;
@@ -621,7 +888,7 @@ void ShopTransactionSystem::displaySellableEntries(
 void ShopTransactionSystem::displayUnsupportedPurchaseMessage(const ShopItem& item)
 {
     std::cout << item.getName() << " existe dans la boutique," << std::endl;
-    std::cout << "mais son stockage réel n'est pas encore branché dans l'inventaire." << std::endl;
+    std::cout << "mais ton sac ne peut pas le recevoir correctement." << std::endl;
     std::cout << "Aucun or n'a été dépensé." << std::endl;
     std::cout << std::endl;
 }

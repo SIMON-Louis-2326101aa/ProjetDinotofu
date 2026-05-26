@@ -7,12 +7,14 @@
 #define INCLUDE_INTERFACE_MENU_PROGRESSION_STATISTICSMENU_HPP
 
 #include "progression/DifficultyMode.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 class Player;
 
 class StatisticsMenu
 {
 public:
+    static MenuScreen buildHubScreen();
     // EN: open displays the statistics hub and returns to the caller without consuming combat turns.
     // FR: open affiche le menu central des statistiques et revient à l'appelant sans consommer de tour.
     static void open(const Player& player, DifficultyMode difficulty);

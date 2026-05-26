@@ -6,11 +6,15 @@
 #include "combat/reward/CombatRewardSystem.hpp"
 
 #include "progression/DifficultyRules.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 #include <algorithm>
 #include <iostream>
 #include <functional>
 #include <string>
+#include <cctype>
+#include <initializer_list>
 
 namespace
 {
@@ -79,6 +83,60 @@ namespace
         if (monster.isElite()) gold += 1;
         if (monster.isEvolved()) gold += 1;
         return std::max(1, std::min(8, gold));
+    }
+
+
+
+    std::string normalizeRewardText(std::string value)
+    {
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char character) {
+            return static_cast<char>(std::tolower(character));
+        });
+
+        return value;
+    }
+
+    bool rewardTextContainsAny(const Monster& monster, std::initializer_list<const char*> terms)
+    {
+        std::string text = normalizeRewardText(monster.getName() + " " + monster.getType());
+
+        for (const char* term : terms)
+        {
+            if (text.find(term) != std::string::npos)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    int monsterThreatRewardPercent(const Monster& monster)
+    {
+        int percent = 100;
+
+        if (monster.isElite()) percent += 6;
+        if (monster.isEvolved()) percent += 7;
+        if (!monster.areStatsVisible()) percent += 4;
+        if (monster.getHealingPotionCount() > 0) percent += 2;
+        if (monster.getDamagePotionCount() > 0) percent += 2;
+
+        if (rewardTextContainsAny(monster, {"shaman", "chamane", "oracle", "soigneur", "support", "medecin", "apothicaire"}))
+        {
+            percent += 5;
+        }
+
+        if (rewardTextContainsAny(monster, {"colosse", "golem", "armure", "gardien", "massive", "tenace"}))
+        {
+            percent += 3;
+        }
+
+        if (rewardTextContainsAny(monster, {"anomalie", "instable", "chromatique", "prisme", "miroir"}))
+        {
+            percent += 4;
+        }
+
+        return std::clamp(percent, 90, 130);
     }
 
     int difficultySurvivalPercent(DifficultyMode difficulty)
@@ -151,6 +209,16 @@ CombatReward CombatRewardSystem::calculateMonsterReward(const Monster& monster, 
         gold += givesNormalGoldReward(monster.getRace())
             ? 8 + monsterLevel * 4
             : 0;
+    }
+
+    int threatPercent = monsterThreatRewardPercent(monster);
+    experience = std::max(1, experience * threatPercent / 100);
+
+    if (givesNormalGoldReward(monster.getRace()))
+    {
+        // FR: le danger donne surtout de l'XP ; l'or reste beaucoup plus contrôlé.
+        int goldPercent = 100 + (threatPercent - 100) / 4;
+        gold = std::max(0, gold * goldPercent / 100);
     }
 
     return CombatReward(experience, gold);
@@ -430,19 +498,19 @@ void CombatRewardSystem::displayReward(
     const CombatReward& reward
 )
 {
-    std::cout << "========== RÉCOMPENSES ==========" << std::endl;
+    MenuScreen screen("RÉCOMPENSES", "combat.reward.full");
 
     if (reward.getExperience() <= 0 && reward.getGold() <= 0)
     {
-        std::cout << "Aucune récompense récupérée." << std::endl;
+        screen.addLine("Aucune récompense récupérée.");
     }
     else
     {
-        std::cout << "Expérience gagnée : " << reward.getExperience() << std::endl;
-        std::cout << "Or gagné : " << reward.getGold() << " pièces" << std::endl;
+        screen.addLine("Expérience gagnée : " + std::to_string(reward.getExperience()));
+        screen.addLine("Or gagné : " + std::to_string(reward.getGold()) + " pièces");
     }
 
-    std::cout << "=================================" << std::endl;
+    TerminalInterface::renderMenuScreen(screen, false);
     std::cout << std::endl;
 }
 
@@ -451,20 +519,20 @@ void CombatRewardSystem::displayPartialReward(
     const std::string& reason
 )
 {
-    std::cout << "====== RÉCOMPENSES PARTIELLES ======" << std::endl;
-    std::cout << reason << std::endl;
-    std::cout << std::endl;
+    MenuScreen screen("RÉCOMPENSES PARTIELLES", "combat.reward.partial");
+    screen.addLine(reason);
+    screen.addLine("");
 
     if (reward.getExperience() <= 0 && reward.getGold() <= 0)
     {
-        std::cout << "Aucune récompense récupérée." << std::endl;
+        screen.addLine("Aucune récompense récupérée.");
     }
     else
     {
-        std::cout << "Expérience récupérée : " << reward.getExperience() << std::endl;
-        std::cout << "Or récupéré : " << reward.getGold() << " pièces" << std::endl;
+        screen.addLine("Expérience récupérée : " + std::to_string(reward.getExperience()));
+        screen.addLine("Or récupéré : " + std::to_string(reward.getGold()) + " pièces");
     }
 
-    std::cout << "====================================" << std::endl;
+    TerminalInterface::renderMenuScreen(screen, false);
     std::cout << std::endl;
 }

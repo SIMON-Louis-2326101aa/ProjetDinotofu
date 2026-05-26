@@ -39,6 +39,8 @@ private:
     // EN: canUseDamagePotion declares or implements a focused behavior used by this module.
     // FR: canUseDamagePotion déclare ou implémente un comportement précis utilisé par ce module.
     static bool canUseDamagePotion(const Entity& entity);
+    static bool canUseClassSkill(const Entity& entity);
+    static int getClassSkillUseChance(const Entity& entity);
 
     // EN: calculateHpPercentage declares or implements a focused behavior used by this module.
     // FR: calculateHpPercentage déclare ou implémente un comportement précis utilisé par ce module.

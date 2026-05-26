@@ -41,6 +41,15 @@ Entity::Entity()
     shockTurns = 0;
     bleedingTurns = 0;
     bleedingDamage = 0;
+    weakeningTurns = 0;
+    weakeningDamagePenaltyPercent = 0;
+    vulnerabilityTurns = 0;
+    vulnerabilityDamageTakenPercent = 0;
+    elementalWardTurns = 0;
+    elementalWardResistancePercent = 0;
+    regenerationTurns = 0;
+    regenerationPerTurn = 0;
+    classSkillCooldownTurns = 0;
 }
 
 Entity::Entity(
@@ -82,6 +91,15 @@ Entity::Entity(
     shockTurns = 0;
     bleedingTurns = 0;
     bleedingDamage = 0;
+    weakeningTurns = 0;
+    weakeningDamagePenaltyPercent = 0;
+    vulnerabilityTurns = 0;
+    vulnerabilityDamageTakenPercent = 0;
+    elementalWardTurns = 0;
+    elementalWardResistancePercent = 0;
+    regenerationTurns = 0;
+    regenerationPerTurn = 0;
+    classSkillCooldownTurns = 0;
 }
 
 std::string Entity::getName() const
@@ -307,6 +325,39 @@ void Entity::applyBleeding(int turns, int damage)
     bleedingDamage = std::max(bleedingDamage, damage);
 }
 
+void Entity::applyWeakening(int turns, int damagePenaltyPercent)
+{
+    if (turns <= 0 || damagePenaltyPercent <= 0) return;
+    if (damagePenaltyPercent > 60) damagePenaltyPercent = 60;
+    weakeningTurns = std::max(weakeningTurns, turns);
+    weakeningDamagePenaltyPercent = std::max(weakeningDamagePenaltyPercent, damagePenaltyPercent);
+}
+
+void Entity::applyVulnerability(int turns, int damageTakenPercent)
+{
+    if (turns <= 0 || damageTakenPercent <= 0) return;
+    if (damageTakenPercent > 55) damageTakenPercent = 55;
+    vulnerabilityTurns = std::max(vulnerabilityTurns, turns);
+    vulnerabilityDamageTakenPercent = std::max(vulnerabilityDamageTakenPercent, damageTakenPercent);
+}
+
+void Entity::applyElementalWard(int turns, int resistancePercent)
+{
+    if (turns <= 0 || resistancePercent <= 0) return;
+    if (resistancePercent > 45) resistancePercent = 45;
+    elementalWardTurns = std::max(elementalWardTurns, turns);
+    elementalWardResistancePercent = std::max(elementalWardResistancePercent, resistancePercent);
+}
+
+void Entity::applyRegeneration(int turns, int healPerTurn)
+{
+    if (turns <= 0 || healPerTurn <= 0) return;
+    int maxReasonableHeal = std::max(1, maxHp / 4);
+    if (healPerTurn > maxReasonableHeal) healPerTurn = maxReasonableHeal;
+    regenerationTurns = std::max(regenerationTurns, turns);
+    regenerationPerTurn = std::max(regenerationPerTurn, healPerTurn);
+}
+
 bool Entity::cureBurning()
 {
     if (burningTurns <= 0) return false;
@@ -345,15 +396,36 @@ bool Entity::cureBleeding()
     return true;
 }
 
+bool Entity::cureWeakening()
+{
+    if (weakeningTurns <= 0) return false;
+    weakeningTurns = 0;
+    weakeningDamagePenaltyPercent = 0;
+    return true;
+}
+
+bool Entity::cureVulnerability()
+{
+    if (vulnerabilityTurns <= 0) return false;
+    vulnerabilityTurns = 0;
+    vulnerabilityDamageTakenPercent = 0;
+    return true;
+}
+
 bool Entity::hasBurning() const { return burningTurns > 0; }
 bool Entity::hasPoison() const { return poisonTurns > 0; }
 bool Entity::hasFrost() const { return frostTurns > 0; }
 bool Entity::hasShock() const { return shockTurns > 0; }
 bool Entity::hasBleeding() const { return bleedingTurns > 0; }
+bool Entity::hasWeakening() const { return weakeningTurns > 0; }
+bool Entity::hasVulnerability() const { return vulnerabilityTurns > 0; }
+bool Entity::hasElementalWard() const { return elementalWardTurns > 0; }
+bool Entity::hasRegeneration() const { return regenerationTurns > 0; }
+int Entity::getElementalWardResistancePercent() const { return elementalWardResistancePercent; }
 
 bool Entity::hasActiveCombatStatus() const
 {
-    return burningTurns > 0 || poisonTurns > 0 || frostTurns > 0 || shockTurns > 0 || bleedingTurns > 0;
+    return burningTurns > 0 || poisonTurns > 0 || frostTurns > 0 || shockTurns > 0 || bleedingTurns > 0 || weakeningTurns > 0 || vulnerabilityTurns > 0 || elementalWardTurns > 0 || regenerationTurns > 0;
 }
 
 void Entity::processStatusTickAtTurnStart()
@@ -418,12 +490,97 @@ void Entity::processStatusTickAtTurnStart()
         }
     }
 
+    if (weakeningTurns > 0)
+    {
+        std::cout << name << " reste affaibli : ses prochains gestes perdent "
+                  << weakeningDamagePenaltyPercent << "% de force." << std::endl;
+        weakeningTurns--;
+        if (weakeningTurns <= 0)
+        {
+            weakeningDamagePenaltyPercent = 0;
+            std::cout << name << " retrouve assez de stabilité pour frapper normalement." << std::endl;
+        }
+    }
+
+    if (vulnerabilityTurns > 0)
+    {
+        std::cout << name << " garde une faille ouverte : les prochains impacts mordent "
+                  << vulnerabilityDamageTakenPercent << "% plus fort." << std::endl;
+        vulnerabilityTurns--;
+        if (vulnerabilityTurns <= 0)
+        {
+            vulnerabilityDamageTakenPercent = 0;
+            std::cout << "La faille autour de " << name << " se referme." << std::endl;
+        }
+    }
+
+    if (elementalWardTurns > 0)
+    {
+        std::cout << "Un voile élémentaire protège encore " << name << " : les altérations mordent "
+                  << elementalWardResistancePercent << "% moins fort." << std::endl;
+        elementalWardTurns--;
+        if (elementalWardTurns <= 0)
+        {
+            elementalWardResistancePercent = 0;
+            std::cout << "Le voile élémentaire autour de " << name << " se dissipe." << std::endl;
+        }
+    }
+
     if (totalDamage > 0)
     {
         takeDamage(totalDamage);
         std::cout << name << " possède maintenant " << hp << "/" << maxHp << " PV après les statuts." << std::endl;
         std::cout << std::endl;
     }
+
+    if (regenerationTurns > 0 && hp > 0)
+    {
+        int before = hp;
+        heal(regenerationPerTurn);
+        std::cout << "La suture de mana referme une partie des blessures de " << name
+                  << " (+" << (hp - before) << " PV)." << std::endl;
+        regenerationTurns--;
+        if (regenerationTurns <= 0)
+        {
+            regenerationPerTurn = 0;
+            std::cout << "La suture de mana autour de " << name << " se défait." << std::endl;
+        }
+        std::cout << std::endl;
+    }
+}
+
+
+int Entity::getClassSkillCooldownTurns() const
+{
+    return classSkillCooldownTurns;
+}
+
+bool Entity::isClassSkillReady() const
+{
+    return classSkillCooldownTurns <= 0;
+}
+
+void Entity::startClassSkillCooldown(int turns)
+{
+    if (turns < 0)
+    {
+        turns = 0;
+    }
+
+    classSkillCooldownTurns = turns;
+}
+
+void Entity::reduceClassSkillCooldown()
+{
+    if (classSkillCooldownTurns > 0)
+    {
+        classSkillCooldownTurns--;
+    }
+}
+
+void Entity::resetClassSkillCooldown()
+{
+    classSkillCooldownTurns = 0;
 }
 
 // EN: reviveWithHealthPercentage declares or implements a focused behavior used by this module.
@@ -457,6 +614,11 @@ void Entity::takeDamage(int damage)
     if (damage < 0)
     {
         return;
+    }
+
+    if (vulnerabilityTurns > 0 && vulnerabilityDamageTakenPercent > 0 && damage > 0)
+    {
+        damage = std::max(1, damage * (100 + vulnerabilityDamageTakenPercent) / 100);
     }
 
     hp -= damage;
@@ -567,6 +729,10 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         {
             dealtDamage = std::max(1, dealtDamage * frostDamagePercent / 100);
         }
+        if (weakeningTurns > 0 && weakeningDamagePenaltyPercent > 0)
+        {
+            dealtDamage = std::max(1, dealtDamage * (100 - weakeningDamagePenaltyPercent) / 100);
+        }
         return dealtDamage;
     }
 
@@ -575,6 +741,10 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     if (frostDamagePercent < 100)
     {
         criticalResult = std::max(1, criticalResult * frostDamagePercent / 100);
+    }
+    if (weakeningTurns > 0 && weakeningDamagePenaltyPercent > 0)
+    {
+        criticalResult = std::max(1, criticalResult * (100 - weakeningDamagePenaltyPercent) / 100);
     }
     return criticalResult;
 }
@@ -668,5 +838,18 @@ void Entity::displayStats() const
     std::cout << "Dégâts crit : " << criticalDamage << std::endl;
     std::cout << "Potions de soin : " << healingPotionCount << std::endl;
     std::cout << "Potions de dégâts : " << damagePotionCount << std::endl;
+    if (hasActiveCombatStatus())
+    {
+        std::cout << "États actifs :" << std::endl;
+        if (burningTurns > 0) std::cout << "- Brûlure : " << burningTurns << " tour(s)" << std::endl;
+        if (poisonTurns > 0) std::cout << "- Poison : " << poisonTurns << " tour(s)" << std::endl;
+        if (frostTurns > 0) std::cout << "- Froid : " << frostTurns << " tour(s)" << std::endl;
+        if (shockTurns > 0) std::cout << "- Choc : " << shockTurns << " tour(s)" << std::endl;
+        if (bleedingTurns > 0) std::cout << "- Saignement : " << bleedingTurns << " tour(s)" << std::endl;
+        if (weakeningTurns > 0) std::cout << "- Affaiblissement : " << weakeningTurns << " tour(s)" << std::endl;
+        if (vulnerabilityTurns > 0) std::cout << "- Faille ouverte : " << vulnerabilityTurns << " tour(s)" << std::endl;
+        if (elementalWardTurns > 0) std::cout << "- Voile élémentaire : " << elementalWardTurns << " tour(s)" << std::endl;
+        if (regenerationTurns > 0) std::cout << "- Suture de mana : " << regenerationTurns << " tour(s)" << std::endl;
+    }
     std::cout << std::endl;
 }

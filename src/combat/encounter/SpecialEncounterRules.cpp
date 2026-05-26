@@ -130,7 +130,7 @@ std::string SpecialEncounterRules::getIntentText(
     switch (intent)
     {
         case CombatIntent::FriendlyDuel:
-            return "Intention : duel amical brutal. Ça tape fort, mais ce n'est pas censé finir en massacre.";
+            return "Intention : duel amical brutal. Ça tape fort, mais le groupe retient encore les coups mortels.";
 
         case CombatIntent::Training:
             return "Intention : entraînement sérieux. Le groupe veut tester ton niveau sans forcément te tuer.";
@@ -148,11 +148,11 @@ std::string SpecialEncounterRules::getIntentText(
             return "Intention : combat à mort. L'arène ne promet aucun retour.";
 
         case CombatIntent::StoryLocked:
-            return "Intention : rencontre scénarisée. Les règles normales ne suffisent pas à expliquer ce combat.";
+            return "Intention : rencontre liée au récit. Quelque chose dépasse le simple hasard de l'arène.";
 
         case CombatIntent::SeriousFight:
         default:
-            return "Intention : combat sérieux. Normalement, ce n'est pas un combat à mort, sauf si tu les pousses trop loin.";
+            return "Intention : combat sérieux. La mort n'est pas recherchée, sauf si tu pousses le groupe à franchir la limite.";
     }
 }
 

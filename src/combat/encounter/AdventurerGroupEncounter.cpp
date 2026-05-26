@@ -422,7 +422,7 @@ void AdventurerGroupEncounter::announceRelationshipBonus(
     }
     else if (containsName(groupNames, "Mattzelda") && containsName(groupNames, "Louis") && containsName(groupNames, "Trexof"))
     {
-        std::cout << "Relation active : trio de potes. Tanking, improvisation et test d'équilibrage se mélangent." << std::endl;
+        std::cout << "Relation active : trio de potes. Tanking, improvisation et chaos amical se mélangent." << std::endl;
     }
     else if (containsName(groupNames, "Skuro"))
     {

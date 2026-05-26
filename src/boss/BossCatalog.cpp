@@ -9,31 +9,28 @@
 
 namespace
 {
+    std::string getRegistryDisplayNameInternal(int id)
+    {
+        if (id == 1) return "Fitoria";
+        if (id == 2) return "Zelef";
+        if (id == 3) return "Atlas";
+        return "???";
+    }
+
+    std::string getRegistryHintInternal(int id)
+    {
+        if (id == 1) return "Entité de base déjà identifiée : ange lumineux. Le reste reste brouillé.";
+        if (id == 2) return "Entité de base déjà identifiée : démon brutal. Le reste reste brouillé.";
+        if (id == 3) return "Entité de base déjà identifiée : protecteur universel déchu. Le reste reste brouillé.";
+        return "Une variation d'énergie anormale a été détectée, mais son identité refuse encore le registre.";
+    }
+
     // EN: displayBossLine declares or implements a focused behavior used by this module.
     // FR: displayBossLine déclare ou implémente un comportement précis utilisé par ce module.
     void displayBossLine(int id)
     {
-        if (id == 1)
-        {
-            std::cout << "1 : Fitoria" << std::endl;
-            std::cout << "    Entité de base déjà identifiée : ange lumineux. Le reste reste brouillé." << std::endl;
-        }
-        else if (id == 2)
-        {
-            std::cout << "2 : Zelef" << std::endl;
-            std::cout << "    Entité de base déjà identifiée : démon brutal. Le reste reste brouillé." << std::endl;
-        }
-        else if (id == 3)
-        {
-            std::cout << "3 : Atlas" << std::endl;
-            std::cout << "    Entité de base déjà identifiée : protecteur universel déchu. Le reste reste brouillé." << std::endl;
-        }
-        else
-        {
-            std::cout << id << " : ???" << std::endl;
-            std::cout << "    Une variation d'énergie anormale a été détectée, mais son identité refuse encore le registre." << std::endl;
-        }
-
+        std::cout << id << " : " << getRegistryDisplayNameInternal(id) << std::endl;
+        std::cout << "    " << getRegistryHintInternal(id) << std::endl;
         std::cout << std::endl;
     }
 }
@@ -55,6 +52,16 @@ void BossCatalog::displayAvailableBosses(const std::vector<int>& bossIds)
     {
         displayBossLine(id);
     }
+}
+
+std::string BossCatalog::getRegistryDisplayName(int bossId)
+{
+    return getRegistryDisplayNameInternal(bossId);
+}
+
+std::string BossCatalog::getRegistryHint(int bossId)
+{
+    return getRegistryHintInternal(bossId);
 }
 
 // EN: getMaximumBossId declares or implements a focused behavior used by this module.

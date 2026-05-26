@@ -148,7 +148,7 @@ std::string DndAttributes::getChoiceDescription(int choice)
             return "Augmente légèrement les dégâts de base.";
 
         case 2:
-            return "Augmente légèrement le critique. Plus tard : esquive, initiative et fuite.";
+            return "Augmente légèrement le critique. Influence aussi les réflexes, l'initiative et la fuite.";
 
         case 3:
             return "Augmente les PV maximum.";

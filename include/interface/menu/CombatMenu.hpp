@@ -7,12 +7,15 @@
 #define INCLUDE_INTERFACE_MENU_COMBATMENU_HPP
 
 #include "entity/Entity.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 class CombatMenu
 {
 public:
-    // EN: displayTurnMenu declares or implements a focused behavior used by this module.
-    // FR: displayTurnMenu déclare ou implémente un comportement précis utilisé par ce module.
+    static MenuScreen buildTurnScreen(const Entity& entity);
+
+    // EN: displayTurnMenu renders the current terminal turn menu from the shared screen model.
+    // FR: displayTurnMenu affiche le menu de tour terminal depuis le modèle partagé.
     static void displayTurnMenu(const Entity& entity);
     // EN: displayUnavailableOption declares or implements a focused behavior used by this module.
     // FR: displayUnavailableOption déclare ou implémente un comportement précis utilisé par ce module.

@@ -6,7 +6,7 @@
 #include "interface/menu/inventory/InventoryDisplay.hpp"
 
 #include "interface/menu/inventory/InventoryUtils.hpp"
-#include "interface/menu/common/MenuFrame.hpp"
+#include "interface/TerminalInterface.hpp"
 
 #include "item/Inventory.hpp"
 #include "item/consumable/Consumable.hpp"
@@ -16,20 +16,24 @@
 
 // EN: displayMainMenu declares or implements a focused behavior used by this module.
 // FR: displayMainMenu déclare ou implémente un comportement précis utilisé par ce module.
+MenuScreen InventoryDisplay::buildMainScreen()
+{
+    MenuScreen screen("INVENTAIRE", "inventory.main");
+    screen.addOption(1, "Bestiaire (objet spécial)", "Consulter les créatures, boss, matériaux et informations connues.", true, "inventory.bestiary");
+    screen.addOption(2, "Voir tout (affichage simple)", "Résumé court de l'or, des objets et des ressources.", true, "inventory.full_simple");
+    screen.addOption(3, "Armes", "Voir, inspecter, équiper ou réparer les armes.", true, "inventory.weapons");
+    screen.addOption(4, "Armures", "Voir, inspecter, équiper ou réparer les protections.", true, "inventory.armors");
+    screen.addOption(5, "Consommables", "Potions et objets utilisables.", true, "inventory.consumables");
+    screen.addOption(6, "Matériaux / plantes / infos", "Ressources, notes, fragments et composants.", true, "inventory.materials");
+    screen.addOption(7, "Craft / schémas de fabrication", "Fabriquer ou améliorer avec les recettes connues.", true, "inventory.craft");
+    screen.addOption(8, "Consulter mes quêtes", "Ouvrir le journal de quêtes.", true, "inventory.quests");
+    screen.addBackOption("Retour", "inventory.back");
+    return screen;
+}
+
 void InventoryDisplay::displayMainMenu()
 {
-    MenuFrame::title("INVENTAIRE");
-    MenuFrame::option(1, "Bestiaire (objet spécial)");
-    MenuFrame::option(2, "Voir tout (affichage simple)");
-    MenuFrame::option(3, "Armes");
-    MenuFrame::option(4, "Armures");
-    MenuFrame::option(5, "Consommables");
-    MenuFrame::option(6, "Matériaux / plantes / infos");
-    MenuFrame::option(7, "Craft / schémas de fabrication");
-    MenuFrame::option(8, "Consulter mes quêtes");
-    MenuFrame::backOption("Retour");
-    MenuFrame::end();
-    MenuFrame::prompt();
+    TerminalInterface::renderMenuScreen(buildMainScreen());
 }
 
 // EN: displaySimpleFullInventory declares or implements a focused behavior used by this module.
@@ -110,90 +114,95 @@ void InventoryDisplay::displaySimpleFullInventory(const Player& player)
     std::cout << std::endl;
 }
 
-// EN: displaySelectedWeapon declares or implements a focused behavior used by this module.
-// FR: displaySelectedWeapon déclare ou implémente un comportement précis utilisé par ce module.
+MenuScreen InventoryDisplay::buildSelectedWeaponScreen(const Weapon& weapon)
+{
+    MenuScreen screen("ARME SÉLECTIONNÉE", "inventory.weapon.selected");
+    screen.addLine("Arme : " + weapon.getName());
+    screen.addBackOption("Retour", "inventory.weapon.back");
+    screen.addOption(1, "Inspecter", "Voir la description et les détails de l'arme.", true, "inventory.weapon.inspect");
+    screen.addOption(2, "Équiper", "Équiper cette arme maintenant.", true, "inventory.weapon.equip");
+    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.weapon.bestiary");
+    screen.addOption(4, "Réparer", "Utiliser un kit ou des matériaux compatibles.", true, "inventory.weapon.repair");
+    return screen;
+}
+
 void InventoryDisplay::displaySelectedWeapon(const Weapon& weapon)
 {
-    std::cout << "========== ARME SÉLECTIONNÉE ==========" << std::endl;
-    std::cout << "Arme : " << weapon.getName() << std::endl;
-    std::cout << "=======================================" << std::endl;
-    std::cout << "0 : Retour" << std::endl;
-    std::cout << "1 : Inspecter" << std::endl;
-    std::cout << "2 : Équiper" << std::endl;
-    std::cout << "3 : Voir dans le bestiaire" << std::endl;
-    std::cout << "4 : Réparer" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
+    TerminalInterface::renderMenuScreen(buildSelectedWeaponScreen(weapon));
 }
 
-// EN: displaySelectedArmor declares or implements a focused behavior used by this module.
-// FR: displaySelectedArmor déclare ou implémente un comportement précis utilisé par ce module.
+MenuScreen InventoryDisplay::buildSelectedArmorScreen(const Armor& armor)
+{
+    MenuScreen screen("ARMURE SÉLECTIONNÉE", "inventory.armor.selected");
+    screen.addLine("Armure : " + armor.getName());
+    screen.addBackOption("Retour", "inventory.armor.back");
+    screen.addOption(1, "Inspecter", "Voir la description et les détails de l'armure.", true, "inventory.armor.inspect");
+    screen.addOption(2, "Équiper", "Équiper cette protection maintenant.", true, "inventory.armor.equip");
+    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.armor.bestiary");
+    screen.addOption(4, "Réparer", "Utiliser un kit ou des matériaux compatibles.", true, "inventory.armor.repair");
+    return screen;
+}
+
 void InventoryDisplay::displaySelectedArmor(const Armor& armor)
 {
-    std::cout << "========== ARMURE SÉLECTIONNÉE ==========" << std::endl;
-    std::cout << "Armure : " << armor.getName() << std::endl;
-    std::cout << "=========================================" << std::endl;
-    std::cout << "0 : Retour" << std::endl;
-    std::cout << "1 : Inspecter" << std::endl;
-    std::cout << "2 : Équiper" << std::endl;
-    std::cout << "3 : Voir dans le bestiaire" << std::endl;
-    std::cout << "4 : Réparer" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
+    TerminalInterface::renderMenuScreen(buildSelectedArmorScreen(armor));
 }
 
-// EN: displaySelectedConsumable declares or implements a focused behavior used by this module.
-// FR: displaySelectedConsumable déclare ou implémente un comportement précis utilisé par ce module.
-void InventoryDisplay::displaySelectedConsumable(const Consumable& consumable)
+MenuScreen InventoryDisplay::buildSelectedConsumableScreen(const Consumable& consumable)
 {
-    std::cout << "========== CONSOMMABLE SÉLECTIONNÉ ==========" << std::endl;
-    std::cout << "Consommable : " << consumable.getName() << std::endl;
-    std::cout << "Type : " << InventoryUtils::consumableTypeToText(consumable.getType()) << std::endl;
-    std::cout << "Puissance : " << consumable.getPower() << std::endl;
-    std::cout << "=============================================" << std::endl;
-    std::cout << "0 : Retour" << std::endl;
-    std::cout << "1 : Inspecter" << std::endl;
+    MenuScreen screen("CONSOMMABLE SÉLECTIONNÉ", "inventory.consumable.selected");
+    screen.addLine("Consommable : " + consumable.getName());
+    screen.addLine("Type : " + InventoryUtils::consumableTypeToText(consumable.getType()));
+    screen.addLine("Puissance : " + std::to_string(consumable.getPower()));
+    screen.addBackOption("Retour", "inventory.consumable.back");
+    screen.addOption(1, "Inspecter", "Lire la description complète.", true, "inventory.consumable.inspect");
 
     if (consumable.getType() == ConsumableType::Healing)
     {
-        std::cout << "2 : Utiliser" << std::endl;
+        screen.addOption(2, "Utiliser", "Boire cette potion de soin hors combat.", true, "inventory.consumable.use");
     }
     else
     {
-        std::cout << "2 : Utiliser (à faire depuis le menu Potions en combat)" << std::endl;
+        screen.addOption(2, "Utiliser depuis le menu Potions en combat", "Ce type demande une situation de combat.", true, "inventory.consumable.use_locked");
     }
 
-    std::cout << "3 : Voir dans le bestiaire" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
+    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.consumable.bestiary");
+    return screen;
 }
 
+void InventoryDisplay::displaySelectedConsumable(const Consumable& consumable)
+{
+    TerminalInterface::renderMenuScreen(buildSelectedConsumableScreen(consumable));
+}
 
-// EN: displaySelectedMaterial declares or implements a focused behavior used by this module.
-// FR: displaySelectedMaterial déclare ou implémente un comportement précis utilisé par ce module.
+MenuScreen InventoryDisplay::buildSelectedMaterialScreen(const Material& material)
+{
+    MenuScreen screen("ENTRÉE SÉLECTIONNÉE", "inventory.material.selected");
+    screen.addLine("Nom : " + material.getName());
+    screen.addLine("Catégorie : " + material.getCategory());
+    screen.addLine("Quantité : " + std::to_string(material.getQuantity()));
+    screen.addBackOption("Retour", "inventory.material.back");
+    screen.addOption(1, "Inspecter", "Lire la description complète.", true, "inventory.material.inspect");
+    screen.addOption(2, "Voir dans le bestiaire", "Consulter la connaissance liée à cette ressource.", true, "inventory.material.bestiary");
+    screen.addOption(3, "Voir les usages connus", "Recettes, réparations ou pistes déjà découvertes.", true, "inventory.material.uses");
+    screen.addOption(4, "Lire / utiliser", "Exploiter cette entrée si elle contient une note ou un usage direct.", true, "inventory.material.use");
+    return screen;
+}
+
 void InventoryDisplay::displaySelectedMaterial(const Material& material)
 {
-    std::cout << "========== ENTRÉE SÉLECTIONNÉE ==========" << std::endl;
-    std::cout << "Nom : " << material.getName() << std::endl;
-    std::cout << "Catégorie : " << material.getCategory() << std::endl;
-    std::cout << "Quantité : " << material.getQuantity() << std::endl;
-    std::cout << "=========================================" << std::endl;
-    std::cout << "0 : Retour" << std::endl;
-    std::cout << "1 : Inspecter" << std::endl;
-    std::cout << "2 : Voir dans le bestiaire" << std::endl;
-    std::cout << "3 : Voir l'utilité prévue" << std::endl;
-    std::cout << "4 : Lire / utiliser" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
+    TerminalInterface::renderMenuScreen(buildSelectedMaterialScreen(material));
 }
 
-// EN: displayUnavailableMaterials declares or implements a focused behavior used by this module.
-// FR: displayUnavailableMaterials déclare ou implémente un comportement précis utilisé par ce module.
+MenuScreen InventoryDisplay::buildUnavailableMaterialsScreen()
+{
+    MenuScreen screen("MATÉRIAUX", "inventory.materials.empty");
+    screen.addLine("Aucun matériau exploitable dans cette section.");
+    screen.addLine("Quand tu en possèdes, ils peuvent servir à réparer, améliorer ou fabriquer de l'équipement.");
+    return screen;
+}
+
 void InventoryDisplay::displayUnavailableMaterials()
 {
-    std::cout << "========== MATÉRIAUX ==========" << std::endl;
-    std::cout << "Les matériaux ne sont pas encore disponibles." << std::endl;
-    std::cout << "Plus tard, ils serviront à réparer, améliorer et fabriquer de l'équipement." << std::endl;
-    std::cout << "===============================" << std::endl;
-    std::cout << std::endl;
+    TerminalInterface::renderMenuScreen(buildUnavailableMaterialsScreen(), false);
 }

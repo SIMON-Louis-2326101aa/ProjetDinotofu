@@ -1,6 +1,6 @@
 {
     "title": "Dinotofu class catalog",
-    "note": "Design roadmap. The C++ ClassCatalog is currently the source used by the game.",
+    "note": "Class design archive. The C++ ClassCatalog is currently the source used by the game.",
     "categories": [
         {
             "id": "melee",

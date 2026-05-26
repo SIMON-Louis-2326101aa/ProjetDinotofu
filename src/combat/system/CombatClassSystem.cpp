@@ -8,6 +8,24 @@
 #include <algorithm>
 #include <cctype>
 #include <string>
+#include <initializer_list>
+
+
+namespace
+{
+    bool containsAny(const std::string& value, std::initializer_list<const char*> terms)
+    {
+        for (const char* term : terms)
+        {
+            if (value.find(term) != std::string::npos)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
 
 std::string CombatClassSystem::normalizeClassText(const std::string& classText)
 {
@@ -220,4 +238,79 @@ int CombatClassSystem::getOutgoingFlatBonus(const Entity& entity)
     }
 
     return 0;
+}
+
+
+bool CombatClassSystem::hasWeaponAffinity(
+    const Entity& entity,
+    WeaponType weaponType,
+    const std::string& weaponName
+)
+{
+    const std::string className = normalizeClassText(entity.getType());
+    const std::string weapon = normalizeClassText(weaponName);
+
+    switch (weaponType)
+    {
+        case WeaponType::Sword:
+            return containsAny(className, {"épéiste", "epeiste", "chevalier", "guerrier", "duelliste", "paladin", "templier", "mage-lame"});
+        case WeaponType::Dagger:
+            return containsAny(className, {"assassin", "ombrelame", "voleur", "lanceur de dagues", "dague"});
+        case WeaponType::Spear:
+            return containsAny(className, {"lancier", "garde", "chevalier", "sentinelle"});
+        case WeaponType::Bow:
+            return containsAny(className, {"archer", "rôdeur", "rodeur", "chasseur", "tireur", "arbal"})
+                || weapon.find("arbal") != std::string::npos;
+        case WeaponType::Staff:
+            return containsAny(className, {"mage", "sorcier", "arcaniste", "clerc", "prêtre", "pretre", "druide", "invoc", "nécro", "necro", "occultiste"});
+        case WeaponType::Axe:
+        case WeaponType::Hammer:
+            return containsAny(className, {"berserker", "barbare", "briseur", "colosse", "forgeron", "gardien", "orc"});
+        case WeaponType::BareHands:
+            return containsAny(className, {"moine", "pugiliste", "bagarreur"});
+        default:
+            return false;
+    }
+}
+
+int CombatClassSystem::getWeaponAffinityDamageBonus(
+    const Entity& entity,
+    WeaponType weaponType,
+    const std::string& weaponName,
+    int currentDamage
+)
+{
+    if (currentDamage <= 0 || !hasWeaponAffinity(entity, weaponType, weaponName))
+    {
+        return 0;
+    }
+
+    // EN: Very small mastery bonus: enough to reward coherent equipment, not enough to force a meta.
+    // FR: Très léger bonus de maîtrise : il récompense l'équipement cohérent sans imposer une méta.
+    return std::max(1, currentDamage * 3 / 100);
+}
+
+std::string CombatClassSystem::getWeaponAffinityLabel(
+    const Entity& entity,
+    WeaponType weaponType,
+    const std::string& weaponName
+)
+{
+    if (!hasWeaponAffinity(entity, weaponType, weaponName))
+    {
+        return "";
+    }
+
+    switch (weaponType)
+    {
+        case WeaponType::Sword: return "la classe sait manier ce type de lame";
+        case WeaponType::Dagger: return "la classe exploite bien les armes courtes";
+        case WeaponType::Spear: return "la classe profite naturellement de l'allonge";
+        case WeaponType::Bow: return "la classe sait garder une vraie ligne de tir";
+        case WeaponType::Staff: return "la classe canalise mieux avec ce support";
+        case WeaponType::Axe:
+        case WeaponType::Hammer: return "la classe transforme mieux la force brute";
+        case WeaponType::BareHands: return "la classe sait se battre sans arme lourde";
+        default: return "";
+    }
 }

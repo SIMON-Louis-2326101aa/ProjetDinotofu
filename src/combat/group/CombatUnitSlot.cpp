@@ -135,3 +135,13 @@ Summon* CombatUnitSlot::getSummon()
 {
     return summon;
 }
+
+const Entity* CombatUnitSlot::getEntity() const
+{
+    return entity;
+}
+
+const Summon* CombatUnitSlot::getSummon() const
+{
+    return summon;
+}

@@ -14,6 +14,7 @@ struct VersionNumber
 enum class VersionCompatibilityImpact
 {
     None,
+    PatchUpdate,
     MidUpdate,
     RecreateRecommended
 };

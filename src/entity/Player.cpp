@@ -13,6 +13,7 @@
 #include "progression/DifficultyRules.hpp"
 #include "progression/Level.hpp"
 #include "character/RaceCatalog.hpp"
+#include "combat/system/CombatClassSystem.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -89,26 +90,48 @@ namespace
         if (skillId == "arcane_impulse") return "Élan arcanique";
         if (skillId == "prepared_volley") return "Salve préparée";
         if (skillId == "tracking_mark") return "Marque de pisteur";
+        if (skillId == "blade_discipline") return "Discipline de lame";
+        if (skillId == "splitting_blow") return "Frappe fendue";
+        if (skillId == "armor_crack") return "Fracasse-garde";
+        if (skillId == "reach_control") return "Contrôle d'allonge";
+        if (skillId == "learned_arcane_mark") return "Marque élémentaire étudiée";
+        if (skillId == "learned_arcane_binding") return "Entrave arcanique étudiée";
+        if (skillId == "learned_elemental_ward") return "Voile élémentaire étudié";
+        if (skillId == "learned_resistance_rift") return "Faille de résistance étudiée";
+        if (skillId == "learned_frost_needle") return "Aiguille de givre étudiée";
+        if (skillId == "learned_mana_suture") return "Suture de mana étudiée";
+        if (skillId == "learned_occult_bramble") return "Ronces occultes étudiées";
         return skillId;
     }
 
     std::string playerSkillDescription(const std::string& skillId)
     {
-        if (skillId == "night_vision") return "Passif racial : les zones sombres devraient devenir plus lisibles quand l'exploration avancée l'utilisera.";
-        if (skillId == "survival_breath") return "Passif : petit instinct de survie débloqué par l'expérience. Les effets chiffrés seront branchés avec le système de compétences complet.";
+        if (skillId == "night_vision") return "Passif racial : tes yeux s'habituent mieux aux zones sombres et aux détails cachés.";
+        if (skillId == "survival_breath") return "Passif : petit instinct de survie débloqué par l'expérience. Ton corps apprend à encaisser l'instant où tout bascule.";
         if (skillId == "ranger_eye") return "Passif : meilleure lecture des ouvertures à distance, gagné en utilisant régulièrement un arc.";
-        if (skillId == "steady_guard") return "Passif de chevalier : posture plus stable, surtout utile quand les bonus de défense seront finalisés.";
+        if (skillId == "steady_guard") return "Passif de chevalier : posture plus stable lorsque tu tiens ta ligne.";
         if (skillId == "living_rampart") return "Passif de colosse : présence défensive plus lourde.";
         if (skillId == "sure_hand") return "Passif d'artisan/forgeron : meilleure maîtrise des réparations et gestes précis.";
         if (skillId == "careful_dosage") return "Passif d'alchimiste : meilleure lecture des potions et catalyseurs.";
-        if (skillId == "chain_execution") return "Actif, recharge prévue 3 tours : après plusieurs kills à la dague, permettrait d'enchaîner une seconde frappe si une cible tombe.";
-        if (skillId == "reflex_counter") return "Actif, recharge prévue 4 tours : contre brutal appris en combattant aux mains nues.";
-        if (skillId == "cautious_channeling") return "Actif, recharge prévue 3 tours : canalisation plus sûre après usage répété du bâton.";
-        if (skillId == "shadow_step") return "Actif d'assassin, recharge prévue 4 tours : déplacement court pour mieux choisir l'ouverture.";
-        if (skillId == "arcane_impulse") return "Actif de mage, recharge prévue 4 tours : poussée magique courte.";
-        if (skillId == "prepared_volley") return "Actif d'artificier, recharge prévue 5 tours : salve préparée de projectiles/outils.";
-        if (skillId == "tracking_mark") return "Actif de rôdeur, recharge prévue 3 tours : marque une cible après lecture des traces.";
-        return "Compétence préparée pour le futur système actif/passif.";
+        if (skillId == "chain_execution") return "Actif, recharge 3 tours : après plusieurs exécutions à la dague, tu cherches l'ouverture pour enchaîner si une cible tombe.";
+        if (skillId == "reflex_counter") return "Actif, recharge 4 tours : contre brutal appris en combattant aux mains nues.";
+        if (skillId == "cautious_channeling") return "Actif, recharge 3 tours : canalisation plus sûre après usage répété du bâton.";
+        if (skillId == "shadow_step") return "Actif d'assassin, recharge 4 tours : déplacement court pour mieux choisir l'ouverture.";
+        if (skillId == "arcane_impulse") return "Actif de mage, recharge 4 tours : poussée magique courte.";
+        if (skillId == "prepared_volley") return "Actif d'artificier, recharge 5 tours : salve préparée de projectiles et outils.";
+        if (skillId == "tracking_mark") return "Actif de rôdeur, recharge 3 tours : marque une cible après lecture des traces.";
+        if (skillId == "blade_discipline") return "Passif : habitude des lignes propres à l'épée, gagnée à force de combattre avec une lame.";
+        if (skillId == "splitting_blow") return "Actif, recharge 4 tours : coup ample appris en ouvrant les défenses avec une hache.";
+        if (skillId == "armor_crack") return "Actif, recharge 4 tours : frappe lourde qui cherche les points faibles d'une garde.";
+        if (skillId == "reach_control") return "Passif : meilleure lecture des distances, gagnée en maniant régulièrement une lance.";
+        if (skillId == "learned_arcane_mark") return "Sort appris par étude : marque élémentaire simple, réservée aux vrais canalisateurs.";
+        if (skillId == "learned_arcane_binding") return "Sort appris par grimoire : entrave la cible sans exister forcément en parchemin commun.";
+        if (skillId == "learned_elemental_ward") return "Sort appris par grimoire : voile défensif utilisable avec un catalyseur correct.";
+        if (skillId == "learned_resistance_rift") return "Sort rare appris par grimoire : ouvre une faille de résistance après préparation.";
+        if (skillId == "learned_frost_needle") return "Sort de bibliothèque sans parchemin courant : givre précis, fragile et exigeant.";
+        if (skillId == "learned_mana_suture") return "Sort appris par grimoire, sans parchemin courant : referme lentement les blessures pendant quelques tours.";
+        if (skillId == "learned_occult_bramble") return "Sort appris par grimoire, sans parchemin courant : entrave la cible avec ronces, poison et fatigue magique.";
+        return "Compétence instable : son usage reste difficile à canaliser.";
     }
 }
 
@@ -126,6 +149,10 @@ Player::Player() : Entity()
     bowKillProgress = 0;
     bareHandKillProgress = 0;
     staffKillProgress = 0;
+    swordKillProgress = 0;
+    axeKillProgress = 0;
+    hammerKillProgress = 0;
+    spearKillProgress = 0;
 
     combatsStarted = 0;
     victories = 0;
@@ -212,6 +239,10 @@ Player::Player(
     bowKillProgress = 0;
     bareHandKillProgress = 0;
     staffKillProgress = 0;
+    swordKillProgress = 0;
+    axeKillProgress = 0;
+    hammerKillProgress = 0;
+    spearKillProgress = 0;
 
     combatsStarted = 0;
     victories = 0;
@@ -674,6 +705,26 @@ int Player::getStaffKillProgress() const
     return staffKillProgress;
 }
 
+int Player::getSwordKillProgress() const
+{
+    return swordKillProgress;
+}
+
+int Player::getAxeKillProgress() const
+{
+    return axeKillProgress;
+}
+
+int Player::getHammerKillProgress() const
+{
+    return hammerKillProgress;
+}
+
+int Player::getSpearKillProgress() const
+{
+    return spearKillProgress;
+}
+
 // EN: hasPassiveSkill declares or implements a focused behavior used by this module.
 // FR: hasPassiveSkill déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::hasPassiveSkill(const std::string& skillId) const
@@ -715,7 +766,7 @@ bool Player::unlockActiveSkill(const std::string& skillId, const std::string& sk
 
     unlockedActiveSkills.push_back(skillId);
     std::cout << "Nouvelle compétence active : " << skillName << std::endl;
-    std::cout << "Elle aura un délai de réutilisation quand le menu de compétences sera branché en combat." << std::endl;
+    std::cout << "Son rythme naturel apparaîtra quand tu sauras mieux la canaliser en combat." << std::endl;
     std::cout << std::endl;
     return true;
 }
@@ -761,6 +812,38 @@ void Player::recordGameplaySkillProgressForKills(int amount)
         if (staffKillProgress >= 6)
         {
             unlockActiveSkill("cautious_channeling", "Canalisation prudente");
+        }
+    }
+    else if (weapon.getType() == WeaponType::Sword)
+    {
+        swordKillProgress += amount;
+        if (swordKillProgress >= 7)
+        {
+            unlockPassiveSkill("blade_discipline", "Discipline de lame");
+        }
+    }
+    else if (weapon.getType() == WeaponType::Axe)
+    {
+        axeKillProgress += amount;
+        if (axeKillProgress >= 7)
+        {
+            unlockActiveSkill("splitting_blow", "Frappe fendue");
+        }
+    }
+    else if (weapon.getType() == WeaponType::Hammer)
+    {
+        hammerKillProgress += amount;
+        if (hammerKillProgress >= 7)
+        {
+            unlockActiveSkill("armor_crack", "Fracasse-garde");
+        }
+    }
+    else if (weapon.getType() == WeaponType::Spear)
+    {
+        spearKillProgress += amount;
+        if (spearKillProgress >= 7)
+        {
+            unlockPassiveSkill("reach_control", "Contrôle d'allonge");
         }
     }
 }
@@ -826,7 +909,11 @@ void Player::setLoadedSkillState(
     int daggerProgress,
     int bowProgress,
     int bareHandProgress,
-    int staffProgress
+    int staffProgress,
+    int swordProgress,
+    int axeProgress,
+    int hammerProgress,
+    int spearProgress
 )
 {
     unlockedPassiveSkills = passiveSkills;
@@ -835,6 +922,10 @@ void Player::setLoadedSkillState(
     bowKillProgress = bowProgress < 0 ? 0 : bowProgress;
     bareHandKillProgress = bareHandProgress < 0 ? 0 : bareHandProgress;
     staffKillProgress = staffProgress < 0 ? 0 : staffProgress;
+    swordKillProgress = swordProgress < 0 ? 0 : swordProgress;
+    axeKillProgress = axeProgress < 0 ? 0 : axeProgress;
+    hammerKillProgress = hammerProgress < 0 ? 0 : hammerProgress;
+    spearKillProgress = spearProgress < 0 ? 0 : spearProgress;
 }
 
 // EN: displaySkillProgress declares or implements a focused behavior used by this module.
@@ -876,6 +967,10 @@ void Player::displaySkillProgress() const
     std::cout << "- Kills à l'arc vers Œil de rôdeur : " << bowKillProgress << "/8" << std::endl;
     std::cout << "- Kills aux mains nues vers Contre réflexe : " << bareHandKillProgress << "/10" << std::endl;
     std::cout << "- Kills au bâton vers Canalisation prudente : " << staffKillProgress << "/6" << std::endl;
+    std::cout << "- Kills à l'épée vers Discipline de lame : " << swordKillProgress << "/7" << std::endl;
+    std::cout << "- Kills à la hache vers Frappe fendue : " << axeKillProgress << "/7" << std::endl;
+    std::cout << "- Kills au marteau vers Fracasse-garde : " << hammerKillProgress << "/7" << std::endl;
+    std::cout << "- Kills à la lance vers Contrôle d'allonge : " << spearKillProgress << "/7" << std::endl;
     std::cout << "=================================" << std::endl;
     std::cout << std::endl;
 }
@@ -1505,6 +1600,7 @@ void Player::setLoadedStatistics(
 void Player::recordCombatStarted()
 {
     combatsStarted++;
+    resetClassSkillCooldown();
     recordCurrentEquipmentUsage();
 }
 
@@ -2344,7 +2440,7 @@ void Player::initializeStarterInventory(DifficultyMode difficulty)
             std::cout << "Munitions de départ : flèches d'entraînement x18." << std::endl;
         }
 
-        std::cout << "Les recettes de munitions et munitions spéciales seront apprises plus tard par exploration, level up ou expérimentation." << std::endl;
+        std::cout << "Les recettes de munitions spéciales se découvrent par exploration, expérience et expérimentation." << std::endl;
     }
 
     Weapon* starterWeapon = inventory.getMutableWeapon(1);
@@ -2616,7 +2712,7 @@ void Player::levelUp()
 
     std::cout << name << " monte au niveau " << level << " !" << std::endl;
     std::cout << "Ses blessures se referment, et sa puissance augmente." << std::endl;
-    std::cout << "Les attributs avancés sont préparés, mais pas encore actifs dans cette version." << std::endl;
+    std::cout << "Les attributs avancés dorment encore dans les registres du personnage." << std::endl;
     std::cout << std::endl;
 
     refreshLevelAndIdentitySkills();
@@ -2938,6 +3034,32 @@ void Player::displaySimpleEquipment() const
         }
 
         std::cout << std::endl;
+
+        if (!weapon.isBroken() && !hasBossEquipmentSeal())
+        {
+            std::string affinityLabel = CombatClassSystem::getWeaponAffinityLabel(
+                *this,
+                weapon.getType(),
+                weapon.getName()
+            );
+
+            if (!affinityLabel.empty())
+            {
+                std::cout << "Affinité arme/classe : active, " << affinityLabel << "." << std::endl;
+            }
+            else
+            {
+                std::cout << "Affinité arme/classe : aucune maîtrise particulière avec cette arme." << std::endl;
+            }
+        }
+        else if (weapon.isBroken())
+        {
+            std::cout << "Affinité arme/classe : inactive, l'arme est cassée." << std::endl;
+        }
+        else if (hasBossEquipmentSeal())
+        {
+            std::cout << "Affinité arme/classe : bloquée par le sceau de boss." << std::endl;
+        }
     }
     else
     {
@@ -3005,10 +3127,32 @@ void Player::displayDetailedEquipment() const
         if (weapon.isBroken())
         {
             std::cout << "État : Cassée, ses bonus ne s'appliquent plus." << std::endl;
+            std::cout << "Affinité arme/classe : inactive, l'arme est cassée." << std::endl;
+        }
+        else if (hasBossEquipmentSeal())
+        {
+            std::cout << "État : utilisable, mais le sceau de boss bloque ses bonus." << std::endl;
+            std::cout << "Affinité arme/classe : bloquée par le sceau de boss." << std::endl;
         }
         else
         {
             std::cout << "État : Utilisable" << std::endl;
+
+            std::string affinityLabel = CombatClassSystem::getWeaponAffinityLabel(
+                *this,
+                weapon.getType(),
+                weapon.getName()
+            );
+
+            if (!affinityLabel.empty())
+            {
+                std::cout << "Affinité arme/classe : active, " << affinityLabel << "." << std::endl;
+                std::cout << "Effet : très léger bonus de dégâts en combat." << std::endl;
+            }
+            else
+            {
+                std::cout << "Affinité arme/classe : aucune maîtrise particulière avec cette arme." << std::endl;
+            }
         }
     }
     else

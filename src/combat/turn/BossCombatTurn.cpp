@@ -364,7 +364,7 @@ namespace
             boss.setSpecialEffect(warGauge);
 
             std::cout << "L'avatar de Boros sourit, pas par plaisir : par reconnaissance." << std::endl;
-            std::cout << "Le combat devient enfin un vrai champ de bataille." << std::endl;
+            std::cout << "Le combat se transforme enfin en champ de bataille complet." << std::endl;
             std::cout << "Jauge de guerre : " << warGauge << std::endl;
             std::cout << std::endl;
         }

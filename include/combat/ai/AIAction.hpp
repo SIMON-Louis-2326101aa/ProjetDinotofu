@@ -9,6 +9,7 @@
 enum class AIAction
 {
     Attack,
+    ClassSkill,
     HealingPotion,
     DamagePotion,
     Ultimate,

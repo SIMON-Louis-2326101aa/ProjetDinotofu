@@ -34,11 +34,19 @@ public:
     static Consumable createGreaterDefensivePotion();
     static Consumable createPrecisionPotion();
     static Consumable createWeakeningDebuffPotion();
+    static Consumable createFragilityDebuffPotion();
     static Consumable createAntidotePotion();
     static Consumable createBurnSalvePotion();
     static Consumable createFrostResistancePotion();
     static Consumable createShockResistancePotion();
+    static Consumable createElementalWardPotion();
     static Consumable createSmokeEscapeVial();
+    static Consumable createArcaneSparkScroll();
+    static Consumable createElementalWardScroll();
+    static Consumable createResistanceRiftScroll();
+    static Consumable createWanderingEmberScroll();
+    static Consumable createMinorPurificationScroll();
+    static Consumable createCrawlingVenomScroll();
 };
 
 #endif

@@ -32,6 +32,14 @@ public:
         int finalSellPrice
     );
 
+    static bool sellInventoryEntryQuantity(
+        Player& player,
+        ShopType shopType,
+        int index,
+        int finalSellPrice,
+        int quantity
+    );
+
     static int getSellPriceForEntry(
         const Player& player,
         ShopType shopType,
@@ -47,6 +55,12 @@ public:
     static int getSellableEntryCount(
         const Player& player,
         ShopType shopType
+    );
+
+    static int getMaxSellQuantityForEntry(
+        const Player& player,
+        ShopType shopType,
+        int index
     );
 
     static void displaySellableEntries(

@@ -19,6 +19,11 @@
 #include "interface/menu/progression/AttributeMenu.hpp"
 #include "interface/menu/progression/StatisticsMenu.hpp"
 #include "interface/menu/quest/QuestMenu.hpp"
+#include "interface/menu/InventoryMenu.hpp"
+#include "interface/menu/PostCombatMenu.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/model/MenuScreen.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 #include "cheat/CheatManager.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "progression/death/DeathPenaltySystem.hpp"
@@ -150,6 +155,315 @@ namespace
                   << " : " << estimatePlayerTradeValue(second) << " pièces." << std::endl;
         std::cout << std::endl;
     }
+
+    int askExchangeWeaponIndex(const Player& giver)
+    {
+        const std::vector<Weapon>& weapons = giver.getInventory().getWeapons();
+
+        if (weapons.empty())
+        {
+            MenuScreen screen("ARME À TRANSFÉRER", "exchange.weapon.empty");
+            screen.addLine(giver.getName() + " n'a aucune arme transférable dans son sac.");
+            TerminalInterface::renderMenuScreen(screen, false);
+            return -1;
+        }
+
+        constexpr std::size_t itemsPerPage = 8;
+        std::size_t page = 0;
+
+        while (true)
+        {
+            const std::size_t totalPages = PagedMenu::pageCount(weapons.size(), itemsPerPage);
+            const std::size_t first = PagedMenu::firstIndex(page, itemsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(weapons.size(), page, itemsPerPage);
+
+            MenuScreen screen("ARME À TRANSFÉRER", "exchange.weapon.select");
+            screen.addSubtitle("Source : " + giver.getName());
+            screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, weapons.size()));
+
+            for (std::size_t i = first; i < last; ++i)
+            {
+                const Weapon& weapon = weapons[i];
+                const bool equipped = static_cast<int>(i) == giver.getEquippedWeaponIndex();
+                std::ostringstream hint;
+                hint << "Dégâts +" << weapon.getMinDamageBonus() << "/+" << weapon.getMaxDamageBonus()
+                     << " | Critique +" << weapon.getCriticalBonus();
+
+                if (weapon.isIndestructible())
+                {
+                    hint << " | Durabilité : indestructible";
+                }
+                else
+                {
+                    hint << " | Durabilité " << weapon.getDurability() << "/" << weapon.getMaxDurability();
+                }
+
+                if (equipped)
+                {
+                    hint << " | équipée";
+                }
+
+                screen.addOption(
+                    static_cast<int>(i - first + 1),
+                    weapon.getName(),
+                    hint.str(),
+                    !equipped,
+                    "exchange.weapon.select"
+                );
+            }
+
+            PagedMenu::addNavigationOptions(screen, page, totalPages);
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une arme affichée.");
+
+            if (choice == 0)
+            {
+                return -1;
+            }
+
+            if (choice == 98 && page > 0)
+            {
+                --page;
+                Console::clear();
+                continue;
+            }
+
+            if (choice == 99 && page + 1 < totalPages)
+            {
+                ++page;
+                Console::clear();
+                continue;
+            }
+
+            const int visibleCount = static_cast<int>(last - first);
+            if (choice >= 1 && choice <= visibleCount)
+            {
+                return static_cast<int>(first + static_cast<std::size_t>(choice - 1));
+            }
+        }
+    }
+
+    int askExchangeArmorIndex(const Player& giver)
+    {
+        const std::vector<Armor>& armors = giver.getInventory().getArmors();
+
+        if (armors.empty())
+        {
+            MenuScreen screen("ARMURE À TRANSFÉRER", "exchange.armor.empty");
+            screen.addLine(giver.getName() + " n'a aucune armure transférable dans son sac.");
+            TerminalInterface::renderMenuScreen(screen, false);
+            return -1;
+        }
+
+        constexpr std::size_t itemsPerPage = 8;
+        std::size_t page = 0;
+
+        while (true)
+        {
+            const std::size_t totalPages = PagedMenu::pageCount(armors.size(), itemsPerPage);
+            const std::size_t first = PagedMenu::firstIndex(page, itemsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(armors.size(), page, itemsPerPage);
+
+            MenuScreen screen("ARMURE À TRANSFÉRER", "exchange.armor.select");
+            screen.addSubtitle("Source : " + giver.getName());
+            screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, armors.size()));
+
+            for (std::size_t i = first; i < last; ++i)
+            {
+                const Armor& armor = armors[i];
+                const bool equipped = static_cast<int>(i) == giver.getEquippedArmorIndex();
+                std::ostringstream hint;
+                hint << "PV +" << armor.getMaxHpBonus() << " | Réduction " << armor.getDamageReduction();
+
+                if (armor.isIndestructible())
+                {
+                    hint << " | Durabilité : indestructible";
+                }
+                else
+                {
+                    hint << " | Durabilité " << armor.getDurability() << "/" << armor.getMaxDurability();
+                }
+
+                if (equipped)
+                {
+                    hint << " | portée";
+                }
+
+                screen.addOption(
+                    static_cast<int>(i - first + 1),
+                    armor.getName(),
+                    hint.str(),
+                    !equipped,
+                    "exchange.armor.select"
+                );
+            }
+
+            PagedMenu::addNavigationOptions(screen, page, totalPages);
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une armure affichée.");
+
+            if (choice == 0)
+            {
+                return -1;
+            }
+
+            if (choice == 98 && page > 0)
+            {
+                --page;
+                Console::clear();
+                continue;
+            }
+
+            if (choice == 99 && page + 1 < totalPages)
+            {
+                ++page;
+                Console::clear();
+                continue;
+            }
+
+            const int visibleCount = static_cast<int>(last - first);
+            if (choice >= 1 && choice <= visibleCount)
+            {
+                return static_cast<int>(first + static_cast<std::size_t>(choice - 1));
+            }
+        }
+    }
+
+    int askExchangeConsumableIndex(const Player& giver)
+    {
+        const std::vector<Consumable>& consumables = giver.getInventory().getConsumables();
+
+        if (consumables.empty())
+        {
+            MenuScreen screen("CONSOMMABLE À TRANSFÉRER", "exchange.consumable.empty");
+            screen.addLine(giver.getName() + " n'a aucun consommable dans son sac.");
+            TerminalInterface::renderMenuScreen(screen, false);
+            return -1;
+        }
+
+        constexpr std::size_t itemsPerPage = 8;
+        std::size_t page = 0;
+
+        while (true)
+        {
+            const std::size_t totalPages = PagedMenu::pageCount(consumables.size(), itemsPerPage);
+            const std::size_t first = PagedMenu::firstIndex(page, itemsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(consumables.size(), page, itemsPerPage);
+
+            MenuScreen screen("CONSOMMABLE À TRANSFÉRER", "exchange.consumable.select");
+            screen.addSubtitle("Source : " + giver.getName());
+            screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, consumables.size()));
+
+            for (std::size_t i = first; i < last; ++i)
+            {
+                const Consumable& consumable = consumables[i];
+                screen.addOption(
+                    static_cast<int>(i - first + 1),
+                    consumable.getName(),
+                    "Puissance " + std::to_string(consumable.getPower()) + " | Valeur " + std::to_string(consumable.getValue()),
+                    true,
+                    "exchange.consumable.select"
+                );
+            }
+
+            PagedMenu::addNavigationOptions(screen, page, totalPages);
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis un consommable affiché.");
+
+            if (choice == 0)
+            {
+                return -1;
+            }
+
+            if (choice == 98 && page > 0)
+            {
+                --page;
+                Console::clear();
+                continue;
+            }
+
+            if (choice == 99 && page + 1 < totalPages)
+            {
+                ++page;
+                Console::clear();
+                continue;
+            }
+
+            const int visibleCount = static_cast<int>(last - first);
+            if (choice >= 1 && choice <= visibleCount)
+            {
+                return static_cast<int>(first + static_cast<std::size_t>(choice - 1));
+            }
+        }
+    }
+
+    int askExchangeMaterialIndex(const Player& giver)
+    {
+        const std::vector<Material>& materials = giver.getInventory().getMaterials();
+
+        if (materials.empty())
+        {
+            MenuScreen screen("MATÉRIAU À TRANSFÉRER", "exchange.material.empty");
+            screen.addLine(giver.getName() + " n'a aucun matériau dans son sac.");
+            TerminalInterface::renderMenuScreen(screen, false);
+            return -1;
+        }
+
+        constexpr std::size_t itemsPerPage = 8;
+        std::size_t page = 0;
+
+        while (true)
+        {
+            const std::size_t totalPages = PagedMenu::pageCount(materials.size(), itemsPerPage);
+            const std::size_t first = PagedMenu::firstIndex(page, itemsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(materials.size(), page, itemsPerPage);
+
+            MenuScreen screen("MATÉRIAU À TRANSFÉRER", "exchange.material.select");
+            screen.addSubtitle("Source : " + giver.getName());
+            screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, materials.size()));
+
+            for (std::size_t i = first; i < last; ++i)
+            {
+                const Material& material = materials[i];
+                screen.addOption(
+                    static_cast<int>(i - first + 1),
+                    material.getName() + " x" + std::to_string(material.getQuantity()),
+                    material.getCategory() + " | Qualité " + material.getQualityLabel() + " | Valeur " + std::to_string(material.getValue()),
+                    true,
+                    "exchange.material.select"
+                );
+            }
+
+            PagedMenu::addNavigationOptions(screen, page, totalPages);
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis un matériau affiché.");
+
+            if (choice == 0)
+            {
+                return -1;
+            }
+
+            if (choice == 98 && page > 0)
+            {
+                --page;
+                Console::clear();
+                continue;
+            }
+
+            if (choice == 99 && page + 1 < totalPages)
+            {
+                ++page;
+                Console::clear();
+                continue;
+            }
+
+            const int visibleCount = static_cast<int>(last - first);
+            if (choice >= 1 && choice <= visibleCount)
+            {
+                return static_cast<int>(first + static_cast<std::size_t>(choice - 1));
+            }
+        }
+    }
 }
 
 // EN: Game declares or implements a focused behavior used by this module.
@@ -244,36 +558,17 @@ void Game::askPlayerName()
 // FR: chooseDifficulty déclare ou implémente un comportement précis utilisé par ce module.
 void Game::chooseDifficulty()
 {
-    std::cout << "Choisis la difficulté de ton personnage." << std::endl;
-    std::cout << "Ce choix influence le kit de départ, les récompenses, la mort et le respawn." << std::endl;
-    std::cout << std::endl;
+    MenuScreen screen("DIFFICULTÉ", "character.creation.difficulty");
+    screen.addSubtitle("Ce choix influence le kit de départ, les récompenses, la mort et le respawn.");
+    screen.addOption(1, "Facile", "Plus d'or, plus de sécurité, retour à 75% PV après une mort non définitive.", true, "difficulty.easy");
+    screen.addOption(2, "Normal", "L'expérience Dinotofu standard.", true, "difficulty.normal");
+    screen.addOption(3, "Difficile", "Moins de ressources, pénalités plus dures, retour à 30% PV.", true, "difficulty.hard");
+    screen.addOption(4, "Cauchemar", "Très punitif, retour à 10% PV, et la mort commence vraiment à avoir des dents.", true, "difficulty.nightmare");
+    screen.addOption(5, "Léthal", "Le registre ne pardonne pas : une vraie chute peut effacer ton nom.", true, "difficulty.lethal");
 
-    std::cout << "1 : Facile" << std::endl;
-    std::cout << "    Plus d'or, plus de sécurité, retour à 75% PV après une mort non définitive." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "2 : Normal" << std::endl;
-    std::cout << "    L'expérience Dinotofu standard." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "3 : Difficile" << std::endl;
-    std::cout << "    Moins de ressources, pénalités plus dures, retour à 30% PV." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "4 : Cauchemar" << std::endl;
-    std::cout << "    Très punitif, retour à 10% PV, et la mort commence vraiment à avoir des dents." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "5 : Léthal" << std::endl;
-    std::cout << "    Mort définitive prévue plus tard. Les statistiques de mort sont corrompues." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "> ";
-
-    int choice = Console::askNumberBetween(
-        1,
-        5,
-        "Veuillez entrer un chiffre valide entre 1 et 5."
+    int choice = TerminalInterface::askMenuChoiceFromOptions(
+        screen,
+        "Veuillez entrer un chiffre correspondant à une difficulté affichée."
     );
 
     switch (choice)
@@ -302,16 +597,17 @@ void Game::chooseDifficulty()
 
     Console::clear();
 
-    std::cout << "Difficulté sélectionnée : " << getDifficultyName() << "." << std::endl;
-    std::cout << "Ton départ sera ajusté en conséquence." << std::endl;
+    MenuScreen confirmation("DIFFICULTÉ VALIDÉE", "character.creation.difficulty.confirmation");
+    confirmation.addLine("Difficulté sélectionnée : " + getDifficultyName() + ".");
+    confirmation.addLine("Ton départ sera ajusté en conséquence.");
 
     if (specialIdentityValidated)
     {
-        std::cout << "Identité spéciale reconnue : le choix de race est verrouillé par son histoire." << std::endl;
-        std::cout << "Race imposée : " << characterRaceToText(selectedRace) << "." << std::endl;
+        confirmation.addLine("Identité spéciale reconnue : le choix de race est verrouillé par son histoire.");
+        confirmation.addLine("Race imposée : " + characterRaceToText(selectedRace) + ".");
     }
-    std::cout << std::endl;
 
+    TerminalInterface::renderMenuScreen(confirmation, false);
     Console::waitForEnter();
     Console::clear();
 }
@@ -320,19 +616,39 @@ void Game::chooseDifficulty()
 // FR: choosePlayerRace déclare ou implémente un comportement précis utilisé par ce module.
 void Game::choosePlayerRace()
 {
-    std::cout << "Choisis ta race." << std::endl;
-    std::cout << "Chaque race apporte une petite identité de départ." << std::endl;
-    std::cout << "Plus tard, elle pourra aussi influencer les dialogues, les ventes, les résistances et certaines quêtes." << std::endl;
-    std::cout << std::endl;
+    MenuScreen screen("RACE", "character.creation.race");
+    screen.addSubtitle("Chaque race apporte une petite identité de départ.");
+    screen.addLine("Elle marque ton origine, tes affinités et le regard que le monde pose sur toi.");
 
-    RaceCatalog::displayPlayableRaces();
+    const std::vector<CharacterRace> races = RaceCatalog::getPlayableRaces();
 
-    std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
-    std::cout << "> ";
+    for (std::size_t i = 0; i < races.size(); ++i)
+    {
+        CharacterRace race = races[i];
+        RaceStartingBonus bonus = RaceCatalog::getStartingBonus(race);
 
-    int choice = Console::askNumberBetween(
-        1,
-        RaceCatalog::getPlayableRaceCount(),
+        std::ostringstream hint;
+        hint << RaceCatalog::getGameplayIdentity(race)
+             << " | PV " << bonus.maxHpBonus
+             << " | Dégâts " << bonus.minDamageBonus << "/" << bonus.maxDamageBonus
+             << " | Critique " << bonus.criticalDamageBonus;
+
+        if (race == CharacterRace::Demon)
+        {
+            hint << " | Commerce tendu";
+        }
+
+        screen.addOption(
+            static_cast<int>(i + 1),
+            characterRaceToText(race),
+            hint.str(),
+            true,
+            "character.race.select"
+        );
+    }
+
+    int choice = TerminalInterface::askMenuChoiceFromOptions(
+        screen,
         "Veuillez entrer un chiffre correspondant à une race affichée."
     );
 
@@ -340,18 +656,17 @@ void Game::choosePlayerRace()
 
     Console::clear();
 
-    std::cout << "Race sélectionnée : " << characterRaceToText(selectedRace) << "." << std::endl;
-    std::cout << RaceCatalog::getShortDescription(selectedRace) << std::endl;
+    MenuScreen confirmation("RACE VALIDÉE", "character.creation.race.confirmation");
+    confirmation.addLine("Race sélectionnée : " + characterRaceToText(selectedRace) + ".");
+    confirmation.addLine(RaceCatalog::getShortDescription(selectedRace));
 
     if (selectedRace == CharacterRace::Demon)
     {
-        std::cout << std::endl;
-        std::cout << "Note commerce : certains marchands risquent de serrer les dents en te voyant arriver." << std::endl;
-        std::cout << "Les prix pourront être plus élevés que la norme, surtout dans les villes peu habituées aux démons." << std::endl;
+        confirmation.addLine("Note commerce : certains marchands risquent de serrer les dents en te voyant arriver.");
+        confirmation.addLine("Les prix pourront être plus élevés que la norme, surtout dans les villes peu habituées aux démons.");
     }
 
-    std::cout << std::endl;
-
+    TerminalInterface::renderMenuScreen(confirmation, false);
     Console::waitForEnter();
     Console::clear();
 }
@@ -360,41 +675,56 @@ void Game::choosePlayerRace()
 // FR: choosePlayerClass déclare ou implémente un comportement précis utilisé par ce module.
 void Game::choosePlayerClass()
 {
-    std::cout << "Choisis la famille de classe qui t'intéresse." << std::endl;
-    std::cout << "Comme il commence à y avoir pas mal de choix, l'arène range maintenant les classes par style." << std::endl;
-    std::cout << std::endl;
+    MenuScreen categoryScreen("FAMILLE DE CLASSE", "character.creation.class.category");
+    categoryScreen.addSubtitle("L'arène range maintenant les classes par style.");
 
-    ClassCatalog::displayClassCategories();
+    const std::vector<ClassCategory> categories = ClassCatalog::getClassCategories();
 
-    std::cout << std::endl;
-    std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
-    std::cout << "> ";
+    for (std::size_t i = 0; i < categories.size(); ++i)
+    {
+        ClassCategory category = categories[i];
+        categoryScreen.addOption(
+            static_cast<int>(i + 1),
+            classCategoryToText(category),
+            std::to_string(ClassCatalog::getPlayableClassCountByCategory(category)) + " classes disponibles",
+            true,
+            "character.class.category.select"
+        );
+    }
 
-    int categoryChoice = Console::askNumberBetween(
-        1,
-        ClassCatalog::getClassCategoryCount(),
+    int categoryChoice = TerminalInterface::askMenuChoiceFromOptions(
+        categoryScreen,
         "Veuillez entrer un chiffre correspondant à une famille affichée."
     );
 
     Console::clear();
 
-    std::cout << "Famille sélectionnée : "
-              << ClassCatalog::getClassCategoryNameByChoice(categoryChoice)
-              << "."
-              << std::endl;
-    std::cout << "Choisis maintenant ta classe." << std::endl;
-    std::cout << std::endl;
+    const std::vector<ClassOptionInfo> classOptions = ClassCatalog::getClassOptionsByCategoryChoice(categoryChoice);
 
-    ClassCatalog::displayClassesByCategoryChoice(categoryChoice);
+    MenuScreen classScreen("CLASSE", "character.creation.class.select");
+    classScreen.addSubtitle("Famille sélectionnée : " + ClassCatalog::getClassCategoryNameByChoice(categoryChoice) + ".");
 
-    int maxClassChoice = ClassCatalog::getPlayableClassCountByCategoryChoice(categoryChoice);
+    for (std::size_t i = 0; i < classOptions.size(); ++i)
+    {
+        const ClassOptionInfo& info = classOptions[i];
+        std::ostringstream hint;
+        hint << info.role
+             << " | PV " << info.maxHp
+             << " | Dégâts " << info.minDamage << "-" << info.maxDamage
+             << " | Critique " << info.criticalDamage
+             << " | Potions " << info.healingPotionCount << "/" << info.damagePotionCount;
 
-    std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
-    std::cout << "> ";
+        classScreen.addOption(
+            static_cast<int>(i + 1),
+            info.name,
+            hint.str(),
+            true,
+            "character.class.select"
+        );
+    }
 
-    int classChoice = Console::askNumberBetween(
-        1,
-        maxClassChoice,
+    int classChoice = TerminalInterface::askMenuChoiceFromOptions(
+        classScreen,
         "Veuillez entrer un chiffre correspondant à une classe affichée."
     );
 
@@ -412,28 +742,22 @@ void Game::choosePlayerClass()
 
     Console::clear();
 
-    std::cout << playerName << ", tu as choisi : "
-              << characterRaceToText(selectedRace)
-              << " / "
-              << chosenClass.getName()
-              << "."
-              << std::endl;
-    std::cout << "Famille : " << ClassCatalog::getClassCategoryNameByChoice(categoryChoice) << "." << std::endl;
-    std::cout << "Difficulté : " << getDifficultyName() << "." << std::endl;
-    std::cout << "Tes statistiques ont été gravées dans l'arène avec succès." << std::endl;
-    std::cout << "Ton équipement et tes ressources de départ ont été adaptés à la difficulté." << std::endl;
-    std::cout << "Créé le " << mainPlayer.getCreatedAtText()
-              << " V" << mainPlayer.getCreatedForVersion() << std::endl;
-    std::cout << "Dernière adaptation faite pour la V"
-              << mainPlayer.getLastAdaptedVersion() << std::endl;
+    MenuScreen confirmation("PERSONNAGE GRAVÉ", "character.creation.summary");
+    confirmation.addLine(playerName + ", tu as choisi : " + characterRaceToText(selectedRace) + " / " + chosenClass.getName() + ".");
+    confirmation.addLine("Famille : " + ClassCatalog::getClassCategoryNameByChoice(categoryChoice) + ".");
+    confirmation.addLine("Difficulté : " + getDifficultyName() + ".");
+    confirmation.addLine("Tes statistiques ont été gravées dans l'arène avec succès.");
+    confirmation.addLine("Ton équipement et tes ressources de départ ont été adaptés à la difficulté.");
+    confirmation.addLine("Créé le " + mainPlayer.getCreatedAtText() + " V" + mainPlayer.getCreatedForVersion());
+    confirmation.addLine("Dernière adaptation faite pour la V" + mainPlayer.getLastAdaptedVersion());
 
     if (nativeBonusApplied)
     {
-        std::cout << "Bonus natif : actif." << std::endl;
+        confirmation.addLine("Bonus natif : actif.");
     }
 
+    TerminalInterface::renderMenuScreen(confirmation, false);
     std::cout << std::endl;
-
     mainPlayer.displayStats();
     mainPlayer.displaySimpleEquipment();
 
@@ -497,7 +821,7 @@ void Game::savePartyProgress(const std::string& reason) const
             }
             else
             {
-                std::cout << "Impossible de déplacer automatiquement " << partyPlayer.getName()
+                std::cout << "Le registre des morts refuse d'emporter " << partyPlayer.getName()
                           << " dans le registre des morts." << std::endl;
             }
             continue;
@@ -537,74 +861,162 @@ bool Game::addSecondaryPlayerToParty(int playerNumber)
 
     if (availableAccounts.empty())
     {
-        std::cout << "Aucun autre compte local disponible pour le joueur " << playerNumber << "." << std::endl;
-        std::cout << "La coop nécessite des comptes différents, et donc des personnages différents." << std::endl;
-        std::cout << std::endl;
-        return false;
-    }
-
-    std::cout << "========== JOUEUR " << playerNumber << " ==========" << std::endl;
-    std::cout << "Choisis le compte du joueur " << playerNumber << "." << std::endl;
-    std::cout << "0 : Annuler" << std::endl;
-
-    for (int i = 0; i < static_cast<int>(availableAccounts.size()); ++i)
-    {
-        std::cout << (i + 1) << " : " << availableAccounts[i].accountName << std::endl;
-    }
-
-    std::cout << "> ";
-    int accountChoice = Console::askNumberBetween(0, static_cast<int>(availableAccounts.size()), "Choisis un compte affiché.");
-
-    if (accountChoice == 0)
-    {
+        MenuScreen emptyScreen("JOUEUR " + std::to_string(playerNumber), "session.party.secondary.no_account");
+        emptyScreen.addLine("Aucun autre compte local disponible pour le joueur " + std::to_string(playerNumber) + ".");
+        emptyScreen.addLine("La coop nécessite des comptes différents, et donc des personnages différents.");
+        TerminalInterface::renderMenuScreen(emptyScreen, false);
+        Console::waitForEnter();
         Console::clear();
         return false;
     }
 
-    std::string secondaryAccount = availableAccounts[accountChoice - 1].accountName;
-    std::vector<CharacterSaveSummary> characters = SaveManager::listPlayableCharacters(secondaryAccount);
+    constexpr std::size_t accountsPerPage = 10;
+    std::size_t accountPage = 0;
+    std::string secondaryAccount;
 
-    Console::clear();
+    while (secondaryAccount.empty())
+    {
+        const std::size_t totalItems = availableAccounts.size();
+        const std::size_t totalPages = PagedMenu::pageCount(totalItems, accountsPerPage);
+        const std::size_t first = PagedMenu::firstIndex(accountPage, accountsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, accountPage, accountsPerPage);
+
+        MenuScreen accountScreen("JOUEUR " + std::to_string(playerNumber), "session.party.secondary.account");
+        accountScreen.addSubtitle("Compte du joueur " + std::to_string(playerNumber));
+        accountScreen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
+
+        for (std::size_t i = first; i < last; ++i)
+        {
+            accountScreen.addOption(
+                static_cast<int>(i - first + 1),
+                availableAccounts[i].accountName,
+                "Compte local disponible pour cette session.",
+                true,
+                "session.party.account.select"
+            );
+        }
+
+        PagedMenu::addNavigationOptions(accountScreen, accountPage, totalPages);
+
+        int accountChoice = TerminalInterface::askMenuChoiceFromOptions(
+            accountScreen,
+            "Choisis un compte affiché."
+        );
+        Console::clear();
+
+        if (accountChoice == 0)
+        {
+            return false;
+        }
+
+        if (accountChoice == 98 && accountPage > 0)
+        {
+            --accountPage;
+            continue;
+        }
+
+        if (accountChoice == 99 && accountPage + 1 < totalPages)
+        {
+            ++accountPage;
+            continue;
+        }
+
+        const int visibleCount = static_cast<int>(last - first);
+        if (accountChoice >= 1 && accountChoice <= visibleCount)
+        {
+            secondaryAccount = availableAccounts[first + static_cast<std::size_t>(accountChoice - 1)].accountName;
+        }
+    }
+
+    std::vector<CharacterSaveSummary> characters = SaveManager::listPlayableCharacters(secondaryAccount);
 
     if (characters.empty())
     {
-        std::cout << "Ce compte n'a aucun personnage jouable." << std::endl;
-        std::cout << std::endl;
-        return false;
-    }
-
-    std::cout << "========== PERSONNAGE JOUEUR " << playerNumber << " ==========" << std::endl;
-    std::cout << "0 : Annuler" << std::endl;
-
-    for (int i = 0; i < static_cast<int>(characters.size()); ++i)
-    {
-        std::cout << (i + 1) << " : "
-                  << characters[i].characterName
-                  << " | " << characters[i].raceName
-                  << " / " << characters[i].className
-                  << " | Niveau " << characters[i].level
-                  << " | Maître : " << characters[i].currentOwnerAccountName
-                  << std::endl;
-    }
-
-    std::cout << "> ";
-    int characterChoice = Console::askNumberBetween(0, static_cast<int>(characters.size()), "Choisis un personnage affiché.");
-
-    if (characterChoice == 0)
-    {
+        MenuScreen emptyCharacterScreen("PERSONNAGE JOUEUR " + std::to_string(playerNumber), "session.party.secondary.no_character");
+        emptyCharacterScreen.addLine("Ce compte n'a aucun personnage jouable.");
+        emptyCharacterScreen.addLine("Compte choisi : " + secondaryAccount + ".");
+        TerminalInterface::renderMenuScreen(emptyCharacterScreen, false);
+        Console::waitForEnter();
         Console::clear();
         return false;
     }
 
-    CharacterSaveSummary summary = characters[characterChoice - 1];
+    constexpr std::size_t charactersPerPage = 8;
+    std::size_t characterPage = 0;
+    CharacterSaveSummary summary;
+    bool characterSelected = false;
+
+    while (!characterSelected)
+    {
+        const std::size_t totalItems = characters.size();
+        const std::size_t totalPages = PagedMenu::pageCount(totalItems, charactersPerPage);
+        const std::size_t first = PagedMenu::firstIndex(characterPage, charactersPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, characterPage, charactersPerPage);
+
+        MenuScreen characterScreen("PERSONNAGE JOUEUR " + std::to_string(playerNumber), "session.party.secondary.character");
+        characterScreen.addSubtitle("Compte : " + secondaryAccount);
+        characterScreen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
+
+        for (std::size_t i = first; i < last; ++i)
+        {
+            const CharacterSaveSummary& character = characters[i];
+            std::string label = character.characterName
+                + " | " + character.raceName
+                + " / " + character.className
+                + " | Niveau " + std::to_string(character.level);
+
+            characterScreen.addOption(
+                static_cast<int>(i - first + 1),
+                label,
+                "Maître : " + character.currentOwnerAccountName,
+                true,
+                "session.party.character.select"
+            );
+        }
+
+        PagedMenu::addNavigationOptions(characterScreen, characterPage, totalPages);
+
+        int characterChoice = TerminalInterface::askMenuChoiceFromOptions(
+            characterScreen,
+            "Choisis un personnage affiché."
+        );
+        Console::clear();
+
+        if (characterChoice == 0)
+        {
+            return false;
+        }
+
+        if (characterChoice == 98 && characterPage > 0)
+        {
+            --characterPage;
+            continue;
+        }
+
+        if (characterChoice == 99 && characterPage + 1 < totalPages)
+        {
+            ++characterPage;
+            continue;
+        }
+
+        const int visibleCount = static_cast<int>(last - first);
+        if (characterChoice >= 1 && characterChoice <= visibleCount)
+        {
+            summary = characters[first + static_cast<std::size_t>(characterChoice - 1)];
+            characterSelected = true;
+        }
+    }
 
     if (summary.currentOwnerAccountName != secondaryAccount || summary.accountName != secondaryAccount)
     {
-        std::cout << "Le fil de maîtrise refuse ce chargement." << std::endl;
-        std::cout << "Un personnage n'a qu'un seul maître." << std::endl;
-        std::cout << "Maître inscrit : " << summary.currentOwnerAccountName << std::endl;
-        std::cout << "Compte choisi : " << secondaryAccount << std::endl;
-        std::cout << std::endl;
+        MenuScreen refusedScreen("MAÎTRISE REFUSÉE", "session.party.secondary.owner_refused");
+        refusedScreen.addLine("Le fil de maîtrise refuse ce chargement.");
+        refusedScreen.addLine("Un personnage n'a qu'un seul maître.");
+        refusedScreen.addLine("Maître inscrit : " + summary.currentOwnerAccountName);
+        refusedScreen.addLine("Compte choisi : " + secondaryAccount);
+        TerminalInterface::renderMenuScreen(refusedScreen, false);
+        Console::waitForEnter();
+        Console::clear();
         return false;
     }
 
@@ -613,8 +1025,11 @@ bool Game::addSecondaryPlayerToParty(int playerNumber)
 
     if (!SaveManager::loadPlayerSnapshot(summary, secondaryPlayer, secondaryDifficulty))
     {
-        std::cout << "Impossible de charger ce personnage." << std::endl;
-        std::cout << std::endl;
+        MenuScreen errorScreen("CHARGEMENT IMPOSSIBLE", "session.party.secondary.load_failed");
+        errorScreen.addLine("Impossible de charger ce personnage.");
+        TerminalInterface::renderMenuScreen(errorScreen, false);
+        Console::waitForEnter();
+        Console::clear();
         return false;
     }
 
@@ -622,9 +1037,11 @@ bool Game::addSecondaryPlayerToParty(int playerNumber)
     partyDifficulties.push_back(secondaryDifficulty);
     partyPlayers.push_back(secondaryPlayer);
 
-    std::cout << "Joueur " << playerNumber << " ajouté : " << secondaryPlayer.getName()
-              << " (" << secondaryAccount << ")." << std::endl;
-    std::cout << std::endl;
+    MenuScreen successScreen("JOUEUR AJOUTÉ", "session.party.secondary.added");
+    successScreen.addLine("Joueur " + std::to_string(playerNumber) + " ajouté : " + secondaryPlayer.getName() + " (" + secondaryAccount + ").");
+    TerminalInterface::renderMenuScreen(successScreen, false);
+    Console::waitForEnter();
+    Console::clear();
     return true;
 }
 
@@ -634,29 +1051,31 @@ void Game::configurePartyMode()
     partyAccountNames.clear();
     partyDifficulties.clear();
 
-    std::cout << "========== SESSION ==========" << std::endl;
-    std::cout << "1 : Solo" << std::endl;
-    std::cout << "2 : Multi local - 2 joueurs" << std::endl;
-    std::cout << "3 : Multi local - 3 joueurs" << std::endl;
-    std::cout << "=============================" << std::endl;
-    std::cout << "> ";
+    MenuScreen screen("SESSION", "session.party.mode");
+    screen.addSubtitle("Le joueur 1 reste le point d'ancrage de la partie.");
+    screen.addOption(1, "Solo", "Un seul personnage actif.", true, "session.solo");
+    screen.addOption(2, "Multi local - 2 joueurs", "Un allié joueur intervient surtout en combat et récompenses individuelles.", true, "session.coop.2");
+    screen.addOption(3, "Multi local - 3 joueurs", "Deux alliés joueurs avec inventaires et récompenses séparés.", true, "session.coop.3");
 
-    int choice = Console::askNumberBetween(1, 3, "Choisis 1, 2 ou 3.");
+    int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une session affichée.");
     Console::clear();
 
     if (choice == 1)
     {
-        std::cout << "Session solo sélectionnée." << std::endl;
-        std::cout << std::endl;
+        MenuScreen confirmation("SESSION SOLO", "session.party.confirmation.solo");
+        confirmation.addLine("Session solo sélectionnée.");
+        TerminalInterface::renderMenuScreen(confirmation, false);
         Console::waitForEnter();
         Console::clear();
         return;
     }
 
-    std::cout << "Session coop sélectionnée." << std::endl;
-    std::cout << "Le joueur 1 reste le point d'ancrage : voyage, boss, niveau de session, événements et monstres." << std::endl;
-    std::cout << "Les autres joueurs interviennent surtout en combat, avec leur inventaire et leurs récompenses individuelles." << std::endl;
-    std::cout << std::endl;
+    MenuScreen coopIntro("SESSION COOP", "session.party.confirmation.coop");
+    coopIntro.addLine("Le joueur 1 reste le point d'ancrage : voyage, boss, niveau de session, événements et monstres.");
+    coopIntro.addLine("Les autres joueurs interviennent surtout en combat, avec leur inventaire et leurs récompenses individuelles.");
+    TerminalInterface::renderMenuScreen(coopIntro, false);
+    Console::waitForEnter();
+    Console::clear();
 
     for (int playerNumber = 2; playerNumber <= choice; ++playerNumber)
     {
@@ -668,16 +1087,18 @@ void Game::configurePartyMode()
         }
     }
 
+    MenuScreen result("GROUPE", "session.party.result");
+
     if (partyPlayers.empty())
     {
-        std::cout << "Aucun joueur secondaire validé. Session solo conservée." << std::endl;
+        result.addLine("Aucun joueur secondaire validé. Session solo conservée.");
     }
     else
     {
-        std::cout << "Groupe actif : " << (partyPlayers.size() + 1) << " joueurs." << std::endl;
+        result.addLine("Groupe actif : " + std::to_string(partyPlayers.size() + 1) + " joueurs.");
     }
 
-    std::cout << std::endl;
+    TerminalInterface::renderMenuScreen(result, false);
     Console::waitForEnter();
     Console::clear();
 }
@@ -688,47 +1109,21 @@ void Game::chooseGameMode()
 {
     while (true)
     {
-        std::cout << "========== ACTIVITÉS ==========" << std::endl;
-        std::cout << "1 : Histoire" << std::endl;
-        std::cout << "    Mode aventure principal. Il reste volontairement en attente pour la fin du développement." << std::endl;
-        std::cout << std::endl;
+        MenuScreen screen("ACTIVITÉS", "activity.main");
+        screen.addSubtitle("Choisis la prochaine route de " + mainPlayer.getName() + ".");
+        screen.addOption(0, "Sauvegarder et quitter", "Écrire la progression puis fermer Dinotofu.", true, "activity.save_quit");
+        screen.addOption(1, "Histoire", "La grande route du monde, encore scellée par les archives.", true, "activity.story");
+        screen.addOption(2, "Combats", "PvE monstres, boss, groupes d'adversaires et JcJ.", true, "activity.combat");
+        screen.addOption(3, "Exploration", "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues.", true, "activity.exploration");
+        screen.addOption(4, "Quêtes", "Guilde, journal, demandes de PNJ et progression de quêtes.", true, "activity.quests");
+        screen.addOption(5, "Boutiques / lieux visitables", "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux.", true, "activity.locations");
+        screen.addOption(6, "PNJ notables", "Parler aux clients et personnages disponibles sans passer par une boutique.", true, "activity.npcs");
+        screen.addOption(7, "Échange / don", "Transférer des ressources entre personnages compatibles.", true, "activity.exchange");
+        screen.addOption(8, "Information sur toutes les options", "Ouvre un guide clair sur les routes possibles.", true, "activity.info");
 
-        std::cout << "2 : Combats" << std::endl;
-        std::cout << "    PvE monstres, boss, groupes d'adversaires et JcJ." << std::endl;
-        std::cout << std::endl;
-
-        std::cout << "3 : Exploration" << std::endl;
-        std::cout << "    Recherche passive par biome : plantes, matériaux, coffres, pièges, mimics et événements." << std::endl;
-        std::cout << std::endl;
-
-        std::cout << "4 : Quêtes" << std::endl;
-        std::cout << "    Guilde, journal, demandes de PNJ et progression de quêtes." << std::endl;
-        std::cout << std::endl;
-
-        std::cout << "5 : Boutiques / lieux visitables" << std::endl;
-        std::cout << "    Forge, herboristerie, bibliothèque, boutiques spécialisées et lieux sociaux." << std::endl;
-        std::cout << std::endl;
-
-        std::cout << "6 : PNJ notables" << std::endl;
-        std::cout << "    Parler aux clients et personnages disponibles sans passer par une boutique." << std::endl;
-        std::cout << std::endl;
-
-        std::cout << "7 : Échange / don" << std::endl;
-        std::cout << "    Transférer des ressources entre personnages compatibles." << std::endl;
-        std::cout << std::endl;
-
-        std::cout << "8 : Information sur toutes les options" << std::endl;
-        std::cout << "    Explique concrètement ce que fait chaque activité." << std::endl;
-        std::cout << std::endl;
-
-        std::cout << "0 : Sauvegarder et quitter" << std::endl;
-        std::cout << "================================" << std::endl;
-        std::cout << "> ";
-
-        int choice = Console::askNumberBetween(
-            0,
-            8,
-            "Veuillez entrer un chiffre valide entre 0 et 8."
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Veuillez choisir une activité affichée."
         );
 
         Console::clear();
@@ -749,20 +1144,17 @@ void Game::chooseGameMode()
 
         if (choice == 2)
         {
-            std::cout << "========== COMBATS ==========" << std::endl;
-            std::cout << "0 : Retour" << std::endl;
-            std::cout << "1 : PvP IA" << std::endl;
-            std::cout << "    Duel contre une IA, avec personnages spéciaux possibles selon le mode." << std::endl;
-            std::cout << "2 : PvP 2 joueurs / JcJ" << std::endl;
-            std::cout << "    Duel local amical ou mortel selon les comptes, clones, altérations et difficultés." << std::endl;
-            std::cout << "3 : PvE monstres" << std::endl;
-            std::cout << "    Vagues de monstres, loots, matériaux, qualité de récupération et progression." << std::endl;
-            std::cout << "4 : PvE Boss" << std::endl;
-            std::cout << "    Combat contre un boss avec identité, décryptage et fragments spéciaux." << std::endl;
-            std::cout << "============================" << std::endl;
-            std::cout << "> ";
+            MenuScreen combatScreen("COMBATS", "activity.combat.menu");
+            combatScreen.addBackOption();
+            combatScreen.addOption(1, "PvP IA", "Duel contre une IA, avec personnages spéciaux possibles selon le mode.", true, "combat.ai_pvp");
+            combatScreen.addOption(2, "PvP 2 joueurs / JcJ", "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.", true, "combat.local_pvp");
+            combatScreen.addOption(3, "PvE monstres", "Vagues de monstres, loots, matériaux, qualité de récupération et progression.", true, "combat.monster_pve");
+            combatScreen.addOption(4, "PvE Boss", "Combat contre un boss avec identité, décryptage et fragments spéciaux.", true, "combat.boss_pve");
 
-            int combatChoice = Console::askNumberBetween(0, 4, "Veuillez choisir un combat affiché.");
+            int combatChoice = TerminalInterface::askMenuChoiceFromOptions(
+                combatScreen,
+                "Veuillez choisir un combat affiché."
+            );
             Console::clear();
 
             if (combatChoice == 0)
@@ -827,55 +1219,52 @@ void Game::displaySelectedMode()
 {
     Console::clear();
 
-    std::cout << "Activité sélectionnée : ";
+    std::string modeName;
 
     switch (selectedMode)
     {
         case GameMode::Story:
-            std::cout << "Histoire";
+            modeName = "Histoire";
             break;
-
         case GameMode::AIPvp:
-            std::cout << "Combat - PvP IA";
+            modeName = "Combat - PvP IA";
             break;
-
         case GameMode::TwoPlayerPvp:
-            std::cout << "Combat - PvP 2 joueurs / JcJ";
+            modeName = "Combat - PvP 2 joueurs / JcJ";
             break;
-
         case GameMode::MonsterPve:
-            std::cout << "Combat - PvE monstres";
+            modeName = "Combat - PvE monstres";
             break;
-
         case GameMode::BossPve:
-            std::cout << "Combat - PvE Boss";
+            modeName = "Combat - PvE Boss";
             break;
-
         case GameMode::Challenges:
-            std::cout << "Quêtes";
+            modeName = "Quêtes";
             break;
-
         case GameMode::Exploration:
-            std::cout << "Exploration";
+            modeName = "Exploration";
             break;
-
         case GameMode::Locations:
-            std::cout << "Boutiques / lieux visitables";
+            modeName = "Boutiques / lieux visitables";
             break;
-
         case GameMode::NotableNpcs:
-            std::cout << "PNJ notables";
+            modeName = "PNJ notables";
             break;
-
         case GameMode::Exchange:
-            std::cout << "Échange / don";
+            modeName = "Échange / don";
             break;
     }
 
-    std::cout << std::endl;
-    std::cout << "Difficulté : " << getDifficultyName() << std::endl;
-    std::cout << std::endl;
+    MenuScreen screen("ACTIVITÉ SÉLECTIONNÉE", "activity.selected");
+    screen.addLine("Activité : " + modeName);
+    screen.addLine("Difficulté : " + getDifficultyName());
 
+    if (isMultiplayerSession())
+    {
+        screen.addLine("Groupe actif : " + std::to_string(partyPlayers.size() + 1) + " joueurs.");
+    }
+
+    TerminalInterface::renderMenuScreen(screen, false);
     Console::waitForEnter();
     Console::clear();
 }
@@ -884,42 +1273,17 @@ void Game::displaySelectedMode()
 // FR: displayActivityInformation déclare ou implémente un comportement précis utilisé par ce module.
 void Game::displayActivityInformation() const
 {
-    std::cout << "========== INFORMATION SUR LES ACTIVITÉS ==========" << std::endl;
-    std::cout << "Histoire : mode aventure principal. Il sera développé en dernier, après les systèmes DND et l'interface graphique." << std::endl;
-    std::cout << std::endl;
+    MenuScreen screen("INFORMATION SUR LES ACTIVITÉS", "activity.info");
+    screen.addLine("Histoire : grande route principale, encore scellée par les archives du monde.");
+    screen.addLine("Combats : affrontements volontaires contre IA, joueurs, monstres ou boss.");
+    screen.addLine("Exploration : sortie de terrain par biome avec plantes, matériaux, trésors, pièges, mimics et combats inattendus.");
+    screen.addLine("Quêtes : journal, guilde, demandes de PNJ, quêtes terminées et validation des objectifs.");
+    screen.addLine("Boutiques / lieux visitables : forge, herboristerie, bibliothèque, vendeurs et lieux sociaux.");
+    screen.addLine("PNJ notables : accès direct aux clients ou personnages disponibles.");
+    screen.addLine("Échange / don : transfert protégé d'objets ou d'or entre personnages compatibles.");
+    screen.addFooterLine("Certaines portes restent fermées. Le monde te laisse progresser par ses guildes, ses routes et ses combats.");
 
-    std::cout << "Combats : regroupe les affrontements volontaires." << std::endl;
-    std::cout << "- PvP IA : duel contre une IA ou un adversaire spécial." << std::endl;
-    std::cout << "- PvP 2 joueurs / JcJ : duel local entre deux personnages, avec règles amicales ou mortelles." << std::endl;
-    std::cout << "- PvE monstres : vagues d'ennemis, loots, matériaux et progression de quêtes." << std::endl;
-    std::cout << "- PvE Boss : boss avec phases, identité, fragments et récompenses spéciales." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "Exploration : sortie passive par biome." << std::endl;
-    std::cout << "Tu choisis un biome, puis tu peux trouver plantes, matériaux, trésors, coffres, pièges, mimics ou combats inattendus." << std::endl;
-    std::cout << "Ce n'est pas un combat volontaire : c'est une activité de recherche et d'événements." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "Quêtes : journal, guilde, demandes de PNJ, quêtes terminées et validation des objectifs." << std::endl;
-    std::cout << "Les quêtes de guilde sont limitées, les demandes personnelles peuvent être plus nombreuses." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "Boutiques / lieux visitables : accès aux lieux sociaux comme forge, herboristerie, bibliothèque et vendeurs." << std::endl;
-    std::cout << "Certains vendeurs peuvent aussi proposer des demandes personnelles." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "PNJ notables : liste directe des PNJ importants ou clients disponibles." << std::endl;
-    std::cout << "Utile pour rendre une demande sans fouiller tous les lieux." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "Échange / don : transfère des objets ou de l'or entre personnages compatibles." << std::endl;
-    std::cout << "Les clones, personnages altérés et mélanges Léthal/non-Léthal restent protégés contre les abus." << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "Roadmap : l'interface graphique viendra après les systèmes DND. L'histoire complète viendra encore après." << std::endl;
-    std::cout << "====================================================" << std::endl;
-    std::cout << std::endl;
-
+    TerminalInterface::renderMenuScreen(screen, false);
     Console::waitForEnter();
     Console::clear();
 }
@@ -1028,7 +1392,7 @@ void Game::launchSelectedMode()
             }
             else
             {
-                std::cout << "Impossible de déplacer automatiquement le personnage dans le registre des morts." << std::endl;
+                std::cout << "Le registre des morts refuse de se fermer correctement autour de ce personnage." << std::endl;
                 std::cout << "La sauvegarde de mort a tout de même été tentée." << std::endl;
             }
 
@@ -1063,15 +1427,15 @@ void Game::launchSelectedMode()
 void Game::launchStoryModePlaceholder()
 {
     std::cout << "========== HISTOIRE ==========" << std::endl;
-    std::cout << "Le mode Histoire est maintenant placé tout en haut du jeu." << std::endl;
-    std::cout << "Pour l'instant, l'aventure principale n'est pas encore développée." << std::endl;
+    std::cout << "La grande route de l'Histoire se dresse devant toi." << std::endl;
+    std::cout << "Les portes principales restent scellées par des archives anciennes." << std::endl;
     std::cout << std::endl;
-    std::cout << "Contexte prévu :" << std::endl;
+    std::cout << "Ce que murmurent les archives :" << std::endl;
     std::cout << "Tu n'es pas seulement un combattant d'arène. Tu es un personnage inscrit dans un monde" << std::endl;
-    std::cout << "où les quêtes, les guildes, les boss, les matériaux rares et les choix finiront par compter." << std::endl;
+    std::cout << "où les quêtes, les guildes, les boss, les matériaux rares et les choix laissent déjà des traces." << std::endl;
     std::cout << std::endl;
-    std::cout << "Pour l'instant, utilise les Quêtes, l'Exploration, le PvE et les Boss pour faire progresser ton personnage." << std::endl;
-    std::cout << "Roadmap : les attributs DND seront stabilisés avant l'interface graphique, puis l'histoire complète viendra après." << std::endl;
+    std::cout << "Les guildes, l'exploration, les monstres et les boss restent les routes ouvertes pour faire grandir ton personnage." << std::endl;
+    std::cout << "Quand les sceaux céderont, cette route reprendra là où ton personnage aura grandi." << std::endl;
     std::cout << "==============================" << std::endl;
     std::cout << std::endl;
 
@@ -1094,30 +1458,9 @@ bool Game::openPostCombatMenu()
 
     while (menuOpen)
     {
-        int maxChoice = mainPlayer.isAlteredByCheats() ? 12 : 11;
+        int maxChoice = PostCombatMenu::getMaxChoice(mainPlayer);
 
-        std::cout << "========== APRÈS-COMBAT ==========" << std::endl;
-        std::cout << "0 : Continuer" << std::endl;
-        std::cout << "1 : Ouvrir les boutiques" << std::endl;
-        std::cout << "2 : Voir mes statistiques" << std::endl;
-        std::cout << "3 : Voir mon équipement" << std::endl;
-        std::cout << "4 : Améliorer mes attributs" << std::endl;
-        std::cout << "5 : Sauvegarde rapide" << std::endl;
-        std::cout << "6 : Sauvegarder et quitter" << std::endl;
-        std::cout << "7 : Consulter mes quêtes" << std::endl;
-        std::cout << "8 : Lieux visitables" << std::endl;
-        std::cout << "9 : PNJ notables" << std::endl;
-        std::cout << "10 : Échange / don entre personnages" << std::endl;
-        std::cout << "11 : Voir mes compétences" << std::endl;
-
-        if (mainPlayer.isAlteredByCheats())
-        {
-            std::cout << "12 : Données altérées" << std::endl;
-        }
-
-        std::cout << "==================================" << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
+        PostCombatMenu::display(mainPlayer);
 
         std::string input;
         std::getline(std::cin >> std::ws, input);
@@ -1176,8 +1519,8 @@ bool Game::openPostCombatMenu()
         }
         else if (choice == 3)
         {
-            mainPlayer.displaySimpleEquipment();
-            Console::waitForEnter();
+            InventoryMenu::open(mainPlayer);
+            saveCurrentProgress("Inventaire après-combat");
             Console::clear();
         }
         else if (choice == 4)
@@ -1224,7 +1567,13 @@ bool Game::openPostCombatMenu()
             Console::waitForEnter();
             Console::clear();
         }
-        else if (choice == 12 && mainPlayer.isAlteredByCheats())
+        else if (choice == 12)
+        {
+            mainPlayer.displaySimpleEquipment();
+            Console::waitForEnter();
+            Console::clear();
+        }
+        else if (choice == 13 && mainPlayer.isAlteredByCheats())
         {
             CheatManager::openAlteredDataMenu(mainPlayer, selectedDifficulty);
             saveCurrentProgress("Données altérées");
@@ -1243,76 +1592,85 @@ void Game::openExchangeMenu()
 
     if (accounts.empty())
     {
-        std::cout << "Aucun autre compte disponible pour un échange." << std::endl;
-        std::cout << std::endl;
+        MenuScreen emptyScreen("ÉCHANGE / DON", "exchange.no_account");
+        emptyScreen.addLine("Aucun autre compte disponible pour un échange.");
+        TerminalInterface::renderMenuScreen(emptyScreen, false);
         Console::waitForEnter();
         Console::clear();
         return;
     }
 
-    std::cout << "========== ÉCHANGE / DON ==========" << std::endl;
-    std::cout << "Choisis le compte cible." << std::endl;
-    std::cout << "0 : Retour" << std::endl;
+    MenuScreen accountScreen("ÉCHANGE / DON", "exchange.account.select");
+    accountScreen.addSubtitle("Choisis le compte cible.");
+    accountScreen.addBackOption();
 
     for (int i = 0; i < static_cast<int>(accounts.size()); ++i)
     {
-        std::cout << (i + 1) << " : " << accounts[i].accountName << std::endl;
+        accountScreen.addOption(
+            i + 1,
+            accounts[i].accountName,
+            accounts[i].accountName == accountName ? "Ton compte actuel : seuls les autres personnages peuvent être ciblés." : "Compte local disponible.",
+            true,
+            "exchange.account.select"
+        );
     }
 
-    std::cout << "===================================" << std::endl;
-    std::cout << "> ";
-
-    int accountChoice = Console::askNumberBetween(
-        0,
-        static_cast<int>(accounts.size()),
+    int accountChoice = TerminalInterface::askMenuChoiceFromOptions(
+        accountScreen,
         "Veuillez choisir un compte affiché."
     );
+    Console::clear();
 
     if (accountChoice == 0)
     {
-        Console::clear();
         return;
     }
 
     std::string targetAccount = accounts[accountChoice - 1].accountName;
     std::vector<CharacterSaveSummary> characters = SaveManager::listPlayableCharacters(targetAccount);
 
-    Console::clear();
-
     if (characters.empty())
     {
-        std::cout << "Ce compte n'a aucun personnage jouable." << std::endl;
-        std::cout << std::endl;
+        MenuScreen emptyCharacterScreen("PERSONNAGE CIBLE", "exchange.character.empty");
+        emptyCharacterScreen.addLine("Ce compte n'a aucun personnage jouable.");
+        emptyCharacterScreen.addLine("Compte : " + targetAccount);
+        TerminalInterface::renderMenuScreen(emptyCharacterScreen, false);
         Console::waitForEnter();
         Console::clear();
         return;
     }
 
-    std::cout << "========== PERSONNAGE CIBLE ==========" << std::endl;
-    std::cout << "0 : Retour" << std::endl;
+    MenuScreen characterScreen("PERSONNAGE CIBLE", "exchange.character.select");
+    characterScreen.addSubtitle("Compte cible : " + targetAccount);
+    characterScreen.addBackOption();
 
     for (int i = 0; i < static_cast<int>(characters.size()); ++i)
     {
-        std::cout << (i + 1) << " : "
-                  << characters[i].characterName
-                  << " | " << characters[i].raceName
-                  << " / " << characters[i].className
-                  << " | Niveau " << characters[i].level
-                  << std::endl;
+        const CharacterSaveSummary& character = characters[i];
+        std::string label = character.characterName
+            + " | " + character.raceName
+            + " / " + character.className
+            + " | Niveau " + std::to_string(character.level);
+
+        bool sameCharacter = targetAccount == accountName && character.characterName == mainPlayer.getName();
+
+        characterScreen.addOption(
+            i + 1,
+            label,
+            sameCharacter ? "C'est ton personnage actuel : échange impossible avec soi-même." : "Maître : " + character.currentOwnerAccountName,
+            true,
+            "exchange.character.select"
+        );
     }
 
-    std::cout << "======================================" << std::endl;
-    std::cout << "> ";
-
-    int characterChoice = Console::askNumberBetween(
-        0,
-        static_cast<int>(characters.size()),
+    int characterChoice = TerminalInterface::askMenuChoiceFromOptions(
+        characterScreen,
         "Veuillez choisir un personnage affiché."
     );
+    Console::clear();
 
     if (characterChoice == 0)
     {
-        Console::clear();
         return;
     }
 
@@ -1346,7 +1704,6 @@ void Game::openExchangeMenu()
         Console::clear();
         std::cout << "Échange impossible." << std::endl;
         std::cout << "Un personnage altéré ne peut pas transférer de ressources réelles." << std::endl;
-        std::cout << "Suggestion sécurité : les données instables restent isolées du commerce entre personnages." << std::endl;
         std::cout << std::endl;
         Console::waitForEnter();
         Console::clear();
@@ -1358,7 +1715,7 @@ void Game::openExchangeMenu()
         Console::clear();
         std::cout << "Échange impossible." << std::endl;
         std::cout << "Un clone ne peut pas donner ou recevoir d'objets réels." << std::endl;
-        std::cout << "Raison : éviter la duplication par export/copie de personnage." << std::endl;
+        std::cout << "Le registre refuse les silhouettes copiées dans les échanges réels." << std::endl;
         std::cout << std::endl;
         Console::waitForEnter();
         Console::clear();
@@ -1386,21 +1743,23 @@ void Game::openExchangeMenu()
     while (open)
     {
         Console::clear();
-        std::cout << "========== ÉCHANGE / DON ==========" << std::endl;
-        std::cout << "Source principale : " << mainPlayer.getName() << std::endl;
-        std::cout << "Cible : " << targetPlayer.getName() << " (" << targetAccount << ")" << std::endl;
-        displayExchangeValueEstimation(mainPlayer, targetPlayer);
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Donner de l'or" << std::endl;
-        std::cout << "2 : Donner une arme" << std::endl;
-        std::cout << "3 : Donner une armure" << std::endl;
-        std::cout << "4 : Donner un consommable" << std::endl;
-        std::cout << "5 : Donner un matériau" << std::endl;
-        std::cout << "6 : Recevoir depuis le personnage cible" << std::endl;
-        std::cout << "===================================" << std::endl;
-        std::cout << "> ";
 
-        int choice = Console::askNumberBetween(0, 6, "Veuillez choisir une option affichée.");
+        MenuScreen exchangeScreen("ÉCHANGE / DON", "exchange.action");
+        exchangeScreen.addLine("Source principale : " + mainPlayer.getName());
+        exchangeScreen.addLine("Cible : " + targetPlayer.getName() + " (" + targetAccount + ")");
+        exchangeScreen.addBackOption();
+        exchangeScreen.addOption(1, "Donner de l'or", "Transfert direct depuis " + mainPlayer.getName() + ".", true, "exchange.give.gold");
+        exchangeScreen.addOption(2, "Donner une arme", "Impossible avec l'arme équipée.", true, "exchange.give.weapon");
+        exchangeScreen.addOption(3, "Donner une armure", "Impossible avec l'armure portée.", true, "exchange.give.armor");
+        exchangeScreen.addOption(4, "Donner un consommable", "Transfert d'un objet consommable.", true, "exchange.give.consumable");
+        exchangeScreen.addOption(5, "Donner un matériau", "Transfert avec quantité choisie.", true, "exchange.give.material");
+        exchangeScreen.addOption(6, "Recevoir depuis le personnage cible", "Inverse la source et la cible pour cette action.", true, "exchange.receive");
+        exchangeScreen.addFooterLine("L'estimation de valeur s'affiche après le choix pour garder l'écran lisible.");
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            exchangeScreen,
+            "Veuillez choisir une option affichée."
+        );
 
         Player* giver = &mainPlayer;
         Player* receiver = &targetPlayer;
@@ -1416,17 +1775,29 @@ void Game::openExchangeMenu()
             receiver = &mainPlayer;
 
             Console::clear();
-            std::cout << "Recevoir depuis " << giver->getName() << " vers " << receiver->getName() << "." << std::endl;
-            std::cout << "1 : Or" << std::endl;
-            std::cout << "2 : Arme" << std::endl;
-            std::cout << "3 : Armure" << std::endl;
-            std::cout << "4 : Consommable" << std::endl;
-            std::cout << "5 : Matériau" << std::endl;
-            std::cout << "> ";
-            choice = Console::askNumberBetween(1, 5, "Veuillez choisir une option affichée.");
+            MenuScreen receiveScreen("RECEVOIR", "exchange.receive.type");
+            receiveScreen.addLine("Depuis : " + giver->getName());
+            receiveScreen.addLine("Vers : " + receiver->getName());
+            receiveScreen.addBackOption("Annuler");
+            receiveScreen.addOption(1, "Or", "Transférer une quantité d'or.", true, "exchange.receive.gold");
+            receiveScreen.addOption(2, "Arme", "Choisir une arme non équipée.", true, "exchange.receive.weapon");
+            receiveScreen.addOption(3, "Armure", "Choisir une armure non portée.", true, "exchange.receive.armor");
+            receiveScreen.addOption(4, "Consommable", "Choisir un consommable.", true, "exchange.receive.consumable");
+            receiveScreen.addOption(5, "Matériau", "Choisir un matériau et une quantité.", true, "exchange.receive.material");
+
+            choice = TerminalInterface::askMenuChoiceFromOptions(
+                receiveScreen,
+                "Veuillez choisir une ressource affichée."
+            );
+
+            if (choice == 0)
+            {
+                continue;
+            }
         }
 
         Console::clear();
+        displayExchangeValueEstimation(*giver, *receiver);
 
         if (choice == 1)
         {
@@ -1447,54 +1818,39 @@ void Game::openExchangeMenu()
         }
         else if (choice == 2)
         {
-            giver->getInventory().displayWeaponList();
-            std::cout << "Choisis l'arme à transférer. 0 pour annuler." << std::endl;
-            std::cout << "> ";
-            int index = Console::askNumberBetween(0, giver->getInventory().getWeaponCount(), "Choix invalide.") - 1;
+            int index = askExchangeWeaponIndex(*giver);
 
             if (index >= 0)
             {
-                if (index == giver->getEquippedWeaponIndex())
-                {
-                    std::cout << "Impossible de transférer l'arme équipée pour l'instant." << std::endl;
-                }
-                else
-                {
-                    Weapon weapon = giver->getInventory().getWeapon(index);
-                    receiver->getInventory().addWeapon(weapon);
-                    giver->getInventory().removeWeapon(index);
-                    std::cout << "Arme transférée : " << weapon.getName() << "." << std::endl;
-                }
+                Weapon weapon = giver->getInventory().getWeapon(index);
+                receiver->getInventory().addWeapon(weapon);
+                giver->getInventory().removeWeapon(index);
+                std::cout << "Arme transférée : " << weapon.getName() << "." << std::endl;
+            }
+            else
+            {
+                std::cout << "Aucune arme transférée." << std::endl;
             }
         }
         else if (choice == 3)
         {
-            giver->getInventory().displayArmorList();
-            std::cout << "Choisis l'armure à transférer. 0 pour annuler." << std::endl;
-            std::cout << "> ";
-            int index = Console::askNumberBetween(0, giver->getInventory().getArmorCount(), "Choix invalide.") - 1;
+            int index = askExchangeArmorIndex(*giver);
 
             if (index >= 0)
             {
-                if (index == giver->getEquippedArmorIndex())
-                {
-                    std::cout << "Impossible de transférer l'armure équipée pour l'instant." << std::endl;
-                }
-                else
-                {
-                    Armor armor = giver->getInventory().getArmor(index);
-                    receiver->getInventory().addArmor(armor);
-                    giver->getInventory().removeArmor(index);
-                    std::cout << "Armure transférée : " << armor.getName() << "." << std::endl;
-                }
+                Armor armor = giver->getInventory().getArmor(index);
+                receiver->getInventory().addArmor(armor);
+                giver->getInventory().removeArmor(index);
+                std::cout << "Armure transférée : " << armor.getName() << "." << std::endl;
+            }
+            else
+            {
+                std::cout << "Aucune armure transférée." << std::endl;
             }
         }
         else if (choice == 4)
         {
-            giver->getInventory().displayConsumableList();
-            std::cout << "Choisis le consommable à transférer. 0 pour annuler." << std::endl;
-            std::cout << "> ";
-            int index = Console::askNumberBetween(0, giver->getInventory().getConsumableCount(), "Choix invalide.") - 1;
+            int index = askExchangeConsumableIndex(*giver);
 
             if (index >= 0)
             {
@@ -1503,13 +1859,14 @@ void Game::openExchangeMenu()
                 giver->getInventory().removeConsumable(index);
                 std::cout << "Consommable transféré : " << consumable.getName() << "." << std::endl;
             }
+            else
+            {
+                std::cout << "Aucun consommable transféré." << std::endl;
+            }
         }
         else if (choice == 5)
         {
-            giver->getInventory().displayMaterialList();
-            std::cout << "Choisis le matériau à transférer. 0 pour annuler." << std::endl;
-            std::cout << "> ";
-            int index = Console::askNumberBetween(0, static_cast<int>(giver->getInventory().getMaterials().size()), "Choix invalide.") - 1;
+            int index = askExchangeMaterialIndex(*giver);
 
             if (index >= 0)
             {
@@ -1521,6 +1878,10 @@ void Game::openExchangeMenu()
                 receiver->getInventory().addMaterial(material);
                 giver->getInventory().removeMaterialQuantity(index, amount);
                 std::cout << "Matériau transféré : " << material.getName() << " x" << amount << "." << std::endl;
+            }
+            else
+            {
+                std::cout << "Aucun matériau transféré." << std::endl;
             }
         }
 

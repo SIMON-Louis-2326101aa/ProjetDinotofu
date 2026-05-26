@@ -7,7 +7,9 @@ output/
 *.d
 *.out
 *.exe
+Dinotofu
 dinotofu
+Dinotofu.exe
 dinotofu.exe
 
 # =========================
@@ -79,3 +81,8 @@ import_accounts/**
 # =========================
 Thumbs.db
 desktop.ini
+
+# =========================
+# Release packaging local
+# =========================
+release_packages/

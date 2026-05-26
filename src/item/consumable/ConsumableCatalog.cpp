@@ -127,7 +127,7 @@ Consumable ConsumableCatalog::createDefensivePotion()
 {
     return Consumable(
         "Potion défensive",
-        "Potion de préparation défensive. Le vrai effet défensif sera branché avec les buffs complets.",
+        "Potion de préparation défensive. Son mélange durcit brièvement les réflexes du corps.",
         45,
         ConsumableType::Buff,
         18
@@ -160,10 +160,21 @@ Consumable ConsumableCatalog::createWeakeningDebuffPotion()
 {
     return Consumable(
         "Fiole d'affaiblissement",
-        "Potion offensive/debuff à lancer sur une cible. Prévue pour le futur sous-menu de potions offensives.",
+        "Potion offensive à lancer sur une cible. Son mélange épuise la force du prochain échange.",
         85,
         ConsumableType::Debuff,
         22
+    );
+}
+
+Consumable ConsumableCatalog::createFragilityDebuffPotion()
+{
+    return Consumable(
+        "Fiole de fragilisation",
+        "Potion offensive à lancer sur une cible. Son mélange ouvre une faille qui rend les prochains impacts plus cruels.",
+        105,
+        ConsumableType::Debuff,
+        26
     );
 }
 
@@ -212,6 +223,17 @@ Consumable ConsumableCatalog::createShockResistancePotion()
     );
 }
 
+Consumable ConsumableCatalog::createElementalWardPotion()
+{
+    return Consumable(
+        "Potion de voile élémentaire",
+        "Une potion défensive qui enveloppe le corps d'un voile court contre les altérations élémentaires.",
+        120,
+        ConsumableType::Buff,
+        30
+    );
+}
+
 Consumable ConsumableCatalog::createSmokeEscapeVial()
 {
     return Consumable(
@@ -220,5 +242,71 @@ Consumable ConsumableCatalog::createSmokeEscapeVial()
         180,
         ConsumableType::Special,
         1
+    );
+}
+
+Consumable ConsumableCatalog::createArcaneSparkScroll()
+{
+    return Consumable(
+        "Parchemin d'étincelle arcanique",
+        "Un sort scellé dans l'encre. Même un non-mage peut le déclencher, mais une seule fois.",
+        95,
+        ConsumableType::Special,
+        24
+    );
+}
+
+Consumable ConsumableCatalog::createElementalWardScroll()
+{
+    return Consumable(
+        "Parchemin de voile élémentaire",
+        "Un voile défensif inscrit sur papier runique. Usage unique, précieux quand aucun vrai mage n'est disponible.",
+        135,
+        ConsumableType::Special,
+        28
+    );
+}
+
+Consumable ConsumableCatalog::createResistanceRiftScroll()
+{
+    return Consumable(
+        "Parchemin de faille fragile",
+        "Une formule instable qui ouvre brièvement la défense d'une cible. Usage unique et risqué.",
+        185,
+        ConsumableType::Special,
+        32
+    );
+}
+
+Consumable ConsumableCatalog::createWanderingEmberScroll()
+{
+    return Consumable(
+        "Parchemin de braise errante",
+        "Une magie jetable sans grimoire stable connu. La braise choisit mal sa faim si la main tremble.",
+        125,
+        ConsumableType::Special,
+        26
+    );
+}
+
+Consumable ConsumableCatalog::createMinorPurificationScroll()
+{
+    return Consumable(
+        "Parchemin de purification mineure",
+        "Une magie jetable qui chasse quelques altérations. Aucun grimoire stable courant ne reproduit exactement ce tracé.",
+        115,
+        ConsumableType::Special,
+        22
+    );
+}
+
+Consumable ConsumableCatalog::createCrawlingVenomScroll()
+{
+    return Consumable(
+        "Parchemin de venin rampant",
+        "Une formule jetable de venin magique. Elle existe surtout sur papier : le tracé se dissout dès que le poison mord.",
+        145,
+        ConsumableType::Special,
+        25
     );
 }

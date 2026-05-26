@@ -217,15 +217,15 @@ bool PlayerWaveCombatTurn::openWaveInterface(
 
     if (interfaceChoice == 7)
     {
-        std::cout << "Les ordres aux alliés seront disponibles quand les alliés permanents seront branchés." << std::endl;
+        std::cout << "Aucun allié stable n'attend d'ordre sur ce champ de bataille." << std::endl;
         std::cout << std::endl;
         return false;
     }
 
     if (interfaceChoice == 8)
     {
-        std::cout << "Le contrôle des invocations se choisit déjà au début du combat si tu possèdes des invocations." << std::endl;
-        std::cout << "Plus tard, cette option permettra de changer les ordres pendant le combat." << std::endl;
+        std::cout << "Tes invocations suivent l'ordre donné au début du combat." << std::endl;
+        std::cout << "Changer cet ordre au milieu du chaos demande une ouverture que tu n'as pas encore." << std::endl;
         std::cout << std::endl;
         return false;
     }

@@ -268,23 +268,23 @@ void Material::display() const
 
     if (category == "Matériau de monstre")
     {
-        std::cout << "Utilité prévue : revente, artisanat, trophées et recettes liées aux monstres." << std::endl;
+        std::cout << "Utilité connue : revente, artisanat, trophées et recettes liées aux monstres." << std::endl;
     }
     else if (category == "Matériau")
     {
-        std::cout << "Utilité prévue : réparation, amélioration et fabrication d'équipement." << std::endl;
+        std::cout << "Utilité connue : réparation, amélioration et fabrication d'équipement." << std::endl;
     }
     else if (category == "Plante")
     {
-        std::cout << "Utilité prévue : potions, remèdes, quêtes et secrets botaniques." << std::endl;
+        std::cout << "Utilité connue : potions, remèdes, quêtes et secrets botaniques." << std::endl;
     }
     else if (category == "Outil")
     {
-        std::cout << "Utilité prévue : accepter une réparation autonome. Un kit intact reste empilé ; un kit entamé est affiché séparément avec sa durabilité." << std::endl;
+        std::cout << "Utilité connue : réparation autonome. Un kit intact reste empilé ; un kit entamé garde la marque de son usure." << std::endl;
     }
     else if (category == "Renseignement" || category == "Livre")
     {
-        std::cout << "Utilité prévue : débloquer ou compléter des informations du bestiaire." << std::endl;
+        std::cout << "Utilité connue : débloquer ou compléter des informations du bestiaire." << std::endl;
     }
     std::cout << "====================" << std::endl;
     std::cout << std::endl;

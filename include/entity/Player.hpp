@@ -40,6 +40,10 @@ private:
     int bowKillProgress;
     int bareHandKillProgress;
     int staffKillProgress;
+    int swordKillProgress;
+    int axeKillProgress;
+    int hammerKillProgress;
+    int spearKillProgress;
 
     int combatsStarted;
     int victories;
@@ -199,6 +203,10 @@ public:
     // EN: getStaffKillProgress declares or implements a focused behavior used by this module.
     // FR: getStaffKillProgress déclare ou implémente un comportement précis utilisé par ce module.
     int getStaffKillProgress() const;
+    int getSwordKillProgress() const;
+    int getAxeKillProgress() const;
+    int getHammerKillProgress() const;
+    int getSpearKillProgress() const;
     // EN: hasPassiveSkill declares or implements a focused behavior used by this module.
     // FR: hasPassiveSkill déclare ou implémente un comportement précis utilisé par ce module.
     bool hasPassiveSkill(const std::string& skillId) const;
@@ -223,7 +231,11 @@ public:
         int daggerProgress,
         int bowProgress,
         int bareHandProgress,
-        int staffProgress
+        int staffProgress,
+        int swordProgress,
+        int axeProgress,
+        int hammerProgress,
+        int spearProgress
     );
     // EN: displaySkillProgress declares or implements a focused behavior used by this module.
     // FR: displaySkillProgress déclare ou implémente un comportement précis utilisé par ce module.

@@ -1,6 +1,6 @@
 {
     "title": "Dinotofu special character dialogues",
-    "note": "Prepared dialogue design file. Code currently displays entrance, victory and defeat lines for special arena opponents. Group dialogue and Sanctus/Skuro transformation notes have been added to prepare future story reactions.",
+    "note": "Dialogue archive for special arena opponents: entrance, victory, defeat, group lines and Sanctus/Skuro transformation hints.",
     "characters": {
         "Hazak": {
             "personality": "Dark, efficient assassin. Direct, arrogant, focused on winning.",
@@ -49,6 +49,10 @@
         },
         "Matt (PRO)": {
             "personality": "Silent and respectful opponent. He does not talk directly: he fights."
+        },
+        "Trexof": {
+            "personality": "Assassin humain, testeur principal, précis et dangereux.",
+            "entrance": "On va voir si ton build tient vraiment. Bouge pas trop vite, j'ai besoin de données propres."
         }
     },
     "groups": {
@@ -61,25 +65,25 @@
             "Trexof: D’abord on teste. Après on négocie."
         ],
         "Aoi / Kanadé / Sanctus": [
-            "Sanctus protects the group.",
-            "Kanadé complains while staying determined.",
-            "Aoi protects her incantations."
+            "Sanctus protège le groupe.",
+            "Kanadé râle tout en restant déterminée.",
+            "Aoi protège ses incantations."
         ],
         "Hazak / Hestia": [
-            "Hazak refuses to turn this into a massacre when Hestia is present.",
-            "Hestia does not want to see humans or semi-humans assassinated."
+            "Hazak refuse de transformer ce combat en massacre quand Hestia est présente.",
+            "Hestia ne veut pas voir d'humains ou de semi-humains assassinés."
         ],
         "Fail / Hazak": [
-            "Fail respects the non-aggression contract with Hazak.",
-            "Hazak tolerates Fail as long as the contract still means something."
+            "Fail respecte son contrat de non-agression avec Hazak.",
+            "Hazak tolère Fail tant que le contrat signifie encore quelque chose."
         ],
         "Skuro groups": [
-            "Skuro can only appear with Hazak, Henrique, Aoi, Fail or Kanadé.",
-            "His presence makes the encounter dangerous."
+            "Skuro ne peut apparaître qu'avec Hazak, Henrique, Aoi, Fail ou Kanadé.",
+            "Sa présence rend la rencontre dangereuse."
         ],
         "Fire Flight / Matt (PRO)": [
-            "Fire Flight leads.",
-            "Matt (PRO) stays silent and fights respectfully."
+            "Fire Flight mène le groupe.",
+            "Matt (PRO) reste silencieux et combat avec respect."
         ]
     }
 }

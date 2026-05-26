@@ -1,5 +1,5 @@
-// EN: AIPvpMode.cpp briefly defines this Dinotofu module and its responsibilities.
-// FR: AIPvpMode.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
+// EN: AIPvpMode.cpp implements the player-versus-AI arena mode.
+// FR: AIPvpMode.cpp implémente le mode arène joueur contre IA.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
@@ -7,12 +7,12 @@
 
 #include "combat/TurnManager.hpp"
 #include "combat/ai/CombatAI.hpp"
-#include "combat/summon/SummonRules.hpp"
-#include "combat/summon/SummonCombatSystem.hpp"
-#include "combat/threat/ThreatSystem.hpp"
 #include "combat/group/CombatGroupBuilder.hpp"
 #include "combat/group/CombatUnitKind.hpp"
 #include "combat/role/CombatRoleActionSystem.hpp"
+#include "combat/summon/SummonCombatSystem.hpp"
+#include "combat/summon/SummonRules.hpp"
+#include "combat/threat/ThreatSystem.hpp"
 
 #include "character/RandomCharacterGenerator.hpp"
 #include "character/SpecialCharacterCatalog.hpp"
@@ -21,6 +21,9 @@
 #include "class_system/ClassCatalog.hpp"
 #include "core/Console.hpp"
 #include "interface/CombatDisplay.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 #include <iostream>
 #include <string>
@@ -28,86 +31,87 @@
 
 namespace
 {
-    // EN: askClassManually declares or implements a focused behavior used by this module.
-    // FR: askClassManually déclare ou implémente un comportement précis utilisé par ce module.
     PlayerClass askClassManually(const std::string& targetName)
     {
         Console::clear();
 
-        std::cout << "Choisis une famille de classe pour " << targetName << "." << std::endl;
-        std::cout << "Tu ne choisis pas vraiment l'identité de l'adversaire : seulement son style de combat." << std::endl;
-        std::cout << std::endl;
+        MenuScreen categoryScreen("STYLE DE COMBAT DE " + targetName, "pvp.ai.class.category");
+        categoryScreen.addLine("Tu ne choisis pas vraiment l'identité de l'adversaire : seulement son style de combat.");
+        categoryScreen.addLine("Le nom, la race et l'équipement restent gérés par l'arène.");
 
-        ClassCatalog::displayClassCategories();
+        for (int i = 1; i <= ClassCatalog::getClassCategoryCount(); ++i)
+        {
+            categoryScreen.addOption(
+                i,
+                ClassCatalog::getClassCategoryNameByChoice(i),
+                std::to_string(ClassCatalog::getPlayableClassCountByCategoryChoice(i)) + " classes disponibles",
+                true,
+                "pvp.ai.class.category." + std::to_string(i)
+            );
+        }
 
-        std::cout << std::endl;
-        std::cout << "> ";
-
-        int categoryChoice = Console::askNumberBetween(
-            1,
-            ClassCatalog::getClassCategoryCount(),
-            "Veuillez entrer un chiffre correspondant à une famille affichée."
+        int categoryChoice = TerminalInterface::askMenuChoiceFromOptions(
+            categoryScreen,
+            "Veuillez choisir une famille affichée."
         );
 
         Console::clear();
 
-        std::cout << "Famille sélectionnée : "
-                  << ClassCatalog::getClassCategoryNameByChoice(categoryChoice)
-                  << "."
-                  << std::endl;
-        std::cout << "Choisis maintenant la classe de l'adversaire." << std::endl;
-        std::cout << "Son nom et sa race seront tirés aléatoirement." << std::endl;
-        std::cout << std::endl;
+        std::vector<ClassOptionInfo> classOptions = ClassCatalog::getClassOptionsByCategoryChoice(categoryChoice);
+        MenuScreen classScreen("CLASSE DE " + targetName, "pvp.ai.class.choice");
+        classScreen.addLine("Famille sélectionnée : " + ClassCatalog::getClassCategoryNameByChoice(categoryChoice) + ".");
+        classScreen.addLine("Choisis une classe précise pour fixer le rythme du duel.");
 
-        ClassCatalog::displayClassesByCategoryChoice(categoryChoice);
+        for (std::size_t i = 0; i < classOptions.size(); ++i)
+        {
+            const ClassOptionInfo& info = classOptions[i];
+            classScreen.addOption(
+                static_cast<int>(i + 1),
+                info.name,
+                "Rôle : " + info.role
+                    + " | PV " + std::to_string(info.maxHp)
+                    + " | Dégâts " + std::to_string(info.minDamage) + "-" + std::to_string(info.maxDamage)
+                    + " | Crit " + std::to_string(info.criticalDamage),
+                true,
+                "pvp.ai.class.choice." + std::to_string(i + 1)
+            );
+        }
 
-        int maxClassChoice = ClassCatalog::getPlayableClassCountByCategoryChoice(categoryChoice);
-
-        std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
-        std::cout << "> ";
-
-        int classChoice = Console::askNumberBetween(
-            1,
-            maxClassChoice,
-            "Veuillez entrer un chiffre correspondant à une classe affichée."
+        int classChoice = TerminalInterface::askMenuChoiceFromOptions(
+            classScreen,
+            "Veuillez choisir une classe affichée."
         );
 
         return ClassCatalog::createClassByCategoryChoice(categoryChoice, classChoice);
     }
 
-    // EN: applyMattProUniversalBonus declares or implements a focused behavior used by this module.
-    // FR: applyMattProUniversalBonus déclare ou implémente un comportement précis utilisé par ce module.
     void applyMattProUniversalBonus(Player& matt)
     {
-        matt.applyFlatStatBonus(
-            20,
-            2,
-            4,
-            6
-        );
+        matt.applyFlatStatBonus(20, 2, 4, 6);
     }
 
-    // EN: createMattOpponent declares or implements a focused behavior used by this module.
-    // FR: createMattOpponent déclare ou implémente un comportement précis utilisé par ce module.
     Player createMattOpponent(Random& random)
     {
-        std::cout << "Matt (PRO) est entré dans l'arène." << std::endl;
-        std::cout << "Il n'a pas vraiment de spécialité : il est juste meilleur que prévu, quelle que soit sa classe." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "MATT (PRO)",
+            "pvp.ai.matt.intro",
+            {
+                "Matt (PRO) est entré dans l'arène.",
+                "Il n'a pas vraiment de spécialité : il est juste meilleur que prévu, quelle que soit sa classe."
+            },
+            false
+        );
 
         Console::pauseSeconds(1);
 
-        std::cout << "Choisis comment Matt obtiendra sa classe :" << std::endl;
-        std::cout << std::endl;
-        std::cout << "1 : Classe aléatoire" << std::endl;
-        std::cout << "2 : Choisir sa classe toi-même" << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
+        MenuScreen screen("CLASSE DE MATT (PRO)", "pvp.ai.matt.class_mode");
+        screen.addLine("Choisis comment Matt obtiendra sa classe.");
+        screen.addOption(1, "Classe aléatoire", "L'arène décide, comme prévu.", true, "pvp.ai.matt.random");
+        screen.addOption(2, "Choisir sa classe toi-même", "Pas très fair-play, mais accepté.", true, "pvp.ai.matt.manual");
 
-        int classChoiceType = Console::askNumberBetween(
-            1,
-            2,
-            "Veuillez entrer un chiffre valide : 1 ou 2."
+        int classChoiceType = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Veuillez choisir 1 ou 2."
         );
 
         PlayerClass mattClass;
@@ -119,9 +123,13 @@ namespace
         }
         else
         {
-            std::cout << "Pas très fair-play, mais l'arène accepte ce genre de petit caprice." << std::endl;
+            MessageScreen::show(
+                "CAPRICE ACCEPTÉ",
+                "pvp.ai.matt.manual.warning",
+                {"L'arène accepte que tu règles toi-même le style de Matt."},
+                false
+            );
             Console::pauseSeconds(1);
-
             mattClass = askClassManually("Matt (PRO)");
         }
 
@@ -133,127 +141,127 @@ namespace
         return ai;
     }
 
-    // EN: createChosenSpecialOpponent declares or implements a focused behavior used by this module.
-    // FR: createChosenSpecialOpponent déclare ou implémente un comportement précis utilisé par ce module.
     Player createChosenSpecialOpponent()
     {
         Console::clear();
 
         std::vector<SpecialCharacter> characters = SpecialCharacterCatalog::getAllSpecialCharacters();
-
-        std::cout << "========== PERSONNAGES SPÉCIAUX ==========" << std::endl;
-        std::cout << "Le code a ouvert une porte que l'arène garde normalement rare." << std::endl;
-        std::cout << "Tu peux provoquer un personnage spécial précis, y compris Matt (PRO)." << std::endl;
-        std::cout << std::endl;
+        MenuScreen screen("PERSONNAGES SPÉCIAUX", "pvp.ai.special.choice");
+        screen.addLine("Le code a ouvert une porte que l'arène garde normalement rare.");
+        screen.addLine("Tu peux provoquer un personnage spécial précis, y compris Matt (PRO).");
 
         for (std::size_t index = 0; index < characters.size(); ++index)
         {
             const SpecialCharacter& character = characters[index];
-            std::cout << index + 1 << " : " << character.getName()
-                      << " | Race : " << character.getRaceText()
-                      << " | Classe native : " << character.getNativeClass()
-                      << std::endl;
-            std::cout << "    " << character.getCombatStyle() << std::endl;
+            screen.addOption(
+                static_cast<int>(index + 1),
+                character.getName(),
+                "Race : " + character.getRaceText()
+                    + " | Classe native : " + character.getNativeClass()
+                    + " | " + character.getCombatStyle(),
+                true,
+                "pvp.ai.special." + std::to_string(index + 1)
+            );
         }
 
-        std::cout << std::endl;
-        std::cout << "> ";
-
-        int choice = Console::askNumberBetween(
-            1,
-            static_cast<int>(characters.size()),
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
             "Veuillez choisir un personnage spécial affiché."
         );
 
         const SpecialCharacter& selected = characters[static_cast<std::size_t>(choice - 1)];
 
-        Player opponent(
-            selected.getName(),
-            ClassCatalog::createClassByName(selected.getNativeClass())
-        );
-
+        Player opponent(selected.getName(), ClassCatalog::createClassByName(selected.getNativeClass()));
         opponent.setRace(selected.getRace());
         opponent.initializeStarterInventory();
 
-        SpecialCharacterNativeBonus::applyForSpecialCharacter(
-            opponent,
-            selected
-        );
+        SpecialCharacterNativeBonus::applyForSpecialCharacter(opponent, selected);
 
         Console::clear();
-        std::cout << selected.getName() << " a été appelé directement par le registre altéré." << std::endl;
-        std::cout << "Ce n'est plus une rencontre rare : c'est un défi provoqué." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "DÉFI PROVOQUÉ",
+            "pvp.ai.special.called",
+            {
+                selected.getName() + " a été appelé directement par le registre altéré.",
+                "Ce n'est plus une rencontre rare : c'est un défi provoqué."
+            },
+            false
+        );
 
         return opponent;
     }
 
-    // EN: createClassicOpponentFromChosenClass declares or implements a focused behavior used by this module.
-    // FR: createClassicOpponentFromChosenClass déclare ou implémente un comportement précis utilisé par ce module.
     Player createClassicOpponentFromChosenClass(Random& random)
     {
         Console::clear();
 
-        std::cout << "Création d'un adversaire classique par style de combat." << std::endl;
-        std::cout << "Cette option ne peut pas faire apparaître de personnage spécial." << std::endl;
-        std::cout << "Tu choisis seulement la classe. Le nom et la race seront tirés par l'arène." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ADVERSAIRE CLASSIQUE",
+            "pvp.ai.classic.manual_intro",
+            {
+                "Création d'un adversaire classique par style de combat.",
+                "Cette option ne peut pas faire apparaître de personnage spécial.",
+                "Tu choisis seulement la classe. Le nom et la race seront tirés par l'arène."
+            },
+            false
+        );
 
         Console::pauseSeconds(1);
 
         PlayerClass opponentClass = askClassManually("l'adversaire");
-
-        Player opponent = RandomCharacterGenerator::generateClassicOpponentWithClass(
-            opponentClass,
-            random
-        );
-
-        return opponent;
+        return RandomCharacterGenerator::generateClassicOpponentWithClass(opponentClass, random);
     }
 }
 
-// EN: run declares or implements a focused behavior used by this module.
-// FR: run déclare ou implémente un comportement précis utilisé par ce module.
 void AIPvpMode::run(Player& player1, Random& random)
 {
-    std::cout << "Préparation de l'IA..." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "PRÉPARATION DE L'IA",
+        "pvp.ai.intro",
+        {"L'arène grave une silhouette adverse dans ses données."},
+        false
+    );
 
     Console::pauseSeconds(1);
 
-    std::cout << "Choisis le type d'adversaire IA :" << std::endl;
-    std::cout << std::endl;
-    std::cout << "1 : Matt (PRO)" << std::endl;
-    std::cout << "    L'adversaire référence. Il est meilleur globalement, peu importe sa classe." << std::endl;
-    std::cout << std::endl;
-    std::cout << "2 : Tirage d'arène aléatoire" << std::endl;
-    std::cout << "    Nom, race et classe aléatoires. Peut appeler un personnage spécial." << std::endl;
-    std::cout << "    Chance actuelle de personnage spécial : "
-              << RandomCharacterGenerator::SPECIAL_ARENA_SPAWN_PERCENTAGE
-              << "%" << std::endl;
-    std::cout << std::endl;
-    std::cout << "3 : Choisir une classe d'adversaire" << std::endl;
-    std::cout << "    Tu choisis le style de combat, mais le nom et la race restent aléatoires." << std::endl;
-    std::cout << "    Aucun personnage spécial ne peut apparaître avec cette option." << std::endl;
-    std::cout << std::endl;
-
-    int maxOpponentChoice = 3;
+    MenuScreen opponentScreen("TYPE D'ADVERSAIRE IA", "pvp.ai.opponent_type");
+    opponentScreen.addOption(
+        1,
+        "Matt (PRO)",
+        "L'adversaire référence. Il est meilleur globalement, peu importe sa classe.",
+        true,
+        "pvp.ai.opponent.matt"
+    );
+    opponentScreen.addOption(
+        2,
+        "Tirage d'arène aléatoire",
+        "Nom, race et classe aléatoires. Personnage spécial possible : "
+            + std::to_string(RandomCharacterGenerator::SPECIAL_ARENA_SPAWN_PERCENTAGE) + "%.",
+        true,
+        "pvp.ai.opponent.random"
+    );
+    opponentScreen.addOption(
+        3,
+        "Choisir une classe d'adversaire",
+        "Tu choisis le style de combat. Aucun personnage spécial ne peut apparaître avec cette option.",
+        true,
+        "pvp.ai.opponent.manual_class"
+    );
 
     if (player1.hasSpecialChallengeAccess())
     {
-        maxOpponentChoice = 4;
-        std::cout << "4 : Spéciaux" << std::endl;
-        std::cout << "    Liste tous les personnages spéciaux et permet d'en provoquer un directement." << std::endl;
-        std::cout << "    Cette option vient d'une donnée altérée." << std::endl;
-        std::cout << std::endl;
+        opponentScreen.addOption(
+            4,
+            "Spéciaux",
+            "Liste tous les personnages spéciaux et permet d'en provoquer un directement. Donnée altérée.",
+            true,
+            "pvp.ai.opponent.special"
+        );
     }
 
-    std::cout << "> ";
-
-    int opponentChoice = Console::askNumberBetween(
-        1,
-        maxOpponentChoice,
-        "Veuillez entrer un chiffre valide affiché."
+    int opponentChoice = TerminalInterface::askMenuChoiceFromOptions(
+        opponentScreen,
+        "Veuillez choisir une option affichée."
     );
 
     Player ai;
@@ -277,10 +285,20 @@ void AIPvpMode::run(Player& player1, Random& random)
 
     Console::clear();
 
-    std::cout << ai.getName() << " entre dans l'arène." << std::endl;
-    std::cout << "Race : " << ai.getRaceText() << "." << std::endl;
-    std::cout << "Classe : " << ai.getType() << "." << std::endl;
-    std::cout << "Ses statistiques ont été gravées dans l'arène." << std::endl;
+    MessageScreen::show(
+        "ADVERSAIRE GRAVÉ",
+        "pvp.ai.opponent.ready",
+        {
+            ai.getName() + " entre dans l'arène.",
+            "Race : " + ai.getRaceText() + ".",
+            "Classe : " + ai.getType() + ".",
+            "Ses statistiques ont été gravées dans l'arène."
+        },
+        false
+    );
+
+    std::cout << "Aperçu de son équipement :" << std::endl;
+    ai.displaySimpleEquipment();
 
     if (SpecialCharacterDialogueCatalog::hasDialogueFor(ai.getName()))
     {
@@ -290,13 +308,18 @@ void AIPvpMode::run(Player& player1, Random& random)
 
     if (SummonRules::classCanSummon(ai.getType()))
     {
-        std::cout << std::endl;
-        std::cout << "Note : " << SummonRules::getSummonWarningText(ai.getType()) << std::endl;
-        std::cout << "Un 1v1 peut vite devenir un PvE miniature quand quelqu'un appelle des renforts." << std::endl;
+        MessageScreen::show(
+            "RISQUE D'INVOCATION",
+            "pvp.ai.summon.warning",
+            {
+                SummonRules::getSummonWarningText(ai.getType()),
+                "Un duel peut basculer en combat de groupe dès qu'un invocateur appelle ses renforts."
+            },
+            false
+        );
     }
 
     std::cout << std::endl;
-
     Console::pauseSeconds(2);
 
     std::vector<Summon> playerSummons = SummonCombatSystem::createInitialSummonsFor(player1);
@@ -311,15 +334,10 @@ void AIPvpMode::run(Player& player1, Random& random)
         CombatUnitKind::MainFighter
     );
 
-    CombatGroupBuilder::displayGroup(
-        playerGroupPreview,
-        "GROUPE DU JOUEUR"
-    );
-
+    CombatGroupBuilder::displayGroup(playerGroupPreview, "GROUPE DU JOUEUR");
     CombatRoleActionSystem::displayRoleIdentity(player1);
 
-    SummonControlMode playerSummonControlMode =
-        SummonCombatSystem::askPlayerSummonControlMode(player1, playerSummons);
+    SummonControlMode playerSummonControlMode = SummonCombatSystem::askPlayerSummonControlMode(player1, playerSummons);
 
     SummonCombatSystem::displaySummonArrival(ai, aiSummons);
 
@@ -330,19 +348,27 @@ void AIPvpMode::run(Player& player1, Random& random)
         CombatUnitKind::Enemy
     );
 
-    CombatGroupBuilder::displayGroup(
-        enemyGroupPreview,
-        "GROUPE ADVERSE"
-    );
-
+    CombatGroupBuilder::displayGroup(enemyGroupPreview, "GROUPE ADVERSE");
     CombatRoleActionSystem::displayRoleIdentity(ai);
+
+    CombatDisplay::displayCombatState(
+        CombatDisplay::buildGroupSnapshot(
+            playerGroupPreview,
+            enemyGroupPreview,
+            "ÉTAT DE COMBAT",
+            "Pré-combat : groupes actifs et invocations visibles"
+        ),
+        false
+    );
 
     int turn = random.chooseFirstTurn();
 
-    std::cout << "Prépare-toi..." << std::endl;
-    Console::pauseSeconds(2);
-    std::cout << "Le combat contre " << ai.getName() << " commence maintenant." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "DÉBUT DU COMBAT",
+        "pvp.ai.fight.start",
+        {"Le combat contre " + ai.getName() + " commence maintenant."},
+        false
+    );
 
     while (!player1.isDead() && !ai.isDead())
     {
@@ -393,17 +419,14 @@ void AIPvpMode::run(Player& player1, Random& random)
 
                 if (summonIndex >= 0)
                 {
-                    std::cout << ai.getName()
-                              << " choisit de briser une invocation avant de viser l'invocateur."
-                              << std::endl;
-                    std::cout << std::endl;
-
-                    SummonCombatSystem::entityAttacksSummon(
-                        ai,
-                        playerSummons[summonIndex],
-                        random
+                    MessageScreen::show(
+                        "CIBLAGE D'INVOCATION",
+                        "pvp.ai.summon.targeted",
+                        {ai.getName() + " choisit de briser une invocation avant de viser l'invocateur."},
+                        false
                     );
 
+                    SummonCombatSystem::entityAttacksSummon(ai, playerSummons[summonIndex], random);
                     SummonCombatSystem::removeInactiveSummons(playerSummons);
                     turnFinished = true;
                 }
@@ -429,11 +452,7 @@ void AIPvpMode::run(Player& player1, Random& random)
             {
                 if (!player1.isDead() && SummonCombatSystem::hasActiveSummons(aiSummons))
                 {
-                    SummonCombatSystem::playSummonTurnsAgainstEntity(
-                        aiSummons,
-                        player1,
-                        random
-                    );
+                    SummonCombatSystem::playSummonTurnsAgainstEntity(aiSummons, player1, random);
                 }
 
                 turn = 1;
@@ -442,17 +461,4 @@ void AIPvpMode::run(Player& player1, Random& random)
     }
 
     CombatDisplay::displayCombatResult(player1, ai);
-
-    if (SpecialCharacterDialogueCatalog::hasDialogueFor(ai.getName()))
-    {
-        if (ai.isDead())
-        {
-            SpecialCharacterDialogueCatalog::displayDefeatDialogue(ai.getName());
-        }
-        else if (player1.isDead())
-        {
-            SpecialCharacterDialogueCatalog::displayVictoryDialogue(ai.getName());
-        }
-    }
 }
-

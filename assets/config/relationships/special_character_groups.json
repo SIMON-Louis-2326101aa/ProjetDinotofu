@@ -1,5 +1,5 @@
 {
-    "description": "Roadmap data for special character groups, relationships and future encounter intent rules.",
+    "description": "Data for special character groups, relationships and encounter intent rules.",
     "specialGroupSpawnChancePercent": 25,
     "classicRandomGroupChancePercent": 75,
     "groups": [

@@ -17,6 +17,12 @@ struct BestiaryRuntimeRecord
     std::string name;
     std::string description;
     std::string status;
+    std::string habitat;
+    std::string weaknesses;
+    std::string resistances;
+    std::string drops;
+    std::string strategy;
+    std::string dangerRank;
     int encounters;
     int kills;
     bool informationBought;

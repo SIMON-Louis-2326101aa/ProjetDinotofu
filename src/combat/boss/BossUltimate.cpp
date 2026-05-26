@@ -5,29 +5,38 @@
 
 #include "combat/boss/BossUltimate.hpp"
 #include "entity/Player.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <iostream>
+#include <string>
+#include <vector>
 
 namespace
 {
     // EN: applyDirectDamage declares or implements a focused behavior used by this module.
     // FR: applyDirectDamage déclare ou implémente un comportement précis utilisé par ce module.
 
+    void showBossUltimateLines(const std::string& title, const std::string& screenId, const std::vector<std::string>& lines)
+    {
+        MessageScreen::show(title, screenId, lines, false);
+    }
+
     void displayUltimateStart(const Boss& boss)
     {
-        std::cout << "========== ULTIME DE BOSS ==========" << std::endl;
-        std::cout << "L'aura de l'entité change brutalement : un ultime vient de commencer." << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("L'aura de l'entité change brutalement : un ultime vient de commencer.");
+
         if (boss.getMaxUltimateTurns() > 1)
         {
-            std::cout << "Durée estimée : " << boss.getMaxUltimateTurns() << " tours de boss." << std::endl;
-            std::cout << "Tant que l'effet reste actif, la fin de tour du boss peut déclencher une pression supplémentaire." << std::endl;
+            lines.push_back("Durée estimée : " + std::to_string(boss.getMaxUltimateTurns()) + " tours de boss.");
+            lines.push_back("Tant que l'effet reste actif, la fin de tour du boss peut déclencher une pression supplémentaire.");
         }
         else
         {
-            std::cout << "Effet estimé : décharge immédiate." << std::endl;
+            lines.push_back("Effet estimé : décharge immédiate.");
         }
-        std::cout << "====================================" << std::endl;
-        std::cout << std::endl;
+
+        showBossUltimateLines("ULTIME DE BOSS", "boss.ultimate.start", lines);
     }
 
     void applyDirectDamage(Entity& target, int damage)
@@ -38,10 +47,15 @@ namespace
         }
 
         target.takeDamage(damage);
-        std::cout << target.getName() << " reçoit " << damage << " dégâts." << std::endl;
-        std::cout << target.getName() << " possède maintenant "
-                  << target.getHp() << "/" << target.getMaxHp() << " PV." << std::endl;
-        std::cout << std::endl;
+        showBossUltimateLines(
+            "IMPACT",
+            "boss.ultimate.direct_damage",
+            {
+                target.getName() + " reçoit " + std::to_string(damage) + " dégâts.",
+                target.getName() + " possède maintenant "
+                    + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp()) + " PV."
+            }
+        );
     }
 }
 
@@ -763,7 +777,7 @@ void BossUltimate::executeBossUltimate(
         }
 
         applyDirectDamage(player, damage);
-        std::cout << "Effet narratif : pendant deux tours, répéter exactement la même réponse devient plus dangereux." << std::endl;
+        std::cout << "Pendant deux tours, répéter exactement la même réponse devient plus dangereux." << std::endl;
         std::cout << std::endl;
     }
     else if (boss.getBossId() == 31)

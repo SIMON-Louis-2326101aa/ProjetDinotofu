@@ -42,6 +42,19 @@ bool AICombatTurn::play(
         return true;
     }
 
+    if (action == AIAction::ClassSkill)
+    {
+        SpecialCharacterDialogueCatalog::displayCombatActionDialogue(ai.getName(), "attack");
+        bool actionSucceeded = CombatActions::executeAIClassSkill(ai, defender, random);
+
+        if (!actionSucceeded)
+        {
+            CombatActions::executeAttack(ai, defender, random);
+        }
+
+        return true;
+    }
+
     if (action == AIAction::HealingPotion)
     {
         SpecialCharacterDialogueCatalog::displayCombatActionDialogue(ai.getName(), "healing");

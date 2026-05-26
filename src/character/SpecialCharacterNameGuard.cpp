@@ -39,7 +39,7 @@ void SpecialCharacterNameGuard::displayIdentityWarning(const SpecialCharacter& c
 
     if (character.isPermanentlyNonPlayable())
     {
-        std::cout << "Cette identité est verrouillée. Elle n'est pas prévue pour être jouée." << std::endl;
+        std::cout << "Cette identité est verrouillée. Elle refuse d'être incarnée par ce chemin." << std::endl;
     }
     else
     {

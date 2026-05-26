@@ -13,7 +13,7 @@ std::vector<ShopItem> LibraryInformationCatalog::createCommonInformationOffers()
         ShopItem(
             "common_goblin_notes",
             "Notes communes sur les gobelins",
-            "Prépare le futur achat d'informations sur les gobelins communs.",
+            "Rassemble des observations simples sur les gobelins communs.",
             ShopItemCategory::Information,
             40,
             0,
@@ -23,7 +23,7 @@ std::vector<ShopItem> LibraryInformationCatalog::createCommonInformationOffers()
         ShopItem(
             "common_wolf_notes",
             "Notes communes sur les loups",
-            "Prépare le futur achat d'informations sur les bêtes communes.",
+            "Rassemble des observations simples sur les bêtes communes.",
             ShopItemCategory::Information,
             35,
             0,
@@ -33,7 +33,7 @@ std::vector<ShopItem> LibraryInformationCatalog::createCommonInformationOffers()
         ShopItem(
             "basic_plant_manual",
             "Petit guide des plantes communes",
-            "Prépare les futures informations sur les plantes basiques.",
+            "Rassemble des observations simples sur les plantes basiques.",
             ShopItemCategory::Information,
             45,
             0,
@@ -84,7 +84,7 @@ std::vector<ShopItem> LibraryInformationCatalog::createCommonInformationOffers()
         ShopItem(
             "weapon_training_notes",
             "Notes d'entraînement aux techniques",
-            "Prépare les compétences débloquées par niveau, arme et expérimentation.",
+            "Décrit comment les techniques naissent du niveau, de l'arme et de l'expérimentation.",
             ShopItemCategory::Information,
             135,
             0,

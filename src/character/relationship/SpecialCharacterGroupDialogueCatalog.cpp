@@ -91,7 +91,7 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getEntranceLines(
 
     if (hasLouis && hasFireFlight && hasTrexof)
     {
-        return {"Fire Flight lève une main. Louis prépare trop de projectiles. Trexof regarde déjà les limites du système.", "Fire Flight : On ne gagne pas par hasard. On gagne parce que le chaos obéit trois secondes.", "Louis : Trois secondes, c'est large, non ?", "Trexof : Pour un bug, oui."};
+        return {"Fire Flight lève une main. Louis prépare trop de projectiles. Trexof regarde déjà les limites de l'arène.", "Fire Flight : On ne gagne pas par hasard. On gagne parce que le chaos obéit trois secondes.", "Louis : Trois secondes, c'est large, non ?", "Trexof : Pour une faille, oui."};
     }
 
     if (hasHenrique && hasMattzelda && hasSkuro)

@@ -21,6 +21,9 @@
 #include "combat/system/CombatClassSystem.hpp"
 #include "combat/summon/SummonCombatSystem.hpp"
 #include "combat/summon/SummonControlMode.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -121,7 +124,7 @@ namespace
         {
             std::cout << "Louis... là, ce n'est plus seulement un personnage." << std::endl;
             std::cout << "C'est la petite signature du créateur qui descend dans sa propre arène." << std::endl;
-            std::cout << "Conseil du dev : certains secrets ne se donnent pas dans les menus. Ils apparaissent quand tu reviens lire les registres après une victoire qui semblait inutile." << std::endl;
+            std::cout << "Conseil du créateur : certains secrets ne se donnent pas dans les menus. Ils apparaissent quand tu reviens lire les registres après une victoire qui semblait inutile." << std::endl;
         }
         else if (isAnyName(name, {"fireflight", "fire flight"}))
         {
@@ -167,7 +170,7 @@ namespace
         }
         else if (name == "trexof")
         {
-            std::cout << "Trexof. Bêta-testeur, assassin, et probablement déjà en train de calculer si ce combat est équilibré." << std::endl;
+            std::cout << "Trexof. Assassin, testeur, et probablement déjà en train de calculer où l'arène peut céder." << std::endl;
             std::cout << "Je te connais assez pour savoir que tu vas chercher la faille propre." << std::endl;
             std::cout << "Indice : les boss qui semblent punir une habitude révèlent souvent leur contre si tu changes de rythme deux tours avant l'ulti." << std::endl;
         }
@@ -181,13 +184,13 @@ namespace
         {
             std::cout << "Hestia..." << std::endl;
             std::cout << "Je vais être honnête : je n'ai pas vraiment envie de te voir tomber." << std::endl;
-            std::cout << "Même en tant que MJ, même en tant que dev, même en tant que créateur... il y a des personnages qu'on protège un peu trop." << std::endl;
+            std::cout << "Même derrière les dés, même derrière les règles, même derrière la création... il y a des personnages qu'on protège un peu trop." << std::endl;
             std::cout << "Indice : ton dôme n'est pas seulement une défense. Bien placé, il peut transformer un tour perdu en tour survivant." << std::endl;
         }
         else
         {
             std::cout << "Même si ton nom n'a pas de note personnelle dans mes fichiers, ta trace existe maintenant." << std::endl;
-            std::cout << "Conseil : un boss vaincu ne donne pas seulement du butin. Il ouvre parfois une porte que le menu ne nomme pas encore." << std::endl;
+            std::cout << "Indice : un boss vaincu ne laisse pas seulement du butin. Certaines portes ne s'ouvrent qu'après sa chute." << std::endl;
         }
 
         if (altered)
@@ -237,7 +240,7 @@ namespace
             }
             else if (name == "trexof")
             {
-                std::cout << "Trexof, trouver une faille n'est pas pareil que la valider en production." << std::endl;
+                std::cout << "Trexof, trouver une faille n'est pas pareil que survivre à son retour." << std::endl;
                 std::cout << "Merci pour le test. Maintenant, survis au correctif." << std::endl;
             }
             else if (name == "mattzelda")
@@ -467,6 +470,64 @@ namespace
         };
     }
 
+    std::string getResonanceLabel(int ratioPercent)
+    {
+        if (ratioPercent >= 120) return "stable";
+        if (ratioPercent >= 95) return "incertaine";
+        if (ratioPercent >= 75) return "fragile";
+        if (ratioPercent >= 55) return "brisée par endroits";
+        return "presque étouffée";
+    }
+
+    std::string getPowerWarningText(BossPowerRisk risk)
+    {
+        switch (risk)
+        {
+            case BossPowerRisk::PlayerAdvantage:
+                return "Ton corps ne tremble pas. Pour une fois, l'arène semble te reconnaître comme une vraie menace.";
+            case BossPowerRisk::Balanced:
+                return "Le registre ne voit aucun vainqueur évident. Ce combat peut basculer sur une seule bonne décision.";
+            case BossPowerRisk::Risky:
+                return "Ton instinct hésite. Ce boss est prenable, mais une erreur pourrait coûter très cher.";
+            case BossPowerRisk::MajorDanger:
+                return "Ton corps comprend avant ton esprit : cette entité est au-dessus de toi. Ce n'est pas impossible... mais l'arène sent déjà le sang.";
+            case BossPowerRisk::ProbableExtermination:
+            default:
+                return "Ton instinct te hurle de reculer. Cette chose ne ressemble pas à un adversaire. Elle ressemble à une fin de partie.";
+        }
+    }
+
+    MenuScreen buildBossPowerAnalysisScreen(
+        const Player& player,
+        const Boss& boss,
+        DifficultyMode difficulty,
+        const BossPowerAnalysis& analysis
+    )
+    {
+        MenuScreen screen("ANALYSE DE PUISSANCE", "boss.power_analysis");
+        screen.addLine("Le registre analyse la variation d'énergie devant toi...");
+        screen.addLine("Il compare ton niveau, ton état, ton équipement, tes ressources et la pression dégagée par l'entité.");
+        screen.addLine("");
+        screen.addLine("Résonance de " + player.getName() + " : " + getResonanceLabel(analysis.ratioPercent) + ".");
+        screen.addLine("Puissance estimée de l'entité : " + getPowerLabel(analysis.risk) + ".");
+        screen.addLine(getPowerWarningText(analysis.risk));
+
+        if (DifficultyRules::isPermanentDeath(difficulty))
+        {
+            screen.addLine("");
+            screen.addLine("Difficulté Léthal détectée.");
+            screen.addLine("Si tu meurs ici, ce personnage peut devenir une simple trace dans le registre des morts.");
+        }
+
+        if (!boss.isIdentityRevealed())
+        {
+            screen.addLine("");
+            screen.addLine("Le nom reste brouillé, mais sa pression suffit déjà à salir les pages du registre.");
+        }
+
+        return screen;
+    }
+
     void displayBossPowerAnalysis(
         const Player& player,
         const Boss& boss,
@@ -474,78 +535,9 @@ namespace
         const BossPowerAnalysis& analysis
     )
     {
-        std::cout << "Le registre analyse la variation d'énergie devant toi..." << std::endl;
-        std::cout << "Il compare ton niveau, ton état, ton équipement, tes ressources et la pression dégagée par l'entité." << std::endl;
-        std::cout << std::endl;
-
-        std::cout << "Résonance de " << player.getName() << " : ";
-
-        if (analysis.ratioPercent >= 120)
-        {
-            std::cout << "stable" << std::endl;
-        }
-        else if (analysis.ratioPercent >= 95)
-        {
-            std::cout << "incertaine" << std::endl;
-        }
-        else if (analysis.ratioPercent >= 75)
-        {
-            std::cout << "fragile" << std::endl;
-        }
-        else if (analysis.ratioPercent >= 55)
-        {
-            std::cout << "brisée par endroits" << std::endl;
-        }
-        else
-        {
-            std::cout << "presque étouffée" << std::endl;
-        }
-
-        std::cout << "Puissance estimée de l'entité : " << getPowerLabel(analysis.risk) << "." << std::endl;
-        std::cout << std::endl;
-
-        switch (analysis.risk)
-        {
-            case BossPowerRisk::PlayerAdvantage:
-                std::cout << "Ton corps ne tremble pas. Pour une fois, l'arène semble te reconnaître comme une vraie menace." << std::endl;
-                break;
-
-            case BossPowerRisk::Balanced:
-                std::cout << "Le registre ne voit aucun vainqueur évident. Ce combat peut basculer sur une seule bonne décision." << std::endl;
-                break;
-
-            case BossPowerRisk::Risky:
-                std::cout << "Ton instinct hésite. Ce boss est prenable, mais une erreur pourrait coûter très cher." << std::endl;
-                break;
-
-            case BossPowerRisk::MajorDanger:
-                std::cout << "Ton corps comprend avant ton esprit : cette entité est au-dessus de toi." << std::endl;
-                std::cout << "Ce n'est pas impossible... mais l'arène sent déjà le sang." << std::endl;
-                break;
-
-            case BossPowerRisk::ProbableExtermination:
-            default:
-                std::cout << "Ton instinct te hurle de reculer." << std::endl;
-                std::cout << "Cette chose ne ressemble pas à un adversaire. Elle ressemble à une fin de partie." << std::endl;
-                break;
-        }
-
-        if (DifficultyRules::isPermanentDeath(difficulty))
-        {
-            std::cout << std::endl;
-            std::cout << "Difficulté Léthal détectée." << std::endl;
-            std::cout << "Si tu meurs ici, ce personnage peut devenir une simple trace dans le registre des morts." << std::endl;
-        }
-
-        if (!boss.isIdentityRevealed())
-        {
-            std::cout << std::endl;
-            std::cout << "Le nom reste brouillé, mais sa pression suffit déjà à salir les pages du registre." << std::endl;
-        }
-
+        TerminalInterface::renderMenuScreen(buildBossPowerAnalysisScreen(player, boss, difficulty, analysis), false);
         std::cout << std::endl;
     }
-
 
     // EN: runFireFlightFinalTest declares or implements a focused behavior used by this module.
     // FR: runFireFlightFinalTest déclare ou implémente un comportement précis utilisé par ce module.
@@ -567,7 +559,7 @@ namespace
             std::cout << "2 : Couronne des ténèbres / Souffle de l'Origine / La forêt se souvient" << std::endl;
             std::cout << "3 : Erreur critique : le récit se réécrit" << std::endl;
             std::cout << "4 : Inversion des probabilités / Verdict des actes répétés" << std::endl;
-            std::cout << "5 : Patch d'urgence : survivre trois tours" << std::endl;
+            std::cout << "5 : Sursis d'urgence : survivre trois tours" << std::endl;
             if (player.isAlteredByCheats())
             {
                 std::cout << "? : idontwanttodie" << std::endl;
@@ -681,7 +673,7 @@ namespace
         std::cout << "Zelef a gagné. La corrosion ne quitte pas entièrement ton corps." << std::endl;
         std::cout << "PV maximum retenus par Zelef : " << lostMaxHp << std::endl;
         std::cout << "Effet visible sur le personnage : Corrosion présente." << std::endl;
-        std::cout << "Si tu bats Zelef plus tard, tu pourras récupérer ce qu'il t'a pris." << std::endl;
+        std::cout << "Si tu bats Zelef lors d'un prochain affrontement, tu pourras récupérer ce qu'il t'a pris." << std::endl;
         std::cout << "======================================" << std::endl;
         std::cout << std::endl;
     }
@@ -786,22 +778,23 @@ namespace
     // FR: askBossFightConfirmation déclare ou implémente un comportement précis utilisé par ce module.
     bool askBossFightConfirmation(const BossPowerAnalysis& analysis)
     {
+        MenuScreen screen("CONFIRMATION BOSS", "boss.confirmation");
+
         if (analysis.risk == BossPowerRisk::MajorDanger
             || analysis.risk == BossPowerRisk::ProbableExtermination)
         {
-            std::cout << "Procéder malgré tout ?" << std::endl;
+            screen.addLine("Procéder malgré tout ?");
+            screen.addLine("Le registre a déjà senti que cette arène pouvait devenir une tombe.");
         }
         else
         {
-            std::cout << "Procéder au combat ?" << std::endl;
+            screen.addLine("Procéder au combat ?");
         }
 
-        std::cout << "1 : Entrer dans l'arène" << std::endl;
-        std::cout << "0 : Reculer" << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
+        screen.addOption(1, "Entrer dans l'arène", "Le tour sera lancé après cette confirmation.", true, "boss.confirm.enter");
+        screen.addOption(0, "Reculer", "Refermer la faille pour l'instant.", true, "boss.confirm.back");
 
-        int confirmation = Console::askNumberBetween(0, 1, "Choix invalide.");
+        int confirmation = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         return confirmation == 1;
     }
 
@@ -898,7 +891,7 @@ namespace
 
         std::cout << "Stabilisation coop : le boss adapte son enveloppe." << std::endl;
         std::cout << "PV x" << hpPercent << "% | puissance x" << damagePercent << "% selon le nombre de joueurs réels." << std::endl;
-        std::cout << "Le but est d'éviter que la coop transforme un boss en sac de frappe gratuit." << std::endl;
+        std::cout << "Le sceau refuse qu'un adversaire majeur perde sa forme face au nombre." << std::endl;
         std::cout << std::endl;
     }
 
@@ -954,12 +947,12 @@ namespace
             return false;
         }
 
-        std::cout << "Action de soutien disponible pour " << healer.getName() << "." << std::endl;
-        std::cout << "0 : Jouer normalement" << std::endl;
-        std::cout << "1 : Utiliser une potion de soin sur un allié" << std::endl;
-        std::cout << "> ";
+        MenuScreen supportScreen("SOUTIEN COOP BOSS", "boss.coop.support.choice");
+        supportScreen.addLine("Action de soutien disponible pour " + healer.getName() + ".");
+        supportScreen.addOption(1, "Utiliser une potion de soin sur un allié", "Le tour de ce personnage sera consommé.", true, "boss.coop.support.heal");
+        supportScreen.addOption(0, "Jouer normalement", "Ne pas prendre le rôle de soigneur ce tour-ci.", true, "boss.coop.support.skip");
 
-        int supportChoice = Console::askNumberBetween(0, 1, "Choisis 0 ou 1.");
+        int supportChoice = TerminalInterface::askMenuChoiceFromOptions(supportScreen, "Choisis 0 ou 1.");
         Console::clear();
 
         if (supportChoice == 0)
@@ -968,25 +961,31 @@ namespace
         }
 
         std::vector<Player*> targets;
-        std::cout << "Choisis l'allié à soigner ou réveiller." << std::endl;
-        std::cout << "0 : Annuler" << std::endl;
+        MenuScreen targetScreen("CIBLE DU SOIN", "boss.coop.support.target");
+        targetScreen.addLine("Choisis l'allié à soigner ou réveiller.");
+        targetScreen.addOption(0, "Annuler", "Revenir au tour normal.", true, "boss.coop.support.target.cancel");
 
         for (Player* ally : party)
         {
             if (ally != nullptr && ally != &healer && (ally->isDead() || ally->getHp() < ally->getMaxHp()))
             {
                 targets.push_back(ally);
-                std::cout << targets.size() << " : " << ally->getName();
+                std::string label = ally->getName();
                 if (ally->isDead())
                 {
-                    std::cout << " [au sol]";
+                    label += " [au sol]";
                 }
-                std::cout << " (" << ally->getHp() << "/" << ally->getMaxHp() << " PV)" << std::endl;
+                targetScreen.addOption(
+                    static_cast<int>(targets.size()),
+                    label,
+                    std::to_string(ally->getHp()) + "/" + std::to_string(ally->getMaxHp()) + " PV",
+                    true,
+                    "boss.coop.support.target.select"
+                );
             }
         }
 
-        std::cout << "> ";
-        int targetChoice = Console::askNumberBetween(0, static_cast<int>(targets.size()), "Choisis une cible affichée.");
+        int targetChoice = TerminalInterface::askMenuChoiceFromOptions(targetScreen, "Choisis une cible affichée.");
         Console::clear();
 
         if (targetChoice == 0)
@@ -996,18 +995,22 @@ namespace
 
         Player* target = targets[targetChoice - 1];
 
-        std::cout << "Choisis la potion à utiliser." << std::endl;
-        std::cout << "0 : Annuler" << std::endl;
+        MenuScreen potionScreen("POTION DE SOUTIEN", "boss.coop.support.potion");
+        potionScreen.addLine("Choisis la potion à utiliser.");
+        potionScreen.addOption(0, "Annuler", "Garder la potion pour plus tard.", true, "boss.coop.support.potion.cancel");
         for (int i = 0; i < static_cast<int>(potionIndices.size()); ++i)
         {
             Consumable potion = healer.getInventory().getConsumable(potionIndices[i]);
-            std::cout << (i + 1) << " : " << potion.getName()
-                      << " | soin " << potion.getPower()
-                      << std::endl;
+            potionScreen.addOption(
+                i + 1,
+                potion.getName(),
+                "Soin " + std::to_string(potion.getPower()),
+                true,
+                "boss.coop.support.potion.select"
+            );
         }
 
-        std::cout << "> ";
-        int potionChoice = Console::askNumberBetween(0, static_cast<int>(potionIndices.size()), "Choisis une potion affichée.");
+        int potionChoice = TerminalInterface::askMenuChoiceFromOptions(potionScreen, "Choisis une potion affichée.");
         Console::clear();
 
         if (potionChoice == 0)
@@ -1067,7 +1070,7 @@ namespace
         int red = 0;
 
         std::cout << "Léthal coop boss : " << player.getName() << " est au sol." << std::endl;
-        std::cout << "3 pastilles vertes le ramènent. 3 rouges le rayent du registre, sauf divination future." << std::endl;
+        std::cout << "3 pastilles vertes le ramènent. 3 rouges le rayent du registre, sauf intervention capable de briser le destin." << std::endl;
         std::cout << std::endl;
 
         while (green < 3 && red < 3)
@@ -1242,6 +1245,65 @@ namespace
         return true;
     }
 
+
+    MenuScreen buildBossChoiceTypeScreen(const std::string& playerName, bool coop)
+    {
+        MenuScreen screen(coop ? "BOSS COOP" : "REGISTRE DES BOSS", coop ? "boss.coop.choice_type" : "boss.choice_type");
+        screen.addSubtitle(playerName + ", choisis le type d'apparition du boss");
+
+        if (coop)
+        {
+            screen.addLine("Le boss choisi doit être compatible avec tout le groupe.");
+            screen.addOption(1, "Boss aléatoire compatible", "Le registre choisit parmi les boss débloqués par tous.", true, "boss.choice.random.coop");
+            screen.addOption(2, "Choisir le boss", "Afficher les entités accessibles au groupe.", true, "boss.choice.manual.coop");
+        }
+        else
+        {
+            screen.addOption(1, "Boss aléatoire", "Le registre choisit une entité disponible.", true, "boss.choice.random");
+            screen.addOption(2, "Choisir le boss", "Afficher les entités que tu peux stabiliser.", true, "boss.choice.manual");
+        }
+
+        return screen;
+    }
+
+    MenuScreen buildBossSelectionScreen(
+        const std::vector<int>& visibleBossIds,
+        const std::vector<int>& enabledBossIds,
+        bool coop
+    )
+    {
+        MenuScreen screen(coop ? "SÉLECTION DU BOSS COOP" : "SÉLECTION DU BOSS", coop ? "boss.coop.selection" : "boss.selection");
+        screen.addLine(coop
+            ? "Sélectionne l'entité que le groupe veut affronter."
+            : "Sélectionne l'entité que tu veux exterminer.");
+
+        for (int id : visibleBossIds)
+        {
+            bool enabled = std::find(enabledBossIds.begin(), enabledBossIds.end(), id) != enabledBossIds.end();
+            std::string hint = BossCatalog::getRegistryHint(id);
+            if (!enabled)
+            {
+                hint += coop
+                    ? " L'un des registres du groupe bloque encore cette faille."
+                    : " Cette faille est encore verrouillée ou trop instable.";
+            }
+
+            screen.addOption(
+                id,
+                BossCatalog::getRegistryDisplayName(id),
+                hint,
+                enabled,
+                coop ? "boss.coop.select" : "boss.select"
+            );
+        }
+
+        screen.addOption(0, "Retour", "Refermer le registre.", true, "boss.selection.back");
+        screen.addFooterLine("Les boss vaincus récemment sont temporairement instables.");
+        screen.addFooterLine("Leurs statistiques exactes restent inconnues avant l'arène.");
+
+        return screen;
+    }
+
 }
 
 void BossPveMode::run(
@@ -1259,16 +1321,8 @@ void BossPveMode::run(
 
     Console::pauseSeconds(2);
 
-    std::cout << player1.getName() << ", choisis le type d'apparition du boss :" << std::endl;
-    std::cout << std::endl;
-    std::cout << "1 : Boss aléatoire" << std::endl;
-    std::cout << "2 : Choisir le boss toi-même" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
-
-    int bossChoiceType = Console::askNumberBetween(
-        1,
-        2,
+    int bossChoiceType = TerminalInterface::askMenuChoiceFromOptions(
+        buildBossChoiceTypeScreen(player1.getName(), false),
         "Veuillez entrer un chiffre valide : 1 ou 2."
     );
 
@@ -1301,22 +1355,15 @@ void BossPveMode::run(
     {
         Console::clear();
 
-        std::cout << "Sélectionne l'entité que tu veux exterminer :" << std::endl;
-        std::cout << std::endl;
-
-        BossCatalog::displayAvailableBosses(player1.getUnlockedBossIds());
-
-        std::cout << "Les boss vaincus récemment sont temporairement instables." << std::endl;
-        std::cout << "Pour refaire un boss, il faut vaincre au moins deux autres boss avant." << std::endl;
-        std::cout << "Leurs statistiques resteront inconnues pour le moment." << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
-
-        bossChoice = Console::askNumberBetween(
-            1,
-            BossCatalog::getMaximumBossId(),
-            "Veuillez entrer un identifiant de boss valide."
+        bossChoice = TerminalInterface::askMenuChoiceFromOptions(
+            buildBossSelectionScreen(player1.getUnlockedBossIds(), availableBossIds, false),
+            "Veuillez entrer un identifiant de boss affiché."
         );
+
+        if (bossChoice == 0)
+        {
+            return;
+        }
 
         if (!player1.isBossUnlocked(bossChoice))
         {
@@ -1522,15 +1569,15 @@ void BossPveMode::run(
             DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty)
         );
 
-        std::cout << player1.getName()
-                  << " revient à lui avec "
-                  << player1.getHp()
-                  << "/"
-                  << player1.getMaxHp()
-                  << " PV."
-                  << std::endl;
-        std::cout << "Même vaincu, tu n'es pas encore sorti du registre des vivants." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "RETOUR À LA VIE",
+            "combat.boss.revive",
+            {
+                player1.getName() + " revient à lui avec " + std::to_string(player1.getHp()) + "/" + std::to_string(player1.getMaxHp()) + " PV.",
+                "Même vaincu, tu n'es pas encore sorti du registre des vivants."
+            },
+            false
+        );
 
         return;
     }
@@ -1568,11 +1615,17 @@ void BossPveMode::run(
 
         if (newEntityDetected)
         {
-            std::cout << std::endl;
-            std::cout << "Une nouvelle entité a été détectée dans le registre des variations d'énergie anormale." << std::endl;
-            std::cout << "Nom : ???" << std::endl;
-            std::cout << "Statut : brouillé." << std::endl;
-            std::cout << "Le registre a ajouté une entrée, mais refuse encore d'en révéler l'identité." << std::endl;
+            MessageScreen::show(
+                "REGISTRE BOSS",
+                "boss.registry.new_entity",
+                {
+                    "Une nouvelle entité a été détectée dans le registre des variations d'énergie anormale.",
+                    "Nom : ???",
+                    "Statut : brouillé.",
+                    "Le registre a ajouté une entrée, mais refuse encore d'en révéler l'identité."
+                },
+                false
+            );
         }
 
         if (boss.getBossId() == 2 && player1.hasZelefCorrosionPresent())
@@ -1623,19 +1676,21 @@ void BossPveMode::runTeam(
     Player& leader = *party[0];
 
     Console::clear();
-    std::cout << "========== BOSS COOP ==========" << std::endl;
-    std::cout << "Joueur principal : " << leader.getName() << std::endl;
-    std::cout << "Les données de boss, niveau de session et validation d'arène suivent le joueur 1." << std::endl;
-    std::cout << "Mais l'accès au boss exige que tous les joueurs l'aient débloqué." << std::endl;
-    std::cout << "Les récompenses resteront individuelles selon participation, niveau et survie." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "BOSS COOP",
+        "boss.coop.intro",
+        {
+            "Joueur principal : " + leader.getName(),
+            "Les données de boss, niveau de session et validation d'arène suivent le joueur 1.",
+            "Mais l'accès au boss exige que tous les joueurs l'aient débloqué.",
+            "Les récompenses resteront individuelles selon participation, niveau et survie."
+        }
+    );
 
-    std::cout << leader.getName() << ", choisis le type d'apparition du boss :" << std::endl;
-    std::cout << "1 : Boss aléatoire compatible avec tout le groupe" << std::endl;
-    std::cout << "2 : Choisir le boss toi-même" << std::endl;
-    std::cout << "> ";
-
-    int bossChoiceType = Console::askNumberBetween(1, 2, "Veuillez entrer 1 ou 2.");
+    int bossChoiceType = TerminalInterface::askMenuChoiceFromOptions(
+        buildBossChoiceTypeScreen(leader.getName(), true),
+        "Veuillez entrer 1 ou 2."
+    );
 
     std::vector<int> leaderAvailableBossIds = leader.getAvailableBossIds();
     if (!hasAllInvitationsBeforeFireFlight(leader))
@@ -1675,17 +1730,15 @@ void BossPveMode::runTeam(
     else
     {
         Console::clear();
-        std::cout << "Sélectionne l'entité que le groupe veut affronter :" << std::endl;
-        std::cout << std::endl;
-        BossCatalog::displayAvailableBosses(leader.getUnlockedBossIds());
-        std::cout << "En coop, le boss choisi doit aussi être débloqué par J2/J3." << std::endl;
-        std::cout << "> ";
-
-        bossChoice = Console::askNumberBetween(
-            1,
-            BossCatalog::getMaximumBossId(),
-            "Veuillez entrer un identifiant de boss valide."
+        bossChoice = TerminalInterface::askMenuChoiceFromOptions(
+            buildBossSelectionScreen(leader.getUnlockedBossIds(), coopAvailableBossIds, true),
+            "Veuillez entrer un identifiant de boss affiché."
         );
+
+        if (bossChoice == 0)
+        {
+            return;
+        }
 
         if (!leader.isBossUnlocked(bossChoice))
         {
@@ -1900,9 +1953,14 @@ void BossPveMode::runTeam(
         boss.revealIdentity();
     }
 
-    std::cout << "========== RÉSULTAT BOSS COOP ==========" << std::endl;
-    std::cout << boss.getName() << " : " << (boss.isDead() ? "vaincu" : "encore debout") << "." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "RÉSULTAT BOSS COOP",
+        "combat.boss.coop.result",
+        {
+            boss.getName() + " : " + std::string(boss.isDead() ? "vaincu" : "encore debout") + "."
+        },
+        false
+    );
 
     for (Player* player : party)
     {
@@ -1914,8 +1972,12 @@ void BossPveMode::runTeam(
 
     if (!boss.isDead())
     {
-        std::cout << "Le groupe a été brisé par le boss." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "DÉFAITE DU GROUPE",
+            "combat.boss.coop.defeat",
+            {"Le groupe a été brisé par le boss."},
+            false
+        );
 
         for (Player* player : party)
         {
@@ -1948,7 +2010,12 @@ void BossPveMode::runTeam(
         bossCombatTurnCount
     );
 
-    std::cout << "========== RÉCOMPENSES INDIVIDUELLES BOSS COOP ==========" << std::endl;
+    MessageScreen::show(
+        "RÉCOMPENSES INDIVIDUELLES",
+        "combat.boss.coop.individual_rewards",
+        {"Chaque personnage reçoit selon sa participation, sa survie et son rôle dans le combat."},
+        false
+    );
 
     for (std::size_t i = 0; i < party.size(); ++i)
     {

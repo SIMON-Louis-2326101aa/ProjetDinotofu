@@ -7,6 +7,7 @@
 #define INCLUDE_COMBAT_SYSTEM_COMBATCLASSSYSTEM_HPP
 
 #include "entity/Entity.hpp"
+#include "item/weapon/WeaponType.hpp"
 
 #include <string>
 
@@ -22,6 +23,9 @@ public:
     static int getOutgoingDamagePercent(const Entity& entity);
     static int getOutgoingFlatBonus(const Entity& entity);
     static std::string normalizeClassText(const std::string& classText);
+    static bool hasWeaponAffinity(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
+    static int getWeaponAffinityDamageBonus(const Entity& entity, WeaponType weaponType, const std::string& weaponName, int currentDamage);
+    static std::string getWeaponAffinityLabel(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
 
 private:
 };

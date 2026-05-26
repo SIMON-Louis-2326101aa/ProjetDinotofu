@@ -5,6 +5,7 @@
 
 #include "quest/QuestCatalog.hpp"
 
+#include <algorithm>
 #include <array>
 #include <random>
 #include <string>
@@ -36,7 +37,11 @@ namespace
         bool guildQuest,
         const std::string& requiredMaterialId = "",
         const std::string& requiredMaterialName = "",
-        int requiredMaterialQuantity = 0
+        int requiredMaterialQuantity = 0,
+        const std::string& rewardMaterialId = "",
+        const std::string& rewardMaterialName = "",
+        int rewardMaterialQuantity = 0,
+        const std::string& rewardNote = ""
     )
     {
         Quest quest;
@@ -51,6 +56,10 @@ namespace
         quest.targetFamily = targetFamily;
         quest.rewardExperience = experience;
         quest.rewardGold = gold;
+        quest.rewardMaterialId = rewardMaterialId;
+        quest.rewardMaterialName = rewardMaterialName;
+        quest.rewardMaterialQuantity = rewardMaterialQuantity;
+        quest.rewardNote = rewardNote;
         quest.requiredMaterialId = requiredMaterialId;
         quest.requiredMaterialName = requiredMaterialName;
         quest.requiredMaterialQuantity = requiredMaterialQuantity;
@@ -128,14 +137,67 @@ namespace
     // FR: rankPower déclare ou implémente un comportement précis utilisé par ce module.
     int rankPower(const std::string& rank)
     {
-        if (rank == "F") return 1;
-        if (rank == "E") return 2;
-        if (rank == "D") return 3;
-        if (rank == "C") return 4;
-        if (rank == "B") return 5;
-        if (rank == "A") return 7;
-        if (rank == "S") return 10;
+        if (rank.find("Dieu") != std::string::npos) return 34;
+        if (rank.find("Légende") != std::string::npos || rank.find("Legende") != std::string::npos) return 28;
+        if (rank.find("Héros mondial") != std::string::npos || rank.find("Heros mondial") != std::string::npos) return 22;
+        if (rank.find("SSS") != std::string::npos) return 18;
+        if (rank.find("SS") != std::string::npos) return 14;
+        if (rank.find("S") != std::string::npos) return 10;
+        if (rank.find("A") != std::string::npos) return 7;
+        if (rank.find("B") != std::string::npos) return 5;
+        if (rank.find("C") != std::string::npos) return 4;
+        if (rank.find("D") != std::string::npos) return 3;
+        if (rank.find("E") != std::string::npos) return 2;
+        if (rank.find("F") != std::string::npos) return 1;
         return 1;
+    }
+
+    int minimumLevelForRank(const std::string& rank)
+    {
+        if (rank.find("Dieu") != std::string::npos) return 90;
+        if (rank.find("Légende") != std::string::npos || rank.find("Legende") != std::string::npos) return 70;
+        if (rank.find("Héros mondial") != std::string::npos || rank.find("Heros mondial") != std::string::npos) return 55;
+        if (rank.find("SSS") != std::string::npos) return 42;
+        if (rank.find("SS") != std::string::npos) return 32;
+        if (rank.find("S") != std::string::npos) return 24;
+        if (rank.find("A") != std::string::npos) return 16;
+        if (rank.find("B") != std::string::npos) return 11;
+        if (rank.find("C") != std::string::npos) return 7;
+        if (rank.find("D") != std::string::npos) return 4;
+        if (rank.find("E") != std::string::npos) return 2;
+        return 1;
+    }
+
+    std::string visibleRankVariant(const std::string& baseRank, int playerLevel)
+    {
+        if (baseRank == "F")
+        {
+            if (playerLevel >= 4 && randomBetween(1, 100) <= 35) return "F+";
+            return randomBetween(1, 100) <= 30 ? "F-" : "F";
+        }
+
+        if (baseRank == "E")
+        {
+            if (playerLevel <= 2 && randomBetween(1, 100) <= 40) return "E-";
+            if (playerLevel >= 5 && randomBetween(1, 100) <= 35) return "E+";
+            return "E";
+        }
+
+        if (baseRank == "D")
+        {
+            if (playerLevel <= 4 && randomBetween(1, 100) <= 35) return "D-";
+            if (playerLevel >= 8 && randomBetween(1, 100) <= 35) return "D+";
+            return "D";
+        }
+
+        if (baseRank == "C" || baseRank == "B" || baseRank == "A")
+        {
+            int roll = randomBetween(1, 100);
+            if (roll <= 25) return baseRank + "-";
+            if (roll >= 76) return baseRank + "+";
+        }
+
+        return baseRank;
     }
 
     // EN: questExperience declares or implements a focused behavior used by this module.
@@ -149,7 +211,20 @@ namespace
     // FR: questGold déclare ou implémente un comportement précis utilisé par ce module.
     int questGold(const std::string& rank, int playerLevel, int target)
     {
-        return 14 + playerLevel * 5 + target * 7 + rankPower(rank) * 10;
+        int value = 8 + playerLevel * 3 + target * 5 + rankPower(rank) * 7;
+        return std::max(0, value);
+    }
+
+    int adjustedQuestGold(const std::string& rank, int playerLevel, int target, const std::string& objectiveType, bool givesObjectReward)
+    {
+        int value = questGold(rank, playerLevel, target);
+
+        if (objectiveType == "livraison") value = value * 70 / 100;
+        if (objectiveType == "bestiaire") value = value * 55 / 100;
+        if (objectiveType == "service") value = value * 45 / 100;
+        if (givesObjectReward) value = value * 60 / 100;
+
+        return std::max(0, value);
     }
 
     std::string materialRank(int playerLevel, int minRankPower)
@@ -186,6 +261,82 @@ namespace
         int minLevel;
     };
 
+    struct ExtraReward
+    {
+        std::string materialId;
+        std::string materialName;
+        int materialQuantity = 0;
+        std::string note;
+    };
+
+    ExtraReward chooseExtraReward(const GuildTemplate& questTemplate, int playerLevel)
+    {
+        ExtraReward reward;
+        int roll = randomBetween(1, 100);
+
+        if (questTemplate.type == "service")
+        {
+            if (roll <= 45)
+            {
+                reward.materialId = "client_recommendation";
+                reward.materialName = "Recommandation de client";
+                reward.materialQuantity = 1;
+                reward.note = chooseText({
+                    "Client supplémentaire recommandé : Mirette la couturière",
+                    "Client supplémentaire recommandé : Noro le palefrenier",
+                    "Client supplémentaire recommandé : Éliane du vieux pont",
+                    "Client supplémentaire recommandé : Caldor le porteur de caisses",
+                    "Client supplémentaire recommandé : Bruma la réparatrice de selles"
+                });
+                return reward;
+            }
+
+            if (roll <= 75)
+            {
+                reward.materialId = "guild_favor_token";
+                reward.materialName = "Jeton de faveur de guilde";
+                reward.materialQuantity = 1;
+                reward.note = "La guilde te remet un jeton de faveur au lieu d'une grosse prime.";
+                return reward;
+            }
+
+            reward.materialId = "local_service_letter";
+            reward.materialName = "Lettre de service local";
+            reward.materialQuantity = 1;
+            reward.note = "Le client laisse une lettre proprement signée pour confirmer le service rendu.";
+            return reward;
+        }
+
+        if (questTemplate.type == "bestiaire" || roll <= 22)
+        {
+            reward.materialId = playerLevel >= 8 ? "advanced_monster_notes" : "common_goblin_notes";
+            reward.materialName = playerLevel >= 8 ? "Notes avancées de monstre" : "Notes communes de gobelin";
+            reward.materialQuantity = 1;
+            reward.note = "La guilde ajoute une petite note exploitable au dossier de terrain.";
+            return reward;
+        }
+
+        if (questTemplate.type == "exploration" && roll <= 55)
+        {
+            reward.materialId = playerLevel >= 10 ? "preservation_vials" : "bitter_healing_leaf";
+            reward.materialName = playerLevel >= 10 ? "Fioles de conservation" : "Feuille amère de soin";
+            reward.materialQuantity = playerLevel >= 10 ? 1 : 2;
+            reward.note = "Récompense matérielle à la place d'une grosse bourse d'or.";
+            return reward;
+        }
+
+        if (questTemplate.type == "combat" && roll <= 35)
+        {
+            reward.materialId = playerLevel >= 12 ? "medium_repair_kit" : "weak_repair_kit";
+            reward.materialName = playerLevel >= 12 ? "Kit de réparation moyen" : "Kit de réparation faible";
+            reward.materialQuantity = 1;
+            reward.note = "Prime matérielle : la guilde préfère parfois fournir du matériel plutôt que des pièces.";
+            return reward;
+        }
+
+        return reward;
+    }
+
     // EN: chooseGuildTemplate declares or implements a focused behavior used by this module.
     // FR: chooseGuildTemplate déclare ou implémente un comportement précis utilisé par ce module.
     GuildTemplate chooseGuildTemplate(const std::vector<GuildTemplate>& templates, int playerLevel)
@@ -194,7 +345,7 @@ namespace
 
         for (const GuildTemplate& questTemplate : templates)
         {
-            if (playerLevel >= questTemplate.minLevel)
+            if (playerLevel >= questTemplate.minLevel && playerLevel >= minimumLevelForRank(questTemplate.rank))
             {
                 available.push_back(questTemplate);
             }
@@ -208,18 +359,70 @@ namespace
         return available[randomBetween(0, static_cast<int>(available.size()) - 1)];
     }
 
+    bool hasAvailableGuildTemplate(const std::vector<GuildTemplate>& templates, int playerLevel)
+    {
+        for (const GuildTemplate& questTemplate : templates)
+        {
+            if (playerLevel >= questTemplate.minLevel && playerLevel >= minimumLevelForRank(questTemplate.rank))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // EN: buildGuildQuest declares or implements a focused behavior used by this module.
     // FR: buildGuildQuest déclare ou implémente un comportement précis utilisé par ce module.
     Quest buildGuildQuest(const std::string& idPrefix, int playerLevel, const GuildTemplate& questTemplate)
     {
+        ExtraReward extraReward = chooseExtraReward(questTemplate, playerLevel);
+        bool givesObjectReward = !extraReward.materialId.empty();
+        std::string finalRank = visibleRankVariant(questTemplate.rank, playerLevel);
+
         return buildQuest(
             questId(idPrefix, playerLevel),
-            questTemplate.rank, questTemplate.title, "Guilde", "Maître de guilde", "Guilde",
+            finalRank, questTemplate.title, "Guilde", "Maître de guilde", "Guilde",
             questTemplate.objective, questTemplate.type, questTemplate.family,
-            questExperience(questTemplate.rank, playerLevel, questTemplate.target),
-            questGold(questTemplate.rank, playerLevel, questTemplate.target),
-            questTemplate.target, true
+            questExperience(finalRank, playerLevel, questTemplate.target),
+            adjustedQuestGold(finalRank, playerLevel, questTemplate.target, questTemplate.type, givesObjectReward),
+            questTemplate.target, true,
+            "", "", 0,
+            extraReward.materialId, extraReward.materialName, extraReward.materialQuantity, extraReward.note
         );
+    }
+
+    bool boardAlreadyHasTitle(const std::vector<Quest>& board, const std::string& title)
+    {
+        for (const Quest& quest : board)
+        {
+            if (quest.title == title)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void addGuildQuestIfAvailable(std::vector<Quest>& board, const std::string& idPrefix, int playerLevel, const std::vector<GuildTemplate>& templates)
+    {
+        if (!hasAvailableGuildTemplate(templates, playerLevel))
+        {
+            return;
+        }
+
+        for (int attempt = 0; attempt < 8; ++attempt)
+        {
+            GuildTemplate selectedTemplate = chooseGuildTemplate(templates, playerLevel);
+            if (!boardAlreadyHasTitle(board, selectedTemplate.title))
+            {
+                board.push_back(buildGuildQuest(idPrefix, playerLevel, selectedTemplate));
+                return;
+            }
+        }
+
+        board.push_back(buildGuildQuest(idPrefix, playerLevel, chooseGuildTemplate(templates, playerLevel)));
     }
 
     struct BiomeQuestProfile
@@ -297,63 +500,148 @@ namespace
 std::vector<Quest> QuestCatalog::createGuildBoard(int playerLevel)
 {
     std::vector<Quest> board;
+    std::vector<GuildTemplate> fillerTemplates;
+    auto registerTemplates = [&fillerTemplates](const std::vector<GuildTemplate>& templates) {
+        fillerTemplates.insert(fillerTemplates.end(), templates.begin(), templates.end());
+    };
 
     const std::vector<GuildTemplate> fTemplates = {
         {"F", "Livrer des provisions à un camp proche", "Terminer une mission courte pour sécuriser une livraison locale.", "exploration", "Route / livraison", 1, 1},
         {"F", "Repérer une trace facile", "Sortir brièvement et confirmer une trace signalée par un éclaireur débutant.", "exploration", "Plaine sauvage / traces", 1, 1},
-        {"F", "Aider un garde qui débute", "Écarter une petite menace sans transformer la mission en duel héroïque inutile.", "combat", "Créatures faibles", 1, 1}
+        {"F", "Aider un garde qui débute", "Écarter une petite menace sans transformer la mission en duel héroïque inutile.", "combat", "Créatures faibles", 1, 1},
+        {"F", "Retrouver le seau de Madame Brune", "Rendre un petit service local. Pas glorieux, mais la guilde paie parfois en contacts plutôt qu'en or.", "service", "Service local", 1, 1},
+        {"F", "Compter les caisses du dépôt", "Vérifier un stock de base sans se faire enfermer par erreur dans la réserve.", "service", "Guilde / inventaire", 1, 1},
+        {"F", "Porter une lettre pas urgente", "Livrer un message de village sans prétendre que c'est une mission de héros.", "exploration", "Village / livraison", 1, 1}
     };
+    registerTemplates(fTemplates);
 
     const std::vector<GuildTemplate> eTemplates = {
-        {"E", "Nettoyer une petite route infestée", "Écarter quelques monstres faibles d'une route locale.", "combat", "Créatures faibles", 2, 1},
-        {"E", "Cartographier un détour douteux", "Explorer une zone simple et revenir avec assez de détails pour corriger la carte de la guilde.", "exploration", "Route / exploration", 2, 1},
-        {"E", "Surveiller une caisse suspecte", "Vérifier une livraison abandonnée et survivre à ce qui pourrait se cacher dedans.", "exploration", "Route commerciale", 2, 2}
+        {"E", "Nettoyer une petite route infestée", "Écarter quelques monstres faibles d'une route locale.", "combat", "Créatures faibles", 2, 2},
+        {"E", "Cartographier un détour douteux", "Explorer une zone simple et revenir avec assez de détails pour corriger la carte de la guilde.", "exploration", "Route / exploration", 2, 2},
+        {"E", "Surveiller une caisse suspecte", "Vérifier une livraison abandonnée et survivre à ce qui pourrait se cacher dedans.", "exploration", "Route commerciale", 2, 2},
+        {"E", "Retrouver un client qui se cache", "Identifier un client paniqué qui doit de l'argent à trois personnes différentes.", "service", "Clientèle locale", 1, 2},
+        {"E", "Récupérer des outils oubliés", "Rapporter du petit matériel abandonné près d'une zone encore raisonnable.", "livraison", "Matériel de guilde", 2, 2}
     };
+    registerTemplates(eTemplates);
 
     const std::vector<GuildTemplate> dTemplates = {
-        {"D", "Récupérer des matériaux près d'une zone instable", "Revenir avec des matériaux exploitables après plusieurs affrontements ou fouilles.", "exploration", "Matériaux / fouille", 3, 1},
-        {"D", "Traquer une meute locale", "Réduire la pression d'un groupe de créatures qui rôde trop près des voyageurs.", "combat", "Créatures locales", 3, 3},
-        {"D", "Observer un monstre évolué", "Confirmer les signes d'évolution d'une créature sans mourir pour la science.", "bestiaire", "Créature évoluée", 3, 4}
+        {"D", "Récupérer des matériaux près d'une zone instable", "Revenir avec des matériaux exploitables après plusieurs affrontements ou fouilles.", "exploration", "Matériaux / fouille", 3, 4},
+        {"D", "Traquer une meute locale", "Réduire la pression d'un groupe de créatures qui rôde trop près des voyageurs.", "combat", "Créatures locales", 3, 4},
+        {"D", "Observer un monstre évolué", "Confirmer les signes d'évolution d'une créature sans mourir pour la science.", "bestiaire", "Créature évoluée", 3, 4},
+        {"D", "Récupérer une dette minable", "Faire comprendre à un client que payer en chaussettes trouées ne compte pas comme une récompense.", "service", "Clientèle locale", 2, 4},
+        {"D", "Patrouille des chemins secondaires", "Faire une sortie utile sur un chemin que personne ne veut surveiller parce qu'il sent mauvais.", "exploration", "Route / surveillance", 3, 5}
     };
+    registerTemplates(dTemplates);
 
     const std::vector<GuildTemplate> cTemplates = {
-        {"C", "Escorter un apprenti marchand nerveux", "Protéger un civil assez longtemps pour qu'il arrête de trembler.", "combat", "Humanoïdes / embuscades", 3, 1},
-        {"C", "Fouille de ruines encadrée", "Explorer une ruine instable et revenir avec des notes utilisables par la guilde.", "exploration", "Ruines effondrées", 3, 5},
-        {"C", "Contrat anti-embuscade", "Affronter plusieurs menaces intelligentes qui testent les routes commerciales.", "combat", "Humanoïdes / embuscades", 4, 6}
+        {"C", "Escorter un apprenti marchand nerveux", "Protéger un civil assez longtemps pour qu'il arrête de trembler.", "combat", "Humanoïdes / embuscades", 3, 7},
+        {"C", "Fouille de ruines encadrée", "Explorer une ruine instable et revenir avec des notes utilisables par la guilde.", "exploration", "Ruines effondrées", 3, 7},
+        {"C", "Contrat anti-embuscade", "Affronter plusieurs menaces intelligentes qui testent les routes commerciales.", "combat", "Humanoïdes / embuscades", 4, 7},
+        {"C", "Inspection d'un ancien relais", "Vérifier un relais de guilde abandonné et noter ce qui manque avant de toucher aux trucs maudits.", "bestiaire", "Ruines / relais", 3, 8},
+        {"C", "Livraison avec témoins gênants", "Aider un client officiel sans laisser les témoins empirer la situation.", "service", "Clientèle officielle", 2, 7}
     };
+    registerTemplates(cTemplates);
 
     const std::vector<GuildTemplate> bTemplates = {
-        {"B", "Traquer une menace signalée par la guilde", "Identifier puis vaincre une menace plus sérieuse.", "combat", "Élite / menace", 4, 1},
-        {"B", "Mini-boss régional", "Forcer une menace locale à se montrer et survivre au rapport de mission.", "combat", "Mini-boss / menace évoluée", 4, 7},
-        {"B", "Zone dangereuse sous surveillance", "Revenir d'un lieu dangereux avec assez d'informations pour éviter un massacre de novices.", "exploration", "Menace avancée", 4, 8}
+        {"B", "Traquer une menace signalée par la guilde", "Identifier puis vaincre une menace plus sérieuse.", "combat", "Élite / menace", 4, 11},
+        {"B", "Mini-boss régional", "Forcer une menace locale à se montrer et survivre au rapport de mission.", "combat", "Mini-boss / menace évoluée", 4, 11},
+        {"B", "Zone dangereuse sous surveillance", "Revenir d'un lieu dangereux avec assez d'informations pour éviter un massacre de novices.", "exploration", "Menace avancée", 4, 11},
+        {"B", "Prime silencieuse", "Régler une affaire que la guilde refuse d'écrire trop clairement sur le panneau public.", "combat", "Menace avancée", 4, 13},
+        {"B", "Dossier de terrain incomplet", "Compléter des informations dangereuses sans offrir ton cadavre comme source supplémentaire.", "bestiaire", "Bestiaire avancé", 4, 12}
     };
+    registerTemplates(bTemplates);
 
-    board.push_back(buildGuildQuest("guild_f_dynamic", playerLevel, chooseGuildTemplate(fTemplates, playerLevel)));
-    board.push_back(buildGuildQuest("guild_e_dynamic", playerLevel, chooseGuildTemplate(eTemplates, playerLevel)));
-    board.push_back(buildGuildQuest("guild_d_dynamic", playerLevel, chooseGuildTemplate(dTemplates, playerLevel)));
-    board.push_back(buildGuildQuest("guild_c_dynamic", playerLevel, chooseGuildTemplate(cTemplates, playerLevel)));
-    board.push_back(buildGuildQuest("guild_b_dynamic", playerLevel, chooseGuildTemplate(bTemplates, playerLevel)));
+    addGuildQuestIfAvailable(board, "guild_f_dynamic", playerLevel, fTemplates);
+    addGuildQuestIfAvailable(board, "guild_e_dynamic", playerLevel, eTemplates);
+    addGuildQuestIfAvailable(board, "guild_d_dynamic", playerLevel, dTemplates);
+    addGuildQuestIfAvailable(board, "guild_c_dynamic", playerLevel, cTemplates);
+    addGuildQuestIfAvailable(board, "guild_b_dynamic", playerLevel, bTemplates);
 
-    if (playerLevel >= 8)
+    if (playerLevel >= 16)
     {
         const std::vector<GuildTemplate> aTemplates = {
-            {"A", "Contrat dangereux de la guilde", "Enchaîner plusieurs sorties contre des adversaires solides sans abandonner le contrat.", "combat", "Menace avancée", 5, 8},
-            {"A", "Anomalie régionale mineure", "Explorer et stabiliser une variation anormale avant qu'elle n'attire un vrai boss.", "exploration", "Variation d'énergie", 5, 8},
-            {"A", "Chasse d'élite", "Affronter une menace évoluée qui a déjà survécu à plusieurs groupes.", "combat", "Mini-boss / menace évoluée", 5, 10}
+            {"A", "Contrat dangereux de la guilde", "Enchaîner plusieurs sorties contre des adversaires solides sans abandonner le contrat.", "combat", "Menace avancée", 5, 16},
+            {"A", "Anomalie régionale mineure", "Explorer et stabiliser une variation anormale avant qu'elle n'attire un vrai boss.", "exploration", "Variation d'énergie", 5, 16},
+            {"A", "Chasse d'élite", "Affronter une menace évoluée qui a déjà survécu à plusieurs groupes.", "combat", "Mini-boss / menace évoluée", 5, 18},
+            {"A", "Client trop important pour paniquer", "Résoudre une affaire de client influent sans ruiner la réputation de la guilde.", "service", "Clientèle noble", 3, 17}
         };
+        registerTemplates(aTemplates);
 
-        board.push_back(buildGuildQuest("guild_a_dynamic", playerLevel, chooseGuildTemplate(aTemplates, playerLevel)));
+        addGuildQuestIfAvailable(board, "guild_a_dynamic", playerLevel, aTemplates);
     }
 
-    if (playerLevel >= 14)
+    if (playerLevel >= 24)
     {
         const std::vector<GuildTemplate> sTemplates = {
-            {"S", "Mission classée S", "Un contrat que la guilde ne donne pas aux aventuriers qui tiennent à leurs dents.", "combat", "Menace majeure", 6, 14},
-            {"S", "Registre interdit", "Vérifier une entrée qui ne devrait pas apparaître dans un registre public.", "bestiaire", "Boss potentiel / variation majeure", 6, 14},
-            {"S", "Route condamnée", "Nettoyer une zone où la guilde a déjà perdu trop de noms.", "combat", "Menace majeure", 7, 16}
+            {"S", "Mission classée S", "Un contrat que la guilde ne donne pas aux aventuriers qui tiennent à leurs dents.", "combat", "Menace majeure", 6, 24},
+            {"S", "Registre interdit", "Vérifier une entrée qui ne devrait pas apparaître dans un registre public.", "bestiaire", "Boss potentiel / variation majeure", 6, 24},
+            {"S", "Route condamnée", "Nettoyer une zone où la guilde a déjà perdu trop de noms.", "combat", "Menace majeure", 7, 26},
+            {"SS", "Ordre scellé de la guilde", "Un contrat au-dessus du rang S classique, réservé aux noms que la guilde n'enterre pas à la légère.", "combat", "Menace catastrophique", 8, 32},
+            {"SS", "Caravane sous sceau noir", "Escorter un convoi que même les vétérans refusent de regarder trop longtemps.", "exploration", "Menace catastrophique", 7, 32}
         };
+        registerTemplates(sTemplates);
 
-        board.push_back(buildGuildQuest("guild_s_dynamic", playerLevel, chooseGuildTemplate(sTemplates, playerLevel)));
+        addGuildQuestIfAvailable(board, "guild_s_dynamic", playerLevel, sTemplates);
+    }
+
+    if (playerLevel >= 42)
+    {
+        const std::vector<GuildTemplate> sssTemplates = {
+            {"SSS", "Éradication d'une zone morte", "Entrer dans une zone que la guilde a déjà rayée de ses cartes et revenir avec une preuve de nettoyage.", "combat", "Zone morte", 9, 42},
+            {"SSS", "Archive qui respire encore", "Récupérer un registre vivant sans le laisser écrire ton nom à l'intérieur.", "bestiaire", "Archive vivante", 8, 42}
+        };
+        registerTemplates(sssTemplates);
+
+        addGuildQuestIfAvailable(board, "guild_sss_dynamic", playerLevel, sssTemplates);
+    }
+
+    if (playerLevel >= 55)
+    {
+        const std::vector<GuildTemplate> heroTemplates = {
+            {"Héros mondial", "Contrat de héros mondial", "Répondre à une menace dont l'échec serait raconté dans plusieurs royaumes.", "combat", "Menace mondiale", 10, 55},
+            {"Héros mondial", "Serment sous plusieurs bannières", "Porter une mission signée par plusieurs autorités sans laisser la politique tuer les civils.", "service", "Clientèle royale", 4, 55}
+        };
+        registerTemplates(heroTemplates);
+
+        addGuildQuestIfAvailable(board, "guild_world_hero_dynamic", playerLevel, heroTemplates);
+    }
+
+    if (playerLevel >= 70)
+    {
+        const std::vector<GuildTemplate> legendTemplates = {
+            {"Légende", "Contrat réservé aux légendes", "S'occuper d'une menace que la guilde ne décrit plus aux aventuriers normaux.", "combat", "Menace légendaire", 11, 70},
+            {"Légende", "Cartographie d'un lieu impossible", "Revenir d'un endroit qui change de forme dès que quelqu'un affirme l'avoir compris.", "exploration", "Lieu impossible", 9, 70}
+        };
+        registerTemplates(legendTemplates);
+
+        addGuildQuestIfAvailable(board, "guild_legend_dynamic", playerLevel, legendTemplates);
+    }
+
+    if (playerLevel >= 90)
+    {
+        const std::vector<GuildTemplate> godTemplates = {
+            {"Dieu", "Demande que personne ne devrait accepter", "Approcher une anomalie de rang divin sans confondre courage et suicide.", "bestiaire", "Anomalie divine", 12, 90},
+            {"Dieu", "Dernière ligne d'un registre brûlé", "Traiter une menace que les maîtres de guilde ne prononcent qu'une fois la porte fermée.", "combat", "Menace divine", 12, 95}
+        };
+        registerTemplates(godTemplates);
+
+        addGuildQuestIfAvailable(board, "guild_god_dynamic", playerLevel, godTemplates);
+    }
+
+    const int desiredBoardSize = randomBetween(3, 8);
+    int fillAttempts = 0;
+
+    while (static_cast<int>(board.size()) < desiredBoardSize && fillAttempts < 24)
+    {
+        fillAttempts++;
+        addGuildQuestIfAvailable(board, "guild_extra_dynamic", playerLevel, fillerTemplates);
+    }
+
+    std::shuffle(board.begin(), board.end(), questGenerator());
+
+    if (static_cast<int>(board.size()) > desiredBoardSize)
+    {
+        board.resize(desiredBoardSize);
     }
 
     return board;
@@ -524,7 +812,7 @@ Quest QuestCatalog::createArmorerRequest(int playerLevel)
 
     return buildQuest(
         questIdWithMaterial("npc_armorer", material, playerLevel), rank, "Pièces pour armures", "PNJ client", "Armurier", "Armurerie défensive",
-        "Ramener des matériaux défensifs pour réparer ou préparer de futures armures.",
+        "Ramener des matériaux défensifs pour réparer ou renforcer des armures.",
         "livraison", "Armures / défense", questExperience(rank, playerLevel, quantity), questGold(rank, playerLevel, quantity), quantity, false,
         material.id, material.name, quantity
     );

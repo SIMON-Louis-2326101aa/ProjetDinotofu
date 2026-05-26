@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${ROOT_DIR}"
+
+VERSION="$(./scripts/get_version.sh)"
+PACKAGE_DIR="release_packages"
+PACKAGE_NAME="dinotofu_source_${VERSION}_no_exe.zip"
+PACKAGE_PATH="${PACKAGE_DIR}/${PACKAGE_NAME}"
+
+mkdir -p "${PACKAGE_DIR}"
+rm -f "${PACKAGE_PATH}"
+
+make clean >/dev/null 2>&1 || true
+
+zip -r "${PACKAGE_PATH}" . \
+    -x ".git/*" \
+    -x "build/*" \
+    -x "output/*" \
+    -x "release_packages/*" \
+    -x "assets/saves/*" \
+    -x "saves/*" \
+    -x "accounts/*" \
+    -x "characters/*" \
+    -x "exported_accounts/*" \
+    -x "import_accounts/*" \
+    -x "*.exe" \
+    -x "*.o" \
+    -x "*.d" \
+    -x "*.out" \
+    -x "Dinotofu" \
+    -x "dinotofu" \
+    -x "*.log" \
+    -x "*.tmp"
+
+echo "Archive source sans exécutable créée : ${PACKAGE_PATH}"

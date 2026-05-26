@@ -1,0 +1,242 @@
+name: Build and Publish Dinotofu Releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_release:
+        description: "Recréer la release même si le tag de version existe déjà"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dinotofu-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DINOTOFU_RELEASE_BRANCH_MODE: "auto-version-tag"
+
+jobs:
+  prepare-release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.prepare.outputs.version }}
+      tag: ${{ steps.prepare.outputs.tag }}
+      should_publish: ${{ steps.prepare.outputs.should_publish }}
+      reason: ${{ steps.prepare.outputs.reason }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Decide release tag
+        id: prepare
+        env:
+          FORCE_RELEASE: ${{ github.event.inputs.force_release }}
+        run: |
+          set -euo pipefail
+
+          VERSION="$(./scripts/get_version.sh)"
+          TAG="v${VERSION}"
+          SHOULD_PUBLISH="false"
+          REASON=""
+
+          echo "Version détectée dans le code : ${VERSION}"
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            TAG="${GITHUB_REF_NAME}"
+            SHOULD_PUBLISH="true"
+            REASON="workflow lancé depuis le tag ${TAG}"
+            TAG_VERSION="${TAG#v}"
+            if [[ "${TAG_VERSION}" != "${VERSION}" ]]; then
+              echo "::warning::Le tag ${TAG} ne correspond pas à la version du code ${VERSION}."
+            fi
+          else
+            echo "Push sur branche ${GITHUB_REF_NAME}. Tag attendu : ${TAG}"
+            if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+              if [[ "${FORCE_RELEASE:-false}" == "true" ]]; then
+                SHOULD_PUBLISH="true"
+                REASON="force_release demandé, release ${TAG} recréée"
+              else
+                SHOULD_PUBLISH="false"
+                REASON="le tag ${TAG} existe déjà : aucune nouvelle release"
+              fi
+            else
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git tag -a "${TAG}" -m "Dinotofu ${TAG}"
+              git push origin "${TAG}"
+              SHOULD_PUBLISH="true"
+              REASON="nouveau tag ${TAG} créé automatiquement depuis la version du code"
+            fi
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "should_publish=${SHOULD_PUBLISH}" >> "$GITHUB_OUTPUT"
+          echo "reason=${REASON}" >> "$GITHUB_OUTPUT"
+          echo "Décision : ${SHOULD_PUBLISH} (${REASON})"
+
+  no-release-needed:
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    if: needs.prepare-release.outputs.should_publish != 'true'
+    steps:
+      - name: Nothing to publish
+        run: |
+          echo "Aucune release générée."
+          echo "Raison : ${{ needs.prepare-release.outputs.reason }}"
+          echo "Pour publier une nouvelle release automatiquement, augmente la version dans src/core/VersionInfo.cpp puis push sur main/master."
+
+  package-source:
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    if: needs.prepare-release.outputs.should_publish == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-release.outputs.tag }}
+
+      - name: Install package tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Package source without executables
+        run: ./scripts/package_source_no_exe.sh
+
+      - name: Upload source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dinotofu-source-${{ needs.prepare-release.outputs.version }}-no-exe
+          path: release_packages/dinotofu_source_${{ needs.prepare-release.outputs.version }}_no_exe.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    if: needs.prepare-release.outputs.should_publish == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-release.outputs.tag }}
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential zip
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Package Linux release and installer
+        env:
+          DINOTOFU_REPO: ${{ github.repository }}
+        run: |
+          ./scripts/package_linux_release.sh
+          ./scripts/package_linux_installer.sh
+
+      - name: Upload Linux game artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}
+          path: release_packages/Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}.zip
+
+      - name: Upload Linux installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DinotofuInstaller-Linux-v${{ needs.prepare-release.outputs.version }}
+          path: release_packages/DinotofuInstaller-Linux-v${{ needs.prepare-release.outputs.version }}.zip
+
+  build-windows:
+    runs-on: ubuntu-latest
+    needs: prepare-release
+    if: needs.prepare-release.outputs.should_publish == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-release.outputs.tag }}
+
+      - name: Install Windows cross-compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential mingw-w64 zip
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Package Windows release and installer
+        env:
+          DINOTOFU_REPO: ${{ github.repository }}
+        run: ./scripts/package_windows_release.sh
+
+      - name: Upload Windows game artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}
+          path: release_packages/Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}.zip
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DinotofuInstaller-Windows-v${{ needs.prepare-release.outputs.version }}
+          path: release_packages/DinotofuInstaller-Windows-v${{ needs.prepare-release.outputs.version }}.zip
+
+  publish-release:
+    runs-on: ubuntu-latest
+    needs: [prepare-release, package-source, build-linux, build-windows]
+    if: needs.prepare-release.outputs.should_publish == 'true'
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_upload
+          merge-multiple: true
+
+      - name: Publish or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.prepare-release.outputs.tag }}
+          RELEASE_VERSION: ${{ needs.prepare-release.outputs.version }}
+          RELEASE_REASON: ${{ needs.prepare-release.outputs.reason }}
+        run: |
+          set -euo pipefail
+          ls -la release_upload
+          NOTES="Release automatique Dinotofu ${RELEASE_TAG}.
+
+Raison : ${RELEASE_REASON}
+
+Fichiers :
+- Dinotofu-Windows-v${RELEASE_VERSION}.zip : jeu Windows prêt à lancer.
+- DinotofuInstaller-Windows-v${RELEASE_VERSION}.zip : installer/launcher Windows à envoyer aux joueurs.
+- Dinotofu-Linux-v${RELEASE_VERSION}.zip : jeu Linux prêt à lancer.
+- DinotofuInstaller-Linux-v${RELEASE_VERSION}.zip : installer/launcher Linux.
+- dinotofu_source_${RELEASE_VERSION}_no_exe.zip : source propre sans exécutable."
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" release_upload/*.zip --clobber
+            gh release edit "${RELEASE_TAG}" --title "Dinotofu ${RELEASE_TAG}" --notes "${NOTES}"
+          else
+            gh release create "${RELEASE_TAG}" release_upload/*.zip \
+              --title "Dinotofu ${RELEASE_TAG}" \
+              --notes "${NOTES}"
+          fi

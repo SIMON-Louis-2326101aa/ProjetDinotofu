@@ -9,7 +9,7 @@
 
 std::string VersionInfo::currentVersion()
 {
-    return "1.32.03";
+    return "1.35.18";
 }
 
 std::string VersionInfo::recreateRecommendedBeforeVersion()
@@ -141,6 +141,11 @@ VersionCompatibilityImpact VersionInfo::evaluateCompatibility(const std::string&
         return VersionCompatibilityImpact::MidUpdate;
     }
 
+    if (saved.patch != current.patch && compare(lastAdaptedVersion, currentVersion()) < 0)
+    {
+        return VersionCompatibilityImpact::PatchUpdate;
+    }
+
     return VersionCompatibilityImpact::None;
 }
 
@@ -150,8 +155,10 @@ std::string VersionInfo::compatibilityMessage(VersionCompatibilityImpact impact)
     {
         case VersionCompatibilityImpact::RecreateRecommended:
             return "Attention : il est conseillé de recréer un personnage pour cette version plus récente.";
+        case VersionCompatibilityImpact::PatchUpdate:
+            return "Petit patch détecté : quelques corrections ou ajouts mineurs ont été appliqués depuis la dernière adaptation de ce personnage.";
         case VersionCompatibilityImpact::MidUpdate:
-            return "Nouvelle version détectée : vous pourrez rencontrer quelques différences durant votre aventure, et peut-être de nouveaux bugs.";
+            return "Nouvelle version détectée : certaines règles du monde ont changé depuis la dernière adaptation de ce personnage.";
         case VersionCompatibilityImpact::None:
         default:
             return "";

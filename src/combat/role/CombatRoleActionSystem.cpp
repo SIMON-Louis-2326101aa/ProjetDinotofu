@@ -78,7 +78,7 @@ bool CombatRoleActionSystem::activateManualProvocation(
     std::cout << entity.getName()
               << " utilise Provocation. Les ennemis auront beaucoup plus de mal à ignorer sa présence."
               << std::endl;
-    std::cout << "La provocation force aussi une vraie posture de défense." << std::endl;
+    std::cout << "La posture de défense se verrouille dans le même mouvement." << std::endl;
     std::cout << std::endl;
 
     DefensePostureSystem::enterDefensePosture(entity);

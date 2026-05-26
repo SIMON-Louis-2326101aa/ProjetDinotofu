@@ -8,9 +8,11 @@
 #include "save/menu/AccountMenu.hpp"
 
 #include "core/Console.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
+#include "interface/model/MenuScreen.hpp"
 #include "save/SaveManager.hpp"
 
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -20,20 +22,23 @@ std::string AccountMenu::open()
     {
         std::vector<AccountSaveSummary> accounts = SaveManager::listAccounts();
 
-        std::cout << "===== COMPTES LOCAUX =====" << std::endl;
-        std::cout << "0 : Créer / utiliser un nouveau compte" << std::endl;
-        std::cout << "-1 : Importer un compte extrait" << std::endl;
+        MenuScreen accountListScreen("COMPTES LOCAUX", "save.accounts.list");
+        accountListScreen.addOption(0, "Créer / utiliser un nouveau compte", "", true, "save.accounts.create_or_use");
+        accountListScreen.addOption(-1, "Importer un compte extrait", "", true, "save.accounts.import");
 
         for (int i = 0; i < static_cast<int>(accounts.size()); i++)
         {
-            std::cout << (i + 1) << " : " << accounts[i].accountName << std::endl;
+            accountListScreen.addOption(
+                i + 1,
+                accounts[i].accountName,
+                "",
+                true,
+                "save.accounts.select." + std::to_string(i + 1)
+            );
         }
 
-        std::cout << "==========================" << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
-
-        int choice = Console::askNumberBetween(
+        int choice = TerminalInterface::askMenuChoice(
+            accountListScreen,
             -1,
             static_cast<int>(accounts.size()),
             "Veuillez choisir un compte affiché, 0 pour créer, ou -1 pour importer."
@@ -41,45 +46,54 @@ std::string AccountMenu::open()
 
         if (choice == -1)
         {
-            std::string packagePath;
-
-            std::cout << std::endl;
-            std::cout << "Chemin du dossier de compte extrait ?" << std::endl;
-            std::cout << "Exemple : assets/saves/import_accounts/mon-compte_dinotofu_account" << std::endl;
-            std::cout << "> ";
-
-            std::getline(std::cin >> std::ws, packagePath);
+            std::string packagePath = MessageScreen::askText(
+                "IMPORT DE COMPTE",
+                "save.accounts.import.path",
+                {
+                    "Chemin du dossier de compte extrait ?",
+                    "Exemple : assets/saves/import_accounts/mon-compte_dinotofu_account"
+                }
+            );
 
             std::string importedAccountName;
             Console::clear();
 
             if (SaveManager::importAccountPackage(packagePath, importedAccountName))
             {
-                std::cout << "Compte importé : " << importedAccountName << "." << std::endl;
-                std::cout << "Tu peux maintenant le sélectionner dans la liste des comptes." << std::endl;
+                MessageScreen::show(
+                    "COMPTE IMPORTÉ",
+                    "save.accounts.import.success",
+                    {
+                        "Compte importé : " + importedAccountName + ".",
+                        "Tu peux maintenant le sélectionner dans la liste des comptes."
+                    }
+                );
             }
             else
             {
-                std::cout << "Import impossible." << std::endl;
-                std::cout << "Vérifie que le dossier contient bien accounts/ et les fichiers exportés." << std::endl;
+                MessageScreen::show(
+                    "IMPORT IMPOSSIBLE",
+                    "save.accounts.import.failure",
+                    {
+                        "Import impossible.",
+                        "Vérifie que le dossier contient bien accounts/ et les fichiers exportés."
+                    }
+                );
             }
 
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
             continue;
         }
 
         if (choice == 0)
         {
-            std::string accountName;
-
-            std::cout << std::endl;
-            std::cout << "Nom du compte local ?" << std::endl;
-            std::cout << "Tu peux laisser vide pour utiliser le compte local par défaut." << std::endl;
-            std::cout << "> ";
-
-            std::getline(std::cin >> std::ws, accountName);
+            std::string accountName = MessageScreen::askText(
+                "NOUVEAU COMPTE",
+                "save.accounts.create.name",
+                {
+                    "Nom du compte local ?",
+                    "Tu peux laisser vide pour utiliser le compte local par défaut."
+                }
+            );
 
             if (accountName.empty())
             {
@@ -87,34 +101,34 @@ std::string AccountMenu::open()
             }
 
             Console::clear();
-            std::cout << "Compte actif : " << accountName << "." << std::endl;
-            std::cout << "Les sauvegardes sont rangées dans assets/saves/." << std::endl;
-            std::cout << std::endl;
+
+            std::vector<std::string> lines = {
+                "Compte actif : " + accountName + ".",
+                "Les sauvegardes sont rangées dans assets/saves/."
+            };
 
             if (!SaveManager::saveAccountSnapshot(accountName))
             {
-                std::cout << "Attention : impossible de préparer la sauvegarde du compte pour le moment." << std::endl;
-                std::cout << std::endl;
+                lines.push_back("Attention : impossible de préparer la sauvegarde du compte pour le moment.");
             }
 
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show("COMPTE ACTIF", "save.accounts.create.active", lines);
             return accountName;
         }
 
         AccountSaveSummary selectedAccount = accounts[choice - 1];
 
         Console::clear();
-        std::cout << "Compte sélectionné : " << selectedAccount.accountName << std::endl;
-        std::cout << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Se connecter" << std::endl;
-        std::cout << "2 : Extraire / transférer ce compte" << std::endl;
-        std::cout << "3 : Supprimer ce compte" << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
 
-        int accountAction = Console::askNumberBetween(
+        MenuScreen accountActionScreen("COMPTE SÉLECTIONNÉ", "save.accounts.actions");
+        accountActionScreen.addLine("Compte : " + selectedAccount.accountName);
+        accountActionScreen.addOption(0, "Retour", "", true, "save.accounts.actions.back");
+        accountActionScreen.addOption(1, "Se connecter", "", true, "save.accounts.actions.login");
+        accountActionScreen.addOption(2, "Extraire / transférer ce compte", "", true, "save.accounts.actions.export");
+        accountActionScreen.addOption(3, "Supprimer ce compte", "", true, "save.accounts.actions.delete");
+
+        int accountAction = TerminalInterface::askMenuChoice(
+            accountActionScreen,
             0,
             3,
             "Veuillez choisir 0, 1, 2 ou 3."
@@ -131,18 +145,18 @@ std::string AccountMenu::open()
             std::string accountName = selectedAccount.accountName;
 
             Console::clear();
-            std::cout << "Compte actif : " << accountName << "." << std::endl;
-            std::cout << "Les sauvegardes sont rangées dans assets/saves/." << std::endl;
-            std::cout << std::endl;
+
+            std::vector<std::string> lines = {
+                "Compte actif : " + accountName + ".",
+                "Les sauvegardes sont rangées dans assets/saves/."
+            };
 
             if (!SaveManager::saveAccountSnapshot(accountName))
             {
-                std::cout << "Attention : impossible de préparer la sauvegarde du compte pour le moment." << std::endl;
-                std::cout << std::endl;
+                lines.push_back("Attention : impossible de préparer la sauvegarde du compte pour le moment.");
             }
 
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show("COMPTE ACTIF", "save.accounts.login.active", lines);
             return accountName;
         }
 
@@ -152,45 +166,60 @@ std::string AccountMenu::open()
 
             Console::clear();
 
-            std::cout << "Attention : l'extraction fonctionne comme un transfert." << std::endl;
-            std::cout << "Les personnages et donnees liees partiront en voyage dans le dossier portable." << std::endl;
-            std::cout << "Le compte local restera visible, mais sans les personnages transferes." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "EXTRACTION DE COMPTE",
+                "save.accounts.export.warning",
+                {
+                    "Attention : l'extraction fonctionne comme un transfert.",
+                    "Les personnages et données liées partiront en voyage dans le dossier portable.",
+                    "Le compte local restera visible, mais sans les personnages transférés."
+                },
+                false
+            );
 
             if (SaveManager::exportAccountPackage(selectedAccount.accountName, exportedPath))
             {
-                std::cout << "Compte extrait avec succès." << std::endl;
-                std::cout << "Dossier portable : " << exportedPath << std::endl;
-                std::cout << "Tu peux copier ce dossier sur clé USB, puis l'importer sur une autre installation." << std::endl;
+                MessageScreen::show(
+                    "COMPTE EXTRAIT",
+                    "save.accounts.export.success",
+                    {
+                        "Compte extrait avec succès.",
+                        "Dossier portable : " + exportedPath,
+                        "Tu peux copier ce dossier sur clé USB, puis l'importer sur une autre installation."
+                    }
+                );
             }
             else
             {
-                std::cout << "Extraction impossible." << std::endl;
-                std::cout << "Vérifie que le compte existe et que assets/saves/ est accessible." << std::endl;
+                MessageScreen::show(
+                    "EXTRACTION IMPOSSIBLE",
+                    "save.accounts.export.failure",
+                    {
+                        "Extraction impossible.",
+                        "Vérifie que le compte existe et que assets/saves/ est accessible."
+                    }
+                );
             }
 
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
             continue;
         }
 
-        std::cout << std::endl;
-        std::cout << "Supprimer ce compte supprimera aussi tous les personnages liés." << std::endl;
-        std::cout << "Cette action est définitive." << std::endl;
-        std::cout << "Tape SUPPRIMER pour confirmer." << std::endl;
-        std::cout << "> ";
-
-        std::string confirmation;
-        std::getline(std::cin >> std::ws, confirmation);
-
-        if (confirmation != "SUPPRIMER")
+        if (!MessageScreen::askKeywordConfirmation(
+                "SUPPRESSION DE COMPTE",
+                "save.accounts.delete.confirm",
+                {
+                    "Supprimer ce compte supprimera aussi tous les personnages liés.",
+                    "Cette action est définitive."
+                },
+                "SUPPRIMER"
+            ))
         {
             Console::clear();
-            std::cout << "Suppression annulée." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "SUPPRESSION ANNULÉE",
+                "save.accounts.delete.cancelled",
+                {"Suppression annulée."}
+            );
             continue;
         }
 
@@ -198,17 +227,25 @@ std::string AccountMenu::open()
 
         if (SaveManager::deleteAccountAndLinkedCharacters(selectedAccount.accountName))
         {
-            std::cout << "Compte supprimé : " << selectedAccount.accountName << "." << std::endl;
-            std::cout << "Les personnages liés à ce compte ont aussi été supprimés." << std::endl;
+            MessageScreen::show(
+                "COMPTE SUPPRIMÉ",
+                "save.accounts.delete.success",
+                {
+                    "Compte supprimé : " + selectedAccount.accountName + ".",
+                    "Les personnages liés à ce compte ont aussi été supprimés."
+                }
+            );
         }
         else
         {
-            std::cout << "Impossible de supprimer complètement ce compte." << std::endl;
-            std::cout << "Vérifie les fichiers dans assets/saves/." << std::endl;
+            MessageScreen::show(
+                "SUPPRESSION INCOMPLÈTE",
+                "save.accounts.delete.failure",
+                {
+                    "Impossible de supprimer complètement ce compte.",
+                    "Vérifie les fichiers dans assets/saves/."
+                }
+            );
         }
-
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
     }
 }

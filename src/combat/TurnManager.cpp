@@ -20,13 +20,20 @@ bool TurnManager::playHumanTurn(
     int potionDamageBonus
 )
 {
-    return HumanCombatTurn::play(
+    bool turnFinished = HumanCombatTurn::play(
         attacker,
         defender,
         random,
         potionHealAmount,
         potionDamageBonus
     );
+
+    if (turnFinished)
+    {
+        attacker.reduceClassSkillCooldown();
+    }
+
+    return turnFinished;
 }
 
 bool TurnManager::playHumanTurnWithEnemySummons(
@@ -38,7 +45,7 @@ bool TurnManager::playHumanTurnWithEnemySummons(
     int potionDamageBonus
 )
 {
-    return HumanCombatTurn::playWithEnemySummons(
+    bool turnFinished = HumanCombatTurn::playWithEnemySummons(
         attacker,
         defender,
         enemySummons,
@@ -46,6 +53,13 @@ bool TurnManager::playHumanTurnWithEnemySummons(
         potionHealAmount,
         potionDamageBonus
     );
+
+    if (turnFinished)
+    {
+        attacker.reduceClassSkillCooldown();
+    }
+
+    return turnFinished;
 }
 
 bool TurnManager::playAITurn(
@@ -56,13 +70,20 @@ bool TurnManager::playAITurn(
     int potionDamageBonus
 )
 {
-    return AICombatTurn::play(
+    bool turnFinished = AICombatTurn::play(
         ai,
         defender,
         random,
         potionHealAmount,
         potionDamageBonus
     );
+
+    if (turnFinished)
+    {
+        ai.reduceClassSkillCooldown();
+    }
+
+    return turnFinished;
 }
 
 bool TurnManager::playBossTurn(

@@ -8,11 +8,90 @@
 #include "core/Console.hpp"
 #include "entity/Player.hpp"
 #include "interface/menu/common/MenuFrame.hpp"
+#include "interface/TerminalInterface.hpp"
 #include "item/Inventory.hpp"
 #include "progression/Level.hpp"
 
 #include <iostream>
 #include <map>
+#include <string>
+#include <vector>
+
+
+namespace
+{
+    std::string skillNameFromId(const std::string& id)
+    {
+        static const std::map<std::string, std::string> names = {
+            {"night_vision", "Vision nocturne"},
+            {"survival_breath", "Souffle de survie"},
+            {"steady_guard", "Garde stable"},
+            {"living_rampart", "Rempart vivant"},
+            {"sure_hand", "Main sûre"},
+            {"careful_dosage", "Dosage prudent"},
+            {"ranger_eye", "Œil de rôdeur"},
+            {"chain_execution", "Enchaînement"},
+            {"reflex_counter", "Contre réflexe"},
+            {"cautious_channeling", "Canalisation prudente"},
+            {"shadow_step", "Pas de l'ombre"},
+            {"arcane_impulse", "Élan arcanique"},
+            {"tracking_mark", "Marque de pisteur"},
+            {"prepared_volley", "Salve préparée"},
+            {"blade_discipline", "Discipline de lame"},
+            {"splitting_blow", "Frappe fendue"},
+            {"armor_crack", "Fracasse-garde"},
+            {"reach_control", "Contrôle d'allonge"}
+        };
+
+        auto found = names.find(id);
+        if (found != names.end())
+        {
+            return found->second;
+        }
+
+        return id;
+    }
+
+    void displaySkillList(const std::string& title, const std::vector<std::string>& skills)
+    {
+        std::cout << title << std::endl;
+        if (skills.empty())
+        {
+            std::cout << "- Aucune pour le moment." << std::endl;
+            return;
+        }
+
+        for (const std::string& skillId : skills)
+        {
+            std::cout << "- " << skillNameFromId(skillId) << std::endl;
+        }
+    }
+
+    void displayProgressLine(const std::string& label, int current, int target)
+    {
+        if (current >= target)
+        {
+            std::cout << "- " << label << " : trace maîtrisée" << std::endl;
+            return;
+        }
+
+        std::cout << "- " << label << " : " << current << "/" << target << std::endl;
+    }
+}
+
+
+MenuScreen StatisticsMenu::buildHubScreen()
+{
+    MenuScreen screen("STATISTIQUES", "statistics.hub");
+    screen.addOption(1, "Résumé du personnage", "Identité, niveau, expérience et état général.", true, "statistics.summary");
+    screen.addOption(2, "Statistiques de combat", "Combats, boss, JcJ, morts et difficulté.", true, "statistics.combat");
+    screen.addOption(3, "Équipement et objets récents", "Équipement actuel et traces d'utilisation.", true, "statistics.equipment");
+    screen.addOption(4, "Compétences / progression", "Passifs, techniques et traces d'apprentissage.", true, "statistics.skills");
+    screen.addOption(5, "États spéciaux et conséquences", "Altérations, clones, dettes et marques de boss.", true, "statistics.states");
+    screen.addOption(6, "Affichage complet historique", "Afficher les statistiques longues du personnage.", true, "statistics.full_history");
+    screen.addBackOption("Retour", "statistics.back");
+    return screen;
+}
 
 // EN: open displays the statistics hub and returns to the caller without consuming combat turns.
 // FR: open affiche le menu central des statistiques et revient à l'appelant sans consommer de tour.
@@ -21,16 +100,7 @@ void StatisticsMenu::open(const Player& player, DifficultyMode difficulty)
     const bool difficultyKnown = true;
     while (true)
     {
-        MenuFrame::title("STATISTIQUES");
-        MenuFrame::option(1, "Résumé du personnage");
-        MenuFrame::option(2, "Statistiques de combat");
-        MenuFrame::option(3, "Équipement et objets récents");
-        MenuFrame::option(4, "Compétences / progression");
-        MenuFrame::option(5, "États spéciaux et conséquences");
-        MenuFrame::option(6, "Affichage complet historique");
-        MenuFrame::backOption();
-        MenuFrame::end();
-        MenuFrame::prompt();
+        TerminalInterface::renderMenuScreen(buildHubScreen());
 
         int choice = Console::askNumberBetween(0, 6, "Choix invalide. Entre un chiffre entre 0 et 6.");
         Console::clear();
@@ -80,16 +150,7 @@ void StatisticsMenu::open(const Player& player)
 
     while (true)
     {
-        MenuFrame::title("STATISTIQUES");
-        MenuFrame::option(1, "Résumé du personnage");
-        MenuFrame::option(2, "Statistiques de combat");
-        MenuFrame::option(3, "Équipement et objets récents");
-        MenuFrame::option(4, "Compétences / progression");
-        MenuFrame::option(5, "États spéciaux et conséquences");
-        MenuFrame::option(6, "Affichage complet historique");
-        MenuFrame::backOption();
-        MenuFrame::end();
-        MenuFrame::prompt();
+        TerminalInterface::renderMenuScreen(buildHubScreen());
 
         int choice = Console::askNumberBetween(0, 6, "Choix invalide. Entre un chiffre entre 0 et 6.");
         Console::clear();
@@ -235,11 +296,26 @@ void StatisticsMenu::displayEquipmentUsage(const Player& player)
 // FR: displaySkillStats affiche les compétences débloquées et leur progression.
 void StatisticsMenu::displaySkillStats(const Player& player)
 {
-    (void)player;
     MenuFrame::title("COMPÉTENCES");
-    std::cout << "Les compétences déjà débloquées restent visibles dans le résumé complet du personnage." << std::endl;
-    std::cout << "Les conditions exactes, compteurs et checklists de déblocage sont volontairement cachés." << std::endl;
-    std::cout << "Ton style de combat commence à laisser une trace, mais le monde ne te donnera pas une liste de courses." << std::endl;
+
+    displaySkillList("Passives connues :", player.getUnlockedPassiveSkills());
+    std::cout << std::endl;
+
+    displaySkillList("Actives connues :", player.getUnlockedActiveSkills());
+    std::cout << std::endl;
+
+    std::cout << "Traces d'entraînement visibles :" << std::endl;
+    displayProgressLine("Armes courtes / dagues", player.getDaggerKillProgress(), 5);
+    displayProgressLine("Arcs et tirs", player.getBowKillProgress(), 8);
+    displayProgressLine("Combat à mains nues", player.getBareHandKillProgress(), 10);
+    displayProgressLine("Bâtons et canalisation", player.getStaffKillProgress(), 6);
+    displayProgressLine("Épées et discipline", player.getSwordKillProgress(), 7);
+    displayProgressLine("Haches et ouverture", player.getAxeKillProgress(), 7);
+    displayProgressLine("Marteaux et fracture de garde", player.getHammerKillProgress(), 7);
+    displayProgressLine("Lances et contrôle de distance", player.getSpearKillProgress(), 7);
+
+    std::cout << std::endl;
+    std::cout << "Ces traces montrent ce que ton personnage répète assez souvent pour l'intégrer à son style." << std::endl;
     std::cout << std::endl;
 }
 

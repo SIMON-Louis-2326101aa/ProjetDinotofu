@@ -52,7 +52,7 @@ namespace
 
         if (material.getQualityCraftWeight() >= 4)
         {
-            description += " Ce composant compte très fort dans les futurs crafts à particularité.";
+            description += " Ce composant réagit fortement aux crafts à particularité.";
         }
         else if (material.getQualityCraftWeight() <= 1)
         {

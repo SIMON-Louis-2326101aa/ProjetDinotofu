@@ -60,10 +60,11 @@ bool HumanCombatTurn::play(
         std::cout << "2 : Technique d'arme" << std::endl;
         std::cout << "3 : Attaque lourde" << std::endl;
         std::cout << "4 : Attaque rapide" << std::endl;
+        std::cout << "5 : Compétence de classe" << std::endl;
         std::cout << "====================================" << std::endl;
         std::cout << "> ";
 
-        int attackChoice = Console::askNumberBetween(0, 4, "Choix invalide.");
+        int attackChoice = Console::askNumberBetween(0, 5, "Choix invalide.");
         Console::clear();
 
         if (attackChoice == 0)
@@ -93,6 +94,11 @@ bool HumanCombatTurn::play(
         {
             CombatActions::executeQuickAttack(attacker, defender, random);
             return true;
+        }
+
+        if (attackChoice == 5)
+        {
+            return CombatActions::executeClassSkill(attacker, defender, random);
         }
     }
 
@@ -239,8 +245,8 @@ bool HumanCombatTurn::playWithEnemySummons(
             return false;
         }
 
-        std::cout << "Pour l'instant, les potions offensives ciblent encore seulement l'adversaire principal." << std::endl;
-        std::cout << "Les invocations pourront recevoir des effets spéciaux plus tard." << std::endl;
+        std::cout << "La fiole cherche la menace principale et ignore les cibles secondaires." << std::endl;
+        std::cout << "Les invocations restent hors de portée de ce mélange instable." << std::endl;
         std::cout << std::endl;
 
         return CombatPotionMenu::openAgainstSingleTarget(
@@ -394,15 +400,15 @@ bool HumanCombatTurn::openObservationInterface(
 
     if (choice == 7)
     {
-        std::cout << "Les ordres aux alliés seront disponibles quand les alliés permanents seront branchés." << std::endl;
+        std::cout << "Aucun allié stable n'attend d'ordre sur ce champ de bataille." << std::endl;
         std::cout << std::endl;
         return false;
     }
 
     if (choice == 8)
     {
-        std::cout << "Le contrôle des invocations se choisit déjà au début du combat si tu possèdes des invocations." << std::endl;
-        std::cout << "Plus tard, cette option permettra de changer les ordres pendant le combat." << std::endl;
+        std::cout << "Tes invocations suivent l'ordre donné au début du combat." << std::endl;
+        std::cout << "Changer cet ordre au milieu du chaos demande une ouverture que tu n'as pas encore." << std::endl;
         std::cout << std::endl;
         return false;
     }
@@ -543,15 +549,15 @@ bool HumanCombatTurn::inspectCombatTarget(
 
     if (choice == 8)
     {
-        std::cout << "Les ordres aux alliés seront disponibles quand les alliés permanents seront branchés." << std::endl;
+        std::cout << "Aucun allié stable n'attend d'ordre sur ce champ de bataille." << std::endl;
         std::cout << std::endl;
         return false;
     }
 
     if (choice == 9)
     {
-        std::cout << "Le contrôle des invocations se choisit déjà au début du combat si tu possèdes des invocations." << std::endl;
-        std::cout << "Plus tard, cette option permettra de changer les ordres pendant le combat." << std::endl;
+        std::cout << "Tes invocations suivent l'ordre donné au début du combat." << std::endl;
+        std::cout << "Changer cet ordre au milieu du chaos demande une ouverture que tu n'as pas encore." << std::endl;
         std::cout << std::endl;
         return false;
     }

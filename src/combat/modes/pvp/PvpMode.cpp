@@ -10,6 +10,9 @@
 #include "core/Console.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "interface/CombatDisplay.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
+#include "interface/model/MenuScreen.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "save/SaveManager.hpp"
 #include "save/menu/AccountMenu.hpp"
@@ -130,23 +133,31 @@ namespace
         winner.getInventory().earnGold(symbolicGold);
         winner.gainExperience(symbolicExperience);
 
-        std::cout << "Gain symbolique de l'arène pour " << winner.getName() << " : "
-                  << symbolicGold << " or et " << symbolicExperience << " expérience." << std::endl;
+        MessageScreen::show(
+            "GAIN SYMBOLIQUE",
+            "pvp.local.friendly.reward",
+            {
+                "Gain symbolique de l'arène pour " + winner.getName() + " : "
+                    + std::to_string(symbolicGold) + " or et "
+                    + std::to_string(symbolicExperience) + " expérience."
+            },
+            false
+        );
     }
 
     // EN: askDifficultyForSecondPlayer declares or implements a focused behavior used by this module.
     // FR: askDifficultyForSecondPlayer déclare ou implémente un comportement précis utilisé par ce module.
     DifficultyMode askDifficultyForSecondPlayer()
     {
-        std::cout << "Difficulté du personnage J2 ?" << std::endl;
-        std::cout << "1 : Facile" << std::endl;
-        std::cout << "2 : Normal" << std::endl;
-        std::cout << "3 : Difficile" << std::endl;
-        std::cout << "4 : Cauchemar" << std::endl;
-        std::cout << "5 : Léthal" << std::endl;
-        std::cout << "> ";
+        MenuScreen screen("DIFFICULTÉ J2", "pvp.local.j2.difficulty");
+        screen.addLine("Choisis la difficulté du personnage J2.");
+        screen.addOption(1, "Facile", "Simulation plus douce.", true, "pvp.local.j2.difficulty.easy");
+        screen.addOption(2, "Normal", "Règles standard.", true, "pvp.local.j2.difficulty.normal");
+        screen.addOption(3, "Difficile", "Pénalités et dangers renforcés.", true, "pvp.local.j2.difficulty.hard");
+        screen.addOption(4, "Cauchemar", "La marge d'erreur devient faible.", true, "pvp.local.j2.difficulty.nightmare");
+        screen.addOption(5, "Léthal", "La mort peut devenir définitive.", true, "pvp.local.j2.difficulty.lethal");
 
-        int choice = Console::askNumberBetween(1, 5, "Veuillez choisir une difficulté valide.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Veuillez choisir une difficulté affichée.");
 
         if (choice == 1) return DifficultyMode::Easy;
         if (choice == 3) return DifficultyMode::Hard;
@@ -224,13 +235,12 @@ namespace
 
         while (true)
         {
-            std::cout << "========== JOUEUR 2 ==========" << std::endl;
-            std::cout << "1 : Charger / créer un compte local" << std::endl;
-            std::cout << "2 : Utiliser un personnage éphémère" << std::endl;
-            std::cout << "==============================" << std::endl;
-            std::cout << "> ";
+            MenuScreen screen("JOUEUR 2", "pvp.local.j2.source");
+            screen.addLine("J2 peut charger/créer un compte local, ou utiliser un personnage éphémère.");
+            screen.addOption(1, "Charger / créer un compte local", "Le personnage sera sauvegardé et pourra recevoir des statistiques JcJ.", true, "pvp.local.j2.account");
+            screen.addOption(2, "Utiliser un personnage éphémère", "Combat rapide, sans compte persistant.", true, "pvp.local.j2.ephemeral");
 
-            int choice = Console::askNumberBetween(1, 2, "Veuillez choisir 1 ou 2.");
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Veuillez choisir 1 ou 2.");
             Console::clear();
 
             if (choice == 2)
@@ -345,52 +355,46 @@ namespace
         const PvpPlayerSlot& player2Slot
     )
     {
-        std::cout << "========== CONTRÔLE DE L'ARÈNE ==========" << std::endl;
-        std::cout << player1.getName() << " | compte local : " << account1
-                  << " | difficulté : " << pvpDifficultyName(difficulty1);
-        if (player1.isClone())
-        {
-            std::cout << " | CLONE";
-        }
-        std::cout << std::endl;
+        std::vector<std::string> lines;
 
-        std::cout << player2Slot.player.getName() << " | " << pvpAccountStatus(player2Slot)
-                  << " | difficulté : " << pvpDifficultyName(player2Slot.difficulty);
-        if (player2Slot.player.isClone())
-        {
-            std::cout << " | CLONE";
-        }
-        std::cout << std::endl;
-        std::cout << std::endl;
+        std::string p1Line = player1.getName() + " | compte local : " + account1
+            + " | difficulté : " + pvpDifficultyName(difficulty1);
+        if (player1.isClone()) p1Line += " | CLONE";
+        lines.push_back(p1Line);
+
+        std::string p2Line = player2Slot.player.getName() + " | " + pvpAccountStatus(player2Slot)
+            + " | difficulté : " + pvpDifficultyName(player2Slot.difficulty);
+        if (player2Slot.player.isClone()) p2Line += " | CLONE";
+        lines.push_back(p2Line);
+        lines.push_back("");
 
         if (player1.isClone() || player2Slot.player.isClone())
         {
-            std::cout << "Verdict : combat amical uniquement." << std::endl;
-            std::cout << "Un clone peut se battre pour le fun, mais pas créer de vrai butin." << std::endl;
+            lines.push_back("Verdict : combat amical uniquement.");
+            lines.push_back("Un clone peut se battre pour le fun, mais pas créer de vrai butin.");
         }
         else if (!player2Slot.persistent || account1 == player2Slot.accountName)
         {
-            std::cout << "Verdict : combat amical uniquement." << std::endl;
-            std::cout << "Le duel mortel exige deux comptes locaux différents et persistants." << std::endl;
+            lines.push_back("Verdict : combat amical uniquement.");
+            lines.push_back("Le duel mortel exige deux comptes locaux différents et persistants.");
         }
         else if (!canStartDeadlyDuel(difficulty1, player2Slot.difficulty))
         {
-            std::cout << "Verdict : combat mortel visible, mais verrouillé." << std::endl;
-            std::cout << "Une existence Léthal ne peut pas être mélangée avec une simulation non Léthal." << std::endl;
+            lines.push_back("Verdict : combat mortel visible, mais verrouillé.");
+            lines.push_back("Une existence Léthal ne peut pas être mélangée avec une simulation non Léthal.");
         }
         else if (isLethal(difficulty1))
         {
-            std::cout << "Verdict : duel mortel Léthal autorisé." << std::endl;
-            std::cout << "Le perdant quittera le registre des vivants." << std::endl;
+            lines.push_back("Verdict : duel mortel Léthal autorisé.");
+            lines.push_back("Le perdant quittera le registre des vivants.");
         }
         else
         {
-            std::cout << "Verdict : duel mortel non Léthal autorisé." << std::endl;
-            std::cout << "Le butin restera limité par la valeur du gagnant pour éviter les abus." << std::endl;
+            lines.push_back("Verdict : duel mortel non Léthal autorisé.");
+            lines.push_back("Le butin restera limité par la valeur du gagnant pour éviter les abus.");
         }
 
-        std::cout << "=========================================" << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show("CONTRÔLE DE L'ARÈNE", "pvp.local.security_summary", lines, false);
     }
 
     // EN: isProtectedStarterWeapon declares or implements a focused behavior used by this module.
@@ -662,15 +666,17 @@ namespace
     // FR: displayDuelValueEstimation déclare ou implémente un comportement précis utilisé par ce module.
     void displayDuelValueEstimation(const Player& player1, const Player& player2)
     {
-        std::cout << "========== ESTIMATION AVANT DUEL ==========" << std::endl;
-        std::cout << "Estimation de l'inventaire et de l'équipement de "
-                  << player1.getName() << " : "
-                  << estimateInventoryAndEquipmentValue(player1) << " pièces." << std::endl;
-        std::cout << "Estimation de l'inventaire et de l'équipement de l'opposant "
-                  << player2.getName() << " : "
-                  << estimateInventoryAndEquipmentValue(player2) << " pièces." << std::endl;
-        std::cout << "===========================================" << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ESTIMATION AVANT DUEL",
+            "pvp.local.duel_value",
+            {
+                "Estimation de l'inventaire et de l'équipement de " + player1.getName()
+                    + " : " + std::to_string(estimateInventoryAndEquipmentValue(player1)) + " pièces.",
+                "Estimation de l'inventaire et de l'équipement de l'opposant " + player2.getName()
+                    + " : " + std::to_string(estimateInventoryAndEquipmentValue(player2)) + " pièces."
+            },
+            false
+        );
     }
 
     // EN: askProceedAfterDuelValueEstimation declares or implements a focused behavior used by this module.
@@ -678,12 +684,13 @@ namespace
     bool askProceedAfterDuelValueEstimation(const Player& player1, const Player& player2)
     {
         displayDuelValueEstimation(player1, player2);
-        std::cout << "Procéder au combat ?" << std::endl;
-        std::cout << "1 : Oui" << std::endl;
-        std::cout << "2 : Non" << std::endl;
-        std::cout << "> ";
 
-        int choice = Console::askNumberBetween(1, 2, "Veuillez choisir 1 ou 2.");
+        MenuScreen screen("CONFIRMATION DU DUEL", "pvp.local.duel_confirm");
+        screen.addLine("Procéder au combat ?");
+        screen.addOption(1, "Oui", "L'arène verrouille le duel.", true, "pvp.local.duel_confirm.yes");
+        screen.addOption(2, "Non", "Annuler avant engagement.", true, "pvp.local.duel_confirm.no");
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Veuillez choisir 1 ou 2.");
         Console::clear();
         return choice == 1;
     }
@@ -856,73 +863,80 @@ namespace
     {
         if (player1.isClone() || player2Slot.player.isClone())
         {
-            std::cout << "Combat JcJ amical imposé : un clone ne peut pas participer à un combat à mort." << std::endl;
-            std::cout << "Un clone sert à jouer, tester et transporter une copie, pas à générer du vrai butin." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "DUEL AMICAL IMPOSÉ",
+                "pvp.local.deadly.clone_refused",
+                {
+                    "Un clone ne peut pas participer à un combat à mort.",
+                    "Un clone sert à jouer, tester et transporter une copie, pas à générer du vrai butin."
+                }
+            );
             return false;
         }
 
         if (!player2Slot.persistent || account1 == player2Slot.accountName)
         {
-            std::cout << "Combat JcJ amical : gain symbolique seulement." << std::endl;
-            std::cout << "Le combat mortel n'est proposé que pour deux comptes différents." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "DUEL AMICAL",
+                "pvp.local.deadly.account_refused",
+                {
+                    "Gain symbolique seulement.",
+                    "Le combat mortel n'est proposé que pour deux comptes différents."
+                }
+            );
             return false;
         }
 
-        std::cout << "========== TYPE DE DUEL ==========" << std::endl;
-        std::cout << "1 : Combat amical" << std::endl;
-        std::cout << "2 : Combat à mort" << std::endl;
-        std::cout << "==================================" << std::endl;
-        std::cout << "> ";
+        MenuScreen screen("TYPE DE DUEL", "pvp.local.duel_type");
+        screen.addOption(1, "Combat amical", "Gain symbolique, consommables et usure remboursés par l'arène.", true, "pvp.local.duel_type.friendly");
+        screen.addOption(2, "Combat à mort", "Butin réel. Risque définitif en Léthal.", true, "pvp.local.duel_type.deadly");
 
-        int choice = Console::askNumberBetween(1, 2, "Veuillez choisir 1 ou 2.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Veuillez choisir 1 ou 2.");
         Console::clear();
 
         if (choice == 1)
         {
-            std::cout << "Combat amical : gain symbolique, consommables et usure d'équipement remboursés par l'arène." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "COMBAT AMICAL",
+                "pvp.local.duel_type.friendly_confirmed",
+                {"Gain symbolique, consommables et usure d'équipement remboursés par l'arène."}
+            );
             return false;
         }
 
         if (!canStartDeadlyDuel(difficulty1, player2Slot.difficulty))
         {
-            std::cout << "Combat à mort refusé." << std::endl;
-            std::cout << "Un personnage Léthal ne peut pas engager un duel mortel contre une simulation non Léthal." << std::endl;
-            std::cout << "Il faut deux personnages Léthal, ou deux personnages non Léthal." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "COMBAT À MORT REFUSÉ",
+                "pvp.local.duel_type.deadly_refused",
+                {
+                    "Un personnage Léthal ne peut pas engager un duel mortel contre une simulation non Léthal.",
+                    "Il faut deux personnages Léthal, ou deux personnages non Léthal."
+                }
+            );
             return false;
         }
 
-        std::cout << "Combat à mort confirmé." << std::endl;
+        std::vector<std::string> lines;
         if (isLethal(difficulty1))
         {
-            std::cout << "Deux existences Léthal s'affrontent : le perdant sera inscrit comme mort." << std::endl;
-            std::cout << "Ce n'est pas une grosse pénalité : c'est une mort définitive, sauf bénédiction future." << std::endl;
+            lines.push_back("Deux existences Léthal s'affrontent : le perdant sera inscrit comme mort.");
+            lines.push_back("Ce n'est pas une grosse pénalité : c'est une mort définitive, sauf bénédiction capable de briser le verdict.");
         }
         else
         {
-            std::cout << "Deux personnages non Léthal s'affrontent : butin limité, pas d'effacement définitif." << std::endl;
+            lines.push_back("Deux personnages non Léthal s'affrontent : butin limité, pas d'effacement définitif.");
         }
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
+
+        MessageScreen::show("COMBAT À MORT CONFIRMÉ", "pvp.local.duel_type.deadly_confirmed", lines);
 
         if (!askProceedAfterDuelValueEstimation(player1, player2Slot.player))
         {
-            std::cout << "Duel mortel annulé après estimation." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "DUEL ANNULÉ",
+                "pvp.local.duel_type.cancelled_after_estimation",
+                {"Duel mortel annulé après estimation."}
+            );
             return false;
         }
 
@@ -934,18 +948,26 @@ namespace
 // FR: run déclare ou implémente un comportement précis utilisé par ce module.
 void PvpMode::run(Player& player1, Random& random, const std::string& account1, DifficultyMode difficulty1)
 {
-    std::cout << "À votre tour, Joueur 2." << std::endl;
-    std::cout << "J2 peut charger/créer un compte local, ou utiliser un personnage éphémère." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "JOUEUR 2",
+        "pvp.local.j2.intro",
+        {
+            "À votre tour, Joueur 2.",
+            "J2 peut charger/créer un compte local, ou utiliser un personnage éphémère."
+        },
+        false
+    );
 
     if (player1.isAlteredByCheats())
     {
-        std::cout << "Duel refusé." << std::endl;
-        std::cout << "Un personnage altéré ne peut pas agir en JcJ." << std::endl;
-        std::cout << "L'arène refuse les données instables pour protéger les autres comptes." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
+        MessageScreen::show(
+            "DUEL REFUSÉ",
+            "pvp.local.refused.player1_altered",
+            {
+                "Un personnage altéré ne peut pas agir en JcJ.",
+                "L'arène refuse les données instables pour protéger les autres comptes."
+            }
+        );
         return;
     }
 
@@ -954,23 +976,27 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
 
     if (player2.isAlteredByCheats())
     {
-        std::cout << "Duel refusé." << std::endl;
-        std::cout << "Un personnage altéré ne peut pas agir en JcJ." << std::endl;
-        std::cout << "J2 doit choisir un personnage non altéré ou un personnage éphémère sain." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
+        MessageScreen::show(
+            "DUEL REFUSÉ",
+            "pvp.local.refused.player2_altered",
+            {
+                "Un personnage altéré ne peut pas agir en JcJ.",
+                "J2 doit choisir un personnage non altéré ou un personnage éphémère sain."
+            }
+        );
         return;
     }
 
     if (isSameCharacterName(player1, player2))
     {
-        std::cout << "Duel refusé." << std::endl;
-        std::cout << "Deux personnages portant le même nom ne peuvent pas s'affronter." << std::endl;
-        std::cout << "Raison : éviter les doublons copiés/collés et la duplication de ressources par suicide répété." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
+        MessageScreen::show(
+            "DUEL REFUSÉ",
+            "pvp.local.refused.same_name",
+            {
+                "Deux personnages portant le même nom ne peuvent pas s'affronter.",
+                "Raison : éviter les doublons copiés/collés et la duplication de ressources par suicide répété."
+            }
+        );
         return;
     }
 
@@ -987,19 +1013,33 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
 
     Console::clear();
 
-    std::cout << player2.getName() << ", tes statistiques ont été gravées dans l'arène." << std::endl;
-    std::cout << "Le duel peut maintenant commencer." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "DUEL PRÊT",
+        "pvp.local.ready",
+        {
+            player2.getName() + ", tes statistiques ont été gravées dans l'arène.",
+            "Le duel peut maintenant commencer."
+        },
+        false
+    );
+
+    CombatDisplay::displayCombatState(
+        CombatDisplay::buildDuelSnapshot(player1, player2, "ÉTAT DU DUEL", "Pré-combat : deux combattants verrouillés"),
+        false
+    );
 
     Console::pauseSeconds(2);
 
     player2.recordCombatStarted();
     int turn = random.chooseFirstTurn();
 
-    std::cout << "Préparez-vous..." << std::endl;
     Console::pauseSeconds(2);
-    std::cout << "Le combat commence maintenant." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "DÉBUT DU DUEL",
+        "pvp.local.fight.start",
+        {"Le combat commence maintenant."},
+        false
+    );
 
     while (!player1.isDead() && !player2.isDead())
     {
@@ -1064,12 +1104,17 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
         restoreFriendlyArenaSnapshot(player1, player1FriendlySnapshot);
         restoreFriendlyArenaSnapshot(player2, player2FriendlySnapshot);
 
-        std::cout << "Combat amical terminé : PV, consommables, équipement et inventaire reviennent à l'état d'avant-duel." << std::endl;
-        std::cout << "Aucun gain ou dommage sérieux n'est conservé hors statistiques JcJ." << std::endl;
+        MessageScreen::show(
+            "COMBAT AMICAL TERMINÉ",
+            "pvp.local.friendly.finished",
+            {
+                "PV, consommables, équipement et inventaire reviennent à l'état d'avant-duel.",
+                "Aucun gain ou dommage sérieux n'est conservé hors statistiques JcJ.",
+                "Stat JcJ mise à jour : victoire pour " + winner->getName() + ", défaite pour " + loser->getName() + "."
+            },
+            false
+        );
         applyFriendlyDuelSymbolicReward(*winner);
-        std::cout << "Stat JcJ mise à jour : victoire pour " << winner->getName()
-                  << ", défaite pour " << loser->getName() << "." << std::endl;
-        std::cout << std::endl;
     }
 
     if (player2Slot.persistent)
@@ -1084,7 +1129,7 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
             }
             else
             {
-                std::cout << "Attention : impossible de déplacer automatiquement J2 dans le registre des morts." << std::endl;
+                std::cout << "Attention : le registre des morts refuse d'emporter J2 proprement." << std::endl;
             }
         }
         else

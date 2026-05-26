@@ -26,6 +26,12 @@ public:
     static Material createCommonWolfNotes(int quantity = 1);
     static Material createBasicPlantManual(int quantity = 1);
     static Material createBasicMagicManual(int quantity = 1);
+    static Material createArcaneBindingGrimoire(int quantity = 1);
+    static Material createElementalWardGrimoire(int quantity = 1);
+    static Material createResistanceRiftGrimoire(int quantity = 1);
+    static Material createFrostNeedleGrimoire(int quantity = 1);
+    static Material createManaSutureGrimoire(int quantity = 1);
+    static Material createOccultBrambleGrimoire(int quantity = 1);
     static Material createCrackedBone(int quantity = 1);
     static Material createArcaneDust(int quantity = 1);
     static Material createSlimeResidue(int quantity = 1);
@@ -43,7 +49,12 @@ public:
     static Material createPotionRecipePage(int quantity = 1);
     static Material createRepairRecipePage(int quantity = 1);
     static Material createAdvancedMonsterNotes(int quantity = 1);
+    static Material createClientRecommendation(int quantity = 1);
+    static Material createGuildFavorToken(int quantity = 1);
+    static Material createLocalServiceLetter(int quantity = 1);
     static Material createNecromancyWarning(int quantity = 1);
+    static Material createMagicLearningNotes(int quantity = 1);
+    static Material createElementalWeaknessNotes(int quantity = 1);
     static Material createBeastHide(int quantity = 1);
     static Material createShadowThread(int quantity = 1);
     static Material createKitsuneEmber(int quantity = 1);

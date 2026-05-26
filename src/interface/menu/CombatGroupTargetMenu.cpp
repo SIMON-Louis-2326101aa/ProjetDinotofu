@@ -14,6 +14,8 @@
 #include "combat/group/CombatUnitSlot.hpp"
 #include "combat/summon/SummonCombatSystem.hpp"
 #include "core/Console.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 #include <iostream>
 #include <vector>
@@ -47,30 +49,26 @@ bool CombatGroupTargetMenu::openSingleEnemyAttack(
         return true;
     }
 
-    std::cout << "========== CHOIX DE CIBLE ==========" << std::endl;
-    std::cout << "0 : Retour" << std::endl;
+    MenuScreen screen("CHOIX DE CIBLE", "combat_group.target_select");
+    screen.addBackOption();
 
     for (int i = 0; i < static_cast<int>(targetableSlots.size()); ++i)
     {
         CombatUnitSlot* slot = targetableSlots[i];
+        std::string hint = slot->getKind() == CombatUnitKind::Summon
+            ? "invocation"
+            : "cible principale";
 
-        std::cout << (i + 1) << " : " << slot->getDisplayName();
-
-        if (slot->getKind() == CombatUnitKind::Summon)
-        {
-            std::cout << " | invocation";
-        }
-        else
-        {
-            std::cout << " | cible principale";
-        }
-
-        std::cout << std::endl;
+        screen.addOption(
+            i + 1,
+            slot->getDisplayName(),
+            hint,
+            true,
+            "combat_group.target"
+        );
     }
 
-    std::cout << "====================================" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
+    TerminalInterface::renderMenuScreen(screen);
 
     int choice = Console::askNumberBetween(
         0,

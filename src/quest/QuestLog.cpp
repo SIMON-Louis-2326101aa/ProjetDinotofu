@@ -4,6 +4,7 @@
 // Description: Implements the player's quest journal.
 
 #include "quest/QuestLog.hpp"
+#include "quest/QuestCatalog.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -138,6 +139,14 @@ namespace
             || (target.find("élite") != std::string::npos && encounter.find("mini-boss") != std::string::npos)
             || (target.find("elite") != std::string::npos && encounter.find("mini-boss") != std::string::npos);
     }
+}
+
+QuestLog::QuestLog()
+    : guildBoardCreatedAtCombat(-1),
+      guildBoardTargetSize(0),
+      guildBoardPendingReplacements(0),
+      guildBoardReplacementDueAtCombat(-1)
+{
 }
 
 // EN: getQuests declares or implements a focused behavior used by this module.
@@ -455,7 +464,211 @@ bool QuestLog::hasTurnInReadyQuestForClient(const std::string& client) const
 
 // EN: clear declares or implements a focused behavior used by this module.
 // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
+
+
+const std::vector<Quest>& QuestLog::getGuildBoardOffers() const
+{
+    return guildBoardOffers;
+}
+
+std::vector<Quest>& QuestLog::getGuildBoardOffers()
+{
+    return guildBoardOffers;
+}
+
+namespace
+{
+    bool questOfferMatches(const Quest& a, const Quest& b)
+    {
+        return a.id == b.id || a.title == b.title;
+    }
+
+    bool offerAlreadyVisible(const std::vector<Quest>& offers, const Quest& candidate)
+    {
+        for (const Quest& offer : offers)
+        {
+            if (questOfferMatches(offer, candidate))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+void QuestLog::ensureGuildBoardReady(int playerLevel, int currentCombatsStarted)
+{
+    if (currentCombatsStarted < 0)
+    {
+        currentCombatsStarted = 0;
+    }
+
+    const bool expired = guildBoardCreatedAtCombat < 0
+        || currentCombatsStarted - guildBoardCreatedAtCombat >= 3;
+
+    if (expired || guildBoardOffers.empty() || guildBoardTargetSize < 3)
+    {
+        guildBoardOffers = QuestCatalog::createGuildBoard(playerLevel);
+        guildBoardCreatedAtCombat = currentCombatsStarted;
+        guildBoardTargetSize = static_cast<int>(guildBoardOffers.size());
+        if (guildBoardTargetSize < 3) guildBoardTargetSize = 3;
+        if (guildBoardTargetSize > 8) guildBoardTargetSize = 8;
+        guildBoardPendingReplacements = 0;
+        guildBoardReplacementDueAtCombat = -1;
+        return;
+    }
+
+    if (guildBoardPendingReplacements > 0
+        && guildBoardReplacementDueAtCombat >= 0
+        && currentCombatsStarted >= guildBoardReplacementDueAtCombat)
+    {
+        std::vector<Quest> candidates = QuestCatalog::createGuildBoard(playerLevel);
+        int added = 0;
+
+        for (const Quest& candidate : candidates)
+        {
+            if (static_cast<int>(guildBoardOffers.size()) >= guildBoardTargetSize)
+            {
+                break;
+            }
+
+            if (hasQuest(candidate.id) || offerAlreadyVisible(guildBoardOffers, candidate))
+            {
+                continue;
+            }
+
+            guildBoardOffers.push_back(candidate);
+            added++;
+        }
+
+        int attempts = 0;
+        while (static_cast<int>(guildBoardOffers.size()) < guildBoardTargetSize && attempts < 5)
+        {
+            attempts++;
+            std::vector<Quest> moreCandidates = QuestCatalog::createGuildBoard(playerLevel);
+            for (const Quest& candidate : moreCandidates)
+            {
+                if (static_cast<int>(guildBoardOffers.size()) >= guildBoardTargetSize)
+                {
+                    break;
+                }
+
+                if (hasQuest(candidate.id) || offerAlreadyVisible(guildBoardOffers, candidate))
+                {
+                    continue;
+                }
+
+                guildBoardOffers.push_back(candidate);
+                added++;
+            }
+        }
+
+        guildBoardPendingReplacements = 0;
+        guildBoardReplacementDueAtCombat = -1;
+    }
+}
+
+bool QuestLog::removeGuildBoardOfferAt(int offerIndex, int currentCombatsStarted)
+{
+    if (offerIndex < 0 || offerIndex >= static_cast<int>(guildBoardOffers.size()))
+    {
+        return false;
+    }
+
+    guildBoardOffers.erase(guildBoardOffers.begin() + offerIndex);
+    guildBoardPendingReplacements++;
+
+    const int dueAt = currentCombatsStarted + 1;
+    if (guildBoardReplacementDueAtCombat < 0 || dueAt < guildBoardReplacementDueAtCombat)
+    {
+        guildBoardReplacementDueAtCombat = dueAt;
+    }
+
+    return true;
+}
+
+int QuestLog::getGuildBoardCombatsBeforeRefresh(int currentCombatsStarted) const
+{
+    if (guildBoardCreatedAtCombat < 0)
+    {
+        return 0;
+    }
+
+    int remaining = 3 - (currentCombatsStarted - guildBoardCreatedAtCombat);
+    if (remaining < 0) return 0;
+    if (remaining > 3) return 3;
+    return remaining;
+}
+
+int QuestLog::getGuildBoardPendingReplacements() const
+{
+    return guildBoardPendingReplacements;
+}
+
+int QuestLog::getGuildBoardTargetSize() const
+{
+    return guildBoardTargetSize;
+}
+
+int QuestLog::getGuildBoardCreatedAtCombat() const
+{
+    return guildBoardCreatedAtCombat;
+}
+
+int QuestLog::getGuildBoardReplacementDueAtCombat() const
+{
+    return guildBoardReplacementDueAtCombat;
+}
+
+int QuestLog::getClientQuestCount(const std::string& client) const
+{
+    int count = 0;
+
+    for (const Quest& quest : quests)
+    {
+        if (!quest.guildQuest && quest.client == client)
+        {
+            count++;
+        }
+    }
+
+    return count;
+}
+
+bool QuestLog::hasRecommendedClientCapacity(const std::string& client) const
+{
+    return getClientQuestCount(client) < 5;
+}
+
+void QuestLog::setLoadedGuildBoardState(
+    const std::vector<Quest>& offers,
+    int createdAtCombat,
+    int targetSize,
+    int pendingReplacements,
+    int replacementDueAtCombat
+)
+{
+    guildBoardOffers = offers;
+    guildBoardCreatedAtCombat = createdAtCombat;
+    guildBoardTargetSize = targetSize;
+    guildBoardPendingReplacements = pendingReplacements;
+    guildBoardReplacementDueAtCombat = replacementDueAtCombat;
+
+    if (guildBoardTargetSize < static_cast<int>(guildBoardOffers.size()))
+    {
+        guildBoardTargetSize = static_cast<int>(guildBoardOffers.size());
+    }
+    if (guildBoardTargetSize < 0) guildBoardTargetSize = 0;
+    if (guildBoardPendingReplacements < 0) guildBoardPendingReplacements = 0;
+}
+
 void QuestLog::clear()
 {
     quests.clear();
+    guildBoardOffers.clear();
+    guildBoardCreatedAtCombat = -1;
+    guildBoardTargetSize = 0;
+    guildBoardPendingReplacements = 0;
+    guildBoardReplacementDueAtCombat = -1;
 }

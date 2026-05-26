@@ -963,7 +963,7 @@ void LootGenerator::giveDefeatedBossLoot(
               << "."
               << std::endl;
 
-    std::cout << "Ces fragments ne sont pas encore des reliques complètes, mais ils sont déjà sauvegardés comme matériaux rares." << std::endl;
+    std::cout << "Ces fragments ne forment pas une relique complète, mais leur présence pèse déjà dans ton inventaire." << std::endl;
     std::cout << "===================================" << std::endl;
     std::cout << std::endl;
 }

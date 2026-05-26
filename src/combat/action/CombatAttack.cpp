@@ -7,6 +7,7 @@
 
 #include "combat/DamageReport.hpp"
 #include "combat/system/DamageSystem.hpp"
+#include "combat/system/ElementalAffinitySystem.hpp"
 #include "combat/system/CombatClassSystem.hpp"
 #include "combat/system/DefensePostureSystem.hpp"
 #include "combat/action/SpecialCombatEffects.hpp"
@@ -86,7 +87,7 @@ namespace
 
         if (ammoId == "barbed_arrows" || ammoId == "balanced_throwing_knives")
         {
-            defender.applyBleeding(2, 3 + attacker.getLevel() / 25);
+            ElementalAffinitySystem::applyBleeding(defender, 2, 3 + attacker.getLevel() / 25);
             std::cout << "La munition ouvre une blessure qui saignera sur les prochains tours." << std::endl;
         }
         else if (ammoId == "piercing_bolts")
@@ -97,17 +98,17 @@ namespace
         }
         else if (ammoId == "ash_arrows")
         {
-            defender.applyBurning(2, 4 + attacker.getLevel() / 30);
+            ElementalAffinitySystem::applyBurning(defender, 2, 4 + attacker.getLevel() / 30);
             std::cout << "La flèche de cendre accroche une brûlure faible mais persistante." << std::endl;
         }
         else if (ammoId == "frozen_bolts")
         {
-            defender.applyFrost(2);
+            ElementalAffinitySystem::applyFrost(defender, 2);
             std::cout << "Le carreau givré ralentit la cible : le froid restera un court instant." << std::endl;
         }
         else if (ammoId == "conductive_knives")
         {
-            defender.applyShock(2);
+            ElementalAffinitySystem::applyShock(defender, 2);
             int shockDamage = 2 + attacker.getLevel() / 35;
             Player* defendingPlayer = dynamic_cast<Player*>(&defender);
             if (defendingPlayer != nullptr)
@@ -124,12 +125,12 @@ namespace
         }
         else if (ammoId == "venom_arrows")
         {
-            defender.applyPoison(3, 2 + attacker.getLevel() / 18);
+            ElementalAffinitySystem::applyPoison(defender, 3, 2 + attacker.getLevel() / 18);
             std::cout << "Le venin de la flèche s'accroche : poison léger sur plusieurs tours." << std::endl;
         }
         else if (ammoId == "shock_bolts")
         {
-            defender.applyShock(2);
+            ElementalAffinitySystem::applyShock(defender, 2);
             int shockDamage = 4 + attacker.getLevel() / 24;
             Player* defendingPlayer = dynamic_cast<Player*>(&defender);
             if (defendingPlayer != nullptr)
@@ -146,7 +147,7 @@ namespace
         }
         else if (ammoId == "smoke_knives")
         {
-            defender.applyFrost(1);
+            ElementalAffinitySystem::applyFrost(defender, 1);
             attacker.startDefensePosture(10, 8, "Écran de fumée court");
             std::cout << "Le couteau fumigène gêne la cible et donne une petite fenêtre défensive au lanceur." << std::endl;
         }
@@ -165,48 +166,48 @@ namespace
             int effectRoll = random.between(1, 4);
             if (effectRoll == 1)
             {
-                defender.applyPoison(2, 2 + attacker.getLevel() / 14);
+                ElementalAffinitySystem::applyPoison(defender, 2, 2 + attacker.getLevel() / 14);
                 std::cout << attacker.getName() << " change de couleur et laisse un poison instable." << std::endl;
             }
             else if (effectRoll == 2)
             {
-                defender.applyBurning(2, 2 + attacker.getLevel() / 16);
+                ElementalAffinitySystem::applyBurning(defender, 2, 2 + attacker.getLevel() / 16);
                 std::cout << attacker.getName() << " pulse rouge et accroche une chaleur anormale." << std::endl;
             }
             else if (effectRoll == 3)
             {
-                defender.applyFrost(2);
+                ElementalAffinitySystem::applyFrost(defender, 2);
                 std::cout << attacker.getName() << " devient pâle et ralentit la cible." << std::endl;
             }
             else
             {
-                defender.applyShock(2);
+                ElementalAffinitySystem::applyShock(defender, 2);
                 std::cout << attacker.getName() << " vibre comme du verre chargé d'électricité." << std::endl;
             }
         }
         else if (textContainsAny(combined, {"ambré", "ambre", "collant", "poisseux"}) && random.between(1, 100) <= 34)
         {
-            defender.applyFrost(1);
+            ElementalAffinitySystem::applyFrost(defender, 1);
             std::cout << attacker.getName() << " colle à la cible : ce n'est pas du givre, mais les mouvements deviennent lourds." << std::endl;
         }
         else if (textContainsAny(combined, {"toxique", "putride", "venime", "poison", "violet", "noir", "vaseux"}) && random.between(1, 100) <= 28)
         {
-            defender.applyPoison(2, 3 + attacker.getLevel() / 12);
+            ElementalAffinitySystem::applyPoison(defender, 2, 3 + attacker.getLevel() / 12);
             std::cout << attacker.getName() << " laisse un poison léger dans la blessure." << std::endl;
         }
         else if (textContainsAny(combined, {"brûl", "brule", "cendre", "feu", "rouge", "irritant", "chaud"}) && random.between(1, 100) <= 24)
         {
-            defender.applyBurning(2, 3 + attacker.getLevel() / 14);
+            ElementalAffinitySystem::applyBurning(defender, 2, 3 + attacker.getLevel() / 14);
             std::cout << attacker.getName() << " transmet une chaleur persistante." << std::endl;
         }
         else if (textContainsAny(combined, {"givre", "gel", "froid", "glace", "bleu", "blanc"}) && random.between(1, 100) <= 24)
         {
-            defender.applyFrost(2);
+            ElementalAffinitySystem::applyFrost(defender, 2);
             std::cout << attacker.getName() << " ralentit sa cible avec un froid mordant." << std::endl;
         }
         else if (textContainsAny(combined, {"élect", "elect", "conduct", "orage", "jaune", "vibrant", "chromatique"}) && random.between(1, 100) <= 22)
         {
-            defender.applyShock(2);
+            ElementalAffinitySystem::applyShock(defender, 2);
             int shockDamage = 2 + attacker.getLevel() / 16;
             Player* defendingPlayer = dynamic_cast<Player*>(&defender);
             if (defendingPlayer != nullptr)
@@ -305,6 +306,33 @@ void CombatAttack::executeBoostedAttack(
             rawDamage = 1;
         }
 
+        if (attackingPlayerIdentity->hasEquippedWeapon())
+        {
+            Weapon equippedWeapon = attackingPlayerIdentity->getEquippedWeapon();
+
+            if (!equippedWeapon.isBroken() && !attackingPlayerIdentity->hasBossEquipmentSeal())
+            {
+                int affinityBonus = CombatClassSystem::getWeaponAffinityDamageBonus(
+                    attacker,
+                    equippedWeapon.getType(),
+                    equippedWeapon.getName(),
+                    rawDamage
+                );
+
+                if (affinityBonus > 0)
+                {
+                    rawDamage += affinityBonus;
+                    std::string affinityLabel = CombatClassSystem::getWeaponAffinityLabel(
+                        attacker,
+                        equippedWeapon.getType(),
+                        equippedWeapon.getName()
+                    );
+                    std::cout << "Affinité arme/classe : +" << affinityBonus
+                              << " dégât(s), " << affinityLabel << "." << std::endl;
+                }
+            }
+        }
+
         std::string classFocus = CombatClassSystem::normalizeClassText(attacker.getType());
 
         const int classLevel = attackingPlayerIdentity->getLevel();
@@ -324,7 +352,7 @@ void CombatAttack::executeBoostedAttack(
                 || classFocus.find("ombrelame") != std::string::npos)
             && random.between(1, 100) <= 16)
         {
-            defender.applyBleeding(1, 1 + classLevel / 40);
+            ElementalAffinitySystem::applyBleeding(defender, 1, 1 + classLevel / 40);
             rawDamage += 1;
             std::cout << "Technique apprise : incision discrète, une blessure courte s'ajoute à la frappe." << std::endl;
         }
@@ -346,10 +374,10 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 15)
         {
             int roll = random.between(1, 4);
-            if (roll == 1) defender.applyBurning(1, 1 + classLevel / 32);
-            else if (roll == 2) defender.applyPoison(1, 1 + classLevel / 32);
-            else if (roll == 3) defender.applyFrost(1);
-            else defender.applyShock(1);
+            if (roll == 1) ElementalAffinitySystem::applyBurning(defender, 1, 1 + classLevel / 32);
+            else if (roll == 2) ElementalAffinitySystem::applyPoison(defender, 1, 1 + classLevel / 32);
+            else if (roll == 3) ElementalAffinitySystem::applyFrost(defender, 1);
+            else ElementalAffinitySystem::applyShock(defender, 1);
             std::cout << "Technique apprise : trace élémentaire, la magie suit le geste physique." << std::endl;
         }
 
@@ -372,7 +400,7 @@ void CombatAttack::executeBoostedAttack(
             || classFocus.find("lanceur de dagues") != std::string::npos)
             && random.between(1, 100) <= (critical ? 45 : 18))
         {
-            defender.applyBleeding(2, 2 + attackingPlayerIdentity->getLevel() / 35);
+            ElementalAffinitySystem::applyBleeding(defender, 2, 2 + attackingPlayerIdentity->getLevel() / 35);
             std::cout << "Spécialité furtive : la frappe cherche une veine et prépare un saignement." << std::endl;
         }
 
@@ -406,17 +434,17 @@ void CombatAttack::executeBoostedAttack(
             int effectRoll = random.between(1, 3);
             if (effectRoll == 1)
             {
-                defender.applyBurning(1, 2 + attackingPlayerIdentity->getLevel() / 28);
+                ElementalAffinitySystem::applyBurning(defender, 1, 2 + attackingPlayerIdentity->getLevel() / 28);
                 std::cout << "Spécialité magique : une braise instable reste accrochée à la cible." << std::endl;
             }
             else if (effectRoll == 2)
             {
-                defender.applyFrost(1);
+                ElementalAffinitySystem::applyFrost(defender, 1);
                 std::cout << "Spécialité magique : un froid bref gêne le mouvement adverse." << std::endl;
             }
             else
             {
-                defender.applyShock(1);
+                ElementalAffinitySystem::applyShock(defender, 1);
                 std::cout << "Spécialité magique : une perturbation électrique traverse l'impact." << std::endl;
             }
         }
@@ -430,7 +458,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 26)
         {
             rawDamage += std::max(1, 2 + attackingPlayerIdentity->getLevel() / 25);
-            std::cout << "Spécialité à distance : le tir est cadré par l'arme équipée, pas par la classe seule." << std::endl;
+            std::cout << "Spécialité à distance : le tir suit enfin la ligne de l'arme équipée." << std::endl;
         }
 
         if ((classFocus.find("lancier") != std::string::npos
@@ -462,12 +490,12 @@ void CombatAttack::executeBoostedAttack(
             int effectRoll = random.between(1, 4);
             if (effectRoll == 1)
             {
-                defender.applyPoison(1, 1 + attackingPlayerIdentity->getLevel() / 35);
+                ElementalAffinitySystem::applyPoison(defender, 1, 1 + attackingPlayerIdentity->getLevel() / 35);
                 std::cout << "Spécialité d'artisanat : un résidu expérimental empoisonne légèrement la cible." << std::endl;
             }
             else if (effectRoll == 2)
             {
-                defender.applyBurning(1, 1 + attackingPlayerIdentity->getLevel() / 35);
+                ElementalAffinitySystem::applyBurning(defender, 1, 1 + attackingPlayerIdentity->getLevel() / 35);
                 std::cout << "Spécialité d'artisanat : une étincelle chimique reste sur la blessure." << std::endl;
             }
             else
@@ -482,13 +510,13 @@ void CombatAttack::executeBoostedAttack(
             || classFocus.find("necro") != std::string::npos)
             && random.between(1, 100) <= 18)
         {
-            defender.applyFrost(1);
+            ElementalAffinitySystem::applyFrost(defender, 1);
             std::cout << "Spécialité d'invocateur : l'attaque laisse une pression froide, comme une présence derrière la cible." << std::endl;
         }
 
         if (rawDamage != beforeSpecialityDamage)
         {
-            std::cout << "La spécialité de classe modifie l'impact de l'attaque."
+            std::cout << "La spécialité de classe change l'impact de l'attaque."
                       << std::endl;
         }
     }
@@ -643,7 +671,7 @@ void CombatAttack::executeBoostedAttack(
             rawDamage += anomalyRoll * 2;
             if (anomalyRoll == 4)
             {
-                defender.applyShock(1);
+                ElementalAffinitySystem::applyShock(defender, 1);
                 std::cout << "L'anomalie déforme l'impact et laisse une perturbation électrique." << std::endl;
             }
             else

@@ -5,34 +5,47 @@
 
 #include "interface/menu/CombatMenu.hpp"
 
-#include "interface/menu/common/MenuFrame.hpp"
+#include "interface/TerminalInterface.hpp"
 
 #include <iostream>
+#include <sstream>
 
-// EN: displayTurnMenu declares or implements a focused behavior used by this module.
-// FR: displayTurnMenu déclare ou implémente un comportement précis utilisé par ce module.
+MenuScreen CombatMenu::buildTurnScreen(const Entity& entity)
+{
+    MenuScreen screen("COMBAT", "combat.turn");
+    screen.addSubtitle("Tour de " + entity.getName());
+
+    if (entity.getClassSkillCooldownTurns() > 0)
+    {
+        std::ostringstream cooldownText;
+        cooldownText << "Compétence de classe : récupération "
+                     << entity.getClassSkillCooldownTurns()
+                     << " tour(s).";
+        screen.addLine(cooldownText.str());
+    }
+
+    screen.addOption(1, "Attaquer", "Attaque simple, technique d'arme, attaque lourde/rapide ou compétence.", true, "combat.attack");
+    screen.addOption(2, "Potion de soin rapide", "Liste seulement les potions de soin utilisables rapidement.", true, "combat.quick_heal");
+    screen.addOption(3, "Potions", "Curatif, défensif, buff, offensive ou debuff.", true, "combat.potions");
+    screen.addOption(4, "Équipement", "Voir ou changer rapidement l'arme et la tenue.", true, "combat.equipment");
+    screen.addOption(5, "Inventaire / bestiaire", "Consulter les objets, matériaux et informations connues.", true, "combat.inventory");
+    screen.addOption(6, "Posture de défense", "Renforce la survie jusqu'au prochain tour.", true, "combat.defend");
+    screen.addOption(7, "Passer son tour", "Ne rien faire volontairement.", true, "combat.wait");
+    screen.addOption(8, "Fuir", "Impossible contre un boss, variable contre les autres ennemis.", true, "combat.flee");
+    screen.addOption(0, "Interface / aide rapide", "Rappelle les règles principales du combat.", true, "combat.help");
+
+    return screen;
+}
+
 void CombatMenu::displayTurnMenu(const Entity& entity)
 {
-    MenuFrame::title("COMBAT");
-    MenuFrame::subtitle("Tour de " + entity.getName());
-    MenuFrame::separator();
-    MenuFrame::option(1, "Attaquer");
-    MenuFrame::option(2, "Potion de soin rapide");
-    MenuFrame::option(3, "Potions");
-    MenuFrame::option(4, "Équipement");
-    MenuFrame::option(5, "Inventaire / bestiaire");
-    MenuFrame::option(6, "Posture de défense");
-    MenuFrame::option(7, "Passer son tour");
-    MenuFrame::option(8, "Fuir");
-    MenuFrame::option(0, "Interface / aide rapide");
-    MenuFrame::end();
-    MenuFrame::prompt();
+    TerminalInterface::renderMenuScreen(buildTurnScreen(entity));
 }
 
 // EN: displayUnavailableOption declares or implements a focused behavior used by this module.
 // FR: displayUnavailableOption déclare ou implémente un comportement précis utilisé par ce module.
 void CombatMenu::displayUnavailableOption()
 {
-    std::cout << "[cette option n'est pas encore accessible pour ce mode]" << std::endl;
+    std::cout << "[cette option est inaccessible dans ce combat]" << std::endl;
     std::cout << std::endl;
 }

@@ -108,6 +108,12 @@ Material MaterialCatalog::createById(const std::string& id, int quantity, const 
     if (normalized == "common_wolf_notes") return withQuality(createCommonWolfNotes(quantity), quality);
     if (normalized == "basic_plant_manual") return withQuality(createBasicPlantManual(quantity), quality);
     if (normalized == "basic_magic_manual") return withQuality(createBasicMagicManual(quantity), quality);
+    if (normalized == "arcane_binding_grimoire") return withQuality(createArcaneBindingGrimoire(quantity), quality);
+    if (normalized == "elemental_ward_grimoire") return withQuality(createElementalWardGrimoire(quantity), quality);
+    if (normalized == "resistance_rift_grimoire") return withQuality(createResistanceRiftGrimoire(quantity), quality);
+    if (normalized == "frost_needle_grimoire") return withQuality(createFrostNeedleGrimoire(quantity), quality);
+    if (normalized == "mana_suture_grimoire") return withQuality(createManaSutureGrimoire(quantity), quality);
+    if (normalized == "occult_bramble_grimoire") return withQuality(createOccultBrambleGrimoire(quantity), quality);
     if (normalized == "cracked_bone") return withQuality(createCrackedBone(quantity), quality);
     if (normalized == "arcane_dust") return withQuality(createArcaneDust(quantity), quality);
     if (normalized == "slime_residue") return withQuality(createSlimeResidue(quantity), quality);
@@ -130,7 +136,12 @@ Material MaterialCatalog::createById(const std::string& id, int quantity, const 
     if (normalized == "potion_recipe_page") return withQuality(createPotionRecipePage(quantity), quality);
     if (normalized == "repair_recipe_page") return withQuality(createRepairRecipePage(quantity), quality);
     if (normalized == "advanced_monster_notes") return withQuality(createAdvancedMonsterNotes(quantity), quality);
+    if (normalized == "client_recommendation") return withQuality(createClientRecommendation(quantity), quality);
+    if (normalized == "guild_favor_token") return withQuality(createGuildFavorToken(quantity), quality);
+    if (normalized == "local_service_letter") return withQuality(createLocalServiceLetter(quantity), quality);
     if (normalized == "necromancy_warning") return withQuality(createNecromancyWarning(quantity), quality);
+    if (normalized == "magic_learning_notes") return withQuality(createMagicLearningNotes(quantity), quality);
+    if (normalized == "elemental_weakness_notes") return withQuality(createElementalWeaknessNotes(quantity), quality);
     if (normalized == "beast_hide") return withQuality(createBeastHide(quantity), quality);
     if (normalized == "shadow_thread") return withQuality(createShadowThread(quantity), quality);
     if (normalized == "kitsune_ember") return withQuality(createKitsuneEmber(quantity), quality);
@@ -188,7 +199,7 @@ Material MaterialCatalog::createById(const std::string& id, int quantity, const 
     return Material(
         id,
         "Renseignement inconnu",
-        "Une entrée préparée, mais pas encore détaillée dans le catalogue.",
+        "Une entrée dont les artisans parlent encore à demi-mot.",
         "Inconnu",
         0,
         quantity
@@ -255,14 +266,44 @@ Material MaterialCatalog::createCommonWolfNotes(int quantity)
 // FR: createBasicPlantManual déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createBasicPlantManual(int quantity)
 {
-    return Material("basic_plant_manual", "Petit guide des plantes communes", "Livre de terrain préparant le futur journal des plantes.", "Livre", 10, quantity);
+    return Material("basic_plant_manual", "Petit guide des plantes communes", "Livre de terrain utilisé par les herboristes pour tenir un journal des plantes.", "Livre", 10, quantity);
 }
 
 // EN: createBasicMagicManual declares or implements a focused behavior used by this module.
 // FR: createBasicMagicManual déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createBasicMagicManual(int quantity)
 {
-    return Material("basic_magic_manual", "Manuel de magie basique", "Livre simple qui servira plus tard aux premières notions de magie.", "Livre", 10, quantity);
+    return Material("basic_magic_manual", "Manuel de magie basique", "Livre simple couvrant les premières notions de magie.", "Livre", 10, quantity);
+}
+
+Material MaterialCatalog::createArcaneBindingGrimoire(int quantity)
+{
+    return Material("arcane_binding_grimoire", "Grimoire d'entrave arcanique", "Livre de magie appliquée : utile aux mages capables de maintenir un sort sans se faire dévorer par leur propre souffle.", "Livre magique", 20, quantity);
+}
+
+Material MaterialCatalog::createElementalWardGrimoire(int quantity)
+{
+    return Material("elemental_ward_grimoire", "Grimoire du voile élémentaire", "Livre défensif décrivant comment replier l'énergie autour du corps au lieu de la projeter.", "Livre magique", 25, quantity);
+}
+
+Material MaterialCatalog::createResistanceRiftGrimoire(int quantity)
+{
+    return Material("resistance_rift_grimoire", "Grimoire de faille de résistance", "Ouvrage instable : ses pages parlent de brèches dans les défenses, pas de miracles sans coût.", "Livre magique rare", 35, quantity);
+}
+
+Material MaterialCatalog::createFrostNeedleGrimoire(int quantity)
+{
+    return Material("frost_needle_grimoire", "Grimoire d'aiguille de givre", "Sort apprenable sans parchemin courant : précis, froid et trop fin pour être scellé proprement sur du papier basique.", "Livre magique", 28, quantity);
+}
+
+Material MaterialCatalog::createManaSutureGrimoire(int quantity)
+{
+    return Material("mana_suture_grimoire", "Grimoire de suture de mana", "Sort apprenable sans parchemin courant : il referme lentement une blessure, mais demande un vrai canaliseur et un catalyseur fiable.", "Livre magique", 34, quantity);
+}
+
+Material MaterialCatalog::createOccultBrambleGrimoire(int quantity)
+{
+    return Material("occult_bramble_grimoire", "Grimoire des ronces occultes", "Sort apprenable sans parchemin courant : il serre la cible avec des ronces de mana, puis laisse un venin lent dans les ouvertures.", "Livre magique", 32, quantity);
 }
 
 // EN: createCrackedBone declares or implements a focused behavior used by this module.
@@ -276,7 +317,7 @@ Material MaterialCatalog::createCrackedBone(int quantity)
 // FR: createArcaneDust déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createArcaneDust(int quantity)
 {
-    return Material("arcane_dust", "Poussière arcanique", "Résidu magique instable, utile pour les futurs enchantements et composants de sorts.", "Matériau magique", 12, quantity);
+    return Material("arcane_dust", "Poussière arcanique", "Résidu magique instable, utile aux enchantements et composants de sorts.", "Matériau magique", 12, quantity);
 }
 
 // EN: createSlimeResidue declares or implements a focused behavior used by this module.
@@ -297,7 +338,7 @@ Material MaterialCatalog::createVariationResidue(int quantity)
 // FR: createBattleTornBadge déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createBattleTornBadge(int quantity)
 {
-    return Material("battle_torn_badge", "Insigne abîmé d'aventurier", "Preuve laissée par un combattant humain ou semi-humain. Peut servir plus tard aux réputations, guildes ou contrats.", "Trophée", 15, quantity);
+    return Material("battle_torn_badge", "Insigne abîmé d'aventurier", "Preuve laissée par un combattant humain ou semi-humain. Les guildes et certains clients y accordent de la valeur.", "Trophée", 15, quantity);
 }
 
 // EN: createWeakRepairKit declares or implements a focused behavior used by this module.
@@ -354,7 +395,7 @@ Material MaterialCatalog::createSpecialAdventurerNotes(int quantity)
 // FR: createSummoningNotes déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createSummoningNotes(int quantity)
 {
-    return Material("summoning_notes", "Manuel d'invocations instables", "Livre préparant les futurs slots, coûts de mana, sacrifices et évolutions d'invocations.", "Livre", 12, quantity);
+    return Material("summoning_notes", "Manuel d'invocations instables", "Livre décrivant les places actives, coûts de mana, sacrifices et évolutions d'invocations.", "Livre", 12, quantity);
 }
 
 // EN: createBossIdentityScrap declares or implements a focused behavior used by this module.
@@ -385,6 +426,27 @@ Material MaterialCatalog::createAdvancedMonsterNotes(int quantity)
     return Material("advanced_monster_notes", "Notes avancées sur les monstres", "Renseignement décrivant les loots et comportements de monstres plus dangereux.", "Renseignement", 0, quantity);
 }
 
+// EN: createClientRecommendation declares or implements a focused behavior used by this module.
+// FR: createClientRecommendation déclare ou implémente un comportement précis utilisé par ce module.
+Material MaterialCatalog::createClientRecommendation(int quantity)
+{
+    return Material("client_recommendation", "Recommandation de client", "Billet signé, adresse griffonnée ou nom transmis par la guilde. Ce n'est pas une bourse d'or, mais une porte qui s'ouvre quelque part.", "Renseignement", 12, quantity);
+}
+
+// EN: createGuildFavorToken declares or implements a focused behavior used by this module.
+// FR: createGuildFavorToken déclare ou implémente un comportement précis utilisé par ce module.
+Material MaterialCatalog::createGuildFavorToken(int quantity)
+{
+    return Material("guild_favor_token", "Jeton de faveur de guilde", "Petit jeton marqué au sceau de la guilde. Il prouve qu'un service a été rendu proprement, même quand la prime en pièces reste maigre.", "Renseignement", 22, quantity);
+}
+
+// EN: createLocalServiceLetter declares or implements a focused behavior used by this module.
+// FR: createLocalServiceLetter déclare ou implémente un comportement précis utilisé par ce module.
+Material MaterialCatalog::createLocalServiceLetter(int quantity)
+{
+    return Material("local_service_letter", "Lettre de service local", "Lettre simple remise par un habitant, un marchand ou un artisan. Elle vaut parfois plus qu'une petite prime quand il faut se faire connaître.", "Renseignement", 8, quantity);
+}
+
 // EN: createNecromancyWarning declares or implements a focused behavior used by this module.
 // FR: createNecromancyWarning déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createNecromancyWarning(int quantity)
@@ -392,39 +454,49 @@ Material MaterialCatalog::createNecromancyWarning(int quantity)
     return Material("necromancy_warning", "Avertissement nécromantique", "Renseignement sombre : manipuler les os et les ombres peut attirer des effets qui ne pardonnent pas.", "Renseignement", 0, quantity);
 }
 
+Material MaterialCatalog::createMagicLearningNotes(int quantity)
+{
+    return Material("magic_learning_notes", "Notes sur supports magiques", "Notes de bibliothèque : parchemins, grimoires et catalyseurs ne suivent pas tous les mêmes règles.", "Renseignement", 38, quantity);
+}
+
+Material MaterialCatalog::createElementalWeaknessNotes(int quantity)
+{
+    return Material("elemental_weakness_notes", "Notes sur faiblesses élémentaires", "Tableau de terrain sur les résistances, faiblesses et réactions selon matière, race, classe et équipement.", "Renseignement", 44, quantity);
+}
+
 // EN: createBeastHide declares or implements a focused behavior used by this module.
 // FR: createBeastHide déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createBeastHide(int quantity)
 {
-    return Material("beast_hide", "Peau de bête robuste", "Matériau solide récupéré sur des bêtes résistantes. Utile pour armures, réparations épaisses et futurs crafts de tanks.", "Matériau de monstre", 13, quantity);
+    return Material("beast_hide", "Peau de bête robuste", "Matériau solide récupéré sur des bêtes résistantes. Utile pour armures, réparations épaisses et équipements de garde.", "Matériau de monstre", 13, quantity);
 }
 
 // EN: createShadowThread declares or implements a focused behavior used by this module.
 // FR: createShadowThread déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createShadowThread(int quantity)
 {
-    return Material("shadow_thread", "Fil d'ombre", "Composant sombre et rare, lié aux assassins, aux morts-vivants et aux futures ombres de Hazak.", "Matériau sombre", 28, quantity);
+    return Material("shadow_thread", "Fil d'ombre", "Composant sombre et rare, lié aux assassins, aux morts-vivants et aux ombres de Hazak.", "Matériau sombre", 28, quantity);
 }
 
 // EN: createKitsuneEmber declares or implements a focused behavior used by this module.
 // FR: createKitsuneEmber déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createKitsuneEmber(int quantity)
 {
-    return Material("kitsune_ember", "Braise kitsune", "Braise magique instable, utile aux futures flammes d'Aoi, aux invocations et aux potions avancées.", "Matériau magique", 34, quantity);
+    return Material("kitsune_ember", "Braise kitsune", "Braise magique instable, utile aux flammes d'Aoi, aux invocations et aux potions avancées.", "Matériau magique", 34, quantity);
 }
 
 // EN: createDraconicScaleFragment declares or implements a focused behavior used by this module.
 // FR: createDraconicScaleFragment déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createDraconicScaleFragment(int quantity)
 {
-    return Material("draconic_scale_fragment", "Fragment d'écaille draconique", "Fragment extrêmement résistant, prévu pour les protections rares et certains crafts semi-dragons.", "Matériau rare", 45, quantity);
+    return Material("draconic_scale_fragment", "Fragment d'écaille draconique", "Fragment extrêmement résistant, recherché pour protections rares et crafts semi-dragons.", "Matériau rare", 45, quantity);
 }
 
 // EN: createUnstableCore declares or implements a focused behavior used by this module.
 // FR: createUnstableCore déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createUnstableCore(int quantity)
 {
-    return Material("unstable_core", "Noyau instable", "Cœur magique dangereux, prévu pour invocations, alchimie risquée et enchantements expérimentaux.", "Matériau rare", 40, quantity);
+    return Material("unstable_core", "Noyau instable", "Cœur magique dangereux, utilisé pour invocations, alchimie risquée et enchantements expérimentaux.", "Matériau rare", 40, quantity);
 }
 
 
@@ -432,28 +504,28 @@ Material MaterialCatalog::createUnstableCore(int quantity)
 // FR: createFitoriaFeather déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createFitoriaFeather(int quantity)
 {
-    return Material("fitoria_feather", "Plume lumineuse de Fitoria", "Fragment de boss : plume presque sacrée, utile plus tard pour bénédictions, soins rares et équipements de lumière.", "Fragment de boss", 120, quantity);
+    return Material("fitoria_feather", "Plume lumineuse de Fitoria", "Fragment de boss : plume presque sacrée, utile aux bénédictions, soins rares et équipements de lumière.", "Fragment de boss", 120, quantity);
 }
 
 // EN: createZelefDemonBlood declares or implements a focused behavior used by this module.
 // FR: createZelefDemonBlood déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createZelefDemonBlood(int quantity)
 {
-    return Material("zelef_demon_blood", "Sang démoniaque de Zelef", "Fragment de boss : résidu sombre encore vivant, prévu pour alchimie dangereuse, malédictions et armes démoniaques.", "Fragment de boss", 135, quantity);
+    return Material("zelef_demon_blood", "Sang démoniaque de Zelef", "Fragment de boss : résidu sombre encore vivant, recherché pour alchimie dangereuse, malédictions et armes démoniaques.", "Fragment de boss", 135, quantity);
 }
 
 // EN: createAtlasBrokenPlate declares or implements a focused behavior used by this module.
 // FR: createAtlasBrokenPlate déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createAtlasBrokenPlate(int quantity)
 {
-    return Material("atlas_broken_plate", "Plaque brisée d'Atlas", "Fragment de boss : morceau d'une protection universelle déchue, prévu pour armures lourdes, reliques et réparations extrêmes.", "Fragment de boss", 150, quantity);
+    return Material("atlas_broken_plate", "Plaque brisée d'Atlas", "Fragment de boss : morceau d'une protection universelle déchue, recherché pour armures lourdes, reliques et réparations extrêmes.", "Fragment de boss", 150, quantity);
 }
 
 // EN: createLyknirHuntShard declares or implements a focused behavior used by this module.
 // FR: createLyknirHuntShard déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createLyknirHuntShard(int quantity)
 {
-    return Material("lyknir_hunt_shard", "Fragment de chasse silencieuse", "Fragment de boss : morceau d'une traque sans lune, lié aux marques de proie, aux meutes et aux futurs crafts de chasseurs.", "Fragment de boss", 165, quantity);
+    return Material("lyknir_hunt_shard", "Fragment de chasse silencieuse", "Fragment de boss : morceau d'une traque sans lune, lié aux marques de proie, aux meutes et aux crafts de chasseurs.", "Fragment de boss", 165, quantity);
 }
 
 // EN: createGrinkaAvariceCoin declares or implements a focused behavior used by this module.
@@ -474,21 +546,21 @@ Material MaterialCatalog::createAzelanosDarkCrownShard(int quantity)
 // FR: createThamarysOriginScale déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createThamarysOriginScale(int quantity)
 {
-    return Material("thamarys_origin_scale", "Écaille d'origine de Thamarys", "Fragment de boss : écaille issue d'un souffle draconique ancien, prévue pour armes et armures draconiques rares.", "Fragment de boss", 225, quantity);
+    return Material("thamarys_origin_scale", "Écaille d'origine de Thamarys", "Fragment de boss : écaille issue d'un souffle draconique ancien, recherchée pour armes et armures draconiques rares.", "Fragment de boss", 225, quantity);
 }
 
 // EN: createMojoAncientSeed declares or implements a focused behavior used by this module.
 // FR: createMojoAncientSeed déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createMojoAncientSeed(int quantity)
 {
-    return Material("mojo_ancient_seed", "Graine ancienne de Mojo", "Fragment de boss : graine vivante gardant une mémoire de la forêt, prévue pour bénédictions naturelles et crafts respectueux.", "Fragment de boss", 205, quantity);
+    return Material("mojo_ancient_seed", "Graine ancienne de Mojo", "Fragment de boss : graine vivante gardant une mémoire de la forêt, recherchée pour bénédictions naturelles et crafts respectueux.", "Fragment de boss", 205, quantity);
 }
 
 // EN: createInakariMirrorShard declares or implements a focused behavior used by this module.
 // FR: createInakariMirrorShard déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createInakariMirrorShard(int quantity)
 {
-    return Material("inakari_mirror_shard", "Fragment de miroir d'Inakari", "Fragment de boss : éclat de reflet kitsune, lié aux illusions, aux talismans et aux futures protections mentales.", "Fragment de boss", 200, quantity);
+    return Material("inakari_mirror_shard", "Fragment de miroir d'Inakari", "Fragment de boss : éclat de reflet kitsune, lié aux illusions, aux talismans et aux protections mentales.", "Fragment de boss", 200, quantity);
 }
 
 
@@ -497,7 +569,7 @@ Material MaterialCatalog::createInakariMirrorShard(int quantity)
 // FR: createSilentJudgmentSeal déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createSilentJudgmentSeal(int quantity)
 {
-    return Material("silent_judgment_seal", "Sceau du Jugement Silencieux", "Fragment de boss : sceau muet lié aux ombres, aux fautes répétées et aux futurs crafts de justice.", "Fragment de boss", 230, quantity);
+    return Material("silent_judgment_seal", "Sceau du Jugement Silencieux", "Fragment de boss : sceau muet lié aux ombres, aux fautes répétées et aux crafts de justice.", "Fragment de boss", 230, quantity);
 }
 
 // EN: createAnomalyGlitchFragment declares or implements a focused behavior used by this module.
@@ -623,7 +695,7 @@ Material MaterialCatalog::createFacelessBreath(int quantity)
 // FR: createPuppetNail déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createPuppetNail(int quantity)
 {
-    return Material("puppet_nail", "Clou de marionnette", "Fragment de boss : clou cousu à une douleur ancienne, utile pour de futurs crafts de contrôle et de contre-coup.", "Fragment de boss", 360, quantity);
+    return Material("puppet_nail", "Clou de marionnette", "Fragment de boss : clou cousu à une douleur ancienne, utile aux crafts de contrôle et de contre-coup.", "Fragment de boss", 360, quantity);
 }
 
 // EN: createMoiranFateThread declares or implements a focused behavior used by this module.
@@ -672,7 +744,7 @@ Material MaterialCatalog::createBrokenMirrorShard(int quantity)
 // FR: createUnstableVersionCore déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createUnstableVersionCore(int quantity)
 {
-    return Material("unstable_version_core", "Noyau de version instable", "Fragment de boss : règle condensée par un avatar limité du créateur, dangereusement proche d'un patch vivant.", "Fragment de boss", 420, quantity);
+    return Material("unstable_version_core", "Noyau de version instable", "Fragment de boss : règle condensée par un avatar limité du créateur, dangereusement proche d'une loi vivante.", "Fragment de boss", 420, quantity);
 }
 
 // EN: createPrecisionHarvestTools declares or implements a focused behavior used by this module.
@@ -705,12 +777,12 @@ Material MaterialCatalog::createMonsterDissectionGuide(int quantity)
 
 Material MaterialCatalog::createTrainingArrows(int quantity)
 {
-    return Material("training_arrows", "Flèches d'entraînement", "Munitions basiques fournies aux classes à arc. Le craft de munitions spéciales sera appris plus tard.", "Munition", 1, quantity);
+    return Material("training_arrows", "Flèches d'entraînement", "Munitions basiques fournies aux classes à arc. Les archers s'en servent pour apprendre à économiser leurs vrais tirs.", "Munition", 1, quantity);
 }
 
 Material MaterialCatalog::createTrainingBolts(int quantity)
 {
-    return Material("training_bolts", "Carreaux d'entraînement", "Munitions basiques pour arbalète ou arme de tir lourde. Leur système actif viendra avec les armes à munitions.", "Munition", 2, quantity);
+    return Material("training_bolts", "Carreaux d'entraînement", "Munitions basiques pour arbalète ou arme de tir lourde.", "Munition", 2, quantity);
 }
 
 Material MaterialCatalog::createTrainingThrowingKnives(int quantity)
@@ -720,12 +792,12 @@ Material MaterialCatalog::createTrainingThrowingKnives(int quantity)
 
 Material MaterialCatalog::createBarbedArrows(int quantity)
 {
-    return Material("barbed_arrows", "Flèches barbelées", "Munitions spéciales artisanales. Elles infligeront plus tard des effets de saignement ; pour l'instant elles comptent comme munitions avancées.", "Munition spéciale", 5, quantity);
+    return Material("barbed_arrows", "Flèches barbelées", "Munitions spéciales artisanales conçues pour ouvrir des plaies plus difficiles à refermer.", "Munition spéciale", 5, quantity);
 }
 
 Material MaterialCatalog::createPiercingBolts(int quantity)
 {
-    return Material("piercing_bolts", "Carreaux perforants", "Munitions d'arbalète renforcées, pensées pour armures et monstres épais. Effets avancés prévus avec les armes à munitions.", "Munition spéciale", 6, quantity);
+    return Material("piercing_bolts", "Carreaux perforants", "Munitions d'arbalète renforcées, pensées pour armures et monstres épais.", "Munition spéciale", 6, quantity);
 }
 
 Material MaterialCatalog::createBalancedThrowingKnives(int quantity)
@@ -735,17 +807,17 @@ Material MaterialCatalog::createBalancedThrowingKnives(int quantity)
 
 Material MaterialCatalog::createAshArrows(int quantity)
 {
-    return Material("ash_arrows", "Flèches de cendre", "Munitions expérimentales noircies par alchimie. Elles préparent le futur système de brûlure sans l'activer partout trop tôt.", "Munition élémentaire", 8, quantity);
+    return Material("ash_arrows", "Flèches de cendre", "Munitions expérimentales noircies par alchimie, connues pour favoriser les blessures brûlantes.", "Munition élémentaire", 8, quantity);
 }
 
 Material MaterialCatalog::createFrozenBolts(int quantity)
 {
-    return Material("frozen_bolts", "Carreaux givrés", "Carreaux traités au froid. Ils serviront aux futures interactions de ralentissement, glace et armures gelées.", "Munition élémentaire", 9, quantity);
+    return Material("frozen_bolts", "Carreaux givrés", "Carreaux traités au froid, conçus pour gêner les mouvements et mordre les armures gelées.", "Munition élémentaire", 9, quantity);
 }
 
 Material MaterialCatalog::createConductiveKnives(int quantity)
 {
-    return Material("conductive_knives", "Couteaux conducteurs", "Projectiles métalliques préparés pour les futures réactions électriques, surtout contre les cibles équipées de métal.", "Munition élémentaire", 9, quantity);
+    return Material("conductive_knives", "Couteaux conducteurs", "Projectiles métalliques préparés pour les réactions électriques, surtout contre les cibles équipées de métal.", "Munition élémentaire", 9, quantity);
 }
 
 Material MaterialCatalog::createVenomArrows(int quantity)

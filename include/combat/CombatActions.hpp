@@ -43,6 +43,18 @@ public:
         Random& random
     );
 
+    static bool executeClassSkill(
+        Entity& attacker,
+        Entity& defender,
+        Random& random
+    );
+
+    static bool executeAIClassSkill(
+        Entity& attacker,
+        Entity& defender,
+        Random& random
+    );
+
     static bool executeHealingPotion(
         Entity& entity,
         int potionHealAmount

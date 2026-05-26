@@ -1,25 +1,147 @@
 {
     "title": "Dinotofu cheat codes",
-    "note": "Prepared data file. Effects are not fully connected yet.",
+    "note": "Archive de référence des codes cachés connus. Les effets réellement actifs restent ceux du code C++.",
     "codes": [
-        { "code": "idontwanttodie", "category": "debug", "effect": "God mode: HP loss blocked.", "reusable": false, "marksAltered": true },
-        { "code": "infinituseforeverything", "category": "debug", "effect": "Consumables no longer decrease.", "reusable": false, "marksAltered": true },
-        { "code": "bedrockequipment", "category": "debug", "effect": "Equipment becomes indestructible.", "reusable": false, "marksAltered": true },
-        { "code": "myweaponandnotother", "category": "debug", "effect": "Equipment cannot be stolen or lost.", "reusable": false, "marksAltered": true },
-        { "code": "skipallstory", "category": "debug", "effect": "Unlock all bestiary/story knowledge.", "reusable": false, "marksAltered": true },
-        { "code": "skipalllevels", "category": "debug", "effect": "Set character to max level.", "reusable": false, "marksAltered": true },
-        { "code": "1302313", "category": "secret", "effect": "Creator message.", "reusable": false, "marksAltered": false },
-        { "code": "13023131302313", "category": "combat_sequence", "effect": "Creator/divinity scene, enemy one-shot and full heal if accepted.", "reusable": false, "marksAltered": true },
-        { "code": "iamnotgoblinfood", "category": "fun", "effect": "Goblins fear the character for a future encounter/fight.", "reusable": false, "marksAltered": true },
-        { "code": "letmecook", "category": "fun", "effect": "Temporary critical chance boost.", "reusable": false, "marksAltered": true },
-        { "code": "whereismyplotarmor", "category": "fun", "effect": "Temporary anti-death blessing.", "reusable": false, "marksAltered": true },
-        { "code": "talktothedev", "category": "secret", "effect": "Meta creator note.", "reusable": false, "marksAltered": false },
-        { "code": "oopsallbosses", "category": "chaos", "effect": "Future boss-heavy mode or wave replacement.", "reusable": false, "marksAltered": true },
-        { "code": "randomizemyfate", "category": "chaos", "effect": "Random class, weapon and inventory.", "reusable": false, "marksAltered": true },
-        { "code": "resetmycharacter", "category": "danger", "effect": "Reset or destroy and recreate the current character.", "reusable": false, "marksAltered": true },
-        { "code": "switchmyclassandweapon", "category": "debug", "effect": "Change class and give progression-appropriate equipment.", "reusable": false, "marksAltered": true },
-        { "code": "helpmerefundmyaction", "category": "recovery", "effect": "Undo accidental action or sale. Max 3 per character.", "reusable": true, "maxUsesPerCharacter": 3, "marksAltered": true },
-        { "code": "givemesomegolds", "category": "debug", "effect": "Give 100 to 1000 gold.", "reusable": true, "marksAltered": true },
-        { "code": "givemealevel", "category": "debug", "effect": "Give one level.", "reusable": true, "marksAltered": true }
+        {
+            "code": "idontwanttodie",
+            "category": "archive",
+            "effect": "Mode divin : la perte de PV est bloquée.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "infinituseforeverything",
+            "category": "archive",
+            "effect": "Les consommables ne diminuent plus.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "bedrockequipment",
+            "category": "archive",
+            "effect": "L'équipement devient indestructible.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "myweaponandnotother",
+            "category": "archive",
+            "effect": "L'équipement ne peut plus être volé ou perdu.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "skipallstory",
+            "category": "archive",
+            "effect": "Débloque les connaissances de récit/bestiaire prévues par ce code.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "skipalllevels",
+            "category": "archive",
+            "effect": "Amène le personnage au niveau maximum.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "1302313",
+            "category": "secret",
+            "effect": "Message personnel du créateur.",
+            "reusable": false,
+            "marksAltered": false
+        },
+        {
+            "code": "13023131302313",
+            "category": "combat_sequence",
+            "effect": "Séquence divine : scène spéciale, ennemi abattu et soin complet si accepté.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "iamnotgoblinfood",
+            "category": "fun",
+            "effect": "Les gobelins craignent le personnage pour une future rencontre.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "letmecook",
+            "category": "fun",
+            "effect": "Bonus temporaire de chance critique.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "whereismyplotarmor",
+            "category": "fun",
+            "effect": "Bénédiction temporaire anti-mort.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "talktothedev",
+            "category": "secret",
+            "effect": "Note secrète du créateur.",
+            "reusable": false,
+            "marksAltered": false
+        },
+        {
+            "code": "oopsallbosses",
+            "category": "chaos",
+            "effect": "Mode chaotique orienté boss/vagues spéciales.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "randomizemyfate",
+            "category": "chaos",
+            "effect": "Classe, arme et inventaire réattribués aléatoirement.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "resetmycharacter",
+            "category": "danger",
+            "effect": "Réinitialise ou détruit puis recrée le personnage courant.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "switchmyclassandweapon",
+            "category": "archive",
+            "effect": "Change la classe et donne un équipement cohérent avec la progression.",
+            "reusable": false,
+            "marksAltered": true
+        },
+        {
+            "code": "helpmerefundmyaction",
+            "category": "recovery",
+            "effect": "Annule une action ou vente accidentelle. Maximum 3 fois par personnage.",
+            "reusable": true,
+            "maxUsesPerCharacter": 3,
+            "marksAltered": true
+        },
+        {
+            "code": "givemesomegolds",
+            "category": "archive",
+            "effect": "Donne entre 100 et 1000 pièces d’or.",
+            "reusable": true,
+            "marksAltered": true
+        },
+        {
+            "code": "givemealevel",
+            "category": "archive",
+            "effect": "Donne un niveau.",
+            "reusable": true,
+            "marksAltered": true
+        },
+        {
+            "code": "fuckgrindinggimifight",
+            "category": "arena_shortcut",
+            "effect": "Ouvre les combats spéciaux en arène, révèle les boss non finaux et marque le personnage Altéré.",
+            "reusable": false,
+            "marksAltered": true
+        }
     ]
 }

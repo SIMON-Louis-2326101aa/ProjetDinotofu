@@ -12,6 +12,9 @@
 #include "character/SpecialCharacterNameGuard.hpp"
 #include "core/Console.hpp"
 #include "core/VersionInfo.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
+#include "interface/model/MenuScreen.hpp"
 #include "save/SaveManager.hpp"
 
 #include <iostream>
@@ -37,12 +40,13 @@ namespace
     // FR: askYesNo déclare ou implémente un comportement précis utilisé par ce module.
     bool askYesNo(const std::string& question)
     {
-        std::cout << question << std::endl;
-        std::cout << "1 : Oui" << std::endl;
-        std::cout << "2 : Non" << std::endl;
-        std::cout << "> ";
+        MenuScreen screen("CONFIRMATION", "save.confirmation.yes_no");
+        screen.addLine(question);
+        screen.addOption(1, "Oui", "", true, "save.confirmation.yes");
+        screen.addOption(2, "Non", "", true, "save.confirmation.no");
 
-        int choice = Console::askNumberBetween(
+        int choice = TerminalInterface::askMenuChoice(
+            screen,
             1,
             2,
             "Veuillez choisir 1 ou 2."
@@ -51,6 +55,21 @@ namespace
         return choice == 1;
     }
 
+    std::string versionImpactShortLabel(VersionCompatibilityImpact impact)
+    {
+        switch (impact)
+        {
+            case VersionCompatibilityImpact::RecreateRecommended:
+                return "MAJ lourde conseillée";
+            case VersionCompatibilityImpact::MidUpdate:
+                return "MAJ moyenne";
+            case VersionCompatibilityImpact::PatchUpdate:
+                return "patch dispo";
+            case VersionCompatibilityImpact::None:
+            default:
+                return "";
+        }
+    }
 
     void displayVersionCompatibilityWarning(
         const std::string& accountName,
@@ -65,20 +84,19 @@ namespace
             return;
         }
 
-        std::cout << "==============================================" << std::endl;
-        std::cout << message << std::endl;
-        std::cout << "Profil concerné : " << accountName << std::endl;
-        std::cout << "Personnage concerné : " << character.characterName << std::endl;
-        std::cout << "Version actuelle : V" << VersionInfo::currentVersion() << std::endl;
-        std::cout << "Dernière adaptation connue : V" << character.lastAdaptedVersion << std::endl;
+        MenuScreen screen("TRACE DE VERSION", "save.characters.version.warning");
+        screen.addLine(message);
+        screen.addLine("Profil concerné : " + accountName);
+        screen.addLine("Personnage concerné : " + character.characterName);
+        screen.addLine("Version actuelle : V" + VersionInfo::currentVersion());
+        screen.addLine("Dernière adaptation connue : V" + character.lastAdaptedVersion);
 
         if (impact == VersionCompatibilityImpact::RecreateRecommended)
         {
-            std::cout << "Certaines nouveautés de départ peuvent ne pas être présentes : équipement, munitions, potions, équilibrage initial." << std::endl;
+            screen.addLine("Certaines protections de départ peuvent manquer : équipement, munitions, potions, traces initiales.");
         }
 
-        std::cout << "==============================================" << std::endl;
-        std::cout << std::endl;
+        TerminalInterface::renderMenuScreen(screen, false);
     }
 
 
@@ -102,25 +120,18 @@ namespace
             return LegacyCharacterDecision::ContinueNormally;
         }
 
-        std::cout << "Les archives sentent une ancienne version autour de ce personnage." << std::endl;
-        std::cout << "Son histoire peut continuer, mais certains fils de départ n'existaient pas encore" << std::endl;
-        std::cout << "dans cette version du monde : kit initial, munitions, équipement de secours, protections." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Profil concerné : " << accountName << std::endl;
-        std::cout << "Personnage concerné : " << character.characterName << std::endl;
-        std::cout << std::endl;
-        std::cout << "Que veux-tu faire ?" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Procéder au rituel d'oubli contrôlé" << std::endl;
-        std::cout << "    Le personnage sera recréé proprement pour cette version." << std::endl;
-        std::cout << "2 : Subir une adaptation lourde" << std::endl;
-        std::cout << "    Le jeu ajoute seulement les sécurités manquantes sans remplacer tes gains." << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
+        MenuScreen screen("ANCIENNE TRACE DE PERSONNAGE", "save.characters.legacy.decision");
+        screen.addLine("Les archives sentent une ancienne version autour de ce personnage.");
+        screen.addLine("Son histoire peut continuer, mais certains fils de départ étaient encore absents.");
+        screen.addLine("Kit initial, munitions, équipement de secours et protections peuvent devoir être retissés.");
+        screen.addLine("Profil concerné : " + accountName);
+        screen.addLine("Personnage concerné : " + character.characterName);
+        screen.addOption(0, "Retour", "", true, "save.characters.legacy.back");
+        screen.addOption(1, "Procéder au rituel d'oubli contrôlé", "Le personnage sera recréé proprement pour cette version.", true, "save.characters.legacy.recreate");
+        screen.addOption(2, "Subir une adaptation lourde", "Ajoute les sécurités manquantes sans remplacer tes gains.", true, "save.characters.legacy.heavy_adaptation");
 
-        int choice = Console::askNumberBetween(
-            0,
-            2,
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
             "Veuillez choisir 0, 1 ou 2."
         );
 
@@ -153,7 +164,7 @@ namespace
 
         if (!protectedCharacter.canBePlayedWithSpecialDate())
         {
-            std::cout << "Cette identité n'est pas prévue pour être incarnée." << std::endl;
+            std::cout << "Cette identité refuse d'être incarnée par ce chemin." << std::endl;
             std::cout << std::endl;
             Console::waitForEnter();
             Console::clear();
@@ -211,25 +222,36 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
     {
         std::vector<CharacterSaveSummary> characters = SaveManager::listPlayableCharacters(accountName);
 
-        std::cout << "===== PERSONNAGES =====" << std::endl;
-        std::cout << "0 : Créer un nouveau personnage" << std::endl;
+        MenuScreen characterListScreen("PERSONNAGES", "save.characters.list");
+        characterListScreen.addOption(0, "Créer un nouveau personnage", "", true, "save.characters.create");
 
         for (int i = 0; i < static_cast<int>(characters.size()); i++)
         {
-            std::cout << (i + 1) << " : "
-                      << characters[i].characterName
-                      << " | " << characters[i].raceName
-                      << " / " << characters[i].className
-                      << " | Niveau " << characters[i].level
-                      << (characters[i].clone ? " | CLONE" : "")
-                      << std::endl;
+            VersionCompatibilityImpact listImpact = VersionInfo::evaluateCompatibility(characters[i].lastAdaptedVersion);
+            std::string versionLabel = versionImpactShortLabel(listImpact);
+
+            std::string label = characters[i].characterName
+                + " | " + characters[i].raceName
+                + " / " + characters[i].className
+                + " | Niveau " + std::to_string(characters[i].level)
+                + (characters[i].clone ? " | CLONE" : "");
+
+            if (!versionLabel.empty())
+            {
+                label += " | " + versionLabel;
+            }
+
+            characterListScreen.addOption(
+                i + 1,
+                label,
+                "",
+                true,
+                "save.characters.select." + std::to_string(i + 1)
+            );
         }
 
-        std::cout << "=======================" << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
-
-        int choice = Console::askNumberBetween(
+        int choice = TerminalInterface::askMenuChoice(
+            characterListScreen,
             0,
             static_cast<int>(characters.size()),
             "Veuillez choisir un personnage affiché, ou 0 pour en créer un."
@@ -241,18 +263,22 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
 
             while (true)
             {
-                std::cout << "Quel est ton nom ?" << std::endl;
-                std::cout << "> ";
-
-                std::getline(std::cin >> std::ws, result.playerName);
+                result.playerName = MessageScreen::askText(
+                    "NOM DU PERSONNAGE",
+                    "save.characters.create.name",
+                    {"Quel est ton nom ?"}
+                );
 
                 while (result.playerName.empty())
                 {
-                    std::cout << "Un nom vide ? Même les gobelins ont plus de présence que ça." << std::endl;
-                    std::cout << "Entre un vrai nom." << std::endl;
-                    std::cout << "> ";
-
-                    std::getline(std::cin >> std::ws, result.playerName);
+                    result.playerName = MessageScreen::askText(
+                        "NOM DU PERSONNAGE",
+                        "save.characters.create.name.empty",
+                        {
+                            "Un nom vide ? Même les gobelins ont plus de présence que ça.",
+                            "Entre un vrai nom."
+                        }
+                    );
                 }
 
                 if (validateProtectedName(result.playerName, result))
@@ -263,61 +289,66 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
 
             Console::clear();
 
-            std::cout << "Très bien, " << result.playerName << "." << std::endl;
-            std::cout << "L'arène se souviendra peut-être de ce nom..." << std::endl;
-            std::cout << std::endl;
-
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "NOM GRAVÉ",
+                "save.characters.create.name.accepted",
+                {
+                    "Très bien, " + result.playerName + ".",
+                    "L'arène se souviendra peut-être de ce nom..."
+                }
+            );
             return result;
         }
 
         CharacterSaveSummary selectedCharacter = characters[choice - 1];
 
         Console::clear();
-        std::cout << "Personnage sélectionné : " << selectedCharacter.characterName << std::endl;
-        std::cout << "Race / classe : " << selectedCharacter.raceName << " / " << selectedCharacter.className << std::endl;
-        std::cout << "Niveau : " << selectedCharacter.level << std::endl;
-        std::cout << "Créateur : " << selectedCharacter.creatorAccountName << std::endl;
-        std::cout << "Joueur / maître actuel : " << selectedCharacter.currentOwnerAccountName << std::endl;
-        std::cout << "Créé le : " << selectedCharacter.createdAt
-                  << " | V" << selectedCharacter.createdForVersion << std::endl;
-        std::cout << "Dernière adaptation faite pour la V"
-                  << selectedCharacter.lastAdaptedVersion << std::endl;
+        MenuScreen selectedCharacterScreen("PERSONNAGE SÉLECTIONNÉ", "save.characters.selected.summary");
+        selectedCharacterScreen.addLine("Personnage : " + selectedCharacter.characterName);
+        selectedCharacterScreen.addLine("Race / classe : " + selectedCharacter.raceName + " / " + selectedCharacter.className);
+        selectedCharacterScreen.addLine("Niveau : " + std::to_string(selectedCharacter.level));
+        selectedCharacterScreen.addLine("Créateur : " + selectedCharacter.creatorAccountName);
+        selectedCharacterScreen.addLine("Joueur / maître actuel : " + selectedCharacter.currentOwnerAccountName);
+        selectedCharacterScreen.addLine("Créé le : " + selectedCharacter.createdAt + " | V" + selectedCharacter.createdForVersion);
+        selectedCharacterScreen.addLine("Dernière adaptation faite pour la V" + selectedCharacter.lastAdaptedVersion);
         if (selectedCharacter.clone)
         {
-            std::cout << "Statut : CLONE — JcJ amical uniquement." << std::endl;
+            selectedCharacterScreen.addLine("Statut : CLONE — JcJ amical uniquement.");
         }
-        std::cout << std::endl;
+        TerminalInterface::renderMenuScreen(selectedCharacterScreen, false);
 
         if (selectedCharacter.accountName != accountName
             || selectedCharacter.currentOwnerAccountName != accountName)
         {
-            std::cout << "Une marque étrangère traverse cette sauvegarde." << std::endl;
-            std::cout << "Ce personnage n'appartient pas à ce compte, même si son fichier a été déplacé ici." << std::endl;
-            std::cout << "Un personnage n'a qu'un seul maître." << std::endl;
-            std::cout << "Maître inscrit : " << selectedCharacter.currentOwnerAccountName << std::endl;
-            std::cout << "Compte actif : " << accountName << std::endl;
-            std::cout << std::endl;
-            std::cout << "Chargement refusé. Utilise le transfert irréversible prévu par le jeu si le personnage doit changer de joueur." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "MAÎTRE REFUSÉ",
+                "save.characters.owner.refused",
+                {
+                    "Une marque étrangère traverse cette sauvegarde.",
+                    "Ce personnage n'appartient pas à ce compte, même si son fichier a été déplacé ici.",
+                    "Un personnage n'a qu'un seul maître.",
+                    "Maître inscrit : " + selectedCharacter.currentOwnerAccountName,
+                    "Compte actif : " + accountName,
+                    "Chargement refusé. Utilise le rituel de transfert irréversible si ce personnage doit changer de maître."
+                }
+            );
             continue;
         }
 
         displayVersionCompatibilityWarning(accountName, selectedCharacter);
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Incarner" << std::endl;
-        std::cout << "2 : Donner ce personnage à un autre compte" << std::endl;
-        std::cout << "    Action irréversible : le maître actuel changera vraiment." << std::endl;
-        std::cout << "3 : Extraire / transférer ce personnage en dossier portable" << std::endl;
-        std::cout << "4 : Extraire un clone du personnage" << std::endl;
-        std::cout << "5 : Supprimer ce personnage" << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
 
-        int characterAction = Console::askNumberBetween(
+        MenuScreen characterActionScreen("ACTIONS DU PERSONNAGE", "save.characters.actions");
+        characterActionScreen.addLine("Personnage : " + selectedCharacter.characterName);
+        characterActionScreen.addLine("Action irréversible disponible : le maître actuel peut changer vraiment.");
+        characterActionScreen.addOption(0, "Retour", "", true, "save.characters.actions.back");
+        characterActionScreen.addOption(1, "Incarner", "", true, "save.characters.actions.play");
+        characterActionScreen.addOption(2, "Donner ce personnage à un autre compte", "", true, "save.characters.actions.transfer_owner");
+        characterActionScreen.addOption(3, "Extraire / transférer ce personnage en dossier portable", "", true, "save.characters.actions.export");
+        characterActionScreen.addOption(4, "Extraire un clone du personnage", "", true, "save.characters.actions.clone");
+        characterActionScreen.addOption(5, "Supprimer ce personnage", "", true, "save.characters.actions.delete");
+
+        int characterAction = TerminalInterface::askMenuChoice(
+            characterActionScreen,
             0,
             5,
             "Veuillez choisir 0, 1, 2, 3, 4 ou 5."
@@ -344,13 +375,18 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
                 CharacterMenuResult result = createEmptyResult();
                 result.playerName = selectedCharacter.characterName;
                 Console::clear();
-                std::cout << "Le nom est conservé, mais le fil sera retissé depuis le début." << std::endl;
-                std::cout << "Choisis à nouveau la difficulté, la race et la classe pour recréer proprement ce personnage." << std::endl;
-                std::cout << std::endl;
-                Console::waitForEnter();
-                Console::clear();
+                MessageScreen::show(
+                    "RITUEL D'OUBLI CONTRÔLÉ",
+                    "save.characters.legacy.recreate.notice",
+                    {
+                        "Le nom est conservé, mais le fil sera retissé depuis le début.",
+                        "Choisis à nouveau la difficulté, la race et la classe pour recréer proprement ce personnage."
+                    }
+                );
                 return result;
             }
+
+            VersionCompatibilityImpact selectedImpact = VersionInfo::evaluateCompatibility(selectedCharacter.lastAdaptedVersion);
 
             CharacterMenuResult result = createEmptyResult();
             result.characterLoaded = SaveManager::loadPlayerSnapshot(
@@ -369,6 +405,21 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
                     adaptationChanges.push_back("Attention : adaptation appliquée en mémoire, mais sauvegarde immédiate impossible.");
                 }
             }
+            else if (result.characterLoaded
+                && (selectedImpact == VersionCompatibilityImpact::PatchUpdate
+                    || selectedImpact == VersionCompatibilityImpact::MidUpdate))
+            {
+                player.markAdaptedToCurrentVersion();
+
+                if (SaveManager::savePlayerSnapshot(player, accountName, result.difficulty))
+                {
+                    adaptationChanges.push_back("Marque de version mise à jour vers V" + VersionInfo::currentVersion() + ".");
+                }
+                else
+                {
+                    adaptationChanges.push_back("Attention : nouvelle version détectée, mais sauvegarde de la marque de version impossible.");
+                }
+            }
 
             if (result.characterLoaded)
             {
@@ -383,7 +434,15 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
 
                 if (!adaptationChanges.empty())
                 {
-                    std::cout << "Adaptation lourde appliquée :" << std::endl;
+                    if (legacyDecision == LegacyCharacterDecision::HeavyAdaptation)
+                    {
+                        std::cout << "Adaptation lourde appliquée :" << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "Mise à jour de version appliquée :" << std::endl;
+                    }
+
                     for (const std::string& change : adaptationChanges)
                     {
                         std::cout << "- " << change << std::endl;
@@ -411,57 +470,68 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
         {
             Console::clear();
 
-            std::cout << "Transfert de maîtrise irréversible." << std::endl;
-            std::cout << selectedCharacter.characterName << " gardera son créateur inscrit : "
-                      << selectedCharacter.creatorAccountName << "." << std::endl;
-            std::cout << "Mais son joueur / maître actuel deviendra le compte que tu vas indiquer." << std::endl;
-            std::cout << "Après ça, ce compte ne pourra plus l'incarner." << std::endl;
-            std::cout << std::endl;
-            std::cout << "Nom exact du compte destinataire :" << std::endl;
-            std::cout << "> ";
-
-            std::string targetAccount;
-            std::getline(std::cin >> std::ws, targetAccount);
+            std::string targetAccount = MessageScreen::askText(
+                "TRANSFERT DE MAÎTRISE",
+                "save.characters.transfer.target",
+                {
+                    "Transfert de maîtrise irréversible.",
+                    selectedCharacter.characterName + " gardera son créateur inscrit : " + selectedCharacter.creatorAccountName + ".",
+                    "Mais son joueur / maître actuel deviendra le compte que tu vas indiquer.",
+                    "Après ça, ce compte ne pourra plus l'incarner.",
+                    "Nom exact du compte destinataire :"
+                }
+            );
 
             if (targetAccount.empty() || targetAccount == accountName)
             {
-                std::cout << "Transfert annulé : le destinataire est vide ou identique au compte actuel." << std::endl;
-                std::cout << std::endl;
-                Console::waitForEnter();
-                Console::clear();
+                MessageScreen::show(
+                    "TRANSFERT ANNULÉ",
+                    "save.characters.transfer.invalid_target",
+                    {"Transfert annulé : le destinataire est vide ou identique au compte actuel."}
+                );
                 continue;
             }
 
-            std::cout << std::endl;
-            std::cout << "Tape TRANSFERER pour confirmer." << std::endl;
-            std::cout << "> ";
-
-            std::string confirmation;
-            std::getline(std::cin >> std::ws, confirmation);
-
-            if (confirmation != "TRANSFERER")
+            if (!MessageScreen::askKeywordConfirmation(
+                    "CONFIRMATION DE TRANSFERT",
+                    "save.characters.transfer.confirm",
+                    {
+                        "Personnage : " + selectedCharacter.characterName,
+                        "Créateur conservé : " + selectedCharacter.creatorAccountName,
+                        "Nouveau joueur / maître : " + targetAccount
+                    },
+                    "TRANSFERER"
+                ))
             {
-                std::cout << "Transfert annulé." << std::endl;
-                std::cout << std::endl;
-                Console::waitForEnter();
-                Console::clear();
+                MessageScreen::show(
+                    "TRANSFERT ANNULÉ",
+                    "save.characters.transfer.cancelled",
+                    {"Transfert annulé."}
+                );
                 continue;
             }
 
             if (SaveManager::transferCharacterOwnership(selectedCharacter, targetAccount))
             {
-                std::cout << "Le fil de maîtrise a été déplacé." << std::endl;
-                std::cout << "Créateur : " << selectedCharacter.creatorAccountName << std::endl;
-                std::cout << "Nouveau joueur / maître : " << targetAccount << std::endl;
+                MessageScreen::show(
+                    "MAÎTRISE TRANSFÉRÉE",
+                    "save.characters.transfer.success",
+                    {
+                        "Le fil de maîtrise a été déplacé.",
+                        "Créateur : " + selectedCharacter.creatorAccountName,
+                        "Nouveau joueur / maître : " + targetAccount
+                    }
+                );
             }
             else
             {
-                std::cout << "Transfert impossible. Vérifie que le destinataire n'a pas déjà un personnage du même nom." << std::endl;
+                MessageScreen::show(
+                    "TRANSFERT IMPOSSIBLE",
+                    "save.characters.transfer.failure",
+                    {"Transfert impossible. Vérifie que le destinataire n'a pas déjà un personnage du même nom."}
+                );
             }
 
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
             continue;
         }
 
@@ -470,24 +540,37 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
             Console::clear();
             std::string exportedPath;
 
-            std::cout << selectedCharacter.characterName << " part en voyage." << std::endl;
-            std::cout << "L'extraction transfère le personnage : il quitte ce compte local." << std::endl;
-            std::cout << "Le compte reste présent, mais ce personnage ne sera plus jouable ici tant qu'il n'est pas réimporté." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "EXTRACTION DU PERSONNAGE",
+                "save.characters.export.warning",
+                {
+                    selectedCharacter.characterName + " part en voyage.",
+                    "L'extraction transfère le personnage : il quitte ce compte local.",
+                    "Le compte reste présent, mais ce personnage ne sera plus jouable ici tant qu'il n'est pas réimporté."
+                },
+                false
+            );
 
             if (SaveManager::exportCharacterPackage(selectedCharacter, exportedPath))
             {
-                std::cout << "Personnage extrait avec succès." << std::endl;
-                std::cout << "Dossier portable : " << exportedPath << std::endl;
+                MessageScreen::show(
+                    "PERSONNAGE EXTRAIT",
+                    "save.characters.export.success",
+                    {
+                        "Personnage extrait avec succès.",
+                        "Dossier portable : " + exportedPath
+                    }
+                );
             }
             else
             {
-                std::cout << "Extraction impossible pour ce personnage." << std::endl;
+                MessageScreen::show(
+                    "EXTRACTION IMPOSSIBLE",
+                    "save.characters.export.failure",
+                    {"Extraction impossible pour ce personnage."}
+                );
             }
 
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
             continue;
         }
 
@@ -496,42 +579,53 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
             Console::clear();
             std::string exportedPath;
 
-            std::cout << "Création d'un clone portable de " << selectedCharacter.characterName << "." << std::endl;
-            std::cout << "Le personnage original reste ici." << std::endl;
-            std::cout << "Le clone sera marqué CLONE et limité aux combats JcJ amicaux." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "CLONE PORTABLE",
+                "save.characters.clone.warning",
+                {
+                    "Création d'un clone portable de " + selectedCharacter.characterName + ".",
+                    "Le personnage original reste ici.",
+                    "Le clone sera marqué CLONE et limité aux combats JcJ amicaux."
+                },
+                false
+            );
 
             if (SaveManager::exportCharacterClonePackage(selectedCharacter, exportedPath))
             {
-                std::cout << "Clone extrait avec succès." << std::endl;
-                std::cout << "Dossier portable : " << exportedPath << std::endl;
+                MessageScreen::show(
+                    "CLONE EXTRAIT",
+                    "save.characters.clone.success",
+                    {
+                        "Clone extrait avec succès.",
+                        "Dossier portable : " + exportedPath
+                    }
+                );
             }
             else
             {
-                std::cout << "Extraction du clone impossible." << std::endl;
+                MessageScreen::show(
+                    "EXTRACTION IMPOSSIBLE",
+                    "save.characters.clone.failure",
+                    {"Extraction du clone impossible."}
+                );
             }
 
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
             continue;
         }
 
-        std::cout << std::endl;
-        std::cout << "Supprimer ce personnage est définitif." << std::endl;
-        std::cout << "Tape SUPPRIMER pour confirmer." << std::endl;
-        std::cout << "> ";
-
-        std::string confirmation;
-        std::getline(std::cin >> std::ws, confirmation);
-
-        if (confirmation != "SUPPRIMER")
+        if (!MessageScreen::askKeywordConfirmation(
+                "SUPPRESSION DE PERSONNAGE",
+                "save.characters.delete.confirm",
+                {"Supprimer ce personnage est définitif."},
+                "SUPPRIMER"
+            ))
         {
             Console::clear();
-            std::cout << "Suppression annulée." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "SUPPRESSION ANNULÉE",
+                "save.characters.delete.cancelled",
+                {"Suppression annulée."}
+            );
             continue;
         }
 
@@ -539,16 +633,22 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
 
         if (SaveManager::deletePlayableCharacter(selectedCharacter))
         {
-            std::cout << "Personnage supprimé : " << selectedCharacter.characterName << "." << std::endl;
+            MessageScreen::show(
+                "PERSONNAGE SUPPRIMÉ",
+                "save.characters.delete.success",
+                {"Personnage supprimé : " + selectedCharacter.characterName + "."}
+            );
         }
         else
         {
-            std::cout << "Impossible de supprimer ce personnage." << std::endl;
-            std::cout << "Vérifie les fichiers dans assets/saves/characters/playable/." << std::endl;
+            MessageScreen::show(
+                "SUPPRESSION IMPOSSIBLE",
+                "save.characters.delete.failure",
+                {
+                    "Impossible de supprimer ce personnage.",
+                    "Vérifie les fichiers dans assets/saves/characters/playable/."
+                }
+            );
         }
-
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
     }
 }

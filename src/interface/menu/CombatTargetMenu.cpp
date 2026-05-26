@@ -12,6 +12,8 @@
 #include "combat/threat/ThreatSystem.hpp"
 
 #include "core/Console.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 #include <iostream>
 
@@ -87,9 +89,11 @@ int CombatTargetMenu::chooseTarget(const EnemyCombatQueue& wave)
 {
     wave.displayActiveEnemies();
 
-    std::cout << "Choisis une cible." << std::endl;
-    std::cout << "Entre le numéro de l'ennemi à sélectionner, ou 0 pour revenir." << std::endl;
-    std::cout << "> ";
+    MenuScreen screen("CHOIX DE CIBLE", "combat.target_select");
+    screen.addLine("Choisis une cible.");
+    screen.addLine("Entre le numéro de l'ennemi à sélectionner, ou 0 pour revenir.");
+    screen.addBackOption();
+    TerminalInterface::renderMenuScreen(screen);
 
     int choice = Console::askNumberBetween(
         0,
@@ -160,39 +164,37 @@ bool CombatTargetMenu::openTargetMenu(
 
         while (stayOnThisTarget && !target.isDead())
         {
-            std::cout << "========== CIBLE SÉLECTIONNÉE ==========" << std::endl;
-            std::cout << "Cible : " << target.getName() << std::endl;
-            std::cout << "Race : " << target.getRaceText() << std::endl;
+            MenuScreen targetScreen("CIBLE SÉLECTIONNÉE", "combat.target_actions");
+            targetScreen.addLine("Cible : " + target.getName());
+            targetScreen.addLine("Race : " + target.getRaceText());
 
             if (target.isInvocation())
             {
-                std::cout << "Statut : Invocation" << std::endl;
+                targetScreen.addLine("Statut : Invocation");
             }
             else if (target.isElite())
             {
-                std::cout << "Statut : Élite" << std::endl;
+                targetScreen.addLine("Statut : Élite");
             }
             else
             {
-                std::cout << "Statut : Ennemi standard" << std::endl;
+                targetScreen.addLine("Statut : Ennemi standard");
             }
 
-            std::cout << "========================================" << std::endl;
-            std::cout << "0 : Retour au menu principal" << std::endl;
+            targetScreen.addOption(0, "Retour au menu principal", "", true, "combat.target.back");
 
             if (boostedAttack)
             {
-                std::cout << "1 : Utiliser la potion de rage sur cette cible" << std::endl;
+                targetScreen.addOption(1, "Utiliser la potion de rage sur cette cible", "", true, "combat.target.use_rage_potion");
             }
             else
             {
-                std::cout << "1 : Attaquer cette cible" << std::endl;
+                targetScreen.addOption(1, "Attaquer cette cible", "", true, "combat.target.attack");
             }
 
-            std::cout << "2 : Inspecter cette cible" << std::endl;
-            std::cout << "3 : Choisir une autre cible" << std::endl;
-            std::cout << std::endl;
-            std::cout << "> ";
+            targetScreen.addOption(2, "Inspecter cette cible", "Voir les informations de combat connues.", true, "combat.target.inspect");
+            targetScreen.addOption(3, "Choisir une autre cible", "", true, "combat.target.change");
+            TerminalInterface::renderMenuScreen(targetScreen);
 
             int choice = Console::askNumberBetween(
                 0,

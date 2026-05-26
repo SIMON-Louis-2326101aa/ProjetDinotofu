@@ -41,14 +41,14 @@ namespace
             {"Duelliste", 170, 12, 27, 43, 4, 2, "1v1, style et précision", ClassCategory::Melee},
             {"Berserker", 240, 14, 34, 46, 2, 4, "énormes dégâts, défense discutable", ClassCategory::Melee},
             {"Lancier", 210, 10, 27, 39, 4, 3, "portée, contrôle et contre-attaque", ClassCategory::Melee},
-            {"Briseur lourd", 300, 15, 38, 58, 2, 2, "faible précision future, dégâts énormes", ClassCategory::Melee},
+            {"Briseur lourd", 300, 15, 38, 58, 2, 2, "précision instable, dégâts énormes", ClassCategory::Melee},
 
             {"Archer", 160, 10, 29, 44, 5, 3, "distance, précision et mobilité", ClassCategory::Distance},
             {"Rôdeur", 180, 9, 27, 40, 5, 3, "distance, pistage et survie", ClassCategory::Distance},
             {"Arbalétrier", 175, 12, 32, 46, 3, 3, "tir lourd, plus lent mais puissant", ClassCategory::Distance},
             {"Chasseur", 190, 9, 24, 37, 4, 3, "traque, pièges et survie", ClassCategory::Distance},
             {"Lanceur de dagues", 150, 11, 26, 44, 5, 2, "distance courte, multi-projectiles", ClassCategory::Distance},
-            {"Tireur", 165, 11, 31, 45, 3, 3, "visée, armes futures et précision", ClassCategory::Distance},
+            {"Tireur", 165, 11, 31, 45, 3, 3, "visée, armes de trait et précision", ClassCategory::Distance},
 
             {"Mage", 140, 6, 29, 46, 4, 5, "magie classique, fragile mais dangereux", ClassCategory::Magic},
             {"Ensorceleur", 145, 8, 27, 42, 4, 4, "magie instinctive et explosive", ClassCategory::Magic},
@@ -132,6 +132,21 @@ namespace
             selectedClass.healingPotionCount,
             selectedClass.damagePotionCount
         );
+    }
+
+    ClassOptionInfo toClassOptionInfo(const ClassTemplate& currentClass)
+    {
+        ClassOptionInfo info;
+        info.name = currentClass.name;
+        info.role = currentClass.role;
+        info.categoryName = classCategoryToText(currentClass.category);
+        info.maxHp = currentClass.maxHp;
+        info.minDamage = currentClass.minDamage;
+        info.maxDamage = currentClass.maxDamage;
+        info.criticalDamage = currentClass.criticalDamage;
+        info.healingPotionCount = currentClass.healingPotionCount;
+        info.damagePotionCount = currentClass.damagePotionCount;
+        return info;
     }
 }
 
@@ -252,6 +267,19 @@ ClassCategory ClassCatalog::getClassCategoryByChoice(int categoryChoice)
 std::string ClassCatalog::getClassCategoryNameByChoice(int categoryChoice)
 {
     return classCategoryToText(getClassCategoryByChoice(categoryChoice));
+}
+
+std::vector<ClassOptionInfo> ClassCatalog::getClassOptionsByCategoryChoice(int categoryChoice)
+{
+    std::vector<ClassOptionInfo> options;
+    ClassCategory category = getClassCategoryByChoice(categoryChoice);
+
+    for (const ClassTemplate* currentClass : getClassesByCategory(category))
+    {
+        options.push_back(toClassOptionInfo(*currentClass));
+    }
+
+    return options;
 }
 
 // EN: createBaseClass declares or implements a focused behavior used by this module.

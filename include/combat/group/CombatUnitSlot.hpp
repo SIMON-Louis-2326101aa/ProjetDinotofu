@@ -66,9 +66,11 @@ public:
     // EN: getEntity declares or implements a focused behavior used by this module.
     // FR: getEntity déclare ou implémente un comportement précis utilisé par ce module.
     Entity* getEntity();
+    const Entity* getEntity() const;
     // EN: getSummon declares or implements a focused behavior used by this module.
     // FR: getSummon déclare ou implémente un comportement précis utilisé par ce module.
     Summon* getSummon();
+    const Summon* getSummon() const;
 };
 
 #endif

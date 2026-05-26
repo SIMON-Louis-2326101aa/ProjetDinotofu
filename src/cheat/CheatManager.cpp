@@ -123,7 +123,7 @@ bool CheatManager::confirmFirstAlteration(Player& player)
     std::cout << "tes statistiques, tes souvenirs, et la trace laissée par ce personnage." << std::endl;
     std::cout << std::endl;
     std::cout << "Un personnage altéré ne retrouvera jamais un historique parfaitement officiel," << std::endl;
-    std::cout << "même si toutes ses altérations sont désactivées plus tard." << std::endl;
+    std::cout << "même si toutes ses altérations sont un jour réduites au silence." << std::endl;
     std::cout << std::endl;
     std::cout << "Voulez-vous procéder à l'activation ?" << std::endl;
     std::cout << "1 : Oui, altérer ce personnage" << std::endl;
@@ -259,7 +259,7 @@ void CheatManager::displayKnownAlterations(const Player& player)
     {
         hasSomething = true;
         std::cout << "- skipallstory | " << (player.hasStorySkip() ? "activé" : "désactivé") << std::endl;
-        std::cout << "  Effet : prépare le déblocage futur histoire/bestiaire." << std::endl;
+        std::cout << "  Effet : force l'ouverture d'archives liées à l'histoire et au bestiaire." << std::endl;
     }
 
     if (player.getGoldCheatUseCount() > 0)
@@ -470,7 +470,7 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
     if (normalizedCode == "skipallstory")
     {
         bool enabled = player.toggleStorySkip();
-        displayToggleResult("la progression d'histoire/bestiaire est préparée comme débloquée pour les systèmes futurs.", enabled);
+        displayToggleResult("les archives d'histoire et de bestiaire s'ouvrent de force autour de toi.", enabled);
         return true;
     }
 

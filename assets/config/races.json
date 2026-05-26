@@ -1,6 +1,6 @@
 {
     "title": "Dinotofu playable races",
-    "note": "Design roadmap. The C++ RaceCatalog is currently the source used by the game.",
+    "note": "Race design archive. The C++ RaceCatalog is currently the source used by the game.",
     "races": [
         {
             "id": "human",

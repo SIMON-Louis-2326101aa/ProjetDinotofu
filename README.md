@@ -2,7 +2,7 @@
 
 Dinotofu is a C++17 terminal RPG and arena game built around character progression, tactical combat, exploration, quests, crafting, shops, boss encounters and long-term account/character saves.
 
-The project started as a large single-file prototype and is being rebuilt into a cleaner object-oriented architecture. The game currently stays in the terminal on purpose: the priority is to stabilize the RPG systems first, then prepare DND-inspired attributes and durable skills, then move toward a graphical interface, and only after that build the full story mode.
+The project started as a large single-file prototype and is being rebuilt into a cleaner object-oriented architecture. The terminal version now acts as the stable gameplay base while the project prepares the graphical interface layer. The goal is to keep the existing systems playable, readable and reusable before building the full story mode.
 
 ## What you can do in the game
 
@@ -157,21 +157,19 @@ Run the game directly after compilation:
 make run
 ```
 
-Run with automatic version/build check:
+Run with the project launcher target:
 
 ```bash
-./run_dinotofu.sh
-# or
 make launch
 ```
 
 On Windows, double-click:
 
 ```bash
-run_dinotofu_windows.bat
+Installer-Dinotofu.cmd / Lancer-Dinotofu.cmd
 ```
 
-This launcher calls WSL, checks whether the build version changed, rebuilds when needed, clears the screen, then starts the game.
+The release launcher checks GitHub updates, downloads a newer release when available, then starts the game.
 
 Clean generated files:
 
@@ -227,11 +225,11 @@ The project is organized around folders such as:
 
 Current priorities are:
 
-1. Expand durable skills with passive progression, active skills and cooldowns.
-2. Continue terminal interface cleanup without hiding useful options.
-3. Polish crafting and economy balance.
-4. Complete DND-inspired attributes once the surrounding systems are stable.
-5. Move toward a graphical interface.
+1. Prepare the graphical interface layer from the current terminal systems.
+2. Keep menus, paginated lists and navigation consistent so they can be reused cleanly.
+3. Continue durable skills and class identity without breaking existing saves.
+4. Add content progressively when a system needs it: monsters, bestiary entries, recipes, shops and events.
+5. Complete DND-inspired attributes after the interface base is stable.
 6. Build the real story mode after the graphical interface.
 
 ## Personal note
@@ -249,3 +247,118 @@ If you manage to become a legend in Dinotofu, congratulations. If you die agains
 Step into the arena. We will see whether you truly play well, or whether you only talk loudly on Discord.
 
 During the real open beta, you may even have a chance to be directly integrated into the base game if your contribution deserves it. Prove that you are worth it. Good luck until then.
+
+Update 1.32.28:
+- Added Mana Suture: a short persistent regeneration status, displayed in active states and resolved at turn start.
+- Added the Mana Suture Grimoire, a learnable spell without a common scroll equivalent, limited to coherent caster profiles with level and catalyst constraints.
+- Added the Minor Purification Scroll, a one-use consumable usable by both mages and non-mages to remove simple combat afflictions.
+- Expanded durable magic-study compatibility to coherent mystical, sacred, summoning and hybrid classes without giving permanent magic to everyone.
+- Added bestiary/library notes about minor purification, mana suture and non-equivalent magical supports.
+
+Ajout 1.32.30 :
+- Grosse passe bestiaire : les fiches affichent maintenant danger estimé, habitat/origine, faiblesses, résistances, butin/ressource liée et conseil de chasse selon le niveau de connaissance.
+- Ajout d'une catégorie dédiée aux effets et altérations : brûlure, poison, givre, choc, saignement, affaiblissement, faille ouverte, voile élémentaire et suture de mana.
+- Ajout de nouvelles entrées de familles/variantes : slimes colorés, racine étrangleuse, squelette archer rouillé, oracle fissuré et bandit apothicaire.
+- Ajout d'un index tactique dans le bestiaire pour lire rapidement les grandes familles, leurs contres et les pièges d'interprétation.
+- Les entrées découvertes pendant la partie stockent aussi des indices persistants : danger, habitat, faiblesses, résistances, butin et stratégie.
+
+## Version 1.32.31
+
+- Expanded the bestiary with zone/habitat entries, many more hostile creature sheets, knowledge progression hints, a bestiary summary screen, and richer tactical notes for constructs, dragons, anomalies and biomes.
+
+
+### V1.32.33
+- Ajout d'une première infrastructure de publication GitHub : scripts de packaging, workflow GitHub Actions, guide d'installation et base installer/launcher PowerShell.
+- Ajout de scripts pour créer une archive source sans exécutable et une release Linux compilée.
+- Préparation d'un launcher Windows capable de vérifier les releases GitHub, télécharger une mise à jour avec progression et lancer le jeu quand une release Windows précompilée sera disponible.
+
+## Version 1.32.40
+
+- Inventory weapon, armor, consumable and material lists now use the shared terminal pagination helper instead of dumping very long lists.
+- The quest journal now opens on active quests by default, keeps completed quests in a separate view, and supports page navigation.
+- A few meta-style player-facing messages were replaced with more immersive text.
+
+
+## Version 1.32.41
+- Shop item lists now use paginated terminal views.
+- Source packaging checks remain focused on game files and generated/private artifacts.
+
+## Version 1.35.06
+- Project version aligned to V1.35.06 after the interface-preparation branch became more than simple patch work.
+- Priority list updated: graphical interface preparation is now the visible direction; balancing continues as normal background work, not as a repeated task.
+- Empty reserve JSON files are now valid empty arrays, special-character dialogues include Trexof, cheat-code archives are synchronized, and console/input safety is improved.
+
+## Version 1.35.07
+- Added display-neutral `MenuScreen` / `MenuOption` models to centralize menu data before rendering.
+- Terminal menus can now render shared screen models through `TerminalInterface`, preparing the future graphical interface.
+- Combat turn, target choice, group target choice and post-combat menus were migrated to the shared screen model.
+
+
+## Version 1.35.08
+- Continued GUI preparation by moving equipment, inventory selection, potion, combat role and statistics hub screens to shared `MenuScreen` data.
+- More menus now expose stable `screenId` and `actionId` values, so the future graphical interface can consume the same actions as the terminal.
+- Terminal rendering remains active through `TerminalInterface`, keeping the game playable during the transition.
+
+
+## Version 1.35.09
+- Continued GUI preparation by migrating shop hub, shop stock, shop item inspection, bestiary hub, bestiary entry lists/details, quest hub, guild, locations, notable NPC and exploration selection screens to shared `MenuScreen` data.
+- Shop, bestiary, quest and exploration screens now expose more stable `screenId` / `actionId` values for the future graphical interface.
+- Terminal rendering remains unchanged in behavior, but more displayed menus now pass through `TerminalInterface`.
+
+
+## Version 1.35.10
+- Added `GuiMenuSnapshot` / `GuiMenuActionSnapshot` so the future graphical interface can read clean menu data without parsing terminal output.
+- Added `TerminalInterface::askMenuChoice` to centralize migrated menu rendering and input handling.
+- Saved account and character menus now use `MenuScreen` more directly with stable `screenId` / `actionId` values.
+- Several exploration event choices now pass through a shared screen helper, with one overly meta wave message replaced by an in-world line.
+
+## Version 1.35.11
+- Continued GUI preparation on paginated inventory category screens: weapons, armors, consumables and materials now use shared `MenuScreen` data for their page rendering.
+- Added pagination helpers that can populate `MenuScreen` navigation options directly, reducing terminal-only pagination code.
+- Inventory page entries now expose stable action ids such as `inventory.weapon.select`, `inventory.armor.select`, `inventory.consumable.select` and `inventory.material.select`.
+- Removed one obsolete terminal-only repair-kit display helper after moving consumable page rendering closer to the shared interface model.
+
+
+
+## Version 1.35.12
+- Continued GUI preparation by centralizing difficulty selection, session selection, activity selection, selected activity confirmation and activity information through shared `MenuScreen` data.
+- Coop secondary-account and secondary-character selection now use paginated `MenuScreen` screens instead of raw terminal lists.
+- Craft screens now use shared menu data, local page choices, 98/99 navigation, detailed recipe screens and confirmation screens.
+- Exchange/donation account, character and action screens now expose `screenId` / `actionId` values for the future graphical renderer.
+- `MenuScreen` can now export a `GuiMenuSnapshot`, and `TerminalInterface` can ask for one of the real enabled options of a screen.
+
+## Version 1.35.13
+- Character creation race and class choices now use structured MenuScreen screens instead of raw terminal-only lists.
+- Class catalog exposes ClassOptionInfo so GUI preparation can read class names, roles and starting numbers without scraping console output.
+- Exchange item selection now uses paginated structured menus for weapons, armors, consumables and materials.
+- Equipped weapon/armor transfer is blocked directly through disabled menu choices.
+
+
+## Version 1.35.14
+- Added a reusable `MessageScreen` helper for information screens, text input screens and keyword-confirmation screens.
+- Local account import, creation, login, export and deletion flows now use more structured shared interface screens.
+- Character name input, version warnings, legacy adaptation decisions, ownership refusal, transfer, export, clone and deletion flows now use more structured shared screens.
+- Dangerous SUPPRIMER / TRANSFERER confirmations are now closer to the shared interface model, preparing the future graphical renderer.
+
+## Version 1.35.15
+- Continued GUI preparation on boss flows: solo/coop appearance choice, manual selection, power analysis and confirmation now use more shared `MenuScreen` data.
+- Boss selection now exposes structured options with `screenId` / `actionId` values instead of relying on raw console lists.
+- Coop boss support healing now uses shared screens for action, target and potion selection.
+- `BossCatalog` exposes registry names and hints without forcing terminal output, preparing the future graphical renderer.
+
+## Version 1.35.16
+- Continued GUI preparation on combat outcome screens: PvE encounter choice, escape, victory, defeat and revive screens now use shared screen helpers.
+- Reward and partial-reward displays are now rendered through shared interface data instead of hard-coded terminal frames.
+- Non-lethal death penalties, lethal corruption and survival anomaly messages are now centralized in reusable screens.
+- Several boss result and coop reward headers now use shared message screens, keeping the terminal playable while preparing a graphical renderer.
+
+## Version 1.35.17
+- Added a GUI-ready combat state snapshot model for duels, groups, summons, HP, statuses and targetability.
+- Reworked more PvP/PvE AI, exploration and special dialogue screens through shared MenuScreen/MessageScreen models.
+- Boss ultimate start/damage feedback now goes through shared message screens.
+
+## Version 1.35.18
+- Windows installer/launcher pass: ASCII-only Windows scripts to avoid broken console accents.
+- Default installation folder is now `Downloads/ProjetDinotofu`; the player can choose another parent folder, but the final folder is always `ProjetDinotofu`.
+- Windows launcher does not use WSL; Windows releases must include `Dinotofu.exe`.
+- Linux installer/launcher now follows the same `ProjetDinotofu` installation rule.

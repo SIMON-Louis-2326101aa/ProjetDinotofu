@@ -72,7 +72,7 @@ void RaceCatalog::displayPlayableRaces()
 
         if (race == CharacterRace::Demon)
         {
-            std::cout << "    Commerce futur : certaines ventes pourront coûter plus cher à cause de ta nature démoniaque." << std::endl;
+            std::cout << "    Commerce : certains vendeurs hésitent déjà devant ta nature démoniaque." << std::endl;
         }
 
         std::cout << std::endl;
@@ -177,7 +177,7 @@ std::string RaceCatalog::getShortDescription(CharacterRace race)
             return "Puissant, frontal, très adapté aux armes lourdes et au combat brutal.";
 
         case CharacterRace::Vampire:
-            return "Prédateur élégant, futur potentiel de vol de vie, mais faiblesse à la lumière.";
+            return "Prédateur élégant, attiré par le sang et fragile face à la lumière.";
 
         case CharacterRace::Demon:
             return "Force sombre, présence inquiétante, mais relations commerciales et sociales compliquées.";
@@ -187,7 +187,7 @@ std::string RaceCatalog::getShortDescription(CharacterRace race)
 
         case CharacterRace::Other:
         default:
-            return "Race non classée. Son potentiel sera défini plus tard.";
+            return "Race non classée. Son potentiel reste enveloppé de brouillard.";
     }
 }
 
@@ -198,11 +198,11 @@ std::string RaceCatalog::getGameplayIdentity(CharacterRace race)
         case CharacterRace::Human:
             return "polyvalence";
         case CharacterRace::Elf:
-            return "précision / esquive future";
+            return "précision / esquive instinctive";
         case CharacterRace::DarkElf:
-            return "critique / furtivité future";
+            return "critique / furtivité naturelle";
         case CharacterRace::Dwarf:
-            return "résistance / durabilité future";
+            return "résistance / endurance physique";
         case CharacterRace::Gnome:
             return "artificier / magie technique";
         case CharacterRace::Halfling:
@@ -220,7 +220,7 @@ std::string RaceCatalog::getGameplayIdentity(CharacterRace race)
         case CharacterRace::Orc:
             return "force physique / brutalité";
         case CharacterRace::Vampire:
-            return "vol de vie futur / nuit";
+            return "vol de vie latent / nuit";
         case CharacterRace::Demon:
             return "puissance sombre / commerce difficile";
         case CharacterRace::SemiHuman:
