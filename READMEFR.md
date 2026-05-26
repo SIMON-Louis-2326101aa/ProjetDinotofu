@@ -403,7 +403,7 @@ V1.35.06 - Mise à niveau version/interface
 - Reprise de plusieurs écrans JcJ/PvP IA, exploration et dialogues spéciaux via MenuScreen/MessageScreen.
 - Début et impacts d'ultimes de boss centralisés via des écrans de message partagés.
 
-## Version 1.35.18
+## Version 1.35.19
 - Passe installer/launcher Windows : scripts Windows en ASCII pour eviter les accents casses dans PowerShell/CMD.
 - Dossier d'installation par defaut : `Downloads/ProjetDinotofu` ; le joueur peut choisir un autre dossier parent, mais le dossier final reste toujours `ProjetDinotofu`.
 - Le launcher Windows n'utilise pas WSL ; la release Windows doit contenir `Dinotofu.exe`.

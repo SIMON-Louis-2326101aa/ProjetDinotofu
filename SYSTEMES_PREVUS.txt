@@ -158,7 +158,7 @@ Interface terminal :
 
 VERSIONING / COMPATIBILITÉ DES PERSONNAGES
 ------------------------------------------
-Version actuelle de développement : 1.35.18
+Version actuelle de développement : 1.35.19
 
 Logique X.Y.Z :
 - X : grande phase du jeu.
@@ -682,7 +682,7 @@ V1.35.17 - Préparation IG combat et écrans restants
 - Exploration : plusieurs événements, coffres, découvertes rares et rencontres imprévues passent par MessageScreen.
 - Dialogues spéciaux et début/impact d'ultime de boss centralisés davantage pour préparer l'IG.
 
-V1.35.18 - Installers, launchers et dossier ProjetDinotofu
+V1.35.19 - Installers, launchers et dossier ProjetDinotofu
 - Windows : installer et launcher retravailles en texte ASCII pour eviter les caracteres casses dans PowerShell/CMD.
 - Windows : installation par defaut dans Downloads/ProjetDinotofu, avec choix possible d'un autre dossier parent.
 - Windows : aucun WSL requis ; la release Windows doit contenir Dinotofu.exe.

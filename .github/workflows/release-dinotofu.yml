@@ -47,6 +47,7 @@ jobs:
         id: prepare
         env:
           FORCE_RELEASE: ${{ github.event.inputs.force_release }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -55,33 +56,46 @@ jobs:
           SHOULD_PUBLISH="false"
           REASON=""
 
-          echo "Version détectée dans le code : ${VERSION}"
+          echo "Version detectee dans le code : ${VERSION}"
 
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
             TAG="${GITHUB_REF_NAME}"
             SHOULD_PUBLISH="true"
-            REASON="workflow lancé depuis le tag ${TAG}"
+            REASON="workflow lance depuis le tag ${TAG}"
             TAG_VERSION="${TAG#v}"
             if [[ "${TAG_VERSION}" != "${VERSION}" ]]; then
-              echo "::warning::Le tag ${TAG} ne correspond pas à la version du code ${VERSION}."
+              echo "::warning::Le tag ${TAG} ne correspond pas a la version du code ${VERSION}."
             fi
           else
             echo "Push sur branche ${GITHUB_REF_NAME}. Tag attendu : ${TAG}"
+
+            TAG_EXISTS="false"
+            RELEASE_EXISTS="false"
+
             if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-              if [[ "${FORCE_RELEASE:-false}" == "true" ]]; then
-                SHOULD_PUBLISH="true"
-                REASON="force_release demandé, release ${TAG} recréée"
-              else
-                SHOULD_PUBLISH="false"
-                REASON="le tag ${TAG} existe déjà : aucune nouvelle release"
-              fi
-            else
+              TAG_EXISTS="true"
+            fi
+
+            if gh release view "${TAG}" >/dev/null 2>&1; then
+              RELEASE_EXISTS="true"
+            fi
+
+            if [[ "${TAG_EXISTS}" == "false" ]]; then
               git config user.name "github-actions[bot]"
               git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
               git tag -a "${TAG}" -m "Dinotofu ${TAG}"
               git push origin "${TAG}"
               SHOULD_PUBLISH="true"
-              REASON="nouveau tag ${TAG} créé automatiquement depuis la version du code"
+              REASON="nouveau tag ${TAG} cree automatiquement depuis la version du code"
+            elif [[ "${FORCE_RELEASE:-false}" == "true" ]]; then
+              SHOULD_PUBLISH="true"
+              REASON="force_release demande : mise a jour de la release ${TAG}"
+            elif [[ "${RELEASE_EXISTS}" == "false" ]]; then
+              SHOULD_PUBLISH="true"
+              REASON="le tag ${TAG} existe deja mais la release GitHub manque : publication reprise"
+            else
+              SHOULD_PUBLISH="false"
+              REASON="le tag ${TAG} et la release GitHub existent deja : aucune nouvelle release"
             fi
           fi
 
@@ -89,7 +103,7 @@ jobs:
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "should_publish=${SHOULD_PUBLISH}" >> "$GITHUB_OUTPUT"
           echo "reason=${REASON}" >> "$GITHUB_OUTPUT"
-          echo "Décision : ${SHOULD_PUBLISH} (${REASON})"
+          echo "Decision : ${SHOULD_PUBLISH} (${REASON})"
 
   no-release-needed:
     runs-on: ubuntu-latest
@@ -207,7 +221,7 @@ jobs:
     if: needs.prepare-release.outputs.should_publish == 'true'
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v4
         with:
           path: release_upload
           merge-multiple: true
@@ -220,5 +234,33 @@ jobs:
           RELEASE_REASON: ${{ needs.prepare-release.outputs.reason }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
+
           ls -la release_upload
-          NOTES="Release automatique Dinotofu ${RELEASE_TAG}.
+          files=(release_upload/*.zip)
+          if (( ${#files[@]} == 0 )); then
+            echo "::error::Aucun ZIP trouve dans release_upload. Publication annulee."
+            exit 1
+          fi
+
+          cat > release_notes.md <<EOF
+          Release automatique Dinotofu ${RELEASE_TAG}.
+
+          Raison : ${RELEASE_REASON}
+
+          Fichiers :
+          - Dinotofu-Windows-v${RELEASE_VERSION}.zip : jeu Windows pret a lancer.
+          - DinotofuInstaller-Windows-v${RELEASE_VERSION}.zip : installer/launcher Windows a envoyer aux joueurs.
+          - Dinotofu-Linux-v${RELEASE_VERSION}.zip : jeu Linux pret a lancer.
+          - DinotofuInstaller-Linux-v${RELEASE_VERSION}.zip : installer/launcher Linux.
+          - dinotofu_source_${RELEASE_VERSION}_no_exe.zip : source propre sans executable.
+          EOF
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" "${files[@]}" --clobber
+            gh release edit "${RELEASE_TAG}" --title "Dinotofu ${RELEASE_TAG}" --notes-file release_notes.md
+          else
+            gh release create "${RELEASE_TAG}" "${files[@]}" \
+              --title "Dinotofu ${RELEASE_TAG}" \
+              --notes-file release_notes.md
+          fi

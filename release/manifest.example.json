@@ -1,7 +1,7 @@
 {
   "name": "Dinotofu",
-  "version": "1.35.18",
-  "releaseTag": "v1.35.18",
+  "version": "1.35.19",
+  "releaseTag": "v1.35.19",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
   "notes": "Exemple de manifeste. Les launchers utilisent les releases GitHub et installent dans ProjetDinotofu."
