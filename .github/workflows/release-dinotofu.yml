@@ -36,7 +36,7 @@ jobs:
       reason: ${{ steps.prepare.outputs.reason }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -108,7 +108,7 @@ jobs:
     if: needs.prepare-release.outputs.should_publish == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
 
@@ -135,7 +135,7 @@ jobs:
     if: needs.prepare-release.outputs.should_publish == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
 
@@ -172,7 +172,7 @@ jobs:
     if: needs.prepare-release.outputs.should_publish == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
 
@@ -207,7 +207,7 @@ jobs:
     if: needs.prepare-release.outputs.should_publish == 'true'
     steps:
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: release_upload
           merge-multiple: true
