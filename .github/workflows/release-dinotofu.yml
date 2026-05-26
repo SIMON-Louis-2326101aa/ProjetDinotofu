@@ -222,21 +222,3 @@ jobs:
           set -euo pipefail
           ls -la release_upload
           NOTES="Release automatique Dinotofu ${RELEASE_TAG}.
-
-Raison : ${RELEASE_REASON}
-
-Fichiers :
-- Dinotofu-Windows-v${RELEASE_VERSION}.zip : jeu Windows prêt à lancer.
-- DinotofuInstaller-Windows-v${RELEASE_VERSION}.zip : installer/launcher Windows à envoyer aux joueurs.
-- Dinotofu-Linux-v${RELEASE_VERSION}.zip : jeu Linux prêt à lancer.
-- DinotofuInstaller-Linux-v${RELEASE_VERSION}.zip : installer/launcher Linux.
-- dinotofu_source_${RELEASE_VERSION}_no_exe.zip : source propre sans exécutable."
-
-          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release upload "${RELEASE_TAG}" release_upload/*.zip --clobber
-            gh release edit "${RELEASE_TAG}" --title "Dinotofu ${RELEASE_TAG}" --notes "${NOTES}"
-          else
-            gh release create "${RELEASE_TAG}" release_upload/*.zip \
-              --title "Dinotofu ${RELEASE_TAG}" \
-              --notes "${NOTES}"
-          fi
