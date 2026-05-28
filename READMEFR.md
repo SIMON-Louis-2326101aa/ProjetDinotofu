@@ -4,7 +4,7 @@ Dinotofu est un RPG / jeu d'arène en C++17. La version terminal reste le socle 
    
 ## Version actuelle   
    
-- Version actuelle : **V2.0.08**   
+- Version actuelle : **V2.0.09**   
 - Dernière version de personnage encore acceptable avant recommandation forte de recréation : **V1.32.03**   
 - Personnages beaucoup plus anciens que **V1.32.03** : recréation conseillée, car trop de systèmes ont changé.   
 - Passage V1 récent vers V2 : adaptation moyenne seulement, car le palier V2 valide surtout l'IG et ne doit pas forcer les sauvegardes récentes à repartir de zéro.   
@@ -91,7 +91,7 @@ Sur les versions desktop Windows/Linux, l'installateur ou le launcher doit crée
    
 ## Grandes directions seulement   
    
-1. Stabiliser les retours joueurs sur le palier **V2.0.08**.   
+1. Stabiliser les retours joueurs sur le palier **V2.0.09**.   
 2. Ajouter ensuite contenu, dialogues/lore vivants, compétences et polish progressif.   
 3. Passer en **V3.0.0** quand le premier chapitre d'histoire est codé.   
 4. Garder le multijoueur en ligne pour une grosse version future beaucoup plus tard.   

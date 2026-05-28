@@ -303,7 +303,7 @@
 
 
     /* =========================================================
-       CLEAN PLAYER VIEW V2.0.08 LAYOUT
+       CLEAN PLAYER VIEW V2.0.09 LAYOUT
        ========================================================= */
     body { min-height: 100vh; }
     .game-header {
@@ -323,14 +323,14 @@
       width: min(1720px, calc(100vw - 1.25rem));
       margin: 0.65rem auto 1.25rem;
       display: grid;
-      grid-template-columns: minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr) minmax(245px, 315px);
       gap: 0.75rem;
       align-items: start;
     }
-    .output-panel { min-height: calc(100vh - 17.5rem); padding: 0.75rem; }
+    .output-panel { min-height: calc(100vh - 8.5rem); padding: 0.75rem; }
     .player-panel {
       position: sticky;
-      bottom: 0.55rem;
+      top: 5.25rem;
       z-index: 8;
       display: grid;
       gap: 0.65rem;
@@ -433,8 +433,48 @@
     .last-input,
     .queue-list,
     .context-panel { display: none; }
+
+    .player-main-box .input-expectation,
+    .player-main-box .manual-answer-grid,
+    .player-main-box .validation-message,
+    .player-main-box .suggestion-row,
+    .player-main-box #enterButton,
+    .player-main-box #backButton,
+    .player-main-box #clearCommandButton {
+      display: none !important;
+    }
+
+    body.needs-manual-input .player-main-box .input-expectation,
+    body.needs-manual-input .player-main-box .manual-answer-grid,
+    body.needs-manual-input .player-main-box .validation-message {
+      display: grid !important;
+    }
+    body.needs-manual-input .player-main-box .input-expectation,
+    body.needs-manual-input .player-main-box .validation-message {
+      display: block !important;
+    }
+    .player-main-box .quick-row.compact-actions { grid-template-columns: 1fr; }
+    .submenu-actions { grid-template-columns: 1fr; }
+    .submenu-actions button { width: 100%; text-align: left; }
+    .info-card-source,
+    .notice-meta,
+    .item-card-meta,
+    .focus-card-action { display: none; }
+    .continue-panel {
+      margin-top: 0.85rem;
+      border: 1px solid rgba(255,179,71,0.30);
+      border-radius: 18px;
+      padding: 0.8rem;
+      background: rgba(255,179,71,0.065);
+    }
+    .continue-button {
+      width: 100%;
+      min-height: 3.2rem;
+      font-size: 1rem;
+    }
     .debug-hidden { display: none !important; }
-    @media (max-width: 760px) {
+    @media (max-width: 980px) {
+      .game-shell { grid-template-columns: 1fr; }
       .output-panel { min-height: auto; }
       .player-panel { position: static; }
       .command-grid { grid-template-columns: 1fr; }
@@ -473,7 +513,7 @@
     <aside class="panel player-panel">
       <section class="player-main-box">
         <div class="player-compact-head">
-          <h2>Sous-menu hors combat</h2>
+          <h2>Accès rapides</h2>
           <span id="submenuStateBadge" class="badge">chargement...</span>
         </div>
         <div id="inputExpectation" class="input-expectation">Aucun écran chargé pour le moment.</div>
@@ -485,8 +525,8 @@
 
         <div id="commandValidation" class="validation-message"></div>
         <div id="suggestedCommands" class="suggestion-row" aria-label="Commandes utiles"></div>
-        <details id="utilityDetails" class="utility-details" open>
-          <summary>Actions hors combat disponibles</summary>
+        <details id="utilityDetails" class="utility-details">
+          <summary>Menu rapide hors combat</summary>
           <div id="utilityActions" class="submenu-actions" aria-label="Sous-menu rapide"></div>
         </details>
 
@@ -835,7 +875,7 @@
       const save = findUtilityAction('utility.quick_save');
       const saveQuit = findUtilityAction('utility.save_quit');
       const altered = findUtilityAction('utility.altered_data');
-      const disabledReason = isCombatContextActive() ? 'Sous-menu bloqué pendant le combat.' : '';
+      const disabledReason = isCombatContextActive() ? 'Menu rapide indisponible pendant le combat.' : '';
       const buttons = [
         actionToSubmenuButton('guardian', 'Parler au gardien', guardian),
         actionToSubmenuButton('inventory', 'Inventaire', inventory),
@@ -914,6 +954,8 @@
     function refreshChrome() {
       if (liveButton) liveButton.classList.toggle('active', state.live);
       const combatActive = isCombatContextActive();
+      const manualInputModes = new Set(['text', 'quantity', 'confirmation']);
+      document.body.classList.toggle('needs-manual-input', Boolean(state.lastMenu && manualInputModes.has(state.lastMenu.inputMode || '')));
       if (!combatActive && (state.view === 'both' || state.view === 'combat')) state.view = 'menu';
       if (tabs.both) tabs.both.hidden = !combatActive;
       if (tabs.combat) tabs.combat.hidden = !combatActive;
@@ -928,7 +970,7 @@
       versionBadge.textContent = snap ? `Contrat JSON ${snap.schemaVersion ?? '?'} · Jeu V${snap.gameVersion ?? '?'}` : 'Contrat JSON ? · Jeu V?';
       inputExpectation.innerHTML = describeInputMode(state.lastMenu);
       if (submenuStateBadge) {
-        submenuStateBadge.textContent = combatActive ? 'combat : bloqué' : 'hors combat';
+        submenuStateBadge.textContent = combatActive ? 'combat : bloqué' : 'disponible';
         submenuStateBadge.classList.toggle('warn', combatActive);
         submenuStateBadge.classList.toggle('ok', !combatActive);
       }
@@ -1171,7 +1213,6 @@
               <div class="info-card kind-${escapeHtml(kind)} ${card.important ? 'important' : ''}">
                 <div class="info-card-label">${escapeHtml(card.label || 'Info')}</div>
                 <div class="info-card-value">${escapeHtml(card.value || '-')}</div>
-                <div class="info-card-source">${escapeHtml(card.kind || 'info')} · ${escapeHtml(card.source || 'ligne')}</div>
               </div>`;
           }).join('')}
         </div>`;
@@ -1208,7 +1249,7 @@
       const quantity = card.quantity ? `<span class="item-card-qty">x${escapeHtml(card.quantity)}</span>` : '';
       const status = card.status ? `<span class="item-card-status">${escapeHtml(card.status)}</span>` : '';
       const actionTypeLabel = card.actionTypeLabel || getItemActionTypeLabel(card.actionType || 'open');
-      const actionType = actionTypeLabel ? `<span class="item-card-actiontype">${escapeHtml(actionTypeLabel)}</span>` : '';
+      const actionType = '';
       const facts = [
         card.price ? ['Prix', card.price] : null,
         card.stock ? ['Stock', card.stock] : null,
@@ -1228,7 +1269,6 @@
           </div>
           ${card.detail ? `<div class="item-card-detail">${escapeHtml(card.detail)}</div>` : ''}
           ${facts.length ? `<div class="item-card-facts">${facts.map(([label, value]) => `<span class="item-card-fact">${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('')}</div>` : ''}
-          <div class="item-card-meta"><span>${escapeHtml(card.kind || 'item')}</span><span>${escapeHtml(card.section || 'Général')}</span>${available ? `<span>Action ${escapeHtml(card.actionNumber)}</span>` : ''}</div>
         </div>`;
     }
 
@@ -1267,7 +1307,6 @@
             return `
               <div class="notice-card kind-${escapeHtml(kind)} ${card.important ? 'important' : ''}">
                 <div>${escapeHtml(card.text || '')}</div>
-                <div class="notice-meta">${escapeHtml(card.kind || 'info')} · ${escapeHtml(card.source || 'ligne')}</div>
               </div>`;
           }).join('')}
         </div>`;
@@ -1300,12 +1339,11 @@
                   <div class="focus-card-title">${available ? `<span class="focus-card-choice">${escapeHtml(card.actionNumber)}</span>` : ''}<span>${escapeHtml(card.label || card.id || 'Bloc')}</span></div>
                   <div class="focus-card-detail">${escapeHtml(card.detail || '')}</div>
                 </div>
-                <div class="focus-card-action">${escapeHtml(locked ? 'Commande en attente · ' + action : action)}</div>
               </div>`;
           }).join('')
-        : (renderedInfoCards || renderedNoticeCards
+        : (renderedInfoCards || renderedItemCards || renderedNoticeCards
           ? (state.menuFilter && allCards.length ? renderMenuFilterNotice(allCards.length, 0, 'bloc') : '')
-          : '<div class="empty">Vue spécialisée prête, mais aucun bloc contextuel pour cet écran.</div>');
+          : '<div class="empty">Aucune action contextualisée pour cet écran.</div>');
 
       return `
         <div class="specialized-panel">
@@ -1432,8 +1470,20 @@
       return `${renderMenuFilterNotice(availableActions.length, filteredActions.length, 'action')}<div class="action-sections">${order.map(group => renderActionGroup(group, grouped[group] || [])).join('')}</div>`;
     }
 
+    function renderContinueControl(snapshot) {
+      if (!snapshot || snapshot.type !== 'menu' || snapshot.inputMode !== 'continue') return '';
+      const locked = !canSendInputNow();
+      const disabledAttribute = locked ? ' disabled' : '';
+      const label = snapshot.primarySubmitLabel || 'Continuer';
+      return `
+        <div class="continue-panel">
+          <button type="button" class="continue-button" data-choice="" data-action-display-label="${escapeHtml(label)}" data-action-label="${escapeHtml(label)}" data-action-role="continue"${disabledAttribute}>${escapeHtml(label)}</button>
+        </div>`;
+    }
+
     function renderMainViewActions(snapshot) {
       if (!snapshot || snapshot.type !== 'menu') return '';
+      if (snapshot.inputMode === 'continue') return renderContinueControl(snapshot);
       const actions = Array.isArray(snapshot.actions) ? snapshot.actions.filter(action => !isUtilityAction(action)) : [];
       const hasSpecializedContent = snapshot.specializedView && snapshot.specializedView !== 'generic' && Array.isArray(snapshot.focusCards) && snapshot.focusCards.length > 0;
 
@@ -2220,7 +2270,14 @@
           const response = await fetch('/gui/force-stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
           const payload = await response.json().catch(() => ({}));
           if (!response.ok || payload.ok === false) throw new Error(payload.error || ('HTTP ' + response.status));
-          setStatus("Arrêt forcé demandé. Le moteur se fermera dès sa prochaine lecture d'entrée IG.");
+          setStatus("Arrêt forcé demandé. Fermeture de l'IG...");
+          window.setTimeout(() => {
+            try { window.open('', '_self'); } catch (_) {}
+            try { window.close(); } catch (_) {}
+            window.setTimeout(() => {
+              document.body.innerHTML = '<main class="game-shell"><section class="panel output-panel"><h1>Dinotofu arrêté</h1><p class="hint">Le navigateur a bloqué la fermeture automatique de l’onglet. Tu peux fermer cette page.</p></section></main>';
+            }, 450);
+          }, 350);
         } catch (error) {
           setStatus("Impossible de demander l'arrêt forcé : " + error.message);
         }

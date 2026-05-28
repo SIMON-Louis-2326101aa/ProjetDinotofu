@@ -17,6 +17,7 @@ import os
 import shutil
 import socketserver
 import time
+import threading
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -339,7 +340,16 @@ def main() -> int:
                     self._send_json(500, {"ok": False, "error": str(error)})
                     return
 
-                self._send_json(200, {"ok": True, "forceStopRequested": True, "file": str(force_stop_file)})
+                self._send_json(200, {"ok": True, "forceStopRequested": True, "file": str(force_stop_file), "serverShutdownRequested": True})
+
+                def delayed_shutdown() -> None:
+                    time.sleep(0.75)
+                    try:
+                        self.server.shutdown()
+                    except Exception:
+                        pass
+
+                threading.Thread(target=delayed_shutdown, daemon=True).start()
                 return
 
             command = str(payload.get("command", ""))

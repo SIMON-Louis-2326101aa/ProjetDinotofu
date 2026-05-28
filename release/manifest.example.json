@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.0.08",
-  "releaseTag": "v2.0.08",
+  "version": "2.0.09",
+  "releaseTag": "v2.0.09",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "V2.0.08 : correction launcher compatible PowerShell ancien, fermeture des processus Python/IG restants avant mise à jour et installation plus robuste."
+  "notes": "V2.0.09 : affinage de l’interface graphique, menu rapide déroulable à droite, bouton Continuer, cartes contextuelles limitées aux choix disponibles et affichage moins technique."
 }

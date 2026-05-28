@@ -83,7 +83,7 @@ void TerminalInterface::renderMenuScreen(const MenuScreen& screen, bool showProm
     if (!utilityOptions.empty())
     {
         MenuFrame::separator();
-        std::cout << "Sous-menu hors combat" << std::endl;
+        std::cout << "Accès rapides hors combat" << std::endl;
         for (const MenuOption& option : utilityOptions)
         {
             renderOptionLine(option);

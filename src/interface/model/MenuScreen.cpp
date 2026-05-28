@@ -579,7 +579,10 @@ namespace
             }
         }
 
-        snapshot.focusCards.push_back(card);
+        if (card.available)
+        {
+            snapshot.focusCards.push_back(card);
+        }
     }
 
 
