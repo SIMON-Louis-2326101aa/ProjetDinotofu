@@ -11,6 +11,10 @@
 class Console
 {
 public:
+    // EN: configureTerminalEncoding prepares UTF-8 console I/O when supported.
+    // FR: configureTerminalEncoding prépare l'encodage UTF-8 du terminal quand c'est possible.
+    static void configureTerminalEncoding();
+
     // EN: clear declares or implements a focused behavior used by this module.
     // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
     static void clear();

@@ -82,6 +82,35 @@ PY
     rm -f "$tmp_json"
 fi
 
+
+wait_for_gui_server() {
+    local port="$1"
+    local attempts="${2:-32}"
+    local url="http://127.0.0.1:${port}/gui/status"
+    for _ in $(seq 1 "$attempts"); do
+        if command -v python3 >/dev/null 2>&1; then
+            if python3 - "$url" <<'PYWAIT' >/dev/null 2>&1
+import sys
+from urllib.request import urlopen
+try:
+    with urlopen(sys.argv[1], timeout=1) as response:
+        sys.exit(0 if response.status < 500 else 1)
+except Exception:
+    sys.exit(1)
+PYWAIT
+            then
+                return 0
+            fi
+        elif command -v curl >/dev/null 2>&1; then
+            if curl -fsS --max-time 1 "$url" >/dev/null 2>&1; then
+                return 0
+            fi
+        fi
+        sleep 0.25
+    done
+    return 1
+}
+
 open_url_or_file() {
     local target="$1"
     if command -v xdg-open >/dev/null 2>&1; then
@@ -114,9 +143,17 @@ start_gui_preview() {
 
     if command -v python3 >/dev/null 2>&1 && [[ -f "$server_script" ]]; then
         echo "Ouverture de l interface graphique experimentale : http://127.0.0.1:${port}/tools/gui/dinotofu_gui_experimental.html"
-        nohup python3 "$server_script" --root "$INSTALL_DIR" --port "$port" --gui-debug-dir "$gui_debug_dir" >/dev/null 2>&1 &
-        sleep 0.8
-        open_url_or_file "http://127.0.0.1:${port}/tools/gui/dinotofu_gui_experimental.html"
+        local server_out="${gui_debug_dir}/server_stdout.log"
+        local server_err="${gui_debug_dir}/server_stderr.log"
+        rm -f "$server_out" "$server_err"
+        nohup python3 "$server_script" --root "$INSTALL_DIR" --port "$port" --gui-debug-dir "$gui_debug_dir" >"$server_out" 2>"$server_err" &
+        if wait_for_gui_server "$port" 32; then
+            open_url_or_file "http://127.0.0.1:${port}/tools/gui/dinotofu_gui_experimental.html"
+        else
+            echo "Serveur IG local non joignable sur 127.0.0.1:${port}. Ouverture du fichier HTML local en secours." >&2
+            echo "Logs serveur : ${server_out} / ${server_err}" >&2
+            open_url_or_file "$gui_file"
+        fi
     else
         echo "Python3 introuvable : ouverture du fichier HTML local. Le live peut etre limite par le navigateur."
         open_url_or_file "$gui_file"

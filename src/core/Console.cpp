@@ -19,6 +19,12 @@
 #include <cctype>
 #include <cstdio>
 #include <ctime>
+#include <clocale>
+
+#if defined(_WIN32)
+#define NOMINMAX
+#include <windows.h>
+#endif
 
 namespace
 {
@@ -298,6 +304,23 @@ namespace
             return !std::isspace(c);
         }));
     }
+}
+
+// EN: configureTerminalEncoding declares or implements a focused behavior used by this module.
+// FR: configureTerminalEncoding déclare ou implémente un comportement précis utilisé par ce module.
+void Console::configureTerminalEncoding()
+{
+    std::setlocale(LC_ALL, "");
+
+#if defined(_WIN32)
+    // EN: Dinotofu texts are encoded in UTF-8. Windows terminals may still start
+    // with an old code page, which breaks French accents. We switch the current
+    // console to UTF-8 at runtime; Linux/macOS terminals are generally already UTF-8.
+    // FR: les textes Dinotofu sont encodés en UTF-8. Certains terminaux Windows
+    // démarrent encore avec une ancienne page de code, ce qui casse les accents.
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#endif
 }
 
 // EN: clear declares or implements a focused behavior used by this module.

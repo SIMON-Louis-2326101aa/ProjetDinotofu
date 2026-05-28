@@ -185,13 +185,18 @@ if [[ -d "$BACKUP_DIR" ]]; then
     cp -a "${BACKUP_DIR}/." "$INSTALL_DIR/" 2>/dev/null || true
 fi
 
-cat > "${INSTALL_DIR}/dinotofu-installer.config.json" <<JSON
-{
-  "repo": "${REPO}",
-  "assetPattern": "${ASSET_PATTERN}",
-  "installDir": "${INSTALL_DIR}"
-}
-JSON
+python3 - "${INSTALL_DIR}/dinotofu-installer.config.json" "${REPO}" "${ASSET_PATTERN}" "${INSTALL_DIR}" <<'PYCONFIG'
+import json
+import sys
+path, repo, asset_pattern, install_dir = sys.argv[1:5]
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump({
+        "repo": repo,
+        "assetPattern": asset_pattern,
+        "installDir": install_dir,
+    }, handle, ensure_ascii=False, indent=2)
+    handle.write("\n")
+PYCONFIG
 
 chmod +x "${INSTALL_DIR}/output/Dinotofu" 2>/dev/null || true
 chmod +x "${INSTALL_DIR}/DinotofuLauncher.sh" 2>/dev/null || true

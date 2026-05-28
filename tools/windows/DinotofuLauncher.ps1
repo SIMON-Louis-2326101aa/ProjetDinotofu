@@ -21,6 +21,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+try { [Console]::OutputEncoding = $OutputEncoding; [Console]::InputEncoding = $OutputEncoding } catch { }
 
 function Write-Step {
     param([string]$Message)
@@ -229,6 +231,59 @@ function Test-CommandAvailable {
     return $null -ne (Get-Command $CommandName -ErrorAction SilentlyContinue)
 }
 
+function Test-PythonSpec {
+    param([string]$FilePath, [string[]]$PrefixArgs)
+
+    try {
+        $allArgs = @()
+        if ($PrefixArgs) { $allArgs += $PrefixArgs }
+        $allArgs += @("--version")
+        $process = Start-Process -FilePath $FilePath -ArgumentList $allArgs -NoNewWindow -Wait -PassThru -RedirectStandardOutput ([System.IO.Path]::GetTempFileName()) -RedirectStandardError ([System.IO.Path]::GetTempFileName())
+        return $process.ExitCode -eq 0
+    }
+    catch {
+        return $false
+    }
+}
+
+function Get-PythonLaunchSpec {
+    # EN: prefer the Windows py launcher when present. The Microsoft Store "python" alias can exist
+    # without a real Python install and can make the browser open before the local server exists.
+    # FR: on préfère le launcher py sous Windows. L'alias Microsoft Store "python" peut exister
+    # sans vraie installation Python et ouvrir le navigateur alors que le serveur local n'existe pas.
+    $candidates = @(
+        [pscustomobject]@{ FilePath = "py"; PrefixArgs = @("-3") },
+        [pscustomobject]@{ FilePath = "python"; PrefixArgs = @() },
+        [pscustomobject]@{ FilePath = "python3"; PrefixArgs = @() }
+    )
+
+    foreach ($candidate in $candidates) {
+        if ((Test-CommandAvailable $candidate.FilePath) -and (Test-PythonSpec -FilePath $candidate.FilePath -PrefixArgs $candidate.PrefixArgs)) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
+
+function Test-GuiServerReady {
+    param([int]$Port, [int]$TimeoutMilliseconds = 7000)
+
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+    $url = "http://127.0.0.1:$Port/gui/status"
+    while ([DateTime]::UtcNow -lt $deadline) {
+        try {
+            $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 1
+            if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) { return $true }
+        }
+        catch {
+            Start-Sleep -Milliseconds 250
+        }
+    }
+
+    return $false
+}
+
 function Start-GameExecutable {
     param([string]$ExecutablePath, [string]$Label, [string]$GuiDebugDir = "")
 
@@ -272,22 +327,34 @@ function Start-ExperimentalGui {
     New-Item -ItemType Directory -Path $GuiDebugDir -Force | Out-Null
     $serverScript = Join-Path $InstallDir "tools\gui\serve_gui_preview.py"
     $port = 8787
-
-    $pythonCommand = ""
-    foreach ($candidate in @("python", "python3", "py")) {
-        if (Test-CommandAvailable $candidate) { $pythonCommand = $candidate; break }
+    if (-not [string]::IsNullOrWhiteSpace($env:DINOTOFU_GUI_PREVIEW_PORT)) {
+        try { $port = [int]$env:DINOTOFU_GUI_PREVIEW_PORT } catch { $port = 8787 }
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($pythonCommand) -and (Test-Path $serverScript)) {
+    $pythonSpec = Get-PythonLaunchSpec
+
+    if ($pythonSpec -and (Test-Path $serverScript)) {
         Write-Step "Ouverture de l interface graphique experimentale"
-        if ($pythonCommand -eq "py") {
-            Start-Process -FilePath $pythonCommand -ArgumentList @("-3", $serverScript, "--root", $InstallDir, "--port", "$port", "--gui-debug-dir", $GuiDebugDir) -WindowStyle Minimized | Out-Null
+        $serverOut = Join-Path $GuiDebugDir "server_stdout.log"
+        $serverErr = Join-Path $GuiDebugDir "server_stderr.log"
+        Remove-Item $serverOut, $serverErr -Force -ErrorAction SilentlyContinue
+
+        $arguments = @()
+        if ($pythonSpec.PrefixArgs) { $arguments += $pythonSpec.PrefixArgs }
+        $arguments += @($serverScript, "--root", $InstallDir, "--port", "$port", "--gui-debug-dir", $GuiDebugDir)
+
+        $serverProcess = Start-Process -FilePath $pythonSpec.FilePath -ArgumentList $arguments -WindowStyle Minimized -PassThru -RedirectStandardOutput $serverOut -RedirectStandardError $serverErr
+        if (Test-GuiServerReady -Port $port -TimeoutMilliseconds 8000) {
+            Start-Process "http://127.0.0.1:$port/tools/gui/dinotofu_gui_experimental.html" | Out-Null
         }
         else {
-            Start-Process -FilePath $pythonCommand -ArgumentList @($serverScript, "--root", $InstallDir, "--port", "$port", "--gui-debug-dir", $GuiDebugDir) -WindowStyle Minimized | Out-Null
+            Write-Warning "Serveur IG local non joignable sur 127.0.0.1:$port. Ouverture du fichier HTML local en secours."
+            Write-Warning "Logs serveur : $serverOut / $serverErr"
+            if ($serverProcess -and $serverProcess.HasExited) {
+                Write-Warning "Le serveur IG s'est arrete avec le code $($serverProcess.ExitCode)."
+            }
+            Start-Process $guiFile | Out-Null
         }
-        Start-Sleep -Milliseconds 800
-        Start-Process "http://127.0.0.1:$port/tools/gui/dinotofu_gui_experimental.html" | Out-Null
     }
     else {
         Write-Warning "Python introuvable : ouverture du fichier HTML local. Le chargement live peut etre limite par le navigateur."
