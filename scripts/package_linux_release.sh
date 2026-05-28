@@ -9,6 +9,25 @@ PACKAGE_DIR="release_packages"
 STAGING_DIR="${PACKAGE_DIR}/Dinotofu-Linux-v${VERSION}"
 PACKAGE_PATH="${PACKAGE_DIR}/Dinotofu-Linux-v${VERSION}.zip"
 
+write_installer_config_json() {
+    local target_file="$1"
+    python3 - "$target_file" "${DINOTOFU_REPO:-TON_COMPTE/TON_REPO}" <<'PY_JSON'
+import json
+import sys
+
+path = sys.argv[1]
+repo = sys.argv[2]
+config = {
+    "repo": repo,
+    "assetPattern": "Dinotofu-Linux-v*.zip",
+    "installDir": "~/Downloads/ProjetDinotofu",
+}
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(config, handle, ensure_ascii=False, indent=2)
+    handle.write("\n")
+PY_JSON
+}
+
 mkdir -p "${PACKAGE_DIR}"
 rm -rf "${STAGING_DIR}" "${PACKAGE_PATH}"
 
@@ -23,13 +42,7 @@ cp tools/linux/Lancer-Dinotofu.sh "${STAGING_DIR}/Lancer-Dinotofu.sh" 2>/dev/nul
 cp tools/linux/Lancer-Dinotofu-Terminal.sh "${STAGING_DIR}/Lancer-Dinotofu-Terminal.sh" 2>/dev/null || true
 mkdir -p "${STAGING_DIR}/tools"
 cp -r tools/gui "${STAGING_DIR}/tools/gui"
-cat > "${STAGING_DIR}/dinotofu-installer.config.json" <<JSON
-{
-  "repo": "${DINOTOFU_REPO:-TON_COMPTE/TON_REPO}",
-  "assetPattern": "Dinotofu-Linux-v*.zip",
-  "installDir": "~/Downloads/ProjetDinotofu"
-}
-JSON
+write_installer_config_json "${STAGING_DIR}/dinotofu-installer.config.json"
 mkdir -p "${STAGING_DIR}/output"
 cp output/Dinotofu "${STAGING_DIR}/output/Dinotofu"
 echo "${VERSION}" > "${STAGING_DIR}/version.txt"

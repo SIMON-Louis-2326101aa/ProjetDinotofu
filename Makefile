@@ -14,7 +14,7 @@
 #   make install-desktop Create a Linux desktop launcher / Créer un lanceur Linux
 #   make desktop         Alias for install-desktop / Alias de install-desktop
 #   make remove-desktop  Remove the Linux desktop launcher / Supprimer le lanceur Linux
-#   make package-source  Create source ZIP without executable / Créer ZIP source sans exécutable
+#   make package-source  Create clean source ZIP / Créer ZIP source propre
 #   make package-linux-release Build and package Linux release / Créer release Linux
 #   make package-linux-installer Build Linux installer pack / Créer pack installer Linux
 #   make package-windows-release Build and package Windows release / Créer release Windows
@@ -136,8 +136,8 @@ remove-desktop:
 # =========================================================
 
 package-source: clean
-	@chmod +x ./scripts/package_source_no_exe.sh
-	@./scripts/package_source_no_exe.sh
+	@chmod +x ./scripts/package_source_clean.sh
+	@./scripts/package_source_clean.sh
 
 package-linux-release:
 	@chmod +x ./scripts/package_linux_release.sh

@@ -14,6 +14,25 @@ INSTALLER_ZIP="${PACKAGE_DIR}/DinotofuInstaller-Windows-v${VERSION}.zip"
 
 CROSS_CXX="${CXX:-x86_64-w64-mingw32-g++}"
 
+write_installer_config_json() {
+    local target_file="$1"
+    python3 - "$target_file" "$REPO_NAME" <<'PY_JSON'
+import json
+import sys
+
+path = sys.argv[1]
+repo = sys.argv[2]
+config = {
+    "repo": repo,
+    "assetPattern": "Dinotofu-Windows-v*.zip",
+    "installDir": r"%USERPROFILE%\Downloads\ProjetDinotofu",
+}
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(config, handle, ensure_ascii=False, indent=2)
+    handle.write("\n")
+PY_JSON
+}
+
 mkdir -p "${PACKAGE_DIR}"
 rm -rf "${STAGING_DIR}" "${INSTALLER_DIR}" "${GAME_ZIP}" "${INSTALLER_ZIP}"
 
@@ -38,13 +57,7 @@ cp tools/windows/Lancer-Dinotofu.cmd "${STAGING_DIR}/Lancer-Dinotofu.cmd"
 cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${STAGING_DIR}/Lancer-Dinotofu-Terminal.cmd"
 mkdir -p "${STAGING_DIR}/tools"
 cp -r tools/gui "${STAGING_DIR}/tools/gui"
-cat > "${STAGING_DIR}/dinotofu-installer.config.json" <<JSON
-{
-  "repo": "${REPO_NAME}",
-  "assetPattern": "Dinotofu-Windows-v*.zip",
-  "installDir": "%USERPROFILE%\\Downloads\\ProjetDinotofu"
-}
-JSON
+write_installer_config_json "${STAGING_DIR}/dinotofu-installer.config.json"
 echo "${VERSION}" > "${STAGING_DIR}/version.txt"
 
 (
@@ -68,13 +81,7 @@ cp tools/windows/DinotofuLauncher.ps1 "${INSTALLER_DIR}/DinotofuLauncher.ps1"
 cp tools/windows/Installer-Dinotofu.cmd "${INSTALLER_DIR}/Installer-Dinotofu.cmd"
 cp tools/windows/Lancer-Dinotofu.cmd "${INSTALLER_DIR}/Lancer-Dinotofu.cmd"
 cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${INSTALLER_DIR}/Lancer-Dinotofu-Terminal.cmd"
-cat > "${INSTALLER_DIR}/dinotofu-installer.config.json" <<JSON
-{
-  "repo": "${REPO_NAME}",
-  "assetPattern": "Dinotofu-Windows-v*.zip",
-  "installDir": "%USERPROFILE%\\Downloads\\ProjetDinotofu"
-}
-JSON
+write_installer_config_json "${INSTALLER_DIR}/dinotofu-installer.config.json"
 cat > "${INSTALLER_DIR}/LISEZ-MOI.txt" <<TXT
 Dinotofu Installer Windows
 

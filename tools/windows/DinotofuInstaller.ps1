@@ -22,10 +22,39 @@ function Write-Step {
     Write-Host "==> $Message" -ForegroundColor Cyan
 }
 
+function Get-LooseJsonStringValue {
+    param([string]$Raw, [string]$Key)
+    $pattern = '"' + [regex]::Escape($Key) + '"\s*:\s*"((?:[^"\\]|\\.)*)"'
+    $match = [regex]::Match($Raw, $pattern)
+    if (-not $match.Success) { return "" }
+    $value = $match.Groups[1].Value
+    return ($value -replace '\\\\','\')
+}
+
 function Load-Config {
     $configPath = Join-Path $PSScriptRoot "dinotofu-installer.config.json"
     if (-not (Test-Path $configPath)) { return $null }
-    return Get-Content $configPath -Raw | ConvertFrom-Json
+
+    $rawConfig = Get-Content $configPath -Raw
+    try {
+        return $rawConfig | ConvertFrom-Json
+    }
+    catch {
+        Write-Warning "Config JSON invalide. Lecture tolerante des chemins Windows avec backslashes simples."
+        $repoValue = Get-LooseJsonStringValue -Raw $rawConfig -Key "repo"
+        $assetPatternValue = Get-LooseJsonStringValue -Raw $rawConfig -Key "assetPattern"
+        $installDirValue = Get-LooseJsonStringValue -Raw $rawConfig -Key "installDir"
+
+        if ([string]::IsNullOrWhiteSpace($repoValue) -and [string]::IsNullOrWhiteSpace($assetPatternValue) -and [string]::IsNullOrWhiteSpace($installDirValue)) {
+            throw "Config installer illisible : $configPath. Verifie que les chemins Windows utilisent \\ ou / dans le JSON. Detail : $($_.Exception.Message)"
+        }
+
+        return [pscustomobject]@{
+            repo = $repoValue
+            assetPattern = $assetPatternValue
+            installDir = $installDirValue
+        }
+    }
 }
 
 function Expand-PathText {

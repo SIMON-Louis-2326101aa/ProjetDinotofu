@@ -10,6 +10,25 @@ PACKAGE_DIR="release_packages"
 INSTALLER_DIR="${PACKAGE_DIR}/DinotofuInstaller-Linux-v${VERSION}"
 INSTALLER_ZIP="${PACKAGE_DIR}/DinotofuInstaller-Linux-v${VERSION}.zip"
 
+write_installer_config_json() {
+    local target_file="$1"
+    python3 - "$target_file" "${REPO_NAME}" <<'PY_JSON'
+import json
+import sys
+
+path = sys.argv[1]
+repo = sys.argv[2]
+config = {
+    "repo": repo,
+    "assetPattern": "Dinotofu-Linux-v*.zip",
+    "installDir": "~/Downloads/ProjetDinotofu",
+}
+with open(path, "w", encoding="utf-8") as handle:
+    json.dump(config, handle, ensure_ascii=False, indent=2)
+    handle.write("\n")
+PY_JSON
+}
+
 mkdir -p "${PACKAGE_DIR}"
 rm -rf "${INSTALLER_DIR}" "${INSTALLER_ZIP}"
 mkdir -p "${INSTALLER_DIR}"
@@ -21,13 +40,7 @@ cp tools/linux/Lancer-Dinotofu.sh "${INSTALLER_DIR}/Lancer-Dinotofu.sh"
 cp tools/linux/Lancer-Dinotofu-Terminal.sh "${INSTALLER_DIR}/Lancer-Dinotofu-Terminal.sh"
 chmod +x "${INSTALLER_DIR}"/*.sh
 
-cat > "${INSTALLER_DIR}/dinotofu-installer.config.json" <<JSON
-{
-  "repo": "${REPO_NAME}",
-  "assetPattern": "Dinotofu-Linux-v*.zip",
-  "installDir": "~/Downloads/ProjetDinotofu"
-}
-JSON
+write_installer_config_json "${INSTALLER_DIR}/dinotofu-installer.config.json"
 
 cat > "${INSTALLER_DIR}/LISEZ-MOI.txt" <<TXT
 Dinotofu Installer Linux

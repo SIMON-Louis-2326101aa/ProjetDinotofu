@@ -1,6 +1,6 @@
 # Dinotofu — GitHub Releases, installers et launchers   
 
-Version actuelle : **V2.0.01**   
+Version actuelle : **V2.0.02**   
 Dernière version de personnage encore acceptable : **V1.32.03**   
 
 ## Objectif   
@@ -13,7 +13,6 @@ Les releases GitHub doivent fournir des ZIP propres pour Windows/Linux, ainsi qu
 - `Dinotofu-Linux-vX.Y.Z.zip`   
 - `DinotofuInstaller-Windows-vX.Y.Z.zip`   
 - `DinotofuInstaller-Linux-vX.Y.Z.zip`   
-- `dinotofu_source_X.Y.Z_no_exe.zip`   
 
 ## Raccourcis/lanceurs visibles Windows/Linux   
 
@@ -47,7 +46,7 @@ make clean
 make release-check   
 ```   
 
-Le ZIP source ne doit pas contenir :   
+Le ZIP source local de développement ne doit pas contenir :   
 
 - `build/`   
 - `output/`   
@@ -60,6 +59,6 @@ Le ZIP source ne doit pas contenir :
 
 ## Jalons majeurs   
 
-- V2.0.01 : palier IG jouable/stabilisé.   
+- V2.0.02 : palier IG jouable/stabilisé.   
 - V3.0.0 : premier chapitre d'histoire codé.   
 - Multijoueur en ligne : future grosse version, beaucoup plus tard.   

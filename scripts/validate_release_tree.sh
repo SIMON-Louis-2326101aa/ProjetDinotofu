@@ -119,6 +119,47 @@ grep -q "Lancer-Dinotofu.cmd" tools/windows/DinotofuInstaller.ps1 || fail "Le ra
 grep -q "Lancer-Dinotofu-Terminal.cmd" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows terminal doit cibler Lancer-Dinotofu-Terminal.cmd."
 grep -q -- "-Mode Auto" tools/windows/Lancer-Dinotofu.cmd || fail "Lancer-Dinotofu.cmd doit lancer le mode Auto."
 grep -q -- "-Mode Terminal" tools/windows/Lancer-Dinotofu-Terminal.cmd || fail "Lancer-Dinotofu-Terminal.cmd doit lancer le mode Terminal."
+
+if ! python3 <<'PY_INSTALLER'
+from pathlib import Path
+import json
+import sys
+
+errors = []
+for name in [
+    'tools/windows/dinotofu-installer.config.example.json',
+    'tools/linux/dinotofu-installer.config.example.json',
+]:
+    path = Path(name)
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'))
+    except Exception as exc:
+        errors.append(f"{name}: JSON invalide ({exc})")
+        continue
+    for key in ('repo', 'assetPattern', 'installDir'):
+        if key not in data:
+            errors.append(f"{name}: cle manquante {key}")
+
+package_windows = Path('scripts/package_windows_release.sh').read_text(encoding='utf-8')
+if 'write_installer_config_json()' not in package_windows or 'json.dump(config' not in package_windows:
+    errors.append('scripts/package_windows_release.sh doit generer les configs JSON via Python/json.dump.')
+if 'cat > "${STAGING_DIR}/dinotofu-installer.config.json" <<JSON' in package_windows:
+    errors.append('scripts/package_windows_release.sh ne doit plus ecrire la config Windows via heredoc JSON non echappe.')
+if 'r"%USERPROFILE%\\Downloads\\ProjetDinotofu"' not in package_windows:
+    errors.append('scripts/package_windows_release.sh doit conserver le chemin Windows en raw string Python valide.')
+
+workflow = Path('.github/workflows/release-dinotofu.yml').read_text(encoding='utf-8')
+if 'package-source:' in workflow or ('no_' + 'exe') in workflow:
+    errors.append('Le workflow GitHub ne doit plus publier de ZIP source dans les releases.')
+
+for entry in errors:
+    print(entry)
+sys.exit(1 if errors else 0)
+PY_INSTALLER
+then
+    fail "Configuration installateurs/release invalide."
+fi
+warn "Configs installateurs/release OK."
 warn "Launchers/installateurs OK."
 
 # Private save/account folders.

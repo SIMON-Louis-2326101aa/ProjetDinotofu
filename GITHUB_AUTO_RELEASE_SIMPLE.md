@@ -1,6 +1,6 @@
 # Dinotofu — automatisation GitHub simple   
 
-Version actuelle : **V2.0.01**   
+Version actuelle : **V2.0.02**   
 Dernière version de personnage encore acceptable : **V1.32.03**   
 
 ## Principe   
@@ -14,7 +14,7 @@ src/core/VersionInfo.cpp
 Il prépare ensuite les releases et assets autour du tag correspondant, par exemple :   
 
 ```text   
-v2.0.01   
+v2.0.02   
 ```   
 
 ## Ce que tu dois faire   
@@ -35,22 +35,22 @@ make release-check
 Pour créer une archive source propre :   
 
 ```bash   
-./scripts/package_source_no_exe.sh   
+./scripts/package_source_clean.sh   
 ```   
 
 ## Archives generees   
 
-Les releases/installers Windows/Linux sont les archives de diffusion. Le ZIP source sert surtout au développement.   
+Les releases/installers Windows/Linux sont les seules archives de diffusion GitHub. Le ZIP source sert seulement au développement local.   
 
 ## Règles importantes   
 
 - Pas de sauvegardes privées dans les ZIP.   
-- Pas d'exécutable dans le ZIP source.   
+- Le ZIP source local reste propre et n’est pas publié comme asset GitHub.   
 - Pas de long historique de versions dans les docs joueur.   
 - Garder seulement la version actuelle, la compatibilité personnage, les gros jalons et les consignes utiles.   
 
 ## Jalons   
 
-- V2.0.01 : palier IG jouable/stabilisé.   
+- V2.0.02 : palier IG jouable/stabilisé.   
 - V3.0.0 : premier chapitre d'histoire.   
 - Multijoueur en ligne : future grosse version beaucoup plus tard.   

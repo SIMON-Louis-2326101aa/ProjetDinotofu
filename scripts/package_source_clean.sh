@@ -6,7 +6,7 @@ cd "${ROOT_DIR}"
 
 VERSION="$(./scripts/get_version.sh)"
 PACKAGE_DIR="release_packages"
-PACKAGE_NAME="dinotofu_source_${VERSION}_no_exe.zip"
+PACKAGE_NAME="dinotofu_source_${VERSION}.zip"
 PACKAGE_PATH="${PACKAGE_DIR}/${PACKAGE_NAME}"
 
 mkdir -p "${PACKAGE_DIR}"
@@ -39,4 +39,4 @@ zip -r "${PACKAGE_PATH}" . \
     -x "*/__pycache__/*" \
     -x "*.pyc"
 
-echo "Archive source sans exécutable créée : ${PACKAGE_PATH}"
+echo "Archive source propre créée : ${PACKAGE_PATH}"
