@@ -1,6 +1,6 @@
 # Dinotofu — GitHub Releases, installers et launchers   
    
-Version actuelle : **V2.0.06**   
+Version actuelle : **V2.00.16**   
 Dernière version de personnage encore acceptable : **V1.32.03**   
    
 ## Objectif   
@@ -59,6 +59,6 @@ Le ZIP source local de développement ne doit pas contenir :
    
 ## Jalons majeurs   
    
-- V2.0.06 : palier IG jouable/stabilisé.   
-- V3.0.0 : premier chapitre d'histoire codé.   
+- V2.00.16 : palier IG jouable/stabilisé, avec dialogues ennemis/boutiques plus vivants.   
+- V3.00.00 : premier chapitre d'histoire codé.   
 - Multijoueur en ligne : future grosse version, beaucoup plus tard.   

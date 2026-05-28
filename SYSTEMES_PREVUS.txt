@@ -54,8 +54,8 @@ Versioning
 - Z : patch/correctif/amélioration ciblée.
 
 Jalons validés :
-- 2.0.0 : IG entièrement finie, stable et jouable à fond.
-- 3.0.0 : premier chapitre d'histoire codé.
+- 2.00.00 : IG entièrement finie, stable et jouable à fond.
+- 3.00.00 : premier chapitre d'histoire codé.
 - Version majeure future, beaucoup plus tard : multijoueur en ligne.
 
 Compatibilité personnages
@@ -67,9 +67,9 @@ Le code source de vérité pour la version courante et la version minimale conse
 
 Grandes parties futures
 -----------------------
-1. Terminer la stabilité IG jusqu'à V2.0.0.
+1. Terminer la stabilité IG jusqu'à V2.00.00.
 2. Ajouter ensuite contenu, dialogues/lore vivants, compétences, magie et équilibrage approfondi.
-3. Coder le premier chapitre d'histoire pour V3.0.0.
+3. Coder le premier chapitre d'histoire pour V3.00.00.
 4. Garder le multijoueur en ligne pour une phase lointaine.
 
 Note

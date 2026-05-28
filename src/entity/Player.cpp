@@ -95,6 +95,11 @@ namespace
         if (skillId == "splitting_blow") return "Frappe fendue";
         if (skillId == "armor_crack") return "Fracasse-garde";
         if (skillId == "reach_control") return "Contrôle d'allonge";
+        if (skillId == "battle_instinct") return "Instinct de bataille";
+        if (skillId == "veteran_rhythm") return "Rythme de vétéran";
+        if (skillId == "scar_tissue") return "Peau des survivants";
+        if (skillId == "escape_reader") return "Lecture de fuite";
+        if (skillId == "boss_memory") return "Mémoire de boss";
         if (skillId == "learned_arcane_mark") return "Marque élémentaire étudiée";
         if (skillId == "learned_arcane_binding") return "Entrave arcanique étudiée";
         if (skillId == "learned_elemental_ward") return "Voile élémentaire étudié";
@@ -125,6 +130,11 @@ namespace
         if (skillId == "splitting_blow") return "Actif, recharge 4 tours : coup ample appris en ouvrant les défenses avec une hache.";
         if (skillId == "armor_crack") return "Actif, recharge 4 tours : frappe lourde qui cherche les points faibles d'une garde.";
         if (skillId == "reach_control") return "Passif : meilleure lecture des distances, gagnée en maniant régulièrement une lance.";
+        if (skillId == "battle_instinct") return "Passif de carrière : après plusieurs combats lancés, les premiers gestes deviennent plus propres et gagnent un léger bonus stable.";
+        if (skillId == "veteran_rhythm") return "Passif de carrière : les victoires répétées améliorent la finition des coups critiques.";
+        if (skillId == "scar_tissue") return "Passif de survie : les défaites et morts apprennent au corps à rester dangereux même quand tout va mal.";
+        if (skillId == "escape_reader") return "Passif de prudence : les fuites réussies apprennent à mieux lire les distances et les sorties.";
+        if (skillId == "boss_memory") return "Passif de boss : chaque vraie victoire majeure laisse une mémoire de rythme contre les ennemis importants.";
         if (skillId == "learned_arcane_mark") return "Sort appris par étude : marque élémentaire simple, réservée aux vrais canalisateurs.";
         if (skillId == "learned_arcane_binding") return "Sort appris par grimoire : entrave la cible sans exister forcément en parchemin commun.";
         if (skillId == "learned_elemental_ward") return "Sort appris par grimoire : voile défensif utilisable avec un catalyseur correct.";
@@ -933,6 +943,38 @@ void Player::refreshLevelAndIdentitySkills()
     {
         unlockActiveSkill("prepared_volley", "Salve préparée");
     }
+
+    refreshCareerSkillProgress();
+}
+
+// EN: refreshCareerSkillProgress declares or implements a focused behavior used by this module.
+// FR: refreshCareerSkillProgress déclare ou implémente un comportement précis utilisé par ce module.
+void Player::refreshCareerSkillProgress()
+{
+    if (combatsStarted >= 8)
+    {
+        unlockPassiveSkill("battle_instinct", "Instinct de bataille");
+    }
+
+    if (victories >= 5)
+    {
+        unlockPassiveSkill("veteran_rhythm", "Rythme de vétéran");
+    }
+
+    if (deaths >= 2 || defeats >= 3)
+    {
+        unlockPassiveSkill("scar_tissue", "Peau des survivants");
+    }
+
+    if (escapes >= 2)
+    {
+        unlockPassiveSkill("escape_reader", "Lecture de fuite");
+    }
+
+    if (bossesKilled >= 1)
+    {
+        unlockPassiveSkill("boss_memory", "Mémoire de boss");
+    }
 }
 
 void Player::setLoadedSkillState(
@@ -1004,6 +1046,14 @@ void Player::displaySkillProgress() const
     lines.push_back("- Kills à la hache vers Frappe fendue : " + std::to_string(axeKillProgress) + "/7");
     lines.push_back("- Kills au marteau vers Fracasse-garde : " + std::to_string(hammerKillProgress) + "/7");
     lines.push_back("- Kills à la lance vers Contrôle d'allonge : " + std::to_string(spearKillProgress) + "/7");
+
+    lines.push_back("");
+    lines.push_back("Progression de carrière :");
+    lines.push_back("- Combats lancés vers Instinct de bataille : " + std::to_string(combatsStarted) + "/8");
+    lines.push_back("- Victoires vers Rythme de vétéran : " + std::to_string(victories) + "/5");
+    lines.push_back("- Défaites/morts vers Peau des survivants : " + std::to_string(defeats) + "/3 ou " + std::to_string(deaths) + "/2");
+    lines.push_back("- Fuites vers Lecture de fuite : " + std::to_string(escapes) + "/2");
+    lines.push_back("- Boss vaincus vers Mémoire de boss : " + std::to_string(bossesKilled) + "/1");
 
     showPlayerScreen("COMPÉTENCES", "player.skill_progress", lines, false);
 }
@@ -1640,6 +1690,7 @@ void Player::recordCombatStarted()
     combatsStarted++;
     resetClassSkillCooldown();
     recordCurrentEquipmentUsage();
+    refreshCareerSkillProgress();
 }
 
 // EN: recordVictory declares or implements a focused behavior used by this module.
@@ -1648,6 +1699,7 @@ void Player::recordVictory()
 {
     victories++;
     reduceWorldGazeDurationAfterCombat();
+    refreshCareerSkillProgress();
 }
 
 // EN: recordDefeat declares or implements a focused behavior used by this module.
@@ -1656,6 +1708,7 @@ void Player::recordDefeat()
 {
     defeats++;
     reduceWorldGazeDurationAfterCombat();
+    refreshCareerSkillProgress();
 }
 
 // EN: recordEscape declares or implements a focused behavior used by this module.
@@ -1664,6 +1717,7 @@ void Player::recordEscape()
 {
     escapes++;
     reduceWorldGazeDurationAfterCombat();
+    refreshCareerSkillProgress();
 }
 
 // EN: recordDeath declares or implements a focused behavior used by this module.
@@ -1671,6 +1725,7 @@ void Player::recordEscape()
 void Player::recordDeath()
 {
     deaths++;
+    refreshCareerSkillProgress();
 }
 
 // EN: recordEnemyKills declares or implements a focused behavior used by this module.
@@ -1691,6 +1746,7 @@ void Player::recordEnemyKills(int amount)
 void Player::recordBossKill()
 {
     bossesKilled++;
+    refreshCareerSkillProgress();
 }
 
 // EN: recordPvpVictory declares or implements a focused behavior used by this module.
@@ -2808,6 +2864,34 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     int bonusMax = 0;
     int criticalBonus = 0;
 
+    if (hasPassiveSkill("battle_instinct"))
+    {
+        bonusMin += 1;
+        bonusMax += 1;
+    }
+
+    if (hasPassiveSkill("survival_breath") && hp * 3 <= maxHp)
+    {
+        bonusMin += 1;
+        bonusMax += 2;
+    }
+
+    if (hasPassiveSkill("veteran_rhythm"))
+    {
+        criticalBonus += 2;
+    }
+
+    if (hasPassiveSkill("scar_tissue") && hp * 2 <= maxHp)
+    {
+        criticalBonus += 2;
+    }
+
+    if (hasPassiveSkill("boss_memory") && bossesKilled > 0)
+    {
+        bonusMax += 1;
+        criticalBonus += 1;
+    }
+
     Weapon* equippedWeapon = inventory.getMutableWeapon(equippedWeaponIndex);
     clearLastConsumedAmmunition();
 
@@ -2821,6 +2905,12 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
 
         if (equippedWeapon->getType() == WeaponType::Bow)
         {
+            if (hasPassiveSkill("ranger_eye"))
+            {
+                bonusMax += 2;
+                criticalBonus += 3;
+            }
+
             std::string ammoId = "training_arrows";
             std::string weaponText = equippedWeapon->getName();
             std::transform(weaponText.begin(), weaponText.end(), weaponText.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });

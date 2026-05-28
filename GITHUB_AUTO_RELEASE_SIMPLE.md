@@ -1,6 +1,6 @@
 # Dinotofu — automatisation GitHub simple   
    
-Version actuelle : **V2.0.06**   
+Version actuelle : **V2.00.16**   
 Dernière version de personnage encore acceptable : **V1.32.03**   
    
 ## Principe   
@@ -14,7 +14,7 @@ src/core/VersionInfo.cpp
 Il prépare ensuite les releases et assets autour du tag correspondant, par exemple :   
    
 ```text   
-v2.0.06   
+v2.00.16   
 ```   
    
 ## Ce que tu dois faire   
@@ -51,6 +51,6 @@ Les releases/installers Windows/Linux sont les seules archives de diffusion GitH
    
 ## Jalons   
    
-- V2.0.06 : palier IG jouable/stabilisé.   
-- V3.0.0 : premier chapitre d'histoire.   
+- V2.00.16 : palier IG jouable/stabilisé, avec dialogues ennemis/boutiques plus vivants.   
+- V3.00.00 : premier chapitre d'histoire.   
 - Multijoueur en ligne : future grosse version beaucoup plus tard.   

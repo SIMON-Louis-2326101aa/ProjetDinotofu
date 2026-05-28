@@ -1,6 +1,6 @@
 # Dinotofu - interface graphique expérimentale   
    
-Version jeu : **V2.00.12**   
+Version jeu : **V2.00.16**   
 Version minimale conseillée des personnages : **V1.32.03**   
    
 ## Lancement rapide Linux / WSL   
@@ -48,6 +48,6 @@ L'IG lit les snapshots produits par le jeu, affiche les menus/combat/cartes, pui
    
 ## Jalons   
    
-- V2.00.12 : palier IG jouable/stabilisé.   
-- V3.0.0 : premier chapitre d'histoire.   
+- V2.00.16 : palier IG jouable/stabilisé, avec dialogues ennemis/boutiques plus vivants.   
+- V3.00.00 : premier chapitre d'histoire.   
 - Multijoueur en ligne : grosse version future, pas prioritaire.   

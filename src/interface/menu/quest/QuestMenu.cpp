@@ -97,6 +97,16 @@ namespace
             lines.push_back("Elle reste vague, ce qui est rarement bon signe dans une guilde qui vend normalement le danger au mot près.");
         }
 
+        if (!quest.location.empty())
+        {
+            lines.push_back("Zone annoncée : " + quest.location + ". La gérante précise que la carte donne une direction, pas une promesse de sécurité.");
+        }
+
+        if (!quest.targetFamily.empty())
+        {
+            lines.push_back("Famille ciblée : " + quest.targetFamily + ". Elle recommande de noter ce qui est observé avant de tout régler à coups de panique.");
+        }
+
         if (quest.rank == "S" || quest.rank == "SS" || quest.rank == "SSS" || quest.rank == "Légende" || quest.rank == "Dieu")
         {
             lines.push_back("Avant de te laisser partir, elle ajoute que ce rang n'est pas une décoration : c'est une manière polie de prévenir les inconscients.");
@@ -128,6 +138,16 @@ namespace
         else
         {
             lines.push_back("Il ajoute quelques détails personnels, pas assez pour faire un roman, mais assez pour que la mission ressemble enfin à autre chose qu'une ligne de menu.");
+        }
+
+        if (!quest.location.empty())
+        {
+            lines.push_back("Lieu évoqué : " + quest.location + ". Le client n'est pas certain de tout, mais il sait exactement où la peur a commencé.");
+        }
+
+        if (!quest.targetFamily.empty())
+        {
+            lines.push_back("Indice donné : la demande semble liée à " + quest.targetFamily + ", sans garantie officielle tant que la guilde n'a rien vérifié.");
         }
 
         return lines;

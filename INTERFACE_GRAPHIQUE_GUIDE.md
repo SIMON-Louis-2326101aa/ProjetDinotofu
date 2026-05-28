@@ -1,6 +1,6 @@
 # Dinotofu — interface graphique expérimentale   
    
-Version jeu : **V2.0.06**   
+Version jeu : **V2.00.16**   
 Version de personnage encore acceptable avant recréation conseillée : **V1.32.03**   
    
 ## But de l'IG   
@@ -44,6 +44,6 @@ Ne pas bump `schemaVersion` pour : couleur, style, texte HTML, positionnement, m
    
 ## Prochaines directions   
    
-- Stabiliser les retours joueurs sur la V2.0.06.   
+- Stabiliser les retours joueurs sur la V2.00.16.   
 - Ajouter ensuite contenu, dialogues/lore vivants, compétences et polish progressif.   
-- Passer en V3.0.0 avec le premier chapitre d'histoire codé.   
+- Passer en V3.00.00 avec le premier chapitre d'histoire codé.   

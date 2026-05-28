@@ -56,7 +56,7 @@ normalize_version() {
     echo "${1#v}" | tr -d '[:space:]'
 }
 
-local_version="0.0.0"
+local_version="0.00.00"
 if [[ -f "${INSTALL_DIR}/version.txt" ]]; then
     local_version="$(normalize_version "$(cat "${INSTALL_DIR}/version.txt")")"
 fi

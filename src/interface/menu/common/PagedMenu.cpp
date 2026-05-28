@@ -82,18 +82,18 @@ void PagedMenu::printPageInfo(std::size_t pageIndex, std::size_t totalPages, std
 
 void PagedMenu::printNavigation(std::size_t pageIndex, std::size_t totalPages)
 {
-    std::cout << "0 : Retour" << std::endl;
+    std::cout << "0 : Retour" << std::endl << std::endl;
 
     if (totalPages > 1)
     {
         if (pageIndex > 0)
         {
-            std::cout << "98 : Page précédente" << std::endl;
+            std::cout << "98 : Page précédente" << std::endl << std::endl;
         }
 
         if (pageIndex + 1 < totalPages)
         {
-            std::cout << "99 : Page suivante" << std::endl;
+            std::cout << "99 : Page suivante" << std::endl << std::endl;
         }
     }
 }

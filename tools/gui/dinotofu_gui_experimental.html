@@ -148,7 +148,7 @@
 
     .action-sections { display: grid; gap: 0.85rem; }
     .action-section { border: 1px solid rgba(255,255,255,0.07); border-radius: 18px; padding: 0.75rem; background: rgba(255,255,255,0.022); }
-    .action-section.main { border-color: rgba(255,179,71,0.22); background: rgba(255,179,71,0.045); }
+    .action-section.main { border-color: rgba(255,255,255,0.08); background: rgba(255,255,255,0.022); }
     .action-section.navigation { background: rgba(123,183,255,0.035); border-color: rgba(123,183,255,0.16); }
     .action-section.danger { background: rgba(255,107,107,0.045); border-color: rgba(255,107,107,0.20); }
     .action-section.locked { opacity: 0.82; }
@@ -163,7 +163,7 @@
     .action-card.back, .action-card.pagination { background: rgba(255,255,255,0.026); }
     .action-card.danger { border-color: rgba(255,107,107,0.48); background: linear-gradient(180deg, rgba(255,107,107,0.12), rgba(255,255,255,0.018)); }
     .action-card.disabled { color: var(--disabled); opacity: 0.72; cursor: not-allowed; }
-    .answer-panel { display: none; margin-top: 1rem; border-color: rgba(255,179,71,0.22); background: rgba(255,179,71,0.035); }
+    .answer-panel { display: none; margin-top: 1rem; border-color: var(--line); background: rgba(255,255,255,0.035); }
     body.needs-manual-input .answer-panel { display: block; }
     .command-grid { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: end; }
     .quick-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.45rem; margin-top: 0.55rem; }
@@ -173,7 +173,7 @@
     .suggestion-chip.primary { color: #1b1205; background: var(--accent); border-color: var(--accent); font-weight: 800; }
     .suggestion-chip.disabled, .suggestion-chip:disabled { opacity: 0.55; cursor: not-allowed; }
     .input-note { color: var(--muted); font-size: 0.84rem; line-height: 1.35; margin-top: 0.55rem; }
-    .input-expectation { border: 1px solid rgba(255,179,71,0.25); background: var(--accent-soft); border-radius: 14px; padding: 0.65rem 0.75rem; margin-top: 0.65rem; color: var(--text); font-size: 0.9rem; line-height: 1.35; }
+    .input-expectation { border: 1px solid var(--line); background: rgba(255,255,255,0.028); border-radius: 14px; padding: 0.65rem 0.75rem; margin-top: 0.65rem; color: var(--text); font-size: 0.9rem; line-height: 1.35; }
     .input-expectation strong { color: var(--accent); }
     .input-contract { border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.032); border-radius: 16px; padding: 0.75rem; margin: 0.65rem 0 0.85rem; }
     .input-contract-title { color: var(--accent); font-weight: 850; margin-bottom: 0.45rem; }
@@ -219,7 +219,7 @@
     .context-panel { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.55rem 0 0.75rem; }
 
     .summary-panel { border: 1px solid rgba(128,226,126,0.18); background: rgba(128,226,126,0.045); border-radius: 16px; padding: 0.72rem 0.8rem; margin: 0.65rem 0 0.85rem; }
-    .specialized-panel { border: 1px solid rgba(255,179,71,0.22); background: rgba(255,179,71,0.055); border-radius: 18px; padding: 0.78rem 0.85rem; margin: 0.65rem 0 0.85rem; }
+    .specialized-panel { border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.032); border-radius: 18px; padding: 0.78rem 0.85rem; margin: 0.65rem 0 0.85rem; }
     .specialized-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.55rem; }
     .specialized-title { color: var(--accent); font-weight: 900; }
     .specialized-hint { color: var(--muted); font-size: 0.84rem; line-height: 1.35; margin-top: 0.16rem; }
@@ -235,7 +235,7 @@
     .item-section-title { color: var(--accent); font-weight: 900; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 0.36rem 0.08rem; }
     .item-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.48rem; margin-bottom: 0.75rem; }
     .item-card { border: 1px solid rgba(255,255,255,0.09); border-radius: 15px; padding: 0.58rem 0.64rem; background: rgba(255,255,255,0.032); color: var(--muted); min-height: 5.1rem; display: flex; flex-direction: column; gap: 0.38rem; }
-    .item-card.available { border-color: rgba(255,179,71,0.28); background: rgba(255,179,71,0.055); }
+    .item-card.available { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.035); }
     .item-card.clickable { cursor: pointer; }
     .item-card.clickable:hover { transform: translateY(-1px); border-color: rgba(255,179,71,0.55); }
     .item-card.locked { opacity: 0.62; cursor: not-allowed; }
@@ -256,7 +256,7 @@
     .notice-meta { color: var(--muted); font-size: 0.7rem; margin-top: 0.28rem; text-transform: uppercase; letter-spacing: 0.04em; }
     .focus-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.45rem; }
     .focus-card { border: 1px solid var(--line); border-radius: 14px; padding: 0.55rem 0.62rem; background: rgba(0,0,0,0.12); color: var(--muted); min-height: 5.3rem; display: flex; flex-direction: column; justify-content: space-between; gap: 0.35rem; }
-    .focus-card.available { border-color: rgba(255,179,71,0.32); background: rgba(255,179,71,0.07); }
+    .focus-card.available { border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.035); }
     .focus-card.clickable { cursor: pointer; text-align: left; }
     .focus-card.clickable:hover { border-color: rgba(255,179,71,0.58); transform: translateY(-1px); }
     .focus-card.locked { cursor: not-allowed; opacity: 0.72; }
@@ -305,7 +305,7 @@
 
 
     /* =========================================================
-       CLEAN PLAYER VIEW V2.00.12 LAYOUT
+       CLEAN PLAYER VIEW V2.00.16 LAYOUT
        ========================================================= */
     body { min-height: 100vh; }
     .game-header {
@@ -485,6 +485,81 @@
       min-height: 3.2rem;
       font-size: 1rem;
     }
+
+    /* V2.00.16 : vue joueur vraiment propre.
+       Les indications techniques de saisie restent dans le code, mais ne polluent plus l'IG. */
+    #inputExpectation,
+    #suggestedCommands,
+    .input-warning,
+    .input-flow,
+    .filter-notice {
+      display: none !important;
+    }
+    .answer-panel {
+      border-color: var(--line) !important;
+      background: rgba(255, 255, 255, 0.035) !important;
+    }
+    .continue-panel {
+      border-color: var(--line);
+      background: rgba(255, 255, 255, 0.035);
+    }
+    .specialized-content {
+      display: grid;
+      gap: 0.65rem;
+      margin: 0.65rem 0 0.85rem;
+    }
+    .specialized-panel {
+      border: 0 !important;
+      background: transparent !important;
+      padding: 0 !important;
+    }
+    .choices-section .action-section-head,
+    .choices-section .action-card [data-action-status] {
+      display: none !important;
+    }
+    .choices-section .action-section.main {
+      border-color: rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.022);
+    }
+    .choices-section .actions.main {
+      grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+    }
+    .choices-section .action-card.primary,
+    .choices-section .action-card.recommended {
+      border-color: var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018));
+      box-shadow: none;
+      color: var(--text);
+    }
+    .choices-section .action-card.primary:hover,
+    .choices-section .action-card.recommended:hover {
+      border-color: rgba(255,179,71,0.55);
+    }
+    .choices-section .action-card {
+      min-height: 2.85rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0.62rem 0.72rem;
+    }
+    .choices-section .action-main { align-items: center; }
+    .choices-section .action-main span:first-child { line-height: 1.22; }
+    .choices-section .action-role,
+    .choices-section .action-hint,
+    .choices-section .action-facts {
+      display: none !important;
+    }
+    .choices-section .action-card.item-important .action-fact {
+      border-color: var(--line);
+      background: rgba(0,0,0,0.12);
+      color: var(--muted);
+    }
+    .choices-section .actions.main {
+      grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+    }
+    .choices-section.navigation-only { margin-bottom: 0.65rem; }
+    .answer-panel .player-compact-head h2 { font-size: 1rem; }
+    .answer-panel .player-compact-head .badge { display: none; }
     .debug-hidden { display: none !important; }
     @media (max-width: 980px) {
       .game-shell { grid-template-columns: 1fr; }
@@ -520,7 +595,7 @@
 
       <section id="answerPanel" class="panel answer-panel">
         <div class="player-compact-head">
-          <h2>Réponse attendue</h2>
+          <h2>Réponse</h2>
           <span class="badge warn">saisie demandée</span>
         </div>
         <div id="inputExpectation" class="input-expectation">Aucun écran chargé pour le moment.</div>
@@ -766,8 +841,18 @@
       return Number(state.lastServerStatus?.pendingInputCount || 0);
     }
 
+    function activeScreenAdvancedAfterQueuedInput() {
+      const pending = pendingInputCount() > 0;
+      const flowSequence = Number(state.commandFlow?.screenSequence || 0);
+      const currentSequence = getCurrentGuiSequence();
+      return pending && flowSequence > 0 && currentSequence > flowSequence;
+    }
+
     function isInputLockedByQueue() {
-      return state.preventQueueStacking && pendingInputCount() > 0;
+      // FR: si l'IG a déjà affiché un nouvel écran, une ancienne commande encore
+      // signalée en attente par le statut ne doit pas bloquer le bouton Continuer.
+      // EN: stale pending status must not freeze the next screen once the GUI advanced.
+      return state.preventQueueStacking && pendingInputCount() > 0 && !activeScreenAdvancedAfterQueuedInput();
     }
 
     function canSendInputNow() {
@@ -1306,11 +1391,18 @@
       }
       return `
         ${renderMenuFilterNotice(allCards.length, cards.length, 'carte métier')}
-        ${groups.map(group => `
-          <section class="item-section">
-            <div class="item-section-title">${escapeHtml(group.section)} · ${escapeHtml(group.cards.length)} carte(s)</div>
-            <div class="item-grid">${group.cards.map(renderItemCard).join('')}</div>
-          </section>`).join('')}`;
+        ${groups.map(group => {
+          const normalizedSection = normalizeSearchText(group.section);
+          const hideTitle = normalizedSection.includes('choix disponibles')
+            || normalizedSection === 'comptes'
+            || normalizedSection.includes('compte local')
+            || normalizedSection.includes('sauvegarde');
+          return `
+            <section class="item-section">
+              ${hideTitle ? '' : `<div class="item-section-title">${escapeHtml(group.section)} · ${escapeHtml(group.cards.length)} carte(s)</div>`}
+              <div class="item-grid">${group.cards.map(renderItemCard).join('')}</div>
+            </section>`;
+        }).join('')}`;
     }
 
     function renderNoticeCards(snapshot) {
@@ -1340,51 +1432,12 @@
     }
 
     function renderSpecializedPanel(snapshot) {
-      if (shouldHideSpecializedPanel(snapshot)) return '';
-      const view = snapshot.specializedView || 'generic';
-      const allCards = Array.isArray(snapshot.focusCards) ? snapshot.focusCards : [];
-      const cards = allCards.filter(card => matchesMenuFilter(card.id, card.label, card.detail, card.actionLabel, card.actionDisplayLabel, card.actionId));
-      const renderedInfoCards = renderInfoCards(snapshot);
-      const renderedNoticeCards = renderNoticeCards(snapshot);
-      const renderedItemCards = renderItemCards(snapshot);
-      const renderedCards = cards.length
-        ? cards.map(card => {
-            const available = card.available === true && Number(card.actionNumber ?? -1) >= 0;
-            const locked = available && !canSendInputNow();
-            const actionLabel = card.actionLabel || card.actionId || card.label || '';
-            const actionDisplayLabel = card.actionDisplayLabel || (available ? `${card.actionNumber} - ${actionLabel || card.label || 'Action'}` : '');
-            const action = available
-              ? `Action ${actionDisplayLabel}`
-              : "Pas d\'action directe ici";
-            const choiceAttrs = available
-              ? ` data-focus-choice="${escapeHtml(card.actionNumber)}" data-focus-id="${escapeHtml(card.id || '')}" data-focus-label="${escapeHtml(card.label || '')}" data-focus-action-id="${escapeHtml(card.actionId || '')}" data-focus-action-label="${escapeHtml(actionLabel)}" data-focus-action-display-label="${escapeHtml(actionDisplayLabel || actionLabel)}" role="button" tabindex="0"`
-              : '';
-            return `
-              <div class="focus-card ${available ? 'available clickable' : ''} ${locked ? 'locked' : ''}"${choiceAttrs}>
-                <div>
-                  <div class="focus-card-title"><span>${escapeHtml(card.label || card.id || 'Bloc')}</span></div>
-                  <div class="focus-card-detail">${escapeHtml(card.detail || '')}</div>
-                </div>
-              </div>`;
-          }).join('')
-        : (renderedInfoCards || renderedItemCards || renderedNoticeCards
-          ? (state.menuFilter && allCards.length ? renderMenuFilterNotice(allCards.length, 0, 'bloc') : '')
-          : '<div class="empty">Aucune action contextualisée pour cet écran.</div>');
-
-      return `
-        <div class="specialized-panel">
-          <div class="specialized-head">
-            <div>
-              <div class="specialized-title">${escapeHtml(snapshot.specializedTitle || 'Vue spécialisée')}</div>
-              <div class="specialized-hint">${escapeHtml(snapshot.specializedHint || '')}</div>
-            </div>
-          </div>
-          ${renderedInfoCards}
-          ${renderedItemCards}
-          ${renderedNoticeCards}
-          ${cards.length ? renderMenuFilterNotice(allCards.length, cards.length, 'bloc') : ''}
-          ${renderedCards ? `<div class="focus-grid">${renderedCards}</div>` : ''}
-        </div>`;
+      // V2.00.16 : les anciennes vues spécialisées créaient encore des blocs jaunes,
+      // des cartes de choix dupliquées et des titres techniques de sauvegarde.
+      // La vue joueur propre garde maintenant uniquement le texte pur + les choix
+      // principaux rendus plus bas par renderMainViewActions().
+      void snapshot;
+      return '';
     }
 
     function renderScreenSummary(snapshot) {
@@ -1446,9 +1499,56 @@
         </div>`;
     }
 
+    function normalizeDisplayLine(value) {
+      return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function isTechnicalDisplayLine(line) {
+      const normalized = normalizeDisplayLine(line);
+      if (!normalized) return true;
+      const exact = new Set([
+        'choix disponibles',
+        'texte libre attendu',
+        'texte attendu',
+        'saisie demandee',
+        'reponse attendue'
+      ]);
+      if (exact.has(normalized.replace(/[.:]+$/g, ''))) return true;
+      if (/^vue (sauvegarde|creation|inventaire|equipement|potions|boutique|exploration|quetes|progression|catalogue|activites|session|apres combat|mort|donnees alterees|combat)\b/.test(normalized)) return true;
+      if (/^resume ig\b/.test(normalized)) return true;
+      if (/^contrat json\b/.test(normalized)) return true;
+      if (/^saisie\s*:/.test(normalized)) return true;
+      if (/^input\s*:/.test(normalized)) return true;
+      if (/^specialized\s*:/.test(normalized)) return true;
+      if (/^(source|kind|action technique|screen id|screenid)\s*:/.test(normalized)) return true;
+      if (normalized.includes('texte libre attendu')) return true;
+      if (normalized.includes('choix disponibles') && normalized.length <= 40) return true;
+      return false;
+    }
+
+    function sanitizeDisplayLines(lines) {
+      if (!Array.isArray(lines)) return [];
+      const seen = new Set();
+      const cleaned = [];
+      for (const raw of lines) {
+        const line = String(raw ?? '').trim();
+        const key = normalizeDisplayLine(line);
+        if (!line || isTechnicalDisplayLine(line) || seen.has(key)) continue;
+        seen.add(key);
+        cleaned.push(line);
+      }
+      return cleaned;
+    }
+
     function renderLines(title, lines) {
-      if (!Array.isArray(lines) || lines.length === 0) return '';
-      return `<div class="section"><h3>${escapeHtml(title)}</h3><div class="line-list">${lines.map(line => `<div class="line">${escapeHtml(line)}</div>`).join('')}</div></div>`;
+      const cleaned = sanitizeDisplayLines(lines);
+      if (!cleaned.length) return '';
+      return `<div class="section readable-section"><h3>${escapeHtml(title)}</h3><div class="line-list">${cleaned.map(line => `<div class="line">${escapeHtml(line)}</div>`).join('')}</div></div>`;
     }
 
     function getActionGroup(action) {
@@ -1499,8 +1599,7 @@
         : '';
       const mainHtml = mainActions.length
         ? `<div class="action-section main ${compact ? 'compact-many' : ''}">
-            <div class="action-section-head"><span>Choix disponibles</span><span>${escapeHtml(mainActions.length)} choix · numéros conservés</span></div>
-            <div class="actions main ${compact ? 'compact-many' : ''}">${mainActions.map(action => renderAction(action, { compact })).join('')}</div>
+            <div class="actions main ${compact ? 'compact-many' : ''}">${mainActions.map(action => renderAction(action, { compact, uniformChoices: true })).join('')}</div>
           </div>`
         : '';
 
@@ -1520,9 +1619,13 @@
 
     function renderMainViewActions(snapshot) {
       if (!snapshot || snapshot.type !== 'menu') return '';
-      if (snapshot.inputMode === 'continue') return renderContinueControl(snapshot);
-      if (snapshot.inputMode !== 'choice') return '';
       const actions = Array.isArray(snapshot.actions) ? snapshot.actions.filter(action => !isUtilityAction(action)) : [];
+      if (snapshot.inputMode === 'continue') return renderContinueControl(snapshot);
+      if (['text', 'quantity', 'confirmation'].includes(snapshot.inputMode || '')) {
+        const navigation = renderNavigationOnlyActions(actions);
+        return navigation ? `<div class="section choices-section navigation-only">${navigation}</div>` : '';
+      }
+      if (snapshot.inputMode !== 'choice') return '';
       return `<div class="section choices-section">${renderActionsByGroup(actions)}</div>`;
     }
 
@@ -1531,7 +1634,7 @@
       const actions = Array.isArray(snapshot.actions) ? snapshot.actions : [];
       const mode = snapshot.inputMode || 'choice';
       if (mode === 'text' || mode === 'quantity' || mode === 'confirmation') {
-        const hint = snapshot.inputHint || snapshot.primarySubmitLabel || 'Réponse attendue';
+        const hint = snapshot.inputHint || snapshot.primarySubmitLabel || 'Réponse';
         return `
           <div class="manual-only-box">
             <div class="input-warning">${escapeHtml(hint)}</div>
@@ -1545,7 +1648,15 @@
     function renderNavigationOnlyActions(actions) {
       const navigation = Array.isArray(actions) ? actions.filter(action => ['back', 'pagination'].includes(action.role || '') || ['navigation'].includes(action.group || '')) : [];
       if (!navigation.length) return '';
-      return `<div class="action-sections">${renderActionGroup('navigation', navigation)}</div>`;
+      const backActions = navigation.filter(isBackAction);
+      const otherNavigation = navigation.filter(action => !isBackAction(action));
+      const backHtml = backActions.length
+        ? `<div class="choice-back-row">${backActions.map(action => renderAction(action, { compact: true, backTop: true })).join('')}</div>`
+        : '';
+      const otherHtml = otherNavigation.length
+        ? `<div class="action-section navigation compact-many"><div class="actions navigation compact-many">${otherNavigation.map(action => renderAction(action, { compact: true })).join('')}</div></div>`
+        : '';
+      return `<div class="action-sections">${backHtml}${otherHtml}</div>`;
     }
 
     function renderInputDebug() {
@@ -1749,22 +1860,25 @@
     }
 
     function renderReadableInputLines(snapshot) {
-      // FR: l'indication de saisie vit dans le panneau "Réponse attendue".
+      // FR: l'indication de saisie vit dans le panneau "Réponse".
       // La vue principale reste réservée au vrai contenu joueur : informations,
       // dialogues, affichage pur et choix disponibles.
       return '';
     }
 
     function renderMenu(snapshot) {
+      const mainLines = [
+        ...(Array.isArray(snapshot.subtitles) ? snapshot.subtitles : []),
+        ...(Array.isArray(snapshot.lines) ? snapshot.lines : [])
+      ];
       return `
         ${renderHeader(snapshot, 'menu')}
         ${renderPagination(snapshot)}
         ${renderSpecializedPanel(snapshot)}
         ${renderReadableInputLines(snapshot)}
-        ${renderLines('Sous-titres', snapshot.subtitles)}
-        ${renderLines('Informations', snapshot.lines)}
+        ${renderLines('Informations', mainLines)}
         ${renderMainViewActions(snapshot)}
-        ${renderLines('Bas d\'écran', snapshot.footerLines)}`;
+        ${renderLines('Affichage', snapshot.footerLines)}`;
     }
 
 
@@ -1775,11 +1889,15 @@
       const locked = !canSendInputNow();
       const disabledAttribute = enabled && !locked ? '' : ' disabled';
       const role = action.role || (action.dangerous ? 'danger' : 'normal');
-      const styleClass = ['primary', 'back', 'pagination', 'danger'].includes(role) ? role : '';
-      const recommendedClass = action.recommended ? 'recommended' : '';
-      const itemClass = action.hasItemMetadata ? 'item-action' : '';
-      const importantClass = action.itemImportant ? 'item-important' : '';
-      const facts = action.hasItemMetadata ? [
+      const uniformChoices = Boolean(options.uniformChoices);
+      const styleClass = uniformChoices
+        ? (role === 'danger' || action.dangerous ? 'danger' : '')
+        : (['primary', 'back', 'pagination', 'danger'].includes(role) ? role : '');
+      const recommendedClass = uniformChoices ? '' : (action.recommended ? 'recommended' : '');
+      const itemClass = action.hasItemMetadata && !uniformChoices ? 'item-action' : '';
+      const importantClass = action.itemImportant && !uniformChoices ? 'item-important' : '';
+      const showChoiceDetails = !compact && !uniformChoices;
+      const facts = action.hasItemMetadata && showChoiceDetails ? [
         action.itemActionType ? ['Action', getItemActionTypeLabel(action.itemActionType)] : null,
         action.itemKind ? ['Type', action.itemKind] : null,
         action.itemSection ? ['Section', action.itemSection] : null,
@@ -1799,10 +1917,10 @@
             <span>${escapeHtml(displayLabel)}</span>
             <span data-action-status>${!enabled ? 'Bloqué' : (locked ? 'Attente' : 'Envoyer')}</span>
           </div>
-          ${action.recommended && !compact ? '<div class="action-role">Conseillé</div>' : ''}
-          ${action.hint && !compact ? `<div class="action-hint">${escapeHtml(action.hint)}</div>` : ''}
-          ${action.hasItemMetadata && action.itemDetail && !compact ? `<div class="action-hint">${escapeHtml(action.itemDetail)}</div>` : ''}
-          ${facts.length && !compact ? `<div class="action-facts">${facts.map(([label, value]) => `<span class="action-fact">${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('')}</div>` : ''}
+          ${action.recommended && showChoiceDetails ? '<div class="action-role">Conseillé</div>' : ''}
+          ${action.hint && showChoiceDetails ? `<div class="action-hint">${escapeHtml(action.hint)}</div>` : ''}
+          ${action.hasItemMetadata && action.itemDetail && showChoiceDetails ? `<div class="action-hint">${escapeHtml(action.itemDetail)}</div>` : ''}
+          ${facts.length && showChoiceDetails ? `<div class="action-facts">${facts.map(([label, value]) => `<span class="action-fact">${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('')}</div>` : ''}
         </button>`;
     }
 

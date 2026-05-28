@@ -97,7 +97,7 @@ function Is-RepoConfigured {
 
 function Normalize-Version {
     param([string]$Text)
-    if ([string]::IsNullOrWhiteSpace($Text)) { return "0.0.0" }
+    if ([string]::IsNullOrWhiteSpace($Text)) { return "0.00.00" }
     return ($Text.Trim() -replace '^v','')
 }
 
@@ -116,7 +116,7 @@ function Compare-VersionText {
 function Get-LocalVersion {
     $versionFile = Join-Path $InstallDir "version.txt"
     if (Test-Path $versionFile) { return Normalize-Version (Get-Content $versionFile -Raw) }
-    return "0.0.0"
+    return "0.00.00"
 }
 
 function Get-LatestRelease {
@@ -456,8 +456,9 @@ function Start-GameExecutable {
             }
         }
         elseif ($UseTerminalWrapper) {
-            $command = "chcp 65001 >nul & `"$ExecutablePath`""
-            Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $command) -WorkingDirectory $workingDir | Out-Null
+            $safeExecutablePath = $ExecutablePath -replace "'", "''"
+            $command = "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(`$false); [Console]::InputEncoding = [System.Text.UTF8Encoding]::new(`$false); `$OutputEncoding = [Console]::OutputEncoding; chcp 65001 > `$null; & '$safeExecutablePath'"
+            Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $command) -WorkingDirectory $workingDir | Out-Null
         }
         else {
             Start-Process -FilePath $ExecutablePath -WorkingDirectory $workingDir | Out-Null

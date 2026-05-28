@@ -361,23 +361,23 @@ namespace
 
     std::string inferSpecializedTitle(const std::string& specializedView)
     {
-        if (specializedView == "inventory") return "Vue inventaire";
-        if (specializedView == "equipment") return "Vue équipement";
-        if (specializedView == "potions") return "Vue potions";
-        if (specializedView == "shop") return "Vue boutique";
-        if (specializedView == "exploration") return "Vue exploration";
-        if (specializedView == "quest") return "Vue quêtes";
-        if (specializedView == "progression") return "Vue progression";
-        if (specializedView == "catalog") return "Vue catalogue";
-        if (specializedView == "activity") return "Vue activités";
-        if (specializedView == "session") return "Vue session";
-        if (specializedView == "creation") return "Vue création";
-        if (specializedView == "post_combat") return "Vue après-combat";
-        if (specializedView == "save") return "Vue sauvegarde";
-        if (specializedView == "death") return "Vue mort";
-        if (specializedView == "altered_data") return "Vue données altérées";
-        if (specializedView == "combat") return "Vue combat";
-        return "Vue menu";
+        if (specializedView == "inventory") return "Inventaire";
+        if (specializedView == "equipment") return "Équipement";
+        if (specializedView == "potions") return "Potions";
+        if (specializedView == "shop") return "Boutique";
+        if (specializedView == "exploration") return "Exploration";
+        if (specializedView == "quest") return "Quêtes";
+        if (specializedView == "progression") return "Progression";
+        if (specializedView == "catalog") return "Catalogue";
+        if (specializedView == "activity") return "Activités";
+        if (specializedView == "session") return "Session";
+        if (specializedView == "creation") return "Création";
+        if (specializedView == "post_combat") return "Après-combat";
+        if (specializedView == "save") return "Sauvegarde";
+        if (specializedView == "death") return "Mort";
+        if (specializedView == "altered_data") return "Données altérées";
+        if (specializedView == "combat") return "Combat";
+        return "Menu";
     }
 
     std::string inferSpecializedHint(const std::string& specializedView)

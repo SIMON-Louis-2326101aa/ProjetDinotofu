@@ -225,6 +225,9 @@ public:
     // EN: refreshLevelAndIdentitySkills declares or implements a focused behavior used by this module.
     // FR: refreshLevelAndIdentitySkills déclare ou implémente un comportement précis utilisé par ce module.
     void refreshLevelAndIdentitySkills();
+    // EN: refreshCareerSkillProgress unlocks passive skills from long-term play statistics.
+    // FR: refreshCareerSkillProgress débloque des passifs selon les statistiques durables du personnage.
+    void refreshCareerSkillProgress();
     void setLoadedSkillState(
         const std::vector<std::string>& passiveSkills,
         const std::vector<std::string>& activeSkills,

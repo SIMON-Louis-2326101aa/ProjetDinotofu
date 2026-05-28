@@ -101,6 +101,285 @@ namespace
         return description;
     }
 
+    std::string toLowerForDialogue(std::string text)
+    {
+        std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return text;
+    }
+
+    bool textContainsAny(const std::string& text, const std::vector<std::string>& needles)
+    {
+        for (const std::string& needle : needles)
+        {
+            if (text.find(needle) != std::string::npos)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool looksMindlessForDialogue(const Monster& monster)
+    {
+        const std::string text = toLowerForDialogue(monster.getName() + " " + monster.getType());
+        return textContainsAny(text, {
+            "zombie",
+            "squelette",
+            "ossement",
+            "cadavre",
+            "carcasse",
+            "automate",
+            "golem",
+            "tourelle"
+        });
+    }
+
+    bool raceCanSpeakForDialogue(Race race)
+    {
+        switch (race)
+        {
+            case Race::Humain:
+            case Race::SemiHumain:
+            case Race::Elfe:
+            case Race::ElfeNoir:
+            case Race::Nain:
+            case Race::Gnome:
+            case Race::Halfelin:
+            case Race::Tieffelin:
+            case Race::Aasimar:
+            case Race::Kitsune:
+            case Race::Fee:
+            case Race::SemiDragon:
+            case Race::Gobelin:
+            case Race::Hobgobelin:
+            case Race::Orc:
+            case Race::Demon:
+            case Race::Ange:
+            case Race::Dragon:
+            case Race::Draconide:
+            case Race::Esprit:
+            case Race::Aberration:
+            case Race::AnomalieArcanique:
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    std::string languageFamilyForMonsterRace(Race race)
+    {
+        switch (race)
+        {
+            case Race::Gobelin:
+            case Race::Hobgobelin:
+                return "gobelin";
+            case Race::Orc:
+                return "orc";
+            case Race::Demon:
+            case Race::Tieffelin:
+                return "infernal";
+            case Race::Dragon:
+            case Race::Draconide:
+            case Race::SemiDragon:
+                return "draconique";
+            case Race::Elfe:
+            case Race::ElfeNoir:
+            case Race::Fee:
+            case Race::Kitsune:
+            case Race::Esprit:
+                return "sylvain";
+            case Race::Ange:
+            case Race::Aasimar:
+                return "céleste";
+            case Race::Aberration:
+            case Race::AnomalieArcanique:
+                return "anormal";
+            default:
+                return "commun";
+        }
+    }
+
+    std::string languageFamilyForPlayerRace(CharacterRace race)
+    {
+        switch (race)
+        {
+            case CharacterRace::Orc:
+                return "orc";
+            case CharacterRace::Demon:
+            case CharacterRace::Tiefling:
+                return "infernal";
+            case CharacterRace::HalfDragon:
+                return "draconique";
+            case CharacterRace::Elf:
+            case CharacterRace::DarkElf:
+            case CharacterRace::Fairy:
+            case CharacterRace::Kitsune:
+                return "sylvain";
+            case CharacterRace::Aasimar:
+                return "céleste";
+            default:
+                return "commun";
+        }
+    }
+
+    bool playerUnderstandsMonsterRace(const Player& player, Race monsterRace)
+    {
+        const std::string monsterLanguage = languageFamilyForMonsterRace(monsterRace);
+        if (monsterLanguage == "commun")
+        {
+            return true;
+        }
+
+        const std::string playerLanguage = languageFamilyForPlayerRace(player.getRace());
+        if (playerLanguage == monsterLanguage)
+        {
+            return true;
+        }
+
+        // FR: certaines proximités de lore donnent assez de bases pour comprendre le ton et les mots simples.
+        // EN: some lore-adjacent races understand enough simple wording to make the line readable.
+        return (playerLanguage == "commun" && (monsterLanguage == "sylvain" || monsterLanguage == "céleste"));
+    }
+
+    std::string foreignDialogueLineForRace(Race race, Random& random)
+    {
+        const std::string language = languageFamilyForMonsterRace(race);
+
+        if (language == "gobelin")
+        {
+            return random.between(1, 2) == 1 ? "\"Grik tak narok ! Skree val !\"" : "\"Rakka-til ! Nosh griba !\"";
+        }
+        if (language == "orc")
+        {
+            return random.between(1, 2) == 1 ? "\"Urg drah kor. Mak'thar !\"" : "\"Gor ash muk !\"";
+        }
+        if (language == "infernal")
+        {
+            return random.between(1, 2) == 1 ? "\"Vel'khara noss tiren...\"" : "\"Shaal ven dorakh.\"";
+        }
+        if (language == "draconique")
+        {
+            return random.between(1, 2) == 1 ? "\"Tharun vek siira.\"" : "\"Kraav nor elthar.\"";
+        }
+        if (language == "sylvain")
+        {
+            return random.between(1, 2) == 1 ? "\"Leth aen silva, mori.\"" : "\"Elyn thar vae.\"";
+        }
+        if (language == "céleste")
+        {
+            return random.between(1, 2) == 1 ? "\"Aurel na venia.\"" : "\"Lum aster, solenne.\"";
+        }
+        if (language == "anormal")
+        {
+            return random.between(1, 2) == 1 ? "\"// voix non conforme // sujet observé //\"" : "\"La phrase se plie avant d'atteindre tes oreilles.\"";
+        }
+
+        return "\"...\"";
+    }
+
+    std::string understoodDialogueLineForRace(Race race, Random& random)
+    {
+        if (race == Race::Gobelin || race == Race::Hobgobelin)
+        {
+            return random.between(1, 2) == 1
+                ? "\"Tu as l'air d'avoir une bourse et peu d'amis. Mauvaise combinaison.\""
+                : "\"On prend les vivants, les sacs, puis on discute du reste.\"";
+        }
+        if (race == Race::Orc)
+        {
+            return random.between(1, 2) == 1
+                ? "\"Tiens ta ligne. Si tu recules, je le verrai.\""
+                : "\"Un bon combat vaut mieux qu'une longue excuse.\"";
+        }
+        if (race == Race::Demon)
+        {
+            return random.between(1, 2) == 1
+                ? "\"Ta peur fait plus de bruit que ton arme.\""
+                : "\"Approche. Les pactes les plus courts sont les plus honnêtes.\"";
+        }
+        if (race == Race::Dragon || race == Race::Draconide || race == Race::SemiDragon)
+        {
+            return random.between(1, 2) == 1
+                ? "\"Chaque pas de plus sera gravé dans tes os.\""
+                : "\"Je respecte le courage. Je punis l'arrogance.\"";
+        }
+        if (race == Race::Esprit || race == Race::AnomalieArcanique || race == Race::Aberration)
+        {
+            return random.between(1, 2) == 1
+                ? "\"Tu entres dans une histoire qui ne t'a pas encore choisi.\""
+                : "\"Ton nom tremble dans la marge du monde.\"";
+        }
+
+        return random.between(1, 2) == 1
+            ? "\"Pas un pas de plus. Les problèmes commencent toujours comme ça.\""
+            : "\"Rentre chez toi pendant que tu as encore assez de jambes pour le faire.\"";
+    }
+
+    const Monster* pickDialogueCandidateFromWave(const EnemyCombatQueue& wave, Random& random)
+    {
+        std::vector<const Monster*> candidates;
+
+        for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+        {
+            const Monster& monster = wave.getActiveEnemy(i);
+            if (raceCanSpeakForDialogue(monster.getRace()) && !looksMindlessForDialogue(monster))
+            {
+                candidates.push_back(&monster);
+            }
+        }
+
+        for (int i = 0; i < wave.getWaitingEnemyCount(); ++i)
+        {
+            const Monster& monster = wave.getWaitingEnemy(i);
+            if (raceCanSpeakForDialogue(monster.getRace()) && !looksMindlessForDialogue(monster))
+            {
+                candidates.push_back(&monster);
+            }
+        }
+
+        if (candidates.empty())
+        {
+            return nullptr;
+        }
+
+        return candidates[static_cast<std::size_t>(random.between(0, static_cast<int>(candidates.size()) - 1))];
+    }
+
+    void displayEncounterDialogue(const Player& player, const EnemyCombatQueue& wave, Random& random, const std::string& screenIdPrefix)
+    {
+        const Monster* speaker = pickDialogueCandidateFromWave(wave, random);
+        if (speaker == nullptr)
+        {
+            return;
+        }
+
+        const bool understood = playerUnderstandsMonsterRace(player, speaker->getRace());
+        const std::string language = languageFamilyForMonsterRace(speaker->getRace());
+        std::vector<std::string> lines;
+        lines.push_back(speaker->getName() + " s'avance assez pour parler avant que le combat ne commence vraiment.");
+
+        if (understood)
+        {
+            lines.push_back(understoodDialogueLineForRace(speaker->getRace(), random));
+            lines.push_back("Tu comprends les mots. Le ton, lui, ne laisse pas beaucoup de place à la négociation.");
+        }
+        else
+        {
+            lines.push_back(foreignDialogueLineForRace(speaker->getRace(), random));
+            lines.push_back("Langue probable : " + language + ". Tu ne comprends pas les mots, mais l'intention hostile passe très bien.");
+        }
+
+        MessageScreen::show(
+            "DIALOGUE D'INTRODUCTION",
+            screenIdPrefix + ".enemy_dialogue",
+            lines,
+            false
+        );
+    }
+
+
     // EN: recordWaveEncountersInBestiary declares or implements a focused behavior used by this module.
     // FR: recordWaveEncountersInBestiary déclare ou implémente un comportement précis utilisé par ce module.
     void recordWaveEncountersInBestiary(const EnemyCombatQueue& wave)
@@ -302,6 +581,7 @@ void MonsterPveMode::run(
 
     WaveCombatSystem::displayFrontLineArrival(wave);
     recordWaveEncountersInBestiary(wave);
+    displayEncounterDialogue(player, wave, random, "pve.encounter");
 
     CombatGroup enemyFrontPreview = CombatGroupBuilder::buildSideFromWave(
         wave,
@@ -572,6 +852,7 @@ bool MonsterPveMode::runExplorationWave(
 
     WaveCombatSystem::displayFrontLineArrival(wave);
     recordWaveEncountersInBestiary(wave);
+    displayEncounterDialogue(player, wave, random, "exploration.wave");
 
     CombatGroup enemyFrontPreview = CombatGroupBuilder::buildSideFromWave(
         wave,
@@ -1371,6 +1652,7 @@ void MonsterPveMode::runTeam(
 
     WaveCombatSystem::displayFrontLineArrival(wave);
     recordWaveEncountersInBestiary(wave);
+    displayEncounterDialogue(leader, wave, random, "pve.coop");
 
     std::vector<int> initialHp;
     std::vector<CoopContribution> contributions(party.size());

@@ -38,6 +38,10 @@ namespace
         {
             std::cout << "    " << option.getHint() << std::endl;
         }
+
+        // FR: espace visuel entre deux choix pour éviter le bloc compact illisible en terminal.
+        // EN: keep a small visual gap between options so terminal menus stay readable.
+        std::cout << std::endl;
     }
 }
 

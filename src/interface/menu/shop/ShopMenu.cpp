@@ -433,6 +433,97 @@ namespace
         });
     }
 
+
+    std::vector<std::string> chooseVendorTalkLines(ShopType type)
+    {
+        std::vector<std::string> lines;
+
+        if (type == ShopType::MonsterMaterial)
+        {
+            lines.push_back(chooseRandomLine({
+                "Le vendeur aligne trois griffes sur le comptoir : deux sont utiles, la troisième est probablement juste là pour impressionner les débutants.",
+                "Il explique que les bons composants ne sentent pas toujours bon, mais que les composants trop propres mentent souvent.",
+                "Il conseille de noter quelle créature a donné quoi : dans ce métier, confondre une dent et une écaille finit rarement bien."
+            }));
+            lines.push_back("Rumeur : certaines carcasses réagissent mieux si le coup final n'a pas broyé la matière intéressante.");
+            return lines;
+        }
+
+        if (type == ShopType::Material || type == ShopType::Blacksmith)
+        {
+            lines.push_back(chooseRandomLine({
+                "Le vendeur parle densité, veines de métal et réparations comme si tout le monde rêvait de dormir dans une forge.",
+                "Il te montre une fissure presque invisible : selon lui, c'est là que la moitié des aventuriers perdent leur argent avant de perdre leur bras.",
+                "Le comptoir porte des marques de test. Visiblement, taper sur les choses reste une méthode scientifique locale."
+            }));
+            lines.push_back("Conseil : une arme qui frappe une matière trop dure s'use plus vite, même si elle gagne le duel sur le moment.");
+            return lines;
+        }
+
+        if (type == ShopType::Weapon)
+        {
+            lines.push_back(chooseRandomLine({
+                "Le vendeur affirme qu'une arme choisie au hasard est une arme qui cherche déjà son prochain propriétaire.",
+                "Il parle équilibre, portée et rythme. Puis il regarde ton inventaire avec la tête de quelqu'un qui a envie de tout ranger lui-même.",
+                "Il rappelle qu'une lame héroïque mérite un minimum de respect, et idéalement quelqu'un qui sait de quel côté elle coupe."
+            }));
+            lines.push_back("Rumeur : quelques combattants apprennent de nouvelles techniques seulement après avoir vraiment insisté avec le même type d'arme.");
+            return lines;
+        }
+
+        if (type == ShopType::Armor)
+        {
+            lines.push_back(chooseRandomLine({
+                "L'armurier assure que la meilleure armure est celle qu'on remarque avant que le monstre ne remarque tes côtes.",
+                "Il décrit des protections légères, lourdes, souples, puis soupire en disant que personne ne lit les faiblesses avant le premier impact.",
+                "Il tape sur une épaulière : le bruit est rassurant, ou inquiétant, selon ton optimisme."
+            }));
+            lines.push_back("Conseil : encaisser un choc trop violent peut abîmer l'équipement, même si les PV tiennent encore debout.");
+            return lines;
+        }
+
+        if (type == ShopType::Plant || type == ShopType::Alchemist || type == ShopType::Consumable)
+        {
+            lines.push_back(chooseRandomLine({
+                "L'herboriste parle de dosage avec le calme d'une personne qui a déjà vu quelqu'un boire une potion offensive par curiosité.",
+                "L'alchimiste explique que la couleur d'une fiole ne garantit rien, sauf peut-être la couleur de la panique après usage.",
+                "Le vendeur conseille de garder une potion de soin rapide séparée du reste. Il dit ça comme si la survie aimait les raccourcis propres."
+            }));
+            lines.push_back("Rumeur : certains mélanges rares demanderont des plantes et matériaux que les boutiques ne vendent presque jamais ensemble.");
+            return lines;
+        }
+
+        if (type == ShopType::Library)
+        {
+            lines.push_back(chooseRandomLine({
+                "La bibliothécaire baisse la voix : certains grimoires ne lancent pas un sort, ils apprennent au lecteur à le mériter.",
+                "Elle range un livre qui semble respirer. Elle prétend que c'est normal. Le livre n'a pas l'air d'accord.",
+                "Elle rappelle que connaître une faiblesse avant de frapper coûte moins cher qu'apprendre la même chose avec son visage."
+            }));
+            lines.push_back("Conseil : le bestiaire et les renseignements doivent rester la base des recommandations tactiques, sinon c'est juste de la triche mal habillée.");
+            return lines;
+        }
+
+        if (type == ShopType::BlackMarket)
+        {
+            lines.push_back(chooseRandomLine({
+                "Le contact parle de stocks oubliés, d'objets sans facture et de garanties qui s'évaporent dès qu'on les relit.",
+                "Il te conseille de ne pas poser de questions, ce qui est exactement le genre de phrase qui donne envie d'en poser douze.",
+                "Il glisse que les meilleurs prix ne sont pas toujours en or. Parfois, ils coûtent surtout en problèmes futurs."
+            }));
+            lines.push_back("Rumeur : quelques marchandises spéciales n'apparaissent qu'après des combats ou événements assez rares.");
+            return lines;
+        }
+
+        lines.push_back(chooseRandomLine({
+            "Le marchand parle de clients, de routes et de taxes avec l'énergie de quelqu'un qui a survécu à pire qu'un monstre : la comptabilité.",
+            "Il dit que le monde change vite après chaque combat, surtout les prix, les stocks et les excuses des vendeurs.",
+            "Il te conseille de ne pas tout acheter juste parce que ça brille. Puis il ajoute que si tu le fais quand même, il ne jugera pas trop fort."
+        }));
+        lines.push_back("Conseil : reviens après quelques combats, les étals peuvent changer et certaines occasions ne restent pas longtemps.");
+        return lines;
+    }
+
     MenuScreen buildShopConfirmationScreen(
         const std::string& title,
         const std::string& screenId,
@@ -589,6 +680,13 @@ namespace
         const std::string vendorName = getVendorNameForShop(shop.getType());
         MenuScreen screen("DISCUSSION", "shop.vendor_talk");
         screen.addLine(vendorName + " prend quelques secondes pour parler boutique, rumeurs et besoins du moment.");
+
+        const std::vector<std::string> talkLines = chooseVendorTalkLines(shop.getType());
+        for (const std::string& line : talkLines)
+        {
+            screen.addLine(line);
+        }
+
         screen.addLine("S'il a une vraie demande, utilise l'option de quêtes juste en dessous.");
         screen.addOption(0, "Continuer", "", true, "shop.vendor_talk.continue");
         return screen;
