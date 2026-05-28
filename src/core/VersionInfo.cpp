@@ -9,7 +9,7 @@
 
 std::string VersionInfo::currentVersion()
 {
-    return "2.00.10";
+    return "2.00.11";
 }
 
 std::string VersionInfo::recreateRecommendedBeforeVersion()

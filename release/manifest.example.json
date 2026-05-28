@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.00.10",
-  "releaseTag": "v2.00.10",
+  "version": "2.00.11",
+  "releaseTag": "v2.00.11",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "V2.00.10 : correction du format x.yy.zz, choix de difficulté lisibles, Incarner déplacé au bon écran personnage, liste unique de choix et saisie replacée dans la vue."
+  "notes": "V2.00.11 : nettoyage des cartes sauvegarde/création en IG, retrait du filtre, bouton Retour isolé, choix nombreux compactés et bouton Continuer réparé après difficulté/race/création."
 }

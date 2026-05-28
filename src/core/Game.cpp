@@ -669,6 +669,7 @@ void Game::chooseDifficulty()
     Console::clear();
 
     MenuScreen confirmation("DIFFICULTÉ VALIDÉE", "character.creation.difficulty.confirmation");
+    confirmation.setContinueInput("Valide pour continuer vers la suite de création.");
     confirmation.addLine("Difficulté sélectionnée : " + getDifficultyName() + ".");
     confirmation.addLine("Ton départ sera ajusté en conséquence.");
 
@@ -728,6 +729,7 @@ void Game::choosePlayerRace()
     Console::clear();
 
     MenuScreen confirmation("RACE VALIDÉE", "character.creation.race.confirmation");
+    confirmation.setContinueInput("Valide pour continuer vers le choix de classe.");
     confirmation.addLine("Race sélectionnée : " + characterRaceToText(selectedRace) + ".");
     confirmation.addLine(RaceCatalog::getShortDescription(selectedRace));
 
@@ -814,6 +816,7 @@ void Game::choosePlayerClass()
     Console::clear();
 
     MenuScreen confirmation("PERSONNAGE GRAVÉ", "character.creation.summary");
+    confirmation.setContinueInput("Valide pour entrer dans le jeu avec ce personnage.");
     confirmation.addLine(playerName + ", tu as choisi : " + characterRaceToText(selectedRace) + " / " + chosenClass.getName() + ".");
     confirmation.addLine("Famille : " + ClassCatalog::getClassCategoryNameByChoice(categoryChoice) + ".");
     confirmation.addLine("Difficulté : " + getDifficultyName() + ".");

@@ -305,7 +305,7 @@
 
 
     /* =========================================================
-       CLEAN PLAYER VIEW V2.00.10 LAYOUT
+       CLEAN PLAYER VIEW V2.00.11 LAYOUT
        ========================================================= */
     body { min-height: 100vh; }
     .game-header {
@@ -458,6 +458,15 @@
     }
     .player-main-box .quick-row.compact-actions { grid-template-columns: 1fr; }
     .submenu-actions { grid-template-columns: 1fr; }
+
+    .simple-topbar { justify-content: flex-start; }
+    .choice-back-row { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.65rem; }
+    .choice-back-row .action-card { width: 100%; border-color: rgba(123,183,255,0.32); background: rgba(123,183,255,0.07); }
+    .action-card.compact { padding: 0.58rem 0.65rem; min-height: 2.75rem; }
+    .action-card.compact .action-main { align-items: center; font-size: 0.92rem; }
+    .action-section.compact-many { padding: 0.6rem; }
+    .actions.compact-many { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 0.42rem; }
+    .choices-section h3 { margin-bottom: 0.45rem; }
     .submenu-actions button { width: 100%; text-align: left; }
     .info-card-source,
     .notice-meta,
@@ -500,10 +509,6 @@
           <button id="tabBoth" class="secondary active">Vue complète</button>
           <button id="tabMenu" class="secondary">Menu</button>
           <button id="tabCombat" class="secondary">Combat</button>
-        </div>
-        <div class="menu-filter" title="Filtre uniquement l'affichage IG, pas la saisie envoyée au jeu.">
-          <input id="menuFilterInput" type="text" placeholder="Filtrer l'écran : potion, arme, quête..." autocomplete="off" />
-          <button id="clearMenuFilterButton" class="ghost" type="button">Effacer</button>
         </div>
       </div>
 
@@ -915,20 +920,15 @@
     }
 
     function getMenuFilterNeedle() {
-      return normalizeSearchText(state.menuFilter || '');
+      return '';
     }
 
     function matchesMenuFilter(...values) {
-      const needle = getMenuFilterNeedle();
-      if (!needle) return true;
-      const haystack = normalizeSearchText(values.filter(value => value !== null && value !== undefined).join(' '));
-      return haystack.includes(needle);
+      return true;
     }
 
     function renderMenuFilterNotice(total, visible, label) {
-      const needle = String(state.menuFilter || '').trim();
-      if (!needle) return '';
-      return `<div class="filter-notice">Filtre IG actif : <strong>${escapeHtml(needle)}</strong> · ${escapeHtml(visible)} / ${escapeHtml(total)} ${escapeHtml(label)} visible(s). Le joueur peut toujours taper un numero valide dans la saisie.</div>`;
+      return '';
     }
 
     function isTargetSelectionMenu(menu) {
@@ -1466,26 +1466,36 @@
       return `
         <div class="action-section ${escapeHtml(group)}">
           <div class="action-section-head"><span>${escapeHtml(meta.title)}</span><span>${escapeHtml(actions.length)} · ${escapeHtml(meta.hint)}</span></div>
-          <div class="actions ${escapeHtml(group)}">${actions.map(renderAction).join('')}</div>
+          <div class="actions ${escapeHtml(group)}">${actions.map(action => renderAction(action)).join('')}</div>
         </div>`;
     }
 
     function renderActionsByGroup(actions) {
-      if (!Array.isArray(actions) || actions.length === 0) return '<div class="empty">Aucune action.</div>';
+      if (!Array.isArray(actions) || actions.length === 0) return '<div class="empty">Aucun choix disponible.</div>';
       const availableActions = actions.filter(action => action && action.enabled !== false && !isUtilityAction(action));
-      const filteredActions = availableActions
+      if (!availableActions.length) return '<div class="empty">Aucun choix disponible pour cet écran.</div>';
+
+      const sortedActions = availableActions
         .filter(action => matchesMenuFilter(action.actionDisplayLabel, action.label, action.hint, action.actionId, action.role, action.group))
         .sort((a, b) => Number(a.number ?? 9999) - Number(b.number ?? 9999));
-      if (!availableActions.length) return '<div class="empty">Aucun choix disponible pour cet écran.</div>';
-      if (!filteredActions.length) return renderMenuFilterNotice(availableActions.length, 0, 'action') + '<div class="empty">Aucune action ne correspond au filtre IG.</div>';
-      return `
-        ${renderMenuFilterNotice(availableActions.length, filteredActions.length, 'action')}
-        <div class="action-sections">
-          <div class="action-section main">
-            <div class="action-section-head"><span>Liste unique des choix</span><span>${escapeHtml(filteredActions.length)} · numéros non réinitialisés</span></div>
-            <div class="actions main">${filteredActions.map(renderAction).join('')}</div>
-          </div>
-        </div>`;
+
+      if (!sortedActions.length) return '<div class="empty">Aucun choix disponible.</div>';
+
+      const backActions = sortedActions.filter(isBackAction);
+      const backNumbers = new Set(backActions.map(action => String(action.number ?? '')));
+      const mainActions = sortedActions.filter(action => !backNumbers.has(String(action.number ?? '')));
+      const compact = mainActions.length >= 10;
+      const backHtml = backActions.length
+        ? `<div class="choice-back-row">${backActions.map(action => renderAction(action, { compact: true, backTop: true })).join('')}</div>`
+        : '';
+      const mainHtml = mainActions.length
+        ? `<div class="action-section main ${compact ? 'compact-many' : ''}">
+            <div class="action-section-head"><span>Choix disponibles</span><span>${escapeHtml(mainActions.length)} choix · numéros conservés</span></div>
+            <div class="actions main ${compact ? 'compact-many' : ''}">${mainActions.map(action => renderAction(action, { compact })).join('')}</div>
+          </div>`
+        : '';
+
+      return `<div class="action-sections">${backHtml}${mainHtml}</div>`;
     }
 
     function renderContinueControl(snapshot) {
@@ -1502,8 +1512,9 @@
     function renderMainViewActions(snapshot) {
       if (!snapshot || snapshot.type !== 'menu') return '';
       if (snapshot.inputMode === 'continue') return renderContinueControl(snapshot);
+      if (snapshot.inputMode !== 'choice') return '';
       const actions = Array.isArray(snapshot.actions) ? snapshot.actions.filter(action => !isUtilityAction(action)) : [];
-      return `<div class="section"><h3>Réponse / choix disponibles</h3>${renderActionsByGroup(actions)}</div>`;
+      return `<div class="section choices-section"><h3>Choix disponibles</h3>${renderActionsByGroup(actions)}</div>`;
     }
 
     function renderPlayerActions(snapshot) {
@@ -1756,8 +1767,10 @@
     }
 
 
-    function renderAction(action) {
+    function renderAction(action, options = {}) {
       const enabled = action.enabled !== false;
+      const compact = Boolean(options.compact);
+      const backTop = Boolean(options.backTop);
       const locked = !canSendInputNow();
       const disabledAttribute = enabled && !locked ? '' : ' disabled';
       const role = action.role || (action.dangerous ? 'danger' : 'normal');
@@ -1778,16 +1791,17 @@
         action.itemReward ? ['Gain', action.itemReward] : null,
         action.itemOwner ? ['Lien', action.itemOwner] : null
       ].filter(Boolean) : [];
+      const displayLabel = action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim();
       return `
-        <button type="button" class="action-card ${styleClass} ${recommendedClass} ${itemClass} ${importantClass} ${enabled && !locked ? '' : 'disabled'}" data-choice="${escapeHtml(action.number)}" data-base-enabled="${enabled ? 'true' : 'false'}" data-action-id="${escapeHtml(action.actionId || '')}" data-action-label="${escapeHtml(action.label || '')}" data-action-display-label="${escapeHtml(action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim())}" data-action-role="${escapeHtml(role)}" data-action-style="${escapeHtml(action.style || '')}" data-action-group="${escapeHtml(action.group || getActionGroup(action))}" data-knowledge-sensitive="${action.knowledgeSensitive ? 'true' : 'false'}" data-recommendation-reason="${escapeHtml(action.recommendationReason || '')}"${disabledAttribute}>
+        <button type="button" class="action-card ${styleClass} ${recommendedClass} ${itemClass} ${importantClass} ${compact ? 'compact' : ''} ${backTop ? 'back-top' : ''} ${enabled && !locked ? '' : 'disabled'}" data-choice="${escapeHtml(action.number)}" data-base-enabled="${enabled ? 'true' : 'false'}" data-action-id="${escapeHtml(action.actionId || '')}" data-action-label="${escapeHtml(action.label || '')}" data-action-display-label="${escapeHtml(displayLabel)}" data-action-role="${escapeHtml(role)}" data-action-style="${escapeHtml(action.style || '')}" data-action-group="${escapeHtml(action.group || getActionGroup(action))}" data-knowledge-sensitive="${action.knowledgeSensitive ? 'true' : 'false'}" data-recommendation-reason="${escapeHtml(action.recommendationReason || '')}"${disabledAttribute}>
           <div class="action-main">
-            <span>${escapeHtml(action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim())}</span>
+            <span>${escapeHtml(displayLabel)}</span>
             <span data-action-status>${!enabled ? 'Bloqué' : (locked ? 'Attente' : 'Envoyer')}</span>
           </div>
-          ${action.recommended ? '<div class="action-role">Conseillé</div>' : ''}
-          ${action.hint ? `<div class="action-hint">${escapeHtml(action.hint)}</div>` : ''}
-          ${action.hasItemMetadata && action.itemDetail ? `<div class="action-hint">${escapeHtml(action.itemDetail)}</div>` : ''}
-          ${facts.length ? `<div class="action-facts">${facts.map(([label, value]) => `<span class="action-fact">${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('')}</div>` : ''}
+          ${action.recommended && !compact ? '<div class="action-role">Conseillé</div>' : ''}
+          ${action.hint && !compact ? `<div class="action-hint">${escapeHtml(action.hint)}</div>` : ''}
+          ${action.hasItemMetadata && action.itemDetail && !compact ? `<div class="action-hint">${escapeHtml(action.itemDetail)}</div>` : ''}
+          ${facts.length && !compact ? `<div class="action-facts">${facts.map(([label, value]) => `<span class="action-fact">${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('')}</div>` : ''}
         </button>`;
     }
 

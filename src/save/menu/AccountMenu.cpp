@@ -29,7 +29,7 @@ namespace
         MenuOptionItemData data;
         data.structured = true;
         data.kind = "save_account";
-        data.section = "Comptes";
+        data.section = "Choix disponibles";
         data.actionType = actionType;
         data.name = name;
         data.detail = detail;
