@@ -54,7 +54,7 @@
       width: min(1480px, calc(100% - 1.5rem));
       margin: 1rem auto 2.5rem;
       display: grid;
-      grid-template-columns: minmax(290px, 360px) 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
       gap: 1rem;
     }
 
@@ -163,6 +163,8 @@
     .action-card.back, .action-card.pagination { background: rgba(255,255,255,0.026); }
     .action-card.danger { border-color: rgba(255,107,107,0.48); background: linear-gradient(180deg, rgba(255,107,107,0.12), rgba(255,255,255,0.018)); }
     .action-card.disabled { color: var(--disabled); opacity: 0.72; cursor: not-allowed; }
+    .answer-panel { display: none; margin-top: 1rem; border-color: rgba(255,179,71,0.22); background: rgba(255,179,71,0.035); }
+    body.needs-manual-input .answer-panel { display: block; }
     .command-grid { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: end; }
     .quick-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.45rem; margin-top: 0.55rem; }
     .suggestion-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
@@ -303,7 +305,7 @@
 
 
     /* =========================================================
-       CLEAN PLAYER VIEW V2.0.09 LAYOUT
+       CLEAN PLAYER VIEW V2.00.10 LAYOUT
        ========================================================= */
     body { min-height: 100vh; }
     .game-header {
@@ -434,24 +436,25 @@
     .queue-list,
     .context-panel { display: none; }
 
-    .player-main-box .input-expectation,
-    .player-main-box .manual-answer-grid,
-    .player-main-box .validation-message,
-    .player-main-box .suggestion-row,
-    .player-main-box #enterButton,
-    .player-main-box #backButton,
-    .player-main-box #clearCommandButton {
+    .answer-panel .input-expectation,
+    .answer-panel .manual-answer-grid,
+    .answer-panel .validation-message,
+    .answer-panel .suggestion-row {
       display: none !important;
     }
 
-    body.needs-manual-input .player-main-box .input-expectation,
-    body.needs-manual-input .player-main-box .manual-answer-grid,
-    body.needs-manual-input .player-main-box .validation-message {
+    body.needs-manual-input .answer-panel .manual-answer-grid,
+    body.needs-manual-input .answer-panel .suggestion-row {
       display: grid !important;
     }
-    body.needs-manual-input .player-main-box .input-expectation,
-    body.needs-manual-input .player-main-box .validation-message {
+    body.needs-manual-input .answer-panel .input-expectation,
+    body.needs-manual-input .answer-panel .validation-message {
       display: block !important;
+    }
+    .answer-panel #enterButton,
+    .answer-panel #backButton,
+    .answer-panel #clearCommandButton {
+      display: none !important;
     }
     .player-main-box .quick-row.compact-actions { grid-template-columns: 1fr; }
     .submenu-actions { grid-template-columns: 1fr; }
@@ -508,13 +511,11 @@
         <section id="menuRoot" class="panel inner-panel"><div class="empty">Aucun menu chargé.</div></section>
         <section id="combatRoot" class="panel inner-panel"><div class="empty">Aucun combat chargé.</div></section>
       </div>
-    </section>
 
-    <aside class="panel player-panel">
-      <section class="player-main-box">
+      <section id="answerPanel" class="panel answer-panel">
         <div class="player-compact-head">
-          <h2>Accès rapides</h2>
-          <span id="submenuStateBadge" class="badge">chargement...</span>
+          <h2>Réponse attendue</h2>
+          <span class="badge warn">saisie demandée</span>
         </div>
         <div id="inputExpectation" class="input-expectation">Aucun écran chargé pour le moment.</div>
 
@@ -525,15 +526,26 @@
 
         <div id="commandValidation" class="validation-message"></div>
         <div id="suggestedCommands" class="suggestion-row" aria-label="Commandes utiles"></div>
+        <div class="quick-row compact-actions">
+          <button id="enterButton" class="secondary">Entrée</button>
+          <button id="backButton" class="secondary">0 Retour</button>
+          <button id="clearCommandButton" class="ghost">Effacer</button>
+        </div>
+      </section>
+    </section>
+
+    <aside class="panel player-panel">
+      <section class="player-main-box">
+        <div class="player-compact-head">
+          <h2>Accès rapides</h2>
+          <span id="submenuStateBadge" class="badge">chargement...</span>
+        </div>
         <details id="utilityDetails" class="utility-details">
           <summary>Menu rapide hors combat</summary>
           <div id="utilityActions" class="submenu-actions" aria-label="Sous-menu rapide"></div>
         </details>
 
         <div class="quick-row compact-actions">
-          <button id="enterButton" class="secondary">Entrée</button>
-          <button id="backButton" class="secondary">0 Retour</button>
-          <button id="clearCommandButton" class="ghost">Effacer</button>
           <button id="forceStopButton" class="ghost">Forcer l'arrêt</button>
         </div>
       </section>
@@ -1003,6 +1015,11 @@
       renderUtilityActions();
       updateCommandValidation();
 
+      const answerPanel = document.getElementById('answerPanel');
+      if (answerPanel && document.body.classList.contains('needs-manual-input') && !state.inputBusy) {
+        answerPanel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+
       const displayOnly = state.lastMenu?.inputMode === 'display';
       const locked = !canSendInputNow();
       const canType = !displayOnly && !combatActive;
@@ -1336,7 +1353,7 @@
             return `
               <div class="focus-card ${available ? 'available clickable' : ''} ${locked ? 'locked' : ''}"${choiceAttrs}>
                 <div>
-                  <div class="focus-card-title">${available ? `<span class="focus-card-choice">${escapeHtml(card.actionNumber)}</span>` : ''}<span>${escapeHtml(card.label || card.id || 'Bloc')}</span></div>
+                  <div class="focus-card-title"><span>${escapeHtml(card.label || card.id || 'Bloc')}</span></div>
                   <div class="focus-card-detail">${escapeHtml(card.detail || '')}</div>
                 </div>
               </div>`;
@@ -1456,18 +1473,19 @@
     function renderActionsByGroup(actions) {
       if (!Array.isArray(actions) || actions.length === 0) return '<div class="empty">Aucune action.</div>';
       const availableActions = actions.filter(action => action && action.enabled !== false && !isUtilityAction(action));
-      const filteredActions = availableActions.filter(action => matchesMenuFilter(action.actionDisplayLabel, action.label, action.hint, action.actionId, action.role, action.group));
+      const filteredActions = availableActions
+        .filter(action => matchesMenuFilter(action.actionDisplayLabel, action.label, action.hint, action.actionId, action.role, action.group))
+        .sort((a, b) => Number(a.number ?? 9999) - Number(b.number ?? 9999));
       if (!availableActions.length) return '<div class="empty">Aucun choix disponible pour cet écran.</div>';
       if (!filteredActions.length) return renderMenuFilterNotice(availableActions.length, 0, 'action') + '<div class="empty">Aucune action ne correspond au filtre IG.</div>';
-      const grouped = { main: [], navigation: [], danger: [] };
-      for (const action of filteredActions) {
-        const group = getActionGroup(action);
-        const safeGroup = group === 'locked' ? 'main' : group;
-        if (!grouped[safeGroup]) grouped[safeGroup] = [];
-        grouped[safeGroup].push(action);
-      }
-      const order = ['main', 'navigation', 'danger'];
-      return `${renderMenuFilterNotice(availableActions.length, filteredActions.length, 'action')}<div class="action-sections">${order.map(group => renderActionGroup(group, grouped[group] || [])).join('')}</div>`;
+      return `
+        ${renderMenuFilterNotice(availableActions.length, filteredActions.length, 'action')}
+        <div class="action-sections">
+          <div class="action-section main">
+            <div class="action-section-head"><span>Liste unique des choix</span><span>${escapeHtml(filteredActions.length)} · numéros non réinitialisés</span></div>
+            <div class="actions main">${filteredActions.map(renderAction).join('')}</div>
+          </div>
+        </div>`;
     }
 
     function renderContinueControl(snapshot) {
@@ -1485,14 +1503,7 @@
       if (!snapshot || snapshot.type !== 'menu') return '';
       if (snapshot.inputMode === 'continue') return renderContinueControl(snapshot);
       const actions = Array.isArray(snapshot.actions) ? snapshot.actions.filter(action => !isUtilityAction(action)) : [];
-      const hasSpecializedContent = snapshot.specializedView && snapshot.specializedView !== 'generic' && Array.isArray(snapshot.focusCards) && snapshot.focusCards.length > 0;
-
-      if (hasSpecializedContent) {
-        const navigation = renderNavigationOnlyActions(actions);
-        return navigation ? `<div class="section"><h3>Navigation</h3>${navigation}</div>` : '';
-      }
-
-      return `<div class="section"><h3>Choix disponibles</h3>${renderActionsByGroup(actions)}</div>`;
+      return `<div class="section"><h3>Réponse / choix disponibles</h3>${renderActionsByGroup(actions)}</div>`;
     }
 
     function renderPlayerActions(snapshot) {

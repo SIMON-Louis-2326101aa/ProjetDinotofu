@@ -841,6 +841,11 @@ namespace
 
         const std::string text = snapshot.screenId + " " + action.actionId + " " + action.label;
 
+        if (snapshot.specializedView == "creation" || snapshot.specializedView == "save")
+        {
+            return action.hasItemMetadata || action.label.find('|') != std::string::npos;
+        }
+
         if (containsAny(text, {".select", "select", "article", "stock", "client", "guild", "guilde", "quest", "quête", "quete"}))
         {
             return true;
@@ -1267,10 +1272,40 @@ namespace
         }
         else if (snapshot.specializedView == "save")
         {
-            addFocusCard(snapshot, "save.create", "Créer", "Créer ou préparer un nouveau personnage.", {"créer", "creer", "nouveau", "create", "new"});
-            addFocusCard(snapshot, "save.play", "Incarner", "Charger le personnage sélectionné.", {"incarner", "play", "charger", "select"});
-            addFocusCard(snapshot, "save.transfer", "Transfert", "Exporter, cloner ou transférer une maîtrise.", {"transfer", "transfert", "extraire", "clone"});
-            addFocusCard(snapshot, "save.delete", "Suppression", "Action irréversible à confirmer.", {"supprimer", "delete", "irréversible", "irreversible"});
+            const bool isAccountList = containsAny(snapshot.screenId, {"save.accounts.list"});
+            const bool isAccountActions = containsAny(snapshot.screenId, {"save.accounts.actions"});
+            const bool isCharacterList = containsAny(snapshot.screenId, {"save.characters.list"});
+            const bool isCharacterActions = containsAny(snapshot.screenId, {"save.characters.actions"});
+
+            if (isCharacterActions)
+            {
+                addFocusCard(snapshot, "save.play", "Incarner", "Charger le personnage sélectionné.", {"incarner", "play", "charger"});
+                addFocusCard(snapshot, "save.transfer", "Transfert", "Exporter, cloner ou transférer une maîtrise.", {"transfer", "transfert", "extraire", "clone"});
+                addFocusCard(snapshot, "save.delete", "Suppression", "Action irréversible à confirmer.", {"supprimer", "delete", "irréversible", "irreversible"});
+            }
+            else if (isCharacterList)
+            {
+                addFocusCard(snapshot, "save.character_select", "Sélectionner", "Choisir un personnage existant avant de proposer Incarner.", {"save.characters.select", "personnage"});
+                addFocusCard(snapshot, "save.create", "Créer", "Créer ou préparer un nouveau personnage.", {"créer", "creer", "nouveau", "create", "new"});
+            }
+            else if (isAccountActions)
+            {
+                addFocusCard(snapshot, "save.account_login", "Se connecter", "Ouvrir le compte sélectionné.", {"save.accounts.login", "connecter", "connexion"});
+                addFocusCard(snapshot, "save.transfer", "Transfert", "Exporter ou importer les données du compte.", {"transfer", "transfert", "extraire", "importer", "exporter"});
+                addFocusCard(snapshot, "save.delete", "Suppression", "Action irréversible à confirmer.", {"supprimer", "delete", "irréversible", "irreversible"});
+            }
+            else if (isAccountList)
+            {
+                addFocusCard(snapshot, "save.account_select", "Compte existant", "Sélectionner un compte avant les actions de compte.", {"save.accounts.select", "compte"});
+                addFocusCard(snapshot, "save.account_create", "Créer compte", "Créer un nouveau compte.", {"save.accounts.create", "créer", "creer", "nouveau", "create", "new"});
+                addFocusCard(snapshot, "save.account_import", "Importer", "Restaurer un compte exporté.", {"save.accounts.import", "importer"});
+            }
+            else
+            {
+                addFocusCard(snapshot, "save.create", "Créer", "Créer ou préparer une sauvegarde.", {"créer", "creer", "nouveau", "create", "new"});
+                addFocusCard(snapshot, "save.transfer", "Transfert", "Exporter, importer ou cloner une maîtrise.", {"transfer", "transfert", "extraire", "clone", "importer", "exporter"});
+                addFocusCard(snapshot, "save.delete", "Suppression", "Action irréversible à confirmer.", {"supprimer", "delete", "irréversible", "irreversible"});
+            }
         }
         else if (snapshot.specializedView == "death")
         {

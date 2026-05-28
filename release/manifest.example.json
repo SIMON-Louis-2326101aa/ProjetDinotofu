@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.0.09",
-  "releaseTag": "v2.0.09",
+  "version": "2.00.10",
+  "releaseTag": "v2.00.10",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "V2.0.09 : affinage de l’interface graphique, menu rapide déroulable à droite, bouton Continuer, cartes contextuelles limitées aux choix disponibles et affichage moins technique."
+  "notes": "V2.00.10 : correction du format x.yy.zz, choix de difficulté lisibles, Incarner déplacé au bon écran personnage, liste unique de choix et saisie replacée dans la vue."
 }

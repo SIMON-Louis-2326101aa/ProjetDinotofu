@@ -18,7 +18,7 @@ warn() {
 
 # Version consistency across code, README and release metadata.
 CURRENT_VERSION="$(./scripts/get_version.sh)"
-[[ "${CURRENT_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Version courante invalide : ${CURRENT_VERSION}"
+[[ "${CURRENT_VERSION}" =~ ^[0-9]+\.[0-9]{2}\.[0-9]{2}$ ]] || fail "Version courante invalide : ${CURRENT_VERSION} (format attendu : x.yy.zz)"
 grep -q "V${CURRENT_VERSION}" READMEFR.md || fail "READMEFR.md ne mentionne pas la version courante V${CURRENT_VERSION}."
 grep -q "V${CURRENT_VERSION}" README.md || fail "README.md ne mentionne pas la version courante V${CURRENT_VERSION}."
 grep -q "\"version\": \"${CURRENT_VERSION}\"" release/manifest.example.json || fail "release/manifest.example.json ne mentionne pas la version ${CURRENT_VERSION}."

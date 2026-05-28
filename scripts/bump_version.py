@@ -6,7 +6,7 @@ Usage:
   python3 scripts/bump_version.py patch
   python3 scripts/bump_version.py minor
   python3 scripts/bump_version.py major
-  python3 scripts/bump_version.py 1.33.00
+  python3 scripts/bump_version.py 2.00.10
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def parse_version(text: str) -> tuple[int, int, int]:
 
 
 def format_version(parts: tuple[int, int, int]) -> str:
-    return f"{parts[0]}.{parts[1]}.{parts[2]:02d}"
+    return f"{parts[0]}.{parts[1]:02d}.{parts[2]:02d}"
 
 
 def main() -> int:
