@@ -15,6 +15,32 @@
 #include <string>
 #include <vector>
 
+namespace
+{
+    bool isOutOfCombatUtilityOption(const MenuOption& option)
+    {
+        const std::string& actionId = option.getActionId();
+        return actionId.rfind("utility.", 0) == 0;
+    }
+
+    void renderOptionLine(const MenuOption& option)
+    {
+        std::string label = option.getLabel();
+
+        if (!option.isEnabled())
+        {
+            label = "[◘ " + label + "]";
+        }
+
+        MenuFrame::option(option.getNumber(), label);
+
+        if (!option.getHint().empty())
+        {
+            std::cout << "    " << option.getHint() << std::endl;
+        }
+    }
+}
+
 void TerminalInterface::renderMenuScreen(const MenuScreen& screen, bool showPrompt)
 {
     GuiDebugExporter::exportMenu(screen);
@@ -41,20 +67,26 @@ void TerminalInterface::renderMenuScreen(const MenuScreen& screen, bool showProm
         MenuFrame::separator();
     }
 
+    std::vector<MenuOption> utilityOptions;
+
     for (const MenuOption& option : screen.getOptions())
     {
-        std::string label = option.getLabel();
-
-        if (!option.isEnabled())
+        if (isOutOfCombatUtilityOption(option))
         {
-            label = "[◘ " + label + "]";
+            utilityOptions.push_back(option);
+            continue;
         }
 
-        MenuFrame::option(option.getNumber(), label);
+        renderOptionLine(option);
+    }
 
-        if (!option.getHint().empty())
+    if (!utilityOptions.empty())
+    {
+        MenuFrame::separator();
+        std::cout << "Sous-menu hors combat" << std::endl;
+        for (const MenuOption& option : utilityOptions)
         {
-            std::cout << "    " << option.getHint() << std::endl;
+            renderOptionLine(option);
         }
     }
 

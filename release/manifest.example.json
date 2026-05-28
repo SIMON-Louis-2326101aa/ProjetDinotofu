@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.0.04",
-  "releaseTag": "v2.0.04",
+  "version": "2.0.07",
+  "releaseTag": "v2.0.07",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "Palier V2 : V2.0.04 : launcher plus propre après mise à jour, terminal Windows UTF-8 renforcé et interface graphique expérimentale simplifiée côté joueur."
+  "notes": "V2.0.07 : correction launcher IG Windows sans terminaux fantômes, démarrage py/jeu caché renforcé, bouton Retour IG sécurisé et encodage terminal renforcé."
 }

@@ -196,19 +196,39 @@ start_gui_preview() {
     return 0
 }
 
-launch_terminal() {
+find_terminal_executable() {
     if [[ -x "${INSTALL_DIR}/output/Dinotofu" ]]; then
-        cd "$INSTALL_DIR"
-        exec "${INSTALL_DIR}/output/Dinotofu"
+        printf '%s\n' "${INSTALL_DIR}/output/Dinotofu"
+        return 0
     fi
     if [[ -x "${INSTALL_DIR}/Dinotofu" ]]; then
+        printf '%s\n' "${INSTALL_DIR}/Dinotofu"
+        return 0
+    fi
+    return 1
+}
+
+launch_terminal() {
+    local executable
+    if executable="$(find_terminal_executable)"; then
         cd "$INSTALL_DIR"
-        exec "${INSTALL_DIR}/Dinotofu"
+        exec "$executable"
     fi
 
     echo "Impossible de trouver l'executable terminal Dinotofu." >&2
     echo "Chemins attendus : ${INSTALL_DIR}/output/Dinotofu ou ${INSTALL_DIR}/Dinotofu" >&2
     exit 1
+}
+
+launch_hidden_gui_backend() {
+    local executable
+    if ! executable="$(find_terminal_executable)"; then
+        return 1
+    fi
+
+    cd "$INSTALL_DIR"
+    nohup "$executable" >"${INSTALL_DIR}/gui_debug/game_stdout.log" 2>"${INSTALL_DIR}/gui_debug/game_stderr.log" &
+    return 0
 }
 
 if [[ "$LAUNCH_MODE" != "terminal" ]]; then
@@ -224,7 +244,8 @@ if [[ "$LAUNCH_MODE" != "terminal" ]]; then
     done
 
     if start_gui_preview; then
-        launch_terminal
+        launch_hidden_gui_backend || launch_terminal
+        exit 0
     fi
 
     if [[ "$LAUNCH_MODE" == "gui" ]]; then

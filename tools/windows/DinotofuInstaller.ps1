@@ -228,6 +228,24 @@ function Test-ShortcutCreated {
     return $true
 }
 
+function Ensure-LauncherVbs {
+    param([string]$TargetPath)
+
+    $content = @(
+        'Option Explicit',
+        'Dim shell, fso, scriptDir, ps1, command',
+        'Set shell = CreateObject("WScript.Shell")',
+        'Set fso = CreateObject("Scripting.FileSystemObject")',
+        'scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)',
+        'ps1 = fso.BuildPath(scriptDir, "DinotofuLauncher.ps1")',
+        'command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & ps1 & """ -Mode Auto"',
+        'shell.CurrentDirectory = scriptDir',
+        'shell.Run command, 0, False'
+    ) -join "`r`n"
+
+    $content | Set-Content -Path $TargetPath -Encoding ASCII
+}
+
 function Ensure-LauncherCmd {
     param(
         [string]$TargetPath,
@@ -237,11 +255,16 @@ function Ensure-LauncherCmd {
     if ($Mode -eq "Auto") {
         $content = @(
             "@echo off",
-            "chcp 65001 >nul",
             "setlocal",
             "set PYTHONUTF8=1",
             "set PYTHONIOENCODING=utf-8",
-            "start `"`" /min powershell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode Auto",
+            "set LANG=C.UTF-8",
+            "set LC_ALL=C.UTF-8",
+            "if exist `"%~dp0Lancer-Dinotofu.vbs`" (",
+            "    wscript.exe `"%~dp0Lancer-Dinotofu.vbs`"",
+            ") else (",
+            "    start `"`" /b powershell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode Auto",
+            ")",
             "exit /b"
         ) -join "`r`n"
     }
@@ -252,7 +275,9 @@ function Ensure-LauncherCmd {
             "setlocal",
             "set PYTHONUTF8=1",
             "set PYTHONIOENCODING=utf-8",
-            "powershell -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode $Mode"
+            "set LANG=C.UTF-8",
+            "set LC_ALL=C.UTF-8",
+            "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode $Mode"
         ) -join "`r`n"
     }
 
@@ -337,10 +362,12 @@ if (-not (Test-Path $launcherPath)) {
 }
 
 if (Test-Path $launcherPath) {
-    $normalLauncherEntry = Join-Path $InstallDir "Lancer-Dinotofu.cmd"
+    $normalLauncherEntry = Join-Path $InstallDir "Lancer-Dinotofu.vbs"
+    $normalLauncherCmd = Join-Path $InstallDir "Lancer-Dinotofu.cmd"
     $terminalLauncherEntry = Join-Path $InstallDir "Lancer-Dinotofu-Terminal.cmd"
 
-    if (-not (Test-Path $normalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $normalLauncherEntry -Mode "Auto" }
+    if (-not (Test-Path $normalLauncherEntry)) { Ensure-LauncherVbs -TargetPath $normalLauncherEntry }
+    if (-not (Test-Path $normalLauncherCmd)) { Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto" }
     if (-not (Test-Path $terminalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal" }
 
     Write-Step "Creation des deux raccourcis bureau"
@@ -352,10 +379,10 @@ if (Test-Path $launcherPath) {
     Create-DesktopShortcut -TargetPath $normalLauncherEntry -ShortcutPath $shortcutGuiPath -IconPath $iconPath
     Create-DesktopShortcut -TargetPath $terminalLauncherEntry -ShortcutPath $shortcutTerminalPath -IconPath $iconPath
 
-    $guiShortcutOk = Test-ShortcutCreated -ShortcutPath $shortcutGuiPath -ExpectedTargetFile "Lancer-Dinotofu.cmd"
+    $guiShortcutOk = Test-ShortcutCreated -ShortcutPath $shortcutGuiPath -ExpectedTargetFile "Lancer-Dinotofu.vbs"
     $terminalShortcutOk = Test-ShortcutCreated -ShortcutPath $shortcutTerminalPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd"
 
-    if ($guiShortcutOk) { Write-Host "Raccourci verifie : $shortcutGuiPath -> Lancer-Dinotofu.cmd" }
+    if ($guiShortcutOk) { Write-Host "Raccourci verifie : $shortcutGuiPath -> Lancer-Dinotofu.vbs" }
     if ($terminalShortcutOk) { Write-Host "Raccourci verifie : $shortcutTerminalPath -> Lancer-Dinotofu-Terminal.cmd" }
     if (-not $guiShortcutOk -or -not $terminalShortcutOk) {
         Write-Warning "Installation terminee, mais au moins un raccourci bureau doit etre verifie manuellement."

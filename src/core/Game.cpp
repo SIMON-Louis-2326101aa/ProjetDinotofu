@@ -46,6 +46,73 @@
 
 namespace
 {
+    constexpr int UtilityChoiceGuardian = 90;
+    constexpr int UtilityChoiceInventory = 91;
+    constexpr int UtilityChoiceQuickSave = 92;
+    constexpr int UtilityChoiceSaveQuit = 93;
+    constexpr int UtilityChoiceAlteredData = 94;
+
+    MenuOptionItemData makeUtilityItemData(
+        const Player& player,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = ""
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "utility";
+        itemData.section = "Sous-menu hors combat";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.owner = player.getName();
+        itemData.progress = "Niveau " + std::to_string(player.getLevel());
+        itemData.important = actionType == "save" || actionType == "guardian" || status == "Altéré";
+        return itemData;
+    }
+
+    std::string guardianAnswerFor(const std::string& rawText)
+    {
+        std::string normalized;
+        normalized.reserve(rawText.size());
+
+        for (unsigned char character : rawText)
+        {
+            normalized += static_cast<char>(std::tolower(character));
+        }
+
+        if (normalized.empty())
+        {
+            return "Le gardien attend quelques mots avant de répondre.";
+        }
+
+        if (normalized.find("bug") != std::string::npos ||
+            normalized.find("bloque") != std::string::npos ||
+            normalized.find("erreur") != std::string::npos)
+        {
+            return "Le gardien sent une fissure. Reviens à l'écran précédent, sauvegarde si possible, puis force l'arrêt seulement si le monde ne répond vraiment plus.";
+        }
+
+        if (normalized.find("aide") != std::string::npos ||
+            normalized.find("perdu") != std::string::npos ||
+            normalized.find("quoi faire") != std::string::npos)
+        {
+            return "Regarde les choix affichés à l'instant présent. Les routes disponibles sont celles que le monde accepte maintenant, pas celles qui appartiennent à un autre écran.";
+        }
+
+        if (normalized.find("mort") != std::string::npos ||
+            normalized.find("boss") != std::string::npos ||
+            normalized.find("combat") != std::string::npos)
+        {
+            return "Un combat se gagne avant le premier coup : équipement, potions, lecture des indices, puis décision nette quand le tour arrive.";
+        }
+
+        return "Le gardien t'entend. Ces mots ne modifient pas encore le monde, mais ils restent au bord de la faille.";
+    }
+
     std::string normalizeValueName(std::string value)
     {
         std::string out;
@@ -1129,7 +1196,6 @@ void Game::chooseGameMode()
     {
         MenuScreen screen("ACTIVITÉS", "activity.main");
         screen.addSubtitle("Choisis la prochaine route de " + mainPlayer.getName() + ".");
-        screen.addOption(0, "Sauvegarder et quitter", "Écrire la progression puis fermer Dinotofu.", true, "activity.save_quit");
         screen.addOption(1, "Histoire", "La grande route du monde, encore scellée par les archives.", true, "activity.story");
         screen.addOption(2, "Combats", "PvE monstres, boss, groupes d'adversaires et JcJ.", true, "activity.combat");
         screen.addOption(3, "Exploration", "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues.", true, "activity.exploration");
@@ -1137,8 +1203,9 @@ void Game::chooseGameMode()
         screen.addOption(5, "Boutiques / lieux visitables", "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux.", true, "activity.locations");
         screen.addOption(6, "PNJ notables", "Parler aux clients et personnages disponibles sans passer par une boutique.", true, "activity.npcs");
         screen.addOption(7, "Échange / don", "Transférer des ressources entre personnages compatibles.", true, "activity.exchange");
-        screen.addOption(8, "Menu après-combat / gestion", "Ouvre le récap, l'équipement, les potions, les statistiques et les raccourcis de gestion.", true, "activity.post_combat");
+        screen.addOption(8, "Gestion après-combat", "Ouvre le récap, les statistiques, les lieux, les quêtes et les actions entre deux combats.", true, "activity.post_combat");
         screen.addOption(9, "Information sur toutes les options", "Ouvre un guide clair sur les routes possibles.", true, "activity.info");
+        addOutOfCombatUtilityOptions(screen, true, true);
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(
             screen,
@@ -1147,16 +1214,9 @@ void Game::chooseGameMode()
 
         Console::clear();
 
-        if (choice == 0)
+        if (handleOutOfCombatUtilityChoice(choice, true))
         {
-            saveCurrentProgress("Sauvegarder et quitter");
-            MessageScreen::show(
-                "SAUVEGARDE",
-                "activity.save_quit.done",
-                {"Progression sauvegardée. Fermeture de Dinotofu."},
-                false
-            );
-            std::exit(0);
+            continue;
         }
 
         if (choice == 8)
@@ -1565,6 +1625,142 @@ void Game::launchChallengeBoard()
     QuestMenu::openQuestHub(mainPlayer);
 }
 
+void Game::addOutOfCombatUtilityOptions(MenuScreen& screen, bool inventoryAvailable, bool saveAvailable) const
+{
+    screen.addOption(
+        UtilityChoiceGuardian,
+        "Parler au gardien / saisie libre",
+        "Écrire une phrase, un choix ou une commande sans afficher de liste cachée.",
+        true,
+        "utility.guardian",
+        makeUtilityItemData(mainPlayer, "guardian", "Gardien du monde", "Saisie libre hors combat.")
+    );
+
+    screen.addOption(
+        UtilityChoiceInventory,
+        "Inventaire",
+        "Gérer objets, équipement et potions hors combat.",
+        inventoryAvailable,
+        "utility.inventory",
+        makeUtilityItemData(mainPlayer, "open", "Inventaire", "Gestion hors combat.", inventoryAvailable ? "Disponible" : "Indisponible")
+    );
+
+    screen.addOption(
+        UtilityChoiceQuickSave,
+        "Sauvegarder",
+        "Sauvegarder sans quitter la partie.",
+        saveAvailable,
+        "utility.quick_save",
+        makeUtilityItemData(mainPlayer, "save", "Sauvegarder", "Sauvegarde rapide.", saveAvailable ? "Disponible" : "Indisponible")
+    );
+
+    screen.addOption(
+        UtilityChoiceSaveQuit,
+        "Sauvegarder et quitter",
+        "Sauvegarder puis fermer Dinotofu.",
+        saveAvailable,
+        "utility.save_quit",
+        makeUtilityItemData(mainPlayer, "save", "Sauvegarder et quitter", "Fermeture propre après sauvegarde.", saveAvailable ? "Disponible" : "Indisponible")
+    );
+
+    if (mainPlayer.isAlteredByCheats())
+    {
+        screen.addOption(
+            UtilityChoiceAlteredData,
+            "Données altérées",
+            "Voir les altérations connues de ce personnage.",
+            true,
+            "utility.altered_data",
+            makeUtilityItemData(mainPlayer, "inspect", "Données altérées", "Informations déjà révélées pour ce personnage.", "Altéré")
+        );
+    }
+}
+
+bool Game::handleOutOfCombatUtilityChoice(int choice, bool inventoryAvailable)
+{
+    if (choice == UtilityChoiceGuardian)
+    {
+        openGuardianInputMenu();
+        return true;
+    }
+
+    if (choice == UtilityChoiceInventory)
+    {
+        if (!inventoryAvailable)
+        {
+            MessageScreen::show(
+                "INVENTAIRE",
+                "utility.inventory.unavailable",
+                {"L'inventaire n'est pas disponible sur cet écran."}
+            );
+            return true;
+        }
+
+        InventoryMenu::open(mainPlayer);
+        saveCurrentProgress("Inventaire hors combat");
+        Console::clear();
+        return true;
+    }
+
+    if (choice == UtilityChoiceQuickSave)
+    {
+        saveCurrentProgress("Sauvegarde rapide hors combat");
+        Console::waitForEnter();
+        Console::clear();
+        return true;
+    }
+
+    if (choice == UtilityChoiceSaveQuit)
+    {
+        saveCurrentProgress("Sauvegarder et quitter");
+        MessageScreen::show(
+            "SAUVEGARDE",
+            "utility.save_quit.done",
+            {"Progression sauvegardée. Fermeture de Dinotofu."},
+            false
+        );
+        std::exit(0);
+    }
+
+    if (choice == UtilityChoiceAlteredData && mainPlayer.isAlteredByCheats())
+    {
+        CheatManager::openAlteredDataMenu(mainPlayer, selectedDifficulty);
+        saveCurrentProgress("Données altérées");
+        return true;
+    }
+
+    return false;
+}
+
+void Game::openGuardianInputMenu()
+{
+    MenuScreen screen("GARDIEN DU MONDE", "utility.guardian.input");
+    screen.addSubtitle("Saisie libre hors combat");
+    screen.addLine("Écris ce que tu veux transmettre au bord du monde.");
+    screen.addLine("Le gardien répondra si ce n'est pas une commande reconnue.");
+    screen.setTextInput("Choix, texte ou commande", "Saisie libre", true, 0, 120);
+
+    TerminalInterface::renderMenuScreen(screen);
+
+    std::string input;
+    Console::readLine(input, true);
+    Console::clear();
+
+    if (CheatManager::tryActivateHiddenCode(mainPlayer, selectedDifficulty, input))
+    {
+        saveCurrentProgress("Saisie du gardien");
+        Console::waitForEnter();
+        Console::clear();
+        return;
+    }
+
+    MessageScreen::show(
+        "GARDIEN DU MONDE",
+        "utility.guardian.reply",
+        {guardianAnswerFor(input)}
+    );
+}
+
 // EN: openPostCombatMenu declares or implements a focused behavior used by this module.
 // FR: openPostCombatMenu déclare ou implémente un comportement précis utilisé par ce module.
 bool Game::openPostCombatMenu()
@@ -1574,55 +1770,18 @@ bool Game::openPostCombatMenu()
     while (menuOpen)
     {
         const bool hasLastCombatRecap = lastCombatRecap.available;
-        int maxChoice = PostCombatMenu::getMaxChoice(mainPlayer, hasLastCombatRecap);
+        MenuScreen screen = PostCombatMenu::buildScreen(mainPlayer, hasLastCombatRecap);
+        addOutOfCombatUtilityOptions(screen, true, true);
 
-        PostCombatMenu::display(mainPlayer, hasLastCombatRecap);
-
-        std::string input;
-        Console::readLine(input, true);
-
-        std::istringstream stream(input);
-        int choice = -1;
-        char extraCharacter;
-
-        bool isCleanNumber = false;
-
-        if (stream >> choice)
-        {
-            isCleanNumber = !(stream >> extraCharacter);
-        }
-
-        if (!isCleanNumber)
-        {
-            Console::clear();
-
-            if (CheatManager::tryActivateHiddenCode(mainPlayer, selectedDifficulty, input))
-            {
-                saveCurrentProgress("Altération cachée");
-                Console::waitForEnter();
-                Console::clear();
-            }
-            else
-            {
-                MessageScreen::show(
-                    "ENTRÉE INVALIDE",
-                    "post_combat.invalid_input",
-                    {"Entrée invalide."}
-                );
-            }
-
-            continue;
-        }
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Veuillez choisir une option affichée."
+        );
 
         Console::clear();
 
-        if (choice < 0 || choice > maxChoice)
+        if (handleOutOfCombatUtilityChoice(choice, true))
         {
-            MessageScreen::show(
-                "CHOIX INVALIDE",
-                "post_combat.choice_out_of_range",
-                {"Veuillez choisir une option affichée."}
-            );
             continue;
         }
 
@@ -1641,76 +1800,50 @@ bool Game::openPostCombatMenu()
         }
         else if (choice == 3)
         {
-            InventoryMenu::open(mainPlayer);
-            saveCurrentProgress("Inventaire après-combat");
-            Console::clear();
-        }
-        else if (choice == 4)
-        {
             AttributeMenu::displayLockedDevelopmentMessage();
             Console::waitForEnter();
             Console::clear();
         }
-        else if (choice == 5)
-        {
-            saveCurrentProgress("Sauvegarde rapide");
-            Console::waitForEnter();
-            Console::clear();
-        }
-        else if (choice == 6)
-        {
-            saveCurrentProgress("Sauvegarder et quitter");
-            MessageScreen::show(
-                "SAUVEGARDE",
-                "post_combat.save_quit.done",
-                {"Progression sauvegardée. Fermeture de Dinotofu."}
-            );
-            return false;
-        }
-        else if (choice == 7)
+        else if (choice == 4)
         {
             QuestMenu::consultOnly(mainPlayer);
         }
-        else if (choice == 8)
+        else if (choice == 5)
         {
             QuestMenu::openLocations(mainPlayer);
             saveCurrentProgress("Lieux visitables");
         }
-        else if (choice == 9)
+        else if (choice == 6)
         {
             QuestMenu::openNotableNpcMenu(mainPlayer);
             saveCurrentProgress("PNJ notables");
         }
-        else if (choice == 10)
+        else if (choice == 7)
         {
             openExchangeMenu();
             saveCurrentProgress("Échange entre personnages");
         }
-        else if (choice == 11)
+        else if (choice == 8)
         {
             mainPlayer.displaySkillProgress();
             Console::waitForEnter();
             Console::clear();
         }
-        else if (choice == 12)
+        else if (choice == 9)
         {
             mainPlayer.displaySimpleEquipment();
             Console::waitForEnter();
             Console::clear();
         }
-        else if (choice == 13)
+        else if (choice == 10)
         {
             displayLastCombatRecap();
-        }
-        else if (choice == 14 && mainPlayer.isAlteredByCheats())
-        {
-            CheatManager::openAlteredDataMenu(mainPlayer, selectedDifficulty);
-            saveCurrentProgress("Données altérées");
         }
     }
 
     return false;
 }
+
 
 
 // EN: openExchangeMenu declares or implements a focused behavior used by this module.

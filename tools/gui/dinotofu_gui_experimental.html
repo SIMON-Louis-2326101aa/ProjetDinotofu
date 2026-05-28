@@ -303,7 +303,7 @@
 
 
     /* =========================================================
-       PLAYER-FIRST V2.0.04 LAYOUT
+       CLEAN PLAYER VIEW V2.0.07 LAYOUT
        ========================================================= */
     body { min-height: 100vh; }
     .game-header {
@@ -312,7 +312,7 @@
       justify-content: space-between;
       gap: 1rem;
       padding: 1rem 1.25rem;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid var(--line);
       background: rgba(10, 15, 27, 0.96);
       position: sticky;
       top: 0;
@@ -321,23 +321,23 @@
     .game-header h1 { margin: 0; }
     .game-shell {
       width: min(1720px, calc(100vw - 1.25rem));
-      margin: 0.65rem auto;
+      margin: 0.65rem auto 1.25rem;
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+      grid-template-columns: minmax(0, 1fr);
       gap: 0.75rem;
       align-items: start;
     }
-    .output-panel,
-    .player-panel { min-height: calc(100vh - 6.2rem); }
-    .output-panel { padding: 0.75rem; }
+    .output-panel { min-height: calc(100vh - 17.5rem); padding: 0.75rem; }
     .player-panel {
       position: sticky;
-      top: 5.5rem;
-      max-height: calc(100vh - 6.2rem);
-      overflow: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
+      bottom: 0.55rem;
+      z-index: 8;
+      display: grid;
+      gap: 0.65rem;
+      padding: 0.75rem;
+      min-height: auto;
+      background: rgba(13, 18, 30, 0.97);
+      backdrop-filter: blur(14px);
     }
     .inner-panel { min-width: 0; }
     .simple-topbar {
@@ -352,34 +352,59 @@
     .player-main-box,
     .guardian-box,
     .advanced-box {
-      border: 1px solid var(--border);
+      border: 1px solid var(--line);
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.035);
       padding: 0.85rem;
     }
     .player-main-box h2 { margin-top: 0; }
-    .manual-answer-grid { margin-top: 0.7rem; }
-    .player-actions {
-      margin-top: 0.75rem;
-      display: grid;
-      gap: 0.65rem;
+    .player-compact-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      margin-bottom: 0.55rem;
     }
-    .player-actions .action-sections { display: grid; gap: 0.65rem; }
-    .player-actions .action-section { margin: 0; }
-    .player-actions .actions { grid-template-columns: 1fr; }
-    .player-actions .action-card {
-      min-height: auto;
-      padding: 0.7rem;
-    }
+    .player-compact-head h2 { margin: 0; font-size: 1.05rem; }
+    .manual-answer-grid { margin-top: 0.55rem; }
+    .player-actions { display: none; }
     .compact-actions { margin-top: 0.65rem; }
     .full-width { width: 100%; }
+    .utility-details {
+      margin-top: 0.65rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0.6rem;
+      background: rgba(255, 255, 255, 0.025);
+    }
+    .utility-details > summary {
+      cursor: pointer;
+      color: var(--text);
+      font-weight: 850;
+      list-style: none;
+    }
+    .utility-details > summary::-webkit-details-marker { display: none; }
+    .submenu-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 0.45rem;
+      margin-top: 0.65rem;
+    }
+    .submenu-actions button { min-height: 2.55rem; }
+    .guardian-box details > summary {
+      cursor: pointer;
+      color: var(--accent);
+      font-weight: 850;
+      list-style: none;
+    }
+    .guardian-box details > summary::-webkit-details-marker { display: none; }
     .guardian-panel { margin-top: 0.65rem; }
     .guardian-panel textarea {
       width: 100%;
       min-height: 82px;
       resize: vertical;
       border-radius: 12px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--line);
       background: #07101e;
       color: var(--text);
       padding: 0.7rem;
@@ -401,22 +426,18 @@
     }
     .guardian-message.player { border-color: rgba(96, 165, 250, 0.45); }
     .guardian-message.npc { border-color: rgba(34, 197, 94, 0.34); }
-    .advanced-box summary,
-    .cheat-details summary { cursor: pointer; color: var(--accent); font-weight: 700; }
-    .advanced-box > * + * { margin-top: 0.75rem; }
-    .advanced-box .status { margin-top: 0.55rem; }
-    .cheat-list { max-height: 280px; }
+    .advanced-box { display: none; }
+    .cheat-list { display: none; }
+    .action-id,
     .input-contract,
     .last-input,
-    .queue-list { display: none; }
-    @media (max-width: 1120px) {
-      .game-shell { grid-template-columns: 1fr; }
-      .player-panel {
-        position: static;
-        max-height: none;
-        min-height: auto;
-      }
+    .queue-list,
+    .context-panel { display: none; }
+    .debug-hidden { display: none !important; }
+    @media (max-width: 760px) {
       .output-panel { min-height: auto; }
+      .player-panel { position: static; }
+      .command-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -451,70 +472,63 @@
 
     <aside class="panel player-panel">
       <section class="player-main-box">
-        <h2>Actions du joueur</h2>
+        <div class="player-compact-head">
+          <h2>Sous-menu hors combat</h2>
+          <span id="submenuStateBadge" class="badge">chargement...</span>
+        </div>
         <div id="inputExpectation" class="input-expectation">Aucun écran chargé pour le moment.</div>
 
         <div class="command-grid manual-answer-grid">
-          <input id="commandInput" type="text" placeholder="Écris ta réponse ici..." autocomplete="off" />
+          <input id="commandInput" type="text" placeholder="Choix ou texte..." autocomplete="off" />
           <button id="sendCommandButton">Envoyer</button>
         </div>
 
         <div id="commandValidation" class="validation-message"></div>
-        <div id="suggestedCommands" class="suggestion-row" aria-label="Commandes suggérées"></div>
-        <div id="playerActions" class="player-actions"><div class="empty">Les choix apparaîtront ici.</div></div>
+        <div id="suggestedCommands" class="suggestion-row" aria-label="Commandes utiles"></div>
+        <details id="utilityDetails" class="utility-details" open>
+          <summary>Actions hors combat disponibles</summary>
+          <div id="utilityActions" class="submenu-actions" aria-label="Sous-menu rapide"></div>
+        </details>
 
         <div class="quick-row compact-actions">
           <button id="enterButton" class="secondary">Entrée</button>
           <button id="backButton" class="secondary">0 Retour</button>
           <button id="clearCommandButton" class="ghost">Effacer</button>
+          <button id="forceStopButton" class="ghost">Forcer l'arrêt</button>
         </div>
       </section>
 
       <section class="guardian-box">
-        <button id="guardianToggle" class="secondary full-width" type="button">Parler au gardien du monde</button>
-        <div id="guardianPanel" class="guardian-panel" hidden>
-          <p class="hint">Cette zone ne modifie pas encore la partie : le gardien répond automatiquement pour donner une ambiance et garder un espace d'écriture propre.</p>
-          <textarea id="guardianInput" rows="3" placeholder="Écris quelque chose au gardien..."></textarea>
-          <div class="quick-row">
-            <button id="guardianSend" type="button">Envoyer au gardien</button>
-            <button id="guardianClear" class="ghost" type="button">Vider</button>
+        <details id="guardianDetails">
+          <summary>Parler au gardien du monde</summary>
+          <div id="guardianPanel" class="guardian-panel">
+            <p class="hint">Espace d'écriture libre : tu peux parler au gardien, ou transmettre cette saisie au monde quand l'écran actif l'accepte.</p>
+            <textarea id="guardianInput" rows="3" placeholder="Choix, texte ou commande..."></textarea>
+            <div class="quick-row">
+              <button id="guardianSend" type="button">Envoyer au gardien</button>
+              <button id="guardianSendGame" class="secondary" type="button">Transmettre au monde</button>
+              <button id="guardianClear" class="ghost" type="button">Vider</button>
+            </div>
+            <div id="guardianMessages" class="guardian-messages"><div class="guardian-message npc">Le gardien observe silencieusement le fil du monde.</div></div>
           </div>
-          <div id="guardianMessages" class="guardian-messages"><div class="guardian-message npc">Le gardien observe silencieusement le fil du monde.</div></div>
-        </div>
+        </details>
       </section>
 
-      <details class="advanced-box">
-        <summary>Options avancées / secours</summary>
-        <div class="button-row">
-          <button id="liveButton">Live auto</button>
-          <button id="menuButton" class="secondary">Menu JSON</button>
-          <button id="combatButton" class="secondary">Combat JSON</button>
-          <button id="reloadButton" class="ghost">Recharger</button>
-        </div>
-
-        <label for="jsonFile">Charger un JSON manuellement</label>
+      <section class="advanced-box debug-hidden" aria-hidden="true">
+        <button id="liveButton">Live auto</button>
+        <button id="menuButton" class="secondary">Menu JSON</button>
+        <button id="combatButton" class="secondary">Combat JSON</button>
+        <button id="reloadButton" class="ghost">Recharger</button>
         <input id="jsonFile" type="file" accept="application/json,.json" />
-
-        <div class="quick-row">
-          <button id="clearQueueButton" class="ghost">Vider file IG</button>
-        </div>
-
-        <div class="toggle-grid">
-          <label class="toggle-line"><input id="safeQueueToggle" type="checkbox" checked /> Bloquer les doubles envois tant qu'une commande attend encore.</label>
-          <label class="toggle-line"><input id="keyboardShortcutToggle" type="checkbox" checked /> Raccourcis clavier 0-9, Entrée, PageUp/PageDown.</label>
-        </div>
-
-        <details class="cheat-details">
-          <summary>Codes cachés / debug</summary>
-          <p class="input-note">Certains codes marquent définitivement le personnage comme Altéré.</p>
-          <input id="cheatSearch" class="cheat-search" type="text" placeholder="Filtrer les codes : boss, gold, dev..." autocomplete="off" />
-          <div id="cheatList" class="cheat-list"><div class="empty">Chargement des codes...</div></div>
-        </details>
-
+        <button id="clearQueueButton" class="ghost">Vider file IG</button>
+        <input id="safeQueueToggle" type="checkbox" checked />
+        <input id="keyboardShortcutToggle" type="checkbox" checked />
+        <input id="cheatSearch" class="cheat-search" type="text" autocomplete="off" />
+        <div id="cheatList" class="cheat-list"><div class="empty">Chargement des codes...</div></div>
         <div id="status" class="status">En attente de JSON...</div>
         <div id="serverStatus" class="status">Serveur local : vérification...</div>
         <div id="liveMeta" class="live-meta"></div>
-      </details>
+      </section>
     </aside>
   </main>
 
@@ -542,16 +556,19 @@
     const cheatSearch = document.getElementById('cheatSearch');
     const cheatList = document.getElementById('cheatList');
     const suggestedCommands = document.getElementById('suggestedCommands');
-    const playerActions = document.getElementById('playerActions');
     const commandValidation = document.getElementById('commandValidation');
     const liveMeta = document.getElementById('liveMeta');
     const menuFilterInput = document.getElementById('menuFilterInput');
     const clearMenuFilterButton = document.getElementById('clearMenuFilterButton');
-    const guardianToggle = document.getElementById('guardianToggle');
+    const utilityActions = document.getElementById('utilityActions');
+    const submenuStateBadge = document.getElementById('submenuStateBadge');
+    const forceStopButton = document.getElementById('forceStopButton');
+    const guardianDetails = document.getElementById('guardianDetails');
     const guardianPanel = document.getElementById('guardianPanel');
     const guardianInput = document.getElementById('guardianInput');
     const guardianSend = document.getElementById('guardianSend');
     const guardianClear = document.getElementById('guardianClear');
+    const guardianSendGame = document.getElementById('guardianSendGame');
     const guardianMessages = document.getElementById('guardianMessages');
     const tabs = {
       both: document.getElementById('tabBoth'),
@@ -560,8 +577,8 @@
     };
 
     const state = {
-      live: false,
-      view: 'both',
+      live: true,
+      view: 'menu',
       lastMenu: null,
       lastCombat: null,
       lastSource: '-',
@@ -661,22 +678,21 @@
     }
 
     function getExpectedPatternLabel(pattern) {
-      if (pattern === 'integer_or_hidden_code') return 'Nombre ou code cache';
+      if (pattern === 'integer_or_hidden_code') return 'Nombre ou texte';
       if (pattern === 'integer_in_range') return 'Nombre dans les limites';
       if (pattern === 'exact_keyword') return 'Mot exact';
       if (pattern === 'empty_enter') return 'Entrée vide';
       if (pattern === 'free_text') return 'Texte libre';
       if (pattern === 'none') return 'Aucune saisie';
-      return pattern || 'Non precise';
+      return pattern || 'Non précisé';
     }
 
     function describeInputMode(snapshot) {
       if (!snapshot || snapshot.type !== 'menu') return 'Aucun menu actif. Utilise le terminal si le jeu attend une saisie invisible ici.';
       const mode = snapshot.inputMode || 'choice';
       const intent = snapshot.inputIntent || '';
-      const category = snapshot.screenCategory ? ' · ' + escapeHtml(snapshot.screenCategory) : '';
       const hint = snapshot.inputHint ? ' — ' + escapeHtml(snapshot.inputHint) : '';
-      if (mode === 'choice') return 'Saisie attendue : <strong>' + escapeHtml(intent || 'choix de menu') + '</strong>' + category + hint;
+      if (mode === 'choice') return 'Saisie attendue : <strong>' + escapeHtml(intent || 'choix de menu') + '</strong>' + hint;
       if (mode === 'text') return 'Saisie attendue : <strong>texte libre</strong>' + hint;
       if (mode === 'quantity') {
         const range = snapshot.hasNumericRange ? ' entre <strong>' + escapeHtml(snapshot.numericMin) + '</strong> et <strong>' + escapeHtml(snapshot.numericMax) + '</strong>' : '';
@@ -737,6 +753,97 @@
       if (!menu || !Array.isArray(menu.actions)) return null;
       const wanted = String(number);
       return menu.actions.find(action => String(action.number ?? '') === wanted) || null;
+    }
+
+    function isCombatContextActive() {
+      const gui = state.lastGuiState || {};
+      const category = String(gui.activeScreenCategory || state.lastMenu?.screenCategory || '').toLowerCase();
+      const kind = String(gui.lastExportKind || '').toLowerCase();
+      const screenId = String(gui.activeScreenId || state.lastMenu?.screenId || '').toLowerCase();
+      const title = String(gui.activeTitle || state.lastMenu?.title || '').toLowerCase();
+      return category.includes('combat') || kind === 'combat' || screenId.includes('combat') || title.includes('combat');
+    }
+
+    function currentVisibleMenuActions() {
+      const menu = state.lastMenu;
+      if (!menu || !Array.isArray(menu.actions)) return [];
+      return menu.actions.filter(action => action && action.enabled !== false);
+    }
+
+    function isBackAction(action) {
+      if (!action) return false;
+      const role = String(action.role || '').toLowerCase();
+      const text = normalizeActionLookupText(action);
+      if (role === 'back') return true;
+      return text.includes('retour') || text.includes('precedent') || text.includes('annuler');
+    }
+
+    function findBackAction() {
+      const directZero = findMenuActionByNumber('0');
+      if (isBackAction(directZero)) return directZero;
+      return currentVisibleMenuActions().find(isBackAction) || null;
+    }
+
+    function hasBackAction() {
+      return Boolean(findBackAction());
+    }
+
+    function canSendEmptyInput() {
+      const menu = state.lastMenu;
+      if (!menu) return false;
+      return menu.inputMode === 'continue' || menu.acceptsEmptyInput === true;
+    }
+
+    function normalizeActionLookupText(action) {
+      return normalizeSearchText([
+        action?.label,
+        action?.actionDisplayLabel,
+        action?.hint,
+        action?.actionId,
+        action?.group,
+        action?.role
+      ].filter(Boolean).join(' '));
+    }
+
+    function findFirstActionMatching(needles) {
+      const normalizedNeedles = needles.map(normalizeSearchText).filter(Boolean);
+      return currentVisibleMenuActions().find(action => {
+        const haystack = normalizeActionLookupText(action);
+        return normalizedNeedles.some(needle => haystack.includes(needle));
+      }) || null;
+    }
+
+    function isUtilityAction(action) {
+      return String(action?.actionId || '').startsWith('utility.');
+    }
+
+    function findUtilityAction(actionId) {
+      return currentVisibleMenuActions().find(action => String(action?.actionId || '') === actionId) || null;
+    }
+
+    function actionToSubmenuButton(kind, label, action) {
+      const enabled = Boolean(action) && !isCombatContextActive() && canSendInputNow();
+      const choice = action?.number ?? '';
+      const display = action?.actionDisplayLabel || `${action?.number ?? ''} - ${action?.label || label}`.trim();
+      return `<button type="button" class="secondary" data-utility-kind="${escapeHtml(kind)}" data-utility-choice="${escapeHtml(choice)}" data-utility-label="${escapeHtml(display)}" ${enabled ? '' : 'disabled'}>${escapeHtml(label)}</button>`;
+    }
+
+    function renderUtilityActions() {
+      if (!utilityActions) return;
+      const guardian = findUtilityAction('utility.guardian');
+      const inventory = findUtilityAction('utility.inventory');
+      const save = findUtilityAction('utility.quick_save');
+      const saveQuit = findUtilityAction('utility.save_quit');
+      const altered = findUtilityAction('utility.altered_data');
+      const disabledReason = isCombatContextActive() ? 'Sous-menu bloqué pendant le combat.' : '';
+      const buttons = [
+        actionToSubmenuButton('guardian', 'Parler au gardien', guardian),
+        actionToSubmenuButton('inventory', 'Inventaire', inventory),
+        actionToSubmenuButton('save', 'Sauvegarder', save),
+        actionToSubmenuButton('save_quit', 'Sauvegarder et quitter', saveQuit)
+      ];
+      if (altered) buttons.push(actionToSubmenuButton('altered', 'Données altérées', altered));
+      utilityActions.innerHTML = buttons.join('') + (disabledReason ? `<div class="input-note">${escapeHtml(disabledReason)}</div>` : '');
     }
 
     function isKnownValidChoice(number) {
@@ -805,17 +912,29 @@
     }
 
     function refreshChrome() {
-      liveButton.classList.toggle('active', state.live);
-      for (const [name, button] of Object.entries(tabs)) button.classList.toggle('active', state.view === name);
-      renderRoot.className = state.view === 'both' ? 'dual' : 'layout';
+      if (liveButton) liveButton.classList.toggle('active', state.live);
+      const combatActive = isCombatContextActive();
+      if (!combatActive && (state.view === 'both' || state.view === 'combat')) state.view = 'menu';
+      if (tabs.both) tabs.both.hidden = !combatActive;
+      if (tabs.combat) tabs.combat.hidden = !combatActive;
+      for (const [name, button] of Object.entries(tabs)) {
+        if (button) button.classList.toggle('active', state.view === name);
+      }
+      renderRoot.className = (state.view === 'both' && combatActive) ? 'dual' : 'layout';
       menuRoot.style.display = state.view === 'combat' ? 'none' : '';
-      combatRoot.style.display = state.view === 'menu' ? 'none' : '';
+      combatRoot.style.display = (!combatActive || state.view === 'menu') ? 'none' : '';
+
       const snap = state.lastCombat || state.lastMenu;
       versionBadge.textContent = snap ? `Contrat JSON ${snap.schemaVersion ?? '?'} · Jeu V${snap.gameVersion ?? '?'}` : 'Contrat JSON ? · Jeu V?';
       inputExpectation.innerHTML = describeInputMode(state.lastMenu);
+      if (submenuStateBadge) {
+        submenuStateBadge.textContent = combatActive ? 'combat : bloqué' : 'hors combat';
+        submenuStateBadge.classList.toggle('warn', combatActive);
+        submenuStateBadge.classList.toggle('ok', !combatActive);
+      }
       if (state.lastMenu?.inputPlaceholder) commandInput.placeholder = state.lastMenu.inputPlaceholder;
       else if (state.lastMenu?.inputMode === 'quantity' && state.lastMenu?.hasNumericRange) commandInput.placeholder = `${state.lastMenu.numericMin}-${state.lastMenu.numericMax}`;
-      else commandInput.placeholder = 'Choix, texte ou code cache';
+      else commandInput.placeholder = 'Choix ou texte';
       sendCommandButton.textContent = state.lastMenu?.primarySubmitLabel || 'Envoyer';
       commandInput.removeAttribute('min');
       commandInput.removeAttribute('max');
@@ -835,20 +954,20 @@
           commandInput.setAttribute('min', String(state.lastMenu.numericMin));
           commandInput.setAttribute('max', String(state.lastMenu.numericMax));
         }
-      } else if (state.lastMenu?.inputMode === 'choice') {
-        commandInput.setAttribute('inputmode', 'text');
-      } else if (state.lastMenu?.inputMode === 'confirmation') {
+      } else {
         commandInput.setAttribute('inputmode', 'text');
       }
       renderSuggestedCommands();
+      renderUtilityActions();
       updateCommandValidation();
 
       const displayOnly = state.lastMenu?.inputMode === 'display';
       const locked = !canSendInputNow();
-      sendCommandButton.disabled = locked || displayOnly;
-      enterButton.disabled = locked || displayOnly;
-      backButton.disabled = locked;
-      commandInput.disabled = state.inputBusy || displayOnly;
+      const canType = !displayOnly && !combatActive;
+      sendCommandButton.disabled = locked || !canType;
+      enterButton.disabled = locked || !canSendEmptyInput();
+      backButton.disabled = locked || !hasBackAction();
+      commandInput.disabled = state.inputBusy || !canType;
       if (safeQueueToggle) safeQueueToggle.checked = state.preventQueueStacking;
       if (keyboardShortcutToggle) keyboardShortcutToggle.checked = state.keyboardShortcuts;
       if (menuFilterInput && menuFilterInput.value !== state.menuFilter) menuFilterInput.value = state.menuFilter;
@@ -858,7 +977,7 @@
         button.disabled = shouldDisable;
         button.classList.toggle('disabled', shouldDisable);
         const status = button.querySelector('[data-action-status]');
-        if (status) status.textContent = !baseEnabled ? 'Bloque' : (locked ? 'Attente' : 'Envoyer');
+        if (status) status.textContent = !baseEnabled ? 'Bloqué' : (locked ? 'Attente' : 'Envoyer');
       });
       document.querySelectorAll('[data-item-choice], [data-focus-choice], [data-unit-choice]').forEach(card => {
         card.classList.toggle('locked', locked);
@@ -867,8 +986,8 @@
         else card.removeAttribute('title');
       });
       document.querySelectorAll('.suggestion-chip').forEach(button => {
-        button.disabled = locked || displayOnly;
-        button.classList.toggle('disabled', locked || displayOnly);
+        button.disabled = locked || displayOnly || combatActive;
+        button.classList.toggle('disabled', locked || displayOnly || combatActive);
       });
     }
 
@@ -1003,31 +1122,22 @@
     function renderAll() {
       menuRoot.innerHTML = state.lastMenu ? renderMenu(state.lastMenu) : '<div class="empty">Aucun menu chargé.</div>';
       combatRoot.innerHTML = state.lastCombat ? renderCombat(state.lastCombat) : '<div class="empty">Aucun combat chargé.</div>';
-      if (playerActions) {
-        playerActions.innerHTML = state.lastMenu ? renderPlayerActions(state.lastMenu) : '<div class="empty">Les choix apparaîtront ici.</div>';
-      }
       refreshChrome();
     }
 
     function renderHeader(snapshot, rightLabel) {
-      const category = snapshot.screenCategory || (rightLabel === 'combat' ? 'combat' : 'menu');
+      const friendly = rightLabel === 'combat' ? 'Combat' : 'Vue';
       return `
         <div class="screen-title">
           <div>
-            <h2>${escapeHtml(snapshot.title || 'Ecran sans titre')}</h2>
-            <span class="badge">${escapeHtml(snapshot.screenId || 'screen.unknown')}</span>
-            <span class="badge warn">${escapeHtml(category)}</span>
+            <h2>${escapeHtml(snapshot.title || 'Écran sans titre')}</h2>
           </div>
-          <span class="badge ${rightLabel === 'combat' ? 'warn' : 'ok'}">${escapeHtml(rightLabel)}</span>
+          <span class="badge ${rightLabel === 'combat' ? 'warn' : 'ok'}">${escapeHtml(friendly)}</span>
         </div>`;
     }
 
     function renderContextTags(snapshot) {
-      const tags = Array.isArray(snapshot?.contextTags) ? snapshot.contextTags : [];
-      if (!tags.length && !snapshot?.inputIntent) return '';
-      const allTags = [...tags];
-      if (snapshot.inputIntent && !allTags.includes(snapshot.inputIntent)) allTags.unshift(snapshot.inputIntent);
-      return `<div class="context-panel">${allTags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>`;
+      return '';
     }
 
     function renderPagination(snapshot) {
@@ -1204,7 +1314,6 @@
               <div class="specialized-title">${escapeHtml(snapshot.specializedTitle || 'Vue spécialisée')}</div>
               <div class="specialized-hint">${escapeHtml(snapshot.specializedHint || '')}</div>
             </div>
-            <span class="badge warn">${escapeHtml(view)}</span>
           </div>
           ${renderedInfoCards}
           ${renderedItemCards}
@@ -1308,16 +1417,32 @@
 
     function renderActionsByGroup(actions) {
       if (!Array.isArray(actions) || actions.length === 0) return '<div class="empty">Aucune action.</div>';
-      const filteredActions = actions.filter(action => matchesMenuFilter(action.actionDisplayLabel, action.label, action.hint, action.actionId, action.role, action.group));
-      if (!filteredActions.length) return renderMenuFilterNotice(actions.length, 0, 'action') + '<div class="empty">Aucune action ne correspond au filtre IG.</div>';
-      const grouped = { main: [], navigation: [], danger: [], locked: [] };
+      const availableActions = actions.filter(action => action && action.enabled !== false && !isUtilityAction(action));
+      const filteredActions = availableActions.filter(action => matchesMenuFilter(action.actionDisplayLabel, action.label, action.hint, action.actionId, action.role, action.group));
+      if (!availableActions.length) return '<div class="empty">Aucun choix disponible pour cet écran.</div>';
+      if (!filteredActions.length) return renderMenuFilterNotice(availableActions.length, 0, 'action') + '<div class="empty">Aucune action ne correspond au filtre IG.</div>';
+      const grouped = { main: [], navigation: [], danger: [] };
       for (const action of filteredActions) {
         const group = getActionGroup(action);
-        if (!grouped[group]) grouped[group] = [];
-        grouped[group].push(action);
+        const safeGroup = group === 'locked' ? 'main' : group;
+        if (!grouped[safeGroup]) grouped[safeGroup] = [];
+        grouped[safeGroup].push(action);
       }
-      const order = ['main', 'navigation', 'danger', 'locked'];
-      return `${renderMenuFilterNotice(actions.length, filteredActions.length, 'action')}<div class="action-sections">${order.map(group => renderActionGroup(group, grouped[group] || [])).join('')}</div>`;
+      const order = ['main', 'navigation', 'danger'];
+      return `${renderMenuFilterNotice(availableActions.length, filteredActions.length, 'action')}<div class="action-sections">${order.map(group => renderActionGroup(group, grouped[group] || [])).join('')}</div>`;
+    }
+
+    function renderMainViewActions(snapshot) {
+      if (!snapshot || snapshot.type !== 'menu') return '';
+      const actions = Array.isArray(snapshot.actions) ? snapshot.actions.filter(action => !isUtilityAction(action)) : [];
+      const hasSpecializedContent = snapshot.specializedView && snapshot.specializedView !== 'generic' && Array.isArray(snapshot.focusCards) && snapshot.focusCards.length > 0;
+
+      if (hasSpecializedContent) {
+        const navigation = renderNavigationOnlyActions(actions);
+        return navigation ? `<div class="section"><h3>Navigation</h3>${navigation}</div>` : '';
+      }
+
+      return `<div class="section"><h3>Choix disponibles</h3>${renderActionsByGroup(actions)}</div>`;
     }
 
     function renderPlayerActions(snapshot) {
@@ -1407,7 +1532,7 @@
         }
       }
 
-      const actions = Array.isArray(menu.actions) ? menu.actions.filter(action => action.enabled !== false) : [];
+      const actions = Array.isArray(menu.actions) ? menu.actions.filter(action => action.enabled !== false && !isUtilityAction(action)) : [];
       const recommendedChoice = String(menu.recommendedChoice ?? '-1');
       if (mode === 'choice') {
         for (const action of actions.slice(0, 7)) {
@@ -1429,8 +1554,18 @@
         }
       }
 
-      if (!commands.some(item => item.command === '0')) {
-        addCommand({ command: '0', label: '0 Retour', primary: false, kind: 'back' });
+      const backAction = findBackAction();
+      if (backAction && !commands.some(item => String(item.command) === String(backAction.number ?? ''))) {
+        addCommand({
+          command: String(backAction.number ?? '0'),
+          label: backAction.actionDisplayLabel || ((backAction.number ?? '0') + ' Retour'),
+          primary: false,
+          kind: 'back',
+          actionId: backAction.actionId || '',
+          actionLabel: backAction.label || 'Retour',
+          actionDisplayLabel: backAction.actionDisplayLabel || ((backAction.number ?? '0') + ' Retour'),
+          actionRole: backAction.role || 'back'
+        });
       }
       return commands;
     }
@@ -1459,7 +1594,7 @@
       if (mode === 'quantity') {
         const numeric = /^-?\d+$/.test(value);
         if (!numeric) {
-          return { level: 'warn', message: 'Cet ecran attend une quantite en chiffres.', blocking: true };
+          return { level: 'warn', message: 'Cet écran attend une quantité en chiffres.', blocking: true };
         }
 
         if (menu.hasNumericRange) {
@@ -1467,12 +1602,12 @@
           const min = Number(menu.numericMin ?? 0);
           const max = Number(menu.numericMax ?? 0);
           if (numberValue < min || numberValue > max) {
-            return { level: 'warn', message: 'Quantite hors limite : entre ' + min + ' et ' + max + '.', blocking: true };
+            return { level: 'warn', message: 'Quantité hors limite : entre ' + min + ' et ' + max + '.', blocking: true };
           }
           return { level: 'ok', message: 'Quantite valide : ' + numberValue + '.', blocking: false };
         }
 
-        return { level: 'ok', message: 'Quantite numerique reconnue.', blocking: false };
+        return { level: 'ok', message: 'Quantité numérique reconnue.', blocking: false };
       }
 
       if (mode === 'confirmation' && menu.confirmationKeyword) {
@@ -1503,16 +1638,16 @@
         if (numeric) {
           const action = findAnyMenuActionByNumber(value);
           if (action && action.enabled === false) {
-            return { level: 'warn', message: 'Ce choix existe, mais il est verrouille pour cet ecran.', blocking: true };
+            return { level: 'warn', message: 'Ce choix existe, mais il est verrouillé pour cet écran.', blocking: true };
           }
           if (Array.isArray(menu.validChoices) && menu.validChoices.length && !isKnownValidChoice(value)) {
-            return { level: 'warn', message: 'Ce numero n apparait pas dans les actions actuellement valides.', blocking: true };
+            return { level: 'warn', message: "Ce numéro n'apparait pas dans les actions actuellement valides.", blocking: true };
           }
           if (action) {
             return { level: 'ok', message: 'Choix reconnu : ' + action.label, blocking: false };
           }
         } else if (!knownCheat) {
-          return { level: 'warn', message: 'Texte libre envoye dans un menu de choix : utile pour cheat/cache, sinon le jeu refusera.', blocking: false };
+          return { level: 'warn', message: "Texte libre envoyé dans un menu de choix : vérifie que cet écran l'accepte.", blocking: false };
         }
       }
 
@@ -1532,22 +1667,33 @@
       refreshChrome();
     }
 
+    function renderReadableInputLines(snapshot) {
+      const lines = [];
+      if (snapshot.inputMode === 'quantity' && snapshot.hasNumericRange) {
+        lines.push(`Quantité attendue : ${escapeHtml(snapshot.numericMin)} à ${escapeHtml(snapshot.numericMax)}`);
+      }
+      if (snapshot.inputMode === 'text' && snapshot.hasTextLengthRange) {
+        lines.push(`Texte attendu : ${escapeHtml(snapshot.textMinLength || 0)} à ${escapeHtml(snapshot.textMaxLength || '∞')} caractères`);
+      }
+      if (snapshot.inputHint && snapshot.inputMode !== 'choice') {
+        lines.push(snapshot.inputHint);
+      }
+      if (!lines.length) return '';
+      return `<div class="line-list">${lines.map(line => `<div class="line">${escapeHtml(line)}</div>`).join('')}</div>`;
+    }
+
     function renderMenu(snapshot) {
       return `
         ${renderHeader(snapshot, 'menu')}
-        ${renderContextTags(snapshot)}
         ${renderPagination(snapshot)}
         ${renderSpecializedPanel(snapshot)}
-        <div class="line-list">
-          <div class="line">Saisie attendue : ${escapeHtml(snapshot.inputIntent || snapshot.inputMode || 'choix')}${snapshot.inputHint ? ' — ' + escapeHtml(snapshot.inputHint) : ''}</div>
-          ${snapshot.inputMode === 'quantity' && snapshot.hasNumericRange ? `<div class="line">Limites de quantité : ${escapeHtml(snapshot.numericMin)} à ${escapeHtml(snapshot.numericMax)}</div>` : ''}
-          ${snapshot.inputMode === 'text' && snapshot.hasTextLengthRange ? `<div class="line">Longueur texte : ${escapeHtml(snapshot.textMinLength || 0)} à ${escapeHtml(snapshot.textMaxLength || '∞')} caractères</div>` : ''}
-          ${snapshot.hasKnowledgeSensitiveAction ? `<div class="line">Prudence : une option touche à une connaissance sensible, elle n'est pas mise en avant automatiquement.</div>` : ''}
-        </div>
+        ${renderReadableInputLines(snapshot)}
         ${renderLines('Sous-titres', snapshot.subtitles)}
         ${renderLines('Informations', snapshot.lines)}
+        ${renderMainViewActions(snapshot)}
         ${renderLines('Bas d\'écran', snapshot.footerLines)}`;
     }
+
 
     function renderAction(action) {
       const enabled = action.enabled !== false;
@@ -1575,13 +1721,12 @@
         <button type="button" class="action-card ${styleClass} ${recommendedClass} ${itemClass} ${importantClass} ${enabled && !locked ? '' : 'disabled'}" data-choice="${escapeHtml(action.number)}" data-base-enabled="${enabled ? 'true' : 'false'}" data-action-id="${escapeHtml(action.actionId || '')}" data-action-label="${escapeHtml(action.label || '')}" data-action-display-label="${escapeHtml(action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim())}" data-action-role="${escapeHtml(role)}" data-action-style="${escapeHtml(action.style || '')}" data-action-group="${escapeHtml(action.group || getActionGroup(action))}" data-knowledge-sensitive="${action.knowledgeSensitive ? 'true' : 'false'}" data-recommendation-reason="${escapeHtml(action.recommendationReason || '')}"${disabledAttribute}>
           <div class="action-main">
             <span>${escapeHtml(action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim())}</span>
-            <span data-action-status>${!enabled ? 'Bloque' : (locked ? 'Attente' : 'Envoyer')}</span>
+            <span data-action-status>${!enabled ? 'Bloqué' : (locked ? 'Attente' : 'Envoyer')}</span>
           </div>
-          <div class="action-role">${escapeHtml(getActionRoleLabel(role))}${action.recommended ? ' · mis en avant' : ''}${action.knowledgeSensitive ? ' · connaissance prudente' : ''}${action.hasItemMetadata ? ' · carte liée' : ''}</div>
+          ${action.recommended ? '<div class="action-role">Conseillé</div>' : ''}
           ${action.hint ? `<div class="action-hint">${escapeHtml(action.hint)}</div>` : ''}
           ${action.hasItemMetadata && action.itemDetail ? `<div class="action-hint">${escapeHtml(action.itemDetail)}</div>` : ''}
           ${facts.length ? `<div class="action-facts">${facts.map(([label, value]) => `<span class="action-fact">${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('')}</div>` : ''}
-          ${action.actionId ? `<div class="action-id">${escapeHtml(action.actionId)}</div>` : ''}
         </button>`;
     }
 
@@ -1701,7 +1846,7 @@
         return "Les boss n'offrent pas toujours une sortie. Prépare ton équipement, lis tes indices, et n'oublie pas : survivre est déjà une stratégie.";
       }
       if (clean.includes('aide') || clean.includes('quoi faire') || clean.includes('perdu')) {
-        return "Regarde la zone Actions du joueur. Quand le monde attend un nom, un nombre ou une confirmation, écris directement dans la zone de texte.";
+        return "Regarde la vue principale et le sous-menu en bas. Quand le monde attend un nom, un nombre ou une confirmation, écris directement dans la zone de texte.";
       }
       return "Le gardien t'entend. Tes mots ne changent pas encore le destin, mais ils restent gravés dans le bord du monde.";
     }
@@ -1944,24 +2089,6 @@
       });
     });
 
-    if (playerActions) {
-      playerActions.addEventListener('click', event => {
-        const actionButton = event.target.closest('[data-choice]');
-        if (!actionButton || actionButton.disabled) return;
-        sendInput(actionButton.dataset.choice || '', 'choix menu', {
-          actionId: actionButton.dataset.actionId || '',
-          actionLabel: actionButton.dataset.actionLabel || '',
-          actionDisplayLabel: actionButton.dataset.actionDisplayLabel || actionButton.dataset.actionLabel || '',
-          actionRole: actionButton.dataset.actionRole || '',
-          actionStyle: actionButton.dataset.actionStyle || '',
-          actionGroup: actionButton.dataset.actionGroup || '',
-          knowledgeSensitive: actionButton.dataset.knowledgeSensitive === 'true',
-          recommendationReason: actionButton.dataset.recommendationReason || '',
-          commandKind: 'menu_action'
-        });
-      });
-    }
-
     renderRoot.addEventListener('keydown', event => {
       const itemCard = event.target.closest('[data-item-choice]');
       const focusCard = event.target.closest('[data-focus-choice]');
@@ -1984,7 +2111,21 @@
     });
     commandInput.addEventListener('input', updateCommandValidation);
     enterButton.addEventListener('click', () => sendInput('', 'entree'));
-    backButton.addEventListener('click', () => sendInput('0', 'retour'));
+    backButton.addEventListener('click', () => {
+      const action = findBackAction();
+      if (!action) {
+        setStatus('Retour indisponible sur cet écran.');
+        refreshChrome();
+        return;
+      }
+      sendInput(String(action.number ?? '0'), 'retour', {
+        actionId: action.actionId || '',
+        actionLabel: action.label || 'Retour',
+        actionDisplayLabel: action.actionDisplayLabel || `${action.number ?? '0'} - ${action.label || 'Retour'}`.trim(),
+        actionRole: action.role || 'back',
+        commandKind: 'back_action'
+      });
+    });
     clearCommandButton.addEventListener('click', () => { commandInput.value = ''; commandInput.focus(); });
     clearQueueButton.addEventListener('click', async () => {
       try {
@@ -2047,10 +2188,10 @@
         commandInput.value = code;
         commandInput.focus();
         if (sendButton) {
-          sendInput(code, 'code triche', {
+          sendInput(code, 'commande', {
             actionId: 'cheat.manual.' + code,
-            actionLabel: 'Code triche ' + code,
-            commandKind: 'cheat_code'
+            actionLabel: 'Commande ' + code,
+            commandKind: 'command'
           });
         } else {
           setStatus('Code place dans la saisie : ' + code + '\nTu peux le modifier ou l envoyer.');
@@ -2058,13 +2199,45 @@
       });
     }
 
-    if (guardianToggle && guardianPanel) {
-      guardianToggle.addEventListener('click', () => {
-        guardianPanel.hidden = !guardianPanel.hidden;
-        if (!guardianPanel.hidden) guardianInput?.focus();
+    if (utilityActions) {
+      utilityActions.addEventListener('click', event => {
+        const button = event.target.closest('[data-utility-choice]');
+        if (!button || button.disabled) return;
+        const choice = button.dataset.utilityChoice || '';
+        if (!choice) return;
+        sendInput(choice, button.dataset.utilityLabel || 'sous-menu', {
+          actionDisplayLabel: button.dataset.utilityLabel || '',
+          commandKind: button.dataset.utilityKind || 'utility'
+        });
+      });
+    }
+
+    if (forceStopButton) {
+      forceStopButton.addEventListener('click', async () => {
+        const confirmed = window.confirm("Forcer l'arrêt du moteur Dinotofu en arrière-plan ? À utiliser seulement si la partie semble bloquée.");
+        if (!confirmed) return;
+        try {
+          const response = await fetch('/gui/force-stop', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || payload.ok === false) throw new Error(payload.error || ('HTTP ' + response.status));
+          setStatus("Arrêt forcé demandé. Le moteur se fermera dès sa prochaine lecture d'entrée IG.");
+        } catch (error) {
+          setStatus("Impossible de demander l'arrêt forcé : " + error.message);
+        }
+      });
+    }
+
+    if (guardianDetails) {
+      guardianDetails.addEventListener('toggle', () => {
+        if (guardianDetails.open) guardianInput?.focus();
       });
     }
     if (guardianSend) guardianSend.addEventListener('click', sendGuardianMessage);
+    if (guardianSendGame) guardianSendGame.addEventListener('click', async () => {
+      const text = guardianInput?.value || '';
+      const sent = await sendInput(text, 'saisie du gardien', { commandKind: 'guardian_input' });
+      if (sent && guardianInput) guardianInput.value = '';
+    });
     if (guardianClear && guardianMessages) {
       guardianClear.addEventListener('click', () => {
         guardianMessages.innerHTML = '<div class="guardian-message npc">Le gardien observe silencieusement le fil du monde.</div>';
@@ -2100,13 +2273,13 @@
 
       if (/^[0-9]$/.test(event.key)) {
         const action = findMenuActionByNumber(event.key);
-        if (action || event.key === '0') {
+        if (action) {
           event.preventDefault();
           sendInput(event.key, 'raccourci clavier', {
-            actionId: action?.actionId || '',
-            actionLabel: action?.label || (event.key === '0' ? 'Retour' : ''),
-            actionDisplayLabel: action?.actionDisplayLabel || (event.key === '0' ? '0 - Retour' : ''),
-            actionRole: action?.role || (event.key === '0' ? 'back' : '')
+            actionId: action.actionId || '',
+            actionLabel: action.label || '',
+            actionDisplayLabel: action.actionDisplayLabel || `${action.number ?? event.key} - ${action.label || ''}`.trim(),
+            actionRole: action.role || ''
           });
         }
         return;
@@ -2136,7 +2309,6 @@
       }
     });
 
-    loadCheatCatalog();
     refreshServerStatus();
     setLive(true);
     renderAll();

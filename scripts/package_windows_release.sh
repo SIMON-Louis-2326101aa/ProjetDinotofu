@@ -55,6 +55,7 @@ cp README.md READMEFR.md SYSTEMES_PREVUS.txt SPECIAL_CHARACTERS_AND_CHEATS.txt B
 cp output/Dinotofu.exe "${STAGING_DIR}/Dinotofu.exe"
 cp tools/windows/DinotofuLauncher.ps1 "${STAGING_DIR}/DinotofuLauncher.ps1"
 cp tools/windows/Lancer-Dinotofu.cmd "${STAGING_DIR}/Lancer-Dinotofu.cmd"
+cp tools/windows/Lancer-Dinotofu.vbs "${STAGING_DIR}/Lancer-Dinotofu.vbs"
 cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${STAGING_DIR}/Lancer-Dinotofu-Terminal.cmd"
 mkdir -p "${STAGING_DIR}/tools"
 cp -r tools/gui "${STAGING_DIR}/tools/gui"
@@ -81,6 +82,7 @@ cp tools/windows/DinotofuInstaller.ps1 "${INSTALLER_DIR}/DinotofuInstaller.ps1"
 cp tools/windows/DinotofuLauncher.ps1 "${INSTALLER_DIR}/DinotofuLauncher.ps1"
 cp tools/windows/Installer-Dinotofu.cmd "${INSTALLER_DIR}/Installer-Dinotofu.cmd"
 cp tools/windows/Lancer-Dinotofu.cmd "${INSTALLER_DIR}/Lancer-Dinotofu.cmd"
+cp tools/windows/Lancer-Dinotofu.vbs "${INSTALLER_DIR}/Lancer-Dinotofu.vbs"
 cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${INSTALLER_DIR}/Lancer-Dinotofu-Terminal.cmd"
 write_installer_config_json "${INSTALLER_DIR}/dinotofu-installer.config.json"
 cat > "${INSTALLER_DIR}/LISEZ-MOI.txt" <<TXT
@@ -95,7 +97,7 @@ Dinotofu Installer Windows
    - ProjetDinotofu Launcher Terminal version
 6. Le raccourci principal lance le mode Auto : vraie IG si elle existe, sinon IG experimentale, sinon terminal.
 7. Le raccourci Terminal version force toujours le terminal, sans IG.
-8. Dans le dossier du jeu, Lancer-Dinotofu.cmd et Lancer-Dinotofu-Terminal.cmd sont les deux entrees techniques utilisees par ces raccourcis.
+8. Dans le dossier du jeu, Lancer-Dinotofu.vbs lance l'IG sans console visible, Lancer-Dinotofu.cmd reste un secours technique, et Lancer-Dinotofu-Terminal.cmd force la version terminal.
 
 Aucun WSL n'est requis pour la version Windows. La release Windows doit contenir Dinotofu.exe.
 Si Windows bloque l'execution, clic droit sur le fichier, Proprietes, puis Debloquer si l'option existe.

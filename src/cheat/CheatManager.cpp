@@ -351,10 +351,10 @@ void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty
     {
         MenuScreen screen("DONNÉES ALTÉRÉES", "cheat.altered_data.main");
         screen.addLine("Ces commandes appartiennent maintenant à la partie altérée du personnage.");
-        screen.addLine("Les codes restent tapables proprement, sans brouiller les archives altérées.");
+        screen.addLine("Les commandes déjà assumées restent tapables proprement, sans brouiller les archives altérées.");
         screen.addOption(0, "Retour", "Revenir à l'après-combat.", true, "cheat.altered_data.back");
         screen.addOption(1, "Voir les altérations connues", "Consulter les marques déjà inscrites sur ce personnage.", true, "cheat.altered_data.known");
-        screen.addOption(2, "Entrer une nouvelle commande", "Saisir un code caché déjà assumé par un personnage altéré.", true, "cheat.altered_data.enter_code");
+        screen.addOption(2, "Entrer une nouvelle commande", "Saisir une commande déjà assumée par un personnage altéré.", true, "cheat.altered_data.enter_code");
 
         int choice = TerminalInterface::askMenuChoice(
             screen,
@@ -380,11 +380,11 @@ void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty
                 "COMMANDE ALTÉRÉE",
                 "cheat.altered_data.enter_code.text",
                 {
-                    "Entre une commande cachée.",
-                    "Le personnage est déjà altéré : l'interface n'a plus besoin de faire semblant de ne rien voir."
+                    "Entre une commande.",
+                    "Le personnage est déjà altéré : l'interface traite cette saisie comme une donnée assumée."
                 },
-                "Commande cachée",
-                "Code de triche / commande altérée.",
+                "Commande",
+                "Choix, texte ou commande.",
                 true,
                 0,
                 64

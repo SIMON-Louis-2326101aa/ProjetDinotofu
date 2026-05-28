@@ -38,6 +38,7 @@ def main() -> int:
     input_queue_dir = gui_debug_dir / "input_queue"
     input_history_file = gui_debug_dir / "input_history.json"
     consumed_input_file = gui_debug_dir / "last_consumed_input.json"
+    force_stop_file = gui_debug_dir / "force_stop.txt"
     os.chdir(root)
 
     def sorted_queue_command_paths() -> list[Path]:
@@ -295,7 +296,7 @@ def main() -> int:
 
         def do_POST(self) -> None:  # noqa: N802 - stdlib handler method name
             parsed = urlparse(self.path)
-            if parsed.path not in {"/gui/input", "/gui/clear-input"}:
+            if parsed.path not in {"/gui/input", "/gui/clear-input", "/gui/force-stop"}:
                 self._send_json(404, {"ok": False, "error": "unknown endpoint"})
                 return
 
@@ -324,6 +325,21 @@ def main() -> int:
                     return
 
                 self._send_json(200, {"ok": True, "cleared": True, "file": str(pending_input_file), "queueDir": str(input_queue_dir)})
+                return
+
+            if parsed.path == "/gui/force-stop":
+                try:
+                    gui_debug_dir.mkdir(parents=True, exist_ok=True)
+                    force_stop_file.write_text(str(int(time.time())) + "\n", encoding="utf-8")
+                    pending_input_file.write_text("", encoding="utf-8")
+                    if input_queue_dir.exists():
+                        shutil.rmtree(input_queue_dir)
+                    input_queue_dir.mkdir(parents=True, exist_ok=True)
+                except OSError as error:
+                    self._send_json(500, {"ok": False, "error": str(error)})
+                    return
+
+                self._send_json(200, {"ok": True, "forceStopRequested": True, "file": str(force_stop_file)})
                 return
 
             command = str(payload.get("command", ""))

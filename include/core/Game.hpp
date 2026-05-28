@@ -13,6 +13,7 @@
 #include "core/GameMode.hpp"
 #include "progression/DifficultyMode.hpp"
 #include "character/CharacterRace.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 class Game
 {
@@ -101,6 +102,9 @@ private:
     // EN: openPostCombatMenu declares or implements a focused behavior used by this module.
     // FR: openPostCombatMenu déclare ou implémente un comportement précis utilisé par ce module.
     bool openPostCombatMenu();
+    void addOutOfCombatUtilityOptions(MenuScreen& screen, bool inventoryAvailable = true, bool saveAvailable = true) const;
+    bool handleOutOfCombatUtilityChoice(int choice, bool inventoryAvailable = true);
+    void openGuardianInputMenu();
     // EN: openExchangeMenu declares or implements a focused behavior used by this module.
     // FR: openExchangeMenu déclare ou implémente un comportement précis utilisé par ce module.
     void openExchangeMenu();

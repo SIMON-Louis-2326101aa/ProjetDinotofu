@@ -106,6 +106,44 @@ namespace
         return {};
     }
 
+    std::filesystem::path guiForceStopFilePath()
+    {
+        const char* debugDirectory = std::getenv("DINOTOFU_GUI_DEBUG_DIR");
+        if (debugDirectory != nullptr && std::string(debugDirectory).empty() == false)
+        {
+            return std::filesystem::path(debugDirectory) / "force_stop.txt";
+        }
+
+        const std::filesystem::path inputPath = guiInputFilePath();
+        if (!inputPath.empty() && inputPath.has_parent_path())
+        {
+            return inputPath.parent_path() / "force_stop.txt";
+        }
+
+        return {};
+    }
+
+    bool tryConsumeGuiForceStopRequest()
+    {
+        const std::filesystem::path forceStopPath = guiForceStopFilePath();
+        if (forceStopPath.empty() || !std::filesystem::exists(forceStopPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            std::filesystem::remove(forceStopPath);
+        }
+        catch (...)
+        {
+            // EN: even if cleanup fails, the GUI request must still stop the hidden backend.
+            // FR: meme si le nettoyage echoue, la demande IG doit quand meme arreter le moteur cache.
+        }
+
+        return true;
+    }
+
     std::string escapeSmallJsonString(const std::string& value)
     {
         std::string escaped;
@@ -383,6 +421,11 @@ bool Console::readLine(std::string& line, bool trimLeadingWhitespace)
     {
         while (true)
         {
+            if (tryConsumeGuiForceStopRequest())
+            {
+                std::exit(0);
+            }
+
             if (tryReadGuiInputLine(line))
             {
                 if (trimLeadingWhitespace)

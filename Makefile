@@ -38,7 +38,7 @@
 # =========================================================
 
 CXX      := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -Iinclude -MMD -MP
+CXXFLAGS := -std=c++17 -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
 LDFLAGS  :=
 
 SRC_DIR  := src

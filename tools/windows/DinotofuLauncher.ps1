@@ -226,7 +226,13 @@ function Restart-LauncherAfterUpdate {
     $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $updatedLauncher, "-Mode", $Mode, "-NoUpdateCheck")
     if (-not [string]::IsNullOrWhiteSpace($Repo)) { $arguments += @("-Repo", $Repo) }
     if (-not [string]::IsNullOrWhiteSpace($AssetPattern)) { $arguments += @("-AssetPattern", $AssetPattern) }
-    Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -WorkingDirectory $InstallDir | Out-Null
+    $restartParams = @{
+        FilePath = "powershell.exe"
+        ArgumentList = $arguments
+        WorkingDirectory = $InstallDir
+    }
+    if ($Mode -ne "Terminal") { $restartParams.WindowStyle = "Hidden" }
+    Start-Process @restartParams | Out-Null
     exit 0
 }
 
@@ -259,6 +265,32 @@ function Test-CommandAvailable {
     return $null -ne (Get-Command $CommandName -ErrorAction SilentlyContinue)
 }
 
+function Start-HiddenProcessNoWindow {
+    param(
+        [string]$FilePath,
+        [string[]]$ArgumentList = @(),
+        [string]$WorkingDirectory = ""
+    )
+
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $FilePath
+    if ($ArgumentList) {
+        foreach ($argument in $ArgumentList) {
+            [void]$startInfo.ArgumentList.Add($argument)
+        }
+    }
+    if (-not [string]::IsNullOrWhiteSpace($WorkingDirectory)) {
+        $startInfo.WorkingDirectory = $WorkingDirectory
+    }
+
+    # EN: GUI mode must not leave a useless cmd/py/game terminal on the player screen.
+    # FR: le mode IG ne doit pas laisser de terminal cmd/py/jeu inutile a l'ecran du joueur.
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+    return [System.Diagnostics.Process]::Start($startInfo)
+}
+
 function Test-PythonSpec {
     param([string]$FilePath, [string[]]$PrefixArgs)
 
@@ -277,7 +309,7 @@ function Test-PythonSpec {
 function Get-PythonLaunchSpec {
     # EN: prefer the Windows py launcher when present. The Microsoft Store "python" alias can exist
     # without a real Python install and can make the browser open before the local server exists.
-    # FR: on préfère le launcher py sous Windows. L'alias Microsoft Store "python" peut exister
+    # FR: on prefere le launcher py sous Windows. L'alias Microsoft Store "python" peut exister
     # sans vraie installation Python et ouvrir le navigateur alors que le serveur local n'existe pas.
     $candidates = @(
         [pscustomobject]@{ FilePath = "py"; PrefixArgs = @("-3") },
@@ -340,23 +372,17 @@ function Start-GameExecutable {
         }
 
         $workingDir = Split-Path $ExecutablePath
-        if ($UseTerminalWrapper) {
+        if ($HiddenWindow) {
+            # EN: hidden IG backend is launched directly. Wrapping it in cmd.exe can create a stray terminal.
+            # FR: le moteur IG cache est lance directement. Le wrapper cmd.exe peut creer un terminal fantome.
+            Start-HiddenProcessNoWindow -FilePath $ExecutablePath -ArgumentList @() -WorkingDirectory $workingDir | Out-Null
+        }
+        elseif ($UseTerminalWrapper) {
             $command = "chcp 65001 >nul & `"$ExecutablePath`""
-            $startParams = @{
-                FilePath = "cmd.exe"
-                ArgumentList = @("/d", "/c", $command)
-                WorkingDirectory = $workingDir
-            }
-            if ($HiddenWindow) { $startParams.WindowStyle = "Hidden" }
-            Start-Process @startParams | Out-Null
+            Start-Process -FilePath "cmd.exe" -ArgumentList @("/d", "/c", $command) -WorkingDirectory $workingDir | Out-Null
         }
         else {
-            $startParams = @{
-                FilePath = $ExecutablePath
-                WorkingDirectory = $workingDir
-            }
-            if ($HiddenWindow) { $startParams.WindowStyle = "Hidden" }
-            Start-Process @startParams | Out-Null
+            Start-Process -FilePath $ExecutablePath -WorkingDirectory $workingDir | Out-Null
         }
     }
     finally {
@@ -405,7 +431,7 @@ function Start-ExperimentalGui {
         if ($pythonSpec.PrefixArgs) { $arguments += $pythonSpec.PrefixArgs }
         $arguments += @($serverScript, "--root", $InstallDir, "--port", "$port", "--gui-debug-dir", $GuiDebugDir)
 
-        $serverProcess = Start-Process -FilePath $pythonSpec.FilePath -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput $serverOut -RedirectStandardError $serverErr
+        $serverProcess = Start-HiddenProcessNoWindow -FilePath $pythonSpec.FilePath -ArgumentList $arguments -WorkingDirectory $InstallDir
         if (Test-GuiServerReady -Port $port -TimeoutMilliseconds 8000) {
             Start-Process "http://127.0.0.1:$port/tools/gui/dinotofu_gui_experimental.html" | Out-Null
         }
