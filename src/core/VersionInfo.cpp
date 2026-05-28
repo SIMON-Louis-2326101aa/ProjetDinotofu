@@ -9,7 +9,7 @@
 
 std::string VersionInfo::currentVersion()
 {
-    return "1.35.20";
+    return "2.0.0";
 }
 
 std::string VersionInfo::recreateRecommendedBeforeVersion()
@@ -133,6 +133,13 @@ VersionCompatibilityImpact VersionInfo::evaluateCompatibility(const std::string&
 
     if (saved.major != current.major)
     {
+        // EN: The V1 -> V2 jump mainly validates the GUI milestone and should not force every recent save to restart.
+        // FR: Le passage V1 -> V2 valide surtout le palier IG et ne doit pas forcer toutes les sauvegardes récentes à repartir de zéro.
+        if (saved.major == 1 && current.major == 2)
+        {
+            return VersionCompatibilityImpact::MidUpdate;
+        }
+
         return VersionCompatibilityImpact::RecreateRecommended;
     }
 

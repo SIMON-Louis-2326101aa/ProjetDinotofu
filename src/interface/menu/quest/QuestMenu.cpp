@@ -11,6 +11,7 @@
 #include "item/material/MaterialCatalog.hpp"
 #include "entity/MonsterCatalog.hpp"
 #include "combat/modes/pve/MonsterPveMode.hpp"
+#include "economy/shop/ShopTransactionSystem.hpp"
 #include "interface/menu/InventoryMenu.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
@@ -24,6 +25,7 @@
 #include <cstddef>
 #include <set>
 #include <utility>
+#include <sstream>
 
 namespace
 {
@@ -69,6 +71,91 @@ namespace
         return text;
     }
 
+
+    std::vector<std::string> guildQuestAcceptedDialogueLines(const Quest& quest)
+    {
+        std::vector<std::string> lines;
+        lines.push_back("La gérante pose un doigt sur la ligne du contrat.");
+
+        if (quest.objectiveType == "combat")
+        {
+            lines.push_back("Elle précise que les témoins parlent d'une menace mobile, pas d'un simple sac de PV qui attend poliment.");
+            lines.push_back("Si la zone devient trop calme, c'est probablement que quelque chose écoute déjà.");
+        }
+        else if (quest.objectiveType == "exploration" || quest.objectiveType == "bestiaire")
+        {
+            lines.push_back("Elle te demande de revenir avec des notes propres, pas juste avec une phrase du style 'j'ai vu un truc bizarre'.");
+            lines.push_back("La guilde paie mieux les aventuriers qui savent lire le terrain avant de le piétiner.");
+        }
+        else if (quest.objectiveType == "livraison" || quest.objectiveType == "service")
+        {
+            lines.push_back("Elle résume le service demandé : rien d'héroïque sur le papier, mais les petites affaires tiennent parfois une ville entière.");
+            lines.push_back("Le client veut du sérieux, pas une grande légende avec trois fautes dans son nom.");
+        }
+        else
+        {
+            lines.push_back("Elle reste vague, ce qui est rarement bon signe dans une guilde qui vend normalement le danger au mot près.");
+        }
+
+        if (quest.rank == "S" || quest.rank == "SS" || quest.rank == "SSS" || quest.rank == "Légende" || quest.rank == "Dieu")
+        {
+            lines.push_back("Avant de te laisser partir, elle ajoute que ce rang n'est pas une décoration : c'est une manière polie de prévenir les inconscients.");
+        }
+
+        return lines;
+    }
+
+    std::vector<std::string> clientQuestAcceptedDialogueLines(const Quest& quest)
+    {
+        std::vector<std::string> lines;
+        lines.push_back(quest.client + " garde la voix basse en détaillant la demande.");
+
+        if (quest.objectiveType == "combat")
+        {
+            lines.push_back("Le problème a commencé par des bruits au loin, puis par des traces, puis par des gens qui ont arrêté de faire les malins.");
+            lines.push_back("Le client ne veut pas seulement une victoire : il veut pouvoir dormir sans compter les ombres.");
+        }
+        else if (quest.objectiveType == "livraison")
+        {
+            lines.push_back("Ce qui manque paraît banal, mais tout devient urgent quand une boutique, un atelier ou une famille attend dessus.");
+            lines.push_back("Le client te décrit rapidement où la trace se perd et ce qu'il ne faut pas confondre avec la bonne marchandise.");
+        }
+        else if (quest.objectiveType == "exploration" || quest.objectiveType == "bestiaire")
+        {
+            lines.push_back("Il ne demande pas de ramener le monde entier dans un sac, seulement assez d'informations pour éviter au prochain idiot de se perdre.");
+            lines.push_back("Les détails du terrain comptent : couleur des traces, bruit des pierres, odeur trop forte, tout ce qui semble inutile jusqu'au moment où ça sauve une jambe.");
+        }
+        else
+        {
+            lines.push_back("Il ajoute quelques détails personnels, pas assez pour faire un roman, mais assez pour que la mission ressemble enfin à autre chose qu'une ligne de menu.");
+        }
+
+        return lines;
+    }
+
+
+    MenuOptionItemData makeQuestNavigationItemData(
+        const std::string& kind,
+        const std::string& section,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& owner = ""
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = kind;
+        itemData.section = section;
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.owner = owner;
+        itemData.status = "Accessible";
+        itemData.important = actionType == "quest" || actionType == "talk";
+        return itemData;
+    }
+
     void applyQuestExtraReward(Player& player, const Quest& quest)
     {
         if (!quest.rewardMaterialId.empty() && quest.rewardMaterialQuantity > 0)
@@ -86,6 +173,7 @@ namespace
     )
     {
         player.recordCombatStarted();
+        ShopTransactionSystem::clearBuybackAfterCombat();
         return MonsterPveMode::runExplorationWave(player, random, difficulty, monsters, context);
     }
 
@@ -242,24 +330,800 @@ namespace
 
     // EN: displayQuestLine declares or implements a focused behavior used by this module.
     // FR: displayQuestLine déclare ou implémente un comportement précis utilisé par ce module.
-    void displayQuestLine(const Quest& quest, int index)
+    bool isPersonalNpcQuest(const Quest& quest)
     {
-        std::cout << index << " : [Rang " << quest.rank << "] " << quest.title << std::endl;
-        std::cout << "    Origine : " << quest.origin << " | Client : " << quest.client << " | Lieu : " << quest.location << std::endl;
-        if (!quest.objectiveType.empty() || !quest.targetFamily.empty())
+        return !quest.guildQuest;
+    }
+
+    std::string questKindText(const Quest& quest)
+    {
+        return quest.guildQuest ? "Contrat officiel de guilde" : "Demande informelle de PNJ";
+    }
+
+    std::string approximateQuestRewardText(const Quest& quest)
+    {
+        if (quest.guildQuest)
         {
-            std::cout << "    Type : " << (quest.objectiveType.empty() ? "général" : quest.objectiveType)
-                      << " | Cible : " << (quest.targetFamily.empty() ? "générale" : quest.targetFamily)
-                      << std::endl;
+            return questRewardText(quest);
         }
-        std::cout << "    Objectif : " << quest.objective << std::endl;
-        std::cout << "    Progression : " << quest.progress << "/" << quest.target << " | État : " << questStateText(quest) << std::endl;
-        std::cout << "    Récompenses : " << questRewardText(quest) << std::endl;
+
+        std::string text = "Récompense probable : ";
+
+        if (quest.rewardGold > 0)
+        {
+            if (quest.rewardGold < 40) text += "petite compensation";
+            else if (quest.rewardGold < 120) text += "paiement correct";
+            else text += "prime intéressante";
+        }
+        else
+        {
+            text += "surtout de la reconnaissance ou un service";
+        }
+
+        if (!quest.rewardMaterialId.empty() && quest.rewardMaterialQuantity > 0)
+        {
+            text += " + objet ou contact possible";
+        }
+
+        if (quest.rewardExperience > 0)
+        {
+            text += " | Expérience estimée : ";
+            if (quest.rewardExperience < 80) text += "faible";
+            else if (quest.rewardExperience < 220) text += "moyenne";
+            else text += "élevée";
+        }
+
+        return text;
+    }
+
+    std::string questCardLabel(const Quest& quest)
+    {
+        std::ostringstream label;
+
+        if (quest.guildQuest)
+        {
+            label << "[Contrat de guilde - Rang " << quest.rank << "] " << quest.title
+                  << " | Client : " << quest.client
+                  << " | Lieu : " << quest.location
+                  << " | Objectif : " << quest.objective
+                  << " | Progression : " << quest.progress << "/" << quest.target
+                  << " | État : " << questStateText(quest)
+                  << " | Récompenses : " << questRewardText(quest);
+        }
+        else
+        {
+            label << "[Demande PNJ - Rang estimé " << quest.rank << "] " << quest.title
+                  << " | Contact : " << quest.client
+                  << " | Zone supposée : " << quest.location
+                  << " | Objectif résumé : " << quest.objective
+                  << " | Avancée : " << quest.progress << "/" << quest.target
+                  << " | État : " << questStateText(quest)
+                  << " | " << approximateQuestRewardText(quest);
+        }
 
         if (!quest.requiredMaterialId.empty() && quest.requiredMaterialQuantity > 0)
         {
-            std::cout << "    Livraison demandée : " << quest.requiredMaterialName
-                      << " x" << quest.requiredMaterialQuantity << std::endl;
+            label << " | Livraison : " << quest.requiredMaterialName << " x" << quest.requiredMaterialQuantity;
+        }
+
+        return label.str();
+    }
+
+    std::vector<std::string> guildQuestDetailLines(const Quest& quest)
+    {
+        std::vector<std::string> lines;
+        lines.push_back("Nature : contrat officiel de guilde");
+        lines.push_back("Titre : " + quest.title);
+        lines.push_back("Origine : " + quest.origin);
+        lines.push_back("Client : " + quest.client);
+        lines.push_back("Rang : " + quest.rank);
+        lines.push_back("Lieu : " + quest.location);
+        lines.push_back("Type : " + (quest.objectiveType.empty() ? std::string("général") : quest.objectiveType));
+        lines.push_back("Cible : " + (quest.targetFamily.empty() ? std::string("générale") : quest.targetFamily));
+        lines.push_back("Objectif : " + quest.objective);
+        lines.push_back("Progression : " + std::to_string(quest.progress) + "/" + std::to_string(quest.target));
+        lines.push_back("État : " + questStateText(quest));
+        lines.push_back("Récompenses : " + questRewardText(quest));
+
+        if (!quest.requiredMaterialId.empty() && quest.requiredMaterialQuantity > 0)
+        {
+            lines.push_back("Livraison demandée : " + quest.requiredMaterialName + " x" + std::to_string(quest.requiredMaterialQuantity));
+        }
+
+        lines.push_back("Lecture : la guilde a assez cadré ce contrat pour que les informations soient fiables.");
+        return lines;
+    }
+
+    std::vector<std::string> personalQuestEstimateLines(const Quest& quest)
+    {
+        std::vector<std::string> lines;
+        lines.push_back("Nature : demande informelle de PNJ");
+        lines.push_back("Ce n'est pas un contrat officiel : le journal ne peut pas tout certifier.");
+        lines.push_back("Contact : " + quest.client);
+        lines.push_back("Rang supposé : " + quest.rank);
+        lines.push_back("Zone probable : " + (quest.location.empty() ? std::string("à confirmer sur le terrain") : quest.location));
+        lines.push_back("Type supposé : " + (quest.objectiveType.empty() ? std::string("service général") : quest.objectiveType));
+        lines.push_back("Objectif rapporté : " + quest.objective);
+        lines.push_back("Avancée notée : " + std::to_string(quest.progress) + "/" + std::to_string(quest.target));
+        lines.push_back("État : " + questStateText(quest));
+        lines.push_back(approximateQuestRewardText(quest));
+
+        if (!quest.requiredMaterialId.empty() && quest.requiredMaterialQuantity > 0)
+        {
+            lines.push_back("Livraison estimée : " + quest.requiredMaterialName + " x" + std::to_string(quest.requiredMaterialQuantity));
+        }
+
+        if (!quest.targetFamily.empty())
+        {
+            lines.push_back("Supposition du journal : la demande semble liée à " + quest.targetFamily + ".");
+        }
+
+        lines.push_back("Conseil : retourne voir le PNJ concerné si tu veux une confirmation plus humaine que ce carnet griffonné.");
+        return lines;
+    }
+
+    void showQuestDetail(const Quest& quest)
+    {
+        if (quest.guildQuest)
+        {
+            MessageScreen::show("INSPECTION DU CONTRAT", "quest.detail.guild", guildQuestDetailLines(quest), true);
+            return;
+        }
+
+        MessageScreen::show("ESTIMATION DE DEMANDE", "quest.detail.personal_estimate", personalQuestEstimateLines(quest), true);
+    }
+
+    std::string questRequiredMaterialStatusLine(const Player& player, const Quest& quest)
+    {
+        if (quest.requiredMaterialId.empty() || quest.requiredMaterialQuantity <= 0)
+        {
+            return "";
+        }
+
+        return "Matériaux à rapporter : " + quest.requiredMaterialName
+            + " x" + std::to_string(quest.requiredMaterialQuantity)
+            + " (possédé : " + std::to_string(player.getInventory().countMaterialById(quest.requiredMaterialId))
+            + ", équiv. normale : " + std::to_string(player.getInventory().countMaterialQualityPointsById(quest.requiredMaterialId) / 2)
+            + ")";
+    }
+
+    void appendQuestRewardResultLines(std::vector<std::string>& lines, const Quest& quest)
+    {
+        lines.push_back("Quête validée : " + quest.title);
+        lines.push_back("XP gagnée : " + std::to_string(quest.rewardExperience));
+
+        if (quest.rewardGold > 0)
+        {
+            lines.push_back("Or gagné : " + std::to_string(quest.rewardGold) + " pièces");
+        }
+        else
+        {
+            lines.push_back("Prime en or : aucune");
+        }
+
+        if (!quest.rewardMaterialId.empty() && quest.rewardMaterialQuantity > 0)
+        {
+            lines.push_back("Objet reçu : " + quest.rewardMaterialName + " x" + std::to_string(quest.rewardMaterialQuantity));
+
+            if (quest.rewardMaterialId == "client_recommendation")
+            {
+                const std::string recommendedClient = extractRecommendedClientName(quest);
+                if (!recommendedClient.empty())
+                {
+                    lines.push_back("Nouveau contact ajouté aux PNJ notables : " + recommendedClient + " [Recommandé par un habitant]");
+                }
+                else
+                {
+                    lines.push_back("Un nouveau contact pourra apparaître dans la section des PNJ recommandés.");
+                }
+            }
+        }
+
+        if (!quest.rewardNote.empty())
+        {
+            lines.push_back(quest.rewardNote);
+        }
+    }
+
+    enum class QuestJournalFilter
+    {
+        Active,
+        ReadyToTurnIn,
+        Guild,
+        Personal,
+        Combat,
+        Exploration,
+        Delivery,
+        TurnedIn
+    };
+
+    std::string questJournalFilterTitle(QuestJournalFilter filter)
+    {
+        switch (filter)
+        {
+            case QuestJournalFilter::Active: return "Quêtes actives";
+            case QuestJournalFilter::ReadyToTurnIn: return "Prêtes à rendre";
+            case QuestJournalFilter::Guild: return "Contrats de guilde";
+            case QuestJournalFilter::Personal: return "Demandes PNJ";
+            case QuestJournalFilter::Combat: return "Objectifs de combat";
+            case QuestJournalFilter::Exploration: return "Exploration / bestiaire";
+            case QuestJournalFilter::Delivery: return "Livraisons";
+            case QuestJournalFilter::TurnedIn: return "Rendues / archivées";
+        }
+
+        return "Journal";
+    }
+
+    std::string questJournalFilterHint(QuestJournalFilter filter)
+    {
+        switch (filter)
+        {
+            case QuestJournalFilter::Active:
+                return "Tout ce qui n'est pas encore rendu.";
+            case QuestJournalFilter::ReadyToTurnIn:
+                return "Quêtes terminées ou livraisons dont les matériaux sont prêts.";
+            case QuestJournalFilter::Guild:
+                return "Contrats officiels : inspection fiable et cadrée.";
+            case QuestJournalFilter::Personal:
+                return "Demandes informelles : inspection limitée à des estimations.";
+            case QuestJournalFilter::Combat:
+                return "Objectifs qui progressent par combat ou chasse.";
+            case QuestJournalFilter::Exploration:
+                return "Objectifs qui progressent par notes, traces, terrain ou bestiaire.";
+            case QuestJournalFilter::Delivery:
+                return "Demandes qui réclament des matériaux ou objets précis.";
+            case QuestJournalFilter::TurnedIn:
+                return "Archives des quêtes déjà rendues.";
+        }
+
+        return "";
+    }
+
+    bool questMatchesJournalFilter(const Player& player, const Quest& quest, QuestJournalFilter filter)
+    {
+        switch (filter)
+        {
+            case QuestJournalFilter::Active:
+                return !quest.turnedIn;
+            case QuestJournalFilter::ReadyToTurnIn:
+                return !quest.turnedIn && isReadyToTurnIn(player, quest);
+            case QuestJournalFilter::Guild:
+                return !quest.turnedIn && quest.guildQuest;
+            case QuestJournalFilter::Personal:
+                return !quest.turnedIn && isPersonalNpcQuest(quest);
+            case QuestJournalFilter::Combat:
+                return !quest.turnedIn && quest.objectiveType == "combat";
+            case QuestJournalFilter::Exploration:
+                return !quest.turnedIn && (quest.objectiveType == "exploration" || quest.objectiveType == "bestiaire");
+            case QuestJournalFilter::Delivery:
+                return !quest.turnedIn && isMaterialDeliveryQuest(quest);
+            case QuestJournalFilter::TurnedIn:
+                return quest.turnedIn;
+        }
+
+        return false;
+    }
+
+    std::vector<const Quest*> collectQuestsForJournalFilter(const Player& player, QuestJournalFilter filter)
+    {
+        std::vector<const Quest*> filtered;
+
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (questMatchesJournalFilter(player, quest, filter))
+            {
+                filtered.push_back(&quest);
+            }
+        }
+
+        std::stable_sort(filtered.begin(), filtered.end(), [](const Quest* left, const Quest* right) {
+            if (left->completed != right->completed)
+            {
+                return left->completed > right->completed;
+            }
+
+            if (left->guildQuest != right->guildQuest)
+            {
+                return left->guildQuest > right->guildQuest;
+            }
+
+            return left->title < right->title;
+        });
+
+        return filtered;
+    }
+
+    int countQuestsForJournalFilter(const Player& player, QuestJournalFilter filter)
+    {
+        int count = 0;
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (questMatchesJournalFilter(player, quest, filter))
+            {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    std::string questJournalInspectHint(const Quest& quest)
+    {
+        if (quest.guildQuest)
+        {
+            return "Inspecter le contrat officiel et ses clauses principales.";
+        }
+
+        return "Noter seulement des suppositions : cette demande PNJ n'est pas un contrat officiel.";
+    }
+
+    struct ClientQuestCounts
+    {
+        int active = 0;
+        int ready = 0;
+        int turnedIn = 0;
+        int total = 0;
+    };
+
+    ClientQuestCounts countQuestsForClient(const Player& player, const std::string& clientName)
+    {
+        ClientQuestCounts counts;
+
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (quest.client != clientName)
+            {
+                continue;
+            }
+
+            ++counts.total;
+
+            if (quest.turnedIn)
+            {
+                ++counts.turnedIn;
+                continue;
+            }
+
+            ++counts.active;
+
+            if (isReadyToTurnIn(player, quest))
+            {
+                ++counts.ready;
+            }
+        }
+
+        return counts;
+    }
+
+    std::string clientQuestStatusText(const ClientQuestCounts& counts)
+    {
+        if (counts.ready > 0)
+        {
+            return "À rendre : " + std::to_string(counts.ready)
+                + " | En cours : " + std::to_string(counts.active)
+                + " | Rendues : " + std::to_string(counts.turnedIn);
+        }
+
+        if (counts.active > 0)
+        {
+            return "En cours : " + std::to_string(counts.active)
+                + " | Rendues : " + std::to_string(counts.turnedIn);
+        }
+
+        if (counts.turnedIn > 0)
+        {
+            return "Aucune demande active | Rendues : " + std::to_string(counts.turnedIn);
+        }
+
+        return "Aucune demande enregistrée";
+    }
+
+    std::string clientQuestHintText(const ClientQuestCounts& counts)
+    {
+        if (counts.ready > 0)
+        {
+            return "Une demande peut être rendue ici.";
+        }
+
+        if (counts.active > 0)
+        {
+            return "Des demandes sont encore en cours.";
+        }
+
+        return "Aucune demande active avec ce contact.";
+    }
+
+    struct ReadyQuestClientEntry
+    {
+        std::string clientName;
+        int readyCount = 0;
+        int guildReadyCount = 0;
+        int personalReadyCount = 0;
+        std::string firstTitle;
+        std::string firstReward;
+    };
+
+    std::vector<ReadyQuestClientEntry> collectReadyQuestClients(const Player& player)
+    {
+        std::vector<ReadyQuestClientEntry> entries;
+
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (quest.turnedIn || !isReadyToTurnIn(player, quest))
+            {
+                continue;
+            }
+
+            auto it = std::find_if(entries.begin(), entries.end(), [&quest](const ReadyQuestClientEntry& entry) {
+                return entry.clientName == quest.client;
+            });
+
+            if (it == entries.end())
+            {
+                ReadyQuestClientEntry entry;
+                entry.clientName = quest.client;
+                entry.firstTitle = quest.title;
+                entry.firstReward = quest.guildQuest ? questRewardText(quest) : approximateQuestRewardText(quest);
+                entries.push_back(entry);
+                it = entries.end() - 1;
+            }
+
+            ++it->readyCount;
+            if (quest.guildQuest)
+            {
+                ++it->guildReadyCount;
+            }
+            else
+            {
+                ++it->personalReadyCount;
+            }
+        }
+
+        std::stable_sort(entries.begin(), entries.end(), [](const ReadyQuestClientEntry& left, const ReadyQuestClientEntry& right) {
+            if (left.guildReadyCount != right.guildReadyCount)
+            {
+                return left.guildReadyCount > right.guildReadyCount;
+            }
+
+            if (left.readyCount != right.readyCount)
+            {
+                return left.readyCount > right.readyCount;
+            }
+
+            return left.clientName < right.clientName;
+        });
+
+        return entries;
+    }
+
+    std::string readyQuestClientStatusText(const ReadyQuestClientEntry& entry)
+    {
+        std::string status = "Prêtes : " + std::to_string(entry.readyCount);
+
+        if (entry.guildReadyCount > 0)
+        {
+            status += " | Guilde : " + std::to_string(entry.guildReadyCount);
+        }
+
+        if (entry.personalReadyCount > 0)
+        {
+            status += " | PNJ : " + std::to_string(entry.personalReadyCount);
+        }
+
+        return status;
+    }
+
+    MenuOptionItemData makeClientQuestNavigationItemData(
+        const std::string& clientName,
+        const std::string& section,
+        const std::string& detail,
+        const ClientQuestCounts& counts
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "npc";
+        itemData.section = section;
+        itemData.actionType = counts.ready > 0 ? "turn_in" : "talk";
+        itemData.name = clientName;
+        itemData.detail = detail;
+        itemData.status = clientQuestStatusText(counts);
+        itemData.progress = counts.active > 0
+            ? "Demandes actives " + std::to_string(counts.active)
+            : "Aucune demande active";
+        itemData.owner = clientName;
+        itemData.important = counts.ready > 0;
+        return itemData;
+    }
+
+    void addClientQuestSummaryLines(MenuScreen& screen, const Player& player, const std::string& clientName)
+    {
+        const ClientQuestCounts counts = countQuestsForClient(player, clientName);
+        screen.addLine("Contact : " + clientName);
+        screen.addLine("Demandes de ce contact : " + clientQuestStatusText(counts));
+
+        if (counts.ready > 0)
+        {
+            screen.addLine("Priorité : une demande peut être rendue ici avant de repartir chercher autre chose.");
+        }
+        else if (counts.active > 0)
+        {
+            screen.addLine("Note : les informations PNJ restent des pourparlers, pas des contrats officiels de guilde.");
+        }
+        else
+        {
+            screen.addLine("Ce contact n'a pas de demande active dans ton journal pour le moment.");
+        }
+    }
+
+    void showClientQuestOverview(const Player& player, const std::string& clientName)
+    {
+        constexpr std::size_t questsPerPage = 5;
+        std::size_t pageIndex = 0;
+
+        while (true)
+        {
+            std::vector<const Quest*> relatedQuests;
+            for (const Quest& quest : player.getQuestLog().getQuests())
+            {
+                if (quest.client == clientName)
+                {
+                    relatedQuests.push_back(&quest);
+                }
+            }
+
+            std::stable_sort(relatedQuests.begin(), relatedQuests.end(), [&player](const Quest* left, const Quest* right) {
+                const bool leftReady = !left->turnedIn && isReadyToTurnIn(player, *left);
+                const bool rightReady = !right->turnedIn && isReadyToTurnIn(player, *right);
+
+                if (leftReady != rightReady)
+                {
+                    return leftReady > rightReady;
+                }
+
+                if (left->turnedIn != right->turnedIn)
+                {
+                    return left->turnedIn < right->turnedIn;
+                }
+
+                return left->title < right->title;
+            });
+
+            const std::size_t totalPages = PagedMenu::pageCount(relatedQuests.size(), questsPerPage);
+            if (pageIndex >= totalPages)
+            {
+                pageIndex = totalPages == 0 ? 0 : totalPages - 1;
+            }
+
+            const std::size_t first = PagedMenu::firstIndex(pageIndex, questsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(relatedQuests.size(), pageIndex, questsPerPage);
+
+            MenuScreen screen("DEMANDES DU CONTACT", "quest.client.overview");
+            screen.addSubtitle(clientName);
+            addClientQuestSummaryLines(screen, player, clientName);
+            screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, relatedQuests.size()));
+            screen.addBackOption("Retour", "quest.client.overview.back");
+
+            if (relatedQuests.empty())
+            {
+                screen.addLine("Aucune demande connue avec ce contact.");
+            }
+            else
+            {
+                for (std::size_t i = first; i < last; ++i)
+                {
+                    const Quest& quest = *relatedQuests[i];
+                    MenuOptionItemData itemData;
+                    itemData.structured = true;
+                    itemData.kind = "quest";
+                    itemData.section = clientName;
+                    itemData.actionType = quest.guildQuest ? "inspect_contract" : "estimate_request";
+                    itemData.name = quest.title;
+                    itemData.detail = quest.guildQuest ? quest.objective : "Pourparler : " + quest.objective;
+                    itemData.status = isReadyToTurnIn(player, quest)
+            ? (quest.guildQuest ? "Prête à rendre - contrat officiel" : "Prête à confirmer - demande PNJ")
+            : (quest.guildQuest ? questStateText(quest) : questStateText(quest) + " - informations estimées");
+                    itemData.reward = quest.guildQuest ? questRewardText(quest) : approximateQuestRewardText(quest);
+                    itemData.progress = std::to_string(quest.progress) + "/" + std::to_string(quest.target);
+                    itemData.owner = quest.client;
+                    itemData.important = !quest.turnedIn && isReadyToTurnIn(player, quest);
+
+                    screen.addOption(
+                        static_cast<int>(10 + (i - first)),
+                        questCardLabel(quest),
+                        questJournalInspectHint(quest),
+                        true,
+                        quest.guildQuest
+                            ? "quest.client.overview.inspect.guild." + std::to_string(i)
+                            : "quest.client.overview.estimate.personal." + std::to_string(i),
+                        itemData
+                    );
+                }
+            }
+
+            PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+            Console::clear();
+
+            if (choice == 0)
+            {
+                return;
+            }
+
+            if (choice == 98 && pageIndex > 0)
+            {
+                --pageIndex;
+                continue;
+            }
+
+            if (choice == 99 && pageIndex + 1 < totalPages)
+            {
+                ++pageIndex;
+                continue;
+            }
+
+            const int localQuestIndex = choice - 10;
+            if (localQuestIndex >= 0 && first + static_cast<std::size_t>(localQuestIndex) < last)
+            {
+                showQuestDetail(*relatedQuests[first + static_cast<std::size_t>(localQuestIndex)]);
+                continue;
+            }
+
+            MessageScreen::show(
+                "ACTION INDISPONIBLE",
+                "quest.client.overview.invalid",
+                {"Ce choix ne correspond à aucune demande de ce contact."}
+            );
+        }
+    }
+
+    int askQuestOfferDecision(
+        const std::string& title,
+        const std::string& screenId,
+        const Player& player,
+        const Quest& quest,
+        const std::vector<std::string>& introLines
+    )
+    {
+        MenuScreen screen(title, screenId);
+        screen.addSubtitle(quest.guildQuest ? "Contrat officiel" : "Pourparler / demande informelle");
+
+        for (const std::string& line : introLines)
+        {
+            screen.addLine(line);
+        }
+
+        screen.addLine("Nature : " + questKindText(quest));
+        screen.addLine((quest.guildQuest ? "Contrat proposé : [Rang " : "Demande proposée : [Rang estimé ") + quest.rank + "] " + quest.title);
+        screen.addLine((quest.guildQuest ? "Client officiel : " : "Contact : ") + quest.client);
+        screen.addLine((quest.guildQuest ? "Lieu : " : "Zone probable : ") + quest.location);
+        screen.addLine((quest.guildQuest ? "Objectif : " : "Objectif raconté : ") + quest.objective);
+        screen.addLine((quest.guildQuest ? "Récompenses : " : "Estimation : ") + (quest.guildQuest ? questRewardText(quest) : approximateQuestRewardText(quest)));
+
+        if (!quest.guildQuest)
+        {
+            screen.addLine("Note : ce PNJ parle de vive voix. Le journal pourra seulement estimer certaines informations.");
+        }
+
+        const std::string materialLine = questRequiredMaterialStatusLine(player, quest);
+        if (!materialLine.empty())
+        {
+            screen.addLine(materialLine);
+        }
+
+        MenuOptionItemData acceptData;
+        acceptData.structured = true;
+        acceptData.kind = "quest";
+        acceptData.section = quest.guildQuest ? "Contrat officiel" : "Demande informelle";
+        acceptData.actionType = "accept";
+        acceptData.name = quest.title;
+        acceptData.detail = quest.objective;
+        acceptData.status = quest.guildQuest ? "Disponible" : "Disponible - informations estimées";
+        acceptData.reward = quest.guildQuest ? questRewardText(quest) : approximateQuestRewardText(quest);
+        acceptData.progress = quest.guildQuest ? "Rang " + quest.rank : "Rang estimé " + quest.rank;
+        acceptData.owner = quest.client;
+        acceptData.important = true;
+
+        screen.addOption(1, quest.guildQuest ? "Accepter le contrat" : "Accepter la demande", "Ajouter cette entrée au journal.", true, screenId + ".accept", acceptData);
+        screen.addOption(0, "Refuser", quest.guildQuest ? "Laisser ce contrat sur le panneau." : "Laisser ce pourparler pour le moment.", true, screenId + ".decline");
+
+        return TerminalInterface::askMenuChoice(screen, 0, 1, "Choix invalide.");
+    }
+
+
+    bool askQuestTurnInConfirmation(const Player& player, const Quest& quest, const std::string& clientName)
+    {
+        while (true)
+        {
+            MenuScreen screen(
+                quest.guildQuest ? "VALIDATION DU CONTRAT" : "CONFIRMATION DE DEMANDE",
+                quest.guildQuest ? "quest.turn_in.confirm.guild" : "quest.turn_in.confirm.personal"
+            );
+
+            screen.addSubtitle(quest.guildQuest ? "Contrat officiel" : "Pourparler / demande informelle");
+            screen.addLine(quest.guildQuest
+                ? "La guilde peut tamponner ce contrat, mais le choix reste le tien."
+                : clientName + " peut confirmer cette demande, sans registre officiel de guilde.");
+            screen.addLine("Titre : " + quest.title);
+            screen.addLine(quest.guildQuest ? "Client officiel : " + quest.client : "Contact : " + quest.client);
+            screen.addLine(quest.guildQuest ? "Lieu : " + quest.location : "Zone supposée : " + quest.location);
+            screen.addLine(quest.guildQuest ? "Objectif vérifié : " + quest.objective : "Objectif rapporté : " + quest.objective);
+            screen.addLine("Progression : " + std::to_string(quest.progress) + "/" + std::to_string(quest.target));
+            screen.addLine(quest.guildQuest
+                ? "Récompenses prévues : " + questRewardText(quest)
+                : "Ce que le journal estime : " + approximateQuestRewardText(quest));
+
+            const std::string materialLine = questRequiredMaterialStatusLine(player, quest);
+            if (!materialLine.empty())
+            {
+                screen.addLine(materialLine);
+            }
+
+            if (!quest.guildQuest)
+            {
+                screen.addLine("Note : les récompenses exactes ne sont sûres qu'au moment où le contact accepte vraiment le service.");
+            }
+
+            MenuOptionItemData confirmData;
+            confirmData.structured = true;
+            confirmData.kind = "quest";
+            confirmData.section = quest.guildQuest ? "Contrat officiel" : "Demande informelle";
+            confirmData.actionType = "turn_in";
+            confirmData.name = quest.title;
+            confirmData.detail = quest.objective;
+            confirmData.status = quest.guildQuest ? "Prête à tamponner" : "Prête à confirmer";
+            confirmData.reward = quest.guildQuest ? questRewardText(quest) : approximateQuestRewardText(quest);
+            confirmData.progress = std::to_string(quest.progress) + "/" + std::to_string(quest.target);
+            confirmData.owner = quest.client;
+            confirmData.important = true;
+
+            MenuOptionItemData inspectData;
+            inspectData.structured = true;
+            inspectData.kind = "quest";
+            inspectData.section = quest.guildQuest ? "Inspection" : "Estimation";
+            inspectData.actionType = quest.guildQuest ? "inspect_contract" : "estimate_request";
+            inspectData.name = quest.title;
+            inspectData.detail = quest.guildQuest
+                ? "Relire les clauses du contrat officiel."
+                : "Relire les suppositions du journal sur ce pourparler.";
+            inspectData.status = quest.guildQuest ? "Fiable" : "Vague / estimé";
+            inspectData.owner = quest.client;
+
+            screen.addOption(
+                1,
+                quest.guildQuest ? "Valider ce contrat" : "Confirmer cette demande",
+                quest.guildQuest ? "Tamponner le contrat et recevoir les récompenses." : "Valider le service auprès du contact.",
+                true,
+                quest.guildQuest ? "quest.turn_in.confirm.guild.accept" : "quest.turn_in.confirm.personal.accept",
+                confirmData
+            );
+            screen.addOption(
+                2,
+                quest.guildQuest ? "Relire le contrat" : "Relire les estimations",
+                quest.guildQuest ? "Voir les informations officielles du contrat." : "Voir les suppositions et infos vagues du journal.",
+                true,
+                quest.guildQuest ? "quest.turn_in.confirm.guild.inspect" : "quest.turn_in.confirm.personal.estimate",
+                inspectData
+            );
+            screen.addOption(0, "Retour", "Ne rien rendre pour le moment.", true, "quest.turn_in.confirm.back");
+
+            int choice = TerminalInterface::askMenuChoice(screen, 0, 2, "Choix invalide.");
+            Console::clear();
+
+            if (choice == 1)
+            {
+                return true;
+            }
+
+            if (choice == 0)
+            {
+                return false;
+            }
+
+            if (choice == 2)
+            {
+                showQuestDetail(quest);
+            }
         }
     }
 
@@ -722,16 +1586,19 @@ namespace
 
     // EN: addExplorationMaterial declares or implements a focused behavior used by this module.
     // FR: addExplorationMaterial déclare ou implémente un comportement précis utilisé par ce module.
-    void addExplorationMaterial(Player& player, const std::string& id, int quantity, const std::string& quality)
+    std::string addExplorationMaterial(Player& player, const std::string& id, int quantity, const std::string& quality)
     {
         player.getInventory().addMaterial(MaterialCatalog::createById(id, quantity, quality));
         Material preview = MaterialCatalog::createById(id, quantity, quality);
-        std::cout << "Récupéré : " << preview.getName();
+
+        std::string line = "Récupéré : " + preview.getName();
         if (preview.hasSpecialQuality())
         {
-            std::cout << " [" << preview.getQualityLabel() << "]";
+            line += " [" + preview.getQualityLabel() + "]";
         }
-        std::cout << " x" << quantity << std::endl;
+
+        line += " x" + std::to_string(quantity);
+        return line;
     }
 
 
@@ -748,6 +1615,44 @@ namespace
     bool hasPotentialQuestForBiome(const Player& player, const ExplorationBiome& biome)
     {
         return getQuestSearchHintForBiome(player, biome).hasAny;
+    }
+
+    MenuOptionItemData makeExplorationBiomeItemData(
+        const Player& player,
+        const ExplorationBiome& biome,
+        bool questLikely
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "biome";
+        itemData.section = "Exploration";
+        itemData.actionType = "travel";
+        itemData.name = biome.name;
+        itemData.detail = biome.style;
+        itemData.status = evolvedBiomeRangeText(player, biome);
+        itemData.reward = "Commun : " + biome.commonMaterialId + " | Rare : " + biome.rareMaterialId;
+        itemData.progress = questLikely ? "Objectif de quête probable" : "Aucun objectif actif évident";
+        itemData.owner = "Monstres : " + biome.commonMonsters;
+        itemData.important = questLikely || isBiomeEvolvedForPlayer(player, biome);
+        return itemData;
+    }
+
+    MenuOptionItemData makeExplorationIntensityItemData(const ExplorationIntensity& intensity)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "exploration_intensity";
+        itemData.section = "Exploration";
+        itemData.actionType = "select";
+        itemData.name = intensity.name;
+        itemData.detail = intensity.description;
+        itemData.status = "Danger : " + std::to_string(intensity.eventShift) + "%";
+        itemData.reward = "Or direct : " + std::to_string(intensity.goldPercent) + "%";
+        itemData.progress = "Bonus trouvailles : " + std::to_string(intensity.quantityBonus)
+            + " | Prudence : " + std::to_string(intensity.carefulBonus);
+        itemData.important = intensity.eventShift > 0 || intensity.quantityBonus > 0 || intensity.goldPercent > 100;
+        return itemData;
     }
 
     // EN: progressExplorationQuests declares or implements a focused behavior used by this module.
@@ -792,6 +1697,105 @@ namespace
         return updated;
     }
 
+    void appendExplorationQuestProgressLine(
+        Player& player,
+        const ExplorationBiome& biome,
+        int amount,
+        std::vector<std::string>& lines,
+        const std::string& successText,
+        const std::string& noQuestText = ""
+    )
+    {
+        int updated = progressExplorationQuests(player, biome.name, amount);
+
+        if (updated > 0)
+        {
+            lines.push_back(successText + " (" + std::to_string(updated) + " note(s) mise(s) à jour.)");
+        }
+        else if (!noQuestText.empty())
+        {
+            lines.push_back(noQuestText);
+        }
+    }
+
+    void appendCombatQuestProgressLine(
+        Player& player,
+        int amount,
+        const std::string& family,
+        std::vector<std::string>& lines,
+        const std::string& successText
+    )
+    {
+        int updated = player.getQuestLog().progressCombatQuestsByFamily(amount, family);
+
+        if (updated > 0)
+        {
+            lines.push_back(successText + " (" + std::to_string(updated) + " contrat(s) mis à jour.)");
+        }
+    }
+
+    std::string explorationEventLabelFromRoll(int roll)
+    {
+        if (roll <= 24) return "récolte de terrain";
+        if (roll <= 37) return "trace intéressante";
+        if (roll <= 48) return "petit trésor";
+        if (roll <= 54) return "fausses pièces";
+        if (roll <= 66) return "coffre suspect";
+        if (roll <= 78) return "rencontre imprévue";
+        if (roll <= 87) return "mini-boss d'exploration";
+        if (roll <= 91) return "demande de PNJ";
+        if (roll <= 96) return "événement actif de biome";
+        if (roll <= 98) return "lieu dangereux";
+        return "découverte rare";
+    }
+
+    void showExplorationRunSummary(
+        const Player& player,
+        const ExplorationBiome& biome,
+        const ExplorationIntensity& intensity,
+        const std::string& eventLabel,
+        int hpBefore,
+        int goldBefore,
+        int readyBefore
+    )
+    {
+        const int hpAfter = player.getHp();
+        const int goldAfter = player.getInventory().getGold();
+        const int readyAfter = countQuestsForJournalFilter(player, QuestJournalFilter::ReadyToTurnIn);
+
+        std::vector<std::string> lines = {
+            "Zone : " + biome.name + ".",
+            "Approche : " + intensity.name + ".",
+            "Événement principal : " + eventLabel + ".",
+            "PV : " + std::to_string(hpBefore) + " -> " + std::to_string(hpAfter)
+                + " / " + std::to_string(player.getMaxHp()) + ".",
+            "Or : " + std::to_string(goldBefore) + " -> " + std::to_string(goldAfter)
+                + " (écart : " + std::to_string(goldAfter - goldBefore) + ").",
+            "Demandes prêtes à rendre : " + std::to_string(readyBefore)
+                + " -> " + std::to_string(readyAfter) + "."
+        };
+
+        if (readyAfter > readyBefore)
+        {
+            lines.push_back("Ton journal signale une nouvelle remise possible depuis le hub des quêtes.");
+        }
+        else if (readyAfter > 0)
+        {
+            lines.push_back("Tu as toujours au moins une demande prête à rendre.");
+        }
+
+        if (hpAfter < hpBefore)
+        {
+            lines.push_back("État : sortie marquée par des blessures, pense à vérifier tes soins avant de repartir.");
+        }
+        else
+        {
+            lines.push_back("État : aucune blessure supplémentaire visible dans ce résumé.");
+        }
+
+        MessageScreen::show("RÉSUMÉ D'EXPLORATION", "exploration.run.summary", lines, true);
+    }
+
     // EN: simulateUnexpectedExplorationFight declares or implements a focused behavior used by this module.
     // FR: simulateUnexpectedExplorationFight déclare ou implémente un comportement précis utilisé par ce module.
     void simulateUnexpectedExplorationFight(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity, DifficultyMode difficulty)
@@ -823,20 +1827,37 @@ namespace
             return;
         }
 
+        std::vector<std::string> resultLines = {
+            "La menace imprévue est neutralisée."
+        };
+
         if (random.between(1, 100) <= 70)
         {
-            addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, false));
+            resultLines.push_back(addExplorationMaterial(
+                player,
+                biome.commonMaterialId,
+                applyExplorationQuantityBonus(1, intensity),
+                chooseExplorationQuality(random, false)
+            ));
+        }
+        else
+        {
+            resultLines.push_back("Aucune ressource exploitable ne reste après l'affrontement.");
         }
 
-        int updated = player.getQuestLog().progressCombatQuestsByFamily(1, "Créatures locales");
-        if (updated > 0)
-        {
-            showExplorationNotice(
-                "QUÊTE MISE À JOUR",
-                "exploration.unexpected_fight.quest_progress",
-                {"Une quête de combat progresse grâce à cette menace imprévue."}
-            );
-        }
+        appendCombatQuestProgressLine(
+            player,
+            1,
+            "Créatures locales",
+            resultLines,
+            "Une quête de combat progresse grâce à cette menace imprévue"
+        );
+
+        showExplorationNotice(
+            "RENCONTRE TERMINÉE",
+            "exploration.unexpected_fight.result",
+            resultLines
+        );
     }
 
     // EN: openExplorationChest declares or implements a focused behavior used by this module.
@@ -909,29 +1930,23 @@ namespace
         {
             int gold = applyExplorationGoldReward(random.between(8, 30 + player.getLevel() * 3), player, intensity, difficulty, 1);
             player.getInventory().earnGold(gold);
-            showExplorationNotice(
-                "COFFRE MODESTE",
-                "exploration.chest.modest",
-                {
-                    "Le coffre est réel, mais son contenu reste modeste.",
-                    "Or gagné : " + std::to_string(gold)
-                }
-            );
-            addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
+            std::vector<std::string> rewardLines = {
+                "Le coffre est réel, mais son contenu reste modeste.",
+                "Or gagné : " + std::to_string(gold),
+                addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
+            };
+            showExplorationNotice("COFFRE MODESTE", "exploration.chest.modest", rewardLines);
         }
         else
         {
             int gold = applyExplorationGoldReward(random.between(35 + player.getLevel() * 3, 90 + player.getLevel() * 8), player, intensity, difficulty, 2);
             player.getInventory().earnGold(gold);
-            showExplorationNotice(
-                "COFFRE INTACT",
-                "exploration.chest.good",
-                {
-                    "Le coffre est réel, et pour une fois il n'a pas décidé de te mordre.",
-                    "Or gagné : " + std::to_string(gold)
-                }
-            );
-            addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
+            std::vector<std::string> rewardLines = {
+                "Le coffre est réel, et pour une fois il n'a pas décidé de te mordre.",
+                "Or gagné : " + std::to_string(gold),
+                addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
+            };
+            showExplorationNotice("COFFRE INTACT", "exploration.chest.good", rewardLines);
         }
     }
 
@@ -943,17 +1958,14 @@ namespace
 
         if (roll <= 22)
         {
-            showExplorationNotice(
-                "DÉCOUVERTE RARE",
-                "exploration.rare.discovery.resource",
-                {
-                    "Un filon / bouquet intact a survécu aux passages précédents.",
-                    "Tu prends le temps de récupérer proprement ce qui peut l'être."
-                }
-            );
-            addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(random.between(1, 2), intensity), chooseExplorationQuality(random, true));
-            addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
-            progressExplorationQuests(player, biome.name, 2);
+            std::vector<std::string> lines = {
+                "Un filon / bouquet intact a survécu aux passages précédents.",
+                "Tu prends le temps de récupérer proprement ce qui peut l'être.",
+                addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(random.between(1, 2), intensity), chooseExplorationQuality(random, true)),
+                addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
+            };
+            appendExplorationQuestProgressLine(player, biome, 2, lines, "Des notes d'exploration progressent grâce à cette découverte rare");
+            showExplorationNotice("DÉCOUVERTE RARE", "exploration.rare.discovery.resource", lines);
             return;
         }
 
@@ -961,55 +1973,45 @@ namespace
         {
             int gold = applyExplorationGoldReward(random.between(45 + player.getLevel() * 4, 120 + player.getLevel() * 9), player, intensity, difficulty, 3);
             player.getInventory().earnGold(gold);
-            showExplorationNotice(
-                "CACHE ANCIENNE",
-                "exploration.rare.discovery.cache",
-                {
-                    "Une cache ancienne est dissimulée sous des marques presque effacées.",
-                    "Ce n'est pas un trésor de roi, mais ce n'est clairement pas une trouvaille normale.",
-                    "Or gagné : " + std::to_string(gold)
-                }
-            );
-            addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
-            progressExplorationQuests(player, biome.name, 1);
+            std::vector<std::string> lines = {
+                "Une cache ancienne est dissimulée sous des marques presque effacées.",
+                "Ce n'est pas un trésor de roi, mais ce n'est clairement pas une trouvaille normale.",
+                "Or gagné : " + std::to_string(gold),
+                addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
+            };
+            appendExplorationQuestProgressLine(player, biome, 1, lines, "Le journal d'exploration progresse grâce à cette cache");
+            showExplorationNotice("CACHE ANCIENNE", "exploration.rare.discovery.cache", lines);
             return;
         }
 
         if (roll <= 58)
         {
-            showExplorationNotice(
-                "TRACES CONSERVÉES",
-                "exploration.rare.discovery.traces",
-                {
-                    "Tu trouves des traces parfaitement conservées.",
-                    "Elles ne donnent pas un objet immédiat, mais elles valent beaucoup pour les quêtes et le registre."
-                }
-            );
+            std::vector<std::string> lines = {
+                "Tu trouves des traces parfaitement conservées.",
+                "Elles ne donnent pas un objet immédiat, mais elles valent beaucoup pour les quêtes et le registre."
+            };
             recordBiomeFieldObservation(biome, "Trace rare conservée : " + biome.name + " révèle des présences locales plus anciennes que les rencontres normales.");
-            int updated = progressExplorationQuests(player, biome.name, 3);
-            if (updated > 0)
-            {
-                showExplorationNotice("QUÊTES MISES À JOUR", "exploration.rare.discovery.traces.quest", {"Plusieurs notes de quête progressent grâce à ces traces."});
-            }
-            else
-            {
-                showExplorationNotice("TRACE NOTÉE", "exploration.rare.discovery.traces.note", {"Tu notes mentalement le lieu : ce genre de trace intéresserait clairement une guilde ou un client."});
-            }
+            appendExplorationQuestProgressLine(
+                player,
+                biome,
+                3,
+                lines,
+                "Plusieurs notes de quête progressent grâce à ces traces",
+                "Tu notes mentalement le lieu : ce genre de trace intéresserait clairement une guilde ou un client."
+            );
+            showExplorationNotice("TRACES CONSERVÉES", "exploration.rare.discovery.traces", lines);
             return;
         }
 
         if (roll <= 76)
         {
-            showExplorationNotice(
-                "ANOMALIE DE MATÉRIAUX",
-                "exploration.rare.discovery.anomaly",
-                {
-                    "Une petite anomalie de matériaux pulse au sol.",
-                    "Tu n'en comprends pas tout, mais tu arrives à détacher un résidu stable."
-                }
-            );
-            addExplorationMaterial(player, "variation_residue", applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
-            progressExplorationQuests(player, biome.name, 2);
+            std::vector<std::string> lines = {
+                "Une petite anomalie de matériaux pulse au sol.",
+                "Tu n'en comprends pas tout, mais tu arrives à détacher un résidu stable.",
+                addExplorationMaterial(player, "variation_residue", applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
+            };
+            appendExplorationQuestProgressLine(player, biome, 2, lines, "Les notes d'exploration progressent grâce à l'anomalie");
+            showExplorationNotice("ANOMALIE DE MATÉRIAUX", "exploration.rare.discovery.anomaly", lines);
             return;
         }
 
@@ -1026,23 +2028,31 @@ namespace
             );
 
             bool newEntityDetected = player.unlockNextBossVariation();
+            std::vector<std::string> registryLines;
             if (newEntityDetected)
             {
-                showExplorationNotice(
-                    "REGISTRE DES BOSS",
-                    "exploration.rare.discovery.boss_trace.new",
-                    {
-                        "Une nouvelle entité a été détectée dans le registre des variations d'énergie anormale.",
-                        "Nom : ???",
-                        "Statut : repérée par exploration rare."
-                    }
-                );
+                registryLines = {
+                    "Une nouvelle entité a été détectée dans le registre des variations d'énergie anormale.",
+                    "Nom : ???",
+                    "Statut : repérée par exploration rare."
+                };
             }
             else
             {
-                showExplorationNotice("REGISTRE DES BOSS", "exploration.rare.discovery.boss_trace.old", {"Le registre garde la trace, mais aucune nouvelle entrée ne se stabilise."});
+                registryLines = {"Le registre garde la trace, mais aucune nouvelle entrée ne se stabilise."};
             }
-            progressExplorationQuests(player, biome.name, 2);
+            appendExplorationQuestProgressLine(
+                player,
+                biome,
+                2,
+                registryLines,
+                "La trace de boss fait progresser les notes d'exploration"
+            );
+            showExplorationNotice(
+                "REGISTRE DES BOSS",
+                newEntityDetected ? "exploration.rare.discovery.boss_trace.new" : "exploration.rare.discovery.boss_trace.old",
+                registryLines
+            );
             return;
         }
 
@@ -1066,8 +2076,11 @@ namespace
 
         if (victory)
         {
-            addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), "exceptional");
-            progressExplorationQuests(player, biome.name, 3);
+            std::vector<std::string> lines = {
+                addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), "exceptional")
+            };
+            appendExplorationQuestProgressLine(player, biome, 3, lines, "Le journal d'exploration progresse après cette rencontre rarissime");
+            showExplorationNotice("RÉCOMPENSE DU PRÉDATEUR", "exploration.rare.discovery.predator.reward", lines);
         }
     }
 
@@ -1081,7 +2094,7 @@ namespace
             };
 
             std::string client = clients[std::clamp(roll, 1, 11) - 1];
-            intro = client + " te confie une demande liée à " + biomeName + ". La demande porte une marque locale et un sceau récent de la guilde.";
+            intro = client + " te confie une demande liée à " + biomeName + ". Ce n'est pas un contrat officiel : plutôt un pourparler griffonné à la hâte.";
             return QuestCatalog::createBiomeRequest(player.getLevel(), biomeName, client);
         }
 
@@ -1173,38 +2186,26 @@ namespace
     // FR: displayQuestOffer déclare ou implémente un comportement précis utilisé par ce module.
     void displayQuestOffer(Player& player, const Quest& offeredQuest, const std::string& intro)
     {
-        std::cout << "========== ÉVÉNEMENT DE QUÊTE ==========" << std::endl;
-        std::cout << intro << std::endl;
-        std::cout << std::endl;
+        std::vector<std::string> introLines;
+        if (!intro.empty())
+        {
+            introLines.push_back(intro);
+        }
 
         if (!player.getQuestLog().canAcceptPersonalQuestForClient(offeredQuest.client))
         {
-            std::cout << offeredQuest.client << " a déjà deux demandes actives dans ton journal." << std::endl;
-            std::cout << "Tant qu'au moins une de ses demandes n'est pas rendue, ce PNJ évite de t'en confier une autre." << std::endl;
+            MessageScreen::show(
+                "DEMANDE BLOQUÉE",
+                "quest.event.offer.blocked",
+                {
+                    offeredQuest.client + " a déjà deux demandes actives dans ton journal.",
+                    "Tant qu'au moins une de ses demandes n'est pas rendue, ce PNJ évite de t'en confier une autre."
+                }
+            );
             return;
         }
 
-        std::cout << "Demande proposée : [Rang " << offeredQuest.rank << "] " << offeredQuest.title << std::endl;
-        std::cout << offeredQuest.objective << std::endl;
-        std::cout << "Client : " << offeredQuest.client << " | Lieu : " << offeredQuest.location << std::endl;
-        std::cout << "Récompenses : " << questRewardText(offeredQuest) << std::endl;
-
-        if (!offeredQuest.requiredMaterialId.empty() && offeredQuest.requiredMaterialQuantity > 0)
-        {
-            std::cout << "Matériaux à rapporter : " << offeredQuest.requiredMaterialName
-                      << " x" << offeredQuest.requiredMaterialQuantity
-                      << " (équiv. normale possédée : "
-                      << player.getInventory().countMaterialQualityPointsById(offeredQuest.requiredMaterialId) / 2
-                      << ")" << std::endl;
-        }
-
-        std::cout << std::endl;
-        std::cout << "1 : Accepter la demande" << std::endl;
-        std::cout << "0 : Refuser poliment" << std::endl;
-        std::cout << "========================================" << std::endl;
-        std::cout << "> ";
-
-        int choice = Console::askNumberBetween(0, 1, "Choix invalide.");
+        int choice = askQuestOfferDecision("ÉVÉNEMENT DE QUÊTE", "quest.event.offer", player, offeredQuest, introLines);
         Console::clear();
 
         if (choice == 1)
@@ -1212,16 +2213,30 @@ namespace
             if (player.getQuestLog().addQuest(offeredQuest))
             {
                 player.getQuestLog().refreshMaterialDeliveryQuests(player.getInventory());
-                std::cout << "Demande ajoutée au journal : " << offeredQuest.title << std::endl;
+                std::vector<std::string> lines = {"Demande ajoutée au journal : " + offeredQuest.title};
+                std::vector<std::string> dialogue = clientQuestAcceptedDialogueLines(offeredQuest);
+                lines.insert(lines.end(), dialogue.begin(), dialogue.end());
+                MessageScreen::show("DEMANDE ACCEPTÉE", "quest.event.offer.accepted", lines);
             }
             else
             {
-                std::cout << "Impossible d'ajouter cette demande au journal." << std::endl;
+                MessageScreen::show(
+                    "DEMANDE REFUSÉE PAR LE JOURNAL",
+                    "quest.event.offer.failed",
+                    {
+                        "Impossible d'ajouter cette demande au journal.",
+                        "Elle est peut-être déjà active ou incompatible avec tes demandes actuelles."
+                    }
+                );
             }
         }
         else
         {
-            std::cout << "Tu refuses la demande pour l'instant." << std::endl;
+            MessageScreen::show(
+                "DEMANDE REFUSÉE",
+                "quest.event.offer.declined",
+                {"Tu refuses la demande pour l'instant."}
+            );
         }
     }
 
@@ -1244,15 +2259,19 @@ namespace
 
         Monster miniBoss = createExplorationMonsterForBiome(player, random, biome, intensity);
 
-        std::cout << "L'air se tasse autour de toi." << std::endl;
-        std::cout << "Mini-boss d'exploration : " << miniBossName << "." << std::endl;
-        std::cout << "Forme rencontrée : " << miniBoss.getName()
-                  << " [niveau " << miniBoss.getLevel() << "]." << std::endl;
+        std::vector<std::string> introLines = {
+            "L'air se tasse autour de toi.",
+            "Mini-boss d'exploration : " + miniBossName + ".",
+            "Forme rencontrée : " + miniBoss.getName() + " [niveau " + std::to_string(miniBoss.getLevel()) + "].",
+            "Zone : " + biome.name + " | Approche : " + intensity.name + "."
+        };
+
         if (evolved)
         {
-            std::cout << "Cette chose ressemble à une version évoluée d'un monstre local." << std::endl;
+            introLines.push_back("Cette chose ressemble à une version évoluée d'un monstre local.");
         }
-        std::cout << std::endl;
+
+        showExplorationNotice("MINI-BOSS D'EXPLORATION", "exploration.miniboss.intro", introLines);
 
         bool victory = runTrackedExplorationWave(
             player,
@@ -1267,13 +2286,17 @@ namespace
             return;
         }
 
-        addExplorationMaterial(player, evolved ? biome.rareMaterialId : biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, evolved));
+        std::vector<std::string> rewardLines = {
+            addExplorationMaterial(player, evolved ? biome.rareMaterialId : biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, evolved))
+        };
 
         int updated = player.getQuestLog().progressCombatQuestsByFamily(evolved ? 2 : 1, questFamily);
         if (updated > 0)
         {
-            std::cout << "Des quêtes de combat progressent grâce à cette rencontre." << std::endl;
+            rewardLines.push_back("Des quêtes de combat progressent grâce à cette rencontre.");
         }
+
+        showExplorationNotice("RÉCOMPENSE DU MINI-BOSS", "exploration.miniboss.reward", rewardLines);
     }
 
     // EN: simulateAfterCombatMiniBoss declares or implements a focused behavior used by this module.
@@ -1303,16 +2326,18 @@ namespace
             monsters.push_back(monster);
         }
 
-        std::cout << "========== ÉVÉNEMENT APRÈS-COMBAT ==========" << std::endl;
-        std::cout << "Tu pensais pouvoir souffler, mais quelque chose a suivi le bruit du combat." << std::endl;
-        std::cout << "Mini-boss détecté : " << miniBossName << "." << std::endl;
-        std::cout << "La menace est trop proche pour être ignorée : il va falloir survivre." << std::endl;
-        std::cout << std::endl;
-        std::cout << "1 : Affronter la menace" << std::endl;
-        std::cout << "0 : Tenter de l'éviter avant contact" << std::endl;
-        std::cout << "> ";
-
-        int choice = Console::askNumberBetween(0, 1, "Choix invalide.");
+        int choice = askChoiceScreen(
+            "ÉVÉNEMENT APRÈS-COMBAT",
+            "exploration.after_combat.choice",
+            {
+                "Tu pensais pouvoir souffler, mais quelque chose a suivi le bruit du combat.",
+                "Mini-boss détecté : " + miniBossName + ".",
+                "La menace est trop proche pour être ignorée : il va falloir survivre."
+            },
+            {{1, "Affronter la menace"}, {0, "Tenter de l'éviter avant contact"}},
+            0,
+            1
+        );
         Console::clear();
 
         if (choice == 0)
@@ -1320,13 +2345,22 @@ namespace
             int escapeChance = evolved ? 45 : 65;
             if (random.between(1, 100) <= escapeChance)
             {
-                std::cout << "Tu t'éloignes avant que la menace ne verrouille vraiment ta position." << std::endl;
-                std::cout << "L'événement est évité, mais aucune récompense supplémentaire n'est obtenue." << std::endl;
+                showExplorationNotice(
+                    "MENACE ÉVITÉE",
+                    "exploration.after_combat.escaped",
+                    {
+                        "Tu t'éloignes avant que la menace ne verrouille vraiment ta position.",
+                        "L'événement est évité, mais aucune récompense supplémentaire n'est obtenue."
+                    }
+                );
                 return;
             }
 
-            std::cout << "Trop tard. La menace a déjà senti ta fatigue." << std::endl;
-            std::cout << std::endl;
+            showExplorationNotice(
+                "TROP TARD",
+                "exploration.after_combat.escape_failed",
+                {"La menace a déjà senti ta fatigue."}
+            );
         }
 
         bool victory = runTrackedExplorationWave(
@@ -1342,32 +2376,52 @@ namespace
             return;
         }
 
-        int updated = player.getQuestLog().progressCombatQuestsByFamily(evolved ? 2 : 1, questFamily);
-        if (updated > 0)
-        {
-            std::cout << "Le sang versé après l'embuscade fait avancer les contrats de chasse." << std::endl;
-        }
+        std::vector<std::string> resultLines = {
+            "La menace attirée par le combat est repoussée.",
+            evolved ? "Nature : forme évoluée / dangereuse." : "Nature : menace opportuniste."
+        };
+
+        appendCombatQuestProgressLine(
+            player,
+            evolved ? 2 : 1,
+            questFamily,
+            resultLines,
+            "Le sang versé après l'embuscade fait avancer les contrats de chasse"
+        );
+
+        showExplorationNotice(
+            "APRÈS-COMBAT STABILISÉ",
+            "exploration.after_combat.result",
+            resultLines
+        );
     }
 
     // EN: openDangerousExplorationSite declares or implements a focused behavior used by this module.
     // FR: openDangerousExplorationSite déclare ou implémente un comportement précis utilisé par ce module.
     void openDangerousExplorationSite(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity, DifficultyMode difficulty)
     {
-        std::cout << "Tu remarques un passage récent vers un lieu qui n'a clairement pas envie d'être visité." << std::endl;
-        std::cout << "Lieu repéré : " << dangerousSiteNameForBiome(biome) << "." << std::endl;
-        std::cout << dangerousSiteWarningForBiome(biome) << std::endl;
-        std::cout << "L'air est trop lourd, les traces trop profondes, et ton instinct te conseille poliment de rentrer." << std::endl;
-        std::cout << std::endl;
-        std::cout << "1 : Visiter quand même ce lieu dangereux" << std::endl;
-        std::cout << "0 : Ignorer l'endroit" << std::endl;
-        std::cout << "> ";
-
-        int visitChoice = Console::askNumberBetween(0, 1, "Choix invalide.");
+        int visitChoice = askChoiceScreen(
+            "LIEU DANGEREUX",
+            "exploration.dangerous_site.choice",
+            {
+                "Tu remarques un passage récent vers un lieu qui n'a clairement pas envie d'être visité.",
+                "Lieu repéré : " + dangerousSiteNameForBiome(biome) + ".",
+                dangerousSiteWarningForBiome(biome),
+                "L'air est trop lourd, les traces trop profondes, et ton instinct te conseille poliment de rentrer."
+            },
+            {{1, "Visiter quand même ce lieu dangereux"}, {0, "Ignorer l'endroit"}},
+            0,
+            1
+        );
         Console::clear();
 
         if (visitChoice == 0)
         {
-            std::cout << "Tu décides de ne pas offrir ton nom au premier trou suspect venu." << std::endl;
+            showExplorationNotice(
+                "LIEU IGNORÉ",
+                "exploration.dangerous_site.ignored",
+                {"Tu décides de ne pas offrir ton nom au premier trou suspect venu."}
+            );
             return;
         }
 
@@ -1375,20 +2429,27 @@ namespace
 
         if (!bossEntrance)
         {
-            std::cout << "Le lieu abrite une vague de gros monstres." << std::endl;
-            std::cout << "Ce n'est pas un simple détour : c'est une embuscade naturelle." << std::endl;
-            std::cout << "Tu reconnais assez la zone pour comprendre que ce danger appartient à " << biome.name << "." << std::endl;
-            std::cout << std::endl;
-            std::cout << "1 : Tenter l'affrontement" << std::endl;
-            std::cout << "0 : Reculer maintenant" << std::endl;
-            std::cout << "> ";
-
-            int fightChoice = Console::askNumberBetween(0, 1, "Choix invalide.");
+            int fightChoice = askChoiceScreen(
+                "EMBUSCADE NATURELLE",
+                "exploration.dangerous_site.wave_choice",
+                {
+                    "Le lieu abrite une vague de gros monstres.",
+                    "Ce n'est pas un simple détour : c'est une embuscade naturelle.",
+                    "Tu reconnais assez la zone pour comprendre que ce danger appartient à " + biome.name + "."
+                },
+                {{1, "Tenter l'affrontement"}, {0, "Reculer maintenant"}},
+                0,
+                1
+            );
             Console::clear();
 
             if (fightChoice == 0)
             {
-                std::cout << "Tu recules avant que la zone ne se referme sur toi." << std::endl;
+                showExplorationNotice(
+                    "REPLI",
+                    "exploration.dangerous_site.wave_retreat",
+                    {"Tu recules avant que la zone ne se referme sur toi."}
+                );
                 return;
             }
 
@@ -1409,50 +2470,73 @@ namespace
 
             if (victory)
             {
-                addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
-                player.getQuestLog().progressCombatQuestsByFamily(3, "Menace avancée");
+                std::vector<std::string> rewardLines = {
+                    addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
+                };
+                appendCombatQuestProgressLine(
+                    player,
+                    3,
+                    "Menace avancée",
+                    rewardLines,
+                    "Des contrats de menace avancée progressent grâce à ce lieu"
+                );
+                showExplorationNotice("LIEU NETTOYÉ", "exploration.dangerous_site.wave_reward", rewardLines);
             }
             return;
         }
 
-        std::cout << "Ce n'est pas une simple tanière." << std::endl;
-        std::cout << "C'est une entrée de boss." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Description rapide : " << bossTraceForBiome(biome) << "," << std::endl;
-        std::cout << "mais trop brouillée pour que le registre accepte son nom." << std::endl;
-        std::cout << "Le sol vibre comme si une variation d'énergie anormale venait de respirer." << std::endl;
-        std::cout << std::endl;
-        std::cout << "1 : Tenter l'affrontement malgré l'avertissement" << std::endl;
-        std::cout << "0 : Reculer et mémoriser l'entrée" << std::endl;
-        std::cout << "> ";
-
-        int bossChoice = Console::askNumberBetween(0, 1, "Choix invalide.");
+        int bossChoice = askChoiceScreen(
+            "ENTRÉE DE BOSS",
+            "exploration.dangerous_site.boss_choice",
+            {
+                "Ce n'est pas une simple tanière.",
+                "C'est une entrée de boss.",
+                "Description rapide : " + bossTraceForBiome(biome) + ",",
+                "mais trop brouillée pour que le registre accepte son nom.",
+                "Le sol vibre comme si une variation d'énergie anormale venait de respirer."
+            },
+            {{1, "Tenter l'affrontement malgré l'avertissement"}, {0, "Reculer et mémoriser l'entrée"}},
+            0,
+            1
+        );
         Console::clear();
 
         if (bossChoice == 0)
         {
-            std::cout << "Tu recules. Le registre note seulement : Boss potentiel — nom inconnu." << std::endl;
-            progressExplorationQuests(player, biome.name, 1);
+            int updated = progressExplorationQuests(player, biome.name, 1);
+            std::vector<std::string> lines = {"Tu recules. Le registre note seulement : Boss potentiel — nom inconnu."};
+            if (updated > 0)
+            {
+                lines.push_back("Des notes d'exploration progressent grâce à cette entrée mémorisée.");
+            }
+            showExplorationNotice("ENTRÉE MÉMORISÉE", "exploration.dangerous_site.boss_retreat", lines);
             return;
         }
 
-        std::cout << "Tu franchis la limite... puis ton instinct te ramène brutalement en arrière." << std::endl;
-        std::cout << "Le registre des Boss grave maintenant son sceau. Reviens par cette voie si tu veux vraiment l'affronter." << std::endl;
+        std::vector<std::string> bossLines = {
+            "Tu franchis la limite... puis ton instinct te ramène brutalement en arrière.",
+            "Le registre des Boss grave maintenant son sceau. Reviens par cette voie si tu veux vraiment l'affronter."
+        };
 
         bool newEntityDetected = player.unlockNextBossVariation();
         if (newEntityDetected)
         {
-            std::cout << std::endl;
-            std::cout << "Une nouvelle entité a été détectée dans le registre des variations d'énergie anormale." << std::endl;
-            std::cout << "Nom : ???" << std::endl;
-            std::cout << "Statut : éveillé par exploration dangereuse." << std::endl;
+            bossLines.push_back("Une nouvelle entité a été détectée dans le registre des variations d'énergie anormale.");
+            bossLines.push_back("Nom : ???");
+            bossLines.push_back("Statut : éveillé par exploration dangereuse.");
         }
         else
         {
-            std::cout << "Le registre tremble, mais aucune nouvelle entrée ne se stabilise pour l'instant." << std::endl;
+            bossLines.push_back("Le registre tremble, mais aucune nouvelle entrée ne se stabilise pour l'instant.");
         }
 
-        progressExplorationQuests(player, biome.name, 2);
+        int updated = progressExplorationQuests(player, biome.name, 2);
+        if (updated > 0)
+        {
+            bossLines.push_back("Des notes d'exploration progressent grâce à cette découverte dangereuse.");
+        }
+
+        showExplorationNotice("REGISTRE DES BOSS", "exploration.dangerous_site.boss_register", bossLines);
     }
 
 
@@ -1520,14 +2604,18 @@ namespace
             }
             else
             {
-                showExplorationNotice("EMBUSCADE ÉVITÉE", "exploration.event.abandoned_camp.avoid", {"Tu lis correctement les traces et évites l'embuscade avant qu'elle ne se referme."});
-                progressExplorationQuests(player, biome.name, 1);
+                std::vector<std::string> lines = {"Tu lis correctement les traces et évites l'embuscade avant qu'elle ne se referme."};
+                appendExplorationQuestProgressLine(player, biome, 1, lines, "Les traces du camp font progresser ton journal");
+                showExplorationNotice("EMBUSCADE ÉVITÉE", "exploration.event.abandoned_camp.avoid", lines);
             }
 
             int gold = applyExplorationGoldReward(random.between(12, 38 + player.getLevel() * 2), player, intensity, difficulty, 1);
             player.getInventory().earnGold(gold);
-            showExplorationNotice("CAMP FOUILLÉ", "exploration.event.abandoned_camp.reward", {"Tu récupères dans le camp : " + std::to_string(gold) + " pièces."});
-            addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
+            std::vector<std::string> rewardLines = {
+                "Tu récupères dans le camp : " + std::to_string(gold) + " pièces.",
+                addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
+            };
+            showExplorationNotice("CAMP FOUILLÉ", "exploration.event.abandoned_camp.reward", rewardLines);
             return;
         }
 
@@ -1545,8 +2633,9 @@ namespace
 
             if (choice == 0)
             {
-                showExplorationNotice("REPAIRE IGNORÉ", "exploration.event.local_den.leave", {"Tu marques mentalement le lieu, mais tu ne vas pas mourir pour trois bouts de cuir."});
-                progressExplorationQuests(player, biome.name, 1);
+                std::vector<std::string> lines = {"Tu marques mentalement le lieu, mais tu ne vas pas mourir pour trois bouts de cuir."};
+                appendExplorationQuestProgressLine(player, biome, 1, lines, "Le repaire noté fait progresser une demande d'exploration");
+                showExplorationNotice("REPAIRE IGNORÉ", "exploration.event.local_den.leave", lines);
                 return;
             }
 
@@ -1560,12 +2649,15 @@ namespace
 
             if (victory)
             {
-                addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(random.between(1, 2), intensity), chooseExplorationQuality(random, true));
+                std::vector<std::string> rewardLines = {
+                    addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(random.between(1, 2), intensity), chooseExplorationQuality(random, true))
+                };
                 if (random.between(1, 100) <= 45)
                 {
-                    addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
+                    rewardLines.push_back(addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true)));
                 }
-                player.getQuestLog().progressCombatQuestsByFamily(2, "Créatures locales");
+                appendCombatQuestProgressLine(player, 2, "Créatures locales", rewardLines, "Des contrats de créatures locales progressent");
+                showExplorationNotice("REPAIRE NETTOYÉ", "exploration.event.local_den.reward", rewardLines);
             }
             return;
         }
@@ -1587,16 +2679,18 @@ namespace
 
             if (choice == 0)
             {
-                showExplorationNotice("TRACE IGNORÉE", "exploration.event.tracks.leave", {"Tu notes mentalement le lieu, sans jouer au héros inutilement."});
-                progressExplorationQuests(player, biome.name, 1);
+                std::vector<std::string> lines = {"Tu notes mentalement le lieu, sans jouer au héros inutilement."};
+                appendExplorationQuestProgressLine(player, biome, 1, lines, "La trace notée fait progresser le journal");
+                showExplorationNotice("TRACE IGNORÉE", "exploration.event.tracks.leave", lines);
                 return;
             }
 
             std::string clue = "Trace étudiée : " + biome.name + " favorise " + biome.commonMonsters
                 + ". Présences rares possibles : " + biome.rareMonsters + ".";
             recordBiomeFieldObservation(biome, clue);
-            progressExplorationQuests(player, biome.name, choice == 1 ? 2 : 1);
-            showExplorationNotice("BESTIAIRE", "exploration.event.tracks.bestiary", {"Le bestiaire ajoute une observation de terrain sur " + biome.name + "."});
+            std::vector<std::string> lines = {"Le bestiaire ajoute une observation de terrain sur " + biome.name + "."};
+            appendExplorationQuestProgressLine(player, biome, choice == 1 ? 2 : 1, lines, "Les traces étudiées font progresser le journal");
+            showExplorationNotice("BESTIAIRE", "exploration.event.tracks.bestiary", lines);
 
             if (choice == 2)
             {
@@ -1611,7 +2705,11 @@ namespace
 
                 if (victory)
                 {
-                    addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
+                    showExplorationNotice(
+                        "RESSOURCE RÉCUPÉRÉE",
+                        "exploration.reward.material",
+                        {addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))}
+                    );
                 }
             }
 
@@ -1643,9 +2741,10 @@ namespace
 
             if (choice == 1)
             {
-                showExplorationNotice("OBSERVATION", "exploration.event.hazard.observe", {environmentalObservationForBiome(biome)});
+                std::vector<std::string> lines = {environmentalObservationForBiome(biome)};
                 recordBiomeFieldObservation(biome, environmentalObservationForBiome(biome));
-                progressExplorationQuests(player, biome.name, 2);
+                appendExplorationQuestProgressLine(player, biome, 2, lines, "L'observation prudente fait progresser le journal");
+                showExplorationNotice("OBSERVATION", "exploration.event.hazard.observe", lines);
                 return;
             }
 
@@ -1654,25 +2753,29 @@ namespace
                 int successChance = 62 + intensity.carefulBonus * 4;
                 if (random.between(1, 100) <= successChance)
                 {
-                    showExplorationNotice("RÉCUPÉRATION RÉUSSIE", "exploration.event.hazard.collect_success", {"Tu récupères sans réveiller toute la zone."});
-                    addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
+                    std::vector<std::string> rewardLines = {
+                        "Tu récupères sans réveiller toute la zone.",
+                        addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
+                    };
                     if (random.between(1, 100) <= 28)
                     {
-                        addExplorationMaterial(player, biome.rareMaterialId, 1, chooseExplorationQuality(random, true));
+                        rewardLines.push_back(addExplorationMaterial(player, biome.rareMaterialId, 1, chooseExplorationQuality(random, true)));
                     }
-                    progressExplorationQuests(player, biome.name, 2);
+                    appendExplorationQuestProgressLine(player, biome, 2, rewardLines, "Le terrain récupéré proprement fait progresser le journal");
+                    showExplorationNotice("RÉCUPÉRATION RÉUSSIE", "exploration.event.hazard.collect_success", rewardLines);
                     return;
                 }
 
                 int damage = std::min(random.between(4, 12 + player.getLevel()), std::max(0, player.getHp() - 1));
-                showExplorationNotice("RÉCUPÉRATION RISQUÉE", "exploration.event.hazard.collect_fail", {"La zone répond mal à ta récupération."});
+                std::vector<std::string> lines = {"La zone répond mal à ta récupération."};
                 if (damage > 0)
                 {
                     player.takeDamage(damage);
-                    showExplorationNotice("DÉGÂTS", "exploration.event.hazard.damage", {"Tu subis " + std::to_string(damage) + " dégâts, mais tu gardes le contrôle."});
+                    lines.push_back("Tu subis " + std::to_string(damage) + " dégâts, mais tu gardes le contrôle.");
                 }
                 recordBiomeFieldObservation(biome, environmentalObservationForBiome(biome));
-                progressExplorationQuests(player, biome.name, 1);
+                appendExplorationQuestProgressLine(player, biome, 1, lines, "Même ratée, la récupération laisse des notes utiles");
+                showExplorationNotice("RÉCUPÉRATION RISQUÉE", "exploration.event.hazard.collect_fail", lines);
                 return;
             }
 
@@ -1687,8 +2790,11 @@ namespace
 
             if (victory)
             {
-                addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
-                progressExplorationQuests(player, biome.name, 2);
+                std::vector<std::string> rewardLines = {
+                    addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
+                };
+                appendExplorationQuestProgressLine(player, biome, 2, rewardLines, "Le passage forcé fait progresser les notes d'exploration");
+                showExplorationNotice("PASSAGE OUVERT", "exploration.event.hazard.force_reward", rewardLines);
             }
             return;
         }
@@ -1735,7 +2841,11 @@ namespace
                 "barbed_arrows", "piercing_bolts", "balanced_throwing_knives", "ash_arrows", "frozen_bolts", "conductive_knives", "unstable_core", "shadow_thread"
             };
             std::string found = illegalFinds[random.between(0, static_cast<int>(illegalFinds.size()) - 1)];
-            addExplorationMaterial(player, found, random.between(1, 3), chooseExplorationQuality(random, true));
+            showExplorationNotice(
+                "CACHE OUVERTE",
+                "exploration.event.hidden_cache.reward",
+                {addExplorationMaterial(player, found, random.between(1, 3), chooseExplorationQuality(random, true))}
+            );
             return;
         }
 
@@ -1760,8 +2870,11 @@ namespace
 
             if (victory)
             {
-                addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, false));
-                progressExplorationQuests(player, biome.name, 2);
+                std::vector<std::string> rewardLines = {
+                    addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, false))
+                };
+                appendExplorationQuestProgressLine(player, biome, 2, rewardLines, "La vague forcée fait progresser les notes d'exploration");
+                showExplorationNotice("VAGUE REPOUSSÉE", "exploration.event.wave.reward", rewardLines);
             }
             return;
         }
@@ -1780,23 +2893,25 @@ namespace
 
             if (choice == 0)
             {
-                showExplorationNotice("SIGNE RESPECTÉ", "exploration.event.ancient_sign.leave", {"Tu respectes l'endroit. Le registre note quand même la position."});
-                progressExplorationQuests(player, biome.name, 1);
+                std::vector<std::string> lines = {"Tu respectes l'endroit. Le registre note quand même la position."};
+                appendExplorationQuestProgressLine(player, biome, 1, lines, "La position du signe fait progresser le journal");
+                showExplorationNotice("SIGNE RESPECTÉ", "exploration.event.ancient_sign.leave", lines);
                 return;
             }
 
             if (choice == 1)
             {
-                showExplorationNotice("SIGNE ÉTUDIÉ", "exploration.event.ancient_sign.study", {"Tu prends des notes. Le bestiaire garde maintenant cette observation de terrain."});
+                std::vector<std::string> lines = {"Tu prends des notes. Le bestiaire garde maintenant cette observation de terrain."};
                 recordBiomeFieldObservation(
                     biome,
                     "Signe ancien étudié : le biome " + biome.name + " semble lié à des variations locales et à des présences plus rares."
                 );
-                progressExplorationQuests(player, biome.name, 3);
+                appendExplorationQuestProgressLine(player, biome, 3, lines, "L'étude du signe fait progresser fortement le journal");
                 if (random.between(1, 100) <= 35)
                 {
-                    addExplorationMaterial(player, "variation_residue", 1, chooseExplorationQuality(random, true));
+                    lines.push_back(addExplorationMaterial(player, "variation_residue", 1, chooseExplorationQuality(random, true)));
                 }
+                showExplorationNotice("SIGNE ÉTUDIÉ", "exploration.event.ancient_sign.study", lines);
                 return;
             }
 
@@ -1811,8 +2926,12 @@ namespace
 
             if (victory)
             {
-                addExplorationMaterial(player, "variation_residue", applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true));
-                addExplorationMaterial(player, biome.rareMaterialId, 1, chooseExplorationQuality(random, true));
+                std::vector<std::string> rewardLines = {
+                    addExplorationMaterial(player, "variation_residue", applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true)),
+                    addExplorationMaterial(player, biome.rareMaterialId, 1, chooseExplorationQuality(random, true))
+                };
+                appendExplorationQuestProgressLine(player, biome, 2, rewardLines, "Le fragment instable fait progresser les notes d'exploration");
+                showExplorationNotice("FRAGMENT STABILISÉ", "exploration.event.ancient_sign.fragment_reward", rewardLines);
             }
             return;
         }
@@ -1857,7 +2976,16 @@ namespace
 
         int gold = applyExplorationGoldReward(random.between(18, 55 + player.getLevel() * 2), player, intensity, difficulty, 2);
         player.getInventory().earnGold(gold);
-        showExplorationNotice("RÉCOMPENSE IMPROVISÉE", "exploration.event.distress_call.reward", {"Récompense improvisée : " + std::to_string(gold) + " pièces."});
+        std::vector<std::string> rewardLines = {"Récompense improvisée : " + std::to_string(gold) + " pièces."};
+        appendExplorationQuestProgressLine(
+            player,
+            biome,
+            1,
+            rewardLines,
+            "Le secours laisse assez de traces pour faire progresser le journal",
+            "Aucune quête active ne reprend ce secours, mais le registre garde l'écho de l'appel."
+        );
+        showExplorationNotice("RÉCOMPENSE IMPROVISÉE", "exploration.event.distress_call.reward", rewardLines);
         offerExplorationNpcQuest(player, random, biome);
     }
 
@@ -1869,12 +2997,52 @@ void QuestMenu::openQuestHub(Player& player)
 {
     while (true)
     {
+        const int readyCount = countQuestsForJournalFilter(player, QuestJournalFilter::ReadyToTurnIn);
         MenuScreen screen("QUÊTES", "quest.hub");
         screen.addLine("Les quêtes progressent en combattant, explorant, récupérant des ressources ou battant les bonnes cibles.");
-        screen.addOption(0, "Retour", "", true, "quest.hub.back");
-        screen.addOption(1, "Consulter le journal de quêtes", "", true, "quest.hub.journal");
-        screen.addOption(2, "Aller à la guilde", "", true, "quest.hub.guild");
-        int choice = TerminalInterface::askMenuChoice(screen, 0, 2, "Choix invalide.");
+        screen.addLine("Quêtes de guilde actives : " + std::to_string(player.getQuestLog().getActiveGuildQuestCount()) + "/3.");
+        screen.addLine("Demandes prêtes à rendre : " + std::to_string(readyCount) + ".");
+        screen.addBackOption("Retour", "quest.hub.back");
+
+        MenuOptionItemData journalData = makeQuestNavigationItemData(
+            "quest",
+            "Hub",
+            "inspect",
+            "Journal de quêtes",
+            "Consulter les contrats officiels et les demandes informelles."
+        );
+        journalData.status = "Consultation";
+
+        MenuOptionItemData readyData = makeQuestNavigationItemData(
+            "quest",
+            "Hub",
+            "turn_in",
+            "Demandes prêtes à rendre",
+            readyCount > 0 ? "Choisir le bon contact pour valider une quête terminée." : "Aucune quête prête à rendre."
+        );
+        readyData.status = readyCount > 0 ? std::to_string(readyCount) + " prête(s)" : "Indisponible";
+        readyData.important = readyCount > 0;
+
+        MenuOptionItemData guildData = makeQuestNavigationItemData(
+            "npc",
+            "Hub",
+            "quest",
+            "Guilde",
+            "Panneau officiel, contrats et remise auprès du maître de guilde.",
+            "Maître de guilde"
+        );
+        guildData.status = "Contrats officiels";
+
+        screen.addOption(1, "Consulter le journal de quêtes", "Voir les quêtes et estimations connues.", true, "quest.hub.journal", journalData);
+        screen.addOption(2, "Rendre une quête prête" + (readyCount > 0 ? " [" + std::to_string(readyCount) + "]" : ""),
+            readyCount > 0 ? "Choisir un contact et valider une quête terminée." : "Aucune quête prête à rendre.",
+            readyCount > 0,
+            "quest.hub.ready_turn_in",
+            readyData
+        );
+        screen.addOption(3, "Aller à la guilde", "Consulter le panneau officiel ou rendre un contrat de guilde.", true, "quest.hub.guild", guildData);
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
 
         if (choice == 0)
@@ -1888,6 +3056,10 @@ void QuestMenu::openQuestHub(Player& player)
         }
         else if (choice == 2)
         {
+            openReadyQuestTurnInMenu(player);
+        }
+        else if (choice == 3)
+        {
             openGuild(player);
         }
     }
@@ -1897,9 +3069,15 @@ void QuestMenu::openQuestHub(Player& player)
 // FR: consultOnly déclare ou implémente un comportement précis utilisé par ce module.
 void QuestMenu::consultOnly(const Player& player)
 {
-    std::cout << "Note : depuis ce menu, tu peux seulement consulter." << std::endl;
-    std::cout << "Pour accepter ou valider une quête, retourne voir la guilde ou le client." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "CONSULTATION SEULE",
+        "quest.consult_only",
+        {
+            "Depuis ce menu, tu peux seulement consulter.",
+            "Pour accepter ou valider une quête, retourne voir la guilde ou le client."
+        },
+        false
+    );
     displayQuestJournal(player);
 }
 
@@ -1907,39 +3085,14 @@ void QuestMenu::consultOnly(const Player& player)
 // FR: displayQuestJournal déclare ou implémente un comportement précis utilisé par ce module.
 void QuestMenu::displayQuestJournal(const Player& player)
 {
-    const std::vector<Quest>& quests = player.getQuestLog().getQuests();
-    constexpr std::size_t questsPerPage = 3;
-    std::size_t activePage = 0;
-    std::size_t completedPage = 0;
-    bool showingCompleted = false;
+    constexpr std::size_t questsPerPage = 5;
+    QuestJournalFilter activeFilter = QuestJournalFilter::Active;
+    std::size_t pageIndex = 0;
 
     while (true)
     {
-        std::vector<const Quest*> activeGuildQuests;
-        std::vector<const Quest*> activePersonalQuests;
-        std::vector<const Quest*> completedQuests;
-
-        for (const Quest& quest : quests)
-        {
-            if (quest.turnedIn)
-            {
-                completedQuests.push_back(&quest);
-            }
-            else if (quest.guildQuest)
-            {
-                activeGuildQuests.push_back(&quest);
-            }
-            else
-            {
-                activePersonalQuests.push_back(&quest);
-            }
-        }
-
-        std::vector<const Quest*> activeQuests = activeGuildQuests;
-        activeQuests.insert(activeQuests.end(), activePersonalQuests.begin(), activePersonalQuests.end());
-
-        std::vector<const Quest*>& displayedQuests = showingCompleted ? completedQuests : activeQuests;
-        std::size_t& pageIndex = showingCompleted ? completedPage : activePage;
+        const std::vector<Quest>& quests = player.getQuestLog().getQuests();
+        std::vector<const Quest*> displayedQuests = collectQuestsForJournalFilter(player, activeFilter);
         const std::size_t totalPages = PagedMenu::pageCount(displayedQuests.size(), questsPerPage);
 
         if (pageIndex >= totalPages)
@@ -1950,72 +3103,77 @@ void QuestMenu::displayQuestJournal(const Player& player)
         const std::size_t first = PagedMenu::firstIndex(pageIndex, questsPerPage);
         const std::size_t last = PagedMenu::lastIndexExclusive(displayedQuests.size(), pageIndex, questsPerPage);
 
-        std::cout << "========== JOURNAL DE QUÊTES ==========" << std::endl;
+        MenuScreen screen("JOURNAL DE QUÊTES", "quest.journal");
+        screen.addSubtitle(questJournalFilterTitle(activeFilter));
+        screen.addLine("Filtre actif : " + questJournalFilterTitle(activeFilter));
+        screen.addLine(questJournalFilterHint(activeFilter));
+        screen.addLine("Quêtes de guilde actives : " + std::to_string(player.getQuestLog().getActiveGuildQuestCount()) + "/3");
+        screen.addLine("Demandes prêtes à rendre : " + std::to_string(countQuestsForJournalFilter(player, QuestJournalFilter::ReadyToTurnIn)));
+        if (countQuestsForJournalFilter(player, QuestJournalFilter::ReadyToTurnIn) > 0)
+        {
+            screen.addLine("Astuce : passe par le hub des quêtes pour choisir directement le bon contact de validation.");
+        }
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, displayedQuests.size()));
 
         if (quests.empty())
         {
-            std::cout << "Aucune quête acceptée pour l'instant." << std::endl;
-            std::cout << "La guilde propose des contrats, et certains PNJ peuvent aussi te demander un service." << std::endl;
-            std::cout << std::endl;
-            std::cout << "0 : Retour" << std::endl;
-            std::cout << "=======================================" << std::endl;
-            std::cout << "> ";
-            Console::askNumberBetween(0, 0, "Choix invalide.");
+            screen.addLine("Aucune quête acceptée pour l'instant.");
+            screen.addLine("La guilde propose des contrats officiels ; certains PNJ peuvent seulement demander un service de vive voix.");
+            screen.addBackOption("Retour", "quest.journal.back");
+            TerminalInterface::askMenuChoiceFromOptions(screen, "Entre 0 pour revenir.");
             Console::clear();
             return;
         }
 
-        std::cout << "Quêtes de guilde actives : " << player.getQuestLog().getActiveGuildQuestCount() << "/3" << std::endl;
-        std::cout << "Vue : " << (showingCompleted ? "quêtes terminées / rendues" : "quêtes actives") << std::endl;
-        PagedMenu::printPageInfo(pageIndex, totalPages, displayedQuests.size());
-        std::cout << "Affichage : " << PagedMenu::rangeText(first, last, displayedQuests.size()) << std::endl;
-        std::cout << std::endl;
-
         if (displayedQuests.empty())
         {
-            std::cout << (showingCompleted ? "Aucune quête rendue pour l'instant." : "Aucune quête active pour l'instant.") << std::endl;
-            std::cout << std::endl;
+            screen.addLine("Aucune entrée dans ce filtre.");
         }
         else
         {
             for (std::size_t i = first; i < last; ++i)
             {
                 const Quest& quest = *displayedQuests[i];
-                const bool firstPersonalQuest = !showingCompleted
-                    && i > 0
-                    && displayedQuests[i - 1]->guildQuest
-                    && !quest.guildQuest;
+                const int localNumber = static_cast<int>(10 + (i - first));
+                MenuOptionItemData itemData;
+                itemData.structured = true;
+                itemData.kind = "quest";
+                itemData.section = questJournalFilterTitle(activeFilter);
+                itemData.actionType = quest.guildQuest ? "inspect_contract" : "estimate_request";
+                itemData.name = quest.title;
+                itemData.detail = quest.guildQuest ? quest.objective : "Demande informelle : " + quest.objective;
+                itemData.status = isReadyToTurnIn(player, quest)
+                    ? (quest.guildQuest ? "Prête à rendre - contrat officiel" : "Prête à confirmer - demande PNJ")
+                    : (quest.guildQuest ? questStateText(quest) : questStateText(quest) + " - informations estimées");
+                itemData.reward = quest.guildQuest ? questRewardText(quest) : approximateQuestRewardText(quest);
+                itemData.progress = std::to_string(quest.progress) + "/" + std::to_string(quest.target);
+                itemData.owner = quest.client;
+                itemData.important = isReadyToTurnIn(player, quest) || !quest.guildQuest;
 
-                if (!showingCompleted && i == first)
-                {
-                    std::cout << (quest.guildQuest ? "--- Quêtes actives de guilde ---" : "--- Demandes actives / événements / clients ---") << std::endl;
-                }
-                else if (firstPersonalQuest)
-                {
-                    std::cout << "--- Demandes actives / événements / clients ---" << std::endl;
-                }
-
-                displayQuestLine(quest, static_cast<int>(i - first + 1));
-                std::cout << std::endl;
+                screen.addOption(
+                    localNumber,
+                    questCardLabel(quest),
+                    questJournalInspectHint(quest),
+                    true,
+                    quest.guildQuest
+                        ? "quest.journal.inspect.guild." + std::to_string(i)
+                        : "quest.journal.estimate.personal." + std::to_string(i),
+                    itemData
+                );
             }
         }
 
-        PagedMenu::printNavigation(pageIndex, totalPages);
-        if (!showingCompleted)
-        {
-            std::cout << "1 : Voir les quêtes terminées / rendues"
-                      << (completedQuests.empty() ? " (aucune)" : "")
-                      << std::endl;
-        }
-        else
-        {
-            std::cout << "1 : Revenir aux quêtes actives" << std::endl;
-        }
+        screen.addOption(1, "Filtre : actives", "Tout ce qui n'est pas encore rendu.", true, "quest.journal.filter.active");
+        screen.addOption(2, "Filtre : prêtes à rendre", "Quêtes terminées ou livraisons possibles.", true, "quest.journal.filter.ready");
+        screen.addOption(3, "Filtre : guilde", "Contrats officiels inspectables proprement.", true, "quest.journal.filter.guild");
+        screen.addOption(4, "Filtre : demandes PNJ", "Demandes informelles avec infos vagues/estimées.", true, "quest.journal.filter.personal");
+        screen.addOption(5, "Filtre : combat", "Contrats ou demandes qui progressent par combat.", true, "quest.journal.filter.combat");
+        screen.addOption(6, "Filtre : exploration / bestiaire", "Notes de terrain, traces et observations.", true, "quest.journal.filter.exploration");
+        screen.addOption(7, "Filtre : livraison", "Matériaux ou objets à rapporter.", true, "quest.journal.filter.delivery");
+        screen.addOption(8, "Filtre : rendues", "Archives des quêtes déjà validées.", true, "quest.journal.filter.turned_in");
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
 
-        std::cout << "=======================================" << std::endl;
-        std::cout << "> ";
-
-        int choice = Console::askNumberBetween(0, 99, "Choix invalide.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
 
         if (choice == 0)
@@ -2023,9 +3181,21 @@ void QuestMenu::displayQuestJournal(const Player& player)
             return;
         }
 
-        if (choice == 1)
+        if (choice >= 1 && choice <= 8)
         {
-            showingCompleted = !showingCompleted;
+            switch (choice)
+            {
+                case 1: activeFilter = QuestJournalFilter::Active; break;
+                case 2: activeFilter = QuestJournalFilter::ReadyToTurnIn; break;
+                case 3: activeFilter = QuestJournalFilter::Guild; break;
+                case 4: activeFilter = QuestJournalFilter::Personal; break;
+                case 5: activeFilter = QuestJournalFilter::Combat; break;
+                case 6: activeFilter = QuestJournalFilter::Exploration; break;
+                case 7: activeFilter = QuestJournalFilter::Delivery; break;
+                case 8: activeFilter = QuestJournalFilter::TurnedIn; break;
+                default: break;
+            }
+            pageIndex = 0;
             continue;
         }
 
@@ -2041,8 +3211,18 @@ void QuestMenu::displayQuestJournal(const Player& player)
             continue;
         }
 
-        std::cout << "Ce choix ne correspond à aucune action du journal." << std::endl;
-        std::cout << std::endl;
+        const int localQuestIndex = choice - 10;
+        if (localQuestIndex >= 0 && first + static_cast<std::size_t>(localQuestIndex) < last)
+        {
+            showQuestDetail(*displayedQuests[first + static_cast<std::size_t>(localQuestIndex)]);
+            continue;
+        }
+
+        MessageScreen::show(
+            "ACTION INDISPONIBLE",
+            "quest.journal.invalid",
+            {"Ce choix ne correspond à aucune action du journal."}
+        );
     }
 }
 
@@ -2052,14 +3232,44 @@ void QuestMenu::openGuild(Player& player)
 {
     while (true)
     {
+        const ClientQuestCounts guildCounts = countQuestsForClient(player, "Maître de guilde");
         MenuScreen screen("GUILDE", "quest.guild");
         screen.addLine("La guilde centralise les quêtes officielles.");
         screen.addLine("Tu peux avoir jusqu'à 3 quêtes de guilde actives.");
-        screen.addOption(0, "Retour", "", true, "quest.guild.back");
-        screen.addOption(1, "Voir le panneau de quêtes", "", true, "quest.guild.board");
-        screen.addOption(2, "Rendre une quête de guilde terminée", "", true, "quest.guild.turn_in");
-        screen.addOption(3, "Consulter le journal", "", true, "quest.guild.journal");
-        int choice = TerminalInterface::askMenuChoice(screen, 0, 3, "Choix invalide.");
+        screen.addLine("Contrats de guilde : " + clientQuestStatusText(guildCounts));
+        screen.addBackOption("Retour", "quest.guild.back");
+
+        MenuOptionItemData boardData = makeQuestNavigationItemData(
+            "quest",
+            "Guilde",
+            "quest",
+            "Panneau de quêtes",
+            "Voir les contrats officiels disponibles.",
+            "Maître de guilde"
+        );
+        boardData.status = "Officiel";
+
+        MenuOptionItemData turnInData = makeQuestNavigationItemData(
+            "quest",
+            "Guilde",
+            "turn_in",
+            "Contrats terminés",
+            guildCounts.ready > 0 ? "Valider les contrats prêts auprès du maître de guilde." : "Aucun contrat de guilde prêt.",
+            "Maître de guilde"
+        );
+        turnInData.status = guildCounts.ready > 0 ? std::to_string(guildCounts.ready) + " prêt(s)" : "Indisponible";
+        turnInData.important = guildCounts.ready > 0;
+
+        screen.addOption(1, "Voir le panneau de quêtes", "Consulter les contrats officiels disponibles.", true, "quest.guild.board", boardData);
+        screen.addOption(2, "Rendre une quête de guilde terminée" + (guildCounts.ready > 0 ? " [" + std::to_string(guildCounts.ready) + "]" : ""),
+            guildCounts.ready > 0 ? "Valider un contrat terminé." : "Aucun contrat de guilde prêt à rendre.",
+            guildCounts.ready > 0,
+            "quest.guild.turn_in",
+            turnInData
+        );
+        screen.addOption(3, "Consulter le journal", "Lire le journal complet des quêtes.", true, "quest.guild.journal");
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
 
         if (choice == 0)
@@ -2090,51 +3300,65 @@ void QuestMenu::acceptGuildQuest(Player& player)
     questLog.ensureGuildBoardReady(player.getLevel(), player.getCombatsStarted());
 
     const std::vector<Quest>& board = questLog.getGuildBoardOffers();
-
-    std::cout << "========== PANNEAU DE GUILDE ==========" << std::endl;
-    std::cout << "Quêtes actives : " << questLog.getActiveGuildQuestCount() << "/3" << std::endl;
-    std::cout << "Offres visibles : " << board.size() << "/" << questLog.getGuildBoardTargetSize() << std::endl;
+    MenuScreen screen("PANNEAU DE GUILDE", "quest.guild.board");
+    screen.addLine("Quêtes actives : " + std::to_string(questLog.getActiveGuildQuestCount()) + "/3");
+    screen.addLine("Offres visibles : " + std::to_string(board.size()) + "/" + std::to_string(questLog.getGuildBoardTargetSize()));
 
     int remainingBeforeRefresh = questLog.getGuildBoardCombatsBeforeRefresh(player.getCombatsStarted());
     if (remainingBeforeRefresh <= 0)
     {
-        std::cout << "Le panneau sera réécrit au prochain passage." << std::endl;
+        screen.addLine("Le panneau sera réécrit au prochain passage.");
     }
     else
     {
-        std::cout << "Le panneau actuel reste affiché encore " << remainingBeforeRefresh
-                  << " combat" << (remainingBeforeRefresh > 1 ? "s" : "") << "." << std::endl;
+        screen.addLine("Le panneau actuel reste affiché encore " + std::to_string(remainingBeforeRefresh)
+            + " combat" + (remainingBeforeRefresh > 1 ? "s" : "") + ".");
     }
 
     if (questLog.getGuildBoardPendingReplacements() > 0)
     {
-        std::cout << "Des places prises seront remplacées après le prochain combat." << std::endl;
-    }
-
-    std::cout << "0 : Retour" << std::endl;
-
-    for (int i = 0; i < static_cast<int>(board.size()); ++i)
-    {
-        std::cout << i + 1 << " : [Rang " << board[i].rank << "] " << board[i].title
-                  << " | " << questRewardText(board[i]);
-
-        if (questLog.hasQuest(board[i].id))
-        {
-            std::cout << " | déjà prise";
-        }
-
-        std::cout << std::endl;
+        screen.addLine("Des places prises seront remplacées après le prochain combat.");
     }
 
     if (board.empty())
     {
-        std::cout << "Le panneau est vide pour l'instant. Repasse après un combat." << std::endl;
+        screen.addLine("Le panneau est vide pour l'instant. Repasse après un combat.");
     }
 
-    std::cout << "=======================================" << std::endl;
-    std::cout << "> ";
+    screen.addBackOption("Retour", "quest.guild.board.back");
 
-    int choice = Console::askNumberBetween(0, static_cast<int>(board.size()), "Choix invalide.");
+    for (int i = 0; i < static_cast<int>(board.size()); ++i)
+    {
+        std::string label = questCardLabel(board[i]);
+        if (questLog.hasQuest(board[i].id))
+        {
+            label += " | Statut : déjà prise";
+        }
+
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "quest";
+        itemData.section = "Panneau de guilde";
+        itemData.actionType = "quest";
+        itemData.name = board[i].title;
+        itemData.detail = board[i].objective;
+        itemData.status = questLog.hasQuest(board[i].id) ? "Déjà prise" : "Disponible";
+        itemData.reward = questRewardText(board[i]);
+        itemData.progress = "Rang " + board[i].rank;
+        itemData.owner = "Guilde";
+        itemData.important = !questLog.hasQuest(board[i].id);
+
+        screen.addOption(
+            i + 1,
+            label,
+            "Accepter cette quête de guilde si une place est libre.",
+            true,
+            "quest.guild.board.accept." + std::to_string(i + 1),
+            itemData
+        );
+    }
+
+    int choice = TerminalInterface::askMenuChoice(screen, 0, static_cast<int>(board.size()), "Choix invalide.");
     Console::clear();
 
     if (choice == 0)
@@ -2146,23 +3370,79 @@ void QuestMenu::acceptGuildQuest(Player& player)
 
     if (!questLog.canAcceptGuildQuest())
     {
-        std::cout << "Tu as déjà 3 quêtes de guilde actives." << std::endl;
-        std::cout << "Termine ou rends-en une avant d'en accepter une autre." << std::endl;
+        MessageScreen::show(
+            "PANNEAU SATURÉ",
+            "quest.guild.board.full",
+            {
+                "Tu as déjà 3 quêtes de guilde actives.",
+                "Termine ou rends-en une avant d'en accepter une autre."
+            }
+        );
+        return;
     }
-    else if (questLog.addQuest(selectedQuest))
+
+    if (questLog.hasQuest(selectedQuest.id))
+    {
+        MessageScreen::show(
+            "CONTRAT DÉJÀ PRIS",
+            "quest.guild.board.already_taken",
+            {
+                "Ce contrat est déjà dans ton journal.",
+                "La guilde refuse de tamponner deux fois le même papier, même avec un sourire."
+            }
+        );
+        return;
+    }
+
+    int accept = askQuestOfferDecision(
+        "CONTRAT DE GUILDE",
+        "quest.guild.board.offer",
+        player,
+        selectedQuest,
+        {
+            "La gérante détache la fiche du panneau sans encore la signer.",
+            "Ici, les informations sont cadrées : objectif, rang, zone et récompense sont notés officiellement."
+        }
+    );
+    Console::clear();
+
+    if (accept != 1)
+    {
+        MessageScreen::show(
+            "CONTRAT LAISSÉ",
+            "quest.guild.board.declined",
+            {
+                "Tu laisses le contrat sur le panneau.",
+                "Quelqu'un d'autre le prendra peut-être, ou peut-être pas. La guilde adore ce genre de suspense administratif."
+            }
+        );
+        return;
+    }
+
+    if (questLog.addQuest(selectedQuest))
     {
         questLog.removeGuildBoardOfferAt(choice - 1, player.getCombatsStarted());
-        std::cout << "Quête acceptée : " << selectedQuest.title << std::endl;
-        std::cout << "L'annonce est retirée du panneau. Une nouvelle place sera préparée après ton prochain combat." << std::endl;
+
+        std::vector<std::string> lines = {
+            "Quête acceptée : " + selectedQuest.title
+        };
+        std::vector<std::string> dialogue = guildQuestAcceptedDialogueLines(selectedQuest);
+        lines.insert(lines.end(), dialogue.begin(), dialogue.end());
+        lines.push_back("Objectif : " + selectedQuest.objective);
+        lines.push_back("Zone probable : " + selectedQuest.location);
+        lines.push_back("Récompenses : " + questRewardText(selectedQuest));
+        lines.push_back("Une nouvelle place sera préparée après ton prochain combat.");
+
+        MessageScreen::show("QUÊTE DE GUILDE ACCEPTÉE", "quest.guild.board.accepted", lines);
     }
     else
     {
-        std::cout << "Impossible d'accepter cette quête. Elle est peut-être déjà active." << std::endl;
+        MessageScreen::show(
+            "QUÊTE NON AJOUTÉE",
+            "quest.guild.board.failed",
+            {"Impossible d'accepter cette quête. Elle est peut-être déjà active."}
+        );
     }
-
-    std::cout << std::endl;
-    Console::waitForEnter();
-    Console::clear();
 }
 
 // EN: openExploration declares or implements a focused behavior used by this module.
@@ -2176,23 +3456,86 @@ void QuestMenu::openExploration(Player& player, DifficultyMode difficulty)
 // FR: openLocations déclare ou implémente un comportement précis utilisé par ce module.
 void QuestMenu::openLocations(Player& player)
 {
+    struct LocationEntry
+    {
+        int choice;
+        std::string label;
+        std::string detail;
+        std::string client;
+        bool guild = false;
+        bool inventory = false;
+    };
+
+    const std::vector<LocationEntry> entries = {
+        {1, "Guilde", "Contrats officiels, panneau et journal.", "Maître de guilde", true, false},
+        {2, "Forge", "Commandes et demandes du forgeron.", "Forgeron", false, false},
+        {3, "Herboristerie", "Demandes liées aux plantes et ingrédients.", "Alchimiste", false, false},
+        {4, "Place du village", "Rumeurs, habitants et petites demandes.", "Villageois nerveux", false, false},
+        {5, "Route commerciale", "Demandes de marchands et risques de voyage.", "Marchand inquiet", false, false},
+        {6, "Boutique de monstres", "Composants de créatures et revente spécialisée.", "Vendeur de composants", false, false},
+        {7, "Boutique de matériaux", "Matériaux, stocks et approvisionnement.", "Vendeur de matériaux", false, false},
+        {8, "Armurerie défensive", "Protections, pièces d'armure et commandes.", "Armurier", false, false},
+        {9, "Forge d'armes", "Armes, réparation et approvisionnement.", "Vendeur d'armes", false, false},
+        {10, "Boutique de consommables", "Potions, consommables et réserves.", "Vendeur de consommables", false, false},
+        {11, "Bibliothèque", "Notes, savoirs et pistes de recherche.", "Bibliothécaire", false, false},
+        {12, "Ouvrir l'inventaire", "Consulter objets et connaissances avant de repartir.", "", false, true}
+    };
+
     while (true)
     {
         MenuScreen screen("LIEUX VISITABLES", "quest.locations");
-        screen.addOption(0, "Retour", "", true, "quest.locations.back");
-        screen.addOption(1, "Guilde", "", true, "quest.locations.guild");
-        screen.addOption(2, "Forge", "", true, "quest.locations.forge");
-        screen.addOption(3, "Herboristerie", "", true, "quest.locations.herbalist");
-        screen.addOption(4, "Place du village", "", true, "quest.locations.village_square");
-        screen.addOption(5, "Route commerciale", "", true, "quest.locations.trade_road");
-        screen.addOption(6, "Boutique de monstres", "", true, "quest.locations.monster_shop");
-        screen.addOption(7, "Boutique de matériaux", "", true, "quest.locations.material_shop");
-        screen.addOption(8, "Armurerie défensive", "", true, "quest.locations.armor_shop");
-        screen.addOption(9, "Forge d'armes", "", true, "quest.locations.weapon_shop");
-        screen.addOption(10, "Boutique de consommables", "", true, "quest.locations.consumable_shop");
-        screen.addOption(11, "Bibliothèque", "", true, "quest.locations.library");
-        screen.addOption(12, "Ouvrir l'inventaire", "", true, "quest.locations.inventory");
-        int choice = TerminalInterface::askMenuChoice(screen, 0, 12, "Choix invalide.");
+        screen.addLine("Chaque lieu peut servir à parler, rendre une demande ou vérifier un contact.");
+        screen.addLine("Les demandes PNJ restent des pourparlers : seules les quêtes de guilde sont des contrats officiels.");
+        screen.addBackOption("Retour", "quest.locations.back");
+
+        for (const LocationEntry& entry : entries)
+        {
+            if (entry.inventory)
+            {
+                screen.addOption(
+                    entry.choice,
+                    entry.label,
+                    entry.detail,
+                    true,
+                    "quest.locations.inventory",
+                    makeQuestNavigationItemData("location", "Lieux visitables", "open", "Inventaire", entry.detail)
+                );
+                continue;
+            }
+
+            const ClientQuestCounts counts = countQuestsForClient(player, entry.client);
+            std::string label = entry.label + " — " + entry.client;
+            if (counts.ready > 0)
+            {
+                label += " [" + std::to_string(counts.ready) + " à rendre]";
+            }
+            else if (counts.active > 0)
+            {
+                label += " [" + std::to_string(counts.active) + " en cours]";
+            }
+
+            MenuOptionItemData itemData = makeClientQuestNavigationItemData(
+                entry.client,
+                "Lieux visitables",
+                entry.detail,
+                counts
+            );
+            itemData.kind = "location";
+            itemData.actionType = entry.guild ? "quest" : itemData.actionType;
+            itemData.name = entry.label;
+            itemData.owner = entry.client;
+
+            screen.addOption(
+                entry.choice,
+                label,
+                entry.detail + " " + clientQuestHintText(counts),
+                true,
+                "quest.locations.select." + std::to_string(entry.choice),
+                itemData
+            );
+        }
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
 
         if (choice == 0)
@@ -2200,54 +3543,29 @@ void QuestMenu::openLocations(Player& player)
             return;
         }
 
-        if (choice == 1)
-        {
-            openGuild(player);
-        }
-        else if (choice == 2)
-        {
-            talkToClient(player, "Forgeron");
-        }
-        else if (choice == 3)
-        {
-            talkToClient(player, "Alchimiste");
-        }
-        else if (choice == 4)
-        {
-            talkToClient(player, "Villageois nerveux");
-        }
-        else if (choice == 5)
-        {
-            talkToClient(player, "Marchand inquiet");
-        }
-        else if (choice == 6)
-        {
-            talkToClient(player, "Vendeur de composants");
-        }
-        else if (choice == 7)
-        {
-            talkToClient(player, "Vendeur de matériaux");
-        }
-        else if (choice == 8)
-        {
-            talkToClient(player, "Armurier");
-        }
-        else if (choice == 9)
-        {
-            talkToClient(player, "Vendeur d'armes");
-        }
-        else if (choice == 10)
-        {
-            talkToClient(player, "Vendeur de consommables");
-        }
-        else if (choice == 11)
-        {
-            talkToClient(player, "Bibliothécaire");
-        }
-        else if (choice == 12)
+        if (choice == 12)
         {
             InventoryMenu::open(player);
             Console::clear();
+            continue;
+        }
+
+        for (const LocationEntry& entry : entries)
+        {
+            if (choice != entry.choice)
+            {
+                continue;
+            }
+
+            if (entry.guild)
+            {
+                openGuild(player);
+            }
+            else
+            {
+                talkToClient(player, entry.client);
+            }
+            break;
         }
     }
 }
@@ -2259,7 +3577,7 @@ void QuestMenu::openNotableNpcMenu(Player& player)
     while (true)
     {
         std::vector<std::pair<std::string, std::string>> entries = {
-            {"Maître de guilde", "PNJ important"},
+            {"Maître de guilde", "PNJ important / contrats officiels"},
             {"Forgeron", "PNJ client"},
             {"Alchimiste", "PNJ client"},
             {"Villageois nerveux", "PNJ client / événement"},
@@ -2280,7 +3598,9 @@ void QuestMenu::openNotableNpcMenu(Player& player)
         }
 
         MenuScreen screen("PNJ NOTABLES", "quest.notable_npc");
-        screen.addOption(0, "Retour", "", true, "quest.notable_npc.back");
+        screen.addLine("Sélectionne un contact pour parler, consulter ses demandes ou rendre ce qui est terminé.");
+        screen.addLine("Les PNJ donnent des demandes de vive voix : le journal les estime, il ne les certifie pas comme la guilde.");
+        screen.addBackOption("Retour", "quest.notable_npc.back");
 
         bool printedRecommendedHeader = false;
         for (int i = 0; i < static_cast<int>(entries.size()); ++i)
@@ -2291,12 +3611,38 @@ void QuestMenu::openNotableNpcMenu(Player& player)
                 screen.addLine("--- Recommandés par un habitant ---");
             }
 
+            const ClientQuestCounts counts = countQuestsForClient(player, entries[i].first);
+            std::string label = entries[i].first + " (" + entries[i].second + ")";
+
+            if (counts.ready > 0)
+            {
+                label += " [" + std::to_string(counts.ready) + " à rendre]";
+            }
+            else if (counts.active > 0)
+            {
+                label += " [" + std::to_string(counts.active) + " en cours]";
+            }
+
+            MenuOptionItemData itemData = makeClientQuestNavigationItemData(
+                entries[i].first,
+                "PNJ notables",
+                entries[i].second,
+                counts
+            );
+            itemData.status = entries[i].first == "Maître de guilde"
+                ? "Contrats officiels / panneau de guilde"
+                : clientQuestStatusText(counts);
+            itemData.actionType = entries[i].first == "Maître de guilde" ? "quest" : itemData.actionType;
+
             screen.addOption(
                 i + 1,
-                entries[i].first + " (" + entries[i].second + ")",
-                "",
+                label,
+                entries[i].first == "Maître de guilde"
+                    ? "Ouvrir le panneau officiel de guilde."
+                    : "Parler, consulter ou rendre une demande auprès de ce contact.",
                 true,
-                "quest.notable_npc.select." + std::to_string(i + 1)
+                "quest.notable_npc.select." + std::to_string(i + 1),
+                itemData
             );
         }
 
@@ -2306,7 +3652,7 @@ void QuestMenu::openNotableNpcMenu(Player& player)
             screen.addLine("Aucun nom recommandé pour l'instant.");
         }
 
-        int choice = TerminalInterface::askMenuChoice(screen, 0, static_cast<int>(entries.size()), "Choix invalide.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
 
         if (choice == 0)
@@ -2332,11 +3678,74 @@ void QuestMenu::talkToClient(Player& player, const std::string& clientName)
 {
     while (true)
     {
+        const ClientQuestCounts counts = countQuestsForClient(player, clientName);
         MenuScreen screen(clientName, "quest.client");
-        screen.addOption(0, "Retour", "", true, "quest.client.back");
-        screen.addOption(1, "Parler", "", true, "quest.client.talk");
-        screen.addOption(2, "Voir / rendre une demande terminée", "", true, "quest.client.turn_in");
-        int choice = TerminalInterface::askMenuChoice(screen, 0, 2, "Choix invalide.");
+        addClientQuestSummaryLines(screen, player, clientName);
+        screen.addBackOption("Retour", "quest.client.back");
+
+        MenuOptionItemData talkData = makeClientQuestNavigationItemData(
+            clientName,
+            "Contact",
+            "Demander si ce contact a quelque chose à confier.",
+            counts
+        );
+        talkData.actionType = "talk";
+        talkData.status = isRecommendedClientName(clientName)
+            ? "Contact recommandé - demandes limitées"
+            : "Pourparler possible";
+
+        MenuOptionItemData overviewData = makeClientQuestNavigationItemData(
+            clientName,
+            "Contact",
+            "Consulter les demandes connues de ce contact.",
+            counts
+        );
+        overviewData.actionType = "inspect";
+        overviewData.status = counts.total > 0 ? clientQuestStatusText(counts) : "Aucune demande connue";
+        overviewData.important = counts.ready > 0;
+
+        MenuOptionItemData turnInData = makeClientQuestNavigationItemData(
+            clientName,
+            "Contact",
+            "Valider une demande terminée auprès de ce contact.",
+            counts
+        );
+        turnInData.actionType = "turn_in";
+        turnInData.status = counts.ready > 0
+            ? std::to_string(counts.ready) + " demande(s) prête(s)"
+            : "Aucune demande prête";
+        turnInData.important = counts.ready > 0;
+
+        screen.addOption(
+            1,
+            "Parler",
+            "Demander si ce contact a quelque chose à confier.",
+            true,
+            "quest.client.talk",
+            talkData
+        );
+        screen.addOption(
+            2,
+            "Consulter les demandes de ce contact",
+            counts.total > 0
+                ? "Voir les demandes connues, avec inspection fiable pour la guilde ou estimation vague pour les PNJ."
+                : "Aucune demande connue pour ce contact.",
+            counts.total > 0,
+            "quest.client.overview",
+            overviewData
+        );
+        screen.addOption(
+            3,
+            "Rendre une demande terminée" + (counts.ready > 0 ? " [" + std::to_string(counts.ready) + "]" : ""),
+            counts.ready > 0
+                ? "Valider une demande prête auprès de ce contact."
+                : "Aucune demande prête à rendre ici.",
+            counts.ready > 0,
+            "quest.client.turn_in",
+            turnInData
+        );
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
 
         if (choice == 0)
@@ -2346,24 +3755,34 @@ void QuestMenu::talkToClient(Player& player, const std::string& clientName)
 
         if (choice == 2)
         {
+            showClientQuestOverview(player, clientName);
+            continue;
+        }
+
+        if (choice == 3)
+        {
             completeQuestAtClient(player, clientName);
             continue;
         }
 
+        std::vector<std::string> introLines;
         if (isRecommendedClientName(clientName))
         {
             int usedRequests = player.getQuestLog().getClientQuestCount(clientName);
             if (usedRequests >= 5)
             {
-                std::cout << clientName << " n'a plus de nouvelles demandes à confier." << std::endl;
-                std::cout << "Son nom quitte naturellement la liste des contacts recommandés." << std::endl;
-                std::cout << std::endl;
-                Console::waitForEnter();
-                Console::clear();
+                MessageScreen::show(
+                    "CONTACT ÉPUISÉ",
+                    "quest.client.recommended.empty",
+                    {
+                        clientName + " n'a plus de nouvelles demandes à confier.",
+                        "Son nom quitte naturellement la liste des contacts recommandés."
+                    }
+                );
                 return;
             }
 
-            std::cout << "Demandes confiées par ce contact : " << usedRequests << "/5." << std::endl;
+            introLines.push_back("Demandes confiées par ce contact : " + std::to_string(usedRequests) + "/5.");
         }
 
         Quest offeredQuest;
@@ -2372,103 +3791,87 @@ void QuestMenu::talkToClient(Player& player, const std::string& clientName)
         if (questRandom.between(1, 100) <= 70)
         {
             std::string targetedBiome = randomBiomeForClient(questRandom, clientName);
-            std::cout << clientName << " n'a rien de sérieux à confier pour le moment." << std::endl;
-            std::cout << "Cette fois, il vise une zone précise : " << targetedBiome << "." << std::endl;
+            introLines.push_back(clientName + " n'a rien de totalement officiel à confier pour le moment.");
+            introLines.push_back("Cette fois, il parle surtout d'une zone précise : " + targetedBiome + ".");
             offeredQuest = QuestCatalog::createBiomeRequest(player.getLevel(), targetedBiome, clientName);
         }
         else if (clientName == "Forgeron")
         {
-            std::cout << "Le forgeron essuie ses mains noircies et te jauge du regard." << std::endl;
+            introLines.push_back("Le forgeron essuie ses mains noircies et te jauge du regard.");
             offeredQuest = QuestCatalog::createForgemasterMaterialRequest(player.getLevel());
         }
         else if (clientName == "Alchimiste")
         {
-            std::cout << "L'alchimiste sourit comme si son idée allait forcément exploser." << std::endl;
+            introLines.push_back("L'alchimiste sourit comme si son idée allait forcément exploser.");
             offeredQuest = QuestCatalog::createAlchemistIngredientRequest(player.getLevel());
         }
         else if (clientName == "Villageois nerveux")
         {
-            std::cout << "Le villageois te rattrape presque en courant." << std::endl;
+            introLines.push_back("Le villageois te rattrape presque en courant.");
             offeredQuest = QuestCatalog::createVillagerMonsterFearRequest(player.getLevel());
         }
         else if (clientName == "Marchand inquiet")
         {
-            std::cout << "Le marchand tient une caisse vide et un sourire beaucoup trop forcé." << std::endl;
+            introLines.push_back("Le marchand tient une caisse vide et un sourire beaucoup trop forcé.");
             offeredQuest = QuestCatalog::createMerchantDeliveryRequest(player.getLevel());
         }
         else if (clientName == "Vendeur de composants")
         {
-            std::cout << "Le vendeur aligne des bocaux pas vraiment rassurants." << std::endl;
+            introLines.push_back("Le vendeur aligne des bocaux pas vraiment rassurants.");
             offeredQuest = QuestCatalog::createMonsterMaterialVendorRequest(player.getLevel());
         }
         else if (clientName == "Vendeur de matériaux")
         {
-            std::cout << "Le vendeur tapote une étagère presque vide." << std::endl;
+            introLines.push_back("Le vendeur tapote une étagère presque vide.");
             offeredQuest = QuestCatalog::createMaterialVendorRequest(player.getLevel());
         }
         else if (clientName == "Herboriste")
         {
-            std::cout << "L'herboriste trie des feuilles avec une précision maniaque." << std::endl;
+            introLines.push_back("L'herboriste trie des feuilles avec une précision maniaque.");
             offeredQuest = QuestCatalog::createHerbalistRequest(player.getLevel());
         }
         else if (clientName == "Armurier")
         {
-            std::cout << "L'armurier soupire devant une pile de protections abîmées." << std::endl;
+            introLines.push_back("L'armurier soupire devant une pile de protections abîmées.");
             offeredQuest = QuestCatalog::createArmorerRequest(player.getLevel());
         }
         else if (clientName == "Vendeur d'armes")
         {
-            std::cout << "Le vendeur d'armes vérifie ses lames une par une." << std::endl;
+            introLines.push_back("Le vendeur d'armes vérifie ses lames une par une.");
             offeredQuest = QuestCatalog::createWeaponVendorRequest(player.getLevel());
         }
         else if (clientName == "Vendeur de consommables")
         {
-            std::cout << "Le vendeur de consommables recompte ses flacons avec inquiétude." << std::endl;
+            introLines.push_back("Le vendeur de consommables recompte ses flacons avec inquiétude.");
             offeredQuest = QuestCatalog::createConsumableVendorRequest(player.getLevel());
         }
         else if (isRecommendedClientName(clientName))
         {
-            std::cout << clientName << " t'accueille grâce à une recommandation griffonnée sur un billet." << std::endl;
-            std::cout << "Ce contact n'a pas encore pignon sur rue, mais il a déjà une demande précise." << std::endl;
+            introLines.push_back(clientName + " t'accueille grâce à une recommandation griffonnée sur un billet.");
+            introLines.push_back("Ce contact n'a pas encore pignon sur rue, mais il a déjà une demande précise.");
             offeredQuest = QuestCatalog::createBiomeRequest(player.getLevel(), randomBiomeForClient(questRandom, clientName), clientName);
         }
         else
         {
-            std::cout << "La bibliothécaire te montre des notes incomplètes." << std::endl;
+            introLines.push_back("La bibliothécaire te montre des notes incomplètes.");
             offeredQuest = QuestCatalog::createLibrarianRequest(player.getLevel());
         }
 
         if (!player.getQuestLog().canAcceptPersonalQuestForClient(offeredQuest.client))
         {
-            std::cout << std::endl;
-            std::cout << offeredQuest.client << " a déjà deux demandes actives dans ton journal." << std::endl;
-            std::cout << "Il préfère attendre que tu lui rendes au moins une mission avant d'en confier une autre." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "DEMANDES EN ATTENTE",
+                "quest.client.offer.blocked",
+                {
+                    offeredQuest.client + " a déjà deux demandes actives dans ton journal.",
+                    "Il préfère attendre que tu lui rendes au moins une demande avant d'en confier une autre.",
+                    "Conseil : consulte ce contact puis rends une demande terminée si elle est prête."
+                }
+            );
             continue;
         }
 
-        std::cout << std::endl;
-        std::cout << "Demande proposée : [Rang " << offeredQuest.rank << "] " << offeredQuest.title << std::endl;
-        std::cout << offeredQuest.objective << std::endl;
-        std::cout << "Récompenses : " << questRewardText(offeredQuest) << std::endl;
-
-        if (!offeredQuest.requiredMaterialId.empty() && offeredQuest.requiredMaterialQuantity > 0)
-        {
-            std::cout << "Matériaux à rapporter : " << offeredQuest.requiredMaterialName
-                      << " x" << offeredQuest.requiredMaterialQuantity
-                      << " (possédé : " << player.getInventory().countMaterialById(offeredQuest.requiredMaterialId)
-                      << ", équiv. normale : " << player.getInventory().countMaterialQualityPointsById(offeredQuest.requiredMaterialId) / 2 << ")"
-                      << std::endl;
-        }
-
-        std::cout << std::endl;
-        std::cout << "1 : Accepter" << std::endl;
-        std::cout << "0 : Refuser" << std::endl;
-        std::cout << "> ";
-
-        int accept = Console::askNumberBetween(0, 1, "Choix invalide.");
+        int accept = askQuestOfferDecision("DEMANDE DE CLIENT", "quest.client.offer", player, offeredQuest, introLines);
         Console::clear();
 
         if (accept == 1)
@@ -2476,17 +3879,104 @@ void QuestMenu::talkToClient(Player& player, const std::string& clientName)
             if (player.getQuestLog().addQuest(offeredQuest))
             {
                 player.getQuestLog().refreshMaterialDeliveryQuests(player.getInventory());
-                std::cout << "Demande acceptée : " << offeredQuest.title << std::endl;
+                std::vector<std::string> lines = {"Demande acceptée : " + offeredQuest.title};
+                std::vector<std::string> dialogue = clientQuestAcceptedDialogueLines(offeredQuest);
+                lines.insert(lines.end(), dialogue.begin(), dialogue.end());
+                lines.push_back("Journal : cette entrée reste une estimation de pourparler tant qu'elle ne vient pas de la guilde.");
+                MessageScreen::show("DEMANDE ACCEPTÉE", "quest.client.offer.accepted", lines);
             }
             else
             {
-                std::cout << "Cette demande est déjà active ou impossible à ajouter." << std::endl;
+                MessageScreen::show(
+                    "DEMANDE NON AJOUTÉE",
+                    "quest.client.offer.failed",
+                    {"Cette demande est déjà active ou impossible à ajouter."}
+                );
+            }
+        }
+        else
+        {
+            MessageScreen::show(
+                "DEMANDE REFUSÉE",
+                "quest.client.offer.declined",
+                {"Tu refuses la demande pour l'instant."}
+            );
+        }
+    }
+}
+
+// EN: openReadyQuestTurnInMenu declares or implements a focused behavior used by this module.
+// FR: openReadyQuestTurnInMenu déclare ou implémente un comportement précis utilisé par ce module.
+void QuestMenu::openReadyQuestTurnInMenu(Player& player)
+{
+    while (true)
+    {
+        const std::vector<ReadyQuestClientEntry> entries = collectReadyQuestClients(player);
+        MenuScreen screen("QUÊTES PRÊTES À RENDRE", "quest.ready_turn_in");
+        screen.addLine("Choisis le contact concerné : la validation se fait auprès de la personne ou de l'organisme qui a confié la demande.");
+        screen.addLine("Rappel : la guilde valide des contrats officiels ; les PNJ confirment surtout des pourparlers et services rendus.");
+        screen.addBackOption("Retour", "quest.ready_turn_in.back");
+
+        if (entries.empty())
+        {
+            screen.addLine("Aucune quête n'est prête à rendre pour le moment.");
+            TerminalInterface::askMenuChoiceFromOptions(screen, "Entre 0 pour revenir.");
+            Console::clear();
+            return;
+        }
+
+        for (int i = 0; i < static_cast<int>(entries.size()); ++i)
+        {
+            const ReadyQuestClientEntry& entry = entries[i];
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = entry.guildReadyCount > 0 && entry.personalReadyCount == 0 ? "quest" : "npc";
+            itemData.section = "Quêtes prêtes";
+            itemData.actionType = "turn_in";
+            itemData.name = entry.clientName;
+            itemData.detail = "Première entrée : " + entry.firstTitle;
+            itemData.status = readyQuestClientStatusText(entry);
+            itemData.reward = entry.firstReward;
+            itemData.owner = entry.clientName;
+            itemData.important = true;
+
+            std::string label = entry.clientName + " | " + readyQuestClientStatusText(entry);
+            if (!entry.firstTitle.empty())
+            {
+                label += " | Première : " + entry.firstTitle;
             }
 
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            screen.addOption(
+                i + 1,
+                label,
+                entry.guildReadyCount > 0 && entry.personalReadyCount == 0
+                    ? "Rendre un contrat officiel auprès de ce contact."
+                    : "Rendre une demande ou un service terminé auprès de ce contact.",
+                true,
+                "quest.ready_turn_in.client." + std::to_string(i + 1),
+                itemData
+            );
         }
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+
+        if (choice >= 1 && choice <= static_cast<int>(entries.size()))
+        {
+            completeQuestAtClient(player, entries[choice - 1].clientName);
+            continue;
+        }
+
+        MessageScreen::show(
+            "CONTACT INVALIDE",
+            "quest.ready_turn_in.invalid",
+            {"Ce choix ne correspond à aucun contact ayant une quête prête à rendre."}
+        );
     }
 }
 
@@ -2507,36 +3997,67 @@ void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientN
 
     if (readyIndexes.empty())
     {
-        std::cout << "Aucune quête prête à être rendue à " << clientName << "." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
+        MessageScreen::show(
+            "AUCUNE QUÊTE À RENDRE",
+            "quest.turn_in.empty",
+            {
+                "Aucune quête prête à être rendue à " + clientName + ".",
+                clientName == "Maître de guilde"
+                    ? "Les contrats officiels doivent être terminés avant d'être tamponnés."
+                    : "Pour les demandes PNJ, le journal peut estimer une avancée, mais le contact doit encore confirmer la fin."
+            }
+        );
         return;
     }
 
-    std::cout << "========== QUÊTES À RENDRE ==========" << std::endl;
-    std::cout << "0 : Retour" << std::endl;
+    MenuScreen screen("QUÊTES À RENDRE", "quest.turn_in.list");
+    screen.addSubtitle(clientName);
+    screen.addLine(clientName == "Maître de guilde"
+        ? "Sélectionne le contrat officiel à tamponner auprès de la guilde."
+        : "Sélectionne la demande à confirmer auprès de ce contact. Ce n'est pas un tampon officiel, plutôt une validation de parole donnée.");
+    screen.addBackOption("Retour", "quest.turn_in.back");
 
     for (int i = 0; i < static_cast<int>(readyIndexes.size()); ++i)
     {
         const Quest& quest = quests[readyIndexes[i]];
-        std::cout << i + 1 << " : [Rang " << quest.rank << "] " << quest.title
-                  << " | " << questRewardText(quest);
+        std::string label = quest.guildQuest
+            ? "[Contrat officiel - Rang " + quest.rank + "] " + quest.title + " | " + questRewardText(quest)
+            : "[Pourparler PNJ - Rang estimé " + quest.rank + "] " + quest.title + " | " + approximateQuestRewardText(quest);
 
         if (isMaterialDeliveryQuest(quest))
         {
-            std::cout << " | " << quest.requiredMaterialName
-                      << " " << player.getInventory().countMaterialById(quest.requiredMaterialId)
-                      << " (équiv. " << player.getInventory().countMaterialQualityPointsById(quest.requiredMaterialId) / 2 << ")/" << quest.requiredMaterialQuantity;
+            label += " | " + quest.requiredMaterialName
+                + " " + std::to_string(player.getInventory().countMaterialById(quest.requiredMaterialId))
+                + " (équiv. " + std::to_string(player.getInventory().countMaterialQualityPointsById(quest.requiredMaterialId) / 2)
+                + ")/" + std::to_string(quest.requiredMaterialQuantity);
         }
 
-        std::cout << std::endl;
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "quest";
+        itemData.section = "Quêtes à rendre";
+        itemData.actionType = "turn_in";
+        itemData.name = quest.title;
+        itemData.detail = quest.objective;
+        itemData.status = "Prête à rendre";
+        itemData.reward = quest.guildQuest ? questRewardText(quest) : approximateQuestRewardText(quest);
+        itemData.progress = std::to_string(quest.progress) + "/" + std::to_string(quest.target);
+        itemData.owner = quest.client;
+        itemData.important = true;
+
+        screen.addOption(
+            i + 1,
+            label,
+            quest.guildQuest
+                ? "Tamponner ce contrat officiel et recevoir les récompenses."
+                : "Confirmer cette demande informelle auprès du PNJ.",
+            true,
+            "quest.turn_in.select." + std::to_string(i + 1),
+            itemData
+        );
     }
 
-    std::cout << "=====================================" << std::endl;
-    std::cout << "> ";
-
-    int choice = Console::askNumberBetween(0, static_cast<int>(readyIndexes.size()), "Choix invalide.");
+    int choice = TerminalInterface::askMenuChoice(screen, 0, static_cast<int>(readyIndexes.size()), "Choix invalide.");
     Console::clear();
 
     if (choice == 0)
@@ -2546,24 +4067,43 @@ void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientN
 
     Quest& quest = quests[readyIndexes[choice - 1]];
 
+    if (!askQuestTurnInConfirmation(player, quest, clientName))
+    {
+        return;
+    }
+
+    const int goldBefore = player.getInventory().getGold();
+    const int experienceBefore = player.getExperience();
+    const int levelBefore = player.getLevel();
+
+    std::vector<std::string> resultLines;
+    resultLines.push_back(quest.guildQuest
+        ? "La guilde vérifie le contrat, puis appose son tampon."
+        : quest.client + " confirme que le service rendu correspond bien à ce qui avait été demandé.");
+    resultLines.push_back(quest.guildQuest
+        ? "Nature : contrat officiel validé."
+        : "Nature : demande informelle confirmée par le contact.");
+
     if (!quest.requiredMaterialId.empty() && quest.requiredMaterialQuantity > 0)
     {
         int owned = player.getInventory().countMaterialQualityPointsById(quest.requiredMaterialId) / 2;
 
         if (owned < quest.requiredMaterialQuantity)
         {
-            std::cout << "Il manque des matériaux pour rendre cette quête." << std::endl;
-            std::cout << quest.requiredMaterialName << " requis : " << quest.requiredMaterialQuantity
-                      << " (possédé : " << owned << ")" << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "LIVRAISON INCOMPLÈTE",
+                "quest.turn_in.missing_materials",
+                {
+                    "Il manque des matériaux pour rendre cette quête.",
+                    quest.requiredMaterialName + " requis : " + std::to_string(quest.requiredMaterialQuantity)
+                        + " (possédé : " + std::to_string(owned) + ")"
+                }
+            );
             return;
         }
 
         player.getInventory().removeMaterialQuantityByIdFlexible(quest.requiredMaterialId, quest.requiredMaterialQuantity);
-        std::cout << "Matériaux remis : " << quest.requiredMaterialName
-                  << " x" << quest.requiredMaterialQuantity << std::endl;
+        resultLines.push_back("Matériaux remis : " + quest.requiredMaterialName + " x" + std::to_string(quest.requiredMaterialQuantity));
     }
 
     quest.completed = true;
@@ -2573,42 +4113,18 @@ void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientN
     player.getInventory().earnGold(quest.rewardGold);
     applyQuestExtraReward(player, quest);
 
-    std::cout << "Quête validée : " << quest.title << std::endl;
-    std::cout << "XP gagnée : " << quest.rewardExperience << std::endl;
-    if (quest.rewardGold > 0)
+    appendQuestRewardResultLines(resultLines, quest);
+    resultLines.push_back("Or : " + std::to_string(goldBefore) + " -> " + std::to_string(player.getInventory().getGold()));
+    resultLines.push_back("XP : " + std::to_string(experienceBefore) + " -> " + std::to_string(player.getExperience()));
+    if (player.getLevel() != levelBefore)
     {
-        std::cout << "Or gagné : " << quest.rewardGold << " pièces" << std::endl;
+        resultLines.push_back("Niveau : " + std::to_string(levelBefore) + " -> " + std::to_string(player.getLevel()));
     }
-    else
-    {
-        std::cout << "Prime en or : aucune" << std::endl;
-    }
-
-    if (!quest.rewardMaterialId.empty() && quest.rewardMaterialQuantity > 0)
-    {
-        std::cout << "Objet reçu : " << quest.rewardMaterialName << " x" << quest.rewardMaterialQuantity << std::endl;
-
-        if (quest.rewardMaterialId == "client_recommendation")
-        {
-            std::string recommendedClient = extractRecommendedClientName(quest);
-            if (!recommendedClient.empty())
-            {
-                std::cout << "Nouveau contact ajouté aux PNJ notables : " << recommendedClient << " [Recommandé par un habitant]" << std::endl;
-            }
-            else
-            {
-                std::cout << "Un nouveau contact pourra apparaître dans la section des PNJ recommandés." << std::endl;
-            }
-        }
-    }
-
-    if (!quest.rewardNote.empty())
-    {
-        std::cout << quest.rewardNote << std::endl;
-    }
-    std::cout << std::endl;
-    Console::waitForEnter();
-    Console::clear();
+    MessageScreen::show(
+        quest.guildQuest ? "CONTRAT VALIDÉ" : "DEMANDE VALIDÉE",
+        quest.guildQuest ? "quest.turn_in.guild_completed" : "quest.turn_in.personal_completed",
+        resultLines
+    );
 }
 
 // EN: maybeOfferRandomInterception declares or implements a focused behavior used by this module.
@@ -2633,8 +4149,6 @@ void QuestMenu::maybeOfferRandomInterception(Player& player, DifficultyMode diff
         displayQuestOffer(player, offeredQuest, intro);
     }
 
-    std::cout << std::endl;
-    Console::waitForEnter();
     Console::clear();
 }
 
@@ -2700,18 +4214,24 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty)
                 + " (" + evolvedBiomeRangeText(player, biomes[i]) + ") — "
                 + biomes[i].style;
 
-            if (hasPotentialQuestForBiome(player, biomes[i]))
+            const bool questLikely = hasPotentialQuestForBiome(player, biomes[i]);
+
+            if (questLikely)
             {
                 label += " [Objectif de quête probable]";
             }
 
-            screen.addOption(i + 1, label, "", true, "exploration.biome." + std::to_string(i + 1));
+            screen.addOption(
+                i + 1,
+                label,
+                "Terrain : " + biomes[i].commonMonsters + " | Rares : " + biomes[i].rareMonsters,
+                true,
+                "exploration.biome." + std::to_string(i + 1),
+                makeExplorationBiomeItemData(player, biomes[i], questLikely)
+            );
         }
 
-        TerminalInterface::renderMenuScreen(screen);
-        std::cout << "> ";
-
-        int choice = Console::askNumberBetween(0, static_cast<int>(biomes.size()), "Choix invalide.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
 
         if (choice == 0)
@@ -2730,16 +4250,16 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty)
             intensityScreen.addOption(
                 i + 1,
                 intensities[i].name + " — " + intensities[i].description,
-                "",
+                "Risque " + std::to_string(intensities[i].eventShift)
+                    + "% | Or " + std::to_string(intensities[i].goldPercent)
+                    + "% | Trouvailles +" + std::to_string(intensities[i].quantityBonus),
                 true,
-                "exploration.intensity." + std::to_string(i + 1)
+                "exploration.intensity." + std::to_string(i + 1),
+                makeExplorationIntensityItemData(intensities[i])
             );
         }
 
-        TerminalInterface::renderMenuScreen(intensityScreen);
-        std::cout << "> ";
-
-        int intensityChoice = Console::askNumberBetween(0, static_cast<int>(intensities.size()), "Choix invalide.");
+        int intensityChoice = TerminalInterface::askMenuChoiceFromOptions(intensityScreen, "Choix invalide.");
         Console::clear();
 
         if (intensityChoice == 0)
@@ -2748,67 +4268,88 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty)
         }
 
         const ExplorationIntensity& intensity = intensities[intensityChoice - 1];
+        const int hpBeforeExploration = player.getHp();
+        const int goldBeforeExploration = player.getInventory().getGold();
+        const int readyBeforeExploration = countQuestsForJournalFilter(player, QuestJournalFilter::ReadyToTurnIn);
+
         Random random;
         QuestSearchHint questHint = getQuestSearchHintForBiome(player, biome);
         int roll = adjustExplorationEventRoll(random.between(1, 100), intensity);
         roll = adjustExplorationRollForActiveQuests(roll, random, questHint);
+        const std::string eventLabel = explorationEventLabelFromRoll(roll);
         bool carefulRecovery = chooseCarefulRecovery(random, intensity);
 
-        std::cout << "========== " << biome.name << " ==========" << std::endl;
-        std::cout << "Style : " << biome.style << "." << std::endl;
-        std::cout << "Niveaux locaux : " << biome.minLevel << "-" << biome.maxLevel << "." << std::endl;
+        std::vector<std::string> entryLines = {
+            "Style : " + biome.style + ".",
+            "Niveaux locaux : " + std::to_string(biome.minLevel) + "-" + std::to_string(biome.maxLevel) + ".",
+            "Monstres surtout présents : " + biome.commonMonsters + ".",
+            "Rares / élites typiques : " + biome.rareMonsters + ".",
+            "Approche : " + intensity.name + "."
+        };
+
         if (isBiomeEvolvedForPlayer(player, biome))
         {
-            std::cout << "Adaptation de zone : ton niveau attire maintenant des menaces plus fortes ici." << std::endl;
-            std::cout << "Niveaux effectifs actuels : " << evolvedBiomeMinLevel(player, biome)
-                      << "-" << evolvedBiomeMaxLevel(player, biome) << "." << std::endl;
-            std::cout << "Les récompenses suivent mieux ce danger, car les rencontres générées montent aussi en niveau." << std::endl;
+            entryLines.push_back("Adaptation de zone : ton niveau attire maintenant des menaces plus fortes ici.");
+            entryLines.push_back("Niveaux effectifs actuels : "
+                + std::to_string(evolvedBiomeMinLevel(player, biome))
+                + "-" + std::to_string(evolvedBiomeMaxLevel(player, biome)) + ".");
+            entryLines.push_back("Les récompenses suivent mieux ce danger, car les rencontres générées montent aussi en niveau.");
         }
-        std::cout << "Monstres surtout présents : " << biome.commonMonsters << "." << std::endl;
-        std::cout << "Rares / élites typiques : " << biome.rareMonsters << "." << std::endl;
-        std::cout << "Approche : " << intensity.name << "." << std::endl;
+
         if (questHint.hasAny)
         {
-            std::cout << "Ton journal réagit légèrement : cette zone peut aider une quête active, sans garantir la trouvaille." << std::endl;
+            entryLines.push_back("Ton journal réagit légèrement : cette zone peut aider une quête active, sans garantir la trouvaille.");
         }
-        std::cout << std::endl;
+
+        showExplorationNotice("EXPLORATION — " + biome.name, "exploration.run.entry", entryLines, false);
 
         if (roll <= 24)
         {
-            std::cout << "Tu fouilles calmement la zone." << std::endl;
+            std::vector<std::string> lines = {"Tu fouilles calmement la zone."};
             if (carefulRecovery)
             {
-                std::cout << "Récolte propre : tu récupères la ressource de la meilleure façon possible." << std::endl;
+                lines.push_back("Récolte propre : tu récupères la ressource de la meilleure façon possible.");
             }
-            addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(random.between(1, 2), intensity), chooseExplorationQuality(random, carefulRecovery));
+            lines.push_back(addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(random.between(1, 2), intensity), chooseExplorationQuality(random, carefulRecovery)));
+            showExplorationNotice("RÉCOLTE", "exploration.run.gather", lines);
         }
         else if (roll <= 37)
         {
-            std::cout << "Une trace intéressante attire ton attention." << std::endl;
+            std::vector<std::string> lines = {"Une trace intéressante attire ton attention."};
             int updated = progressExplorationQuests(player, biome.name, random.between(1, 2));
             if (updated > 0)
             {
-                std::cout << "Des quêtes d'exploration progressent grâce à cette découverte." << std::endl;
+                lines.push_back("Des quêtes d'exploration progressent grâce à cette découverte.");
             }
             else
             {
-                std::cout << "Tu gardes mentalement l'endroit en tête, même si aucune quête actuelle ne l'exploite." << std::endl;
+                lines.push_back("Tu gardes mentalement l'endroit en tête, même si aucune quête actuelle ne l'exploite.");
             }
+            showExplorationNotice("TRACE INTÉRESSANTE", "exploration.run.trace", lines);
         }
         else if (roll <= 48)
         {
             int gold = applyExplorationGoldReward(random.between(5, 22 + player.getLevel() * 2), player, intensity, difficulty, 1);
-            std::cout << "Tu trouves un petit trésor au sol." << std::endl;
             player.getInventory().earnGold(gold);
-            std::cout << "Or gagné : " << gold << std::endl;
+            showExplorationNotice(
+                "PETIT TRÉSOR",
+                "exploration.run.gold",
+                {"Tu trouves un petit trésor au sol.", "Or gagné : " + std::to_string(gold)}
+            );
         }
         else if (roll <= 54)
         {
-            std::cout << "Tu trouves beaucoup de pièces d'or." << std::endl;
-            std::cout << "Pendant une seconde, tu te vois déjà riche." << std::endl;
-            std::cout << "Mais en les prenant dans ta main, les pièces fondent entre tes doigts." << std::endl;
-            std::cout << "De fausses pièces. Une arnaque magique ridicule." << std::endl;
-            std::cout << "Tu décides de laisser toute cette honte au sol." << std::endl;
+            showExplorationNotice(
+                "FAUSSES PIÈCES",
+                "exploration.run.fake_gold",
+                {
+                    "Tu trouves beaucoup de pièces d'or.",
+                    "Pendant une seconde, tu te vois déjà riche.",
+                    "Mais en les prenant dans ta main, les pièces fondent entre tes doigts.",
+                    "De fausses pièces. Une arnaque magique ridicule.",
+                    "Tu décides de laisser toute cette honte au sol."
+                }
+            );
         }
         else if (roll <= 66)
         {
@@ -2840,8 +4381,15 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty)
         }
 
         player.getQuestLog().refreshMaterialDeliveryQuests(player.getInventory());
-        std::cout << std::endl;
-        Console::waitForEnter();
+        showExplorationRunSummary(
+            player,
+            biome,
+            intensity,
+            eventLabel,
+            hpBeforeExploration,
+            goldBeforeExploration,
+            readyBeforeExploration
+        );
         Console::clear();
     }
 }

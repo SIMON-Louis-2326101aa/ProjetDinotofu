@@ -14,6 +14,7 @@ struct DamageReport
     int receivedDamage;
     bool armorUsed;
     bool armorBrokenDuringImpact;
+    bool armorBlockedByBossSeal;
 
     DamageReport()
         : rawDamage(0),
@@ -21,7 +22,8 @@ struct DamageReport
           classReducedDamage(0),
           receivedDamage(0),
           armorUsed(false),
-          armorBrokenDuringImpact(false)
+          armorBrokenDuringImpact(false),
+          armorBlockedByBossSeal(false)
     {
     }
 };

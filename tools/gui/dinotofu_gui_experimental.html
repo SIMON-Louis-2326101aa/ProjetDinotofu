@@ -1,0 +1,1929 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ProjetDinotofu Launcher - Interface graphique experimentale</title>
+  <style>
+    :root {
+      --bg: #090b10;
+      --panel: rgba(22, 27, 38, 0.94);
+      --panel-soft: rgba(35, 42, 59, 0.92);
+      --text: #f5f7ff;
+      --muted: #aab4cc;
+      --line: #30394f;
+      --accent: #ffb347;
+      --accent-soft: rgba(255, 179, 71, 0.14);
+      --danger: #ff6b6b;
+      --ok: #80e27e;
+      --blue: #7bb7ff;
+      --disabled: #71798a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 5%, rgba(255, 179, 71, 0.16), transparent 28%),
+        radial-gradient(circle at 90% 10%, rgba(123, 183, 255, 0.16), transparent 26%),
+        linear-gradient(135deg, #101522, var(--bg) 56%, #050609);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 1rem clamp(1rem, 3vw, 2rem);
+      border-bottom: 1px solid var(--line);
+      background: rgba(9, 11, 16, 0.9);
+      backdrop-filter: blur(16px);
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { margin-bottom: 0.25rem; font-size: clamp(1.5rem, 2.8vw, 2.4rem); }
+    h2 { margin-bottom: 0.45rem; }
+    h3 { margin-bottom: 0.55rem; }
+
+    .subtitle { color: var(--muted); margin-bottom: 0; }
+
+    main {
+      width: min(1480px, calc(100% - 1.5rem));
+      margin: 1rem auto 2.5rem;
+      display: grid;
+      grid-template-columns: minmax(290px, 360px) 1fr;
+      gap: 1rem;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.35);
+      padding: 1rem;
+    }
+
+    .controls { position: sticky; top: 92px; align-self: start; }
+
+    button, input[type="file"]::file-selector-button {
+      border: 0;
+      border-radius: 14px;
+      padding: 0.72rem 0.85rem;
+      color: #1b1205;
+      background: var(--accent);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.secondary {
+      color: var(--text);
+      background: var(--panel-soft);
+      border: 1px solid var(--line);
+    }
+
+    button.ghost {
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line);
+    }
+
+    button.active { outline: 2px solid var(--accent); background: var(--accent-soft); color: var(--text); }
+    button:disabled { opacity: 0.52; cursor: not-allowed; }
+
+    .button-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.7rem 0 1rem; }
+    label { display: block; color: var(--muted); font-size: 0.9rem; margin: 0.8rem 0 0.35rem; }
+    input[type="file"] { width: 100%; color: var(--muted); }
+    input[type="text"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 0.75rem 0.85rem;
+      color: var(--text);
+      background: rgba(255,255,255,0.045);
+      outline: none;
+    }
+    input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,179,71,0.12); }
+    code { color: var(--accent); }
+
+    .hint { color: var(--muted); line-height: 1.45; font-size: 0.93rem; }
+    .status {
+      border-radius: 14px;
+      padding: 0.75rem;
+      background: var(--panel-soft);
+      color: var(--muted);
+      white-space: pre-line;
+      min-height: 3rem;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 0.86rem;
+    }
+
+    .section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+    .layout { display: grid; gap: 1rem; }
+    .dual { display: grid; grid-template-columns: minmax(320px, 0.9fr) minmax(360px, 1.2fr); gap: 1rem; }
+
+    .screen-title { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 0.75rem; }
+    .badge, .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-radius: 999px;
+      padding: 0.22rem 0.58rem;
+      background: var(--panel-soft);
+      color: var(--muted);
+      font-size: 0.8rem;
+      border: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    .badge.ok { color: var(--ok); border-color: rgba(128, 226, 126, 0.35); }
+    .badge.warn { color: var(--accent); border-color: rgba(255, 179, 71, 0.35); }
+    .badge.danger { color: var(--danger); border-color: rgba(255, 107, 107, 0.35); }
+
+    .line-list { display: grid; gap: 0.35rem; }
+    .line { color: var(--muted); background: rgba(255,255,255,0.035); border-radius: 12px; padding: 0.55rem 0.7rem; }
+    .empty { color: var(--muted); text-align: center; padding: 1.6rem 1rem; }
+
+    .action-sections { display: grid; gap: 0.85rem; }
+    .action-section { border: 1px solid rgba(255,255,255,0.07); border-radius: 18px; padding: 0.75rem; background: rgba(255,255,255,0.022); }
+    .action-section.main { border-color: rgba(255,179,71,0.22); background: rgba(255,179,71,0.045); }
+    .action-section.navigation { background: rgba(123,183,255,0.035); border-color: rgba(123,183,255,0.16); }
+    .action-section.danger { background: rgba(255,107,107,0.045); border-color: rgba(255,107,107,0.20); }
+    .action-section.locked { opacity: 0.82; }
+    .action-section-head { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.55rem; color: var(--text); font-weight: 850; }
+    .action-section-head span:last-child { color: var(--muted); font-size: 0.78rem; font-weight: 700; }
+    .actions { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+    .actions.navigation { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+    .action-card { border: 1px solid var(--line); border-radius: 16px; padding: 0.75rem; background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018)); cursor: pointer; text-align: left; transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease; }
+    .action-card:hover { border-color: rgba(255,179,71,0.55); transform: translateY(-1px); }
+    .action-card.primary { border-color: rgba(255,179,71,0.34); background: linear-gradient(180deg, rgba(255,179,71,0.12), rgba(255,255,255,0.022)); }
+    .action-card.recommended { box-shadow: 0 0 0 2px rgba(255,179,71,0.14); }
+    .action-card.back, .action-card.pagination { background: rgba(255,255,255,0.026); }
+    .action-card.danger { border-color: rgba(255,107,107,0.48); background: linear-gradient(180deg, rgba(255,107,107,0.12), rgba(255,255,255,0.018)); }
+    .action-card.disabled { color: var(--disabled); opacity: 0.72; cursor: not-allowed; }
+    .command-grid { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; align-items: end; }
+    .quick-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0.45rem; margin-top: 0.55rem; }
+    .suggestion-row { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
+    .suggestion-chip { border-radius: 999px; padding: 0.36rem 0.58rem; color: var(--text); background: rgba(255,255,255,0.04); border: 1px solid var(--line); font-size: 0.78rem; cursor: pointer; }
+    .suggestion-chip:hover { border-color: rgba(255,179,71,0.55); color: var(--accent); }
+    .suggestion-chip.primary { color: #1b1205; background: var(--accent); border-color: var(--accent); font-weight: 800; }
+    .suggestion-chip.disabled, .suggestion-chip:disabled { opacity: 0.55; cursor: not-allowed; }
+    .input-note { color: var(--muted); font-size: 0.84rem; line-height: 1.35; margin-top: 0.55rem; }
+    .input-expectation { border: 1px solid rgba(255,179,71,0.25); background: var(--accent-soft); border-radius: 14px; padding: 0.65rem 0.75rem; margin-top: 0.65rem; color: var(--text); font-size: 0.9rem; line-height: 1.35; }
+    .input-expectation strong { color: var(--accent); }
+    .input-contract { border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.032); border-radius: 16px; padding: 0.75rem; margin: 0.65rem 0 0.85rem; }
+    .input-contract-title { color: var(--accent); font-weight: 850; margin-bottom: 0.45rem; }
+    .input-contract-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.45rem; }
+    .input-contract-item { border: 1px solid var(--line); border-radius: 12px; padding: 0.48rem 0.55rem; background: rgba(0,0,0,0.12); color: var(--muted); font-size: 0.8rem; line-height: 1.3; }
+    .input-contract-item strong { display: block; color: var(--text); font-size: 0.86rem; margin-top: 0.1rem; }
+    .input-warning { color: var(--accent); margin-top: 0.45rem; font-size: 0.82rem; }
+    .input-flow { border: 1px solid rgba(123,183,255,0.20); background: rgba(123,183,255,0.055); border-radius: 14px; padding: 0.55rem 0.65rem; margin-top: 0.5rem; color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
+    .input-flow strong { color: var(--text); }
+    .input-flow.ok { border-color: rgba(128,226,126,0.28); background: rgba(128,226,126,0.055); }
+    .input-flow.warn { border-color: rgba(255,179,71,0.28); background: rgba(255,179,71,0.065); }
+    .input-flow.error { border-color: rgba(255,107,107,0.30); background: rgba(255,107,107,0.06); }
+    .last-input { color: var(--muted); font-size: 0.82rem; margin-top: 0.45rem; white-space: pre-line; }
+    .command-chip { display: inline-flex; align-items: center; gap: 0.25rem; margin: 0.15rem 0.2rem 0 0; padding: 0.18rem 0.42rem; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: rgba(255,255,255,0.035); font-size: 0.76rem; }
+    .queue-list { display: grid; gap: 0.28rem; margin-top: 0.45rem; }
+    .queue-item { border: 1px solid var(--line); border-radius: 12px; padding: 0.4rem 0.52rem; background: rgba(255,255,255,0.028); color: var(--muted); font-size: 0.78rem; }
+    .validation-message { color: var(--muted); font-size: 0.8rem; margin-top: 0.35rem; min-height: 1.1rem; }
+    .validation-message.warn { color: var(--accent); }
+    .validation-message.ok { color: var(--ok); }
+    .toggle-grid { display: grid; gap: 0.42rem; margin-top: 0.65rem; }
+    .toggle-line { display: flex; align-items: flex-start; gap: 0.55rem; color: var(--muted); font-size: 0.82rem; line-height: 1.3; }
+    .toggle-line input { margin-top: 0.15rem; accent-color: var(--accent); }
+    .manual-panel { border: 1px solid rgba(255,179,71,0.22); background: rgba(255,179,71,0.07); border-radius: 16px; padding: 0.75rem; margin-top: 0.75rem; }
+    .manual-panel h4 { margin: 0 0 0.45rem; color: var(--accent); font-size: 0.95rem; }
+    .cheat-search { margin: 0.45rem 0 0.55rem; }
+    .cheat-list { display: grid; gap: 0.45rem; max-height: 260px; overflow: auto; padding-right: 0.2rem; }
+    .cheat-card { border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,0.035); padding: 0.55rem; }
+    .cheat-head { display: flex; justify-content: space-between; gap: 0.45rem; align-items: flex-start; }
+    .cheat-code { color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.82rem; word-break: break-all; }
+    .cheat-effect { color: var(--muted); font-size: 0.78rem; line-height: 1.32; margin: 0.35rem 0; }
+    .cheat-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .cheat-actions button { padding: 0.42rem 0.55rem; border-radius: 10px; font-size: 0.75rem; }
+    .cheat-tag { font-size: 0.7rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0.12rem 0.38rem; white-space: nowrap; }
+    .live-meta { display: grid; gap: 0.35rem; margin-top: 0.6rem; }
+    .live-meta-row { display: flex; justify-content: space-between; gap: 0.65rem; color: var(--muted); font-size: 0.84rem; border-bottom: 1px dashed rgba(255,255,255,0.08); padding-bottom: 0.3rem; }
+    .action-main { display: flex; justify-content: space-between; gap: 0.75rem; font-weight: 850; }
+    .action-hint { color: var(--muted); font-size: 0.9rem; margin-top: 0.35rem; }
+    .action-id { color: var(--muted); font-size: 0.76rem; margin-top: 0.45rem; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .action-role { color: var(--muted); font-size: 0.72rem; margin-top: 0.35rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .action-facts { display: flex; flex-wrap: wrap; gap: 0.26rem; margin-top: 0.48rem; }
+    .action-fact { border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.12); border-radius: 999px; padding: 0.12rem 0.42rem; font-size: 0.7rem; color: var(--muted); }
+    .action-card.item-important .action-fact { border-color: rgba(255,179,71,0.26); background: rgba(255,179,71,0.055); color: var(--text); }
+    .context-panel { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.55rem 0 0.75rem; }
+
+    .summary-panel { border: 1px solid rgba(128,226,126,0.18); background: rgba(128,226,126,0.045); border-radius: 16px; padding: 0.72rem 0.8rem; margin: 0.65rem 0 0.85rem; }
+    .specialized-panel { border: 1px solid rgba(255,179,71,0.22); background: rgba(255,179,71,0.055); border-radius: 18px; padding: 0.78rem 0.85rem; margin: 0.65rem 0 0.85rem; }
+    .specialized-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.55rem; }
+    .specialized-title { color: var(--accent); font-weight: 900; }
+    .specialized-hint { color: var(--muted); font-size: 0.84rem; line-height: 1.35; margin-top: 0.16rem; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.45rem; margin-bottom: 0.7rem; }
+    .info-card { border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 0.56rem 0.62rem; background: rgba(255,255,255,0.035); color: var(--muted); }
+    .info-card.important { border-color: rgba(255,179,71,0.28); background: rgba(255,179,71,0.065); }
+    .info-card.kind-danger { border-color: rgba(255,107,107,0.28); background: rgba(255,107,107,0.055); }
+    .info-card-label { color: var(--muted); font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.045em; margin-bottom: 0.22rem; }
+    .info-card-value { color: var(--text); font-weight: 850; line-height: 1.28; word-break: break-word; }
+    .info-card-source { color: var(--muted); font-size: 0.7rem; margin-top: 0.32rem; }
+
+    .item-section { margin: 0.2rem 0 0.78rem; }
+    .item-section-title { color: var(--accent); font-weight: 900; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 0.36rem 0.08rem; }
+    .item-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.48rem; margin-bottom: 0.75rem; }
+    .item-card { border: 1px solid rgba(255,255,255,0.09); border-radius: 15px; padding: 0.58rem 0.64rem; background: rgba(255,255,255,0.032); color: var(--muted); min-height: 5.1rem; display: flex; flex-direction: column; gap: 0.38rem; }
+    .item-card.available { border-color: rgba(255,179,71,0.28); background: rgba(255,179,71,0.055); }
+    .item-card.clickable { cursor: pointer; }
+    .item-card.clickable:hover { transform: translateY(-1px); border-color: rgba(255,179,71,0.55); }
+    .item-card.locked { opacity: 0.62; cursor: not-allowed; }
+    .item-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; }
+    .item-card-title { color: var(--text); font-weight: 850; line-height: 1.25; }
+    .item-card-choice { display: inline-flex; align-items: center; justify-content: center; min-width: 1.55rem; height: 1.55rem; border-radius: 999px; background: rgba(255,179,71,0.14); border: 1px solid rgba(255,179,71,0.28); color: var(--accent); font-size: 0.78rem; font-weight: 900; margin-right: 0.4rem; }
+    .item-card-qty, .item-card-status, .item-card-actiontype { border: 1px solid var(--line); border-radius: 999px; padding: 0.12rem 0.4rem; font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+    .item-card-actiontype { color: var(--accent); border-color: rgba(255,179,71,0.25); }
+    .item-card-detail { color: var(--muted); font-size: 0.8rem; line-height: 1.3; }
+    .item-card-facts { display: flex; flex-wrap: wrap; gap: 0.26rem; }
+    .item-card-fact { border: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.12); border-radius: 999px; padding: 0.12rem 0.42rem; font-size: 0.7rem; color: var(--muted); }
+    .item-card-meta { display: flex; flex-wrap: wrap; gap: 0.28rem; margin-top: auto; color: var(--muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.035em; }
+    .notice-grid { display: grid; gap: 0.42rem; margin-bottom: 0.7rem; }
+    .notice-card { border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 0.55rem 0.62rem; background: rgba(255,255,255,0.028); color: var(--muted); line-height: 1.32; font-size: 0.83rem; }
+    .notice-card.important { border-color: rgba(255,179,71,0.28); background: rgba(255,179,71,0.055); color: var(--text); }
+    .notice-card.kind-danger, .notice-card.kind-warning { border-color: rgba(255,107,107,0.28); background: rgba(255,107,107,0.055); }
+    .notice-card.kind-success { border-color: rgba(128,226,126,0.24); background: rgba(128,226,126,0.055); }
+    .notice-meta { color: var(--muted); font-size: 0.7rem; margin-top: 0.28rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .focus-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.45rem; }
+    .focus-card { border: 1px solid var(--line); border-radius: 14px; padding: 0.55rem 0.62rem; background: rgba(0,0,0,0.12); color: var(--muted); min-height: 5.3rem; display: flex; flex-direction: column; justify-content: space-between; gap: 0.35rem; }
+    .focus-card.available { border-color: rgba(255,179,71,0.32); background: rgba(255,179,71,0.07); }
+    .focus-card.clickable { cursor: pointer; text-align: left; }
+    .focus-card.clickable:hover { border-color: rgba(255,179,71,0.58); transform: translateY(-1px); }
+    .focus-card.locked { cursor: not-allowed; opacity: 0.72; }
+    .focus-card-title { color: var(--text); font-weight: 850; display: flex; align-items: center; gap: 0.42rem; flex-wrap: wrap; }
+    .focus-card-choice { color: #0d0f16; background: var(--accent); border-radius: 999px; padding: 0.08rem 0.45rem; font-size: 0.74rem; font-weight: 950; box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset; }
+    .focus-card-detail { font-size: 0.78rem; line-height: 1.28; }
+    .focus-card-action { font-size: 0.76rem; color: var(--accent); font-weight: 800; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.45rem; }
+    .summary-item { border: 1px solid var(--line); border-radius: 12px; padding: 0.48rem 0.55rem; background: rgba(0,0,0,0.12); color: var(--muted); font-size: 0.78rem; line-height: 1.25; }
+    .summary-item strong { display: block; color: var(--text); font-size: 0.95rem; margin-top: 0.08rem; }
+    .consumed-ok { border: 1px solid rgba(128,226,126,0.26); background: rgba(128,226,126,0.06); border-radius: 14px; padding: 0.55rem 0.65rem; color: var(--muted); font-size: 0.82rem; margin-top: 0.5rem; line-height: 1.35; }
+    .consumed-ok strong { color: var(--ok); }
+    .pagination-panel { border: 1px solid rgba(123,183,255,0.25); background: rgba(123,183,255,0.07); border-radius: 16px; padding: 0.7rem 0.8rem; margin: 0.65rem 0 0.8rem; }
+    .pagination-head { display: flex; justify-content: space-between; gap: 0.75rem; color: var(--text); font-weight: 800; margin-bottom: 0.5rem; }
+    .pagination-bar { height: 8px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.08); border: 1px solid var(--line); }
+    .pagination-fill { height: 100%; width: var(--page-progress, 0%); background: linear-gradient(90deg, var(--blue), var(--accent)); }
+    .pagination-meta { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
+
+    .combat-grid { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 1rem; }
+    .unit-list { display: grid; gap: 0.65rem; }
+    .unit-card { border: 1px solid var(--line); border-radius: 16px; padding: 0.75rem; background: rgba(255,255,255,0.04); }
+    .unit-card.dead { opacity: 0.52; }
+    .unit-card.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,179,71,0.16); }
+    .unit-card.target { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(123,183,255,0.14); }
+    .unit-card.clickable { cursor: pointer; background: linear-gradient(180deg, rgba(255,179,71,0.08), rgba(255,255,255,0.035)); }
+    .unit-card.clickable:hover { border-color: rgba(255,179,71,0.58); transform: translateY(-1px); }
+    .unit-card.clickable.locked { cursor: not-allowed; opacity: 0.72; }
+    .unit-target-action { margin-top: 0.55rem; color: var(--accent); font-size: 0.78rem; font-weight: 800; }
+    .unit-head { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; margin-bottom: 0.55rem; }
+    .hp-bar { height: 10px; border-radius: 999px; overflow: hidden; background: #2c3141; border: 1px solid var(--line); }
+    .hp-fill { height: 100%; width: var(--hp, 0%); background: linear-gradient(90deg, var(--danger), var(--accent), var(--ok)); }
+    .unit-meta, .tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
+
+    .topbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; justify-content: space-between; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .menu-filter { display: flex; align-items: center; gap: 0.45rem; flex: 1 1 260px; max-width: 430px; }
+    .menu-filter input { min-width: 180px; padding: 0.58rem 0.7rem; border-radius: 12px; font-size: 0.84rem; }
+    .menu-filter button { padding: 0.58rem 0.68rem; border-radius: 12px; }
+    .filter-notice { border: 1px solid rgba(123,183,255,0.22); background: rgba(123,183,255,0.055); border-radius: 14px; padding: 0.55rem 0.7rem; color: var(--muted); font-size: 0.83rem; margin: 0.6rem 0; }
+    .filter-notice strong { color: var(--blue); }
+
+    @media (max-width: 980px) {
+      main, .dual, .combat-grid { grid-template-columns: 1fr; }
+      .controls { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ProjetDinotofu — interface graphique experimentale</h1>
+    <p class="subtitle">Version de transition : le terminal reste jouable, cette fenetre affiche les ecrans JSON exportes par le jeu.</p>
+  </header>
+
+  <main>
+    <aside class="panel controls">
+      <h2>Connexion au jeu</h2>
+      <p class="hint">
+        Le launcher principal lance normalement le jeu avec <code>DINOTOFU_GUI_DEBUG_DIR</code> puis ouvre cette page.
+        Les boutons peuvent envoyer un choix au jeu quand le launcher lance le mode IG experimental. La page lit maintenant un etat combine via <code>/gui/snapshot</code>, puis garde le terminal comme secours.
+      </p>
+
+      <div class="button-row">
+        <button id="liveButton">Live auto</button>
+        <button id="menuButton" class="secondary">Menu</button>
+        <button id="combatButton" class="secondary">Combat</button>
+        <button id="reloadButton" class="ghost">Recharger</button>
+      </div>
+
+      <label for="jsonFile">Charger un JSON manuellement</label>
+      <input id="jsonFile" type="file" accept="application/json,.json" />
+
+      <div class="section">
+        <h3>Saisie IG</h3>
+        <label for="commandInput">Choix, texte, code triche ou confirmation</label>
+        <div id="inputExpectation" class="input-expectation">Aucun écran chargé pour le moment.</div>
+        <div class="command-grid">
+          <input id="commandInput" type="text" placeholder="Ex : 1, 0, SUPPRIMER, fuckgrindinggimifight..." autocomplete="off" />
+          <button id="sendCommandButton">Envoyer</button>
+        </div>
+        <div class="quick-row">
+          <button id="enterButton" class="secondary">Entrée</button>
+          <button id="backButton" class="secondary">0 Retour</button>
+          <button id="clearCommandButton" class="ghost">Effacer</button>
+          <button id="clearQueueButton" class="ghost">Vider file IG</button>
+        </div>
+        <div class="toggle-grid">
+          <label class="toggle-line"><input id="safeQueueToggle" type="checkbox" checked /> Bloquer les nouveaux envois tant qu'une commande attend encore d'etre lue par le jeu.</label>
+          <label class="toggle-line"><input id="keyboardShortcutToggle" type="checkbox" checked /> Activer les raccourcis clavier 0-9, Entree, PageUp/PageDown quand le champ texte n'est pas selectionne.</label>
+        </div>
+        <div id="suggestedCommands" class="suggestion-row" aria-label="Commandes suggerees"></div>
+        <div id="commandValidation" class="validation-message"></div>
+        <p class="input-note">
+          Ce champ sert aussi pour les noms, les quantites, les mots de confirmation et les codes caches.
+          Si l'envoi echoue, utilise le raccourci Terminal version.
+        </p>
+
+        <div class="manual-panel">
+          <h4>Commandes manuelles / codes debug</h4>
+          <p class="input-note">
+            Visible pour l'instant pendant les tests. Plus tard, cette zone pourra etre cachee ou deplacee dans un acces discret.
+            Attention : certains codes marquent le personnage comme Altere.
+          </p>
+          <input id="cheatSearch" class="cheat-search" type="text" placeholder="Filtrer les codes : boss, gold, dev..." autocomplete="off" />
+          <div id="cheatList" class="cheat-list"><div class="empty">Chargement des codes...</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3>Etat</h3>
+        <div id="status" class="status">En attente de JSON...</div>
+        <div id="serverStatus" class="status" style="margin-top:0.55rem;">Serveur local : verification...</div>
+        <div id="liveMeta" class="live-meta"></div>
+      </div>
+
+      <div class="section">
+        <h3>Mode de secours</h3>
+        <p class="hint">
+          Si cette page ne s'actualise pas, le raccourci <strong>ProjetDinotofu Launcher Terminal version</strong> lance toujours le jeu terminal seul.
+        </p>
+      </div>
+    </aside>
+
+    <section class="layout">
+      <div class="panel topbar">
+        <div class="tabs">
+          <button id="tabBoth" class="secondary active">Menu + Combat</button>
+          <button id="tabMenu" class="secondary">Menu seul</button>
+          <button id="tabCombat" class="secondary">Combat seul</button>
+        </div>
+        <div class="menu-filter" title="Filtre uniquement l'affichage IG, pas la saisie terminale.">
+          <input id="menuFilterInput" type="text" placeholder="Filtrer l'ecran : potion, arme, quete..." autocomplete="off" />
+          <button id="clearMenuFilterButton" class="ghost" type="button">Filtre</button>
+        </div>
+        <span id="versionBadge" class="badge">Schema ? · Version ?</span>
+      </div>
+
+      <div id="renderRoot" class="dual">
+        <section id="menuRoot" class="panel"><div class="empty">Aucun menu charge.</div></section>
+        <section id="combatRoot" class="panel"><div class="empty">Aucun combat charge.</div></section>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const statusBox = document.getElementById('status');
+    const versionBadge = document.getElementById('versionBadge');
+    const serverStatusBox = document.getElementById('serverStatus');
+    const menuRoot = document.getElementById('menuRoot');
+    const combatRoot = document.getElementById('combatRoot');
+    const renderRoot = document.getElementById('renderRoot');
+    const fileInput = document.getElementById('jsonFile');
+    const liveButton = document.getElementById('liveButton');
+    const menuButton = document.getElementById('menuButton');
+    const combatButton = document.getElementById('combatButton');
+    const reloadButton = document.getElementById('reloadButton');
+    const commandInput = document.getElementById('commandInput');
+    const inputExpectation = document.getElementById('inputExpectation');
+    const sendCommandButton = document.getElementById('sendCommandButton');
+    const enterButton = document.getElementById('enterButton');
+    const backButton = document.getElementById('backButton');
+    const clearCommandButton = document.getElementById('clearCommandButton');
+    const clearQueueButton = document.getElementById('clearQueueButton');
+    const safeQueueToggle = document.getElementById('safeQueueToggle');
+    const keyboardShortcutToggle = document.getElementById('keyboardShortcutToggle');
+    const cheatSearch = document.getElementById('cheatSearch');
+    const cheatList = document.getElementById('cheatList');
+    const suggestedCommands = document.getElementById('suggestedCommands');
+    const commandValidation = document.getElementById('commandValidation');
+    const liveMeta = document.getElementById('liveMeta');
+    const menuFilterInput = document.getElementById('menuFilterInput');
+    const clearMenuFilterButton = document.getElementById('clearMenuFilterButton');
+    const tabs = {
+      both: document.getElementById('tabBoth'),
+      menu: document.getElementById('tabMenu'),
+      combat: document.getElementById('tabCombat')
+    };
+
+    const state = {
+      live: false,
+      view: 'both',
+      lastMenu: null,
+      lastCombat: null,
+      lastSource: '-',
+      lastGuiState: null,
+      timer: null,
+      statusTimer: null,
+      inputBusy: false,
+      lastServerStatus: null,
+      cheatCatalog: [],
+      cheatCatalogLoaded: false,
+      preventQueueStacking: true,
+      keyboardShortcuts: true,
+      menuFilter: '',
+      commandFlow: null
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function setStatus(message) { statusBox.textContent = message; }
+
+    function getConsumedActionLabel(consumed) {
+      if (!consumed || typeof consumed !== 'object') return '';
+      return consumed.metadata?.itemCardName || consumed.itemCardName || consumed.metadata?.focusCardLabel || consumed.focusCardLabel || consumed.metadata?.actionDisplayLabel || consumed.actionDisplayLabel || consumed.metadata?.actionLabel || consumed.actionLabel || consumed.metadata?.actionId || consumed.actionId || '';
+    }
+
+    function getConsumedInputId(consumed) {
+      if (!consumed || typeof consumed !== 'object') return '';
+      return String(consumed.metadata?.id || consumed.id || '');
+    }
+
+    function getCurrentGuiSequence() {
+      const value = Number(state.lastGuiState?.sequence ?? 0);
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    function updateCommandFlowFromStatus(status) {
+      const flow = state.commandFlow;
+      if (!flow || !status) return;
+
+      const pendingQueue = Array.isArray(status.pendingQueue) ? status.pendingQueue : [];
+      const stillPending = pendingQueue.some(item => String(item.id || '') === String(flow.id || ''));
+      const consumed = status.lastConsumedInput || null;
+      const consumedId = getConsumedInputId(consumed);
+      const currentScreenId = state.lastGuiState?.activeScreenId || state.lastMenu?.screenId || '';
+      const currentSequence = getCurrentGuiSequence();
+
+      if (consumedId && consumedId === String(flow.id || '')) {
+        flow.stage = 'consumed';
+        flow.consumedAtEpoch = consumed.consumedAtEpoch || Math.floor(Date.now() / 1000);
+      } else if (stillPending) {
+        flow.stage = 'pending';
+      } else if (flow.stage === 'queued') {
+        flow.stage = 'accepted';
+      }
+
+      if (flow.stage === 'consumed' && currentSequence > Number(flow.screenSequence || 0) && currentScreenId && currentScreenId !== flow.screenId) {
+        flow.stage = 'screen_updated';
+        flow.newScreenId = currentScreenId;
+        flow.newScreenTitle = state.lastGuiState?.activeTitle || state.lastMenu?.title || '';
+      }
+    }
+
+    function renderCommandFlow() {
+      const flow = state.commandFlow;
+      if (!flow) return '';
+      const stages = {
+        queued: ['warn', 'Commande acceptée par le serveur IG'],
+        pending: ['warn', 'Commande envoyée, en attente de lecture par le jeu'],
+        accepted: ['warn', 'Commande acceptée, attente de confirmation de lecture'],
+        consumed: ['ok', 'Commande lue par le jeu'],
+        screen_updated: ['ok', 'Nouvel écran reçu après la commande'],
+        refused: ['error', 'Commande refusée'],
+        failed: ['error', 'Envoi impossible']
+      };
+      const [level, title] = stages[flow.stage] || ['warn', 'Commande IG'];
+      const command = flow.display || (flow.command === '' ? '[Entree]' : flow.command);
+      const label = flow.label ? ' · ' + escapeHtml(flow.label) : '';
+      const screen = flow.newScreenTitle || flow.newScreenId ? `<br>Écran actuel : <strong>${escapeHtml(flow.newScreenTitle || flow.newScreenId)}</strong>` : '';
+      const detail = flow.detail ? `<br>${escapeHtml(flow.detail)}` : '';
+      return `<div class="input-flow ${level}"><strong>${escapeHtml(title)}</strong><br>Commande : <strong>${escapeHtml(command)}</strong>${label}${screen}${detail}</div>`;
+    }
+
+    function getActionRoleLabel(role) {
+      if (role === 'primary') return 'action principale';
+      if (role === 'back') return 'retour';
+      if (role === 'pagination') return 'pagination';
+      if (role === 'danger') return 'dangereux';
+      if (role === 'disabled') return 'verrouille';
+      return 'normal';
+    }
+
+    function getExpectedPatternLabel(pattern) {
+      if (pattern === 'integer_or_hidden_code') return 'Nombre ou code cache';
+      if (pattern === 'integer_in_range') return 'Nombre dans les limites';
+      if (pattern === 'exact_keyword') return 'Mot exact';
+      if (pattern === 'empty_enter') return 'Entrée vide';
+      if (pattern === 'free_text') return 'Texte libre';
+      if (pattern === 'none') return 'Aucune saisie';
+      return pattern || 'Non precise';
+    }
+
+    function describeInputMode(snapshot) {
+      if (!snapshot || snapshot.type !== 'menu') return 'Aucun menu actif. Utilise le terminal si le jeu attend une saisie invisible ici.';
+      const mode = snapshot.inputMode || 'choice';
+      const intent = snapshot.inputIntent || '';
+      const category = snapshot.screenCategory ? ' · ' + escapeHtml(snapshot.screenCategory) : '';
+      const hint = snapshot.inputHint ? ' — ' + escapeHtml(snapshot.inputHint) : '';
+      if (mode === 'choice') return 'Saisie attendue : <strong>' + escapeHtml(intent || 'choix de menu') + '</strong>' + category + hint;
+      if (mode === 'text') return 'Saisie attendue : <strong>texte libre</strong>' + hint;
+      if (mode === 'quantity') {
+        const range = snapshot.hasNumericRange ? ' entre <strong>' + escapeHtml(snapshot.numericMin) + '</strong> et <strong>' + escapeHtml(snapshot.numericMax) + '</strong>' : '';
+        return 'Saisie attendue : <strong>quantite</strong>' + range + hint;
+      }
+      if (mode === 'confirmation') return 'Saisie attendue : <strong>confirmation exacte</strong> ' + escapeHtml(snapshot.confirmationKeyword || '') + hint;
+      if (mode === 'continue') return 'Saisie attendue : <strong>Entrée</strong>' + hint;
+      if (mode === 'display') return 'Aucune saisie obligatoire pour cet écran.' + hint;
+      return 'Saisie attendue : <strong>' + escapeHtml(mode) + '</strong>' + hint;
+    }
+
+    function pendingInputCount() {
+      return Number(state.lastServerStatus?.pendingInputCount || 0);
+    }
+
+    function isInputLockedByQueue() {
+      return state.preventQueueStacking && pendingInputCount() > 0;
+    }
+
+    function canSendInputNow() {
+      return !state.inputBusy && !isInputLockedByQueue();
+    }
+
+    function inputLockReason() {
+      if (state.inputBusy) return 'Envoi en cours...';
+      if (isInputLockedByQueue()) return 'Commande en attente : attends que le jeu la lise ou vide la file IG.';
+      return '';
+    }
+
+    function friendlyServerInputError(errorMessage) {
+      const text = String(errorMessage || '');
+      const known = [
+        ['screen changed before input was queued', "L'écran a changé avant l'envoi : commande annulée pour éviter un mauvais choix."],
+        ['current screen is display-only', "L'écran actuel est en lecture seule."],
+        ['current screen expects a non-empty input', "L'écran actuel attend une saisie non vide."],
+        ['current screen expects a numeric quantity', "L'écran actuel attend une quantité en chiffres."],
+        ['quantity out of range', "Quantité hors limites pour l'écran actuel."],
+        ['current screen expects the exact confirmation keyword', "Le mot de confirmation exact est requis."],
+        ['text too short', "Texte trop court pour cet écran."],
+        ['text too long', "Texte trop long pour cet écran."],
+        ['selected action is locked', "Cette action est verrouillée sur l'écran actuel."],
+        ['numeric choice is not valid', "Ce numéro n'est plus valide sur l'écran actuel."],
+        ['input queue already has a pending command', "Une commande attend déjà d'être lue par le jeu."]
+      ];
+      const match = known.find(([needle]) => text.includes(needle));
+      return match ? match[1] : text;
+    }
+
+    function findMenuActionByNumber(number) {
+      const menu = state.lastMenu;
+      if (!menu || !Array.isArray(menu.actions)) return null;
+      const wanted = String(number);
+      return menu.actions.find(action => String(action.number ?? '') === wanted && action.enabled !== false) || null;
+    }
+
+    function findAnyMenuActionByNumber(number) {
+      const menu = state.lastMenu;
+      if (!menu || !Array.isArray(menu.actions)) return null;
+      const wanted = String(number);
+      return menu.actions.find(action => String(action.number ?? '') === wanted) || null;
+    }
+
+    function isKnownValidChoice(number) {
+      const menu = state.lastMenu;
+      if (!menu || !Array.isArray(menu.validChoices)) return false;
+      return menu.validChoices.map(String).includes(String(number));
+    }
+
+
+    function normalizeSearchText(value) {
+      return String(value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    }
+
+    function getMenuFilterNeedle() {
+      return normalizeSearchText(state.menuFilter || '');
+    }
+
+    function matchesMenuFilter(...values) {
+      const needle = getMenuFilterNeedle();
+      if (!needle) return true;
+      const haystack = normalizeSearchText(values.filter(value => value !== null && value !== undefined).join(' '));
+      return haystack.includes(needle);
+    }
+
+    function renderMenuFilterNotice(total, visible, label) {
+      const needle = String(state.menuFilter || '').trim();
+      if (!needle) return '';
+      return `<div class="filter-notice">Filtre IG actif : <strong>${escapeHtml(needle)}</strong> · ${escapeHtml(visible)} / ${escapeHtml(total)} ${escapeHtml(label)} visible(s). Le joueur peut toujours taper un numero valide dans la saisie.</div>`;
+    }
+
+    function isTargetSelectionMenu(menu) {
+      const text = normalizeSearchText((menu?.screenId || '') + ' ' + (menu?.title || '') + ' ' + (menu?.screenCategory || ''));
+      return text.includes('target') || text.includes('cible') || text.includes('combat target') || text.includes('combat group target');
+    }
+
+    function findMenuActionForUnit(unit) {
+      const menu = state.lastMenu;
+      if (!menu || !Array.isArray(menu.actions) || !unit) return null;
+
+      const targetActionId = String(unit.targetActionId || '');
+      if (targetActionId) {
+        const directAction = menu.actions.find(action => action.enabled !== false && action.actionId === targetActionId);
+        if (directAction) return directAction;
+      }
+
+      if (Number.isInteger(Number(unit.targetChoice)) && Number(unit.targetChoice) >= 0 && isTargetSelectionMenu(menu)) {
+        const choiceAction = findMenuActionByNumber(String(unit.targetChoice));
+        if (choiceAction) return choiceAction;
+      }
+
+      if (!unit.name) return null;
+      const unitName = normalizeSearchText(unit.name);
+      if (!unitName) return null;
+
+      return menu.actions.find(action => {
+        if (action.enabled === false) return false;
+        const label = normalizeSearchText(action.label || '');
+        const hint = normalizeSearchText(action.hint || '');
+        return (label && label.includes(unitName)) || (hint && hint.includes(unitName)) || (label && unitName.includes(label));
+      }) || null;
+    }
+
+    function refreshChrome() {
+      liveButton.classList.toggle('active', state.live);
+      for (const [name, button] of Object.entries(tabs)) button.classList.toggle('active', state.view === name);
+      renderRoot.className = state.view === 'both' ? 'dual' : 'layout';
+      menuRoot.style.display = state.view === 'combat' ? 'none' : '';
+      combatRoot.style.display = state.view === 'menu' ? 'none' : '';
+      const snap = state.lastCombat || state.lastMenu;
+      versionBadge.textContent = snap ? `Contrat JSON ${snap.schemaVersion ?? '?'} · Jeu V${snap.gameVersion ?? '?'}` : 'Contrat JSON ? · Jeu V?';
+      inputExpectation.innerHTML = describeInputMode(state.lastMenu);
+      if (state.lastMenu?.inputPlaceholder) commandInput.placeholder = state.lastMenu.inputPlaceholder;
+      else if (state.lastMenu?.inputMode === 'quantity' && state.lastMenu?.hasNumericRange) commandInput.placeholder = `${state.lastMenu.numericMin}-${state.lastMenu.numericMax}`;
+      else commandInput.placeholder = 'Choix, texte ou code cache';
+      sendCommandButton.textContent = state.lastMenu?.primarySubmitLabel || 'Envoyer';
+      commandInput.removeAttribute('min');
+      commandInput.removeAttribute('max');
+      commandInput.removeAttribute('pattern');
+      commandInput.removeAttribute('inputmode');
+
+      if (state.lastMenu?.inputMode === 'text' && state.lastMenu?.hasTextLengthRange && Number(state.lastMenu?.textMaxLength || 0) > 0) {
+        commandInput.maxLength = Number(state.lastMenu.textMaxLength);
+      } else {
+        commandInput.removeAttribute('maxLength');
+      }
+
+      if (state.lastMenu?.inputMode === 'quantity') {
+        commandInput.setAttribute('inputmode', 'numeric');
+        commandInput.setAttribute('pattern', '[0-9]*');
+        if (state.lastMenu?.hasNumericRange) {
+          commandInput.setAttribute('min', String(state.lastMenu.numericMin));
+          commandInput.setAttribute('max', String(state.lastMenu.numericMax));
+        }
+      } else if (state.lastMenu?.inputMode === 'choice') {
+        commandInput.setAttribute('inputmode', 'text');
+      } else if (state.lastMenu?.inputMode === 'confirmation') {
+        commandInput.setAttribute('inputmode', 'text');
+      }
+      renderSuggestedCommands();
+      updateCommandValidation();
+
+      const displayOnly = state.lastMenu?.inputMode === 'display';
+      const locked = !canSendInputNow();
+      sendCommandButton.disabled = locked || displayOnly;
+      enterButton.disabled = locked || displayOnly;
+      backButton.disabled = locked;
+      commandInput.disabled = state.inputBusy || displayOnly;
+      if (safeQueueToggle) safeQueueToggle.checked = state.preventQueueStacking;
+      if (keyboardShortcutToggle) keyboardShortcutToggle.checked = state.keyboardShortcuts;
+      if (menuFilterInput && menuFilterInput.value !== state.menuFilter) menuFilterInput.value = state.menuFilter;
+      document.querySelectorAll('.action-card[data-base-enabled]').forEach(button => {
+        const baseEnabled = button.dataset.baseEnabled === 'true';
+        const shouldDisable = !baseEnabled || locked;
+        button.disabled = shouldDisable;
+        button.classList.toggle('disabled', shouldDisable);
+        const status = button.querySelector('[data-action-status]');
+        if (status) status.textContent = !baseEnabled ? 'Bloque' : (locked ? 'Attente' : 'Envoyer');
+      });
+      document.querySelectorAll('[data-item-choice], [data-focus-choice], [data-unit-choice]').forEach(card => {
+        card.classList.toggle('locked', locked);
+        card.setAttribute('aria-disabled', locked ? 'true' : 'false');
+        if (locked) card.setAttribute('title', inputLockReason());
+        else card.removeAttribute('title');
+      });
+      document.querySelectorAll('.suggestion-chip').forEach(button => {
+        button.disabled = locked || displayOnly;
+        button.classList.toggle('disabled', locked || displayOnly);
+      });
+    }
+
+    async function fetchJson(path) {
+      const response = await fetch(path + '?t=' + Date.now(), { cache: 'no-store' });
+      if (!response.ok) throw new Error('HTTP ' + response.status + ' sur ' + path);
+      return response.json();
+    }
+
+    function refreshServerStatusBox(status) {
+      if (!status) {
+        serverStatusBox.textContent = 'Serveur local : verification...';
+        liveMeta.innerHTML = '';
+        return;
+      }
+
+      state.lastServerStatus = status;
+      updateCommandFlowFromStatus(status);
+      const guiStateLabel = status.guiStateExists ? 'oui' : 'non';
+      const consumedAction = getConsumedActionLabel(status.lastConsumedInput);
+      const consumed = status.lastConsumedInput?.display ? ('\nDerniere commande lue par le jeu : ' + status.lastConsumedInput.display + (consumedAction ? ' — ' + consumedAction : '')) : '';
+      const queueDetail = 'queue ' + (status.pendingQueueCount ?? '?') + ' / ancien fichier ' + (status.pendingLegacyCount ?? '?');
+      serverStatusBox.textContent = 'Serveur local : OK\nFile saisie : ' + (status.pendingInputCount ?? '?') + ' commande(s) en attente (' + queueDetail + ')\nEtat IG : ' + guiStateLabel + '\nMenu JSON : ' + (status.latestMenuExists ? 'oui' : 'non') + ' · Combat JSON : ' + (status.latestCombatExists ? 'oui' : 'non') + consumed;
+
+      const active = state.lastGuiState || {};
+      liveMeta.innerHTML = `
+        <div class="live-meta-row"><span>Ecran actif</span><strong>${escapeHtml(active.activeTitle || active.activeScreenId || '-')}</strong></div>
+        <div class="live-meta-row"><span>Dernier export</span><strong>${escapeHtml(active.lastExportKind || '-')}</strong></div>
+        <div class="live-meta-row"><span>Contexte</span><strong>${escapeHtml(active.activeScreenCategory || state.lastMenu?.screenCategory || '-')} / ${escapeHtml(active.activeInputIntent || state.lastMenu?.inputIntent || '-')}</strong></div>
+        <div class="live-meta-row"><span>Vue IG</span><strong>${escapeHtml(active.activeSpecializedView || state.lastMenu?.specializedView || '-')} · ${escapeHtml(active.activeFocusCardCount ?? (Array.isArray(state.lastMenu?.focusCards) ? state.lastMenu.focusCards.length : 0))} action(s) · ${escapeHtml(active.activeInfoCardCount ?? (Array.isArray(state.lastMenu?.infoCards) ? state.lastMenu.infoCards.length : 0))} info(s) · ${escapeHtml(active.activeItemCardCount ?? (Array.isArray(state.lastMenu?.itemCards) ? state.lastMenu.itemCards.length : 0))} carte(s) · ${escapeHtml(active.activeNoticeCardCount ?? (Array.isArray(state.lastMenu?.noticeCards) ? state.lastMenu.noticeCards.length : 0))} note(s)</strong></div>
+        <div class="live-meta-row"><span>Pagination</span><strong>${active.activeHasPagination ? escapeHtml((active.activePageNumber || '?') + ' / ' + (active.activeTotalPages || '?')) : '-'}</strong></div>
+        <div class="live-meta-row"><span>Actions écran</span><strong>${escapeHtml((active.activeEnabledActionCount ?? '-') + ' / ' + (active.activeActionCount ?? '-') + ' utilisables')}</strong></div>
+        <div class="live-meta-row"><span>Risques/verrous</span><strong>${escapeHtml((active.activeDangerActionCount ?? 0) + ' sensibles · ' + (active.activeLockedActionCount ?? 0) + ' verrouillées')}</strong></div>
+        <div class="live-meta-row"><span>Sequence</span><strong>${escapeHtml(active.sequence ?? '-')}</strong></div>
+        <div class="live-meta-row"><span>Verrou saisie</span><strong>${escapeHtml(inputLockReason() || 'non')}</strong></div>
+      `;
+      refreshChrome();
+    }
+
+    async function refreshServerStatus() {
+      try {
+        refreshServerStatusBox(await fetchJson('/gui/status'));
+      } catch (error) {
+        serverStatusBox.textContent = 'Serveur local : non joignable depuis cette page.\nLes clics ne fonctionneront pas sans le launcher IG.';
+        liveMeta.innerHTML = '';
+      }
+    }
+
+    async function loadLiveOnce(showErrors = true) {
+      const results = [];
+
+      try {
+        const bundle = await fetchJson('/gui/snapshot');
+        if (bundle?.type === 'gui_snapshot_bundle') {
+          state.lastGuiState = bundle.guiState || null;
+          state.lastServerStatus = bundle.status || state.lastServerStatus;
+
+          if (bundle.menu?.type === 'menu') {
+            acceptSnapshot(bundle.menu, state.lastGuiState?.latestMenuFile || 'latest_menu.json', false);
+            results.push('menu ok');
+          } else if (showErrors) {
+            results.push('menu: absent');
+          }
+
+          if (bundle.combat?.type === 'combat') {
+            acceptSnapshot(bundle.combat, state.lastGuiState?.latestCombatFile || 'latest_combat.json', false);
+            results.push('combat ok');
+          } else if (showErrors) {
+            results.push('combat: absent');
+          }
+
+          results.unshift('bundle ok');
+          refreshServerStatusBox(bundle.status);
+        } else {
+          throw new Error('bundle invalide');
+        }
+      } catch (bundleError) {
+        if (showErrors) results.push('bundle: ' + bundleError.message);
+
+        let menuPath = '/gui_debug/latest_menu.json';
+        let combatPath = '/gui_debug/latest_combat.json';
+
+        try {
+          const guiState = await fetchJson('/gui_debug/gui_state.json');
+          if (guiState?.type === 'gui_state') {
+            state.lastGuiState = guiState;
+            if (guiState.latestMenuFile) menuPath = '/gui_debug/' + guiState.latestMenuFile;
+            if (guiState.latestCombatFile) combatPath = '/gui_debug/' + guiState.latestCombatFile;
+            results.push('etat #' + (guiState.sequence ?? '?') + ' : ' + (guiState.lastExportKind || '?'));
+          }
+        } catch (error) {
+          if (showErrors) results.push('etat IG: ' + error.message);
+        }
+
+        try {
+          const menu = await fetchJson(menuPath);
+          acceptSnapshot(menu, menuPath.split('/').pop(), false);
+          results.push('menu ok');
+        } catch (error) {
+          if (showErrors) results.push('menu: ' + error.message);
+        }
+
+        try {
+          const combat = await fetchJson(combatPath);
+          acceptSnapshot(combat, combatPath.split('/').pop(), false);
+          results.push('combat ok');
+        } catch (error) {
+          if (showErrors) results.push('combat: ' + error.message);
+        }
+      }
+
+      updateCommandFlowFromStatus(state.lastServerStatus);
+      if (results.length) {
+        const active = state.lastGuiState ? ('\nActif : ' + (state.lastGuiState.activeTitle || state.lastGuiState.activeScreenId || '-')) : '';
+        setStatus('Live : ' + results.join('\n') + active + '\nDerniere source : ' + state.lastSource);
+      }
+      renderAll();
+    }
+
+    function acceptSnapshot(snapshot, sourceName, render = true) {
+      if (!snapshot || typeof snapshot !== 'object') throw new Error('JSON invalide');
+      state.lastSource = sourceName;
+      if (snapshot.type === 'menu') state.lastMenu = snapshot;
+      else if (snapshot.type === 'combat') state.lastCombat = snapshot;
+      else throw new Error('Type de snapshot inconnu : ' + snapshot.type);
+      if (render) {
+        setStatus('Charge : ' + sourceName + '\nType : ' + snapshot.type + '\nVersion : ' + (snapshot.gameVersion || '?'));
+        renderAll();
+      }
+    }
+
+    function renderAll() {
+      menuRoot.innerHTML = state.lastMenu ? renderMenu(state.lastMenu) : '<div class="empty">Aucun menu charge.</div>';
+      combatRoot.innerHTML = state.lastCombat ? renderCombat(state.lastCombat) : '<div class="empty">Aucun combat charge.</div>';
+      refreshChrome();
+    }
+
+    function renderHeader(snapshot, rightLabel) {
+      const category = snapshot.screenCategory || (rightLabel === 'combat' ? 'combat' : 'menu');
+      return `
+        <div class="screen-title">
+          <div>
+            <h2>${escapeHtml(snapshot.title || 'Ecran sans titre')}</h2>
+            <span class="badge">${escapeHtml(snapshot.screenId || 'screen.unknown')}</span>
+            <span class="badge warn">${escapeHtml(category)}</span>
+          </div>
+          <span class="badge ${rightLabel === 'combat' ? 'warn' : 'ok'}">${escapeHtml(rightLabel)}</span>
+        </div>`;
+    }
+
+    function renderContextTags(snapshot) {
+      const tags = Array.isArray(snapshot?.contextTags) ? snapshot.contextTags : [];
+      if (!tags.length && !snapshot?.inputIntent) return '';
+      const allTags = [...tags];
+      if (snapshot.inputIntent && !allTags.includes(snapshot.inputIntent)) allTags.unshift(snapshot.inputIntent);
+      return `<div class="context-panel">${allTags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>`;
+    }
+
+    function renderPagination(snapshot) {
+      if (!snapshot?.hasPagination) return '';
+      const pageNumber = Math.max(1, Number(snapshot.pageNumber || 1));
+      const totalPages = Math.max(1, Number(snapshot.totalPages || 1));
+      const progress = Math.max(0, Math.min(100, Math.round((pageNumber / totalPages) * 100)));
+      return `
+        <div class="pagination-panel">
+          <div class="pagination-head"><span>Page ${escapeHtml(pageNumber)} / ${escapeHtml(totalPages)}</span><span>${snapshot.hasPreviousPage ? '98 précédent' : ''}${snapshot.hasPreviousPage && snapshot.hasNextPage ? ' · ' : ''}${snapshot.hasNextPage ? '99 suivant' : ''}</span></div>
+          <div class="pagination-bar"><div class="pagination-fill" style="--page-progress: ${progress}%"></div></div>
+          <div class="pagination-meta">
+            <span class="tag">${snapshot.hasPreviousPage ? 'page précédente disponible' : 'début de liste'}</span>
+            <span class="tag">${snapshot.hasNextPage ? 'page suivante disponible' : 'fin de liste'}</span>
+          </div>
+        </div>`;
+    }
+
+
+
+    function renderInfoCards(snapshot) {
+      const allCards = Array.isArray(snapshot?.infoCards) ? snapshot.infoCards : [];
+      const cards = allCards.filter(card => matchesMenuFilter(card.label, card.value, card.kind, card.source));
+      if (!cards.length) return state.menuFilter && allCards.length ? renderMenuFilterNotice(allCards.length, 0, 'info') : '';
+      return `
+        ${renderMenuFilterNotice(allCards.length, cards.length, 'info')}
+        <div class="info-grid">
+          ${cards.map(card => {
+            const kind = String(card.kind || 'info').replace(/[^a-z0-9_-]/gi, '');
+            return `
+              <div class="info-card kind-${escapeHtml(kind)} ${card.important ? 'important' : ''}">
+                <div class="info-card-label">${escapeHtml(card.label || 'Info')}</div>
+                <div class="info-card-value">${escapeHtml(card.value || '-')}</div>
+                <div class="info-card-source">${escapeHtml(card.kind || 'info')} · ${escapeHtml(card.source || 'ligne')}</div>
+              </div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    function getItemActionTypeLabel(actionType) {
+      const labels = {
+        buy: 'Acheter',
+        buyback: 'Racheter',
+        sell: 'Vendre',
+        barter: 'Troquer',
+        equip: 'Équiper',
+        use: 'Utiliser',
+        repair: 'Réparer',
+        inspect: 'Inspecter',
+        quest: 'Quête',
+        save: 'Sauvegarder',
+        death: 'Consulter',
+        altered_data: 'Consulter',
+        continue: 'Continuer',
+        travel: 'Voyager',
+        talk: 'Parler',
+        select: 'Choisir',
+        open: 'Ouvrir'
+      };
+      return labels[actionType] || 'Ouvrir';
+    }
+
+    function renderItemCard(card) {
+      const available = card.available === true && Number(card.actionNumber ?? -1) >= 0;
+      const locked = available && !canSendInputNow();
+      const actionDisplayLabel = card.actionDisplayLabel || (available ? `${card.actionNumber} - ${card.actionLabel || card.name || 'Action'}` : '');
+      const kind = String(card.kind || 'item').replace(/[^a-z0-9_-]/gi, '');
+      const quantity = card.quantity ? `<span class="item-card-qty">x${escapeHtml(card.quantity)}</span>` : '';
+      const status = card.status ? `<span class="item-card-status">${escapeHtml(card.status)}</span>` : '';
+      const actionTypeLabel = card.actionTypeLabel || getItemActionTypeLabel(card.actionType || 'open');
+      const actionType = actionTypeLabel ? `<span class="item-card-actiontype">${escapeHtml(actionTypeLabel)}</span>` : '';
+      const facts = [
+        card.price ? ['Prix', card.price] : null,
+        card.stock ? ['Stock', card.stock] : null,
+        card.maxQuantity ? ['Max', card.maxQuantity] : null,
+        card.progress ? ['Progression', card.progress] : null,
+        card.reward ? ['Gain', card.reward] : null,
+        card.owner ? ['Lien', card.owner] : null
+      ].filter(Boolean);
+      const choiceAttrs = available
+        ? ` data-item-choice="${escapeHtml(card.actionNumber)}" data-item-id="${escapeHtml(card.id || '')}" data-item-name="${escapeHtml(card.name || '')}" data-item-kind="${escapeHtml(card.kind || '')}" data-item-action-id="${escapeHtml(card.actionId || '')}" data-item-action-label="${escapeHtml(card.actionLabel || card.name || '')}" data-item-action-display-label="${escapeHtml(actionDisplayLabel || card.actionLabel || card.name || '')}" data-item-section="${escapeHtml(card.section || '')}" data-item-action-type="${escapeHtml(card.actionType || '')}" data-item-action-type-label="${escapeHtml(actionTypeLabel || '')}" role="button" tabindex="0"`
+        : '';
+      return `
+        <div class="item-card kind-${escapeHtml(kind)} action-${escapeHtml(card.actionType || 'open')} ${available ? 'available clickable' : ''} ${locked ? 'locked' : ''} ${card.important ? 'important' : ''}"${choiceAttrs}>
+          <div class="item-card-head">
+            <div class="item-card-title">${available ? `<span class="item-card-choice">${escapeHtml(card.actionNumber)}</span>` : ''}${escapeHtml(card.name || card.actionLabel || 'Entrée')}</div>
+            <div>${quantity}${status}${actionType}</div>
+          </div>
+          ${card.detail ? `<div class="item-card-detail">${escapeHtml(card.detail)}</div>` : ''}
+          ${facts.length ? `<div class="item-card-facts">${facts.map(([label, value]) => `<span class="item-card-fact">${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('')}</div>` : ''}
+          <div class="item-card-meta"><span>${escapeHtml(card.kind || 'item')}</span><span>${escapeHtml(card.section || 'Général')}</span>${available ? `<span>Action ${escapeHtml(card.actionNumber)}</span>` : ''}</div>
+        </div>`;
+    }
+
+    function renderItemCards(snapshot) {
+      const allCards = Array.isArray(snapshot?.itemCards) ? snapshot.itemCards : [];
+      const cards = allCards.filter(card => matchesMenuFilter(card.name, card.detail, card.kind, card.status, card.section, card.actionType, card.actionTypeLabel, card.price, card.stock, card.maxQuantity, card.reward, card.progress, card.owner, card.actionLabel, card.actionDisplayLabel, card.actionId));
+      if (!cards.length) return state.menuFilter && allCards.length ? renderMenuFilterNotice(allCards.length, 0, 'carte métier') : '';
+      const groups = [];
+      for (const card of cards) {
+        const section = card.section || 'Général';
+        let group = groups.find(item => item.section === section);
+        if (!group) {
+          group = { section, cards: [] };
+          groups.push(group);
+        }
+        group.cards.push(card);
+      }
+      return `
+        ${renderMenuFilterNotice(allCards.length, cards.length, 'carte métier')}
+        ${groups.map(group => `
+          <section class="item-section">
+            <div class="item-section-title">${escapeHtml(group.section)} · ${escapeHtml(group.cards.length)} carte(s)</div>
+            <div class="item-grid">${group.cards.map(renderItemCard).join('')}</div>
+          </section>`).join('')}`;
+    }
+
+    function renderNoticeCards(snapshot) {
+      const allCards = Array.isArray(snapshot?.noticeCards) ? snapshot.noticeCards : [];
+      const cards = allCards.filter(card => matchesMenuFilter(card.text, card.kind, card.source));
+      if (!cards.length) return state.menuFilter && allCards.length ? renderMenuFilterNotice(allCards.length, 0, 'note') : '';
+      return `
+        ${renderMenuFilterNotice(allCards.length, cards.length, 'note')}
+        <div class="notice-grid">
+          ${cards.map(card => {
+            const kind = String(card.kind || 'info').replace(/[^a-z0-9_-]/gi, '');
+            return `
+              <div class="notice-card kind-${escapeHtml(kind)} ${card.important ? 'important' : ''}">
+                <div>${escapeHtml(card.text || '')}</div>
+                <div class="notice-meta">${escapeHtml(card.kind || 'info')} · ${escapeHtml(card.source || 'ligne')}</div>
+              </div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    function renderSpecializedPanel(snapshot) {
+      if (!snapshot || snapshot.type !== 'menu') return '';
+      const view = snapshot.specializedView || 'generic';
+      if (view === 'generic') return '';
+      const allCards = Array.isArray(snapshot.focusCards) ? snapshot.focusCards : [];
+      const cards = allCards.filter(card => matchesMenuFilter(card.id, card.label, card.detail, card.actionLabel, card.actionDisplayLabel, card.actionId));
+      const renderedInfoCards = renderInfoCards(snapshot);
+      const renderedNoticeCards = renderNoticeCards(snapshot);
+      const renderedItemCards = renderItemCards(snapshot);
+      const renderedCards = cards.length
+        ? cards.map(card => {
+            const available = card.available === true && Number(card.actionNumber ?? -1) >= 0;
+            const locked = available && !canSendInputNow();
+            const actionLabel = card.actionLabel || card.actionId || card.label || '';
+            const actionDisplayLabel = card.actionDisplayLabel || (available ? `${card.actionNumber} - ${actionLabel || card.label || 'Action'}` : '');
+            const action = available
+              ? `Action ${actionDisplayLabel}`
+              : "Pas d\'action directe ici";
+            const choiceAttrs = available
+              ? ` data-focus-choice="${escapeHtml(card.actionNumber)}" data-focus-id="${escapeHtml(card.id || '')}" data-focus-label="${escapeHtml(card.label || '')}" data-focus-action-id="${escapeHtml(card.actionId || '')}" data-focus-action-label="${escapeHtml(actionLabel)}" data-focus-action-display-label="${escapeHtml(actionDisplayLabel || actionLabel)}" role="button" tabindex="0"`
+              : '';
+            return `
+              <div class="focus-card ${available ? 'available clickable' : ''} ${locked ? 'locked' : ''}"${choiceAttrs}>
+                <div>
+                  <div class="focus-card-title">${available ? `<span class="focus-card-choice">${escapeHtml(card.actionNumber)}</span>` : ''}<span>${escapeHtml(card.label || card.id || 'Bloc')}</span></div>
+                  <div class="focus-card-detail">${escapeHtml(card.detail || '')}</div>
+                </div>
+                <div class="focus-card-action">${escapeHtml(locked ? 'Commande en attente · ' + action : action)}</div>
+              </div>`;
+          }).join('')
+        : (renderedInfoCards || renderedNoticeCards
+          ? (state.menuFilter && allCards.length ? renderMenuFilterNotice(allCards.length, 0, 'bloc') : '')
+          : '<div class="empty">Vue spécialisée prête, mais aucun bloc contextuel pour cet écran.</div>');
+
+      return `
+        <div class="specialized-panel">
+          <div class="specialized-head">
+            <div>
+              <div class="specialized-title">${escapeHtml(snapshot.specializedTitle || 'Vue spécialisée')}</div>
+              <div class="specialized-hint">${escapeHtml(snapshot.specializedHint || '')}</div>
+            </div>
+            <span class="badge warn">${escapeHtml(view)}</span>
+          </div>
+          ${renderedInfoCards}
+          ${renderedItemCards}
+          ${renderedNoticeCards}
+          ${cards.length ? renderMenuFilterNotice(allCards.length, cards.length, 'bloc') : ''}
+          ${renderedCards ? `<div class="focus-grid">${renderedCards}</div>` : ''}
+        </div>`;
+    }
+
+    function renderScreenSummary(snapshot) {
+      if (!snapshot || snapshot.type !== 'menu') return '';
+      const total = Number(snapshot.actionCount ?? (Array.isArray(snapshot.actions) ? snapshot.actions.length : 0));
+      const enabled = Number(snapshot.enabledActionCount ?? 0);
+      const main = Number(snapshot.mainActionCount ?? 0);
+      const nav = Number(snapshot.navigationActionCount ?? 0);
+      const danger = Number(snapshot.dangerActionCount ?? 0);
+      const locked = Number(snapshot.lockedActionCount ?? snapshot.disabledActionCount ?? 0);
+      const recommendation = Number(snapshot.recommendedChoice ?? -1) >= 0
+        ? `${snapshot.recommendedChoice} — ${snapshot.recommendedChoiceLabel || 'mise en avant IG'}`
+        : 'Aucune';
+      const recommendationReason = snapshot.recommendationReason || 'Jamais basee sur une faiblesse inconnue.';
+      return `
+        <div class="summary-panel">
+          <div class="input-contract-title">Résumé IG de l'écran</div>
+          <div class="summary-grid">
+            <div class="summary-item">Actions<strong>${escapeHtml(total)}</strong></div>
+            <div class="summary-item">Utilisables<strong>${escapeHtml(enabled)}</strong></div>
+            <div class="summary-item">Principales<strong>${escapeHtml(main)}</strong></div>
+            <div class="summary-item">Navigation<strong>${escapeHtml(nav)}</strong></div>
+            <div class="summary-item">Sensibles<strong>${escapeHtml(danger)}</strong></div>
+            <div class="summary-item">Verrouillées<strong>${escapeHtml(locked)}</strong></div>
+            <div class="summary-item">Mise en avant<strong>${escapeHtml(recommendation)}</strong></div>
+            <div class="summary-item">Sécurité<strong>${escapeHtml(recommendationReason)}</strong></div>
+          </div>
+        </div>`;
+    }
+
+    function renderInputContract(snapshot) {
+      if (!snapshot || snapshot.type !== 'menu') return '';
+      const required = snapshot.inputRequired === false ? 'Non' : 'Oui';
+      const empty = snapshot.acceptsEmptyInput ? 'Oui' : 'Non';
+      const submit = snapshot.primarySubmitLabel || 'Envoyer';
+      const pattern = getExpectedPatternLabel(snapshot.expectedInputPattern || '');
+      const range = snapshot.inputMode === 'quantity' && snapshot.hasNumericRange
+        ? `<div class="input-contract-item">Limites<strong>${escapeHtml(snapshot.numericMin)} → ${escapeHtml(snapshot.numericMax)}</strong></div>`
+        : '';
+      const textRange = snapshot.inputMode === 'text' && snapshot.hasTextLengthRange
+        ? `<div class="input-contract-item">Longueur texte<strong>${escapeHtml(snapshot.textMinLength || 0)} → ${escapeHtml(snapshot.textMaxLength || '∞')}</strong></div>`
+        : '';
+      const keyword = snapshot.inputMode === 'confirmation' && snapshot.confirmationKeyword
+        ? `<div class="input-contract-item">Mot requis<strong>${escapeHtml(snapshot.confirmationKeyword)}</strong></div>`
+        : '';
+      return `
+        <div class="input-contract">
+          <div class="input-contract-title">Contrat de saisie IG</div>
+          <div class="input-contract-grid">
+            <div class="input-contract-item">Mode<strong>${escapeHtml(snapshot.inputIntent || snapshot.inputMode || '-')}</strong></div>
+            <div class="input-contract-item">Format attendu<strong>${escapeHtml(pattern)}</strong></div>
+            <div class="input-contract-item">Bouton principal<strong>${escapeHtml(submit)}</strong></div>
+            <div class="input-contract-item">Saisie obligatoire<strong>${escapeHtml(required)}</strong></div>
+            <div class="input-contract-item">Entrée vide acceptée<strong>${escapeHtml(empty)}</strong></div>
+            ${range}
+            ${textRange}
+            ${keyword}
+          </div>
+        </div>`;
+    }
+
+    function renderLines(title, lines) {
+      if (!Array.isArray(lines) || lines.length === 0) return '';
+      return `<div class="section"><h3>${escapeHtml(title)}</h3><div class="line-list">${lines.map(line => `<div class="line">${escapeHtml(line)}</div>`).join('')}</div></div>`;
+    }
+
+    function getActionGroup(action) {
+      const explicitGroup = action?.group || '';
+      if (['main', 'navigation', 'danger', 'locked'].includes(explicitGroup)) return explicitGroup;
+      const role = action?.role || '';
+      if (role === 'danger' || action?.dangerous) return 'danger';
+      if (role === 'disabled' || action?.enabled === false) return 'locked';
+      if (role === 'back' || role === 'pagination') return 'navigation';
+      return 'main';
+    }
+
+    function getActionGroupMeta(group) {
+      if (group === 'main') return { title: 'Actions principales', hint: 'choix utiles' };
+      if (group === 'navigation') return { title: 'Navigation', hint: 'retour / pages' };
+      if (group === 'danger') return { title: 'Actions sensibles', hint: 'prudence' };
+      if (group === 'locked') return { title: 'Options verrouillées', hint: 'indisponible ici' };
+      return { title: 'Autres actions', hint: 'menu' };
+    }
+
+    function renderActionGroup(group, actions) {
+      if (!actions.length) return '';
+      const meta = getActionGroupMeta(group);
+      return `
+        <div class="action-section ${escapeHtml(group)}">
+          <div class="action-section-head"><span>${escapeHtml(meta.title)}</span><span>${escapeHtml(actions.length)} · ${escapeHtml(meta.hint)}</span></div>
+          <div class="actions ${escapeHtml(group)}">${actions.map(renderAction).join('')}</div>
+        </div>`;
+    }
+
+    function renderActionsByGroup(actions) {
+      if (!Array.isArray(actions) || actions.length === 0) return '<div class="empty">Aucune action.</div>';
+      const filteredActions = actions.filter(action => matchesMenuFilter(action.actionDisplayLabel, action.label, action.hint, action.actionId, action.role, action.group));
+      if (!filteredActions.length) return renderMenuFilterNotice(actions.length, 0, 'action') + '<div class="empty">Aucune action ne correspond au filtre IG.</div>';
+      const grouped = { main: [], navigation: [], danger: [], locked: [] };
+      for (const action of filteredActions) {
+        const group = getActionGroup(action);
+        if (!grouped[group]) grouped[group] = [];
+        grouped[group].push(action);
+      }
+      const order = ['main', 'navigation', 'danger', 'locked'];
+      return `${renderMenuFilterNotice(actions.length, filteredActions.length, 'action')}<div class="action-sections">${order.map(group => renderActionGroup(group, grouped[group] || [])).join('')}</div>`;
+    }
+
+    function renderInputDebug() {
+      const status = state.lastServerStatus;
+      if (!status) return '';
+      const pending = Number(status.pendingInputCount || 0);
+      const historyItems = Array.isArray(status.inputHistory) ? status.inputHistory.slice(-5) : [];
+      const history = historyItems.map(item => {
+        const display = item.display || item.command || '[Entree]';
+        const label = item.focusCardLabel || item.actionDisplayLabel || item.actionLabel || item.actionId || item.screenId || '';
+        return label ? `${display} (${label})` : display;
+      });
+      const consumed = status.lastConsumedInput?.display || '';
+      const consumedAction = getConsumedActionLabel(status.lastConsumedInput);
+      const warning = pending > 0 ? `<div class="input-warning">${pending} commande(s) attendent encore d'être lues par le jeu. La saisie est verrouillee pour eviter les doubles clics tant que le jeu ne l'a pas lue.</div>` : '';
+      const chips = historyItems.length
+        ? `<div>${historyItems.map(item => `<span class="command-chip">${escapeHtml(item.display || item.command || '[Entree]')}</span>`).join('')}</div>`
+        : '';
+      const pendingQueue = Array.isArray(status.pendingQueue) ? status.pendingQueue.slice(0, 6) : [];
+      const queueDetails = pendingQueue.length
+        ? `<div class="queue-list">${pendingQueue.map(item => `<div class="queue-item">En attente : <strong>${escapeHtml(item.display || item.command || '[Entree]')}</strong>${item.itemCardName ? ' — carte ' + escapeHtml(item.itemCardName) : (item.focusCardLabel ? ' — bloc ' + escapeHtml(item.focusCardLabel) : ((item.actionDisplayLabel || item.actionLabel) ? ' — ' + escapeHtml(item.actionDisplayLabel || item.actionLabel) : ''))}${item.actionGroup ? ' · ' + escapeHtml(item.actionGroup) : ''}</div>`).join('')}</div>`
+        : '';
+      const consumedBox = consumed
+        ? `<div class="consumed-ok"><strong>Commande consommee</strong> : ${escapeHtml(consumed)}${consumedAction ? ' — ' + escapeHtml(consumedAction) : ''}</div>`
+        : '';
+      const details = history.length || consumed
+        ? `<div class="last-input">Derniere lue : ${escapeHtml(consumed || '-')}\nDernieres envoyees : ${escapeHtml(history.join(' | ') || '-')}</div>${chips}`
+        : '';
+      return warning + renderCommandFlow() + consumedBox + details + queueDetails;
+    }
+
+    function buildSuggestedCommands() {
+      const commands = [];
+      const menu = state.lastMenu;
+      if (!menu || menu.type !== 'menu') return commands;
+
+      const addCommand = item => {
+        const command = String(item.command ?? '');
+        const alreadyExists = commands.some(existing => String(existing.command ?? '') === command);
+        if (!alreadyExists) commands.push(item);
+      };
+
+      const mode = menu.inputMode || 'choice';
+      if (mode === 'continue') {
+        addCommand({ command: '', label: 'Entrée', primary: true, kind: 'continue' });
+      }
+
+      if (mode === 'confirmation' && menu.confirmationKeyword) {
+        addCommand({ command: menu.confirmationKeyword, label: menu.confirmationKeyword, primary: true, kind: 'confirmation' });
+      }
+
+      if (mode === 'quantity') {
+        if (menu.hasNumericRange) {
+          const min = Number(menu.numericMin ?? 0);
+          const max = Number(menu.numericMax ?? 0);
+          addCommand({ command: String(min), label: 'Min ' + min, primary: min === max, kind: 'quantity_min' });
+          if (min <= 1 && 1 <= max) {
+            addCommand({ command: '1', label: '1', primary: min !== 1, kind: 'quantity_one' });
+          }
+          if (max !== min) {
+            addCommand({ command: String(max), label: 'Max ' + max, primary: false, kind: 'quantity_max' });
+          }
+        } else {
+          addCommand({ command: '1', label: '1', primary: true, kind: 'quantity' });
+        }
+      }
+
+      const actions = Array.isArray(menu.actions) ? menu.actions.filter(action => action.enabled !== false) : [];
+      const recommendedChoice = String(menu.recommendedChoice ?? '-1');
+      for (const action of actions.slice(0, 7)) {
+        const command = String(action.number ?? '');
+        addCommand({
+          command,
+          label: action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim(),
+          primary: command === recommendedChoice && mode === 'choice',
+          kind: 'choice',
+          actionId: action.actionId || '',
+          actionLabel: action.label || '',
+          actionDisplayLabel: action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim(),
+          actionRole: action.role || '',
+          actionStyle: action.style || '',
+          actionGroup: action.group || getActionGroup(action),
+          knowledgeSensitive: !!action.knowledgeSensitive,
+          recommendationReason: action.recommendationReason || ''
+        });
+      }
+
+      if (!commands.some(item => item.command === '0')) {
+        addCommand({ command: '0', label: '0 Retour', primary: false, kind: 'back' });
+      }
+      return commands;
+    }
+
+    function renderSuggestedCommands() {
+      if (!suggestedCommands) return;
+      const commands = buildSuggestedCommands();
+      suggestedCommands.innerHTML = commands.length
+        ? commands.map(item => `<button type="button" class="suggestion-chip ${item.primary ? 'primary' : ''}" data-suggestion-command="${escapeHtml(item.command)}" data-suggestion-kind="${escapeHtml(item.kind || '')}" data-suggestion-action-id="${escapeHtml(item.actionId || '')}" data-suggestion-action-label="${escapeHtml(item.actionLabel || '')}" data-suggestion-action-display-label="${escapeHtml(item.actionDisplayLabel || item.label || item.actionLabel || '')}" data-suggestion-action-role="${escapeHtml(item.actionRole || '')}" data-suggestion-action-style="${escapeHtml(item.actionStyle || '')}" data-suggestion-action-group="${escapeHtml(item.actionGroup || '')}" data-suggestion-knowledge-sensitive="${item.knowledgeSensitive ? 'true' : 'false'}" data-suggestion-recommendation-reason="${escapeHtml(item.recommendationReason || '')}">${escapeHtml(item.label)}</button>`).join('')
+        : '<span class="command-chip">Aucune suggestion pour cet écran.</span>';
+    }
+
+    function getCommandValidation(valueOverride = null) {
+      const menu = state.lastMenu;
+      const value = String(valueOverride ?? commandInput?.value ?? '').trim();
+      if (!menu) return { level: '', message: '', blocking: false };
+
+      const mode = menu.inputMode || 'choice';
+
+      if (!value) {
+        if (mode === 'display') return { level: '', message: 'Cet écran est en lecture seule.', blocking: true };
+        if (menu.acceptsEmptyInput) return { level: mode === 'continue' ? 'ok' : '', message: mode === 'continue' ? 'Entrée vide valide pour continuer.' : '', blocking: false };
+        return { level: 'warn', message: 'Cet écran attend une saisie avant envoi.', blocking: true };
+      }
+
+      if (mode === 'quantity') {
+        const numeric = /^-?\d+$/.test(value);
+        if (!numeric) {
+          return { level: 'warn', message: 'Cet ecran attend une quantite en chiffres.', blocking: true };
+        }
+
+        if (menu.hasNumericRange) {
+          const numberValue = Number(value);
+          const min = Number(menu.numericMin ?? 0);
+          const max = Number(menu.numericMax ?? 0);
+          if (numberValue < min || numberValue > max) {
+            return { level: 'warn', message: 'Quantite hors limite : entre ' + min + ' et ' + max + '.', blocking: true };
+          }
+          return { level: 'ok', message: 'Quantite valide : ' + numberValue + '.', blocking: false };
+        }
+
+        return { level: 'ok', message: 'Quantite numerique reconnue.', blocking: false };
+      }
+
+      if (mode === 'confirmation' && menu.confirmationKeyword) {
+        if (value === menu.confirmationKeyword) {
+          return { level: 'ok', message: 'Confirmation exacte reconnue.', blocking: false };
+        }
+        return { level: 'warn', message: 'Attention : cet écran attend exactement "' + menu.confirmationKeyword + '".', blocking: true };
+      }
+
+      if (mode === 'text') {
+        const length = value.length;
+        if (menu.hasTextLengthRange) {
+          const min = Number(menu.textMinLength || 0);
+          const max = Number(menu.textMaxLength || 0);
+          if (min > 0 && length < min) {
+            return { level: 'warn', message: 'Texte trop court : minimum ' + min + ' caractère(s).', blocking: true };
+          }
+          if (max > 0 && length > max) {
+            return { level: 'warn', message: 'Texte trop long : maximum ' + max + ' caractère(s).', blocking: true };
+          }
+        }
+        return { level: 'ok', message: 'Texte prêt à être envoyé (' + length + ' caractère(s)).', blocking: false };
+      }
+
+      if (mode === 'choice') {
+        const numeric = /^-?\d+$/.test(value);
+        const knownCheat = state.cheatCatalog.some(entry => entry.code === value);
+        if (numeric) {
+          const action = findAnyMenuActionByNumber(value);
+          if (action && action.enabled === false) {
+            return { level: 'warn', message: 'Ce choix existe, mais il est verrouille pour cet ecran.', blocking: true };
+          }
+          if (Array.isArray(menu.validChoices) && menu.validChoices.length && !isKnownValidChoice(value)) {
+            return { level: 'warn', message: 'Ce numero n apparait pas dans les actions actuellement valides.', blocking: true };
+          }
+          if (action) {
+            return { level: 'ok', message: 'Choix reconnu : ' + action.label, blocking: false };
+          }
+        } else if (!knownCheat) {
+          return { level: 'warn', message: 'Texte libre envoye dans un menu de choix : utile pour cheat/cache, sinon le jeu refusera.', blocking: false };
+        }
+      }
+
+      return { level: '', message: '', blocking: false };
+    }
+
+    function updateCommandValidation() {
+      if (!commandValidation) return;
+      const result = getCommandValidation();
+      commandValidation.className = 'validation-message';
+      if (result.level) commandValidation.classList.add(result.level);
+      commandValidation.textContent = result.message || '';
+    }
+
+    function setInputBusy(value) {
+      state.inputBusy = value;
+      refreshChrome();
+    }
+
+    function renderMenu(snapshot) {
+      const actions = Array.isArray(snapshot.actions) ? snapshot.actions : [];
+      return `
+        ${renderHeader(snapshot, 'menu')}
+        ${renderContextTags(snapshot)}
+        ${renderPagination(snapshot)}
+        ${renderScreenSummary(snapshot)}
+        ${renderSpecializedPanel(snapshot)}
+        ${renderInputContract(snapshot)}
+        <div class="line-list">
+          <div class="line">Saisie attendue : ${escapeHtml(snapshot.inputIntent || snapshot.inputMode || 'choix')}${snapshot.inputHint ? ' — ' + escapeHtml(snapshot.inputHint) : ''}</div>
+          ${snapshot.inputMode === 'quantity' && snapshot.hasNumericRange ? `<div class="line">Limites de quantité : ${escapeHtml(snapshot.numericMin)} à ${escapeHtml(snapshot.numericMax)}</div>` : ''}
+          ${snapshot.inputMode === 'text' && snapshot.hasTextLengthRange ? `<div class="line">Longueur texte : ${escapeHtml(snapshot.textMinLength || 0)} à ${escapeHtml(snapshot.textMaxLength || '∞')} caractères</div>` : ''}
+          ${snapshot.recommendedChoice >= 0 ? `<div class="line">Mise en avant IG : ${escapeHtml(snapshot.recommendedChoice)}${snapshot.recommendedChoiceLabel ? ' — ' + escapeHtml(snapshot.recommendedChoiceLabel) : ''}</div>` : ''}
+          ${snapshot.recommendationReason ? `<div class="line">Sécurité recommandation : ${escapeHtml(snapshot.recommendationReason)}</div>` : ''}
+          ${snapshot.hasKnowledgeSensitiveAction ? `<div class="line">Prudence : une option touche à une connaissance sensible, elle n'est pas mise en avant automatiquement.</div>` : ''}
+        </div>
+        ${renderInputDebug()}
+        ${renderLines('Sous-titres', snapshot.subtitles)}
+        ${renderLines('Informations', snapshot.lines)}
+        <div class="section">
+          <h3>Actions disponibles</h3>
+          ${renderActionsByGroup(actions)}
+        </div>
+        ${renderLines('Bas d\'ecran', snapshot.footerLines)}`;
+    }
+
+    function renderAction(action) {
+      const enabled = action.enabled !== false;
+      const locked = !canSendInputNow();
+      const disabledAttribute = enabled && !locked ? '' : ' disabled';
+      const role = action.role || (action.dangerous ? 'danger' : 'normal');
+      const styleClass = ['primary', 'back', 'pagination', 'danger'].includes(role) ? role : '';
+      const recommendedClass = action.recommended ? 'recommended' : '';
+      const itemClass = action.hasItemMetadata ? 'item-action' : '';
+      const importantClass = action.itemImportant ? 'item-important' : '';
+      const facts = action.hasItemMetadata ? [
+        action.itemActionType ? ['Action', getItemActionTypeLabel(action.itemActionType)] : null,
+        action.itemKind ? ['Type', action.itemKind] : null,
+        action.itemSection ? ['Section', action.itemSection] : null,
+        action.itemQuantity ? ['Qté', action.itemQuantity] : null,
+        action.itemStatus ? ['Statut', action.itemStatus] : null,
+        action.itemPrice ? ['Prix', action.itemPrice] : null,
+        action.itemStock ? ['Stock', action.itemStock] : null,
+        action.itemMaxQuantity ? ['Max', action.itemMaxQuantity] : null,
+        action.itemProgress ? ['Progression', action.itemProgress] : null,
+        action.itemReward ? ['Gain', action.itemReward] : null,
+        action.itemOwner ? ['Lien', action.itemOwner] : null
+      ].filter(Boolean) : [];
+      return `
+        <button type="button" class="action-card ${styleClass} ${recommendedClass} ${itemClass} ${importantClass} ${enabled && !locked ? '' : 'disabled'}" data-choice="${escapeHtml(action.number)}" data-base-enabled="${enabled ? 'true' : 'false'}" data-action-id="${escapeHtml(action.actionId || '')}" data-action-label="${escapeHtml(action.label || '')}" data-action-display-label="${escapeHtml(action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim())}" data-action-role="${escapeHtml(role)}" data-action-style="${escapeHtml(action.style || '')}" data-action-group="${escapeHtml(action.group || getActionGroup(action))}" data-knowledge-sensitive="${action.knowledgeSensitive ? 'true' : 'false'}" data-recommendation-reason="${escapeHtml(action.recommendationReason || '')}"${disabledAttribute}>
+          <div class="action-main">
+            <span>${escapeHtml(action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim())}</span>
+            <span data-action-status>${!enabled ? 'Bloque' : (locked ? 'Attente' : 'Envoyer')}</span>
+          </div>
+          <div class="action-role">${escapeHtml(getActionRoleLabel(role))}${action.recommended ? ' · mis en avant' : ''}${action.knowledgeSensitive ? ' · connaissance prudente' : ''}${action.hasItemMetadata ? ' · carte liée' : ''}</div>
+          ${action.hint ? `<div class="action-hint">${escapeHtml(action.hint)}</div>` : ''}
+          ${action.hasItemMetadata && action.itemDetail ? `<div class="action-hint">${escapeHtml(action.itemDetail)}</div>` : ''}
+          ${facts.length ? `<div class="action-facts">${facts.map(([label, value]) => `<span class="action-fact">${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('')}</div>` : ''}
+          ${action.actionId ? `<div class="action-id">${escapeHtml(action.actionId)}</div>` : ''}
+        </button>`;
+    }
+
+    function renderCombat(snapshot) {
+      return `
+        ${renderHeader(snapshot, 'combat')}
+        <div class="line-list">
+          <div class="line">Phase : ${escapeHtml(snapshot.phase || '?')}</div>
+          <div class="line">Tour : ${escapeHtml(snapshot.turnNumber ?? '?')}</div>
+          <div class="line">Acteur : ${escapeHtml(snapshot.currentActorName || '-')}</div>
+          <div class="line">Cible : ${escapeHtml(snapshot.currentTargetName || '-')}</div>
+          <div class="line">Fuite disponible : ${snapshot.escapeAvailable ? 'oui' : 'non'}</div>
+        </div>
+        ${renderLines('Resume', snapshot.summaryLines)}
+        <div class="section combat-grid">
+          ${renderUnitColumn('Camp joueur', snapshot.playerUnits, snapshot)}
+          ${renderUnitColumn('Camp ennemi', snapshot.enemyUnits, snapshot)}
+        </div>
+        ${Array.isArray(snapshot.neutralUnits) && snapshot.neutralUnits.length ? `<div class="section">${renderUnitColumn('Neutres', snapshot.neutralUnits, snapshot)}</div>` : ''}
+        ${renderLines('Journal', snapshot.logLines)}`;
+    }
+
+    function renderUnitColumn(title, units, snapshot) {
+      const safeUnits = Array.isArray(units) ? units : [];
+      return `<div><h3>${escapeHtml(title)}</h3><div class="unit-list">${safeUnits.length ? safeUnits.map(unit => renderUnit(unit, snapshot)).join('') : '<div class="empty">Aucune unite.</div>'}</div></div>`;
+    }
+
+    function renderUnit(unit, snapshot) {
+      const hp = Number(unit.hp || 0);
+      const maxHp = Math.max(1, Number(unit.maxHp || 1));
+      const percent = Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100)));
+      const tags = [];
+      if (unit.kind) tags.push(unit.kind);
+      if (unit.type) tags.push(unit.type);
+      if (unit.targetable === false) tags.push('non ciblable');
+      if (unit.targetChoice >= 0) tags.push('choix ' + unit.targetChoice);
+      if (unit.provoking) tags.push('provocation');
+      if (unit.healingThreatMarked) tags.push('menace soin');
+      if (unit.defensePostureActive) tags.push(unit.defensePostureLabel || 'defense');
+      if (Array.isArray(unit.statusLabels)) tags.push(...unit.statusLabels);
+      const isActive = unit.unitId && unit.unitId === snapshot.activeUnitId;
+      const isTarget = unit.name && unit.name === snapshot.currentTargetName;
+      const targetAction = findMenuActionForUnit(unit);
+      const locked = !canSendInputNow();
+      const clickable = Boolean(targetAction) && !unit.dead && unit.targetable !== false;
+      const clickableClass = clickable ? 'clickable' : '';
+      const lockedClass = clickable && locked ? 'locked' : '';
+      const targetDisplayLabel = targetAction?.actionDisplayLabel || `${targetAction?.number ?? ''} - ${targetAction?.label || unit.name || ''}`.trim();
+      const choiceAttrs = clickable
+        ? ` data-unit-choice="${escapeHtml(targetAction.number)}" data-unit-action-id="${escapeHtml(targetAction.actionId || '')}" data-unit-target-action-id="${escapeHtml(unit.targetActionId || '')}" data-unit-action-label="${escapeHtml(targetAction.label || unit.name || '')}" data-unit-action-display-label="${escapeHtml(targetDisplayLabel)}"`
+        : '';
+      const targetHint = clickable
+        ? `<div class="unit-target-action">${locked ? 'Ciblage verrouille : commande en attente' : 'Cliquer pour choisir : ' + escapeHtml(targetDisplayLabel)}</div>`
+        : '';
+
+      return `
+        <article class="unit-card ${unit.dead ? 'dead' : ''} ${isActive ? 'active' : ''} ${isTarget ? 'target' : ''} ${clickableClass} ${lockedClass}"${choiceAttrs}>
+          <div class="unit-head"><strong>${escapeHtml(unit.name || 'Unite')}</strong><span class="badge">${escapeHtml(hp)} / ${escapeHtml(maxHp)} PV</span></div>
+          <div class="hp-bar"><div class="hp-fill" style="--hp: ${percent}%"></div></div>
+          <div class="unit-meta">
+            <span class="tag">Degats ${escapeHtml(unit.minDamage ?? '?')}-${escapeHtml(unit.maxDamage ?? '?')}</span>
+            <span class="tag">Crit ${escapeHtml(unit.criticalDamage ?? '?')}</span>
+            <span class="tag">${unit.dead ? 'mort' : 'vivant'}</span>
+          </div>
+          <div class="tags">${tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>
+          ${targetHint}
+        </article>`;
+    }
+
+    function renderCheatCatalog() {
+      if (!cheatList) return;
+      const filter = String(cheatSearch?.value || '').trim().toLowerCase();
+      const cheats = state.cheatCatalog.filter(entry => {
+        if (!filter) return true;
+        return [entry.code, entry.category, entry.effect].some(value => String(value || '').toLowerCase().includes(filter));
+      });
+
+      if (!state.cheatCatalogLoaded) {
+        cheatList.innerHTML = '<div class="empty">Chargement des codes...</div>';
+        return;
+      }
+
+      if (!cheats.length) {
+        cheatList.innerHTML = '<div class="empty">Aucun code trouve.</div>';
+        return;
+      }
+
+      cheatList.innerHTML = cheats.map(entry => {
+        const altered = entry.marksAltered ? 'Altere' : 'secret/neutre';
+        const reusable = entry.reusable ? 'reutilisable' : 'usage unique';
+        return `
+          <article class="cheat-card">
+            <div class="cheat-head">
+              <span class="cheat-code">${escapeHtml(entry.code || '')}</span>
+              <span class="cheat-tag">${escapeHtml(entry.category || 'code')}</span>
+            </div>
+            <div class="cheat-effect">${escapeHtml(entry.effect || 'Effet non documente dans le catalogue.')}</div>
+            <div class="tags">
+              <span class="cheat-tag">${escapeHtml(altered)}</span>
+              <span class="cheat-tag">${escapeHtml(reusable)}</span>
+            </div>
+            <div class="cheat-actions">
+              <button type="button" class="secondary" data-cheat-copy="${escapeHtml(entry.code || '')}">Mettre dans la saisie</button>
+              <button type="button" data-cheat-send="${escapeHtml(entry.code || '')}">Envoyer</button>
+            </div>
+          </article>`;
+      }).join('');
+    }
+
+    async function loadCheatCatalog() {
+      if (!cheatList) return;
+      try {
+        const payload = await fetchJson('/assets/config/cheat_codes.json');
+        const codes = Array.isArray(payload?.codes) ? payload.codes : [];
+        state.cheatCatalog = codes.filter(entry => entry && entry.code).map(entry => ({
+          code: String(entry.code || ''),
+          category: String(entry.category || ''),
+          effect: String(entry.effect || ''),
+          reusable: Boolean(entry.reusable),
+          marksAltered: Boolean(entry.marksAltered)
+        }));
+        state.cheatCatalogLoaded = true;
+        renderCheatCatalog();
+      } catch (error) {
+        state.cheatCatalogLoaded = true;
+        cheatList.innerHTML = '<div class="empty">Catalogue indisponible. Tu peux quand meme taper un code manuellement.</div>';
+      }
+    }
+
+    async function sendInput(command, label = 'commande', metadata = {}) {
+      if (!canSendInputNow()) {
+        setStatus('Envoi bloque : ' + inputLockReason());
+        await refreshServerStatus();
+        return false;
+      }
+      const value = String(command ?? '');
+      const validation = getCommandValidation(value);
+      if (validation.blocking && !metadata.allowInvalidCommand) {
+        state.commandFlow = {
+          id: '',
+          command: value,
+          display: value === '' ? '[Entree]' : value,
+          label,
+          stage: 'refused',
+          detail: validation.message,
+          screenId: state.lastMenu?.screenId || state.lastGuiState?.activeScreenId || '',
+          screenSequence: getCurrentGuiSequence()
+        };
+        setStatus("Envoi bloque par l'IG : " + validation.message + "\nCorrige la saisie ou utilise la version terminale si tu veux forcer un cas special.");
+        updateCommandValidation();
+        renderAll();
+        return false;
+      }
+      setInputBusy(true);
+      try {
+        const response = await fetch('/gui/input', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            command: value,
+            source: 'dinotofu_gui_experimental',
+            allowQueueStacking: !state.preventQueueStacking,
+            screenId: state.lastMenu?.screenId || state.lastGuiState?.activeScreenId || '',
+            screenCategory: state.lastMenu?.screenCategory || state.lastGuiState?.activeScreenCategory || '',
+            inputMode: state.lastMenu?.inputMode || state.lastGuiState?.activeInputMode || '',
+            inputIntent: state.lastMenu?.inputIntent || state.lastGuiState?.activeInputIntent || '',
+            expectedInputPattern: state.lastMenu?.expectedInputPattern || state.lastGuiState?.activeExpectedInputPattern || '',
+            primarySubmitLabel: state.lastMenu?.primarySubmitLabel || state.lastGuiState?.activePrimarySubmitLabel || '',
+            acceptsEmptyInput: Boolean(state.lastMenu?.acceptsEmptyInput || state.lastGuiState?.activeAcceptsEmptyInput),
+            hasNumericRange: Boolean(state.lastMenu?.hasNumericRange || state.lastGuiState?.activeHasNumericRange),
+            numericMin: Number(state.lastMenu?.numericMin ?? state.lastGuiState?.activeNumericMin ?? 0),
+            numericMax: Number(state.lastMenu?.numericMax ?? state.lastGuiState?.activeNumericMax ?? 0),
+            hasTextLengthRange: Boolean(state.lastMenu?.hasTextLengthRange || state.lastGuiState?.activeHasTextLengthRange),
+            textMinLength: Number(state.lastMenu?.textMinLength ?? state.lastGuiState?.activeTextMinLength ?? 0),
+            textMaxLength: Number(state.lastMenu?.textMaxLength ?? state.lastGuiState?.activeTextMaxLength ?? 0),
+            commandKind: metadata.commandKind || label || 'commande',
+            ...metadata
+          })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.ok === false) throw new Error(payload.error || ('HTTP ' + response.status));
+        state.commandFlow = {
+          id: payload.id || '',
+          command: value,
+          display: value === '' ? '[Entree]' : value,
+          label,
+          stage: 'queued',
+          queuedAtEpoch: Math.floor(Date.now() / 1000),
+          screenId: state.lastMenu?.screenId || state.lastGuiState?.activeScreenId || '',
+          screenTitle: state.lastMenu?.title || state.lastGuiState?.activeTitle || '',
+          screenSequence: getCurrentGuiSequence(),
+          detail: payload.id ? 'ID IG : ' + payload.id : ''
+        };
+        setStatus('Envoye au jeu : ' + (value === '' ? '[Entree]' : value) + '\nType : ' + label + (payload.id ? '\nCommande IG : ' + payload.id : '') + '\nEtat : en attente de lecture par le jeu.');
+        await refreshServerStatus();
+        if (state.live) setTimeout(() => loadLiveOnce(false), 180);
+        return true;
+      } catch (error) {
+        state.commandFlow = {
+          id: '',
+          command: value,
+          display: value === '' ? '[Entree]' : value,
+          label,
+          stage: 'failed',
+          detail: friendlyServerInputError(error.message),
+          screenId: state.lastMenu?.screenId || state.lastGuiState?.activeScreenId || '',
+          screenSequence: getCurrentGuiSequence()
+        };
+        setStatus("Envoi impossible : " + friendlyServerInputError(error.message) + "\nSi le jeu a changé d'écran, recharge l'IG ou utilise le terminal de secours.");
+        renderAll();
+        return false;
+      } finally {
+        window.setTimeout(() => setInputBusy(false), 350);
+      }
+    }
+
+    function setLive(enabled) {
+      state.live = enabled;
+      if (state.timer) clearInterval(state.timer);
+      state.timer = null;
+      if (enabled) {
+        loadLiveOnce(true);
+        refreshServerStatus();
+        state.timer = setInterval(() => loadLiveOnce(false), 1200);
+        if (state.statusTimer) clearInterval(state.statusTimer);
+        state.statusTimer = setInterval(refreshServerStatus, 1800);
+      } else if (state.statusTimer) {
+        clearInterval(state.statusTimer);
+        state.statusTimer = null;
+      }
+      refreshChrome();
+    }
+
+    fileInput.addEventListener('change', async event => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try { acceptSnapshot(JSON.parse(await file.text()), file.name); }
+      catch (error) { setStatus('Fichier illisible : ' + error.message); }
+    });
+
+    liveButton.addEventListener('click', () => setLive(!state.live));
+    menuButton.addEventListener('click', async () => { try { acceptSnapshot(await fetchJson('/gui_debug/latest_menu.json'), 'latest_menu.json'); } catch (e) { setStatus(e.message); } });
+    combatButton.addEventListener('click', async () => { try { acceptSnapshot(await fetchJson('/gui_debug/latest_combat.json'), 'latest_combat.json'); } catch (e) { setStatus(e.message); } });
+    reloadButton.addEventListener('click', () => loadLiveOnce(true));
+
+    tabs.both.addEventListener('click', () => { state.view = 'both'; refreshChrome(); });
+    tabs.menu.addEventListener('click', () => { state.view = 'menu'; refreshChrome(); });
+    tabs.combat.addEventListener('click', () => { state.view = 'combat'; refreshChrome(); });
+
+    renderRoot.addEventListener('click', event => {
+      const unitCard = event.target.closest('[data-unit-choice]');
+      if (unitCard) {
+        if (!canSendInputNow()) {
+          setStatus('Ciblage bloque : ' + inputLockReason());
+          refreshChrome();
+          return;
+        }
+        sendInput(unitCard.dataset.unitChoice || '', 'ciblage unite', {
+          actionId: unitCard.dataset.unitActionId || '',
+          actionLabel: unitCard.dataset.unitActionLabel || '',
+          actionDisplayLabel: unitCard.dataset.unitActionDisplayLabel || unitCard.dataset.unitActionLabel || '',
+          targetActionId: unitCard.dataset.unitTargetActionId || '',
+          actionRole: 'target',
+          commandKind: 'unit_target'
+        });
+        return;
+      }
+
+      const itemCard = event.target.closest('[data-item-choice]');
+      if (itemCard) {
+        if (!canSendInputNow()) {
+          setStatus('Carte métier bloquee : ' + inputLockReason());
+          refreshChrome();
+          return;
+        }
+        sendInput(itemCard.dataset.itemChoice || '', 'carte metier', {
+          actionId: itemCard.dataset.itemActionId || '',
+          actionLabel: itemCard.dataset.itemActionLabel || itemCard.dataset.itemName || '',
+          actionDisplayLabel: itemCard.dataset.itemActionDisplayLabel || itemCard.dataset.itemActionLabel || itemCard.dataset.itemName || '',
+          itemCardId: itemCard.dataset.itemId || '',
+          itemCardName: itemCard.dataset.itemName || '',
+          itemCardKind: itemCard.dataset.itemKind || '',
+          itemCardSection: itemCard.dataset.itemSection || '',
+          itemCardActionType: itemCard.dataset.itemActionType || '',
+          itemCardActionTypeLabel: itemCard.dataset.itemActionTypeLabel || '',
+          actionRole: 'item_card',
+          actionStyle: 'specialized',
+          actionGroup: itemCard.dataset.itemSection || 'main',
+          commandKind: 'item_card'
+        });
+        return;
+      }
+
+      const focusCard = event.target.closest('[data-focus-choice]');
+      if (focusCard) {
+        if (!canSendInputNow()) {
+          setStatus('Action de bloc bloquee : ' + inputLockReason());
+          refreshChrome();
+          return;
+        }
+        sendInput(focusCard.dataset.focusChoice || '', 'bloc specialise', {
+          actionId: focusCard.dataset.focusActionId || '',
+          actionLabel: focusCard.dataset.focusActionLabel || focusCard.dataset.focusLabel || '',
+          actionDisplayLabel: focusCard.dataset.focusActionDisplayLabel || focusCard.dataset.focusActionLabel || focusCard.dataset.focusLabel || '',
+          focusCardId: focusCard.dataset.focusId || '',
+          focusCardLabel: focusCard.dataset.focusLabel || '',
+          actionRole: 'focus',
+          actionStyle: 'specialized',
+          actionGroup: 'main',
+          commandKind: 'focus_card'
+        });
+        return;
+      }
+
+      const actionButton = event.target.closest('[data-choice]');
+      if (!actionButton || actionButton.disabled) return;
+      sendInput(actionButton.dataset.choice || '', 'choix menu', {
+        actionId: actionButton.dataset.actionId || '',
+        actionLabel: actionButton.dataset.actionLabel || '',
+        actionDisplayLabel: actionButton.dataset.actionDisplayLabel || actionButton.dataset.actionLabel || '',
+        actionRole: actionButton.dataset.actionRole || '',
+        actionStyle: actionButton.dataset.actionStyle || '',
+        actionGroup: actionButton.dataset.actionGroup || '',
+        knowledgeSensitive: actionButton.dataset.knowledgeSensitive === 'true',
+        recommendationReason: actionButton.dataset.recommendationReason || '',
+        commandKind: 'menu_action'
+      });
+    });
+
+    renderRoot.addEventListener('keydown', event => {
+      const itemCard = event.target.closest('[data-item-choice]');
+      const focusCard = event.target.closest('[data-focus-choice]');
+      const clickableCard = itemCard || focusCard;
+      if (!clickableCard || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
+      clickableCard.click();
+    });
+
+    sendCommandButton.addEventListener('click', async () => {
+      const sent = await sendInput(commandInput.value, 'saisie texte');
+      if (sent) commandInput.value = '';
+      commandInput.focus();
+    });
+    commandInput.addEventListener('keydown', async event => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      const sent = await sendInput(commandInput.value, 'saisie texte');
+      if (sent) commandInput.value = '';
+    });
+    commandInput.addEventListener('input', updateCommandValidation);
+    enterButton.addEventListener('click', () => sendInput('', 'entree'));
+    backButton.addEventListener('click', () => sendInput('0', 'retour'));
+    clearCommandButton.addEventListener('click', () => { commandInput.value = ''; commandInput.focus(); });
+    clearQueueButton.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/gui/clear-input', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.ok === false) throw new Error(payload.error || ('HTTP ' + response.status));
+        setStatus('File de saisie IG videe.');
+        await refreshServerStatus();
+        renderAll();
+      } catch (error) {
+        setStatus('Impossible de vider la file IG : ' + error.message);
+      }
+      commandInput.focus();
+    });
+
+    if (suggestedCommands) {
+      suggestedCommands.addEventListener('click', event => {
+        const chip = event.target.closest('[data-suggestion-command]');
+        if (!chip) return;
+        sendInput(chip.dataset.suggestionCommand || '', 'suggestion IG', {
+          actionId: chip.dataset.suggestionActionId || '',
+          actionLabel: chip.dataset.suggestionActionLabel || '',
+          actionDisplayLabel: chip.dataset.suggestionActionDisplayLabel || chip.textContent || '',
+          actionRole: chip.dataset.suggestionActionRole || '',
+          actionStyle: chip.dataset.suggestionActionStyle || '',
+          actionGroup: chip.dataset.suggestionActionGroup || '',
+          knowledgeSensitive: chip.dataset.suggestionKnowledgeSensitive === 'true',
+          recommendationReason: chip.dataset.suggestionRecommendationReason || '',
+          commandKind: chip.dataset.suggestionKind || 'suggestion'
+        });
+      });
+    }
+
+    if (menuFilterInput) {
+      menuFilterInput.addEventListener('input', () => {
+        state.menuFilter = menuFilterInput.value;
+        renderAll();
+      });
+    }
+
+    if (clearMenuFilterButton) {
+      clearMenuFilterButton.addEventListener('click', () => {
+        state.menuFilter = '';
+        if (menuFilterInput) menuFilterInput.value = '';
+        renderAll();
+        menuFilterInput?.focus();
+      });
+    }
+
+    if (cheatSearch) {
+      cheatSearch.addEventListener('input', renderCheatCatalog);
+    }
+
+    if (cheatList) {
+      cheatList.addEventListener('click', event => {
+        const copyButton = event.target.closest('[data-cheat-copy]');
+        const sendButton = event.target.closest('[data-cheat-send]');
+        if (!copyButton && !sendButton) return;
+        const code = (copyButton || sendButton).dataset.cheatCopy || (copyButton || sendButton).dataset.cheatSend || '';
+        commandInput.value = code;
+        commandInput.focus();
+        if (sendButton) {
+          sendInput(code, 'code triche', {
+            actionId: 'cheat.manual.' + code,
+            actionLabel: 'Code triche ' + code,
+            commandKind: 'cheat_code'
+          });
+        } else {
+          setStatus('Code place dans la saisie : ' + code + '\nTu peux le modifier ou l envoyer.');
+        }
+      });
+    }
+
+    if (safeQueueToggle) {
+      safeQueueToggle.addEventListener('change', () => {
+        state.preventQueueStacking = Boolean(safeQueueToggle.checked);
+        refreshChrome();
+      });
+    }
+
+    if (keyboardShortcutToggle) {
+      keyboardShortcutToggle.addEventListener('change', () => {
+        state.keyboardShortcuts = Boolean(keyboardShortcutToggle.checked);
+      });
+    }
+
+    document.addEventListener('keydown', event => {
+      if (!state.keyboardShortcuts) return;
+      const target = event.target;
+      const typing = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+      if (typing || event.ctrlKey || event.altKey || event.metaKey) return;
+
+      if (/^[0-9]$/.test(event.key)) {
+        const action = findMenuActionByNumber(event.key);
+        if (action || event.key === '0') {
+          event.preventDefault();
+          sendInput(event.key, 'raccourci clavier', {
+            actionId: action?.actionId || '',
+            actionLabel: action?.label || (event.key === '0' ? 'Retour' : ''),
+            actionDisplayLabel: action?.actionDisplayLabel || (event.key === '0' ? '0 - Retour' : ''),
+            actionRole: action?.role || (event.key === '0' ? 'back' : '')
+          });
+        }
+        return;
+      }
+
+      if (event.key === 'Enter' && state.lastMenu?.inputMode === 'continue') {
+        event.preventDefault();
+        sendInput('', 'raccourci entree');
+        return;
+      }
+
+      if (event.key === 'PageUp') {
+        const action = findMenuActionByNumber('98');
+        if (action) {
+          event.preventDefault();
+          sendInput('98', 'page precedente', { actionId: action.actionId || '', actionLabel: action.label || 'Page precedente', actionDisplayLabel: action.actionDisplayLabel || '98 - Page precedente', actionRole: action.role || 'pagination' });
+        }
+        return;
+      }
+
+      if (event.key === 'PageDown') {
+        const action = findMenuActionByNumber('99');
+        if (action) {
+          event.preventDefault();
+          sendInput('99', 'page suivante', { actionId: action.actionId || '', actionLabel: action.label || 'Page suivante', actionDisplayLabel: action.actionDisplayLabel || '99 - Page suivante', actionRole: action.role || 'pagination' });
+        }
+      }
+    });
+
+    loadCheatCatalog();
+    refreshServerStatus();
+    setLive(true);
+    renderAll();
+  </script>
+</body>
+</html>

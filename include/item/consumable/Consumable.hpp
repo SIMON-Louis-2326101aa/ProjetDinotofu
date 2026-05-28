@@ -42,6 +42,8 @@ public:
     // FR: isDamage déclare ou implémente un comportement précis utilisé par ce module.
     bool isDamage() const;
 
+    std::vector<std::string> toDisplayLines() const override;
+
     // EN: display declares or implements a focused behavior used by this module.
     // FR: display déclare ou implémente un comportement précis utilisé par ce module.
     void display() const override;

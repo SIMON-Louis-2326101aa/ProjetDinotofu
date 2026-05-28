@@ -6,6 +6,7 @@
 #ifndef INCLUDE_INTERFACE_MODEL_COMBATSTATESNAPSHOT_HPP
 #define INCLUDE_INTERFACE_MODEL_COMBATSTATESNAPSHOT_HPP
 
+#include "combat/EnemyCombatQueue.hpp"
 #include "combat/group/CombatGroup.hpp"
 #include "combat/summon/Summon.hpp"
 #include "entity/Entity.hpp"
@@ -16,6 +17,8 @@
 struct GuiCombatUnitSnapshot
 {
     std::string unitId;
+    std::string targetActionId;
+    int targetChoice = -1;
     std::string name;
     std::string type;
     std::string side;
@@ -41,7 +44,12 @@ struct GuiCombatStateSnapshot
     std::string screenId;
     std::string title;
     std::string phase;
+    std::string activeUnitId;
+    std::string currentActorName;
+    std::string currentTargetName;
+    bool escapeAvailable = false;
     int turnNumber = 0;
+    std::vector<std::string> summaryLines;
     std::vector<GuiCombatUnitSnapshot> playerUnits;
     std::vector<GuiCombatUnitSnapshot> enemyUnits;
     std::vector<GuiCombatUnitSnapshot> neutralUnits;
@@ -80,6 +88,24 @@ public:
         int turnNumber = 0
     );
 
+    static GuiCombatStateSnapshot fromWave(
+        const Entity& playerSideEntity,
+        const EnemyCombatQueue& wave,
+        const std::vector<Summon>& playerSummons,
+        const std::string& title,
+        const std::string& phase,
+        int turnNumber = 0
+    );
+
+    static GuiCombatStateSnapshot fromWaveParty(
+        const std::vector<Entity*>& playerSideEntities,
+        const EnemyCombatQueue& wave,
+        const std::vector<Summon>& playerSummons,
+        const std::string& title,
+        const std::string& phase,
+        int turnNumber = 0
+    );
+
     static std::vector<std::string> toDisplayLines(const GuiCombatStateSnapshot& snapshot);
     static std::string healthText(const GuiCombatUnitSnapshot& unit);
 
@@ -88,6 +114,8 @@ private:
     static std::string sideToText(CombatSide side);
     static std::string kindToText(CombatUnitKind kind);
     static void addUnitToSnapshot(GuiCombatStateSnapshot& snapshot, const GuiCombatUnitSnapshot& unit);
+    static void addWaveEnemiesToSnapshot(GuiCombatStateSnapshot& snapshot, const EnemyCombatQueue& wave);
+    static void addWaveSummaryToSnapshot(GuiCombatStateSnapshot& snapshot, const EnemyCombatQueue& wave);
 };
 
 #endif

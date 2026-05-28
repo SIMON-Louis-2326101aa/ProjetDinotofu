@@ -196,6 +196,7 @@ JSON
 chmod +x "${INSTALL_DIR}/output/Dinotofu" 2>/dev/null || true
 chmod +x "${INSTALL_DIR}/DinotofuLauncher.sh" 2>/dev/null || true
 chmod +x "${INSTALL_DIR}/Lancer-Dinotofu.sh" 2>/dev/null || true
+chmod +x "${INSTALL_DIR}/Lancer-Dinotofu-Terminal.sh" 2>/dev/null || true
 chmod +x "${INSTALL_DIR}/Installer-Dinotofu.sh" 2>/dev/null || true
 
 if [[ ! -f "${INSTALL_DIR}/version.txt" ]]; then
@@ -204,24 +205,33 @@ fi
 
 echo "==> Creation des raccourcis Linux"
 mkdir -p "${HOME}/.local/share/applications"
-cat > "${HOME}/.local/share/applications/dinotofu.desktop" <<DESKTOP
+cat > "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=Dinotofu
-Comment=Lancer Dinotofu
+Name=ProjetDinotofu Launcher
+Comment=Lancer Dinotofu avec le launcher principal
 Exec=${INSTALL_DIR}/Lancer-Dinotofu.sh
 Terminal=true
 Categories=Game;
 DESKTOP
-chmod +x "${HOME}/.local/share/applications/dinotofu.desktop" || true
-if [[ -d "${HOME}/Desktop" ]]; then
-    cp "${HOME}/.local/share/applications/dinotofu.desktop" "${HOME}/Desktop/Dinotofu.desktop" || true
-    chmod +x "${HOME}/Desktop/Dinotofu.desktop" || true
-fi
-if [[ -d "${HOME}/Bureau" ]]; then
-    cp "${HOME}/.local/share/applications/dinotofu.desktop" "${HOME}/Bureau/Dinotofu.desktop" || true
-    chmod +x "${HOME}/Bureau/Dinotofu.desktop" || true
-fi
+cat > "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=ProjetDinotofu Launcher Terminal version
+Comment=Lancer la version terminale de secours de Dinotofu
+Exec=${INSTALL_DIR}/Lancer-Dinotofu-Terminal.sh
+Terminal=true
+Categories=Game;
+DESKTOP
+chmod +x "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" || true
+chmod +x "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" || true
+for desktop_dir in "${HOME}/Desktop" "${HOME}/Bureau"; do
+    if [[ -d "$desktop_dir" ]]; then
+        cp "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" "$desktop_dir/ProjetDinotofu Launcher.desktop" || true
+        cp "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" "$desktop_dir/ProjetDinotofu Launcher Terminal version.desktop" || true
+        chmod +x "$desktop_dir/ProjetDinotofu Launcher.desktop" "$desktop_dir/ProjetDinotofu Launcher Terminal version.desktop" 2>/dev/null || true
+    fi
+done
 
 echo "Dinotofu est installe."
 if [[ "$SKIP_LAUNCH" != "true" ]]; then

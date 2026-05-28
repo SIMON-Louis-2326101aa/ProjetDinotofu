@@ -53,6 +53,7 @@ public:
 
     // EN: displayAvailableMonsters declares or implements a focused behavior used by this module.
     // FR: displayAvailableMonsters déclare ou implémente un comportement précis utilisé par ce module.
+    static std::vector<std::string> getAvailableMonsterLines();
     static void displayAvailableMonsters();
 };
 

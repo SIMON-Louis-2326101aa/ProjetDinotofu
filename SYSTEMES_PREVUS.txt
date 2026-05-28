@@ -1,690 +1,77 @@
-SYSTÈMES PRÉVUS / EN COURS - DINOTOFU
+DINOTOFU - SYSTEMES ACTUELS ET PRIORITES
+=========================================
 
-Objectif général :
-Dinotofu doit rester jouable en terminal tout en préparant une future interface graphique réutilisable. Les systèmes RPG principaux déjà en place doivent rester propres : combat, exploration, quêtes, inventaire, craft, économie, bestiaire, boss, personnages spéciaux, invocations, compétences, attributs et sauvegardes.
+Version actuelle de développement : 1.38.55
+Dernière version de personnage encore acceptable : 1.32.03
+Recréation fortement conseillée pour les personnages beaucoup plus anciens que : 1.32.03
 
-Ordre de priorité actuel :
-1. Interface graphique : préparer les données, menus, listes paginées et retours de navigation pour une future couche visuelle sans casser la version terminal.
-2. Cohérence d'interface : garder les options claires, normaliser les écrans longs, limiter les répétitions et éviter les textes méta côté joueur.
-3. Compétences durables : progression passive, compétences actives, délais de réutilisation, conditions de gameplay, classe, race, personnage et armes les plus utilisées.
-4. Contenu nécessaire aux systèmes actifs : monstres, bestiaire, recettes, boutiques, événements, boss et ressources quand une fonctionnalité en a besoin.
-5. Attributs DND complets : Force, Dextérité, Constitution, Intelligence, Sagesse, Charisme, après stabilisation de la base d'interface.
-6. Mode Histoire complet.
+Règle de documentation
+----------------------
+Ce fichier ne doit pas servir d'historique complet du développement. Il décrit l'état actuel du jeu, les grands systèmes présents et les grosses directions. Les petites passes, corrections et micro-ajouts ne doivent pas être empilés ici.
 
-Menu principal souhaité :
-1. Histoire
-2. Combats
-3. Exploration
-4. Quêtes
-5. Boutiques / lieux visitables
-6. PNJ notables
-7. Échange / don
-8. Information sur toutes les options
-0. Sauvegarder et quitter
+Résumé du jeu
+-------------
+Dinotofu est un RPG/arène C++17 actuellement jouable en terminal, avec une interface graphique expérimentale en cours de stabilisation. Le joueur crée un compte/personnage, choisit race/classe/difficulté, combat, explore, accepte des quêtes, gère son équipement, visite des boutiques, utilise des consommables, consulte le bestiaire et progresse à travers des systèmes durables.
 
-Histoire :
-- Visible mais en attente.
-- Doit afficher un texte contextualisé tant que le vrai mode histoire n'est pas prêt.
-- La vraie histoire arrive après les systèmes DND et après l'interface graphique.
+Systèmes présents
+-----------------
+- Comptes, personnages, sauvegardes JSON, import/export/clone/transfert encadrés.
+- Races, classes, difficultés, identités spéciales protégées.
+- Combats PvP IA, PvP local, PvE monstres, boss solo, boss coop, invocations et soutien.
+- Inventaire, équipement, consommables, matériaux, durabilité, qualité, réparation.
+- Boutiques, achat, vente, troc, lieux visitables, bibliothèque et services de guilde.
+- Exploration par biomes : ressources, coffres, pièges, traces, événements, mini-boss, lieux dangereux.
+- Quêtes : guilde, clients, exploration, combat, livraison, matériaux, bestiaire.
+- Bestiaire et connaissance progressive : ennemis, boss, invocations, matériaux, plantes, races, personnages spéciaux, lore.
+- Codes cachés, personnages altérés, réactions de lore, contraintes Léthal.
+- Préparation des compétences durables et actives liées aux habitudes de jeu, classes, races, armes et personnages.
+- Interface graphique expérimentale locale avec snapshots JSON, cartes cliquables, saisie guidée, validation serveur et terminal de secours.
 
-Combats :
-- PvP IA.
-- PvP deux joueurs.
-- PvE monstres.
-- PvE boss.
-- Groupes d'aventuriers et personnages spéciaux selon les systèmes disponibles.
-- Les boss empêchent toujours la fuite.
-- La posture de défense et la provocation doivent rester lisibles.
+Derniers gros ajouts visibles
+-----------------------------
+- Les transactions de boutique remontent maintenant leurs détails comme notes structurées au lieu d'écrire directement dans le terminal.
+- Les achats, ventes, rachats et trocs affichent des résultats propres avec objet, quantité, or, stock, détails spéciaux et refus éventuel.
+- Les écrans de boutique utilisent davantage les choix structurés compatibles IG, notamment stock paginé, article, rachat et rotation.
+- Le rachat reste disponible seulement dans la boutique concernée jusqu'au prochain combat / changement d'étal.
+- Les cartes gardent toujours le numéro d'action visible pour rester cohérentes avec le terminal de secours.
 
-Exploration :
-- Choix de biome.
-- Récolte de plantes et matériaux.
-- Coffres, pièges, mimics, traces, trésors et lieux dangereux.
-- Mini-boss et combats inattendus.
-- Les combats inattendus doivent éviter de tuer gratuitement un personnage Léthal sans vrai combat lisible.
+Priorité actuelle
+-----------------
+Finir la stabilité et la jouabilité complète de l'IG expérimentale avant tout ajout de contenu, design graphique ou gros polish visuel. L'objectif est que tout soit jouable à fond via l'IG, avec le terminal en secours.
 
-Quêtes :
-- Quêtes de guilde limitées.
-- Quêtes personnelles / clients / événements plus libres.
-- Objectifs de combat, exploration, livraison, ressources et bestiaire.
-- Les quêtes doivent se lier aux biomes, familles de monstres, lieux, PNJ et rangs.
+Règles IG importantes
+---------------------
+- Les numéros de choix doivent rester visibles à côté des actions, même dans les cartes/boutons.
+- Les recommandations doivent rester discrètes : soin pertinent, unique action sûre, attaque seulement si faiblesse connue/débloquée et une seule fois par combat pour cette attaque.
+- L'IG ne doit jamais révéler une faiblesse ou information que le joueur ne connaît pas encore.
+- Les codes cachés doivent rester tapables tant que le système n'a pas reçu une vraie interface dédiée.
+- Le terminal reste la version de secours obligatoire.
 
-Inventaire :
-- Affichage simple et détaillé.
-- Armes, armures, consommables, matériaux, objets spéciaux, craft, bestiaire.
-- Les armes et armures doivent permettre inspecter, équiper, réparer et revenir.
-- Les kits de réparation restent dans les consommables mais s'utilisent depuis l'objet à réparer.
-
-Craft :
-- Afficher les schémas disponibles.
-- Afficher matériaux requis et possédés.
-- Prendre en compte la qualité des matériaux.
-- Permettre des particularités d'objets si les matériaux exceptionnels sont dominants.
-- Étendre les recettes et équilibrer les prix, les récompenses, les coûts de craft et les valeurs de revente.
-
-Qualités de matériaux :
-- Faible qualité, normal, haute qualité.
-- Impur, normal, pur.
-- Exceptionnel possible sur les ressources récupérables, mais pas en achat direct normal.
-- Les qualités différentes ne se stackent pas ensemble.
-- La manière de combattre ou récolter peut améliorer ou dégrader la qualité.
-
-Boutiques et lieux :
-- Guilde.
-- Forge.
-- Herboristerie.
-- Boutique de monstres.
-- Boutique de matériaux.
-- Armurerie.
-- Forge d'armes.
-- Consommables.
-- Bibliothèque.
-- Route commerciale.
-- PNJ notables.
-
-Bestiaire :
-- Ennemis.
-- Boss.
-- Invocations.
-- Matériaux.
-- Plantes.
-- Races.
-- Personnages spéciaux.
-- Divinités / lore.
-- Objets rares.
-- Connaissance progressive par rencontre, combat, lecture, achat d'information et exploration.
-
-Invocations :
-- Slots.
-- Lien d'invocation.
-- Contrôle manuel ou automatique.
-- Maintien.
-- Sacrifice.
-- Mana futur.
-- Évolution future.
-- Ombres de Hazak liées à de vrais kills ou conditions narratives.
-- Alliés IA et combats de groupe plus complets.
-
-Compétences durables :
-- Les passives progressent par habitudes de jeu.
-- Les actives ont des délais de réutilisation.
-- Les compétences peuvent venir des niveaux, classes, races, personnages, armes jouées, défis et conditions cachées.
-- Exemple : kills rapides à la dague pouvant débloquer Enchaînement.
-- Exemple : vision nocturne comme compétence passive.
-- Un ultime joueur pourra exister plus tard.
-
-Attributs DND :
-- Force.
-- Dextérité.
-- Constitution.
-- Intelligence.
-- Sagesse.
-- Charisme.
-- Préparés mais à finaliser plus tard, après les systèmes actuels.
-
-Difficultés :
-- Facile.
-- Normal.
-- Difficile.
-- Cauchemar.
-- Léthal.
-- La difficulté influence départ, récompenses, fuite, mort, loot, durabilité, boutiques et risques.
-- En Léthal, la mort est définitive sauf exception narrative très rare future.
-
-JcJ et échanges :
-- Combat amical sans vraie perte.
-- Combat mortel seulement entre personnages compatibles.
-- Les clones et altérés sont limités pour éviter les abus.
-- Les échanges réels doivent respecter Léthal/non-Léthal et bloquer altérés/clones.
-
-Export / import :
-- Extraire un compte ou personnage doit être un transfert, pas une duplication exploitable.
-- Extraire un clone doit être une option séparée.
-- Un clone ne sert qu'au jeu amical et ne doit pas permettre l'économie réelle.
-
-Sauvegardes :
-- Comptes et personnages en JSON.
-- Les saves personnelles ne doivent pas être commit.
-- Les dossiers restent présents grâce aux `.gitkeep`.
-- Tout nouveau système durable doit sauvegarder ses données dans la même passe où il est ajouté.
-
-Interface terminal :
-- Garder beaucoup d'options quand c'est clair.
-- Ne pas cacher trop d'actions dans des sous-menus inutiles.
-- Normaliser les retours.
-- Vérifier les chemins.
-- Ajouter pagination quand un écran devient trop long.
-- Affichages simple / détaillé pour stats, inventaire, équipement, bestiaire et compétences.
-
-VERSIONING / COMPATIBILITÉ DES PERSONNAGES
-------------------------------------------
-Version actuelle de développement : 1.35.20
-
-Logique X.Y.Z :
+Versioning
+----------
 - X : grande phase du jeu.
-  - 0 : base incomplète ou non fonctionnelle.
-  - 1 : base refonctionnelle et systèmes principaux stabilisés.
-  - 2 : gros ajouts de roleplay, statistiques, gameplay et systèmes durables.
-  - 3 : interface graphique fonctionnelle.
-  - 4 : mode histoire et chapitres principaux.
-- Y : changement majeur dans la phase actuelle, ajout ou modification qui peut changer la façon de jouer.
-- Z : petit patch, correctif ou ajustement mineur.
-
-Ajout 1.32.06 :
-- Les personnages dont la dernière adaptation est ancienne affichent maintenant un statut directement dans la liste : patch dispo, MAJ moyenne ou MAJ lourde conseillée.
-- Le patch 1.32.06 ajoute un léger bonus d'affinité arme/classe, des observations de biome dans le bestiaire, un comportement IA un peu plus contextuel et quelques variantes de monstres.
-
-Ajout 1.32.07 :
-- Le bonus d'affinité arme/classe est maintenant plus lisible dans les écrans d'équipement.
-- Le bonus ne s'applique plus si l'arme est cassée ou si un sceau de boss bloque l'équipement.
-- Les adversaires IA de l'arène affichent leur équipement avant le combat, ce qui rend leur cohérence classe/arme plus vérifiable.
-
-Ajout 1.32.08 :
-- Le marché noir garde ses achats en or, mais certains articles peuvent maintenant être obtenus par troc avec des matériaux précis.
-- Les fiches d'articles du marché noir indiquent le coût en composants et la quantité maximale échangeable selon l'inventaire.
-- Cette première couche prépare une économie plus vivante : tout ne doit pas forcément s'acheter avec de l'argent.
-
-Ajout 1.32.09 :
-- Les soigneurs ennemis sont maintenant plus stricts : un loup, un slime, une plante ou une bête classique ne consomme plus une potion de soin juste parce qu'une variante possède un compteur de potion.
-- L'IA garde l'usage des soins pour les profils crédibles : chamane, prêtre/clerc, oracle, médecin, apothicaire, alchimiste, sorcier/mage, chef/pilleur organisé ou personnage spécial.
-- L'exploration gagne un nouveau biome : Cimetière oublié, avec ses monstres, traces, sites dangereux et matériaux associés.
-- Les événements actifs d'exploration gagnent un obstacle environnemental propre au biome, avec choix entre observation prudente, récupération risquée ou passage forcé.
-- Les récompenses de combat appliquent une première pondération de menace : élite, évolué, stats masquées, profil support ou danger spécial donnent surtout un léger bonus d'XP, avec un bonus d'or beaucoup plus faible uniquement sur les ennemis capables d'en porter.
-
-Ajout 1.32.10 :
-- L'or direct gagné en exploration est maintenant pondéré par la difficulté et limité par un plafond souple selon le niveau, le type de trouvaille et l'approche choisie.
-- Les grosses trouvailles restent possibles, mais le surplus est compressé pour éviter qu'une suite d'événements chanceux en Normal casse trop vite l'économie.
-- L'exploration rappelle maintenant que les matériaux font aussi partie de la valeur économique, afin de ne pas équilibrer uniquement autour des pièces gagnées directement.
-
-
-Ajout 1.32.11 :
-- Les quêtes de guilde gagnent plus de variété : rangs F-/F+/E+/D+/C-/B+ selon niveau, titres plus nombreux et récompenses moins répétitives.
-- Un personnage bas niveau ne peut plus accepter de quêtes de rang trop élevé, même si le panneau laisse parfois voir des demandes ambitieuses.
-- Certaines demandes peuvent donner moins d'or et plutôt des objets, matériaux, notes ou clients recommandés.
-
-Ajout 1.32.12 :
-- Passe d'immersion sur les textes affichés au joueur : suppression/remplacement de nombreuses remarques méta liées aux anciennes versions, à la roadmap ou au développement.
-- Les phrases de type “ce n'est pas un vrai combat”, “prévu plus tard”, “pas encore branché” sont remplacées par des formulations de registre, d'archives, de guildes, de terrain ou de lore.
-
-Ajout 1.32.13 :
-- Nouvelle passe d'immersion sur les textes affichés au joueur : les descriptions de matériaux, bestiaire, compétences, marché noir, quêtes et inventaire évitent davantage les formulations de développement.
-- Les formulations comme “utilité prévue”, “servira plus tard”, “future mécanique”, “vrai gameplay” ou “trace du développeur” ont été remplacées par des termes de lore : usages connus, archives, guilde, artisanat, pactes, registres et terrain.
-- Les menus gardent les informations utiles au joueur sans casser l'ambiance avec des remarques de roadmap.
-
-Ajout 1.32.14 :
-- Les services de guilde peuvent maintenant donner de vraies récompenses non monétaires : recommandation de client, jeton de faveur de guilde ou lettre de service local.
-- Ces récompenses sont ajoutées à l'inventaire comme renseignements, au lieu d'être seulement une ligne de texte.
-- Le panneau de guilde évite davantage les doublons de titres sur une même génération.
-- Ajout de rangs de quêtes très haut niveau : SSS, Héros mondial, Légende et Dieu, visibles seulement quand le niveau du personnage le justifie.
-- Le menu de statistiques affiche maintenant les compétences passives/actives connues et les traces d'entraînement visibles, au lieu de renvoyer uniquement vers le résumé complet.
-- Le message de mise à jour moyenne évite les formulations trop techniques et parle maintenant de règles du monde qui ont changé.
-
-À la sélection d'un personnage, le jeu peut afficher :
-- un conseil de recréer le personnage si la sauvegarde vient d'une version trop ancienne ou inconnue ;
-- un avertissement de différences possibles si la mise à jour est moyenne ;
-- aucun avertissement si la différence est seulement un petit patch.
-
-Chaque personnage sauvegarde :
-- la date de création ;
-- la version de création ;
-- la dernière version d'adaptation connue.
-
----
-
-## Migration / adaptation des anciennes sauvegardes
-
-Depuis la version 1.32.03, les personnages sauvegardent aussi un `starterKitSnapshot`, c'est-à-dire la trace de ce qu'ils ont reçu au départ : arme de classe, équipement de secours, munitions, armure, potions et or. Cette trace sert à comprendre l'origine du personnage sans supposer qu'il possède encore ces objets, car il a pu les vendre, les casser, les perdre ou les donner.
-
-Si une version ancienne ou inconnue est détectée après sélection d'un personnage, le jeu recommande de recréer le personnage. Le joueur peut alors choisir :
-
-- procéder au rituel d'oubli contrôlé, donc recréer proprement le personnage pour la version actuelle ;
-- subir une adaptation lourde, qui ajoute seulement les sécurités manquantes sans remplacer les objets gagnés normalement ;
-- revenir au menu.
-
-L'adaptation lourde ne doit pas réinitialiser l'inventaire et ne doit pas remplacer les objets rares, héroïques, reliques, boss ou obtenus normalement. Elle sert seulement à éviter qu'une ancienne sauvegarde soit injouable à cause d'un système ajouté plus tard.
-
-## Tables de spawn par biome et fuite PvE de groupe
-
-Les rencontres d'exploration utilisent maintenant des tables de spawn liées au biome :
-- 70% de monstres typiques de la zone.
-- 20% de monstres compatibles mais moins fréquents.
-- 10% de rares / élites propres au biome.
-
-Chaque biome garde son identité même quand la zone évolue : une plaine évoluée génère surtout des prédateurs de plaine renforcés, pas des morts-vivants de ruines sans raison.
-Les rares et élites sont beaucoup plus liés à leur zone naturelle : slimes couronnés dans le marais, revenants et anomalies dans les ruines, embuscades sur la route commerciale, etc.
-
-En PvE vague directe, le nombre d'ennemis est maintenant encadré entre 2 et 10.
-La fuite dépend du nombre d'adversaires restants :
-- minimum 1 réussite de fuite ;
-- sinon réussites nécessaires = nombre d'adversaires / 3, arrondi au plus proche avec .5 vers le haut.
-
-Exemples :
-- 2 à 4 ennemis : 1 réussite.
-- 5 à 7 ennemis : 2 réussites.
-- 8 à 10 ennemis : 3 réussites.
-
-Toutes les ouvertures doivent réussir sur la même tentative de fuite. Plus le groupe ennemi est nombreux, plus il devient logique et difficile de s'extraire de l'encerclement.
-
-## Patch combat - techniques, munitions et potions actives
-
-- Le sous-menu Attaquer n'est plus uniquement décoratif :
-  - Attaque simple : comportement standard.
-  - Technique d'arme : bonus dépendant de l'arme équipée (dague, lance, arc, bâton, arme lourde, épée, mains nues).
-  - Attaque lourde : coup plus violent avec bonus fixe, moins subtil mais utile.
-  - Attaque rapide : premier coup plus léger avec une chance d'enchaîner un second geste.
-
-- Les armes de type arc consomment maintenant une munition à chaque attaque :
-  - Archer / rôdeur / chasseur : flèches d'entraînement.
-  - Arbalétrier / tireur : carreaux d'entraînement.
-  - Lanceur de dagues : couteaux de lancer émoussés.
-  - Sans munition adaptée, l'attaque reste possible mais devient très faible, comme une défense improvisée.
-
-- Les potions de buff et de debuff ne sont plus de simples WIP :
-  - Potion défensive / buff : soigne légèrement et active immédiatement une posture défensive.
-  - Fiole de debuff : inflige des dégâts chimiques à une cible et peut tuer/remplacer un ennemi en vague.
-
-Ces systèmes restent volontairement simples pour cette version : les vrais buffs persistants, cooldowns, crafts de munitions et munitions spéciales viendront dans une passe dédiée.
-
-## Patch sauvegarde - maître unique des personnages
-
-- Chaque sauvegarde de personnage écrit maintenant deux informations distinctes :
-  - `creatorAccount` : le compte créateur historique du personnage ;
-  - `currentOwnerAccount` : le joueur / maître actuel autorisé à l'incarner.
-
-- À la sélection d'un personnage, ces deux informations sont affichées :
-  - Créateur : ...
-  - Joueur / maître actuel : ...
-
-- Si un fichier de personnage est déplacé ou renommé dans le dossier d'un autre compte sans passer par le jeu, le chargement est refusé avec un dialogue spécial : un personnage n'a qu'un seul maître.
-
-- Une nouvelle action permet de donner un personnage à un autre compte local :
-  - le transfert est volontaire et confirmé par `TRANSFERER` ;
-  - le fichier quitte l'ancien compte ;
-  - le compte destinataire devient le nouveau maître ;
-  - le créateur reste conservé dans la sauvegarde.
-
-- L'ancien export portable reste disponible séparément, tout comme l'export de clone. Le clone reste limité aux usages amicaux et ne remplace pas le vrai transfert de maîtrise.
-
-## Coop boss et soutien allié - ajout 1.32.03
-
-- Le mode multi local est branché sur les boss : le joueur 1 reste la référence pour l'arène, mais tous les joueurs doivent avoir débloqué le boss choisi.
-- Si un joueur secondaire bloque l'accès, le jeu affiche quels joueurs empêchent l'ouverture du boss.
-- Les boss aléatoires coop sont pris dans la liste commune accessible à tout le groupe.
-- Chaque joueur agit pendant le tour de groupe, puis le boss cible un joueur vivant.
-- Les potions de soin peuvent maintenant réveiller un allié au sol en PvE coop et en boss coop, puis le soigner.
-- Les récompenses de boss coop sont individuelles : participation, chute au combat et écart de niveau avec le joueur 1 réduisent la récompense.
-- Un joueur qui n'a pas réellement joué de tour ne progresse pas dans le registre de boss et ne reçoit pas de loot de boss.
-- En Léthal coop boss, les personnages au sol utilisent les jets de survie type DND : 11+ vert, 10- rouge, 20 réveil direct à 1 PV, 1 double rouge.
-
-COOP - REGLES VALIDEES / EN COURS
----------------------------------
-- Le mode multi local doit être disponible depuis tous les modes du jeu.
-- Le joueur 1 reste la référence pour le voyage, les événements, le niveau de session, les monstres et les boss.
-- Les joueurs 2 et 3 interviennent surtout en combat avec leur inventaire, leur état et leurs récompenses individuelles.
-- Un personnage peut alterner librement entre solo et coop.
-- Les récompenses coop sont individuelles : participation, niveau, chance, survie, soins et danger réel devront compter de plus en plus.
-- Un joueur trop bas niveau ne doit pas recevoir du loot endgame juste parce qu'un joueur haut niveau l'accompagne.
-- En boss coop, tous les joueurs doivent avoir débloqué le boss pour l'affronter.
-- Les joueurs secondaires peuvent progresser dans les déblocages de boss s'ils participent réellement au combat.
-- Les potions de soin doivent pouvoir être utilisées sur joueurs alliés et IA alliées.
-- Un personnage tombé cesse de générer des récompenses supplémentaires après sa chute, mais garde ce qu'il a mérité avant.
-- En Léthal coop, un personnage au sol lance des dés de survie : 11+ vert, 10- rouge, 20 réveil immédiat à 1 PV, 1 deux rouges. Trois rouges signifient mort définitive sauf exception/divination future. Trois verts réveillent à 1 PV sans compter la mort.
-- Les personnages secondaires morts définitivement en coop doivent être retirés des personnages jouables de leur compte et placés dans le registre des morts.
-
-=== FORMATION ALLIÉE / COOP / INVOCATIONS ===
-
-Règle validée pour les combats de groupe :
-- Le joueur principal occupe le centre de la formation.
-- Les deux emplacements latéraux peuvent recevoir des joueurs secondaires ou des personnages alliés.
-- Les deux extrémités sont réservées aux invocations.
-- Si plus de trois alliés non-invocations sont disponibles, les joueurs prennent toujours la priorité sur les personnages alliés.
-- Les personnages alliés prennent toujours la priorité sur les invocations lors du placement/remplacement d'équipe.
-- Les invocations sont donc la dernière priorité et ne doivent pas voler une place centrale ou latérale à un joueur/personnage.
-
-Placement logique actuel :
-- Slot 0 : centre, joueur principal.
-- Slot 1 : côté gauche, joueur secondaire ou allié.
-- Slot 2 : côté droit, joueur secondaire ou allié.
-- Slot 3 : extrémité gauche, invocation uniquement.
-- Slot 4 : extrémité droite, invocation uniquement.
-
-## Ajustement IA soin / munitions - passe actuelle
-
-- Les ennemis ne doivent pas devenir des soigneurs par défaut parce qu'ils possèdent une potion.
-- Une bête classique, un loup, un mort-vivant basique ou un monstre sans logique de soin ne sait pas utiliser de potion ni de sort de soin, sauf exception explicite de lore.
-- En PvE coop, seuls les profils précis capables de comprendre le soin peuvent utiliser une potion/technique de soin sur un allié ou eux-mêmes : soigneur, prêtre/clerc, chaman, alchimiste, sorcier, mage putride, chef bandit ou pilleur vétéran.
-- Quand un tel ennemi soigne, la priorité est de sauver un allié blessé. Le soin personnel existe, mais il représente seulement une survie de secours et reste moins prioritaire.
-- Les IA alliées devront suivre la même logique plus tard : elles pourront soigner joueurs/alliés/IA selon leur personnalité, leur rôle, leur inventaire et leur volonté réelle d'aider.
-- Les munitions spéciales ne sont plus consommées automatiquement : pour chaque tir avec une arme à munitions, le joueur choisit la munition à utiliser et voit le nombre restant.
-
-============================================================
-TÂCHE PRÉVUE - VARIANTES DE MONSTRES ET ÉLÉMENTS
-============================================================
-
-Objectif : augmenter fortement la variété du bestiaire même avant que toutes les variantes possèdent des mécaniques uniques.
-
-Règles validées :
-- Un monstre simple ne sait pas forcément utiliser des potions, techniques ou sorts.
-- Exemple : un gobelin classique ne soigne pas, mais un gobelin shaman peut le faire.
-- Les soigneurs ennemis doivent surtout soigner leurs alliés ; le soin personnel reste une survie de secours.
-- Les bêtes classiques comme loups, sangliers ou rats ne doivent pas utiliser de potions, sauf variante spéciale justifiée par le lore.
-- Les slimes pourront avoir des couleurs et règles dédiées : vert, bleu, rouge, violet, noir, doré, etc.
-- Certaines variantes peuvent être presque inutiles volontairement pour donner du relief au monde et remplir le bestiaire.
-- Les évolutions/variantes doivent exister progressivement, même si leurs effets spéciaux arrivent plus tard.
-
-Tâche future élémentaire :
-- Ajouter des dégâts élémentaires : feu, poison, glace, électricité, etc.
-- Ajouter des statuts sur la durée : brûlure, poison, gel, électrocution.
-- Électricité : prévoir une interaction spéciale avec armes/armures en fer. Si arme en fer équipée ou armure en fer équipée : dégâts supplémentaires ; si les deux : pénalité doublée ou aggravée.
-- Les monstres élémentaires et certaines variantes rares utiliseront ces statuts.
-
-[2026-05-23] Passe gameplay classes / armes à munitions / variantes
-- Les tirs ne sont plus décidés par la classe seule : le menu de munition se base sur l'arme équipée.
-- Les armes à distance sans munition utilisent une défense d'urgence justifiée : coup de poignée / branche / crosse à très courte portée, pas un projectile magique.
-- Ajout d'armes de départ compatibles : arbalète d'entraînement et bandoulière de lancer.
-- Ajout de variantes de slimes par zone, sans utiliser de noms non lore comme “pion” ou “inutile”.
-- Les évolutions de slimes et de gobelins ont maintenant des noms plus spécifiques.
-- Les invocations ont gagné de nouveaux profils : Totem gardien, Corbeau familier, Éclat de miroir.
-- La coop PvE prend maintenant en compte les invocations du joueur concerné après son tour, avec contribution individuelle.
-- Les boutiques vendent plus souvent des munitions basiques/spéciales, avec marché noir pour munitions interdites ou volées.
-
-[2026-05-23] Passe continuation boss coop / munitions élémentaires / variantes
-- Les invocations peuvent maintenant agir aussi en boss coop après le tour de leur propriétaire.
-- En boss coop, le boss peut parfois sentir le lien d'invocation et frapper une invocation au lieu d'un joueur vivant.
-- Les dégâts des invocations en boss coop comptent dans la participation du propriétaire.
-- Ajout de munitions élémentaires préparatoires : Flèches de cendre, Carreaux givrés, Couteaux conducteurs.
-- Ajout de recettes de craft pour ces munitions élémentaires, en attendant le vrai système complet de statuts élémentaires.
-- Le marché noir et certaines boutiques peuvent proposer ces munitions élémentaires selon la rotation.
-- Ajout de nouvelles variantes de slimes par biome : rouge tiède, doré minuscule, vert ancien, blanc poudreux, vert putride jeune, gris gravé.
-- Les monstres gagnent une première couche de spécialités supplémentaires : slimes, plantes et insectoïdes ont des réactions d'attaque plus distinctes.
-
-## Événements d'exploration réellement joués
-
-Les événements aléatoires d'exploration qui annoncent un combat ne doivent plus être de simples textes avec un résultat automatique.
-Quand l'exploration déclenche une rencontre, un mimic, un mini-boss local ou une vague dangereuse, le jeu lance maintenant un vrai combat via le système PvE.
-Les récompenses, la fuite, les morts, les invocations, les munitions, les potions, les statuts et le bestiaire passent donc par les règles de combat réelles.
-
-Règle validée : si l'événement implique un affrontement, le joueur doit jouer l'affrontement, pas seulement lire "réussi/échoué".
-
-[2026-05-24] Passe événements actifs / boutiques corrigées
-- Ajout d'une couche d'événements actifs en exploration : camp abandonné, repaire local, cache clandestine, vague forcée, autel instable, appel au secours.
-- Ces événements proposent des choix et peuvent lancer de vrais combats PvE au lieu d'un simple résultat textuel.
-- Les récompenses de ces événements passent par l'inventaire réel : or, matériaux du biome, matériaux rares, munitions spéciales ou composants douteux.
-- Les zones évoluées peuvent produire des groupes plus dangereux dans ces événements.
-- Correction des achats de potions anti-statut / utilitaires : antidote, baume anti-brûlure, potion anti-givre, potion isolante et fiole de fumée sont maintenant reconnues comme achetables.
-- Les boutiques ont plus de contenu rotatif : armurerie défensive, forge d'armes, consommables, alchimiste et marché noir.
-- Le marché noir propose davantage de stock cher, instable, volé ou expérimental, sans rendre les boutiques normales trop fortes.
-- Le marché noir commence aussi à accepter le troc : certains articles peuvent demander des composants précis au lieu d'or.
-
-## Patch gameplay - compétences de classe actives
-
-- Le menu d'attaque propose maintenant une option "Compétence de classe".
-- Ces compétences commencent surtout à exister vers les niveaux 3 à 5 selon la classe.
-- Elles ne remplacent pas encore le futur arbre complet, mais elles donnent déjà une action différente selon le profil :
-  - Assassin / Ombrelame : saignement préparé par angle mort.
-  - Gardien / Tank / Colosse : rempart provoquant avec posture défensive.
-  - Clerc / Prêtre / Paladin : serment de survie, soin personnel et garde.
-  - Mage / Sorcier / Arcaniste : choix de marque élémentaire.
-  - Archer / Rôdeur / Tireur : tir de couverture uniquement avec vraie arme à distance.
-  - Berserker / Barbare / Briseur : rage assumée avec contrecoup.
-  - Alchimiste / Artificier : mélange improvisé instable.
-  - Invocateur / Nécromancien / Dresseur : ordre spectral, pression froide et soutien défensif.
-
-À faire plus tard : transformer ces bases en vraies compétences apprises, améliorées et sélectionnables via niveau, armes utilisées, expérimentation et quêtes.
-
-[2026-05-24] Patch compétences de classe - deuxième palier
-- Les compétences de classe ne sont plus seulement une action unique par famille : plusieurs grandes familles ont maintenant un choix entre une base et un palier plus avancé.
-- Exemples : assassin avec Disparition basse, tank avec Ancrage total, clerc/paladin avec Prière purificatrice, mage avec Surcharge contrôlée, distance avec Tir d'arrêt, berserker avec Coup de rupture, alchimiste avec Fiole tactique, invocateur/nécromancien avec Lien de meute / ombre.
-- Les compétences de distance continuent de vérifier l'arme équipée : une classe archer avec une épée ne déclenche pas de tir magique.
-- Les paliers avancés restent volontairement simples pour ne pas remplacer encore le futur arbre complet de compétences.
-
-
-Ajout 1.32.15 :
-- Les recommandations de client débloquent maintenant des entrées dans les PNJ notables, sous la section « Recommandés par un habitant ».
-- Le journal de quêtes affiche par défaut uniquement les quêtes actives ; les quêtes terminées sont consultables via une option séparée pour éviter une liste interminable.
-
-
-Ajout 1.32.16 :
-- Le panneau de guilde devient persistant : les offres affichées restent les mêmes pendant 3 combats au lieu d'être régénérées à chaque ouverture.
-- Une quête de guilde acceptée disparaît immédiatement du panneau ; sa place est remplacée après 1 combat.
-- Le nombre d'offres visibles sur le panneau varie maintenant entre 3 et 8.
-- L'état du panneau de guilde est sauvegardé avec le personnage.
-- Les clients recommandés par un habitant ont une limite : après 5 demandes confiées, ils quittent naturellement la liste des PNJ notables recommandés.
-
-Ajout 1.32.17 :
-- Les combats déclenchés depuis l'exploration comptent maintenant dans le suivi des combats du personnage.
-- Le panneau de guilde peut donc remplacer les annonces prises après une rencontre d'exploration et rafraîchir ses offres après trois affrontements, même si le joueur explore au lieu de passer par l'arène.
-- Nouvelle passe d'immersion sur plusieurs textes restants : suppression de formulations trop méta comme “vrai événement”, “PvE miniature” ou “attaque automatique activée”.
-
-
-Ajout 1.32.18 :
-- Correction du troc au marché noir : les composants sont maintenant prélevés avant la remise de l'objet, avec restitution si l'échange est interrompu juste après le prélèvement.
-- Les pièces récupérées après un mimic d'exploration passent maintenant par la même pondération que les autres gains d'exploration : difficulté, intensité et plafond souple.
-- Nouvelle micro-passe d'immersion sur des formulations restantes autour de la défense, des coffres et d'un boss : le texte reste lore/in-world au lieu de sonner comme une remarque de système.
-
-Ajout 1.32.19 :
-- Les traces d'entraînement liées aux armes couvrent maintenant davantage de styles : épée, hache, marteau et lance rejoignent dague, arc, mains nues et bâton.
-- Ces nouvelles traces sont sauvegardées avec le personnage et visibles dans les statistiques/compétences.
-- Nouveaux jalons de compétences : Discipline de lame, Frappe fendue, Fracasse-garde et Contrôle d'allonge.
-
-Ajout 1.32.20 :
-- Les traces d'armes débloquées commencent à agir dans la technique d'arme au lieu de rester seulement affichées dans les statistiques.
-- Dague, bâton, mains nues, hache et marteau exploitent leurs compétences actives apprises quand l'arme correspondante est équipée.
-- Épée et lance exploitent leurs passifs Discipline de lame et Contrôle d'allonge avec de petits bonus maîtrisés, sans transformer l'effet en pouvoir magique.
-
-
-Ajout 1.32.21 :
-- Les compétences de classe ont maintenant une récupération interne : une compétence utilisée ne peut plus être relancée immédiatement au tour suivant.
-- Le menu de combat affiche la récupération restante lorsque la compétence de classe n'est pas encore revenue.
-- Le cooldown est réinitialisé au début d'un nouveau combat pour éviter qu'une ancienne bataille bloque inutilement le combat suivant.
-- Les IA capables de compétences de classe peuvent maintenant en utiliser, mais avec une probabilité contextuelle plutôt qu'un spam automatique dès que l'action est disponible.
-- Les profils défensifs, agressifs, magiques, de soutien, d'artificier et d'invocateur ont une première logique d'usage automatique adaptée.
-
-Ajout 1.32.22 :
-- Les IA ne considèrent plus les compétences de classe comme automatiquement connues dès que leur type contient un mot-clé : leur accès dépend maintenant du niveau réel quand il existe, du profil et de la discipline du combattant.
-- Les monstres utilisent leur niveau de monstre pour débloquer ou non une compétence ; les profils novices, jeunes, faibles ou improvisés demandent plus de niveau avant d'y accéder.
-- Les profils vétérans, élites, chefs, champions, oracles et personnages spéciaux ont une meilleure maîtrise, sans utiliser leur compétence à chaque tour.
-- Les IA de haut niveau peuvent parfois utiliser une variante plus avancée de leur compétence, tandis que les IA bas niveau restent sur des gestes plus simples ou n'ont rien débloqué.
-
-Ajout 1.32.24 :
-- Ajout d'un statut persistant de fragilisation : une cible fragilisée reçoit davantage de dégâts pendant quelques tours, puis la faille se referme naturellement.
-- Les soins/purifications adaptés peuvent maintenant refermer aussi cette faille, en plus de retirer l'affaiblissement classique.
-- Les mages/arcanistes gagnent un nouveau palier de sort : Faille de résistance, qui combine fragilisation et élément choisi.
-- Les alchimistes/artificiers gagnent Poudre de fragilisation, une option de contrôle qui prépare les prochains impacts au lieu de chercher seulement le dégât brut.
-- Les IA avancées peuvent utiliser ces nouveaux effets selon leur niveau et leur profil, sans les lancer automatiquement à chaque disponibilité.
-- Ajout de la Fiole de fragilisation chez l'alchimiste : elle ouvre une faille défensive différente de la Fiole d'affaiblissement.
-
-Ajout 1.32.25 :
-- Ajout du Voile élémentaire : un effet persistant défensif qui réduit la force et la durée des altérations élémentaires reçues.
-- Les mages/arcanistes gagnent un nouveau palier défensif niveau 8 : Voile élémentaire. Il consomme le tour, donne une garde légère et protège des brûlures, poisons, givre, choc et saignement pendant quelques tours.
-- Les mages IA peuvent utiliser ce voile quand leurs PV baissent, mais seulement selon leur niveau/profil et sans le lancer automatiquement à chaque disponibilité.
-- Les affinités élémentaires prennent maintenant en compte le voile actif en plus de la race, classe, équipement et type de monstre.
-- Ajout de la Potion de voile élémentaire dans les consommables, les sauvegardes et certaines boutiques.
-- Les potions anti-givre et isolantes donnent aussi une petite protection élémentaire courte en plus de leur stabilisation.
-- L'affichage des statistiques d'une entité montre maintenant les états actifs importants, dont brûlure, poison, froid, choc, saignement, affaiblissement, faille ouverte et voile élémentaire.
-
-Ajout 1.32.26 :
-- Les sorts ne sont plus pensés uniquement comme des techniques de classe fixes : les mages peuvent débloquer certains sorts via grimoires de bibliothèque ou de marché noir, avec prérequis de niveau et compatibilité de classe.
-- Ajout de parchemins magiques consommables à usage unique pour les non-mages : étincelle arcanique, voile élémentaire et faille fragile.
-- Les sorts de mage lancés avec un bâton/catalyseur abîmé, brisé ou non adapté ont maintenant une chance de canalisation réduite.
-
-Ajout 1.32.28 :
-- Ajout d'un statut persistant de régénération courte via Suture de mana.
-- Ajout d'un grimoire de Suture de mana sans parchemin courant, avec apprentissage limité aux profils canalisateurs cohérents et niveau requis.
-- Ajout d'un parchemin de Purification mineure sans grimoire équivalent stable, utilisable comme consommable par les mages et non-mages.
-- Les notes de bibliothèque/bestiaire documentent mieux la différence entre sort appris, parchemin jetable, grimoire durable et catalyseur instable.
-
-
-[V1.32.29] Contenu magie/bestiaire : parchemin de venin rampant, grimoire des ronces occultes, apprentissage limité par profil/niveau et nouvelles notes de bibliothèque/bestiaire.
-
-Ajout 1.32.30 :
-- Grosse passe bestiaire : les fiches affichent maintenant danger estimé, habitat/origine, faiblesses, résistances, butin/ressource liée et conseil de chasse selon le niveau de connaissance.
-- Ajout d'une catégorie dédiée aux effets et altérations : brûlure, poison, givre, choc, saignement, affaiblissement, faille ouverte, voile élémentaire et suture de mana.
-- Ajout de nouvelles entrées de familles/variantes : slimes colorés, racine étrangleuse, squelette archer rouillé, oracle fissuré et bandit apothicaire.
-- Ajout d'un index tactique dans le bestiaire pour lire rapidement les grandes familles, leurs contres et les pièges d'interprétation.
-- Les entrées découvertes pendant la partie stockent aussi des indices persistants : danger, habitat, faiblesses, résistances, butin et stratégie.
-
-Ajout 1.32.31 :
-- Nouvelle passe bestiaire : ajout de la catégorie Habitats / zones avec les principales zones connues et leurs familles dominantes.
-- Ajout de nombreuses fiches hostiles supplémentaires : chauve-souris, rat géant, kobold, araignée, sanglier, ours, squelettes/goules, alchimiste, mage renégat, orcs, chevalier corrompu, élémentaires, anomalie, armure morte et dragon mineur.
-- Les fiches affichent maintenant une indication de progression pour savoir comment passer de simple existence à informations utiles puis fiche complète actuelle.
-- Ajout d'une synthèse du bestiaire : nombre d'entrées par niveau de connaissance, répartition par catégorie, rencontres/tués enregistrés et top des découvertes réelles.
-- L'index tactique couvre mieux les constructions, dragons, anomalies, supports spectraux et biomes.
-- Les renseignements de biomes achetés à la bibliothèque débloquent maintenant aussi des entrées de zones dans le bestiaire.
-
-Ajout 1.32.32 :
-- Bestiaire encore renforcé avec carnet de traque, registre filtrable par niveau de connaissance et nouvelles notes de terrain.
-- Ajout de fiches sur traces de territoire, cadavres étudiés, qualité de dépouille, pages de terrain annotées et rumeurs de boss.
-- Le menu du bestiaire permet maintenant de consulter directement les fiches inconnues, confirmées, utiles ou complètes sans parcourir toute la liste.
-
-
-Ajout 1.32.33 :
-- Infrastructure GitHub/release : scripts de packaging source sans exécutable et release Linux.
-- Workflow GitHub Actions pour compiler et publier une archive Linux sur tag.
-- Guide INSTALLER_GITHUB_GUIDE.md.
-- Base PowerShell DinotofuInstaller/DinotofuLauncher pour les futures releases Windows précompilées avec vérification de mise à jour.
-
-Ajout 1.32.34 :
-- Automatisation complète des releases GitHub : un workflow unique prépare le ZIP source sans exécutable, la release Linux, la release Windows précompilée et le pack installer Windows.
-- Ajout d'un packaging Windows via cross-compilation MinGW sur GitHub Actions : les joueurs Windows peuvent recevoir un ZIP avec Dinotofu.exe sans installer Visual Studio/Make.
-- Ajout d'un pack DinotofuInstaller-Windows configurable automatiquement avec le repo GitHub de la release.
-- L'installer et le launcher lisent maintenant dinotofu-installer.config.json, ce qui évite de devoir saisir le repo à la main quand le pack vient de GitHub Actions.
-- Le launcher conserve la vérification de mise à jour, le téléchargement avec barre de progression, la protection temporaire des sauvegardes et le lancement du jeu.
-- Console::clear utilise maintenant cls sous Windows et clear sous Linux.
-
-Ajout 1.32.35 :
-- Automatisation plus complète des releases GitHub : un push sur main/master crée automatiquement le tag correspondant à la version du code si ce tag n'existe pas encore.
-- La release automatique publie maintenant les packs Windows, Linux, source propre et installateurs.
-- Ajout d'un installer/launcher Linux avec vérification de mise à jour, téléchargement de la dernière release et raccourci Linux.
-
-[V1.32.36] Automatisation release renforcée
-- Ajout d'un guide simple GITHUB_AUTO_RELEASE_SIMPLE.md.
-- Ajout de scripts pour bumper la version, commit et push automatiquement.
-- Le workflow GitHub continue de créer le tag/release automatiquement depuis VersionInfo.cpp.
-- Les releases Linux sont plus orientées joueur : exécutable + assets + launcher, tandis que le ZIP source reste séparé.
-
-
-
-[V1.32.37] Packaging release nettoyé
-- Retrait du lanceur racine run_dinotofu.sh : il ne doit plus apparaître dans le ZIP source/dev ni dans les releases joueur.
-- make launch et le raccourci Linux lancent maintenant directement output/Dinotofu après compilation.
-- Les packs Windows/Linux gardent chacun leurs propres installateurs/launchers dédiés dans tools/windows ou tools/linux.
-- Clarification : les scripts .sh restent uniquement pour Linux/dev, pas dans le pack installer Windows.
-
-[V1.32.38] Nettoyage packaging et contrôle release
-- Retrait des outils locaux hors projet du projet : ces éléments sont utiles localement mais ne doivent pas faire partie du ZIP du jeu.
-- Le workflow GitHub ne se déclenche plus sur les tags créés automatiquement, afin d'éviter les doublons de release pendant la publication automatique.
-- Ajout de scripts/validate_release_tree.sh et de make release-check pour vérifier qu'aucun exécutable, sauvegarde privée, vieux lanceur racine ou fichier d’authentification local n'est présent avant partage.
-- Ajout de release_packages/ au .gitignore pour éviter de pousser les ZIP locaux générés.
-
-V1.32.39 - Préparation interface / bestiaire paginé
-- Ajout d'un helper de pagination terminal réutilisable pour les longues listes.
-- Le bestiaire affiche maintenant ses entrées par pages de 12 au lieu de dérouler des listes interminables.
-- Navigation page précédente / page suivante dans les listes de fiches.
-- Cette couche prépare mieux une future interface graphique sans toucher aux règles de gameplay.
-
-V1.32.40 - Préparation interface / longues listes
-- Les listes d'armes, armures, consommables et matériaux de l'inventaire utilisent maintenant la pagination commune au lieu de dérouler toute la réserve d'un coup.
-- Le journal de quêtes ouvre directement sur les quêtes actives, avec pagination, et garde les quêtes terminées dans une vue séparée.
-- Les choix page précédente / page suivante sont harmonisés avec le bestiaire pour préparer une future interface graphique plus propre.
-- Nettoyage de quelques phrases trop méta afin de préserver l'immersion pendant les événements et menus.
-
-
-V1.32.41 - Interface terminal / boutiques paginées
-- Les articles des boutiques sont maintenant affichés par pages avec navigation 98/99.
-- La sélection d’un article se fait par numéro local à la page, ce qui prépare mieux une future interface graphique.
-- Les notes liées aux outils locaux de configuration développeur ont été nettoyées du projet.
-
-V1.35.06 - Mise à niveau version/interface
-- Version courante alignée sur 1.35.06 : les changements accumulés depuis 1.32.41 sont considérés comme plus importants que de simples patchs.
-- La préparation de l'interface graphique devient la priorité visible ; l'équilibrage courant reste un travail naturel de fond et ne doit plus être répété comme tâche restante séparée.
-- Les fichiers JSON de réserve armures, boss, consommables, matériaux, monstres et armes sont maintenant des tableaux vides valides au lieu de fichiers vides.
-- Les dialogues de personnages spéciaux incluent Trexof et les notes de groupe restantes sont harmonisées en français.
-- L'archive des codes de triche inclut fuckgrindinggimifight et ses descriptions sont synchronisées avec les codes reconnus.
-- Console::clear évite le message TERM absent dans certains environnements, et les entrées interrompues ne bloquent plus askNumberBetween en boucle infinie.
-- Une phrase méta sur l'équilibrage coop des boss a été remplacée par une formulation lore.
-
-V1.35.07 - Centralisation interface / préparation IG
-- Ajout d'un modèle commun `MenuScreen` / `MenuOption` pour séparer les données affichables du rendu terminal.
-- `TerminalInterface` devient le point de rendu terminal pour les menus migrés.
-- `GraphicalInterface` expose déjà une lecture minimale des actions d'écran, afin de préparer une future IG sans réécrire tous les menus.
-- Menus migrés : tour de combat, choix de cible, choix de cible de groupe, après-combat.
-
-
-V1.35.08 - Centralisation interface élargie
-- Menus équipement, inventaire, potions, compétences de rôle et statistiques migrés vers des écrans `MenuScreen` réutilisables.
-- Les écrans migrés portent des identifiants `screenId` et des actions `actionId` pour préparer le futur renderer graphique.
-- Le terminal reste la sortie active, mais il consomme davantage de données centralisées au lieu de textes dispersés.
-
-
-V1.35.09 - Centralisation interface / boutiques, bestiaire, quêtes et exploration
-- Les menus de boutique utilisent davantage le modèle `MenuScreen` : liste des boutiques, menu marchand, stock paginé, inspection d'article et actions d'achat/troc.
-- Le bestiaire utilise davantage `MenuScreen` pour le hub, les listes paginées, les fiches détaillées, les registres par niveau de connaissance et les entrées inconnues.
-- Les menus de quêtes principaux, la guilde, les lieux visitables, les PNJ notables, les clients et la sélection d'exploration exposent maintenant des identifiants d'écran et d'action pour préparer l'IG.
-- L'équilibrage courant reste traité en fond pendant les ajouts, sans être répété comme tâche restante séparée.
-
-V1.35.10 - Centralisation interface / comptes, personnages et événements
-- Ajout d'un snapshot `GuiMenuSnapshot` / `GuiMenuActionSnapshot` utilisable par une future IG sans parser le texte terminal.
-- Ajout de `TerminalInterface::askMenuChoice` pour centraliser rendu + saisie des menus migrés.
-- Menus comptes/personnages et plusieurs événements d'exploration rapprochés du modèle `MenuScreen`.
-- L'équilibrage courant continue en fond sans être listé comme tâche séparée répétitive.
-
-V1.35.11 - Centralisation interface / inventaire paginé
-- Les listes paginées armes, armures, consommables et matériaux passent davantage par `MenuScreen`.
-- `PagedMenu` sait maintenant ajouter ses options de navigation dans un écran partagé, ce qui prépare mieux la future interface graphique.
-- Les actions de sélection d'inventaire exposent des identifiants stables pour le futur renderer IG.
-- L'équilibrage courant continue en fond sans être listé comme tâche séparée répétitive.
-
-
-
-V1.35.12 - Centralisation interface / navigation globale, coop, craft et échanges
-- Les choix de difficulté, session, activité principale, sous-menu combat, information d'activité et confirmation d'activité passent davantage par `MenuScreen`.
-- La sélection des comptes/personnages secondaires en coop est paginée et rapprochée du modèle partagé pour préparer l'IG.
-- Le craft utilise maintenant des écrans partagés avec pagination, détail de schéma, quantité et confirmation.
-- Les écrans d'échange/don sont rapprochés du modèle `MenuScreen` avec identifiants d'action stables.
-- `MenuScreen` exporte un `GuiMenuSnapshot`, et `TerminalInterface` peut valider les choix sur les options réelles d'un écran.
-- L'équilibrage courant continue en fond sans être listé comme tâche séparée répétitive.
-
-V1.35.13 - Centralisation interface / création et échanges
-- Création de personnage : choix de race et choix de classe convertis en MenuScreen, avec identifiants d'écran et d'actions exploitables par l'IG.
-- Catalogue des classes : ajout d'une structure de lecture ClassOptionInfo pour exposer les infos de classe sans dépendre d'un affichage terminal brut.
-- Échange / don : sélection d'armes, armures, consommables et matériaux convertie en menus paginés, avec annulation, navigation et blocage clair de l'équipement porté/équipé.
-- Préparation IG : moins de listes imprimées directement, davantage de données structurées utilisables par un futur rendu graphique.
-
-
-V1.35.14 - Centralisation interface / messages et sauvegardes
-- Ajout d'un helper commun `MessageScreen` pour les écrans d'information, de saisie texte et de confirmation par mot-clé.
-- Les menus de comptes utilisent davantage des écrans structurés pour l'import, la création, la connexion, l'extraction et la suppression.
-- Les menus de personnages utilisent davantage des écrans structurés pour le nom, les avertissements de version, les décisions d'adaptation, le refus de maîtrise, le transfert, l'extraction, le clone et la suppression.
-- Les confirmations dangereuses SUPPRIMER / TRANSFERER sont rapprochées du modèle réutilisable, ce qui prépare mieux le futur rendu graphique.
-- L'équilibrage courant continue en fond sans être listé comme tâche séparée répétitive.
-
-V1.35.15 - Centralisation interface / boss
-- Les choix d'apparition de boss solo et coop passent maintenant par des écrans `MenuScreen`, avec identifiants d'écran et d'action stables.
-- La sélection manuelle de boss utilise des options structurées et désactive les failles non stabilisables au lieu de dépendre d'une simple liste imprimée.
-- L'analyse de puissance et la confirmation avant boss sont rapprochées du modèle d'interface partagé.
-- Les soins de soutien en boss coop utilisent maintenant des écrans structurés pour le choix d'action, de cible et de potion.
-- `BossCatalog` expose les noms/hints de registre sans imposer un affichage console, ce qui aide la future interface graphique.
-- L'équilibrage courant continue en fond sans être listé comme tâche séparée répétitive.
-
-
-V1.35.16 - Centralisation interface / résultats de combat
-- Les résultats PvE importants passent davantage par des écrans communs : choix de rencontre, fuite, victoire, défaite et réveil.
-- Les affichages de récompenses et récompenses partielles utilisent maintenant les données d'interface partagées.
-- Les conséquences de mort non létale, la mort létale et l'anomalie de survie sont rapprochées du modèle d'écran commun.
-- Plusieurs écrans de résultat boss et boss coop utilisent maintenant `MessageScreen`, pour réduire les sorties console brutes avant l'IG.
-- L'équilibrage courant continue en fond sans être listé comme tâche séparée répétitive.
-
-V1.35.17 - Préparation IG combat et écrans restants
-- Ajout d'un CombatStateSnapshot pour exposer un état de combat lisible par la future interface graphique : camps, unités, PV, statuts, invocations, ciblage et phase.
-- CombatDisplay peut maintenant construire et afficher des instantanés de duel/groupe sans dépendre uniquement de textes imprimés.
-- JcJ local et PvP IA : plusieurs écrans très terminal ont été remplacés par MenuScreen/MessageScreen.
-- Exploration : plusieurs événements, coffres, découvertes rares et rencontres imprévues passent par MessageScreen.
-- Dialogues spéciaux et début/impact d'ultime de boss centralisés davantage pour préparer l'IG.
-
-V1.35.20 - Installers, launchers et dossier ProjetDinotofu
-- Windows : installer et launcher retravailles en texte ASCII pour eviter les caracteres casses dans PowerShell/CMD.
-- Windows : installation par defaut dans Downloads/ProjetDinotofu, avec choix possible d'un autre dossier parent.
-- Windows : aucun WSL requis ; la release Windows doit contenir Dinotofu.exe.
-- Linux : meme logique ProjetDinotofu, sauvegarde des donnees joueur et raccourcis conserves.
-- Scripts de release alignes sur les nouveaux dossiers d'installation.
+- Y : changement majeur dans la phase actuelle.
+- Z : patch/correctif/amélioration ciblée.
+
+Jalons validés :
+- 2.0.0 : IG entièrement finie, stable et jouable à fond.
+- 3.0.0 : premier chapitre d'histoire codé.
+- Version majeure future, beaucoup plus tard : multijoueur en ligne.
+
+Compatibilité personnages
+-------------------------
+Le code source de vérité pour la version courante et la version minimale conseillée est `src/core/VersionInfo.cpp`.
+
+- Version actuelle : 1.38.55
+- Recréation conseillée avant : 1.32.03
+
+Grandes parties futures
+-----------------------
+1. Terminer la stabilité IG jusqu'à V2.0.0.
+2. Ajouter ensuite contenu, dialogues/lore vivants, compétences, magie et équilibrage approfondi.
+3. Coder le premier chapitre d'histoire pour V3.0.0.
+4. Garder le multijoueur en ligne pour une phase lointaine.
+
+Note
+----
+Les détails très fins de boss, cheats, personnages spéciaux et données de configuration restent dans leurs fichiers dédiés (`BOSS_VALIDES_DINOTOFU.txt`, `SPECIAL_CHARACTERS_AND_CHEATS.txt`, `assets/config/`).

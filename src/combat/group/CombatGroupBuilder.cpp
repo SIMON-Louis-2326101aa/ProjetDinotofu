@@ -8,8 +8,10 @@
 
 #include "entity/Monster.hpp"
 #include "entity/Player.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <iostream>
+#include <vector>
 
 CombatGroup CombatGroupBuilder::buildSideFromEntityAndSummons(
     Entity& mainEntity,
@@ -75,9 +77,15 @@ CombatGroup CombatGroupBuilder::buildSideFromPlayersAndSummons(
 
         if (placedPlayers >= 3)
         {
-            std::cout << player->getName()
-                      << " ne peut pas entrer dans la ligne active : les trois emplacements de personnage sont déjà pris."
-                      << std::endl;
+            MessageScreen::show(
+                "FORMATION COMPLÈTE",
+                "combat.group.player.overflow",
+                {
+                    player->getName() + " ne peut pas entrer dans la ligne active.",
+                    "Les trois emplacements de personnage sont déjà pris."
+                },
+                false
+            );
             continue;
         }
 
@@ -109,9 +117,15 @@ CombatGroup CombatGroupBuilder::buildSideFromPlayersAndSummons(
 
         if (placedSummons >= 2)
         {
-            std::cout << summon.getName()
-                      << " reste en retrait : les extrémités réservées aux invocations sont déjà occupées."
-                      << std::endl;
+            MessageScreen::show(
+                "INVOCATION EN RETRAIT",
+                "combat.group.summon.overflow",
+                {
+                    summon.getName() + " reste en retrait.",
+                    "Les extrémités réservées aux invocations sont déjà occupées."
+                },
+                false
+            );
             continue;
         }
 
@@ -173,11 +187,11 @@ void CombatGroupBuilder::displayGroup(
     const std::string& title
 )
 {
-    std::cout << "========== " << title << " ==========" << std::endl;
+    std::vector<std::string> lines;
 
     if (group.getSlotCount() <= 0)
     {
-        std::cout << "Aucune unité visible." << std::endl;
+        lines.push_back("Aucune unité visible.");
     }
 
     for (const CombatUnitSlot& slot : group.getSlots())
@@ -187,41 +201,39 @@ void CombatGroupBuilder::displayGroup(
             continue;
         }
 
-        std::cout << "[" << slot.getSlotIndex() << " - "
-                  << getFormationSlotLabel(slot.getSlotIndex()) << "] "
-                  << slot.getDisplayName();
+        std::string line = "[" + std::to_string(slot.getSlotIndex()) + " - "
+            + getFormationSlotLabel(slot.getSlotIndex()) + "] " + slot.getDisplayName();
 
         if (!slot.isAlive())
         {
-            std::cout << " - hors combat";
+            line += " - hors combat";
         }
 
         if (slot.getKind() == CombatUnitKind::Summon)
         {
-            std::cout << " - invocation";
+            line += " - invocation";
         }
         else if (slot.getKind() == CombatUnitKind::Boss)
         {
-            std::cout << " - boss";
+            line += " - boss";
         }
         else if (slot.getKind() == CombatUnitKind::Ally)
         {
-            std::cout << " - allié";
+            line += " - allié";
         }
         else if (slot.getKind() == CombatUnitKind::Enemy)
         {
-            std::cout << " - ennemi";
+            line += " - ennemi";
         }
         else if (slot.getKind() == CombatUnitKind::MainFighter)
         {
-            std::cout << " - joueur";
+            line += " - joueur";
         }
 
-        std::cout << std::endl;
+        lines.push_back(line);
     }
 
-    std::cout << "========================================" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(title, "combat.group.display", lines, false);
 }
 
 
@@ -240,10 +252,16 @@ std::string CombatGroupBuilder::getFormationSlotLabel(int slotIndex)
 
 void CombatGroupBuilder::displayFormationRules()
 {
-    std::cout << "Formation alliée :" << std::endl;
-    std::cout << "- centre : joueur principal ;" << std::endl;
-    std::cout << "- côtés : joueurs secondaires ou personnages alliés ;" << std::endl;
-    std::cout << "- extrémités : invocations uniquement ;" << std::endl;
-    std::cout << "- priorité : joueurs > personnages alliés > invocations." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "RÈGLES DE FORMATION",
+        "combat.group.formation.rules",
+        {
+            "Formation alliée :",
+            "- centre : joueur principal ;",
+            "- côtés : joueurs secondaires ou personnages alliés ;",
+            "- extrémités : invocations uniquement ;",
+            "- priorité : joueurs > personnages alliés > invocations."
+        },
+        false
+    );
 }

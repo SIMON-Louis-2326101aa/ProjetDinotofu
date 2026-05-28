@@ -7,6 +7,7 @@
 #include "combat/threat/ThreatSystem.hpp"
 
 #include "combat/role/CombatRoleSystem.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -38,22 +39,27 @@ void ThreatSystem::markAllyHealingAction(Entity& healer, const Entity& healedAll
 {
     healer.markHealingThreat();
 
-    std::cout << "Menace : " << healer.getName()
-              << " vient de soigner "
-              << healedAlly.getName()
-              << ". Les ennemis attentifs risquent de viser le soigneur en priorité."
-              << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "MENACE DE SOIN",
+        "combat.threat.heal.ally",
+        {
+            "Menace : " + healer.getName() + " vient de soigner " + healedAlly.getName() + ".",
+            "Les ennemis attentifs risquent de viser le soigneur en priorité."
+        },
+        false
+    );
 }
 
 // EN: markSelfHealingAction declares or implements a focused behavior used by this module.
 // FR: markSelfHealingAction déclare ou implémente un comportement précis utilisé par ce module.
 void ThreatSystem::markSelfHealingAction(const Entity& healer)
 {
-    std::cout << healer.getName()
-              << " se soigne lui-même. La menace ennemie ne change pas vraiment."
-              << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "SOIN PERSONNEL",
+        "combat.threat.heal.self",
+        {healer.getName() + " se soigne lui-même. La menace ennemie ne change pas vraiment."},
+        false
+    );
 }
 
 // EN: tryActivatePassiveProvocation declares or implements a focused behavior used by this module.
@@ -86,18 +92,28 @@ void ThreatSystem::tryActivatePassiveProvocation(Entity& entity, Random& random)
 
     if (toLower(entity.getName()) == "sanctus")
     {
-        std::cout << "Sanctus lève sa garde sacrée." << std::endl;
-        std::cout << "Provocation : les ennemis sentent qu'ils devront passer par lui." << std::endl;
+        MessageScreen::show(
+            "PROVOCATION PASSIVE",
+            "combat.threat.passive_provocation.sanctus",
+            {
+                "Sanctus lève sa garde sacrée.",
+                "Provocation : les ennemis sentent qu'ils devront passer par lui."
+            },
+            false
+        );
     }
     else
     {
-        std::cout << entity.getName()
-                  << " prend l'avant de la ligne et attire l'attention ennemie."
-                  << std::endl;
-        std::cout << "Provocation : le ciblage ennemi est perturbé." << std::endl;
+        MessageScreen::show(
+            "PROVOCATION PASSIVE",
+            "combat.threat.passive_provocation.default",
+            {
+                entity.getName() + " prend l'avant de la ligne et attire l'attention ennemie.",
+                "Provocation : le ciblage ennemi est perturbé."
+            },
+            false
+        );
     }
-
-    std::cout << std::endl;
 }
 
 bool ThreatSystem::shouldForceTargetMainEntity(
@@ -117,23 +133,29 @@ void ThreatSystem::notifyForcedTarget(
 {
     if (target.isProvoking())
     {
-        std::cout << attackerName
-                  << " tente de chercher une cible plus facile, mais la provocation de "
-                  << target.getName()
-                  << " l'oblige à rester focalisé."
-                  << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "CIBLAGE FORCÉ",
+            "combat.threat.forced_target.provocation",
+            {
+                attackerName + " tente de chercher une cible plus facile.",
+                "La provocation de " + target.getName() + " l'oblige à rester focalisé."
+            },
+            false
+        );
         return;
     }
 
     if (target.hasHealingThreat())
     {
-        std::cout << attackerName
-                  << " a vu "
-                  << target.getName()
-                  << " soigner un allié. Sa prochaine attaque se dirige vers le soigneur."
-                  << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "SOIGNEUR VISÉ",
+            "combat.threat.forced_target.healer",
+            {
+                attackerName + " a vu " + target.getName() + " soigner un allié.",
+                "Sa prochaine attaque se dirige vers le soigneur."
+            },
+            false
+        );
     }
 }
 

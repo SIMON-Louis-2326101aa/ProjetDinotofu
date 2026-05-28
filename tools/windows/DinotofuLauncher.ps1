@@ -4,13 +4,20 @@ DinotofuLauncher.ps1
 Windows launcher: checks GitHub Releases, preserves player data during update, then launches Dinotofu.
 Windows script intentionally uses ASCII text only to avoid broken accents in cmd/PowerShell.
 No WSL is required: Windows releases must contain Dinotofu.exe.
+
+Modes:
+- Auto: try real GUI exe, then experimental browser GUI, then terminal.
+- Gui: same as Auto, but warns if GUI is missing.
+- Terminal: terminal game only, safe fallback.
 #>
 
 param(
     [string]$Repo = "",
     [string]$InstallDir = "$PSScriptRoot",
     [string]$AssetPattern = "",
-    [switch]$NoUpdateCheck
+    [switch]$NoUpdateCheck,
+    [ValidateSet("Auto", "Gui", "Terminal")]
+    [string]$Mode = "Auto"
 )
 
 $ErrorActionPreference = "Stop"
@@ -180,23 +187,133 @@ function Apply-Update {
     Write-InstalledConfig
 }
 
+function Get-FirstExistingPath {
+    param([string[]]$Candidates)
+    foreach ($candidate in $Candidates) {
+        if (Test-Path $candidate) { return $candidate }
+    }
+    return ""
+}
+
+function Test-CommandAvailable {
+    param([string]$CommandName)
+    return $null -ne (Get-Command $CommandName -ErrorAction SilentlyContinue)
+}
+
+function Start-GameExecutable {
+    param([string]$ExecutablePath, [string]$Label, [string]$GuiDebugDir = "")
+
+    Write-Step "Lancement de $Label"
+    $oldDebugDir = $env:DINOTOFU_GUI_DEBUG_DIR
+    $oldInputMode = $env:DINOTOFU_GUI_INPUT_MODE
+    $oldInputFile = $env:DINOTOFU_GUI_INPUT_FILE
+    $oldInputQueueDir = $env:DINOTOFU_GUI_INPUT_QUEUE_DIR
+    try {
+        if (-not [string]::IsNullOrWhiteSpace($GuiDebugDir)) {
+            New-Item -ItemType Directory -Path $GuiDebugDir -Force | Out-Null
+            $env:DINOTOFU_GUI_DEBUG_DIR = $GuiDebugDir
+            $env:DINOTOFU_GUI_INPUT_MODE = "1"
+            $env:DINOTOFU_GUI_INPUT_FILE = Join-Path $GuiDebugDir "pending_input.txt"
+            $env:DINOTOFU_GUI_INPUT_QUEUE_DIR = Join-Path $GuiDebugDir "input_queue"
+        }
+        Start-Process -FilePath $ExecutablePath -WorkingDirectory (Split-Path $ExecutablePath)
+    }
+    finally {
+        if ($null -eq $oldDebugDir) { Remove-Item Env:DINOTOFU_GUI_DEBUG_DIR -ErrorAction SilentlyContinue }
+        else { $env:DINOTOFU_GUI_DEBUG_DIR = $oldDebugDir }
+        if ($null -eq $oldInputMode) { Remove-Item Env:DINOTOFU_GUI_INPUT_MODE -ErrorAction SilentlyContinue }
+        else { $env:DINOTOFU_GUI_INPUT_MODE = $oldInputMode }
+        if ($null -eq $oldInputFile) { Remove-Item Env:DINOTOFU_GUI_INPUT_FILE -ErrorAction SilentlyContinue }
+        else { $env:DINOTOFU_GUI_INPUT_FILE = $oldInputFile }
+        if ($null -eq $oldInputQueueDir) { Remove-Item Env:DINOTOFU_GUI_INPUT_QUEUE_DIR -ErrorAction SilentlyContinue }
+        else { $env:DINOTOFU_GUI_INPUT_QUEUE_DIR = $oldInputQueueDir }
+    }
+}
+
+function Start-ExperimentalGui {
+    param([string]$GuiDebugDir)
+
+    $guiFileCandidates = @(
+        (Join-Path $InstallDir "tools\gui\dinotofu_gui_experimental.html"),
+        (Join-Path $InstallDir "tools\gui\dinotofu_gui_preview.html")
+    )
+    $guiFile = Get-FirstExistingPath $guiFileCandidates
+    if ([string]::IsNullOrWhiteSpace($guiFile)) { return $false }
+
+    New-Item -ItemType Directory -Path $GuiDebugDir -Force | Out-Null
+    $serverScript = Join-Path $InstallDir "tools\gui\serve_gui_preview.py"
+    $port = 8787
+
+    $pythonCommand = ""
+    foreach ($candidate in @("python", "python3", "py")) {
+        if (Test-CommandAvailable $candidate) { $pythonCommand = $candidate; break }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($pythonCommand) -and (Test-Path $serverScript)) {
+        Write-Step "Ouverture de l interface graphique experimentale"
+        if ($pythonCommand -eq "py") {
+            Start-Process -FilePath $pythonCommand -ArgumentList @("-3", $serverScript, "--root", $InstallDir, "--port", "$port", "--gui-debug-dir", $GuiDebugDir) -WindowStyle Minimized | Out-Null
+        }
+        else {
+            Start-Process -FilePath $pythonCommand -ArgumentList @($serverScript, "--root", $InstallDir, "--port", "$port", "--gui-debug-dir", $GuiDebugDir) -WindowStyle Minimized | Out-Null
+        }
+        Start-Sleep -Milliseconds 800
+        Start-Process "http://127.0.0.1:$port/tools/gui/dinotofu_gui_experimental.html" | Out-Null
+    }
+    else {
+        Write-Warning "Python introuvable : ouverture du fichier HTML local. Le chargement live peut etre limite par le navigateur."
+        Start-Process $guiFile | Out-Null
+    }
+
+    return $true
+}
+
 function Launch-Game {
-    $candidates = @(
+    $guiCandidates = @(
+        (Join-Path $InstallDir "DinotofuGUI.exe"),
+        (Join-Path $InstallDir "DinotofuGui.exe"),
+        (Join-Path $InstallDir "output\DinotofuGUI.exe"),
+        (Join-Path $InstallDir "output\DinotofuGui.exe"),
+        (Join-Path $InstallDir "bin\DinotofuGUI.exe"),
+        (Join-Path $InstallDir "bin\DinotofuGui.exe")
+    )
+
+    $terminalCandidates = @(
         (Join-Path $InstallDir "Dinotofu.exe"),
         (Join-Path $InstallDir "output\Dinotofu.exe"),
         (Join-Path $InstallDir "bin\Dinotofu.exe")
     )
 
-    foreach ($candidate in $candidates) {
-        if (Test-Path $candidate) {
-            Write-Step "Lancement de Dinotofu"
-            Start-Process -FilePath $candidate -WorkingDirectory (Split-Path $candidate)
+    if ($Mode -ne "Terminal") {
+        $realGui = Get-FirstExistingPath $guiCandidates
+        if (-not [string]::IsNullOrWhiteSpace($realGui)) {
+            Start-GameExecutable -ExecutablePath $realGui -Label "Dinotofu GUI"
             return
+        }
+
+        $terminal = Get-FirstExistingPath $terminalCandidates
+        if (-not [string]::IsNullOrWhiteSpace($terminal)) {
+            $debugDir = Join-Path $InstallDir "gui_debug"
+            if (Start-ExperimentalGui -GuiDebugDir $debugDir) {
+                Start-GameExecutable -ExecutablePath $terminal -Label "Dinotofu Terminal avec export IG" -GuiDebugDir $debugDir
+                return
+            }
+        }
+
+        if ($Mode -eq "Gui") {
+            Write-Warning "Version graphique introuvable. Bascule vers la version terminale si elle existe."
         }
     }
 
-    Write-Host "Aucun Dinotofu.exe trouve dans $InstallDir" -ForegroundColor Yellow
-    Write-Host "La release Windows doit contenir Dinotofu.exe. WSL n'est pas utilise par le launcher Windows."
+    $terminalFallback = Get-FirstExistingPath $terminalCandidates
+    if (-not [string]::IsNullOrWhiteSpace($terminalFallback)) {
+        Start-GameExecutable -ExecutablePath $terminalFallback -Label "Dinotofu Terminal"
+        return
+    }
+
+    Write-Host "Aucun executable Dinotofu trouve dans $InstallDir" -ForegroundColor Yellow
+    Write-Host "La release Windows doit contenir Dinotofu.exe pour la version terminale, et plus tard DinotofuGUI.exe pour l'IG."
+    Write-Host "WSL n'est pas utilise par le launcher Windows."
     Read-Host "Appuie sur Entree pour fermer"
 }
 

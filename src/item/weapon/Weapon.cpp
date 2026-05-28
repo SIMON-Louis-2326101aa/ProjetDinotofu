@@ -5,7 +5,10 @@
 
 #include "item/weapon/Weapon.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <vector>
+#include <string>
 
 // EN: Weapon declares or implements a focused behavior used by this module.
 // FR: Weapon déclare ou implémente un comportement précis utilisé par ce module.
@@ -151,75 +154,67 @@ void Weapon::fullyRepair()
     durability = maxDurability;
 }
 
+namespace
+{
+    std::string weaponTypeLabel(WeaponType type)
+    {
+        switch (type)
+        {
+            case WeaponType::Sword:
+                return "Épée";
+            case WeaponType::Dagger:
+                return "Dague";
+            case WeaponType::Axe:
+                return "Hache";
+            case WeaponType::Hammer:
+                return "Marteau";
+            case WeaponType::Spear:
+                return "Lance";
+            case WeaponType::Staff:
+                return "Bâton";
+            case WeaponType::Bow:
+                return "Arc";
+            case WeaponType::BareHands:
+                return "Mains nues";
+            default:
+                return "Inconnu";
+        }
+    }
+}
+
+std::vector<std::string> Weapon::toDisplayLines() const
+{
+    std::vector<std::string> lines = {
+        "===== ARME =====",
+        "Nom : " + name,
+        "Description : " + description,
+        "Valeur : " + std::to_string(value) + " pièces",
+        "Type : " + weaponTypeLabel(type),
+        "Bonus dégâts min : " + std::to_string(minDamageBonus),
+        "Bonus dégâts max : " + std::to_string(maxDamageBonus),
+        "Bonus critique : " + std::to_string(criticalBonus)
+    };
+
+    if (isIndestructible())
+    {
+        lines.push_back("Durabilité : Indestructible");
+    }
+    else
+    {
+        lines.push_back("Durabilité : " + std::to_string(durability) + "/" + std::to_string(maxDurability));
+        if (isBroken())
+        {
+            lines.push_back("État : Cassée, ses bonus ne s'appliquent plus.");
+        }
+    }
+
+    lines.push_back("================");
+    return lines;
+}
+
 // EN: display declares or implements a focused behavior used by this module.
 // FR: display déclare ou implémente un comportement précis utilisé par ce module.
 void Weapon::display() const
 {
-    std::cout << "===== ARME =====" << std::endl;
-    std::cout << "Nom : " << name << std::endl;
-    std::cout << "Description : " << description << std::endl;
-    std::cout << "Valeur : " << value << " pièces" << std::endl;
-
-    std::cout << "Type : ";
-
-    switch (type)
-    {
-        case WeaponType::Sword:
-            std::cout << "Épée";
-            break;
-
-        case WeaponType::Dagger:
-            std::cout << "Dague";
-            break;
-
-        case WeaponType::Axe:
-            std::cout << "Hache";
-            break;
-
-        case WeaponType::Hammer:
-            std::cout << "Marteau";
-            break;
-
-        case WeaponType::Spear:
-            std::cout << "Lance";
-            break;
-
-        case WeaponType::Staff:
-            std::cout << "Bâton";
-            break;
-
-        case WeaponType::Bow:
-            std::cout << "Arc";
-            break;
-
-        case WeaponType::BareHands:
-            std::cout << "Mains nues";
-            break;
-
-        default:
-            std::cout << "Inconnu";
-            break;
-    }
-
-    std::cout << std::endl;
-    std::cout << "Bonus dégâts min : " << minDamageBonus << std::endl;
-    std::cout << "Bonus dégâts max : " << maxDamageBonus << std::endl;
-    std::cout << "Bonus critique : " << criticalBonus << std::endl;
-
-    if (isIndestructible())
-    {
-        std::cout << "Durabilité : Indestructible" << std::endl;
-    }
-    else
-    {
-        std::cout << "Durabilité : " << durability << "/" << maxDurability << std::endl;
-
-        if (isBroken())
-        {
-            std::cout << "État : Cassée, ses bonus ne s'appliquent plus." << std::endl;
-        }
-    }
-
-    std::cout << "================" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show("ARME", "item.weapon.display", toDisplayLines(), false);
 }

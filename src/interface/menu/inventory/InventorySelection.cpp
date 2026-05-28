@@ -12,6 +12,7 @@
 #include "interface/menu/inventory/InventoryDisplay.hpp"
 #include "interface/menu/inventory/InventoryUtils.hpp"
 #include "interface/menu/common/MenuFrame.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
@@ -29,9 +30,9 @@
 
 #include <algorithm>
 #include <functional>
-#include <iostream>
 #include <cstddef>
 #include <sstream>
+#include <ostream>
 #include <random>
 #include <string>
 #include <vector>
@@ -39,6 +40,208 @@
 
 namespace
 {
+
+    std::string yesNoText(bool value, const std::string& yesText, const std::string& noText)
+    {
+        return value ? yesText : noText;
+    }
+
+    void showInventoryNotice(const std::string& title, const std::string& screenId, const std::vector<std::string>& lines)
+    {
+        MessageScreen::show(title, screenId, lines);
+    }
+
+
+    class InventoryNoticeStream
+    {
+    public:
+        template <typename T>
+        InventoryNoticeStream& operator<<(const T& value)
+        {
+            current << value;
+            return *this;
+        }
+
+        using StreamManipulator = std::ostream& (*)(std::ostream&);
+
+        InventoryNoticeStream& operator<<(StreamManipulator manipulator)
+        {
+            if (manipulator == static_cast<StreamManipulator>(std::endl<char, std::char_traits<char>>))
+            {
+                flushLine();
+            }
+            else
+            {
+                manipulator(current);
+            }
+            return *this;
+        }
+
+        void flushPending()
+        {
+            std::string line = current.str();
+            if (!line.empty())
+            {
+                flushLine();
+            }
+            showPending();
+        }
+
+    private:
+        std::ostringstream current;
+        std::vector<std::string> lines;
+
+        void flushLine()
+        {
+            std::string line = current.str();
+            while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t'))
+            {
+                line.pop_back();
+            }
+
+            current.str(std::string());
+            current.clear();
+
+            if (line.empty())
+            {
+                showPending();
+                return;
+            }
+
+            lines.push_back(line);
+        }
+
+        void showPending()
+        {
+            if (lines.empty())
+            {
+                return;
+            }
+
+            MessageScreen::show("INVENTAIRE", "inventory.notice.stream", lines, false);
+            lines.clear();
+        }
+    };
+
+    InventoryNoticeStream inventoryNotice;
+
+    void showWeaponInspectionScreen(const Weapon& weapon)
+    {
+        std::vector<std::string> lines;
+        lines.push_back("Nom : " + weapon.getName());
+        lines.push_back("Description : " + weapon.getDescription());
+        lines.push_back("Bonus dégâts : +" + std::to_string(weapon.getMinDamageBonus()) + " à +" + std::to_string(weapon.getMaxDamageBonus()));
+        lines.push_back("Bonus critique : +" + std::to_string(weapon.getCriticalBonus()));
+        lines.push_back("Durabilité : " + InventoryUtils::weaponDurabilityText(weapon));
+        lines.push_back("État : " + yesNoText(weapon.isBroken(), "Cassée, ses bonus ne s'appliquent plus.", "Utilisable"));
+        lines.push_back("Valeur : " + std::to_string(weapon.getValue()) + " pièces");
+        MessageScreen::show("INSPECTION - ARME", "inventory.weapon.inspect.details", lines);
+    }
+
+    void showArmorInspectionScreen(const Armor& armor)
+    {
+        std::vector<std::string> lines;
+        lines.push_back("Nom : " + armor.getName());
+        lines.push_back("Description : " + armor.getDescription());
+        lines.push_back("Bonus PV max : +" + std::to_string(armor.getMaxHpBonus()));
+        lines.push_back("Réduction dégâts : " + std::to_string(armor.getDamageReduction()));
+        lines.push_back("Durabilité : " + InventoryUtils::armorDurabilityText(armor));
+        lines.push_back("État : " + yesNoText(armor.isBroken(), "Cassée, ses bonus ne s'appliquent plus.", "Utilisable"));
+        lines.push_back("Valeur : " + std::to_string(armor.getValue()) + " pièces");
+        MessageScreen::show("INSPECTION - ARMURE", "inventory.armor.inspect.details", lines);
+    }
+
+    void showConsumableInspectionScreen(const Consumable& consumable)
+    {
+        MessageScreen::show(
+            "INSPECTION - CONSOMMABLE",
+            "inventory.consumable.inspect.details",
+            {
+                "Nom : " + consumable.getName(),
+                "Description : " + consumable.getDescription(),
+                "Type : " + InventoryUtils::consumableTypeToText(consumable.getType()),
+                "Puissance : " + std::to_string(consumable.getPower()),
+                "Valeur : " + std::to_string(consumable.getValue()) + " pièces"
+            }
+        );
+    }
+
+    void showMaterialInspectionScreen(const Material& material)
+    {
+        std::vector<std::string> lines;
+        lines.push_back("Nom : " + material.getName());
+        lines.push_back("Description : " + material.getDescription());
+        lines.push_back("Catégorie : " + material.getCategory());
+        lines.push_back("Quantité : " + std::to_string(material.getQuantity()));
+        lines.push_back("Qualité : " + material.getQualityLabel());
+        lines.push_back("Valeur : " + std::to_string(material.getValue()) + " pièces/unité");
+
+        if (material.hasSpecialQuality())
+        {
+            lines.push_back("Note : cette qualité peut influencer le craft, le prix ou certaines expérimentations.");
+        }
+
+        MessageScreen::show("INSPECTION - ENTRÉE", "inventory.material.inspect.details", lines);
+    }
+
+    void showEquipWeaponResultScreen(const Player& player, const Weapon& weapon, bool success)
+    {
+        if (!success)
+        {
+            MessageScreen::show(
+                "ARME NON ÉQUIPÉE",
+                "inventory.weapon.equip.failed",
+                {"Impossible d'équiper cette arme.", "Elle a peut-être été déplacée, retirée ou rendue indisponible."}
+            );
+            return;
+        }
+
+        std::vector<std::string> lines;
+        lines.push_back(player.getName() + " équipe : " + weapon.getName() + ".");
+        lines.push_back("Durabilité : " + InventoryUtils::weaponDurabilityText(weapon));
+        lines.push_back(weapon.isBroken()
+            ? "Attention : cette arme est cassée, elle ne donnera aucun bonus."
+            : "La prise en main est bonne. Cette arme est prête au combat.");
+        MessageScreen::show("ARME ÉQUIPÉE", "inventory.weapon.equip.result", lines);
+    }
+
+    void showEquipArmorResultScreen(const Player& player, const Armor& armor, bool success)
+    {
+        if (!success)
+        {
+            MessageScreen::show(
+                "ARMURE NON ÉQUIPÉE",
+                "inventory.armor.equip.failed",
+                {"Impossible d'équiper cette armure.", "Elle a peut-être été déplacée, retirée ou rendue indisponible."}
+            );
+            return;
+        }
+
+        std::vector<std::string> lines;
+        lines.push_back(player.getName() + " équipe : " + armor.getName() + ".");
+        lines.push_back("Durabilité : " + InventoryUtils::armorDurabilityText(armor));
+        lines.push_back(armor.isBroken()
+            ? "Attention : cette armure est cassée, elle ne donnera aucun bonus."
+            : "Ses protections sont maintenant actives.");
+        lines.push_back(player.getName() + " possède maintenant " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + " PV.");
+        MessageScreen::show("ARMURE ÉQUIPÉE", "inventory.armor.equip.result", lines);
+    }
+
+    void showHealingConsumableResultScreen(const Player& player, const Consumable& consumable, int hpBefore)
+    {
+        MessageScreen::show(
+            "CONSOMMABLE UTILISÉ",
+            "inventory.consumable.use.heal.result",
+            {
+                player.getName() + " utilise : " + consumable.getName() + ".",
+                "Soin théorique : " + std::to_string(consumable.getPower()) + " PV.",
+                "PV avant : " + std::to_string(hpBefore) + "/" + std::to_string(player.getMaxHp()),
+                "PV après : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()),
+                player.hasInfiniteConsumables() ? "Code actif : le consommable n'est pas retiré." : "Consommable retiré de l'inventaire."
+            }
+        );
+    }
+
     bool hasRecipeIngredients(Player& player, const std::string& id, int quantity);
     bool consumeRecipeIngredient(Player& player, const std::string& id, int quantity);
 
@@ -212,6 +415,109 @@ namespace
         return "Kit de réparation faible";
     }
 
+    std::string materialStockText(Player& player, const std::string& id, int needed)
+    {
+        int owned = player.getInventory().countMaterialById(id);
+        int qualityPoints = player.getInventory().countMaterialQualityPointsById(id);
+        int requiredPoints = needed * 2;
+
+        std::ostringstream line;
+        line << MaterialCatalog::createById(id, 1).getName()
+             << " x" << needed
+             << " | possédé : " << owned
+             << " | équiv. qualité normale : " << qualityPoints / 2
+             << " | points : " << qualityPoints << "/" << requiredPoints;
+
+        if (qualityPoints < requiredPoints)
+        {
+            line << " | manquant";
+        }
+
+        return line.str();
+    }
+
+    std::vector<std::string> buildRepairMaterialCostLines(Player& player, bool armorRepair, int thresholdPercent)
+    {
+        std::vector<std::string> lines;
+
+        if (armorRepair)
+        {
+            lines.push_back(materialStockText(player, "worn_leather_piece", thresholdPercent >= 75 ? 2 : 1));
+
+            if (thresholdPercent >= 75)
+            {
+                lines.push_back(materialStockText(player, "beast_hide", 1));
+            }
+        }
+        else
+        {
+            lines.push_back(materialStockText(player, "rusted_metal_fragment", thresholdPercent >= 75 ? 2 : 1));
+        }
+
+        if (thresholdPercent >= 50)
+        {
+            lines.push_back(materialStockText(player, "slime_residue", 1));
+        }
+
+        if (thresholdPercent >= 75)
+        {
+            lines.push_back(materialStockText(player, "arcane_dust", 1));
+        }
+
+        if (thresholdPercent >= 95)
+        {
+            lines.push_back(materialStockText(player, "draconic_scale_fragment", 1));
+        }
+
+        return lines;
+    }
+
+    std::string repairKitStatusText(const std::string& kitId)
+    {
+        if (isUsedRepairKitId(kitId))
+        {
+            return "Entamé [" + std::to_string(repairKitCurrentDurability(kitId)) + "/" + std::to_string(repairKitMaxDurability(kitId)) + "]";
+        }
+
+        return "Intact [" + std::to_string(repairKitMaxDurability(kitId)) + "/" + std::to_string(repairKitMaxDurability(kitId)) + "]";
+    }
+
+    std::string repairKitWearResultText(const std::string& kitId, bool kitDurabilitySaved)
+    {
+        if (kitDurabilitySaved)
+        {
+            return "Spécial Forgeron : l'usure du kit est économisée cette fois-ci.";
+        }
+
+        int remainingDurability = repairKitCurrentDurability(kitId) - 1;
+
+        if (remainingDurability > 0)
+        {
+            return "Le kit perd 1 durabilité. Il passe à " + std::to_string(remainingDurability) + "/" + std::to_string(repairKitMaxDurability(kitId)) + ".";
+        }
+
+        return "Le kit perd sa dernière durabilité et disparaît.";
+    }
+
+    void showCraftResultScreen(const std::string& recipeName, int crafted, int requested)
+    {
+        std::vector<std::string> lines;
+        lines.push_back("Schéma : " + recipeName);
+        lines.push_back("Fabrication(s) réussie(s) : " + std::to_string(crafted) + "/" + std::to_string(requested) + ".");
+
+        if (crafted <= 0)
+        {
+            lines.push_back("Rien n'a été produit. Les composants ont été vérifiés avant l'essai ou la fabrication s'est arrêtée immédiatement.");
+        }
+        else
+        {
+            lines.push_back("Les composants consommés et les objets obtenus sont enregistrés dans l'inventaire.");
+            lines.push_back("Le journal d'expérimentation garde la trace de cette fabrication.");
+        }
+
+        MessageScreen::show("RÉSUMÉ CRAFT", "inventory.craft.result", lines);
+    }
+
 
     // EN: rollPercent declares or implements a focused behavior used by this module.
     // FR: rollPercent déclare ou implémente un comportement précis utilisé par ce module.
@@ -247,7 +553,7 @@ namespace
         if (saveChance > 0 && rollPercent(saveChance))
         {
             player.getInventory().addMaterial(MaterialCatalog::createById(catalystId, 1));
-            std::cout << "Spécial Alchimiste : tu récupères/économises " << catalystName << " pendant la préparation." << std::endl;
+            inventoryNotice << "Spécial Alchimiste : tu récupères/économises " << catalystName << " pendant la préparation." << std::endl;
         }
     }
 
@@ -335,86 +641,6 @@ namespace
         return true;
     }
 
-    // EN: displayRepairMaterialCost declares or implements a focused behavior used by this module.
-    // FR: displayRepairMaterialCost déclare ou implémente un comportement précis utilisé par ce module.
-    void displayRepairMaterialCost(bool armorRepair, int thresholdPercent)
-    {
-        if (armorRepair)
-        {
-            std::cout << (thresholdPercent >= 75 ? "2 Morceaux de cuir abîmé" : "1 Morceau de cuir abîmé");
-
-            if (thresholdPercent >= 75)
-            {
-                std::cout << " + 1 Peau de bête robuste";
-            }
-        }
-        else
-        {
-            std::cout << (thresholdPercent >= 75 ? "2 Fragments de métal rouillé" : "1 Fragment de métal rouillé");
-        }
-
-        if (thresholdPercent >= 50)
-        {
-            std::cout << " + 1 Résidu de slime";
-        }
-
-        if (thresholdPercent >= 75)
-        {
-            std::cout << " + 1 Poussière arcanique";
-        }
-
-        if (thresholdPercent >= 95)
-        {
-            std::cout << " + 1 Fragment d'écaille draconique";
-        }
-    }
-
-
-    // EN: displayRepairMaterialLine declares or implements a focused behavior used by this module.
-    // FR: displayRepairMaterialLine déclare ou implémente un comportement précis utilisé par ce module.
-    void displayRepairMaterialLine(Player& player, const std::string& id, const std::string& name, int needed)
-    {
-        std::cout << "- " << name << " x" << needed
-                  << " (possédé : " << player.getInventory().countMaterialById(id)
-                  << ", équiv. qualité normale : "
-                  << player.getInventory().countMaterialQualityPointsById(id) / 2
-                  << ")" << std::endl;
-    }
-
-    // EN: displayRepairMaterialCostDetailed declares or implements a focused behavior used by this module.
-    // FR: displayRepairMaterialCostDetailed déclare ou implémente un comportement précis utilisé par ce module.
-    void displayRepairMaterialCostDetailed(Player& player, bool armorRepair, int thresholdPercent)
-    {
-        if (armorRepair)
-        {
-            displayRepairMaterialLine(player, "worn_leather_piece", "Morceau de cuir abîmé", thresholdPercent >= 75 ? 2 : 1);
-
-            if (thresholdPercent >= 75)
-            {
-                displayRepairMaterialLine(player, "beast_hide", "Peau de bête robuste", 1);
-            }
-        }
-        else
-        {
-            displayRepairMaterialLine(player, "rusted_metal_fragment", "Fragment de métal rouillé", thresholdPercent >= 75 ? 2 : 1);
-        }
-
-        if (thresholdPercent >= 50)
-        {
-            displayRepairMaterialLine(player, "slime_residue", "Résidu de slime", 1);
-        }
-
-        if (thresholdPercent >= 75)
-        {
-            displayRepairMaterialLine(player, "arcane_dust", "Poussière arcanique", 1);
-        }
-
-        if (thresholdPercent >= 95)
-        {
-            displayRepairMaterialLine(player, "draconic_scale_fragment", "Fragment d'écaille draconique", 1);
-        }
-    }
-
     // EN: consumeRepairMaterials declares or implements a focused behavior used by this module.
     // FR: consumeRepairMaterials déclare ou implémente un comportement précis utilisé par ce module.
     void consumeRepairMaterials(Player& player, bool armorRepair, int thresholdPercent)
@@ -499,77 +725,99 @@ namespace
 
         if (choices.empty())
         {
-            std::cout << "Tu n'as aucun kit de réparation disponible." << std::endl;
-            std::cout << "Les kits restent listés avec les consommables, mais la réparation se lance depuis une arme ou une armure." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "AUCUN KIT",
+                "inventory.repair.kit.empty",
+                {
+                    "Tu n'as aucun kit de réparation disponible.",
+                    "Les kits restent visibles avec les consommables, mais la réparation se lance depuis une arme ou une armure."
+                }
+            );
             return -1;
         }
 
-        std::cout << "========== CHOIX DU KIT ==========" << std::endl;
-        std::cout << "0 : Annuler" << std::endl;
+        MenuScreen screen("CHOIX DU KIT", "inventory.repair.kit.choice");
+        screen.addLine("Sélectionne le kit à utiliser pour cette réparation.");
+        screen.addBackOption("Annuler", "inventory.repair.kit.cancel");
 
         for (int i = 0; i < static_cast<int>(choices.size()); ++i)
         {
-            std::cout << i + 1 << " : " << choices[i].label;
+            const RepairKitChoice& choice = choices[i];
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "material";
+            itemData.section = "Réparation";
+            itemData.actionType = "repair_kit";
+            itemData.name = choice.label;
+            itemData.quantity = std::to_string(choice.quantity);
+            itemData.detail = "Seuil de réparation : " + std::to_string(choice.thresholdPercent) + "%";
+            itemData.status = repairKitStatusText(choice.id);
+            itemData.progress = "Durabilité kit : " + std::to_string(choice.currentDurability) + "/" + std::to_string(choice.maxDurability);
 
-            if (isUsedRepairKitId(choices[i].id))
-            {
-                std::cout << " entamé [" << choices[i].currentDurability << "/" << choices[i].maxDurability << "]";
-            }
-            else
-            {
-                std::cout << " intact [" << choices[i].maxDurability << "/" << choices[i].maxDurability << "]";
-            }
-
-            std::cout << " x" << choices[i].quantity
-                      << " | seuil : +" << choices[i].thresholdPercent << "%"
-                      << std::endl;
+            screen.addOption(
+                i + 1,
+                choice.label + " x" + std::to_string(choice.quantity),
+                repairKitStatusText(choice.id) + " | seuil : " + std::to_string(choice.thresholdPercent) + "%",
+                true,
+                "inventory.repair.kit.select",
+                itemData
+            );
         }
 
-        std::cout << "==================================" << std::endl;
-        std::cout << "> ";
+        int selected = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis un kit affiché, ou 0 pour annuler.");
+        Console::clear();
 
-        int choice = Console::askNumberBetween(0, static_cast<int>(choices.size()), "Choix invalide.");
-        std::cout << std::endl;
-
-        if (choice == 0)
+        if (selected == 0)
         {
             return -1;
         }
 
-        return choice - 1;
+        if (selected < 1 || selected > static_cast<int>(choices.size()))
+        {
+            MessageScreen::show(
+                "KIT INVALIDE",
+                "inventory.repair.kit.invalid",
+                {"Ce numéro ne correspond à aucun kit affiché.", "La réparation est annulée pour éviter de consommer le mauvais outil."}
+            );
+            return -1;
+        }
+
+        return selected - 1;
     }
+
 
     // EN: confirmRepairCost declares or implements a focused behavior used by this module.
     // FR: confirmRepairCost déclare ou implémente un comportement précis utilisé par ce module.
     bool confirmRepairCost(Player& player, const std::string& itemName, bool armorRepair, const RepairKitChoice& kitChoice)
     {
-        std::cout << "========== RÉPARATION ==========" << std::endl;
-        std::cout << "Équipement : " << itemName << std::endl;
-        std::cout << "Kit : " << kitChoice.label << " [" << kitChoice.currentDurability << "/" << kitChoice.maxDurability << "]" << std::endl;
-        std::cout << "Seuil permis : +" << kitChoice.thresholdPercent << "% de durabilité maximale." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Matériaux nécessaires :" << std::endl;
-        displayRepairMaterialCostDetailed(player, armorRepair, kitChoice.thresholdPercent);
-        std::cout << std::endl;
+        MenuScreen screen("CONFIRMATION RÉPARATION", "inventory.repair.confirm");
+        screen.addLine("Équipement : " + itemName);
+        screen.addLine("Kit : " + kitChoice.label + " | " + repairKitStatusText(kitChoice.id));
+        screen.addLine("Seuil permis : " + std::to_string(kitChoice.thresholdPercent) + "% de la durabilité maximale.");
+        screen.addLine("Matériaux nécessaires :");
+
+        for (const std::string& line : buildRepairMaterialCostLines(player, armorRepair, kitChoice.thresholdPercent))
+        {
+            screen.addLine("- " + line);
+        }
 
         if (!hasRepairMaterials(player, armorRepair, kitChoice.thresholdPercent))
         {
-            std::cout << "Matériaux insuffisants pour cette réparation." << std::endl;
-            std::cout << "================================" << std::endl;
-            std::cout << std::endl;
+            screen.addLine("Matériaux insuffisants pour cette réparation.");
+            screen.addBackOption("Retour", "inventory.repair.confirm.back");
+            TerminalInterface::askMenuChoice(screen, 0, 0, "Entre 0 pour revenir.");
+            Console::clear();
             return false;
         }
 
-        std::cout << "1 : Continuer et réparer" << std::endl;
-        std::cout << "0 : Annuler" << std::endl;
-        std::cout << "> ";
+        screen.addBackOption("Annuler", "inventory.repair.cancel");
+        screen.addOption(1, "Continuer et réparer", "Le kit et les composants indiqués seront utilisés.", true, "inventory.repair.accept");
 
-        int choice = Console::askNumberBetween(0, 1, "Choix invalide.");
-        std::cout << std::endl;
-
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option affichée.");
+        Console::clear();
         return choice == 1;
     }
+
 
     // EN: applyRepairKitWear declares or implements a focused behavior used by this module.
     // FR: applyRepairKitWear déclare ou implémente un comportement précis utilisé par ce module.
@@ -587,28 +835,6 @@ namespace
         consumeRepairKitDurability(player, kitId);
     }
 
-    // EN: displayRepairKitWearResult declares or implements a focused behavior used by this module.
-    // FR: displayRepairKitWearResult déclare ou implémente un comportement précis utilisé par ce module.
-    void displayRepairKitWearResult(const std::string& kitId, bool kitDurabilitySaved)
-    {
-        if (kitDurabilitySaved)
-        {
-            std::cout << "Spécial Forgeron : tu économises l'usure du kit cette fois-ci." << std::endl;
-            return;
-        }
-
-        int remainingDurability = repairKitCurrentDurability(kitId) - 1;
-
-        if (remainingDurability > 0)
-        {
-            std::cout << "Le kit perd 1 durabilité. Il passe à " << remainingDurability << "/" << repairKitMaxDurability(kitId) << "." << std::endl;
-        }
-        else
-        {
-            std::cout << "Le kit perd sa dernière durabilité et disparaît." << std::endl;
-        }
-    }
-
     // EN: repairSelectedWeapon declares or implements a focused behavior used by this module.
     // FR: repairSelectedWeapon déclare ou implémente un comportement précis utilisé par ce module.
     bool repairSelectedWeapon(Player& player, int weaponIndex)
@@ -617,19 +843,19 @@ namespace
 
         if (weapon == nullptr)
         {
-            std::cout << "Cette arme n'existe plus." << std::endl << std::endl;
+            MessageScreen::show("ARME INTROUVABLE", "inventory.weapon.repair.missing", {"Cette arme n'existe plus.", "La réparation est annulée."});
             return false;
         }
 
         if (weapon->isIndestructible())
         {
-            std::cout << "Cette arme est indestructible. Elle n'a pas besoin de réparation." << std::endl << std::endl;
+            MessageScreen::show("RÉPARATION INUTILE", "inventory.weapon.repair.indestructible", {"Cette arme est indestructible.", "Elle n'a pas besoin de réparation."});
             return false;
         }
 
         if (weapon->getDurability() >= weapon->getMaxDurability())
         {
-            std::cout << "Cette arme est déjà en parfait état." << std::endl << std::endl;
+            MessageScreen::show("ARME INTACTE", "inventory.weapon.repair.full", {"Cette arme est déjà en parfait état.", "Aucun kit n'est consommé."});
             return false;
         }
 
@@ -642,13 +868,21 @@ namespace
         }
 
         RepairKitChoice kitChoice = choices[kitChoiceIndex];
+        int durabilityBefore = weapon->getDurability();
         int cap = repairedDurabilityCap(weapon->getMaxDurability(), kitChoice.thresholdPercent);
 
         if (weapon->getDurability() >= cap)
         {
-            std::cout << "Ce kit ne peut pas améliorer davantage cette arme." << std::endl;
-            std::cout << "Seuil du kit : " << cap << "/" << weapon->getMaxDurability() << "." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "KIT TROP FAIBLE",
+                "inventory.weapon.repair.cap_blocked",
+                {
+                    "Arme : " + weapon->getName(),
+                    "Durabilité actuelle : " + std::to_string(weapon->getDurability()) + "/" + std::to_string(weapon->getMaxDurability()),
+                    "Seuil du kit : " + std::to_string(cap) + "/" + std::to_string(weapon->getMaxDurability()),
+                    "Ce kit ne peut pas améliorer davantage cette arme."
+                }
+            );
             return false;
         }
 
@@ -657,6 +891,8 @@ namespace
             return false;
         }
 
+        std::string kitStatusBefore = repairKitStatusText(kitChoice.id);
+        std::vector<std::string> consumedLines = buildRepairMaterialCostLines(player, false, kitChoice.thresholdPercent);
         consumeRepairMaterials(player, false, kitChoice.thresholdPercent);
         bool kitDurabilitySaved = false;
         applyRepairKitWear(player, kitChoice.id, kitDurabilitySaved);
@@ -664,15 +900,22 @@ namespace
         int amountToRepair = cap - weapon->getDurability();
         weapon->repair(amountToRepair);
 
-        std::cout << "Tu répares " << weapon->getName() << "." << std::endl;
-        std::cout << "Matériaux consommés : ";
-        displayRepairMaterialCost(false, kitChoice.thresholdPercent);
-        std::cout << "." << std::endl;
-        displayRepairKitWearResult(kitChoice.id, kitDurabilitySaved);
-        std::cout << "Durabilité actuelle : " << weapon->getDurability() << "/" << weapon->getMaxDurability() << std::endl;
-        std::cout << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("Arme : " + weapon->getName());
+        lines.push_back("Kit utilisé : " + kitChoice.label + " | état avant usage : " + kitStatusBefore);
+        lines.push_back("Durabilité avant : " + std::to_string(durabilityBefore) + "/" + std::to_string(weapon->getMaxDurability()));
+        lines.push_back("Durabilité après : " + std::to_string(weapon->getDurability()) + "/" + std::to_string(weapon->getMaxDurability()));
+        lines.push_back("Matériaux consommés :");
+        for (const std::string& line : consumedLines)
+        {
+            lines.push_back("- " + line);
+        }
+        lines.push_back(repairKitWearResultText(kitChoice.id, kitDurabilitySaved));
+
+        MessageScreen::show("ARME RÉPARÉE", "inventory.weapon.repair.result", lines);
         return false;
     }
+
 
     // EN: repairSelectedArmor declares or implements a focused behavior used by this module.
     // FR: repairSelectedArmor déclare ou implémente un comportement précis utilisé par ce module.
@@ -682,19 +925,19 @@ namespace
 
         if (armor == nullptr)
         {
-            std::cout << "Cette armure n'existe plus." << std::endl << std::endl;
+            MessageScreen::show("ARMURE INTROUVABLE", "inventory.armor.repair.missing", {"Cette armure n'existe plus.", "La réparation est annulée."});
             return false;
         }
 
         if (armor->isIndestructible())
         {
-            std::cout << "Cette armure est indestructible. Elle n'a pas besoin de réparation." << std::endl << std::endl;
+            MessageScreen::show("RÉPARATION INUTILE", "inventory.armor.repair.indestructible", {"Cette armure est indestructible.", "Elle n'a pas besoin de réparation."});
             return false;
         }
 
         if (armor->getDurability() >= armor->getMaxDurability())
         {
-            std::cout << "Cette armure est déjà en parfait état." << std::endl << std::endl;
+            MessageScreen::show("ARMURE INTACTE", "inventory.armor.repair.full", {"Cette armure est déjà en parfait état.", "Aucun kit n'est consommé."});
             return false;
         }
 
@@ -707,13 +950,21 @@ namespace
         }
 
         RepairKitChoice kitChoice = choices[kitChoiceIndex];
+        int durabilityBefore = armor->getDurability();
         int cap = repairedDurabilityCap(armor->getMaxDurability(), kitChoice.thresholdPercent);
 
         if (armor->getDurability() >= cap)
         {
-            std::cout << "Ce kit ne peut pas améliorer davantage cette armure." << std::endl;
-            std::cout << "Seuil du kit : " << cap << "/" << armor->getMaxDurability() << "." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "KIT TROP FAIBLE",
+                "inventory.armor.repair.cap_blocked",
+                {
+                    "Armure : " + armor->getName(),
+                    "Durabilité actuelle : " + std::to_string(armor->getDurability()) + "/" + std::to_string(armor->getMaxDurability()),
+                    "Seuil du kit : " + std::to_string(cap) + "/" + std::to_string(armor->getMaxDurability()),
+                    "Ce kit ne peut pas améliorer davantage cette armure."
+                }
+            );
             return false;
         }
 
@@ -722,6 +973,8 @@ namespace
             return false;
         }
 
+        std::string kitStatusBefore = repairKitStatusText(kitChoice.id);
+        std::vector<std::string> consumedLines = buildRepairMaterialCostLines(player, true, kitChoice.thresholdPercent);
         consumeRepairMaterials(player, true, kitChoice.thresholdPercent);
         bool kitDurabilitySaved = false;
         applyRepairKitWear(player, kitChoice.id, kitDurabilitySaved);
@@ -729,131 +982,127 @@ namespace
         int amountToRepair = cap - armor->getDurability();
         armor->repair(amountToRepair);
 
-        std::cout << "Tu répares " << armor->getName() << "." << std::endl;
-        std::cout << "Matériaux consommés : ";
-        displayRepairMaterialCost(true, kitChoice.thresholdPercent);
-        std::cout << "." << std::endl;
-        displayRepairKitWearResult(kitChoice.id, kitDurabilitySaved);
-        std::cout << "Durabilité actuelle : " << armor->getDurability() << "/" << armor->getMaxDurability() << std::endl;
-        std::cout << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("Armure : " + armor->getName());
+        lines.push_back("Kit utilisé : " + kitChoice.label + " | état avant usage : " + kitStatusBefore);
+        lines.push_back("Durabilité avant : " + std::to_string(durabilityBefore) + "/" + std::to_string(armor->getMaxDurability()));
+        lines.push_back("Durabilité après : " + std::to_string(armor->getDurability()) + "/" + std::to_string(armor->getMaxDurability()));
+        lines.push_back("Matériaux consommés :");
+        for (const std::string& line : consumedLines)
+        {
+            lines.push_back("- " + line);
+        }
+        lines.push_back(repairKitWearResultText(kitChoice.id, kitDurabilitySaved));
+
+        MessageScreen::show("ARMURE RÉPARÉE", "inventory.armor.repair.result", lines);
         return false;
     }
+
 
     // EN: displayMaterialUtility declares or implements a focused behavior used by this module.
     // FR: displayMaterialUtility déclare ou implémente un comportement précis utilisé par ce module.
     void displayMaterialUtility(const Material& material)
     {
-        std::cout << "========== UTILITÉ PRÉVUE ==========" << std::endl;
-        std::cout << material.getName() << " | " << material.getCategory() << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back(material.getName() + " | " + material.getCategory());
+
         if (material.getCategory() != "Livre" && material.getCategory() != "Renseignement" && material.getCategory() != "Outil")
         {
-            std::cout << "Qualité : " << material.getQualityLabel() << std::endl;
-            std::cout << "Craft : faible/impur compte moins, pur/haute qualité compte plus." << std::endl;
+            lines.push_back("Qualité : " + material.getQualityLabel());
+            lines.push_back("Craft : faible/impur compte moins, pur/haute qualité compte plus.");
         }
 
         if (isRepairKitId(material.getId()))
         {
-            std::cout << "Usage : autorise une réparation autonome jusqu'à environ +" << repairThresholdPercentForKit(material.getId()) << "% de durabilité." << std::endl;
-            if (isUsedRepairKitId(material.getId()))
-            {
-                std::cout << "Kits entamés empilés ici : " << material.getQuantity() << std::endl;
-                std::cout << "Durabilité par kit : " << repairKitCurrentDurability(material.getId()) << "/" << repairKitMaxDurability(material.getId()) << std::endl;
-            }
-            else
-            {
-                std::cout << "Kits intacts empilés ici : " << material.getQuantity() << std::endl;
-                std::cout << "Durabilité par kit : " << repairKitMaxDurability(material.getId()) << "/" << repairKitMaxDurability(material.getId()) << std::endl;
-            }
-            std::cout << "Après chaque réparation, le kit perd normalement 1 durabilité. Les matériaux restent consommés." << std::endl;
+            lines.push_back("Usage : réparation autonome jusqu'à environ " + std::to_string(repairThresholdPercentForKit(material.getId())) + "% de durabilité.");
+            lines.push_back("Durabilité par kit : " + std::to_string(repairKitCurrentDurability(material.getId())) + "/" + std::to_string(repairKitMaxDurability(material.getId())));
+            lines.push_back("Kits empilés ici : " + std::to_string(material.getQuantity()));
+            lines.push_back("La réparation se lance depuis l'arme ou l'armure, pas directement depuis le kit.");
         }
         else if (material.getId() == "rusted_metal_fragment" || material.getId() == "worn_leather_piece")
         {
-            std::cout << "Usages connus : craft basique, réparation et amélioration d'équipement commun." << std::endl;
+            lines.push_back("Usages connus : craft basique, réparation et amélioration d'équipement commun.");
         }
         else if (material.getId() == "wolf_fang" || material.getId() == "goblin_ear" || material.getId() == "cracked_bone")
         {
-            std::cout << "Usages connus : trophées, recettes de monstres, contrats de guilde et artisanat spécialisé." << std::endl;
+            lines.push_back("Usages connus : trophées, recettes de monstres, contrats de guilde et artisanat spécialisé.");
         }
         else if (material.getId() == "arcane_dust")
         {
-            std::cout << "Usages connus : enchantements, catalyseurs de sorts et équipements magiques." << std::endl;
+            lines.push_back("Usages connus : enchantements, catalyseurs de sorts et équipements magiques.");
         }
         else if (material.getId() == "slime_residue")
         {
-            std::cout << "Usages connus : colle, pièges, potions et réparations de fortune." << std::endl;
+            lines.push_back("Usages connus : colle, pièges, potions et réparations de fortune.");
         }
         else if (material.getCategory() == "Plante")
         {
-            std::cout << "Usages connus : potions, remèdes, quêtes botaniques et expériences." << std::endl;
+            lines.push_back("Usages connus : potions, remèdes, quêtes botaniques et expériences.");
         }
         else if (material.getCategory() == "Livre" || material.getCategory() == "Renseignement")
         {
-            std::cout << "Usages connus : lecture, recoupement d'archives et progression du bestiaire." << std::endl;
-        }
-        else if (material.getId() == "cracked_bone")
-        {
-            std::cout << "Usage supposé : nécromancie, rage supérieure, invocations sombres et artisanat d'os." << std::endl;
+            lines.push_back("Usages connus : lecture, recoupement d'archives et progression du bestiaire.");
         }
         else if (material.getId() == "battle_torn_badge")
         {
-            std::cout << "Usages connus : guildes, contrats, réputation et rencontres d'aventuriers." << std::endl;
+            lines.push_back("Usages connus : guildes, contrats, réputation et rencontres d'aventuriers.");
         }
         else if (material.getId() == "beast_hide")
         {
-            std::cout << "Usage supposé : armures, réparations épaisses, équipements lourds et survie." << std::endl;
+            lines.push_back("Usage supposé : armures, réparations épaisses, équipements lourds et survie.");
         }
         else if (material.getId() == "shadow_thread")
         {
-            std::cout << "Usages connus : ombres de Hazak, objets d'assassin, nécromancie et améliorations furtives." << std::endl;
+            lines.push_back("Usages connus : ombres de Hazak, objets d'assassin, nécromancie et améliorations furtives.");
         }
         else if (material.getId() == "kitsune_ember")
         {
-            std::cout << "Usages connus : flammes kitsune, invocations d'Aoi, potions avancées et enchantements feu." << std::endl;
+            lines.push_back("Usages connus : flammes kitsune, invocations d'Aoi, potions avancées et enchantements feu.");
         }
         else if (material.getId() == "draconic_scale_fragment")
         {
-            std::cout << "Usages connus : protections rares, armures lourdes et crafts semi-dragons." << std::endl;
+            lines.push_back("Usages connus : protections rares, armures lourdes et crafts semi-dragons.");
         }
         else if (material.getId() == "unstable_core")
         {
-            std::cout << "Usage supposé : alchimie risquée, expériences de Fail, invocations instables et objets explosifs." << std::endl;
+            lines.push_back("Usage supposé : alchimie risquée, expériences de Fail, invocations instables et objets explosifs.");
         }
         else if (material.getId() == "fitoria_feather")
         {
-            std::cout << "Usage supposé : bénédictions, soins rares, équipements de lumière et reliques angéliques." << std::endl;
+            lines.push_back("Usage supposé : bénédictions, soins rares, équipements de lumière et reliques angéliques.");
         }
         else if (material.getId() == "zelef_demon_blood")
         {
-            std::cout << "Usages connus : alchimie dangereuse, armes démoniaques, malédictions et contrats sombres." << std::endl;
+            lines.push_back("Usages connus : alchimie dangereuse, armes démoniaques, malédictions et contrats sombres.");
         }
         else if (material.getId() == "atlas_broken_plate")
         {
-            std::cout << "Usages connus : armures lourdes, réparation extrême, reliques défensives et forge de haut niveau." << std::endl;
+            lines.push_back("Usages connus : armures lourdes, réparation extrême, reliques défensives et forge de haut niveau.");
         }
         else if (material.getId() == "precision_harvest_tools")
         {
-            std::cout << "Usages connus : bonus passif de récupération. Tant que tu les possèdes, tu récupères plus proprement certains matériaux." << std::endl;
+            lines.push_back("Usages connus : bonus passif de récupération propre tant que l'outil est conservé.");
         }
         else if (material.getId() == "preservation_vials")
         {
-            std::cout << "Usages connus : bonus passif de conservation. Réduit les chances d'abîmer liquides, braises, résidus et composants instables." << std::endl;
+            lines.push_back("Usages connus : bonus passif de conservation des composants fragiles.");
         }
         else if (material.getId() == "clean_harvest_manual")
         {
-            std::cout << "Usages connus : technique passive. La lecture confirme l'apprentissage, et posséder le manuel augmente la récupération propre." << std::endl;
+            lines.push_back("Usages connus : technique passive de récolte propre après lecture.");
         }
         else if (material.getId() == "monster_dissection_guide")
         {
-            std::cout << "Usages connus : technique passive. Aide à récupérer les composants de monstres sans trop les dégrader." << std::endl;
+            lines.push_back("Usages connus : technique passive pour récupérer des composants de monstres.");
         }
         else
         {
-            std::cout << "Usage supposé : craft, réparation ou expérimentation artisanale." << std::endl;
+            lines.push_back("Usage supposé : craft, réparation ou expérimentation artisanale.");
         }
 
-        std::cout << "====================================" << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show("UTILITÉ PRÉVUE", "inventory.material.utility", lines);
     }
+
 
     // EN: readMaterialIfPossible declares or implements a focused behavior used by this module.
     // FR: readMaterialIfPossible déclare ou implémente un comportement précis utilisé par ce module.
@@ -861,21 +1110,21 @@ namespace
     {
         if (material.getCategory() != "Livre" && material.getCategory() != "Renseignement")
         {
-            std::cout << "Tu manipules " << material.getName() << ", mais tu ne trouves pas comment l'utiliser sans risque." << std::endl;
-            std::cout << "[rien ne se passe]" << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Tu manipules " << material.getName() << ", mais tu ne trouves pas comment l'utiliser sans risque." << std::endl;
+            inventoryNotice << "[rien ne se passe]" << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
         BestiaryRuntimeProgress::unlockCommonInformation(material.getId());
 
-        std::cout << "Tu prends le temps de lire : " << material.getName() << "." << std::endl;
+        inventoryNotice << "Tu prends le temps de lire : " << material.getName() << "." << std::endl;
         if (material.getId() == "clean_harvest_manual" || material.getId() == "monster_dissection_guide")
         {
-            std::cout << "Technique passive comprise : ses effets restent actifs tant que l'apprentissage est conservé dans l'inventaire." << std::endl;
+            inventoryNotice << "Technique passive comprise : ses effets restent actifs tant que l'apprentissage est conservé dans l'inventaire." << std::endl;
         }
-        std::cout << "Les informations compatibles sont ajoutées ou confirmées dans le bestiaire de session." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Les informations compatibles sont ajoutées ou confirmées dans le bestiaire de session." << std::endl;
+        inventoryNotice << std::endl;
         return false;
     }
 
@@ -1027,8 +1276,8 @@ namespace
         {
             Consumable special = createExceptionalCraftedConsumable(base);
             player.getInventory().addConsumable(special);
-            std::cout << "Matériaux exceptionnels majoritaires : la fabrication ajoute une faible particularité à l'objet créé." << std::endl;
-            std::cout << "Chance appliquée : " << chance << "% grâce à la qualité et au métier." << std::endl;
+            inventoryNotice << "Matériaux exceptionnels majoritaires : la fabrication ajoute une faible particularité à l'objet créé." << std::endl;
+            inventoryNotice << "Chance appliquée : " << chance << "% grâce à la qualité et au métier." << std::endl;
             return;
         }
 
@@ -1075,8 +1324,8 @@ namespace
         if (exceptionalMajority && rollPercent(chance))
         {
             player.getInventory().addWeapon(createExceptionalCraftedWeapon(base));
-            std::cout << "Matériaux exceptionnels majoritaires : l'arme gagne une faible particularité." << std::endl;
-            std::cout << "Chance appliquée : " << chance << "% grâce à la qualité et au métier." << std::endl;
+            inventoryNotice << "Matériaux exceptionnels majoritaires : l'arme gagne une faible particularité." << std::endl;
+            inventoryNotice << "Chance appliquée : " << chance << "% grâce à la qualité et au métier." << std::endl;
             return;
         }
 
@@ -1092,8 +1341,8 @@ namespace
         if (exceptionalMajority && rollPercent(chance))
         {
             player.getInventory().addArmor(createExceptionalCraftedArmor(base));
-            std::cout << "Matériaux exceptionnels majoritaires : l'armure gagne une faible particularité." << std::endl;
-            std::cout << "Chance appliquée : " << chance << "% grâce à la qualité et au métier." << std::endl;
+            inventoryNotice << "Matériaux exceptionnels majoritaires : l'armure gagne une faible particularité." << std::endl;
+            inventoryNotice << "Chance appliquée : " << chance << "% grâce à la qualité et au métier." << std::endl;
             return;
         }
 
@@ -1120,7 +1369,7 @@ namespace
         {
             if (!hasRecipeIngredients(player, ingredient.id, ingredient.quantity))
             {
-                std::cout << "Il manque des composants pour : " << recipeName << "." << std::endl << std::endl;
+                inventoryNotice << "Il manque des composants pour : " << recipeName << "." << std::endl << std::endl;
                 return false;
             }
         }
@@ -1142,8 +1391,8 @@ namespace
             // FR: !hasRecipeIngredients déclare ou implémente un comportement précis utilisé par ce module.
             || !hasRecipeIngredients(player, "slime_residue", 1))
         {
-            std::cout << "Recette incomplète : il faut 2 Feuilles amères de soin et 1 Résidu de slime." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 2 Feuilles amères de soin et 1 Résidu de slime." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1154,9 +1403,9 @@ namespace
         addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createBasicHealingPotion(), exceptionalMajority);
         maybeRestoreAlchemistCatalyst(player, "slime_residue", "le résidu de slime");
 
-        std::cout << "Tu écrases les feuilles, stabilises le mélange avec le résidu de slime," << std::endl;
-        std::cout << "et obtiens une Potion de soin." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu écrases les feuilles, stabilises le mélange avec le résidu de slime," << std::endl;
+        inventoryNotice << "et obtiens une Potion de soin." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1169,8 +1418,8 @@ namespace
             // FR: !hasRecipeIngredients déclare ou implémente un comportement précis utilisé par ce module.
             || !hasRecipeIngredients(player, "arcane_dust", 1))
         {
-            std::cout << "Recette incomplète : il faut 1 Fleur bleue de montagne et 1 Poussière arcanique." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Fleur bleue de montagne et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1181,9 +1430,9 @@ namespace
         addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createReinforcedHealingPotion(), exceptionalMajority);
         maybeRestoreAlchemistCatalyst(player, "arcane_dust", "la poussière arcanique");
 
-        std::cout << "La fleur bleue absorbe la poussière arcanique sans se briser." << std::endl;
-        std::cout << "Tu obtiens une Potion de soin renforcée." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "La fleur bleue absorbe la poussière arcanique sans se briser." << std::endl;
+        inventoryNotice << "Tu obtiens une Potion de soin renforcée." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1193,7 +1442,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"slime_residue", 1}, {"bitter_healing_leaf", 1}}, "Antidote simple")) return false;
         addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createAntidotePotion(), false);
         maybeRestoreAlchemistCatalyst(player, "slime_residue", "le résidu de slime");
-        std::cout << "Tu filtres le résidu et obtiens un Antidote simple contre les poisons faibles." << std::endl << std::endl;
+        inventoryNotice << "Tu filtres le résidu et obtiens un Antidote simple contre les poisons faibles." << std::endl << std::endl;
         return true;
     }
 
@@ -1202,7 +1451,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"bitter_healing_leaf", 1}, {"slime_residue", 1}, {"arcane_dust", 1}}, "Baume anti-brûlure")) return false;
         addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createBurnSalvePotion(), false);
         maybeRestoreAlchemistCatalyst(player, "arcane_dust", "la poussière arcanique");
-        std::cout << "Tu obtiens un Baume anti-brûlure, assez stable pour stopper une brûlure faible." << std::endl << std::endl;
+        inventoryNotice << "Tu obtiens un Baume anti-brûlure, assez stable pour stopper une brûlure faible." << std::endl << std::endl;
         return true;
     }
 
@@ -1211,7 +1460,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"mountain_blue_flower", 1}, {"slime_residue", 1}}, "Potion tiède anti-givre")) return false;
         addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createFrostResistancePotion(), false);
         maybeRestoreAlchemistCatalyst(player, "slime_residue", "le résidu de slime");
-        std::cout << "Tu obtiens une Potion tiède anti-givre, utile contre les ralentissements froids." << std::endl << std::endl;
+        inventoryNotice << "Tu obtiens une Potion tiède anti-givre, utile contre les ralentissements froids." << std::endl << std::endl;
         return true;
     }
 
@@ -1220,7 +1469,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"rusted_metal_fragment", 1}, {"arcane_dust", 1}, {"slime_residue", 1}}, "Potion isolante")) return false;
         addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createShockResistancePotion(), false);
         maybeRestoreAlchemistCatalyst(player, "arcane_dust", "la poussière arcanique");
-        std::cout << "Tu obtiens une Potion isolante, pensée pour couper les décharges avant le prochain geste raté." << std::endl << std::endl;
+        inventoryNotice << "Tu obtiens une Potion isolante, pensée pour couper les décharges avant le prochain geste raté." << std::endl << std::endl;
         return true;
     }
 
@@ -1233,8 +1482,8 @@ namespace
             // FR: !hasRecipeIngredients déclare ou implémente un comportement précis utilisé par ce module.
             || !hasRecipeIngredients(player, "arcane_dust", 1))
         {
-            std::cout << "Recette incomplète : il faut 1 Croc de loup et 1 Poussière arcanique." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Croc de loup et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1245,9 +1494,9 @@ namespace
         addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createBasicDamagePotion(), exceptionalMajority);
         maybeRestoreAlchemistCatalyst(player, "arcane_dust", "la poussière arcanique");
 
-        std::cout << "Le croc garde une agressivité étrange une fois broyé." << std::endl;
-        std::cout << "Tu obtiens une Potion de rage." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Le croc garde une agressivité étrange une fois broyé." << std::endl;
+        inventoryNotice << "Tu obtiens une Potion de rage." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1261,8 +1510,8 @@ namespace
             || !hasRecipeIngredients(player, "cracked_bone", 1)
             || !hasRecipeIngredients(player, "arcane_dust", 1))
         {
-            std::cout << "Recette incomplète : il faut 2 Crocs de loup, 1 Os fissuré et 1 Poussière arcanique." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 2 Crocs de loup, 1 Os fissuré et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1274,9 +1523,9 @@ namespace
         addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createReinforcedDamagePotion(), exceptionalMajority);
         maybeRestoreAlchemistCatalyst(player, "arcane_dust", "la poussière arcanique");
 
-        std::cout << "L'os fissuré absorbe la rage du croc et la poussière arcanique la stabilise à peine." << std::endl;
-        std::cout << "Tu obtiens une Potion de rage supérieure." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "L'os fissuré absorbe la rage du croc et la poussière arcanique la stabilise à peine." << std::endl;
+        inventoryNotice << "Tu obtiens une Potion de rage supérieure." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1290,8 +1539,8 @@ namespace
             || !hasRecipeIngredients(player, "mountain_blue_flower", 1)
             || !hasRecipeIngredients(player, "slime_residue", 1))
         {
-            std::cout << "Recette incomplète : il faut 1 Braise kitsune, 1 Fleur bleue de montagne et 1 Résidu de slime." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Braise kitsune, 1 Fleur bleue de montagne et 1 Résidu de slime." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1303,9 +1552,9 @@ namespace
         addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createReinforcedHealingPotion(), exceptionalMajority);
         maybeRestoreAlchemistCatalyst(player, "slime_residue", "le résidu de slime");
 
-        std::cout << "La braise kitsune réchauffe la fleur sans la brûler." << std::endl;
-        std::cout << "Tu obtiens une Potion de soin renforcée." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "La braise kitsune réchauffe la fleur sans la brûler." << std::endl;
+        inventoryNotice << "Tu obtiens une Potion de soin renforcée." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1319,8 +1568,8 @@ namespace
             || !hasRecipeIngredients(player, "wolf_fang", 1)
             || !hasRecipeIngredients(player, "arcane_dust", 1))
         {
-            std::cout << "Recette incomplète : il faut 1 Noyau instable, 1 Croc de loup et 1 Poussière arcanique." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Noyau instable, 1 Croc de loup et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1332,9 +1581,9 @@ namespace
         addCraftedConsumableWithExceptionalChance(player, ConsumableCatalog::createReinforcedDamagePotion(), exceptionalMajority);
         maybeRestoreAlchemistCatalyst(player, "arcane_dust", "la poussière arcanique");
 
-        std::cout << "Le noyau instable pulse une dernière fois avant d'être scellé." << std::endl;
-        std::cout << "Tu obtiens une Potion de rage supérieure." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Le noyau instable pulse une dernière fois avant d'être scellé." << std::endl;
+        inventoryNotice << "Tu obtiens une Potion de rage supérieure." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1348,8 +1597,8 @@ namespace
             || !hasRecipeIngredients(player, "worn_leather_piece", 1)
             || !hasRecipeIngredients(player, "slime_residue", 1))
         {
-            std::cout << "Recette incomplète : il faut 2 Fragments de métal rouillé, 1 Morceau de cuir abîmé et 1 Résidu de slime." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 2 Fragments de métal rouillé, 1 Morceau de cuir abîmé et 1 Résidu de slime." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1358,9 +1607,9 @@ namespace
         consumeRecipeIngredient(player, "slime_residue", 1);
         player.getInventory().addMaterial(MaterialCatalog::createWeakRepairKit());
 
-        std::cout << "Tu relies le cuir, coinces les fragments métalliques et utilises le slime comme liant." << std::endl;
-        std::cout << "Tu obtiens un Kit de réparation faible. Sa durabilité est limitée." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu relies le cuir, coinces les fragments métalliques et utilises le slime comme liant." << std::endl;
+        inventoryNotice << "Tu obtiens un Kit de réparation faible. Sa durabilité est limitée." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1377,8 +1626,8 @@ namespace
             // FR: !hasRecipeIngredients déclare ou implémente un comportement précis utilisé par ce module.
             || !hasRecipeIngredients(player, "arcane_dust", 1))
         {
-            std::cout << "Recette incomplète : il faut 1 Kit faible intact, 3 Fragments de métal rouillé, 1 Morceau de cuir abîmé et 1 Poussière arcanique." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Kit faible intact, 3 Fragments de métal rouillé, 1 Morceau de cuir abîmé et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1388,9 +1637,9 @@ namespace
         consumeRecipeIngredient(player, "arcane_dust", 1);
         player.getInventory().addMaterial(MaterialCatalog::createMediumRepairKit());
 
-        std::cout << "La poussière arcanique stabilise les plaques de réparation." << std::endl;
-        std::cout << "Tu obtiens un Kit de réparation moyen." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "La poussière arcanique stabilise les plaques de réparation." << std::endl;
+        inventoryNotice << "Tu obtiens un Kit de réparation moyen." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1407,8 +1656,8 @@ namespace
             // FR: !hasRecipeIngredients déclare ou implémente un comportement précis utilisé par ce module.
             || !hasRecipeIngredients(player, "arcane_dust", 2))
         {
-            std::cout << "Recette incomplète : il faut 1 Kit moyen intact, 5 Fragments de métal rouillé, 3 Morceaux de cuir abîmé et 2 Poussières arcaniques." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Kit moyen intact, 5 Fragments de métal rouillé, 3 Morceaux de cuir abîmé et 2 Poussières arcaniques." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1418,9 +1667,9 @@ namespace
         consumeRecipeIngredient(player, "arcane_dust", 2);
         player.getInventory().addMaterial(MaterialCatalog::createBigRepairKit());
 
-        std::cout << "Tu renforces les attaches et solidifies les outils." << std::endl;
-        std::cout << "Tu obtiens un Gros kit de réparation." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu renforces les attaches et solidifies les outils." << std::endl;
+        inventoryNotice << "Tu obtiens un Gros kit de réparation." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1438,8 +1687,8 @@ namespace
             // FR: !hasRecipeIngredients déclare ou implémente un comportement précis utilisé par ce module.
             || !hasRecipeIngredients(player, "slime_residue", 3))
         {
-            std::cout << "Recette incomplète : il faut 1 Gros kit intact, 8 Fragments de métal rouillé, 5 Morceaux de cuir abîmé, 4 Poussières arcaniques et 3 Résidus de slime." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Gros kit intact, 8 Fragments de métal rouillé, 5 Morceaux de cuir abîmé, 4 Poussières arcaniques et 3 Résidus de slime." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1450,9 +1699,9 @@ namespace
         consumeRecipeIngredient(player, "slime_residue", 3);
         player.getInventory().addMaterial(MaterialCatalog::createTinkererCompleteRepairKit());
 
-        std::cout << "Tu assembles une vraie trousse presque complète." << std::endl;
-        std::cout << "Tu obtiens un Kit complet du bricoleur." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu assembles une vraie trousse presque complète." << std::endl;
+        inventoryNotice << "Tu obtiens un Kit complet du bricoleur." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1466,8 +1715,8 @@ namespace
             || !hasRecipeIngredients(player, "worn_leather_piece", 2)
             || !hasRecipeIngredients(player, "slime_residue", 1))
         {
-            std::cout << "Recette incomplète : il faut 1 Peau de bête robuste, 2 Morceaux de cuir abîmé et 1 Résidu de slime." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Peau de bête robuste, 2 Morceaux de cuir abîmé et 1 Résidu de slime." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1476,9 +1725,9 @@ namespace
         consumeRecipeIngredient(player, "slime_residue", 1);
         player.getInventory().addMaterial(MaterialCatalog::createMediumRepairKit());
 
-        std::cout << "Tu transformes la peau robuste en plaques de rafistolage renforcées." << std::endl;
-        std::cout << "Tu obtiens un Kit de réparation moyen." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu transformes la peau robuste en plaques de rafistolage renforcées." << std::endl;
+        inventoryNotice << "Tu obtiens un Kit de réparation moyen." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1492,8 +1741,8 @@ namespace
             || !hasRecipeIngredients(player, "worn_leather_piece", 1)
             || !hasRecipeIngredients(player, "arcane_dust", 1))
         {
-            std::cout << "Recette incomplète : il faut 4 Fragments de métal rouillé, 1 Morceau de cuir abîmé et 1 Poussière arcanique." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 4 Fragments de métal rouillé, 1 Morceau de cuir abîmé et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1517,8 +1766,8 @@ namespace
 
         addCraftedWeaponWithExceptionalChance(player, blade, exceptionalMajority);
 
-        std::cout << "Tu ajustes les fragments et obtiens une Lame de récupération." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu ajustes les fragments et obtiens une Lame de récupération." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1532,8 +1781,8 @@ namespace
             || !hasRecipeIngredients(player, "worn_leather_piece", 3)
             || !hasRecipeIngredients(player, "slime_residue", 1))
         {
-            std::cout << "Recette incomplète : il faut 2 Peaux de bête robustes, 3 Morceaux de cuir abîmé et 1 Résidu de slime." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 2 Peaux de bête robustes, 3 Morceaux de cuir abîmé et 1 Résidu de slime." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1556,8 +1805,8 @@ namespace
 
         addCraftedArmorWithExceptionalChance(player, armor, exceptionalMajority);
 
-        std::cout << "Tu tends la peau, renforces les coutures et obtiens une Armure de chasseur rafistolée." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu tends la peau, renforces les coutures et obtiens une Armure de chasseur rafistolée." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1573,8 +1822,8 @@ namespace
             || !hasRecipeIngredients(player, "rusted_metal_fragment", 3)
             || !hasRecipeIngredients(player, "arcane_dust", 1))
         {
-            std::cout << "Recette incomplète : il faut 2 Fils d'ombre, 3 Fragments de métal rouillé et 1 Poussière arcanique." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 2 Fils d'ombre, 3 Fragments de métal rouillé et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1595,8 +1844,8 @@ namespace
         );
 
         addCraftedWeaponWithExceptionalChance(player, dagger, exceptionalMajority);
-        std::cout << "Tu tends le fil d'ombre autour de la lame et obtiens une Dague cousue d'ombre." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu tends le fil d'ombre autour de la lame et obtiens une Dague cousue d'ombre." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1612,8 +1861,8 @@ namespace
             || !hasRecipeIngredients(player, "beast_hide", 1)
             || !hasRecipeIngredients(player, "worn_leather_piece", 2))
         {
-            std::cout << "Recette incomplète : il faut 3 Crocs de loup, 1 Peau de bête robuste et 2 Morceaux de cuir abîmé." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 3 Crocs de loup, 1 Peau de bête robuste et 2 Morceaux de cuir abîmé." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1634,8 +1883,8 @@ namespace
         );
 
         addCraftedWeaponWithExceptionalChance(player, bow, exceptionalMajority);
-        std::cout << "Tu tends le cuir et fixes les crocs : l'Arc recourbé aux crocs est prêt." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu tends le cuir et fixes les crocs : l'Arc recourbé aux crocs est prêt." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1651,8 +1900,8 @@ namespace
             || !hasRecipeIngredients(player, "arcane_dust", 3)
             || !hasRecipeIngredients(player, "worn_leather_piece", 1))
         {
-            std::cout << "Recette incomplète : il faut 1 Noyau instable, 3 Poussières arcaniques et 1 Morceau de cuir abîmé." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Noyau instable, 3 Poussières arcaniques et 1 Morceau de cuir abîmé." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1673,8 +1922,8 @@ namespace
         );
 
         addCraftedWeaponWithExceptionalChance(player, staff, exceptionalMajority);
-        std::cout << "Le noyau pulse au bout du bâton. C'est probablement stable. Probablement." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Le noyau pulse au bout du bâton. C'est probablement stable. Probablement." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1690,8 +1939,8 @@ namespace
             || !hasRecipeIngredients(player, "beast_hide", 2)
             || !hasRecipeIngredients(player, "arcane_dust", 2))
         {
-            std::cout << "Recette incomplète : il faut 2 Fragments d'écaille draconique, 2 Peaux de bête robustes et 2 Poussières arcaniques." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 2 Fragments d'écaille draconique, 2 Peaux de bête robustes et 2 Poussières arcaniques." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1711,8 +1960,8 @@ namespace
         );
 
         addCraftedArmorWithExceptionalChance(player, armor, exceptionalMajority);
-        std::cout << "Tu fixes les écailles sur une base robuste : l'armure encaisse déjà mieux." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu fixes les écailles sur une base robuste : l'armure encaisse déjà mieux." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1728,8 +1977,8 @@ namespace
             || !hasRecipeIngredients(player, "mountain_blue_flower", 1)
             || !hasRecipeIngredients(player, "arcane_dust", 2))
         {
-            std::cout << "Recette incomplète : il faut 2 Braises kitsune, 1 Fleur bleue de montagne et 2 Poussières arcaniques." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 2 Braises kitsune, 1 Fleur bleue de montagne et 2 Poussières arcaniques." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1749,8 +1998,8 @@ namespace
         );
 
         addCraftedArmorWithExceptionalChance(player, robe, exceptionalMajority);
-        std::cout << "Les braises se calment autour du tissu : la Robe aux braises kitsune est terminée." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Les braises se calment autour du tissu : la Robe aux braises kitsune est terminée." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1765,8 +2014,8 @@ namespace
             || !hasRecipeIngredients(player, "wolf_fang", 2)
             || !hasRecipeIngredients(player, "rusted_metal_fragment", 2))
         {
-            std::cout << "Recette incomplète : il faut 2 Oreilles de gobelin, 2 Crocs de loup et 2 Fragments de métal rouillé." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 2 Oreilles de gobelin, 2 Crocs de loup et 2 Fragments de métal rouillé." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1787,8 +2036,8 @@ namespace
         );
 
         addCraftedWeaponWithExceptionalChance(player, dagger, exceptionalMajority);
-        std::cout << "Tu ajustes les crocs contre la lame : la Dague dentelée de traque est prête." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu ajustes les crocs contre la lame : la Dague dentelée de traque est prête." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1803,8 +2052,8 @@ namespace
             || !hasRecipeIngredients(player, "arcane_dust", 2)
             || !hasRecipeIngredients(player, "worn_leather_piece", 1))
         {
-            std::cout << "Recette incomplète : il faut 1 Noyau instable, 2 Résidus de slime, 2 Poussières arcaniques et 1 Morceau de cuir abîmé." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Noyau instable, 2 Résidus de slime, 2 Poussières arcaniques et 1 Morceau de cuir abîmé." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1825,8 +2074,8 @@ namespace
         );
 
         addCraftedArmorWithExceptionalChance(player, robe, exceptionalMajority);
-        std::cout << "Le noyau cesse de vibrer dans les coutures : la Robe stabilisée du laboratoire est terminée." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Le noyau cesse de vibrer dans les coutures : la Robe stabilisée du laboratoire est terminée." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1841,8 +2090,8 @@ namespace
             || !hasRecipeIngredients(player, "beast_hide", 1)
             || !hasRecipeIngredients(player, "cracked_bone", 2))
         {
-            std::cout << "Recette incomplète : il faut 1 Insigne abîmé, 6 Fragments de métal rouillé, 1 Peau de bête robuste et 2 Os fissurés." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 1 Insigne abîmé, 6 Fragments de métal rouillé, 1 Peau de bête robuste et 2 Os fissurés." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1864,8 +2113,8 @@ namespace
         );
 
         addCraftedWeaponWithExceptionalChance(player, hammer, exceptionalMajority);
-        std::cout << "Tu serres les plaques autour du manche : le Marteau lesté d'arène est prêt." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu serres les plaques autour du manche : le Marteau lesté d'arène est prêt." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1879,8 +2128,8 @@ namespace
             || !hasRecipeIngredients(player, "worn_leather_piece", 2)
             || !hasRecipeIngredients(player, "arcane_dust", 1))
         {
-            std::cout << "Recette incomplète : il faut 3 Fragments de métal rouillé, 2 Morceaux de cuir abîmé et 1 Poussière arcanique." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 3 Fragments de métal rouillé, 2 Morceaux de cuir abîmé et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1889,8 +2138,8 @@ namespace
         consumeRecipeIngredient(player, "arcane_dust", 1);
         player.getInventory().addMaterial(MaterialCatalog::createPrecisionHarvestTools());
 
-        std::cout << "Tu assembles des outils fins pour récupérer les ressources plus proprement." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu assembles des outils fins pour récupérer les ressources plus proprement." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1904,8 +2153,8 @@ namespace
             || !hasRecipeIngredients(player, "arcane_dust", 1)
             || !hasRecipeIngredients(player, "mountain_blue_flower", 1))
         {
-            std::cout << "Recette incomplète : il faut 2 Résidus de slime, 1 Poussière arcanique et 1 Fleur bleue de montagne." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 2 Résidus de slime, 1 Poussière arcanique et 1 Fleur bleue de montagne." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1914,8 +2163,8 @@ namespace
         consumeRecipeIngredient(player, "mountain_blue_flower", 1);
         player.getInventory().addMaterial(MaterialCatalog::createPreservationVials());
 
-        std::cout << "Tu obtiens des Fioles de conservation pour préserver les composants fragiles." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu obtiens des Fioles de conservation pour préserver les composants fragiles." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1929,8 +2178,8 @@ namespace
             || !hasRecipeIngredients(player, "wolf_fang", 2)
             || !hasRecipeIngredients(player, "battle_torn_badge", 1))
         {
-            std::cout << "Recette incomplète : il faut 2 Oreilles de gobelin, 2 Crocs de loup et 1 Insigne abîmé d'aventurier." << std::endl;
-            std::cout << std::endl;
+            inventoryNotice << "Recette incomplète : il faut 2 Oreilles de gobelin, 2 Crocs de loup et 1 Insigne abîmé d'aventurier." << std::endl;
+            inventoryNotice << std::endl;
             return false;
         }
 
@@ -1939,8 +2188,8 @@ namespace
         consumeRecipeIngredient(player, "battle_torn_badge", 1);
         player.getInventory().addMaterial(MaterialCatalog::createMonsterDissectionGuide());
 
-        std::cout << "Tu compares plusieurs restes de combat et rédiges une vraie méthode de dissection." << std::endl;
-        std::cout << std::endl;
+        inventoryNotice << "Tu compares plusieurs restes de combat et rédiges une vraie méthode de dissection." << std::endl;
+        inventoryNotice << std::endl;
         return true;
     }
 
@@ -1951,7 +2200,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"wolf_fang", 1}, {"worn_leather_piece", 1}}, "Flèches barbelées")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("barbed_arrows", 8));
         MaterialExperimentLog::recordCraft("Flèches barbelées", 8);
-        std::cout << "Tu fabriques 8 flèches barbelées. Elles peuvent maintenant provoquer du saignement sur une attaque réussie." << std::endl << std::endl;
+        inventoryNotice << "Tu fabriques 8 flèches barbelées. Elles peuvent maintenant provoquer du saignement sur une attaque réussie." << std::endl << std::endl;
         return true;
     }
 
@@ -1960,7 +2209,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"rusted_metal_fragment", 2}, {"arcane_dust", 1}}, "Carreaux perforants")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("piercing_bolts", 6));
         MaterialExperimentLog::recordCraft("Carreaux perforants", 6);
-        std::cout << "Tu fabriques 6 carreaux perforants. C'est cher, mais pensé pour les cibles solides." << std::endl << std::endl;
+        inventoryNotice << "Tu fabriques 6 carreaux perforants. C'est cher, mais pensé pour les cibles solides." << std::endl << std::endl;
         return true;
     }
 
@@ -1969,7 +2218,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"rusted_metal_fragment", 2}, {"worn_leather_piece", 1}}, "Couteaux de lancer équilibrés")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("balanced_throwing_knives", 5));
         MaterialExperimentLog::recordCraft("Couteaux de lancer équilibrés", 5);
-        std::cout << "Tu fabriques 5 couteaux de lancer équilibrés. Les classes mobiles devraient mieux les rentabiliser." << std::endl << std::endl;
+        inventoryNotice << "Tu fabriques 5 couteaux de lancer équilibrés. Les classes mobiles devraient mieux les rentabiliser." << std::endl << std::endl;
         return true;
     }
 
@@ -1978,7 +2227,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"training_arrows", 6}, {"arcane_dust", 1}}, "Flèches de cendre")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("ash_arrows", 6));
         MaterialExperimentLog::recordCraft("Flèches de cendre", 6);
-        std::cout << "Tu transformes 6 flèches en flèches de cendre. Elles peuvent maintenant accrocher une brûlure faible sur une attaque réussie." << std::endl << std::endl;
+        inventoryNotice << "Tu transformes 6 flèches en flèches de cendre. Elles peuvent maintenant accrocher une brûlure faible sur une attaque réussie." << std::endl << std::endl;
         return true;
     }
 
@@ -1987,7 +2236,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"training_bolts", 5}, {"mountain_blue_flower", 1}}, "Carreaux givrés")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("frozen_bolts", 5));
         MaterialExperimentLog::recordCraft("Carreaux givrés", 5);
-        std::cout << "Tu fabriques 5 carreaux givrés. Ils peuvent maintenant ralentir une cible avec du givre." << std::endl << std::endl;
+        inventoryNotice << "Tu fabriques 5 carreaux givrés. Ils peuvent maintenant ralentir une cible avec du givre." << std::endl << std::endl;
         return true;
     }
 
@@ -1996,7 +2245,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"training_throwing_knives", 5}, {"rusted_metal_fragment", 2}, {"arcane_dust", 1}}, "Couteaux conducteurs")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("conductive_knives", 5));
         MaterialExperimentLog::recordCraft("Couteaux conducteurs", 5);
-        std::cout << "Tu fabriques 5 couteaux conducteurs. Ils peuvent maintenant infliger un choc, surtout contre l'équipement métallique." << std::endl << std::endl;
+        inventoryNotice << "Tu fabriques 5 couteaux conducteurs. Ils peuvent maintenant infliger un choc, surtout contre l'équipement métallique." << std::endl << std::endl;
         return true;
     }
 
@@ -2005,7 +2254,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"training_arrows", 6}, {"slime_residue", 1}, {"goblin_ear", 1}}, "Flèches enduites de venin")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("venom_arrows", 6));
         MaterialExperimentLog::recordCraft("Flèches enduites de venin", 6);
-        std::cout << "Tu fabriques 6 flèches enduites de venin. Elles sont sales, pas nobles, mais efficaces si le tir blesse vraiment." << std::endl << std::endl;
+        inventoryNotice << "Tu fabriques 6 flèches enduites de venin. Elles sont sales, pas nobles, mais efficaces si le tir blesse vraiment." << std::endl << std::endl;
         return true;
     }
 
@@ -2014,7 +2263,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"training_bolts", 5}, {"rusted_metal_fragment", 3}, {"arcane_dust", 2}}, "Carreaux à pointe conductrice")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("shock_bolts", 5));
         MaterialExperimentLog::recordCraft("Carreaux à pointe conductrice", 5);
-        std::cout << "Tu fabriques 5 carreaux conducteurs. Très utile contre les ennemis équipés de métal." << std::endl << std::endl;
+        inventoryNotice << "Tu fabriques 5 carreaux conducteurs. Très utile contre les ennemis équipés de métal." << std::endl << std::endl;
         return true;
     }
 
@@ -2023,7 +2272,7 @@ namespace
         if (!consumeRecipeIngredients(player, {{"training_throwing_knives", 5}, {"slime_residue", 1}, {"arcane_dust", 1}}, "Couteaux fumigènes")) return false;
         player.getInventory().addMaterial(MaterialCatalog::createById("smoke_knives", 5));
         MaterialExperimentLog::recordCraft("Couteaux fumigènes", 5);
-        std::cout << "Tu fabriques 5 couteaux fumigènes. Ce n'est pas magique : le projectile éclate une petite poudre qui gêne l'ennemi." << std::endl << std::endl;
+        inventoryNotice << "Tu fabriques 5 couteaux fumigènes. Ce n'est pas magique : le projectile éclate une petite poudre qui gêne l'ennemi." << std::endl << std::endl;
         return true;
     }
 
@@ -2177,108 +2426,127 @@ namespace
     }
 
 
+    bool runMaterialCraftAttempt(Player& player, const std::string& recipeName, const std::string& screenId, const std::function<bool(Player&)>& craftAction)
+    {
+        bool success = false;
+        {
+            success = craftAction(player);
+        }
+
+        MessageScreen::show(
+            success ? "EXPÉRIENCE RÉUSSIE" : "EXPÉRIENCE IMPOSSIBLE",
+            screenId,
+            {
+                "Essai : " + recipeName,
+                success
+                    ? "Le résultat est ajouté à l'inventaire ou confirmé dans le registre correspondant."
+                    : "Les composants nécessaires ne sont pas réunis, ou la préparation demande une meilleure maîtrise.",
+                "Les détails de composants restent consultables dans le menu Craft / schémas."
+            }
+        );
+
+        return success;
+    }
+
     // EN: useMaterialIfPossible declares or implements a focused behavior used by this module.
     // FR: useMaterialIfPossible déclare ou implémente un comportement précis utilisé par ce module.
     bool useMaterialIfPossible(Player& player, const Material& material)
     {
         if (material.getCategory() == "Livre" || material.getCategory() == "Renseignement")
         {
-            return readMaterialIfPossible(material);
+            bool read = false;
+            {
+                read = readMaterialIfPossible(material);
+            }
+
+            MessageScreen::show(
+                "LECTURE",
+                "inventory.material.read.result",
+                {
+                    "Entrée : " + material.getName(),
+                    read ? "Lecture utile confirmée." : "Le contenu est parcouru, puis archivé mentalement.",
+                    "Les informations compatibles sont ajoutées ou confirmées dans le bestiaire de session."
+                }
+            );
+            return read;
         }
 
         if (isRepairKitId(material.getId()))
         {
-            std::cout << "Ce kit est prêt, mais la réparation se lance maintenant depuis l'arme ou l'armure à réparer." << std::endl;
-            std::cout << "Inventaire > armes/armures > sélectionner l'équipement > Réparer." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "KIT DE RÉPARATION",
+                "inventory.material.repair_kit.info",
+                {
+                    "Ce kit est prêt, mais la réparation se lance depuis l'arme ou l'armure à réparer.",
+                    "Chemin conseillé : Inventaire > armes/armures > sélectionner l'équipement > Réparer.",
+                    "Durabilité du kit : " + std::to_string(repairKitCurrentDurability(material.getId())) + "/" + std::to_string(repairKitMaxDurability(material.getId()))
+                }
+            );
             return false;
         }
 
         if (material.getId() == "bitter_healing_leaf" || material.getId() == "slime_residue")
         {
-            if (isAlchemist(player))
-            {
-                std::cout << "Spécial Alchimiste : tu stabilises la préparation sans vendeur." << std::endl;
-                std::cout << std::endl;
-            }
-            else
-            {
-                std::cout << "Tu tentes une recette de fortune. Un vrai Alchimiste ferait ça plus naturellement." << std::endl;
-                std::cout << std::endl;
-            }
-
-            return craftBasicHealingPotion(player);
+            MessageScreen::show(
+                "PRÉPARATION DE FORTUNE",
+                "inventory.material.quick_alchemy.info",
+                {
+                    isAlchemist(player)
+                        ? "Spécial Alchimiste : tu stabilises naturellement la préparation."
+                        : "Tu tentes une recette de fortune. Un vrai Alchimiste ferait ça plus naturellement.",
+                    "Essai proposé : Potion de soin."
+                }
+            );
+            return runMaterialCraftAttempt(player, "Potion de soin", "inventory.material.quick_alchemy.result", craftBasicHealingPotion);
         }
 
         if (material.getId() == "mountain_blue_flower")
         {
             if (!isAlchemist(player))
             {
-                std::cout << "Cette fleur demande une vraie main d'Alchimiste pour devenir une potion stable." << std::endl;
-                std::cout << "[recette avancée réservée à l'Alchimiste]" << std::endl;
-                std::cout << std::endl;
+                MessageScreen::show(
+                    "RECETTE INSTABLE",
+                    "inventory.material.alchemist_locked",
+                    {
+                        "Cette fleur demande une vraie main d'Alchimiste pour devenir une potion stable.",
+                        "[◘ recette avancée réservée à l'Alchimiste]"
+                    }
+                );
                 return false;
             }
 
-            return craftReinforcedHealingPotion(player);
+            return runMaterialCraftAttempt(player, "Potion de soin renforcée", "inventory.material.mountain_flower.result", craftReinforcedHealingPotion);
         }
 
         if (material.getId() == "wolf_fang" || material.getId() == "arcane_dust" || material.getId() == "cracked_bone")
         {
-            std::cout << "Choisis l'expérience à tenter avec ce composant." << std::endl;
-            std::cout << "0 : Annuler" << std::endl;
-            std::cout << "1 : Potion de rage simple" << std::endl;
+            MenuScreen screen("EXPÉRIENCE DE COMPOSANT", "inventory.material.monster_component.choice");
+            screen.addLine("Composant : " + material.getName());
+            screen.addBackOption("Annuler", "inventory.material.experiment.cancel");
+            screen.addOption(1, "Potion de rage simple", "Essai agressif basique.", true, "inventory.material.craft.damage");
+            screen.addOption(2, "Potion de soin renforcée", isAlchemist(player) ? "Préparation alchimique avancée." : "[◘ réservé à l'Alchimiste]", isAlchemist(player), "inventory.material.craft.heal_plus");
+            screen.addOption(3, "Potion de rage supérieure", isAlchemist(player) ? "Préparation alchimique avancée." : "[◘ réservé à l'Alchimiste]", isAlchemist(player), "inventory.material.craft.damage_plus");
+            bool canKit = isBlacksmith(player) || material.getId() == "arcane_dust";
+            screen.addOption(4, "Améliorer / renforcer un kit", canKit ? "Ouvre le choix du kit à fabriquer." : "[◘ connaissances de forge insuffisantes]", canKit, "inventory.material.craft.kit_branch");
 
-            int maxChoice = 1;
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une expérience affichée.");
+            Console::clear();
 
-            if (isAlchemist(player))
-            {
-                std::cout << "2 : Potion de soin renforcée" << std::endl;
-                std::cout << "3 : Potion de rage supérieure" << std::endl;
-                maxChoice = 3;
-            }
-            else
-            {
-                std::cout << "2 : Recettes avancées [réservées à l'Alchimiste]" << std::endl;
-                maxChoice = 2;
-            }
-
-            if (isBlacksmith(player) || material.getId() == "arcane_dust")
-            {
-                std::cout << "4 : Améliorer / renforcer un kit de réparation" << std::endl;
-                maxChoice = 4;
-            }
-
-            std::cout << "> ";
-
-            int choice = Console::askNumberBetween(0, maxChoice, "Choix invalide.");
-            std::cout << std::endl;
-
-            if (choice == 1) return craftDamagePotion(player);
-
-            if (choice == 2 && !isAlchemist(player))
-            {
-                std::cout << "Tu sens que le mélange pourrait mal tourner." << std::endl;
-                std::cout << "Il faudra une recette apprise ou la classe Alchimiste pour stabiliser ça." << std::endl;
-                std::cout << std::endl;
-                return false;
-            }
-
-            if (choice == 2) return craftReinforcedHealingPotion(player);
-            if (choice == 3) return craftReinforcedDamagePotion(player);
+            if (choice == 1) return runMaterialCraftAttempt(player, "Potion de rage simple", "inventory.material.damage_potion.result", craftDamagePotion);
+            if (choice == 2) return runMaterialCraftAttempt(player, "Potion de soin renforcée", "inventory.material.reinforced_heal.result", craftReinforcedHealingPotion);
+            if (choice == 3) return runMaterialCraftAttempt(player, "Potion de rage supérieure", "inventory.material.reinforced_damage.result", craftReinforcedDamagePotion);
             if (choice == 4)
             {
-                std::cout << "0 : Annuler" << std::endl;
-                std::cout << "1 : Kit moyen (+50%)" << std::endl;
-                std::cout << "2 : Gros kit (+75%)" << std::endl;
-                std::cout << "3 : Kit complet du bricoleur (+95%)" << std::endl;
-                std::cout << "> ";
-                int kitChoice = Console::askNumberBetween(0, 3, "Choix invalide.");
-                std::cout << std::endl;
-                if (kitChoice == 1) return craftMediumRepairKit(player);
-                if (kitChoice == 2) return craftBigRepairKit(player);
-                if (kitChoice == 3) return craftTinkererCompleteRepairKit(player);
-                return false;
+                MenuScreen kitScreen("RENFORCER UN KIT", "inventory.material.kit.choice");
+                kitScreen.addBackOption("Annuler", "inventory.material.kit.cancel");
+                kitScreen.addOption(1, "Kit moyen (+50%)", "Nécessite un kit faible intact et des composants de forge.", true, "inventory.material.kit.medium");
+                kitScreen.addOption(2, "Gros kit (+75%)", "Nécessite un kit moyen intact et plus de matériaux.", true, "inventory.material.kit.big");
+                kitScreen.addOption(3, "Kit complet du bricoleur (+95%)", "Nécessite un gros kit intact et beaucoup de composants.", true, "inventory.material.kit.complete");
+                int kitChoice = TerminalInterface::askMenuChoiceFromOptions(kitScreen, "Choisis un kit à fabriquer.");
+                Console::clear();
+                if (kitChoice == 1) return runMaterialCraftAttempt(player, "Kit de réparation moyen", "inventory.material.kit.medium.result", craftMediumRepairKit);
+                if (kitChoice == 2) return runMaterialCraftAttempt(player, "Gros kit de réparation", "inventory.material.kit.big.result", craftBigRepairKit);
+                if (kitChoice == 3) return runMaterialCraftAttempt(player, "Kit complet du bricoleur", "inventory.material.kit.complete.result", craftTinkererCompleteRepairKit);
             }
             return false;
         }
@@ -2287,64 +2555,69 @@ namespace
         {
             if (!isAlchemist(player))
             {
-                std::cout << "Ce composant est trop instable sans vraie maîtrise d'Alchimiste." << std::endl;
-                std::cout << "Tu pourrais le garder pour une recette avancée." << std::endl;
-                std::cout << std::endl;
+                MessageScreen::show(
+                    "COMPOSANT INSTABLE",
+                    "inventory.material.unstable.locked",
+                    {
+                        "Ce composant est trop instable sans vraie maîtrise d'Alchimiste.",
+                        "Garde-le pour une recette avancée ou un artisan plus compétent."
+                    }
+                );
                 return false;
             }
 
-            std::cout << "Choisis l'expérience alchimique avancée." << std::endl;
-            std::cout << "0 : Annuler" << std::endl;
-            std::cout << "1 : Potion de soin renforcée à la braise kitsune" << std::endl;
-            std::cout << "2 : Potion de rage supérieure au noyau instable" << std::endl;
-            std::cout << "> ";
-
-            int choice = Console::askNumberBetween(0, 2, "Choix invalide.");
-            std::cout << std::endl;
-
-            if (choice == 1) return craftKitsuneHealingPotion(player);
-            if (choice == 2) return craftUnstableRagePotion(player);
+            MenuScreen screen("ALCHIMIE AVANCÉE", "inventory.material.advanced_alchemy.choice");
+            screen.addLine("Composant : " + material.getName());
+            screen.addBackOption("Annuler", "inventory.material.advanced_alchemy.cancel");
+            screen.addOption(1, "Potion de soin renforcée à la braise kitsune", "Préparation chaude et fragile.", true, "inventory.material.kitsune_heal");
+            screen.addOption(2, "Potion de rage supérieure au noyau instable", "Préparation dangereuse mais puissante.", true, "inventory.material.unstable_rage");
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une expérience affichée.");
+            Console::clear();
+            if (choice == 1) return runMaterialCraftAttempt(player, "Potion kitsune renforcée", "inventory.material.kitsune_heal.result", craftKitsuneHealingPotion);
+            if (choice == 2) return runMaterialCraftAttempt(player, "Potion de rage au noyau instable", "inventory.material.unstable_rage.result", craftUnstableRagePotion);
             return false;
         }
 
         if (material.getId() == "beast_hide")
         {
-            std::cout << "Choisis l'expérience à tenter avec cette peau robuste." << std::endl;
-            std::cout << "0 : Annuler" << std::endl;
-            std::cout << "1 : Fabriquer un kit moyen par rafistolage renforcé" << std::endl;
-            std::cout << "2 : Fabriquer une Armure de chasseur rafistolée" << std::endl;
-            std::cout << "> ";
-            int choice = Console::askNumberBetween(0, 2, "Choix invalide.");
-            std::cout << std::endl;
-            if (choice == 1) return craftFieldArmorPatch(player);
-            if (choice == 2) return craftHunterLeatherArmor(player);
+            MenuScreen screen("TRAVAIL DE PEAU ROBUSTE", "inventory.material.beast_hide.choice");
+            screen.addBackOption("Annuler", "inventory.material.beast_hide.cancel");
+            screen.addOption(1, "Kit moyen par rafistolage renforcé", "Transforme la peau en plaques de réparation.", true, "inventory.material.beast_hide.kit");
+            screen.addOption(2, "Armure de chasseur rafistolée", "Fabrique une protection souple.", true, "inventory.material.beast_hide.armor");
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une expérience affichée.");
+            Console::clear();
+            if (choice == 1) return runMaterialCraftAttempt(player, "Kit moyen renforcé", "inventory.material.beast_hide.kit.result", craftFieldArmorPatch);
+            if (choice == 2) return runMaterialCraftAttempt(player, "Armure de chasseur rafistolée", "inventory.material.beast_hide.armor.result", craftHunterLeatherArmor);
             return false;
         }
 
-        if (material.getId() == "rusted_metal_fragment"
-            || material.getId() == "worn_leather_piece")
+        if (material.getId() == "rusted_metal_fragment" || material.getId() == "worn_leather_piece")
         {
-            std::cout << "Choisis l'expérience à tenter avec ce composant." << std::endl;
-            std::cout << "0 : Annuler" << std::endl;
-            std::cout << "1 : Fabriquer un Kit de réparation faible" << std::endl;
-            std::cout << "2 : Fabriquer une Lame de récupération" << std::endl;
-            std::cout << "3 : Fabriquer une Armure de chasseur rafistolée" << std::endl;
-            std::cout << "> ";
-
-            int choice = Console::askNumberBetween(0, 3, "Choix invalide.");
-            std::cout << std::endl;
-
-            if (choice == 1) return craftRepairKit(player);
-            if (choice == 2) return craftRecoveryBlade(player);
-            if (choice == 3) return craftHunterLeatherArmor(player);
+            MenuScreen screen("ARTISANAT DE BASE", "inventory.material.basic_craft.choice");
+            screen.addLine("Composant : " + material.getName());
+            screen.addBackOption("Annuler", "inventory.material.basic_craft.cancel");
+            screen.addOption(1, "Kit de réparation faible", "Outil basique pour réparer jusqu'à 25%.", true, "inventory.material.basic_craft.kit");
+            screen.addOption(2, "Lame de récupération", "Arme bricolée mais fiable.", true, "inventory.material.basic_craft.weapon");
+            screen.addOption(3, "Armure de chasseur rafistolée", "Protection simple de survie.", true, "inventory.material.basic_craft.armor");
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une expérience affichée.");
+            Console::clear();
+            if (choice == 1) return runMaterialCraftAttempt(player, "Kit de réparation faible", "inventory.material.basic_craft.kit.result", craftRepairKit);
+            if (choice == 2) return runMaterialCraftAttempt(player, "Lame de récupération", "inventory.material.basic_craft.weapon.result", craftRecoveryBlade);
+            if (choice == 3) return runMaterialCraftAttempt(player, "Armure de chasseur rafistolée", "inventory.material.basic_craft.armor.result", craftHunterLeatherArmor);
             return false;
         }
 
-        std::cout << "Tu manipules " << material.getName() << ", mais tu ne trouves pas comment l'utiliser sans risque." << std::endl;
-        std::cout << "[rien ne se passe]" << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "UTILISATION INCERTAINE",
+            "inventory.material.use.unknown",
+            {
+                "Tu manipules " + material.getName() + ", mais tu ne trouves pas comment l'utiliser sans risque.",
+                "[rien ne se passe]"
+            }
+        );
         return false;
     }
+
 }
 // EN: openWeapons declares or implements a focused behavior used by this module.
 // FR: openWeapons déclare ou implémente un comportement précis utilisé par ce module.
@@ -2352,8 +2625,11 @@ bool InventorySelection::openWeapons(Player& player)
 {
     if (player.getInventory().getWeaponCount() <= 0)
     {
-        std::cout << "Tu n'as aucune arme dans ton inventaire." << std::endl;
-        std::cout << std::endl;
+        showInventoryNotice(
+            "ARMES",
+            "inventory.weapons.empty",
+            {"Tu n'as aucune arme dans ton inventaire.", "Les armes obtenues en combat, boutique ou craft apparaîtront ici."}
+        );
         return false;
     }
 
@@ -2383,12 +2659,26 @@ bool InventorySelection::openWeapons(Player& player)
                 label << " | Cassée";
             }
 
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "weapon";
+            itemData.section = "Armes";
+            itemData.actionType = "select";
+            itemData.name = weapon.getName();
+            itemData.detail = "Dégâts : " + std::to_string(weapon.getMinDamageBonus()) + "-" + std::to_string(weapon.getMaxDamageBonus())
+                + " | Critique : +" + std::to_string(weapon.getCriticalBonus());
+            itemData.status = weapon.isBroken() ? "Cassée" : "Utilisable";
+            itemData.progress = "Durabilité : " + InventoryUtils::weaponDurabilityText(weapon);
+            itemData.price = std::to_string(weapon.getValue()) + " or";
+            itemData.important = weapon.isBroken();
+
             screen.addOption(
                 static_cast<int>(i - first + 1),
                 label.str(),
                 "",
                 true,
-                "inventory.weapon.select"
+                "inventory.weapon.select",
+                itemData
             );
         }
 
@@ -2418,8 +2708,7 @@ bool InventorySelection::openWeapons(Player& player)
         const int visibleCount = static_cast<int>(last - first);
         if (choice < 1 || choice > visibleCount)
         {
-            std::cout << "Ce numéro ne correspond à aucune arme affichée." << std::endl;
-            std::cout << std::endl;
+            showInventoryNotice("CHOIX REFUSÉ", "inventory.weapons.invalid_choice", {"Ce numéro ne correspond à aucune arme affichée.", "Change de page ou choisis une entrée visible."});
             continue;
         }
 
@@ -2427,25 +2716,22 @@ bool InventorySelection::openWeapons(Player& player)
 
         if (!player.getInventory().hasWeapon(index))
         {
-            std::cout << "Cette arme n'existe plus dans ton inventaire." << std::endl;
-            std::cout << std::endl;
+            showInventoryNotice("ARME INTROUVABLE", "inventory.weapons.missing", {"Cette arme n'existe plus dans ton inventaire.", "Le registre se mettra à jour au prochain affichage."});
             continue;
         }
 
         Weapon weapon = player.getInventory().getWeapon(index);
-        InventoryDisplay::displaySelectedWeapon(weapon);
-
-        int action = Console::askNumberBetween(
-            0,
-            4,
-            "Choix invalide. Entre 0, 1, 2, 3 ou 4."
+        MenuScreen selectedWeaponScreen = InventoryDisplay::buildSelectedWeaponScreen(weapon);
+        int action = TerminalInterface::askMenuChoiceFromOptions(
+            selectedWeaponScreen,
+            "Choix invalide. Choisis une action visible pour cette arme."
         );
 
         Console::clear();
 
         if (action == 1)
         {
-            player.getInventory().inspectWeapon(index);
+            showWeaponInspectionScreen(weapon);
             return false;
         }
 
@@ -2462,28 +2748,9 @@ bool InventorySelection::openWeapons(Player& player)
 
         if (action == 2)
         {
-            if (player.equipWeapon(index))
-            {
-                Weapon equippedWeapon = player.getEquippedWeapon();
-
-                std::cout << player.getName() << " équipe : " << equippedWeapon.getName() << "." << std::endl;
-
-                if (equippedWeapon.isBroken())
-                {
-                    std::cout << "Attention : cette arme est cassée, elle ne donnera aucun bonus." << std::endl;
-                }
-                else
-                {
-                    std::cout << "La prise en main est bonne. Cette arme est prête au combat." << std::endl;
-                }
-
-                std::cout << std::endl;
-            }
-            else
-            {
-                std::cout << "Impossible d'équiper cette arme." << std::endl;
-                std::cout << std::endl;
-            }
+            bool equipped = player.equipWeapon(index);
+            Weapon equippedWeapon = equipped ? player.getEquippedWeapon() : weapon;
+            showEquipWeaponResultScreen(player, equippedWeapon, equipped);
         }
 
         return false;
@@ -2496,8 +2763,11 @@ bool InventorySelection::openArmors(Player& player)
 {
     if (player.getInventory().getArmorCount() <= 0)
     {
-        std::cout << "Tu n'as aucune armure dans ton inventaire." << std::endl;
-        std::cout << std::endl;
+        showInventoryNotice(
+            "ARMURES",
+            "inventory.armors.empty",
+            {"Tu n'as aucune armure dans ton inventaire.", "Les protections obtenues en combat, boutique ou craft apparaîtront ici."}
+        );
         return false;
     }
 
@@ -2527,12 +2797,25 @@ bool InventorySelection::openArmors(Player& player)
                 label << " | Cassée";
             }
 
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "armor";
+            itemData.section = "Armures";
+            itemData.actionType = "select";
+            itemData.name = armor.getName();
+            itemData.detail = "PV : +" + std::to_string(armor.getMaxHpBonus()) + " | Réduction : " + std::to_string(armor.getDamageReduction());
+            itemData.status = armor.isBroken() ? "Cassée" : "Utilisable";
+            itemData.progress = "Durabilité : " + InventoryUtils::armorDurabilityText(armor);
+            itemData.price = std::to_string(armor.getValue()) + " or";
+            itemData.important = armor.isBroken();
+
             screen.addOption(
                 static_cast<int>(i - first + 1),
                 label.str(),
                 "",
                 true,
-                "inventory.armor.select"
+                "inventory.armor.select",
+                itemData
             );
         }
 
@@ -2562,8 +2845,7 @@ bool InventorySelection::openArmors(Player& player)
         const int visibleCount = static_cast<int>(last - first);
         if (choice < 1 || choice > visibleCount)
         {
-            std::cout << "Ce numéro ne correspond à aucune armure affichée." << std::endl;
-            std::cout << std::endl;
+            showInventoryNotice("CHOIX REFUSÉ", "inventory.armors.invalid_choice", {"Ce numéro ne correspond à aucune armure affichée.", "Change de page ou choisis une entrée visible."});
             continue;
         }
 
@@ -2571,25 +2853,22 @@ bool InventorySelection::openArmors(Player& player)
 
         if (!player.getInventory().hasArmor(index))
         {
-            std::cout << "Cette armure n'existe plus dans ton inventaire." << std::endl;
-            std::cout << std::endl;
+            showInventoryNotice("ARMURE INTROUVABLE", "inventory.armors.missing", {"Cette armure n'existe plus dans ton inventaire.", "Le registre se mettra à jour au prochain affichage."});
             continue;
         }
 
         Armor armor = player.getInventory().getArmor(index);
-        InventoryDisplay::displaySelectedArmor(armor);
-
-        int action = Console::askNumberBetween(
-            0,
-            4,
-            "Choix invalide. Entre 0, 1, 2, 3 ou 4."
+        MenuScreen selectedArmorScreen = InventoryDisplay::buildSelectedArmorScreen(armor);
+        int action = TerminalInterface::askMenuChoiceFromOptions(
+            selectedArmorScreen,
+            "Choix invalide. Choisis une action visible pour cette armure."
         );
 
         Console::clear();
 
         if (action == 1)
         {
-            player.getInventory().inspectArmor(index);
+            showArmorInspectionScreen(armor);
             return false;
         }
 
@@ -2606,34 +2885,9 @@ bool InventorySelection::openArmors(Player& player)
 
         if (action == 2)
         {
-            if (player.equipArmor(index))
-            {
-                Armor equippedArmor = player.getEquippedArmor();
-
-                std::cout << player.getName() << " équipe : " << equippedArmor.getName() << "." << std::endl;
-
-                if (equippedArmor.isBroken())
-                {
-                    std::cout << "Attention : cette armure est cassée, elle ne donnera aucun bonus." << std::endl;
-                }
-                else
-                {
-                    std::cout << "Ses protections sont maintenant actives." << std::endl;
-                }
-
-                std::cout << player.getName() << " possède maintenant "
-                          << player.getHp()
-                          << "/"
-                          << player.getMaxHp()
-                          << " PV."
-                          << std::endl;
-                std::cout << std::endl;
-            }
-            else
-            {
-                std::cout << "Impossible d'équiper cette armure." << std::endl;
-                std::cout << std::endl;
-            }
+            bool equipped = player.equipArmor(index);
+            Armor equippedArmor = equipped ? player.getEquippedArmor() : armor;
+            showEquipArmorResultScreen(player, equippedArmor, equipped);
         }
 
         return false;
@@ -2649,8 +2903,11 @@ bool InventorySelection::openConsumables(Player& player)
 
     if (!hasClassicConsumables && !hasRepairKits)
     {
-        std::cout << "Tu n'as aucun consommable dans ton inventaire." << std::endl;
-        std::cout << std::endl;
+        showInventoryNotice(
+            "CONSOMMABLES",
+            "inventory.consumables.empty",
+            {"Tu n'as aucun consommable dans ton inventaire.", "Les potions, objets rapides et préparations apparaîtront ici."}
+        );
         return false;
     }
 
@@ -2678,12 +2935,24 @@ bool InventorySelection::openConsumables(Player& player)
                   << " | " << InventoryUtils::consumableTypeToText(group.type)
                   << " | Puissance : " << group.power;
 
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "consumable";
+            itemData.section = "Consommables";
+            itemData.actionType = "select";
+            itemData.name = group.name;
+            itemData.quantity = std::to_string(group.amount);
+            itemData.detail = InventoryUtils::consumableTypeToText(group.type);
+            itemData.progress = "Puissance : " + std::to_string(group.power);
+            itemData.important = group.amount <= 1;
+
             screen.addOption(
                 static_cast<int>(i - first + 1),
                 label.str(),
                 "",
                 true,
-                "inventory.consumable.select"
+                "inventory.consumable.select",
+                itemData
             );
         }
 
@@ -2728,8 +2997,7 @@ bool InventorySelection::openConsumables(Player& player)
         const int visibleCount = static_cast<int>(last - first);
         if (choice < 1 || choice > visibleCount)
         {
-            std::cout << "Ce numéro ne correspond à aucun consommable affiché." << std::endl;
-            std::cout << std::endl;
+            showInventoryNotice("CHOIX REFUSÉ", "inventory.consumables.invalid_choice", {"Ce numéro ne correspond à aucun consommable affiché.", "Change de page ou choisis une entrée visible."});
             continue;
         }
 
@@ -2737,26 +3005,23 @@ bool InventorySelection::openConsumables(Player& player)
 
         if (!player.getInventory().hasConsumable(index))
         {
-            std::cout << "Ce consommable n'existe plus dans ton inventaire." << std::endl;
-            std::cout << std::endl;
+            showInventoryNotice("CONSOMMABLE INTROUVABLE", "inventory.consumables.missing", {"Ce consommable n'existe plus dans ton inventaire.", "Le registre se mettra à jour au prochain affichage."});
             continue;
         }
 
         Consumable consumable = player.getInventory().getConsumable(index);
 
-        InventoryDisplay::displaySelectedConsumable(consumable);
-
-        int action = Console::askNumberBetween(
-            0,
-            3,
-            "Choix invalide. Entre 0, 1, 2 ou 3."
+        MenuScreen selectedConsumableScreen = InventoryDisplay::buildSelectedConsumableScreen(consumable);
+        int action = TerminalInterface::askMenuChoiceFromOptions(
+            selectedConsumableScreen,
+            "Choix invalide. Choisis une action visible pour ce consommable."
         );
 
         Console::clear();
 
         if (action == 1)
         {
-            player.getInventory().inspectConsumable(index);
+            showConsumableInspectionScreen(consumable);
             return false;
         }
 
@@ -2770,12 +3035,15 @@ bool InventorySelection::openConsumables(Player& player)
         {
             if (consumable.getType() != ConsumableType::Healing)
             {
-                std::cout << "Ce consommable demande une cible ou un effet spécial." << std::endl;
-                std::cout << "Utilise plutôt l'option Potions du menu de combat." << std::endl;
-                std::cout << std::endl;
+                showInventoryNotice(
+                    "UTILISATION BLOQUÉE",
+                    "inventory.consumable.use.locked",
+                    {"Ce consommable demande une cible ou un effet spécial.", "Utilise plutôt l'option Potions du menu de combat."}
+                );
                 return false;
             }
 
+            int hpBefore = player.getHp();
             player.heal(consumable.getPower());
             ThreatSystem::markSelfHealingAction(player);
 
@@ -2784,19 +3052,7 @@ bool InventorySelection::openConsumables(Player& player)
                 player.getInventory().removeConsumable(index);
             }
 
-            std::cout << player.getName() << " utilise : " << consumable.getName() << "." << std::endl;
-            std::cout << "Ses blessures se referment, et il récupère "
-                      << consumable.getPower()
-                      << " PV."
-                      << std::endl;
-            std::cout << player.getName() << " possède maintenant "
-                      << player.getHp()
-                      << "/"
-                      << player.getMaxHp()
-                      << " PV."
-                      << std::endl;
-            std::cout << std::endl;
-
+            showHealingConsumableResultScreen(player, consumable, hpBefore);
             return true;
         }
 
@@ -2810,9 +3066,11 @@ bool InventorySelection::openMaterials(Player& player)
 {
     if (player.getInventory().getMaterials().empty())
     {
-        std::cout << "Tu n'as aucun matériau, plante ou renseignement dans ton inventaire." << std::endl;
-        std::cout << "Les loots, les boutiques et la bibliothèque pourront remplir cette partie." << std::endl;
-        std::cout << std::endl;
+        showInventoryNotice(
+            "MATÉRIAUX / PLANTES / INFOS",
+            "inventory.materials.empty",
+            {"Tu n'as aucun matériau, plante ou renseignement dans ton inventaire.", "Les loots, les boutiques et la bibliothèque pourront remplir cette partie."}
+        );
         return false;
     }
 
@@ -2844,12 +3102,25 @@ bool InventorySelection::openMaterials(Player& player)
 
             label << " | " << material.getCategory();
 
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "material";
+            itemData.section = "Matériaux";
+            itemData.actionType = "select";
+            itemData.name = material.getName();
+            itemData.quantity = std::to_string(material.getQuantity());
+            itemData.detail = material.getCategory();
+            itemData.status = material.hasSpecialQuality() ? material.getQualityLabel() : "Qualité normale";
+            itemData.price = std::to_string(material.getValue()) + " or/unité";
+            itemData.important = material.hasSpecialQuality();
+
             screen.addOption(
                 static_cast<int>(i - first + 1),
                 label.str(),
                 "",
                 true,
-                "inventory.material.select"
+                "inventory.material.select",
+                itemData
             );
         }
 
@@ -2879,8 +3150,7 @@ bool InventorySelection::openMaterials(Player& player)
         const int visibleCount = static_cast<int>(last - first);
         if (choice < 1 || choice > visibleCount)
         {
-            std::cout << "Ce numéro ne correspond à aucune entrée affichée." << std::endl;
-            std::cout << std::endl;
+            showInventoryNotice("CHOIX REFUSÉ", "inventory.materials.invalid_choice", {"Ce numéro ne correspond à aucune entrée affichée.", "Change de page ou choisis une entrée visible."});
             continue;
         }
 
@@ -2888,25 +3158,22 @@ bool InventorySelection::openMaterials(Player& player)
 
         if (!player.getInventory().hasMaterial(index))
         {
-            std::cout << "Cette entrée n'existe plus dans ton inventaire." << std::endl;
-            std::cout << std::endl;
+            showInventoryNotice("ENTRÉE INTROUVABLE", "inventory.materials.missing", {"Cette entrée n'existe plus dans ton inventaire.", "Le registre se mettra à jour au prochain affichage."});
             continue;
         }
 
         Material material = player.getInventory().getMaterial(index);
-        InventoryDisplay::displaySelectedMaterial(material);
-
-        int action = Console::askNumberBetween(
-            0,
-            4,
-            "Choix invalide. Entre 0, 1, 2, 3 ou 4."
+        MenuScreen selectedMaterialScreen = InventoryDisplay::buildSelectedMaterialScreen(material);
+        int action = TerminalInterface::askMenuChoiceFromOptions(
+            selectedMaterialScreen,
+            "Choix invalide. Choisis une action visible pour cette entrée."
         );
 
         Console::clear();
 
         if (action == 1)
         {
-            player.getInventory().inspectMaterial(index);
+            showMaterialInspectionScreen(material);
             return false;
         }
 
@@ -2987,12 +3254,25 @@ bool InventorySelection::openCraft(Player& player)
                 hint = "Composants insuffisants pour l'instant.";
             }
 
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "material";
+            itemData.section = "Craft";
+            itemData.actionType = "select";
+            itemData.name = recipe.name;
+            itemData.detail = recipe.category;
+            itemData.status = hint;
+            itemData.maxQuantity = std::to_string(maxCrafts);
+            itemData.progress = maxCrafts > 0 ? "Fabricable" : "Composants insuffisants";
+            itemData.important = maxCrafts <= 0;
+
             screen.addOption(
                 static_cast<int>(i - first + 1),
                 label.str(),
                 hint,
                 true,
-                "inventory.craft.recipe.select"
+                "inventory.craft.recipe.select",
+                itemData
             );
         }
 
@@ -3025,8 +3305,11 @@ bool InventorySelection::openCraft(Player& player)
         const int visibleCount = static_cast<int>(last - first);
         if (choice < 1 || choice > visibleCount)
         {
-            std::cout << "Ce numéro ne correspond à aucun schéma sur cette page." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "SCHÉMA INTROUVABLE",
+                "inventory.craft.invalid_choice",
+                {"Ce numéro ne correspond à aucun schéma sur cette page.", "Change de page ou choisis une entrée visible."}
+            );
             continue;
         }
 
@@ -3058,11 +3341,15 @@ bool InventorySelection::openCraft(Player& player)
 
         if (maxCrafts <= 0)
         {
-            std::cout << std::endl;
-            std::cout << "Tu ne peux pas fabriquer ce schéma pour le moment." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "CRAFT IMPOSSIBLE",
+                "inventory.craft.blocked",
+                {
+                    "Schéma : " + recipe.name,
+                    "Tu ne peux pas fabriquer ce schéma pour le moment.",
+                    "Les lignes de composants indiquent ce qui manque."
+                }
+            );
             continue;
         }
 
@@ -3084,12 +3371,18 @@ bool InventorySelection::openCraft(Player& player)
                 continue;
             }
 
-            std::cout << "Quantité à fabriquer (1-" << maxCrafts << ")" << std::endl;
-            std::cout << "0 : Annuler" << std::endl;
-            std::cout << "> ";
-
-            quantityToCraft = Console::askNumberBetween(0, maxCrafts, "Quantité invalide.");
-            std::cout << std::endl;
+            quantityToCraft = MessageScreen::askQuantity(
+                "QUANTITÉ À FABRIQUER",
+                "inventory.craft.quantity.input",
+                {
+                    "Schéma : " + recipe.name,
+                    "Maximum possible : " + std::to_string(maxCrafts),
+                    "0 : Annuler"
+                },
+                0,
+                maxCrafts,
+                "Quantité invalide."
+            );
 
             if (quantityToCraft == 0)
             {
@@ -3116,7 +3409,12 @@ bool InventorySelection::openCraft(Player& player)
 
         for (int i = 0; i < quantityToCraft; ++i)
         {
-            if (!recipe.craft(player))
+            bool success = false;
+            {
+                success = recipe.craft(player);
+            }
+
+            if (!success)
             {
                 break;
             }
@@ -3129,12 +3427,7 @@ bool InventorySelection::openCraft(Player& player)
             MaterialExperimentLog::recordCraft(recipe.name, crafted);
         }
 
-        MenuScreen resultScreen("RÉSUMÉ CRAFT", "inventory.craft.result");
-        resultScreen.addLine("Schéma : " + recipe.name);
-        resultScreen.addLine("Fabrication(s) réussie(s) : " + std::to_string(crafted) + "/" + std::to_string(quantityToCraft) + ".");
-        TerminalInterface::renderMenuScreen(resultScreen, false);
-        Console::waitForEnter();
-        Console::clear();
+        showCraftResultScreen(recipe.name, crafted, quantityToCraft);
     }
 }
 

@@ -7,6 +7,7 @@
 
 #include "core/Console.hpp"
 #include "interface/menu/common/MenuFrame.hpp"
+#include "interface/GuiDebugExporter.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -16,6 +17,8 @@
 
 void TerminalInterface::renderMenuScreen(const MenuScreen& screen, bool showPrompt)
 {
+    GuiDebugExporter::exportMenu(screen);
+
     MenuFrame::title(screen.getTitle());
 
     for (const std::string& subtitle : screen.getSubtitles())
@@ -106,7 +109,7 @@ int TerminalInterface::askMenuChoiceFromOptions(
     {
         std::string line;
 
-        if (!std::getline(std::cin >> std::ws, line))
+        if (!Console::readLine(line, true))
         {
             std::cin.clear();
             std::cout << "Entrée interrompue. Retour appliqué." << std::endl;

@@ -7,38 +7,69 @@
 #include "interface/menu/progression/AttributeMenu.hpp"
 
 #include "core/Console.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/model/MenuScreen.hpp"
 #include "progression/DndAttributes.hpp"
 
-#include <iostream>
+#include <string>
 
-// EN: open declares or implements a focused behavior used by this module.
-// FR: open déclare ou implémente un comportement précis utilisé par ce module.
-void AttributeMenu::open(Player& player)
+namespace
 {
-    bool menuOpen = true;
-
-    while (menuOpen)
+    std::string attributeCurrentValue(const Player& player, int choice)
     {
-        std::cout << "========== ATTRIBUTS ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "Points disponibles : " << player.getUnspentAttributePoints() << std::endl;
-        std::cout << std::endl;
+        const DndAttributes& attributes = player.getAttributes();
 
-        player.displayAttributes();
+        if (choice == 1) return std::to_string(attributes.getStrength());
+        if (choice == 2) return std::to_string(attributes.getDexterity());
+        if (choice == 3) return std::to_string(attributes.getConstitution());
+        if (choice == 4) return std::to_string(attributes.getIntelligence());
+        if (choice == 5) return std::to_string(attributes.getWisdom());
+        if (choice == 6) return std::to_string(attributes.getCharisma());
+
+        return "?";
+    }
+
+    MenuScreen buildAttributeScreen(const Player& player)
+    {
+        MenuScreen screen("ATTRIBUTS", "attributes.spend");
+        screen.addSubtitle("Points disponibles : " + std::to_string(player.getUnspentAttributePoints()));
+        screen.addLine("Choisis l'attribut à renforcer. Les effets profonds restent liés aux futurs systèmes de progression.");
+        screen.addBackOption("Retour", "attributes.back");
 
         for (int choice = 1; choice <= DndAttributes::getChoiceCount(); choice++)
         {
-            std::cout << choice << " : " << DndAttributes::getChoiceName(choice) << std::endl;
-            std::cout << "    " << DndAttributes::getChoiceDescription(choice) << std::endl;
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "attribute";
+            itemData.section = "Attributs";
+            itemData.actionType = "upgrade";
+            itemData.name = DndAttributes::getChoiceName(choice);
+            itemData.detail = DndAttributes::getChoiceDescription(choice);
+            itemData.status = "Valeur actuelle : " + attributeCurrentValue(player, choice);
+            itemData.progress = "Points disponibles : " + std::to_string(player.getUnspentAttributePoints());
+            itemData.important = player.getUnspentAttributePoints() > 0;
+
+            screen.addOption(
+                choice,
+                DndAttributes::getChoiceName(choice) + " | actuel : " + attributeCurrentValue(player, choice),
+                DndAttributes::getChoiceDescription(choice),
+                true,
+                "attributes.upgrade." + std::to_string(choice),
+                itemData
+            );
         }
 
-        std::cout << "===============================" << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
+        return screen;
+    }
+}
 
-        int choice = Console::askNumberBetween(
-            0,
-            DndAttributes::getChoiceCount(),
+void AttributeMenu::open(Player& player)
+{
+    while (true)
+    {
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            buildAttributeScreen(player),
             "Veuillez choisir un attribut affiché."
         );
 
@@ -51,37 +82,53 @@ void AttributeMenu::open(Player& player)
 
         if (player.getUnspentAttributePoints() <= 0)
         {
-            std::cout << "Tu n'as aucun point d'attribut à dépenser pour le moment." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
-            Console::clear();
+            MessageScreen::show(
+                "ATTRIBUTS",
+                "attributes.no_points",
+                {
+                    "Tu n'as aucun point d'attribut à dépenser pour le moment.",
+                    "Le registre gardera cette voie ouverte quand ton potentiel grandira."
+                }
+            );
             continue;
         }
 
         if (player.spendAttributePoint(choice))
         {
-            std::cout << DndAttributes::getChoiceName(choice) << " augmente." << std::endl;
-            std::cout << "Le personnage se rapproche doucement de sa vraie voie." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "ATTRIBUT AMÉLIORÉ",
+                "attributes.upgrade.success",
+                {
+                    DndAttributes::getChoiceName(choice) + " augmente.",
+                    "Nouvelle valeur : " + attributeCurrentValue(player, choice),
+                    "Le personnage se rapproche doucement de sa vraie voie."
+                }
+            );
         }
         else
         {
-            std::cout << "Impossible d'améliorer cet attribut." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "ATTRIBUT REFUSÉ",
+                "attributes.upgrade.failed",
+                {
+                    "Impossible d'améliorer cet attribut.",
+                    "Le registre refuse ce choix pour le moment."
+                }
+            );
         }
-
-        Console::waitForEnter();
-        Console::clear();
     }
 }
 
-// EN: displayLockedDevelopmentMessage declares or implements a focused behavior used by this module.
-// FR: displayLockedDevelopmentMessage déclare ou implémente un comportement précis utilisé par ce module.
 void AttributeMenu::displayLockedDevelopmentMessage()
 {
-    std::cout << "Tu sens que ton potentiel pourrait encore grandir..." << std::endl;
-    std::cout << "Mais les registres refusent encore de graver ce choix définitivement." << std::endl;
-    std::cout << std::endl;
-    std::cout << "[les runes restent muettes]" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "ATTRIBUTS SCELLÉS",
+        "attributes.locked_development",
+        {
+            "Tu sens que ton potentiel pourrait encore grandir...",
+            "Mais les registres refusent encore de graver ce choix définitivement.",
+            "[les runes restent muettes]"
+        },
+        false
+    );
 }

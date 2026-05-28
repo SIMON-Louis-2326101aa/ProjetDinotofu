@@ -29,6 +29,7 @@ public:
     static SpecialCharacter createRandomSpecialOpponent(Random& random);
     // EN: displaySpecialCharactersRoadmap declares or implements a focused behavior used by this module.
     // FR: displaySpecialCharactersRoadmap déclare ou implémente un comportement précis utilisé par ce module.
+    static std::vector<std::string> getSpecialCharactersRoadmapLines();
     static void displaySpecialCharactersRoadmap();
 
 private:

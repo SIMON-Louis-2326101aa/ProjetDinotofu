@@ -9,7 +9,8 @@
 
 #include <algorithm>
 #include <cctype>
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
 #include <vector>
 
 namespace
@@ -89,19 +90,20 @@ namespace
         return classes;
     }
 
-    // EN: displayClassTemplate declares or implements a focused behavior used by this module.
-    // FR: displayClassTemplate déclare ou implémente un comportement précis utilisé par ce module.
-    void displayClassTemplate(std::size_t displayedIndex, const ClassTemplate& currentClass)
+    void appendClassTemplateLines(std::vector<std::string>& lines, std::size_t displayedIndex, const ClassTemplate& currentClass)
     {
-        std::cout << displayedIndex << " : " << currentClass.name << std::endl;
-        std::cout << "    Famille : " << classCategoryToText(currentClass.category) << std::endl;
-        std::cout << "    Rôle : " << currentClass.role << std::endl;
-        std::cout << "    PV : " << currentClass.maxHp << std::endl;
-        std::cout << "    Dégâts : " << currentClass.minDamage << " - " << currentClass.maxDamage
-                  << " | Critique : " << currentClass.criticalDamage << std::endl;
-        std::cout << "    Potions de soin : " << currentClass.healingPotionCount << std::endl;
-        std::cout << "    Potions de dégâts : " << currentClass.damagePotionCount << std::endl;
-        std::cout << std::endl;
+        lines.push_back(std::to_string(displayedIndex) + " : " + currentClass.name);
+        lines.push_back("    Famille : " + classCategoryToText(currentClass.category));
+        lines.push_back(std::string("    Rôle : ") + currentClass.role);
+        lines.push_back("    PV : " + std::to_string(currentClass.maxHp));
+        lines.push_back(
+            "    Dégâts : " + std::to_string(currentClass.minDamage)
+            + " - " + std::to_string(currentClass.maxDamage)
+            + " | Critique : " + std::to_string(currentClass.criticalDamage)
+        );
+        lines.push_back("    Potions de soin : " + std::to_string(currentClass.healingPotionCount));
+        lines.push_back("    Potions de dégâts : " + std::to_string(currentClass.damagePotionCount));
+        lines.push_back("");
     }
 
     std::vector<const ClassTemplate*> getClassesByCategory(ClassCategory category)
@@ -152,42 +154,66 @@ namespace
 
 // EN: displayBasicClasses declares or implements a focused behavior used by this module.
 // FR: displayBasicClasses déclare ou implémente un comportement précis utilisé par ce module.
-void ClassCatalog::displayBasicClasses()
+std::vector<std::string> ClassCatalog::getBasicClassDisplayLines()
 {
+    std::vector<std::string> lines;
     const std::vector<ClassTemplate>& classes = getClassTemplates();
 
     for (std::size_t i = 0; i < classes.size(); ++i)
     {
-        displayClassTemplate(i + 1, classes[i]);
+        appendClassTemplateLines(lines, i + 1, classes[i]);
     }
+
+    return lines;
+}
+
+void ClassCatalog::displayBasicClasses()
+{
+    MessageScreen::show("CLASSES", "catalog.classes.basic", getBasicClassDisplayLines(), false);
 }
 
 // EN: displayClassCategories declares or implements a focused behavior used by this module.
 // FR: displayClassCategories déclare ou implémente un comportement précis utilisé par ce module.
-void ClassCatalog::displayClassCategories()
+std::vector<std::string> ClassCatalog::getClassCategoryDisplayLines()
 {
+    std::vector<std::string> lines;
     std::vector<ClassCategory> categories = getClassCategories();
 
     for (std::size_t i = 0; i < categories.size(); ++i)
     {
         ClassCategory category = categories[i];
-
-        std::cout << (i + 1) << " : " << classCategoryToText(category)
-                  << " (" << getPlayableClassCountByCategory(category) << " classes)"
-                  << std::endl;
+        lines.push_back(
+            std::to_string(i + 1) + " : " + classCategoryToText(category)
+            + " (" + std::to_string(getPlayableClassCountByCategory(category)) + " classes)"
+        );
     }
+
+    return lines;
+}
+
+void ClassCatalog::displayClassCategories()
+{
+    MessageScreen::show("CATÉGORIES DE CLASSES", "catalog.classes.categories", getClassCategoryDisplayLines(), false);
 }
 
 // EN: displayClassesByCategory declares or implements a focused behavior used by this module.
 // FR: displayClassesByCategory déclare ou implémente un comportement précis utilisé par ce module.
-void ClassCatalog::displayClassesByCategory(ClassCategory category)
+std::vector<std::string> ClassCatalog::getClassDisplayLinesByCategory(ClassCategory category)
 {
+    std::vector<std::string> lines;
     std::vector<const ClassTemplate*> classes = getClassesByCategory(category);
 
     for (std::size_t i = 0; i < classes.size(); ++i)
     {
-        displayClassTemplate(i + 1, *classes[i]);
+        appendClassTemplateLines(lines, i + 1, *classes[i]);
     }
+
+    return lines;
+}
+
+void ClassCatalog::displayClassesByCategory(ClassCategory category)
+{
+    MessageScreen::show("CLASSES PAR CATÉGORIE", "catalog.classes.by_category", getClassDisplayLinesByCategory(category), false);
 }
 
 // EN: displayClassesByCategoryChoice declares or implements a focused behavior used by this module.

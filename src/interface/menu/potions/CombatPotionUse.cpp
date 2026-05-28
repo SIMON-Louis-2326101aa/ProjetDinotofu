@@ -13,13 +13,14 @@
 #include "combat/DamageReport.hpp"
 
 #include "interface/menu/CombatTargetMenu.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include "item/Inventory.hpp"
 
 #include <algorithm>
 #include <cctype>
-#include <iostream>
 #include <string>
+#include <vector>
 
 
 namespace
@@ -37,6 +38,16 @@ namespace
     {
         return normalizePotionText(potion.getName()).find(normalizePotionText(text)) != std::string::npos;
     }
+
+    void showPotionNotice(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines
+    )
+    {
+        MessageScreen::show(title, screenId, lines);
+    }
+
 
     bool playerLooksLikeNaturalCaster(const Player& player)
     {
@@ -60,7 +71,7 @@ namespace
             || className.find("templier") != std::string::npos;
     }
 
-    bool resolveScrollStability(Player& player, const Consumable& potion, Random& random)
+    bool resolveScrollStability(Player& player, const Consumable& potion, Random& random, std::vector<std::string>& lines)
     {
         int successChance = playerLooksLikeNaturalCaster(player) ? 92 : 78;
 
@@ -69,48 +80,48 @@ namespace
             successChance -= 8;
         }
 
-        std::cout << player.getName() << " déchire " << potion.getName() << "." << std::endl;
-        std::cout << "Stabilité du parchemin : " << successChance << "%" << std::endl;
+        lines.push_back(player.getName() + " déchire " + potion.getName() + ".");
+        lines.push_back("Stabilité du parchemin : " + std::to_string(successChance) + "%.");
 
         if (random.between(1, 100) <= successChance)
         {
+            lines.push_back("Les runes tiennent assez longtemps pour prendre forme.");
             return true;
         }
 
-        std::cout << "Les runes brûlent trop vite : la magie se disperse avant de prendre forme." << std::endl;
-        std::cout << std::endl;
+        lines.push_back("Les runes brûlent trop vite : la magie se disperse avant de prendre forme.");
         return false;
     }
 
-    bool applyCurativeStatusEffect(Player& player, const Consumable& potion)
+    bool applyCurativeStatusEffect(Player& player, const Consumable& potion, std::vector<std::string>& notes)
     {
         bool cured = false;
 
         if (potionNameContains(potion, "antidote"))
         {
             cured = player.curePoison();
-            if (cured) std::cout << "Le poison est neutralisé." << std::endl;
+            if (cured) notes.push_back("Le poison est neutralisé.");
         }
         else if (potionNameContains(potion, "anti-br") || potionNameContains(potion, "brûl") || potionNameContains(potion, "brul"))
         {
             cured = player.cureBurning();
-            if (cured) std::cout << "La brûlure est apaisée avant de continuer à ronger les chairs." << std::endl;
+            if (cured) notes.push_back("La brûlure est apaisée avant de continuer à ronger les chairs.");
         }
         else if (potionNameContains(potion, "givre") || potionNameContains(potion, "tiède") || potionNameContains(potion, "tiede"))
         {
             cured = player.cureFrost();
-            if (cured) std::cout << "Le froid quitte les articulations et les gestes redeviennent plus fluides." << std::endl;
+            if (cured) notes.push_back("Le froid quitte les articulations et les gestes redeviennent plus fluides.");
         }
         else if (potionNameContains(potion, "isolante") || potionNameContains(potion, "décharge") || potionNameContains(potion, "decharge"))
         {
             cured = player.cureShock();
-            if (cured) std::cout << "La conduction électrique est coupée avant de perturber un nouveau geste." << std::endl;
+            if (cured) notes.push_back("La conduction électrique est coupée avant de perturber un nouveau geste.");
         }
         else if (potionNameContains(potion, "défensive") || potionNameContains(potion, "defensive") || potionNameContains(potion, "précision") || potionNameContains(potion, "precision"))
         {
             cured = player.cureWeakening();
             if (!cured) cured = player.cureVulnerability();
-            if (cured) std::cout << "Le corps retrouve assez de stabilité pour refermer la faille active." << std::endl;
+            if (cured) notes.push_back("Le corps retrouve assez de stabilité pour refermer la faille active.");
         }
 
         return cured;
@@ -125,12 +136,17 @@ bool CombatPotionUse::useHealingPotion(
 {
     if (!player.getInventory().hasConsumable(consumableIndex))
     {
-        std::cout << "Cette potion n'est plus disponible." << std::endl;
-        std::cout << std::endl;
+        showPotionNotice(
+            "POTION INTROUVABLE",
+            "combat.potion.missing",
+            {"Cette potion n'est plus disponible.", "Le sac a déjà changé depuis l'affichage précédent."}
+        );
         return false;
     }
 
-    bool curedStatus = applyCurativeStatusEffect(player, potion);
+    const int hpBefore = player.getHp();
+    std::vector<std::string> notes;
+    bool curedStatus = applyCurativeStatusEffect(player, potion, notes);
     player.heal(potion.getPower());
     ThreatSystem::markSelfHealingAction(player);
 
@@ -139,21 +155,20 @@ bool CombatPotionUse::useHealingPotion(
         player.getInventory().removeConsumable(consumableIndex);
     }
 
-    std::cout << player.getName()
-              << " boit "
-              << potion.getName()
-              << " et récupère "
-              << potion.getPower()
-              << " PV."
-              << std::endl;
-
+    std::vector<std::string> lines;
+    lines.push_back(player.getName() + " boit " + potion.getName() + ".");
+    lines.push_back("Soin annoncé : +" + std::to_string(potion.getPower()) + " PV.");
+    lines.push_back("PV : " + std::to_string(hpBefore) + " -> " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".");
+    for (const std::string& note : notes)
+    {
+        lines.push_back(note);
+    }
     if (!curedStatus && player.hasActiveCombatStatus())
     {
-        std::cout << "La potion soigne les PV, mais elle n'est pas adaptée aux statuts encore actifs." << std::endl;
+        lines.push_back("La potion soigne les PV, mais elle n'est pas adaptée aux statuts encore actifs.");
     }
 
-    std::cout << std::endl;
-
+    showPotionNotice("POTION CURATIVE", "combat.potion.heal.result", lines);
     return true;
 }
 
@@ -169,8 +184,11 @@ bool CombatPotionUse::useSelectedPotion(
 {
     if (!player.getInventory().hasConsumable(consumableIndex))
     {
-        std::cout << "Cette potion n'est plus disponible." << std::endl;
-        std::cout << std::endl;
+        showPotionNotice(
+            "POTION INTROUVABLE",
+            "combat.potion.missing",
+            {"Cette potion n'est plus disponible.", "Le sac a déjà changé depuis l'affichage précédent."}
+        );
         return false;
     }
 
@@ -214,12 +232,15 @@ bool CombatPotionUse::useSelectedPotion(
                 player.getInventory().removeConsumable(consumableIndex);
             }
 
-            std::cout << player.getName()
-                      << " utilise "
-                      << potion.getName()
-                      << "."
-                      << std::endl;
-            std::cout << std::endl;
+            showPotionNotice(
+                "POTION OFFENSIVE",
+                "combat.potion.damage.launch",
+                {
+                    player.getName() + " utilise " + potion.getName() + ".",
+                    "Cible : " + target->getName(),
+                    "Bonus d'attaque : +" + std::to_string(totalBonus)
+                }
+            );
 
             CombatAttack::executeBoostedAttack(
                 player,
@@ -231,8 +252,11 @@ bool CombatPotionUse::useSelectedPotion(
             return true;
         }
 
-        std::cout << "Aucune cible offensive disponible." << std::endl;
-        std::cout << std::endl;
+        showPotionNotice(
+            "AUCUNE CIBLE",
+            "combat.potion.damage.no_target",
+            {"Aucune cible offensive disponible.", "Choisis une cible valide ou une autre action."}
+        );
         return false;
     }
 
@@ -243,8 +267,10 @@ bool CombatPotionUse::useSelectedPotion(
             player.getInventory().removeConsumable(consumableIndex);
         }
 
+        const int hpBefore = player.getHp();
         int stabilisation = std::max(1, potion.getPower() / 3);
-        bool curedStatus = applyCurativeStatusEffect(player, potion);
+        std::vector<std::string> notes;
+        bool curedStatus = applyCurativeStatusEffect(player, potion, notes);
         bool elementalWard = potionNameContains(potion, "voile")
             || potionNameContains(potion, "élémentaire")
             || potionNameContains(potion, "elementaire")
@@ -259,21 +285,25 @@ bool CombatPotionUse::useSelectedPotion(
             player.applyElementalWard(3, wardPower);
         }
 
-        std::cout << player.getName() << " utilise " << potion.getName() << "." << std::endl;
-        std::cout << "Son corps se stabilise : +" << stabilisation << " PV et posture défensive immédiate." << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back(player.getName() + " utilise " + potion.getName() + ".");
+        lines.push_back("Stabilisation : +" + std::to_string(stabilisation) + " PV.");
+        lines.push_back("PV : " + std::to_string(hpBefore) + " -> " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".");
+        lines.push_back("Posture défensive immédiate.");
         if (elementalWard)
         {
-            std::cout << "Un voile court rend les altérations élémentaires moins mordantes." << std::endl;
+            lines.push_back("Un voile court rend les altérations élémentaires moins mordantes.");
         }
-        if (curedStatus)
+        for (const std::string& note : notes)
         {
-            std::cout << "La potion avait aussi le bon effet pour purger un statut actif." << std::endl;
+            lines.push_back(note);
         }
-        else
+        if (!curedStatus)
         {
-            std::cout << "L'effet reste court, mais ton corps gagne assez de stabilité pour tenir." << std::endl;
+            lines.push_back("L'effet reste court, mais ton corps gagne assez de stabilité pour tenir.");
         }
-        std::cout << std::endl;
+
+        showPotionNotice("POTION DE BUFF", "combat.potion.buff.result", lines);
         return true;
     }
 
@@ -288,8 +318,11 @@ bool CombatPotionUse::useSelectedPotion(
 
         if (debuffTarget == nullptr)
         {
-            std::cout << "Aucune cible n'est assez proche pour recevoir cette fiole." << std::endl;
-            std::cout << std::endl;
+            showPotionNotice(
+                "AUCUNE CIBLE",
+                "combat.potion.debuff.no_target",
+                {"Aucune cible n'est assez proche pour recevoir cette fiole.", "Choisis une autre action ou une cible valide."}
+            );
             return false;
         }
 
@@ -298,6 +331,7 @@ bool CombatPotionUse::useSelectedPotion(
             player.getInventory().removeConsumable(consumableIndex);
         }
 
+        int hpBefore = debuffTarget->getHp();
         int rawDamage = potion.getPower();
         DamageReport report = DamageSystem::calculateReceivedDamage(*debuffTarget, rawDamage);
         DamageSystem::displayDamageReport(*debuffTarget, report);
@@ -312,17 +346,15 @@ bool CombatPotionUse::useSelectedPotion(
             debuffTarget->applyWeakening(3, 12 + std::max(0, potion.getPower() / 12));
         }
 
-        std::cout << player.getName() << " lance " << potion.getName() << " sur " << debuffTarget->getName() << "." << std::endl;
-        if (fragilityPotion)
-        {
-            std::cout << "La cible garde une faille ouverte et reçoit " << report.receivedDamage << " dégâts chimiques." << std::endl;
-        }
-        else
-        {
-            std::cout << "La cible est affaiblie pendant plusieurs tours et reçoit " << report.receivedDamage << " dégâts chimiques." << std::endl;
-        }
-        std::cout << debuffTarget->getName() << " possède maintenant " << debuffTarget->getHp() << "/" << debuffTarget->getMaxHp() << " PV." << std::endl;
-        std::cout << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back(player.getName() + " lance " + potion.getName() + " sur " + debuffTarget->getName() + ".");
+        lines.push_back("PV cible : " + std::to_string(hpBefore) + " -> " + std::to_string(debuffTarget->getHp()) + "/" + std::to_string(debuffTarget->getMaxHp()) + ".");
+        lines.push_back("Dégâts reçus : " + std::to_string(report.receivedDamage) + ".");
+        lines.push_back(fragilityPotion
+            ? "La cible garde une faille ouverte pendant plusieurs tours."
+            : "La cible est affaiblie pendant plusieurs tours.");
+
+        showPotionNotice("POTION DE DEBUFF", "combat.potion.debuff.result", lines);
 
         if (wave != nullptr)
         {
@@ -349,8 +381,11 @@ bool CombatPotionUse::useSelectedPotion(
             bool selfTargetScroll = defensiveScroll || purificationScroll;
             if (!selfTargetScroll && spellTarget == nullptr)
             {
-                std::cout << "Aucune cible n'est assez proche pour recevoir le sort du parchemin." << std::endl;
-                std::cout << std::endl;
+                showPotionNotice(
+                    "AUCUNE CIBLE",
+                    "combat.potion.scroll.no_target",
+                    {"Aucune cible n'est assez proche pour recevoir le sort du parchemin.", "Garde-le pour une situation plus lisible."}
+                );
                 return false;
             }
 
@@ -359,8 +394,10 @@ bool CombatPotionUse::useSelectedPotion(
                 player.getInventory().removeConsumable(consumableIndex);
             }
 
-            if (!resolveScrollStability(player, potion, random))
+            std::vector<std::string> scrollLines;
+            if (!resolveScrollStability(player, potion, random, scrollLines))
             {
+                showPotionNotice("PARCHEMIN INSTABLE", "combat.potion.scroll.failed", scrollLines);
                 return true;
             }
 
@@ -376,13 +413,13 @@ bool CombatPotionUse::useSelectedPotion(
                 if (cured == 0)
                 {
                     player.applyElementalWard(2, std::max(8, potion.getPower() / 3));
-                    std::cout << "Les runes ne trouvent aucun mal à arracher, alors elles laissent une protection faible." << std::endl;
+                    scrollLines.push_back("Les runes ne trouvent aucun mal à arracher, alors elles laissent une protection faible.");
                 }
                 else
                 {
-                    std::cout << "La purification arrache " << cured << " altération(s) au corps." << std::endl;
+                    scrollLines.push_back("La purification arrache " + std::to_string(cured) + " altération(s) au corps.");
                 }
-                std::cout << std::endl;
+                showPotionNotice("PARCHEMIN DE PURIFICATION", "combat.potion.scroll.purification", scrollLines);
                 return true;
             }
 
@@ -390,13 +427,14 @@ bool CombatPotionUse::useSelectedPotion(
             {
                 player.applyElementalWard(3, potion.getPower());
                 DefensePostureSystem::enterDefensePosture(player);
-                std::cout << "Le voile s'accroche au corps : protection élémentaire courte et posture défensive." << std::endl;
-                std::cout << std::endl;
+                scrollLines.push_back("Le voile s'accroche au corps : protection élémentaire courte et posture défensive.");
+                showPotionNotice("PARCHEMIN DÉFENSIF", "combat.potion.scroll.defense", scrollLines);
                 return true;
             }
 
             if (potionNameContains(potion, "braise"))
             {
+                int hpBefore = spellTarget->getHp();
                 DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, std::max(6, potion.getPower() - 4));
                 DamageSystem::displayDamageReport(*spellTarget, report);
                 spellTarget->takeDamage(report.receivedDamage);
@@ -405,18 +443,20 @@ bool CombatPotionUse::useSelectedPotion(
                 if (random.between(1, 100) <= 18)
                 {
                     ElementalAffinitySystem::applyBurning(player, 1, 1);
-                    std::cout << "La braise revient lécher la main qui l'a libérée." << std::endl;
+                    scrollLines.push_back("La braise revient lécher la main qui l'a libérée.");
                 }
 
-                std::cout << "La braise errante mord " << spellTarget->getName() << ", puis cherche une autre faim." << std::endl;
-                std::cout << spellTarget->getName() << " possède maintenant " << spellTarget->getHp() << "/" << spellTarget->getMaxHp() << " PV." << std::endl;
-                std::cout << std::endl;
+                scrollLines.push_back("La braise errante mord " + spellTarget->getName() + ", puis cherche une autre faim.");
+                scrollLines.push_back("PV cible : " + std::to_string(hpBefore) + " -> " + std::to_string(spellTarget->getHp()) + "/" + std::to_string(spellTarget->getMaxHp()) + ".");
+                scrollLines.push_back("Dégâts reçus : " + std::to_string(report.receivedDamage) + ".");
+                showPotionNotice("PARCHEMIN DE BRAISE", "combat.potion.scroll.ember", scrollLines);
                 if (wave != nullptr) wave->removeDeadAndReplace();
                 return true;
             }
 
             if (potionNameContains(potion, "venin"))
             {
+                int hpBefore = spellTarget->getHp();
                 DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, std::max(5, potion.getPower() / 3));
                 DamageSystem::displayDamageReport(*spellTarget, report);
                 spellTarget->takeDamage(report.receivedDamage);
@@ -425,17 +465,19 @@ bool CombatPotionUse::useSelectedPotion(
                 if (random.between(1, 100) <= 25)
                 {
                     ElementalAffinitySystem::applyBleeding(*spellTarget, 1, 1);
-                    std::cout << "Le venin trouve une ouverture et laisse une trace rouge sombre." << std::endl;
+                    scrollLines.push_back("Le venin trouve une ouverture et laisse une trace rouge sombre.");
                 }
-                std::cout << "Le venin rampant mord " << spellTarget->getName() << " et fatigue son prochain échange." << std::endl;
-                std::cout << spellTarget->getName() << " possède maintenant " << spellTarget->getHp() << "/" << spellTarget->getMaxHp() << " PV." << std::endl;
-                std::cout << std::endl;
+                scrollLines.push_back("Le venin rampant mord " + spellTarget->getName() + " et fatigue son prochain échange.");
+                scrollLines.push_back("PV cible : " + std::to_string(hpBefore) + " -> " + std::to_string(spellTarget->getHp()) + "/" + std::to_string(spellTarget->getMaxHp()) + ".");
+                scrollLines.push_back("Dégâts reçus : " + std::to_string(report.receivedDamage) + ".");
+                showPotionNotice("PARCHEMIN DE VENIN", "combat.potion.scroll.venom", scrollLines);
                 if (wave != nullptr) wave->removeDeadAndReplace();
                 return true;
             }
 
             if (potionNameContains(potion, "faille"))
             {
+                int hpBefore = spellTarget->getHp();
                 DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, std::max(8, potion.getPower() / 2));
                 DamageSystem::displayDamageReport(*spellTarget, report);
                 spellTarget->takeDamage(report.receivedDamage);
@@ -444,21 +486,24 @@ bool CombatPotionUse::useSelectedPotion(
                 if (element == 1) ElementalAffinitySystem::applyBurning(*spellTarget, 2, 2 + potion.getPower() / 24);
                 else if (element == 2) ElementalAffinitySystem::applyFrost(*spellTarget, 2);
                 else ElementalAffinitySystem::applyShock(*spellTarget, 1);
-                std::cout << "La faille mord la défense de " << spellTarget->getName() << "." << std::endl;
-                std::cout << spellTarget->getName() << " possède maintenant " << spellTarget->getHp() << "/" << spellTarget->getMaxHp() << " PV." << std::endl;
-                std::cout << std::endl;
+                scrollLines.push_back("La faille mord la défense de " + spellTarget->getName() + ".");
+                scrollLines.push_back("PV cible : " + std::to_string(hpBefore) + " -> " + std::to_string(spellTarget->getHp()) + "/" + std::to_string(spellTarget->getMaxHp()) + ".");
+                scrollLines.push_back("Dégâts reçus : " + std::to_string(report.receivedDamage) + ".");
+                showPotionNotice("PARCHEMIN DE FAILLE", "combat.potion.scroll.rift", scrollLines);
                 if (wave != nullptr) wave->removeDeadAndReplace();
                 return true;
             }
 
+            int hpBefore = spellTarget->getHp();
             DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, potion.getPower());
             DamageSystem::displayDamageReport(*spellTarget, report);
             spellTarget->takeDamage(report.receivedDamage);
             if (random.between(1, 100) <= 45) ElementalAffinitySystem::applyShock(*spellTarget, 1);
             else ElementalAffinitySystem::applyBurning(*spellTarget, 2, 2);
-            std::cout << "L'étincelle arcanique frappe " << spellTarget->getName() << "." << std::endl;
-            std::cout << spellTarget->getName() << " possède maintenant " << spellTarget->getHp() << "/" << spellTarget->getMaxHp() << " PV." << std::endl;
-            std::cout << std::endl;
+            scrollLines.push_back("L'étincelle arcanique frappe " + spellTarget->getName() + ".");
+            scrollLines.push_back("PV cible : " + std::to_string(hpBefore) + " -> " + std::to_string(spellTarget->getHp()) + "/" + std::to_string(spellTarget->getMaxHp()) + ".");
+            scrollLines.push_back("Dégâts reçus : " + std::to_string(report.receivedDamage) + ".");
+            showPotionNotice("PARCHEMIN ARCANISTE", "combat.potion.scroll.arcane", scrollLines);
             if (wave != nullptr) wave->removeDeadAndReplace();
             return true;
         }
@@ -472,16 +517,23 @@ bool CombatPotionUse::useSelectedPotion(
 
             DefensePostureSystem::enterDefensePosture(player);
             player.clearProvocation();
-            std::cout << player.getName() << " brise une " << potion.getName() << "." << std::endl;
-            std::cout << "La fumée ne téléporte pas et ne garantit pas la fuite, mais elle casse la pression immédiate." << std::endl;
-            std::cout << "Effet actuel : posture défensive et provocation annulée." << std::endl;
-            std::cout << std::endl;
+            showPotionNotice(
+                "FUMÉE TACTIQUE",
+                "combat.potion.smoke.result",
+                {
+                    player.getName() + " brise une " + potion.getName() + ".",
+                    "La fumée ne téléporte pas et ne garantit pas la fuite, mais elle casse la pression immédiate.",
+                    "Effet actuel : posture défensive et provocation annulée."
+                }
+            );
             return true;
         }
     }
 
-    std::cout << "[cette option est inaccessible dans ce combat]" << std::endl;
-    std::cout << std::endl;
-
+    showPotionNotice(
+        "ACTION INACCESSIBLE",
+        "combat.potion.unavailable",
+        {"Cette option est inaccessible dans ce combat.", "Choisis une action compatible avec la situation actuelle."}
+    );
     return false;
 }

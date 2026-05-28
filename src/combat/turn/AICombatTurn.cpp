@@ -11,8 +11,10 @@
 #include "character/SpecialCharacterDialogueCatalog.hpp"
 
 #include "core/Console.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
-#include <iostream>
+#include <string>
+#include <vector>
 
 bool AICombatTurn::play(
     Entity& ai,
@@ -22,8 +24,12 @@ bool AICombatTurn::play(
     int potionDamageBonus
 )
 {
-    std::cout << "Tour de " << ai.getName() << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "TOUR ADVERSAIRE",
+        "combat.ai.turn.start",
+        {"Tour de " + ai.getName() + "."},
+        false
+    );
 
     Console::pauseSeconds(1);
 
@@ -86,8 +92,12 @@ bool AICombatTurn::play(
         return true;
     }
 
-    std::cout << ai.getName() << " hésite, fixe le vide, et passe son tour." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "TOUR ADVERSAIRE",
+        "combat.ai.turn.skip",
+        {ai.getName() + " hésite, fixe le vide, et passe son tour."},
+        false
+    );
 
     return true;
 }

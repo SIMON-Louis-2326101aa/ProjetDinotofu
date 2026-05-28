@@ -25,6 +25,7 @@ public:
     static MenuScreen buildUnavailableMaterialsScreen();
 
     static void displayMainMenu();
+    static MenuScreen buildSimpleFullInventoryScreen(const Player& player);
     static void displaySimpleFullInventory(const Player& player);
 
     static void displaySelectedWeapon(const Weapon& weapon);

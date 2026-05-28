@@ -11,15 +11,48 @@
 #include "item/material/MaterialCatalog.hpp"
 #include "item/weapon/WeaponType.hpp"
 #include "progression/DifficultyRules.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
-#include <iostream>
 #include <string>
 #include <algorithm>
 #include <cctype>
+#include <vector>
 
 
 namespace
 {
+    void showLootScreen(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines
+    )
+    {
+        if (!lines.empty())
+        {
+            MessageScreen::show(title, screenId, lines);
+        }
+    }
+
+    std::string formatLootMaterialLine(const Material& material)
+    {
+        std::string line = material.getName();
+        if (material.hasSpecialQuality())
+        {
+            line += " [" + material.getQualityLabel() + "]";
+        }
+        line += " x" + std::to_string(material.getQuantity()) + ".";
+        return line;
+    }
+
+    void addLootLine(
+        std::vector<std::string>& lines,
+        const std::string& reason,
+        const Material& material
+    )
+    {
+        lines.push_back(reason + " : " + formatLootMaterialLine(material));
+    }
+
     std::string toLower(std::string value)
     {
         std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
@@ -95,7 +128,7 @@ namespace
 
     // EN: giveCoinsIfLogical declares or implements a focused behavior used by this module.
     // FR: giveCoinsIfLogical déclare ou implémente un comportement précis utilisé par ce module.
-    void giveCoinsIfLogical(Player& player, const Monster& monster, Random& random)
+    void giveCoinsIfLogical(Player& player, const Monster& monster, Random& random, std::vector<std::string>& lines)
     {
         if (!canLogicallyCarryMoney(monster))
         {
@@ -108,7 +141,7 @@ namespace
         {
             int coins = random.between(3, 8) + monster.getLevel() * 2;
             player.getInventory().earnGold(coins);
-            std::cout << monster.getName() << " avait " << coins << " pièce(s) sur lui." << std::endl;
+            lines.push_back(monster.getName() + " avait " + std::to_string(coins) + " pièce(s) sur lui.");
         }
 
         int largePurseChance = canCarryLargePurse(monster) ? 8 : 1;
@@ -122,8 +155,7 @@ namespace
         {
             int coins = random.between(55, 85) + monster.getLevel() * random.between(8, 12);
             player.getInventory().earnGold(coins);
-            std::cout << "Belle trouvaille : une bourse plus lourde que prévu contient "
-                      << coins << " pièce(s)." << std::endl;
+            lines.push_back("Belle trouvaille : une bourse plus lourde que prévu contient " + std::to_string(coins) + " pièce(s).");
         }
     }
 
@@ -461,7 +493,7 @@ namespace
 
     // EN: applyRecoveryStyleQualityEffect declares or implements a focused behavior used by this module.
     // FR: applyRecoveryStyleQualityEffect déclare ou implémente un comportement précis utilisé par ce module.
-    void applyRecoveryStyleQualityEffect(Material& material, const Monster& monster, const Player& player, Random& random)
+    void applyRecoveryStyleQualityEffect(Material& material, const Monster& monster, const Player& player, Random& random, std::vector<std::string>& lines)
     {
         if (material.getCategory() == "Outil" || material.getCategory() == "Livre" || material.getCategory() == "Renseignement")
         {
@@ -528,8 +560,7 @@ namespace
                     reason = "récupération maladroite";
                 }
 
-                std::cout << "Récupération abîmée (" << reason << ") : la qualité de "
-                          << material.getName() << " baisse d'un cran." << std::endl;
+                lines.push_back("Récupération abîmée (" + reason + ") : la qualité de " + material.getName() + " baisse d'un cran.");
             }
 
             return;
@@ -542,20 +573,20 @@ namespace
 
             if (before != material.getQuality())
             {
-                std::cout << "Récupération précise";
+                std::string qualityLine = "Récupération précise";
                 if (classMastersEquippedWeapon(player))
                 {
-                    std::cout << " grâce à ta maîtrise de l'arme";
+                    qualityLine += " grâce à ta maîtrise de l'arme";
                 }
-                std::cout << " : la qualité de " << material.getName()
-                          << " s'améliore d'un cran." << std::endl;
+                qualityLine += " : la qualité de " + material.getName() + " s'améliore d'un cran.";
+                lines.push_back(qualityLine);
             }
         }
     }
 
     // EN: applyLootQuality declares or implements a focused behavior used by this module.
     // FR: applyLootQuality déclare ou implémente un comportement précis utilisé par ce module.
-    Material applyLootQuality(Material material, const Monster& monster, const Player& player, Random& random, bool foundGoodLoot)
+    Material applyLootQuality(Material material, const Monster& monster, const Player& player, Random& random, bool foundGoodLoot, std::vector<std::string>& lines)
     {
         if (material.getCategory() == "Outil" || material.getCategory() == "Livre" || material.getCategory() == "Renseignement")
         {
@@ -623,32 +654,27 @@ namespace
 
             if (before != material.getQuality())
             {
-                std::cout << "Récupération propre";
+                std::string qualityLine = "Récupération propre";
                 if (classMastersEquippedWeapon(player))
                 {
-                    std::cout << " mieux contrôlée par ta maîtrise de l'arme";
+                    qualityLine += " mieux contrôlée par ta maîtrise de l'arme";
                 }
-                std::cout << " : la qualité de " << material.getName()
-                          << " s'améliore d'un cran." << std::endl;
+                qualityLine += " : la qualité de " + material.getName() + " s'améliore d'un cran.";
+                lines.push_back(qualityLine);
             }
         }
 
-        applyRecoveryStyleQualityEffect(material, monster, player, random);
+        applyRecoveryStyleQualityEffect(material, monster, player, random, lines);
 
         return material;
     }
 
     // EN: giveExtraLoot declares or implements a focused behavior used by this module.
     // FR: giveExtraLoot déclare ou implémente un comportement précis utilisé par ce module.
-    void giveExtraLoot(Player& player, Material material, const std::string& reason)
+    void giveExtraLoot(Player& player, Material material, const std::string& reason, std::vector<std::string>& lines)
     {
         player.getInventory().addMaterial(material);
-        std::cout << reason << " : " << material.getName();
-        if (material.hasSpecialQuality())
-        {
-            std::cout << " [" << material.getQualityLabel() << "]";
-        }
-        std::cout << " x" << material.getQuantity() << "." << std::endl;
+        addLootLine(lines, reason, material);
     }
 }
 
@@ -664,15 +690,14 @@ void LootGenerator::giveDefeatedWaveLoot(
         return;
     }
 
+    std::vector<std::string> lines;
     int lootChance = getLootChance(difficulty);
     bool atLeastOneLoot = false;
-
-    std::cout << "========== BUTIN ==========" << std::endl;
 
     for (int i = 0; i < wave.getDefeatedEnemyCount(); ++i)
     {
         const Monster& monster = wave.getDefeatedEnemy(i);
-        if (tryGiveMonsterLoot(player, monster, random, difficulty, lootChance))
+        if (tryGiveMonsterLoot(player, monster, random, difficulty, lootChance, lines))
         {
             atLeastOneLoot = true;
         }
@@ -682,23 +707,24 @@ void LootGenerator::giveDefeatedWaveLoot(
     for (int i = 0; i < wave.getDefeatedEnemyCount(); ++i)
     {
         progressedQuests += player.getQuestLog().progressCombatQuestsForMonster(wave.getDefeatedEnemy(i));
+        progressedQuests += player.getQuestLog().progressCombatQuestsForMonster(wave.getDefeatedEnemy(i));
     }
 
     int completedDeliveryQuests = player.getQuestLog().refreshMaterialDeliveryQuests(player.getInventory());
 
     if (progressedQuests > 0 || completedDeliveryQuests > 0)
     {
-        std::cout << "Journal de quêtes mis à jour." << std::endl;
+        lines.push_back("Journal de quêtes mis à jour.");
     }
 
     if (!atLeastOneLoot)
     {
-        std::cout << "Aucun matériau intéressant récupéré cette fois." << std::endl;
+        lines.push_back("Aucun matériau intéressant récupéré cette fois.");
     }
 
-    std::cout << "===========================" << std::endl;
-    std::cout << std::endl;
+    showLootScreen("BUTIN", "combat.loot.wave.result", lines);
 }
+
 
 
 void LootGenerator::giveDefeatedBossLoot(
@@ -708,7 +734,7 @@ void LootGenerator::giveDefeatedBossLoot(
     DifficultyMode difficulty
 )
 {
-    std::cout << "========== BUTIN DE BOSS ==========" << std::endl;
+    std::vector<std::string> lines;
 
     int fragmentQuantity = 1;
 
@@ -731,218 +757,218 @@ void LootGenerator::giveDefeatedBossLoot(
     {
         bossFragment = MaterialCatalog::createFitoriaFeather(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createArcaneDust(2));
-        std::cout << "La lumière retombe en poussière arcanique x2." << std::endl;
+        lines.push_back("La lumière retombe en poussière arcanique x2.");
     }
     else if (boss.getBossId() == 2)
     {
         bossFragment = MaterialCatalog::createZelefDemonBlood(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createUnstableCore(1));
-        std::cout << "Un noyau instable bat encore dans les restes du démon." << std::endl;
+        lines.push_back("Un noyau instable bat encore dans les restes du démon.");
     }
     else if (boss.getBossId() == 3)
     {
         bossFragment = MaterialCatalog::createAtlasBrokenPlate(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createDraconicScaleFragment(1));
-        std::cout << "Une résistance presque draconique reste accrochée à la plaque." << std::endl;
+        lines.push_back("Une résistance presque draconique reste accrochée à la plaque.");
     }
     else if (boss.getBossId() == 4)
     {
         bossFragment = MaterialCatalog::createLyknirHuntShard(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createWolfFang(2));
-        std::cout << "La meute laisse derrière elle des crocs marqués par l'écho." << std::endl;
+        lines.push_back("La meute laisse derrière elle des crocs marqués par l'écho.");
     }
     else if (boss.getBossId() == 5)
     {
         bossFragment = MaterialCatalog::createGrinkaAvariceCoin(fragmentQuantity);
         player.getInventory().earnGold(random.between(35, 85));
-        std::cout << "Quelques pièces tombent du sac royal avant que les collecteurs ne les récupèrent." << std::endl;
+        lines.push_back("Quelques pièces tombent du sac royal avant que les collecteurs ne les récupèrent.");
     }
     else if (boss.getBossId() == 6)
     {
         bossFragment = MaterialCatalog::createAzelanosDarkCrownShard(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createUnstableCore(1));
-        std::cout << "Un noyau instable palpite dans les cendres de la couronne noire." << std::endl;
+        lines.push_back("Un noyau instable palpite dans les cendres de la couronne noire.");
     }
     else if (boss.getBossId() == 7)
     {
         bossFragment = MaterialCatalog::createThamarysOriginScale(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createDraconicScaleFragment(2));
-        std::cout << "Des fragments d'écailles ordinaires tombent autour de l'écaille d'origine." << std::endl;
+        lines.push_back("Des fragments d'écailles ordinaires tombent autour de l'écaille d'origine.");
     }
     else if (boss.getBossId() == 8)
     {
         bossFragment = MaterialCatalog::createMojoAncientSeed(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createBitterHealingLeaf(2));
-        std::cout << "La forêt laisse quelques feuilles médicinales près de la graine ancienne." << std::endl;
+        lines.push_back("La forêt laisse quelques feuilles médicinales près de la graine ancienne.");
     }
     else if (boss.getBossId() == 9)
     {
         bossFragment = MaterialCatalog::createInakariMirrorShard(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createKitsuneEmber(1));
-        std::cout << "Une braise kitsune continue de danser dans le reflet brisé." << std::endl;
+        lines.push_back("Une braise kitsune continue de danser dans le reflet brisé.");
     }
     else if (boss.getBossId() == 10)
     {
         bossFragment = MaterialCatalog::createSilentJudgmentSeal(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createShadowThread(1));
-        std::cout << "Un fil d'ombre reste accroché au sceau muet." << std::endl;
+        lines.push_back("Un fil d'ombre reste accroché au sceau muet.");
     }
     else if (boss.getBossId() == 11)
     {
         bossFragment = MaterialCatalog::createAnomalyGlitchFragment(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createVariationResidue(2));
-        std::cout << "Le fragment glitch laisse aussi deux résidus de variation." << std::endl;
+        lines.push_back("Le fragment glitch laisse aussi deux résidus de variation.");
     }
     else if (boss.getBossId() == 12)
     {
         bossFragment = MaterialCatalog::createDeadMinuteGear(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createArcaneDust(2));
-        std::cout << "De la poussière arcanique tombe entre deux secondes mortes." << std::endl;
+        lines.push_back("De la poussière arcanique tombe entre deux secondes mortes.");
     }
     else if (boss.getBossId() == 13)
     {
         bossFragment = MaterialCatalog::createBuriedBoneLullaby(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createCrackedBone(3));
-        std::cout << "Des os fissurés restent dans le sable après le silence." << std::endl;
+        lines.push_back("Des os fissurés restent dans le sable après le silence.");
     }
     else if (boss.getBossId() == 14)
     {
         bossFragment = MaterialCatalog::createBorosWarMark(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createBattleTornBadge(2));
-        std::cout << "Deux insignes abîmés portent encore l'écho du champ de bataille." << std::endl;
+        lines.push_back("Deux insignes abîmés portent encore l'écho du champ de bataille.");
     }
     else if (boss.getBossId() == 15)
     {
         bossFragment = MaterialCatalog::createAnastasiaBoundHeart(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createArcaneDust(1));
-        std::cout << "Une poussière douce et lourde tombe du coeur lié." << std::endl;
+        lines.push_back("Une poussière douce et lourde tombe du coeur lié.");
     }
     else if (boss.getBossId() == 16)
     {
         bossFragment = MaterialCatalog::createLexiorJusticeSplinter(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createBossIdentityScrap(1));
-        std::cout << "Un fragment de registre reste coincé dans le verdict." << std::endl;
+        lines.push_back("Un fragment de registre reste coincé dans le verdict.");
     }
     else if (boss.getBossId() == 17)
     {
         bossFragment = MaterialCatalog::createLunarDreamFragment(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createArcaneDust(2));
-        std::cout << "La poussière arcanique tombe comme de la neige dans un rêve." << std::endl;
+        lines.push_back("La poussière arcanique tombe comme de la neige dans un rêve.");
     }
     else if (boss.getBossId() == 18)
     {
         bossFragment = MaterialCatalog::createElementalFusionCore(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createUnstableCore(1));
-        std::cout << "Un noyau instable vibre encore entre quatre éléments." << std::endl;
+        lines.push_back("Un noyau instable vibre encore entre quatre éléments.");
     }
     else if (boss.getBossId() == 19)
     {
         bossFragment = MaterialCatalog::createHumanWillFragment(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createBattleTornBadge(1));
-        std::cout << "Un insigne abîmé reste près d'une volonté qui refusait de tomber." << std::endl;
+        lines.push_back("Un insigne abîmé reste près d'une volonté qui refusait de tomber.");
     }
     else if (boss.getBossId() == 20)
     {
         bossFragment = MaterialCatalog::createConsciousLuckShard(fragmentQuantity);
         player.getInventory().earnGold(random.between(20, 70));
-        std::cout << "Quelques pièces tombent du bon côté, comme si le hasard avait souri une dernière fois." << std::endl;
+        lines.push_back("Quelques pièces tombent du bon côté, comme si le hasard avait souri une dernière fois.");
     }
     else if (boss.getBossId() == 21)
     {
         bossFragment = MaterialCatalog::createProgressionSeal(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createBossIdentityScrap(1));
-        std::cout << "Un fragment de registre reste collé au sceau du seuil." << std::endl;
+        lines.push_back("Un fragment de registre reste collé au sceau du seuil.");
     }
     else if (boss.getBossId() == 22)
     {
         bossFragment = MaterialCatalog::createAbsentThroneFragment(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createRustedMetalFragment(2));
-        std::cout << "Deux éclats de métal rouillé tombent d'une couronne qui n'a plus de salle." << std::endl;
+        lines.push_back("Deux éclats de métal rouillé tombent d'une couronne qui n'a plus de salle.");
     }
     else if (boss.getBossId() == 23)
     {
         bossFragment = MaterialCatalog::createLostNameFragment(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createBeastHide(2));
-        std::cout << "La bête laisse une peau impossible à classer. Elle ne ressemble déjà plus à celle du combat." << std::endl;
+        lines.push_back("La bête laisse une peau impossible à classer. Elle ne ressemble déjà plus à celle du combat.");
     }
     else if (boss.getBossId() == 24)
     {
         bossFragment = MaterialCatalog::createAldebarothAbyssResidue(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createShadowThread(2));
-        std::cout << "Deux fils d'ombre restent collés au résidu d'abîme." << std::endl;
+        lines.push_back("Deux fils d'ombre restent collés au résidu d'abîme.");
     }
     else if (boss.getBossId() == 25)
     {
         bossFragment = MaterialCatalog::createTwinParadoxShard(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createUnstableCore(2));
-        std::cout << "Deux noyaux instables vibrent entre création et destruction." << std::endl;
+        lines.push_back("Deux noyaux instables vibrent entre création et destruction.");
     }
     else if (boss.getBossId() == 26)
     {
         bossFragment = MaterialCatalog::createOberionOriginThread(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createBossIdentityScrap(2));
-        std::cout << "Deux fragments de registre tentent de suivre le fil d'origine." << std::endl;
+        lines.push_back("Deux fragments de registre tentent de suivre le fil d'origine.");
     }
     else if (boss.getBossId() == 27)
     {
         bossFragment = MaterialCatalog::createUnstableVersionCore(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createVariationResidue(3));
-        std::cout << "Trois résidus de variation tombent comme des lignes supprimées." << std::endl;
+        lines.push_back("Trois résidus de variation tombent comme des lignes supprimées.");
     }
     else if (boss.getBossId() == 28)
     {
         bossFragment = MaterialCatalog::createFacelessBreath(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createShadowThread(2));
-        std::cout << "Deux fils d'ombre restent suspendus dans un souffle qui n'a jamais eu de bouche." << std::endl;
+        lines.push_back("Deux fils d'ombre restent suspendus dans un souffle qui n'a jamais eu de bouche.");
     }
     else if (boss.getBossId() == 29)
     {
         bossFragment = MaterialCatalog::createPuppetNail(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createRustedMetalFragment(3));
-        std::cout << "Trois éclats métalliques tombent avec les clous de la marionnette." << std::endl;
+        lines.push_back("Trois éclats métalliques tombent avec les clous de la marionnette.");
     }
     else if (boss.getBossId() == 30)
     {
         bossFragment = MaterialCatalog::createMoiranFateThread(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createBossIdentityScrap(2));
-        std::cout << "Deux fragments de registre essaient de suivre une destinée qui se déplace encore." << std::endl;
+        lines.push_back("Deux fragments de registre essaient de suivre une destinée qui se déplace encore.");
     }
     else if (boss.getBossId() == 31)
     {
         bossFragment = MaterialCatalog::createLostSoulAntler(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createBeastHide(1));
-        std::cout << "Une peau silencieuse reste près de l'éclat d'âme perdue." << std::endl;
+        lines.push_back("Une peau silencieuse reste près de l'éclat d'âme perdue.");
     }
 
     else if (boss.getBossId() == 32)
     {
         bossFragment = MaterialCatalog::createGorvaldRoyalBlood(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createRustedMetalFragment(2));
-        std::cout << "Deux éclats de hache tribale tombent près du sang royal." << std::endl;
+        lines.push_back("Deux éclats de hache tribale tombent près du sang royal.");
     }
     else if (boss.getBossId() == 33)
     {
         bossFragment = MaterialCatalog::createSeranaRoyalFang(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createShadowThread(1));
-        std::cout << "Un fil d'ombre reste froid malgré le sang rouge." << std::endl;
+        lines.push_back("Un fil d'ombre reste froid malgré le sang rouge.");
     }
     else if (boss.getBossId() == 34)
     {
         bossFragment = MaterialCatalog::createDraiiteBlackSilk(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createSlimeResidue(1));
-        std::cout << "Un résidu collant reste accroché à la soie noire." << std::endl;
+        lines.push_back("Un résidu collant reste accroché à la soie noire.");
     }
     else if (boss.getBossId() == 35)
     {
         bossFragment = MaterialCatalog::createBrokenMirrorShard(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createBossIdentityScrap(2));
-        std::cout << "Deux fragments de registre reflètent deux vérités différentes." << std::endl;
+        lines.push_back("Deux fragments de registre reflètent deux vérités différentes.");
     }
     else
     {
         bossFragment = MaterialCatalog::createUnstableVersionCore(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createVariationResidue(3));
-        std::cout << "Trois résidus de variation tombent comme des lignes supprimées." << std::endl;
+        lines.push_back("Trois résidus de variation tombent comme des lignes supprimées.");
     }
 
     bossFragment.setQuality("pure");
@@ -950,22 +976,22 @@ void LootGenerator::giveDefeatedBossLoot(
     if (random.between(1, 100) <= 12)
     {
         bossFragment.setQuality("exceptional");
-        std::cout << "Récupération parfaite : le fragment de boss est exceptionnel." << std::endl;
+        lines.push_back("Récupération parfaite : le fragment de boss est exceptionnel.");
     }
 
     player.getInventory().addMaterial(bossFragment);
 
-    std::cout << boss.getName()
-              << " laisse un fragment unique : "
-              << bossFragment.getName()
-              << " x"
-              << bossFragment.getQuantity()
-              << "."
-              << std::endl;
+    lines.push_back(
+        boss.getName()
+        + " laisse un fragment unique : "
+        + bossFragment.getName()
+        + " x"
+        + std::to_string(bossFragment.getQuantity())
+        + "."
+    );
+    lines.push_back("Ces fragments ne forment pas une relique complète, mais leur présence pèse déjà dans ton inventaire.");
 
-    std::cout << "Ces fragments ne forment pas une relique complète, mais leur présence pèse déjà dans ton inventaire." << std::endl;
-    std::cout << "===================================" << std::endl;
-    std::cout << std::endl;
+    showLootScreen("BUTIN DE BOSS", "combat.loot.boss.result", lines);
 }
 
 // EN: getLootChance declares or implements a focused behavior used by this module.
@@ -1021,7 +1047,8 @@ bool LootGenerator::tryGiveMonsterLoot(
     const Monster& monster,
     Random& random,
     DifficultyMode difficulty,
-    int lootChance
+    int lootChance,
+    std::vector<std::string>& lines
 )
 {
     bool foundGoodLoot = random.between(1, 100) <= lootChance;
@@ -1085,79 +1112,67 @@ bool LootGenerator::tryGiveMonsterLoot(
     if (monster.isElite() && random.between(1, 100) <= 20)
     {
         Material extra = MaterialCatalog::createWeakRepairKit(1);
-        giveExtraLoot(player, extra, monster.getName() + " possédait aussi un outil intact");
+        giveExtraLoot(player, extra, monster.getName() + " possédait aussi un outil intact", lines);
     }
 
     if (monster.isEvolved() && random.between(1, 100) <= 28)
     {
         Material extra = MaterialCatalog::createArcaneDust(1);
         extra.setQuality(random.between(1, 100) <= 20 ? "exceptional" : "pure");
-        giveExtraLoot(player, extra, "Résidu de variation récupéré sur la créature évoluée");
+        giveExtraLoot(player, extra, "Résidu de variation récupéré sur la créature évoluée", lines);
     }
 
     if (canLogicallyCarryMoney(monster) && random.between(1, 100) <= 4)
     {
-        giveExtraLoot(player, MaterialCatalog::createPrecisionHarvestTools(1), "Matériel de terrain récupéré");
+        giveExtraLoot(player, MaterialCatalog::createPrecisionHarvestTools(1), "Matériel de terrain récupéré", lines);
     }
 
     if ((containsText(monster.getType(), "alchim") || containsText(monster.getType(), "mage") || monster.getRace() == Race::Fee)
         && random.between(1, 100) <= 5)
     {
-        giveExtraLoot(player, MaterialCatalog::createPreservationVials(1), "Sacoche fragile récupérée");
+        giveExtraLoot(player, MaterialCatalog::createPreservationVials(1), "Sacoche fragile récupérée", lines);
     }
 
     if ((monster.getRace() == Race::Bete || containsText(monster.getType(), "bête")) && random.between(1, 100) <= 35)
     {
-        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createBeastHide(1), monster, player, random, true), "Dépouille exploitable");
+        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createBeastHide(1), monster, player, random, true, lines), "Dépouille exploitable", lines);
     }
 
     if ((monster.getRace() == Race::ElfeNoir || containsText(monster.getName(), "Hazak") || containsText(monster.getType(), "assassin"))
         && random.between(1, 100) <= 25)
     {
-        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createShadowThread(1), monster, player, random, true), "Trace d'ombre récupérée");
+        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createShadowThread(1), monster, player, random, true, lines), "Trace d'ombre récupérée", lines);
     }
 
     if ((monster.getRace() == Race::Kitsune || containsText(monster.getName(), "Aoi")) && random.between(1, 100) <= 30)
     {
-        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createKitsuneEmber(1), monster, player, random, true), "Braise instable laissée au sol");
+        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createKitsuneEmber(1), monster, player, random, true, lines), "Braise instable laissée au sol", lines);
     }
 
     if ((monster.getRace() == Race::SemiDragon || containsText(monster.getName(), "Kanad")) && random.between(1, 100) <= 30)
     {
-        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createDraconicScaleFragment(1), monster, player, random, true), "Fragment solide arraché au choc");
+        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createDraconicScaleFragment(1), monster, player, random, true, lines), "Fragment solide arraché au choc", lines);
     }
 
     if ((monster.getRace() == Race::Fee || containsText(monster.getName(), "Fail") || containsText(monster.getType(), "mage"))
         && random.between(1, 100) <= 22)
     {
-        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createUnstableCore(1), monster, player, random, true), "Résidu magique condensé");
+        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createUnstableCore(1), monster, player, random, true, lines), "Résidu magique condensé", lines);
     }
 
-    giveCoinsIfLogical(player, monster, random);
+    giveCoinsIfLogical(player, monster, random, lines);
 
-    loot = applyLootQuality(loot, monster, player, random, foundGoodLoot);
+    loot = applyLootQuality(loot, monster, player, random, foundGoodLoot, lines);
     player.getInventory().addMaterial(loot);
 
     if (!foundGoodLoot)
     {
-        std::cout << "Butin minimal récupéré sur " << monster.getName() << " : ";
+        addLootLine(lines, "Butin minimal récupéré sur " + monster.getName(), loot);
     }
     else
     {
-        std::cout << monster.getName() << " laisse quelque chose derrière lui : ";
+        addLootLine(lines, monster.getName() + " laisse quelque chose derrière lui", loot);
     }
-
-    std::cout << loot.getName();
-
-    if (loot.hasSpecialQuality())
-    {
-        std::cout << " [" << loot.getQualityLabel() << "]";
-    }
-
-    std::cout << " x"
-              << loot.getQuantity()
-              << "."
-              << std::endl;
 
     return true;
 }

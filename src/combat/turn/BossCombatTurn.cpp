@@ -12,13 +12,122 @@
 
 #include "core/Console.hpp"
 #include "entity/Player.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
-#include <iostream>
 #include <map>
+#include <sstream>
 #include <string>
+#include <vector>
 
 namespace
 {
+
+    class BossNarrationLines
+    {
+    public:
+        template <typename T>
+        BossNarrationLines& operator<<(const T& value)
+        {
+            current << value;
+            return *this;
+        }
+
+        using StreamManipulator = std::ostream& (*)(std::ostream&);
+
+        BossNarrationLines& operator<<(StreamManipulator manipulator)
+        {
+            if (manipulator == static_cast<StreamManipulator>(std::endl<char, std::char_traits<char>>))
+            {
+                flushLine();
+            }
+            else
+            {
+                manipulator(current);
+            }
+            return *this;
+        }
+
+        std::vector<std::string> takeLines()
+        {
+            flushLine();
+            return lines;
+        }
+
+    private:
+        std::ostringstream current;
+        std::vector<std::string> lines;
+
+        void flushLine()
+        {
+            std::string line = current.str();
+            while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t'))
+            {
+                line.pop_back();
+            }
+            if (!line.empty())
+            {
+                lines.push_back(line);
+            }
+            current.str(std::string());
+            current.clear();
+        }
+    };
+
+    void showBossNarration(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        bool waitAndClear = false
+    )
+    {
+        if (lines.empty()) return;
+        MessageScreen::show(title, screenId, lines, waitAndClear);
+    }
+
+
+    void executeBossAttackScreen(
+        Boss& boss,
+        Entity& player,
+        Random& random,
+        const std::string& bossScreenSuffix
+    )
+    {
+        (void)bossScreenSuffix;
+        CombatActions::executeAttack(boss, player, random);
+    }
+
+    bool executeBossDamagePotionScreen(
+        Boss& boss,
+        Entity& player,
+        Random& random,
+        int bonusPercent,
+        const std::string& bossScreenSuffix
+    )
+    {
+        (void)bossScreenSuffix;
+        return CombatActions::executeDamagePotion(boss, player, random, bonusPercent);
+    }
+
+    void executeBossUltimateScreen(
+        Boss& boss,
+        Entity& player,
+        Random& random,
+        const std::string& bossScreenSuffix
+    )
+    {
+        (void)bossScreenSuffix;
+        BossCombat::executeBossUltimate(boss, player, random);
+    }
+
+    bool handleBossEndTurnScreen(
+        Boss& boss,
+        Entity& player,
+        const std::string& bossScreenSuffix
+    )
+    {
+        (void)bossScreenSuffix;
+        return BossCombat::handleBossEndTurn(boss, player);
+    }
 
     std::string getMostUsedEquipmentLabel(const Player& player)
     {
@@ -58,7 +167,7 @@ namespace
 
     // EN: applyAlteredHunterPressure declares or implements a focused behavior used by this module.
     // FR: applyAlteredHunterPressure déclare ou implémente un comportement précis utilisé par ce module.
-    void applyAlteredHunterPressure(Boss& boss, Entity& player, Random& random)
+    void applyAlteredHunterPressure(Boss& boss, Entity& player, Random& random, BossNarrationLines& narration)
     {
         Player* concretePlayer = dynamic_cast<Player*>(&player);
         if (concretePlayer == nullptr || !concretePlayer->isAlteredByCheats()) return;
@@ -77,12 +186,12 @@ namespace
             else if (boss.getBossId() == 26) hunterName = "Obérion";
             else if (boss.getBossId() == 27) hunterName = "FireFlight";
 
-            std::cout << hunterName << " lit les altérations du personnage." << std::endl;
-            std::cout << "Les codes ne te protègent pas ici. Ils servent de preuve." << std::endl;
-            std::cout << "Réponse anti-altération : " << punishment << " dégâts." << std::endl;
+            narration << hunterName << " lit les altérations du personnage." << std::endl;
+            narration << "Les codes ne te protègent pas ici. Ils servent de preuve." << std::endl;
+            narration << "Réponse anti-altération : " << punishment << " dégâts." << std::endl;
             player.takeDamage(punishment);
-            std::cout << player.getName() << " possède maintenant " << player.getHp() << "/" << player.getMaxHp() << " PV." << std::endl;
-            std::cout << std::endl;
+            narration << player.getName() << " possède maintenant " << player.getHp() << "/" << player.getMaxHp() << " PV." << std::endl;
+            narration << std::endl;
         }
     }
     // EN: isGoblinLikePlayer declares or implements a focused behavior used by this module.
@@ -98,42 +207,42 @@ namespace
 
     // EN: describeNamelessBeastVariant declares or implements a focused behavior used by this module.
     // FR: describeNamelessBeastVariant déclare ou implémente un comportement précis utilisé par ce module.
-    void describeNamelessBeastVariant(Random& random)
+    void describeNamelessBeastVariant(Random& random, BossNarrationLines& narration)
     {
         int variant = random.between(1, 5);
 
-        std::cout << "Le registre tente de décrire la créature." << std::endl;
+        narration << "Le registre tente de décrire la créature." << std::endl;
         if (variant == 1)
         {
-            std::cout << "Cette fois, elle avance sur quatre pattes trop longues, couverte de poils blancs et d'os apparents." << std::endl;
-            std::cout << "Ses yeux ressemblent à des trous dans une page arrachée." << std::endl;
+            narration << "Cette fois, elle avance sur quatre pattes trop longues, couverte de poils blancs et d'os apparents." << std::endl;
+            narration << "Ses yeux ressemblent à des trous dans une page arrachée." << std::endl;
         }
         else if (variant == 2)
         {
-            std::cout << "Cette fois, elle rampe comme une masse noire, avec des bois de cerf et une mâchoire de requin." << std::endl;
-            std::cout << "Chaque souffle change la forme de son dos." << std::endl;
+            narration << "Cette fois, elle rampe comme une masse noire, avec des bois de cerf et une mâchoire de requin." << std::endl;
+            narration << "Chaque souffle change la forme de son dos." << std::endl;
         }
         else if (variant == 3)
         {
-            std::cout << "Cette fois, elle ressemble presque à un oiseau géant, sauf que ses ailes sont faites de doigts." << std::endl;
-            std::cout << "Le sol refuse d'enregistrer ses empreintes." << std::endl;
+            narration << "Cette fois, elle ressemble presque à un oiseau géant, sauf que ses ailes sont faites de doigts." << std::endl;
+            narration << "Le sol refuse d'enregistrer ses empreintes." << std::endl;
         }
         else if (variant == 4)
         {
-            std::cout << "Cette fois, elle porte une carapace de pierre humide et une queue qui semble venir d'un autre animal." << std::endl;
-            std::cout << "Le bestiaire écrit puis efface son espèce trois fois de suite." << std::endl;
+            narration << "Cette fois, elle porte une carapace de pierre humide et une queue qui semble venir d'un autre animal." << std::endl;
+            narration << "Le bestiaire écrit puis efface son espèce trois fois de suite." << std::endl;
         }
         else
         {
-            std::cout << "Cette fois, elle semble presque humaine de loin." << std::endl;
-            std::cout << "Puis elle bouge, et ton cerveau abandonne cette comparaison." << std::endl;
+            narration << "Cette fois, elle semble presque humaine de loin." << std::endl;
+            narration << "Puis elle bouge, et ton cerveau abandonne cette comparaison." << std::endl;
         }
-        std::cout << std::endl;
+        narration << std::endl;
     }
 
     // EN: executeNewBossPassiveAction declares or implements a focused behavior used by this module.
     // FR: executeNewBossPassiveAction déclare ou implémente un comportement précis utilisé par ce module.
-    void executeNewBossPassiveAction(Boss& boss, Entity& player, Random& random)
+    void executeNewBossPassiveAction(Boss& boss, Entity& player, Random& random, BossNarrationLines& narration)
     {
         if (boss.getBossId() == 1 && random.between(1, 100) <= 22)
         {
@@ -141,10 +250,10 @@ namespace
             if (judgment > 5) judgment = 5;
             boss.setSpecialEffect(judgment);
 
-            std::cout << "Fitoria ne lève pas son arme. Elle lève les yeux vers toi." << std::endl;
-            std::cout << "La lumière ne te frappe pas encore. Elle te mesure." << std::endl;
-            std::cout << "Jugement lumineux : " << judgment << std::endl;
-            std::cout << std::endl;
+            narration << "Fitoria ne lève pas son arme. Elle lève les yeux vers toi." << std::endl;
+            narration << "La lumière ne te frappe pas encore. Elle te mesure." << std::endl;
+            narration << "Jugement lumineux : " << judgment << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 2 && random.between(1, 100) <= 25)
@@ -157,10 +266,10 @@ namespace
             player.takeDamage(damage);
             boss.heal(damage / 2);
 
-            std::cout << "Le sang de Zelef touche le sol." << std::endl;
-            std::cout << "Il ne coule pas. Il rampe vers toi." << std::endl;
-            std::cout << player.getName() << " subit " << damage << " dégâts de corruption légère." << std::endl;
-            std::cout << std::endl;
+            narration << "Le sang de Zelef touche le sol." << std::endl;
+            narration << "Il ne coule pas. Il rampe vers toi." << std::endl;
+            narration << player.getName() << " subit " << damage << " dégâts de corruption légère." << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 3 && random.between(1, 100) <= 25)
@@ -169,10 +278,10 @@ namespace
             if (fissures > 5) fissures = 5;
             boss.setSpecialEffect(fissures);
 
-            std::cout << "Une plaque de l'armure d'Atlas se fissure." << std::endl;
-            std::cout << "Chaque faille retire un peu de défense, mais prépare une réponse plus lourde." << std::endl;
-            std::cout << "Fissures visibles : " << fissures << std::endl;
-            std::cout << std::endl;
+            narration << "Une plaque de l'armure d'Atlas se fissure." << std::endl;
+            narration << "Chaque faille retire un peu de défense, mais prépare une réponse plus lourde." << std::endl;
+            narration << "Fissures visibles : " << fissures << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 4 && random.between(1, 100) <= 25)
@@ -181,19 +290,19 @@ namespace
             if (mark > 5) mark = 5;
             boss.setSpecialEffect(mark);
 
-            std::cout << "L'Écho de Lyknir baisse la tête." << std::endl;
-            std::cout << "Ses yeux ne regardent plus ton corps. Ils regardent ta fuite." << std::endl;
-            std::cout << "Marque de proie : " << mark << std::endl;
-            std::cout << std::endl;
+            narration << "L'Écho de Lyknir baisse la tête." << std::endl;
+            narration << "Ses yeux ne regardent plus ton corps. Ils regardent ta fuite." << std::endl;
+            narration << "Marque de proie : " << mark << std::endl;
+            narration << std::endl;
 
             if (mark >= 3)
             {
                 int damage = 8 + mark * 3;
                 player.takeDamage(damage);
-                std::cout << "La meute mord depuis les angles morts et inflige " << damage << " dégâts." << std::endl;
-                std::cout << player.getName() << " possède maintenant "
+                narration << "La meute mord depuis les angles morts et inflige " << damage << " dégâts." << std::endl;
+                narration << player.getName() << " possède maintenant "
                           << player.getHp() << "/" << player.getMaxHp() << " PV." << std::endl;
-                std::cout << std::endl;
+                narration << std::endl;
             }
         }
 
@@ -203,11 +312,11 @@ namespace
             int debt = boss.getSpecialEffect() + addedDebt;
             boss.setSpecialEffect(debt);
 
-            std::cout << "Grinka claque des doigts." << std::endl;
-            std::cout << "Des collecteurs gobelins surgissent avec des sacs plus grands qu'eux." << std::endl;
-            std::cout << "Ils ne savent pas se battre. Ils savent facturer." << std::endl;
-            std::cout << "Dette gobeline actuelle : " << debt << std::endl;
-            std::cout << std::endl;
+            narration << "Grinka claque des doigts." << std::endl;
+            narration << "Des collecteurs gobelins surgissent avec des sacs plus grands qu'eux." << std::endl;
+            narration << "Ils ne savent pas se battre. Ils savent facturer." << std::endl;
+            narration << "Dette gobeline actuelle : " << debt << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 6 && random.between(1, 100) <= 22)
@@ -215,10 +324,10 @@ namespace
             int darkness = boss.getSpecialEffect() + random.between(1, 2);
             boss.setSpecialEffect(darkness);
 
-            std::cout << "L'ombre derrière l'avatar ne suit pas ses mouvements." << std::endl;
-            std::cout << "Elle grandit." << std::endl;
-            std::cout << "Charges d'obscurité : " << darkness << std::endl;
-            std::cout << std::endl;
+            narration << "L'ombre derrière l'avatar ne suit pas ses mouvements." << std::endl;
+            narration << "Elle grandit." << std::endl;
+            narration << "Charges d'obscurité : " << darkness << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 7 && random.between(1, 100) <= 25)
@@ -227,10 +336,10 @@ namespace
             if (scales > 5) scales = 5;
             boss.setSpecialEffect(scales);
 
-            std::cout << "Les écailles du Fragment de Thamarys changent lentement de reflet." << std::endl;
-            std::cout << "Le dragon apprend la forme de tes attaques." << std::endl;
-            std::cout << "Adaptation draconique : " << scales << std::endl;
-            std::cout << std::endl;
+            narration << "Les écailles du Fragment de Thamarys changent lentement de reflet." << std::endl;
+            narration << "Le dragon apprend la forme de tes attaques." << std::endl;
+            narration << "Adaptation draconique : " << scales << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 8 && random.between(1, 100) <= 29)
@@ -241,20 +350,20 @@ namespace
             {
                 memory -= 1;
                 if (memory < 0) memory = 0;
-                std::cout << "Mojo observe ta posture défensive." << std::endl;
-                std::cout << "La forêt ne voit pas une provocation. Elle voit de la retenue." << std::endl;
+                narration << "Mojo observe ta posture défensive." << std::endl;
+                narration << "La forêt ne voit pas une provocation. Elle voit de la retenue." << std::endl;
             }
             else
             {
                 memory += 1;
                 if (memory > 6) memory = 6;
-                std::cout << "Les feuilles frémissent autour de Mojo." << std::endl;
-                std::cout << "La forêt grave un nouveau souvenir de ce combat." << std::endl;
+                narration << "Les feuilles frémissent autour de Mojo." << std::endl;
+                narration << "La forêt grave un nouveau souvenir de ce combat." << std::endl;
             }
 
             boss.setSpecialEffect(memory);
-            std::cout << "Mémoire de la forêt : " << memory << std::endl;
-            std::cout << std::endl;
+            narration << "Mémoire de la forêt : " << memory << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 9 && random.between(1, 100) <= 28)
@@ -263,10 +372,10 @@ namespace
             if (mirrors > 5) mirrors = 5;
             boss.setSpecialEffect(mirrors);
 
-            std::cout << "Inakari rit sans ouvrir la bouche." << std::endl;
-            std::cout << "Un reflet de plus apparaît dans l'arène." << std::endl;
-            std::cout << "Reflets menteurs : " << mirrors << std::endl;
-            std::cout << std::endl;
+            narration << "Inakari rit sans ouvrir la bouche." << std::endl;
+            narration << "Un reflet de plus apparaît dans l'arène." << std::endl;
+            narration << "Reflets menteurs : " << mirrors << std::endl;
+            narration << std::endl;
         }
 
 
@@ -276,10 +385,10 @@ namespace
             if (judgment > 6) judgment = 6;
             boss.setSpecialEffect(judgment);
 
-            std::cout << "Le Jugement Silencieux ne parle pas." << std::endl;
-            std::cout << "Pourtant, ton ombre semble répondre à sa place." << std::endl;
-            std::cout << "Charges de jugement muet : " << judgment << std::endl;
-            std::cout << std::endl;
+            narration << "Le Jugement Silencieux ne parle pas." << std::endl;
+            narration << "Pourtant, ton ombre semble répondre à sa place." << std::endl;
+            narration << "Charges de jugement muet : " << judgment << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 11 && random.between(1, 100) <= 32)
@@ -288,21 +397,21 @@ namespace
             if (corruption > 9) corruption = 9;
             boss.setSpecialEffect(corruption);
 
-            std::cout << "========== C0M8@T ==========" << std::endl;
-            std::cout << "1 : ▓▒░█§╬?//" << std::endl;
-            std::cout << "2 : @@@_ERREUR_MÉMOIRE" << std::endl;
-            std::cout << "3 : TU N'ÉTAIS PAS CENSÉ VOIR ÇA" << std::endl;
-            std::cout << "L'Anomalie remplace le texte, mais pas toujours les règles." << std::endl;
-            std::cout << "Corruption d'interface : " << corruption << std::endl;
-            std::cout << std::endl;
+            narration << "========== C0M8@T ==========" << std::endl;
+            narration << "1 : ▓▒░█§╬?//" << std::endl;
+            narration << "2 : @@@_ERREUR_MÉMOIRE" << std::endl;
+            narration << "3 : TU N'ÉTAIS PAS CENSÉ VOIR ÇA" << std::endl;
+            narration << "L'Anomalie remplace le texte, mais pas toujours les règles." << std::endl;
+            narration << "Corruption d'interface : " << corruption << std::endl;
+            narration << std::endl;
 
             if (random.between(1, 100) <= 22)
             {
                 int healAmount = 10 + corruption * 2;
                 boss.heal(healAmount);
-                std::cout << "Correction..." << std::endl;
-                std::cout << "PV de l'Anomalie corrigés de +" << healAmount << "." << std::endl;
-                std::cout << std::endl;
+                narration << "Correction..." << std::endl;
+                narration << "PV de l'Anomalie corrigés de +" << healAmount << "." << std::endl;
+                narration << std::endl;
             }
         }
 
@@ -312,10 +421,10 @@ namespace
             if (delayedWounds > 24) delayedWounds = 24;
             boss.setSpecialEffect(delayedWounds);
 
-            std::cout << "L'Horloge des Chuchotements avance sans bouger." << std::endl;
-            std::cout << "Une blessure que tu n'as pas encore reçue vient d'être enregistrée." << std::endl;
-            std::cout << "Blessures retardées : " << delayedWounds << std::endl;
-            std::cout << std::endl;
+            narration << "L'Horloge des Chuchotements avance sans bouger." << std::endl;
+            narration << "Une blessure que tu n'as pas encore reçue vient d'être enregistrée." << std::endl;
+            narration << "Blessures retardées : " << delayedWounds << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 13)
@@ -328,12 +437,12 @@ namespace
                 boss.setSpecialEffect(100 + profanation);
                 golemAwakened = true;
 
-                std::cout << "Le sable s'ouvre sous les os." << std::endl;
-                std::cout << "Un golem d'os et de sable surgit derrière l'Enfant." << std::endl;
-                std::cout << "L'Enfant ne grimpe pas dedans. Il disparaît dans son coeur." << std::endl;
-                std::cout << "Le rythme du combat change complètement." << std::endl;
-                std::cout << "Un second ultime vient d'être débloqué." << std::endl;
-                std::cout << std::endl;
+                narration << "Le sable s'ouvre sous les os." << std::endl;
+                narration << "Un golem d'os et de sable surgit derrière l'Enfant." << std::endl;
+                narration << "L'Enfant ne grimpe pas dedans. Il disparaît dans son coeur." << std::endl;
+                narration << "Le rythme du combat change complètement." << std::endl;
+                narration << "Un second ultime vient d'être débloqué." << std::endl;
+                narration << std::endl;
             }
             else if (random.between(1, 100) <= 29)
             {
@@ -342,18 +451,18 @@ namespace
                 {
                     baseProfanation -= 1;
                     if (baseProfanation < 0) baseProfanation = 0;
-                    std::cout << "L'Enfant des Os voit ta retenue. Les tombes restent calmes, pour l'instant." << std::endl;
+                    narration << "L'Enfant des Os voit ta retenue. Les tombes restent calmes, pour l'instant." << std::endl;
                 }
                 else
                 {
                     baseProfanation += 1;
                     if (baseProfanation > 8) baseProfanation = 8;
-                    std::cout << "Un os craque sous tes pas. Le lieu se souvient de l'affront." << std::endl;
+                    narration << "Un os craque sous tes pas. Le lieu se souvient de l'affront." << std::endl;
                 }
 
                 boss.setSpecialEffect((golemAwakened ? 100 : 0) + baseProfanation);
-                std::cout << "Profanation : " << baseProfanation << std::endl;
-                std::cout << std::endl;
+                narration << "Profanation : " << baseProfanation << std::endl;
+                narration << std::endl;
             }
         }
 
@@ -363,10 +472,10 @@ namespace
             if (warGauge > 12) warGauge = 12;
             boss.setSpecialEffect(warGauge);
 
-            std::cout << "L'avatar de Boros sourit, pas par plaisir : par reconnaissance." << std::endl;
-            std::cout << "Le combat se transforme enfin en champ de bataille complet." << std::endl;
-            std::cout << "Jauge de guerre : " << warGauge << std::endl;
-            std::cout << std::endl;
+            narration << "L'avatar de Boros sourit, pas par plaisir : par reconnaissance." << std::endl;
+            narration << "Le combat se transforme enfin en champ de bataille complet." << std::endl;
+            narration << "Jauge de guerre : " << warGauge << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 15 && random.between(1, 100) <= 22)
@@ -375,10 +484,10 @@ namespace
             if (links > 10) links = 10;
             boss.setSpecialEffect(links);
 
-            std::cout << "Anastasia parle doucement, mais ses mots serrent quelque chose en toi." << std::endl;
-            std::cout << "Elle ne frappe pas seulement le corps. Elle touche ce que tu refuses de perdre." << std::endl;
-            std::cout << "Liens douloureux : " << links << std::endl;
-            std::cout << std::endl;
+            narration << "Anastasia parle doucement, mais ses mots serrent quelque chose en toi." << std::endl;
+            narration << "Elle ne frappe pas seulement le corps. Elle touche ce que tu refuses de perdre." << std::endl;
+            narration << "Liens douloureux : " << links << std::endl;
+            narration << std::endl;
         }
 
 
@@ -389,10 +498,10 @@ namespace
             {
                 std::string sealedLabel = getMostUsedEquipmentLabel(*concretePlayer);
                 concretePlayer->activateBossEquipmentSeal("Verdict de Lexior : " + sealedLabel + " ne répond plus correctement.");
-                std::cout << "Lexior ouvre un registre que tu n'as jamais rempli volontairement." << std::endl;
-                std::cout << "Il y retrouve le stuff le plus utilisé dans tes dix derniers combats... et celui que tu portes maintenant." << std::endl;
-                std::cout << "Verdict : " << sealedLabel << " est scellé pour ce combat." << std::endl;
-                std::cout << std::endl;
+                narration << "Lexior ouvre un registre que tu n'as jamais rempli volontairement." << std::endl;
+                narration << "Il y retrouve le stuff le plus utilisé dans tes dix derniers combats... et celui que tu portes maintenant." << std::endl;
+                narration << "Verdict : " << sealedLabel << " est scellé pour ce combat." << std::endl;
+                narration << std::endl;
             }
 
             if (random.between(1, 100) <= 22)
@@ -400,9 +509,9 @@ namespace
                 int verdict = boss.getSpecialEffect() + 1;
                 if (verdict > 8) verdict = 8;
                 boss.setSpecialEffect(verdict);
-                std::cout << "Lexior compte tes répétitions, tes soins forcés, tes coups inutiles et tes esquives heureuses." << std::endl;
-                std::cout << "Charges de verdict : " << verdict << std::endl;
-                std::cout << std::endl;
+                narration << "Lexior compte tes répétitions, tes soins forcés, tes coups inutiles et tes esquives heureuses." << std::endl;
+                narration << "Charges de verdict : " << verdict << std::endl;
+                narration << std::endl;
             }
         }
 
@@ -411,10 +520,10 @@ namespace
             int dreamPressure = boss.getSpecialEffect() + random.between(1, 2);
             if (dreamPressure > 10) dreamPressure = 10;
             boss.setSpecialEffect(dreamPressure);
-            std::cout << "La lune se reflète dans un sol qui n'existe pas." << std::endl;
-            std::cout << "Onyrae transforme une pensée en cauchemar, puis Luna la recouvre de silence." << std::endl;
-            std::cout << "Pression rêve/cauchemar : " << dreamPressure << std::endl;
-            std::cout << std::endl;
+            narration << "La lune se reflète dans un sol qui n'existe pas." << std::endl;
+            narration << "Onyrae transforme une pensée en cauchemar, puis Luna la recouvre de silence." << std::endl;
+            narration << "Pression rêve/cauchemar : " << dreamPressure << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 18 && random.between(1, 100) <= 32)
@@ -422,10 +531,10 @@ namespace
             int elementalState = boss.getSpecialEffect() + 1;
             if (elementalState > 12) elementalState = 12;
             boss.setSpecialEffect(elementalState);
-            std::cout << "Syvaranelya change de peau élémentaire." << std::endl;
-            std::cout << "Feu, Terre, Eau et Vent ne se remplacent pas : ils s'empilent." << std::endl;
-            std::cout << "Instabilité élémentaire : " << elementalState << std::endl;
-            std::cout << std::endl;
+            narration << "Syvaranelya change de peau élémentaire." << std::endl;
+            narration << "Feu, Terre, Eau et Vent ne se remplacent pas : ils s'empilent." << std::endl;
+            narration << "Instabilité élémentaire : " << elementalState << std::endl;
+            narration << std::endl;
         }
 
 
@@ -438,33 +547,33 @@ namespace
             {
                 adaptation += 1;
 
-                std::cout << "Hitogami t'observe avec une normalité presque insultante." << std::endl;
-                std::cout << "Les monstres naissent forts. Les humains apprennent à le devenir." << std::endl;
+                narration << "Hitogami t'observe avec une normalité presque insultante." << std::endl;
+                narration << "Les monstres naissent forts. Les humains apprennent à le devenir." << std::endl;
 
                 if (concretePlayer != nullptr && concretePlayer->getRace() == CharacterRace::Human)
                 {
-                    std::cout << "Face à un humain, son regard devient presque compatissant." << std::endl;
-                    std::cout << "Tu n'es pas spécial parce que tu tombes. Tu es spécial parce que tu te relèves." << std::endl;
+                    narration << "Face à un humain, son regard devient presque compatissant." << std::endl;
+                    narration << "Tu n'es pas spécial parce que tu tombes. Tu es spécial parce que tu te relèves." << std::endl;
                     if (adaptation > 0) adaptation -= 1;
                 }
                 else if (isGoblinLikePlayer(player))
                 {
-                    std::cout << "Son expression se durcit en voyant une race gobeline." << std::endl;
-                    std::cout << "Il ne cherche même pas à cacher son mépris : pour lui, ce combat doit être purgé." << std::endl;
+                    narration << "Son expression se durcit en voyant une race gobeline." << std::endl;
+                    narration << "Il ne cherche même pas à cacher son mépris : pour lui, ce combat doit être purgé." << std::endl;
                     adaptation += 2;
                     player.takeDamage(8 + random.between(0, 8));
                 }
                 else
                 {
-                    std::cout << "Pour toute race non humaine, sa patience devient plus froide." << std::endl;
-                    std::cout << "Il ne hait pas seulement ton corps. Il hait ce que ton existence contredit." << std::endl;
+                    narration << "Pour toute race non humaine, sa patience devient plus froide." << std::endl;
+                    narration << "Il ne hait pas seulement ton corps. Il hait ce que ton existence contredit." << std::endl;
                     adaptation += 1;
                 }
 
                 if (adaptation > 10) adaptation = 10;
                 boss.setSpecialEffect(adaptation);
-                std::cout << "Adaptation humaine : " << adaptation << std::endl;
-                std::cout << std::endl;
+                narration << "Adaptation humaine : " << adaptation << std::endl;
+                narration << std::endl;
             }
         }
 
@@ -474,15 +583,15 @@ namespace
             if (luck > 12) luck = 12;
             boss.setSpecialEffect(luck);
 
-            std::cout << "Sérendys lance un dé qu'elle ne regarde même pas tomber." << std::endl;
-            std::cout << "Oh... cette version-là était presque belle." << std::endl;
+            narration << "Sérendys lance un dé qu'elle ne regarde même pas tomber." << std::endl;
+            narration << "Oh... cette version-là était presque belle." << std::endl;
             if (random.between(1, 100) <= 22)
             {
-                std::cout << "Elle relance une issue qui ne l'arrangeait pas." << std::endl;
+                narration << "Elle relance une issue qui ne l'arrangeait pas." << std::endl;
                 boss.heal(8 + luck);
             }
-            std::cout << "Chance consciente : " << luck << std::endl;
-            std::cout << std::endl;
+            narration << "Chance consciente : " << luck << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 21 && random.between(1, 100) <= 28)
@@ -490,8 +599,8 @@ namespace
             int threshold = boss.getSpecialEffect();
             int score = 0;
 
-            std::cout << "Le Gardien du Seuil ne pose pas une question." << std::endl;
-            std::cout << "Il agit, puis il juge la réaction que tu avais déjà préparée." << std::endl;
+            narration << "Le Gardien du Seuil ne pose pas une question." << std::endl;
+            narration << "Il agit, puis il juge la réaction que tu avais déjà préparée." << std::endl;
 
             for (int i = 1; i <= 3; ++i)
             {
@@ -500,39 +609,39 @@ namespace
 
                 if (situation == 1)
                 {
-                    std::cout << "Situation " << i << " : le Gardien prépare une frappe lourde." << std::endl;
+                    narration << "Situation " << i << " : le Gardien prépare une frappe lourde." << std::endl;
                     if (player.isInDefensePosture()) roll += 35;
                 }
                 else if (situation == 2)
                 {
-                    std::cout << "Situation " << i << " : le Gardien referme son armure et tente de récupérer le rythme." << std::endl;
+                    narration << "Situation " << i << " : le Gardien referme son armure et tente de récupérer le rythme." << std::endl;
                     if (!player.isInDefensePosture()) roll += 15;
                 }
                 else if (situation == 3)
                 {
-                    std::cout << "Situation " << i << " : le Gardien ouvre un verrou qui punit les automatismes." << std::endl;
+                    narration << "Situation " << i << " : le Gardien ouvre un verrou qui punit les automatismes." << std::endl;
                     roll += random.between(-10, 20);
                 }
                 else
                 {
-                    std::cout << "Situation " << i << " : le Gardien attend que tu paniques." << std::endl;
+                    narration << "Situation " << i << " : le Gardien attend que tu paniques." << std::endl;
                     if (player.isInDefensePosture()) roll += 20;
                 }
 
                 if (roll >= 65)
                 {
                     score += 2;
-                    std::cout << "Lecture correcte. +2 points." << std::endl;
+                    narration << "Lecture correcte. +2 points." << std::endl;
                 }
                 else if (roll >= 45)
                 {
                     score += 1;
-                    std::cout << "Lecture moyenne. +1 point." << std::endl;
+                    narration << "Lecture moyenne. +1 point." << std::endl;
                 }
                 else
                 {
                     score -= 1;
-                    std::cout << "Mauvaise réaction. -1 point." << std::endl;
+                    narration << "Mauvaise réaction. -1 point." << std::endl;
                 }
             }
 
@@ -540,20 +649,20 @@ namespace
             {
                 threshold -= 3;
                 if (threshold < 0) threshold = 0;
-                std::cout << "Score correct : ta prochaine attaque réussie devrait frapper comme un double impact." << std::endl;
-                std::cout << "[Effet simplifié actuel] Le verrou du boss baisse fortement." << std::endl;
+                narration << "Score correct : ta prochaine attaque réussie devrait frapper comme un double impact." << std::endl;
+                narration << "[Effet simplifié actuel] Le verrou du boss baisse fortement." << std::endl;
             }
             else
             {
                 threshold += 4;
-                std::cout << "Score insuffisant : la prochaine sanction du Gardien devrait peser comme un double coup." << std::endl;
-                std::cout << "[Effet simplifié actuel] Le verrou du boss augmente fortement." << std::endl;
+                narration << "Score insuffisant : la prochaine sanction du Gardien devrait peser comme un double coup." << std::endl;
+                narration << "[Effet simplifié actuel] Le verrou du boss augmente fortement." << std::endl;
             }
 
             if (threshold > 12) threshold = 12;
             boss.setSpecialEffect(threshold);
-            std::cout << "Verrou du Seuil : " << threshold << std::endl;
-            std::cout << std::endl;
+            narration << "Verrou du Seuil : " << threshold << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 22 && random.between(1, 100) <= 22)
@@ -562,19 +671,19 @@ namespace
             if (authority > 12) authority = 12;
             boss.setSpecialEffect(authority);
 
-            std::cout << "Le Roi Sans Salle donne un ordre à une cour qui n'existe plus." << std::endl;
+            narration << "Le Roi Sans Salle donne un ordre à une cour qui n'existe plus." << std::endl;
             if (random.between(1, 100) <= 25)
             {
-                std::cout << "Ordre royal : Défendez le trône absent." << std::endl;
+                narration << "Ordre royal : Défendez le trône absent." << std::endl;
                 boss.heal(8 + authority);
             }
             else
             {
-                std::cout << "Ordre royal : Exécutez l'intrus." << std::endl;
+                narration << "Ordre royal : Exécutez l'intrus." << std::endl;
                 player.takeDamage(6 + authority);
             }
-            std::cout << "Autorité fantôme : " << authority << std::endl;
-            std::cout << std::endl;
+            narration << "Autorité fantôme : " << authority << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 23 && random.between(1, 100) <= 25)
@@ -583,21 +692,21 @@ namespace
             if (instinct > 14) instinct = 14;
             boss.setSpecialEffect(instinct);
 
-            describeNamelessBeastVariant(random);
-            std::cout << "Nom : ???" << std::endl;
-            std::cout << "Espèce : erreur" << std::endl;
-            std::cout << "La Bête réagit par instinct pur, comme si elle était différente à chaque rencontre." << std::endl;
+            describeNamelessBeastVariant(random, narration);
+            narration << "Nom : ???" << std::endl;
+            narration << "Espèce : erreur" << std::endl;
+            narration << "La Bête réagit par instinct pur, comme si elle était différente à chaque rencontre." << std::endl;
             if (player.isInDefensePosture())
             {
-                std::cout << "Elle tourne autour de ta garde au lieu de la briser tout de suite." << std::endl;
+                narration << "Elle tourne autour de ta garde au lieu de la briser tout de suite." << std::endl;
             }
             else
             {
                 player.takeDamage(7 + instinct);
-                std::cout << "Elle te mord avant que le registre finisse sa phrase." << std::endl;
+                narration << "Elle te mord avant que le registre finisse sa phrase." << std::endl;
             }
-            std::cout << "Instinct sans nom : " << instinct << std::endl;
-            std::cout << std::endl;
+            narration << "Instinct sans nom : " << instinct << std::endl;
+            narration << std::endl;
         }
 
 
@@ -607,19 +716,19 @@ namespace
             if (abyss > 14) abyss = 14;
             boss.setSpecialEffect(abyss);
 
-            std::cout << "Aldebaroth laisse remonter ce que le combat a de plus laid." << std::endl;
-            std::cout << "Chaque hésitation devient rancune. Chaque blessure devient dette émotionnelle." << std::endl;
+            narration << "Aldebaroth laisse remonter ce que le combat a de plus laid." << std::endl;
+            narration << "Chaque hésitation devient rancune. Chaque blessure devient dette émotionnelle." << std::endl;
             if (player.isInDefensePosture())
             {
-                std::cout << "Ta garde ne l'intéresse pas : il ne cherche pas l'ouverture, il cherche la fissure intérieure." << std::endl;
+                narration << "Ta garde ne l'intéresse pas : il ne cherche pas l'ouverture, il cherche la fissure intérieure." << std::endl;
             }
             else
             {
                 player.takeDamage(7 + abyss);
-                std::cout << "Le négatif s'accroche à toi et inflige " << 7 + abyss << " dégâts." << std::endl;
+                narration << "Le négatif s'accroche à toi et inflige " << 7 + abyss << " dégâts." << std::endl;
             }
-            std::cout << "Pression démoniaque : " << abyss << std::endl;
-            std::cout << std::endl;
+            narration << "Pression démoniaque : " << abyss << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 25)
@@ -630,10 +739,10 @@ namespace
             if (!reconstructionCountdown && boss.getHp() <= boss.getMaxHp() / 2)
             {
                 boss.setSpecialEffect(100 + 5);
-                std::cout << "Asterion vacille. Nihilon rit." << std::endl;
-                std::cout << "Ou peut-être l'inverse. Le registre n'arrive pas à décider lequel vient de tomber." << std::endl;
-                std::cout << "Il reste 5 tours pour briser l'autre moitié avant la reconstruction fatale." << std::endl;
-                std::cout << std::endl;
+                narration << "Asterion vacille. Nihilon rit." << std::endl;
+                narration << "Ou peut-être l'inverse. Le registre n'arrive pas à décider lequel vient de tomber." << std::endl;
+                narration << "Il reste 5 tours pour briser l'autre moitié avant la reconstruction fatale." << std::endl;
+                narration << std::endl;
             }
             else if (reconstructionCountdown)
             {
@@ -641,18 +750,18 @@ namespace
                 remaining--;
                 if (remaining <= 0)
                 {
-                    std::cout << "La moitié détruite se reconstruit autour de l'autre." << std::endl;
-                    std::cout << "Création et destruction se referment sur toi." << std::endl;
-                    std::cout << "Désintégration conceptuelle." << std::endl;
+                    narration << "La moitié détruite se reconstruit autour de l'autre." << std::endl;
+                    narration << "Création et destruction se referment sur toi." << std::endl;
+                    narration << "Désintégration conceptuelle." << std::endl;
                     player.takeDamage(player.getHp());
-                    std::cout << player.getName() << " tombe à 0 PV." << std::endl;
-                    std::cout << std::endl;
+                    narration << player.getName() << " tombe à 0 PV." << std::endl;
+                    narration << std::endl;
                 }
                 else
                 {
                     boss.setSpecialEffect(100 + remaining);
-                    std::cout << "Compte à rebours des jumeaux : " << remaining << " tours avant reconstruction fatale." << std::endl;
-                    std::cout << std::endl;
+                    narration << "Compte à rebours des jumeaux : " << remaining << " tours avant reconstruction fatale." << std::endl;
+                    narration << std::endl;
                 }
             }
             else if (random.between(1, 100) <= 29)
@@ -660,10 +769,10 @@ namespace
                 twinState += random.between(1, 2);
                 if (twinState > 12) twinState = 12;
                 boss.setSpecialEffect(twinState);
-                std::cout << "Asterion ajoute. Nihilon retire." << std::endl;
-                std::cout << "Le résultat n'est pas zéro : c'est une pression impossible." << std::endl;
-                std::cout << "Instabilité jumelle : " << twinState << std::endl;
-                std::cout << std::endl;
+                narration << "Asterion ajoute. Nihilon retire." << std::endl;
+                narration << "Le résultat n'est pas zéro : c'est une pression impossible." << std::endl;
+                narration << "Instabilité jumelle : " << twinState << std::endl;
+                narration << std::endl;
             }
         }
 
@@ -677,10 +786,10 @@ namespace
                 concretePlayer->activateBossEquipmentSeal("Écho d'Obérion : armure et arme refusées. Le combat continue au poing.");
                 if (concretePlayer->hasEquippedWeapon()) concretePlayer->unequipWeapon();
                 if (concretePlayer->hasEquippedArmor()) concretePlayer->unequipArmor();
-                std::cout << "Obérion passe le seuil critique sans colère." << std::endl;
-                std::cout << "À partir de maintenant, l'armure ne répond plus. L'arme quitte ta main." << std::endl;
-                std::cout << "Il ne reste que le poing, le souffle, et la preuve que tu peux exister sans outil." << std::endl;
-                std::cout << std::endl;
+                narration << "Obérion passe le seuil critique sans colère." << std::endl;
+                narration << "À partir de maintenant, l'armure ne répond plus. L'arme quitte ta main." << std::endl;
+                narration << "Il ne reste que le poing, le souffle, et la preuve que tu peux exister sans outil." << std::endl;
+                narration << std::endl;
             }
 
             if (random.between(1, 100) <= 22)
@@ -688,10 +797,10 @@ namespace
                 authority += random.between(1, 2);
                 if (authority > 15) authority = 15;
                 boss.setSpecialEffect(authority);
-                std::cout << "L'écho d'Obérion superpose plusieurs étages du monde pendant une seconde." << std::endl;
-                std::cout << "Ton corps comprend qu'il n'affronte pas la vraie divinité, seulement une règle tombée trop bas." << std::endl;
-                std::cout << "Autorité primordiale fragmentée : " << authority << std::endl;
-                std::cout << std::endl;
+                narration << "L'écho d'Obérion superpose plusieurs étages du monde pendant une seconde." << std::endl;
+                narration << "Ton corps comprend qu'il n'affronte pas la vraie divinité, seulement une règle tombée trop bas." << std::endl;
+                narration << "Autorité primordiale fragmentée : " << authority << std::endl;
+                narration << std::endl;
             }
         }
 
@@ -701,28 +810,28 @@ namespace
             if (authority > 14) authority = 14;
             boss.setSpecialEffect(authority);
 
-            std::cout << "FireFlight regarde une règle invisible dans l'air." << std::endl;
-            std::cout << "Tu appelles ça une faille. Moi, j'appelle ça une décision de conception." << std::endl;
+            narration << "FireFlight regarde une règle invisible dans l'air." << std::endl;
+            narration << "Tu appelles ça une faille. Moi, j'appelle ça une décision de conception." << std::endl;
             if (random.between(1, 100) <= 25)
             {
-                std::cout << "========== MENU COMBAT ==========" << std::endl;
-                std::cout << "1 : Attaquer" << std::endl;
-                std::cout << "2 : Demander au développeur d'être gentil" << std::endl;
-                std::cout << "3 : Ouvrir un ticket de bug contre toi-même" << std::endl;
-                std::cout << "4 : Faire semblant que ce choix est équilibré" << std::endl;
-                std::cout << "FireFlight touche l'interface, mais contrairement à l'Anomalie, il sait exactement ce qu'il fait." << std::endl;
+                narration << "========== MENU COMBAT ==========" << std::endl;
+                narration << "1 : Attaquer" << std::endl;
+                narration << "2 : Demander au développeur d'être gentil" << std::endl;
+                narration << "3 : Ouvrir un ticket de bug contre toi-même" << std::endl;
+                narration << "4 : Faire semblant que ce choix est équilibré" << std::endl;
+                narration << "FireFlight touche l'interface, mais contrairement à l'Anomalie, il sait exactement ce qu'il fait." << std::endl;
             }
             if (player.isInDefensePosture())
             {
-                std::cout << "Trop de stabilité défensive détectée : patch de pression appliqué." << std::endl;
+                narration << "Trop de stabilité défensive détectée : patch de pression appliqué." << std::endl;
                 player.takeDamage(6 + authority);
             }
             else
             {
-                std::cout << "Build instable : FireFlight améliore temporairement son prochain test." << std::endl;
+                narration << "Build instable : FireFlight améliore temporairement son prochain test." << std::endl;
             }
-            std::cout << "Autorité du créateur limitée : " << authority << std::endl;
-            std::cout << std::endl;
+            narration << "Autorité du créateur limitée : " << authority << std::endl;
+            narration << std::endl;
         }
 
 
@@ -732,20 +841,20 @@ namespace
             if (breath > 14) breath = 14;
             boss.setSpecialEffect(breath);
 
-            std::cout << "Le Souffle sans Visage inspire sans bouche." << std::endl;
-            std::cout << "L'air quitte brièvement tes poumons, comme si quelqu'un avait oublié de te dessiner un visage." << std::endl;
+            narration << "Le Souffle sans Visage inspire sans bouche." << std::endl;
+            narration << "L'air quitte brièvement tes poumons, comme si quelqu'un avait oublié de te dessiner un visage." << std::endl;
             if (!player.isInDefensePosture())
             {
                 int damage = 7 + breath;
                 player.takeDamage(damage);
-                std::cout << "Asphyxie muette : " << damage << " dégâts." << std::endl;
+                narration << "Asphyxie muette : " << damage << " dégâts." << std::endl;
             }
             else
             {
-                std::cout << "Ta posture limite la panique, mais pas le froid qui remonte dans ta gorge." << std::endl;
+                narration << "Ta posture limite la panique, mais pas le froid qui remonte dans ta gorge." << std::endl;
             }
-            std::cout << "Pression respiratoire : " << breath << std::endl;
-            std::cout << std::endl;
+            narration << "Pression respiratoire : " << breath << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 29 && random.between(1, 100) <= 22)
@@ -754,20 +863,20 @@ namespace
             if (nails > 12) nails = 12;
             boss.setSpecialEffect(nails);
 
-            std::cout << "La Marionnette aux Mille Clous tire sur des fils que personne ne tient." << std::endl;
-            std::cout << "Un clou tombe au sol. Puis un autre. Puis tu comprends qu'ils comptent tes erreurs." << std::endl;
+            narration << "La Marionnette aux Mille Clous tire sur des fils que personne ne tient." << std::endl;
+            narration << "Un clou tombe au sol. Puis un autre. Puis tu comprends qu'ils comptent tes erreurs." << std::endl;
             if (player.isInDefensePosture())
             {
-                std::cout << "Ta garde bloque le geste, mais pas la tension des fils autour de tes membres." << std::endl;
+                narration << "Ta garde bloque le geste, mais pas la tension des fils autour de tes membres." << std::endl;
             }
             else
             {
                 int damage = 6 + nails;
                 player.takeDamage(damage);
-                std::cout << "Un fil te force à avancer dans la mauvaise direction : " << damage << " dégâts." << std::endl;
+                narration << "Un fil te force à avancer dans la mauvaise direction : " << damage << " dégâts." << std::endl;
             }
-            std::cout << "Clous actifs : " << nails << std::endl;
-            std::cout << std::endl;
+            narration << "Clous actifs : " << nails << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 30 && random.between(1, 100) <= 32)
@@ -779,15 +888,15 @@ namespace
             if (line > 15) line = 15;
             boss.setSpecialEffect(line);
 
-            std::cout << "Moiran ne prédit pas ton prochain coup. Il regarde la route entière." << std::endl;
-            std::cout << "Un fil invisible se tend entre ton choix passé et ta prochaine erreur." << std::endl;
+            narration << "Moiran ne prédit pas ton prochain coup. Il regarde la route entière." << std::endl;
+            narration << "Un fil invisible se tend entre ton choix passé et ta prochaine erreur." << std::endl;
             if (concretePlayer != nullptr && concretePlayer->getLethalCheatAttemptCount() > 0)
             {
-                std::cout << "Le Destin reconnaît la tentative de cheat en Léthal : même les chemins interdits laissent des traces." << std::endl;
+                narration << "Le Destin reconnaît la tentative de cheat en Léthal : même les chemins interdits laissent des traces." << std::endl;
                 player.takeDamage(8 + concretePlayer->getLethalCheatAttemptCount() * 4);
             }
-            std::cout << "Ligne de destinée : " << line << std::endl;
-            std::cout << std::endl;
+            narration << "Ligne de destinée : " << line << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 31 && random.between(1, 100) <= 22)
@@ -796,21 +905,21 @@ namespace
             if (souls > 12) souls = 12;
             boss.setSpecialEffect(souls);
 
-            std::cout << "Le Cerf des Âmes Égarées avance sans bruit." << std::endl;
-            std::cout << "Entre ses bois pendent des lanternes qui ne contiennent pas de feu, mais des souvenirs." << std::endl;
+            narration << "Le Cerf des Âmes Égarées avance sans bruit." << std::endl;
+            narration << "Entre ses bois pendent des lanternes qui ne contiennent pas de feu, mais des souvenirs." << std::endl;
             if (player.isInDefensePosture())
             {
                 boss.heal(6 + souls);
-                std::cout << "Il respecte ta retenue et recule, mais les âmes autour de lui le referment." << std::endl;
+                narration << "Il respecte ta retenue et recule, mais les âmes autour de lui le referment." << std::endl;
             }
             else
             {
                 int damage = 7 + souls;
                 player.takeDamage(damage);
-                std::cout << "Une âme perdue traverse ta poitrine : " << damage << " dégâts." << std::endl;
+                narration << "Une âme perdue traverse ta poitrine : " << damage << " dégâts." << std::endl;
             }
-            std::cout << "Âmes égarées : " << souls << std::endl;
-            std::cout << std::endl;
+            narration << "Âmes égarées : " << souls << std::endl;
+            narration << std::endl;
         }
 
 
@@ -821,14 +930,14 @@ namespace
             if (fury > 16) fury = 16;
             boss.setSpecialEffect(fury);
 
-            std::cout << "Gorvald frappe le sol du manche de sa hache." << std::endl;
-            std::cout << "Un roi orc ne mesure pas seulement la force : il mesure si tu oses rester debout." << std::endl;
+            narration << "Gorvald frappe le sol du manche de sa hache." << std::endl;
+            narration << "Un roi orc ne mesure pas seulement la force : il mesure si tu oses rester debout." << std::endl;
             if (player.isInDefensePosture())
             {
-                std::cout << "Ta posture l'intéresse. Il ne la respecte que si elle tient au prochain choc." << std::endl;
+                narration << "Ta posture l'intéresse. Il ne la respecte que si elle tient au prochain choc." << std::endl;
             }
-            std::cout << "Fureur royale : " << fury << std::endl;
-            std::cout << std::endl;
+            narration << "Fureur royale : " << fury << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 33 && random.between(1, 100) <= 32)
@@ -837,17 +946,17 @@ namespace
             if (thirst > 15) thirst = 15;
             boss.setSpecialEffect(thirst);
 
-            std::cout << "Serana avance comme si l'arène était son salon." << std::endl;
-            std::cout << "Ne tremble pas. Le sang a toujours meilleur goût quand il croit encore choisir." << std::endl;
+            narration << "Serana avance comme si l'arène était son salon." << std::endl;
+            narration << "Ne tremble pas. Le sang a toujours meilleur goût quand il croit encore choisir." << std::endl;
             if (player.getHp() < player.getMaxHp() / 2)
             {
                 int bite = 6 + thirst;
                 player.takeDamage(bite);
                 boss.heal(4 + thirst / 2);
-                std::cout << "Sang appelé : " << bite << " dégâts, et la reine récupère une partie de la blessure." << std::endl;
+                narration << "Sang appelé : " << bite << " dégâts, et la reine récupère une partie de la blessure." << std::endl;
             }
-            std::cout << "Soif royale : " << thirst << std::endl;
-            std::cout << std::endl;
+            narration << "Soif royale : " << thirst << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 34 && random.between(1, 100) <= 32)
@@ -857,20 +966,20 @@ namespace
             if (web > 16) web = 16;
             boss.setSpecialEffect(web);
 
-            std::cout << "Draiite ne court pas. Elle n'en a pas besoin." << std::endl;
-            std::cout << "Un fil invisible vient de choisir une direction à ta place." << std::endl;
+            narration << "Draiite ne court pas. Elle n'en a pas besoin." << std::endl;
+            narration << "Un fil invisible vient de choisir une direction à ta place." << std::endl;
             if (!player.isInDefensePosture())
             {
                 int poison = 5 + web;
                 player.takeDamage(poison);
-                std::cout << "Morsure venimeuse préparée par la toile : " << poison << " dégâts." << std::endl;
+                narration << "Morsure venimeuse préparée par la toile : " << poison << " dégâts." << std::endl;
             }
             else
             {
-                std::cout << "Ta posture tient, mais rester immobile donne du temps à la toile." << std::endl;
+                narration << "Ta posture tient, mais rester immobile donne du temps à la toile." << std::endl;
             }
-            std::cout << "Toile de reine : " << web << std::endl;
-            std::cout << std::endl;
+            narration << "Toile de reine : " << web << std::endl;
+            narration << std::endl;
         }
 
         if (boss.getBossId() == 35 && random.between(1, 100) <= 32)
@@ -879,31 +988,31 @@ namespace
             if (mirror > 15) mirror = 15;
             boss.setSpecialEffect(mirror);
 
-            std::cout << "Les Jumelles parlent ensemble, mais une seule phrase est vraie." << std::endl;
+            narration << "Les Jumelles parlent ensemble, mais une seule phrase est vraie." << std::endl;
             if (random.between(1, 100) <= 25)
             {
-                std::cout << "La prochaine attaque sera faible. La prochaine attaque sera mortelle." << std::endl;
+                narration << "La prochaine attaque sera faible. La prochaine attaque sera mortelle." << std::endl;
                 if (!player.isInDefensePosture())
                 {
                     int cut = 6 + mirror;
                     player.takeDamage(cut);
-                    std::cout << "Tu suis le mauvais reflet : " << cut << " dégâts." << std::endl;
+                    narration << "Tu suis le mauvais reflet : " << cut << " dégâts." << std::endl;
                 }
                 else
                 {
-                    std::cout << "Tu ne choisis aucun reflet. La posture réduit le mensonge." << std::endl;
+                    narration << "Tu ne choisis aucun reflet. La posture réduit le mensonge." << std::endl;
                 }
             }
             else
             {
-                std::cout << "Un reflet corrompu copie ton hésitation et nourrit les Jumelles." << std::endl;
+                narration << "Un reflet corrompu copie ton hésitation et nourrit les Jumelles." << std::endl;
                 boss.heal(5 + mirror);
             }
-            std::cout << "Vérité fendue : " << mirror << std::endl;
-            std::cout << std::endl;
+            narration << "Vérité fendue : " << mirror << std::endl;
+            narration << std::endl;
         }
 
-        applyAlteredHunterPressure(boss, player, random);
+        applyAlteredHunterPressure(boss, player, random, narration);
     }
 }
 
@@ -913,19 +1022,35 @@ bool BossCombatTurn::play(
     Random& random
 )
 {
-    std::cout << "Tour de " << boss.getName() << std::endl;
-    std::cout << std::endl;
+    const std::string bossScreenSuffix = std::to_string(boss.getBossId());
+
+    showBossNarration(
+        "TOUR DU BOSS",
+        "combat.boss.turn_start." + bossScreenSuffix,
+        {
+            "Tour de " + boss.getName() + ".",
+            "Le boss reprend l'initiative."
+        }
+    );
 
     Console::pauseSeconds(1);
 
-    executeNewBossPassiveAction(boss, player, random);
+    BossNarrationLines passiveNarration;
+    executeNewBossPassiveAction(boss, player, random, passiveNarration);
+    const std::vector<std::string> passiveLines = passiveNarration.takeLines();
+
+    showBossNarration(
+        "RÉACTION DU BOSS",
+        "combat.boss.passive." + bossScreenSuffix,
+        passiveLines
+    );
 
     AIAction action = CombatAI::chooseBossAction(boss, random);
 
     if (action == AIAction::Attack)
     {
-        CombatActions::executeAttack(boss, player, random);
-        return BossCombat::handleBossEndTurn(boss, player);
+        executeBossAttackScreen(boss, player, random, bossScreenSuffix);
+        return handleBossEndTurnScreen(boss, player, bossScreenSuffix);
     }
 
     if (action == AIAction::HealingPotion)
@@ -934,49 +1059,71 @@ bool BossCombatTurn::play(
 
         if (potionUsed)
         {
-            std::cout << boss.getName() << " récupère une partie de sa vitalité." << std::endl;
-            std::cout << std::endl;
+            showBossNarration(
+                "RÉGÉNÉRATION DU BOSS",
+                "combat.boss.heal." + bossScreenSuffix,
+                {
+                    boss.getName() + " récupère une partie de sa vitalité.",
+                    "PV actuels : " + std::to_string(boss.getHp()) + "/" + std::to_string(boss.getMaxHp()) + "."
+                }
+            );
         }
         else
         {
-            std::cout << boss.getName()
-                      << " cherche une source de régénération, mais rien ne répond."
-                      << std::endl;
-            std::cout << std::endl;
+            showBossNarration(
+                "RÉGÉNÉRATION IMPOSSIBLE",
+                "combat.boss.heal_failed." + bossScreenSuffix,
+                {
+                    boss.getName() + " cherche une source de régénération, mais rien ne répond.",
+                    "Le boss bascule immédiatement sur une attaque classique."
+                }
+            );
 
-            CombatActions::executeAttack(boss, player, random);
+            executeBossAttackScreen(boss, player, random, bossScreenSuffix);
         }
 
-        return BossCombat::handleBossEndTurn(boss, player);
+        return handleBossEndTurnScreen(boss, player, bossScreenSuffix);
     }
 
     if (action == AIAction::DamagePotion)
     {
-        bool potionUsed = CombatActions::executeDamagePotion(
+        bool potionUsed = executeBossDamagePotionScreen(
             boss,
             player,
             random,
-            50
+            50,
+            bossScreenSuffix
         );
 
         if (!potionUsed)
         {
-            CombatActions::executeAttack(boss, player, random);
+            showBossNarration(
+                "POTION OFFENSIVE RATÉE",
+                "combat.boss.damage_potion_failed." + bossScreenSuffix,
+                {
+                    boss.getName() + " tente une pression offensive, mais l'effet ne se stabilise pas.",
+                    "Le boss reprend avec une attaque classique."
+                }
+            );
+            executeBossAttackScreen(boss, player, random, bossScreenSuffix);
         }
 
-        return BossCombat::handleBossEndTurn(boss, player);
+        return handleBossEndTurnScreen(boss, player, bossScreenSuffix);
     }
 
     if (action == AIAction::Ultimate)
     {
-        BossCombat::executeBossUltimate(boss, player, random);
-        return BossCombat::handleBossEndTurn(boss, player);
+        executeBossUltimateScreen(boss, player, random, bossScreenSuffix);
+        return handleBossEndTurnScreen(boss, player, bossScreenSuffix);
     }
 
-    std::cout << boss.getName()
-              << " reste immobile, comme s'il observait déjà ta fin."
-              << std::endl;
-    std::cout << std::endl;
+    showBossNarration(
+        "BOSS EN OBSERVATION",
+        "combat.boss.idle." + bossScreenSuffix,
+        {
+            boss.getName() + " reste immobile, comme s'il observait déjà ta fin."
+        }
+    );
 
-    return BossCombat::handleBossEndTurn(boss, player);
+    return handleBossEndTurnScreen(boss, player, bossScreenSuffix);
 }

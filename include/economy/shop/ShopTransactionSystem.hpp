@@ -12,6 +12,9 @@
 #include "economy/shop/ShopType.hpp"
 #include "entity/Player.hpp"
 
+#include <string>
+#include <vector>
+
 class ShopTransactionSystem
 {
 public:
@@ -63,10 +66,29 @@ public:
         int index
     );
 
-    static void displaySellableEntries(
-        const Player& player,
-        ShopType shopType
+    static int getBuybackEntryCount(ShopType shopType);
+
+    static std::string getBuybackEntryLabel(ShopType shopType, int visibleIndex);
+
+    static std::string getBuybackEntryName(ShopType shopType, int visibleIndex);
+
+    static std::string getBuybackEntryKindLabel(ShopType shopType, int visibleIndex);
+
+    static int getBuybackEntryQuantity(ShopType shopType, int visibleIndex);
+
+    static int getBuybackEntryPrice(ShopType shopType, int visibleIndex);
+
+    static bool buyBackEntry(
+        Player& player,
+        ShopType shopType,
+        int visibleIndex
     );
+
+    static void clearBuybackAfterCombat();
+
+    static void clearLastTransactionNotes();
+
+    static std::vector<std::string> consumeLastTransactionNotes();
 
     // EN: displayUnsupportedPurchaseMessage declares or implements a focused behavior used by this module.
     // FR: displayUnsupportedPurchaseMessage déclare ou implémente un comportement précis utilisé par ce module.

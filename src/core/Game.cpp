@@ -15,6 +15,7 @@
 #include "save/menu/AccountMenu.hpp"
 #include "save/menu/CharacterMenu.hpp"
 #include "economy/shop/ShopRotationSystem.hpp"
+#include "economy/shop/ShopTransactionSystem.hpp"
 #include "interface/menu/shop/ShopMenu.hpp"
 #include "interface/menu/progression/AttributeMenu.hpp"
 #include "interface/menu/progression/StatisticsMenu.hpp"
@@ -23,6 +24,7 @@
 #include "interface/menu/PostCombatMenu.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "cheat/CheatManager.hpp"
 #include "progression/DifficultyRules.hpp"
@@ -149,11 +151,15 @@ namespace
     // FR: displayExchangeValueEstimation déclare ou implémente un comportement précis utilisé par ce module.
     void displayExchangeValueEstimation(const Player& first, const Player& second)
     {
-        std::cout << "Estimation de la valeur de l'échangeur " << first.getName()
-                  << " : " << estimatePlayerTradeValue(first) << " pièces." << std::endl;
-        std::cout << "Estimation de la valeur de l'échangeur " << second.getName()
-                  << " : " << estimatePlayerTradeValue(second) << " pièces." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ESTIMATION D'ÉCHANGE",
+            "exchange.value_estimation",
+            {
+                "Valeur estimée de " + first.getName() + " : " + std::to_string(estimatePlayerTradeValue(first)) + " pièces.",
+                "Valeur estimée de " + second.getName() + " : " + std::to_string(estimatePlayerTradeValue(second)) + " pièces."
+            },
+            false
+        );
     }
 
     int askExchangeWeaponIndex(const Player& giver)
@@ -511,17 +517,15 @@ void Game::run()
 // FR: displayIntroduction déclare ou implémente un comportement précis utilisé par ce module.
 void Game::displayIntroduction()
 {
-    std::cout << "Lancement de Dinotofu V" << VersionInfo::currentVersion() << std::endl;
-    std::cout << std::endl;
-    std::cout << "Bonjour voyageur, et bienvenue dans Dinotofu." << std::endl;
-    Console::pauseSeconds(1);
-
-    std::cout << "Un monde de fantaisie, d'arènes et de baston," << std::endl;
-    std::cout << "où chaque choix peut transformer un simple combattant en légende." << std::endl;
-    std::cout << std::endl;
-
-    Console::waitForEnter();
-    Console::clear();
+    MessageScreen::show(
+        "DINOTOFU V" + VersionInfo::currentVersion(),
+        "game.introduction",
+        {
+            "Bonjour voyageur, et bienvenue dans Dinotofu.",
+            "Un monde de fantaisie, d'arènes et de baston,",
+            "où chaque choix peut transformer un simple combattant en légende."
+        }
+    );
 }
 
 
@@ -757,7 +761,6 @@ void Game::choosePlayerClass()
     }
 
     TerminalInterface::renderMenuScreen(confirmation, false);
-    std::cout << std::endl;
     mainPlayer.displayStats();
     mainPlayer.displaySimpleEquipment();
 
@@ -792,8 +795,12 @@ void Game::savePartyProgress(const std::string& reason) const
         SaveManager::savePlayerSnapshot(mainPlayer, accountName, selectedDifficulty);
         if (SaveManager::movePlayableCharacterToDead(accountName, mainPlayer.getName()))
         {
-            std::cout << "Le registre Léthal retire " << mainPlayer.getName()
-                      << " des personnages jouables de " << accountName << "." << std::endl;
+            MessageScreen::show(
+                "REGISTRE LÉTHAL",
+                "save.party.lethal.main_removed",
+                {"Le registre Léthal retire " + mainPlayer.getName() + " des personnages jouables de " + accountName + "."},
+                false
+            );
         }
         return;
     }
@@ -816,13 +823,21 @@ void Game::savePartyProgress(const std::string& reason) const
             SaveManager::savePlayerSnapshot(partyPlayer, ownerAccount, playerDifficulty);
             if (SaveManager::movePlayableCharacterToDead(ownerAccount, partyPlayer.getName()))
             {
-                std::cout << "Le registre Léthal retire " << partyPlayer.getName()
-                          << " des personnages jouables de " << ownerAccount << "." << std::endl;
+                MessageScreen::show(
+                    "REGISTRE LÉTHAL",
+                    "save.party.lethal.member_removed",
+                    {"Le registre Léthal retire " + partyPlayer.getName() + " des personnages jouables de " + ownerAccount + "."},
+                    false
+                );
             }
             else
             {
-                std::cout << "Le registre des morts refuse d'emporter " << partyPlayer.getName()
-                          << " dans le registre des morts." << std::endl;
+                MessageScreen::show(
+                    "REGISTRE DES MORTS",
+                    "save.party.lethal.member_refused",
+                    {"Le registre des morts refuse d'emporter " + partyPlayer.getName() + " dans le registre des morts."},
+                    false
+                );
             }
             continue;
         }
@@ -1081,8 +1096,11 @@ void Game::configurePartyMode()
     {
         if (!addSecondaryPlayerToParty(playerNumber))
         {
-            std::cout << "La session repasse sur les joueurs déjà validés." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "SESSION COOP",
+                "session.party.partial",
+                {"La session repasse sur les joueurs déjà validés."}
+            );
             break;
         }
     }
@@ -1119,7 +1137,8 @@ void Game::chooseGameMode()
         screen.addOption(5, "Boutiques / lieux visitables", "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux.", true, "activity.locations");
         screen.addOption(6, "PNJ notables", "Parler aux clients et personnages disponibles sans passer par une boutique.", true, "activity.npcs");
         screen.addOption(7, "Échange / don", "Transférer des ressources entre personnages compatibles.", true, "activity.exchange");
-        screen.addOption(8, "Information sur toutes les options", "Ouvre un guide clair sur les routes possibles.", true, "activity.info");
+        screen.addOption(8, "Menu après-combat / gestion", "Ouvre le récap, l'équipement, les potions, les statistiques et les raccourcis de gestion.", true, "activity.post_combat");
+        screen.addOption(9, "Information sur toutes les options", "Ouvre un guide clair sur les routes possibles.", true, "activity.info");
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(
             screen,
@@ -1131,12 +1150,26 @@ void Game::chooseGameMode()
         if (choice == 0)
         {
             saveCurrentProgress("Sauvegarder et quitter");
-            std::cout << "Progression sauvegardée. Fermeture de Dinotofu." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "SAUVEGARDE",
+                "activity.save_quit.done",
+                {"Progression sauvegardée. Fermeture de Dinotofu."},
+                false
+            );
             std::exit(0);
         }
 
         if (choice == 8)
+        {
+            const bool keepPlaying = openPostCombatMenu();
+            if (!keepPlaying)
+            {
+                std::exit(0);
+            }
+            continue;
+        }
+
+        if (choice == 9)
         {
             displayActivityInformation();
             continue;
@@ -1219,44 +1252,8 @@ void Game::displaySelectedMode()
 {
     Console::clear();
 
-    std::string modeName;
-
-    switch (selectedMode)
-    {
-        case GameMode::Story:
-            modeName = "Histoire";
-            break;
-        case GameMode::AIPvp:
-            modeName = "Combat - PvP IA";
-            break;
-        case GameMode::TwoPlayerPvp:
-            modeName = "Combat - PvP 2 joueurs / JcJ";
-            break;
-        case GameMode::MonsterPve:
-            modeName = "Combat - PvE monstres";
-            break;
-        case GameMode::BossPve:
-            modeName = "Combat - PvE Boss";
-            break;
-        case GameMode::Challenges:
-            modeName = "Quêtes";
-            break;
-        case GameMode::Exploration:
-            modeName = "Exploration";
-            break;
-        case GameMode::Locations:
-            modeName = "Boutiques / lieux visitables";
-            break;
-        case GameMode::NotableNpcs:
-            modeName = "PNJ notables";
-            break;
-        case GameMode::Exchange:
-            modeName = "Échange / don";
-            break;
-    }
-
     MenuScreen screen("ACTIVITÉ SÉLECTIONNÉE", "activity.selected");
-    screen.addLine("Activité : " + modeName);
+    screen.addLine("Activité : " + getSelectedModeName());
     screen.addLine("Difficulté : " + getDifficultyName());
 
     if (isMultiplayerSession())
@@ -1267,6 +1264,110 @@ void Game::displaySelectedMode()
     TerminalInterface::renderMenuScreen(screen, false);
     Console::waitForEnter();
     Console::clear();
+}
+
+
+std::string Game::getSelectedModeName() const
+{
+    switch (selectedMode)
+    {
+        case GameMode::Story:
+            return "Histoire";
+        case GameMode::AIPvp:
+            return "Combat - PvP IA";
+        case GameMode::TwoPlayerPvp:
+            return "Combat - PvP 2 joueurs / JcJ";
+        case GameMode::MonsterPve:
+            return "Combat - PvE monstres";
+        case GameMode::BossPve:
+            return "Combat - PvE Boss";
+        case GameMode::Challenges:
+            return "Quêtes";
+        case GameMode::Exploration:
+            return "Exploration";
+        case GameMode::Locations:
+            return "Boutiques / lieux visitables";
+        case GameMode::NotableNpcs:
+            return "PNJ notables";
+        case GameMode::Exchange:
+            return "Échange / don";
+    }
+
+    return "Activité inconnue";
+}
+
+Game::CombatRecapSnapshot Game::captureCombatRecapSnapshot() const
+{
+    CombatRecapSnapshot snapshot;
+    snapshot.level = mainPlayer.getLevel();
+    snapshot.experience = mainPlayer.getExperience();
+    snapshot.hp = mainPlayer.getHp();
+    snapshot.maxHp = mainPlayer.getMaxHp();
+    snapshot.gold = mainPlayer.getInventory().getGold();
+    snapshot.victories = mainPlayer.getVictories();
+    snapshot.defeats = mainPlayer.getDefeats();
+    snapshot.escapes = mainPlayer.getEscapes();
+    snapshot.enemiesKilled = mainPlayer.getEnemiesKilled();
+    snapshot.bossesKilled = mainPlayer.getBossesKilled();
+    return snapshot;
+}
+
+void Game::updateLastCombatRecap(const CombatRecapSnapshot& beforeSnapshot)
+{
+    lastCombatRecap.available = true;
+    lastCombatRecap.modeName = getSelectedModeName();
+    lastCombatRecap.difficultyName = getDifficultyName();
+    lastCombatRecap.before = beforeSnapshot;
+    lastCombatRecap.after = captureCombatRecapSnapshot();
+}
+
+void Game::displayLastCombatRecap() const
+{
+    if (!lastCombatRecap.available)
+    {
+        MessageScreen::show(
+            "DERNIER RÉCAP",
+            "post_combat.last_recap.empty",
+            {
+                "Aucun combat récent enregistré dans cette session.",
+                "Lance un combat pour que le registre compare l'avant et l'après."
+            }
+        );
+        return;
+    }
+
+    const CombatRecapSnapshot& before = lastCombatRecap.before;
+    const CombatRecapSnapshot& after = lastCombatRecap.after;
+
+    MessageScreen::show(
+        "DERNIER RÉCAP DE COMBAT",
+        "post_combat.last_recap.detail",
+        {
+            "Activité : " + lastCombatRecap.modeName,
+            "Difficulté : " + lastCombatRecap.difficultyName,
+            "",
+            "Avant : niveau " + std::to_string(before.level)
+                + " | XP " + std::to_string(before.experience)
+                + " | PV " + std::to_string(before.hp) + "/" + std::to_string(before.maxHp)
+                + " | Or " + std::to_string(before.gold),
+            "Après : niveau " + std::to_string(after.level)
+                + " | XP " + std::to_string(after.experience)
+                + " | PV " + std::to_string(after.hp) + "/" + std::to_string(after.maxHp)
+                + " | Or " + std::to_string(after.gold),
+            "",
+            "Variations :",
+            "- Niveau : " + std::to_string(after.level - before.level),
+            "- Expérience : " + std::to_string(after.experience - before.experience),
+            "- PV actuels : " + std::to_string(after.hp - before.hp),
+            "- PV max : " + std::to_string(after.maxHp - before.maxHp),
+            "- Or : " + std::to_string(after.gold - before.gold),
+            "- Victoires : " + std::to_string(after.victories - before.victories),
+            "- Défaites : " + std::to_string(after.defeats - before.defeats),
+            "- Fuites : " + std::to_string(after.escapes - before.escapes),
+            "- Ennemis vaincus : " + std::to_string(after.enemiesKilled - before.enemiesKilled),
+            "- Boss vaincus : " + std::to_string(after.bossesKilled - before.bossesKilled)
+        }
+    );
 }
 
 // EN: displayActivityInformation declares or implements a focused behavior used by this module.
@@ -1281,6 +1382,7 @@ void Game::displayActivityInformation() const
     screen.addLine("Boutiques / lieux visitables : forge, herboristerie, bibliothèque, vendeurs et lieux sociaux.");
     screen.addLine("PNJ notables : accès direct aux clients ou personnages disponibles.");
     screen.addLine("Échange / don : transfert protégé d'objets ou d'or entre personnages compatibles.");
+    screen.addLine("Menu après-combat / gestion : relire le dernier état, gérer équipement, potions, progression et statistiques sans lancer de combat.");
     screen.addFooterLine("Certaines portes restent fermées. Le monde te laisse progresser par ses guildes, ses routes et ses combats.");
 
     TerminalInterface::renderMenuScreen(screen, false);
@@ -1326,7 +1428,10 @@ void Game::launchSelectedMode()
     }
     else
     {
+        const CombatRecapSnapshot beforeCombatSnapshot = captureCombatRecapSnapshot();
+
         mainPlayer.recordCombatStarted();
+        ShopTransactionSystem::clearBuybackAfterCombat();
 
         switch (selectedMode)
         {
@@ -1379,6 +1484,7 @@ void Game::launchSelectedMode()
                 break;
         }
 
+        updateLastCombatRecap(beforeCombatSnapshot);
         ShopRotationSystem::markShopsDirtyAfterCombat();
 
         if (mainPlayer.isDead() && DifficultyRules::isPermanentDeath(selectedDifficulty))
@@ -1387,16 +1493,29 @@ void Game::launchSelectedMode()
 
             if (SaveManager::movePlayableCharacterToDead(accountName, mainPlayer.getName()))
             {
-                std::cout << "Le personnage a été déplacé dans le registre des morts." << std::endl;
-                std::cout << "Il ne sera plus disponible dans les personnages jouables." << std::endl;
+                MessageScreen::show(
+                    "REGISTRE DES MORTS",
+                    "combat.lethal.main_moved",
+                    {
+                        "Le personnage a été déplacé dans le registre des morts.",
+                        "Il ne sera plus disponible dans les personnages jouables."
+                    },
+                    false
+                );
             }
             else
             {
-                std::cout << "Le registre des morts refuse de se fermer correctement autour de ce personnage." << std::endl;
-                std::cout << "La sauvegarde de mort a tout de même été tentée." << std::endl;
+                MessageScreen::show(
+                    "REGISTRE DES MORTS",
+                    "combat.lethal.main_move_failed",
+                    {
+                        "Le registre des morts refuse de se fermer correctement autour de ce personnage.",
+                        "La sauvegarde de mort a tout de même été tentée."
+                    },
+                    false
+                );
             }
 
-            std::cout << std::endl;
             DeathPenaltySystem::displayLethalDeathCorruption();
             Console::waitForEnter();
             return;
@@ -1418,29 +1537,25 @@ void Game::launchSelectedMode()
     }
 
     savePartyProgress("Fin de session");
-
-    std::cout << std::endl;
 }
 
 // EN: launchStoryModePlaceholder declares or implements a focused behavior used by this module.
 // FR: launchStoryModePlaceholder déclare ou implémente un comportement précis utilisé par ce module.
 void Game::launchStoryModePlaceholder()
 {
-    std::cout << "========== HISTOIRE ==========" << std::endl;
-    std::cout << "La grande route de l'Histoire se dresse devant toi." << std::endl;
-    std::cout << "Les portes principales restent scellées par des archives anciennes." << std::endl;
-    std::cout << std::endl;
-    std::cout << "Ce que murmurent les archives :" << std::endl;
-    std::cout << "Tu n'es pas seulement un combattant d'arène. Tu es un personnage inscrit dans un monde" << std::endl;
-    std::cout << "où les quêtes, les guildes, les boss, les matériaux rares et les choix laissent déjà des traces." << std::endl;
-    std::cout << std::endl;
-    std::cout << "Les guildes, l'exploration, les monstres et les boss restent les routes ouvertes pour faire grandir ton personnage." << std::endl;
-    std::cout << "Quand les sceaux céderont, cette route reprendra là où ton personnage aura grandi." << std::endl;
-    std::cout << "==============================" << std::endl;
-    std::cout << std::endl;
-
-    Console::waitForEnter();
-    Console::clear();
+    MessageScreen::show(
+        "HISTOIRE",
+        "story.placeholder.sealed_road",
+        {
+            "La grande route de l'Histoire se dresse devant toi.",
+            "Les portes principales restent scellées par des archives anciennes.",
+            "Ce que murmurent les archives :",
+            "Tu n'es pas seulement un combattant d'arène. Tu es un personnage inscrit dans un monde",
+            "où les quêtes, les guildes, les boss, les matériaux rares et les choix laissent déjà des traces.",
+            "Les guildes, l'exploration, les monstres et les boss restent les routes ouvertes pour faire grandir ton personnage.",
+            "Quand les sceaux céderont, cette route reprendra là où ton personnage aura grandi."
+        }
+    );
 }
 
 // EN: launchChallengeBoard declares or implements a focused behavior used by this module.
@@ -1458,12 +1573,13 @@ bool Game::openPostCombatMenu()
 
     while (menuOpen)
     {
-        int maxChoice = PostCombatMenu::getMaxChoice(mainPlayer);
+        const bool hasLastCombatRecap = lastCombatRecap.available;
+        int maxChoice = PostCombatMenu::getMaxChoice(mainPlayer, hasLastCombatRecap);
 
-        PostCombatMenu::display(mainPlayer);
+        PostCombatMenu::display(mainPlayer, hasLastCombatRecap);
 
         std::string input;
-        std::getline(std::cin >> std::ws, input);
+        Console::readLine(input, true);
 
         std::istringstream stream(input);
         int choice = -1;
@@ -1488,8 +1604,11 @@ bool Game::openPostCombatMenu()
             }
             else
             {
-                std::cout << "Entrée invalide." << std::endl;
-                std::cout << std::endl;
+                MessageScreen::show(
+                    "ENTRÉE INVALIDE",
+                    "post_combat.invalid_input",
+                    {"Entrée invalide."}
+                );
             }
 
             continue;
@@ -1499,8 +1618,11 @@ bool Game::openPostCombatMenu()
 
         if (choice < 0 || choice > maxChoice)
         {
-            std::cout << "Veuillez choisir une option affichée." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "CHOIX INVALIDE",
+                "post_combat.choice_out_of_range",
+                {"Veuillez choisir une option affichée."}
+            );
             continue;
         }
 
@@ -1538,8 +1660,11 @@ bool Game::openPostCombatMenu()
         else if (choice == 6)
         {
             saveCurrentProgress("Sauvegarder et quitter");
-            std::cout << "Progression sauvegardée. Fermeture de Dinotofu." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "SAUVEGARDE",
+                "post_combat.save_quit.done",
+                {"Progression sauvegardée. Fermeture de Dinotofu."}
+            );
             return false;
         }
         else if (choice == 7)
@@ -1573,7 +1698,11 @@ bool Game::openPostCombatMenu()
             Console::waitForEnter();
             Console::clear();
         }
-        else if (choice == 13 && mainPlayer.isAlteredByCheats())
+        else if (choice == 13)
+        {
+            displayLastCombatRecap();
+        }
+        else if (choice == 14 && mainPlayer.isAlteredByCheats())
         {
             CheatManager::openAlteredDataMenu(mainPlayer, selectedDifficulty);
             saveCurrentProgress("Données altérées");
@@ -1679,10 +1808,11 @@ void Game::openExchangeMenu()
     if (targetAccount == accountName && targetSummary.characterName == mainPlayer.getName())
     {
         Console::clear();
-        std::cout << "Tu ne peux pas échanger avec le même personnage." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
+        MessageScreen::show(
+            "ÉCHANGE IMPOSSIBLE",
+            "exchange.forbidden.same_character",
+            {"Tu ne peux pas échanger avec le même personnage."}
+        );
         return;
     }
 
@@ -1692,33 +1822,39 @@ void Game::openExchangeMenu()
     if (!SaveManager::loadPlayerSnapshot(targetSummary, targetPlayer, targetDifficulty))
     {
         Console::clear();
-        std::cout << "Impossible de charger le personnage cible." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
+        MessageScreen::show(
+            "ÉCHANGE IMPOSSIBLE",
+            "exchange.load_target_failed",
+            {"Impossible de charger le personnage cible."}
+        );
         return;
     }
 
     if (mainPlayer.isAlteredByCheats() || targetPlayer.isAlteredByCheats())
     {
         Console::clear();
-        std::cout << "Échange impossible." << std::endl;
-        std::cout << "Un personnage altéré ne peut pas transférer de ressources réelles." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
+        MessageScreen::show(
+            "ÉCHANGE IMPOSSIBLE",
+            "exchange.forbidden.altered",
+            {
+                "Échange impossible.",
+                "Un personnage altéré ne peut pas transférer de ressources réelles."
+            }
+        );
         return;
     }
 
     if (mainPlayer.isClone() || targetPlayer.isClone())
     {
         Console::clear();
-        std::cout << "Échange impossible." << std::endl;
-        std::cout << "Un clone ne peut pas donner ou recevoir d'objets réels." << std::endl;
-        std::cout << "Le registre refuse les silhouettes copiées dans les échanges réels." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
+        MessageScreen::show(
+            "ÉCHANGE IMPOSSIBLE",
+            "exchange.forbidden.clone",
+            {
+                "Un clone ne peut pas donner ou recevoir d'objets réels.",
+                "Le registre refuse les silhouettes copiées dans les échanges réels."
+            }
+        );
         return;
     }
 
@@ -1728,13 +1864,15 @@ void Game::openExchangeMenu()
     if (currentIsLethal != targetIsLethal)
     {
         Console::clear();
-        std::cout << "Échange impossible." << std::endl;
-        std::cout << "Un personnage Léthal est considéré comme une vraie existence." << std::endl;
-        std::cout << "Un personnage non Léthal reste une simulation plus sûre." << std::endl;
-        std::cout << "Pour éviter les abus, il faut deux Léthal ou deux non Léthal." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
-        Console::clear();
+        MessageScreen::show(
+            "ÉCHANGE IMPOSSIBLE",
+            "exchange.forbidden.lethal_mismatch",
+            {
+                "Un personnage Léthal est considéré comme une vraie existence.",
+                "Un personnage non Léthal reste une simulation plus sûre.",
+                "Pour éviter les abus, il faut deux Léthal ou deux non Léthal."
+            }
+        );
         return;
     }
 
@@ -1801,19 +1939,26 @@ void Game::openExchangeMenu()
 
         if (choice == 1)
         {
-            std::cout << giver->getName() << " possède " << giver->getInventory().getGold() << " or." << std::endl;
-            std::cout << "Montant à transférer ?" << std::endl;
-            std::cout << "> ";
-            int amount = Console::askNumberBetween(0, giver->getInventory().getGold(), "Montant invalide.");
+            int amount = MessageScreen::askQuantity(
+                "OR À TRANSFÉRER",
+                "exchange.gold.quantity",
+                {
+                    giver->getName() + " possède " + std::to_string(giver->getInventory().getGold()) + " or.",
+                    "Montant à transférer ?"
+                },
+                0,
+                giver->getInventory().getGold(),
+                "Montant invalide."
+            );
 
             if (amount > 0 && giver->getInventory().spendGold(amount))
             {
                 receiver->getInventory().earnGold(amount);
-                std::cout << amount << " or transféré." << std::endl;
+                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.gold.success", {std::to_string(amount) + " or transféré."}, false);
             }
             else
             {
-                std::cout << "Aucun or transféré." << std::endl;
+                MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.gold.none", {"Aucun or transféré."}, false);
             }
         }
         else if (choice == 2)
@@ -1825,11 +1970,11 @@ void Game::openExchangeMenu()
                 Weapon weapon = giver->getInventory().getWeapon(index);
                 receiver->getInventory().addWeapon(weapon);
                 giver->getInventory().removeWeapon(index);
-                std::cout << "Arme transférée : " << weapon.getName() << "." << std::endl;
+                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.weapon.success", {"Arme transférée : " + weapon.getName() + "."}, false);
             }
             else
             {
-                std::cout << "Aucune arme transférée." << std::endl;
+                MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.weapon.none", {"Aucune arme transférée."}, false);
             }
         }
         else if (choice == 3)
@@ -1841,11 +1986,11 @@ void Game::openExchangeMenu()
                 Armor armor = giver->getInventory().getArmor(index);
                 receiver->getInventory().addArmor(armor);
                 giver->getInventory().removeArmor(index);
-                std::cout << "Armure transférée : " << armor.getName() << "." << std::endl;
+                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.armor.success", {"Armure transférée : " + armor.getName() + "."}, false);
             }
             else
             {
-                std::cout << "Aucune armure transférée." << std::endl;
+                MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.armor.none", {"Aucune armure transférée."}, false);
             }
         }
         else if (choice == 4)
@@ -1857,11 +2002,11 @@ void Game::openExchangeMenu()
                 Consumable consumable = giver->getInventory().getConsumable(index);
                 receiver->getInventory().addConsumable(consumable);
                 giver->getInventory().removeConsumable(index);
-                std::cout << "Consommable transféré : " << consumable.getName() << "." << std::endl;
+                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.consumable.success", {"Consommable transféré : " + consumable.getName() + "."}, false);
             }
             else
             {
-                std::cout << "Aucun consommable transféré." << std::endl;
+                MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.consumable.none", {"Aucun consommable transféré."}, false);
             }
         }
         else if (choice == 5)
@@ -1871,27 +2016,36 @@ void Game::openExchangeMenu()
             if (index >= 0)
             {
                 Material material = giver->getInventory().getMaterial(index);
-                std::cout << "Quantité à transférer ? Max : " << material.getQuantity() << std::endl;
-                std::cout << "> ";
-                int amount = Console::askNumberBetween(1, material.getQuantity(), "Quantité invalide.");
+                int amount = MessageScreen::askQuantity(
+                    "QUANTITÉ À TRANSFÉRER",
+                    "exchange.material.quantity",
+                    {
+                        "Matériau : " + material.getName(),
+                        "Maximum transférable : x" + std::to_string(material.getQuantity())
+                    },
+                    1,
+                    material.getQuantity(),
+                    "Quantité invalide."
+                );
                 material.setQuantity(amount);
                 receiver->getInventory().addMaterial(material);
                 giver->getInventory().removeMaterialQuantity(index, amount);
-                std::cout << "Matériau transféré : " << material.getName() << " x" << amount << "." << std::endl;
+                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.material.success", {"Matériau transféré : " + material.getName() + " x" + std::to_string(amount) + "."}, false);
             }
             else
             {
-                std::cout << "Aucun matériau transféré." << std::endl;
+                MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.material.none", {"Aucun matériau transféré."}, false);
             }
         }
 
         SaveManager::savePlayerSnapshot(mainPlayer, accountName, selectedDifficulty);
         SaveManager::savePlayerSnapshot(targetPlayer, targetAccount, targetDifficulty);
 
-        std::cout << std::endl;
-        std::cout << "Échange sauvegardé." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
+        MessageScreen::show(
+            "ÉCHANGE SAUVEGARDÉ",
+            "exchange.saved",
+            {"Le transfert est enregistré dans les deux registres."}
+        );
     }
 
     Console::clear();
@@ -1908,16 +2062,24 @@ void Game::saveCurrentProgress(const std::string& reason) const
 
     if (SaveManager::savePlayerSnapshot(mainPlayer, accountName, selectedDifficulty))
     {
-        std::cout << "Sauvegarde préparée : " << reason << "." << std::endl;
-        std::cout << "Chemin : "
-                  << SaveManager::getCharacterSavePath(accountName, mainPlayer.getName())
-                  << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "SAUVEGARDE",
+            "save.current_progress.ok",
+            {
+                "Sauvegarde préparée : " + reason + ".",
+                "Chemin : " + SaveManager::getCharacterSavePath(accountName, mainPlayer.getName())
+            },
+            false
+        );
     }
     else
     {
-        std::cout << "Sauvegarde impossible pour le moment." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "SAUVEGARDE",
+            "save.current_progress.failed",
+            {"Sauvegarde impossible pour le moment."},
+            false
+        );
     }
 }
 

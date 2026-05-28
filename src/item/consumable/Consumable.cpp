@@ -5,7 +5,10 @@
 
 #include "item/consumable/Consumable.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <vector>
+#include <string>
 
 // EN: Consumable declares or implements a focused behavior used by this module.
 // FR: Consumable déclare ou implémente un comportement précis utilisé par ce module.
@@ -57,46 +60,44 @@ bool Consumable::isDamage() const
     return type == ConsumableType::Damage;
 }
 
+namespace
+{
+    std::string consumableTypeLabel(ConsumableType type)
+    {
+        switch (type)
+        {
+            case ConsumableType::Healing:
+                return "Soin";
+            case ConsumableType::Damage:
+                return "Dégâts";
+            case ConsumableType::Buff:
+                return "Buff";
+            case ConsumableType::Debuff:
+                return "Debuff";
+            case ConsumableType::Special:
+                return "Spécial";
+            default:
+                return "Inconnu";
+        }
+    }
+}
+
+std::vector<std::string> Consumable::toDisplayLines() const
+{
+    return {
+        "===== CONSOMMABLE =====",
+        "Nom : " + name,
+        "Description : " + description,
+        "Valeur : " + std::to_string(value) + " pièces",
+        "Type : " + consumableTypeLabel(type),
+        "Puissance : " + std::to_string(power),
+        "======================="
+    };
+}
+
 // EN: display declares or implements a focused behavior used by this module.
 // FR: display déclare ou implémente un comportement précis utilisé par ce module.
 void Consumable::display() const
 {
-    std::cout << "===== CONSOMMABLE =====" << std::endl;
-    std::cout << "Nom : " << name << std::endl;
-    std::cout << "Description : " << description << std::endl;
-    std::cout << "Valeur : " << value << " pièces" << std::endl;
-
-    std::cout << "Type : ";
-
-    switch (type)
-    {
-        case ConsumableType::Healing:
-            std::cout << "Soin";
-            break;
-
-        case ConsumableType::Damage:
-            std::cout << "Dégâts";
-            break;
-
-        case ConsumableType::Buff:
-            std::cout << "Buff";
-            break;
-
-        case ConsumableType::Debuff:
-            std::cout << "Debuff";
-            break;
-
-        case ConsumableType::Special:
-            std::cout << "Spécial";
-            break;
-
-        default:
-            std::cout << "Inconnu";
-            break;
-    }
-
-    std::cout << std::endl;
-    std::cout << "Puissance : " << power << std::endl;
-    std::cout << "=======================" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show("CONSOMMABLE", "item.consumable.display", toDisplayLines(), false);
 }

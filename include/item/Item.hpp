@@ -7,6 +7,7 @@
 #define INCLUDE_ITEM_ITEM_HPP
 
 #include <string>
+#include <vector>
 
 class Item
 {
@@ -33,6 +34,8 @@ public:
     // EN: getValue declares or implements a focused behavior used by this module.
     // FR: getValue déclare ou implémente un comportement précis utilisé par ce module.
     int getValue() const;
+
+    virtual std::vector<std::string> toDisplayLines() const;
 
     // EN: display declares or implements a focused behavior used by this module.
     // FR: display déclare ou implémente un comportement précis utilisé par ce module.

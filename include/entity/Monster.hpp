@@ -9,6 +9,8 @@
 #include "entity/Entity.hpp"
 #include "entity/Race.hpp"
 
+#include <vector>
+
 class Monster : public Entity
 {
 private:
@@ -66,6 +68,8 @@ public:
     // EN: revealStats declares or implements a focused behavior used by this module.
     // FR: revealStats déclare ou implémente un comportement précis utilisé par ce module.
     void revealStats();
+
+    std::vector<std::string> toDisplayLines() const;
 
     // EN: displayStats declares or implements a focused behavior used by this module.
     // FR: displayStats déclare ou implémente un comportement précis utilisé par ce module.

@@ -5,7 +5,10 @@
 
 #include "entity/Boss.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <vector>
+#include <string>
 
 // EN: Boss declares or implements a focused behavior used by this module.
 // FR: Boss déclare ou implémente un comportement précis utilisé par ce module.
@@ -235,32 +238,48 @@ void Boss::decryptStats()
 
 // EN: displayStats declares or implements a focused behavior used by this module.
 // FR: displayStats déclare ou implémente un comportement précis utilisé par ce module.
-void Boss::displayStats() const
+std::vector<std::string> Boss::toDisplayLines() const
 {
     if (!decryptedStats)
     {
-        std::cout << "Tentative de décryptage des statistiques de l'entité échouée." << std::endl;
-        std::cout << "Sa puissance brouille encore toute lecture fiable." << std::endl;
-        std::cout << std::endl;
-        return;
+        return {
+            "Tentative de décryptage des statistiques de l'entité échouée.",
+            "Sa puissance brouille encore toute lecture fiable."
+        };
     }
 
-    std::cout << "===== STATISTIQUES DE L'ENTITÉ =====" << std::endl;
-    std::cout << "Nom : " << getName() << std::endl;
-    std::cout << "Type d'entité : " << getType() << std::endl;
-    std::cout << "PV : " << hp << "/" << maxHp << std::endl;
-    std::cout << "Dégâts : " << minDamage << " - " << maxDamage << std::endl;
-    std::cout << "Critique : " << criticalDamage << std::endl;
-    std::cout << "Potions de soin : " << healingPotionCount << std::endl;
-    std::cout << "Potions de dégâts : " << damagePotionCount << std::endl;
-    std::cout << "Ultime restant : " << remainingUltimateTurns << std::endl;
-    std::cout << "Délai ultime : " << ultimateCooldown << std::endl;
+    std::vector<std::string> lines = {
+        "===== STATISTIQUES DE L'ENTITÉ =====",
+        "Nom : " + getName(),
+        "Type d'entité : " + getType(),
+        "PV : " + std::to_string(hp) + "/" + std::to_string(maxHp),
+        "Dégâts : " + std::to_string(minDamage) + " - " + std::to_string(maxDamage),
+        "Critique : " + std::to_string(criticalDamage),
+        "Potions de soin : " + std::to_string(healingPotionCount),
+        "Potions de dégâts : " + std::to_string(damagePotionCount),
+        "Ultime restant : " + std::to_string(remainingUltimateTurns),
+        "Délai ultime : " + std::to_string(ultimateCooldown)
+    };
 
     if (specialEffect > 0)
     {
-        std::cout << "Effet spécial actif : " << specialEffect << std::endl;
+        lines.push_back("Effet spécial actif : " + std::to_string(specialEffect));
     }
 
-    std::cout << "====================================" << std::endl;
-    std::cout << std::endl;
+    lines.push_back("====================================");
+
+    return lines;
+}
+
+
+// EN: displayStats declares or implements a focused behavior used by this module.
+// FR: displayStats déclare ou implémente un comportement précis utilisé par ce module.
+void Boss::displayStats() const
+{
+    MessageScreen::show(
+        "BOSS",
+        areStatsVisible() ? "boss.stats" : "boss.stats.hidden",
+        toDisplayLines(),
+        false
+    );
 }

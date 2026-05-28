@@ -1,95 +1,56 @@
-# Dinotofu — automatisation simple GitHub
+# Dinotofu — automatisation GitHub simple   
 
-## Comment GitHub crée les tags/releases tout seul ?
+Version actuelle : **V2.0.0**   
+Dernière version de personnage encore acceptable : **V1.32.03**   
 
-GitHub ne devine pas magiquement ton jeu. Il lit le fichier :
+## Principe   
 
-```text
-.github/workflows/release-dinotofu.yml
-```
+Quand le code est poussé sur GitHub, le workflow lit la version dans :   
 
-Ce fichier dit à GitHub Actions :
+```text   
+src/core/VersionInfo.cpp   
+```   
 
-1. quand un push arrive sur `main` ou `master`, lance le workflow ;
-2. lis la version dans `src/core/VersionInfo.cpp` ;
-3. construis le tag attendu, par exemple `v1.35.10` ;
-4. si ce tag n'existe pas, crée-le ;
-5. compile les versions Linux et Windows ;
-6. prépare les packs installer ;
-7. publie tout dans GitHub Releases.
+Il prépare ensuite les releases et assets autour du tag correspondant, par exemple :   
 
-La version dans le code est donc la source de vérité.
+```text   
+v2.0.0   
+```   
 
-## Ce que tu dois configurer sur GitHub une seule fois
+## Ce que tu dois faire   
 
-Sur ton repo GitHub :
+1. Modifier le code.   
+2. Mettre à jour la version si la passe le mérite.   
+3. Lancer les contrôles locaux.   
+4. Commit/push.   
+5. Laisser GitHub Actions générer les fichiers de release.   
 
-1. Va dans `Settings > Actions > General`.
-2. Vérifie que les actions sont autorisées.
-3. Dans `Workflow permissions`, choisis `Read and write permissions`.
-4. Garde le repo public si tu veux que tes amis téléchargent sans compte GitHub.
+## Commandes utiles   
 
-Après ça, tant que le fichier `.github/workflows/release-dinotofu.yml` est dans ton repo, GitHub s'occupe du reste.
+```bash   
+make clean   
+make release-check   
+```   
 
-## Méthode normale depuis ton PC
+Pour créer une archive source propre :   
 
-Pour publier un simple patch :
+```bash   
+./scripts/package_source_no_exe.sh   
+```   
 
-```bash
-./scripts/release_push.sh patch
-```
+## Ce que tu donnes aux joueurs   
 
-Pour une mise à jour moyenne :
+Donner plutôt les releases/installers Windows/Linux selon leur OS. Le ZIP source sert surtout au développement.   
 
-```bash
-./scripts/release_push.sh minor "Grosse amélioration du bestiaire"
-```
+## Règles importantes   
 
-Pour une grosse phase :
+- Pas de sauvegardes privées dans les ZIP.   
+- Pas d'exécutable dans le ZIP source.   
+- Pas de long historique de versions dans les docs joueur.   
+- Garder seulement la version actuelle, la compatibilité personnage, les gros jalons et les consignes utiles.   
 
-```bash
-./scripts/release_push.sh major "Nouvelle phase Dinotofu"
-```
+## Jalons   
 
-Le script fait :
-
-- changement de version ;
-- `git add .` ;
-- `git commit` ;
-- `git push`.
-
-Ensuite GitHub Actions crée automatiquement le tag et la release.
-
-## Méthode Windows PowerShell
-
-Depuis PowerShell, dans le dossier du repo :
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\windows\Publier-DinotofuPatch.ps1
-```
-
-Pour une version moyenne :
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\windows\Publier-DinotofuPatch.ps1 -Bump minor -Message "Grosse amélioration du jeu"
-```
-
-## Ce que tu donnes aux amis
-
-Dans la page GitHub Release générée automatiquement :
-
-- Windows : `DinotofuInstaller-Windows-vX.Y.Z.zip`
-- Linux : `DinotofuInstaller-Linux-vX.Y.Z.zip`
-
-Ils n'ont pas besoin de Visual Studio, Make, WSL ou Git.
-
-
-## Vérifier que le ZIP du jeu reste propre
-
-Avant d'envoyer un ZIP source ou de préparer une release locale, tu peux lancer :
-
-```bash
-make release-check
-```
-
-Ce contrôle vérifie notamment qu'il n'y a pas de vieux lanceur racine, pas de fichiers d’authentification locaux, pas de saves privées, pas de build/output et pas d'exécutable dans le projet source.
+- V2.0.0 : palier IG jouable/stabilisé.   
+- V3.0.0 : premier chapitre d'histoire.   
+- Multijoueur en ligne : future grosse version beaucoup plus tard.   

@@ -15,10 +15,39 @@
 #include "combat/summon/SummonCombatSystem.hpp"
 #include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 #include "interface/model/MenuScreen.hpp"
 
-#include <iostream>
+#include <string>
 #include <vector>
+
+namespace
+{
+    MenuOptionItemData buildTargetItemData(const CombatUnitSlot& slot)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = slot.getKind() == CombatUnitKind::Summon ? "summon" : "entity";
+        itemData.section = "Cibles";
+        itemData.actionType = "target";
+        itemData.name = slot.getDisplayName();
+        itemData.detail = slot.getKind() == CombatUnitKind::Summon ? "Invocation" : "Cible principale";
+
+        if (const Entity* entity = slot.getEntity())
+        {
+            itemData.status = "PV : " + std::to_string(entity->getHp()) + "/" + std::to_string(entity->getMaxHp());
+            itemData.important = entity->getMaxHp() > 0 && entity->getHp() * 100 <= entity->getMaxHp() * 35;
+        }
+        else if (const Summon* summon = slot.getSummon())
+        {
+            itemData.status = "PV : " + std::to_string(summon->getHp()) + "/" + std::to_string(summon->getMaxHp());
+            itemData.progress = "Durée : " + std::to_string(summon->getDurationTurns()) + " tour(s)";
+            itemData.owner = summon->getOwnerName();
+        }
+
+        return itemData;
+    }
+}
 
 bool CombatGroupTargetMenu::openSingleEnemyAttack(
     Entity& attacker,
@@ -38,8 +67,14 @@ bool CombatGroupTargetMenu::openSingleEnemyAttack(
 
     if (targetableSlots.empty())
     {
-        std::cout << "Aucune cible n'est disponible." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "AUCUNE CIBLE",
+            "combat_group.target_select.empty",
+            {
+                "Aucune cible n'est disponible.",
+                "L'action ne part pas dans le vide."
+            }
+        );
         return false;
     }
 
@@ -64,15 +99,13 @@ bool CombatGroupTargetMenu::openSingleEnemyAttack(
             slot->getDisplayName(),
             hint,
             true,
-            "combat_group.target"
+            "combat_group.target." + std::to_string(i),
+            buildTargetItemData(*slot)
         );
     }
 
-    TerminalInterface::renderMenuScreen(screen);
-
-    int choice = Console::askNumberBetween(
-        0,
-        static_cast<int>(targetableSlots.size()),
+    int choice = TerminalInterface::askMenuChoiceFromOptions(
+        screen,
         "Cible invalide. Choisis une cible affichée, ou 0 pour revenir."
     );
 
@@ -108,8 +141,14 @@ bool CombatGroupTargetMenu::openSingleEnemyAttack(
         return true;
     }
 
-    std::cout << "Cette cible n'est plus disponible." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "CIBLE INTROUVABLE",
+        "combat_group.target_select.missing",
+        {
+            "Cette cible n'est plus disponible.",
+            "Le combat continue sans gaspiller l'action."
+        }
+    );
 
     return false;
 }

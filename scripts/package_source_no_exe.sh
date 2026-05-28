@@ -19,6 +19,7 @@ zip -r "${PACKAGE_PATH}" . \
     -x "build/*" \
     -x "output/*" \
     -x "release_packages/*" \
+    -x "gui_debug/*" \
     -x "assets/saves/*" \
     -x "saves/*" \
     -x "accounts/*" \
@@ -32,6 +33,10 @@ zip -r "${PACKAGE_PATH}" . \
     -x "Dinotofu" \
     -x "dinotofu" \
     -x "*.log" \
-    -x "*.tmp"
+    -x "*.tmp" \
+    -x "AUDIT_IG_RESTANTS_*.md" \
+    -x "reprise_chat_dinotofu_*.txt" \
+    -x "*/__pycache__/*" \
+    -x "*.pyc"
 
 echo "Archive source sans exécutable créée : ${PACKAGE_PATH}"

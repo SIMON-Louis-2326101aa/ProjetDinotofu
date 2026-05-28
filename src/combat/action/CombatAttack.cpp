@@ -15,8 +15,11 @@
 #include "entity/Boss.hpp"
 #include "entity/Monster.hpp"
 #include "item/weapon/WeaponType.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <iostream>
+#include <sstream>
+#include <ostream>
 #include <algorithm>
 #include <cctype>
 #include <string>
@@ -47,6 +50,35 @@ namespace
         return false;
     }
 
+
+    std::vector<std::string> splitCapturedCombatLines(const std::string& text)
+    {
+        std::vector<std::string> lines;
+        std::istringstream stream(text);
+        std::string line;
+        while (std::getline(stream, line))
+        {
+            if (!line.empty())
+            {
+                lines.push_back(line);
+            }
+        }
+        return lines;
+    }
+
+    void showCapturedCombatLines(
+        const std::string& title,
+        const std::string& screenId,
+        const std::string& capturedText
+    )
+    {
+        std::vector<std::string> lines = splitCapturedCombatLines(capturedText);
+        if (!lines.empty())
+        {
+            MessageScreen::show(title, screenId, lines, false);
+        }
+    }
+
     int countPlayerMetalEquipment(const Player& player)
     {
         int metalPieces = 0;
@@ -69,7 +101,7 @@ namespace
         return metalPieces;
     }
 
-    void applyAmmunitionStatusIfNeeded(Player& attacker, Entity& defender, int receivedDamage)
+    void applyAmmunitionStatusIfNeeded(Player& attacker, Entity& defender, int receivedDamage, std::ostream& output)
     {
         if (receivedDamage <= 0)
         {
@@ -88,23 +120,23 @@ namespace
         if (ammoId == "barbed_arrows" || ammoId == "balanced_throwing_knives")
         {
             ElementalAffinitySystem::applyBleeding(defender, 2, 3 + attacker.getLevel() / 25);
-            std::cout << "La munition ouvre une blessure qui saignera sur les prochains tours." << std::endl;
+            output << "La munition ouvre une blessure qui saignera sur les prochains tours." << std::endl;
         }
         else if (ammoId == "piercing_bolts")
         {
             int piercingDamage = 3 + attacker.getLevel() / 20;
             defender.takeDamage(piercingDamage);
-            std::cout << "Le carreau perforant traverse une protection et ajoute " << piercingDamage << " dégâts directs." << std::endl;
+            output << "Le carreau perforant traverse une protection et ajoute " << piercingDamage << " dégâts directs." << std::endl;
         }
         else if (ammoId == "ash_arrows")
         {
             ElementalAffinitySystem::applyBurning(defender, 2, 4 + attacker.getLevel() / 30);
-            std::cout << "La flèche de cendre accroche une brûlure faible mais persistante." << std::endl;
+            output << "La flèche de cendre accroche une brûlure faible mais persistante." << std::endl;
         }
         else if (ammoId == "frozen_bolts")
         {
             ElementalAffinitySystem::applyFrost(defender, 2);
-            std::cout << "Le carreau givré ralentit la cible : le froid restera un court instant." << std::endl;
+            output << "Le carreau givré ralentit la cible : le froid restera un court instant." << std::endl;
         }
         else if (ammoId == "conductive_knives")
         {
@@ -117,16 +149,16 @@ namespace
                 if (metalPieces > 0)
                 {
                     shockDamage += 3 * metalPieces;
-                    std::cout << "Le métal équipé amplifie la conduction électrique." << std::endl;
+                    output << "Le métal équipé amplifie la conduction électrique." << std::endl;
                 }
             }
             defender.takeDamage(shockDamage);
-            std::cout << "Le couteau conducteur ajoute " << shockDamage << " dégâts électriques immédiats." << std::endl;
+            output << "Le couteau conducteur ajoute " << shockDamage << " dégâts électriques immédiats." << std::endl;
         }
         else if (ammoId == "venom_arrows")
         {
             ElementalAffinitySystem::applyPoison(defender, 3, 2 + attacker.getLevel() / 18);
-            std::cout << "Le venin de la flèche s'accroche : poison léger sur plusieurs tours." << std::endl;
+            output << "Le venin de la flèche s'accroche : poison léger sur plusieurs tours." << std::endl;
         }
         else if (ammoId == "shock_bolts")
         {
@@ -139,21 +171,21 @@ namespace
                 shockDamage += 4 * metalPieces;
                 if (metalPieces > 0)
                 {
-                    std::cout << "Le carreau conducteur mord dans le métal équipé." << std::endl;
+                    output << "Le carreau conducteur mord dans le métal équipé." << std::endl;
                 }
             }
             defender.takeDamage(shockDamage);
-            std::cout << "La pointe conductrice ajoute " << shockDamage << " dégâts électriques." << std::endl;
+            output << "La pointe conductrice ajoute " << shockDamage << " dégâts électriques." << std::endl;
         }
         else if (ammoId == "smoke_knives")
         {
             ElementalAffinitySystem::applyFrost(defender, 1);
             attacker.startDefensePosture(10, 8, "Écran de fumée court");
-            std::cout << "Le couteau fumigène gêne la cible et donne une petite fenêtre défensive au lanceur." << std::endl;
+            output << "Le couteau fumigène gêne la cible et donne une petite fenêtre défensive au lanceur." << std::endl;
         }
     }
 
-    void applyMonsterElementalStatusIfNeeded(Monster& attacker, Entity& defender, Random& random, int receivedDamage)
+    void applyMonsterElementalStatusIfNeeded(Monster& attacker, Entity& defender, Random& random, int receivedDamage, std::ostream& output)
     {
         if (receivedDamage <= 0) return;
 
@@ -167,43 +199,43 @@ namespace
             if (effectRoll == 1)
             {
                 ElementalAffinitySystem::applyPoison(defender, 2, 2 + attacker.getLevel() / 14);
-                std::cout << attacker.getName() << " change de couleur et laisse un poison instable." << std::endl;
+                output << attacker.getName() << " change de couleur et laisse un poison instable." << std::endl;
             }
             else if (effectRoll == 2)
             {
                 ElementalAffinitySystem::applyBurning(defender, 2, 2 + attacker.getLevel() / 16);
-                std::cout << attacker.getName() << " pulse rouge et accroche une chaleur anormale." << std::endl;
+                output << attacker.getName() << " pulse rouge et accroche une chaleur anormale." << std::endl;
             }
             else if (effectRoll == 3)
             {
                 ElementalAffinitySystem::applyFrost(defender, 2);
-                std::cout << attacker.getName() << " devient pâle et ralentit la cible." << std::endl;
+                output << attacker.getName() << " devient pâle et ralentit la cible." << std::endl;
             }
             else
             {
                 ElementalAffinitySystem::applyShock(defender, 2);
-                std::cout << attacker.getName() << " vibre comme du verre chargé d'électricité." << std::endl;
+                output << attacker.getName() << " vibre comme du verre chargé d'électricité." << std::endl;
             }
         }
         else if (textContainsAny(combined, {"ambré", "ambre", "collant", "poisseux"}) && random.between(1, 100) <= 34)
         {
             ElementalAffinitySystem::applyFrost(defender, 1);
-            std::cout << attacker.getName() << " colle à la cible : ce n'est pas du givre, mais les mouvements deviennent lourds." << std::endl;
+            output << attacker.getName() << " colle à la cible : ce n'est pas du givre, mais les mouvements deviennent lourds." << std::endl;
         }
         else if (textContainsAny(combined, {"toxique", "putride", "venime", "poison", "violet", "noir", "vaseux"}) && random.between(1, 100) <= 28)
         {
             ElementalAffinitySystem::applyPoison(defender, 2, 3 + attacker.getLevel() / 12);
-            std::cout << attacker.getName() << " laisse un poison léger dans la blessure." << std::endl;
+            output << attacker.getName() << " laisse un poison léger dans la blessure." << std::endl;
         }
         else if (textContainsAny(combined, {"brûl", "brule", "cendre", "feu", "rouge", "irritant", "chaud"}) && random.between(1, 100) <= 24)
         {
             ElementalAffinitySystem::applyBurning(defender, 2, 3 + attacker.getLevel() / 14);
-            std::cout << attacker.getName() << " transmet une chaleur persistante." << std::endl;
+            output << attacker.getName() << " transmet une chaleur persistante." << std::endl;
         }
         else if (textContainsAny(combined, {"givre", "gel", "froid", "glace", "bleu", "blanc"}) && random.between(1, 100) <= 24)
         {
             ElementalAffinitySystem::applyFrost(defender, 2);
-            std::cout << attacker.getName() << " ralentit sa cible avec un froid mordant." << std::endl;
+            output << attacker.getName() << " ralentit sa cible avec un froid mordant." << std::endl;
         }
         else if (textContainsAny(combined, {"élect", "elect", "conduct", "orage", "jaune", "vibrant", "chromatique"}) && random.between(1, 100) <= 22)
         {
@@ -216,11 +248,11 @@ namespace
                 if (metalPieces > 0)
                 {
                     shockDamage += 3 * metalPieces;
-                    std::cout << "L'équipement métallique attire une partie de la décharge." << std::endl;
+                    output << "L'équipement métallique attire une partie de la décharge." << std::endl;
                 }
             }
             defender.takeDamage(shockDamage);
-            std::cout << attacker.getName() << " ajoute " << shockDamage << " dégâts électriques." << std::endl;
+            output << attacker.getName() << " ajoute " << shockDamage << " dégâts électriques." << std::endl;
         }
     }
 }
@@ -249,7 +281,13 @@ void CombatAttack::executeBoostedAttack(
     attacker.processStatusTickAtTurnStart();
     if (attacker.isDead())
     {
-        std::cout << attacker.getName() << " ne peut pas agir : les effets en cours l'ont mis au sol." << std::endl << std::endl;
+        MessageScreen::show(
+            "ACTION IMPOSSIBLE",
+            "combat.attack.status_blocked",
+            {
+                attacker.getName() + " ne peut pas agir : les effets en cours l'ont mis au sol."
+            }
+        );
         return;
     }
 
@@ -265,12 +303,13 @@ void CombatAttack::executeBoostedAttack(
 
     if (dodged)
     {
-        std::cout << attacker.getName()
-                  << " attaque, mais "
-                  << defender.getName()
-                  << " esquive au dernier moment."
-                  << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ATTAQUE ESQUIVÉE",
+            "combat.attack.dodged",
+            {
+                attacker.getName() + " attaque, mais " + defender.getName() + " esquive au dernier moment."
+            }
+        );
         DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
         return;
     }
@@ -289,6 +328,8 @@ void CombatAttack::executeBoostedAttack(
         rawDamage,
         critical
     );
+
+    std::ostringstream preparationBuffer;
 
     Player* attackingPlayerIdentity = dynamic_cast<Player*>(&attacker);
     Monster* attackingMonster = dynamic_cast<Monster*>(&attacker);
@@ -327,7 +368,7 @@ void CombatAttack::executeBoostedAttack(
                         equippedWeapon.getType(),
                         equippedWeapon.getName()
                     );
-                    std::cout << "Affinité arme/classe : +" << affinityBonus
+                    preparationBuffer << "Affinité arme/classe : +" << affinityBonus
                               << " dégât(s), " << affinityLabel << "." << std::endl;
                 }
             }
@@ -344,7 +385,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 18)
         {
             rawDamage += 2 + classLevel / 30;
-            std::cout << "Technique apprise : enchaînement simple, le geste s'enchaîne mieux grâce à l'expérience." << std::endl;
+            preparationBuffer << "Technique apprise : enchaînement simple, le geste s'enchaîne mieux grâce à l'expérience." << std::endl;
         }
 
         if (classLevel >= 8
@@ -354,7 +395,7 @@ void CombatAttack::executeBoostedAttack(
         {
             ElementalAffinitySystem::applyBleeding(defender, 1, 1 + classLevel / 40);
             rawDamage += 1;
-            std::cout << "Technique apprise : incision discrète, une blessure courte s'ajoute à la frappe." << std::endl;
+            preparationBuffer << "Technique apprise : incision discrète, une blessure courte s'ajoute à la frappe." << std::endl;
         }
 
         if (classLevel >= 10
@@ -364,7 +405,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 18)
         {
             attacker.startDefensePosture(10, 2, "Posture apprise de rempart");
-            std::cout << "Technique apprise : rempart court, le combattant finit son attaque en garde." << std::endl;
+            preparationBuffer << "Technique apprise : rempart court, le combattant finit son attaque en garde." << std::endl;
         }
 
         if (classLevel >= 12
@@ -378,7 +419,7 @@ void CombatAttack::executeBoostedAttack(
             else if (roll == 2) ElementalAffinitySystem::applyPoison(defender, 1, 1 + classLevel / 32);
             else if (roll == 3) ElementalAffinitySystem::applyFrost(defender, 1);
             else ElementalAffinitySystem::applyShock(defender, 1);
-            std::cout << "Technique apprise : trace élémentaire, la magie suit le geste physique." << std::endl;
+            preparationBuffer << "Technique apprise : trace élémentaire, la magie suit le geste physique." << std::endl;
         }
 
         if (classLevel >= 15
@@ -392,7 +433,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 20)
         {
             rawDamage += 3 + classLevel / 28;
-            std::cout << "Technique apprise : tir cadré, le bonus existe seulement car l'arme équipée le permet." << std::endl;
+            preparationBuffer << "Technique apprise : tir cadré, le bonus existe seulement car l'arme équipée le permet." << std::endl;
         }
 
         if ((classFocus.find("assassin") != std::string::npos
@@ -401,7 +442,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= (critical ? 45 : 18))
         {
             ElementalAffinitySystem::applyBleeding(defender, 2, 2 + attackingPlayerIdentity->getLevel() / 35);
-            std::cout << "Spécialité furtive : la frappe cherche une veine et prépare un saignement." << std::endl;
+            preparationBuffer << "Spécialité furtive : la frappe cherche une veine et prépare un saignement." << std::endl;
         }
 
         if ((classFocus.find("paladin") != std::string::npos
@@ -413,7 +454,7 @@ void CombatAttack::executeBoostedAttack(
         {
             int selfHeal = std::max(1, 3 + attackingPlayerIdentity->getLevel() / 18);
             attacker.heal(selfHeal);
-            std::cout << "Spécialité sacrée : l'effort referme légèrement les blessures du combattant." << std::endl;
+            preparationBuffer << "Spécialité sacrée : l'effort referme légèrement les blessures du combattant." << std::endl;
         }
 
         if ((classFocus.find("gardien") != std::string::npos
@@ -422,7 +463,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 24)
         {
             attacker.startDefensePosture(8, 3, "Ancrage de classe lourde");
-            std::cout << "Spécialité lourde : le combattant s'ancre après son coup." << std::endl;
+            preparationBuffer << "Spécialité lourde : le combattant s'ancre après son coup." << std::endl;
         }
 
         if ((classFocus.find("mage") != std::string::npos
@@ -435,17 +476,17 @@ void CombatAttack::executeBoostedAttack(
             if (effectRoll == 1)
             {
                 ElementalAffinitySystem::applyBurning(defender, 1, 2 + attackingPlayerIdentity->getLevel() / 28);
-                std::cout << "Spécialité magique : une braise instable reste accrochée à la cible." << std::endl;
+                preparationBuffer << "Spécialité magique : une braise instable reste accrochée à la cible." << std::endl;
             }
             else if (effectRoll == 2)
             {
                 ElementalAffinitySystem::applyFrost(defender, 1);
-                std::cout << "Spécialité magique : un froid bref gêne le mouvement adverse." << std::endl;
+                preparationBuffer << "Spécialité magique : un froid bref gêne le mouvement adverse." << std::endl;
             }
             else
             {
                 ElementalAffinitySystem::applyShock(defender, 1);
-                std::cout << "Spécialité magique : une perturbation électrique traverse l'impact." << std::endl;
+                preparationBuffer << "Spécialité magique : une perturbation électrique traverse l'impact." << std::endl;
             }
         }
 
@@ -458,7 +499,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 26)
         {
             rawDamage += std::max(1, 2 + attackingPlayerIdentity->getLevel() / 25);
-            std::cout << "Spécialité à distance : le tir suit enfin la ligne de l'arme équipée." << std::endl;
+            preparationBuffer << "Spécialité à distance : le tir suit enfin la ligne de l'arme équipée." << std::endl;
         }
 
         if ((classFocus.find("lancier") != std::string::npos
@@ -469,7 +510,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 22)
         {
             attacker.startDefensePosture(6, 2, "Garde de lance");
-            std::cout << "Spécialité de lance : la portée garde l'adversaire à distance après l'impact." << std::endl;
+            preparationBuffer << "Spécialité de lance : la portée garde l'adversaire à distance après l'impact." << std::endl;
         }
 
         if ((classFocus.find("barbare") != std::string::npos
@@ -479,7 +520,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 28)
         {
             rawDamage = rawDamage * 112 / 100 + 2;
-            std::cout << "Spécialité brutale : plus le combattant est blessé, plus il force l'impact." << std::endl;
+            preparationBuffer << "Spécialité brutale : plus le combattant est blessé, plus il force l'impact." << std::endl;
         }
 
         if ((classFocus.find("alchimiste") != std::string::npos
@@ -491,17 +532,17 @@ void CombatAttack::executeBoostedAttack(
             if (effectRoll == 1)
             {
                 ElementalAffinitySystem::applyPoison(defender, 1, 1 + attackingPlayerIdentity->getLevel() / 35);
-                std::cout << "Spécialité d'artisanat : un résidu expérimental empoisonne légèrement la cible." << std::endl;
+                preparationBuffer << "Spécialité d'artisanat : un résidu expérimental empoisonne légèrement la cible." << std::endl;
             }
             else if (effectRoll == 2)
             {
                 ElementalAffinitySystem::applyBurning(defender, 1, 1 + attackingPlayerIdentity->getLevel() / 35);
-                std::cout << "Spécialité d'artisanat : une étincelle chimique reste sur la blessure." << std::endl;
+                preparationBuffer << "Spécialité d'artisanat : une étincelle chimique reste sur la blessure." << std::endl;
             }
             else
             {
                 rawDamage += 2;
-                std::cout << "Spécialité d'artisanat : le coup vise une faiblesse matérielle." << std::endl;
+                preparationBuffer << "Spécialité d'artisanat : le coup vise une faiblesse matérielle." << std::endl;
             }
         }
 
@@ -511,12 +552,12 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 18)
         {
             ElementalAffinitySystem::applyFrost(defender, 1);
-            std::cout << "Spécialité d'invocateur : l'attaque laisse une pression froide, comme une présence derrière la cible." << std::endl;
+            preparationBuffer << "Spécialité d'invocateur : l'attaque laisse une pression froide, comme une présence derrière la cible." << std::endl;
         }
 
         if (rawDamage != beforeSpecialityDamage)
         {
-            std::cout << "La spécialité de classe change l'impact de l'attaque."
+            preparationBuffer << "La spécialité de classe change l'impact de l'attaque."
                       << std::endl;
         }
     }
@@ -531,13 +572,13 @@ void CombatAttack::executeBoostedAttack(
         if (textContainsAny(monsterFocus, {"frondeur", "tireur", "archer"}) && random.between(1, 100) <= 22)
         {
             rawDamage += 2 + attackingMonster->getLevel() / 12;
-            std::cout << attackingMonster->getName() << " harcèle à distance au lieu de charger bêtement." << std::endl;
+            preparationBuffer << attackingMonster->getName() << " harcèle à distance au lieu de charger bêtement." << std::endl;
         }
 
         if (textContainsAny(monsterFocus, {"garde", "sentinelle", "armure", "golem", "construction"}) && random.between(1, 100) <= 24)
         {
             attacker.startDefensePosture(10, 2, "Garde monstrueuse");
-            std::cout << attackingMonster->getName() << " protège son noyau/faiblesse après avoir frappé." << std::endl;
+            preparationBuffer << attackingMonster->getName() << " protège son noyau/faiblesse après avoir frappé." << std::endl;
         }
 
         if (textContainsAny(monsterFocus, {"loup", "prédateur", "predateur", "moustique", "sangsue"})
@@ -545,13 +586,13 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 30)
         {
             rawDamage += 3 + attackingMonster->getLevel() / 10;
-            std::cout << attackingMonster->getName() << " sent la proie blessée et devient plus agressif." << std::endl;
+            preparationBuffer << attackingMonster->getName() << " sent la proie blessée et devient plus agressif." << std::endl;
         }
 
         if (textContainsAny(monsterFocus, {"champignon hurleur", "tambour", "oracle"}) && random.between(1, 100) <= 18)
         {
             rawDamage += 1;
-            std::cout << attackingMonster->getName() << " perturbe le rythme du combat : son rôle de support se ressent même seul." << std::endl;
+            preparationBuffer << attackingMonster->getName() << " perturbe le rythme du combat : son rôle de support se ressent même seul." << std::endl;
         }
 
         if (textContainsAny(attackingMonster->getName() + " " + typeText, {"shaman", "chamane", "oracle", "apothicaire"})
@@ -559,20 +600,20 @@ void CombatAttack::executeBoostedAttack(
         {
             int selfHeal = std::max(2, 4 + attackingMonster->getLevel() / 8);
             attacker.heal(selfHeal);
-            std::cout << attackingMonster->getName() << " gaspille une fiole ou une prière mineure pour rester debout." << std::endl;
+            preparationBuffer << attackingMonster->getName() << " gaspille une fiole ou une prière mineure pour rester debout." << std::endl;
         }
 
         if (raceText.find("Gobelin") != std::string::npos && defender.getHp() * 2 <= defender.getMaxHp())
         {
             rawDamage += 3;
-            std::cout << attackingMonster->getName() << " sent la faiblesse et frappe comme un pillard opportuniste." << std::endl;
+            preparationBuffer << attackingMonster->getName() << " sent la faiblesse et frappe comme un pillard opportuniste." << std::endl;
         }
         else if (raceText.find("Bête") != std::string::npos || typeText.find("Prédateur") != std::string::npos || typeText.find("rapide") != std::string::npos)
         {
             if (random.between(1, 100) <= 25)
             {
                 rawDamage += 4;
-                std::cout << attackingMonster->getName() << " profite de sa vitesse naturelle." << std::endl;
+                preparationBuffer << attackingMonster->getName() << " profite de sa vitesse naturelle." << std::endl;
             }
         }
         else if (raceText.find("Mort-vivant") != std::string::npos)
@@ -580,7 +621,7 @@ void CombatAttack::executeBoostedAttack(
             if (random.between(1, 100) <= 20)
             {
                 rawDamage += 5;
-                std::cout << "Une force froide accompagne le coup du mort-vivant." << std::endl;
+                preparationBuffer << "Une force froide accompagne le coup du mort-vivant." << std::endl;
             }
         }
         else if (raceText.find("Slime") != std::string::npos)
@@ -588,19 +629,19 @@ void CombatAttack::executeBoostedAttack(
             if (typeText.find("toxique") != std::string::npos || typeText.find("putride") != std::string::npos)
             {
                 rawDamage += 4;
-                std::cout << attackingMonster->getName() << " laisse une matière nocive sur la blessure." << std::endl;
+                preparationBuffer << attackingMonster->getName() << " laisse une matière nocive sur la blessure." << std::endl;
             }
             else if (typeText.find("froide") != std::string::npos || typeText.find("gelée froide") != std::string::npos)
             {
                 rawDamage += 3;
-                std::cout << attackingMonster->getName() << " refroidit brutalement l'impact." << std::endl;
+                preparationBuffer << attackingMonster->getName() << " refroidit brutalement l'impact." << std::endl;
             }
             else if (typeText.find("brillante") != std::string::npos || typeText.find("or") != std::string::npos)
             {
                 if (random.between(1, 100) <= 35)
                 {
                     rawDamage += 5;
-                    std::cout << attackingMonster->getName() << " attaque en protégeant ce qui brille en lui." << std::endl;
+                    preparationBuffer << attackingMonster->getName() << " attaque en protégeant ce qui brille en lui." << std::endl;
                 }
             }
             else if (typeText.find("bond") != std::string::npos || attackingMonster->getName().find("rose") != std::string::npos)
@@ -608,18 +649,18 @@ void CombatAttack::executeBoostedAttack(
                 if (random.between(1, 100) <= 35)
                 {
                     rawDamage += 4;
-                    std::cout << attackingMonster->getName() << " rebondit dans un angle absurde avant l'impact." << std::endl;
+                    preparationBuffer << attackingMonster->getName() << " rebondit dans un angle absurde avant l'impact." << std::endl;
                 }
             }
             else if (typeText.find("coll") != std::string::npos || attackingMonster->getName().find("ambr") != std::string::npos)
             {
                 rawDamage += 2;
-                std::cout << attackingMonster->getName() << " rend l'esquive pénible avec sa matière collante." << std::endl;
+                preparationBuffer << attackingMonster->getName() << " rend l'esquive pénible avec sa matière collante." << std::endl;
             }
             else if (random.between(1, 100) <= 18)
             {
                 rawDamage += 2;
-                std::cout << attackingMonster->getName() << " rebondit et rend le choc moins prévisible." << std::endl;
+                preparationBuffer << attackingMonster->getName() << " rebondit et rend le choc moins prévisible." << std::endl;
             }
         }
         else if (raceText.find("Plante") != std::string::npos)
@@ -627,7 +668,7 @@ void CombatAttack::executeBoostedAttack(
             if (random.between(1, 100) <= 25)
             {
                 rawDamage += 3;
-                std::cout << attackingMonster->getName() << " accroche sa cible avec des fibres végétales." << std::endl;
+                preparationBuffer << attackingMonster->getName() << " accroche sa cible avec des fibres végétales." << std::endl;
             }
         }
         else if (raceText.find("Insectoïde") != std::string::npos)
@@ -635,7 +676,7 @@ void CombatAttack::executeBoostedAttack(
             if (random.between(1, 100) <= 28)
             {
                 rawDamage += 4;
-                std::cout << attackingMonster->getName() << " pique dans un angle difficile à protéger." << std::endl;
+                preparationBuffer << attackingMonster->getName() << " pique dans un angle difficile à protéger." << std::endl;
             }
         }
         else if (raceText.find("Élémentaire") != std::string::npos || raceText.find("Démon") != std::string::npos)
@@ -643,7 +684,7 @@ void CombatAttack::executeBoostedAttack(
             if (random.between(1, 100) <= 22)
             {
                 rawDamage += 6;
-                std::cout << attackingMonster->getName() << " libère une surcharge instable." << std::endl;
+                preparationBuffer << attackingMonster->getName() << " libère une surcharge instable." << std::endl;
             }
         }
         else if (raceText.find("Orc") != std::string::npos || raceText.find("Hobgobelin") != std::string::npos)
@@ -651,19 +692,19 @@ void CombatAttack::executeBoostedAttack(
             if (attackingMonster->getHp() * 2 <= attackingMonster->getMaxHp())
             {
                 rawDamage += 6;
-                std::cout << attackingMonster->getName() << " devient plus violent en étant blessé." << std::endl;
+                preparationBuffer << attackingMonster->getName() << " devient plus violent en étant blessé." << std::endl;
             }
             else if (random.between(1, 100) <= 22)
             {
                 rawDamage += 3;
-                std::cout << attackingMonster->getName() << " impose sa force brute." << std::endl;
+                preparationBuffer << attackingMonster->getName() << " impose sa force brute." << std::endl;
             }
         }
         else if (raceText.find("Construction") != std::string::npos)
         {
             rawDamage += 2;
             attacker.startDefensePosture(12, 2, "Carapace de construction");
-            std::cout << attackingMonster->getName() << " frappe lourdement et reste difficile à entamer." << std::endl;
+            preparationBuffer << attackingMonster->getName() << " frappe lourdement et reste difficile à entamer." << std::endl;
         }
         else if (raceText.find("Anomalie") != std::string::npos)
         {
@@ -672,17 +713,17 @@ void CombatAttack::executeBoostedAttack(
             if (anomalyRoll == 4)
             {
                 ElementalAffinitySystem::applyShock(defender, 1);
-                std::cout << "L'anomalie déforme l'impact et laisse une perturbation électrique." << std::endl;
+                preparationBuffer << "L'anomalie déforme l'impact et laisse une perturbation électrique." << std::endl;
             }
             else
             {
-                std::cout << "L'anomalie rend les dégâts difficiles à prévoir." << std::endl;
+                preparationBuffer << "L'anomalie rend les dégâts difficiles à prévoir." << std::endl;
             }
         }
         else if (raceText.find("Dragon") != std::string::npos || raceText.find("Draconide") != std::string::npos)
         {
             rawDamage = rawDamage * 108 / 100 + 2;
-            std::cout << "La puissance draconique rend le coup plus lourd." << std::endl;
+            preparationBuffer << "La puissance draconique rend le coup plus lourd." << std::endl;
         }
 
         if (rawDamage < 1)
@@ -692,9 +733,15 @@ void CombatAttack::executeBoostedAttack(
 
         if (rawDamage != beforeMonsterSpecialityDamage && attackingMonster->isElite())
         {
-            std::cout << "Son statut d'élite rend cette spécialité encore plus inquiétante." << std::endl;
+            preparationBuffer << "Son statut d'élite rend cette spécialité encore plus inquiétante." << std::endl;
         }
     }
+
+    showCapturedCombatLines(
+        "PRÉPARATION DE L'ATTAQUE",
+        "combat.attack.preparation",
+        preparationBuffer.str()
+    );
 
     if (SpecialCombatEffects::specialCharacterDodgesBeforeDamage(
         defender,
@@ -713,9 +760,11 @@ void CombatAttack::executeBoostedAttack(
         return;
     }
 
+    std::ostringstream impactBuffer;
+
     if (critical)
     {
-        std::cout << attacker.getName()
+        impactBuffer << attacker.getName()
                   << " frappe avec une violence monstrueuse et inflige "
                   << rawDamage
                   << " dégâts bruts critiques."
@@ -723,7 +772,7 @@ void CombatAttack::executeBoostedAttack(
     }
     else if (damageBonus > 0)
     {
-        std::cout << attacker.getName()
+        impactBuffer << attacker.getName()
                   << " attaque avec une puissance renforcée et inflige "
                   << rawDamage
                   << " dégâts bruts."
@@ -731,7 +780,7 @@ void CombatAttack::executeBoostedAttack(
     }
     else
     {
-        std::cout << attacker.getName()
+        impactBuffer << attacker.getName()
                   << " attaque et inflige "
                   << rawDamage
                   << " dégâts bruts."
@@ -743,9 +792,15 @@ void CombatAttack::executeBoostedAttack(
         rawDamage
     );
 
-    DamageSystem::displayDamageReport(
-        defender,
-        rapport
+    for (const std::string& line : DamageSystem::buildDamageReportLines(defender, rapport))
+    {
+        impactBuffer << line << std::endl;
+    }
+
+    showCapturedCombatLines(
+        "IMPACT DE L'ATTAQUE",
+        "combat.attack.impact",
+        impactBuffer.str()
     );
 
     rapport.receivedDamage = DefensePostureSystem::reduceIncomingDamage(
@@ -755,15 +810,17 @@ void CombatAttack::executeBoostedAttack(
 
     defender.takeDamage(rapport.receivedDamage);
 
+    std::ostringstream followUpBuffer;
+
     Player* attackingPlayer = dynamic_cast<Player*>(&attacker);
     if (attackingPlayer != nullptr)
     {
-        applyAmmunitionStatusIfNeeded(*attackingPlayer, defender, rapport.receivedDamage);
+        applyAmmunitionStatusIfNeeded(*attackingPlayer, defender, rapport.receivedDamage, followUpBuffer);
     }
 
     if (attackingMonster != nullptr)
     {
-        applyMonsterElementalStatusIfNeeded(*attackingMonster, defender, random, rapport.receivedDamage);
+        applyMonsterElementalStatusIfNeeded(*attackingMonster, defender, random, rapport.receivedDamage, followUpBuffer);
     }
 
     Boss* defendingBoss = dynamic_cast<Boss*>(&defender);
@@ -776,12 +833,18 @@ void CombatAttack::executeBoostedAttack(
     {
         int recoilDamage = random.between(1, 2);
         attackingPlayer->takeDamage(recoilDamage);
-        std::cout << attackingPlayer->getName()
+        followUpBuffer << attackingPlayer->getName()
                   << " se blesse en frappant à mains nues et perd "
                   << recoilDamage
                   << " PV."
                   << std::endl;
     }
+
+    showCapturedCombatLines(
+        "EFFETS APRÈS IMPACT",
+        "combat.attack.follow_up",
+        followUpBuffer.str()
+    );
 
     SpecialCombatEffects::applySpecialCharacterAfterReceivingDamage(
         defender,
@@ -801,19 +864,13 @@ void CombatAttack::executeBoostedAttack(
         rapport.receivedDamage
     );
 
-    std::cout << defender.getName()
-              << " reçoit "
-              << rapport.receivedDamage
-              << " dégâts."
-              << std::endl;
-
-    std::cout << defender.getName()
-              << " possède maintenant "
-              << defender.getHp()
-              << "/"
-              << defender.getMaxHp()
-              << " PV."
-              << std::endl;
-
-    std::cout << std::endl;
+    MessageScreen::show(
+        "RÉSULTAT DE L'ATTAQUE",
+        "combat.attack.result",
+        {
+            defender.getName() + " reçoit " + std::to_string(rapport.receivedDamage) + " dégât(s).",
+            defender.getName() + " possède maintenant " + std::to_string(defender.getHp()) + "/" + std::to_string(defender.getMaxHp()) + " PV."
+        },
+        false
+    );
 }

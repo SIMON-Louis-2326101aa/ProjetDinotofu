@@ -8,7 +8,9 @@
 #include "item/material/Material.hpp"
 
 #include <cctype>
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <vector>
 #include <string>
 
 
@@ -230,62 +232,86 @@ void Material::setQuantity(int amount)
 
 // EN: display declares or implements a focused behavior used by this module.
 // FR: display déclare ou implémente un comportement précis utilisé par ce module.
-void Material::display() const
+std::vector<std::string> Material::toDisplayLines() const
 {
-    std::cout << "===== MATÉRIAU =====" << std::endl;
-    std::cout << "Nom : " << name << std::endl;
-    std::cout << "Catégorie : " << category << std::endl;
+    std::vector<std::string> lines = {
+        "===== MATÉRIAU =====",
+        "Nom : " + name,
+        "Catégorie : " + category
+    };
+
     if (category != "Livre" && category != "Renseignement" && category != "Outil")
     {
-        std::cout << "Qualité : " << getQualityLabel() << std::endl;
+        lines.push_back("Qualité : " + getQualityLabel());
     }
+
     if (category == "Outil" && isRepairKitId(id))
     {
         if (isUsedRepairKitId(id))
         {
-            std::cout << "Nombre : " << quantity << " kit(s) entamé(s)" << std::endl;
-            std::cout << "Durabilité par kit : " << usedRepairKitDurability(id)
-                      << "/" << maxRepairKitDurability(id) << std::endl;
+            lines.push_back("Nombre : " + std::to_string(quantity) + " kit(s) entamé(s)");
+            lines.push_back(
+                "Durabilité par kit : "
+                + std::to_string(usedRepairKitDurability(id))
+                + "/"
+                + std::to_string(maxRepairKitDurability(id))
+            );
         }
         else
         {
-            std::cout << "Nombre : " << quantity << " kit(s) intact(s)" << std::endl;
-            std::cout << "Durabilité par kit : " << maxRepairKitDurability(id)
-                      << "/" << maxRepairKitDurability(id) << std::endl;
+            lines.push_back("Nombre : " + std::to_string(quantity) + " kit(s) intact(s)");
+            lines.push_back(
+                "Durabilité par kit : "
+                + std::to_string(maxRepairKitDurability(id))
+                + "/"
+                + std::to_string(maxRepairKitDurability(id))
+            );
         }
     }
     else
     {
-        std::cout << "Quantité : " << quantity << std::endl;
+        lines.push_back("Quantité : " + std::to_string(quantity));
     }
-    std::cout << "Description : " << description << std::endl;
-    std::cout << "Valeur unitaire : " << (value * getQualityPricePercent() / 100) << " pièces";
+
+    std::string valueLine = "Valeur unitaire : " + std::to_string(value * getQualityPricePercent() / 100) + " pièces";
     if (hasSpecialQuality())
     {
-        std::cout << " (base " << value << ")";
+        valueLine += " (base " + std::to_string(value) + ")";
     }
-    std::cout << std::endl;
+
+    lines.push_back("Description : " + description);
+    lines.push_back(valueLine);
 
     if (category == "Matériau de monstre")
     {
-        std::cout << "Utilité connue : revente, artisanat, trophées et recettes liées aux monstres." << std::endl;
+        lines.push_back("Utilité connue : revente, artisanat, trophées et recettes liées aux monstres.");
     }
     else if (category == "Matériau")
     {
-        std::cout << "Utilité connue : réparation, amélioration et fabrication d'équipement." << std::endl;
+        lines.push_back("Utilité connue : réparation, amélioration et fabrication d'équipement.");
     }
     else if (category == "Plante")
     {
-        std::cout << "Utilité connue : potions, remèdes, quêtes et secrets botaniques." << std::endl;
+        lines.push_back("Utilité connue : potions, remèdes, quêtes et secrets botaniques.");
     }
     else if (category == "Outil")
     {
-        std::cout << "Utilité connue : réparation autonome. Un kit intact reste empilé ; un kit entamé garde la marque de son usure." << std::endl;
+        lines.push_back("Utilité connue : réparation autonome. Un kit intact reste empilé ; un kit entamé garde la marque de son usure.");
     }
     else if (category == "Renseignement" || category == "Livre")
     {
-        std::cout << "Utilité connue : débloquer ou compléter des informations du bestiaire." << std::endl;
+        lines.push_back("Utilité connue : débloquer ou compléter des informations du bestiaire.");
     }
-    std::cout << "====================" << std::endl;
-    std::cout << std::endl;
+
+    lines.push_back("====================");
+
+    return lines;
+}
+
+
+// EN: display declares or implements a focused behavior used by this module.
+// FR: display déclare ou implémente un comportement précis utilisé par ce module.
+void Material::display() const
+{
+    MessageScreen::show("MATÉRIAU / INFO", "item.material.display", toDisplayLines(), false);
 }

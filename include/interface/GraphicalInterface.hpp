@@ -21,6 +21,16 @@ public:
     static std::vector<std::string> collectActionIds(const MenuScreen& screen);
     static std::string describeScreenContract(const MenuScreen& screen);
     static std::string describeCombatContract(const GuiCombatStateSnapshot& snapshot);
+
+    // EN: JSON exports are not a full GUI yet; they define a stable contract for the future renderer.
+    // FR: Les exports JSON ne sont pas encore une vraie IG ; ils définissent un contrat stable pour le futur rendu.
+    static std::string menuSnapshotToJson(const GuiMenuSnapshot& snapshot);
+    static std::string combatSnapshotToJson(const GuiCombatStateSnapshot& snapshot);
+    static std::string screenToJson(const MenuScreen& screen);
+    static std::string escapeJson(const std::string& value);
+    static std::string stringArrayToJson(const std::vector<std::string>& values, int indentLevel);
+    static std::string intArrayToJson(const std::vector<int>& values, int indentLevel);
+    static std::string indent(int indentLevel);
 };
 
 #endif

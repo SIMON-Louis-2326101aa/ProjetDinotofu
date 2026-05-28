@@ -9,6 +9,7 @@
 
 #include "core/Console.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
@@ -601,8 +602,11 @@ namespace
     {
         if (entries.empty())
         {
-            std::cout << "Aucune entrée préparée pour cette sélection." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "BESTIAIRE",
+                "bestiary.entry.empty",
+                {"Aucune entrée préparée pour cette sélection."}
+            );
             return;
         }
 
@@ -631,7 +635,19 @@ namespace
                     + " | Danger : " + std::string(calculateKnowledgeLevel(entry) <= 0 ? "???" : hints.dangerRank)
                     + " | Tués : " + std::to_string(entry.kills);
 
-                screen.addOption(localChoice, label, "", true, "bestiary.entry.select." + std::to_string(i));
+                MenuOptionItemData itemData;
+                itemData.structured = true;
+                itemData.kind = "bestiary";
+                itemData.section = entry.category;
+                itemData.actionType = "inspect";
+                itemData.name = displayNameForEntry(entry);
+                itemData.detail = calculateKnowledgeLevel(entry) <= 0 ? "Information verrouillée" : entry.simpleDescription;
+                itemData.status = knowledgeLabel(entry);
+                itemData.progress = "Tués : " + std::to_string(entry.kills);
+                itemData.owner = calculateKnowledgeLevel(entry) <= 0 ? "???" : hints.habitat;
+                itemData.important = calculateKnowledgeLevel(entry) >= 2 || entry.kills > 0;
+
+                screen.addOption(localChoice, label, "Inspecter cette fiche du bestiaire.", true, "bestiary.entry.select." + std::to_string(i), itemData);
             }
 
             if (pageIndex > 0)
@@ -643,12 +659,8 @@ namespace
                 screen.addOption(99, "Page suivante", "", true, "bestiary.entry.next");
             }
             screen.addOption(0, "Retour", "", true, "bestiary.entry.back");
-            TerminalInterface::renderMenuScreen(screen);
-            std::cout << "> ";
-
-            int choice = Console::askNumberBetween(
-                0,
-                99,
+            int choice = TerminalInterface::askMenuChoiceFromOptions(
+                screen,
                 "Choix invalide."
             );
 
@@ -674,10 +686,14 @@ namespace
             const int visibleCount = static_cast<int>(last - first);
             if (choice < 1 || choice > visibleCount)
             {
-                std::cout << "Cette entrée n'est pas visible sur la page actuelle." << std::endl;
-                std::cout << std::endl;
-                Console::waitForEnter();
-                Console::clear();
+                MessageScreen::show(
+                    "ENTRÉE NON AFFICHÉE",
+                    "bestiary.entry.not_visible",
+                    {
+                        "Cette entrée n'est pas visible sur la page actuelle.",
+                        "Utilise les options de page ou choisis une fiche affichée."
+                    }
+                );
                 continue;
             }
 
@@ -705,10 +721,10 @@ namespace
             screen.addOption(2, "Existence confirmée", "", true, "bestiary.knowledge.level1");
             screen.addOption(3, "Informations utiles", "", true, "bestiary.knowledge.level2");
             screen.addOption(4, "Fiches complètes actuelles", "", true, "bestiary.knowledge.level3");
-            TerminalInterface::renderMenuScreen(screen);
-            std::cout << "> ";
-
-            int choice = Console::askNumberBetween(0, 4, "Choix invalide.");
+            int choice = TerminalInterface::askMenuChoiceFromOptions(
+                screen,
+                "Choix invalide."
+            );
             Console::clear();
 
             if (choice == 0)
@@ -738,6 +754,11 @@ namespace
         }
     }
 
+    void showBestiaryInfoScreen(const std::string& title, const std::string& screenId, const std::vector<std::string>& lines)
+    {
+        MessageScreen::show(title, screenId, lines);
+    }
+
     void displayHuntingNotebook()
     {
         std::vector<BestiaryPreviewEntry> entries = filterEntries("Tout");
@@ -753,13 +774,12 @@ namespace
             return scoreA < scoreB;
         });
 
-        std::cout << "========== CARNET DE TRAQUE ==========" << std::endl;
-        std::cout << "Le carnet sert à choisir quoi observer ensuite au lieu d'ouvrir toute la liste." << std::endl;
-        std::cout << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("Le carnet sert à choisir quoi observer ensuite au lieu d'ouvrir toute la liste.");
+        lines.push_back("");
+        lines.push_back("Fiches à compléter en priorité :");
 
         int shown = 0;
-        std::cout << "Fiches à compléter en priorité :" << std::endl;
-
         for (const BestiaryPreviewEntry& entry : entries)
         {
             const int level = calculateKnowledgeLevel(entry);
@@ -769,11 +789,10 @@ namespace
                 continue;
             }
 
-            std::cout << "- " << displayNameForEntry(entry)
-                      << " | " << entry.category
-                      << " | " << knowledgeLabel(entry)
-                      << " | " << knowledgeProgressHint(entry)
-                      << std::endl;
+            lines.push_back("- " + displayNameForEntry(entry)
+                + " | " + entry.category
+                + " | " + knowledgeLabel(entry)
+                + " | " + knowledgeProgressHint(entry));
 
             shown++;
 
@@ -785,17 +804,17 @@ namespace
 
         if (shown == 0)
         {
-            std::cout << "- Aucune priorité évidente : le registre est déjà très solide." << std::endl;
+            lines.push_back("- Aucune priorité évidente : le registre est déjà très solide.");
         }
 
-        std::cout << std::endl;
-        std::cout << "Pistes de terrain :" << std::endl;
-        std::cout << "- 1 rencontre confirme souvent l'existence." << std::endl;
-        std::cout << "- 3 rencontres ou 1 victoire rendent la fiche plus utile." << std::endl;
-        std::cout << "- Plusieurs victoires, notes de bibliothèque ou observations rares complètent la préparation." << std::endl;
-        std::cout << "- Les boss gardent leur nom masqué sans révélation crédible." << std::endl;
-        std::cout << "=====================================" << std::endl;
-        std::cout << std::endl;
+        lines.push_back("");
+        lines.push_back("Pistes de terrain :");
+        lines.push_back("- 1 rencontre confirme souvent l'existence.");
+        lines.push_back("- 3 rencontres ou 1 victoire rendent la fiche plus utile.");
+        lines.push_back("- Plusieurs victoires, notes de bibliothèque ou observations rares complètent la préparation.");
+        lines.push_back("- Les boss gardent leur nom masqué sans révélation crédible.");
+
+        showBestiaryInfoScreen("CARNET DE TRAQUE", "bestiary.hunting_notebook.detail", lines);
     }
 
 
@@ -803,90 +822,99 @@ namespace
     // FR: displayMaterialJournal déclare ou implémente un comportement précis utilisé par ce module.
     void displayMaterialJournal()
     {
-        std::cout << "========== JOURNAL DES MATÉRIAUX ==========" << std::endl;
-        std::cout << "Ce journal complète le bestiaire : il explique comment un composant peut être trouvé, abîmé, amélioré ou utilisé." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Qualités principales :" << std::endl;
-        std::cout << "- composants de monstre : impur / normal / pur / exceptionnel" << std::endl;
-        std::cout << "- plantes et matériaux classiques : faible qualité / normal / haute qualité / exceptionnel" << std::endl;
-        std::cout << std::endl;
-        std::cout << "Règles utiles :" << std::endl;
-        std::cout << "- deux qualités différentes ne stackent pas ensemble ;" << std::endl;
-        std::cout << "- une action brutale peut dégrader un composant ;" << std::endl;
-        std::cout << "- une récolte propre peut améliorer la qualité d'un cran ;" << std::endl;
-        std::cout << "- les matériaux exceptionnels ne sont pas achetables directement ;" << std::endl;
-        std::cout << "- si plus de 50% de la valeur d'un craft vient d'exceptionnel, une particularité faible peut apparaître." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Exemples suivis par le journal :" << std::endl;
-        std::cout << "- Oreille de gobelin : peut être trouée, brûlée ou propre selon le combat ;" << std::endl;
-        std::cout << "- Peau de bête robuste : utile aux kits et armures ;" << std::endl;
-        std::cout << "- Braise kitsune : composant magique sensible aux invocations ;" << std::endl;
-        std::cout << "- Noyau instable : puissant mais dangereux pour l'alchimie et les expériences." << std::endl;
-        std::cout << "===========================================" << std::endl;
-        std::cout << std::endl;
+        showBestiaryInfoScreen(
+            "JOURNAL DES MATÉRIAUX",
+            "bestiary.material_journal.detail",
+            {
+                "Ce journal complète le bestiaire : il explique comment un composant peut être trouvé, abîmé, amélioré ou utilisé.",
+                "",
+                "Qualités principales :",
+                "- composants de monstre : impur / normal / pur / exceptionnel",
+                "- plantes et matériaux classiques : faible qualité / normal / haute qualité / exceptionnel",
+                "",
+                "Règles utiles :",
+                "- deux qualités différentes ne stackent pas ensemble ;",
+                "- une action brutale peut dégrader un composant ;",
+                "- une récolte propre peut améliorer la qualité d'un cran ;",
+                "- les matériaux exceptionnels ne sont pas achetables directement ;",
+                "- si plus de 50% de la valeur d'un craft vient d'exceptionnel, une particularité faible peut apparaître.",
+                "",
+                "Exemples suivis par le journal :",
+                "- Oreille de gobelin : peut être trouée, brûlée ou propre selon le combat ;",
+                "- Peau de bête robuste : utile aux kits et armures ;",
+                "- Braise kitsune : composant magique sensible aux invocations ;",
+                "- Noyau instable : puissant mais dangereux pour l'alchimie et les expériences."
+            }
+        );
     }
 
     // EN: displayCraftJournal declares or implements a focused behavior used by this module.
     // FR: displayCraftJournal déclare ou implémente un comportement précis utilisé par ce module.
     void displayCraftJournal()
     {
-        std::cout << "========== JOURNAL DU CRAFT ==========" << std::endl;
-        std::cout << "Ce journal suit les fabrications réussies pendant la session actuelle." << std::endl;
-        std::cout << "Il nourrit les savoir-faire liés à l'artisanat, l'alchimie, la forge et aux armes utilisées." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Total fabriqué cette session : " << MaterialExperimentLog::getTotalCrafted() << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("Ce journal suit les fabrications réussies pendant la session actuelle.");
+        lines.push_back("Il nourrit les savoir-faire liés à l'artisanat, l'alchimie, la forge et aux armes utilisées.");
+        lines.push_back("");
+        lines.push_back("Total fabriqué cette session : " + std::to_string(MaterialExperimentLog::getTotalCrafted()));
 
         const std::vector<CraftExperimentRecord>& records = MaterialExperimentLog::getCraftRecords();
 
         if (records.empty())
         {
-            std::cout << "Aucun craft suivi pour le moment." << std::endl;
+            lines.push_back("Aucun craft suivi pour le moment.");
         }
         else
         {
             for (const CraftExperimentRecord& record : records)
             {
-                std::cout << "- " << record.recipeName << " : " << record.craftedCount << " fabrication(s)" << std::endl;
+                lines.push_back("- " + record.recipeName + " : " + std::to_string(record.craftedCount) + " fabrication(s)");
             }
         }
 
-        std::cout << std::endl;
-        std::cout << "Rappel : les matériaux exceptionnels majoritaires peuvent créer une particularité faible." << std::endl;
-        std::cout << "Forgeron, Alchimiste et Artificier ont maintenant un léger avantage économique et artisanal." << std::endl;
-        std::cout << "======================================" << std::endl;
-        std::cout << std::endl;
+        lines.push_back("");
+        lines.push_back("Rappel : les matériaux exceptionnels majoritaires peuvent créer une particularité faible.");
+        lines.push_back("Forgeron, Alchimiste et Artificier ont maintenant un léger avantage économique et artisanal.");
+
+        showBestiaryInfoScreen("JOURNAL DU CRAFT", "bestiary.craft_journal.detail", lines);
     }
 
     // EN: displaySummonJournal declares or implements a focused behavior used by this module.
     // FR: displaySummonJournal déclare ou implémente un comportement précis utilisé par ce module.
     void displaySummonJournal()
     {
-        std::cout << "========== JOURNAL DES INVOCATIONS ==========" << std::endl;
-        std::cout << "Les invocations utilisent maintenant une base plus claire : slots, maintien, durée, contrôle manuel et sacrifice." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Règles observées :" << std::endl;
-        std::cout << "- slots d'invocation : certaines invocations lourdes occupent plus d'un slot ;" << std::endl;
-        std::cout << "- maintien : une invocation peut prolonger son lien au lieu d'attaquer ;" << std::endl;
-        std::cout << "- sacrifice : une invocation peut rompre son lien pour infliger une rupture ;" << std::endl;
-        std::cout << "- ciblage : les ennemis peuvent attaquer les invocations selon leur logique ;" << std::endl;
-        std::cout << "- conduite : instinctive ou guidée selon le lien avec l'invocateur." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Notes incomplètes : certains rituels parlent encore de mana profond, de sacrifices avancés, d'ombres de Hazak et de formations de groupe." << std::endl;
-        std::cout << "=============================================" << std::endl;
-        std::cout << std::endl;
+        showBestiaryInfoScreen(
+            "JOURNAL DES INVOCATIONS",
+            "bestiary.summon_journal.detail",
+            {
+                "Les invocations utilisent maintenant une base plus claire : slots, maintien, durée, contrôle manuel et sacrifice.",
+                "",
+                "Règles observées :",
+                "- slots d'invocation : certaines invocations lourdes occupent plus d'un slot ;",
+                "- maintien : une invocation peut prolonger son lien au lieu d'attaquer ;",
+                "- sacrifice : une invocation peut rompre son lien pour infliger une rupture ;",
+                "- ciblage : les ennemis peuvent attaquer les invocations selon leur logique ;",
+                "- conduite : instinctive ou guidée selon le lien avec l'invocateur.",
+                "",
+                "Notes incomplètes : certains rituels parlent encore de mana profond, de sacrifices avancés, d'ombres de Hazak et de formations de groupe."
+            }
+        );
     }
 
     // EN: displayInformationShopPreview declares or implements a focused behavior used by this module.
     // FR: displayInformationShopPreview déclare ou implémente un comportement précis utilisé par ce module.
     void displayInformationShopPreview()
     {
-        std::cout << "========== ACHAT D'INFORMATIONS ==========" << std::endl;
-        std::cout << "La bibliothèque débloque maintenant des renseignements qui montent le niveau de connaissance du bestiaire." << std::endl;
-        std::cout << "Les secrets, les boss et les noms importants devront toujours se mériter." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Un nom de boss ne sera pas donné gratuitement si personne ne l'a prononcé." << std::endl;
-        std::cout << "==========================================" << std::endl;
-        std::cout << std::endl;
+        showBestiaryInfoScreen(
+            "ACHAT D'INFORMATIONS",
+            "bestiary.info_shop.detail",
+            {
+                "La bibliothèque débloque des renseignements qui montent le niveau de connaissance du bestiaire.",
+                "Les secrets, les boss et les noms importants devront toujours se mériter.",
+                "",
+                "Un nom de boss ne sera pas donné gratuitement si personne ne l'a prononcé."
+            }
+        );
     }
 
 
@@ -932,21 +960,21 @@ namespace
             addCategoryCount(categoryCounts, entry.category);
         }
 
-        std::cout << "========== SYNTHÈSE DU BESTIAIRE ==========" << std::endl;
-        std::cout << "Entrées suivies : " << entries.size() << std::endl;
-        std::cout << "Rencontres enregistrées : " << totalEncounters << std::endl;
-        std::cout << "Tués enregistrés : " << totalKills << std::endl;
-        std::cout << std::endl;
-        std::cout << "Connaissance 0 / verrouillée : " << level0 << std::endl;
-        std::cout << "Connaissance 1 / existence : " << level1 << std::endl;
-        std::cout << "Connaissance 2 / utile : " << level2 << std::endl;
-        std::cout << "Connaissance 3 / complète actuelle : " << level3 << std::endl;
-        std::cout << std::endl;
-        std::cout << "Répartition par catégorie :" << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("Entrées suivies : " + std::to_string(entries.size()));
+        lines.push_back("Rencontres enregistrées : " + std::to_string(totalEncounters));
+        lines.push_back("Tués enregistrés : " + std::to_string(totalKills));
+        lines.push_back("");
+        lines.push_back("Connaissance 0 / verrouillée : " + std::to_string(level0));
+        lines.push_back("Connaissance 1 / existence : " + std::to_string(level1));
+        lines.push_back("Connaissance 2 / utile : " + std::to_string(level2));
+        lines.push_back("Connaissance 3 / complète actuelle : " + std::to_string(level3));
+        lines.push_back("");
+        lines.push_back("Répartition par catégorie :");
 
         for (const std::pair<std::string, int>& count : categoryCounts)
         {
-            std::cout << "- " << count.first << " : " << count.second << std::endl;
+            lines.push_back("- " + count.first + " : " + std::to_string(count.second));
         }
 
         std::vector<BestiaryRuntimeRecord> runtimeRecords = BestiaryRuntimeProgress::getRecords();
@@ -962,12 +990,12 @@ namespace
             return scoreA > scoreB;
         });
 
-        std::cout << std::endl;
-        std::cout << "Découvertes réelles les plus observées :" << std::endl;
+        lines.push_back("");
+        lines.push_back("Découvertes réelles les plus observées :");
 
         if (runtimeRecords.empty())
         {
-            std::cout << "- Aucune trace réelle enregistrée dans cette session ou sauvegarde." << std::endl;
+            lines.push_back("- Aucune trace réelle enregistrée dans cette session ou sauvegarde.");
         }
         else
         {
@@ -976,59 +1004,60 @@ namespace
             for (int i = 0; i < limit; ++i)
             {
                 const BestiaryRuntimeRecord& record = runtimeRecords[i];
-                std::cout << "- " << record.name
-                          << " | " << record.category
-                          << " | rencontres " << record.encounters
-                          << " | tués " << record.kills
-                          << " | " << record.status
-                          << std::endl;
+                lines.push_back("- " + record.name
+                    + " | " + record.category
+                    + " | rencontres " + std::to_string(record.encounters)
+                    + " | tués " + std::to_string(record.kills)
+                    + " | " + record.status);
             }
         }
 
-        std::cout << "==========================================" << std::endl;
-        std::cout << std::endl;
+        showBestiaryInfoScreen("SYNTHÈSE DU BESTIAIRE", "bestiary.summary.detail", lines);
     }
 
     void displayTacticalIndex()
     {
-        std::cout << "========== INDEX TACTIQUE ==========" << std::endl;
-        std::cout << "Lecture rapide des grandes familles. Les fiches individuelles restent plus précises quand elles sont observées." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Gelées / slimes" << std::endl;
-        std::cout << "- Saignement faible, poison souvent mauvais, couleur à identifier avant de lancer un sort rare." << std::endl;
-        std::cout << "- Rouge : froid utile. Bleu/blanc : chaleur utile. Jaune : attention au métal. Violet/noir : antidotes utiles." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Humanoïdes / gobelins / bandits" << std::endl;
-        std::cout << "- Peu de résistances naturelles, mais l'équipement et les rôles changent tout." << std::endl;
-        std::cout << "- Les soutiens crédibles se focus : shaman, apothicaire, oracle, chef." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Bêtes" << std::endl;
-        std::cout << "- Dangereuses sur cible isolée ou blessée. Entrave et contre après charge sont utiles." << std::endl;
-        std::cout << "- Les matériaux se dégradent si le combat est trop brutal." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Morts-vivants / os / ombres" << std::endl;
-        std::cout << "- Poison et saignement souvent faibles. Lumière, feu, rupture d'os ou purification sont plus fiables." << std::endl;
-        std::cout << "- Les supports spectraux et oracles doivent être traités comme des soutiens, pas comme de simples sacs à PV." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Constructions / armures mortes" << std::endl;
-        std::cout << "- Les entailles faibles déçoivent. Marteau, choc ciblé, faille, corrosion ou brise-garde gagnent en valeur." << std::endl;
-        std::cout << "- Elles donnent souvent de bons composants si le combat ne les broie pas n'importe comment." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Draconides / dragons" << std::endl;
-        std::cout << "- Même jeunes, ils demandent préparation : souffle, écailles et matériaux fragiles après combat." << std::endl;
-        std::cout << "- Une victoire trop brutale peut donner moins de ressources propres." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Plantes" << std::endl;
-        std::cout << "- Feu et coupe nette. Le poison est souvent décevant. L'entrave doit être cassée vite." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Élémentaires / effets" << std::endl;
-        std::cout << "- Un élément résiste souvent à lui-même. Le métal amplifie le choc. Le voile élémentaire réduit plusieurs altérations." << std::endl;
-        std::cout << "- Les anomalies peuvent punir les automatismes : observer le premier tour vaut parfois une potion économisée." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Zones" << std::endl;
-        std::cout << "- Plaine = bases, Route = humanoïdes, Mares = slimes, Forêt = entraves, Montagne = froid/roche, Marais = poison, Cimetière = morts, Ruines = anomalies/constructions." << std::endl;
-        std::cout << "====================================" << std::endl;
-        std::cout << std::endl;
+        showBestiaryInfoScreen(
+            "INDEX TACTIQUE",
+            "bestiary.tactical_index.detail",
+            {
+                "Lecture rapide des grandes familles. Les fiches individuelles restent plus précises quand elles sont observées.",
+                "",
+                "Gelées / slimes",
+                "- Saignement faible, poison souvent mauvais, couleur à identifier avant de lancer un sort rare.",
+                "- Rouge : froid utile. Bleu/blanc : chaleur utile. Jaune : attention au métal. Violet/noir : antidotes utiles.",
+                "",
+                "Humanoïdes / gobelins / bandits",
+                "- Peu de résistances naturelles, mais l'équipement et les rôles changent tout.",
+                "- Les soutiens crédibles se focus : shaman, apothicaire, oracle, chef.",
+                "",
+                "Bêtes",
+                "- Dangereuses sur cible isolée ou blessée. Entrave et contre après charge sont utiles.",
+                "- Les matériaux se dégradent si le combat est trop brutal.",
+                "",
+                "Morts-vivants / os / ombres",
+                "- Poison et saignement souvent faibles. Lumière, feu, rupture d'os ou purification sont plus fiables.",
+                "- Les supports spectraux et oracles doivent être traités comme des soutiens, pas comme de simples sacs à PV.",
+                "",
+                "Constructions / armures mortes",
+                "- Les entailles faibles déçoivent. Marteau, choc ciblé, faille, corrosion ou brise-garde gagnent en valeur.",
+                "- Elles donnent souvent de bons composants si le combat ne les broie pas n'importe comment.",
+                "",
+                "Draconides / dragons",
+                "- Même jeunes, ils demandent préparation : souffle, écailles et matériaux fragiles après combat.",
+                "- Une victoire trop brutale peut donner moins de ressources propres.",
+                "",
+                "Plantes",
+                "- Feu et coupe nette. Le poison est souvent décevant. L'entrave doit être cassée vite.",
+                "",
+                "Élémentaires / effets",
+                "- Un élément résiste souvent à lui-même. Le métal amplifie le choc. Le voile élémentaire réduit plusieurs altérations.",
+                "- Les anomalies peuvent punir les automatismes : observer le premier tour vaut parfois une potion économisée.",
+                "",
+                "Zones",
+                "- Plaine = bases, Route = humanoïdes, Mares = slimes, Forêt = entraves, Montagne = froid/roche, Marais = poison, Cimetière = morts, Ruines = anomalies/constructions."
+            }
+        );
     }
 
 }
@@ -1063,13 +1092,9 @@ void BestiaryMenu::open()
         screen.addOption(18, "Synthèse du bestiaire", "", true, "bestiary.summary");
         screen.addOption(19, "Registre par niveau de connaissance", "", true, "bestiary.knowledge_levels");
         screen.addOption(20, "Carnet de traque", "", true, "bestiary.hunting_notebook");
-        TerminalInterface::renderMenuScreen(screen);
-        std::cout << "> ";
-
-        int choice = Console::askNumberBetween(
-            0,
-            20,
-            "Choix invalide. Entre un chiffre entre 0 et 20."
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Choix invalide. Choisis une option affichée."
         );
 
         Console::clear();

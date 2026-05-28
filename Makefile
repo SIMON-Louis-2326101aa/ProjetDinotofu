@@ -21,6 +21,7 @@
 #   make bump-patch      Increase patch version / Augmenter la version patch
 #   make release-push    Bump patch, commit and push / Publier un patch
 #   make release-check   Verify source tree before sharing / Vérifier le projet avant ZIP
+#   make gui-preview     Build, launch the game and serve the GUI debug preview / Lancer aperçu IG
 #
 #
 # Direct launch after build:
@@ -167,4 +168,8 @@ release-check: clean
 	@chmod +x ./scripts/validate_release_tree.sh
 	@./scripts/validate_release_tree.sh
 
-.PHONY: all run launch clean rebuild install-desktop desktop remove-desktop package-source package-linux-release package-linux-installer package-windows-release bump-patch bump-minor bump-major release-push release-check
+gui-preview:
+	@chmod +x ./tools/gui/run_gui_debug.sh
+	@./tools/gui/run_gui_debug.sh
+
+.PHONY: all run launch clean rebuild install-desktop desktop remove-desktop package-source package-linux-release package-linux-installer package-windows-release bump-patch bump-minor bump-major release-push release-check gui-preview

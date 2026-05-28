@@ -11,11 +11,14 @@
 #include "class_system/ClassCatalog.hpp"
 #include "core/Console.hpp"
 #include "core/Random.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
+#include "interface/model/MenuScreen.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "progression/DifficultyRules.hpp"
 
 #include <cctype>
-#include <iostream>
+#include <vector>
 
 
 namespace
@@ -67,22 +70,23 @@ namespace
 
         player.applyLethalCheatAttemptPenalty();
 
-        std::cout << "========== ÉVÉNEMENT LÉTHAL ==========" << std::endl;
-        std::cout << "Le code n'entre pas." << std::endl;
-        std::cout << "Il cogne contre quelque chose de plus ancien que le menu." << std::endl;
-        std::cout << std::endl;
-        std::cout << justiceVoice << " : La tentative est notée." << std::endl;
-        std::cout << anomalyVoice << " : Tu as essayé d'écrire dans une page qui te regarde déjà." << std::endl;
-        std::cout << moiranVoice << " : Tu as tenté de sortir de ta propre fin. Même les chemins interdits laissent des traces." << std::endl;
-        std::cout << oberionVoice << " : Une simulation peut tricher. Une vie ne négocie pas son poids." << std::endl;
-        std::cout << fireVoice << " : Non. Pas en Léthal. Pas avec un vrai personnage." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Malus appliqués :" << std::endl;
-        std::cout << "- PV actuels divisés environ par deux, sans te tuer directement." << std::endl;
-        std::cout << "- 25% de ton or disparaît." << std::endl;
-        std::cout << "- 15% de PV maximum sont retenus pendant 3 combats." << std::endl;
-        std::cout << "======================================" << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ÉVÉNEMENT LÉTHAL",
+            "cheat.lethal.refusal",
+            {
+                "Le code n'entre pas.",
+                "Il cogne contre quelque chose de plus ancien que le menu.",
+                justiceVoice + " : La tentative est notée.",
+                anomalyVoice + " : Tu as essayé d'écrire dans une page qui te regarde déjà.",
+                moiranVoice + " : Tu as tenté de sortir de ta propre fin. Même les chemins interdits laissent des traces.",
+                oberionVoice + " : Une simulation peut tricher. Une vie ne négocie pas son poids.",
+                fireVoice + " : Non. Pas en Léthal. Pas avec un vrai personnage.",
+                "Malus appliqués :",
+                "- PV actuels divisés environ par deux, sans te tuer directement.",
+                "- 25% de ton or disparaît.",
+                "- 15% de PV maximum sont retenus pendant 3 combats."
+            }
+        );
 
         recordLethalCheatVoice("Avatar de Lexior", "Note brouillée : une voix de justice a réagi à une tentative de triche en mode Léthal.");
         recordLethalCheatVoice("L'Anomalie", "Note brouillée : une anomalie a ri devant une tentative de triche en mode Léthal.");
@@ -116,22 +120,22 @@ bool CheatManager::confirmFirstAlteration(Player& player)
         return true;
     }
 
-    std::cout << "========== AVERTISSEMENT ==========" << std::endl;
-    std::cout << "Une règle ancienne vient d'être touchée." << std::endl;
-    std::cout << std::endl;
-    std::cout << "Attention : cela pourrait affecter ton expérience," << std::endl;
-    std::cout << "tes statistiques, tes souvenirs, et la trace laissée par ce personnage." << std::endl;
-    std::cout << std::endl;
-    std::cout << "Un personnage altéré ne retrouvera jamais un historique parfaitement officiel," << std::endl;
-    std::cout << "même si toutes ses altérations sont un jour réduites au silence." << std::endl;
-    std::cout << std::endl;
-    std::cout << "Voulez-vous procéder à l'activation ?" << std::endl;
-    std::cout << "1 : Oui, altérer ce personnage" << std::endl;
-    std::cout << "2 : Non, revenir en arrière" << std::endl;
-    std::cout << "===================================" << std::endl;
-    std::cout << "> ";
+    MenuScreen screen("AVERTISSEMENT", "cheat.first_alteration.warning");
+    screen.addLine("Une règle ancienne vient d'être touchée.");
+    screen.addLine("Attention : cela pourrait affecter ton expérience,");
+    screen.addLine("tes statistiques, tes souvenirs, et la trace laissée par ce personnage.");
+    screen.addLine("Un personnage altéré ne retrouvera jamais un historique parfaitement officiel,");
+    screen.addLine("même si toutes ses altérations sont un jour réduites au silence.");
+    screen.addLine("Voulez-vous procéder à l'activation ?");
+    screen.addOption(1, "Oui, altérer ce personnage", "Assumer l'altération et continuer.", true, "cheat.first_alteration.confirm");
+    screen.addOption(2, "Non, revenir en arrière", "Refuser la commande avant qu'elle laisse une trace.", true, "cheat.first_alteration.cancel");
 
-    int choice = Console::askNumberBetween(1, 2, "Veuillez choisir 1 ou 2.");
+    int choice = TerminalInterface::askMenuChoice(
+        screen,
+        1,
+        2,
+        "Veuillez choisir 1 ou 2."
+    );
     Console::clear();
 
     return choice == 1;
@@ -141,18 +145,28 @@ bool CheatManager::confirmFirstAlteration(Player& player)
 // FR: displayToggleResult déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::displayToggleResult(const std::string& effectText, bool enabled)
 {
-    std::cout << "Effet : " << effectText << std::endl;
-    std::cout << "État : " << (enabled ? "activé" : "désactivé") << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "ALTÉRATION",
+        "cheat.result.toggle",
+        {
+            "Effet : " + effectText,
+            std::string("État : ") + (enabled ? "activé" : "désactivé")
+        }
+    );
 }
 
 // EN: displayInstantResult declares or implements a focused behavior used by this module.
 // FR: displayInstantResult déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::displayInstantResult(const std::string& effectText)
 {
-    std::cout << "Effet : " << effectText << std::endl;
-    std::cout << "État : exécuté" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "ALTÉRATION",
+        "cheat.result.instant",
+        {
+            "Effet : " + effectText,
+            "État : exécuté"
+        }
+    );
 }
 
 // EN: resetCharacter declares or implements a focused behavior used by this module.
@@ -174,32 +188,49 @@ void CheatManager::resetCharacter(Player& player, DifficultyMode difficulty)
 // FR: switchClassAndStarterEquipment déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::switchClassAndStarterEquipment(Player& player, DifficultyMode difficulty)
 {
-    std::cout << "Choisis la nouvelle famille de classe." << std::endl;
-    std::cout << std::endl;
+    MenuScreen categoryScreen("CHANGEMENT DE CLASSE", "cheat.switch_class.category");
+    categoryScreen.addLine("Choisis la nouvelle famille de classe.");
 
-    ClassCatalog::displayClassCategories();
+    for (int choice = 1; choice <= ClassCatalog::getClassCategoryCount(); ++choice)
+    {
+        const std::string categoryName = ClassCatalog::getClassCategoryNameByChoice(choice);
+        categoryScreen.addOption(
+            choice,
+            categoryName,
+            std::to_string(ClassCatalog::getPlayableClassCountByCategoryChoice(choice)) + " classe(s) disponible(s).",
+            true,
+            "cheat.switch_class.category.option"
+        );
+    }
 
-    std::cout << std::endl;
-    std::cout << "> ";
-
-    int categoryChoice = Console::askNumberBetween(
-        1,
-        ClassCatalog::getClassCategoryCount(),
+    int categoryChoice = TerminalInterface::askMenuChoiceFromOptions(
+        categoryScreen,
         "Veuillez choisir une famille affichée."
     );
 
     Console::clear();
 
-    std::cout << "Choisis la nouvelle classe." << std::endl;
-    std::cout << std::endl;
+    MenuScreen classScreen("NOUVELLE CLASSE", "cheat.switch_class.class");
+    classScreen.addSubtitle("Famille : " + ClassCatalog::getClassCategoryNameByChoice(categoryChoice) + ".");
+    classScreen.addLine("Choisis la classe qui remplacera l'ancienne base du personnage.");
 
-    ClassCatalog::displayClassesByCategoryChoice(categoryChoice);
+    const std::vector<ClassOptionInfo> classOptions = ClassCatalog::getClassOptionsByCategoryChoice(categoryChoice);
+    for (std::size_t i = 0; i < classOptions.size(); ++i)
+    {
+        const ClassOptionInfo& info = classOptions[i];
+        classScreen.addOption(
+            static_cast<int>(i + 1),
+            info.name,
+            info.role + " | PV " + std::to_string(info.maxHp)
+                + " | Dégâts " + std::to_string(info.minDamage)
+                + "-" + std::to_string(info.maxDamage),
+            true,
+            "cheat.switch_class.class.option"
+        );
+    }
 
-    std::cout << "> ";
-
-    int classChoice = Console::askNumberBetween(
-        1,
-        ClassCatalog::getPlayableClassCountByCategoryChoice(categoryChoice),
+    int classChoice = TerminalInterface::askMenuChoiceFromOptions(
+        classScreen,
         "Veuillez choisir une classe affichée."
     );
 
@@ -223,131 +254,114 @@ void CheatManager::switchClassAndStarterEquipment(Player& player, DifficultyMode
 // FR: displayKnownAlterations déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::displayKnownAlterations(const Player& player)
 {
-    std::cout << "========== ALTÉRATIONS CONNUES ==========" << std::endl;
+    MenuScreen screen("ALTÉRATIONS CONNUES", "cheat.altered_data.known_list");
+    screen.addLine("Statut du personnage : Altéré.");
+    screen.addLine("Même désactivées, les altérations restent dans l'histoire du personnage.");
 
     bool hasSomething = false;
 
+    auto addAlteration = [&](const std::string& code, const std::string& status, const std::string& effect) {
+        hasSomething = true;
+        screen.addLine(code + " | " + status);
+        screen.addLine("Effet : " + effect);
+    };
+
     if (player.isGodModeKnown())
     {
-        hasSomething = true;
-        std::cout << "- idontwanttodie | " << (player.isGodModeEnabled() ? "activé" : "désactivé") << std::endl;
-        std::cout << "  Effet : bloque les pertes de PV." << std::endl;
+        addAlteration("idontwanttodie", player.isGodModeEnabled() ? "activé" : "désactivé", "bloque les pertes de PV.");
     }
 
     if (player.isInfiniteConsumablesKnown())
     {
-        hasSomething = true;
-        std::cout << "- infinituseforeverything | " << (player.hasInfiniteConsumables() ? "activé" : "désactivé") << std::endl;
-        std::cout << "  Effet : empêche les consommables de diminuer." << std::endl;
+        addAlteration("infinituseforeverything", player.hasInfiniteConsumables() ? "activé" : "désactivé", "empêche les consommables de diminuer.");
     }
 
     if (player.isIndestructibleEquipmentKnown())
     {
-        hasSomething = true;
-        std::cout << "- bedrockequipment | " << (player.hasIndestructibleEquipment() ? "activé" : "désactivé") << std::endl;
-        std::cout << "  Effet : empêche l'équipement de perdre de la durabilité." << std::endl;
+        addAlteration("bedrockequipment", player.hasIndestructibleEquipment() ? "activé" : "désactivé", "empêche l'équipement de perdre de la durabilité.");
     }
 
     if (player.isEquipmentProtectionKnown())
     {
-        hasSomething = true;
-        std::cout << "- myweaponandnotother | " << (player.hasEquipmentProtection() ? "activé" : "désactivé") << std::endl;
-        std::cout << "  Effet : protège l'équipement contre perte, vol et destruction." << std::endl;
+        addAlteration("myweaponandnotother", player.hasEquipmentProtection() ? "activé" : "désactivé", "protège l'équipement contre perte, vol et destruction.");
     }
 
     if (player.isStorySkipKnown())
     {
-        hasSomething = true;
-        std::cout << "- skipallstory | " << (player.hasStorySkip() ? "activé" : "désactivé") << std::endl;
-        std::cout << "  Effet : force l'ouverture d'archives liées à l'histoire et au bestiaire." << std::endl;
+        addAlteration("skipallstory", player.hasStorySkip() ? "activé" : "désactivé", "force l'ouverture d'archives liées à l'histoire et au bestiaire.");
     }
 
     if (player.getGoldCheatUseCount() > 0)
     {
-        hasSomething = true;
-        std::cout << "- givemesomegolds | utilisé " << player.getGoldCheatUseCount() << " fois" << std::endl;
-        std::cout << "  Effet : donne entre 100 et 1000 pièces d'or." << std::endl;
+        addAlteration("givemesomegolds", "utilisé " + std::to_string(player.getGoldCheatUseCount()) + " fois", "donne entre 100 et 1000 pièces d'or.");
     }
 
     if (player.getLevelCheatUseCount() > 0)
     {
-        hasSomething = true;
-        std::cout << "- givemealevel | utilisé " << player.getLevelCheatUseCount() << " fois" << std::endl;
-        std::cout << "  Effet : donne un niveau." << std::endl;
+        addAlteration("givemealevel", "utilisé " + std::to_string(player.getLevelCheatUseCount()) + " fois", "donne un niveau.");
     }
 
     if (player.getMaxLevelCheatUseCount() > 0)
     {
-        hasSomething = true;
-        std::cout << "- skipalllevels | utilisé " << player.getMaxLevelCheatUseCount() << " fois" << std::endl;
-        std::cout << "  Effet : force le niveau 255." << std::endl;
+        addAlteration("skipalllevels", "utilisé " + std::to_string(player.getMaxLevelCheatUseCount()) + " fois", "force le niveau 255.");
     }
 
     if (player.getRefundCheatUseCount() > 0)
     {
-        hasSomething = true;
-        std::cout << "- helpmerefundmyaction | utilisé " << player.getRefundCheatUseCount() << " fois" << std::endl;
-        std::cout << "  Effet : consomme une aide de remboursement." << std::endl;
+        addAlteration("helpmerefundmyaction", "utilisé " + std::to_string(player.getRefundCheatUseCount()) + " fois", "consomme une aide de remboursement.");
     }
 
     if (player.getResetCheatUseCount() > 0)
     {
-        hasSomething = true;
-        std::cout << "- resetmycharacter | utilisé " << player.getResetCheatUseCount() << " fois" << std::endl;
-        std::cout << "  Effet : reconstruit le personnage." << std::endl;
+        addAlteration("resetmycharacter", "utilisé " + std::to_string(player.getResetCheatUseCount()) + " fois", "reconstruit le personnage.");
     }
 
     if (player.getSwitchClassCheatUseCount() > 0)
     {
-        hasSomething = true;
-        std::cout << "- switchmyclassandweapon | utilisé " << player.getSwitchClassCheatUseCount() << " fois" << std::endl;
-        std::cout << "  Effet : change la classe et recalcule l'équipement." << std::endl;
+        addAlteration("switchmyclassandweapon", "utilisé " + std::to_string(player.getSwitchClassCheatUseCount()) + " fois", "change la classe et recalcule l'équipement.");
     }
 
     if (player.isSpecialChallengeAccessKnown())
     {
-        hasSomething = true;
-        std::cout << "- fuckgrindinggimifight | accès spécial "
-                  << (player.hasSpecialChallengeAccess() ? "débloqué" : "connu") << std::endl;
-        std::cout << "  Effet : ouvre la sélection directe des personnages spéciaux et révèle les boss non finaux." << std::endl;
+        addAlteration(
+            "fuckgrindinggimifight",
+            player.hasSpecialChallengeAccess() ? "accès spécial débloqué" : "accès spécial connu",
+            "ouvre la sélection directe des personnages spéciaux et révèle les boss non finaux."
+        );
     }
 
     if (player.isCreatorMessageKnown())
     {
-        hasSomething = true;
-        std::cout << "- 1302313 | message du créateur consulté" << std::endl;
-        std::cout << "  Effet : le créateur sait que tu as fouillé." << std::endl;
+        addAlteration("1302313", "message du créateur consulté", "le créateur sait que tu as fouillé.");
     }
 
     if (!hasSomething)
     {
-        std::cout << "Aucune altération connue." << std::endl;
+        screen.addLine("Aucune altération connue.");
     }
 
-    std::cout << std::endl;
-    std::cout << "Statut du personnage : Altéré" << std::endl;
-    std::cout << "Même désactivées, les altérations restent dans l'histoire du personnage." << std::endl;
-    std::cout << "=========================================" << std::endl;
-    std::cout << std::endl;
+    TerminalInterface::renderMenuScreen(screen, false);
 }
 
-// EN: openAlteredDataMenu declares or implements a focused behavior used by this module.
-// FR: openAlteredDataMenu déclare ou implémente un comportement précis utilisé par ce module.
 void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty)
 {
     bool menuOpen = true;
 
     while (menuOpen)
     {
-        std::cout << "========== DONNÉES ALTÉRÉES ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Voir les altérations connues" << std::endl;
-        std::cout << "2 : Entrer une nouvelle commande" << std::endl;
-        std::cout << "======================================" << std::endl;
-        std::cout << std::endl;
-        std::cout << "> ";
+        MenuScreen screen("DONNÉES ALTÉRÉES", "cheat.altered_data.main");
+        screen.addLine("Ces commandes appartiennent maintenant à la partie altérée du personnage.");
+        screen.addLine("Les codes restent tapables proprement, sans brouiller les archives altérées.");
+        screen.addOption(0, "Retour", "Revenir à l'après-combat.", true, "cheat.altered_data.back");
+        screen.addOption(1, "Voir les altérations connues", "Consulter les marques déjà inscrites sur ce personnage.", true, "cheat.altered_data.known");
+        screen.addOption(2, "Entrer une nouvelle commande", "Saisir un code caché déjà assumé par un personnage altéré.", true, "cheat.altered_data.enter_code");
 
-        int choice = Console::askNumberBetween(0, 2, "Veuillez choisir une option affichée.");
+        int choice = TerminalInterface::askMenuChoice(
+            screen,
+            0,
+            2,
+            "Veuillez choisir une option affichée."
+        );
         Console::clear();
 
         if (choice == 0)
@@ -362,11 +376,19 @@ void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty
         }
         else if (choice == 2)
         {
-            std::cout << "Commande :" << std::endl;
-            std::cout << "> ";
-
-            std::string code;
-            std::getline(std::cin >> std::ws, code);
+            std::string code = MessageScreen::askText(
+                "COMMANDE ALTÉRÉE",
+                "cheat.altered_data.enter_code.text",
+                {
+                    "Entre une commande cachée.",
+                    "Le personnage est déjà altéré : l'interface n'a plus besoin de faire semblant de ne rien voir."
+                },
+                "Commande cachée",
+                "Code de triche / commande altérée.",
+                true,
+                0,
+                64
+            );
             Console::clear();
 
             if (!code.empty())
@@ -374,6 +396,14 @@ void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty
                 activateCode(player, difficulty, code);
                 Console::waitForEnter();
                 Console::clear();
+            }
+            else
+            {
+                MessageScreen::show(
+                    "COMMANDE IGNORÉE",
+                    "cheat.altered_data.enter_code.empty",
+                    {"Aucune commande inscrite. Même l'altération a besoin d'un minimum de texte."}
+                );
             }
         }
     }
@@ -407,16 +437,23 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
     {
         if (!confirmFirstAlteration(player))
         {
-            std::cout << "Activation annulée." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "ACTIVATION ANNULÉE",
+                "cheat.activation.cancelled.creator",
+                {"La commande ne laisse aucune nouvelle trace."}
+            );
             return true;
         }
 
         player.markCreatorMessageSeen();
-        std::cout << "Message du créateur :" << std::endl;
-        std::cout << "Tu as trouvé mon code personnel. Maintenant, fais semblant que c'était évident." << std::endl;
-        std::cout << "Dinotofu te regarde. Moi aussi, un peu." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "MESSAGE DU CRÉATEUR",
+            "cheat.creator_message",
+            {
+                "Tu as trouvé mon code personnel. Maintenant, fais semblant que c'était évident.",
+                "Dinotofu te regarde. Moi aussi, un peu."
+            }
+        );
         return true;
     }
 
@@ -424,9 +461,14 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
     {
         if (displayUnknownMessage)
         {
-            std::cout << "Commande inconnue." << std::endl;
-            std::cout << "Même les tricheurs doivent écrire correctement." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "COMMANDE INCONNUE",
+                "cheat.unknown_command",
+                {
+                    "Commande inconnue.",
+                    "Même les tricheurs doivent écrire correctement."
+                }
+            );
         }
 
         return false;
@@ -434,8 +476,11 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
 
     if (!confirmFirstAlteration(player))
     {
-        std::cout << "Activation annulée." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ACTIVATION ANNULÉE",
+            "cheat.activation.cancelled",
+            {"La commande ne laisse aucune nouvelle trace."}
+        );
         return true;
     }
 
@@ -510,9 +555,14 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
         }
         else
         {
-            std::cout << "Effet refusé : tu as déjà utilisé tes 3 aides de remboursement." << std::endl;
-            std::cout << "État : refusé" << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "ALTÉRATION REFUSÉE",
+                "cheat.refund.refused",
+                {
+                    "Effet refusé : tu as déjà utilisé tes 3 aides de remboursement.",
+                    "État : refusé"
+                }
+            );
         }
 
         return true;
@@ -537,11 +587,16 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
         player.unlockSpecialChallengeAccess();
         player.unlockBossRegistryExceptFinal(BossCatalog::getMaximumBossId(), 27);
 
-        std::cout << "Effet : l'arène arrête de te faire grinder les rencontres spéciales." << std::endl;
-        std::cout << "État : accès aux personnages spéciaux débloqué." << std::endl;
-        std::cout << "État : toutes les variations de boss non finales sont détectées." << std::endl;
-        std::cout << "Note : FireFlight reste verrouillé. Un vrai boss final ne s'ouvre pas avec un raccourci." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ALTÉRATION",
+            "cheat.special_challenge.unlock",
+            {
+                "Effet : l'arène arrête de te faire grinder les rencontres spéciales.",
+                "État : accès aux personnages spéciaux débloqué.",
+                "État : toutes les variations de boss non finales sont détectées.",
+                "Note : FireFlight reste verrouillé. Un vrai boss final ne s'ouvre pas avec un raccourci."
+            }
+        );
         return true;
     }
 

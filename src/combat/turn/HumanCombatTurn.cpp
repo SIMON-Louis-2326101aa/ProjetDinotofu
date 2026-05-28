@@ -22,10 +22,67 @@
 #include "interface/menu/CombatPotionMenu.hpp"
 #include "interface/menu/CombatRoleMenu.hpp"
 #include "interface/menu/CombatGroupTargetMenu.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/model/MenuScreen.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 #include "interface/menu/progression/BestiaryMenu.hpp"
 #include "interface/menu/progression/StatisticsMenu.hpp"
 
+#include <functional>
 #include <iostream>
+#include <sstream>
+#include <streambuf>
+#include <vector>
+
+namespace
+{
+    MenuScreen buildAttackTypeScreen(const std::string& attackerName)
+    {
+        MenuScreen screen("TYPE D'ATTAQUE", "combat.attack_type");
+        screen.addSubtitle("Action offensive de " + attackerName);
+        screen.addLine("Choisis le style d'attaque à exécuter.");
+        screen.addBackOption("Retour", "combat.attack.back");
+        screen.addOption(1, "Attaque simple", "Frappe fiable avec l'arme équipée.", true, "combat.attack.simple");
+        screen.addOption(2, "Technique d'arme", "Utilise le style propre à ton arme actuelle.", true, "combat.attack.weapon_technique");
+        screen.addOption(3, "Attaque lourde", "Plus risquée, plus violente.", true, "combat.attack.heavy");
+        screen.addOption(4, "Attaque rapide", "Moins brutale, mais plus nerveuse.", true, "combat.attack.quick");
+        screen.addOption(5, "Compétence de classe", "Tente l'action spéciale liée au rôle.", true, "combat.attack.class_skill");
+        return screen;
+    }
+
+
+
+    std::vector<std::string> captureHumanTurnText(const std::function<void()>& action)
+    {
+        action();
+        return {};
+    }
+
+    void showCapturedHumanTurnText(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines
+    )
+    {
+        (void)title;
+        (void)screenId;
+        if (!lines.empty())
+        {
+            MessageScreen::show(title, screenId, lines, false);
+        }
+    }
+
+    bool executeCapturedHumanAction(
+        const std::string& title,
+        const std::string& screenId,
+        const std::function<bool()>& action
+    )
+    {
+        (void)title;
+        (void)screenId;
+        return action();
+    }
+}
 
 bool HumanCombatTurn::play(
     Entity& attacker,
@@ -37,11 +94,9 @@ bool HumanCombatTurn::play(
 {
     (void)potionHealAmount;
 
-    CombatMenu::displayTurnMenu(attacker);
-
-    int option = Console::askNumberBetween(
-        0,
-        8,
+    const MenuScreen turnScreen = CombatMenu::buildTurnScreen(attacker);
+    int option = TerminalInterface::askMenuChoiceFromOptions(
+        turnScreen,
         "Choix invalide. Entre un chiffre entre 0 et 8."
     );
 
@@ -54,17 +109,8 @@ bool HumanCombatTurn::play(
 
     if (option == 1)
     {
-        std::cout << "========== TYPE D'ATTAQUE ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Attaque simple" << std::endl;
-        std::cout << "2 : Technique d'arme" << std::endl;
-        std::cout << "3 : Attaque lourde" << std::endl;
-        std::cout << "4 : Attaque rapide" << std::endl;
-        std::cout << "5 : Compétence de classe" << std::endl;
-        std::cout << "====================================" << std::endl;
-        std::cout << "> ";
-
-        int attackChoice = Console::askNumberBetween(0, 5, "Choix invalide.");
+        const MenuScreen attackScreen = buildAttackTypeScreen(attacker.getName());
+        int attackChoice = TerminalInterface::askMenuChoiceFromOptions(attackScreen, "Choix invalide.");
         Console::clear();
 
         if (attackChoice == 0)
@@ -74,31 +120,47 @@ bool HumanCombatTurn::play(
 
         if (attackChoice == 1)
         {
-            CombatActions::executeAttack(attacker, defender, random);
-            return true;
+            return executeCapturedHumanAction(
+                "ATTAQUE SIMPLE",
+                "combat.human.attack.simple",
+                [&]() { CombatActions::executeAttack(attacker, defender, random); return true; }
+            );
         }
 
         if (attackChoice == 2)
         {
-            CombatActions::executeWeaponTechnique(attacker, defender, random);
-            return true;
+            return executeCapturedHumanAction(
+                "TECHNIQUE D'ARME",
+                "combat.human.attack.weapon_technique",
+                [&]() { CombatActions::executeWeaponTechnique(attacker, defender, random); return true; }
+            );
         }
 
         if (attackChoice == 3)
         {
-            CombatActions::executeHeavyAttack(attacker, defender, random);
-            return true;
+            return executeCapturedHumanAction(
+                "ATTAQUE LOURDE",
+                "combat.human.attack.heavy",
+                [&]() { CombatActions::executeHeavyAttack(attacker, defender, random); return true; }
+            );
         }
 
         if (attackChoice == 4)
         {
-            CombatActions::executeQuickAttack(attacker, defender, random);
-            return true;
+            return executeCapturedHumanAction(
+                "ATTAQUE RAPIDE",
+                "combat.human.attack.quick",
+                [&]() { CombatActions::executeQuickAttack(attacker, defender, random); return true; }
+            );
         }
 
         if (attackChoice == 5)
         {
-            return CombatActions::executeClassSkill(attacker, defender, random);
+            return executeCapturedHumanAction(
+                "COMPÉTENCE DE CLASSE",
+                "combat.human.attack.class_skill",
+                [&]() { return CombatActions::executeClassSkill(attacker, defender, random); }
+            );
         }
     }
 
@@ -168,9 +230,15 @@ bool HumanCombatTurn::play(
 
     if (option == 7)
     {
-        std::cout << attacker.getName() << " baisse sa garde et passe son tour." << std::endl;
-        std::cout << "Parfois, attendre le bon moment est déjà une décision." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "TOUR PASSÉ",
+            "combat.wait",
+            {
+                attacker.getName() + " baisse sa garde et passe son tour.",
+                "Parfois, attendre le bon moment est déjà une décision."
+            },
+            false
+        );
 
         return true;
     }
@@ -195,18 +263,23 @@ bool HumanCombatTurn::playWithEnemySummons(
 {
     (void)potionHealAmount;
 
-    CombatMenu::displayTurnMenu(attacker);
+    const MenuScreen turnScreen = CombatMenu::buildTurnScreen(attacker);
 
     if (SummonCombatSystem::hasTargetableSummons(enemySummons))
     {
-        std::cout << "Note : l'adversaire possède une ou plusieurs invocations ciblables." << std::endl;
-        std::cout << "Si tu attaques, tu pourras choisir entre l'invocateur et ses renforts." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "INVOCATIONS ADVERSAIRES",
+            "combat.enemy_summons.note",
+            {
+                "L'adversaire possède une ou plusieurs invocations ciblables.",
+                "Si tu attaques, tu pourras choisir entre l'invocateur et ses renforts."
+            },
+            false
+        );
     }
 
-    int option = Console::askNumberBetween(
-        0,
-        8,
+    int option = TerminalInterface::askMenuChoiceFromOptions(
+        turnScreen,
         "Choix invalide. Entre un chiffre entre 0 et 8."
     );
 
@@ -245,9 +318,15 @@ bool HumanCombatTurn::playWithEnemySummons(
             return false;
         }
 
-        std::cout << "La fiole cherche la menace principale et ignore les cibles secondaires." << std::endl;
-        std::cout << "Les invocations restent hors de portée de ce mélange instable." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "FIOLE INSTABLE",
+            "combat.potion.single_target_warning",
+            {
+                "La fiole cherche la menace principale et ignore les cibles secondaires.",
+                "Les invocations restent hors de portée de ce mélange instable."
+            },
+            false
+        );
 
         return CombatPotionMenu::openAgainstSingleTarget(
             *player,
@@ -292,9 +371,15 @@ bool HumanCombatTurn::playWithEnemySummons(
 
     if (option == 7)
     {
-        std::cout << attacker.getName() << " baisse sa garde et passe son tour." << std::endl;
-        std::cout << "Parfois, attendre le bon moment est déjà une décision." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "TOUR PASSÉ",
+            "combat.wait",
+            {
+                attacker.getName() + " baisse sa garde et passe son tour.",
+                "Parfois, attendre le bon moment est déjà une décision."
+            },
+            false
+        );
 
         return true;
     }
@@ -312,25 +397,19 @@ bool HumanCombatTurn::openObservationInterface(
     Entity& target
 )
 {
-    std::cout << "========== INTERFACE ==========" << std::endl;
-    std::cout << "0 : Retour" << std::endl;
-    std::cout << "1 : Voir l'état du combat" << std::endl;
-    std::cout << "2 : Voir mes statistiques" << std::endl;
-    std::cout << "3 : Résumé équipement" << std::endl;
-    std::cout << "4 : Compétences de rôle" << std::endl;
-    std::cout << "5 : Observer / analyser l'adversaire" << std::endl;
-    std::cout << "6 : Voir l'adversaire dans le bestiaire" << std::endl;
-    std::cout << "7 : Ordres aux alliés" << std::endl;
-    std::cout << "8 : Contrôle des invocations" << std::endl;
-    std::cout << "===============================" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
+    MenuScreen screen("INTERFACE DE COMBAT", "combat.interface.duel");
+    screen.addSubtitle(interfacePlayer.getName() + " face à " + target.getName());
+    screen.addBackOption("Retour", "combat.interface.back");
+    screen.addOption(1, "Voir l'état du combat", "PV et situation directe.", true, "combat.interface.state");
+    screen.addOption(2, "Voir mes statistiques", "Ouvre les statistiques du combattant.", true, "combat.interface.stats");
+    screen.addOption(3, "Résumé équipement", "Affichage simple de l'équipement.", true, "combat.interface.equipment");
+    screen.addOption(4, "Compétences de rôle", "Actions et rappels liés au rôle.", true, "combat.interface.role");
+    screen.addOption(5, "Observer / analyser l'adversaire", "Lecture terrain de l'ennemi.", true, "combat.interface.observe");
+    screen.addOption(6, "Voir l'adversaire dans le bestiaire", "Ouvre l'entrée connue.", true, "combat.interface.bestiary");
+    screen.addOption(7, "Ordres aux alliés", "Indisponible sans allié stable.", true, "combat.interface.allies");
+    screen.addOption(8, "Contrôle des invocations", "Rappel des ordres actuels.", true, "combat.interface.summons");
 
-    int choice = Console::askNumberBetween(
-        0,
-        8,
-        "Choix invalide. Entre un chiffre entre 0 et 8."
-    );
+    int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
 
     Console::clear();
 
@@ -341,15 +420,15 @@ bool HumanCombatTurn::openObservationInterface(
 
     if (choice == 1)
     {
-        std::cout << "========== ÉTAT DU COMBAT ==========" << std::endl;
-        std::cout << interfacePlayer.getName() << " : "
-                  << interfacePlayer.getHp() << "/"
-                  << interfacePlayer.getMaxHp() << " PV" << std::endl;
-        std::cout << target.getName() << " : "
-                  << target.getHp() << "/"
-                  << target.getMaxHp() << " PV" << std::endl;
-        std::cout << "====================================" << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ÉTAT DU COMBAT",
+            "combat.interface.state",
+            {
+                interfacePlayer.getName() + " : " + std::to_string(interfacePlayer.getHp()) + "/" + std::to_string(interfacePlayer.getMaxHp()) + " PV",
+                target.getName() + " : " + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp()) + " PV"
+            },
+            false
+        );
         return false;
     }
 
@@ -359,7 +438,11 @@ bool HumanCombatTurn::openObservationInterface(
 
         if (player == nullptr)
         {
-            interfacePlayer.displayStats();
+            showCapturedHumanTurnText(
+                "STATISTIQUES",
+                "combat.interface.stats.raw_entity",
+                captureHumanTurnText([&]() { interfacePlayer.displayStats(); })
+            );
             return false;
         }
 
@@ -377,7 +460,11 @@ bool HumanCombatTurn::openObservationInterface(
             return false;
         }
 
-        player->displaySimpleEquipment();
+        showCapturedHumanTurnText(
+            "ÉQUIPEMENT",
+            "combat.interface.equipment.summary",
+            captureHumanTurnText([&]() { player->displaySimpleEquipment(); })
+        );
         return false;
     }
 
@@ -388,7 +475,11 @@ bool HumanCombatTurn::openObservationInterface(
 
     if (choice == 5)
     {
-        ObservationSystem::displayTerminalStats(target);
+        showCapturedHumanTurnText(
+            "OBSERVATION",
+            "combat.interface.observe.target",
+            captureHumanTurnText([&]() { ObservationSystem::displayTerminalStats(target); })
+        );
         return false;
     }
 
@@ -400,16 +491,26 @@ bool HumanCombatTurn::openObservationInterface(
 
     if (choice == 7)
     {
-        std::cout << "Aucun allié stable n'attend d'ordre sur ce champ de bataille." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ORDRES AUX ALLIÉS",
+            "combat.interface.allies_unavailable",
+            {"Aucun allié stable n'attend d'ordre sur ce champ de bataille."},
+            false
+        );
         return false;
     }
 
     if (choice == 8)
     {
-        std::cout << "Tes invocations suivent l'ordre donné au début du combat." << std::endl;
-        std::cout << "Changer cet ordre au milieu du chaos demande une ouverture que tu n'as pas encore." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "CONTRÔLE DES INVOCATIONS",
+            "combat.interface.summons_order",
+            {
+                "Tes invocations suivent l'ordre donné au début du combat.",
+                "Changer cet ordre au milieu du chaos demande une ouverture que tu n'as pas encore."
+            },
+            false
+        );
         return false;
     }
 
@@ -438,26 +539,20 @@ bool HumanCombatTurn::inspectCombatTarget(
     const std::vector<Summon>& enemySummons
 )
 {
-    std::cout << "========== INTERFACE ==========" << std::endl;
-    std::cout << "0 : Retour" << std::endl;
-    std::cout << "1 : Voir l'état du combat" << std::endl;
-    std::cout << "2 : Voir mes statistiques" << std::endl;
-    std::cout << "3 : Résumé équipement" << std::endl;
-    std::cout << "4 : Compétences de rôle" << std::endl;
-    std::cout << "5 : Observer / analyser l'adversaire principal" << std::endl;
-    std::cout << "6 : Voir l'adversaire dans le bestiaire" << std::endl;
-    std::cout << "7 : Voir les invocations adverses" << std::endl;
-    std::cout << "8 : Ordres aux alliés" << std::endl;
-    std::cout << "9 : Contrôle des invocations" << std::endl;
-    std::cout << "===============================" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
+    MenuScreen screen("INTERFACE DE COMBAT", "combat.interface.summoner_duel");
+    screen.addSubtitle(interfacePlayer.getName() + " face à " + target.getName());
+    screen.addBackOption("Retour", "combat.interface.back");
+    screen.addOption(1, "Voir l'état du combat", "PV, menace principale et invocations ciblables.", true, "combat.interface.state");
+    screen.addOption(2, "Voir mes statistiques", "Ouvre les statistiques du combattant.", true, "combat.interface.stats");
+    screen.addOption(3, "Résumé équipement", "Affichage simple de l'équipement.", true, "combat.interface.equipment");
+    screen.addOption(4, "Compétences de rôle", "Actions et rappels liés au rôle.", true, "combat.interface.role");
+    screen.addOption(5, "Observer / analyser l'adversaire principal", "Lecture terrain de l'invocateur.", true, "combat.interface.observe_main");
+    screen.addOption(6, "Voir l'adversaire dans le bestiaire", "Ouvre l'entrée connue.", true, "combat.interface.bestiary");
+    screen.addOption(7, "Voir les invocations adverses", "Liste les renforts ciblables.", true, "combat.interface.enemy_summons");
+    screen.addOption(8, "Ordres aux alliés", "Indisponible sans allié stable.", true, "combat.interface.allies");
+    screen.addOption(9, "Contrôle des invocations", "Rappel des ordres actuels.", true, "combat.interface.summons");
 
-    int choice = Console::askNumberBetween(
-        0,
-        9,
-        "Choix invalide. Entre un chiffre entre 0 et 9."
-    );
+    int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
 
     Console::clear();
 
@@ -468,22 +563,28 @@ bool HumanCombatTurn::inspectCombatTarget(
 
     if (choice == 1)
     {
-        std::cout << "========== ÉTAT DU COMBAT ==========" << std::endl;
-        std::cout << interfacePlayer.getName() << " : "
-                  << interfacePlayer.getHp() << "/"
-                  << interfacePlayer.getMaxHp() << " PV" << std::endl;
-        std::cout << target.getName() << " : "
-                  << target.getHp() << "/"
-                  << target.getMaxHp() << " PV" << std::endl;
+        MessageScreen::show(
+            "ÉTAT DU COMBAT",
+            "combat.interface.state_with_summons",
+            {
+                interfacePlayer.getName() + " : " + std::to_string(interfacePlayer.getHp()) + "/" + std::to_string(interfacePlayer.getMaxHp()) + " PV",
+                target.getName() + " : " + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp()) + " PV",
+                SummonCombatSystem::hasTargetableSummons(enemySummons)
+                    ? "Des invocations adverses ciblables entourent encore la menace principale."
+                    : "Aucune invocation adverse ciblable pour le moment."
+            },
+            false
+        );
 
         if (SummonCombatSystem::hasTargetableSummons(enemySummons))
         {
-            std::cout << std::endl;
-            SummonCombatSystem::displayTargetableSummons(enemySummons);
+            showCapturedHumanTurnText(
+                "INVOCATIONS ADVERSAIRES",
+                "combat.interface.enemy_summons.list",
+                captureHumanTurnText([&]() { SummonCombatSystem::displayTargetableSummons(enemySummons); })
+            );
         }
 
-        std::cout << "====================================" << std::endl;
-        std::cout << std::endl;
         return false;
     }
 
@@ -493,7 +594,11 @@ bool HumanCombatTurn::inspectCombatTarget(
 
         if (player == nullptr)
         {
-            interfacePlayer.displayStats();
+            showCapturedHumanTurnText(
+                "STATISTIQUES",
+                "combat.interface.stats.raw_entity",
+                captureHumanTurnText([&]() { interfacePlayer.displayStats(); })
+            );
             return false;
         }
 
@@ -511,7 +616,11 @@ bool HumanCombatTurn::inspectCombatTarget(
             return false;
         }
 
-        player->displaySimpleEquipment();
+        showCapturedHumanTurnText(
+            "ÉQUIPEMENT",
+            "combat.interface.equipment.summary",
+            captureHumanTurnText([&]() { player->displaySimpleEquipment(); })
+        );
         return false;
     }
 
@@ -522,7 +631,11 @@ bool HumanCombatTurn::inspectCombatTarget(
 
     if (choice == 5)
     {
-        ObservationSystem::displayTerminalStats(target);
+        showCapturedHumanTurnText(
+            "OBSERVATION",
+            "combat.interface.observe.target",
+            captureHumanTurnText([&]() { ObservationSystem::displayTerminalStats(target); })
+        );
         return false;
     }
 
@@ -536,12 +649,20 @@ bool HumanCombatTurn::inspectCombatTarget(
     {
         if (SummonCombatSystem::hasTargetableSummons(enemySummons))
         {
-            SummonCombatSystem::displayTargetableSummons(enemySummons);
+            showCapturedHumanTurnText(
+                "INVOCATIONS ADVERSAIRES",
+                "combat.interface.enemy_summons.list",
+                captureHumanTurnText([&]() { SummonCombatSystem::displayTargetableSummons(enemySummons); })
+            );
         }
         else
         {
-            std::cout << "Aucune invocation adverse ciblable pour le moment." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "INVOCATIONS ADVERSAIRES",
+                "combat.interface.enemy_summons_empty",
+                {"Aucune invocation adverse ciblable pour le moment."},
+                false
+            );
         }
 
         return false;
@@ -549,16 +670,26 @@ bool HumanCombatTurn::inspectCombatTarget(
 
     if (choice == 8)
     {
-        std::cout << "Aucun allié stable n'attend d'ordre sur ce champ de bataille." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ORDRES AUX ALLIÉS",
+            "combat.interface.allies_unavailable",
+            {"Aucun allié stable n'attend d'ordre sur ce champ de bataille."},
+            false
+        );
         return false;
     }
 
     if (choice == 9)
     {
-        std::cout << "Tes invocations suivent l'ordre donné au début du combat." << std::endl;
-        std::cout << "Changer cet ordre au milieu du chaos demande une ouverture que tu n'as pas encore." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "CONTRÔLE DES INVOCATIONS",
+            "combat.interface.summons_order",
+            {
+                "Tes invocations suivent l'ordre donné au début du combat.",
+                "Changer cet ordre au milieu du chaos demande une ouverture que tu n'as pas encore."
+            },
+            false
+        );
         return false;
     }
 
@@ -579,12 +710,20 @@ bool HumanCombatTurn::handleEscape(
 
         if (player != nullptr)
         {
-            EscapeSystem::playerAttemptsBossEscape(*player, *targetBoss);
+            showCapturedHumanTurnText(
+                "FUITE CONTRE BOSS",
+                "combat.escape.boss_attempt",
+                captureHumanTurnText([&]() { EscapeSystem::playerAttemptsBossEscape(*player, *targetBoss); })
+            );
         }
         else
         {
-            std::cout << "L'arène du boss se referme. Aucune sortie ne répond à ton mouvement." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "FUITE IMPOSSIBLE",
+                "combat.escape.boss_closed",
+                {"L'arène du boss se referme. Aucune sortie ne répond à ton mouvement."},
+                false
+            );
         }
 
         return true;
@@ -598,7 +737,11 @@ bool HumanCombatTurn::handleEscape(
         return false;
     }
 
-    EscapeSystem::playerAttemptsDuelEscape(*player, defender, random);
+    showCapturedHumanTurnText(
+        "TENTATIVE DE FUITE",
+        "combat.escape.duel_attempt",
+        captureHumanTurnText([&]() { EscapeSystem::playerAttemptsDuelEscape(*player, defender, random); })
+    );
 
     return true;
 }

@@ -7,10 +7,13 @@
 
 #include "combat/DamageReport.hpp"
 #include "combat/system/DamageSystem.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <iostream>
+#include <string>
+#include <vector>
 
 namespace
 {
@@ -133,16 +136,17 @@ void DefensePostureSystem::enterDefensePosture(Entity& entity)
 
     entity.startDefensePosture(reduction, counterChance, label);
 
-    std::cout << entity.getName() << " adopte une " << label << "." << std::endl;
-    std::cout << "Réduction du prochain coup reçu : " << reduction << "%" << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back(entity.getName() + " adopte une " + label + ".");
+    lines.push_back("Réduction du prochain coup reçu : " + std::to_string(reduction) + "%");
 
     if (counterChance > 0)
     {
-        std::cout << "Si l'ennemi rate pendant cette posture, une contre-attaque peut partir." << std::endl;
-        std::cout << "Chance de contre : " << counterChance << "%" << std::endl;
+        lines.push_back("Si l'ennemi rate pendant cette posture, une contre-attaque peut partir.");
+        lines.push_back("Chance de contre : " + std::to_string(counterChance) + "%");
     }
 
-    std::cout << std::endl;
+    MessageScreen::show("POSTURE DÉFENSIVE", "combat.defense_posture.enter", lines, false);
 }
 
 // EN: reduceIncomingDamage declares or implements a focused behavior used by this module.
@@ -164,9 +168,17 @@ int DefensePostureSystem::reduceIncomingDamage(Entity& defender, int receivedDam
 
     int blocked = receivedDamage - reducedDamage;
 
-    std::cout << defender.getName() << " tient sa posture défensive." << std::endl;
-    std::cout << "Dégâts bloqués par la posture : " << blocked << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "POSTURE TENUE",
+        "combat.defense_posture.reduce",
+        {
+            defender.getName() + " tient sa posture défensive.",
+            "Dégâts entrants : " + std::to_string(receivedDamage),
+            "Dégâts bloqués : " + std::to_string(blocked),
+            "Dégâts restants : " + std::to_string(reducedDamage)
+        },
+        false
+    );
 
     defender.clearDefensePosture();
     return reducedDamage;
@@ -187,8 +199,14 @@ void DefensePostureSystem::tryCounterAfterMiss(Entity& defender, Entity& attacke
 
     if (counterChance <= 0 || random.between(1, 100) > counterChance)
     {
-        std::cout << defender.getName() << " garde sa posture, mais ne trouve pas l'ouverture pour contrer." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "CONTRE IMPOSSIBLE",
+            "combat.defense_posture.counter.missed_window",
+            {
+                defender.getName() + " garde sa posture, mais ne trouve pas l'ouverture pour contrer."
+            },
+            false
+        );
         return;
     }
 
@@ -198,22 +216,29 @@ void DefensePostureSystem::tryCounterAfterMiss(Entity& defender, Entity& attacke
 
     if (dodged || rawDamage <= 0)
     {
-        std::cout << defender.getName() << " tente de contre-attaquer depuis sa " << label
-                  << ", mais le geste part trop tard." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "CONTRE RATÉ",
+            "combat.defense_posture.counter.failed",
+            {
+                defender.getName() + " tente de contre-attaquer depuis sa " + label + ", mais le geste part trop tard."
+            },
+            false
+        );
         return;
     }
-
-    std::cout << defender.getName() << " profite du raté pour contre-attaquer depuis sa "
-              << label << "." << std::endl;
 
     DamageReport report = DamageSystem::calculateReceivedDamage(attacker, rawDamage);
     DamageSystem::displayDamageReport(attacker, report);
     attacker.takeDamage(report.receivedDamage);
 
-    std::cout << attacker.getName() << " reçoit " << report.receivedDamage
-              << " dégâts de contre." << std::endl;
-    std::cout << attacker.getName() << " possède maintenant "
-              << attacker.getHp() << "/" << attacker.getMaxHp() << " PV." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "CONTRE-ATTAQUE",
+        "combat.defense_posture.counter.success",
+        {
+            defender.getName() + " profite du raté pour contre-attaquer depuis sa " + label + ".",
+            attacker.getName() + " reçoit " + std::to_string(report.receivedDamage) + " dégâts de contre.",
+            attacker.getName() + " possède maintenant " + std::to_string(attacker.getHp()) + "/" + std::to_string(attacker.getMaxHp()) + " PV."
+        },
+        false
+    );
 }

@@ -6,7 +6,7 @@
 #include "interface/menu/CombatPotionMenu.hpp"
 
 #include "core/Console.hpp"
-
+#include "interface/TerminalInterface.hpp"
 #include "interface/menu/CombatMenu.hpp"
 #include "interface/menu/potions/CombatPotionDisplay.hpp"
 #include "interface/menu/potions/CombatPotionUse.hpp"
@@ -28,18 +28,14 @@ bool CombatPotionMenu::openQuickHealing(Player& player)
 
     if (indices.empty())
     {
-        std::cout << "Tu n'as aucune potion de soin disponible." << std::endl;
-        std::cout << std::endl;
+        CombatPotionDisplay::showEmptyCategory("soin rapide");
         return false;
     }
 
     while (true)
     {
-        CombatPotionDisplay::displayQuickHealing(player, indices);
-
-        int choice = Console::askNumberBetween(
-            0,
-            static_cast<int>(indices.size()),
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            CombatPotionDisplay::buildQuickHealingScreen(player, indices),
             "Choix invalide. Sélectionne une potion affichée."
         );
 
@@ -54,18 +50,14 @@ bool CombatPotionMenu::openQuickHealing(Player& player)
 
         if (!player.getInventory().hasConsumable(consumableIndex))
         {
-            std::cout << "Cette potion n'existe plus dans l'inventaire." << std::endl;
-            std::cout << std::endl;
+            CombatPotionDisplay::showPotionMissing();
             return false;
         }
 
         Consumable potion = player.getInventory().getConsumable(consumableIndex);
 
-        CombatPotionDisplay::displaySelectedHealingPotion(potion);
-
-        int action = Console::askNumberBetween(
-            0,
-            2,
+        int action = TerminalInterface::askMenuChoiceFromOptions(
+            CombatPotionDisplay::buildSelectedHealingPotionScreen(potion),
             "Choix invalide. Entre 0, 1 ou 2."
         );
 
@@ -78,7 +70,7 @@ bool CombatPotionMenu::openQuickHealing(Player& player)
 
         if (action == 1)
         {
-            potion.display();
+            CombatPotionDisplay::showPotionDetails(potion);
             return false;
         }
 
@@ -102,11 +94,8 @@ bool CombatPotionMenu::openAgainstSingleTarget(
 {
     while (true)
     {
-        CombatPotionDisplay::displayMainMenu();
-
-        int choice = Console::askNumberBetween(
-            0,
-            7,
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            CombatPotionDisplay::buildMainScreen(player),
             "Choix invalide. Entre un chiffre entre 0 et 7."
         );
 
@@ -206,11 +195,8 @@ bool CombatPotionMenu::openAgainstWave(
 {
     while (true)
     {
-        CombatPotionDisplay::displayMainMenu();
-
-        int choice = Console::askNumberBetween(
-            0,
-            7,
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            CombatPotionDisplay::buildMainScreen(player),
             "Choix invalide. Entre un chiffre entre 0 et 7."
         );
 
@@ -317,12 +303,7 @@ bool CombatPotionMenu::openCategory(
 
     if (indices.empty())
     {
-        std::cout << "Tu n'as aucune potion de type "
-                  << CombatPotionUtils::typeToText(type)
-                  << "."
-                  << std::endl;
-        std::cout << std::endl;
-
+        CombatPotionDisplay::showEmptyCategory(CombatPotionUtils::typeToText(type));
         return false;
     }
 
@@ -354,11 +335,8 @@ bool CombatPotionMenu::openPotionSelection(
 
     while (true)
     {
-        CombatPotionDisplay::displayFilteredPotions(player, indices);
-
-        int choice = Console::askNumberBetween(
-            0,
-            static_cast<int>(indices.size()),
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            CombatPotionDisplay::buildFilteredPotionsScreen(player, indices),
             "Choix invalide. Sélectionne une potion affichée."
         );
 
@@ -373,18 +351,14 @@ bool CombatPotionMenu::openPotionSelection(
 
         if (!player.getInventory().hasConsumable(consumableIndex))
         {
-            std::cout << "Cette potion n'existe plus dans l'inventaire." << std::endl;
-            std::cout << std::endl;
+            CombatPotionDisplay::showPotionMissing();
             return false;
         }
 
         Consumable potion = player.getInventory().getConsumable(consumableIndex);
 
-        CombatPotionDisplay::displaySelectedPotion(potion);
-
-        int action = Console::askNumberBetween(
-            0,
-            2,
+        int action = TerminalInterface::askMenuChoiceFromOptions(
+            CombatPotionDisplay::buildSelectedPotionScreen(potion),
             "Choix invalide. Entre 0, 1 ou 2."
         );
 
@@ -397,7 +371,7 @@ bool CombatPotionMenu::openPotionSelection(
 
         if (action == 1)
         {
-            potion.display();
+            CombatPotionDisplay::showPotionDetails(potion);
             return false;
         }
 

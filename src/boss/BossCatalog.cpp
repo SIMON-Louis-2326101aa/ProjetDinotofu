@@ -5,7 +5,9 @@
 
 #include "boss/BossCatalog.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <vector>
 
 namespace
 {
@@ -25,33 +27,41 @@ namespace
         return "Une variation d'énergie anormale a été détectée, mais son identité refuse encore le registre.";
     }
 
-    // EN: displayBossLine declares or implements a focused behavior used by this module.
-    // FR: displayBossLine déclare ou implémente un comportement précis utilisé par ce module.
-    void displayBossLine(int id)
+    void appendBossLine(std::vector<std::string>& lines, int id)
     {
-        std::cout << id << " : " << getRegistryDisplayNameInternal(id) << std::endl;
-        std::cout << "    " << getRegistryHintInternal(id) << std::endl;
-        std::cout << std::endl;
+        lines.push_back(std::to_string(id) + " : " + getRegistryDisplayNameInternal(id));
+        lines.push_back("    " + getRegistryHintInternal(id));
+        lines.push_back("");
     }
 }
 
 // EN: displayAvailableBosses declares or implements a focused behavior used by this module.
 // FR: displayAvailableBosses déclare ou implémente un comportement précis utilisé par ce module.
+std::vector<std::string> BossCatalog::getAvailableBossLines()
+{
+    return getAvailableBossLines({1, 2, 3});
+}
+
+std::vector<std::string> BossCatalog::getAvailableBossLines(const std::vector<int>& bossIds)
+{
+    std::vector<std::string> lines;
+    for (int id : bossIds)
+    {
+        appendBossLine(lines, id);
+    }
+    return lines;
+}
+
 void BossCatalog::displayAvailableBosses()
 {
-    displayBossLine(1);
-    displayBossLine(2);
-    displayBossLine(3);
+    MessageScreen::show("BOSS DISPONIBLES", "catalog.boss.available_basic", getAvailableBossLines(), false);
 }
 
 // EN: displayAvailableBosses declares or implements a focused behavior used by this module.
 // FR: displayAvailableBosses déclare ou implémente un comportement précis utilisé par ce module.
 void BossCatalog::displayAvailableBosses(const std::vector<int>& bossIds)
 {
-    for (int id : bossIds)
-    {
-        displayBossLine(id);
-    }
+    MessageScreen::show("BOSS DISPONIBLES", "catalog.boss.available", getAvailableBossLines(bossIds), false);
 }
 
 std::string BossCatalog::getRegistryDisplayName(int bossId)

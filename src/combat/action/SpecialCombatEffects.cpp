@@ -7,6 +7,7 @@
 #include "combat/action/SpecialCombatEffects.hpp"
 
 #include "core/Console.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include "entity/Boss.hpp"
 
@@ -24,6 +25,15 @@ namespace
     {
         static std::set<std::string> names;
         return names;
+    }
+
+    void showSpecialCombatMessage(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines
+    )
+    {
+        MessageScreen::show(title, screenId, lines, false);
     }
 
     // EN: specialAttackCounters stores lightweight per-combat attack rhythm counters for special characters.
@@ -127,11 +137,16 @@ namespace
         awakenedSanctusNames().insert(normalized);
         entity.startProvocation(3);
 
-        std::cout << "La lumière de Sanctus se fend net." << std::endl;
-        std::cout << reason << std::endl;
-        std::cout << "Skuro ne remplace pas Sanctus : il remonte à travers lui." << std::endl;
-        std::cout << "Éveil instable : attaques plus lourdes, défense plus agressive, mais coups moins fiables." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "ÉVEIL INSTABLE",
+            "combat.special.sanctus.awakening",
+            {
+                "La lumière de Sanctus se fend net.",
+                reason,
+                "Skuro ne remplace pas Sanctus : il remonte à travers lui.",
+                "Éveil instable : attaques plus lourdes, défense plus agressive, mais coups moins fiables."
+            }
+        );
     }
 }
 
@@ -180,35 +195,16 @@ bool SpecialCombatEffects::atlasBlocksAttack(
 
     attacker.takeDamage(reflectedDamage);
 
-    std::cout << attacker.getName()
-              << " frappe de toutes ses forces..."
-              << std::endl;
-
-    Console::pauseSeconds(1);
-
-    std::cout << "Mais l'armure d'"
-              << bossDefenseur->getName()
-              << " absorbe l'impact."
-              << std::endl;
-
-    std::cout << "Une partie de la puissance est renvoyée à "
-              << attacker.getName()
-              << ", qui subit "
-              << reflectedDamage
-              << " dégâts."
-              << std::endl;
-
-    std::cout << std::endl;
-
-    std::cout << attacker.getName()
-              << " possède maintenant "
-              << attacker.getHp()
-              << "/"
-              << attacker.getMaxHp()
-              << " PV."
-              << std::endl;
-
-    std::cout << std::endl;
+    showSpecialCombatMessage(
+        "RENVOI D'ATLAS",
+        "combat.special.atlas.reflect",
+        {
+            attacker.getName() + " frappe de toutes ses forces...",
+            "Mais l'armure d'" + bossDefenseur->getName() + " absorbe l'impact.",
+            "Une partie de la puissance est renvoyée : " + std::to_string(reflectedDamage) + " dégâts.",
+            attacker.getName() + " possède maintenant " + std::to_string(attacker.getHp()) + "/" + std::to_string(attacker.getMaxHp()) + " PV."
+        }
+    );
 
     return true;
 }
@@ -245,13 +241,11 @@ void SpecialCombatEffects::applyDemonLifestealIfNeeded(
 
     attackingBoss->heal(healing);
 
-    std::cout << attackingBoss->getName()
-              << " absorbe le sang de l'attaque et récupère "
-              << healing
-              << " PV."
-              << std::endl;
-
-    std::cout << std::endl;
+    showSpecialCombatMessage(
+        "VOL DE VIE DÉMONIAQUE",
+        "combat.special.demon.lifesteal",
+        {attackingBoss->getName() + " absorbe le sang de l'attaque et récupère " + std::to_string(healing) + " PV."}
+    );
 }
 
 bool SpecialCombatEffects::specialCharacterDodgesBeforeDamage(
@@ -263,39 +257,58 @@ bool SpecialCombatEffects::specialCharacterDodgesBeforeDamage(
     {
         if (random.between(1, 100) <= 55)
         {
-            std::cout << "Fire Flight lit le mouvement au dernier instant." << std::endl;
-            std::cout << "Sous 50% PV, son instinct de commandant prend le relais : l'attaque est esquivée." << std::endl;
-            std::cout << std::endl;
+            showSpecialCombatMessage(
+                "ESQUIVE SPÉCIALE",
+                "combat.special.fireflight.dodge",
+                {
+                    "Fire Flight lit le mouvement au dernier instant.",
+                    "Sous 50% PV, son instinct de commandant prend le relais : l'attaque est esquivée."
+                }
+            );
             return true;
         }
     }
 
     if (isName(defender, "Hestia") && random.between(1, 100) <= 18)
     {
-        std::cout << "Hestia ferme les yeux de peur... et esquive presque par accident." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "ESQUIVE SPÉCIALE",
+            "combat.special.hestia.dodge",
+            {"Hestia ferme les yeux de peur... et esquive presque par accident."}
+        );
         return true;
     }
 
     if (isName(defender, "Aoi") && random.between(1, 100) <= 16)
     {
-        std::cout << "Aoi protège son cercle d'incantation avec une petite flamme kitsune." << std::endl;
-        std::cout << "L'attaque glisse sur le sort au lieu de la toucher directement." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "PROTECTION KITSUNE",
+            "combat.special.aoi.dodge",
+            {
+                "Aoi protège son cercle d'incantation avec une petite flamme kitsune.",
+                "L'attaque glisse sur le sort au lieu de la toucher directement."
+            }
+        );
         return true;
     }
 
     if (isName(defender, "Matt (PRO)") && random.between(1, 100) <= 14)
     {
-        std::cout << "Matt (PRO) anticipe le timing comme s'il connaissait déjà la frame exacte." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "ESQUIVE SPÉCIALE",
+            "combat.special.mattpro.dodge",
+            {"Matt (PRO) anticipe le timing comme s'il connaissait déjà la frame exacte."}
+        );
         return true;
     }
 
     if (isName(defender, "Trexof") && isUnderHalfHp(defender) && random.between(1, 100) <= 18)
     {
-        std::cout << "Trexof recule d'un pas : réflexe de testeur, piège évité." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "ESQUIVE SPÉCIALE",
+            "combat.special.trexof.dodge",
+            {"Trexof recule d'un pas : réflexe de testeur, piège évité."}
+        );
         return true;
     }
 
@@ -311,9 +324,14 @@ bool SpecialCombatEffects::specialCharacterMissesBeforeDamage(
     {
         if (random.between(1, 100) <= 20)
         {
-            std::cout << "Sanctus frappe comme si Skuro tenait son bras..." << std::endl;
-            std::cout << "Mais cette violence n'est pas encore stable, et le coup passe à côté." << std::endl;
-            std::cout << std::endl;
+            showSpecialCombatMessage(
+                "COUP INSTABLE",
+                "combat.special.sanctus.unstable_miss",
+                {
+                    "Sanctus frappe comme si Skuro tenait son bras...",
+                    "Mais cette violence n'est pas encore stable, et le coup passe à côté."
+                }
+            );
             return true;
         }
 
@@ -327,9 +345,14 @@ bool SpecialCombatEffects::specialCharacterMissesBeforeDamage(
 
     if (random.between(1, 100) <= 35)
     {
-        std::cout << "Skuro abat son épée à deux mains avec une violence ridicule..." << std::endl;
-        std::cout << "Mais le coup est trop lourd, trop avide, et fend seulement l'air." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "COUP TROP LOURD",
+            "combat.special.skuro.miss",
+            {
+                "Skuro abat son épée à deux mains avec une violence ridicule...",
+                "Mais le coup est trop lourd, trop avide, et fend seulement l'air."
+            }
+        );
         return true;
     }
 
@@ -356,16 +379,23 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
             markSpecialUltimateUsed(attacker);
             bonus += 38;
             critical = true;
-            std::cout << "Ultime spécial - Skuro : Fente de la matière." << std::endl;
-            std::cout << "Il ne cherche plus un adversaire. Il cherche l'endroit exact où le monde se coupe." << std::endl;
+            showSpecialCombatMessage(
+                "ULTIME SPÉCIAL",
+                "combat.special.skuro.ultimate",
+                {
+                    "Ultime spécial - Skuro : Fente de la matière.",
+                    "Il ne cherche plus un adversaire. Il cherche l'endroit exact où le monde se coupe."
+                }
+            );
         }
 
         rawDamage += bonus;
 
-        std::cout << "Skuro trouve enfin la matière. Son tranchant réclame "
-                  << bonus
-                  << " dégâts bruts supplémentaires."
-                  << std::endl;
+        showSpecialCombatMessage(
+            "EFFET SPÉCIAL - SKURO",
+            "combat.special.skuro.bonus",
+            {"Skuro trouve enfin la matière. Son tranchant réclame " + std::to_string(bonus) + " dégâts bruts supplémentaires."}
+        );
     }
 
     if (isName(attacker, "Sanctus") && isAwakenedSanctus(attacker))
@@ -378,10 +408,11 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
             critical = true;
         }
 
-        std::cout << "La protection de Sanctus se retourne en sentence. Skuro pousse sous la lumière : +"
-                  << bonus
-                  << " dégâts bruts."
-                  << std::endl;
+        showSpecialCombatMessage(
+            "EFFET SPÉCIAL - SANCTUS",
+            "combat.special.sanctus.awakened_bonus",
+            {"La protection de Sanctus se retourne en sentence. Skuro pousse sous la lumière : +" + std::to_string(bonus) + " dégâts bruts."}
+        );
     }
 
     if (isName(attacker, "Hestia"))
@@ -393,18 +424,26 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         {
             markSpecialUltimateUsed(attacker);
             bonus += 30;
-            std::cout << "Ultime spécial - Hestia : Dôme d'étoile oubliée." << std::endl;
-            std::cout << "Elle tremble, mais le sort ne tremble pas avec elle." << std::endl;
+            showSpecialCombatMessage(
+                "ULTIME SPÉCIAL",
+                "combat.special.hestia.ultimate",
+                {
+                    "Ultime spécial - Hestia : Dôme d'étoile oubliée.",
+                    "Elle tremble, mais le sort ne tremble pas avec elle."
+                }
+            );
         }
 
         rawDamage += bonus;
 
-        std::cout << "La magie d'Hestia résonne malgré sa peur."
-                  << std::endl;
-        std::cout << "Chaque incantation, ratée ou non, renforce la suivante : +"
-                  << bonus
-                  << " dégâts bruts."
-                  << std::endl;
+        showSpecialCombatMessage(
+            "EFFET SPÉCIAL - HESTIA",
+            "combat.special.hestia.spell_growth",
+            {
+                "La magie d'Hestia résonne malgré sa peur.",
+                "Chaque incantation, ratée ou non, renforce la suivante : +" + std::to_string(bonus) + " dégâts bruts."
+            }
+        );
     }
 
     if (isName(attacker, "Kanadé"))
@@ -420,14 +459,26 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
             }
 
             bonus += 22;
-            std::cout << "Kanadé hurle sur le ciel, et le treizième signe répond trop fort." << std::endl;
-            std::cout << "Ultime spécial - Kanadé : Constellation rageuse." << std::endl;
+            showSpecialCombatMessage(
+                "ULTIME SPÉCIAL",
+                "combat.special.kanade.ultimate",
+                {
+                    "Kanadé hurle sur le ciel, et le treizième signe répond trop fort.",
+                    "Ultime spécial - Kanadé : Constellation rageuse."
+                }
+            );
         }
 
         rawDamage += bonus;
 
-        std::cout << "Kanadé râle contre son propre sort, puis le zodiaque répond quand même." << std::endl;
-        std::cout << "Signe tiré : " << zodiacRoll << "/13, bonus : +" << bonus << " dégâts bruts." << std::endl;
+        showSpecialCombatMessage(
+            "EFFET SPÉCIAL - KANADÉ",
+            "combat.special.kanade.zodiac",
+            {
+                "Kanadé râle contre son propre sort, puis le zodiaque répond quand même.",
+                "Signe tiré : " + std::to_string(zodiacRoll) + "/13, bonus : +" + std::to_string(bonus) + " dégâts bruts."
+            }
+        );
     }
 
     if (isName(attacker, "Fail"))
@@ -438,13 +489,19 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         {
             markSpecialUltimateUsed(attacker);
             rawDamage += 36;
-            std::cout << "Ultime spécial - Fail : Expérience interdite." << std::endl;
-            std::cout << "Fail : Si ça explose, c'est que ça prouve quelque chose." << std::endl;
+            showSpecialCombatMessage(
+                "ULTIME SPÉCIAL",
+                "combat.special.fail.ultimate",
+                {
+                    "Ultime spécial - Fail : Expérience interdite.",
+                    "Fail : Si ça explose, c'est que ça prouve quelque chose."
+                }
+            );
         }
         else if (experiment <= 20)
         {
             rawDamage += 20;
-            std::cout << "Fail sourit : l'expérience est instable, donc parfaite. +20 dégâts bruts." << std::endl;
+            showSpecialCombatMessage("EFFET SPÉCIAL - FAIL", "combat.special.fail.positive_experiment", {"Fail sourit : l'expérience est instable, donc parfaite. +20 dégâts bruts."});
         }
         else if (experiment <= 35)
         {
@@ -453,7 +510,7 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
             {
                 rawDamage = 0;
             }
-            std::cout << "Fail note quelque chose dans sa tête : l'expérience fonctionne... moins bien que prévu. -8 dégâts bruts." << std::endl;
+            showSpecialCombatMessage("EFFET SPÉCIAL - FAIL", "combat.special.fail.failed_experiment", {"Fail note quelque chose dans sa tête : l'expérience fonctionne... moins bien que prévu. -8 dégâts bruts."});
         }
     }
 
@@ -464,8 +521,14 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
             critical = true;
             rawDamage += attacker.getCriticalDamage() / 2;
 
-            std::cout << "Fire Flight passe sous le seuil critique." << std::endl;
-            std::cout << "Ses ordres deviennent plus froids, plus précis : critique renforcé." << std::endl;
+            showSpecialCombatMessage(
+                "EFFET SPÉCIAL - FIRE FLIGHT",
+                "combat.special.fireflight.critical_command",
+                {
+                    "Fire Flight passe sous le seuil critique.",
+                    "Ses ordres deviennent plus froids, plus précis : critique renforcé."
+                }
+            );
         }
     }
 
@@ -476,11 +539,11 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         if (attackCounters[attacker.getName()] % 3 == 0)
         {
             bonus += 12;
-            std::cout << "Louis déclenche une salve préparée : ce n'est pas très propre, mais ça part de partout." << std::endl;
+            showSpecialCombatMessage("EFFET SPÉCIAL - LOUIS", "combat.special.louis.prepared_barrage", {"Louis déclenche une salve préparée : ce n'est pas très propre, mais ça part de partout."});
         }
 
         rawDamage += bonus;
-        std::cout << "Louis ajuste son bricolage offensif : quelques projectiles de plus partent presque au bon endroit." << std::endl;
+        showSpecialCombatMessage("EFFET SPÉCIAL - LOUIS", "combat.special.louis.projectile_bonus", {"Louis ajuste son bricolage offensif : quelques projectiles de plus partent presque au bon endroit.", "Bonus brut : +" + std::to_string(bonus) + "."});
     }
 
     if (isName(attacker, "Hazak"))
@@ -490,14 +553,20 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
             markSpecialUltimateUsed(attacker);
             critical = true;
             rawDamage += 32;
-            std::cout << "Ultime spécial - Hazak : Contrat de silence." << std::endl;
-            std::cout << "Hazak : Le combat faisait trop de bruit." << std::endl;
+            showSpecialCombatMessage(
+                "ULTIME SPÉCIAL",
+                "combat.special.hazak.ultimate",
+                {
+                    "Ultime spécial - Hazak : Contrat de silence.",
+                    "Hazak : Le combat faisait trop de bruit."
+                }
+            );
         }
         else if (random.between(1, 100) <= 25)
         {
             critical = true;
             rawDamage += 10;
-            std::cout << "Hazak ne cherche pas le spectacle. Il cherche l'ouverture. +10 dégâts bruts." << std::endl;
+            showSpecialCombatMessage("EFFET SPÉCIAL - HAZAK", "combat.special.hazak.opening", {"Hazak ne cherche pas le spectacle. Il cherche l'ouverture. +10 dégâts bruts."});
         }
     }
 
@@ -508,12 +577,12 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         if (testRoll <= 22)
         {
             rawDamage += 14;
-            std::cout << "Trexof repère une faille de garde et l'exploite proprement : +14 dégâts bruts." << std::endl;
+            showSpecialCombatMessage("EFFET SPÉCIAL - TREXOF", "combat.special.trexof.clean_test", {"Trexof repère une faille de garde et l'exploite proprement : +14 dégâts bruts."});
         }
         else if (testRoll <= 30)
         {
             rawDamage += 4;
-            std::cout << "Trexof corrige son angle en plein test : +4 dégâts bruts." << std::endl;
+            showSpecialCombatMessage("EFFET SPÉCIAL - TREXOF", "combat.special.trexof.angle_fix", {"Trexof corrige son angle en plein test : +4 dégâts bruts."});
         }
     }
 
@@ -523,14 +592,14 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         {
             critical = true;
             rawDamage += 8;
-            std::cout << "Matt (PRO) joue proprement, sans panique : critique contrôlé." << std::endl;
+            showSpecialCombatMessage("EFFET SPÉCIAL - MATT PRO", "combat.special.mattpro.controlled_critical", {"Matt (PRO) joue proprement, sans panique : critique contrôlé."});
         }
     }
 
     if (isName(attacker, "Mattzelda"))
     {
         rawDamage += random.between(6, 13);
-        std::cout << "Mattzelda transforme sa blague en charge de colosse. Le coup pèse plus lourd que prévu." << std::endl;
+        showSpecialCombatMessage("EFFET SPÉCIAL - MATTZELDA", "combat.special.mattzelda.heavy_joke", {"Mattzelda transforme sa blague en charge de colosse. Le coup pèse plus lourd que prévu."});
     }
 
     if (isName(attacker, "Aoi") && random.between(1, 100) <= 28)
@@ -541,60 +610,66 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         {
             markSpecialUltimateUsed(attacker);
             bonus += 24;
-            std::cout << "Ultime spécial - Aoi : Cercle des flammes kitsune." << std::endl;
-            std::cout << "Aoi baisse les yeux, puis laisse les flammes parler à sa place." << std::endl;
+            showSpecialCombatMessage(
+                "ULTIME SPÉCIAL",
+                "combat.special.aoi.ultimate",
+                {
+                    "Ultime spécial - Aoi : Cercle des flammes kitsune.",
+                    "Aoi baisse les yeux, puis laisse les flammes parler à sa place."
+                }
+            );
         }
 
         rawDamage += bonus;
-        std::cout << "Aoi ose libérer une flamme kitsune plus stable : +" << bonus << " dégâts bruts." << std::endl;
+        showSpecialCombatMessage("EFFET SPÉCIAL - AOI", "combat.special.aoi.kitsune_flame", {"Aoi ose libérer une flamme kitsune plus stable : +" + std::to_string(bonus) + " dégâts bruts."});
     }
 
     if (isName(attacker, "Hazak") && isGroupedWith(attacker, "Henrique"))
     {
         rawDamage += 6;
-        std::cout << "Henrique garde le rythme de Hazak. L'ouverture devient plus propre : +6 dégâts bruts." << std::endl;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.hazak_henrique", {"Henrique garde le rythme de Hazak. L'ouverture devient plus propre : +6 dégâts bruts."});
     }
 
     if (isName(attacker, "Henrique") && isGroupedWith(attacker, "Hazak"))
     {
         rawDamage += 5;
-        std::cout << "Hazak couvre l'angle mort d'Henrique : +5 dégâts bruts." << std::endl;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.henrique_hazak", {"Hazak couvre l'angle mort d'Henrique : +5 dégâts bruts."});
     }
 
     if (isName(attacker, "Hazak") && isGroupedWith(attacker, "Hestia"))
     {
         rawDamage += 8;
-        std::cout << "Hazak frappe plus froidement tant qu'Hestia est dans l'arène : +8 dégâts bruts." << std::endl;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.hazak_hestia", {"Hazak frappe plus froidement tant qu'Hestia est dans l'arène : +8 dégâts bruts."});
     }
 
     if (isName(attacker, "Aoi") && isGroupedWith(attacker, "Kanadé"))
     {
         rawDamage += 5;
-        std::cout << "La rage de Kanadé stabilise la flamme d'Aoi : +5 dégâts bruts." << std::endl;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.aoi_kanade", {"La rage de Kanadé stabilise la flamme d'Aoi : +5 dégâts bruts."});
     }
 
     if (isName(attacker, "Kanadé") && isGroupedWith(attacker, "Aoi"))
     {
         rawDamage += 5;
-        std::cout << "Aoi protège l'incantation de Kanadé avec une flamme discrète : +5 dégâts bruts." << std::endl;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.kanade_aoi", {"Aoi protège l'incantation de Kanadé avec une flamme discrète : +5 dégâts bruts."});
     }
 
     if (isName(attacker, "Louis") && isGroupedWith(attacker, "Trexof"))
     {
         rawDamage += 4;
-        std::cout << "Trexof signale une trajectoire à Louis : +4 dégâts bruts." << std::endl;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.louis_trexof", {"Trexof signale une trajectoire à Louis : +4 dégâts bruts."});
     }
 
     if (isName(attacker, "Trexof") && isGroupedWith(attacker, "Mattzelda"))
     {
         rawDamage += 4;
-        std::cout << "Mattzelda attire l'attention assez longtemps pour que Trexof teste une ouverture : +4 dégâts bruts." << std::endl;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.trexof_mattzelda", {"Mattzelda attire l'attention assez longtemps pour que Trexof teste une ouverture : +4 dégâts bruts."});
     }
 
     if (isName(attacker, "Fail") && isGroupedWith(attacker, "Hazak"))
     {
         rawDamage += 5;
-        std::cout << "Le contrat de non-agression force Fail à viser ailleurs que sur Hazak : +5 dégâts bruts utiles." << std::endl;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.fail_hazak", {"Le contrat de non-agression force Fail à viser ailleurs que sur Hazak : +5 dégâts bruts utiles."});
     }
 
     if (rawDamage < 0)
@@ -622,15 +697,14 @@ void SpecialCombatEffects::applySpecialCharacterAfterDamage(
 
         defender.takeDamage(extraDamage);
 
-        std::cout << "Louis enchaîne avec "
-                  << extraProjectiles
-                  << " projectile(s) secondaire(s). "
-                  << defender.getName()
-                  << " subit "
-                  << extraDamage
-                  << " dégâts supplémentaires."
-                  << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "PROJECTILES SECONDAIRES",
+            "combat.special.louis.after_damage",
+            {
+                "Louis enchaîne avec " + std::to_string(extraProjectiles) + " projectile(s) secondaire(s).",
+                defender.getName() + " subit " + std::to_string(extraDamage) + " dégâts supplémentaires."
+            }
+        );
     }
 
     if (isName(defender, "Hestia") && isGroupedWith(defender, "Hazak") && random.between(1, 100) <= 35)
@@ -638,9 +712,14 @@ void SpecialCombatEffects::applySpecialCharacterAfterDamage(
         int counterDamage = random.between(5, 12);
         attacker.takeDamage(counterDamage);
 
-        std::cout << "Hazak ne laisse pas l'impact sur Hestia devenir gratuit." << std::endl;
-        std::cout << attacker.getName() << " subit " << counterDamage << " dégâts de riposte silencieuse." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "RIPOSTE SILENCIEUSE",
+            "combat.special.hazak.hestia_counter",
+            {
+                "Hazak ne laisse pas l'impact sur Hestia devenir gratuit.",
+                attacker.getName() + " subit " + std::to_string(counterDamage) + " dégâts de riposte silencieuse."
+            }
+        );
     }
 
     if (isName(attacker, "Kanadé") && isGroupedWith(attacker, "Aoi") && random.between(1, 100) <= 22)
@@ -648,19 +727,18 @@ void SpecialCombatEffects::applySpecialCharacterAfterDamage(
         int extraDamage = random.between(5, 10);
         defender.takeDamage(extraDamage);
 
-        std::cout << "Une flamme kitsune d'Aoi suit le signe de Kanadé et explose avec retard : "
-                  << extraDamage
-                  << " dégâts supplémentaires."
-                  << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "FLAMME KITSUNE RETARDÉE",
+            "combat.special.aoi.kanade_delayed_flame",
+            {"Une flamme kitsune d'Aoi suit le signe de Kanadé et explose avec retard : " + std::to_string(extraDamage) + " dégâts supplémentaires."}
+        );
     }
 
     if (isName(attacker, "Mattzelda") && random.between(1, 100) <= 25)
     {
         attacker.heal(6);
 
-        std::cout << "Mattzelda rigole après l'impact et reprend un peu son souffle : +6 PV." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage("SOUFFLE DE MATTZELDA", "combat.special.mattzelda.after_damage_heal", {"Mattzelda rigole après l'impact et reprend un peu son souffle : +6 PV."});
     }
 
     if (isName(attacker, "Trexof") && random.between(1, 100) <= 18)
@@ -668,11 +746,11 @@ void SpecialCombatEffects::applySpecialCharacterAfterDamage(
         int extraDamage = random.between(4, 9);
         defender.takeDamage(extraDamage);
 
-        std::cout << "Trexof valide un second test sur la même ouverture : "
-                  << extraDamage
-                  << " dégâts supplémentaires."
-                  << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "SECOND TEST",
+            "combat.special.trexof.after_damage",
+            {"Trexof valide un second test sur la même ouverture : " + std::to_string(extraDamage) + " dégâts supplémentaires."}
+        );
     }
 
     if (isName(attacker, "Sanctus") && defender.getMaxHp() > 0)
@@ -690,9 +768,14 @@ void SpecialCombatEffects::applySpecialCharacterAfterDamage(
         {
             attacker.startProvocation(2);
 
-            std::cout << "Sanctus retient Skuro de justesse, mais l'ennemi sent la menace." << std::endl;
-            std::cout << "Provocation : le regard revient sur lui." << std::endl;
-            std::cout << std::endl;
+            showSpecialCombatMessage(
+                "PROVOCATION INSTABLE",
+                "combat.special.sanctus.awakened_provocation",
+                {
+                    "Sanctus retient Skuro de justesse, mais l'ennemi sent la menace.",
+                    "Provocation : le regard revient sur lui."
+                }
+            );
         }
     }
 }
@@ -713,15 +796,15 @@ void SpecialCombatEffects::applySpecialCharacterAfterReceivingDamage(
             hestiaDomeUsed.insert(defender.getName());
             defender.reviveWithHealthPercentage(35);
 
-            std::cout << "Hestia disparaît presque derrière la peur..." << std::endl;
-            std::cout << "Puis un dôme ancien se rallume tout seul, comme si quelque chose refusait de la laisser tomber." << std::endl;
-            std::cout << "Protection spéciale : retour unique à "
-                      << defender.getHp()
-                      << "/"
-                      << defender.getMaxHp()
-                      << " PV."
-                      << std::endl;
-            std::cout << std::endl;
+            showSpecialCombatMessage(
+                "DÔME D'HESTIA",
+                "combat.special.hestia.revive",
+                {
+                    "Hestia disparaît presque derrière la peur...",
+                    "Puis un dôme ancien se rallume tout seul, comme si quelque chose refusait de la laisser tomber.",
+                    "Protection spéciale : retour unique à " + std::to_string(defender.getHp()) + "/" + std::to_string(defender.getMaxHp()) + " PV."
+                }
+            );
         }
     }
 
@@ -732,14 +815,14 @@ void SpecialCombatEffects::applySpecialCharacterAfterReceivingDamage(
             henriqueReviveUsed.insert(defender.getName());
             defender.reviveWithHealthPercentage(45);
 
-            std::cout << "Henrique tombe... puis se relève une fois de plus." << std::endl;
-            std::cout << "Sa capacité spéciale s'active : retour unique à "
-                      << defender.getHp()
-                      << "/"
-                      << defender.getMaxHp()
-                      << " PV."
-                      << std::endl;
-            std::cout << std::endl;
+            showSpecialCombatMessage(
+                "RETOUR D'HENRIQUE",
+                "combat.special.henrique.revive",
+                {
+                    "Henrique tombe... puis se relève une fois de plus.",
+                    "Sa capacité spéciale s'active : retour unique à " + std::to_string(defender.getHp()) + "/" + std::to_string(defender.getMaxHp()) + " PV."
+                }
+            );
         }
     }
 
@@ -761,9 +844,14 @@ void SpecialCombatEffects::applySpecialCharacterAfterReceivingDamage(
             defender.startProvocation(3);
             defender.startDefensePosture(35, 18, "Mur sacré de Sanctus");
 
-            std::cout << "Ultime spécial - Sanctus : Rempart de croyance." << std::endl;
-            std::cout << "Sanctus attire la menace sur lui et transforme sa foi en posture de défense." << std::endl;
-            std::cout << std::endl;
+            showSpecialCombatMessage(
+                "ULTIME SPÉCIAL",
+                "combat.special.sanctus.ultimate",
+                {
+                    "Ultime spécial - Sanctus : Rempart de croyance.",
+                    "Sanctus attire la menace sur lui et transforme sa foi en posture de défense."
+                }
+            );
         }
     }
 
@@ -773,44 +861,50 @@ void SpecialCombatEffects::applySpecialCharacterAfterReceivingDamage(
         defender.heal(defender.getMaxHp() * 18 / 100);
         defender.startDefensePosture(30, 10, "Blague de colosse beaucoup trop solide");
 
-        std::cout << "Ultime spécial - Mattzelda : Mur de blagues." << std::endl;
-        std::cout << "Il rigole tellement fort que même les dégâts hésitent à continuer." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "ULTIME SPÉCIAL",
+            "combat.special.mattzelda.ultimate",
+            {
+                "Ultime spécial - Mattzelda : Mur de blagues.",
+                "Il rigole tellement fort que même les dégâts hésitent à continuer."
+            }
+        );
     }
 
     if (isName(defender, "Aoi") && isGroupedWith(defender, "Sanctus") && random.between(1, 100) <= 18)
     {
         defender.heal(5);
-        std::cout << "Sanctus détourne une partie de la menace : Aoi récupère 5 PV en gardant son cercle." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage("SOUTIEN DE SANCTUS", "combat.special.sanctus.aoi_support", {"Sanctus détourne une partie de la menace : Aoi récupère 5 PV en gardant son cercle."});
     }
 
     if (isName(defender, "Kanadé") && isGroupedWith(defender, "Sanctus") && random.between(1, 100) <= 18)
     {
         defender.heal(5);
-        std::cout << "Sanctus encaisse juste assez pour que Kanadé garde sa colère utile : +5 PV." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage("SOUTIEN DE SANCTUS", "combat.special.sanctus.kanade_support", {"Sanctus encaisse juste assez pour que Kanadé garde sa colère utile : +5 PV."});
     }
 
     if (isName(defender, "Hestia") && isGroupedWith(defender, "Hazak") && random.between(1, 100) <= 25)
     {
         defender.startDefensePosture(22, 6, "Protection de Hazak autour d'Hestia");
-        std::cout << "Hazak déplace le combat autour d'Hestia. Sa prochaine garde devient plus sûre." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage("PROTECTION DE HAZAK", "combat.special.hazak.hestia_guard", {"Hazak déplace le combat autour d'Hestia. Sa prochaine garde devient plus sûre."});
     }
 
     if (isName(defender, "Louis") && isGroupedWith(defender, "Mattzelda") && random.between(1, 100) <= 18)
     {
         defender.heal(4);
-        std::cout << "Mattzelda fait écran avec une blague beaucoup trop bruyante. Louis reprend 4 PV." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage("SOUTIEN DE MATTZELDA", "combat.special.mattzelda.louis_support", {"Mattzelda fait écran avec une blague beaucoup trop bruyante. Louis reprend 4 PV."});
     }
 
     if (isName(defender, "Aoi") && random.between(1, 100) <= 20)
     {
-        std::cout << "Aoi recule, timide, mais protège instinctivement ses incantations." << std::endl;
-        std::cout << "Un cercle de protection incomplet tremble autour d'elle, sans parvenir à se fermer." << std::endl;
-        std::cout << std::endl;
+        showSpecialCombatMessage(
+            "RÉFLEXE D'AOI",
+            "combat.special.aoi.partial_guard",
+            {
+                "Aoi recule, timide, mais protège instinctivement ses incantations.",
+                "Un cercle de protection incomplet tremble autour d'elle, sans parvenir à se fermer."
+            }
+        );
     }
 }
 

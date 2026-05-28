@@ -16,6 +16,29 @@
 #include <string>
 #include <vector>
 
+namespace
+{
+    MenuOptionItemData makeAccountMenuItem(
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = "",
+        bool important = false
+    )
+    {
+        MenuOptionItemData data;
+        data.structured = true;
+        data.kind = "save_account";
+        data.section = "Comptes";
+        data.actionType = actionType;
+        data.name = name;
+        data.detail = detail;
+        data.status = status;
+        data.important = important;
+        return data;
+    }
+}
+
 std::string AccountMenu::open()
 {
     while (true)
@@ -23,17 +46,32 @@ std::string AccountMenu::open()
         std::vector<AccountSaveSummary> accounts = SaveManager::listAccounts();
 
         MenuScreen accountListScreen("COMPTES LOCAUX", "save.accounts.list");
-        accountListScreen.addOption(0, "Créer / utiliser un nouveau compte", "", true, "save.accounts.create_or_use");
-        accountListScreen.addOption(-1, "Importer un compte extrait", "", true, "save.accounts.import");
+        accountListScreen.addOption(
+            0,
+            "Créer / utiliser un nouveau compte",
+            "Prépare un compte local ou reprend le compte local par défaut.",
+            true,
+            "save.accounts.create_or_use",
+            makeAccountMenuItem("create", "Nouveau compte", "Créer ou utiliser un compte local.")
+        );
+        accountListScreen.addOption(
+            -1,
+            "Importer un compte extrait",
+            "Récupère un dossier portable exporté depuis une autre installation.",
+            true,
+            "save.accounts.import",
+            makeAccountMenuItem("import", "Importer", "Importer un compte portable.", "Dossier requis", true)
+        );
 
         for (int i = 0; i < static_cast<int>(accounts.size()); i++)
         {
             accountListScreen.addOption(
                 i + 1,
                 accounts[i].accountName,
-                "",
+                "Compte local disponible.",
                 true,
-                "save.accounts.select." + std::to_string(i + 1)
+                "save.accounts.select." + std::to_string(i + 1),
+                makeAccountMenuItem("select", accounts[i].accountName, "Compte local disponible.", "Disponible")
             );
         }
 
@@ -123,9 +161,30 @@ std::string AccountMenu::open()
         MenuScreen accountActionScreen("COMPTE SÉLECTIONNÉ", "save.accounts.actions");
         accountActionScreen.addLine("Compte : " + selectedAccount.accountName);
         accountActionScreen.addOption(0, "Retour", "", true, "save.accounts.actions.back");
-        accountActionScreen.addOption(1, "Se connecter", "", true, "save.accounts.actions.login");
-        accountActionScreen.addOption(2, "Extraire / transférer ce compte", "", true, "save.accounts.actions.export");
-        accountActionScreen.addOption(3, "Supprimer ce compte", "", true, "save.accounts.actions.delete");
+        accountActionScreen.addOption(
+            1,
+            "Se connecter",
+            "Utiliser ce compte pour choisir ou créer un personnage.",
+            true,
+            "save.accounts.actions.login",
+            makeAccountMenuItem("login", "Se connecter", "Compte : " + selectedAccount.accountName, "Action normale")
+        );
+        accountActionScreen.addOption(
+            2,
+            "Extraire / transférer ce compte",
+            "Crée un dossier portable pour déplacer les données du compte.",
+            true,
+            "save.accounts.actions.export",
+            makeAccountMenuItem("export", "Extraire / transférer", "Compte : " + selectedAccount.accountName, "Transfert")
+        );
+        accountActionScreen.addOption(
+            3,
+            "Supprimer ce compte",
+            "Action définitive, confirmation obligatoire.",
+            true,
+            "save.accounts.actions.delete",
+            makeAccountMenuItem("delete", "Supprimer", "Compte : " + selectedAccount.accountName, "Irréversible", true)
+        );
 
         int accountAction = TerminalInterface::askMenuChoice(
             accountActionScreen,

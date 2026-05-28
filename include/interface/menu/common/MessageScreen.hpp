@@ -26,7 +26,23 @@ public:
     static std::string askText(
         const std::string& title,
         const std::string& screenId,
-        const std::vector<std::string>& lines
+        const std::vector<std::string>& lines,
+        const std::string& placeholder = "Saisis ta réponse ici",
+        const std::string& hint = "Texte libre attendu.",
+        bool allowEmpty = false,
+        int minLength = 0,
+        int maxLength = 120
+    );
+
+    // EN: askQuantity displays a structured quantity screen for terminal and GUI input.
+    // FR: askQuantity affiche un écran de quantité structuré pour le terminal et l'IG.
+    static int askQuantity(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        int minValue,
+        int maxValue,
+        const std::string& invalidMessage = "Quantité invalide."
     );
 
     // EN: askKeywordConfirmation asks for an exact keyword before a dangerous action.

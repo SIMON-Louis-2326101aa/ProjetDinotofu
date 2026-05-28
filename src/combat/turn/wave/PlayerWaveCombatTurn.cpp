@@ -17,6 +17,9 @@
 #include "interface/menu/InventoryMenu.hpp"
 #include "interface/menu/CombatPotionMenu.hpp"
 #include "interface/menu/CombatRoleMenu.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/model/MenuScreen.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 #include "interface/menu/progression/BestiaryMenu.hpp"
 #include "interface/menu/progression/StatisticsMenu.hpp"
 
@@ -38,11 +41,9 @@ bool PlayerWaveCombatTurn::play(
         );
     }
 
-    CombatMenu::displayTurnMenu(player);
-
-    int choice = Console::askNumberBetween(
-        0,
-        8,
+    const MenuScreen turnScreen = CombatMenu::buildTurnScreen(player);
+    int choice = TerminalInterface::askMenuChoiceFromOptions(
+        turnScreen,
         "Choix invalide. Entre un chiffre entre 0 et 8."
     );
 
@@ -96,9 +97,15 @@ bool PlayerWaveCombatTurn::play(
 
     if (choice == 7)
     {
-        std::cout << player.getName() << " choisit de ne rien faire ce tour-ci." << std::endl;
-        std::cout << "Parfois, survivre commence par attendre le bon moment." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "TOUR PASSÉ",
+            "wave.combat.wait",
+            {
+                player.getName() + " choisit de ne rien faire ce tour-ci.",
+                "Parfois, survivre commence par attendre le bon moment."
+            },
+            false
+        );
 
         return true;
     }
@@ -123,25 +130,19 @@ bool PlayerWaveCombatTurn::openWaveInterface(
     DifficultyMode difficulty
 )
 {
-    std::cout << "========== INTERFACE ==========" << std::endl;
-    std::cout << "0 : Retour" << std::endl;
-    std::cout << "1 : Voir l'état du combat" << std::endl;
-    std::cout << "2 : Voir mes statistiques" << std::endl;
-    std::cout << "3 : Résumé équipement" << std::endl;
-    std::cout << "4 : Compétences de rôle" << std::endl;
-    std::cout << "5 : Observer / analyser les adversaires" << std::endl;
-    std::cout << "6 : Voir un adversaire dans le bestiaire" << std::endl;
-    std::cout << "7 : Ordres aux alliés" << std::endl;
-    std::cout << "8 : Contrôle des invocations" << std::endl;
-    std::cout << "===============================" << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
+    MenuScreen screen("INTERFACE DE VAGUE", "wave.combat.interface");
+    screen.addSubtitle(player.getName() + " face à " + std::to_string(wave.getTotalRemainingEnemyCount()) + " adversaire(s) restant(s)");
+    screen.addBackOption("Retour", "wave.interface.back");
+    screen.addOption(1, "Voir l'état du combat", "Adversaires actifs et résumé de la file.", true, "wave.interface.state");
+    screen.addOption(2, "Voir mes statistiques", "Ouvre les statistiques du personnage.", true, "wave.interface.stats");
+    screen.addOption(3, "Résumé équipement", "Affichage simple de l'équipement.", true, "wave.interface.equipment");
+    screen.addOption(4, "Compétences de rôle", "Actions et rappels liés au rôle.", true, "wave.interface.role");
+    screen.addOption(5, "Observer / analyser les adversaires", "Relit la vague active.", true, "wave.interface.observe");
+    screen.addOption(6, "Voir un adversaire dans le bestiaire", "Choisir une entrée parmi les ennemis actifs.", true, "wave.interface.bestiary");
+    screen.addOption(7, "Ordres aux alliés", "Indisponible sans allié stable.", true, "wave.interface.allies");
+    screen.addOption(8, "Contrôle des invocations", "Rappel des ordres actuels.", true, "wave.interface.summons");
 
-    int interfaceChoice = Console::askNumberBetween(
-        0,
-        8,
-        "Choix invalide. Entre un chiffre entre 0 et 8."
-    );
+    int interfaceChoice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
 
     Console::clear();
 
@@ -185,21 +186,31 @@ bool PlayerWaveCombatTurn::openWaveInterface(
     {
         if (!wave.hasActiveEnemies())
         {
-            std::cout << "Aucun adversaire actif à consulter dans le bestiaire." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "BESTIAIRE",
+                "wave.interface.bestiary_empty",
+                {"Aucun adversaire actif à consulter dans le bestiaire."},
+                false
+            );
             return false;
         }
 
-        wave.displayActiveEnemies();
-        std::cout << "Choisis l'adversaire à rechercher dans le bestiaire." << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "> ";
+        MenuScreen targetScreen("BESTIAIRE DE COMBAT", "wave.interface.bestiary_target");
+        targetScreen.addLine("Choisis l'adversaire à rechercher dans le bestiaire.");
+        targetScreen.addBackOption("Retour", "wave.interface.bestiary.back");
 
-        int targetChoice = Console::askNumberBetween(
-            0,
-            wave.getActiveEnemyCount(),
-            "Choix invalide."
-        );
+        for (int index = 0; index < wave.getActiveEnemyCount(); ++index)
+        {
+            targetScreen.addOption(
+                index + 1,
+                wave.getActiveEnemy(index).getName(),
+                "Consulter ce que tu sais déjà sur cette créature.",
+                true,
+                "wave.interface.bestiary.target"
+            );
+        }
+
+        int targetChoice = TerminalInterface::askMenuChoiceFromOptions(targetScreen, "Choix invalide.");
 
         Console::clear();
 
@@ -217,16 +228,26 @@ bool PlayerWaveCombatTurn::openWaveInterface(
 
     if (interfaceChoice == 7)
     {
-        std::cout << "Aucun allié stable n'attend d'ordre sur ce champ de bataille." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ORDRES AUX ALLIÉS",
+            "wave.interface.allies_unavailable",
+            {"Aucun allié stable n'attend d'ordre sur ce champ de bataille."},
+            false
+        );
         return false;
     }
 
     if (interfaceChoice == 8)
     {
-        std::cout << "Tes invocations suivent l'ordre donné au début du combat." << std::endl;
-        std::cout << "Changer cet ordre au milieu du chaos demande une ouverture que tu n'as pas encore." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "CONTRÔLE DES INVOCATIONS",
+            "wave.interface.summons_order",
+            {
+                "Tes invocations suivent l'ordre donné au début du combat.",
+                "Changer cet ordre au milieu du chaos demande une ouverture que tu n'as pas encore."
+            },
+            false
+        );
         return false;
     }
 

@@ -7,11 +7,15 @@
 #ifndef INCLUDE_CHARACTER_RELATIONSHIP_SPECIALCHARACTERGROUPCATALOG_HPP
 #define INCLUDE_CHARACTER_RELATIONSHIP_SPECIALCHARACTERGROUPCATALOG_HPP
 
+#include <string>
+#include <vector>
+
 class SpecialCharacterGroupCatalog
 {
 public:
     // EN: displayRoadmap declares or implements a focused behavior used by this module.
     // FR: displayRoadmap déclare ou implémente un comportement précis utilisé par ce module.
+    static std::vector<std::string> getRoadmapLines();
     static void displayRoadmap();
 };
 

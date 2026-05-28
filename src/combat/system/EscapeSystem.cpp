@@ -8,9 +8,12 @@
 #include "progression/DifficultyRules.hpp"
 
 #include "core/Console.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
 #include <iostream>
+#include <string>
+#include <vector>
 
 namespace
 {
@@ -44,11 +47,6 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, Difficul
 
 bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, DifficultyMode difficulty, int enemyCount)
 {
-    std::cout << player.getName() << " cherche une ouverture pour fuir le combat..." << std::endl;
-    std::cout << std::endl;
-
-    Console::pauseSeconds(1);
-
     int escapeChance = CombatClassSystem::getBaseEscapeChance(player)
         + DifficultyRules::getPlayerEscapeChanceModifier(difficulty);
 
@@ -60,13 +58,13 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, Difficul
     }
 
     int requiredSuccesses = requiredEscapeSuccessesForEnemyCount(enemyCount);
-
-    std::cout << "Adversaires encore capables de te bloquer : " << enemyCount << std::endl;
-    std::cout << "Réussites de fuite nécessaires : " << requiredSuccesses << std::endl;
-    std::cout << "Chance estimée par ouverture : " << escapeChance << "%" << std::endl;
-    std::cout << std::endl;
-
     int successes = 0;
+    std::vector<std::string> lines;
+
+    lines.push_back(player.getName() + " cherche une ouverture pour fuir le combat...");
+    lines.push_back("Adversaires encore capables de bloquer la fuite : " + std::to_string(enemyCount));
+    lines.push_back("Réussites nécessaires : " + std::to_string(requiredSuccesses));
+    lines.push_back("Chance estimée par ouverture : " + std::to_string(escapeChance) + "%");
 
     for (int attempt = 1; attempt <= requiredSuccesses; ++attempt)
     {
@@ -75,26 +73,22 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, Difficul
         if (roll <= escapeChance)
         {
             ++successes;
-            std::cout << "Ouverture " << attempt << "/" << requiredSuccesses << " : réussie." << std::endl;
+            lines.push_back("Ouverture " + std::to_string(attempt) + "/" + std::to_string(requiredSuccesses) + " : réussie.");
             continue;
         }
 
-        std::cout << "Ouverture " << attempt << "/" << requiredSuccesses << " : bloquée." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Fuite échouée." << std::endl;
-        std::cout << "Trop de présences ferment ta trajectoire. Ton tour est perdu." << std::endl;
-        std::cout << std::endl;
+        lines.push_back("Ouverture " + std::to_string(attempt) + "/" + std::to_string(requiredSuccesses) + " : bloquée.");
+        lines.push_back("Résultat : fuite échouée.");
+        lines.push_back("Trop de présences ferment la trajectoire. Le tour est perdu.");
 
+        MessageScreen::show("FUITE ÉCHOUÉE", "combat.escape.result.failed", lines);
         return false;
     }
 
-    std::cout << std::endl;
-    std::cout << "Fuite réussie." << std::endl;
-    std::cout << player.getName()
-              << " enchaîne assez d'ouvertures pour quitter l'affrontement avant d'être encerclé."
-              << std::endl;
-    std::cout << std::endl;
+    lines.push_back("Résultat : fuite réussie.");
+    lines.push_back(player.getName() + " enchaîne assez d'ouvertures pour quitter l'affrontement avant d'être encerclé.");
 
+    MessageScreen::show("FUITE RÉUSSIE", "combat.escape.result.success", lines);
     return successes >= requiredSuccesses;
 }
 
@@ -102,28 +96,18 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, Difficul
 // FR: playerAttemptsBossEscape déclare ou implémente un comportement précis utilisé par ce module.
 bool EscapeSystem::playerAttemptsBossEscape(const Player& player, const Boss& boss)
 {
-    std::cout << player.getName() << " cherche une issue..." << std::endl;
-    std::cout << std::endl;
-
-    Console::pauseSeconds(1);
-
-    std::cout << "L'air devient lourd." << std::endl;
-    std::cout << "L'arène semble se refermer comme une cage." << std::endl;
-    std::cout << std::endl;
-
-    Console::pauseSeconds(1);
-
-    std::cout << boss.getName() << " bloque toute échappatoire par sa seule présence." << std::endl;
-    std::cout << "L'arène ne possède plus de sortie : elle n'attend qu'un vainqueur, ou un corps." << std::endl;
-    std::cout << std::endl;
-
-    Console::pauseSeconds(1);
-
-    std::cout << "Tu fais un pas vers la fuite." << std::endl;
-    std::cout << boss.getName() << " tourne lentement la tête vers toi." << std::endl;
-    std::cout << "Même le silence te repousse vers le centre du combat." << std::endl;
-    std::cout << "La tentative échoue. Ton tour est perdu." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "FUITE IMPOSSIBLE",
+        "combat.escape.boss.blocked",
+        {
+            player.getName() + " cherche une issue...",
+            "L'air devient lourd.",
+            "L'arène semble se refermer comme une cage.",
+            boss.getName() + " bloque toute échappatoire par sa seule présence.",
+            "L'arène ne possède plus de sortie : elle n'attend qu'un vainqueur, ou un corps.",
+            "La tentative échoue. Le tour est perdu."
+        }
+    );
 
     return false;
 }
@@ -134,40 +118,33 @@ bool EscapeSystem::playerAttemptsDuelEscape(
     Random& random
 )
 {
-    std::cout << runner.getName() << " cherche une ouverture pour quitter le duel..." << std::endl;
-    std::cout << "En duel, fuir revient à abandonner le combat." << std::endl;
-    std::cout << std::endl;
-
-    Console::pauseSeconds(1);
-
     int escapeChance = calculateDuelEscapeChance(runner, opponent);
     int roll = random.between(1, 100);
+    std::vector<std::string> lines;
+
+    lines.push_back(runner.getName() + " cherche une ouverture pour quitter le duel...");
+    lines.push_back("En duel, fuir revient à abandonner le combat.");
+    lines.push_back("Chance estimée : " + std::to_string(escapeChance) + "%");
 
     if (roll <= escapeChance)
     {
-        std::cout << "Fuite réussie." << std::endl;
-        std::cout << runner.getName() << " sort de l'arène avant de se faire achever." << std::endl;
-        std::cout << opponent.getName() << " remporte l'affrontement." << std::endl;
-        std::cout << std::endl;
+        lines.push_back("Résultat : fuite réussie.");
+        lines.push_back(runner.getName() + " sort de l'arène avant de se faire achever.");
+        lines.push_back(opponent.getName() + " remporte l'affrontement.");
+        lines.push_back("Répartition prévue des récompenses :");
+        lines.push_back("- " + runner.getName() + " : 25%");
+        lines.push_back("- " + opponent.getName() + " : 75%");
 
-        std::cout << "Répartition prévue des récompenses :" << std::endl;
-        std::cout << "- " << runner.getName() << " : 25%" << std::endl;
-        std::cout << "- " << opponent.getName() << " : 75%" << std::endl;
-        std::cout << std::endl;
-
+        MessageScreen::show("ABANDON DU DUEL", "combat.escape.duel.success", lines);
         endCombatBySurrender(runner);
         return true;
     }
 
-    std::cout << "Fuite échouée." << std::endl;
-    std::cout << opponent.getName()
-              << " coupe la trajectoire de "
-              << runner.getName()
-              << "."
-              << std::endl;
-    std::cout << "Le duel continue, mais le tour est perdu." << std::endl;
-    std::cout << std::endl;
+    lines.push_back("Résultat : fuite échouée.");
+    lines.push_back(opponent.getName() + " coupe la trajectoire de " + runner.getName() + ".");
+    lines.push_back("Le duel continue, mais le tour est perdu.");
 
+    MessageScreen::show("FUITE DE DUEL ÉCHOUÉE", "combat.escape.duel.failed", lines);
     return false;
 }
 
@@ -213,13 +190,14 @@ bool EscapeSystem::monsterAttemptsEscape(Monster& monster, Random& random)
 
     if (roll <= LOW_MONSTER_ESCAPE_CHANCE)
     {
-        std::cout << monster.getName() << " panique et tente de fuir..." << std::endl;
-        Console::pauseSeconds(1);
-
-        std::cout << monster.getName()
-                  << " disparaît de l'affrontement avant de recevoir le coup fatal."
-                  << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ENNEMI EN FUITE",
+            "combat.escape.monster.success",
+            {
+                monster.getName() + " panique et tente de fuir...",
+                monster.getName() + " disparaît de l'affrontement avant de recevoir le coup fatal."
+            }
+        );
 
         return true;
     }

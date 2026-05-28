@@ -14,9 +14,10 @@
 #include "progression/Level.hpp"
 #include "character/RaceCatalog.hpp"
 #include "combat/system/CombatClassSystem.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
-#include <iostream>
+#include <vector>
 
 
 namespace
@@ -133,6 +134,20 @@ namespace
         if (skillId == "learned_occult_bramble") return "Sort appris par grimoire, sans parchemin courant : entrave la cible avec ronces, poison et fatigue magique.";
         return "Compétence instable : son usage reste difficile à canaliser.";
     }
+
+    void showPlayerScreen(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        bool waitAndClear = false
+    )
+    {
+        if (!lines.empty())
+        {
+            MessageScreen::show(title, screenId, lines, waitAndClear);
+        }
+    }
+
 }
 
 // EN: Player declares or implements a focused behavior used by this module.
@@ -651,17 +666,22 @@ bool Player::spendAttributePoint(int attributeChoice)
 // FR: displayAttributes déclare ou implémente un comportement précis utilisé par ce module.
 void Player::displayAttributes() const
 {
-    std::cout << "===== ATTRIBUTS =====" << std::endl;
-    std::cout << "Force : " << attributes.getStrength() << std::endl;
-    std::cout << "Dextérité : " << attributes.getDexterity() << std::endl;
-    std::cout << "Constitution : " << attributes.getConstitution() << std::endl;
-    std::cout << "Intelligence : " << attributes.getIntelligence() << std::endl;
-    std::cout << "Sagesse : " << attributes.getWisdom() << std::endl;
-    std::cout << "Charisme : " << attributes.getCharisma() << std::endl;
-    std::cout << "Points disponibles : " << unspentAttributePoints << std::endl;
-    std::cout << "=====================" << std::endl;
-    std::cout << std::endl;
+    showPlayerScreen(
+        "ATTRIBUTS",
+        "player.attributes",
+        {
+            "Force : " + std::to_string(attributes.getStrength()),
+            "Dextérité : " + std::to_string(attributes.getDexterity()),
+            "Constitution : " + std::to_string(attributes.getConstitution()),
+            "Intelligence : " + std::to_string(attributes.getIntelligence()),
+            "Sagesse : " + std::to_string(attributes.getWisdom()),
+            "Charisme : " + std::to_string(attributes.getCharisma()),
+            "Points disponibles : " + std::to_string(unspentAttributePoints)
+        },
+        false
+    );
 }
+
 
 // EN: getUnlockedPassiveSkills declares or implements a focused behavior used by this module.
 // FR: getUnlockedPassiveSkills déclare ou implémente un comportement précis utilisé par ce module.
@@ -749,9 +769,15 @@ bool Player::unlockPassiveSkill(const std::string& skillId, const std::string& s
     }
 
     unlockedPassiveSkills.push_back(skillId);
-    std::cout << "Nouvelle compétence passive : " << skillName << std::endl;
-    std::cout << "Elle s'est développée à force de vivre, combattre et apprendre." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "NOUVELLE COMPÉTENCE PASSIVE",
+        "player.skill.passive_unlocked",
+        {
+            "Nouvelle compétence passive : " + skillName,
+            "Elle s'est développée à force de vivre, combattre et apprendre."
+        },
+        false
+    );
     return true;
 }
 
@@ -765,9 +791,15 @@ bool Player::unlockActiveSkill(const std::string& skillId, const std::string& sk
     }
 
     unlockedActiveSkills.push_back(skillId);
-    std::cout << "Nouvelle compétence active : " << skillName << std::endl;
-    std::cout << "Son rythme naturel apparaîtra quand tu sauras mieux la canaliser en combat." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "NOUVELLE COMPÉTENCE ACTIVE",
+        "player.skill.active_unlocked",
+        {
+            "Nouvelle compétence active : " + skillName,
+            "Son rythme naturel apparaîtra quand tu sauras mieux la canaliser en combat."
+        },
+        false
+    );
     return true;
 }
 
@@ -932,48 +964,50 @@ void Player::setLoadedSkillState(
 // FR: displaySkillProgress déclare ou implémente un comportement précis utilisé par ce module.
 void Player::displaySkillProgress() const
 {
-    std::cout << "========== COMPÉTENCES ==========" << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back("Passives débloquées :");
 
-    std::cout << "Passives débloquées :" << std::endl;
     if (unlockedPassiveSkills.empty())
     {
-        std::cout << "- Aucune pour le moment." << std::endl;
+        lines.push_back("- Aucune pour le moment.");
     }
     else
     {
         for (const std::string& skillId : unlockedPassiveSkills)
         {
-            std::cout << "- " << playerSkillDisplayName(skillId) << " : " << playerSkillDescription(skillId) << std::endl;
+            lines.push_back("- " + playerSkillDisplayName(skillId) + " : " + playerSkillDescription(skillId));
         }
     }
 
-    std::cout << std::endl;
-    std::cout << "Actives débloquées :" << std::endl;
+    lines.push_back("");
+    lines.push_back("Actives débloquées :");
+
     if (unlockedActiveSkills.empty())
     {
-        std::cout << "- Aucune pour le moment." << std::endl;
+        lines.push_back("- Aucune pour le moment.");
     }
     else
     {
         for (const std::string& skillId : unlockedActiveSkills)
         {
-            std::cout << "- " << playerSkillDisplayName(skillId) << " : " << playerSkillDescription(skillId) << std::endl;
+            lines.push_back("- " + playerSkillDisplayName(skillId) + " : " + playerSkillDescription(skillId));
         }
     }
 
-    std::cout << std::endl;
-    std::cout << "Progression passive liée au gameplay :" << std::endl;
-    std::cout << "- Kills à la dague vers Enchaînement : " << daggerKillProgress << "/5" << std::endl;
-    std::cout << "- Kills à l'arc vers Œil de rôdeur : " << bowKillProgress << "/8" << std::endl;
-    std::cout << "- Kills aux mains nues vers Contre réflexe : " << bareHandKillProgress << "/10" << std::endl;
-    std::cout << "- Kills au bâton vers Canalisation prudente : " << staffKillProgress << "/6" << std::endl;
-    std::cout << "- Kills à l'épée vers Discipline de lame : " << swordKillProgress << "/7" << std::endl;
-    std::cout << "- Kills à la hache vers Frappe fendue : " << axeKillProgress << "/7" << std::endl;
-    std::cout << "- Kills au marteau vers Fracasse-garde : " << hammerKillProgress << "/7" << std::endl;
-    std::cout << "- Kills à la lance vers Contrôle d'allonge : " << spearKillProgress << "/7" << std::endl;
-    std::cout << "=================================" << std::endl;
-    std::cout << std::endl;
+    lines.push_back("");
+    lines.push_back("Progression passive liée au gameplay :");
+    lines.push_back("- Kills à la dague vers Enchaînement : " + std::to_string(daggerKillProgress) + "/5");
+    lines.push_back("- Kills à l'arc vers Œil de rôdeur : " + std::to_string(bowKillProgress) + "/8");
+    lines.push_back("- Kills aux mains nues vers Contre réflexe : " + std::to_string(bareHandKillProgress) + "/10");
+    lines.push_back("- Kills au bâton vers Canalisation prudente : " + std::to_string(staffKillProgress) + "/6");
+    lines.push_back("- Kills à l'épée vers Discipline de lame : " + std::to_string(swordKillProgress) + "/7");
+    lines.push_back("- Kills à la hache vers Frappe fendue : " + std::to_string(axeKillProgress) + "/7");
+    lines.push_back("- Kills au marteau vers Fracasse-garde : " + std::to_string(hammerKillProgress) + "/7");
+    lines.push_back("- Kills à la lance vers Contrôle d'allonge : " + std::to_string(spearKillProgress) + "/7");
+
+    showPlayerScreen("COMPÉTENCES", "player.skill_progress", lines, false);
 }
+
 
 
 // EN: getCombatsStarted declares or implements a focused behavior used by this module.
@@ -1553,8 +1587,12 @@ void Player::reduceWorldGazeDurationAfterCombat()
     {
         applyFlatStatBonus(worldGazeMaxHpPenalty, 0, 0, 0);
         worldGazeMaxHpPenalty = 0;
-        std::cout << "Le Regard du monde se retire. Tes PV maximum reviennent à leur état précédent." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "REGARD DU MONDE",
+            "player.world_gaze.removed",
+            {"Le Regard du monde se retire. Tes PV maximum reviennent à leur état précédent."},
+            false
+        );
     }
 }
 
@@ -1688,40 +1726,42 @@ void Player::setLoadedPvpLethalEliminations(const std::vector<std::string>& elim
 // FR: displayCareerStatistics déclare ou implémente un comportement précis utilisé par ce module.
 void Player::displayCareerStatistics(DifficultyMode difficulty) const
 {
-    std::cout << "===== STATISTIQUES DE PARCOURS =====" << std::endl;
-    std::cout << "Combats lancés : " << combatsStarted << std::endl;
-    std::cout << "Victoires : " << victories << std::endl;
-    std::cout << "Défaites : " << defeats << std::endl;
-    std::cout << "Fuites : " << escapes << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back("Combats lancés : " + std::to_string(combatsStarted));
+    lines.push_back("Victoires : " + std::to_string(victories));
+    lines.push_back("Défaites : " + std::to_string(defeats));
+    lines.push_back("Fuites : " + std::to_string(escapes));
 
     if (difficulty == DifficultyMode::Lethal)
     {
-        std::cout << "Morts du personnage : [STATISTIQUE CORROMPUE]" << std::endl;
-        std::cout << "But de mission : survivre." << std::endl;
-        std::cout << "Vous ne deviez pas mourir." << std::endl;
+        lines.push_back("Morts du personnage : [STATISTIQUE CORROMPUE]");
+        lines.push_back("But de mission : survivre.");
+        lines.push_back("Vous ne deviez pas mourir.");
     }
     else
     {
-        std::cout << "Morts du personnage : " << deaths << std::endl;
+        lines.push_back("Morts du personnage : " + std::to_string(deaths));
     }
 
-    std::cout << "Ennemis tués : " << enemiesKilled << std::endl;
-    std::cout << "Boss vaincus : " << bossesKilled << std::endl;
-    std::cout << "JcJ remportés : " << pvpVictories << std::endl;
-    std::cout << "JcJ perdus : " << pvpDefeats << std::endl;
+    lines.push_back("Ennemis tués : " + std::to_string(enemiesKilled));
+    lines.push_back("Boss vaincus : " + std::to_string(bossesKilled));
+    lines.push_back("JcJ remportés : " + std::to_string(pvpVictories));
+    lines.push_back("JcJ perdus : " + std::to_string(pvpDefeats));
 
     if (!pvpLethalEliminations.empty())
     {
-        std::cout << "Éliminations JcJ Léthal :" << std::endl;
+        lines.push_back("");
+        lines.push_back("Éliminations JcJ Léthal :");
 
         for (const std::string& elimination : pvpLethalEliminations)
         {
-            std::cout << "- " << elimination << std::endl;
+            lines.push_back("- " + elimination);
         }
     }
-    std::cout << "====================================" << std::endl;
-    std::cout << std::endl;
+
+    showPlayerScreen("STATISTIQUES DE PARCOURS", "player.career_statistics", lines, false);
 }
+
 
 // EN: isAlteredByCheats declares or implements a focused behavior used by this module.
 // FR: isAlteredByCheats déclare ou implémente un comportement précis utilisé par ce module.
@@ -2187,8 +2227,12 @@ void Player::takeDamage(int damage)
 {
     if (godModeEnabled && damage > 0)
     {
-        std::cout << name << " devrait perdre " << damage << " PV, mais le mode god refuse la réalité." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "MODE GOD",
+            "player.god_mode.damage_refused",
+            {name + " devrait perdre " + std::to_string(damage) + " PV, mais le mode god refuse la réalité."},
+            false
+        );
         return;
     }
 
@@ -2416,7 +2460,7 @@ void Player::initializeStarterInventory(DifficultyMode difficulty)
         Weapon emergencyKnife = WeaponCatalog::createEmergencyWoodKnife();
         inventory.addWeapon(emergencyKnife);
         recordStarterKitEntry("Défense urgente : " + emergencyKnife.getName());
-        std::cout << "Équipement de secours : classe à distance détectée, petit couteau de bois ajouté." << std::endl;
+        MessageScreen::show("KIT DE DÉPART", "player.starter_kit.emergency_weapon", {"Équipement de secours : classe à distance détectée, petit couteau de bois ajouté."}, false);
     }
 
     if (usesStarterAmmunition(type))
@@ -2425,22 +2469,22 @@ void Player::initializeStarterInventory(DifficultyMode difficulty)
         {
             inventory.addMaterial(MaterialCatalog::createById("training_bolts", 14));
             recordStarterKitEntry("Munitions de départ : carreaux d'entraînement x14");
-            std::cout << "Munitions de départ : carreaux d'entraînement x14." << std::endl;
+            MessageScreen::show("MUNITIONS DE DÉPART", "player.starter_kit.bolts", {"Munitions de départ : carreaux d'entraînement x14."}, false);
         }
         else if (type.find("dagues") != std::string::npos || type.find("Dagues") != std::string::npos)
         {
             inventory.addMaterial(MaterialCatalog::createById("training_throwing_knives", 10));
             recordStarterKitEntry("Munitions de départ : couteaux de lancer émoussés x10");
-            std::cout << "Munitions de départ : couteaux de lancer émoussés x10." << std::endl;
+            MessageScreen::show("MUNITIONS DE DÉPART", "player.starter_kit.knives", {"Munitions de départ : couteaux de lancer émoussés x10."}, false);
         }
         else
         {
             inventory.addMaterial(MaterialCatalog::createById("training_arrows", 18));
             recordStarterKitEntry("Munitions de départ : flèches d'entraînement x18");
-            std::cout << "Munitions de départ : flèches d'entraînement x18." << std::endl;
+            MessageScreen::show("MUNITIONS DE DÉPART", "player.starter_kit.arrows", {"Munitions de départ : flèches d'entraînement x18."}, false);
         }
 
-        std::cout << "Les recettes de munitions spéciales se découvrent par exploration, expérience et expérimentation." << std::endl;
+        MessageScreen::show("RECETTES FUTURES", "player.starter_kit.special_ammo_note", {"Les recettes de munitions spéciales se découvrent par exploration, expérience et expérimentation."}, false);
     }
 
     Weapon* starterWeapon = inventory.getMutableWeapon(1);
@@ -2695,9 +2739,15 @@ void Player::levelUp()
         level = MAX_LEVEL;
         experience = 0;
 
-        std::cout << name << " est déjà au niveau maximum : 255." << std::endl;
-        std::cout << "Tous les bits sont à 1. Plus haut, ce serait de la triche... enfin presque." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "NIVEAU MAXIMUM",
+            "player.level.max",
+            {
+                name + " est déjà au niveau maximum : 255.",
+                "Tous les bits sont à 1. Plus haut, ce serait de la triche... enfin presque."
+            },
+            false
+        );
         return;
     }
 
@@ -2710,10 +2760,16 @@ void Player::levelUp()
     maxDamage += 2;
     criticalDamage += 3;
 
-    std::cout << name << " monte au niveau " << level << " !" << std::endl;
-    std::cout << "Ses blessures se referment, et sa puissance augmente." << std::endl;
-    std::cout << "Les attributs avancés dorment encore dans les registres du personnage." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "NIVEAU SUPÉRIEUR",
+        "player.level.up",
+        {
+            name + " monte au niveau " + std::to_string(level) + " !",
+            "Ses blessures se referment, et sa puissance augmente.",
+            "Les attributs avancés dorment encore dans les registres du personnage."
+        },
+        false
+    );
 
     refreshLevelAndIdentitySkills();
 }
@@ -2732,7 +2788,7 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         dodged = true;
         clearLastConsumedAmmunition();
         clearNextAmmunitionChoice();
-        std::cout << name << " est perturbé par le choc électrique et rate son geste." << std::endl;
+        MessageScreen::show("CHOC ÉLECTRIQUE", "player.attack.shock_failed", {name + " est perturbé par le choc électrique et rate son geste."}, false);
         return 0;
     }
 
@@ -2745,7 +2801,7 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         dodgeThreshold += 1;
         normalHitThreshold += 1;
         frostDamagePercent = 85;
-        std::cout << name << " attaque avec des gestes ralentis par le froid." << std::endl;
+        MessageScreen::show("FROID", "player.attack.frost_slow", {name + " attaque avec des gestes ralentis par le froid."}, false);
     }
 
     int bonusMin = 0;
@@ -2795,7 +2851,7 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
                 {
                     clearNextAmmunitionChoice();
                     dodged = true;
-                    std::cout << name << " annule son tir et garde sa munition." << std::endl;
+                    MessageScreen::show("TIR ANNULÉ", "player.attack.ammo_cancel", {name + " annule son tir et garde sa munition."}, false);
                     return 0;
                 }
 
@@ -2828,19 +2884,19 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
                         bonusMin += 3;
                         bonusMax += 5;
                         criticalBonus += 4;
-                        std::cout << name << " consomme une munition élémentaire choisie pour attaquer à distance." << std::endl;
+                        MessageScreen::show("MUNITION ÉLÉMENTAIRE", "player.attack.elemental_ammo", {name + " consomme une munition élémentaire choisie pour attaquer à distance."}, false);
                     }
                     else
                     {
                         bonusMin += 2;
                         bonusMax += 4;
                         criticalBonus += 5;
-                        std::cout << name << " consomme une munition spéciale choisie pour attaquer à distance." << std::endl;
+                        MessageScreen::show("MUNITION SPÉCIALE", "player.attack.special_ammo", {name + " consomme une munition spéciale choisie pour attaquer à distance."}, false);
                     }
                 }
                 else
                 {
-                    std::cout << name << " consomme une munition d'entraînement pour attaquer à distance." << std::endl;
+                    MessageScreen::show("MUNITION", "player.attack.training_ammo", {name + " consomme une munition d'entraînement pour attaquer à distance."}, false);
                 }
             }
             else
@@ -2851,20 +2907,29 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
                 criticalBonus = 0;
 
                 setLastConsumedAmmunition("__emergency_defense__");
-                std::cout << name << " n'a pas de munition adaptée pour ce tir." << std::endl;
-                std::cout << "Défense d'urgence : aucun projectile n'est tiré. Les dégâts représentent seulement un coup de poignée, de branche ou de crosse à très courte portée." << std::endl;
+                MessageScreen::show(
+                    "DÉFENSE D'URGENCE",
+                    "player.attack.no_ammo",
+                    {
+                        name + " n'a pas de munition adaptée pour ce tir.",
+                        "Défense d'urgence : aucun projectile n'est tiré.",
+                        "Les dégâts représentent seulement un coup de poignée, de branche ou de crosse à très courte portée."
+                    },
+                    false
+                );
             }
         }
     }
 
     if (equippedWeapon != nullptr && !equippedWeapon->isBroken() && bossEquipmentSealActive)
     {
-        std::cout << "Le sceau de boss bloque les bonus de " << equippedWeapon->getName() << "." << std::endl;
+        std::vector<std::string> sealLines;
+        sealLines.push_back("Le sceau de boss bloque les bonus de " + equippedWeapon->getName() + ".");
         if (!bossEquipmentSealReason.empty())
         {
-            std::cout << bossEquipmentSealReason << std::endl;
+            sealLines.push_back(bossEquipmentSealReason);
         }
-        std::cout << std::endl;
+        MessageScreen::show("SCEAU DE BOSS", "player.attack.boss_equipment_seal", sealLines, false);
     }
 
     if (resultat <= dodgeThreshold)
@@ -2880,9 +2945,15 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
 
     if (equippedWeapon != nullptr && equippedWeapon->isBroken())
     {
-        std::cout << "L'arme de " << name << " s'abîme sous le choc..." << std::endl;
-        std::cout << equippedWeapon->getName() << " est maintenant cassée et ne donnera plus ses bonus." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ARME CASSÉE",
+            "player.attack.weapon_broken",
+            {
+                "L'arme de " + name + " s'abîme sous le choc...",
+                equippedWeapon->getName() + " est maintenant cassée et ne donnera plus ses bonus."
+            },
+            false
+        );
     }
 
     if (resultat <= normalHitThreshold)
@@ -2925,83 +2996,87 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
 // FR: displayStats déclare ou implémente un comportement précis utilisé par ce module.
 void Player::displayStats() const
 {
-    std::cout << "===== STATS JOUEUR =====" << std::endl;
-    std::cout << "Nom : " << name << std::endl;
-    std::cout << "Race : " << getRaceText() << std::endl;
-    std::cout << "Classe : " << type << std::endl;
-    std::cout << "Niveau : " << level << std::endl;
-    int nextLevelExperience = Level::getExperienceRequiredForNextLevel(level);
+    std::vector<std::string> lines;
+    lines.push_back("Nom : " + name);
+    lines.push_back("Race : " + getRaceText());
+    lines.push_back("Classe : " + type);
+    lines.push_back("Niveau : " + std::to_string(level));
 
+    int nextLevelExperience = Level::getExperienceRequiredForNextLevel(level);
     if (nextLevelExperience > 0)
     {
-        std::cout << "Expérience : " << experience << "/" << nextLevelExperience << std::endl;
+        lines.push_back("Expérience : " + std::to_string(experience) + "/" + std::to_string(nextLevelExperience));
     }
     else
     {
-        std::cout << "Expérience : niveau maximum" << std::endl;
+        lines.push_back("Expérience : niveau maximum");
     }
-    std::cout << "PV : " << hp << "/" << maxHp << std::endl;
-    std::cout << "Dégâts de base : " << minDamage << " - " << maxDamage << std::endl;
-    std::cout << "Critique de base : " << criticalDamage << std::endl;
+
+    lines.push_back("PV : " + std::to_string(hp) + "/" + std::to_string(maxHp));
+    lines.push_back("Dégâts de base : " + std::to_string(minDamage) + " - " + std::to_string(maxDamage));
+    lines.push_back("Critique de base : " + std::to_string(criticalDamage));
 
     if (alteredByCheats)
     {
-        std::cout << "Statut : Altéré" << std::endl;
-        std::cout << "Les souvenirs de ce personnage portent déjà une trace anormale." << std::endl;
+        lines.push_back("");
+        lines.push_back("Statut : Altéré");
+        lines.push_back("Les souvenirs de ce personnage portent déjà une trace anormale.");
     }
 
     if (hasWorldGazePenalty())
     {
-        std::cout << "Effet temporaire : Regard du monde" << std::endl;
-        std::cout << "Les règles t'ont vu essayer de les contourner." << std::endl;
-        std::cout << "Combats restants : " << worldGazeCombatsRemaining << std::endl;
-        std::cout << "PV maximum retenus temporairement : " << worldGazeMaxHpPenalty << std::endl;
+        lines.push_back("");
+        lines.push_back("Effet temporaire : Regard du monde");
+        lines.push_back("Les règles t'ont vu essayer de les contourner.");
+        lines.push_back("Combats restants : " + std::to_string(worldGazeCombatsRemaining));
+        lines.push_back("PV maximum retenus temporairement : " + std::to_string(worldGazeMaxHpPenalty));
     }
 
     if (bossEquipmentSealActive)
     {
-        std::cout << "Effet temporaire de boss : équipement scellé" << std::endl;
+        lines.push_back("");
+        lines.push_back("Effet temporaire de boss : équipement scellé");
         if (!bossEquipmentSealReason.empty())
         {
-            std::cout << bossEquipmentSealReason << std::endl;
+            lines.push_back(bossEquipmentSealReason);
         }
     }
 
     if (zelefCorrosionPresent)
     {
-        std::cout << "Effet boss : Corrosion présente" << std::endl;
-        std::cout << "Zelef garde encore " << zelefMaxHpStolen << " PV maximum quelque part dans son sang noir." << std::endl;
+        lines.push_back("");
+        lines.push_back("Effet boss : Corrosion présente");
+        lines.push_back("Zelef garde encore " + std::to_string(zelefMaxHpStolen) + " PV maximum quelque part dans son sang noir.");
     }
 
     if (grinkaBossTheftPresent)
     {
-        std::cout << "Effet boss : Volé par un boss" << std::endl;
-        std::cout << "Grinka possède encore quelque chose qui appartenait à ce personnage." << std::endl;
+        lines.push_back("");
+        lines.push_back("Effet boss : Volé par un boss");
+        lines.push_back("Grinka possède encore quelque chose qui appartenait à ce personnage.");
     }
 
     if (!unlockedPassiveSkills.empty() || !unlockedActiveSkills.empty())
     {
-        std::cout << "Compétences : "
-                  << unlockedPassiveSkills.size() << " passives, "
-                  << unlockedActiveSkills.size() << " actives" << std::endl;
+        lines.push_back("");
+        lines.push_back(
+            "Compétences : "
+            + std::to_string(unlockedPassiveSkills.size())
+            + " passives, "
+            + std::to_string(unlockedActiveSkills.size())
+            + " actives"
+        );
     }
 
-    std::cout << "Potions de soin : "
-              << inventory.countConsumables(ConsumableType::Healing)
-              << std::endl;
+    lines.push_back("");
+    lines.push_back("Potions de soin : " + std::to_string(inventory.countConsumables(ConsumableType::Healing)));
+    lines.push_back("Potions de rage : " + std::to_string(inventory.countConsumables(ConsumableType::Damage)));
+    lines.push_back("Créé le : " + createdAtText + " | V" + createdForVersion);
+    lines.push_back("Dernière adaptation faite pour la V" + lastAdaptedVersion);
 
-    std::cout << "Potions de rage : "
-              << inventory.countConsumables(ConsumableType::Damage)
-              << std::endl;
-
-    std::cout << "Créé le : " << createdAtText
-              << " | V" << createdForVersion << std::endl;
-    std::cout << "Dernière adaptation faite pour la V"
-              << lastAdaptedVersion << std::endl;
-
-    std::cout << "========================" << std::endl;
-    std::cout << std::endl;
+    showPlayerScreen("STATS JOUEUR", "player.stats", lines, false);
 }
+
 
 // EN: displayInventory declares or implements a focused behavior used by this module.
 // FR: displayInventory déclare ou implémente un comportement précis utilisé par ce module.
@@ -3015,25 +3090,24 @@ void Player::displayInventory() const
 // FR: displaySimpleEquipment déclare ou implémente un comportement précis utilisé par ce module.
 void Player::displaySimpleEquipment() const
 {
-    std::cout << "===== ÉQUIPEMENT =====" << std::endl;
+    std::vector<std::string> lines;
 
     if (hasEquippedWeapon())
     {
         Weapon weapon = getEquippedWeapon();
-
-        std::cout << "Arme équipée : " << weapon.getName();
+        std::string weaponLine = "Arme équipée : " + weapon.getName();
 
         if (!weapon.isIndestructible())
         {
-            std::cout << " (" << weapon.getDurability() << "/" << weapon.getMaxDurability() << ")";
+            weaponLine += " (" + std::to_string(weapon.getDurability()) + "/" + std::to_string(weapon.getMaxDurability()) + ")";
         }
 
         if (weapon.isBroken())
         {
-            std::cout << " - Cassée";
+            weaponLine += " - Cassée";
         }
 
-        std::cout << std::endl;
+        lines.push_back(weaponLine);
 
         if (!weapon.isBroken() && !hasBossEquipmentSeal())
         {
@@ -3045,98 +3119,96 @@ void Player::displaySimpleEquipment() const
 
             if (!affinityLabel.empty())
             {
-                std::cout << "Affinité arme/classe : active, " << affinityLabel << "." << std::endl;
+                lines.push_back("Affinité arme/classe : active, " + affinityLabel + ".");
             }
             else
             {
-                std::cout << "Affinité arme/classe : aucune maîtrise particulière avec cette arme." << std::endl;
+                lines.push_back("Affinité arme/classe : aucune maîtrise particulière avec cette arme.");
             }
         }
         else if (weapon.isBroken())
         {
-            std::cout << "Affinité arme/classe : inactive, l'arme est cassée." << std::endl;
+            lines.push_back("Affinité arme/classe : inactive, l'arme est cassée.");
         }
         else if (hasBossEquipmentSeal())
         {
-            std::cout << "Affinité arme/classe : bloquée par le sceau de boss." << std::endl;
+            lines.push_back("Affinité arme/classe : bloquée par le sceau de boss.");
         }
     }
     else
     {
-        std::cout << "Arme équipée : Aucune" << std::endl;
+        lines.push_back("Arme équipée : Aucune");
     }
 
     if (hasEquippedArmor())
     {
         Armor armor = getEquippedArmor();
-
-        std::cout << "Armure équipée : " << armor.getName();
+        std::string armorLine = "Armure équipée : " + armor.getName();
 
         if (!armor.isIndestructible())
         {
-            std::cout << " (" << armor.getDurability() << "/" << armor.getMaxDurability() << ")";
+            armorLine += " (" + std::to_string(armor.getDurability()) + "/" + std::to_string(armor.getMaxDurability()) + ")";
         }
 
         if (armor.isBroken())
         {
-            std::cout << " - Cassée";
+            armorLine += " - Cassée";
         }
 
-        std::cout << std::endl;
+        lines.push_back(armorLine);
     }
     else
     {
-        std::cout << "Armure équipée : Aucune" << std::endl;
+        lines.push_back("Armure équipée : Aucune");
     }
 
-    std::cout << "Or : " << inventory.getGold() << " pièces" << std::endl;
-    std::cout << "======================" << std::endl;
-    std::cout << std::endl;
+    lines.push_back("Or : " + std::to_string(inventory.getGold()) + " pièces");
+    showPlayerScreen("ÉQUIPEMENT", "player.equipment.simple", lines, false);
 }
+
 
 // EN: displayDetailedEquipment declares or implements a focused behavior used by this module.
 // FR: displayDetailedEquipment déclare ou implémente un comportement précis utilisé par ce module.
 void Player::displayDetailedEquipment() const
 {
-    std::cout << "========== ÉQUIPEMENT DÉTAILLÉ ==========" << std::endl;
-    std::cout << std::endl;
+    std::vector<std::string> lines;
 
+    lines.push_back("Arme équipée :");
     if (hasEquippedWeapon())
     {
         Weapon weapon = getEquippedWeapon();
-
-        std::cout << "=== Arme équipée ===" << std::endl;
-        std::cout << "Nom : " << weapon.getName() << std::endl;
-        std::cout << "Description : " << weapon.getDescription() << std::endl;
-        std::cout << "Bonus dégâts : +"
-                  << weapon.getMinDamageBonus()
-                  << " à +"
-                  << weapon.getMaxDamageBonus()
-                  << std::endl;
-        std::cout << "Bonus critique : +" << weapon.getCriticalBonus() << std::endl;
+        lines.push_back("Nom : " + weapon.getName());
+        lines.push_back("Description : " + weapon.getDescription());
+        lines.push_back(
+            "Bonus dégâts : +"
+            + std::to_string(weapon.getMinDamageBonus())
+            + " à +"
+            + std::to_string(weapon.getMaxDamageBonus())
+        );
+        lines.push_back("Bonus critique : +" + std::to_string(weapon.getCriticalBonus()));
 
         if (weapon.isIndestructible())
         {
-            std::cout << "Durabilité : Indestructible" << std::endl;
+            lines.push_back("Durabilité : Indestructible");
         }
         else
         {
-            std::cout << "Durabilité : " << weapon.getDurability() << "/" << weapon.getMaxDurability() << std::endl;
+            lines.push_back("Durabilité : " + std::to_string(weapon.getDurability()) + "/" + std::to_string(weapon.getMaxDurability()));
         }
 
         if (weapon.isBroken())
         {
-            std::cout << "État : Cassée, ses bonus ne s'appliquent plus." << std::endl;
-            std::cout << "Affinité arme/classe : inactive, l'arme est cassée." << std::endl;
+            lines.push_back("État : Cassée, ses bonus ne s'appliquent plus.");
+            lines.push_back("Affinité arme/classe : inactive, l'arme est cassée.");
         }
         else if (hasBossEquipmentSeal())
         {
-            std::cout << "État : utilisable, mais le sceau de boss bloque ses bonus." << std::endl;
-            std::cout << "Affinité arme/classe : bloquée par le sceau de boss." << std::endl;
+            lines.push_back("État : utilisable, mais le sceau de boss bloque ses bonus.");
+            lines.push_back("Affinité arme/classe : bloquée par le sceau de boss.");
         }
         else
         {
-            std::cout << "État : Utilisable" << std::endl;
+            lines.push_back("État : Utilisable");
 
             std::string affinityLabel = CombatClassSystem::getWeaponAffinityLabel(
                 *this,
@@ -3146,59 +3218,55 @@ void Player::displayDetailedEquipment() const
 
             if (!affinityLabel.empty())
             {
-                std::cout << "Affinité arme/classe : active, " << affinityLabel << "." << std::endl;
-                std::cout << "Effet : très léger bonus de dégâts en combat." << std::endl;
+                lines.push_back("Affinité arme/classe : active, " + affinityLabel + ".");
+                lines.push_back("Effet : très léger bonus de dégâts en combat.");
             }
             else
             {
-                std::cout << "Affinité arme/classe : aucune maîtrise particulière avec cette arme." << std::endl;
+                lines.push_back("Affinité arme/classe : aucune maîtrise particulière avec cette arme.");
             }
         }
     }
     else
     {
-        std::cout << "=== Arme équipée ===" << std::endl;
-        std::cout << "Aucune arme équipée." << std::endl;
+        lines.push_back("Aucune arme équipée.");
     }
 
-    std::cout << std::endl;
-
+    lines.push_back("");
+    lines.push_back("Armure équipée :");
     if (hasEquippedArmor())
     {
         Armor armor = getEquippedArmor();
-
-        std::cout << "=== Armure équipée ===" << std::endl;
-        std::cout << "Nom : " << armor.getName() << std::endl;
-        std::cout << "Description : " << armor.getDescription() << std::endl;
-        std::cout << "Bonus PV max : +" << armor.getMaxHpBonus() << std::endl;
-        std::cout << "Réduction dégâts : " << armor.getDamageReduction() << std::endl;
+        lines.push_back("Nom : " + armor.getName());
+        lines.push_back("Description : " + armor.getDescription());
+        lines.push_back("Bonus PV max : +" + std::to_string(armor.getMaxHpBonus()));
+        lines.push_back("Réduction dégâts : " + std::to_string(armor.getDamageReduction()));
 
         if (armor.isIndestructible())
         {
-            std::cout << "Durabilité : Indestructible" << std::endl;
+            lines.push_back("Durabilité : Indestructible");
         }
         else
         {
-            std::cout << "Durabilité : " << armor.getDurability() << "/" << armor.getMaxDurability() << std::endl;
+            lines.push_back("Durabilité : " + std::to_string(armor.getDurability()) + "/" + std::to_string(armor.getMaxDurability()));
         }
 
         if (armor.isBroken())
         {
-            std::cout << "État : Cassée, ses bonus ne s'appliquent plus." << std::endl;
+            lines.push_back("État : Cassée, ses bonus ne s'appliquent plus.");
         }
         else
         {
-            std::cout << "État : Utilisable" << std::endl;
+            lines.push_back("État : Utilisable");
         }
     }
     else
     {
-        std::cout << "=== Armure équipée ===" << std::endl;
-        std::cout << "Aucune armure équipée." << std::endl;
+        lines.push_back("Aucune armure équipée.");
     }
 
-    std::cout << std::endl;
-    std::cout << "Or : " << inventory.getGold() << " pièces" << std::endl;
-    std::cout << "=========================================" << std::endl;
-    std::cout << std::endl;
+    lines.push_back("");
+    lines.push_back("Or : " + std::to_string(inventory.getGold()) + " pièces");
+    showPlayerScreen("ÉQUIPEMENT DÉTAILLÉ", "player.equipment.detailed", lines, false);
 }
+

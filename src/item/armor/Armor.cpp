@@ -5,7 +5,10 @@
 
 #include "item/armor/Armor.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <vector>
+#include <string>
 
 // EN: Armor declares or implements a focused behavior used by this module.
 // FR: Armor déclare ou implémente un comportement précis utilisé par ce module.
@@ -141,62 +144,60 @@ void Armor::fullyRepair()
     durability = maxDurability;
 }
 
+namespace
+{
+    std::string armorTypeLabel(ArmorType type)
+    {
+        switch (type)
+        {
+            case ArmorType::Cloth:
+                return "Tissu";
+            case ArmorType::Leather:
+                return "Cuir";
+            case ArmorType::Chainmail:
+                return "Maille";
+            case ArmorType::Plate:
+                return "Plaque";
+            case ArmorType::Magical:
+                return "Magique";
+            default:
+                return "Inconnue";
+        }
+    }
+}
+
+std::vector<std::string> Armor::toDisplayLines() const
+{
+    std::vector<std::string> lines = {
+        "===== ARMURE =====",
+        "Nom : " + name,
+        "Description : " + description,
+        "Valeur : " + std::to_string(value) + " pièces",
+        "Type : " + armorTypeLabel(type),
+        "Bonus PV max : " + std::to_string(maxHpBonus),
+        "Réduction dégâts : " + std::to_string(damageReduction)
+    };
+
+    if (isIndestructible())
+    {
+        lines.push_back("Durabilité : Indestructible");
+    }
+    else
+    {
+        lines.push_back("Durabilité : " + std::to_string(durability) + "/" + std::to_string(maxDurability));
+        if (isBroken())
+        {
+            lines.push_back("État : Cassée, ses bonus ne s'appliquent plus.");
+        }
+    }
+
+    lines.push_back("==================");
+    return lines;
+}
+
 // EN: display declares or implements a focused behavior used by this module.
 // FR: display déclare ou implémente un comportement précis utilisé par ce module.
 void Armor::display() const
 {
-    std::cout << "===== ARMURE =====" << std::endl;
-    std::cout << "Nom : " << name << std::endl;
-    std::cout << "Description : " << description << std::endl;
-    std::cout << "Valeur : " << value << " pièces" << std::endl;
-
-    std::cout << "Type : ";
-
-    switch (type)
-    {
-        case ArmorType::Cloth:
-            std::cout << "Tissu";
-            break;
-
-        case ArmorType::Leather:
-            std::cout << "Cuir";
-            break;
-
-        case ArmorType::Chainmail:
-            std::cout << "Maille";
-            break;
-
-        case ArmorType::Plate:
-            std::cout << "Plaque";
-            break;
-
-        case ArmorType::Magical:
-            std::cout << "Magique";
-            break;
-
-        default:
-            std::cout << "Inconnue";
-            break;
-    }
-
-    std::cout << std::endl;
-    std::cout << "Bonus PV max : " << maxHpBonus << std::endl;
-    std::cout << "Réduction dégâts : " << damageReduction << std::endl;
-
-    if (isIndestructible())
-    {
-        std::cout << "Durabilité : Indestructible" << std::endl;
-    }
-    else
-    {
-        std::cout << "Durabilité : " << durability << "/" << maxDurability << std::endl;
-
-        if (isBroken())
-        {
-            std::cout << "État : Cassée, ses bonus ne s'appliquent plus." << std::endl;
-        }
-    }
-
-    std::cout << "==================" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show("ARMURE", "item.armor.display", toDisplayLines(), false);
 }

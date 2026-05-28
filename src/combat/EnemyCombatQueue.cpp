@@ -5,7 +5,9 @@
 
 #include "combat/EnemyCombatQueue.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <sstream>
 
 // EN: EnemyCombatQueue declares or implements a focused behavior used by this module.
 // FR: EnemyCombatQueue déclare ou implémente un comportement précis utilisé par ce module.
@@ -217,9 +219,14 @@ void EnemyCombatQueue::removeDeadAndReplace()
     {
         if (activeEnemies[i].isDead())
         {
-            std::cout << activeEnemies[i].getName()
-                      << " disparaît de la première ligne."
-                      << std::endl;
+            const std::string enemyName = activeEnemies[i].getName();
+
+            MessageScreen::show(
+                "LIGNE ENNEMIE",
+                "combat.wave.enemy_removed",
+                { enemyName + " disparaît de la première ligne." },
+                false
+            );
 
             removeActiveEnemy(i);
             continue;
@@ -229,61 +236,92 @@ void EnemyCombatQueue::removeDeadAndReplace()
     }
 }
 
+// EN: getActiveEnemyDisplayLines returns active enemies as reusable interface lines.
+// FR: getActiveEnemyDisplayLines renvoie les ennemis actifs sous forme de lignes réutilisables par l'interface.
+std::vector<std::string> EnemyCombatQueue::getActiveEnemyDisplayLines() const
+{
+    std::vector<std::string> lines;
+
+    if (activeEnemies.empty())
+    {
+        lines.push_back("Aucun ennemi actif.");
+        return lines;
+    }
+
+    for (int i = 0; i < static_cast<int>(activeEnemies.size()); ++i)
+    {
+        const Monster& monster = activeEnemies[i];
+        std::ostringstream line;
+        line << (i + 1)
+             << " : "
+             << monster.getName()
+             << " | "
+             << monster.getHp()
+             << "/"
+             << monster.getMaxHp()
+             << " PV";
+
+        if (monster.isEvolved())
+        {
+            line << " | variation évoluée";
+        }
+        else if (monster.isElite())
+        {
+            line << " | élite";
+        }
+
+        if (monster.isProvoking())
+        {
+            line << " | provocation";
+        }
+
+        if (monster.hasHealingThreat())
+        {
+            line << " | soigneur marqué";
+        }
+
+        lines.push_back(line.str());
+    }
+
+    return lines;
+}
+
+// EN: getQueueSummaryLines returns wave information without forcing terminal rendering.
+// FR: getQueueSummaryLines renvoie les informations de vague sans imposer le rendu terminal.
+std::vector<std::string> EnemyCombatQueue::getQueueSummaryLines() const
+{
+    return {
+        "Ennemis actifs : " + std::to_string(getActiveEnemyCount()),
+        "Ennemis en attente : " + std::to_string(getWaitingEnemyCount()),
+        "Ennemis blessés encore en vie : " + std::to_string(getDamagedAliveEnemyCount()),
+        "Ennemis vaincus : " + std::to_string(getDefeatedEnemyCount()),
+        "Ennemis en fuite : " + std::to_string(getEscapedEnemyCount()),
+        "Total restant : " + std::to_string(getTotalRemainingEnemyCount())
+    };
+}
+
 // EN: displayActiveEnemies declares or implements a focused behavior used by this module.
 // FR: displayActiveEnemies déclare ou implémente un comportement précis utilisé par ce module.
 void EnemyCombatQueue::displayActiveEnemies() const
 {
-    std::cout << "========== ENNEMIS ACTIFS ==========" << std::endl;
-
-    if (activeEnemies.empty())
-    {
-        std::cout << "Aucun ennemi actif." << std::endl;
-    }
-    else
-    {
-        for (int i = 0; i < static_cast<int>(activeEnemies.size()); ++i)
-        {
-            const Monster& monster = activeEnemies[i];
-
-            std::cout << i + 1
-                      << " : "
-                      << monster.getName()
-                      << " | "
-                      << monster.getHp()
-                      << "/"
-                      << monster.getMaxHp()
-                      << " PV";
-
-            if (monster.isEvolved())
-            {
-                std::cout << " | variation évoluée";
-            }
-            else if (monster.isElite())
-            {
-                std::cout << " | élite";
-            }
-
-            std::cout << std::endl;
-        }
-    }
-
-    std::cout << "====================================" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "ENNEMIS ACTIFS",
+        "combat.wave.active_enemies",
+        getActiveEnemyDisplayLines(),
+        false
+    );
 }
 
 // EN: displayQueueSummary declares or implements a focused behavior used by this module.
 // FR: displayQueueSummary déclare ou implémente un comportement précis utilisé par ce module.
 void EnemyCombatQueue::displayQueueSummary() const
 {
-    std::cout << "========== ÉTAT DE LA VAGUE ==========" << std::endl;
-    std::cout << "Ennemis actifs : " << getActiveEnemyCount() << std::endl;
-    std::cout << "Ennemis en attente : " << getWaitingEnemyCount() << std::endl;
-    std::cout << "Ennemis blessés encore en vie : " << getDamagedAliveEnemyCount() << std::endl;
-    std::cout << "Ennemis vaincus : " << getDefeatedEnemyCount() << std::endl;
-    std::cout << "Ennemis en fuite : " << getEscapedEnemyCount() << std::endl;
-    std::cout << "Total restant : " << getTotalRemainingEnemyCount() << std::endl;
-    std::cout << "======================================" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "ÉTAT DE LA VAGUE",
+        "combat.wave.summary",
+        getQueueSummaryLines(),
+        false
+    );
 }
 
 // EN: canAddActiveEnemy declares or implements a focused behavior used by this module.
@@ -307,16 +345,21 @@ void EnemyCombatQueue::bringNextEnemyIn()
 
     activeEnemies.push_back(next);
 
-    std::cout << next.getName();
+    std::string line = next.getName();
 
     if (next.isEvolved())
     {
-        std::cout << " [variation évoluée]";
+        line += " [variation évoluée]";
     }
 
-    std::cout << " entre dans la première ligne."
-              << std::endl;
-    std::cout << std::endl;
+    line += " entre dans la première ligne.";
+
+    MessageScreen::show(
+        "RENFORT ENNEMI",
+        "combat.wave.enemy_reinforcement",
+        { line },
+        false
+    );
 }
 
 // EN: isDamagedAndAlive declares or implements a focused behavior used by this module.

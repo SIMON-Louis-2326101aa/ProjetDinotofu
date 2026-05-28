@@ -20,6 +20,9 @@ cp README.md READMEFR.md SYSTEMES_PREVUS.txt SPECIAL_CHARACTERS_AND_CHEATS.txt B
 cp tools/linux/DinotofuInstaller.sh "${STAGING_DIR}/Installer-Dinotofu.sh" 2>/dev/null || true
 cp tools/linux/DinotofuLauncher.sh "${STAGING_DIR}/DinotofuLauncher.sh" 2>/dev/null || true
 cp tools/linux/Lancer-Dinotofu.sh "${STAGING_DIR}/Lancer-Dinotofu.sh" 2>/dev/null || true
+cp tools/linux/Lancer-Dinotofu-Terminal.sh "${STAGING_DIR}/Lancer-Dinotofu-Terminal.sh" 2>/dev/null || true
+mkdir -p "${STAGING_DIR}/tools"
+cp -r tools/gui "${STAGING_DIR}/tools/gui"
 cat > "${STAGING_DIR}/dinotofu-installer.config.json" <<JSON
 {
   "repo": "${DINOTOFU_REPO:-TON_COMPTE/TON_REPO}",
@@ -30,7 +33,7 @@ JSON
 mkdir -p "${STAGING_DIR}/output"
 cp output/Dinotofu "${STAGING_DIR}/output/Dinotofu"
 echo "${VERSION}" > "${STAGING_DIR}/version.txt"
-chmod +x "${STAGING_DIR}/output/Dinotofu" "${STAGING_DIR}/Installer-Dinotofu.sh" "${STAGING_DIR}/DinotofuLauncher.sh" "${STAGING_DIR}/Lancer-Dinotofu.sh" || true
+chmod +x "${STAGING_DIR}/output/Dinotofu" "${STAGING_DIR}/Installer-Dinotofu.sh" "${STAGING_DIR}/DinotofuLauncher.sh" "${STAGING_DIR}/Lancer-Dinotofu.sh" "${STAGING_DIR}/Lancer-Dinotofu-Terminal.sh" || true
 
 (
     cd "${PACKAGE_DIR}"

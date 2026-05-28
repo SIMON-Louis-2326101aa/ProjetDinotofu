@@ -10,13 +10,15 @@ MenuOption::MenuOption(
     const std::string& label,
     const std::string& hint,
     bool enabled,
-    const std::string& actionId
+    const std::string& actionId,
+    const MenuOptionItemData& itemData
 )
     : number(number),
       label(label),
       hint(hint),
       actionId(actionId),
-      enabled(enabled)
+      enabled(enabled),
+      itemData(itemData)
 {
 }
 
@@ -43,4 +45,15 @@ const std::string& MenuOption::getActionId() const
 bool MenuOption::isEnabled() const
 {
     return enabled;
+}
+
+
+bool MenuOption::hasStructuredItemData() const
+{
+    return itemData.structured;
+}
+
+const MenuOptionItemData& MenuOption::getItemData() const
+{
+    return itemData;
 }

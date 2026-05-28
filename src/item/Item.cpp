@@ -5,7 +5,10 @@
 
 #include "item/Item.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <vector>
+#include <string>
 
 // EN: Item declares or implements a focused behavior used by this module.
 // FR: Item déclare ou implémente un comportement précis utilisé par ce module.
@@ -44,14 +47,20 @@ int Item::getValue() const
     return value;
 }
 
+std::vector<std::string> Item::toDisplayLines() const
+{
+    return {
+        "===== OBJET =====",
+        "Nom : " + name,
+        "Description : " + description,
+        "Valeur : " + std::to_string(value) + " pièces",
+        "================="
+    };
+}
+
 // EN: display declares or implements a focused behavior used by this module.
 // FR: display déclare ou implémente un comportement précis utilisé par ce module.
 void Item::display() const
 {
-    std::cout << "===== OBJET =====" << std::endl;
-    std::cout << "Nom : " << name << std::endl;
-    std::cout << "Description : " << description << std::endl;
-    std::cout << "Valeur : " << value << " pièces" << std::endl;
-    std::cout << "=================" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show("OBJET", "item.display", toDisplayLines(), false);
 }

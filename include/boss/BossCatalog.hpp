@@ -16,6 +16,8 @@ class BossCatalog
 public:
     // EN: displayAvailableBosses declares or implements a focused behavior used by this module.
     // FR: displayAvailableBosses déclare ou implémente un comportement précis utilisé par ce module.
+    static std::vector<std::string> getAvailableBossLines();
+    static std::vector<std::string> getAvailableBossLines(const std::vector<int>& bossIds);
     static void displayAvailableBosses();
     static void displayAvailableBosses(const std::vector<int>& bossIds);
     static std::string getRegistryDisplayName(int bossId);

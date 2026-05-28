@@ -13,9 +13,11 @@
 
 #include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 #include "interface/model/MenuScreen.hpp"
 
-#include <iostream>
+#include <string>
+#include <vector>
 
 namespace
 {
@@ -87,18 +89,57 @@ bool CombatTargetMenu::openForBoostedAttack(
 // FR: chooseTarget déclare ou implémente un comportement précis utilisé par ce module.
 int CombatTargetMenu::chooseTarget(const EnemyCombatQueue& wave)
 {
-    wave.displayActiveEnemies();
-
     MenuScreen screen("CHOIX DE CIBLE", "combat.target_select");
-    screen.addLine("Choisis une cible.");
-    screen.addLine("Entre le numéro de l'ennemi à sélectionner, ou 0 pour revenir.");
-    screen.addBackOption();
-    TerminalInterface::renderMenuScreen(screen);
+    screen.addLine("Choisis une cible active.");
+    screen.addLine("Les ennemis en attente ne peuvent pas encore être ciblés.");
 
-    int choice = Console::askNumberBetween(
-        0,
-        wave.getActiveEnemyCount(),
-        "Cible invalide. Choisis un ennemi actif, ou 0 pour revenir."
+    for (const std::string& summaryLine : wave.getQueueSummaryLines())
+    {
+        screen.addFooterLine(summaryLine);
+    }
+
+    screen.addBackOption("Retour au menu principal", "combat.target.back");
+
+    for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+    {
+        const Monster& enemy = wave.getActiveEnemy(i);
+        std::string hint = std::to_string(enemy.getHp()) + "/" + std::to_string(enemy.getMaxHp()) + " PV";
+
+        if (enemy.isInvocation())
+        {
+            hint += " | invocation";
+        }
+        else if (enemy.isEvolved())
+        {
+            hint += " | variation évoluée";
+        }
+        else if (enemy.isElite())
+        {
+            hint += " | élite";
+        }
+
+        if (enemy.isProvoking())
+        {
+            hint += " | provocation";
+        }
+
+        if (enemy.hasHealingThreat())
+        {
+            hint += " | soigneur marqué";
+        }
+
+        screen.addOption(
+            i + 1,
+            enemy.getName(),
+            hint,
+            !enemy.isDead(),
+            "combat.target.select." + std::to_string(i)
+        );
+    }
+
+    int choice = TerminalInterface::askMenuChoiceFromOptions(
+        screen,
+        "Cible invalide. Choisis une cible affichée, ou 0 pour revenir."
     );
 
     if (choice == 0)
@@ -130,8 +171,12 @@ bool CombatTargetMenu::openTargetMenu(
 
         if (!wave.isActiveIndexValid(targetIndex))
         {
-            std::cout << "Cette cible n'est plus disponible." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "CIBLE INDISPONIBLE",
+                "combat.target.unavailable",
+                {"Cette cible n'est plus disponible."},
+                false
+            );
             return false;
         }
 
@@ -141,20 +186,25 @@ bool CombatTargetMenu::openTargetMenu(
         {
             const Monster& forcedTarget = wave.getActiveEnemy(forcedTargetIndex);
 
+            std::vector<std::string> lines;
+
             if (forcedTarget.isProvoking())
             {
-                std::cout << forcedTarget.getName()
-                          << " bloque la ligne. Sa provocation t'empêche d'ignorer sa présence."
-                          << std::endl;
+                lines.push_back(forcedTarget.getName() + " bloque la ligne.");
+                lines.push_back("Sa provocation t'empêche d'ignorer sa présence.");
             }
             else
             {
-                std::cout << forcedTarget.getName()
-                          << " vient de soigner un allié. Ton attention se fixe sur le soigneur."
-                          << std::endl;
+                lines.push_back(forcedTarget.getName() + " vient de soigner un allié.");
+                lines.push_back("Ton attention se fixe sur le soigneur.");
             }
 
-            std::cout << std::endl;
+            MessageScreen::show(
+                "CIBLE FORCÉE",
+                "combat.target.forced",
+                lines,
+                false
+            );
             return false;
         }
 

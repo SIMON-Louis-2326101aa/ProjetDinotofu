@@ -8,6 +8,8 @@
 
 #include "entity/Entity.hpp"
 
+#include <vector>
+
 class Boss : public Entity
 {
 private:
@@ -108,6 +110,8 @@ public:
     // EN: decryptStats declares or implements a focused behavior used by this module.
     // FR: decryptStats déclare ou implémente un comportement précis utilisé par ce module.
     void decryptStats();
+
+    std::vector<std::string> toDisplayLines() const;
 
     // EN: displayStats declares or implements a focused behavior used by this module.
     // FR: displayStats déclare ou implémente un comportement précis utilisé par ce module.

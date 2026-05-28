@@ -14,10 +14,12 @@
 #include "combat/role/CombatRoleSystem.hpp"
 
 #include "core/Console.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include "entity/Monster.hpp"
 
-#include <iostream>
+#include <string>
+#include <vector>
 
 namespace
 {
@@ -35,6 +37,15 @@ namespace
 
     // EN: findMostInjuredAllyIndex declares or implements a focused behavior used by this module.
     // FR: findMostInjuredAllyIndex déclare ou implémente un comportement précis utilisé par ce module.
+    void showWaveTurnNotice(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines
+    )
+    {
+        MessageScreen::show(title, screenId, lines, false);
+    }
+
     int findMostInjuredAllyIndex(EnemyCombatQueue& wave, int healerIndex)
     {
         int bestIndex = -1;
@@ -98,21 +109,15 @@ namespace
         ally.heal(healAmount);
         ThreatSystem::markAllyHealingAction(healer, ally);
 
-        std::cout << healer.getName()
-                  << " protège "
-                  << ally.getName()
-                  << " avec un soin rapide. +"
-                  << healAmount
-                  << " PV."
-                  << std::endl;
-        std::cout << ally.getName()
-                  << " possède maintenant "
-                  << ally.getHp()
-                  << "/"
-                  << ally.getMaxHp()
-                  << " PV."
-                  << std::endl;
-        std::cout << std::endl;
+        showWaveTurnNotice(
+            "SOUTIEN DE VAGUE",
+            "wave.monster.support.heal",
+            {
+                healer.getName() + " protège " + ally.getName() + " avec un soin rapide.",
+                "Soin : +" + std::to_string(healAmount) + " PV.",
+                ally.getName() + " possède maintenant " + std::to_string(ally.getHp()) + "/" + std::to_string(ally.getMaxHp()) + " PV."
+            }
+        );
         return true;
     }
 
@@ -194,8 +199,11 @@ void MonsterWaveCombatTurn::playMonsterTurns(
             continue;
         }
 
-        std::cout << "Tour de " << monster.getName() << std::endl;
-        std::cout << std::endl;
+        showWaveTurnNotice(
+            "TOUR DE VAGUE",
+            "wave.monster.turn.start",
+            {"Tour de " + monster.getName() + "."}
+        );
 
         Console::pauseSeconds(1);
 
@@ -266,8 +274,11 @@ void MonsterWaveCombatTurn::playMonsterTurns(
             continue;
         }
 
-        std::cout << "Tour de " << monster.getName() << std::endl;
-        std::cout << std::endl;
+        showWaveTurnNotice(
+            "TOUR DE VAGUE",
+            "wave.monster.turn.start",
+            {"Tour de " + monster.getName() + "."}
+        );
 
         Console::pauseSeconds(1);
 
@@ -303,12 +314,14 @@ void MonsterWaveCombatTurn::playMonsterTurns(
 
             if (summonIndex >= 0)
             {
-                std::cout << monster.getName()
-                          << " se jette sur une invocation au lieu de viser directement "
-                          << player.getName()
-                          << "."
-                          << std::endl;
-                std::cout << std::endl;
+                showWaveTurnNotice(
+                    "CIBLE CHANGÉE",
+                    "wave.monster.target.summon",
+                    {
+                        monster.getName() + " se jette sur une invocation.",
+                        player.getName() + " n'est pas visé directement pendant cette action."
+                    }
+                );
 
                 SummonCombatSystem::entityAttacksSummon(
                     monster,

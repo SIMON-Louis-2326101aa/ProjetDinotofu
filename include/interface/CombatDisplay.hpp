@@ -6,9 +6,13 @@
 #ifndef INCLUDE_INTERFACE_COMBATDISPLAY_HPP
 #define INCLUDE_INTERFACE_COMBATDISPLAY_HPP
 
+#include "combat/EnemyCombatQueue.hpp"
 #include "combat/group/CombatGroup.hpp"
 #include "entity/Entity.hpp"
+#include "combat/summon/Summon.hpp"
 #include "interface/model/CombatStateSnapshot.hpp"
+
+#include <vector>
 
 class CombatDisplay
 {
@@ -29,6 +33,24 @@ public:
     static GuiCombatStateSnapshot buildGroupSnapshot(
         const CombatGroup& playerGroup,
         const CombatGroup& enemyGroup,
+        const std::string& title,
+        const std::string& phase,
+        int turnNumber = 0
+    );
+
+    static GuiCombatStateSnapshot buildWaveSnapshot(
+        const Entity& playerSideEntity,
+        const EnemyCombatQueue& wave,
+        const std::vector<Summon>& playerSummons,
+        const std::string& title,
+        const std::string& phase,
+        int turnNumber = 0
+    );
+
+    static GuiCombatStateSnapshot buildWavePartySnapshot(
+        const std::vector<Entity*>& playerSideEntities,
+        const EnemyCombatQueue& wave,
+        const std::vector<Summon>& playerSummons,
         const std::string& title,
         const std::string& phase,
         int turnNumber = 0

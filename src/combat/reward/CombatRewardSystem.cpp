@@ -511,7 +511,6 @@ void CombatRewardSystem::displayReward(
     }
 
     TerminalInterface::renderMenuScreen(screen, false);
-    std::cout << std::endl;
 }
 
 void CombatRewardSystem::displayPartialReward(
@@ -534,5 +533,4 @@ void CombatRewardSystem::displayPartialReward(
     }
 
     TerminalInterface::renderMenuScreen(screen, false);
-    std::cout << std::endl;
 }

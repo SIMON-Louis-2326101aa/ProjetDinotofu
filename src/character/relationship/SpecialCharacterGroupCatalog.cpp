@@ -6,28 +6,41 @@
 
 #include "character/relationship/SpecialCharacterGroupCatalog.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <vector>
+
+// EN: displayRoadmap declares or implements a focused behavior used by this module.
+// FR: displayRoadmap déclare ou implémente un comportement précis utilisé par ce module.
+std::vector<std::string> SpecialCharacterGroupCatalog::getRoadmapLines()
+{
+    return {
+        "Hazak / Henrique : meilleurs amis.",
+        "Mattzelda / Louis / Trexof : meilleurs potes.",
+        "Aoi / Kanadé / Sanctus : groupe proche.",
+        "Hazak / Hestia : Hazak l'a sauvée et évite les combats à mort avec elle.",
+        "Fail / Hazak : contrat de non-agression.",
+        "Skuro / personnage spécial compatible : Hazak, Henrique, Aoi, Fail ou Kanadé uniquement.",
+        "Skuro / deux personnages spéciaux compatibles : même liste, sans doublon.",
+        "Fire Flight / Matt (PRO) : duo de commandement et de pression.",
+        "Hestia / Sanctus / Hazak : protection sacrée, aucun massacre accepté.",
+        "Fail / Aoi / Kanadé : laboratoire magique, instable mais puissant.",
+        "Louis / Fire Flight / Trexof : test de créateur entre amis, projectiles et failles utiles.",
+        "Henrique / Mattzelda / Skuro : charge instable, humour, endurance et violence lourde.",
+        "Matt (PRO) peut aussi apparaître seul en Combat IA ou via un tirage spécial d'arène.",
+        "Groupe aléatoire normal : aventuriers random sans personnage spécial.",
+        "Sanctus et Skuro sont liés : même âme, deux réponses possibles face à la violence."
+    };
+}
 
 // EN: displayRoadmap declares or implements a focused behavior used by this module.
 // FR: displayRoadmap déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterGroupCatalog::displayRoadmap()
 {
-    std::cout << "========== GROUPES SPECIAUX ==========" << std::endl;
-    std::cout << "Hazak / Henrique : meilleurs amis." << std::endl;
-    std::cout << "Mattzelda / Louis / Trexof : meilleurs potes." << std::endl;
-    std::cout << "Aoi / Kanadé / Sanctus : groupe proche." << std::endl;
-    std::cout << "Hazak / Hestia : Hazak l'a sauvée et évite les combats à mort avec elle." << std::endl;
-    std::cout << "Fail / Hazak : contrat de non-agression." << std::endl;
-    std::cout << "Skuro / personnage spécial compatible : Hazak, Henrique, Aoi, Fail ou Kanadé uniquement." << std::endl;
-    std::cout << "Skuro / deux personnages spéciaux compatibles : même liste, sans doublon." << std::endl;
-    std::cout << "Fire Flight / Matt (PRO) : duo de commandement et de pression." << std::endl;
-    std::cout << "Hestia / Sanctus / Hazak : protection sacrée, aucun massacre accepté." << std::endl;
-    std::cout << "Fail / Aoi / Kanadé : laboratoire magique, instable mais puissant." << std::endl;
-    std::cout << "Louis / Fire Flight / Trexof : test de créateur entre amis, projectiles et failles utiles." << std::endl;
-    std::cout << "Henrique / Mattzelda / Skuro : charge instable, humour, endurance et violence lourde." << std::endl;
-    std::cout << "Matt (PRO) peut aussi apparaître seul en Combat IA ou via un tirage spécial d'arène." << std::endl;
-    std::cout << "Groupe aléatoire normal : aventuriers random sans personnage spécial." << std::endl;
-    std::cout << "Sanctus et Skuro sont liés : même âme, deux réponses possibles face à la violence." << std::endl;
-    std::cout << "======================================" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "GROUPES SPÉCIAUX",
+        "catalog.special_groups.roadmap",
+        getRoadmapLines(),
+        false
+    );
 }

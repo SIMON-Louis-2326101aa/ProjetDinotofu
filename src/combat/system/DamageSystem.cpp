@@ -8,8 +8,10 @@
 
 #include "entity/Player.hpp"
 #include "entity/Monster.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
-#include <iostream>
+#include <string>
+#include <vector>
 
 // EN: calculateReceivedDamage declares or implements a focused behavior used by this module.
 // FR: calculateReceivedDamage déclare ou implémente un comportement précis utilisé par ce module.
@@ -59,9 +61,7 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
 
     if (defendingPlayer != nullptr && defendingPlayer->hasEquippedArmor() && defendingPlayer->hasBossEquipmentSeal())
     {
-        std::cout << "Le sceau de boss empêche l'armure de " << defendingPlayer->getName()
-                  << " de répondre correctement." << std::endl;
-        std::cout << std::endl;
+        rapport.armorBlockedByBossSeal = true;
     }
 
     int classReductionPercentage =
@@ -122,39 +122,78 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
     return rapport;
 }
 
-// EN: displayDamageReport declares or implements a focused behavior used by this module.
-// FR: displayDamageReport déclare ou implémente un comportement précis utilisé par ce module.
-void DamageSystem::displayDamageReport(const Entity& defender, const DamageReport& rapport)
+// EN: buildDamageReportLines declares or implements a focused behavior used by this module.
+// FR: buildDamageReportLines déclare ou implémente un comportement précis utilisé par ce module.
+std::vector<std::string> DamageSystem::buildDamageReportLines(const Entity& defender, const DamageReport& rapport)
 {
+    std::vector<std::string> lines;
+
+    if (rapport.armorBlockedByBossSeal)
+    {
+        lines.push_back("Le sceau de boss empêche l'armure de " + defender.getName() + " de répondre correctement.");
+    }
+
     if (rapport.armorAbsorbedDamage > 0)
     {
-        std::cout << "L'armure de " << defender.getName()
-                  << " absorbe " << rapport.armorAbsorbedDamage
-                  << " dégâts."
-                  << std::endl;
+        lines.push_back(
+            "Armure : " + defender.getName() + " absorbe "
+            + std::to_string(rapport.armorAbsorbedDamage) + " dégât(s)."
+        );
     }
     else if (rapport.armorUsed)
     {
-        std::cout << "L'armure de " << defender.getName()
-                  << " encaisse le choc, mais n'absorbe aucun dégât."
-                  << std::endl;
+        lines.push_back(
+            "Armure : " + defender.getName()
+            + " encaisse le choc, mais n'absorbe aucun dégât."
+        );
     }
 
     if (rapport.armorBrokenDuringImpact)
     {
-        std::cout << "L'armure se fissure sous l'impact et se brise." << std::endl;
-        std::cout << "Elle ne protégera plus son porteur tant qu'elle ne sera pas réparée."
-                  << std::endl;
+        lines.push_back("Rupture : l'armure se fissure sous l'impact et se brise.");
+        lines.push_back("Elle ne protégera plus son porteur tant qu'elle ne sera pas réparée.");
     }
 
     if (rapport.classReducedDamage > 0)
     {
-        std::cout << defender.getName()
-                  << " réduit naturellement "
-                  << rapport.classReducedDamage
-                  << " dégâts grâce à sa résistance de classe."
-                  << std::endl;
+        lines.push_back(
+            "Résistance : " + defender.getName() + " réduit naturellement "
+            + std::to_string(rapport.classReducedDamage)
+            + " dégât(s) grâce à sa résistance de classe."
+        );
     }
+
+    if (!lines.empty())
+    {
+        lines.push_back(
+            "Dégâts reçus après protection : "
+            + std::to_string(rapport.receivedDamage)
+            + " / "
+            + std::to_string(rapport.rawDamage)
+            + " brut(s)."
+        );
+    }
+
+    return lines;
+}
+
+// EN: displayDamageReport declares or implements a focused behavior used by this module.
+// FR: displayDamageReport déclare ou implémente un comportement précis utilisé par ce module.
+void DamageSystem::displayDamageReport(const Entity& defender, const DamageReport& rapport)
+{
+    std::vector<std::string> lines = buildDamageReportLines(defender, rapport);
+
+    if (lines.empty())
+    {
+        return;
+    }
+
+    MessageScreen::show(
+        "RAPPORT DE DÉGÂTS",
+        "combat.damage.report",
+        lines,
+        false
+    );
 }
 
 // EN: applyArmorProtection declares or implements a focused behavior used by this module.

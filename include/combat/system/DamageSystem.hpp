@@ -9,6 +9,9 @@
 #include "combat/DamageReport.hpp"
 #include "entity/Entity.hpp"
 
+#include <string>
+#include <vector>
+
 class DamageSystem
 {
 public:
@@ -17,6 +20,7 @@ public:
     static DamageReport calculateReceivedDamage(Entity& defender, int rawDamage);
     // EN: displayDamageReport declares or implements a focused behavior used by this module.
     // FR: displayDamageReport déclare ou implémente un comportement précis utilisé par ce module.
+    static std::vector<std::string> buildDamageReportLines(const Entity& defender, const DamageReport& rapport);
     static void displayDamageReport(const Entity& defender, const DamageReport& rapport);
 
     // EN: applyArmorProtection declares or implements a focused behavior used by this module.

@@ -18,6 +18,7 @@ cp tools/linux/DinotofuInstaller.sh "${INSTALLER_DIR}/DinotofuInstaller.sh"
 cp tools/linux/DinotofuLauncher.sh "${INSTALLER_DIR}/DinotofuLauncher.sh"
 cp tools/linux/Installer-Dinotofu.sh "${INSTALLER_DIR}/Installer-Dinotofu.sh"
 cp tools/linux/Lancer-Dinotofu.sh "${INSTALLER_DIR}/Lancer-Dinotofu.sh"
+cp tools/linux/Lancer-Dinotofu-Terminal.sh "${INSTALLER_DIR}/Lancer-Dinotofu-Terminal.sh"
 chmod +x "${INSTALLER_DIR}"/*.sh
 
 cat > "${INSTALLER_DIR}/dinotofu-installer.config.json" <<JSON
@@ -36,7 +37,7 @@ Dinotofu Installer Linux
 3. Le script telecharge la derniere release Linux depuis GitHub.
 4. Par defaut, il installe Dinotofu dans ~/Downloads/ProjetDinotofu.
 5. Tu peux choisir un autre dossier parent, mais le dossier final s'appellera toujours ProjetDinotofu.
-6. Il cree un raccourci Linux si possible.
+6. Il cree deux raccourcis Linux si possible : ProjetDinotofu Launcher et ProjetDinotofu Launcher Terminal version.
 7. Le launcher verifie les mises a jour au lancement.
 
 Dependances generalement deja presentes : bash, curl, unzip, python3.

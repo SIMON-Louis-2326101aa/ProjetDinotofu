@@ -6,10 +6,49 @@
 #include "interface/menu/equipment/EquipmentDisplay.hpp"
 
 #include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <iostream>
 #include <sstream>
 #include <string>
+
+namespace
+{
+    MenuOptionItemData makeWeaponItemData(const Weapon& weapon, const std::string& actionType)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "weapon";
+        itemData.section = "Équipement - armes";
+        itemData.actionType = actionType;
+        itemData.name = weapon.getName();
+        itemData.detail = "Dégâts : +" + std::to_string(weapon.getMinDamageBonus())
+            + " à +" + std::to_string(weapon.getMaxDamageBonus())
+            + " | Critique : +" + std::to_string(weapon.getCriticalBonus());
+        itemData.status = weapon.isBroken() ? "Cassée" : "Utilisable";
+        itemData.progress = "Durabilité : " + EquipmentDisplay::weaponDurabilityText(weapon);
+        itemData.price = std::to_string(weapon.getValue()) + " or";
+        itemData.important = weapon.isBroken();
+        return itemData;
+    }
+
+    MenuOptionItemData makeArmorItemData(const Armor& armor, const std::string& actionType)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "armor";
+        itemData.section = "Équipement - armures";
+        itemData.actionType = actionType;
+        itemData.name = armor.getName();
+        itemData.detail = "PV max : +" + std::to_string(armor.getMaxHpBonus())
+            + " | Réduction : " + std::to_string(armor.getDamageReduction());
+        itemData.status = armor.isBroken() ? "Cassée" : "Utilisable";
+        itemData.progress = "Durabilité : " + EquipmentDisplay::armorDurabilityText(armor);
+        itemData.price = std::to_string(armor.getValue()) + " or";
+        itemData.important = armor.isBroken();
+        return itemData;
+    }
+}
 
 MenuScreen EquipmentDisplay::buildMainScreen()
 {
@@ -29,11 +68,18 @@ MenuScreen EquipmentDisplay::buildWeaponListScreen(const Player& player)
     for (int i = 0; i < player.getInventory().getWeaponCount(); ++i)
     {
         Weapon weapon = player.getInventory().getWeapon(i);
-        screen.addLine(weaponSummaryText(weapon, i));
+        screen.addOption(
+            i,
+            weapon.getName(),
+            "Choisir cette arme puis inspecter, comparer ou équiper.",
+            true,
+            "equipment.weapon.select." + std::to_string(i),
+            makeWeaponItemData(weapon, "select")
+        );
     }
 
-    screen.addFooterLine("Choisis l'arme à équiper.");
-    screen.addFooterLine("Entre son numéro, ou -1 pour revenir.");
+    screen.addOption(-1, "Retour", "Revenir sans changer d'arme.", true, "equipment.weapon.back");
+    screen.addFooterLine("Choisis l'arme à équiper, ou -1 pour revenir.");
     return screen;
 }
 
@@ -44,11 +90,18 @@ MenuScreen EquipmentDisplay::buildArmorListScreen(const Player& player)
     for (int i = 0; i < player.getInventory().getArmorCount(); ++i)
     {
         Armor armor = player.getInventory().getArmor(i);
-        screen.addLine(armorSummaryText(armor, i));
+        screen.addOption(
+            i,
+            armor.getName(),
+            "Choisir cette protection puis inspecter, comparer ou équiper.",
+            true,
+            "equipment.armor.select." + std::to_string(i),
+            makeArmorItemData(armor, "select")
+        );
     }
 
-    screen.addFooterLine("Choisis l'armure à équiper.");
-    screen.addFooterLine("Entre son numéro, ou -1 pour revenir.");
+    screen.addOption(-1, "Retour", "Revenir sans changer de tenue.", true, "equipment.armor.back");
+    screen.addFooterLine("Choisis l'armure à équiper, ou -1 pour revenir.");
     return screen;
 }
 
@@ -58,9 +111,9 @@ MenuScreen EquipmentDisplay::buildSelectedWeaponScreen(const Weapon& weapon)
     screen.addLine("Arme : " + weapon.getName());
     screen.addLine("Durabilité : " + weaponDurabilityText(weapon));
     screen.addBackOption("Retour", "equipment.weapon.back");
-    screen.addOption(1, "Inspecter", "Voir la description et les détails de l'arme.", true, "equipment.weapon.inspect");
-    screen.addOption(2, "Comparer", "Comparer avec l'arme actuellement équipée.", true, "equipment.weapon.compare");
-    screen.addOption(3, "Équiper", "Remplacer l'arme actuelle par cette arme.", true, "equipment.weapon.equip");
+    screen.addOption(1, "Inspecter", "Voir la description et les détails de l'arme.", true, "equipment.weapon.inspect", makeWeaponItemData(weapon, "inspect"));
+    screen.addOption(2, "Comparer", "Comparer avec l'arme actuellement équipée.", true, "equipment.weapon.compare", makeWeaponItemData(weapon, "inspect"));
+    screen.addOption(3, "Équiper", "Remplacer l'arme actuelle par cette arme.", true, "equipment.weapon.equip", makeWeaponItemData(weapon, "equip"));
     return screen;
 }
 
@@ -70,9 +123,9 @@ MenuScreen EquipmentDisplay::buildSelectedArmorScreen(const Armor& armor)
     screen.addLine("Armure : " + armor.getName());
     screen.addLine("Durabilité : " + armorDurabilityText(armor));
     screen.addBackOption("Retour", "equipment.armor.back");
-    screen.addOption(1, "Inspecter", "Voir la description et les détails de l'armure.", true, "equipment.armor.inspect");
-    screen.addOption(2, "Comparer", "Comparer avec l'armure actuellement équipée.", true, "equipment.armor.compare");
-    screen.addOption(3, "Équiper", "Remplacer l'armure actuelle par cette armure.", true, "equipment.armor.equip");
+    screen.addOption(1, "Inspecter", "Voir la description et les détails de l'armure.", true, "equipment.armor.inspect", makeArmorItemData(armor, "inspect"));
+    screen.addOption(2, "Comparer", "Comparer avec l'armure actuellement équipée.", true, "equipment.armor.compare", makeArmorItemData(armor, "inspect"));
+    screen.addOption(3, "Équiper", "Remplacer l'armure actuelle par cette armure.", true, "equipment.armor.equip", makeArmorItemData(armor, "equip"));
     return screen;
 }
 
@@ -136,12 +189,22 @@ std::string EquipmentDisplay::armorSummaryText(const Armor& armor, int index)
 
 void EquipmentDisplay::displayWeaponSummary(const Weapon& weapon, int index)
 {
-    std::cout << weaponSummaryText(weapon, index) << std::endl;
+    MessageScreen::show(
+        "ARME",
+        "equipment.weapon.summary",
+        {weaponSummaryText(weapon, index)},
+        false
+    );
 }
 
 void EquipmentDisplay::displayArmorSummary(const Armor& armor, int index)
 {
-    std::cout << armorSummaryText(armor, index) << std::endl;
+    MessageScreen::show(
+        "ARMURE",
+        "equipment.armor.summary",
+        {armorSummaryText(armor, index)},
+        false
+    );
 }
 
 std::string EquipmentDisplay::weaponDurabilityText(const Weapon& weapon)

@@ -8,6 +8,7 @@
 
 #include "entity/Monster.hpp"
 
+#include <string>
 #include <vector>
 
 class EnemyCombatQueue
@@ -90,6 +91,8 @@ public:
 
     // EN: displayActiveEnemies declares or implements a focused behavior used by this module.
     // FR: displayActiveEnemies déclare ou implémente un comportement précis utilisé par ce module.
+    std::vector<std::string> getActiveEnemyDisplayLines() const;
+    std::vector<std::string> getQueueSummaryLines() const;
     void displayActiveEnemies() const;
     // EN: displayQueueSummary declares or implements a focused behavior used by this module.
     // FR: displayQueueSummary déclare ou implémente un comportement précis utilisé par ce module.

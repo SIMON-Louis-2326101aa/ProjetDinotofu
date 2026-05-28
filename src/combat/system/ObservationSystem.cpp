@@ -5,17 +5,23 @@
 
 #include "combat/system/ObservationSystem.hpp"
 
+#include "interface/menu/common/MessageScreen.hpp"
+
 #include <iostream>
 
 // EN: displayFailedDecryptionAttempt declares or implements a focused behavior used by this module.
 // FR: displayFailedDecryptionAttempt déclare ou implémente un comportement précis utilisé par ce module.
 void ObservationSystem::displayFailedDecryptionAttempt(const Entity& target)
 {
-    std::cout << "Tentative de décryptage échouée." << std::endl;
-    std::cout << "Les données de " << target.getName()
-              << " restent brouillées par une force beaucoup trop élevée." << std::endl;
-    std::cout << "L'interface refuse encore d'afficher ses statistiques." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "DÉCRYPTAGE ÉCHOUÉ",
+        "combat.observation.decrypt.failed",
+        {
+            "Tentative de décryptage échouée.",
+            "Les données de " + target.getName() + " restent brouillées par une force beaucoup trop élevée.",
+            "L'interface refuse encore d'afficher ses statistiques."
+        }
+    );
 }
 
 // EN: displayTerminalStats declares or implements a focused behavior used by this module.

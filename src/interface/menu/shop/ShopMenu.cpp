@@ -14,13 +14,16 @@
 #include "economy/shop/ShopRotationSystem.hpp"
 #include "economy/shop/ShopTransactionSystem.hpp"
 #include "interface/menu/quest/QuestMenu.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "item/material/MaterialCatalog.hpp"
+#include "item/material/Material.hpp"
 
 #include <algorithm>
 #include <iostream>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -31,6 +34,18 @@ namespace
         std::string materialId;
         std::string label;
         int quantity;
+    };
+
+    struct SellableEntryUiInfo
+    {
+        std::string name;
+        std::string quantity;
+        std::string price;
+        std::string maxQuantity;
+        std::string status;
+        std::string detail;
+        std::string label;
+        bool sellable = false;
     };
 
     std::vector<BarterRequirement> getBlackMarketBarterRequirements(const ShopItem& item)
@@ -351,6 +366,155 @@ namespace
         }
     }
 
+
+    std::string chooseRandomLine(const std::vector<std::string>& lines)
+    {
+        if (lines.empty())
+        {
+            return "";
+        }
+
+        static std::mt19937 generator(std::random_device{}());
+        std::uniform_int_distribution<int> distribution(0, static_cast<int>(lines.size()) - 1);
+        return lines[distribution(generator)];
+    }
+
+    std::string chooseShopIntroLine(ShopType type)
+    {
+        if (type == ShopType::BlackMarket)
+        {
+            return chooseRandomLine({
+                "Un rideau se ferme derrière toi. Le contact ne demande pas ton nom, ce qui est rarement bon signe.",
+                "Le contact tapote le comptoir : ici, les garanties durent moins longtemps que les mensonges.",
+                "Une odeur de métal froid flotte dans l'air. Même les prix ont l'air de cacher quelque chose."
+            });
+        }
+
+        if (type == ShopType::Library)
+        {
+            return chooseRandomLine({
+                "La bibliothécaire relève les yeux : les livres dangereux sont rangés assez haut pour décourager les idiots motivés.",
+                "Des pages bougent toutes seules dans un coin. Personne ne commente, donc tu fais pareil.",
+                "Le silence ici pèse plus lourd qu'une armure, mais au moins il ne coûte pas encore de taxe."
+            });
+        }
+
+        if (type == ShopType::Weapon || type == ShopType::Blacksmith)
+        {
+            return chooseRandomLine({
+                "Le métal chante derrière le comptoir. Le vendeur sourit comme si une bonne lame réglait tous les débats.",
+                "On te jauge les bras avant de te montrer les articles. Apparemment, le style ne suffit pas à porter une hache.",
+                "Un client teste une lame dans le vide. Tout le monde fait semblant que c'était maîtrisé."
+            });
+        }
+
+        if (type == ShopType::Armor)
+        {
+            return chooseRandomLine({
+                "L'armurier tape sur une cuirasse : si ça sonne creux, c'est soit fragile, soit toi dedans.",
+                "Des protections cabossées attendent réparation. Certaines ont clairement vécu une meilleure histoire que leur propriétaire.",
+                "Le vendeur inspecte tes épaules comme s'il savait déjà où le prochain monstre va mordre."
+            });
+        }
+
+        if (type == ShopType::Plant || type == ShopType::Alchemist || type == ShopType::Consumable)
+        {
+            return chooseRandomLine({
+                "Des flacons frémissent doucement. L'étiquette 'ne pas boire' semble surtout être une suggestion juridique.",
+                "L'odeur des plantes couvre presque celle des expériences ratées. Presque.",
+                "Le vendeur range une fiole trop vite. Tu décides de ne pas demander ce qu'elle faisait avant ton arrivée."
+            });
+        }
+
+        return chooseRandomLine({
+            "Le marchand t'accueille avec le sourire prudent de quelqu'un qui a déjà vu des aventuriers compter jusqu'à trois avec difficulté.",
+            "Le comptoir craque sous les marchandises. Lui, au moins, a une barre de durabilité réaliste.",
+            "Quelques clients chuchotent. Visiblement, ici aussi, ton inventaire intéresse plus de monde que ta santé mentale."
+        });
+    }
+
+    MenuScreen buildShopConfirmationScreen(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        const std::string& confirmLabel,
+        const std::string& cancelLabel,
+        const std::string& actionPrefix
+    )
+    {
+        MenuScreen screen(title, screenId);
+        screen.setChoiceInput("Choisis 1 pour confirmer ou 2 pour annuler.");
+
+        for (const std::string& line : lines)
+        {
+            screen.addLine(line);
+        }
+
+        screen.addOption(1, confirmLabel, "Valider l'action affichée.", true, actionPrefix + ".confirm");
+        screen.addOption(2, cancelLabel, "Revenir sans rien changer.", true, actionPrefix + ".cancel");
+        return screen;
+    }
+
+    bool askShopConfirmation(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        const std::string& confirmLabel,
+        const std::string& cancelLabel,
+        const std::string& actionPrefix
+    )
+    {
+        Console::clear();
+        const MenuScreen screen = buildShopConfirmationScreen(
+            title,
+            screenId,
+            lines,
+            confirmLabel,
+            cancelLabel,
+            actionPrefix
+        );
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Choix refusé : utilise 1 pour confirmer ou 2 pour annuler."
+        );
+        return choice == 1;
+    }
+
+    std::vector<std::string> withTransactionNotes(std::vector<std::string> lines)
+    {
+        const std::vector<std::string> notes = ShopTransactionSystem::consumeLastTransactionNotes();
+        if (!notes.empty())
+        {
+            lines.push_back("");
+            lines.push_back("Détails de transaction :");
+            for (const std::string& note : notes)
+            {
+                lines.push_back("- " + note);
+            }
+        }
+        return lines;
+    }
+
+    void showShopResult(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines
+    )
+    {
+        Console::clear();
+        MessageScreen::show(title, screenId, lines);
+    }
+
+    void showShopTransactionResult(
+        const std::string& title,
+        const std::string& screenId,
+        std::vector<std::string> lines
+    )
+    {
+        showShopResult(title, screenId, withTransactionNotes(lines));
+    }
+
     MenuScreen buildShopListScreen(const std::vector<ShopInventory>& shops, const Player* player)
     {
         MenuScreen screen("BOUTIQUES", "shop.hub");
@@ -389,13 +553,36 @@ namespace
         MenuScreen screen(shop.getName(), "shop.single");
         screen.addLine("Or disponible : " + std::to_string(player.getInventory().getGold()) + " pièces");
         screen.addLine("Interlocuteur : " + vendorName);
+        screen.addLine("Accueil : " + chooseShopIntroLine(shop.getType()));
+
+        const int buybackCount = ShopTransactionSystem::getBuybackEntryCount(shop.getType());
+        if (buybackCount > 0)
+        {
+            screen.addLine("Rachat disponible : " + std::to_string(buybackCount) + " vente(s) récupérable(s) avant le prochain combat.");
+        }
+        else
+        {
+            screen.addLine("Rachat disponible : aucune vente récente dans cette boutique.");
+        }
+
         screen.addOption(0, "Retour", "", true, "shop.single.back");
-        screen.addOption(1, "Acheter", "", true, "shop.single.buy");
-        screen.addOption(2, "Vendre", "", true, "shop.single.sell");
+        screen.addOption(1, "Acheter", "Voir le stock et les prix de cette boutique.", true, "shop.single.buy");
+        screen.addOption(2, "Vendre", "Proposer des objets compatibles avec ce marchand.", true, "shop.single.sell");
         screen.addOption(3, "Discuter avec " + vendorName, "", true, "shop.single.talk");
         screen.addOption(4, "Quêtes de " + vendorName, "", true, "shop.single.quest");
+        screen.addOption(
+            5,
+            "Racheter une vente récente",
+            buybackCount > 0
+                ? "Seulement avant le prochain combat, avec un surcoût de récupération."
+                : "Aucune vente récente n'est récupérable ici pour le moment.",
+            buybackCount > 0,
+            "shop.single.buyback"
+        );
         return screen;
     }
+
+    int getMaxBuyQuantity(const ShopItem& item, const Player& player, int finalPrice);
 
     MenuScreen buildVendorTalkScreen(const ShopInventory& shop)
     {
@@ -425,6 +612,7 @@ namespace
             return screen;
         }
 
+        screen.setPagination(pageIndex, totalPages);
         screen.addLine("Page " + std::to_string(pageIndex + 1) + " / " + std::to_string(totalPages));
         screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, items.size()));
 
@@ -437,33 +625,71 @@ namespace
                 player.getType()
             );
 
+            const bool canBuyNow = ShopTransactionSystem::canBeBoughtNow(items[i]);
+            const bool soldOut = items[i].isSoldOut();
+            const bool barterOffer = hasBlackMarketBarterOffer(shop, items[i]);
+            const int barterMax = barterOffer ? getMaxBarterQuantity(items[i], player) : 0;
+            const std::string categoryLabel = shopItemCategoryToText(items[i].getCategory());
+
             std::string label = items[i].getName()
+                + " | Catégorie : " + categoryLabel
                 + " | Prix : " + std::to_string(finalPrice) + " or";
 
-            if (items[i].getStock() > 0)
+            if (items[i].getStock() >= 0)
             {
                 label += " | Stock : " + std::to_string(items[i].getStock());
             }
+            else
+            {
+                label += " | Stock : non limité";
+            }
 
-            if (items[i].isSoldOut())
+            if (soldOut)
             {
                 label += " | Épuisé";
             }
-            else if (!ShopTransactionSystem::canBeBoughtNow(items[i]))
+            else if (!canBuyNow)
             {
                 label += " | Indisponible";
             }
 
-            if (hasBlackMarketBarterOffer(shop, items[i]))
+            if (barterOffer)
             {
-                const int barterMax = getMaxBarterQuantity(items[i], player);
                 label += " | Troc : " + formatBarterRequirements(items[i]);
                 label += barterMax > 0
                     ? " | Troc possible x" + std::to_string(barterMax)
                     : " | Troc impossible maintenant";
             }
 
-            screen.addOption(localIndex, label, "", true, "shop.stock.select." + std::to_string(i));
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "shop";
+            itemData.section = categoryLabel;
+            itemData.actionType = barterOffer ? "buy" : "buy";
+            itemData.name = items[i].getName();
+            itemData.detail = items[i].getDescription();
+            itemData.price = std::to_string(finalPrice) + " or";
+            itemData.stock = items[i].getStock() >= 0 ? std::to_string(items[i].getStock()) : "non limité";
+            if (soldOut)
+            {
+                itemData.status = "Épuisé";
+            }
+            else if (!canBuyNow)
+            {
+                itemData.status = "Indisponible";
+            }
+            else if (getMaxBuyQuantity(items[i], player, finalPrice) <= 0)
+            {
+                itemData.status = "Or insuffisant";
+            }
+            if (barterOffer)
+            {
+                itemData.reward = "Troc : " + formatBarterRequirements(items[i]);
+                itemData.maxQuantity = barterMax > 0 ? std::to_string(barterMax) : "0";
+            }
+            itemData.important = soldOut || !canBuyNow || barterOffer;
+
+            screen.addOption(localIndex, label, "", true, "shop.stock.select." + std::to_string(i), itemData);
         }
 
         if (pageIndex > 0)
@@ -477,11 +703,6 @@ namespace
         screen.addOption(0, "Retour", "", true, "shop.stock.back");
 
         return screen;
-    }
-
-    void displayShopStockPage(const ShopInventory& shop, const Player& player, std::size_t pageIndex, std::size_t itemsPerPage)
-    {
-        TerminalInterface::renderMenuScreen(buildShopStockScreen(shop, player, pageIndex, itemsPerPage));
     }
 
     // EN: inspectShopItem declares or implements a focused behavior used by this module.
@@ -511,6 +732,85 @@ namespace
         return std::max(0, maxQuantity);
     }
 
+
+    SellableEntryUiInfo getSellableEntryUiInfo(const Player& player, ShopType shopType, int index)
+    {
+        SellableEntryUiInfo info;
+
+        if (shopType == ShopType::Weapon && player.getInventory().hasWeapon(index))
+        {
+            info.name = player.getInventory().getWeapon(index).getName();
+            info.detail = "Arme possédée par le personnage.";
+        }
+        else if (shopType == ShopType::Armor && player.getInventory().hasArmor(index))
+        {
+            info.name = player.getInventory().getArmor(index).getName();
+            info.detail = "Armure ou tenue possédée par le personnage.";
+        }
+        else if (shopType == ShopType::Consumable && player.getInventory().hasConsumable(index))
+        {
+            info.name = player.getInventory().getConsumable(index).getName();
+            info.detail = "Consommable présent dans l'inventaire.";
+        }
+        else if (player.getInventory().hasMaterial(index))
+        {
+            Material material = player.getInventory().getMaterial(index);
+            info.name = material.getName();
+            info.quantity = "x" + std::to_string(material.getQuantity());
+            info.detail = "Matériau présent dans l'inventaire.";
+
+            if (material.hasSpecialQuality())
+            {
+                info.status = "Qualité : " + material.getQualityLabel();
+            }
+        }
+        else
+        {
+            info.name = "Entrée inconnue";
+            info.status = "Invalide";
+            info.detail = "Cette entrée ne peut pas être résolue dans l'inventaire.";
+        }
+
+        info.sellable = ShopTransactionSystem::canShopBuyInventoryEntry(player, shopType, index);
+        if (!info.sellable)
+        {
+            if (info.status.empty())
+            {
+                info.status = "Protégé";
+            }
+            info.label = info.name;
+            if (!info.quantity.empty())
+            {
+                info.label += " " + info.quantity;
+            }
+            info.label += " | Statut : " + info.status;
+            return info;
+        }
+
+        const int sellPrice = ShopTransactionSystem::getSellPriceForEntry(player, shopType, index);
+        const int maxQuantity = ShopTransactionSystem::getMaxSellQuantityForEntry(player, shopType, index);
+        info.price = std::to_string(sellPrice) + " or";
+        info.maxQuantity = "x" + std::to_string(maxQuantity);
+
+        info.label = info.name;
+        if (!info.quantity.empty())
+        {
+            info.label += " " + info.quantity;
+        }
+        if (!info.status.empty())
+        {
+            info.label += " | " + info.status;
+        }
+        info.label += " | Revente : " + info.price;
+        info.label += " | Max : " + info.maxQuantity;
+        return info;
+    }
+
+    std::string sellableEntryLabel(const Player& player, ShopType shopType, int index)
+    {
+        return getSellableEntryUiInfo(player, shopType, index).label;
+    }
+
     MenuScreen buildShopItemScreen(const ShopInventory& shop, const ShopItem& item, const Player& player, bool withActions)
     {
         int finalBuyPrice = ShopPriceRules::applyBuyModifier(
@@ -527,8 +827,12 @@ namespace
 
         MenuScreen screen("ARTICLE", "shop.item");
         screen.addLine("Nom : " + item.getName());
+        screen.addLine("Catégorie : " + std::string(shopItemCategoryToText(item.getCategory())));
         screen.addLine("Description : " + item.getDescription());
         screen.addLine("Prix d'achat : " + std::to_string(finalBuyPrice) + " or");
+        screen.addLine(item.getStock() >= 0
+            ? "Stock : " + std::to_string(item.getStock())
+            : "Stock : non limité");
 
         int maxBuyQuantity = getMaxBuyQuantity(item, player, finalBuyPrice);
         if (maxBuyQuantity > 0)
@@ -572,12 +876,60 @@ namespace
         if (withActions)
         {
             const bool barterAvailable = hasBlackMarketBarterOffer(shop, item);
+            const bool canBuyWithGold = maxBuyQuantity > 0;
+            const int maxBarterQuantity = barterAvailable ? getMaxBarterQuantity(item, player) : 0;
+
+            MenuOptionItemData buyData;
+            buyData.structured = true;
+            buyData.kind = "shop";
+            buyData.section = shopItemCategoryToText(item.getCategory());
+            buyData.actionType = "buy";
+            buyData.name = item.getName();
+            buyData.detail = item.getDescription();
+            buyData.price = std::to_string(finalBuyPrice) + " or";
+            buyData.stock = item.getStock() >= 0 ? std::to_string(item.getStock()) : "non limité";
+            buyData.maxQuantity = std::to_string(maxBuyQuantity);
+            buyData.status = canBuyWithGold ? "Disponible" : "Bloqué";
+            buyData.important = !canBuyWithGold;
+
             screen.addOption(0, "Retour", "", true, "shop.item.back");
-            screen.addOption(1, "Acheter avec de l'or", "", true, "shop.item.buy");
-            screen.addOption(2, "Inspecter encore", "", true, "shop.item.inspect");
+            screen.addOption(
+                1,
+                "Acheter avec de l'or",
+                canBuyWithGold
+                    ? "Acheter cet article avec l'or disponible."
+                    : "Achat impossible maintenant : or, stock ou disponibilité insuffisante.",
+                canBuyWithGold,
+                "shop.item.buy",
+                buyData
+            );
+            screen.addOption(2, "Inspecter encore", "Relire les détails sans transaction.", true, "shop.item.inspect");
+
             if (barterAvailable)
             {
-                screen.addOption(3, "Troquer des objets", "", true, "shop.item.barter");
+                MenuOptionItemData barterData;
+                barterData.structured = true;
+                barterData.kind = "shop";
+                barterData.section = "Marché noir";
+                barterData.actionType = "barter";
+                barterData.name = item.getName();
+                barterData.detail = item.getDescription();
+                barterData.reward = "Demande : " + formatBarterRequirements(item);
+                barterData.stock = item.getStock() >= 0 ? std::to_string(item.getStock()) : "non limité";
+                barterData.maxQuantity = std::to_string(maxBarterQuantity);
+                barterData.status = maxBarterQuantity > 0 ? "Troc possible" : "Composants insuffisants";
+                barterData.important = maxBarterQuantity <= 0;
+
+                screen.addOption(
+                    3,
+                    "Troquer des objets",
+                    maxBarterQuantity > 0
+                        ? "Échanger les composants demandés contre cet article."
+                        : "Troc impossible maintenant : composants ou stock insuffisants.",
+                    maxBarterQuantity > 0,
+                    "shop.item.barter",
+                    barterData
+                );
             }
         }
 
@@ -593,30 +945,51 @@ namespace
         while (selling)
         {
             Console::clear();
-            std::cout << "========== REVENTE ==========" << std::endl;
-            std::cout << "Boutique : " << shop.getName() << std::endl;
-            std::cout << "Or actuel : " << player.getInventory().getGold() << " pièces" << std::endl;
-            std::cout << "0 : Retour" << std::endl;
-            std::cout << std::endl;
-
-            ShopTransactionSystem::displaySellableEntries(player, shop.getType());
-
             int maxChoice = ShopTransactionSystem::getSellableEntryCount(player, shop.getType());
+            MenuScreen sellScreen("REVENTE", "shop.sell");
+            sellScreen.addLine("Boutique : " + shop.getName());
+            sellScreen.addLine("Or actuel : " + std::to_string(player.getInventory().getGold()) + " pièces");
+            sellScreen.addBackOption("Retour", "shop.sell.back");
 
             if (maxChoice <= 0)
             {
-                std::cout << std::endl;
-                Console::waitForEnter();
+                sellScreen.addLine("Rien à vendre ici pour le moment.");
+                TerminalInterface::askMenuChoice(sellScreen, 0, 0, "Entre 0 pour revenir.");
+                Console::clear();
                 return;
             }
 
-            std::cout << std::endl;
-            std::cout << "> ";
+            for (int i = 0; i < maxChoice; ++i)
+            {
+                const SellableEntryUiInfo entryInfo = getSellableEntryUiInfo(player, shop.getType(), i);
+                MenuOptionItemData itemData;
+                itemData.structured = true;
+                itemData.kind = "shop";
+                itemData.section = "Revente";
+                itemData.actionType = "sell";
+                itemData.name = entryInfo.name;
+                itemData.quantity = entryInfo.quantity;
+                itemData.detail = entryInfo.detail;
+                itemData.status = entryInfo.status;
+                itemData.price = entryInfo.price;
+                itemData.maxQuantity = entryInfo.maxQuantity;
+                itemData.important = !entryInfo.sellable || !entryInfo.status.empty();
 
-            int choice = Console::askNumberBetween(
-                0,
-                maxChoice,
-                "Veuillez choisir une entrée à vendre, ou 0 pour revenir."
+                sellScreen.addOption(
+                    i + 1,
+                    entryInfo.label,
+                    entryInfo.sellable
+                        ? "Vendre cet objet ou une quantité si plusieurs exemplaires sont disponibles."
+                        : "Cette entrée reste visible, mais le marchand ne peut pas l'acheter.",
+                    entryInfo.sellable,
+                    "shop.sell.select." + std::to_string(i),
+                    itemData
+                );
+            }
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(
+                sellScreen,
+                "Choix refusé : sélectionne une entrée vendable ou 0 pour revenir."
             );
 
             if (choice == 0)
@@ -629,9 +1002,16 @@ namespace
 
             if (!ShopTransactionSystem::canShopBuyInventoryEntry(player, shop.getType(), index))
             {
-                std::cout << "Cette entrée est protégée ou impossible à vendre ici." << std::endl;
-                std::cout << std::endl;
-                Console::waitForEnter();
+                showShopResult(
+                    "VENTE IMPOSSIBLE",
+                    "shop.sell.blocked",
+                    {
+                        "Entrée : " + sellableEntryLabel(player, shop.getType(), index),
+                        "Statut : protégée ou refusée par cette boutique.",
+                        "Raison possible : équipement porté, objet de base, entrée invalide ou mauvais type de marchand.",
+                        "Aucun objet n'a été retiré de ton inventaire."
+                    }
+                );
                 continue;
             }
 
@@ -646,45 +1026,211 @@ namespace
 
             if (maxQuantity > 1)
             {
-                std::cout << "Quantité à vendre ? Max : x" << maxQuantity << std::endl;
-                std::cout << "> ";
-                quantity = Console::askNumberBetween(
+                quantity = MessageScreen::askQuantity(
+                    "QUANTITÉ À VENDRE",
+                    "shop.sell.quantity",
+                    {
+                        "Boutique : " + shop.getName(),
+                        "Maximum vendable : x" + std::to_string(maxQuantity),
+                        "Prix unitaire estimé : " + std::to_string(sellPrice) + " or"
+                    },
                     1,
                     maxQuantity,
                     "Veuillez choisir une quantité valide."
                 );
-                std::cout << std::endl;
             }
 
-            std::cout << "Confirmer la vente de x" << quantity
-                      << " pour " << sellPrice * quantity << " or ?" << std::endl;
-            std::cout << "1 : Oui" << std::endl;
-            std::cout << "2 : Non" << std::endl;
-            std::cout << "> ";
+            const int goldBeforeSale = player.getInventory().getGold();
+            const std::string selectedEntryLabel = sellableEntryLabel(player, shop.getType(), index);
+            const int totalSellPrice = sellPrice * quantity;
 
-            int confirm = Console::askNumberBetween(
-                1,
-                2,
-                "Veuillez choisir 1 ou 2."
+            const bool confirmSale = askShopConfirmation(
+                "CONFIRMER LA VENTE",
+                "shop.sell.confirm",
+                {
+                    "Boutique : " + shop.getName(),
+                    "Objet : " + selectedEntryLabel,
+                    "Quantité : x" + std::to_string(quantity),
+                    "Prix unitaire : " + std::to_string(sellPrice) + " or",
+                    "Total reçu : " + std::to_string(totalSellPrice) + " or",
+                    "Rachat : l'objet restera récupérable ici jusqu'au prochain combat avec un surcoût."
+                },
+                "Confirmer la vente",
+                "Annuler la vente",
+                "shop.sell"
             );
 
-            if (confirm == 1)
+            if (!confirmSale)
             {
-                ShopTransactionSystem::sellInventoryEntryQuantity(
-                    player,
-                    shop.getType(),
-                    index,
-                    sellPrice,
-                    quantity
+                showShopResult(
+                    "VENTE ANNULÉE",
+                    "shop.sell.cancelled",
+                    {
+                        "Objet : " + selectedEntryLabel,
+                        "Aucun objet n'a quitté ton inventaire.",
+                        "Le marchand range déjà sa bourse, légèrement déçu."
+                    }
                 );
-            }
-            else
-            {
-                std::cout << "Vente annulée." << std::endl;
-                std::cout << std::endl;
+                continue;
             }
 
-            Console::waitForEnter();
+            ShopTransactionSystem::clearLastTransactionNotes();
+            const bool saleSucceeded = ShopTransactionSystem::sellInventoryEntryQuantity(
+                player,
+                shop.getType(),
+                index,
+                sellPrice,
+                quantity
+            );
+
+            showShopTransactionResult(
+                saleSucceeded ? "VENTE TERMINÉE" : "VENTE REFUSÉE",
+                saleSucceeded ? "shop.sell.result.success" : "shop.sell.result.failed",
+                saleSucceeded
+                    ? std::vector<std::string>{
+                        "Objet vendu : " + selectedEntryLabel,
+                        "Quantité : x" + std::to_string(quantity),
+                        "Or reçu : " + std::to_string(totalSellPrice) + " pièces",
+                        "Or avant : " + std::to_string(goldBeforeSale) + " pièces",
+                        "Or actuel : " + std::to_string(player.getInventory().getGold()) + " pièces",
+                        "Rachat : disponible dans cette boutique jusqu'au prochain combat."
+                    }
+                    : std::vector<std::string>{
+                        "Objet demandé : " + selectedEntryLabel,
+                        "Quantité demandée : x" + std::to_string(quantity),
+                        "La transaction a été refusée ou interrompue.",
+                        "Aucune confirmation de rachat n'est ajoutée pour cette tentative."
+                    }
+            );
+        }
+    }
+
+
+    void openBuybackMenu(Player& player, const ShopInventory& shop)
+    {
+        bool buyingBack = true;
+
+        while (buyingBack)
+        {
+            Console::clear();
+            const int count = ShopTransactionSystem::getBuybackEntryCount(shop.getType());
+            MenuScreen screen("RACHAT", "shop.buyback");
+            screen.addLine("Boutique : " + shop.getName());
+            screen.addLine("Or actuel : " + std::to_string(player.getInventory().getGold()) + " pièces");
+            screen.addLine("Les objets vendus ici peuvent être rachetés jusqu'au prochain combat.");
+            screen.addLine("Le prix est plus haut que la revente : frais, paperasse, mauvaise foi du marchand, bref la vie.");
+            screen.addBackOption("Retour", "shop.buyback.back");
+
+            if (count <= 0)
+            {
+                screen.addLine("Aucun objet à racheter dans cette boutique.");
+                TerminalInterface::askMenuChoice(screen, 0, 0, "Entre 0 pour revenir.");
+                return;
+            }
+
+            for (int i = 0; i < count; ++i)
+            {
+                const std::string name = ShopTransactionSystem::getBuybackEntryName(shop.getType(), i);
+                const std::string kindLabel = ShopTransactionSystem::getBuybackEntryKindLabel(shop.getType(), i);
+                const int quantity = ShopTransactionSystem::getBuybackEntryQuantity(shop.getType(), i);
+                const int price = ShopTransactionSystem::getBuybackEntryPrice(shop.getType(), i);
+                const bool affordable = player.getInventory().getGold() >= price;
+                const std::string label = name
+                    + (quantity > 1 ? " x" + std::to_string(quantity) : "")
+                    + " | Type : " + kindLabel
+                    + " | Rachat : " + std::to_string(price) + " or"
+                    + " | " + (affordable ? "Récupérable" : "Or insuffisant");
+
+                MenuOptionItemData itemData;
+                itemData.structured = true;
+                itemData.kind = "shop";
+                itemData.section = "Rachat";
+                itemData.actionType = "buyback";
+                itemData.name = name;
+                itemData.quantity = quantity > 1 ? "x" + std::to_string(quantity) : "";
+                itemData.price = std::to_string(price) + " or";
+                itemData.status = affordable ? "Avant prochain combat" : "Or insuffisant";
+                itemData.detail = "Récupérer un objet vendu récemment dans cette boutique.";
+                itemData.important = !affordable;
+
+                screen.addOption(
+                    i + 1,
+                    label,
+                    affordable
+                        ? itemData.detail
+                        : "Entrée visible, mais il manque de l'or pour la récupérer maintenant.",
+                    affordable,
+                    "shop.buyback.select." + std::to_string(i + 1),
+                    itemData
+                );
+            }
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(
+                screen,
+                "Choix refusé : sélectionne une entrée récupérable ou 0 pour revenir."
+            );
+            if (choice == 0)
+            {
+                buyingBack = false;
+                continue;
+            }
+
+            const int buybackIndex = choice - 1;
+            const std::string buybackName = ShopTransactionSystem::getBuybackEntryName(shop.getType(), buybackIndex);
+            const int buybackQuantity = ShopTransactionSystem::getBuybackEntryQuantity(shop.getType(), buybackIndex);
+            const int buybackPrice = ShopTransactionSystem::getBuybackEntryPrice(shop.getType(), buybackIndex);
+            const int goldBeforeBuyback = player.getInventory().getGold();
+
+            const bool confirmBuyback = askShopConfirmation(
+                "CONFIRMER LE RACHAT",
+                "shop.buyback.confirm",
+                {
+                    "Boutique : " + shop.getName(),
+                    "Objet : " + buybackName,
+                    "Prix de récupération : " + std::to_string(buybackPrice) + " or",
+                    "Or disponible : " + std::to_string(goldBeforeBuyback) + " pièces",
+                    "Limite : cette occasion disparaît au prochain combat."
+                },
+                "Racheter l'objet",
+                "Annuler le rachat",
+                "shop.buyback"
+            );
+
+            if (!confirmBuyback)
+            {
+                showShopResult(
+                    "RACHAT ANNULÉ",
+                    "shop.buyback.cancelled",
+                    {
+                        "Objet : " + buybackName,
+                        "L'objet reste disponible tant qu'aucun combat n'est lancé.",
+                        "Aucun or n'a été dépensé."
+                    }
+                );
+                continue;
+            }
+
+            ShopTransactionSystem::clearLastTransactionNotes();
+            const bool buybackSucceeded = ShopTransactionSystem::buyBackEntry(player, shop.getType(), buybackIndex);
+            showShopTransactionResult(
+                buybackSucceeded ? "RACHAT TERMINÉ" : "RACHAT REFUSÉ",
+                buybackSucceeded ? "shop.buyback.result.success" : "shop.buyback.result.failed",
+                buybackSucceeded
+                    ? std::vector<std::string>{
+                        "Objet récupéré : " + buybackName,
+                        "Quantité récupérée : x" + std::to_string(std::max(1, buybackQuantity)),
+                        "Prix payé : " + std::to_string(buybackPrice) + " or",
+                        "Or avant : " + std::to_string(goldBeforeBuyback) + " pièces",
+                        "Or actuel : " + std::to_string(player.getInventory().getGold()) + " pièces",
+                        "L'entrée de rachat a été retirée de cette boutique."
+                    }
+                    : std::vector<std::string>{
+                        "Objet demandé : " + buybackName,
+                        "Prix demandé : " + std::to_string(buybackPrice) + " or",
+                        "Or actuel : " + std::to_string(player.getInventory().getGold()) + " pièces",
+                        "Raison possible : or insuffisant ou entrée déjà disparue."
+                    }
+            );
         }
     }
 
@@ -697,13 +1243,12 @@ namespace
         while (stayInShop)
         {
             Console::clear();
-            TerminalInterface::renderMenuScreen(buildShopMainScreen(shop, player));
-            std::cout << "> ";
-
-            int shopChoice = Console::askNumberBetween(
-                0,
-                4,
-                "Veuillez choisir acheter, vendre, discuter, quêtes, ou 0 pour revenir."
+            const int buybackCount = ShopTransactionSystem::getBuybackEntryCount(shop.getType());
+            int shopChoice = TerminalInterface::askMenuChoiceFromOptions(
+                buildShopMainScreen(shop, player),
+                buybackCount > 0
+                    ? "Veuillez choisir acheter, vendre, discuter, quêtes, rachat, ou 0 pour revenir."
+                    : "Veuillez choisir acheter, vendre, discuter, quêtes, ou 0 pour revenir."
             );
 
             if (shopChoice == 0)
@@ -733,6 +1278,12 @@ namespace
                 continue;
             }
 
+            if (shopChoice == 5)
+            {
+                openBuybackMenu(player, shop);
+                continue;
+            }
+
             bool buyMenuOpen = true;
             std::size_t pageIndex = 0;
             const std::size_t itemsPerPage = 10;
@@ -740,8 +1291,7 @@ namespace
             while (buyMenuOpen)
             {
                 Console::clear();
-                displayShopStockPage(shop, player, pageIndex, itemsPerPage);
-                std::cout << "> ";
+                const MenuScreen stockScreen = buildShopStockScreen(shop, player, pageIndex, itemsPerPage);
 
                 const std::vector<ShopItem>& items = shop.getItems();
                 const std::size_t totalPages = PagedMenu::pageCount(items.size(), itemsPerPage);
@@ -749,9 +1299,8 @@ namespace
                 const std::size_t last = PagedMenu::lastIndexExclusive(items.size(), pageIndex, itemsPerPage);
                 const int localCount = static_cast<int>(last - first);
 
-                int itemChoice = Console::askNumberBetween(
-                    0,
-                    99,
+                int itemChoice = TerminalInterface::askMenuChoiceFromOptions(
+                    stockScreen,
                     "Veuillez choisir un article affiché, 98/99 pour tourner les pages, ou 0 pour revenir."
                 );
 
@@ -775,8 +1324,14 @@ namespace
 
                 if (itemChoice < 1 || itemChoice > localCount)
                 {
-                    std::cout << "Choix indisponible sur cette page." << std::endl;
-                    Console::waitForEnter();
+                    showShopResult(
+                        "CHOIX INDISPONIBLE",
+                        "shop.stock.invalid_choice",
+                        {
+                            "Cette entrée n'existe pas sur la page actuelle.",
+                            "Utilise les choix affichés par le menu pour continuer."
+                        }
+                    );
                     continue;
                 }
 
@@ -787,14 +1342,11 @@ namespace
                 {
                     Console::clear();
                     bool barterAvailable = hasBlackMarketBarterOffer(shop, item);
-                    int maxActionChoice = barterAvailable ? 3 : 2;
-                    TerminalInterface::renderMenuScreen(buildShopItemScreen(shop, item, player, true));
-                    std::cout << "> ";
-
-                    int actionChoice = Console::askNumberBetween(
-                        0,
-                        maxActionChoice,
-                        barterAvailable ? "Veuillez choisir 0, 1, 2 ou 3." : "Veuillez choisir 0, 1 ou 2."
+                    int actionChoice = TerminalInterface::askMenuChoiceFromOptions(
+                        buildShopItemScreen(shop, item, player, true),
+                        barterAvailable
+                            ? "Choisis une action disponible : retour, achat, inspection ou troc."
+                            : "Choisis une action disponible : retour, achat ou inspection."
                     );
 
                     if (actionChoice == 0)
@@ -813,9 +1365,16 @@ namespace
 
                         if (maxQuantity <= 0)
                         {
-                            std::cout << "Achat impossible maintenant." << std::endl;
-                            std::cout << "Vérifie ton or, le stock ou le statut réel de l'article." << std::endl;
-                            std::cout << std::endl;
+                            showShopResult(
+                                "ACHAT IMPOSSIBLE",
+                                "shop.buy.blocked",
+                                {
+                                    "Article : " + item.getName(),
+                                    "Or disponible : " + std::to_string(player.getInventory().getGold()) + " pièces",
+                                    "Statut : achat refusé pour le moment.",
+                                    "Raison possible : or insuffisant, stock épuisé ou article indisponible."
+                                }
+                            );
                         }
                         else
                         {
@@ -823,38 +1382,95 @@ namespace
 
                             if (maxQuantity > 1)
                             {
-                                std::cout << "Combien veux-tu acheter ? Max : x" << maxQuantity << std::endl;
-                                std::cout << "> ";
-                                quantity = Console::askNumberBetween(
+                                quantity = MessageScreen::askQuantity(
+                                    "QUANTITÉ À ACHETER",
+                                    "shop.buy.quantity",
+                                    {
+                                        "Article : " + item.getName(),
+                                        "Maximum achetable : x" + std::to_string(maxQuantity),
+                                        "Prix unitaire : " + std::to_string(finalPrice) + " or"
+                                    },
                                     1,
                                     maxQuantity,
                                     "Veuillez choisir une quantité valide."
                                 );
-                                std::cout << std::endl;
                             }
 
-                            int boughtCount = 0;
-                            for (int i = 0; i < quantity; ++i)
-                            {
-                                if (ShopTransactionSystem::buyItem(player, item, finalPrice))
-                                {
-                                    boughtCount++;
-                                }
-                                else
-                                {
-                                    break;
-                                }
-                            }
+                            const int goldBeforePurchase = player.getInventory().getGold();
+                            const int stockBeforePurchase = item.getStock();
+                            const int expectedTotalPrice = finalPrice * quantity;
 
-                            if (quantity > 1)
+                            const bool confirmPurchase = askShopConfirmation(
+                                "CONFIRMER L'ACHAT",
+                                "shop.buy.confirm",
+                                {
+                                    "Article : " + item.getName(),
+                                    "Quantité : x" + std::to_string(quantity),
+                                    "Prix unitaire : " + std::to_string(finalPrice) + " or",
+                                    "Total prévu : " + std::to_string(expectedTotalPrice) + " or",
+                                    "Or disponible : " + std::to_string(goldBeforePurchase) + " pièces",
+                                    stockBeforePurchase >= 0
+                                        ? "Stock avant achat : " + std::to_string(stockBeforePurchase)
+                                        : "Stock avant achat : non limité"
+                                },
+                                "Confirmer l'achat",
+                                "Annuler l'achat",
+                                "shop.buy"
+                            );
+
+                            if (!confirmPurchase)
                             {
-                                std::cout << "Résumé achat groupé : x" << boughtCount
-                                          << " / x" << quantity << " obtenu(s)." << std::endl;
-                                std::cout << std::endl;
+                                showShopResult(
+                                    "ACHAT ANNULÉ",
+                                    "shop.buy.cancelled",
+                                    {
+                                        "Article : " + item.getName(),
+                                        "Quantité demandée : x" + std::to_string(quantity),
+                                        "Aucun or n'a été dépensé.",
+                                        "Le stock du marchand n'a pas changé."
+                                    }
+                                );
+                            }
+                            else
+                            {
+                                ShopTransactionSystem::clearLastTransactionNotes();
+                                int boughtCount = 0;
+                                for (int i = 0; i < quantity; ++i)
+                                {
+                                    if (ShopTransactionSystem::buyItem(player, item, finalPrice))
+                                    {
+                                        boughtCount++;
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                }
+
+                                showShopTransactionResult(
+                                    boughtCount > 0 ? "ACHAT TERMINÉ" : "ACHAT REFUSÉ",
+                                    boughtCount > 0 ? "shop.buy.result.success" : "shop.buy.result.failed",
+                                    boughtCount > 0
+                                        ? std::vector<std::string>{
+                                            "Article : " + item.getName(),
+                                            "Quantité obtenue : x" + std::to_string(boughtCount) + " / x" + std::to_string(quantity),
+                                            "Or dépensé : " + std::to_string(finalPrice * boughtCount) + " pièces",
+                                            "Or avant : " + std::to_string(goldBeforePurchase) + " pièces",
+                                            "Or actuel : " + std::to_string(player.getInventory().getGold()) + " pièces",
+                                            item.getStock() >= 0
+                                                ? "Stock restant : " + std::to_string(item.getStock())
+                                                : "Stock restant : non limité"
+                                        }
+                                        : std::vector<std::string>{
+                                            "Article : " + item.getName(),
+                                            "Quantité demandée : x" + std::to_string(quantity),
+                                            "Aucun exemplaire n'a été ajouté.",
+                                            "Raison possible : stock, or ou compatibilité d'inventaire."
+                                        }
+                                );
                             }
                         }
 
-                        Console::waitForEnter();
                         itemMenuOpen = false;
                     }
                     else if (actionChoice == 3)
@@ -863,9 +1479,16 @@ namespace
 
                         if (maxBarterQuantity <= 0)
                         {
-                            std::cout << "Troc impossible maintenant." << std::endl;
-                            std::cout << "Il te manque au moins un composant demandé par ce contact douteux." << std::endl;
-                            std::cout << std::endl;
+                            showShopResult(
+                                "TROC IMPOSSIBLE",
+                                "shop.barter.blocked",
+                                {
+                                    "Article : " + item.getName(),
+                                    "Demande : " + formatBarterRequirements(item),
+                                    "Statut : composants insuffisants.",
+                                    "Le contact garde l'article sous le comptoir."
+                                }
+                            );
                         }
                         else
                         {
@@ -873,35 +1496,57 @@ namespace
 
                             if (maxBarterQuantity > 1)
                             {
-                                std::cout << "Combien veux-tu troquer ? Max : x" << maxBarterQuantity << std::endl;
-                                std::cout << "> ";
-                                quantity = Console::askNumberBetween(
+                                quantity = MessageScreen::askQuantity(
+                                    "QUANTITÉ À TROQUER",
+                                    "shop.barter.quantity",
+                                    {
+                                        "Article : " + item.getName(),
+                                        "Maximum échangeable : x" + std::to_string(maxBarterQuantity),
+                                        "Demande par unité : " + formatBarterRequirements(item)
+                                    },
                                     1,
                                     maxBarterQuantity,
                                     "Veuillez choisir une quantité valide."
                                 );
-                                std::cout << std::endl;
                             }
 
-                            std::cout << "Le contact demande : " << formatBarterRequirements(item);
-                            if (quantity > 1)
-                            {
-                                std::cout << " par unité";
-                            }
-                            std::cout << "." << std::endl;
-                            std::cout << "Confirmer le troc pour x" << quantity << " ?" << std::endl;
-                            std::cout << "1 : Oui" << std::endl;
-                            std::cout << "2 : Non" << std::endl;
-                            std::cout << "> ";
-
-                            int confirm = Console::askNumberBetween(
-                                1,
-                                2,
-                                "Veuillez choisir 1 ou 2."
+                            const std::string barterRequirements = formatBarterRequirements(item);
+                            const int stockBeforeBarter = item.getStock();
+                            const bool confirmBarter = askShopConfirmation(
+                                "CONFIRMER LE TROC",
+                                "shop.barter.confirm",
+                                {
+                                    "Article : " + item.getName(),
+                                    "Quantité : x" + std::to_string(quantity),
+                                    quantity > 1
+                                        ? "Demande par unité : " + barterRequirements
+                                        : "Demande : " + barterRequirements,
+                                    "Maximum échangeable maintenant : x" + std::to_string(maxBarterQuantity),
+                                    stockBeforeBarter >= 0
+                                        ? "Stock avant échange : " + std::to_string(stockBeforeBarter)
+                                        : "Stock avant échange : non limité",
+                                    "Le marché noir ne promet jamais que l'offre reviendra."
+                                },
+                                "Confirmer le troc",
+                                "Annuler le troc",
+                                "shop.barter"
                             );
 
-                            if (confirm == 1)
+                            if (!confirmBarter)
                             {
+                                showShopResult(
+                                    "TROC ANNULÉ",
+                                    "shop.barter.cancelled",
+                                    {
+                                        "Article : " + item.getName(),
+                                        "Aucun composant n'a été retiré.",
+                                        "Le contact fait semblant de n'avoir jamais proposé l'échange."
+                                    }
+                                );
+                            }
+                            else
+                            {
+                                ShopTransactionSystem::clearLastTransactionNotes();
                                 int tradedCount = 0;
 
                                 for (int i = 0; i < quantity; ++i)
@@ -913,37 +1558,49 @@ namespace
 
                                     if (!consumeBarterRequirements(player, item, 1))
                                     {
-                                        std::cout << "Le contact vérifie les composants, puis referme sa sacoche : il manque quelque chose." << std::endl;
                                         break;
                                     }
 
                                     if (!ShopTransactionSystem::buyItem(player, item, 0))
                                     {
                                         refundBarterRequirements(player, item, 1);
-                                        std::cout << "Le contact refuse finalement l'échange et rend les composants." << std::endl;
                                         break;
                                     }
 
                                     tradedCount++;
                                 }
 
-                                std::cout << "Résumé du troc : x" << tradedCount
-                                          << " / x" << quantity << " obtenu(s)." << std::endl;
-                                std::cout << "Le contact range les composants sans demander ton nom." << std::endl;
-                                std::cout << std::endl;
-                            }
-                            else
-                            {
-                                std::cout << "Troc annulé." << std::endl;
-                                std::cout << std::endl;
+                                showShopTransactionResult(
+                                    tradedCount > 0 ? "TROC TERMINÉ" : "TROC REFUSÉ",
+                                    tradedCount > 0 ? "shop.barter.result.success" : "shop.barter.result.failed",
+                                    tradedCount > 0
+                                        ? std::vector<std::string>{
+                                            "Article obtenu : " + item.getName(),
+                                            "Quantité obtenue : x" + std::to_string(tradedCount) + " / x" + std::to_string(quantity),
+                                            quantity > 1
+                                                ? "Coût par unité : " + barterRequirements
+                                                : "Coût : " + barterRequirements,
+                                            item.getStock() >= 0
+                                                ? "Stock restant : " + std::to_string(item.getStock())
+                                                : "Stock restant : non limité",
+                                            "Le contact range les composants sans demander ton nom."
+                                        }
+                                        : std::vector<std::string>{
+                                            "Article demandé : " + item.getName(),
+                                            "Demande : " + barterRequirements,
+                                            "Aucun exemplaire n'a été obtenu.",
+                                            "Raison possible : composant manquant, stock ou refus d'inventaire."
+                                        }
+                                );
                             }
                         }
 
-                        Console::waitForEnter();
                         itemMenuOpen = false;
                     }
                     else
                     {
+                        Console::clear();
+                        TerminalInterface::renderMenuScreen(buildShopItemScreen(shop, item, player, false));
                         Console::waitForEnter();
                     }
                 }
@@ -968,11 +1625,16 @@ void ShopMenu::open(Player& player)
 
     if (ShopRotationSystem::shouldRefreshShops())
     {
-        std::cout << "Les marchands changent leurs étals après ton dernier combat." << std::endl;
-        std::cout << "De nouveaux articles peuvent apparaître, disparaître ou revenir plus cher." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ROTATION DES BOUTIQUES",
+            "shop.rotation.refreshed",
+            {
+                "Les marchands changent leurs étals après ton dernier combat.",
+                "De nouveaux articles peuvent apparaître, disparaître ou revenir plus cher.",
+                "Les rachats des ventes précédentes disparaissent avec cette nouvelle rotation."
+            }
+        );
         ShopRotationSystem::markShopsRefreshed();
-        Console::waitForEnter();
     }
 
     bool stayInMenu = true;
@@ -980,12 +1642,8 @@ void ShopMenu::open(Player& player)
     while (stayInMenu)
     {
         Console::clear();
-        TerminalInterface::renderMenuScreen(buildShopListScreen(shops, &player));
-        std::cout << "> ";
-
-        int choice = Console::askNumberBetween(
-            0,
-            static_cast<int>(shops.size()),
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            buildShopListScreen(shops, &player),
             "Veuillez choisir une boutique affichée, ou 0 pour revenir."
         );
 

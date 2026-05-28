@@ -168,15 +168,68 @@ function Write-InstalledConfig {
     $configObject | ConvertTo-Json | Set-Content -Path (Join-Path $TargetDir "dinotofu-installer.config.json") -Encoding UTF8
 }
 
+
+function Test-ShortcutCreated {
+    param(
+        [string]$ShortcutPath,
+        [string]$ExpectedTargetFile
+    )
+
+    if (-not (Test-Path $ShortcutPath)) {
+        Write-Warning "Raccourci non cree : $ShortcutPath"
+        return $false
+    }
+
+    try {
+        $wsh = New-Object -ComObject WScript.Shell
+        $shortcut = $wsh.CreateShortcut($ShortcutPath)
+        $targetLeaf = Split-Path -Path $shortcut.TargetPath -Leaf
+        if ($targetLeaf -ine $ExpectedTargetFile) {
+            Write-Warning "Raccourci cree, mais cible inattendue pour $ShortcutPath : $($shortcut.TargetPath)"
+            return $false
+        }
+    }
+    catch {
+        Write-Warning "Impossible de verifier le raccourci $ShortcutPath : $($_.Exception.Message)"
+        return $false
+    }
+
+    return $true
+}
+
+function Ensure-LauncherCmd {
+    param(
+        [string]$TargetPath,
+        [string]$Mode
+    )
+
+    $content = @(
+        "@echo off",
+        "setlocal",
+        "powershell -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode $Mode"
+    ) -join "`r`n"
+
+    $content | Set-Content -Path $TargetPath -Encoding ASCII
+}
+
 function Create-DesktopShortcut {
-    param([string]$TargetScript, [string]$ShortcutPath)
+    param(
+        [string]$TargetPath,
+        [string]$ShortcutPath,
+        [string]$IconPath = ""
+    )
 
     $wsh = New-Object -ComObject WScript.Shell
     $shortcut = $wsh.CreateShortcut($ShortcutPath)
-    $shortcut.TargetPath = "powershell.exe"
-    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$TargetScript`""
-    $shortcut.WorkingDirectory = Split-Path $TargetScript
-    $shortcut.IconLocation = "powershell.exe,0"
+    $shortcut.TargetPath = $TargetPath
+    $shortcut.Arguments = ""
+    $shortcut.WorkingDirectory = Split-Path $TargetPath
+    if (-not [string]::IsNullOrWhiteSpace($IconPath) -and (Test-Path $IconPath)) {
+        $shortcut.IconLocation = "$IconPath,0"
+    }
+    else {
+        $shortcut.IconLocation = "cmd.exe,0"
+    }
     $shortcut.Save()
 }
 
@@ -237,10 +290,29 @@ if (-not (Test-Path $launcherPath)) {
 }
 
 if (Test-Path $launcherPath) {
-    Write-Step "Creation du raccourci bureau"
-    $shortcutPath = Join-Path ([Environment]::GetFolderPath("Desktop")) "Dinotofu.lnk"
-    Create-DesktopShortcut -TargetScript $launcherPath -ShortcutPath $shortcutPath
-    Write-Host "Raccourci cree : $shortcutPath"
+    $normalLauncherEntry = Join-Path $InstallDir "Lancer-Dinotofu.cmd"
+    $terminalLauncherEntry = Join-Path $InstallDir "Lancer-Dinotofu-Terminal.cmd"
+
+    if (-not (Test-Path $normalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $normalLauncherEntry -Mode "Auto" }
+    if (-not (Test-Path $terminalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal" }
+
+    Write-Step "Creation des deux raccourcis bureau"
+    $desktopPath = [Environment]::GetFolderPath("Desktop")
+    $shortcutGuiPath = Join-Path $desktopPath "ProjetDinotofu Launcher.lnk"
+    $shortcutTerminalPath = Join-Path $desktopPath "ProjetDinotofu Launcher Terminal version.lnk"
+    $iconPath = Join-Path $InstallDir "Dinotofu.exe"
+
+    Create-DesktopShortcut -TargetPath $normalLauncherEntry -ShortcutPath $shortcutGuiPath -IconPath $iconPath
+    Create-DesktopShortcut -TargetPath $terminalLauncherEntry -ShortcutPath $shortcutTerminalPath -IconPath $iconPath
+
+    $guiShortcutOk = Test-ShortcutCreated -ShortcutPath $shortcutGuiPath -ExpectedTargetFile "Lancer-Dinotofu.cmd"
+    $terminalShortcutOk = Test-ShortcutCreated -ShortcutPath $shortcutTerminalPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd"
+
+    if ($guiShortcutOk) { Write-Host "Raccourci verifie : $shortcutGuiPath -> Lancer-Dinotofu.cmd" }
+    if ($terminalShortcutOk) { Write-Host "Raccourci verifie : $shortcutTerminalPath -> Lancer-Dinotofu-Terminal.cmd" }
+    if (-not $guiShortcutOk -or -not $terminalShortcutOk) {
+        Write-Warning "Installation terminee, mais au moins un raccourci bureau doit etre verifie manuellement."
+    }
 }
 else {
     Write-Warning "Launcher introuvable. Installation faite, mais aucun raccourci n'a ete cree."

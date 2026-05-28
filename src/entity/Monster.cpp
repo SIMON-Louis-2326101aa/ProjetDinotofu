@@ -5,7 +5,10 @@
 
 #include "entity/Monster.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <vector>
+#include <string>
 
 Monster::Monster()
     : Entity(),
@@ -113,53 +116,73 @@ void Monster::revealStats()
 
 // EN: displayStats declares or implements a focused behavior used by this module.
 // FR: displayStats déclare ou implémente un comportement précis utilisé par ce module.
-void Monster::displayStats() const
+std::vector<std::string> Monster::toDisplayLines() const
 {
+    std::vector<std::string> lines;
+
     if (!areStatsVisible())
     {
-        std::cout << "========== DONNÉES BROUILLÉES ==========" << std::endl;
-        std::cout << "Nom : " << name << std::endl;
-        std::cout << "Race : " << getRaceText() << std::endl;
-        std::cout << "Type : " << type << std::endl;
-        std::cout << "Niveau : ???" << std::endl;
-        std::cout << "PV : ???" << std::endl;
-        std::cout << "Dégâts : ???" << std::endl;
-        std::cout << "Critique : ???" << std::endl;
-        std::cout << "========================================" << std::endl;
-        std::cout << std::endl;
-        return;
+        lines = {
+            "========== DONNÉES BROUILLÉES ==========" ,
+            "Nom : " + name,
+            "Race : " + getRaceText(),
+            "Type : " + type,
+            "Niveau : ???",
+            "PV : ???",
+            "Dégâts : ???",
+            "Critique : ???",
+            "========================================"
+        };
+
+        return lines;
     }
 
-    std::cout << "========== STATS MONSTRE ==========" << std::endl;
-    std::cout << "Nom : " << name << std::endl;
-    std::cout << "Race : " << getRaceText() << std::endl;
-    std::cout << "Type : " << type << std::endl;
-    std::cout << "Niveau : " << level << std::endl;
-    std::cout << "PV : " << hp << "/" << maxHp << std::endl;
-    std::cout << "Dégâts : " << minDamage << " - " << maxDamage << std::endl;
-    std::cout << "Critique : " << criticalDamage << std::endl;
+    lines = {
+        "========== STATS MONSTRE ==========" ,
+        "Nom : " + name,
+        "Race : " + getRaceText(),
+        "Type : " + type,
+        "Niveau : " + std::to_string(level),
+        "PV : " + std::to_string(hp) + "/" + std::to_string(maxHp),
+        "Dégâts : " + std::to_string(minDamage) + " - " + std::to_string(maxDamage),
+        "Critique : " + std::to_string(criticalDamage)
+    };
 
     if (invocation)
     {
-        std::cout << "Statut : Invocation" << std::endl;
+        lines.push_back("Statut : Invocation");
     }
     else if (elite && evolved)
     {
-        std::cout << "Statut : Élite évoluée" << std::endl;
+        lines.push_back("Statut : Élite évoluée");
     }
     else if (elite)
     {
-        std::cout << "Statut : Élite" << std::endl;
+        lines.push_back("Statut : Élite");
     }
     else if (evolved)
     {
-        std::cout << "Statut : Créature évoluée" << std::endl;
+        lines.push_back("Statut : Créature évoluée");
     }
     else
     {
-        std::cout << "Statut : Monstre standard" << std::endl;
+        lines.push_back("Statut : Monstre standard");
     }
 
-    std::cout << "===================================" << std::endl;
-    std::cout << std::endl;
+    lines.push_back("===================================");
+
+    return lines;
+}
+
+
+// EN: displayStats declares or implements a focused behavior used by this module.
+// FR: displayStats déclare ou implémente un comportement précis utilisé par ce module.
+void Monster::displayStats() const
+{
+    MessageScreen::show(
+        "MONSTRE",
+        areStatsVisible() ? "monster.stats" : "monster.stats.hidden",
+        toDisplayLines(),
+        false
+    );
 }

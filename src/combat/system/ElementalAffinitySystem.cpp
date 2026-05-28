@@ -7,6 +7,7 @@
 #include "character/CharacterRace.hpp"
 #include "entity/Monster.hpp"
 #include "entity/Player.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -245,21 +246,26 @@ namespace
 
     void printAffinityIfChanged(const Entity& target, const std::string& elementId, int modifier)
     {
+        std::vector<std::string> lines;
+
         if (modifier <= 85)
         {
-            std::cout << "Affinité élémentaire : " << target.getName()
-                      << " résiste " << elementToText(elementId)
-                      << ", l'effet est réduit." << std::endl;
+            lines.push_back("Affinité élémentaire : " + target.getName() + " résiste " + elementToText(elementId) + ".");
+            lines.push_back("L'effet est réduit.");
             if (target.hasElementalWard())
             {
-                std::cout << "Le voile élémentaire absorbe une partie de l'altération." << std::endl;
+                lines.push_back("Le voile élémentaire absorbe une partie de l'altération.");
             }
         }
         else if (modifier >= 115)
         {
-            std::cout << "Affinité élémentaire : " << target.getName()
-                      << " est vulnérable " << elementToText(elementId)
-                      << ", l'effet mord plus fort." << std::endl;
+            lines.push_back("Affinité élémentaire : " + target.getName() + " est vulnérable " + elementToText(elementId) + ".");
+            lines.push_back("L'effet mord plus fort.");
+        }
+
+        if (!lines.empty())
+        {
+            MessageScreen::show("AFFINITÉ ÉLÉMENTAIRE", "combat.elemental_affinity.modifier", lines, false);
         }
     }
 
@@ -328,7 +334,12 @@ void ElementalAffinitySystem::applyDamageStatus(Entity& target, const std::strin
 
     if (finalTurns <= 0)
     {
-        std::cout << target.getName() << " encaisse l'effet sans le laisser s'installer." << std::endl;
+        MessageScreen::show(
+            "ALTÉRATION ABSORBÉE",
+            "combat.elemental_affinity.damage_status.negated",
+            {target.getName() + " encaisse l'effet sans le laisser s'installer."},
+            false
+        );
         return;
     }
 
@@ -348,7 +359,12 @@ void ElementalAffinitySystem::applyTurnStatus(Entity& target, const std::string&
 
     if (finalTurns <= 0)
     {
-        std::cout << target.getName() << " secoue l'effet avant qu'il ne prenne vraiment." << std::endl;
+        MessageScreen::show(
+            "ALTÉRATION SECOUÉE",
+            "combat.elemental_affinity.turn_status.negated",
+            {target.getName() + " secoue l'effet avant qu'il ne prenne vraiment."},
+            false
+        );
         return;
     }
 

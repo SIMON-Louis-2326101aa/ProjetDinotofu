@@ -6,10 +6,11 @@
 #include "item/Inventory.hpp"
 
 #include "progression/material/MaterialKnowledgeProgress.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
-#include <iostream>
 #include <string>
+#include <vector>
 
 
 namespace
@@ -75,6 +76,37 @@ namespace
             return 1;
         }
     }
+    void showInventoryScreen(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        bool waitAndClear = false
+    )
+    {
+        if (!lines.empty())
+        {
+            MessageScreen::show(title, screenId, lines, waitAndClear);
+        }
+    }
+
+    std::string formatRepairKitInventoryStatus(const Material& material)
+    {
+        if (isUsedRepairKitInventoryId(material.getId()))
+        {
+            return " x" + std::to_string(material.getQuantity())
+                + " | dura "
+                + std::to_string(usedRepairKitInventoryDurability(material.getId()))
+                + "/"
+                + std::to_string(maxRepairKitInventoryDurability(material.getId()));
+        }
+
+        return " x" + std::to_string(material.getQuantity())
+            + " | intact "
+            + std::to_string(maxRepairKitInventoryDurability(material.getId()))
+            + "/"
+            + std::to_string(maxRepairKitInventoryDurability(material.getId()));
+    }
+
 }
 
 // EN: Inventory declares or implements a focused behavior used by this module.
@@ -628,74 +660,75 @@ void Inventory::clearAll()
 // FR: displayWeaponList déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::displayWeaponList() const
 {
-    std::cout << "===== ARMES =====" << std::endl;
+    std::vector<std::string> lines;
 
     if (weapons.empty())
     {
-        std::cout << "Aucune arme dans l'inventaire." << std::endl;
-        std::cout << std::endl;
+        lines.push_back("Aucune arme dans l'inventaire.");
+        showInventoryScreen("ARMES", "inventory.weapons", lines, false);
         return;
     }
 
     for (int i = 0; i < static_cast<int>(weapons.size()); i++)
     {
-        std::cout << "[" << i << "] " << weapons[i].getName();
+        std::string line = "[" + std::to_string(i) + "] " + weapons[i].getName();
 
         if (!weapons[i].isIndestructible())
         {
-            std::cout << " (" << weapons[i].getDurability() << "/" << weapons[i].getMaxDurability() << ")";
+            line += " (" + std::to_string(weapons[i].getDurability()) + "/" + std::to_string(weapons[i].getMaxDurability()) + ")";
         }
 
         if (weapons[i].isBroken())
         {
-            std::cout << " - Cassée";
+            line += " - Cassée";
         }
 
-        std::cout << std::endl;
+        lines.push_back(line);
     }
 
-    std::cout << std::endl;
+    showInventoryScreen("ARMES", "inventory.weapons", lines, false);
 }
+
 
 // EN: displayArmorList declares or implements a focused behavior used by this module.
 // FR: displayArmorList déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::displayArmorList() const
 {
-    std::cout << "===== ARMURES =====" << std::endl;
+    std::vector<std::string> lines;
 
     if (armors.empty())
     {
-        std::cout << "Aucune armure dans l'inventaire." << std::endl;
-        std::cout << std::endl;
+        lines.push_back("Aucune armure dans l'inventaire.");
+        showInventoryScreen("ARMURES", "inventory.armors", lines, false);
         return;
     }
 
     for (int i = 0; i < static_cast<int>(armors.size()); i++)
     {
-        std::cout << "[" << i << "] " << armors[i].getName();
+        std::string line = "[" + std::to_string(i) + "] " + armors[i].getName();
 
         if (!armors[i].isIndestructible())
         {
-            std::cout << " (" << armors[i].getDurability() << "/" << armors[i].getMaxDurability() << ")";
+            line += " (" + std::to_string(armors[i].getDurability()) + "/" + std::to_string(armors[i].getMaxDurability()) + ")";
         }
 
         if (armors[i].isBroken())
         {
-            std::cout << " - Cassée";
+            line += " - Cassée";
         }
 
-        std::cout << std::endl;
+        lines.push_back(line);
     }
 
-    std::cout << std::endl;
+    showInventoryScreen("ARMURES", "inventory.armors", lines, false);
 }
+
 
 // EN: displayConsumableList declares or implements a focused behavior used by this module.
 // FR: displayConsumableList déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::displayConsumableList() const
 {
-    std::cout << "===== CONSOMMABLES =====" << std::endl;
-
+    std::vector<std::string> lines;
     bool hasRepairKit = false;
 
     for (const Material& material : materials)
@@ -709,20 +742,24 @@ void Inventory::displayConsumableList() const
 
     if (consumables.empty() && !hasRepairKit)
     {
-        std::cout << "Aucun consommable dans l'inventaire." << std::endl;
-        std::cout << std::endl;
+        lines.push_back("Aucun consommable dans l'inventaire.");
+        showInventoryScreen("CONSOMMABLES", "inventory.consumables", lines, false);
         return;
     }
 
     for (int i = 0; i < static_cast<int>(consumables.size()); i++)
     {
-        std::cout << "[" << i << "] " << consumables[i].getName() << std::endl;
+        lines.push_back("[" + std::to_string(i) + "] " + consumables[i].getName());
     }
 
     if (hasRepairKit)
     {
-        std::cout << std::endl;
-        std::cout << "--- Kits de réparation ---" << std::endl;
+        if (!lines.empty())
+        {
+            lines.push_back("");
+        }
+
+        lines.push_back("Kits de réparation :");
 
         for (const Material& material : materials)
         {
@@ -731,94 +768,74 @@ void Inventory::displayConsumableList() const
                 continue;
             }
 
-            std::cout << "- " << material.getName();
-
-            if (isUsedRepairKitInventoryId(material.getId()))
-            {
-                std::cout << " x" << material.getQuantity()
-                          << " | dura " << usedRepairKitInventoryDurability(material.getId())
-                          << "/" << maxRepairKitInventoryDurability(material.getId());
-            }
-            else
-            {
-                std::cout << " x" << material.getQuantity()
-                          << " | intact " << maxRepairKitInventoryDurability(material.getId())
-                          << "/" << maxRepairKitInventoryDurability(material.getId());
-            }
-
-            std::cout << std::endl;
+            lines.push_back("- " + material.getName() + formatRepairKitInventoryStatus(material));
         }
 
-        std::cout << "Astuce : sélectionne une arme ou une armure pour lancer une réparation." << std::endl;
+        lines.push_back("Astuce : sélectionne une arme ou une armure pour lancer une réparation.");
     }
 
-    std::cout << std::endl;
+    showInventoryScreen("CONSOMMABLES", "inventory.consumables", lines, false);
 }
+
 
 // EN: displayMaterialList declares or implements a focused behavior used by this module.
 // FR: displayMaterialList déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::displayMaterialList() const
 {
-    std::cout << "===== MATÉRIAUX / PLANTES / INFOS =====" << std::endl;
+    std::vector<std::string> lines;
 
     if (materials.empty())
     {
-        std::cout << "Aucun matériau, plante ou renseignement stocké." << std::endl;
-        std::cout << std::endl;
+        lines.push_back("Aucun matériau, plante ou renseignement stocké.");
+        showInventoryScreen("MATÉRIAUX / PLANTES / INFOS", "inventory.materials", lines, false);
         return;
     }
 
     for (int i = 0; i < static_cast<int>(materials.size()); i++)
     {
-        std::cout << "[" << i << "] "
-                  << materials[i].getName();
+        std::string line = "[" + std::to_string(i) + "] " + materials[i].getName();
 
         if (materials[i].getCategory() == "Outil" && isRepairKitInventoryId(materials[i].getId()))
         {
-            if (isUsedRepairKitInventoryId(materials[i].getId()))
-            {
-                std::cout << " x" << materials[i].getQuantity()
-                          << " | dura " << usedRepairKitInventoryDurability(materials[i].getId())
-                          << "/" << maxRepairKitInventoryDurability(materials[i].getId());
-            }
-            else
-            {
-                std::cout << " x" << materials[i].getQuantity()
-                          << " | intact " << maxRepairKitInventoryDurability(materials[i].getId())
-                          << "/" << maxRepairKitInventoryDurability(materials[i].getId());
-            }
+            line += formatRepairKitInventoryStatus(materials[i]);
         }
         else
         {
-            std::cout << " x" << materials[i].getQuantity();
+            line += " x" + std::to_string(materials[i].getQuantity());
             if (materials[i].hasSpecialQuality())
             {
-                std::cout << " | " << materials[i].getQualityLabel();
+                line += " | " + materials[i].getQualityLabel();
             }
         }
 
-        std::cout << " | " << materials[i].getCategory()
-                  << std::endl;
+        line += " | " + materials[i].getCategory();
+        lines.push_back(line);
     }
 
-    std::cout << std::endl;
+    showInventoryScreen("MATÉRIAUX / PLANTES / INFOS", "inventory.materials", lines, false);
 }
+
 
 // EN: displaySummary declares or implements a focused behavior used by this module.
 // FR: displaySummary déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::displaySummary() const
 {
-    std::cout << "================ INVENTAIRE ================" << std::endl;
-    std::cout << "Or : " << or_ << " pièces" << std::endl;
-    std::cout << "Armes : " << getWeaponCount() << std::endl;
-    std::cout << "Armures : " << getArmorCount() << std::endl;
-    std::cout << "Consommables : " << getConsumableCount() << std::endl;
-    std::cout << "Matériaux / plantes / infos : " << getMaterialCount() << std::endl;
-    std::cout << "Potions de soin : " << countConsumables(ConsumableType::Healing) << std::endl;
-    std::cout << "Potions de rage : " << countConsumables(ConsumableType::Damage) << std::endl;
-    std::cout << "============================================" << std::endl;
-    std::cout << std::endl;
+    showInventoryScreen(
+        "INVENTAIRE",
+        "inventory.summary",
+        {
+            "Or : " + std::to_string(or_) + " pièces",
+            "Armes : " + std::to_string(getWeaponCount()),
+            "Armures : " + std::to_string(getArmorCount()),
+            "Consommables : " + std::to_string(getConsumableCount()),
+            "Matériaux / plantes / infos : " + std::to_string(getMaterialCount()),
+            "Potions de soin : " + std::to_string(countConsumables(ConsumableType::Healing)),
+            "Potions de rage : " + std::to_string(countConsumables(ConsumableType::Damage))
+        },
+        false
+    );
 }
+
 
 // EN: inspectWeapon declares or implements a focused behavior used by this module.
 // FR: inspectWeapon déclare ou implémente un comportement précis utilisé par ce module.
@@ -826,35 +843,36 @@ void Inventory::inspectWeapon(int index) const
 {
     if (!hasWeapon(index))
     {
-        std::cout << "Cette arme n'existe pas." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show("ARME INTROUVABLE", "inventory.weapon.invalid", {"Cette arme n'existe pas."}, false);
         return;
     }
 
     const Weapon& weapon = weapons[index];
-
-    std::cout << "========== ARME ==========" << std::endl;
-    std::cout << "Nom : " << weapon.getName() << std::endl;
-    std::cout << "Description : " << weapon.getDescription() << std::endl;
-    std::cout << "Bonus dégâts : +" << weapon.getMinDamageBonus()
-              << " à +" << weapon.getMaxDamageBonus() << std::endl;
-    std::cout << "Bonus critique : +" << weapon.getCriticalBonus() << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back("Nom : " + weapon.getName());
+    lines.push_back("Description : " + weapon.getDescription());
+    lines.push_back(
+        "Bonus dégâts : +"
+        + std::to_string(weapon.getMinDamageBonus())
+        + " à +"
+        + std::to_string(weapon.getMaxDamageBonus())
+    );
+    lines.push_back("Bonus critique : +" + std::to_string(weapon.getCriticalBonus()));
 
     if (weapon.isIndestructible())
     {
-        std::cout << "Durabilité : Indestructible" << std::endl;
+        lines.push_back("Durabilité : Indestructible");
     }
     else
     {
-        std::cout << "Durabilité : " << weapon.getDurability()
-                  << "/" << weapon.getMaxDurability() << std::endl;
+        lines.push_back("Durabilité : " + std::to_string(weapon.getDurability()) + "/" + std::to_string(weapon.getMaxDurability()));
     }
 
-    std::cout << "État : " << (weapon.isBroken() ? "Cassée" : "Utilisable") << std::endl;
-    std::cout << "Valeur : " << weapon.getValue() << " pièces" << std::endl;
-    std::cout << "==========================" << std::endl;
-    std::cout << std::endl;
+    lines.push_back(std::string("État : ") + (weapon.isBroken() ? "Cassée" : "Utilisable"));
+    lines.push_back("Valeur : " + std::to_string(weapon.getValue()) + " pièces");
+    showInventoryScreen("ARME", "inventory.weapon.inspect", lines, false);
 }
+
 
 // EN: inspectArmor declares or implements a focused behavior used by this module.
 // FR: inspectArmor déclare ou implémente un comportement précis utilisé par ce module.
@@ -862,34 +880,31 @@ void Inventory::inspectArmor(int index) const
 {
     if (!hasArmor(index))
     {
-        std::cout << "Cette armure n'existe pas." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show("ARMURE INTROUVABLE", "inventory.armor.invalid", {"Cette armure n'existe pas."}, false);
         return;
     }
 
     const Armor& armor = armors[index];
-
-    std::cout << "========== ARMURE ==========" << std::endl;
-    std::cout << "Nom : " << armor.getName() << std::endl;
-    std::cout << "Description : " << armor.getDescription() << std::endl;
-    std::cout << "Bonus PV max : +" << armor.getMaxHpBonus() << std::endl;
-    std::cout << "Réduction dégâts : " << armor.getDamageReduction() << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back("Nom : " + armor.getName());
+    lines.push_back("Description : " + armor.getDescription());
+    lines.push_back("Bonus PV max : +" + std::to_string(armor.getMaxHpBonus()));
+    lines.push_back("Réduction dégâts : " + std::to_string(armor.getDamageReduction()));
 
     if (armor.isIndestructible())
     {
-        std::cout << "Durabilité : Indestructible" << std::endl;
+        lines.push_back("Durabilité : Indestructible");
     }
     else
     {
-        std::cout << "Durabilité : " << armor.getDurability()
-                  << "/" << armor.getMaxDurability() << std::endl;
+        lines.push_back("Durabilité : " + std::to_string(armor.getDurability()) + "/" + std::to_string(armor.getMaxDurability()));
     }
 
-    std::cout << "État : " << (armor.isBroken() ? "Cassée" : "Utilisable") << std::endl;
-    std::cout << "Valeur : " << armor.getValue() << " pièces" << std::endl;
-    std::cout << "============================" << std::endl;
-    std::cout << std::endl;
+    lines.push_back(std::string("État : ") + (armor.isBroken() ? "Cassée" : "Utilisable"));
+    lines.push_back("Valeur : " + std::to_string(armor.getValue()) + " pièces");
+    showInventoryScreen("ARMURE", "inventory.armor.inspect", lines, false);
 }
+
 
 // EN: inspectConsumable declares or implements a focused behavior used by this module.
 // FR: inspectConsumable déclare ou implémente un comportement précis utilisé par ce module.
@@ -897,21 +912,24 @@ void Inventory::inspectConsumable(int index) const
 {
     if (!hasConsumable(index))
     {
-        std::cout << "Ce consommable n'existe pas." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show("CONSOMMABLE INTROUVABLE", "inventory.consumable.invalid", {"Ce consommable n'existe pas."}, false);
         return;
     }
 
     const Consumable& consumable = consumables[index];
-
-    std::cout << "======= CONSOMMABLE =======" << std::endl;
-    std::cout << "Nom : " << consumable.getName() << std::endl;
-    std::cout << "Description : " << consumable.getDescription() << std::endl;
-    std::cout << "Puissance : " << consumable.getPower() << std::endl;
-    std::cout << "Valeur : " << consumable.getValue() << " pièces" << std::endl;
-    std::cout << "===========================" << std::endl;
-    std::cout << std::endl;
+    showInventoryScreen(
+        "CONSOMMABLE",
+        "inventory.consumable.inspect",
+        {
+            "Nom : " + consumable.getName(),
+            "Description : " + consumable.getDescription(),
+            "Puissance : " + std::to_string(consumable.getPower()),
+            "Valeur : " + std::to_string(consumable.getValue()) + " pièces"
+        },
+        false
+    );
 }
+
 
 // EN: inspectMaterial declares or implements a focused behavior used by this module.
 // FR: inspectMaterial déclare ou implémente un comportement précis utilisé par ce module.
@@ -919,13 +937,83 @@ void Inventory::inspectMaterial(int index) const
 {
     if (!hasMaterial(index))
     {
-        std::cout << "Cette entrée n'existe pas." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show("ENTRÉE INTROUVABLE", "inventory.material.invalid", {"Cette entrée n'existe pas."}, false);
         return;
     }
 
-    materials[index].display();
+    const Material& material = materials[index];
+    std::vector<std::string> lines;
+    lines.push_back("Nom : " + material.getName());
+    lines.push_back("Catégorie : " + material.getCategory());
+
+    if (material.getCategory() != "Livre" && material.getCategory() != "Renseignement" && material.getCategory() != "Outil")
+    {
+        lines.push_back("Qualité : " + material.getQualityLabel());
+    }
+
+    if (material.getCategory() == "Outil" && isRepairKitInventoryId(material.getId()))
+    {
+        if (isUsedRepairKitInventoryId(material.getId()))
+        {
+            lines.push_back("Nombre : " + std::to_string(material.getQuantity()) + " kit(s) entamé(s)");
+            lines.push_back(
+                "Durabilité par kit : "
+                + std::to_string(usedRepairKitInventoryDurability(material.getId()))
+                + "/"
+                + std::to_string(maxRepairKitInventoryDurability(material.getId()))
+            );
+        }
+        else
+        {
+            lines.push_back("Nombre : " + std::to_string(material.getQuantity()) + " kit(s) intact(s)");
+            lines.push_back(
+                "Durabilité par kit : "
+                + std::to_string(maxRepairKitInventoryDurability(material.getId()))
+                + "/"
+                + std::to_string(maxRepairKitInventoryDurability(material.getId()))
+            );
+        }
+    }
+    else
+    {
+        lines.push_back("Quantité : " + std::to_string(material.getQuantity()));
+    }
+
+    lines.push_back("Description : " + material.getDescription());
+
+    std::string valueLine = "Valeur unitaire : "
+        + std::to_string(material.getValue() * material.getQualityPricePercent() / 100)
+        + " pièces";
+    if (material.hasSpecialQuality())
+    {
+        valueLine += " (base " + std::to_string(material.getValue()) + ")";
+    }
+    lines.push_back(valueLine);
+
+    if (material.getCategory() == "Matériau de monstre")
+    {
+        lines.push_back("Utilité connue : revente, artisanat, trophées et recettes liées aux monstres.");
+    }
+    else if (material.getCategory() == "Matériau")
+    {
+        lines.push_back("Utilité connue : réparation, amélioration et fabrication d'équipement.");
+    }
+    else if (material.getCategory() == "Plante")
+    {
+        lines.push_back("Utilité connue : potions, remèdes, quêtes et secrets botaniques.");
+    }
+    else if (material.getCategory() == "Outil")
+    {
+        lines.push_back("Utilité connue : réparation autonome. Un kit intact reste empilé ; un kit entamé garde la marque de son usure.");
+    }
+    else if (material.getCategory() == "Renseignement" || material.getCategory() == "Livre")
+    {
+        lines.push_back("Utilité connue : débloquer ou compléter des informations du bestiaire.");
+    }
+
+    showInventoryScreen("MATÉRIAU / INFO", "inventory.material.inspect", lines, false);
 }
+
 
 // EN: displayWeapons declares or implements a focused behavior used by this module.
 // FR: displayWeapons déclare ou implémente un comportement précis utilisé par ce module.

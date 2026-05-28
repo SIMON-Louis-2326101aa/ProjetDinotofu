@@ -17,6 +17,29 @@
 class Game
 {
 private:
+    struct CombatRecapSnapshot
+    {
+        int level = 0;
+        int experience = 0;
+        int hp = 0;
+        int maxHp = 0;
+        int gold = 0;
+        int victories = 0;
+        int defeats = 0;
+        int escapes = 0;
+        int enemiesKilled = 0;
+        int bossesKilled = 0;
+    };
+
+    struct LastCombatRecap
+    {
+        bool available = false;
+        std::string modeName;
+        std::string difficultyName;
+        CombatRecapSnapshot before;
+        CombatRecapSnapshot after;
+    };
+
     std::string accountName;
     std::string playerName;
     Player mainPlayer;
@@ -28,6 +51,7 @@ private:
     std::vector<Player> partyPlayers;
     std::vector<std::string> partyAccountNames;
     std::vector<DifficultyMode> partyDifficulties;
+    LastCombatRecap lastCombatRecap;
 
     // EN: displayIntroduction declares or implements a focused behavior used by this module.
     // FR: displayIntroduction déclare ou implémente un comportement précis utilisé par ce module.
@@ -61,6 +85,10 @@ private:
     // EN: displayActivityInformation declares or implements a focused behavior used by this module.
     // FR: displayActivityInformation déclare ou implémente un comportement précis utilisé par ce module.
     void displayActivityInformation() const;
+    std::string getSelectedModeName() const;
+    CombatRecapSnapshot captureCombatRecapSnapshot() const;
+    void updateLastCombatRecap(const CombatRecapSnapshot& beforeSnapshot);
+    void displayLastCombatRecap() const;
     // EN: launchSelectedMode declares or implements a focused behavior used by this module.
     // FR: launchSelectedMode déclare ou implémente un comportement précis utilisé par ce module.
     void launchSelectedMode();

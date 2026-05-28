@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "1.35.20",
-  "releaseTag": "v1.35.20",
+  "version": "2.0.0",
+  "releaseTag": "v2.0.0",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "Exemple de manifeste. Les launchers utilisent les releases GitHub et installent dans ProjetDinotofu."
+  "notes": "Palier V2 : interface graphique expérimentale stabilisée avec snapshots menus/combat, cartes métier, contrats de saisie, validation de file de commandes et terminal de secours."
 }

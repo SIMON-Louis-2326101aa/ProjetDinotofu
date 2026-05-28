@@ -58,6 +58,7 @@ std::string PagedMenu::pageInfoText(std::size_t pageIndex, std::size_t totalPage
 
 void PagedMenu::addNavigationOptions(MenuScreen& screen, std::size_t pageIndex, std::size_t totalPages)
 {
+    screen.setPagination(pageIndex, totalPages);
     screen.addBackOption();
 
     if (totalPages > 1)

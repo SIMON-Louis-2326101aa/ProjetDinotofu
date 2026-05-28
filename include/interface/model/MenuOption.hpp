@@ -8,6 +8,25 @@
 
 #include <string>
 
+struct MenuOptionItemData
+{
+    bool structured = false;
+    std::string kind;
+    std::string section;
+    std::string actionType;
+    std::string name;
+    std::string quantity;
+    std::string detail;
+    std::string status;
+    std::string price;
+    std::string stock;
+    std::string maxQuantity;
+    std::string reward;
+    std::string progress;
+    std::string owner;
+    bool important = false;
+};
+
 class MenuOption
 {
 private:
@@ -16,6 +35,7 @@ private:
     std::string hint;
     std::string actionId;
     bool enabled;
+    MenuOptionItemData itemData;
 
 public:
     MenuOption(
@@ -23,7 +43,8 @@ public:
         const std::string& label,
         const std::string& hint = "",
         bool enabled = true,
-        const std::string& actionId = ""
+        const std::string& actionId = "",
+        const MenuOptionItemData& itemData = MenuOptionItemData()
     );
 
     int getNumber() const;
@@ -31,6 +52,8 @@ public:
     const std::string& getHint() const;
     const std::string& getActionId() const;
     bool isEnabled() const;
+    bool hasStructuredItemData() const;
+    const MenuOptionItemData& getItemData() const;
 };
 
 #endif

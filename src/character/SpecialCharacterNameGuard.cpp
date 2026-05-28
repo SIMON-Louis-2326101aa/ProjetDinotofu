@@ -7,8 +7,10 @@
 #include "character/SpecialCharacterNameGuard.hpp"
 
 #include "character/SpecialCharacterCatalog.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <iostream>
+#include <vector>
 
 // EN: isProtectedName declares or implements a focused behavior used by this module.
 // FR: isProtectedName déclare ou implémente un comportement précis utilisé par ce module.
@@ -29,48 +31,50 @@ bool SpecialCharacterNameGuard::tryGetProtectedCharacter(
 // FR: displayIdentityWarning déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterNameGuard::displayIdentityWarning(const SpecialCharacter& character)
 {
-    std::cout << "Ce nom ne t'appartient pas vraiment." << std::endl;
-    std::cout << std::endl;
-    std::cout << character.getName()
-              << " possède déjà son histoire, ses cicatrices, ses choix et ses fautes."
-              << std::endl;
-    std::cout << "Usurper son identité n'est pas une simple fantaisie." << std::endl;
-    std::cout << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back("Ce nom ne t'appartient pas vraiment.");
+    lines.push_back(character.getName() + " possède déjà son histoire, ses cicatrices, ses choix et ses fautes.");
+    lines.push_back("Usurper son identité n'est pas une simple fantaisie.");
 
     if (character.isPermanentlyNonPlayable())
     {
-        std::cout << "Cette identité est verrouillée. Elle refuse d'être incarnée par ce chemin." << std::endl;
+        lines.push_back("Cette identité est verrouillée. Elle refuse d'être incarnée par ce chemin.");
     }
     else
     {
-        std::cout << "Si tu es réellement lié à ce personnage, il faudra le prouver." << std::endl;
-        std::cout << "La date spéciale peut déverrouiller cette identité." << std::endl;
+        lines.push_back("Si tu es réellement lié à ce personnage, il faudra le prouver.");
+        lines.push_back("La date spéciale peut déverrouiller cette identité.");
     }
 
-    std::cout << std::endl;
+    MessageScreen::show("IDENTITÉ PROTÉGÉE", "character.special_name.warning", lines);
 }
 
 // EN: displayIdentityAccepted declares or implements a focused behavior used by this module.
 // FR: displayIdentityAccepted déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterNameGuard::displayIdentityAccepted(const SpecialCharacter& character)
 {
-    std::cout << "Identité reconnue." << std::endl;
-    std::cout << "Tu ne joues pas une copie." << std::endl;
-    std::cout << "Tu réveilles une histoire déjà commencée : "
-              << character.getName()
-              << "."
-              << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "IDENTITÉ RECONNUE",
+        "character.special_name.accepted",
+        {
+            "Identité reconnue.",
+            "Tu ne joues pas une copie.",
+            "Tu réveilles une histoire déjà commencée : " + character.getName() + "."
+        }
+    );
 }
 
 // EN: displayIdentityRefused declares or implements a focused behavior used by this module.
 // FR: displayIdentityRefused déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterNameGuard::displayIdentityRefused(const SpecialCharacter& character)
 {
-    std::cout << "Date incorrecte." << std::endl;
-    std::cout << character.getName()
-              << " refuse de répondre à ton appel."
-              << std::endl;
-    std::cout << "Choisis un autre nom." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "IDENTITÉ REFUSÉE",
+        "character.special_name.refused",
+        {
+            "Date incorrecte.",
+            character.getName() + " refuse de répondre à ton appel.",
+            "Choisis un autre nom."
+        }
+    );
 }

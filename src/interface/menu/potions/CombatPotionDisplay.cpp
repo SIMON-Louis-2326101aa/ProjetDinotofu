@@ -5,6 +5,8 @@
 
 #include "interface/menu/potions/CombatPotionDisplay.hpp"
 
+#include "core/Console.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/potions/CombatPotionUtils.hpp"
 
@@ -13,6 +15,24 @@
 
 #include <iostream>
 #include <string>
+
+namespace
+{
+    MenuOptionItemData makePotionItemData(const Consumable& potion, const std::string& actionType, const std::string& section = "Potions")
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "consumable";
+        itemData.section = section;
+        itemData.actionType = actionType;
+        itemData.name = potion.getName();
+        itemData.detail = CombatPotionUtils::typeToText(potion.getType());
+        itemData.progress = "Puissance : " + std::to_string(potion.getPower());
+        itemData.price = std::to_string(potion.getValue()) + " or";
+        itemData.important = potion.isHealing();
+        return itemData;
+    }
+}
 
 MenuScreen CombatPotionDisplay::buildMainScreen()
 {
@@ -25,6 +45,29 @@ MenuScreen CombatPotionDisplay::buildMainScreen()
     screen.addOption(5, "Utiliser une potion de buff", "Renforcer temporairement le personnage.", true, "potions.buff");
     screen.addOption(6, "Utiliser une potion de debuff", "Affaiblir ou gêner la cible.", true, "potions.debuff");
     screen.addOption(7, "Utiliser une potion spéciale", "Effets rares, instables ou situationnels.", true, "potions.special");
+    return screen;
+}
+
+MenuScreen CombatPotionDisplay::buildMainScreen(const Player& player)
+{
+    MenuScreen screen("POTIONS", "potions.main");
+
+    const bool hasAnyPotion = !player.getInventory().getConsumables().empty();
+    const bool hasHealing = !CombatPotionUtils::getPotionIndices(player, ConsumableType::Healing).empty();
+    const bool hasBuff = !CombatPotionUtils::getPotionIndices(player, ConsumableType::Buff).empty();
+    const bool hasDamage = !CombatPotionUtils::getPotionIndices(player, ConsumableType::Damage).empty();
+    const bool hasDebuff = !CombatPotionUtils::getPotionIndices(player, ConsumableType::Debuff).empty();
+    const bool hasSpecial = !CombatPotionUtils::getPotionIndices(player, ConsumableType::Special).empty();
+
+    screen.addSubtitle("Potions disponibles : " + std::to_string(player.getInventory().getConsumables().size()));
+    screen.addBackOption("Retour", "potions.back");
+    screen.addOption(1, "Voir les potions", hasAnyPotion ? "Liste toutes les potions de l'inventaire." : "Aucune potion à afficher.", hasAnyPotion, "potions.list");
+    screen.addOption(2, "Utiliser une potion curative", hasHealing ? "Soin et récupération." : "Aucune potion curative disponible.", hasHealing, "potions.healing");
+    screen.addOption(3, "Utiliser une potion défensive", hasBuff ? "Protection, réduction ou résistance." : "Aucune potion défensive disponible.", hasBuff, "potions.defensive");
+    screen.addOption(4, "Utiliser une potion offensive", hasDamage ? "Dégâts ou effets lancés sur l'ennemi." : "Aucune potion offensive disponible.", hasDamage, "potions.offensive");
+    screen.addOption(5, "Utiliser une potion de buff", hasBuff ? "Renforcer temporairement le personnage." : "Aucune potion de buff disponible.", hasBuff, "potions.buff");
+    screen.addOption(6, "Utiliser une potion de debuff", hasDebuff ? "Affaiblir ou gêner la cible." : "Aucune potion de debuff disponible.", hasDebuff, "potions.debuff");
+    screen.addOption(7, "Utiliser une potion spéciale", hasSpecial ? "Effets rares, instables ou situationnels." : "Aucune potion spéciale disponible.", hasSpecial, "potions.special");
     return screen;
 }
 
@@ -45,7 +88,8 @@ MenuScreen CombatPotionDisplay::buildQuickHealingScreen(
             potion.getName(),
             "Soin : " + std::to_string(potion.getPower()) + " PV",
             true,
-            "potions.quick_heal.use"
+            "potions.quick_heal.use",
+            makePotionItemData(potion, "use", "Soin rapide")
         );
     }
 
@@ -60,8 +104,8 @@ MenuScreen CombatPotionDisplay::buildSelectedHealingPotionScreen(const Consumabl
     screen.addLine("Description : " + potion.getDescription());
     screen.addLine("Soin : " + std::to_string(potion.getPower()) + " PV");
     screen.addBackOption("Retour", "potions.healing.back");
-    screen.addOption(1, "Inspecter", "Lire les détails de la potion.", true, "potions.healing.inspect");
-    screen.addOption(2, "Utiliser", "Consommer cette potion maintenant.", true, "potions.healing.use");
+    screen.addOption(1, "Inspecter", "Lire les détails de la potion.", true, "potions.healing.inspect", makePotionItemData(potion, "inspect", "Potion sélectionnée"));
+    screen.addOption(2, "Utiliser", "Consommer cette potion maintenant.", true, "potions.healing.use", makePotionItemData(potion, "use", "Potion sélectionnée"));
     return screen;
 }
 
@@ -72,8 +116,8 @@ MenuScreen CombatPotionDisplay::buildSelectedPotionScreen(const Consumable& poti
     screen.addLine("Type : " + CombatPotionUtils::typeToText(potion.getType()));
     screen.addLine("Puissance : " + std::to_string(potion.getPower()));
     screen.addBackOption("Retour", "potions.selected.back");
-    screen.addOption(1, "Inspecter", "Lire les détails de la potion.", true, "potions.selected.inspect");
-    screen.addOption(2, "Utiliser", "Consommer ou lancer cette potion selon son type.", true, "potions.selected.use");
+    screen.addOption(1, "Inspecter", "Lire les détails de la potion.", true, "potions.selected.inspect", makePotionItemData(potion, "inspect", "Potion sélectionnée"));
+    screen.addOption(2, "Utiliser", "Consommer ou lancer cette potion selon son type.", true, "potions.selected.use", makePotionItemData(potion, "use", "Potion sélectionnée"));
     return screen;
 }
 
@@ -93,13 +137,43 @@ MenuScreen CombatPotionDisplay::buildFilteredPotionsScreen(
             potion.getName(),
             "Puissance : " + std::to_string(potion.getPower()),
             true,
-            "potions.filtered.select"
+            "potions.filtered.select",
+            makePotionItemData(potion, "select", "Potions filtrées")
         );
     }
 
     screen.addFooterLine("Choisis une potion.");
     screen.addFooterLine("Entre son numéro dans la liste, ou 0 pour revenir.");
     screen.addBackOption("Retour", "potions.filtered.back");
+    return screen;
+}
+
+MenuScreen CombatPotionDisplay::buildPotionOverviewScreen(const Player& player)
+{
+    MenuScreen screen("POTIONS DISPONIBLES", "potions.overview");
+    const std::vector<Consumable>& consumables = player.getInventory().getConsumables();
+
+    if (consumables.empty())
+    {
+        screen.addLine("Aucune potion dans l'inventaire.");
+        screen.setContinueInput("Valide pour revenir au combat.");
+        return screen;
+    }
+
+    screen.addSubtitle("Total : " + std::to_string(consumables.size()) + " potion(s)");
+    for (int i = 0; i < static_cast<int>(consumables.size()); ++i)
+    {
+        const Consumable& potion = consumables[i];
+        screen.addOption(
+            i + 1,
+            potion.getName(),
+            CombatPotionUtils::typeToText(potion.getType()) + " | Puissance : " + std::to_string(potion.getPower()),
+            false,
+            "potions.overview.item",
+            makePotionItemData(potion, "overview", "Potions disponibles")
+        );
+    }
+    screen.setContinueInput("Valide pour revenir au combat.");
     return screen;
 }
 
@@ -128,34 +202,48 @@ void CombatPotionDisplay::displaySelectedPotion(const Consumable& potion)
 
 void CombatPotionDisplay::displayPotions(const Player& player)
 {
-    const std::vector<Consumable>& consumables =
-        player.getInventory().getConsumables();
+    TerminalInterface::renderMenuScreen(buildPotionOverviewScreen(player), false);
+    Console::waitForEnter();
+    Console::clear();
+}
 
-    std::cout << "========== POTIONS DISPONIBLES ==========" << std::endl;
+void CombatPotionDisplay::showPotionDetails(const Consumable& potion)
+{
+    MessageScreen::show(
+        "DÉTAILS POTION",
+        "potions.details",
+        {
+            "Nom : " + potion.getName(),
+            "Description : " + potion.getDescription(),
+            "Type : " + CombatPotionUtils::typeToText(potion.getType()),
+            "Puissance : " + std::to_string(potion.getPower()),
+            "Valeur : " + std::to_string(potion.getValue()) + " or"
+        }
+    );
+}
 
-    if (consumables.empty())
-    {
-        std::cout << "Aucune potion dans l'inventaire." << std::endl;
-        std::cout << "=========================================" << std::endl;
-        std::cout << std::endl;
-        return;
-    }
+void CombatPotionDisplay::showEmptyCategory(const std::string& typeName)
+{
+    MessageScreen::show(
+        "POTION INDISPONIBLE",
+        "potions.category.empty",
+        {
+            "Aucune potion de type " + typeName + " n'est disponible.",
+            "L'action ne consomme pas le tour."
+        }
+    );
+}
 
-    for (int i = 0; i < static_cast<int>(consumables.size()); ++i)
-    {
-        const Consumable& potion = consumables[i];
-
-        std::cout << "[" << i << "] "
-                  << potion.getName()
-                  << " | "
-                  << CombatPotionUtils::typeToText(potion.getType())
-                  << " | Puissance : "
-                  << potion.getPower()
-                  << std::endl;
-    }
-
-    std::cout << "=========================================" << std::endl;
-    std::cout << std::endl;
+void CombatPotionDisplay::showPotionMissing()
+{
+    MessageScreen::show(
+        "POTION INTROUVABLE",
+        "potions.missing",
+        {
+            "Cette potion n'existe plus dans l'inventaire.",
+            "L'action est annulée proprement."
+        }
+    );
 }
 
 void CombatPotionDisplay::displayFilteredPotions(

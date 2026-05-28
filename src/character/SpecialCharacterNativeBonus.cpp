@@ -10,6 +10,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include "interface/menu/common/MessageScreen.hpp"
+
 #include <iostream>
 
 // EN: applyIfNativeMatch declares or implements a focused behavior used by this module.
@@ -108,9 +110,15 @@ bool SpecialCharacterNativeBonus::applyForSpecialCharacter(
 // FR: displayNativeBonusApplied déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterNativeBonus::displayNativeBonusApplied(const SpecialCharacter& character)
 {
-    std::cout << "Bonus natif reconnu : " << character.getName() << "." << std::endl;
-    std::cout << "L'identité ne copie pas seulement une classe : elle réveille une façon de combattre." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "BONUS NATIF",
+        "character.native_bonus.applied",
+        {
+            "Bonus natif reconnu : " + character.getName() + ".",
+            "L'identité ne copie pas seulement une classe : elle réveille une façon de combattre."
+        },
+        false
+    );
 }
 
 bool SpecialCharacterNativeBonus::classMatchesNativeClass(

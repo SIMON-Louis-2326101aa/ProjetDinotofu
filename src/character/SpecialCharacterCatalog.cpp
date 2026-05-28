@@ -7,7 +7,8 @@
 
 #include <algorithm>
 #include <cctype>
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
 #include <utility>
 #include <vector>
 
@@ -223,32 +224,45 @@ SpecialCharacter SpecialCharacterCatalog::createRandomSpecialOpponent(Random& ra
 
 // EN: displaySpecialCharactersRoadmap declares or implements a focused behavior used by this module.
 // FR: displaySpecialCharactersRoadmap déclare ou implémente un comportement précis utilisé par ce module.
-void SpecialCharacterCatalog::displaySpecialCharactersRoadmap()
+std::vector<std::string> SpecialCharacterCatalog::getSpecialCharactersRoadmapLines()
 {
-    std::cout << "========== PERSONNAGES SPÉCIAUX ==========" << std::endl;
+    std::vector<std::string> lines;
 
     for (const SpecialCharacter& character : getAllSpecialCharacters())
     {
-        std::cout << "- " << character.getName()
-                  << " | Race : " << character.getRaceText()
-                  << " | Classe native : " << character.getNativeClass()
-                  << std::endl;
-        std::cout << "  Style : " << character.getCombatStyle() << std::endl;
+        lines.push_back(
+            "- " + character.getName()
+            + " | Race : " + character.getRaceText()
+            + " | Classe native : " + character.getNativeClass()
+        );
+        lines.push_back("  Style : " + character.getCombatStyle());
 
         if (character.isPermanentlyNonPlayable())
         {
-            std::cout << "  Jouable : non, identité réservée." << std::endl;
+            lines.push_back("  Jouable : non, identité réservée.");
         }
         else if (character.canBePlayedWithSpecialDate())
         {
-            std::cout << "  Jouable : seulement avec validation de date spéciale." << std::endl;
+            lines.push_back("  Jouable : seulement avec validation de date spéciale.");
         }
 
-        std::cout << std::endl;
+        lines.push_back("");
     }
 
-    std::cout << "==========================================" << std::endl;
-    std::cout << std::endl;
+    return lines;
+}
+
+
+// EN: displaySpecialCharactersRoadmap declares or implements a focused behavior used by this module.
+// FR: displaySpecialCharactersRoadmap déclare ou implémente un comportement précis utilisé par ce module.
+void SpecialCharacterCatalog::displaySpecialCharactersRoadmap()
+{
+    MessageScreen::show(
+        "PERSONNAGES SPÉCIAUX",
+        "catalog.special_characters.roadmap",
+        getSpecialCharactersRoadmapLines(),
+        false
+    );
 }
 
 std::string SpecialCharacterCatalog::normalizeName(const std::string& name)

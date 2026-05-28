@@ -7,38 +7,77 @@
 
 #include "interface/TerminalInterface.hpp"
 
-MenuScreen PostCombatMenu::buildScreen(const Player& player)
+#include <string>
+
+namespace
+{
+    MenuOptionItemData makePostCombatItemData(
+        const Player& player,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = ""
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "post_combat";
+        itemData.section = "Après-combat";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.progress = "Niveau " + std::to_string(player.getLevel());
+        itemData.owner = player.getName();
+        itemData.important = actionType == "save" || actionType == "continue" || status == "Altéré";
+        return itemData;
+    }
+}
+
+MenuScreen PostCombatMenu::buildScreen(const Player& player, bool hasLastCombatRecap)
 {
     MenuScreen screen("APRÈS-COMBAT", "post_combat.main");
 
-    screen.addOption(0, "Continuer", "Retourner au choix du mode de jeu.", true, "post_combat.continue");
-    screen.addOption(1, "Ouvrir les boutiques", "Acheter, vendre ou consulter les offres disponibles.", true, "post_combat.shop");
-    screen.addOption(2, "Voir mes statistiques", "Résumé du personnage et de la session.", true, "post_combat.statistics");
-    screen.addOption(3, "Ouvrir l'inventaire / équipement / potions", "Gérer objets, équipement et consommables hors combat.", true, "post_combat.inventory");
-    screen.addOption(4, "Améliorer mes attributs", "Cette voie reste scellée pour l'instant.", true, "post_combat.attributes");
-    screen.addOption(5, "Sauvegarde rapide", "Sauvegarder sans quitter.", true, "post_combat.quick_save");
-    screen.addOption(6, "Sauvegarder et quitter", "Sauvegarder puis fermer la session.", true, "post_combat.save_quit");
-    screen.addOption(7, "Consulter mes quêtes", "Voir les quêtes actives et terminées.", true, "post_combat.quests");
-    screen.addOption(8, "Lieux visitables", "Accéder aux lieux disponibles entre deux combats.", true, "post_combat.locations");
-    screen.addOption(9, "PNJ notables", "Parler aux personnages accessibles.", true, "post_combat.npcs");
-    screen.addOption(10, "Échange / don entre personnages", "Transférer des ressources autorisées entre comptes.", true, "post_combat.exchange");
-    screen.addOption(11, "Voir mes compétences", "Consulter la progression et les techniques connues.", true, "post_combat.skills");
-    screen.addOption(12, "Voir rapidement mon équipement", "Affichage court de l'équipement actuel.", true, "post_combat.quick_equipment");
+    screen.addSubtitle(player.getName() + " | Niveau " + std::to_string(player.getLevel()));
+    screen.addLine("PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()));
+    screen.addLine("Or : " + std::to_string(player.getInventory().getGold()) + " pièces");
+    screen.addLine("Version de création : " + player.getCreatedForVersion());
+    screen.addLine("Dernière adaptation : " + player.getLastAdaptedVersion());
 
     if (player.isAlteredByCheats())
     {
-        screen.addOption(13, "Données altérées", "Voir les altérations connues de ce personnage.", true, "post_combat.altered_data");
+        screen.addLine("État : données altérées");
+    }
+
+    screen.addOption(0, "Continuer", "Retourner au choix du mode de jeu.", true, "post_combat.continue", makePostCombatItemData(player, "continue", "Continuer", "Retourner au choix du mode de jeu."));
+    screen.addOption(1, "Ouvrir les boutiques", "Acheter, vendre ou consulter les offres disponibles.", true, "post_combat.shop", makePostCombatItemData(player, "open", "Boutiques", "Acheter, vendre ou consulter les offres disponibles."));
+    screen.addOption(2, "Voir mes statistiques", "Résumé du personnage et de la session.", true, "post_combat.statistics", makePostCombatItemData(player, "open", "Statistiques", "Résumé du personnage et de la session."));
+    screen.addOption(3, "Ouvrir l'inventaire / équipement / potions", "Gérer objets, équipement et consommables hors combat.", true, "post_combat.inventory", makePostCombatItemData(player, "open", "Inventaire / équipement / potions", "Gérer objets, équipement et consommables hors combat."));
+    screen.addOption(4, "Améliorer mes attributs", "Cette voie reste scellée pour l'instant.", true, "post_combat.attributes", makePostCombatItemData(player, "open", "Attributs", "Cette voie reste scellée pour l'instant.", "Scellé"));
+    screen.addOption(5, "Sauvegarde rapide", "Sauvegarder sans quitter.", true, "post_combat.quick_save", makePostCombatItemData(player, "save", "Sauvegarde rapide", "Sauvegarder sans quitter."));
+    screen.addOption(6, "Sauvegarder et quitter", "Sauvegarder puis fermer la session.", true, "post_combat.save_quit", makePostCombatItemData(player, "save", "Sauvegarder et quitter", "Sauvegarder puis fermer la session."));
+    screen.addOption(7, "Consulter mes quêtes", "Voir les quêtes actives et terminées.", true, "post_combat.quests", makePostCombatItemData(player, "quest", "Quêtes", "Voir les quêtes actives et terminées."));
+    screen.addOption(8, "Lieux visitables", "Accéder aux lieux disponibles entre deux combats.", true, "post_combat.locations", makePostCombatItemData(player, "travel", "Lieux visitables", "Accéder aux lieux disponibles entre deux combats."));
+    screen.addOption(9, "PNJ notables", "Parler aux personnages accessibles.", true, "post_combat.npcs", makePostCombatItemData(player, "talk", "PNJ notables", "Parler aux personnages accessibles."));
+    screen.addOption(10, "Échange / don entre personnages", "Transférer des ressources autorisées entre comptes.", true, "post_combat.exchange", makePostCombatItemData(player, "open", "Échange / don", "Transférer des ressources autorisées entre comptes."));
+    screen.addOption(11, "Voir mes compétences", "Consulter la progression et les techniques connues.", true, "post_combat.skills", makePostCombatItemData(player, "open", "Compétences", "Consulter la progression et les techniques connues."));
+    screen.addOption(12, "Voir rapidement mon équipement", "Affichage court de l'équipement actuel.", true, "post_combat.quick_equipment", makePostCombatItemData(player, "inspect", "Équipement rapide", "Affichage court de l'équipement actuel."));
+    screen.addOption(13, "Dernier récap de combat", hasLastCombatRecap ? "Relire le dernier bilan avant/après combat." : "Aucun combat récent enregistré dans cette session.", hasLastCombatRecap, "post_combat.last_recap", makePostCombatItemData(player, "inspect", "Dernier récap", "Relire le dernier bilan avant/après combat.", hasLastCombatRecap ? "Disponible" : "Indisponible"));
+
+    if (player.isAlteredByCheats())
+    {
+        screen.addOption(14, "Données altérées", "Voir les altérations connues de ce personnage.", true, "post_combat.altered_data", makePostCombatItemData(player, "inspect", "Données altérées", "Voir les altérations connues de ce personnage.", "Altéré"));
     }
 
     return screen;
 }
 
-void PostCombatMenu::display(const Player& player)
+void PostCombatMenu::display(const Player& player, bool hasLastCombatRecap)
 {
-    TerminalInterface::renderMenuScreen(buildScreen(player));
+    TerminalInterface::renderMenuScreen(buildScreen(player, hasLastCombatRecap));
 }
 
-int PostCombatMenu::getMaxChoice(const Player& player)
+int PostCombatMenu::getMaxChoice(const Player& player, bool hasLastCombatRecap)
 {
-    return buildScreen(player).getHighestOptionNumber();
+    return buildScreen(player, hasLastCombatRecap).getHighestOptionNumber();
 }

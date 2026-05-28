@@ -10,6 +10,9 @@
 #include "combat/system/CombatClassSystem.hpp"
 #include "combat/system/ElementalAffinitySystem.hpp"
 #include "core/Console.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 #include "entity/Player.hpp"
 #include "entity/Monster.hpp"
@@ -25,6 +28,81 @@
 
 namespace
 {
+
+
+    struct CombatOptionSpec
+    {
+        int number;
+        std::string label;
+        std::string hint;
+        bool enabled;
+        std::string actionId;
+    };
+
+    void showCombatActionMessage(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        bool waitAndClear = false
+    )
+    {
+        MessageScreen::show(title, screenId, lines, waitAndClear);
+    }
+
+    int askStructuredCombatChoice(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        const std::vector<CombatOptionSpec>& options,
+        const std::string& invalidMessage = "Choix invalide."
+    )
+    {
+        MenuScreen screen(title, screenId);
+        screen.setChoiceInput("Choisis une action affichée.");
+
+        for (const std::string& line : lines)
+        {
+            screen.addLine(line);
+        }
+
+        for (const CombatOptionSpec& option : options)
+        {
+            screen.addOption(option.number, option.label, option.hint, option.enabled, option.actionId);
+        }
+
+        return TerminalInterface::askMenuChoiceFromOptions(screen, invalidMessage);
+    }
+
+    void showCooldownApplied(const Entity& attacker, int turns)
+    {
+        showCombatActionMessage(
+            "SOUFFLE DE COMPÉTENCE",
+            "combat.class_skill.cooldown",
+            {
+                attacker.getName() + " doit reprendre son souffle.",
+                "Récupération restante : " + std::to_string(turns) + " tour(s)."
+            },
+            false
+        );
+    }
+
+    void showClassSkillResult(
+        const std::string& skillName,
+        const std::string& screenId,
+        const std::vector<std::string>& lines
+    )
+    {
+        std::vector<std::string> screenLines;
+        screenLines.push_back("Compétence de classe : " + skillName + ".");
+        screenLines.insert(screenLines.end(), lines.begin(), lines.end());
+
+        showCombatActionMessage(
+            "COMPÉTENCE DE CLASSE",
+            screenId,
+            screenLines,
+            false
+        );
+    }
     struct AmmunitionChoice
     {
         std::string id;
@@ -142,38 +220,46 @@ namespace
         }
 
         int successChance = magicCatalystSuccessChance(*player);
-        std::cout << "Canalisation : " << spellName << "." << std::endl;
-        std::cout << "Stabilité du catalyseur : " << successChance << "%" << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("Sort : " + spellName);
+        lines.push_back("Stabilité du catalyseur : " + std::to_string(successChance) + "%.");
 
         if (player->hasEquippedWeapon())
         {
             Weapon weapon = player->getEquippedWeapon();
             if (weapon.getType() != WeaponType::Staff)
             {
-                std::cout << "L'arme équipée n'est pas un vrai catalyseur : la formule répond moins bien." << std::endl;
+                lines.push_back("L'arme équipée n'est pas un vrai catalyseur : la formule répond moins bien.");
             }
             else if (weapon.isBroken())
             {
-                std::cout << "Le catalyseur est brisé : la magie passe par des fissures dangereuses." << std::endl;
+                lines.push_back("Le catalyseur est brisé : la magie passe par des fissures dangereuses.");
             }
             else if (!weapon.isIndestructible() && weapon.getMaxDurability() > 0 && weapon.getDurability() * 100 / weapon.getMaxDurability() <= 30)
             {
-                std::cout << "Le catalyseur est presque épuisé : la réussite devient moins sûre." << std::endl;
+                lines.push_back("Le catalyseur est presque épuisé : la réussite devient moins sûre.");
+            }
+            else
+            {
+                lines.push_back("Le catalyseur répond correctement.");
             }
         }
         else
         {
-            std::cout << "Aucun catalyseur équipé : le sort est forcé à mains nues." << std::endl;
+            lines.push_back("Aucun catalyseur équipé : le sort est forcé à mains nues.");
         }
 
-        if (random.between(1, 100) <= successChance)
-        {
-            return true;
-        }
+        const bool success = random.between(1, 100) <= successChance;
+        lines.push_back(success ? "Le flux se stabilise." : "Le flux se casse avant de former le sort. Rien ne se stabilise.");
 
-        std::cout << "Le flux se casse avant de former le sort. Rien ne se stabilise." << std::endl;
-        std::cout << std::endl;
-        return false;
+        showCombatActionMessage(
+            success ? "CANALISATION RÉUSSIE" : "CANALISATION INSTABLE",
+            success ? "combat.magic.catalyst.success" : "combat.magic.catalyst.failure",
+            lines,
+            false
+        );
+
+        return success;
     }
 
     void askAmmunitionChoiceIfNeeded(Entity& attacker)
@@ -196,66 +282,80 @@ namespace
             }
         }
 
-        std::cout << "========== CHOIX DES MUNITIONS ==========" << std::endl;
-        std::cout << "Chaque tir consomme une munition. Choisis ce que tu veux utiliser." << std::endl;
-
         if (!hasAvailableAmmunition)
         {
-            std::cout << "Aucune munition compatible." << std::endl;
-            std::cout << "1 : Utiliser l'arme en défense d'urgence" << std::endl;
-            std::cout << "0 : Annuler" << std::endl;
-            std::cout << "=========================================" << std::endl;
-            std::cout << "> ";
-
-            int emergencyChoice = Console::askNumberBetween(
-                0,
-                1,
-                "Choix invalide. Choisis 0 pour annuler ou 1 pour la défense d'urgence."
+            int emergencyChoice = askStructuredCombatChoice(
+                "CHOIX DES MUNITIONS",
+                "combat.ammunition.empty",
+                {
+                    "Arme : " + player->getEquippedWeapon().getName(),
+                    "Aucune munition compatible n'est disponible.",
+                    "Tu peux annuler ou garder l'arme en défense d'urgence."
+                },
+                {
+                    {1, "Utiliser l'arme en défense d'urgence", "Pas de tir magique : seulement une défense de proximité.", true, "emergency_defense"},
+                    {0, "Annuler", "Ne dépense aucune munition et annule l'attaque.", true, "cancel"}
+                },
+                "Choix invalide. Choisis 0 ou 1."
             );
 
             if (emergencyChoice == 0)
             {
                 player->setNextAmmunitionChoice("__cancel_attack__");
-                std::cout << "Tu baisses ton arme à distance : aucune munition, aucune attaque." << std::endl;
-                std::cout << std::endl;
+                showCombatActionMessage(
+                    "TIR ANNULÉ",
+                    "combat.ammunition.cancelled",
+                    {"Tu baisses ton arme à distance.", "Aucune munition n'est dépensée."},
+                    false
+                );
                 return;
             }
 
             player->setNextAmmunitionChoice("__emergency_defense__");
-            std::cout << "Tu utilises ton arme en défense d'urgence : pas de tir magique, seulement un coup de crosse/branche si l'ennemi se rapproche." << std::endl;
-            std::cout << std::endl;
+            showCombatActionMessage(
+                "DÉFENSE D'URGENCE",
+                "combat.ammunition.emergency_defense",
+                {"Aucune munition compatible.", "L'arme reste prête pour un coup de crosse, de branche ou de garde si l'ennemi se rapproche."},
+                false
+            );
             return;
         }
 
-        std::cout << "0 : Annuler" << std::endl;
+        std::vector<CombatOptionSpec> optionSpecs;
+        optionSpecs.push_back({0, "Annuler", "Ne dépense aucune munition.", true, "cancel"});
         for (std::size_t i = 0; i < choices.size(); ++i)
         {
-            std::cout << (i + 1) << " : " << choices[i].label
-                      << " x" << choices[i].count;
-            if (choices[i].special)
+            const AmmunitionChoice& choice = choices[i];
+            std::string label = choice.label + " x" + std::to_string(choice.count);
+            std::string hint = choice.special ? "Munition spéciale." : "Munition standard.";
+            if (choice.count <= 0)
             {
-                std::cout << " [spéciale]";
+                hint += " Indisponible.";
             }
-            if (choices[i].count <= 0)
-            {
-                std::cout << " [indisponible]";
-            }
-            std::cout << std::endl;
+            optionSpecs.push_back({static_cast<int>(i + 1), label, hint, choice.count > 0, choice.id});
         }
-        std::cout << "=========================================" << std::endl;
-        std::cout << "> ";
 
-        int choice = Console::askNumberBetween(
-            0,
-            static_cast<int>(choices.size()),
+        int choice = askStructuredCombatChoice(
+            "CHOIX DES MUNITIONS",
+            "combat.ammunition.choice",
+            {
+                "Arme : " + player->getEquippedWeapon().getName(),
+                "Chaque tir consomme une munition.",
+                "Les munitions indisponibles restent visibles mais verrouillées."
+            },
+            optionSpecs,
             "Choix invalide. Choisis une munition affichée."
         );
 
         if (choice == 0)
         {
             player->setNextAmmunitionChoice("__cancel_attack__");
-            std::cout << "Tir annulé : tu ne dépenses aucune munition." << std::endl;
-            std::cout << std::endl;
+            showCombatActionMessage(
+                "TIR ANNULÉ",
+                "combat.ammunition.cancelled",
+                {"Tir annulé.", "Aucune munition n'est dépensée."},
+                false
+            );
             return;
         }
 
@@ -263,14 +363,26 @@ namespace
         if (selected.count <= 0)
         {
             player->setNextAmmunitionChoice("__cancel_attack__");
-            std::cout << "Tu n'as plus cette munition. Le tir est annulé pour éviter de gaspiller ton tour bêtement." << std::endl;
-            std::cout << std::endl;
+            showCombatActionMessage(
+                "MUNITION INDISPONIBLE",
+                "combat.ammunition.unavailable",
+                {"Cette munition n'est plus disponible.", "Le tir est annulé pour éviter de gaspiller ton tour."},
+                false
+            );
             return;
         }
 
         player->setNextAmmunitionChoice(selected.id);
-        std::cout << "Munition choisie : " << selected.label << " x" << selected.count << "." << std::endl;
-        std::cout << std::endl;
+        showCombatActionMessage(
+            "MUNITION CHOISIE",
+            "combat.ammunition.selected",
+            {
+                "Munition : " + selected.label,
+                "Quantité en réserve : " + std::to_string(selected.count),
+                selected.special ? "Type : spéciale." : "Type : standard."
+            },
+            false
+        );
     }
 }
 
@@ -318,6 +430,8 @@ void CombatActions::executeWeaponTechnique(
     Player* player = dynamic_cast<Player*>(&attacker);
     std::string className = CombatClassSystem::normalizeClassText(attacker.getType());
 
+    std::vector<std::string> techniqueNotes;
+
     if (player != nullptr && player->hasEquippedWeapon())
     {
         WeaponType weaponType = player->getEquippedWeapon().getType();
@@ -363,49 +477,49 @@ void CombatActions::executeWeaponTechnique(
             bonus += 4;
             techniqueName += " / enchaînement appris";
             ElementalAffinitySystem::applyBleeding(defender, 1, 1 + std::max(1, player->getLevel() / 35));
-            std::cout << "Le geste à la dague se prolonge en entaille courte." << std::endl;
+            techniqueNotes.push_back("Le geste à la dague se prolonge en entaille courte.");
         }
         else if (weaponType == WeaponType::Staff && player->hasActiveSkill("cautious_channeling"))
         {
             bonus += 3;
             attacker.startDefensePosture(8, 4, "Canalisation prudente");
             techniqueName += " / canalisation stable";
-            std::cout << "Le bâton canalise sans exposer complètement son porteur." << std::endl;
+            techniqueNotes.push_back("Le bâton canalise sans exposer complètement son porteur.");
         }
         else if (weaponType == WeaponType::BareHands && player->hasActiveSkill("reflex_counter"))
         {
             bonus += 2;
             attacker.startDefensePosture(10, 12, "Contre réflexe");
             techniqueName += " / contre prêt";
-            std::cout << "Le corps garde assez d'élan pour répondre si l'ennemi rate." << std::endl;
+            techniqueNotes.push_back("Le corps garde assez d'élan pour répondre si l'ennemi rate.");
         }
         else if (weaponType == WeaponType::Axe && player->hasActiveSkill("splitting_blow"))
         {
             bonus += 5;
             ElementalAffinitySystem::applyBleeding(defender, 2, 2 + std::max(1, player->getLevel() / 30));
             techniqueName += " / frappe fendue";
-            std::cout << "La hache ouvre une trajectoire large qui mord après l'impact." << std::endl;
+            techniqueNotes.push_back("La hache ouvre une trajectoire large qui mord après l'impact.");
         }
         else if (weaponType == WeaponType::Hammer && player->hasActiveSkill("armor_crack"))
         {
             bonus += 5;
             ElementalAffinitySystem::applyShock(defender, 1);
             techniqueName += " / fracasse-garde";
-            std::cout << "Le choc du marteau casse le rythme défensif adverse." << std::endl;
+            techniqueNotes.push_back("Le choc du marteau casse le rythme défensif adverse.");
         }
 
         if (weaponType == WeaponType::Sword && player->hasPassiveSkill("blade_discipline"))
         {
             bonus += 3;
             techniqueName += " / discipline de lame";
-            std::cout << "La lame reste dans un axe propre : le coup perd moins de force." << std::endl;
+            techniqueNotes.push_back("La lame reste dans un axe propre : le coup perd moins de force.");
         }
         else if (weaponType == WeaponType::Spear && player->hasPassiveSkill("reach_control"))
         {
             bonus += 2;
             attacker.startDefensePosture(6, 5, "Contrôle d'allonge");
             techniqueName += " / allonge tenue";
-            std::cout << "La lance garde une distance sûre après la poussée." << std::endl;
+            techniqueNotes.push_back("La lance garde une distance sûre après la poussée.");
         }
     }
 
@@ -462,13 +576,12 @@ void CombatActions::executeWeaponTechnique(
         techniqueName += " / lecture du rythme";
     }
 
-    std::cout << attacker.getName() << " utilise : " << techniqueName << "." << std::endl;
-    std::cout << "La technique dépend de l'arme équipée et de la classe : certaines formations imposent naturellement leur propre rythme." << std::endl;
+    techniqueNotes.insert(techniqueNotes.begin(), "La technique dépend de l'arme équipée et de la classe : certaines formations imposent naturellement leur propre rythme.");
 
     if (className.find("assassin") != std::string::npos || className.find("ombrelame") != std::string::npos)
     {
         ElementalAffinitySystem::applyBleeding(defender, 1, 2 + std::max(1, attacker.getMaxDamage() / 18));
-        std::cout << "L'angle mort prépare un petit saignement si la cible survit." << std::endl;
+        techniqueNotes.push_back("L'angle mort prépare un petit saignement si la cible survit.");
     }
     else if (className.find("mage") != std::string::npos || className.find("sorcier") != std::string::npos || className.find("arcaniste") != std::string::npos)
     {
@@ -476,24 +589,24 @@ void CombatActions::executeWeaponTechnique(
         if (elementalRoll == 1)
         {
             ElementalAffinitySystem::applyBurning(defender, 1, 2 + std::max(1, attacker.getMaxDamage() / 20));
-            std::cout << "La surcharge laisse une brûlure arcanique faible." << std::endl;
+            techniqueNotes.push_back("La surcharge laisse une brûlure arcanique faible.");
         }
         else if (elementalRoll == 2)
         {
             ElementalAffinitySystem::applyFrost(defender, 2);
-            std::cout << "La surcharge refroidit la cible et prépare un ralentissement." << std::endl;
+            techniqueNotes.push_back("La surcharge refroidit la cible et prépare un ralentissement.");
         }
         else
         {
             ElementalAffinitySystem::applyShock(defender, 2);
-            std::cout << "La surcharge perturbe la cible avec une décharge instable." << std::endl;
+            techniqueNotes.push_back("La surcharge perturbe la cible avec une décharge instable.");
         }
     }
     else if (className.find("clerc") != std::string::npos || className.find("prêtre") != std::string::npos || className.find("pretre") != std::string::npos || className.find("paladin") != std::string::npos)
     {
         int selfHeal = std::max(2, attacker.getMaxHp() / 25);
         attacker.heal(selfHeal);
-        std::cout << "La frappe protectrice rend " << selfHeal << " PV au lanceur." << std::endl;
+        techniqueNotes.push_back("La frappe protectrice rend " + std::to_string(selfHeal) + " PV au lanceur.");
     }
     else if (className.find("alchim") != std::string::npos || className.find("artific") != std::string::npos)
     {
@@ -501,36 +614,47 @@ void CombatActions::executeWeaponTechnique(
         if (effectRoll == 1)
         {
             ElementalAffinitySystem::applyPoison(defender, 2, 2 + std::max(1, attacker.getMaxDamage() / 18));
-            std::cout << "Le dosage instable accroche un poison faible." << std::endl;
+            techniqueNotes.push_back("Le dosage instable accroche un poison faible.");
         }
         else if (effectRoll == 2)
         {
             ElementalAffinitySystem::applyShock(defender, 1);
-            std::cout << "Le mécanisme bricolé produit une petite décharge." << std::endl;
+            techniqueNotes.push_back("Le mécanisme bricolé produit une petite décharge.");
         }
         else
         {
             attacker.startDefensePosture(10, 4, "Couverture d'artificier");
-            std::cout << "Le bricolage crée une petite couverture défensive." << std::endl;
+            techniqueNotes.push_back("Le bricolage crée une petite couverture défensive.");
         }
     }
     else if (className.find("nécro") != std::string::npos || className.find("necro") != std::string::npos)
     {
         ElementalAffinitySystem::applyBleeding(defender, 2, 2 + std::max(1, attacker.getMaxDamage() / 20));
-        std::cout << "La dette des morts laisse une trace sombre, proche d'un saignement." << std::endl;
+        techniqueNotes.push_back("La dette des morts laisse une trace sombre, proche d'un saignement.");
     }
     else if (className.find("duelliste") != std::string::npos || className.find("moine") != std::string::npos)
     {
         attacker.startDefensePosture(8, 10, "Lecture du rythme");
-        std::cout << "Le rythme lu prépare une petite fenêtre de contre." << std::endl;
+        techniqueNotes.push_back("Le rythme lu prépare une petite fenêtre de contre.");
     }
     else if (className.find("lancier") != std::string::npos)
     {
         attacker.startDefensePosture(12, 4, "Allonge de lancier");
-        std::cout << "Le lancier garde l'ennemi à distance après sa technique." << std::endl;
+        techniqueNotes.push_back("Le lancier garde l'ennemi à distance après sa technique.");
     }
 
-    std::cout << std::endl;
+    showCombatActionMessage(
+        "TECHNIQUE D'ARME",
+        "combat.weapon_technique",
+        [&]() {
+            std::vector<std::string> lines;
+            lines.push_back(attacker.getName() + " utilise : " + techniqueName + ".");
+            lines.insert(lines.end(), techniqueNotes.begin(), techniqueNotes.end());
+            lines.push_back("Bonus de technique : " + std::to_string(bonus) + ".");
+            return lines;
+        }(),
+        false
+    );
 
     executeBoostedAttack(attacker, defender, random, bonus);
 }
@@ -548,9 +672,16 @@ void CombatActions::executeHeavyAttack(
     if (className.find("colosse") != std::string::npos || className.find("gardien") != std::string::npos) bonus += 4;
     if (className.find("assassin") != std::string::npos || className.find("archer") != std::string::npos) bonus -= 3;
 
-    std::cout << attacker.getName() << " prépare une attaque lourde." << std::endl;
-    std::cout << "Le coup demande de l'engagement : les profils lourds et berserkers y trouvent plus facilement leur force." << std::endl;
-    std::cout << std::endl;
+    showCombatActionMessage(
+        "ATTAQUE LOURDE",
+        "combat.attack.heavy",
+        {
+            attacker.getName() + " prépare une attaque lourde.",
+            "Le coup demande de l'engagement : les profils lourds et berserkers y trouvent plus facilement leur force.",
+            "Bonus d'attaque : " + std::to_string(bonus) + "."
+        },
+        false
+    );
 
     executeBoostedAttack(attacker, defender, random, bonus);
 }
@@ -576,16 +707,28 @@ void CombatActions::executeQuickAttack(
         chainChance -= 18;
     }
 
-    std::cout << attacker.getName() << " tente une attaque rapide." << std::endl;
-    std::cout << "Les classes agiles enchaînent plus naturellement, les classes lourdes moins." << std::endl;
-    std::cout << std::endl;
+    showCombatActionMessage(
+        "ATTAQUE RAPIDE",
+        "combat.attack.quick",
+        {
+            attacker.getName() + " tente une attaque rapide.",
+            "Les classes agiles enchaînent plus naturellement, les classes lourdes moins.",
+            "Chance d'enchaînement : " + std::to_string(chainChance) + "%.",
+            "Bonus d'attaque : " + std::to_string(bonus) + "."
+        },
+        false
+    );
 
     executeBoostedAttack(attacker, defender, random, bonus);
 
     if (!defender.isDead() && random.between(1, 100) <= chainChance)
     {
-        std::cout << "L'ouverture reste présente : second geste rapide !" << std::endl;
-        std::cout << std::endl;
+        showCombatActionMessage(
+            "ENCHAÎNEMENT RAPIDE",
+            "combat.attack.quick.chain",
+            {"L'ouverture reste présente : second geste rapide !"},
+            false
+        );
         executeBoostedAttack(attacker, defender, random, -5);
     }
 }
@@ -620,33 +763,43 @@ bool CombatActions::executeClassSkill(
 
     auto startCooldown = [&](int turns) {
         attacker.startClassSkillCooldown(turns);
-        std::cout << "Souffle de compétence : " << turns << " tour(s) de récupération." << std::endl;
-        std::cout << std::endl;
+        showCooldownApplied(attacker, turns);
     };
 
     if (!attacker.isClassSkillReady())
     {
-        std::cout << "La compétence de classe n'est pas encore revenue." << std::endl;
-        std::cout << "Récupération restante : " << attacker.getClassSkillCooldownTurns() << " tour(s)." << std::endl;
-        std::cout << std::endl;
+        showCombatActionMessage(
+            "COMPÉTENCE INDISPONIBLE",
+            "combat.class_skill.cooldown_locked",
+            {
+                "La compétence de classe n'est pas encore revenue.",
+                "Récupération restante : " + std::to_string(attacker.getClassSkillCooldownTurns()) + " tour(s)."
+            },
+            false
+        );
         return false;
     }
 
-    std::cout << attacker.getName() << " cherche une compétence de classe utilisable maintenant." << std::endl;
-
     if (hasAny({"assassin", "ombrelame", "lanceur de dagues"}) && level >= 3)
     {
-        std::cout << "========== COMPÉTENCE ASSASSIN ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Pas dans l'angle mort (niv. 3, recharge 3 tours)" << std::endl;
-        if (level >= 8) std::cout << "2 : Disparition basse (niv. 8, recharge 4 tours)" << std::endl;
-        std::cout << "> ";
-        int choice = Console::askNumberBetween(0, level >= 8 ? 2 : 1, "Choix invalide.");
+        int choice = askStructuredCombatChoice(
+            "COMPÉTENCE ASSASSIN",
+            "combat.class_skill.assassin",
+            {attacker.getName() + " cherche une ouverture d'assassin."},
+            {
+                {1, "Pas dans l'angle mort", "Niv. 3, recharge 3 tours. Saignement préparé.", true, "shadow_step"},
+                {2, "Disparition basse", "Niv. 8, recharge 4 tours. Défense + blessure longue.", level >= 8, "low_disappearance"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
         if (choice == 0) return false;
         if (choice == 2)
         {
-            std::cout << "Compétence de classe : Disparition basse." << std::endl;
-            std::cout << "Tu recules dans un angle mort, puis tu frappes en laissant une blessure plus longue." << std::endl;
+            showClassSkillResult(
+                "Disparition basse",
+                "combat.class_skill.assassin.low_disappearance.result",
+                {"Tu recules dans un angle mort, puis tu frappes en laissant une blessure plus longue."}
+            );
             attacker.startDefensePosture(14, 18, "Disparition basse");
             ElementalAffinitySystem::applyBleeding(defender, 4, 3 + std::max(1, level / 14));
             executeBoostedAttack(attacker, defender, random, 4 + level / 18);
@@ -654,8 +807,11 @@ bool CombatActions::executeClassSkill(
             return true;
         }
 
-        std::cout << "Compétence de classe : Pas dans l'angle mort." << std::endl;
-        std::cout << "Tu sacrifies la puissance brute pour préparer une blessure qui continue de travailler." << std::endl;
+        showClassSkillResult(
+            "Pas dans l'angle mort",
+            "combat.class_skill.assassin.shadow_step.result",
+            {"Tu sacrifies la puissance brute pour préparer une blessure qui continue de travailler."}
+        );
         ElementalAffinitySystem::applyBleeding(defender, 3, 2 + std::max(1, level / 18));
         executeBoostedAttack(attacker, defender, random, 2 + level / 20);
         startCooldown(3);
@@ -664,25 +820,35 @@ bool CombatActions::executeClassSkill(
 
     if (hasAny({"gardien", "tank", "colosse"}) && level >= 3)
     {
-        std::cout << "========== COMPÉTENCE DÉFENSIVE ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Rempart provoquant (niv. 3, recharge 3 tours)" << std::endl;
-        if (level >= 8) std::cout << "2 : Ancrage total (niv. 8, recharge 4 tours)" << std::endl;
-        std::cout << "> ";
-        int choice = Console::askNumberBetween(0, level >= 8 ? 2 : 1, "Choix invalide.");
+        int choice = askStructuredCombatChoice(
+            "COMPÉTENCE DÉFENSIVE",
+            "combat.class_skill.defense",
+            {attacker.getName() + " choisit une posture de protection."},
+            {
+                {1, "Rempart provoquant", "Niv. 3, recharge 3 tours. Défense et menace.", true, "taunting_wall"},
+                {2, "Ancrage total", "Niv. 8, recharge 4 tours. Défense très forte.", level >= 8, "total_anchor"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
         if (choice == 0) return false;
         if (choice == 2)
         {
-            std::cout << "Compétence de classe : Ancrage total." << std::endl;
-            std::cout << "Tu abandonnes presque l'offense pour forcer l'ennemi à te gérer." << std::endl;
+            showClassSkillResult(
+                "Ancrage total",
+                "combat.class_skill.defense.total_anchor.result",
+                {"Tu abandonnes presque l'offense pour forcer l'ennemi à te gérer."}
+            );
             attacker.startDefensePosture(35, 12, "Ancrage total");
             executeBoostedAttack(attacker, defender, random, -5);
             startCooldown(4);
             return true;
         }
 
-        std::cout << "Compétence de classe : Rempart provoquant." << std::endl;
-        std::cout << "Tu prends de la place, tu frappes moins fort, mais tu rends ta présence impossible à ignorer." << std::endl;
+        showClassSkillResult(
+            "Rempart provoquant",
+            "combat.class_skill.defense.taunting_wall.result",
+            {"Tu prends de la place, tu frappes moins fort, mais tu rends ta présence impossible à ignorer."}
+        );
         attacker.startDefensePosture(22, 7, "Rempart provoquant");
         executeBoostedAttack(attacker, defender, random, -2);
         startCooldown(3);
@@ -691,17 +857,25 @@ bool CombatActions::executeClassSkill(
 
     if (hasAny({"clerc", "prêtre", "pretre", "paladin"}) && level >= 3)
     {
-        std::cout << "========== COMPÉTENCE SACRÉE ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Serment de survie (niv. 3, recharge 3 tours)" << std::endl;
-        if (level >= 7) std::cout << "2 : Prière purificatrice (niv. 7, recharge 5 tours)" << std::endl;
-        std::cout << "> ";
-        int choice = Console::askNumberBetween(0, level >= 7 ? 2 : 1, "Choix invalide.");
+        int choice = askStructuredCombatChoice(
+            "COMPÉTENCE SACRÉE",
+            "combat.class_skill.sacred",
+            {attacker.getName() + " rassemble une énergie protectrice."},
+            {
+                {1, "Serment de survie", "Niv. 3, recharge 3 tours. Soin personnel + garde légère.", true, "survival_oath"},
+                {2, "Prière purificatrice", "Niv. 7, recharge 5 tours. Soin + purification.", level >= 7, "purifying_prayer"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
         if (choice == 0) return false;
         int heal = std::max(5, attacker.getMaxHp() / 12 + level / 5);
         if (choice == 2)
         {
-            std::cout << "Compétence de classe : Prière purificatrice." << std::endl;
+            showClassSkillResult(
+                "Prière purificatrice",
+                "combat.class_skill.sacred.purifying_prayer.result",
+                {"La lumière cherche d'abord les effets dangereux avant de refermer les blessures."}
+            );
             int cured = 0;
             if (attacker.cureBurning()) cured++;
             if (attacker.curePoison()) cured++;
@@ -712,16 +886,32 @@ bool CombatActions::executeClassSkill(
             if (attacker.cureVulnerability()) cured++;
             attacker.heal(heal + level / 3);
             attacker.startDefensePosture(10, 3, "Prière purificatrice");
-            std::cout << attacker.getName() << " récupère " << (heal + level / 3) << " PV et purifie " << cured << " effet(s)." << std::endl;
+            showCombatActionMessage(
+                "PRIÈRE PURIFICATRICE",
+                "combat.class_skill.sacred.purifying_prayer.heal",
+                {
+                    attacker.getName() + " récupère " + std::to_string(heal + level / 3) + " PV.",
+                    "Effets purifiés : " + std::to_string(cured) + "."
+                },
+                false
+            );
             startCooldown(5);
             return true;
         }
 
-        std::cout << "Compétence de classe : Serment de survie." << std::endl;
-        std::cout << "Ce tour sert surtout à tenir : soin personnel et garde légère." << std::endl;
+        showClassSkillResult(
+            "Serment de survie",
+            "combat.class_skill.sacred.survival_oath.result",
+            {"Ce tour sert surtout à tenir : soin personnel et garde légère."}
+        );
         attacker.heal(heal);
         attacker.startDefensePosture(12, 4, "Serment de survie");
-        std::cout << attacker.getName() << " récupère " << heal << " PV." << std::endl;
+        showCombatActionMessage(
+            "SERMENT DE SURVIE",
+            "combat.class_skill.sacred.survival_oath.heal",
+            {attacker.getName() + " récupère " + std::to_string(heal) + " PV."},
+            false
+        );
         startCooldown(3);
         return true;
     }
@@ -745,39 +935,34 @@ bool CombatActions::executeClassSkill(
         bool canManaSuture = player != nullptr && player->hasActiveSkill("learned_mana_suture");
         bool canOccultBramble = player != nullptr && player->hasActiveSkill("learned_occult_bramble");
 
-        std::cout << "========== COMPÉTENCE ARCANIQUE ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        if (canArcaneMark) std::cout << "1 : Marque élémentaire (recharge 3 tours)" << std::endl;
-        if (canArcaneBinding) std::cout << "2 : Entrave arcanique (recharge 4 tours)" << std::endl;
-        if (canElementalWard) std::cout << "3 : Voile élémentaire (recharge 4 tours)" << std::endl;
-        if (canControlledOverload) std::cout << "4 : Surcharge contrôlée (niv. 9, recharge 5 tours)" << std::endl;
-        if (canResistanceRift) std::cout << "5 : Faille de résistance (recharge 5 tours)" << std::endl;
-        if (canFrostNeedle) std::cout << "6 : Aiguille de givre étudiée (grimoire, recharge 4 tours)" << std::endl;
-        if (canManaSuture) std::cout << "7 : Suture de mana étudiée (grimoire, recharge 5 tours)" << std::endl;
-        if (canOccultBramble) std::cout << "8 : Ronces occultes étudiées (grimoire, recharge 4 tours)" << std::endl;
-        std::cout << "> ";
-
-        int skillChoice = 0;
-        while (true)
-        {
-            skillChoice = Console::askNumberBetween(0, 8, "Choix invalide.");
-            if (skillChoice == 0) return false;
-            if (skillChoice == 1 && canArcaneMark) break;
-            if (skillChoice == 2 && canArcaneBinding) break;
-            if (skillChoice == 3 && canElementalWard) break;
-            if (skillChoice == 4 && canControlledOverload) break;
-            if (skillChoice == 5 && canResistanceRift) break;
-            if (skillChoice == 6 && canFrostNeedle) break;
-            if (skillChoice == 7 && canManaSuture) break;
-            if (skillChoice == 8 && canOccultBramble) break;
-            std::cout << "Ce sort n'est pas encore assez compris par ton personnage." << std::endl;
-            std::cout << "> ";
-        }
+        int skillChoice = askStructuredCombatChoice(
+            "COMPÉTENCE ARCANIQUE",
+            "combat.class_skill.arcane",
+            {
+                attacker.getName() + " choisit une formule arcanique.",
+                "Les sorts non compris restent visibles mais verrouillés."
+            },
+            {
+                {1, "Marque élémentaire", "Recharge 3 tours.", canArcaneMark, "arcane_mark"},
+                {2, "Entrave arcanique", "Recharge 4 tours.", canArcaneBinding, "arcane_binding"},
+                {3, "Voile élémentaire", "Recharge 4 tours.", canElementalWard, "elemental_ward"},
+                {4, "Surcharge contrôlée", "Niv. 9, recharge 5 tours.", canControlledOverload, "controlled_overload"},
+                {5, "Faille de résistance", "Recharge 5 tours.", canResistanceRift, "resistance_rift"},
+                {6, "Aiguille de givre étudiée", "Grimoire, recharge 4 tours.", canFrostNeedle, "frost_needle"},
+                {7, "Suture de mana étudiée", "Grimoire, recharge 5 tours.", canManaSuture, "mana_suture"},
+                {8, "Ronces occultes étudiées", "Grimoire, recharge 4 tours.", canOccultBramble, "occult_bramble"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
+        if (skillChoice == 0) return false;
 
         if (skillChoice == 8)
         {
-            std::cout << "Compétence arcanique : Ronces occultes." << std::endl;
-            std::cout << "Ce grimoire ne lance pas une boule d'énergie : il force des liens sombres à sortir du sol autour de la cible." << std::endl;
+            showClassSkillResult(
+                "Ronces occultes",
+                "combat.class_skill.arcane.dark_roots.result",
+                {"Ce grimoire ne lance pas une boule d'énergie : il force des liens sombres à sortir du sol autour de la cible."}
+            );
             if (!resolveMagicCatalystAttempt(player, "Ronces occultes", random))
             {
                 startCooldown(2);
@@ -788,7 +973,12 @@ bool CombatActions::executeClassSkill(
             if (random.between(1, 100) <= 35)
             {
                 ElementalAffinitySystem::applyFrost(defender, 1);
-                std::cout << "Les ronces freinent aussi l'élan de la cible." << std::endl;
+                showCombatActionMessage(
+                    "RONCES OCCULTES",
+                    "combat.class_skill.arcane.dark_roots.slow",
+                    {"Les ronces freinent aussi l'élan de la cible."},
+                    false
+                );
             }
             executeBoostedAttack(attacker, defender, random, 1 + level / 28);
             startCooldown(4);
@@ -797,8 +987,11 @@ bool CombatActions::executeClassSkill(
 
         if (skillChoice == 7)
         {
-            std::cout << "Compétence arcanique : Suture de mana." << std::endl;
-            std::cout << "Ce sort vient d'un grimoire : il ne soigne pas d'un coup, il referme lentement les blessures." << std::endl;
+            showClassSkillResult(
+                "Suture de mana",
+                "combat.class_skill.arcane.mana_suture.result",
+                {"Ce sort vient d'un grimoire : il ne soigne pas d'un coup, il referme lentement les blessures."}
+            );
             if (!resolveMagicCatalystAttempt(player, "Suture de mana", random))
             {
                 startCooldown(2);
@@ -807,15 +1000,23 @@ bool CombatActions::executeClassSkill(
             int healPerTurn = std::max(4, attacker.getMaxHp() / 18 + level / 8);
             attacker.applyRegeneration(3, healPerTurn);
             attacker.startDefensePosture(6, 2, "Suture de mana");
-            std::cout << "La suture commence à se refermer autour des plaies." << std::endl;
+            showCombatActionMessage(
+                "SUTURE DE MANA",
+                "combat.class_skill.arcane.mana_suture.heal",
+                {"La suture commence à se refermer autour des plaies."},
+                false
+            );
             startCooldown(5);
             return true;
         }
 
         if (skillChoice == 6)
         {
-            std::cout << "Compétence arcanique : Aiguille de givre." << std::endl;
-            std::cout << "Ce sort vient d'un grimoire précis : il n'a pas encore de parchemin courant fiable." << std::endl;
+            showClassSkillResult(
+                "Aiguille de givre",
+                "combat.class_skill.arcane.frost_needle.result",
+                {"Ce sort vient d'un grimoire précis : il n'a pas encore de parchemin courant fiable."}
+            );
             if (!resolveMagicCatalystAttempt(player, "Aiguille de givre", random))
             {
                 startCooldown(2);
@@ -825,7 +1026,12 @@ bool CombatActions::executeClassSkill(
             if (random.between(1, 100) <= 35)
             {
                 defender.applyWeakening(2, 8 + level / 12);
-                std::cout << "Le froid mord assez juste pour raidir le prochain geste." << std::endl;
+                showCombatActionMessage(
+                    "AIGUILLE DE GIVRE",
+                    "combat.class_skill.arcane.frost_needle.slow",
+                    {"Le froid mord assez juste pour raidir le prochain geste."},
+                    false
+                );
             }
             executeBoostedAttack(attacker, defender, random, 2 + level / 26);
             startCooldown(4);
@@ -834,13 +1040,19 @@ bool CombatActions::executeClassSkill(
 
         if (skillChoice == 5)
         {
-            std::cout << "Compétence arcanique : Faille de résistance." << std::endl;
-            std::cout << "Tu ne cherches pas seulement à blesser : tu ouvres une brèche que les prochains impacts pourront exploiter." << std::endl;
-            std::cout << "1 : Faille ardente" << std::endl;
-            std::cout << "2 : Faille de givre" << std::endl;
-            std::cout << "3 : Faille conductrice" << std::endl;
-            std::cout << "> ";
-            int choice = Console::askNumberBetween(1, 3, "Choix invalide.");
+            int choice = askStructuredCombatChoice(
+                "FAILLE DE RÉSISTANCE",
+                "combat.class_skill.arcane.rift",
+                {
+                    "Tu ne cherches pas seulement à blesser : tu ouvres une brèche que les prochains impacts pourront exploiter.",
+                    "Choisis la faille à appliquer."
+                },
+                {
+                    {1, "Faille ardente", "Brèche vulnérable au feu.", true, "fire_rift"},
+                    {2, "Faille de givre", "Brèche vulnérable au froid.", true, "frost_rift"},
+                    {3, "Faille conductrice", "Brèche vulnérable au choc.", true, "shock_rift"}
+                }
+            );
             if (!resolveMagicCatalystAttempt(player, "Faille de résistance", random))
             {
                 startCooldown(2);
@@ -857,13 +1069,17 @@ bool CombatActions::executeClassSkill(
 
         if (skillChoice == 4)
         {
-            std::cout << "Compétence arcanique : Surcharge contrôlée." << std::endl;
-            std::cout << "1 : Feu concentré" << std::endl;
-            std::cout << "2 : Givre concentré" << std::endl;
-            std::cout << "3 : Choc concentré" << std::endl;
-            std::cout << "4 : Poison concentré" << std::endl;
-            std::cout << "> ";
-            int choice = Console::askNumberBetween(1, 4, "Choix invalide.");
+            int choice = askStructuredCombatChoice(
+                "SURCHARGE CONTRÔLÉE",
+                "combat.class_skill.arcane.overload",
+                {"Choisis l'élément concentré dans la surcharge."},
+                {
+                    {1, "Feu concentré", "Brûlure arcanique.", true, "fire_overload"},
+                    {2, "Givre concentré", "Ralentissement par le froid.", true, "frost_overload"},
+                    {3, "Choc concentré", "Décharge instable.", true, "shock_overload"},
+                    {4, "Poison concentré", "Venin arcanique.", true, "poison_overload"}
+                }
+            );
             if (!resolveMagicCatalystAttempt(player, "Surcharge contrôlée", random))
             {
                 startCooldown(2);
@@ -880,8 +1096,11 @@ bool CombatActions::executeClassSkill(
 
         if (skillChoice == 3)
         {
-            std::cout << "Compétence arcanique : Voile élémentaire." << std::endl;
-            std::cout << "Tu replies la magie contre toi plutôt que de la projeter : les altérations élémentaires auront plus de mal à s'accrocher." << std::endl;
+            showClassSkillResult(
+                "Voile élémentaire",
+                "combat.class_skill.arcane.elemental_veil.result",
+                {"Tu replies la magie contre toi plutôt que de la projeter : les altérations élémentaires auront plus de mal à s'accrocher."}
+            );
             if (!resolveMagicCatalystAttempt(player, "Voile élémentaire", random))
             {
                 startCooldown(2);
@@ -895,8 +1114,11 @@ bool CombatActions::executeClassSkill(
 
         if (skillChoice == 2)
         {
-            std::cout << "Compétence arcanique : Entrave arcanique." << std::endl;
-            std::cout << "La magie ne cherche pas seulement à brûler ou choquer : elle tire directement sur le souffle de la cible." << std::endl;
+            showClassSkillResult(
+                "Entrave arcanique",
+                "combat.class_skill.arcane.arcane_shackle.result",
+                {"La magie ne cherche pas seulement à brûler ou choquer : elle tire directement sur le souffle de la cible."}
+            );
             if (!resolveMagicCatalystAttempt(player, "Entrave arcanique", random))
             {
                 startCooldown(2);
@@ -906,38 +1128,43 @@ bool CombatActions::executeClassSkill(
             if (random.between(1, 100) <= 45)
             {
                 ElementalAffinitySystem::applyShock(defender, 1);
-                std::cout << "L'entrave grésille assez pour troubler le prochain geste." << std::endl;
+                showCombatActionMessage("ENTRAVE ARCANIQUE", "combat.class_skill.arcane.arcane_shackle.shock", {"L'entrave grésille assez pour troubler le prochain geste."}, false);
             }
             else
             {
                 ElementalAffinitySystem::applyFrost(defender, 1);
-                std::cout << "L'entrave refroidit le rythme plutôt que le corps." << std::endl;
+                showCombatActionMessage("ENTRAVE ARCANIQUE", "combat.class_skill.arcane.arcane_shackle.frost", {"L'entrave refroidit le rythme plutôt que le corps."}, false);
             }
-            std::cout << std::endl;
+            /* Écran structuré déjà affiché. */
             executeBoostedAttack(attacker, defender, random, 2 + level / 28);
             startCooldown(4);
             return true;
         }
 
-        std::cout << "Compétence arcanique : Marque élémentaire." << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Braise faible" << std::endl;
-        std::cout << "2 : Givre bref" << std::endl;
-        std::cout << "3 : Décharge instable" << std::endl;
-        std::cout << "4 : Venin arcanique" << std::endl;
-        std::cout << "> ";
-        int choice = Console::askNumberBetween(0, 4, "Choix invalide.");
+        int choice = askStructuredCombatChoice(
+            "MARQUE ÉLÉMENTAIRE",
+            "combat.class_skill.arcane.mark",
+            {"Choisis la marque élémentaire à poser."},
+            {
+                {1, "Braise faible", "Applique une petite brûlure.", true, "mark_fire"},
+                {2, "Givre bref", "Ralentit la cible.", true, "mark_frost"},
+                {3, "Décharge instable", "Trouble le prochain geste adverse.", true, "mark_shock"},
+                {4, "Venin arcanique", "Empoisonne faiblement la cible.", true, "mark_poison"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
         if (choice == 0) return false;
         if (!resolveMagicCatalystAttempt(player, "Marque élémentaire", random))
         {
             startCooldown(2);
             return true;
         }
-        if (choice == 1) { ElementalAffinitySystem::applyBurning(defender, 3, 2 + level / 20); std::cout << "Une braise faible s'accroche à la cible." << std::endl; }
-        else if (choice == 2) { ElementalAffinitySystem::applyFrost(defender, 3); std::cout << "Un froid bref ralentit la cible." << std::endl; }
-        else if (choice == 3) { ElementalAffinitySystem::applyShock(defender, 2); std::cout << "Une décharge instable trouble le prochain geste adverse." << std::endl; }
-        else { ElementalAffinitySystem::applyPoison(defender, 3, 2 + level / 22); std::cout << "Un venin arcanique faible entre dans la blessure." << std::endl; }
-        std::cout << std::endl;
+        std::string markNote;
+        if (choice == 1) { ElementalAffinitySystem::applyBurning(defender, 3, 2 + level / 20); markNote = "Une braise faible s'accroche à la cible."; }
+        else if (choice == 2) { ElementalAffinitySystem::applyFrost(defender, 3); markNote = "Un froid bref ralentit la cible."; }
+        else if (choice == 3) { ElementalAffinitySystem::applyShock(defender, 2); markNote = "Une décharge instable trouble le prochain geste adverse."; }
+        else { ElementalAffinitySystem::applyPoison(defender, 3, 2 + level / 22); markNote = "Un venin arcanique faible entre dans la blessure."; }
+        showCombatActionMessage("MARQUE ÉLÉMENTAIRE", "combat.class_skill.arcane.elemental_mark.result", {markNote}, false);
         executeBoostedAttack(attacker, defender, random, 1 + level / 30);
         startCooldown(3);
         return true;
@@ -947,21 +1174,33 @@ bool CombatActions::executeClassSkill(
     {
         if (!hasRangedWeapon())
         {
-            std::cout << "Cette compétence demande une vraie arme à distance équipée." << std::endl << std::endl;
+            showCombatActionMessage(
+                "COMPÉTENCE DISTANCE IMPOSSIBLE",
+                "combat.class_skill.ranged.no_weapon",
+                {"Cette compétence demande une vraie arme à distance équipée."},
+                false
+            );
             return false;
         }
 
-        std::cout << "========== COMPÉTENCE DISTANCE ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Tir de couverture (niv. 4, recharge 3 tours)" << std::endl;
-        if (level >= 8) std::cout << "2 : Tir d'arrêt (niv. 8, recharge 4 tours)" << std::endl;
-        std::cout << "> ";
-        int choice = Console::askNumberBetween(0, level >= 8 ? 2 : 1, "Choix invalide.");
+        int choice = askStructuredCombatChoice(
+            "COMPÉTENCE DISTANCE",
+            "combat.class_skill.ranged",
+            {attacker.getName() + " prépare une technique à distance."},
+            {
+                {1, "Tir de couverture", "Niv. 4, recharge 3 tours. Contrôle la cible.", true, "cover_shot"},
+                {2, "Tir d'arrêt", "Niv. 8, recharge 4 tours. Casse l'élan.", level >= 8, "stopping_shot"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
         if (choice == 0) return false;
         if (choice == 2)
         {
-            std::cout << "Compétence de classe : Tir d'arrêt." << std::endl;
-            std::cout << "Le tir cherche à casser l'élan, pas seulement à blesser." << std::endl;
+            showClassSkillResult(
+                "Tir d'arrêt",
+                "combat.class_skill.ranged.stopping_shot.result",
+                {"Le tir cherche à casser l'élan, pas seulement à blesser."}
+            );
             ElementalAffinitySystem::applyBleeding(defender, 2, 2 + level / 18);
             ElementalAffinitySystem::applyFrost(defender, 2);
             executeBoostedAttack(attacker, defender, random, 6 + level / 16);
@@ -969,8 +1208,11 @@ bool CombatActions::executeClassSkill(
             return true;
         }
 
-        std::cout << "Compétence de classe : Tir de couverture." << std::endl;
-        std::cout << "Le tir vise moins la létalité immédiate que le contrôle de la cible." << std::endl;
+        showClassSkillResult(
+            "Tir de couverture",
+            "combat.class_skill.ranged.cover_shot.result",
+            {"Le tir vise moins la létalité immédiate que le contrôle de la cible."}
+        );
         ElementalAffinitySystem::applyFrost(defender, 1);
         executeBoostedAttack(attacker, defender, random, 4 + level / 18);
         startCooldown(3);
@@ -979,24 +1221,37 @@ bool CombatActions::executeClassSkill(
 
     if (hasAny({"berserker", "barbare", "briseur"}) && level >= 4)
     {
-        std::cout << "========== COMPÉTENCE BRUTALE ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Rage assumée (niv. 4, recharge 3 tours)" << std::endl;
-        if (level >= 8) std::cout << "2 : Coup de rupture (niv. 8, recharge 4 tours)" << std::endl;
-        std::cout << "> ";
-        int choice = Console::askNumberBetween(0, level >= 8 ? 2 : 1, "Choix invalide.");
+        int choice = askStructuredCombatChoice(
+            "COMPÉTENCE BRUTALE",
+            "combat.class_skill.brutal",
+            {attacker.getName() + " canalise une violence directe."},
+            {
+                {1, "Rage assumée", "Niv. 4, recharge 3 tours. Bonus de dégâts avec contrecoup.", true, "assumed_rage"},
+                {2, "Coup de rupture", "Niv. 8, recharge 4 tours. Frappe plus lourde et saignement.", level >= 8, "rupture_blow"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
         if (choice == 0) return false;
         int bonus = 6 + level / 12;
         int recoil = std::max(1, attacker.getMaxHp() / 40);
         if (attacker.getHp() * 100 <= attacker.getMaxHp() * 50)
         {
             bonus += 7;
-            std::cout << "La blessure nourrit la rage : bonus renforcé." << std::endl;
+            showCombatActionMessage(
+                "RAGE RENFORCÉE",
+                "combat.class_skill.brutal.rage_bonus",
+                {"La blessure nourrit la rage : bonus renforcé."},
+                false
+            );
         }
         int cooldownTurns = 3;
         if (choice == 2)
         {
-            std::cout << "Compétence de classe : Coup de rupture." << std::endl;
+            showClassSkillResult(
+                "Coup de rupture",
+                "combat.class_skill.brutal.rupture_blow.result",
+                {"La violence cherche la rupture plutôt que le simple impact."}
+            );
             bonus += 8;
             recoil = std::max(2, attacker.getMaxHp() / 25);
             ElementalAffinitySystem::applyBleeding(defender, 2, 2 + level / 16);
@@ -1004,10 +1259,19 @@ bool CombatActions::executeClassSkill(
         }
         else
         {
-            std::cout << "Compétence de classe : Rage assumée." << std::endl;
+            showClassSkillResult(
+                "Rage assumée",
+                "combat.class_skill.brutal.assumed_rage.result",
+                {"La violence est acceptée, mais elle réclame un contrecoup."}
+            );
         }
         attacker.takeDamage(recoil);
-        std::cout << "Le corps encaisse " << recoil << " PV de contrecoup avant de rendre la violence." << std::endl;
+        showCombatActionMessage(
+            "CONTRECOUP BRUTAL",
+            "combat.class_skill.brutal.recoil",
+            {"Le corps encaisse " + std::to_string(recoil) + " PV de contrecoup avant de rendre la violence."},
+            false
+        );
         executeBoostedAttack(attacker, defender, random, bonus);
         startCooldown(cooldownTurns);
         return true;
@@ -1015,18 +1279,25 @@ bool CombatActions::executeClassSkill(
 
     if (hasAny({"alchim", "artific", "bricoleur"}) && level >= 4)
     {
-        std::cout << "========== COMPÉTENCE EXPÉRIMENTALE ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Mélange improvisé (niv. 4, recharge 3 tours)" << std::endl;
-        if (level >= 7) std::cout << "2 : Fiole tactique (niv. 7, recharge 4 tours)" << std::endl;
-        if (level >= 9) std::cout << "3 : Poudre de fragilisation (niv. 9, recharge 5 tours)" << std::endl;
-        std::cout << "> ";
-        int choice = Console::askNumberBetween(0, level >= 9 ? 3 : (level >= 7 ? 2 : 1), "Choix invalide.");
+        int choice = askStructuredCombatChoice(
+            "COMPÉTENCE EXPÉRIMENTALE",
+            "combat.class_skill.experimental",
+            {attacker.getName() + " choisit un procédé instable."},
+            {
+                {1, "Mélange improvisé", "Niv. 4, recharge 3 tours. Effet aléatoire.", true, "improvised_mix"},
+                {2, "Fiole tactique", "Niv. 7, recharge 4 tours. Choix d'effet.", level >= 7, "tactical_vial"},
+                {3, "Poudre de fragilisation", "Niv. 9, recharge 5 tours. Vulnérabilité.", level >= 9, "fragility_powder"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
         if (choice == 0) return false;
         if (choice == 3)
         {
-            std::cout << "Compétence de classe : Poudre de fragilisation." << std::endl;
-            std::cout << "La poudre n'explose presque pas : elle s'accroche aux points faibles et rend le prochain échange dangereux." << std::endl;
+            showClassSkillResult(
+                "Poudre de fragilisation",
+                "combat.class_skill.experimental.fragility_powder.result",
+                {"La poudre n'explose presque pas : elle s'accroche aux points faibles et rend le prochain échange dangereux."}
+            );
             defender.applyVulnerability(3, 14 + level / 12);
             if (random.between(1, 100) <= 55) ElementalAffinitySystem::applyPoison(defender, 2, 2 + level / 24);
             else ElementalAffinitySystem::applyShock(defender, 1);
@@ -1036,12 +1307,16 @@ bool CombatActions::executeClassSkill(
         }
         if (choice == 2)
         {
-            std::cout << "Compétence de classe : Fiole tactique." << std::endl;
-            std::cout << "1 : Acide/poison" << std::endl;
-            std::cout << "2 : Fumée défensive" << std::endl;
-            std::cout << "3 : Étincelle instable" << std::endl;
-            std::cout << "> ";
-            int vial = Console::askNumberBetween(1, 3, "Choix invalide.");
+            int vial = askStructuredCombatChoice(
+                "FIOLE TACTIQUE",
+                "combat.class_skill.experimental.vial",
+                {"Choisis la fiole à briser pendant l'action."},
+                {
+                    {1, "Acide / poison", "Empoisonne la cible.", true, "acid_vial"},
+                    {2, "Fumée défensive", "Renforce la posture défensive.", true, "smoke_vial"},
+                    {3, "Étincelle instable", "Applique un choc.", true, "spark_vial"}
+                }
+            );
             if (vial == 1) ElementalAffinitySystem::applyPoison(defender, 4, 3 + level / 18);
             else if (vial == 2) attacker.startDefensePosture(22, 8, "Fumée tactique");
             else ElementalAffinitySystem::applyShock(defender, 3);
@@ -1050,13 +1325,17 @@ bool CombatActions::executeClassSkill(
             return true;
         }
 
-        std::cout << "Compétence de classe : Mélange improvisé." << std::endl;
         int roll = random.between(1, 4);
-        if (roll == 1) { ElementalAffinitySystem::applyPoison(defender, 3, 2 + level / 20); std::cout << "Le mélange pique et empoisonne la cible." << std::endl; }
-        else if (roll == 2) { ElementalAffinitySystem::applyBurning(defender, 2, 2 + level / 22); std::cout << "Le mélange chauffe trop vite et brûle la cible." << std::endl; }
-        else if (roll == 3) { ElementalAffinitySystem::applyShock(defender, 2); std::cout << "Un petit mécanisme produit une décharge." << std::endl; }
-        else { attacker.startDefensePosture(14, 6, "Écran expérimental"); std::cout << "Le mélange produit surtout un écran défensif." << std::endl; }
-        std::cout << std::endl;
+        std::string mixNote;
+        if (roll == 1) { ElementalAffinitySystem::applyPoison(defender, 3, 2 + level / 20); mixNote = "Le mélange pique et empoisonne la cible."; }
+        else if (roll == 2) { ElementalAffinitySystem::applyBurning(defender, 2, 2 + level / 22); mixNote = "Le mélange chauffe trop vite et brûle la cible."; }
+        else if (roll == 3) { ElementalAffinitySystem::applyShock(defender, 2); mixNote = "Un petit mécanisme produit une décharge."; }
+        else { attacker.startDefensePosture(14, 6, "Écran expérimental"); mixNote = "Le mélange produit surtout un écran défensif."; }
+        showClassSkillResult(
+            "Mélange improvisé",
+            "combat.class_skill.experimental.improvised_mix.result",
+            {mixNote}
+        );
         executeBoostedAttack(attacker, defender, random, 2 + level / 25);
         startCooldown(3);
         return true;
@@ -1064,17 +1343,24 @@ bool CombatActions::executeClassSkill(
 
     if (hasAny({"invoc", "dresseur", "nécro", "necro"}) && level >= 5)
     {
-        std::cout << "========== COMPÉTENCE D'APPEL ==========" << std::endl;
-        std::cout << "0 : Retour" << std::endl;
-        std::cout << "1 : Ordre spectral (niv. 5, recharge 3 tours)" << std::endl;
-        if (level >= 9) std::cout << "2 : Lien de meute / ombre (niv. 9, recharge 4 tours)" << std::endl;
-        std::cout << "> ";
-        int choice = Console::askNumberBetween(0, level >= 9 ? 2 : 1, "Choix invalide.");
+        int choice = askStructuredCombatChoice(
+            "COMPÉTENCE D'APPEL",
+            "combat.class_skill.call",
+            {attacker.getName() + " appelle une pression de groupe."},
+            {
+                {1, "Ordre spectral", "Niv. 5, recharge 3 tours. Appui invisible et froid.", true, "spectral_order"},
+                {2, "Lien de meute / ombre", "Niv. 9, recharge 4 tours. Pression renforcée.", level >= 9, "pack_shadow_link"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
         if (choice == 0) return false;
         if (choice == 2)
         {
-            std::cout << "Compétence de classe : Lien de meute / ombre." << std::endl;
-            std::cout << "Ta présence impose une pression de groupe, même sans invocation déjà visible." << std::endl;
+            showClassSkillResult(
+                "Lien de meute / ombre",
+                "combat.class_skill.call.pack_shadow_link.result",
+                {"Ta présence impose une pression de groupe, même sans invocation déjà visible."}
+            );
             ElementalAffinitySystem::applyFrost(defender, 3);
             ElementalAffinitySystem::applyBleeding(defender, 2, 2 + level / 20);
             attacker.startDefensePosture(12, 5, "Lien de meute / ombre");
@@ -1083,8 +1369,11 @@ bool CombatActions::executeClassSkill(
             return true;
         }
 
-        std::cout << "Compétence de classe : Ordre spectral." << std::endl;
-        std::cout << "Même sans invocation active, ta présence force un appui invisible et froid." << std::endl;
+        showClassSkillResult(
+            "Ordre spectral",
+            "combat.class_skill.call.spectral_order.result",
+            {"Même sans invocation active, ta présence force un appui invisible et froid."}
+        );
         ElementalAffinitySystem::applyFrost(defender, 2);
         attacker.startDefensePosture(8, 3, "Ordre spectral");
         executeBoostedAttack(attacker, defender, random, 3 + level / 24);
@@ -1092,9 +1381,16 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    std::cout << "Aucune technique de classe stable ne répond pour ce profil." << std::endl;
-    std::cout << "Les maîtres de guilde disent que les premières techniques fiables apparaissent souvent entre les niveaux 3 et 5." << std::endl;
-    std::cout << "Tu improvises donc une attaque simple." << std::endl << std::endl;
+    showCombatActionMessage(
+        "COMPÉTENCE INSTABLE",
+        "combat.class_skill.unavailable.fallback",
+        {
+            "Aucune technique de classe stable ne répond pour ce profil.",
+            "Les maîtres de guilde disent que les premières techniques fiables apparaissent souvent entre les niveaux 3 et 5.",
+            "Tu improvises donc une attaque simple."
+        },
+        false
+    );
     executeAttack(attacker, defender, random);
     return true;
 }
@@ -1145,8 +1441,15 @@ bool CombatActions::executeAIClassSkill(
 
     auto finishAIClassSkill = [&](int cooldown) {
         attacker.startClassSkillCooldown(cooldown);
-        std::cout << attacker.getName() << " reprend son souffle après cette technique." << std::endl;
-        std::cout << std::endl;
+        showCombatActionMessage(
+            "RÉCUPÉRATION IA",
+            "combat.ai.class_skill.cooldown",
+            {
+                attacker.getName() + " reprend son souffle après cette technique.",
+                "Récupération restante : " + std::to_string(cooldown) + " tour(s)."
+            },
+            false
+        );
     };
 
     auto advancedProfile = [&]() {
@@ -1178,7 +1481,7 @@ bool CombatActions::executeAIClassSkill(
     {
         if (level >= 8 && knowsAdvancedMove && random.between(1, 100) <= 55)
         {
-            std::cout << attacker.getName() << " s'abaisse dans un angle mort et laisse une blessure plus longue." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.assassin.advanced", {attacker.getName() + " s'abaisse dans un angle mort et laisse une blessure plus longue.", "Effets : posture défensive et saignement prolongé."}, false);
             attacker.startDefensePosture(12, 14, "Disparition basse");
             ElementalAffinitySystem::applyBleeding(defender, 4, 3 + std::max(1, level / 16));
             executeBoostedAttack(attacker, defender, random, 4 + level / 20);
@@ -1186,7 +1489,7 @@ bool CombatActions::executeAIClassSkill(
         }
         else
         {
-            std::cout << attacker.getName() << " disparaît brièvement de l'angle de vision." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.assassin.basic", {attacker.getName() + " disparaît brièvement de l'angle de vision.", "Effet : saignement préparé avant l'attaque."}, false);
             ElementalAffinitySystem::applyBleeding(defender, 3, 2 + std::max(1, level / 18));
             executeBoostedAttack(attacker, defender, random, 2 + level / 22);
             finishAIClassSkill(3);
@@ -1198,14 +1501,14 @@ bool CombatActions::executeAIClassSkill(
     {
         if (level >= 8 && knowsAdvancedMove && random.between(1, 100) <= 50)
         {
-            std::cout << attacker.getName() << " s'ancre au sol et transforme sa défense en mur vivant." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.defense.advanced", {attacker.getName() + " s'ancre au sol et transforme sa défense en mur vivant.", "Effet : posture défensive majeure."}, false);
             attacker.startDefensePosture(32, 10, "Ancrage total");
             executeBoostedAttack(attacker, defender, random, -5);
             finishAIClassSkill(4);
         }
         else
         {
-            std::cout << attacker.getName() << " impose sa présence et verrouille sa posture." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.defense.basic", {attacker.getName() + " impose sa présence et verrouille sa posture.", "Effet : défense et menace renforcées."}, false);
             attacker.startDefensePosture(20, 6, "Rempart instinctif");
             executeBoostedAttack(attacker, defender, random, -2);
             finishAIClassSkill(3);
@@ -1228,15 +1531,15 @@ bool CombatActions::executeAIClassSkill(
             if (attacker.cureVulnerability()) cured++;
             attacker.heal(heal + level / 4);
             attacker.startDefensePosture(12, 4, "Prière purificatrice");
-            std::cout << attacker.getName() << " purifie " << cured << " effet(s) et récupère " << (heal + level / 4) << " PV." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.sacred.purify", {attacker.getName() + " purifie " + std::to_string(cured) + " effet(s).", "Soin reçu : " + std::to_string(heal + level / 4) + " PV."}, false);
             finishAIClassSkill(5);
         }
         else
         {
-            std::cout << attacker.getName() << " murmure un serment et tient la ligne." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.sacred.oath", {attacker.getName() + " murmure un serment et tient la ligne.", "Effet : soin personnel et garde discrète."}, false);
             attacker.heal(heal);
             attacker.startDefensePosture(10, 3, "Serment discret");
-            std::cout << attacker.getName() << " récupère " << heal << " PV." << std::endl;
+            showCombatActionMessage("SOIN IA", "combat.ai.class_skill.sacred.heal", {attacker.getName() + " récupère " + std::to_string(heal) + " PV."}, false);
             finishAIClassSkill(4);
         }
         return true;
@@ -1247,7 +1550,7 @@ bool CombatActions::executeAIClassSkill(
         int hpPercent = attacker.getMaxHp() > 0 ? attacker.getHp() * 100 / attacker.getMaxHp() : 100;
         if (level >= 9 && hpPercent <= 45 && knowsAdvancedMove && random.between(1, 100) <= 30)
         {
-            std::cout << attacker.getName() << " recoud une blessure avec un fil de mana tremblant." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.arcane.suture", {attacker.getName() + " recoud une blessure avec un fil de mana tremblant.", "Effet : régénération et garde légère."}, false);
             attacker.applyRegeneration(3, std::max(4, attacker.getMaxHp() / 22 + level / 10));
             attacker.startDefensePosture(6, 2, "Suture de mana");
             finishAIClassSkill(5);
@@ -1256,7 +1559,7 @@ bool CombatActions::executeAIClassSkill(
 
         if (level >= 8 && hpPercent <= 55 && random.between(1, 100) <= (knowsAdvancedMove ? 48 : 28))
         {
-            std::cout << attacker.getName() << " referme un voile élémentaire autour de son corps." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.arcane.ward", {attacker.getName() + " referme un voile élémentaire autour de son corps.", "Effet : résistance élémentaire temporaire."}, false);
             attacker.applyElementalWard(3, 16 + level / 10);
             attacker.startDefensePosture(8, 3, "Voile élémentaire");
             finishAIClassSkill(4);
@@ -1265,7 +1568,7 @@ bool CombatActions::executeAIClassSkill(
 
         if (level >= 11 && knowsAdvancedMove && random.between(1, 100) <= 34)
         {
-            std::cout << attacker.getName() << " ouvre une faille magique au lieu de chercher le coup direct." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.arcane.rift", {attacker.getName() + " ouvre une faille magique au lieu de chercher le coup direct.", "Effet : vulnérabilité et altération élémentaire."}, false);
             defender.applyVulnerability(3, 15 + level / 12);
             int element = random.between(1, 3);
             if (element == 1) ElementalAffinitySystem::applyBurning(defender, 3, 3 + level / 20);
@@ -1278,7 +1581,7 @@ bool CombatActions::executeAIClassSkill(
 
         if (level >= 6 && random.between(1, 100) <= (knowsAdvancedMove ? 38 : 24))
         {
-            std::cout << attacker.getName() << " serre la trame magique autour du souffle adverse." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.arcane.binding", {attacker.getName() + " serre la trame magique autour du souffle adverse.", "Effet : affaiblissement et perturbation."}, false);
             defender.applyWeakening(3, 12 + level / 10);
             if (random.between(1, 100) <= 50) ElementalAffinitySystem::applyShock(defender, 1);
             else ElementalAffinitySystem::applyFrost(defender, 1);
@@ -1287,7 +1590,7 @@ bool CombatActions::executeAIClassSkill(
             return true;
         }
 
-        std::cout << attacker.getName() << " condense une marque élémentaire." << std::endl;
+        showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.arcane.mark", {attacker.getName() + " condense une marque élémentaire.", "Effet : altération élémentaire appliquée avant l'attaque."}, false);
         int element = random.between(1, 4);
         if (element == 1) ElementalAffinitySystem::applyBurning(defender, 3, 2 + level / 22);
         else if (element == 2) ElementalAffinitySystem::applyFrost(defender, 3);
@@ -1314,7 +1617,7 @@ bool CombatActions::executeAIClassSkill(
     {
         if (level >= 8 && knowsAdvancedMove && random.between(1, 100) <= 45)
         {
-            std::cout << attacker.getName() << " vise l'élan adverse et cherche à clouer le rythme." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.ranged.stop", {attacker.getName() + " vise l'élan adverse et cherche à clouer le rythme.", "Effet : ralentissement et saignement."}, false);
             ElementalAffinitySystem::applyFrost(defender, 2);
             ElementalAffinitySystem::applyBleeding(defender, 2, 2 + level / 20);
             executeBoostedAttack(attacker, defender, random, 5 + level / 18);
@@ -1322,7 +1625,7 @@ bool CombatActions::executeAIClassSkill(
         }
         else
         {
-            std::cout << attacker.getName() << " choisit un tir de contrôle plutôt qu'un tir gratuit." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.ranged.cover", {attacker.getName() + " choisit un tir de contrôle plutôt qu'un tir gratuit.", "Effet : contrôle léger avant l'impact."}, false);
             ElementalAffinitySystem::applyFrost(defender, 1);
             executeBoostedAttack(attacker, defender, random, 3 + level / 20);
             finishAIClassSkill(3);
@@ -1333,7 +1636,7 @@ bool CombatActions::executeAIClassSkill(
     if (hasAny({"berserker", "barbare", "briseur"}))
     {
         int recoil = std::max(1, attacker.getMaxHp() / 45);
-        std::cout << attacker.getName() << " laisse la rage guider le prochain impact." << std::endl;
+        showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.brutal.rage", {attacker.getName() + " laisse la rage guider le prochain impact.", "Effet : contrecoup personnel avant l'attaque."}, false);
         attacker.takeDamage(recoil);
         if (level >= 8 && knowsAdvancedMove && random.between(1, 100) <= 50)
         {
@@ -1351,7 +1654,7 @@ bool CombatActions::executeAIClassSkill(
 
     if (hasAny({"alchim", "artific", "bricoleur"}))
     {
-        std::cout << attacker.getName() << " libère un mélange préparé à la va-vite." << std::endl;
+        showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.experimental.mix", {attacker.getName() + " libère un mélange préparé à la va-vite.", "Effet : résultat instable selon la fiole."}, false);
         int roll = random.between(1, 4);
         if (roll == 1) ElementalAffinitySystem::applyPoison(defender, 3, 2 + level / 22);
         else if (roll == 2) ElementalAffinitySystem::applyBurning(defender, 2, 2 + level / 24);
@@ -1359,7 +1662,7 @@ bool CombatActions::executeAIClassSkill(
         else attacker.startDefensePosture(12, 5, "Écran expérimental");
         if (level >= 9 && knowsAdvancedMove && random.between(1, 100) <= 35)
         {
-            std::cout << "Une poudre fine trouve les fissures de la défense adverse." << std::endl;
+            showCombatActionMessage("POUDRE IA", "combat.ai.class_skill.experimental.powder", {"Une poudre fine trouve les fissures de la défense adverse.", "Effet : vulnérabilité temporaire."}, false);
             defender.applyVulnerability(3, 13 + level / 14);
             executeBoostedAttack(attacker, defender, random, 3 + level / 24);
             finishAIClassSkill(5);
@@ -1382,7 +1685,7 @@ bool CombatActions::executeAIClassSkill(
     {
         if (level >= 8 && knowsAdvancedMove && random.between(1, 100) <= 45)
         {
-            std::cout << attacker.getName() << " renforce un lien invisible avant de donner l'ordre." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.call.link", {attacker.getName() + " renforce un lien invisible avant de donner l'ordre.", "Effet : pression de meute et garde."}, false);
             ElementalAffinitySystem::applyFrost(defender, 2);
             ElementalAffinitySystem::applyBleeding(defender, 2, 2 + level / 22);
             attacker.startDefensePosture(12, 5, "Lien de meute");
@@ -1391,7 +1694,7 @@ bool CombatActions::executeAIClassSkill(
         }
         else
         {
-            std::cout << attacker.getName() << " donne un ordre à quelque chose que l'on distingue à peine." << std::endl;
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.call.order", {attacker.getName() + " donne un ordre à quelque chose que l'on distingue à peine.", "Effet : froid spectral et garde."}, false);
             ElementalAffinitySystem::applyFrost(defender, 2);
             attacker.startDefensePosture(8, 3, "Ordre spectral");
             executeBoostedAttack(attacker, defender, random, 2 + level / 24);

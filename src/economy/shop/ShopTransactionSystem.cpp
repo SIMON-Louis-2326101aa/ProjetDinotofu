@@ -15,14 +15,146 @@
 #include "item/weapon/WeaponCatalog.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 
-#include <iostream>
 #include <random>
 #include <algorithm>
 #include <cctype>
 #include <string>
+#include <vector>
 
 namespace
 {
+
+    enum class BuybackItemKind
+    {
+        Weapon,
+        Armor,
+        Consumable,
+        Material
+    };
+
+    struct BuybackEntry
+    {
+        ShopType shopType;
+        BuybackItemKind kind;
+        std::string label;
+        int price;
+        int quantity;
+        Weapon weapon;
+        Armor armor;
+        Consumable consumable;
+        Material material;
+    };
+
+    std::vector<BuybackEntry>& buybackLedger()
+    {
+        static std::vector<BuybackEntry> entries;
+        return entries;
+    }
+
+
+    std::vector<std::string>& transactionNotes()
+    {
+        static std::vector<std::string> notes;
+        return notes;
+    }
+
+    void addTransactionNote(const std::string& note)
+    {
+        if (!note.empty())
+        {
+            transactionNotes().push_back(note);
+        }
+    }
+
+    int computeBuybackPrice(int sellPrice)
+    {
+        int safeSellPrice = std::max(1, sellPrice);
+        return safeSellPrice + std::max(1, safeSellPrice / 4);
+    }
+
+    std::vector<int> visibleBuybackIndexes(ShopType shopType)
+    {
+        std::vector<int> indexes;
+        const std::vector<BuybackEntry>& entries = buybackLedger();
+
+        for (int i = 0; i < static_cast<int>(entries.size()); ++i)
+        {
+            if (entries[i].shopType == shopType)
+            {
+                indexes.push_back(i);
+            }
+        }
+
+        return indexes;
+    }
+
+    bool resolveVisibleBuybackIndex(ShopType shopType, int visibleIndex, int& ledgerIndex)
+    {
+        const std::vector<int> indexes = visibleBuybackIndexes(shopType);
+        if (visibleIndex < 0 || visibleIndex >= static_cast<int>(indexes.size()))
+        {
+            return false;
+        }
+
+        ledgerIndex = indexes[visibleIndex];
+        return true;
+    }
+
+    void rememberSoldWeapon(ShopType shopType, const Weapon& weapon, int sellPrice)
+    {
+        BuybackEntry entry;
+        entry.shopType = shopType;
+        entry.kind = BuybackItemKind::Weapon;
+        entry.label = weapon.getName();
+        entry.price = computeBuybackPrice(sellPrice);
+        entry.quantity = 1;
+        entry.weapon = weapon;
+        buybackLedger().push_back(entry);
+    }
+
+    void rememberSoldArmor(ShopType shopType, const Armor& armor, int sellPrice)
+    {
+        BuybackEntry entry;
+        entry.shopType = shopType;
+        entry.kind = BuybackItemKind::Armor;
+        entry.label = armor.getName();
+        entry.price = computeBuybackPrice(sellPrice);
+        entry.quantity = 1;
+        entry.armor = armor;
+        buybackLedger().push_back(entry);
+    }
+
+    void rememberSoldConsumable(ShopType shopType, const Consumable& consumable, int sellPrice)
+    {
+        BuybackEntry entry;
+        entry.shopType = shopType;
+        entry.kind = BuybackItemKind::Consumable;
+        entry.label = consumable.getName();
+        entry.price = computeBuybackPrice(sellPrice);
+        entry.quantity = 1;
+        entry.consumable = consumable;
+        buybackLedger().push_back(entry);
+    }
+
+    void rememberSoldMaterial(ShopType shopType, Material material, int quantity, int totalSellPrice)
+    {
+        material.setQuantity(quantity);
+
+        BuybackEntry entry;
+        entry.shopType = shopType;
+        entry.kind = BuybackItemKind::Material;
+        entry.label = material.getName();
+        if (material.hasSpecialQuality())
+        {
+            entry.label += " [" + material.getQualityLabel() + "]";
+        }
+        entry.label += " x" + std::to_string(quantity);
+        entry.price = computeBuybackPrice(totalSellPrice);
+        entry.quantity = quantity;
+        entry.material = material;
+        buybackLedger().push_back(entry);
+    }
+
     // EN: isMaterialShop declares or implements a focused behavior used by this module.
     // FR: isMaterialShop déclare ou implémente un comportement précis utilisé par ce module.
     bool isMaterialShop(ShopType type)
@@ -147,8 +279,8 @@ namespace
 
         if (!isMagicStudyCompatible(player))
         {
-            std::cout << "Le texte est conservé, mais il ne suffit pas à transformer un non-mage en lanceur de sorts." << std::endl;
-            std::cout << "Pour utiliser une magie hors classe, il faudra plutôt compter sur des parchemins à usage unique." << std::endl;
+            addTransactionNote("Étude : le texte est conservé, mais il ne suffit pas à transformer un non-mage en lanceur de sorts.");
+            addTransactionNote("Conseil : pour utiliser une magie hors classe, il faudra plutôt compter sur des parchemins à usage unique.");
             return;
         }
 
@@ -156,10 +288,11 @@ namespace
         {
             if (player.getLevel() < 3)
             {
-                std::cout << "Le manuel est compris en partie, mais il faudra atteindre le niveau 3 pour stabiliser la première marque." << std::endl;
+                addTransactionNote("Étude partielle : niveau 3 requis pour stabiliser la première marque.");
                 return;
             }
             player.unlockActiveSkill("learned_arcane_mark", "Marque élémentaire étudiée");
+            addTransactionNote("Compétence étudiée : Marque élémentaire étudiée.");
             return;
         }
 
@@ -167,10 +300,11 @@ namespace
         {
             if (player.getLevel() < 5)
             {
-                std::cout << "Les chaînes arcaniques restent trop lourdes à former. Niveau 5 requis pour les comprendre vraiment." << std::endl;
+                addTransactionNote("Étude partielle : niveau 5 requis pour former les chaînes arcaniques.");
                 return;
             }
             player.unlockActiveSkill("learned_arcane_binding", "Entrave arcanique étudiée");
+            addTransactionNote("Compétence étudiée : Entrave arcanique étudiée.");
             return;
         }
 
@@ -178,10 +312,11 @@ namespace
         {
             if (player.getLevel() < 6)
             {
-                std::cout << "Le voile répond, mais trop faiblement. Niveau 6 requis pour le tenir en combat." << std::endl;
+                addTransactionNote("Étude partielle : niveau 6 requis pour tenir le voile élémentaire en combat.");
                 return;
             }
             player.unlockActiveSkill("learned_elemental_ward", "Voile élémentaire étudié");
+            addTransactionNote("Compétence étudiée : Voile élémentaire étudié.");
             return;
         }
 
@@ -189,10 +324,11 @@ namespace
         {
             if (player.getLevel() < 9)
             {
-                std::cout << "La faille décrite dans le grimoire tire trop fort sur le corps. Niveau 9 requis." << std::endl;
+                addTransactionNote("Étude partielle : niveau 9 requis pour supporter la faille décrite dans le grimoire.");
                 return;
             }
             player.unlockActiveSkill("learned_resistance_rift", "Faille de résistance étudiée");
+            addTransactionNote("Compétence étudiée : Faille de résistance étudiée.");
             return;
         }
 
@@ -200,10 +336,11 @@ namespace
         {
             if (player.getLevel() < 4)
             {
-                std::cout << "Les aiguilles de givre se brisent dans la paume. Niveau 4 requis pour les former proprement." << std::endl;
+                addTransactionNote("Étude partielle : niveau 4 requis pour former les aiguilles de givre proprement.");
                 return;
             }
             player.unlockActiveSkill("learned_frost_needle", "Aiguille de givre étudiée");
+            addTransactionNote("Compétence étudiée : Aiguille de givre étudiée.");
             return;
         }
 
@@ -211,10 +348,11 @@ namespace
         {
             if (player.getLevel() < 7)
             {
-                std::cout << "Le fil de mana casse avant de refermer la blessure. Niveau 7 requis pour l'étudier sans danger." << std::endl;
+                addTransactionNote("Étude partielle : niveau 7 requis pour étudier la suture de mana sans danger.");
                 return;
             }
             player.unlockActiveSkill("learned_mana_suture", "Suture de mana étudiée");
+            addTransactionNote("Compétence étudiée : Suture de mana étudiée.");
             return;
         }
 
@@ -222,10 +360,11 @@ namespace
         {
             if (player.getLevel() < 5)
             {
-                std::cout << "Les ronces se dessinent, mais elles cassent avant de saisir une cible. Niveau 5 requis." << std::endl;
+                addTransactionNote("Étude partielle : niveau 5 requis pour stabiliser les ronces occultes.");
                 return;
             }
             player.unlockActiveSkill("learned_occult_bramble", "Ronces occultes étudiées");
+            addTransactionNote("Compétence étudiée : Ronces occultes étudiées.");
             return;
         }
     }
@@ -381,23 +520,15 @@ bool ShopTransactionSystem::buyItem(
 
     if (item.isSoldOut())
     {
-        std::cout << "Stock épuisé pour " << item.getName() << "." << std::endl;
-        std::cout << "Il faudra attendre une nouvelle rotation de boutique." << std::endl;
-        std::cout << std::endl;
+        addTransactionNote("Stock épuisé pour " + item.getName() + ".");
+        addTransactionNote("Il faudra attendre une nouvelle rotation de boutique.");
         return false;
     }
 
     if (!player.getInventory().spendGold(finalPrice))
     {
-        std::cout << "Tu n'as pas assez d'or pour acheter "
-                  << item.getName()
-                  << "."
-                  << std::endl;
-        std::cout << "Or disponible : "
-                  << player.getInventory().getGold()
-                  << " pièces."
-                  << std::endl;
-        std::cout << std::endl;
+        addTransactionNote("Or insuffisant pour acheter " + item.getName() + ".");
+        addTransactionNote("Or disponible : " + std::to_string(player.getInventory().getGold()) + " pièces.");
         return false;
     }
 
@@ -552,45 +683,27 @@ bool ShopTransactionSystem::buyItem(
 
         if (boughtMaterial.hasSpecialQuality())
         {
-            std::cout << "Trouvaille rare en boutique : qualité "
-                      << boughtMaterial.getQualityLabel()
-                      << "." << std::endl;
+            addTransactionNote("Trouvaille rare en boutique : qualité " + boughtMaterial.getQualityLabel() + ".");
             if (boughtMaterial.getQuality() == "exceptional")
             {
-                std::cout << "Le marché noir te glisse quelque chose qu'aucun vendeur honnête n'aurait posé sur un comptoir." << std::endl;
+                addTransactionNote("Le marché noir te glisse quelque chose qu'aucun vendeur honnête n'aurait posé sur un comptoir.");
             }
             else
             {
-                std::cout << "Les objets exceptionnels restent normalement impossibles à acheter hors circuits douteux." << std::endl;
+                addTransactionNote("Les objets exceptionnels restent normalement impossibles à acheter hors circuits douteux.");
             }
         }
     }
 
     item.consumeOneStock();
 
-    std::cout << "Achat réussi : " << item.getName() << "." << std::endl;
-    std::cout << "Or restant : "
-              << player.getInventory().getGold()
-              << " pièces."
-              << std::endl;
-
-    if (item.getStock() >= 0)
-    {
-        std::cout << "Stock restant chez le marchand : "
-                  << item.getStock()
-                  << "."
-                  << std::endl;
-    }
-
     if (item.isCommonInformation())
     {
         BestiaryRuntimeProgress::unlockCommonInformation(item.getId());
-        std::cout << "Renseignement ajouté au bestiaire pour cette session." << std::endl;
+        addTransactionNote("Renseignement ajouté au bestiaire pour cette session.");
     }
 
     applyMagicLearningEffect(player, item);
-
-    std::cout << std::endl;
 
     return true;
 }
@@ -719,15 +832,15 @@ bool ShopTransactionSystem::sellInventoryEntryQuantity(
 {
     if (quantity <= 0)
     {
-        std::cout << "Quantité invalide." << std::endl << std::endl;
+        addTransactionNote("Quantité invalide.");
         return false;
     }
 
     int maxQuantity = getMaxSellQuantityForEntry(player, shopType, index);
     if (maxQuantity <= 0 || quantity > maxQuantity)
     {
-        std::cout << "Quantité impossible à vendre." << std::endl;
-        std::cout << "Maximum vendable : " << maxQuantity << "." << std::endl << std::endl;
+        addTransactionNote("Quantité impossible à vendre.");
+        addTransactionNote("Maximum vendable : " + std::to_string(maxQuantity) + ".");
         return false;
     }
 
@@ -738,7 +851,7 @@ bool ShopTransactionSystem::sellInventoryEntryQuantity(
 
     if (!isMaterialShop(shopType))
     {
-        std::cout << "Le comptoir refuse les lots pour cet objet. Vente d'un seul exemplaire." << std::endl;
+        addTransactionNote("Le comptoir refuse les lots pour cet objet. Vente d'un seul exemplaire.");
         return sellInventoryEntry(player, shopType, index, finalSellPrice);
     }
 
@@ -751,17 +864,13 @@ bool ShopTransactionSystem::sellInventoryEntryQuantity(
 
     if (!player.getInventory().removeMaterialQuantity(index, quantity))
     {
-        std::cout << "La vente a échoué. Rien n'a été perdu." << std::endl << std::endl;
+        addTransactionNote("La vente a échoué. Rien n'a été perdu.");
         return false;
     }
 
     int totalSellPrice = finalSellPrice * quantity;
+    rememberSoldMaterial(shopType, soldMaterial, quantity, totalSellPrice);
     player.getInventory().earnGold(totalSellPrice);
-
-    std::cout << "Vente réussie : " << soldName << " x" << quantity << "." << std::endl;
-    std::cout << "+" << totalSellPrice << " pièces d'or." << std::endl;
-    std::cout << "Or actuel : " << player.getInventory().getGold() << " pièces." << std::endl;
-    std::cout << std::endl;
 
     return true;
 }
@@ -775,120 +884,223 @@ bool ShopTransactionSystem::sellInventoryEntry(
 {
     if (!canShopBuyInventoryEntry(player, shopType, index))
     {
-        std::cout << "Impossible de vendre cette entrée." << std::endl;
-        std::cout << "L'équipement porté, les objets de base et les entrées invalides sont protégés." << std::endl;
-        std::cout << std::endl;
+        addTransactionNote("Impossible de vendre cette entrée.");
+        addTransactionNote("L'équipement porté, les objets de base et les entrées invalides sont protégés.");
         return false;
     }
 
     std::string soldName = "Objet";
     bool removed = false;
+    bool rememberWeapon = false;
+    bool rememberArmor = false;
+    bool rememberConsumable = false;
+    bool rememberMaterial = false;
+    Weapon soldWeapon;
+    Armor soldArmor;
+    Consumable soldConsumable;
+    Material soldMaterial;
 
     if (shopType == ShopType::Weapon)
     {
-        soldName = player.getInventory().getWeapon(index).getName();
+        soldWeapon = player.getInventory().getWeapon(index);
+        soldName = soldWeapon.getName();
         removed = player.getInventory().removeWeapon(index);
+        rememberWeapon = removed;
     }
     else if (shopType == ShopType::Armor)
     {
-        soldName = player.getInventory().getArmor(index).getName();
+        soldArmor = player.getInventory().getArmor(index);
+        soldName = soldArmor.getName();
         removed = player.getInventory().removeArmor(index);
+        rememberArmor = removed;
     }
     else if (shopType == ShopType::Consumable)
     {
-        soldName = player.getInventory().getConsumable(index).getName();
+        soldConsumable = player.getInventory().getConsumable(index);
+        soldName = soldConsumable.getName();
         removed = player.getInventory().removeConsumable(index);
+        rememberConsumable = removed;
     }
     else if (isMaterialShop(shopType))
     {
-        Material soldMaterial = player.getInventory().getMaterial(index);
+        soldMaterial = player.getInventory().getMaterial(index);
         soldName = soldMaterial.getName();
         if (soldMaterial.hasSpecialQuality())
         {
             soldName += " [" + soldMaterial.getQualityLabel() + "]";
         }
         removed = player.getInventory().removeMaterialQuantity(index, 1);
+        rememberMaterial = removed;
     }
 
     if (!removed)
     {
-        std::cout << "La vente a échoué. Rien n'a été perdu." << std::endl;
-        std::cout << std::endl;
+        addTransactionNote("La vente a échoué. Rien n'a été perdu.");
         return false;
+    }
+
+    if (rememberWeapon)
+    {
+        rememberSoldWeapon(shopType, soldWeapon, finalSellPrice);
+    }
+    else if (rememberArmor)
+    {
+        rememberSoldArmor(shopType, soldArmor, finalSellPrice);
+    }
+    else if (rememberConsumable)
+    {
+        rememberSoldConsumable(shopType, soldConsumable, finalSellPrice);
+    }
+    else if (rememberMaterial)
+    {
+        rememberSoldMaterial(shopType, soldMaterial, 1, finalSellPrice);
     }
 
     player.getInventory().earnGold(finalSellPrice);
 
-    std::cout << "Vente réussie : " << soldName << "." << std::endl;
-    std::cout << "+" << finalSellPrice << " pièces d'or." << std::endl;
-    std::cout << "Or actuel : " << player.getInventory().getGold() << " pièces." << std::endl;
-    std::cout << std::endl;
+    return true;
+}
+
+
+int ShopTransactionSystem::getBuybackEntryCount(ShopType shopType)
+{
+    return static_cast<int>(visibleBuybackIndexes(shopType).size());
+}
+
+std::string ShopTransactionSystem::getBuybackEntryLabel(ShopType shopType, int visibleIndex)
+{
+    int ledgerIndex = -1;
+    if (!resolveVisibleBuybackIndex(shopType, visibleIndex, ledgerIndex))
+    {
+        return "Entrée de rachat inconnue";
+    }
+
+    const BuybackEntry& entry = buybackLedger()[ledgerIndex];
+    return entry.label
+        + " | Rachat : " + std::to_string(entry.price) + " or"
+        + " | Disponible jusqu'au prochain combat";
+}
+
+
+std::string ShopTransactionSystem::getBuybackEntryName(ShopType shopType, int visibleIndex)
+{
+    int ledgerIndex = -1;
+    if (!resolveVisibleBuybackIndex(shopType, visibleIndex, ledgerIndex))
+    {
+        return "Entrée de rachat inconnue";
+    }
+
+    return buybackLedger()[ledgerIndex].label;
+}
+
+std::string ShopTransactionSystem::getBuybackEntryKindLabel(ShopType shopType, int visibleIndex)
+{
+    int ledgerIndex = -1;
+    if (!resolveVisibleBuybackIndex(shopType, visibleIndex, ledgerIndex))
+    {
+        return "Inconnu";
+    }
+
+    switch (buybackLedger()[ledgerIndex].kind)
+    {
+        case BuybackItemKind::Weapon:
+            return "Arme";
+        case BuybackItemKind::Armor:
+            return "Armure";
+        case BuybackItemKind::Consumable:
+            return "Consommable";
+        case BuybackItemKind::Material:
+            return "Matériau";
+        default:
+            return "Inconnu";
+    }
+}
+
+int ShopTransactionSystem::getBuybackEntryQuantity(ShopType shopType, int visibleIndex)
+{
+    int ledgerIndex = -1;
+    if (!resolveVisibleBuybackIndex(shopType, visibleIndex, ledgerIndex))
+    {
+        return 0;
+    }
+
+    return buybackLedger()[ledgerIndex].quantity;
+}
+
+int ShopTransactionSystem::getBuybackEntryPrice(ShopType shopType, int visibleIndex)
+{
+    int ledgerIndex = -1;
+    if (!resolveVisibleBuybackIndex(shopType, visibleIndex, ledgerIndex))
+    {
+        return 0;
+    }
+
+    return buybackLedger()[ledgerIndex].price;
+}
+
+bool ShopTransactionSystem::buyBackEntry(
+    Player& player,
+    ShopType shopType,
+    int visibleIndex
+)
+{
+    int ledgerIndex = -1;
+    if (!resolveVisibleBuybackIndex(shopType, visibleIndex, ledgerIndex))
+    {
+        addTransactionNote("Rachat impossible : l'entrée n'existe plus.");
+        return false;
+    }
+
+    BuybackEntry entry = buybackLedger()[ledgerIndex];
+
+    if (!player.getInventory().spendGold(entry.price))
+    {
+        addTransactionNote("Or insuffisant pour racheter " + entry.label + ".");
+        addTransactionNote("Or disponible : " + std::to_string(player.getInventory().getGold()) + " pièces.");
+        return false;
+    }
+
+    if (entry.kind == BuybackItemKind::Weapon)
+    {
+        player.getInventory().addWeapon(entry.weapon);
+    }
+    else if (entry.kind == BuybackItemKind::Armor)
+    {
+        player.getInventory().addArmor(entry.armor);
+    }
+    else if (entry.kind == BuybackItemKind::Consumable)
+    {
+        player.getInventory().addConsumable(entry.consumable);
+    }
+    else if (entry.kind == BuybackItemKind::Material)
+    {
+        player.getInventory().addMaterial(entry.material);
+    }
+
+    buybackLedger().erase(buybackLedger().begin() + ledgerIndex);
 
     return true;
 }
 
-void ShopTransactionSystem::displaySellableEntries(
-    const Player& player,
-    ShopType shopType
-)
+void ShopTransactionSystem::clearBuybackAfterCombat()
 {
-    int count = getSellableEntryCount(player, shopType);
-
-    if (count <= 0)
-    {
-        std::cout << "Rien à vendre ici pour le moment." << std::endl;
-        return;
-    }
-
-    for (int i = 0; i < count; ++i)
-    {
-        std::cout << i + 1 << " : ";
-
-        if (shopType == ShopType::Weapon)
-        {
-            std::cout << player.getInventory().getWeapon(i).getName();
-        }
-        else if (shopType == ShopType::Armor)
-        {
-            std::cout << player.getInventory().getArmor(i).getName();
-        }
-        else if (shopType == ShopType::Consumable)
-        {
-            std::cout << player.getInventory().getConsumable(i).getName();
-        }
-        else if (isMaterialShop(shopType))
-        {
-            Material material = player.getInventory().getMaterial(i);
-            std::cout << material.getName() << " x" << material.getQuantity();
-        }
-
-        if (!canShopBuyInventoryEntry(player, shopType, i))
-        {
-            std::cout << " | Protégé";
-        }
-        else
-        {
-            std::cout << " | Revente : "
-                      << getSellPriceForEntry(player, shopType, i)
-                      << " or";
-
-            int maxQuantity = getMaxSellQuantityForEntry(player, shopType, i);
-            if (maxQuantity > 1)
-            {
-                std::cout << " | Max : x" << maxQuantity;
-            }
-        }
-
-        std::cout << std::endl;
-    }
+    buybackLedger().clear();
 }
 
-// EN: displayUnsupportedPurchaseMessage declares or implements a focused behavior used by this module.
-// FR: displayUnsupportedPurchaseMessage déclare ou implémente un comportement précis utilisé par ce module.
+void ShopTransactionSystem::clearLastTransactionNotes()
+{
+    transactionNotes().clear();
+}
+
+std::vector<std::string> ShopTransactionSystem::consumeLastTransactionNotes()
+{
+    std::vector<std::string> notes = transactionNotes();
+    transactionNotes().clear();
+    return notes;
+}
+
 void ShopTransactionSystem::displayUnsupportedPurchaseMessage(const ShopItem& item)
 {
-    std::cout << item.getName() << " existe dans la boutique," << std::endl;
-    std::cout << "mais ton sac ne peut pas le recevoir correctement." << std::endl;
-    std::cout << "Aucun or n'a été dépensé." << std::endl;
-    std::cout << std::endl;
+    addTransactionNote(item.getName() + " existe dans la boutique, mais ton sac ne peut pas le recevoir correctement.");
+    addTransactionNote("Aucun or n'a été dépensé.");
 }

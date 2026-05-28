@@ -272,7 +272,6 @@ void DeathPenaltySystem::displayNonLethalDeathPenalty(
 
     screen.addFooterLine("Objets liés au corps, à l'âme ou au personnage : une marque profonde les protège.");
     TerminalInterface::renderMenuScreen(screen, false);
-    std::cout << std::endl;
 }
 
 // EN: displayLethalDeathCorruption declares or implements a focused behavior used by this module.
@@ -285,7 +284,6 @@ void DeathPenaltySystem::displayLethalDeathCorruption()
     screen.addLine("Statut : personnage supprimé du registre des vivants.");
     screen.addLine("Connais-tu quelqu'un capable d'échapper à la mort ? Moi non...");
     TerminalInterface::renderMenuScreen(screen, false);
-    std::cout << std::endl;
 }
 
 // EN: displayLethalCurrentDeathStatistic declares or implements a focused behavior used by this module.
@@ -296,7 +294,6 @@ void DeathPenaltySystem::displayLethalCurrentDeathStatistic()
     screen.addLine("Morts du personnage : [STATISTIQUE CORROMPUE]");
     screen.addLine("But de mission : survivre.");
     TerminalInterface::renderMenuScreen(screen, false);
-    std::cout << std::endl;
 }
 
 // EN: displayLethalSurvivalAnomaly declares or implements a focused behavior used by this module.
@@ -319,5 +316,4 @@ void DeathPenaltySystem::displayLethalSurvivalAnomaly()
     screen.addLine("Mais ton nom existe encore.");
     screen.addLine("Mais le registre continue de te regarder.");
     TerminalInterface::renderMenuScreen(screen, false);
-    std::cout << std::endl;
 }

@@ -6,6 +6,8 @@
 
 #include "character/relationship/SpecialCharacterGroupDialogueCatalog.hpp"
 
+#include "interface/menu/common/MessageScreen.hpp"
+
 #include <algorithm>
 #include <iostream>
 
@@ -202,13 +204,5 @@ void SpecialCharacterGroupDialogueCatalog::displayLines(
         return;
     }
 
-    std::cout << "========== " << title << " ==========" << std::endl;
-
-    for (const std::string& line : lines)
-    {
-        std::cout << line << std::endl;
-    }
-
-    std::cout << "========================================" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(title, "character.special_group.dialogue", lines, false);
 }

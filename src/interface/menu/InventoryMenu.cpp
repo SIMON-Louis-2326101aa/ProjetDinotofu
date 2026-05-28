@@ -11,6 +11,7 @@
 #include "interface/menu/inventory/InventorySelection.hpp"
 #include "interface/menu/progression/BestiaryMenu.hpp"
 #include "interface/menu/quest/QuestMenu.hpp"
+#include "interface/TerminalInterface.hpp"
 
 // EN: open declares or implements a focused behavior used by this module.
 // FR: open déclare ou implémente un comportement précis utilisé par ce module.
@@ -18,12 +19,10 @@ bool InventoryMenu::open(Player& player)
 {
     while (true)
     {
-        InventoryDisplay::displayMainMenu();
-
-        int menuChoice = Console::askNumberBetween(
-            0,
-            8,
-            "Choix invalide. Entre un chiffre entre 0 et 8."
+        MenuScreen screen = InventoryDisplay::buildMainScreen();
+        int menuChoice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Choix invalide. Choisis une option visible de l'inventaire."
         );
 
         Console::clear();

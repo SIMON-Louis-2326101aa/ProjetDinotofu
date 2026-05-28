@@ -6,9 +6,10 @@
 #include "interface/menu/CombatMenu.hpp"
 
 #include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
-#include <iostream>
 #include <sstream>
+#include <string>
 
 MenuScreen CombatMenu::buildTurnScreen(const Entity& entity)
 {
@@ -24,8 +25,14 @@ MenuScreen CombatMenu::buildTurnScreen(const Entity& entity)
         screen.addLine(cooldownText.str());
     }
 
+    const bool lowHealth = entity.getMaxHp() > 0 && entity.getHp() * 100 <= entity.getMaxHp() * 35;
+    const bool hasHealingTool = entity.getHealingPotionCount() > 0;
+    const std::string quickHealActionId = (lowHealth && hasHealingTool)
+        ? "combat.quick_heal.recommend_heal.low_hp"
+        : "combat.quick_heal";
+
     screen.addOption(1, "Attaquer", "Attaque simple, technique d'arme, attaque lourde/rapide ou compétence.", true, "combat.attack");
-    screen.addOption(2, "Potion de soin rapide", "Liste seulement les potions de soin utilisables rapidement.", true, "combat.quick_heal");
+    screen.addOption(2, "Potion de soin rapide", "Liste seulement les potions de soin utilisables rapidement.", true, quickHealActionId);
     screen.addOption(3, "Potions", "Curatif, défensif, buff, offensive ou debuff.", true, "combat.potions");
     screen.addOption(4, "Équipement", "Voir ou changer rapidement l'arme et la tenue.", true, "combat.equipment");
     screen.addOption(5, "Inventaire / bestiaire", "Consulter les objets, matériaux et informations connues.", true, "combat.inventory");
@@ -46,6 +53,12 @@ void CombatMenu::displayTurnMenu(const Entity& entity)
 // FR: displayUnavailableOption déclare ou implémente un comportement précis utilisé par ce module.
 void CombatMenu::displayUnavailableOption()
 {
-    std::cout << "[cette option est inaccessible dans ce combat]" << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "OPTION INACCESSIBLE",
+        "combat.option.unavailable",
+        {
+            "Cette option est inaccessible dans ce combat.",
+            "Choisis une action encore possible pour ce tour."
+        }
+    );
 }

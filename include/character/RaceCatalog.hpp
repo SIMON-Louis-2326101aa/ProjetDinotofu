@@ -35,6 +35,7 @@ public:
     static CharacterRace getPlayableRaceByChoice(int choice);
     // EN: displayPlayableRaces declares or implements a focused behavior used by this module.
     // FR: displayPlayableRaces déclare ou implémente un comportement précis utilisé par ce module.
+    static std::vector<std::string> getPlayableRaceDisplayLines();
     static void displayPlayableRaces();
 
     // EN: getStartingBonus declares or implements a focused behavior used by this module.

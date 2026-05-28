@@ -6,6 +6,7 @@
 #include "interface/menu/inventory/InventoryDisplay.hpp"
 
 #include "interface/menu/inventory/InventoryUtils.hpp"
+#include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
 
 #include "item/Inventory.hpp"
@@ -13,6 +14,76 @@
 
 #include <iostream>
 #include <vector>
+
+namespace
+{
+    MenuOptionItemData makeInventoryWeaponItemData(const Weapon& weapon, const std::string& actionType)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "weapon";
+        itemData.section = "Inventaire - arme sélectionnée";
+        itemData.actionType = actionType;
+        itemData.name = weapon.getName();
+        itemData.detail = "Dégâts : +" + std::to_string(weapon.getMinDamageBonus())
+            + " à +" + std::to_string(weapon.getMaxDamageBonus())
+            + " | Critique : +" + std::to_string(weapon.getCriticalBonus());
+        itemData.status = weapon.isBroken() ? "Cassée" : "Utilisable";
+        itemData.progress = "Durabilité : " + InventoryUtils::weaponDurabilityText(weapon);
+        itemData.price = std::to_string(weapon.getValue()) + " or";
+        itemData.important = weapon.isBroken();
+        return itemData;
+    }
+
+    MenuOptionItemData makeInventoryArmorItemData(const Armor& armor, const std::string& actionType)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "armor";
+        itemData.section = "Inventaire - armure sélectionnée";
+        itemData.actionType = actionType;
+        itemData.name = armor.getName();
+        itemData.detail = "PV max : +" + std::to_string(armor.getMaxHpBonus())
+            + " | Réduction : " + std::to_string(armor.getDamageReduction());
+        itemData.status = armor.isBroken() ? "Cassée" : "Utilisable";
+        itemData.progress = "Durabilité : " + InventoryUtils::armorDurabilityText(armor);
+        itemData.price = std::to_string(armor.getValue()) + " or";
+        itemData.important = armor.isBroken();
+        return itemData;
+    }
+
+    MenuOptionItemData makeInventoryConsumableItemData(const Consumable& consumable, const std::string& actionType, const std::string& status = "")
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "consumable";
+        itemData.section = "Inventaire - consommable sélectionné";
+        itemData.actionType = actionType;
+        itemData.name = consumable.getName();
+        itemData.detail = InventoryUtils::consumableTypeToText(consumable.getType());
+        itemData.status = status;
+        itemData.progress = "Puissance : " + std::to_string(consumable.getPower());
+        itemData.price = std::to_string(consumable.getValue()) + " or";
+        itemData.important = consumable.isHealing();
+        return itemData;
+    }
+
+    MenuOptionItemData makeInventoryMaterialItemData(const Material& material, const std::string& actionType)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "material";
+        itemData.section = "Inventaire - entrée sélectionnée";
+        itemData.actionType = actionType;
+        itemData.name = material.getName();
+        itemData.quantity = std::to_string(material.getQuantity());
+        itemData.detail = material.getCategory();
+        itemData.status = material.hasSpecialQuality() ? material.getQualityLabel() : "Qualité normale";
+        itemData.price = std::to_string(material.getValue()) + " or/unité";
+        itemData.important = material.hasSpecialQuality();
+        return itemData;
+    }
+}
 
 // EN: displayMainMenu declares or implements a focused behavior used by this module.
 // FR: displayMainMenu déclare ou implémente un comportement précis utilisé par ce module.
@@ -38,80 +109,93 @@ void InventoryDisplay::displayMainMenu()
 
 // EN: displaySimpleFullInventory declares or implements a focused behavior used by this module.
 // FR: displaySimpleFullInventory déclare ou implémente un comportement précis utilisé par ce module.
-void InventoryDisplay::displaySimpleFullInventory(const Player& player)
+MenuScreen InventoryDisplay::buildSimpleFullInventoryScreen(const Player& player)
 {
     const Inventory& inventory = player.getInventory();
 
-    std::cout << "================ INVENTAIRE ================" << std::endl;
-    std::cout << "Or : " << inventory.getGold() << " pièces" << std::endl;
-    std::cout << "Objet spécial : Bestiaire" << std::endl;
-    std::cout << std::endl;
-
-    std::cout << "Armes : " << inventory.getWeaponCount() << std::endl;
+    MenuScreen screen("INVENTAIRE - RÉSUMÉ SIMPLE", "inventory.full_simple.summary");
+    screen.setContinueInput("Valide pour revenir à l'inventaire.");
+    screen.addSubtitle("Affichage volontairement court : noms, quantités et états importants.");
+    screen.addLine("Or : " + std::to_string(inventory.getGold()) + " pièces");
+    screen.addLine("Objet spécial : Bestiaire");
+    screen.addLine("Armes : " + std::to_string(inventory.getWeaponCount()));
 
     for (int i = 0; i < inventory.getWeaponCount(); ++i)
     {
         Weapon weapon = inventory.getWeapon(i);
-
-        std::cout << "[" << i << "] " << weapon.getName()
-                  << " | Durabilité : " << InventoryUtils::weaponDurabilityText(weapon);
+        std::string line = "[" + std::to_string(i) + "] " + weapon.getName()
+            + " | Durabilité : " + InventoryUtils::weaponDurabilityText(weapon);
 
         if (weapon.isBroken())
         {
-            std::cout << " | Cassée";
+            line += " | Cassée";
         }
 
-        std::cout << std::endl;
+        screen.addLine(line);
     }
 
-    std::cout << std::endl;
-    std::cout << "Armures : " << inventory.getArmorCount() << std::endl;
+    screen.addLine("");
+    screen.addLine("Armures : " + std::to_string(inventory.getArmorCount()));
 
     for (int i = 0; i < inventory.getArmorCount(); ++i)
     {
         Armor armor = inventory.getArmor(i);
-
-        std::cout << "[" << i << "] " << armor.getName()
-                  << " | Durabilité : " << InventoryUtils::armorDurabilityText(armor);
+        std::string line = "[" + std::to_string(i) + "] " + armor.getName()
+            + " | Durabilité : " + InventoryUtils::armorDurabilityText(armor);
 
         if (armor.isBroken())
         {
-            std::cout << " | Cassée";
+            line += " | Cassée";
         }
 
-        std::cout << std::endl;
+        screen.addLine(line);
     }
 
-    std::cout << std::endl;
-    std::cout << "Consommables : " << inventory.getConsumableCount() << std::endl;
+    screen.addLine("");
+    screen.addLine("Consommables : " + std::to_string(inventory.getConsumableCount()));
 
     std::vector<ConsumableGroup> groups = InventoryUtils::groupConsumables(player);
 
     for (int i = 0; i < static_cast<int>(groups.size()); ++i)
     {
         const ConsumableGroup& group = groups[i];
-
-        std::cout << "[" << i << "] " << group.name
-                  << " x" << group.amount
-                  << " | " << InventoryUtils::consumableTypeToText(group.type)
-                  << " | Puissance : " << group.power
-                  << std::endl;
+        screen.addLine(
+            "[" + std::to_string(i) + "] " + group.name
+            + " x" + std::to_string(group.amount)
+            + " | " + InventoryUtils::consumableTypeToText(group.type)
+            + " | Puissance : " + std::to_string(group.power)
+        );
     }
 
-    std::cout << std::endl;
-    std::cout << "Matériaux / plantes / infos : " << inventory.getMaterialCount() << std::endl;
+    screen.addLine("");
+    screen.addLine("Matériaux / plantes / infos : " + std::to_string(inventory.getMaterialCount()));
 
     for (int i = 0; i < static_cast<int>(inventory.getMaterials().size()); ++i)
     {
         Material material = inventory.getMaterial(i);
-        std::cout << "[" << i << "] " << material.getName()
-                  << " x" << material.getQuantity()
-                  << " | " << material.getCategory()
-                  << std::endl;
+        std::string line = "[" + std::to_string(i) + "] " + material.getName()
+            + " x" + std::to_string(material.getQuantity())
+            + " | " + material.getCategory();
+
+        if (material.hasSpecialQuality())
+        {
+            line += " | " + material.getQualityLabel();
+        }
+
+        screen.addLine(line);
     }
 
-    std::cout << "============================================" << std::endl;
-    std::cout << std::endl;
+    screen.addFooterLine("Pour agir sur un objet, reviens au menu et choisis sa catégorie.");
+    return screen;
+}
+
+// EN: displaySimpleFullInventory declares or implements a focused behavior used by this module.
+// FR: displaySimpleFullInventory déclare ou implémente un comportement précis utilisé par ce module.
+void InventoryDisplay::displaySimpleFullInventory(const Player& player)
+{
+    TerminalInterface::renderMenuScreen(buildSimpleFullInventoryScreen(player), false);
+    Console::waitForEnter();
+    Console::clear();
 }
 
 MenuScreen InventoryDisplay::buildSelectedWeaponScreen(const Weapon& weapon)
@@ -119,10 +203,10 @@ MenuScreen InventoryDisplay::buildSelectedWeaponScreen(const Weapon& weapon)
     MenuScreen screen("ARME SÉLECTIONNÉE", "inventory.weapon.selected");
     screen.addLine("Arme : " + weapon.getName());
     screen.addBackOption("Retour", "inventory.weapon.back");
-    screen.addOption(1, "Inspecter", "Voir la description et les détails de l'arme.", true, "inventory.weapon.inspect");
-    screen.addOption(2, "Équiper", "Équiper cette arme maintenant.", true, "inventory.weapon.equip");
-    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.weapon.bestiary");
-    screen.addOption(4, "Réparer", "Utiliser un kit ou des matériaux compatibles.", true, "inventory.weapon.repair");
+    screen.addOption(1, "Inspecter", "Voir la description et les détails de l'arme.", true, "inventory.weapon.inspect", makeInventoryWeaponItemData(weapon, "inspect"));
+    screen.addOption(2, "Équiper", "Équiper cette arme maintenant.", true, "inventory.weapon.equip", makeInventoryWeaponItemData(weapon, "equip"));
+    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.weapon.bestiary", makeInventoryWeaponItemData(weapon, "inspect"));
+    screen.addOption(4, "Réparer", "Utiliser un kit ou des matériaux compatibles.", true, "inventory.weapon.repair", makeInventoryWeaponItemData(weapon, "repair"));
     return screen;
 }
 
@@ -136,10 +220,10 @@ MenuScreen InventoryDisplay::buildSelectedArmorScreen(const Armor& armor)
     MenuScreen screen("ARMURE SÉLECTIONNÉE", "inventory.armor.selected");
     screen.addLine("Armure : " + armor.getName());
     screen.addBackOption("Retour", "inventory.armor.back");
-    screen.addOption(1, "Inspecter", "Voir la description et les détails de l'armure.", true, "inventory.armor.inspect");
-    screen.addOption(2, "Équiper", "Équiper cette protection maintenant.", true, "inventory.armor.equip");
-    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.armor.bestiary");
-    screen.addOption(4, "Réparer", "Utiliser un kit ou des matériaux compatibles.", true, "inventory.armor.repair");
+    screen.addOption(1, "Inspecter", "Voir la description et les détails de l'armure.", true, "inventory.armor.inspect", makeInventoryArmorItemData(armor, "inspect"));
+    screen.addOption(2, "Équiper", "Équiper cette protection maintenant.", true, "inventory.armor.equip", makeInventoryArmorItemData(armor, "equip"));
+    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.armor.bestiary", makeInventoryArmorItemData(armor, "inspect"));
+    screen.addOption(4, "Réparer", "Utiliser un kit ou des matériaux compatibles.", true, "inventory.armor.repair", makeInventoryArmorItemData(armor, "repair"));
     return screen;
 }
 
@@ -155,18 +239,18 @@ MenuScreen InventoryDisplay::buildSelectedConsumableScreen(const Consumable& con
     screen.addLine("Type : " + InventoryUtils::consumableTypeToText(consumable.getType()));
     screen.addLine("Puissance : " + std::to_string(consumable.getPower()));
     screen.addBackOption("Retour", "inventory.consumable.back");
-    screen.addOption(1, "Inspecter", "Lire la description complète.", true, "inventory.consumable.inspect");
+    screen.addOption(1, "Inspecter", "Lire la description complète.", true, "inventory.consumable.inspect", makeInventoryConsumableItemData(consumable, "inspect"));
 
     if (consumable.getType() == ConsumableType::Healing)
     {
-        screen.addOption(2, "Utiliser", "Boire cette potion de soin hors combat.", true, "inventory.consumable.use");
+        screen.addOption(2, "Utiliser", "Boire cette potion de soin hors combat.", true, "inventory.consumable.use", makeInventoryConsumableItemData(consumable, "use", "Utilisable hors combat"));
     }
     else
     {
-        screen.addOption(2, "Utiliser depuis le menu Potions en combat", "Ce type demande une situation de combat.", true, "inventory.consumable.use_locked");
+        screen.addOption(2, "Utiliser depuis le menu Potions en combat", "Ce type demande une situation de combat.", false, "inventory.consumable.use_locked", makeInventoryConsumableItemData(consumable, "use", "Combat requis"));
     }
 
-    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.consumable.bestiary");
+    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.consumable.bestiary", makeInventoryConsumableItemData(consumable, "inspect"));
     return screen;
 }
 
@@ -182,10 +266,10 @@ MenuScreen InventoryDisplay::buildSelectedMaterialScreen(const Material& materia
     screen.addLine("Catégorie : " + material.getCategory());
     screen.addLine("Quantité : " + std::to_string(material.getQuantity()));
     screen.addBackOption("Retour", "inventory.material.back");
-    screen.addOption(1, "Inspecter", "Lire la description complète.", true, "inventory.material.inspect");
-    screen.addOption(2, "Voir dans le bestiaire", "Consulter la connaissance liée à cette ressource.", true, "inventory.material.bestiary");
-    screen.addOption(3, "Voir les usages connus", "Recettes, réparations ou pistes déjà découvertes.", true, "inventory.material.uses");
-    screen.addOption(4, "Lire / utiliser", "Exploiter cette entrée si elle contient une note ou un usage direct.", true, "inventory.material.use");
+    screen.addOption(1, "Inspecter", "Lire la description complète.", true, "inventory.material.inspect", makeInventoryMaterialItemData(material, "inspect"));
+    screen.addOption(2, "Voir dans le bestiaire", "Consulter la connaissance liée à cette ressource.", true, "inventory.material.bestiary", makeInventoryMaterialItemData(material, "inspect"));
+    screen.addOption(3, "Voir les usages connus", "Recettes, réparations ou pistes déjà découvertes.", true, "inventory.material.uses", makeInventoryMaterialItemData(material, "inspect"));
+    screen.addOption(4, "Lire / utiliser", "Exploiter cette entrée si elle contient une note ou un usage direct.", true, "inventory.material.use", makeInventoryMaterialItemData(material, "use"));
     return screen;
 }
 

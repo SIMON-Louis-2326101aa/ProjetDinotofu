@@ -4,10 +4,13 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "entity/Entity.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
 
 #include <iostream>
+#include <string>
+#include <vector>
 
 // EN: Entity declares or implements a focused behavior used by this module.
 // FR: Entity déclare ou implémente un comportement précis utilisé par ce module.
@@ -433,121 +436,122 @@ void Entity::processStatusTickAtTurnStart()
     if (hp <= 0) return;
 
     int totalDamage = 0;
+    std::vector<std::string> lines;
 
     if (burningTurns > 0)
     {
         totalDamage += burningDamage;
-        std::cout << name << " subit une brûlure persistante (" << burningDamage << " dégâts)." << std::endl;
+        lines.push_back(name + " subit une brûlure persistante (" + std::to_string(burningDamage) + " dégâts).");
         burningTurns--;
         if (burningTurns <= 0)
         {
             burningDamage = 0;
-            std::cout << "La brûlure de " << name << " s'éteint." << std::endl;
+            lines.push_back("La brûlure de " + name + " s'éteint.");
         }
     }
 
     if (poisonTurns > 0)
     {
         totalDamage += poisonDamage;
-        std::cout << name << " subit le poison (" << poisonDamage << " dégâts)." << std::endl;
+        lines.push_back(name + " subit le poison (" + std::to_string(poisonDamage) + " dégâts).");
         poisonTurns--;
         if (poisonTurns <= 0)
         {
             poisonDamage = 0;
-            std::cout << "Le poison quitte enfin le corps de " << name << "." << std::endl;
+            lines.push_back("Le poison quitte enfin le corps de " + name + ".");
         }
     }
 
     if (bleedingTurns > 0)
     {
         totalDamage += bleedingDamage;
-        std::cout << name << " perd du sang (" << bleedingDamage << " dégâts)." << std::endl;
+        lines.push_back(name + " perd du sang (" + std::to_string(bleedingDamage) + " dégâts).");
         bleedingTurns--;
         if (bleedingTurns <= 0)
         {
             bleedingDamage = 0;
-            std::cout << "Le saignement de " << name << " se calme." << std::endl;
+            lines.push_back("Le saignement de " + name + " se calme.");
         }
     }
 
     if (frostTurns > 0)
     {
-        std::cout << name << " reste ralenti par le froid." << std::endl;
+        lines.push_back(name + " reste ralenti par le froid.");
         frostTurns--;
         if (frostTurns <= 0)
         {
-            std::cout << name << " retrouve une mobilité normale." << std::endl;
+            lines.push_back(name + " retrouve une mobilité normale.");
         }
     }
 
     if (shockTurns > 0)
     {
-        std::cout << "Des arcs électriques perturbent encore " << name << "." << std::endl;
+        lines.push_back("Des arcs électriques perturbent encore " + name + ".");
         shockTurns--;
         if (shockTurns <= 0)
         {
-            std::cout << "L'électricité autour de " << name << " se dissipe." << std::endl;
+            lines.push_back("L'électricité autour de " + name + " se dissipe.");
         }
     }
 
     if (weakeningTurns > 0)
     {
-        std::cout << name << " reste affaibli : ses prochains gestes perdent "
-                  << weakeningDamagePenaltyPercent << "% de force." << std::endl;
+        lines.push_back(name + " reste affaibli : ses prochains gestes perdent " + std::to_string(weakeningDamagePenaltyPercent) + "% de force.");
         weakeningTurns--;
         if (weakeningTurns <= 0)
         {
             weakeningDamagePenaltyPercent = 0;
-            std::cout << name << " retrouve assez de stabilité pour frapper normalement." << std::endl;
+            lines.push_back(name + " retrouve assez de stabilité pour frapper normalement.");
         }
     }
 
     if (vulnerabilityTurns > 0)
     {
-        std::cout << name << " garde une faille ouverte : les prochains impacts mordent "
-                  << vulnerabilityDamageTakenPercent << "% plus fort." << std::endl;
+        lines.push_back(name + " garde une faille ouverte : les prochains impacts mordent " + std::to_string(vulnerabilityDamageTakenPercent) + "% plus fort.");
         vulnerabilityTurns--;
         if (vulnerabilityTurns <= 0)
         {
             vulnerabilityDamageTakenPercent = 0;
-            std::cout << "La faille autour de " << name << " se referme." << std::endl;
+            lines.push_back("La faille autour de " + name + " se referme.");
         }
     }
 
     if (elementalWardTurns > 0)
     {
-        std::cout << "Un voile élémentaire protège encore " << name << " : les altérations mordent "
-                  << elementalWardResistancePercent << "% moins fort." << std::endl;
+        lines.push_back("Un voile élémentaire protège encore " + name + " : les altérations mordent " + std::to_string(elementalWardResistancePercent) + "% moins fort.");
         elementalWardTurns--;
         if (elementalWardTurns <= 0)
         {
             elementalWardResistancePercent = 0;
-            std::cout << "Le voile élémentaire autour de " << name << " se dissipe." << std::endl;
+            lines.push_back("Le voile élémentaire autour de " + name + " se dissipe.");
         }
     }
 
     if (totalDamage > 0)
     {
         takeDamage(totalDamage);
-        std::cout << name << " possède maintenant " << hp << "/" << maxHp << " PV après les statuts." << std::endl;
-        std::cout << std::endl;
+        lines.push_back(name + " possède maintenant " + std::to_string(hp) + "/" + std::to_string(maxHp) + " PV après les statuts.");
     }
 
     if (regenerationTurns > 0 && hp > 0)
     {
         int before = hp;
         heal(regenerationPerTurn);
-        std::cout << "La suture de mana referme une partie des blessures de " << name
-                  << " (+" << (hp - before) << " PV)." << std::endl;
+        lines.push_back("La suture de mana referme une partie des blessures de " + name + " (+" + std::to_string(hp - before) + " PV).");
         regenerationTurns--;
         if (regenerationTurns <= 0)
         {
             regenerationPerTurn = 0;
-            std::cout << "La suture de mana autour de " << name << " se défait." << std::endl;
+            lines.push_back("La suture de mana autour de " + name + " se défait.");
         }
-        std::cout << std::endl;
+    }
+
+    if (!lines.empty())
+    {
+        MessageScreen::show("EFFETS DE STATUT", "combat.status.tick", lines, false);
     }
 }
+
 
 
 int Entity::getClassSkillCooldownTurns() const
@@ -700,7 +704,12 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     if (shockTurns > 0 && random.between(1, 100) <= 18)
     {
         dodged = true;
-        std::cout << name << " est perturbé par le choc électrique et rate son geste." << std::endl;
+        MessageScreen::show(
+            "CHOC ÉLECTRIQUE",
+            "combat.status.shock.attack_failed",
+            {name + " est perturbé par le choc électrique et rate son geste."},
+            false
+        );
         return 0;
     }
 
@@ -713,7 +722,12 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         dodgeThreshold += 1;
         normalHitThreshold += 1;
         frostDamagePercent = 85;
-        std::cout << name << " attaque avec des mouvements ralentis par le froid." << std::endl;
+        MessageScreen::show(
+            "FROID",
+            "combat.status.frost.slow_attack",
+            {name + " attaque avec des mouvements ralentis par le froid."},
+            false
+        );
     }
 
     if (resultat <= dodgeThreshold)
@@ -830,26 +844,29 @@ bool Entity::areStatsVisible() const
 // FR: displayStats déclare ou implémente un comportement précis utilisé par ce module.
 void Entity::displayStats() const
 {
-    std::cout << name << std::endl;
-    std::cout << "Type : " << type << std::endl;
-    std::cout << "PV : " << hp << "/" << maxHp << std::endl;
-    std::cout << "Dégâts min : " << minDamage << std::endl;
-    std::cout << "Dégâts max : " << maxDamage << std::endl;
-    std::cout << "Dégâts crit : " << criticalDamage << std::endl;
-    std::cout << "Potions de soin : " << healingPotionCount << std::endl;
-    std::cout << "Potions de dégâts : " << damagePotionCount << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back(name);
+    lines.push_back("Type : " + type);
+    lines.push_back("PV : " + std::to_string(hp) + "/" + std::to_string(maxHp));
+    lines.push_back("Dégâts min : " + std::to_string(minDamage));
+    lines.push_back("Dégâts max : " + std::to_string(maxDamage));
+    lines.push_back("Dégâts crit : " + std::to_string(criticalDamage));
+    lines.push_back("Potions de soin : " + std::to_string(healingPotionCount));
+    lines.push_back("Potions de dégâts : " + std::to_string(damagePotionCount));
+
     if (hasActiveCombatStatus())
     {
-        std::cout << "États actifs :" << std::endl;
-        if (burningTurns > 0) std::cout << "- Brûlure : " << burningTurns << " tour(s)" << std::endl;
-        if (poisonTurns > 0) std::cout << "- Poison : " << poisonTurns << " tour(s)" << std::endl;
-        if (frostTurns > 0) std::cout << "- Froid : " << frostTurns << " tour(s)" << std::endl;
-        if (shockTurns > 0) std::cout << "- Choc : " << shockTurns << " tour(s)" << std::endl;
-        if (bleedingTurns > 0) std::cout << "- Saignement : " << bleedingTurns << " tour(s)" << std::endl;
-        if (weakeningTurns > 0) std::cout << "- Affaiblissement : " << weakeningTurns << " tour(s)" << std::endl;
-        if (vulnerabilityTurns > 0) std::cout << "- Faille ouverte : " << vulnerabilityTurns << " tour(s)" << std::endl;
-        if (elementalWardTurns > 0) std::cout << "- Voile élémentaire : " << elementalWardTurns << " tour(s)" << std::endl;
-        if (regenerationTurns > 0) std::cout << "- Suture de mana : " << regenerationTurns << " tour(s)" << std::endl;
+        lines.push_back("États actifs :");
+        if (burningTurns > 0) lines.push_back("- Brûlure : " + std::to_string(burningTurns) + " tour(s)");
+        if (poisonTurns > 0) lines.push_back("- Poison : " + std::to_string(poisonTurns) + " tour(s)");
+        if (frostTurns > 0) lines.push_back("- Froid : " + std::to_string(frostTurns) + " tour(s)");
+        if (shockTurns > 0) lines.push_back("- Choc : " + std::to_string(shockTurns) + " tour(s)");
+        if (bleedingTurns > 0) lines.push_back("- Saignement : " + std::to_string(bleedingTurns) + " tour(s)");
+        if (weakeningTurns > 0) lines.push_back("- Affaiblissement : " + std::to_string(weakeningTurns) + " tour(s)");
+        if (vulnerabilityTurns > 0) lines.push_back("- Faille ouverte : " + std::to_string(vulnerabilityTurns) + " tour(s)");
+        if (elementalWardTurns > 0) lines.push_back("- Voile élémentaire : " + std::to_string(elementalWardTurns) + " tour(s)");
+        if (regenerationTurns > 0) lines.push_back("- Suture de mana : " + std::to_string(regenerationTurns) + " tour(s)");
     }
-    std::cout << std::endl;
+
+    MessageScreen::show("STATISTIQUES", "entity.stats", lines, false);
 }

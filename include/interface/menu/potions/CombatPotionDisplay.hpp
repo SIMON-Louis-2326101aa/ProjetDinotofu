@@ -16,10 +16,12 @@ class CombatPotionDisplay
 {
 public:
     static MenuScreen buildMainScreen();
+    static MenuScreen buildMainScreen(const Player& player);
     static MenuScreen buildQuickHealingScreen(const Player& player, const std::vector<int>& indices);
     static MenuScreen buildSelectedHealingPotionScreen(const Consumable& potion);
     static MenuScreen buildSelectedPotionScreen(const Consumable& potion);
     static MenuScreen buildFilteredPotionsScreen(const Player& player, const std::vector<int>& indices);
+    static MenuScreen buildPotionOverviewScreen(const Player& player);
 
     static void displayMainMenu();
 
@@ -32,6 +34,9 @@ public:
     static void displaySelectedPotion(const Consumable& potion);
 
     static void displayPotions(const Player& player);
+    static void showPotionDetails(const Consumable& potion);
+    static void showEmptyCategory(const std::string& typeName);
+    static void showPotionMissing();
 
     static void displayFilteredPotions(
         const Player& player,

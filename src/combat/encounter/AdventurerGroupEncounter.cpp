@@ -18,12 +18,27 @@
 #include "core/Console.hpp"
 #include "entity/Race.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
 #include <iostream>
 
 namespace
 {
+
+void showEncounterScreen(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        bool waitAndClear = true
+    )
+    {
+        if (!lines.empty())
+        {
+            MessageScreen::show(title, screenId, lines, waitAndClear);
+        }
+    }
+
     // EN: convertCharacterRaceToEntityRace declares or implements a focused behavior used by this module.
     // FR: convertCharacterRaceToEntityRace déclare ou implémente un comportement précis utilisé par ce module.
     Race convertCharacterRaceToEntityRace(CharacterRace race)
@@ -171,12 +186,15 @@ void AdventurerGroupEncounter::displayGroupEncounterIntroduction()
 {
     Console::clear();
 
-    std::cout << "Tu ne tombes pas sur une vague de monstres." << std::endl;
-    std::cout << "Cette fois, l'arène appelle un groupe d'aventuriers." << std::endl;
-    std::cout << "Ils ne sont pas forcément là pour te tuer, mais ils ne sont pas venus pour applaudir non plus." << std::endl;
-    std::cout << std::endl;
-
-    Console::pauseSeconds(2);
+    MessageScreen::show(
+        "RENCONTRE D'AVENTURIERS",
+        "combat.encounter.adventurer_group.intro",
+        {
+            "Tu ne tombes pas sur une vague de monstres.",
+            "Cette fois, l'arène appelle un groupe d'aventuriers.",
+            "Ils ne sont pas forcément là pour te tuer, mais ils ne sont pas venus pour applaudir non plus."
+        }
+    );
 }
 
 EnemyCombatQueue AdventurerGroupEncounter::createClassicRandomGroup(
@@ -188,9 +206,16 @@ EnemyCombatQueue AdventurerGroupEncounter::createClassicRandomGroup(
     int groupSize = random.between(2, 3);
     int encounterLevel = player.getLevel();
 
-    std::cout << "Un groupe d'aventuriers inconnus entre dans l'arène." << std::endl;
-    std::cout << "Noms, races et classes sont générés par l'arène. Aucun personnage spécial ici." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "GROUPE CLASSIQUE",
+        "combat.encounter.adventurer_group.classic",
+        {
+            "Un groupe d'aventuriers inconnus entre dans l'arène.",
+            "Noms, races et classes sont générés par l'arène.",
+            "Aucun personnage spécial ici.",
+            "Taille du groupe : " + std::to_string(groupSize)
+        }
+    );
 
     for (int i = 0; i < groupSize; ++i)
     {
@@ -412,66 +437,79 @@ void AdventurerGroupEncounter::announceRelationshipBonus(
     const std::vector<std::string>& groupNames
 )
 {
+    std::vector<std::string> lines;
+
     if (containsName(groupNames, "Hazak") && containsName(groupNames, "Hestia"))
     {
-        std::cout << "Relation active : Hazak protège Hestia. Ses attaques deviennent plus précises, mais le combat reste non-massacre." << std::endl;
+        lines.push_back("Relation active : Hazak protège Hestia.");
+        lines.push_back("Ses attaques deviennent plus précises, mais le combat reste non-massacre.");
     }
     else if (containsName(groupNames, "Aoi") && containsName(groupNames, "Kanadé") && containsName(groupNames, "Sanctus"))
     {
-        std::cout << "Relation active : Sanctus tient la ligne pendant qu'Aoi et Kanadé préparent leurs sorts." << std::endl;
+        lines.push_back("Relation active : Sanctus tient la ligne pendant qu'Aoi et Kanadé préparent leurs sorts.");
     }
     else if (containsName(groupNames, "Mattzelda") && containsName(groupNames, "Louis") && containsName(groupNames, "Trexof"))
     {
-        std::cout << "Relation active : trio de potes. Tanking, improvisation et chaos amical se mélangent." << std::endl;
+        lines.push_back("Relation active : trio de potes.");
+        lines.push_back("Tanking, improvisation et chaos amical se mélangent.");
     }
     else if (containsName(groupNames, "Skuro"))
     {
-        std::cout << "Relation active : Skuro rend le groupe plus dangereux, mais aussi plus instable." << std::endl;
+        lines.push_back("Relation active : Skuro rend le groupe plus dangereux, mais aussi plus instable.");
     }
     else if (containsName(groupNames, "Hestia") && containsName(groupNames, "Sanctus") && containsName(groupNames, "Hazak"))
     {
-        std::cout << "Relation active : protection sacrée. Sanctus tient la ligne, Hazak refuse le massacre, Hestia survit par réflexe divin." << std::endl;
+        lines.push_back("Relation active : protection sacrée.");
+        lines.push_back("Sanctus tient la ligne, Hazak refuse le massacre, Hestia survit par réflexe divin.");
     }
     else if (containsName(groupNames, "Fail") && containsName(groupNames, "Aoi") && containsName(groupNames, "Kanadé"))
     {
-        std::cout << "Relation active : laboratoire vivant. Fail expérimente pendant qu'Aoi stabilise et que Kanadé surcharge les sorts." << std::endl;
+        lines.push_back("Relation active : laboratoire vivant.");
+        lines.push_back("Fail expérimente pendant qu'Aoi stabilise et que Kanadé surcharge les sorts.");
     }
     else if (containsName(groupNames, "Louis") && containsName(groupNames, "Fire Flight") && containsName(groupNames, "Trexof"))
     {
-        std::cout << "Relation active : pluie de projectiles. Louis veut aider, Fire Flight commande, Trexof teste les limites." << std::endl;
+        lines.push_back("Relation active : pluie de projectiles.");
+        lines.push_back("Louis veut aider, Fire Flight commande, Trexof teste les limites.");
     }
     else if (containsName(groupNames, "Hazak") && containsName(groupNames, "Henrique"))
     {
-        std::cout << "Relation active : Hazak et Henrique se connaissent trop bien pour laisser l'autre tomber facilement." << std::endl;
+        lines.push_back("Relation active : Hazak et Henrique se connaissent trop bien pour laisser l'autre tomber facilement.");
     }
     else if (containsName(groupNames, "Hazak") && containsName(groupNames, "Fail"))
     {
-        std::cout << "Relation active : contrat de non-agression. Fail expérimente, Hazak surveille." << std::endl;
+        lines.push_back("Relation active : contrat de non-agression.");
+        lines.push_back("Fail expérimente, Hazak surveille.");
     }
     else
     {
         return;
     }
 
-    std::cout << std::endl;
+    showEncounterScreen("RELATION DE GROUPE", "combat.encounter.adventurer_group.relationship", lines);
 }
 
 // EN: announceSpecialGroup declares or implements a focused behavior used by this module.
 // FR: announceSpecialGroup déclare ou implémente un comportement précis utilisé par ce module.
 void AdventurerGroupEncounter::announceSpecialGroup(const std::vector<std::string>& names)
 {
-    std::cout << "Un groupe spécial répond à l'appel de l'arène." << std::endl;
-    std::cout << "Ces groupes représentent environ 25% des tirages d'aventuriers." << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back("Un groupe spécial répond à l'appel de l'arène.");
+    lines.push_back("Ces groupes représentent environ 25% des tirages d'aventuriers.");
 
     for (const std::string& name : names)
     {
-        std::cout << "- " << name << std::endl;
+        lines.push_back("- " + name);
     }
 
-    std::cout << std::endl;
     CombatIntent intent = SpecialEncounterRules::getIntentForSpecialGroup(names);
-    std::cout << SpecialEncounterRules::getIntentText(intent, names) << std::endl;
-    std::cout << std::endl;
+    lines.push_back(SpecialEncounterRules::getIntentText(intent, names));
+
+    showEncounterScreen(
+        "GROUPE SPÉCIAL",
+        "combat.encounter.adventurer_group.special",
+        lines
+    );
 
     SpecialCharacterGroupDialogueCatalog::displayEntranceDialogue(names);
 
@@ -482,6 +520,4 @@ void AdventurerGroupEncounter::announceSpecialGroup(const std::vector<std::strin
             SpecialCharacterDialogueCatalog::displayEntranceDialogue(name);
         }
     }
-
-    Console::pauseSeconds(3);
 }

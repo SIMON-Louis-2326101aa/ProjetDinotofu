@@ -15,6 +15,9 @@
 #include "entity/Player.hpp"
 #include "progression/DifficultyMode.hpp"
 
+#include <string>
+#include <vector>
+
 class LootGenerator
 {
 public:
@@ -41,7 +44,7 @@ private:
     static int getLootQuantity(Random& random, DifficultyMode difficulty, const Monster& monster);
     // EN: tryGiveMonsterLoot declares or implements a focused behavior used by this module.
     // FR: tryGiveMonsterLoot déclare ou implémente un comportement précis utilisé par ce module.
-    static bool tryGiveMonsterLoot(Player& player, const Monster& monster, Random& random, DifficultyMode difficulty, int lootChance);
+    static bool tryGiveMonsterLoot(Player& player, const Monster& monster, Random& random, DifficultyMode difficulty, int lootChance, std::vector<std::string>& lines);
 };
 
 #endif

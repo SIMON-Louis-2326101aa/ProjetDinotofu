@@ -6,7 +6,9 @@
 
 #include "character/RaceCatalog.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
+#include <vector>
 
 std::vector<CharacterRace> RaceCatalog::getPlayableRaces()
 {
@@ -52,8 +54,9 @@ CharacterRace RaceCatalog::getPlayableRaceByChoice(int choice)
 
 // EN: displayPlayableRaces declares or implements a focused behavior used by this module.
 // FR: displayPlayableRaces déclare ou implémente un comportement précis utilisé par ce module.
-void RaceCatalog::displayPlayableRaces()
+std::vector<std::string> RaceCatalog::getPlayableRaceDisplayLines()
 {
+    std::vector<std::string> lines;
     std::vector<CharacterRace> races = getPlayableRaces();
 
     for (std::size_t i = 0; i < races.size(); ++i)
@@ -61,22 +64,33 @@ void RaceCatalog::displayPlayableRaces()
         CharacterRace race = races[i];
         RaceStartingBonus bonus = getStartingBonus(race);
 
-        std::cout << (i + 1) << " : " << characterRaceToText(race) << std::endl;
-        std::cout << "    Identité : " << getGameplayIdentity(race) << std::endl;
-        std::cout << "    Description : " << getShortDescription(race) << std::endl;
-        std::cout << "    Bonus départ : PV " << bonus.maxHpBonus
-                  << " | Dégâts min " << bonus.minDamageBonus
-                  << " | Dégâts max " << bonus.maxDamageBonus
-                  << " | Critique " << bonus.criticalDamageBonus
-                  << std::endl;
+        lines.push_back(std::to_string(i + 1) + " : " + characterRaceToText(race));
+        lines.push_back("    Identité : " + getGameplayIdentity(race));
+        lines.push_back("    Description : " + getShortDescription(race));
+        lines.push_back(
+            "    Bonus départ : PV " + std::to_string(bonus.maxHpBonus)
+            + " | Dégâts min " + std::to_string(bonus.minDamageBonus)
+            + " | Dégâts max " + std::to_string(bonus.maxDamageBonus)
+            + " | Critique " + std::to_string(bonus.criticalDamageBonus)
+        );
 
         if (race == CharacterRace::Demon)
         {
-            std::cout << "    Commerce : certains vendeurs hésitent déjà devant ta nature démoniaque." << std::endl;
+            lines.push_back("    Commerce : certains vendeurs hésitent déjà devant ta nature démoniaque.");
         }
 
-        std::cout << std::endl;
+        lines.push_back("");
     }
+
+    return lines;
+}
+
+
+// EN: displayPlayableRaces declares or implements a focused behavior used by this module.
+// FR: displayPlayableRaces déclare ou implémente un comportement précis utilisé par ce module.
+void RaceCatalog::displayPlayableRaces()
+{
+    MessageScreen::show("RACES JOUABLES", "catalog.races.playable", getPlayableRaceDisplayLines(), false);
 }
 
 // EN: getStartingBonus declares or implements a focused behavior used by this module.

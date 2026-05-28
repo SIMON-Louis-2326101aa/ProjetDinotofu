@@ -5,7 +5,8 @@
 
 #include "entity/MonsterCatalog.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
+
 #include <vector>
 #include <algorithm>
 
@@ -739,20 +740,27 @@ std::vector<Monster> MonsterCatalog::createAllPreviewMonsters()
 
 // EN: displayAvailableMonsters declares or implements a focused behavior used by this module.
 // FR: displayAvailableMonsters déclare ou implémente un comportement précis utilisé par ce module.
-void MonsterCatalog::displayAvailableMonsters()
+std::vector<std::string> MonsterCatalog::getAvailableMonsterLines()
 {
+    std::vector<std::string> lines;
     std::vector<Monster> monsters = createAllPreviewMonsters();
-
-    std::cout << "========== MONSTRES PRÉPARÉS ==========" << std::endl;
 
     for (std::size_t i = 0; i < monsters.size(); ++i)
     {
-        std::cout << (i + 1) << " : " << monsters[i].getName()
-                  << " | Race : " << monsters[i].getRaceText()
-                  << " | Niveau : " << monsters[i].getLevel()
-                  << std::endl;
+        lines.push_back(
+            std::to_string(i + 1) + " : " + monsters[i].getName()
+            + " | Race : " + monsters[i].getRaceText()
+            + " | Niveau : " + std::to_string(monsters[i].getLevel())
+        );
     }
 
-    std::cout << "=======================================" << std::endl;
-    std::cout << std::endl;
+    return lines;
+}
+
+
+// EN: displayAvailableMonsters declares or implements a focused behavior used by this module.
+// FR: displayAvailableMonsters déclare ou implémente un comportement précis utilisé par ce module.
+void MonsterCatalog::displayAvailableMonsters()
+{
+    MessageScreen::show("MONSTRES PRÉPARÉS", "catalog.monsters.available", getAvailableMonsterLines(), false);
 }

@@ -7,8 +7,9 @@
 
 #include "progression/death/DeathPenaltySystem.hpp"
 
-#include <iostream>
+#include "interface/menu/common/MessageScreen.hpp"
 
+#include <iostream>
 // EN: PlayerStatistics declares or implements a focused behavior used by this module.
 // FR: PlayerStatistics déclare ou implémente un comportement précis utilisé par ce module.
 PlayerStatistics::PlayerStatistics()
@@ -42,5 +43,10 @@ void PlayerStatistics::displayDeathStatistic(DifficultyMode difficulty) const
         return;
     }
 
-    std::cout << "Morts du personnage : " << deathCount << std::endl;
+    MessageScreen::show(
+        "STATISTIQUE DE MORT",
+        "player.statistics.death",
+        {"Morts du personnage : " + std::to_string(deathCount)},
+        false
+    );
 }

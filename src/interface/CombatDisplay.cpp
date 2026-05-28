@@ -7,6 +7,7 @@
 
 #include "character/SpecialCharacterDialogueCatalog.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/GuiDebugExporter.hpp"
 #include "interface/model/CombatStateSnapshot.hpp"
 
 #include <string>
@@ -75,7 +76,33 @@ GuiCombatStateSnapshot CombatDisplay::buildGroupSnapshot(
     return CombatStateSnapshot::fromGroups(playerGroup, enemyGroup, title, phase, turnNumber);
 }
 
+GuiCombatStateSnapshot CombatDisplay::buildWaveSnapshot(
+    const Entity& playerSideEntity,
+    const EnemyCombatQueue& wave,
+    const std::vector<Summon>& playerSummons,
+    const std::string& title,
+    const std::string& phase,
+    int turnNumber
+)
+{
+    return CombatStateSnapshot::fromWave(playerSideEntity, wave, playerSummons, title, phase, turnNumber);
+}
+
+GuiCombatStateSnapshot CombatDisplay::buildWavePartySnapshot(
+    const std::vector<Entity*>& playerSideEntities,
+    const EnemyCombatQueue& wave,
+    const std::vector<Summon>& playerSummons,
+    const std::string& title,
+    const std::string& phase,
+    int turnNumber
+)
+{
+    return CombatStateSnapshot::fromWaveParty(playerSideEntities, wave, playerSummons, title, phase, turnNumber);
+}
+
 void CombatDisplay::displayCombatState(const GuiCombatStateSnapshot& snapshot, bool waitAndClear)
 {
+    GuiDebugExporter::exportCombat(snapshot);
+
     MessageScreen::show(snapshot.title, snapshot.screenId, CombatStateSnapshot::toDisplayLines(snapshot), waitAndClear);
 }

@@ -32,12 +32,15 @@ class ClassCatalog
 public:
     // EN: displayBasicClasses declares or implements a focused behavior used by this module.
     // FR: displayBasicClasses déclare ou implémente un comportement précis utilisé par ce module.
+    static std::vector<std::string> getBasicClassDisplayLines();
     static void displayBasicClasses();
     // EN: displayClassCategories declares or implements a focused behavior used by this module.
     // FR: displayClassCategories déclare ou implémente un comportement précis utilisé par ce module.
+    static std::vector<std::string> getClassCategoryDisplayLines();
     static void displayClassCategories();
     // EN: displayClassesByCategory declares or implements a focused behavior used by this module.
     // FR: displayClassesByCategory déclare ou implémente un comportement précis utilisé par ce module.
+    static std::vector<std::string> getClassDisplayLinesByCategory(ClassCategory category);
     static void displayClassesByCategory(ClassCategory category);
     // EN: displayClassesByCategoryChoice declares or implements a focused behavior used by this module.
     // FR: displayClassesByCategoryChoice déclare ou implémente un comportement précis utilisé par ce module.

@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <cctype>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <memory>
@@ -110,157 +111,230 @@ namespace
         return false;
     }
 
+
+    class BossPveNarration
+    {
+    public:
+        template <typename T>
+        BossPveNarration& operator<<(const T& value)
+        {
+            current << value;
+            return *this;
+        }
+
+        using StreamManipulator = std::ostream& (*)(std::ostream&);
+
+        BossPveNarration& operator<<(StreamManipulator manipulator)
+        {
+            if (manipulator == static_cast<StreamManipulator>(std::endl<char, std::char_traits<char>>))
+            {
+                flushLine();
+            }
+            else
+            {
+                manipulator(current);
+            }
+            return *this;
+        }
+
+        std::vector<std::string> takeLines()
+        {
+            flushLine();
+            return lines;
+        }
+
+    private:
+        std::ostringstream current;
+        std::vector<std::string> lines;
+
+        void flushLine()
+        {
+            std::string line = current.str();
+            while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t'))
+            {
+                line.pop_back();
+            }
+            if (!line.empty())
+            {
+                lines.push_back(line);
+            }
+            current.str(std::string());
+            current.clear();
+        }
+    };
+
+    void showBossPveLines(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        bool waitAndClear = false
+    )
+    {
+        if (!lines.empty())
+        {
+            MessageScreen::show(title, screenId, lines, waitAndClear);
+        }
+    }
+
     // EN: displayFireFlightSpecialCharacterDialogue declares or implements a focused behavior used by this module.
     // FR: displayFireFlightSpecialCharacterDialogue déclare ou implémente un comportement précis utilisé par ce module.
     void displayFireFlightSpecialCharacterDialogue(const Player& player)
     {
+        BossPveNarration narration;
+
         std::string name = toLowerAscii(player.getName());
         bool altered = player.isAlteredByCheats();
 
-        std::cout << std::endl;
-        std::cout << "FireFlight baisse légèrement la voix." << std::endl;
+        narration << std::endl;
+        narration << "FireFlight baisse légèrement la voix." << std::endl;
 
         if (isAnyName(name, {"louis"}))
         {
-            std::cout << "Louis... là, ce n'est plus seulement un personnage." << std::endl;
-            std::cout << "C'est la petite signature du créateur qui descend dans sa propre arène." << std::endl;
-            std::cout << "Conseil du créateur : certains secrets ne se donnent pas dans les menus. Ils apparaissent quand tu reviens lire les registres après une victoire qui semblait inutile." << std::endl;
+            narration << "Louis... là, ce n'est plus seulement un personnage." << std::endl;
+            narration << "C'est la petite signature du créateur qui descend dans sa propre arène." << std::endl;
+            narration << "Conseil du créateur : certains secrets ne se donnent pas dans les menus. Ils apparaissent quand tu reviens lire les registres après une victoire qui semblait inutile." << std::endl;
         }
         else if (isAnyName(name, {"fireflight", "fire flight"}))
         {
-            std::cout << "FireFlight contre FireFlight..." << std::endl;
-            std::cout << "Même le monde hésite à savoir lequel de nous deux est l'avatar et lequel tient vraiment le clavier." << std::endl;
-            std::cout << "Conseil du créateur : quand une option paraît trop propre pour être vraie, cherche la ligne qui n'a pas été affichée." << std::endl;
+            narration << "FireFlight contre FireFlight..." << std::endl;
+            narration << "Même le monde hésite à savoir lequel de nous deux est l'avatar et lequel tient vraiment le clavier." << std::endl;
+            narration << "Conseil du créateur : quand une option paraît trop propre pour être vraie, cherche la ligne qui n'a pas été affichée." << std::endl;
         }
         else if (name == "hazak")
         {
-            std::cout << "Hazak. Toujours l'ombre, toujours la lame, toujours cette façon de croire que gagner suffit." << std::endl;
-            std::cout << "Je sais d'où tu viens. Une table, des dés, une histoire qui a refusé de rester dans un seul jeu." << std::endl;
-            std::cout << "Indice : les morts récents ne sont pas toujours perdus pour un assassin qui comprend les ombres." << std::endl;
+            narration << "Hazak. Toujours l'ombre, toujours la lame, toujours cette façon de croire que gagner suffit." << std::endl;
+            narration << "Je sais d'où tu viens. Une table, des dés, une histoire qui a refusé de rester dans un seul jeu." << std::endl;
+            narration << "Indice : les morts récents ne sont pas toujours perdus pour un assassin qui comprend les ombres." << std::endl;
         }
         else if (name == "fail")
         {
-            std::cout << "Fail... même ici, tu cherches sûrement comment transformer le problème en expérience dangereuse." << std::endl;
-            std::cout << "Je préfère te prévenir : certaines instabilités deviennent plus fortes quand tu les traites comme des jouets." << std::endl;
-            std::cout << "Indice : les noyaux instables n'aiment pas être conservés trop proprement." << std::endl;
+            narration << "Fail... même ici, tu cherches sûrement comment transformer le problème en expérience dangereuse." << std::endl;
+            narration << "Je préfère te prévenir : certaines instabilités deviennent plus fortes quand tu les traites comme des jouets." << std::endl;
+            narration << "Indice : les noyaux instables n'aiment pas être conservés trop proprement." << std::endl;
         }
         else if (name == "aoi")
         {
-            std::cout << "Aoi. Tu n'as pas besoin de parler fort pour que tes flammes soient entendues." << std::endl;
-            std::cout << "Protège ton incantation. Le monde respecte parfois plus la patience que la puissance." << std::endl;
-            std::cout << "Indice : une braise kitsune devient plus intéressante quand elle est gardée plutôt que vendue." << std::endl;
+            narration << "Aoi. Tu n'as pas besoin de parler fort pour que tes flammes soient entendues." << std::endl;
+            narration << "Protège ton incantation. Le monde respecte parfois plus la patience que la puissance." << std::endl;
+            narration << "Indice : une braise kitsune devient plus intéressante quand elle est gardée plutôt que vendue." << std::endl;
         }
         else if (name == "kanadé" || name == "kanade")
         {
-            std::cout << "Kanadé. Je sais, ce combat t'énerve déjà." << std::endl;
-            std::cout << "Mais même ta rage peut devenir une constellation si tu la laisses choisir sa forme." << std::endl;
-            std::cout << "Indice : les effets zodiacaux aimeront rarement la stabilité parfaite." << std::endl;
+            narration << "Kanadé. Je sais, ce combat t'énerve déjà." << std::endl;
+            narration << "Mais même ta rage peut devenir une constellation si tu la laisses choisir sa forme." << std::endl;
+            narration << "Indice : les effets zodiacaux aimeront rarement la stabilité parfaite." << std::endl;
         }
         else if (name == "skuro")
         {
-            std::cout << "Skuro. Ta lame cherche toujours la matière avant la raison." << std::endl;
-            std::cout << "Je ne vais pas te demander d'être doux. Juste de comprendre ce que tu découpes." << std::endl;
-            std::cout << "Indice : certaines armures ne se brisent pas en tapant plus fort, mais en frappant au bon tour." << std::endl;
+            narration << "Skuro. Ta lame cherche toujours la matière avant la raison." << std::endl;
+            narration << "Je ne vais pas te demander d'être doux. Juste de comprendre ce que tu découpes." << std::endl;
+            narration << "Indice : certaines armures ne se brisent pas en tapant plus fort, mais en frappant au bon tour." << std::endl;
         }
         else if (name == "sanctus")
         {
-            std::cout << "Sanctus. Toi, tu protèges même quand le monde préférerait te voir tomber." << std::endl;
-            std::cout << "Garde cette lumière. Mais n'oublie pas qu'une protection devient une prison si tu ne choisis jamais d'avancer." << std::endl;
-            std::cout << "Indice : Provocation et Posture de défense sont plus liées que beaucoup d'ennemis ne veulent l'admettre." << std::endl;
+            narration << "Sanctus. Toi, tu protèges même quand le monde préférerait te voir tomber." << std::endl;
+            narration << "Garde cette lumière. Mais n'oublie pas qu'une protection devient une prison si tu ne choisis jamais d'avancer." << std::endl;
+            narration << "Indice : Provocation et Posture de défense sont plus liées que beaucoup d'ennemis ne veulent l'admettre." << std::endl;
         }
         else if (name == "trexof")
         {
-            std::cout << "Trexof. Assassin, testeur, et probablement déjà en train de calculer où l'arène peut céder." << std::endl;
-            std::cout << "Je te connais assez pour savoir que tu vas chercher la faille propre." << std::endl;
-            std::cout << "Indice : les boss qui semblent punir une habitude révèlent souvent leur contre si tu changes de rythme deux tours avant l'ulti." << std::endl;
+            narration << "Trexof. Assassin, testeur, et probablement déjà en train de calculer où l'arène peut céder." << std::endl;
+            narration << "Je te connais assez pour savoir que tu vas chercher la faille propre." << std::endl;
+            narration << "Indice : les boss qui semblent punir une habitude révèlent souvent leur contre si tu changes de rythme deux tours avant l'ulti." << std::endl;
         }
         else if (name == "mattzelda")
         {
-            std::cout << "Mattzelda. Même dans un combat final, tu réussirais presque à faire croire que tout ça est une blague." << std::endl;
-            std::cout << "Mais je sais ce que ce nom représente : un pote que le jeu n'a pas voulu transformer en simple statistique." << std::endl;
-            std::cout << "Indice : les colosses gagnent parfois plus en encaissant le bon coup qu'en cherchant le plus gros chiffre." << std::endl;
+            narration << "Mattzelda. Même dans un combat final, tu réussirais presque à faire croire que tout ça est une blague." << std::endl;
+            narration << "Mais je sais ce que ce nom représente : un pote que le jeu n'a pas voulu transformer en simple statistique." << std::endl;
+            narration << "Indice : les colosses gagnent parfois plus en encaissant le bon coup qu'en cherchant le plus gros chiffre." << std::endl;
         }
         else if (name == "hestia")
         {
-            std::cout << "Hestia..." << std::endl;
-            std::cout << "Je vais être honnête : je n'ai pas vraiment envie de te voir tomber." << std::endl;
-            std::cout << "Même derrière les dés, même derrière les règles, même derrière la création... il y a des personnages qu'on protège un peu trop." << std::endl;
-            std::cout << "Indice : ton dôme n'est pas seulement une défense. Bien placé, il peut transformer un tour perdu en tour survivant." << std::endl;
+            narration << "Hestia..." << std::endl;
+            narration << "Je vais être honnête : je n'ai pas vraiment envie de te voir tomber." << std::endl;
+            narration << "Même derrière les dés, même derrière les règles, même derrière la création... il y a des personnages qu'on protège un peu trop." << std::endl;
+            narration << "Indice : ton dôme n'est pas seulement une défense. Bien placé, il peut transformer un tour perdu en tour survivant." << std::endl;
         }
         else
         {
-            std::cout << "Même si ton nom n'a pas de note personnelle dans mes fichiers, ta trace existe maintenant." << std::endl;
-            std::cout << "Indice : un boss vaincu ne laisse pas seulement du butin. Certaines portes ne s'ouvrent qu'après sa chute." << std::endl;
+            narration << "Même si ton nom n'a pas de note personnelle dans mes fichiers, ta trace existe maintenant." << std::endl;
+            narration << "Indice : un boss vaincu ne laisse pas seulement du butin. Certaines portes ne s'ouvrent qu'après sa chute." << std::endl;
         }
 
         if (altered)
         {
-            std::cout << std::endl;
-            std::cout << "Puis son regard accroche une cicatrice dans tes données." << std::endl;
+            narration << std::endl;
+            narration << "Puis son regard accroche une cicatrice dans tes données." << std::endl;
 
             if (isAnyName(name, {"louis"}))
             {
-                std::cout << "Louis... tricher avec ton propre reflet, c'est presque drôle. Presque." << std::endl;
-                std::cout << "Tu voulais aider la création, ou seulement éviter qu'elle te réponde ?" << std::endl;
+                narration << "Louis... tricher avec ton propre reflet, c'est presque drôle. Presque." << std::endl;
+                narration << "Tu voulais aider la création, ou seulement éviter qu'elle te réponde ?" << std::endl;
             }
             else if (isAnyName(name, {"fireflight", "fire flight"}))
             {
-                std::cout << "FireFlight altéré. Voilà donc ce que ça donne quand le créateur laisse une commande ouverte dans sa propre poche." << std::endl;
-                std::cout << "Je ne vais pas effacer la faute. Je vais la rendre intéressante." << std::endl;
+                narration << "FireFlight altéré. Voilà donc ce que ça donne quand le créateur laisse une commande ouverte dans sa propre poche." << std::endl;
+                narration << "Je ne vais pas effacer la faute. Je vais la rendre intéressante." << std::endl;
             }
             else if (name == "hazak")
             {
-                std::cout << "Hazak, tu sais mieux que personne qu'un contrat avec l'ombre finit toujours par réclamer une ligne en plus." << std::endl;
-                std::cout << "Tes raccourcis ne t'ont pas rendu plus discret. Ils ont rendu ton ombre plus bavarde." << std::endl;
+                narration << "Hazak, tu sais mieux que personne qu'un contrat avec l'ombre finit toujours par réclamer une ligne en plus." << std::endl;
+                narration << "Tes raccourcis ne t'ont pas rendu plus discret. Ils ont rendu ton ombre plus bavarde." << std::endl;
             }
             else if (name == "fail")
             {
-                std::cout << "Fail, évidemment que tu as touché à l'interdit. Le problème, c'est que cette expérience-là a touché en retour." << std::endl;
-                std::cout << "Ton altération n'est pas une réussite. C'est un résultat qui n'a pas encore explosé." << std::endl;
+                narration << "Fail, évidemment que tu as touché à l'interdit. Le problème, c'est que cette expérience-là a touché en retour." << std::endl;
+                narration << "Ton altération n'est pas une réussite. C'est un résultat qui n'a pas encore explosé." << std::endl;
             }
             else if (name == "aoi")
             {
-                std::cout << "Aoi, tes flammes n'aiment pas cette trace dans tes données." << std::endl;
-                std::cout << "Une incantation tremble quand la main qui la porte a déjà forcé une règle." << std::endl;
+                narration << "Aoi, tes flammes n'aiment pas cette trace dans tes données." << std::endl;
+                narration << "Une incantation tremble quand la main qui la porte a déjà forcé une règle." << std::endl;
             }
             else if (name == "kanadé" || name == "kanade")
             {
-                std::cout << "Kanadé, même les étoiles refusent de servir de prétexte à une triche." << std::endl;
-                std::cout << "Ta rage est légitime. Ton altération, elle, devra être assumée." << std::endl;
+                narration << "Kanadé, même les étoiles refusent de servir de prétexte à une triche." << std::endl;
+                narration << "Ta rage est légitime. Ton altération, elle, devra être assumée." << std::endl;
             }
             else if (name == "skuro")
             {
-                std::cout << "Skuro, ce n'est pas la première fois qu'une lame veut couper la règle au lieu de l'ennemi." << std::endl;
-                std::cout << "Mais ici, même la violence garde une mémoire." << std::endl;
+                narration << "Skuro, ce n'est pas la première fois qu'une lame veut couper la règle au lieu de l'ennemi." << std::endl;
+                narration << "Mais ici, même la violence garde une mémoire." << std::endl;
             }
             else if (name == "sanctus")
             {
-                std::cout << "Sanctus, une protection obtenue par raccourci protège moins bien l'âme que le corps." << std::endl;
-                std::cout << "Si ta lumière tremble, ce n'est pas parce qu'elle est faible. C'est parce qu'elle sait." << std::endl;
+                narration << "Sanctus, une protection obtenue par raccourci protège moins bien l'âme que le corps." << std::endl;
+                narration << "Si ta lumière tremble, ce n'est pas parce qu'elle est faible. C'est parce qu'elle sait." << std::endl;
             }
             else if (name == "trexof")
             {
-                std::cout << "Trexof, trouver une faille n'est pas pareil que survivre à son retour." << std::endl;
-                std::cout << "Merci pour le test. Maintenant, survis au correctif." << std::endl;
+                narration << "Trexof, trouver une faille n'est pas pareil que survivre à son retour." << std::endl;
+                narration << "Merci pour le test. Maintenant, survis au correctif." << std::endl;
             }
             else if (name == "mattzelda")
             {
-                std::cout << "Mattzelda, même tes blagues ont l'air moins légères quand le personnage porte une trace altérée." << std::endl;
-                std::cout << "Mais je te laisse une chance : fais-en une histoire, pas une excuse." << std::endl;
+                narration << "Mattzelda, même tes blagues ont l'air moins légères quand le personnage porte une trace altérée." << std::endl;
+                narration << "Mais je te laisse une chance : fais-en une histoire, pas une excuse." << std::endl;
             }
             else if (name == "hestia")
             {
-                std::cout << "Hestia... je voulais te protéger, pas te voir devenir une donnée altérée." << std::endl;
-                std::cout << "Alors écoute bien : survivre compte plus que prouver quoi que ce soit. Même ici." << std::endl;
+                narration << "Hestia... je voulais te protéger, pas te voir devenir une donnée altérée." << std::endl;
+                narration << "Alors écoute bien : survivre compte plus que prouver quoi que ce soit. Même ici." << std::endl;
             }
             else
             {
-                std::cout << "Tu as utilisé des raccourcis. Je ne vais pas faire semblant de ne pas l'avoir vu." << std::endl;
-                std::cout << "Ce n'est pas une condamnation. C'est une annotation. Et les annotations, ici, peuvent mordre." << std::endl;
+                narration << "Tu as utilisé des raccourcis. Je ne vais pas faire semblant de ne pas l'avoir vu." << std::endl;
+                narration << "Ce n'est pas une condamnation. C'est une annotation. Et les annotations, ici, peuvent mordre." << std::endl;
             }
         }
 
-        std::cout << std::endl;
+        narration << std::endl;
+
+        showBossPveLines(
+            "MESSAGE DE FIREFLIGHT",
+            "boss.fireflight.special_character_dialogue",
+            narration.takeLines()
+        );
     }
 
     // EN: estimateExpectedDamage declares or implements a focused behavior used by this module.
@@ -536,36 +610,41 @@ namespace
     )
     {
         TerminalInterface::renderMenuScreen(buildBossPowerAnalysisScreen(player, boss, difficulty, analysis), false);
-        std::cout << std::endl;
     }
 
     // EN: runFireFlightFinalTest declares or implements a focused behavior used by this module.
     // FR: runFireFlightFinalTest déclare ou implémente un comportement précis utilisé par ce module.
     bool runFireFlightFinalTest(Player& player, Random& random)
     {
-        std::cout << std::endl;
-        std::cout << "========== TEST FINAL DU CRÉATEUR ==========" << std::endl;
-        std::cout << "FireFlight tombe. Puis le monde refuse de valider la victoire tout de suite." << std::endl;
-        std::cout << "Tous les personnages créés par ce compte sont appelés comme des silhouettes figées." << std::endl;
-        std::cout << "Même ton propre reflet apparaît de l'autre côté du champ de bataille." << std::endl;
-        std::cout << "Les alliés non invoqués restent suspendus dans le temps, inanimés." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "TEST FINAL DU CRÉATEUR",
+            "boss.fireflight.final_test.intro",
+            {
+                "FireFlight tombe. Puis le monde refuse de valider la victoire tout de suite.",
+                "Tous les personnages créés par ce compte sont appelés comme des silhouettes figées.",
+                "Même ton propre reflet apparaît de l'autre côté du champ de bataille.",
+                "Les alliés non invoqués restent suspendus dans le temps, inanimés."
+            },
+            false
+        );
 
         for (int round = 1; round <= 3 && !player.isDead(); ++round)
         {
-            std::cout << "--- Cycle final " << round << "/3 ---" << std::endl;
-            std::cout << "========== 4E_MUR::INTERFACE_BRISEE ==========" << std::endl;
-            std::cout << "1 : Sentence céleste / Chasse sans lune / Dette royale" << std::endl;
-            std::cout << "2 : Couronne des ténèbres / Souffle de l'Origine / La forêt se souvient" << std::endl;
-            std::cout << "3 : Erreur critique : le récit se réécrit" << std::endl;
-            std::cout << "4 : Inversion des probabilités / Verdict des actes répétés" << std::endl;
-            std::cout << "5 : Sursis d'urgence : survivre trois tours" << std::endl;
+            std::vector<std::string> lines;
+            lines.push_back("Cycle final " + std::to_string(round) + "/3.");
+            lines.push_back("4E_MUR::INTERFACE_BRISEE");
+            lines.push_back("1 : Sentence céleste / Chasse sans lune / Dette royale");
+            lines.push_back("2 : Couronne des ténèbres / Souffle de l'Origine / La forêt se souvient");
+            lines.push_back("3 : Erreur critique : le récit se réécrit");
+            lines.push_back("4 : Inversion des probabilités / Verdict des actes répétés");
+            lines.push_back("5 : Sursis d'urgence : survivre trois tours");
+
             if (player.isAlteredByCheats())
             {
-                std::cout << "? : idontwanttodie" << std::endl;
-                std::cout << "? : whereismyplotarmor" << std::endl;
-                std::cout << "? : talktothedev" << std::endl;
-                std::cout << "Les anciens codes apparaissent dans l'interface comme des cicatrices, pas comme des solutions." << std::endl;
+                lines.push_back("? : idontwanttodie");
+                lines.push_back("? : whereismyplotarmor");
+                lines.push_back("? : talktothedev");
+                lines.push_back("Les anciens codes apparaissent dans l'interface comme des cicatrices, pas comme des solutions.");
             }
 
             int damage = 18 + random.between(8, 22) + player.getLevel() / 2;
@@ -575,28 +654,46 @@ namespace
             if (player.isInDefensePosture())
             {
                 damage = damage * 75 / 100;
-                std::cout << "Ta posture réduit un peu le chaos, sans pouvoir l'annuler." << std::endl;
+                lines.push_back("Ta posture réduit un peu le chaos, sans pouvoir l'annuler.");
             }
 
+            const int hpBefore = player.getHp();
             player.takeDamage(damage);
-            std::cout << player.getName() << " subit " << damage << " dégâts de test final." << std::endl;
-            std::cout << player.getName() << " possède maintenant " << player.getHp() << "/" << player.getMaxHp() << " PV." << std::endl;
-            std::cout << std::endl;
+            lines.push_back(player.getName() + " subit " + std::to_string(damage) + " dégâts de test final.");
+            lines.push_back("PV : " + std::to_string(hpBefore) + " -> " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".");
+
+            MessageScreen::show(
+                "CYCLE FINAL " + std::to_string(round),
+                "boss.fireflight.final_test.round." + std::to_string(round),
+                lines,
+                false
+            );
         }
 
         if (player.isDead())
         {
-            std::cout << "Le test final s'arrête. Le monde n'a pas accepté ta version de la fin." << std::endl;
-            std::cout << "==============================================" << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "TEST FINAL ÉCHOUÉ",
+                "boss.fireflight.final_test.defeat",
+                {
+                    "Le test final s'arrête.",
+                    "Le monde n'a pas accepté ta version de la fin."
+                },
+                false
+            );
             return false;
         }
 
-        std::cout << "FireFlight sourit." << std::endl;
-        std::cout << "Cette fois, je n'ai plus de test à ajouter." << std::endl;
-        std::cout << "Le boss final reconnaît ta victoire." << std::endl;
-        std::cout << "==============================================" << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "VICTOIRE RECONNUE",
+            "boss.fireflight.final_test.success",
+            {
+                "FireFlight sourit.",
+                "Cette fois, je n'ai plus de test à ajouter.",
+                "Le boss final reconnaît ta victoire."
+            },
+            false
+        );
         return true;
     }
 
@@ -604,8 +701,8 @@ namespace
     // FR: applyGrinkaVictoryPenalty déclare ou implémente un comportement précis utilisé par ce module.
     void applyGrinkaVictoryPenalty(Player& player, Random& random)
     {
-        std::cout << "========== DETTE ROYALE ENCAISSÉE ==========" << std::endl;
-        std::cout << "Grinka a gagné. Ses taxes ne sont plus une menace de combat : elles deviennent réelles." << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("Grinka a gagné. Ses taxes ne sont plus une menace de combat : elles deviennent réelles.");
 
         int gold = player.getInventory().getGold();
 
@@ -619,15 +716,14 @@ namespace
 
             player.getInventory().spendGold(stolenGold);
             player.recordGrinkaGoldTheft(stolenGold);
-            std::cout << "Or confisqué : " << stolenGold << " pièce(s)." << std::endl;
+            lines.push_back("Or confisqué : " + std::to_string(stolenGold) + " pièce(s).");
         }
         else
         {
             int xpLoss = 20 + player.getLevel() * 8;
             player.loseExperience(xpLoss);
-            std::cout << "Tu n'avais pas d'or sur toi." << std::endl;
-            std::cout << "Grinka transforme la dette en humiliation administrative : perte de "
-                      << xpLoss << " XP." << std::endl;
+            lines.push_back("Tu n'avais pas d'or sur toi.");
+            lines.push_back("Grinka transforme la dette en humiliation administrative : perte de " + std::to_string(xpLoss) + " XP.");
         }
 
         if (!player.hasEquipmentProtection() && player.hasEquippedWeapon() && random.between(1, 100) <= 25)
@@ -636,7 +732,7 @@ namespace
             if (player.destroyEquippedWeapon())
             {
                 player.recordGrinkaStolenWeapon(stolenWeapon);
-                std::cout << "Un collecteur gobelin repart avec ton arme équipée." << std::endl;
+                lines.push_back("Un collecteur gobelin repart avec ton arme équipée.");
             }
         }
 
@@ -646,13 +742,12 @@ namespace
             if (player.destroyEquippedArmor())
             {
                 player.recordGrinkaStolenArmor(stolenArmor);
-                std::cout << "Un autre collecteur arrache une pièce majeure de ton armure équipée." << std::endl;
+                lines.push_back("Un autre collecteur arrache une pièce majeure de ton armure équipée.");
             }
         }
 
-        std::cout << "Aucune dette ne descend sous zéro : Grinka vole ce qui existe, pas ce qui n'existe pas." << std::endl;
-        std::cout << "============================================" << std::endl;
-        std::cout << std::endl;
+        lines.push_back("Aucune dette ne descend sous zéro : Grinka vole ce qui existe, pas ce qui n'existe pas.");
+        MessageScreen::show("DETTE ROYALE ENCAISSÉE", "boss.grinka.victory_penalty", lines, false);
     }
 
     // EN: applyZelefVictoryPenalty declares or implements a focused behavior used by this module.
@@ -669,13 +764,17 @@ namespace
 
         player.recordZelefCorrosionLoss(lostMaxHp);
 
-        std::cout << "========== CORROSION ANCRÉE ==========" << std::endl;
-        std::cout << "Zelef a gagné. La corrosion ne quitte pas entièrement ton corps." << std::endl;
-        std::cout << "PV maximum retenus par Zelef : " << lostMaxHp << std::endl;
-        std::cout << "Effet visible sur le personnage : Corrosion présente." << std::endl;
-        std::cout << "Si tu bats Zelef lors d'un prochain affrontement, tu pourras récupérer ce qu'il t'a pris." << std::endl;
-        std::cout << "======================================" << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "CORROSION ANCRÉE",
+            "boss.zelef.victory_penalty",
+            {
+                "Zelef a gagné. La corrosion ne quitte pas entièrement ton corps.",
+                "PV maximum retenus par Zelef : " + std::to_string(lostMaxHp) + ".",
+                "Effet visible sur le personnage : Corrosion présente.",
+                "Si tu bats Zelef lors d'un prochain affrontement, tu pourras récupérer ce qu'il t'a pris."
+            },
+            false
+        );
     }
 
     // EN: getHitogamiRevivePercent declares or implements a focused behavior used by this module.
@@ -711,14 +810,19 @@ namespace
         int revivePercent = getHitogamiRevivePercent(difficulty);
         boss.reviveWithHealthPercentage(revivePercent);
 
-        std::cout << std::endl;
-        std::cout << "Hitogami tombe à genoux." << std::endl;
-        std::cout << "Pendant une seconde, le combat semble terminé." << std::endl;
-        std::cout << "Puis il respire encore." << std::endl;
-        std::cout << "Tu n'es pas spécial parce que tu tombes." << std::endl;
-        std::cout << "Tu es spécial parce que tu te relèves." << std::endl;
-        std::cout << "L'écho d'Hitogami se relève avec " << boss.getHp() << "/" << boss.getMaxHp() << " PV." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "ÉCHO D'HITOGAMI",
+            "boss.hitogami.revive_once",
+            {
+                "Hitogami tombe à genoux.",
+                "Pendant une seconde, le combat semble terminé.",
+                "Puis il respire encore.",
+                "Tu n'es pas spécial parce que tu tombes.",
+                "Tu es spécial parce que tu te relèves.",
+                "L'écho d'Hitogami se relève avec " + std::to_string(boss.getHp()) + "/" + std::to_string(boss.getMaxHp()) + " PV."
+            },
+            false
+        );
     }
 
 
@@ -746,31 +850,39 @@ namespace
     // FR: displayFireFlightLockedGate déclare ou implémente un comportement précis utilisé par ce module.
     void displayFireFlightLockedGate()
     {
-        std::cout << "L'entrée de FireFlight apparaît dans le registre." << std::endl;
-        std::cout << "Mais la porte ne s'ouvre pas." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Une phrase est gravée dans l'air :" << std::endl;
-        std::cout << "Prouve ta valeur devant chaque variation majeure. Rassemble toutes les invitations." << std::endl;
-        std::cout << std::endl;
-        std::cout << "FireFlight n'est pas un boss de passage." << std::endl;
-        std::cout << "C'est le dernier test du jeu actuel." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "SEUIL DE FIREFLIGHT",
+            "boss.fireflight.locked_gate",
+            {
+                "L'entrée de FireFlight apparaît dans le registre.",
+                "Mais la porte ne s'ouvre pas.",
+                "Une phrase est gravée dans l'air :",
+                "Prouve ta valeur devant chaque variation majeure. Rassemble toutes les invitations.",
+                "FireFlight n'est pas un boss de passage.",
+                "C'est le dernier test du jeu actuel."
+            },
+            false
+        );
     }
 
     // EN: displayFireFlightFirstEntrance declares or implements a focused behavior used by this module.
     // FR: displayFireFlightFirstEntrance déclare ou implémente un comportement précis utilisé par ce module.
     void displayFireFlightFirstEntrance(const Player& player)
     {
-        std::cout << "Le registre cesse de faire semblant d'être neutre." << std::endl;
-        std::cout << "Toutes les lettres récoltées brûlent en même temps dans ton inventaire." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Une silhouette attend au centre d'une arène qui ressemble à un menu cassé." << std::endl;
-        std::cout << "FireFlight te regarde, puis regarde au-dessus de toi, comme s'il voyait le code du monde." << std::endl;
-        std::cout << std::endl;
-        std::cout << "Tu as battu assez de règles pour mériter d'en rencontrer une vraie." << std::endl;
-        std::cout << "Bienvenue dans le test final, " << player.getName() << "." << std::endl;
+        MessageScreen::show(
+            "ENTRÉE DU CRÉATEUR",
+            "boss.fireflight.first_entrance",
+            {
+                "Le registre cesse de faire semblant d'être neutre.",
+                "Toutes les lettres récoltées brûlent en même temps dans ton inventaire.",
+                "Une silhouette attend au centre d'une arène qui ressemble à un menu cassé.",
+                "FireFlight te regarde, puis regarde au-dessus de toi, comme s'il voyait le code du monde.",
+                "Tu as battu assez de règles pour mériter d'en rencontrer une vraie.",
+                "Bienvenue dans le test final, " + player.getName() + "."
+            },
+            false
+        );
         displayFireFlightSpecialCharacterDialogue(player);
-        std::cout << std::endl;
     }
 
 
@@ -889,15 +1001,21 @@ namespace
         int damagePercent = 100 + (partySize - 1) * 12;
         boss.scaleCombatStats(hpPercent, damagePercent);
 
-        std::cout << "Stabilisation coop : le boss adapte son enveloppe." << std::endl;
-        std::cout << "PV x" << hpPercent << "% | puissance x" << damagePercent << "% selon le nombre de joueurs réels." << std::endl;
-        std::cout << "Le sceau refuse qu'un adversaire majeur perde sa forme face au nombre." << std::endl;
-        std::cout << std::endl;
+        showBossPveLines(
+            "STABILISATION COOP",
+            "boss.coop.scaling",
+            {
+                "Stabilisation coop : le boss adapte son enveloppe.",
+                "PV x" + std::to_string(hpPercent) + "% | puissance x" + std::to_string(damagePercent) + "% selon le nombre de joueurs réels.",
+                "Le sceau refuse qu'un adversaire majeur perde sa forme face au nombre."
+            }
+        );
     }
 
     void displayBossCoopPartyStatus(const std::vector<Player*>& party, const std::vector<bool>& wasDowned)
     {
-        std::cout << "========== ÉTAT DU GROUPE ==========" << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("État actuel du groupe face au boss.");
         for (std::size_t i = 0; i < party.size(); ++i)
         {
             Player* player = party[i];
@@ -906,22 +1024,23 @@ namespace
                 continue;
             }
 
-            std::cout << "J" << (i + 1) << " ["
-                      << CombatGroupBuilder::getFormationSlotLabel(static_cast<int>(i))
-                      << "] - " << player->getName()
-                      << " : " << player->getHp() << "/" << player->getMaxHp() << " PV";
+            std::ostringstream line;
+            line << "J" << (i + 1) << " ["
+                 << CombatGroupBuilder::getFormationSlotLabel(static_cast<int>(i))
+                 << "] - " << player->getName()
+                 << " : " << player->getHp() << "/" << player->getMaxHp() << " PV";
             if (player->isDead())
             {
-                std::cout << " [au sol]";
+                line << " [au sol]";
             }
             else if (i < wasDowned.size() && wasDowned[i])
             {
-                std::cout << " [a déjà chuté]";
+                line << " [a déjà chuté]";
             }
-            std::cout << std::endl;
+            lines.push_back(line.str());
         }
-        std::cout << "====================================" << std::endl;
-        std::cout << std::endl;
+
+        showBossPveLines("ÉTAT DU GROUPE", "boss.coop.party_status", lines);
     }
 
     bool tryUseBossHealingPotionOnAlly(Player& healer, std::vector<Player*>& party, int& healingDone)
@@ -1021,8 +1140,11 @@ namespace
         int consumableIndex = potionIndices[potionChoice - 1];
         if (!healer.getInventory().hasConsumable(consumableIndex))
         {
-            std::cout << "Cette potion n'est plus disponible." << std::endl;
-            std::cout << std::endl;
+            showBossPveLines(
+                "POTION INDISPONIBLE",
+                "boss.coop.support.potion.missing",
+                {"Cette potion n'est plus disponible."}
+            );
             return false;
         }
 
@@ -1046,16 +1168,15 @@ namespace
             healer.getInventory().removeConsumable(consumableIndex);
         }
 
-        std::cout << healer.getName() << " devient soigneur ce tour-ci et utilise "
-                  << potion.getName() << " sur " << target->getName() << "." << std::endl;
+        std::vector<std::string> supportLines;
+        supportLines.push_back(healer.getName() + " devient soigneur ce tour-ci et utilise " + potion.getName() + " sur " + target->getName() + ".");
         if (revivedTarget)
         {
-            std::cout << target->getName() << " est réveillé à 1 PV avant de recevoir le soin." << std::endl;
+            supportLines.push_back(target->getName() + " est réveillé à 1 PV avant de recevoir le soin.");
         }
-        std::cout << target->getName() << " possède maintenant "
-                  << target->getHp() << "/" << target->getMaxHp() << " PV." << std::endl;
-        std::cout << "Le tour de " << healer.getName() << " est consommé." << std::endl;
-        std::cout << std::endl;
+        supportLines.push_back(target->getName() + " possède maintenant " + std::to_string(target->getHp()) + "/" + std::to_string(target->getMaxHp()) + " PV.");
+        supportLines.push_back("Le tour de " + healer.getName() + " est consommé.");
+        showBossPveLines("SOIN COOP", "boss.coop.support.result", supportLines);
         return true;
     }
 
@@ -1068,39 +1189,43 @@ namespace
 
         int green = 0;
         int red = 0;
+        std::vector<std::string> lines;
+        lines.push_back("Léthal coop boss : " + player.getName() + " est au sol.");
+        lines.push_back("3 pastilles vertes le ramènent. 3 rouges le rayent du registre, sauf intervention capable de briser le destin.");
 
-        std::cout << "Léthal coop boss : " << player.getName() << " est au sol." << std::endl;
-        std::cout << "3 pastilles vertes le ramènent. 3 rouges le rayent du registre, sauf intervention capable de briser le destin." << std::endl;
-        std::cout << std::endl;
+        auto showSave = [&]()
+        {
+            showBossPveLines("SURVIE LÉTHAL COOP", "boss.coop.lethal.save", lines);
+        };
 
         while (green < 3 && red < 3)
         {
             int roll = random.between(1, 20);
-            std::cout << "Dé de survie : " << roll << std::endl;
+            lines.push_back("Dé de survie : " + std::to_string(roll));
 
             if (roll == 20)
             {
                 player.reviveWithHealthPercentage(1);
                 if (player.getHp() <= 0) player.heal(1);
-                std::cout << "20 naturel : " << player.getName() << " se relève immédiatement à 1 PV et pourra rejouer." << std::endl;
-                std::cout << std::endl;
+                lines.push_back("20 naturel : " + player.getName() + " se relève immédiatement à 1 PV et pourra rejouer.");
+                showSave();
                 return;
             }
 
             if (roll == 1)
             {
                 red += 2;
-                std::cout << "1 naturel : deux pastilles rouges apparaissent d'un coup." << std::endl;
+                lines.push_back("1 naturel : deux pastilles rouges apparaissent d'un coup.");
             }
             else if (roll >= 11)
             {
                 ++green;
-                std::cout << "Pastille verte : " << green << "/3." << std::endl;
+                lines.push_back("Pastille verte : " + std::to_string(green) + "/3.");
             }
             else
             {
                 ++red;
-                std::cout << "Pastille rouge : " << red << "/3." << std::endl;
+                lines.push_back("Pastille rouge : " + std::to_string(red) + "/3.");
             }
         }
 
@@ -1108,14 +1233,14 @@ namespace
         {
             player.reviveWithHealthPercentage(1);
             if (player.getHp() <= 0) player.heal(1);
-            std::cout << player.getName() << " revient à 1 PV. La mort n'est pas comptée." << std::endl;
-            std::cout << std::endl;
+            lines.push_back(player.getName() + " revient à 1 PV. La mort n'est pas comptée.");
+            showSave();
             return;
         }
 
         player.recordDeath();
-        std::cout << player.getName() << " reçoit trois pastilles rouges : mort définitive prévue, sauf exception divine/divination." << std::endl;
-        std::cout << std::endl;
+        lines.push_back(player.getName() + " reçoit trois pastilles rouges : mort définitive prévue, sauf exception divine/divination.");
+        showSave();
     }
 
     bool isBossUnlockedForWholeParty(const std::vector<Player*>& party, int bossId)
@@ -1132,20 +1257,20 @@ namespace
 
     void displayBossLockForParty(const std::vector<Player*>& party, int bossId)
     {
-        std::cout << "Ce boss ne peut pas être stabilisé en coop." << std::endl;
-        std::cout << "Tous les joueurs doivent l'avoir débloqué." << std::endl;
-        std::cout << "Joueurs qui bloquent l'accès :" << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("Ce boss ne peut pas être stabilisé en coop.");
+        lines.push_back("Tous les joueurs doivent l'avoir débloqué.");
+        lines.push_back("Joueurs qui bloquent l'accès :");
         for (std::size_t i = 0; i < party.size(); ++i)
         {
             Player* player = party[i];
             if (player == nullptr || !player->isBossUnlocked(bossId))
             {
-                std::cout << "- J" << (i + 1) << " : "
-                          << (player == nullptr ? "slot vide" : player->getName())
-                          << std::endl;
+                lines.push_back("- J" + std::to_string(i + 1) + " : " + (player == nullptr ? "slot vide" : player->getName()));
             }
         }
-        std::cout << std::endl;
+
+        showBossPveLines("BOSS COOP VERROUILLÉ", "boss.coop.locked", lines);
     }
 
     CombatReward buildIndividualBossCoopReward(
@@ -1225,9 +1350,11 @@ namespace
             return false;
         }
 
-        std::cout << boss.getName()
-                  << " sent le lien d'invocation et tente de couper le soutien avant le joueur."
-                  << std::endl;
+        showBossPveLines(
+            "LIEN D'INVOCATION",
+            "boss.coop.summon_target",
+            {boss.getName() + " sent le lien d'invocation et tente de couper le soutien avant le joueur."}
+        );
 
         SummonCombatSystem::entityAttacksSummon(
             boss,
@@ -1312,12 +1439,16 @@ void BossPveMode::run(
     DifficultyMode difficulty
 )
 {
-    std::cout << "Vous sentez une aura maléfique autour de vous." << std::endl;
-    Console::pauseSeconds(2);
-
-    std::cout << "Par chance, votre âme est encore pure." << std::endl;
-    std::cout << "À mesure que vous avancez, votre force change, comme si l'arène refusait de vous laisser mourir trop vite." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "AURA DE BOSS",
+        "boss.pve.intro",
+        {
+            "Vous sentez une aura maléfique autour de vous.",
+            "Par chance, votre âme est encore pure.",
+            "À mesure que vous avancez, votre force change, comme si l'arène refusait de vous laisser mourir trop vite."
+        },
+        false
+    );
 
     Console::pauseSeconds(2);
 
@@ -1337,10 +1468,14 @@ void BossPveMode::run(
 
     if (availableBossIds.empty())
     {
-        std::cout << "Aucune entité stable n'est disponible pour le moment." << std::endl;
-        std::cout << "Affronte deux autres boss différents pour laisser le registre respirer." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
+        MessageScreen::show(
+            "AUCUN BOSS STABLE",
+            "boss.pve.none_available",
+            {
+                "Aucune entité stable n'est disponible pour le moment.",
+                "Affronte deux autres boss différents pour laisser le registre respirer."
+            }
+        );
         return;
     }
 
@@ -1367,19 +1502,27 @@ void BossPveMode::run(
 
         if (!player1.isBossUnlocked(bossChoice))
         {
-            std::cout << "Cette entité n'est pas encore détectée dans le registre." << std::endl;
-            std::cout << "Un boss vaincu peut provoquer l'apparition d'une nouvelle variation anormale." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
+            MessageScreen::show(
+                "ENTITÉ INCONNUE",
+                "boss.pve.locked_unknown",
+                {
+                    "Cette entité n'est pas encore détectée dans le registre.",
+                    "Un boss vaincu peut provoquer l'apparition d'une nouvelle variation anormale."
+                }
+            );
             return;
         }
 
         if (player1.isBossRecentlyDefeated(bossChoice))
         {
-            std::cout << "Cette entité vient d'être affrontée." << std::endl;
-            std::cout << "Le registre refuse de la stabiliser tout de suite : affronte deux autres boss avant." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
+            MessageScreen::show(
+                "ENTITÉ INSTABLE",
+                "boss.pve.recently_defeated",
+                {
+                    "Cette entité vient d'être affrontée.",
+                    "Le registre refuse de la stabiliser tout de suite : affronte deux autres boss avant."
+                }
+            );
             return;
         }
     }
@@ -1405,11 +1548,14 @@ void BossPveMode::run(
 
     if (!askBossFightConfirmation(powerAnalysis))
     {
-        std::cout << std::endl;
-        std::cout << "Le registre referme la faille avant qu'elle ne devienne une tombe." << std::endl;
-        std::cout << "L'entité reste quelque part dans le brouillard, en attendant que tu sois vraiment prêt." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
+        MessageScreen::show(
+            "FAILLE REFERMÉE",
+            "boss.pve.confirmation.back",
+            {
+                "Le registre referme la faille avant qu'elle ne devienne une tombe.",
+                "L'entité reste quelque part dans le brouillard, en attendant que tu sois vraiment prêt."
+            }
+        );
         return;
     }
 
@@ -1418,10 +1564,16 @@ void BossPveMode::run(
     player1.applyClass(evolvedClass);
     temporaryClassGuard.markActive();
 
-    std::cout << player1.getName() << ", ta classe évolue temporairement en : " << player1.getType() << "." << std::endl;
-    std::cout << "Tes PV et tes objets ont été renforcés pour ce combat." << std::endl;
-    std::cout << "Après le combat, cette forme devra se dissiper et ta classe réelle reviendra." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "ÉVOLUTION TEMPORAIRE",
+        "boss.pve.temporary_class",
+        {
+            player1.getName() + ", ta classe évolue temporairement en : " + player1.getType() + ".",
+            "Tes PV et tes objets ont été renforcés pour ce combat.",
+            "Après le combat, cette forme devra se dissiper et ta classe réelle reviendra."
+        },
+        false
+    );
 
     player1.displayStats();
 
@@ -1434,54 +1586,65 @@ void BossPveMode::run(
         Console::pauseSeconds(3);
     }
 
-    std::cout << "Préparation du boss..." << std::endl;
+    MessageScreen::show(
+        "PRÉPARATION DU BOSS",
+        "boss.pve.preparation",
+        {
+            "Préparation du boss...",
+            boss.getName() + " est entré dans l'arène.",
+            boss.getName() + " est de type : " + boss.getType() + ".",
+            "Fais attention : ce combat pourrait vraiment te coûter cher."
+        },
+        false
+    );
     Console::pauseSeconds(2);
-
-    std::cout << boss.getName() << " est entré dans l'arène." << std::endl;
-    std::cout << boss.getName() << " est de type : " << boss.getType() << "." << std::endl;
-    std::cout << "Fais attention : ce combat pourrait vraiment te coûter cher." << std::endl;
 
     if (player1.getLethalCheatAttemptCount() > 0
         && (boss.getBossId() == 11 || boss.getBossId() == 16 || boss.getBossId() == 26 || boss.getBossId() == 27 || boss.getBossId() == 30))
     {
-        std::cout << std::endl;
+        std::vector<std::string> lethalLines;
         if (boss.getBossId() == 11)
         {
-            std::cout << "L'Anomalie incline la tête." << std::endl;
-            std::cout << "Ah. C'était donc toi qui avais essayé de griffer la page depuis le mode Léthal." << std::endl;
+            lethalLines.push_back("L'Anomalie incline la tête.");
+            lethalLines.push_back("Ah. C'était donc toi qui avais essayé de griffer la page depuis le mode Léthal.");
         }
         else if (boss.getBossId() == 16)
         {
-            std::cout << "Lexior ouvre un dossier déjà marqué." << std::endl;
-            std::cout << "Tentative risquée précédemment constatée. Le verdict s'en souvient." << std::endl;
+            lethalLines.push_back("Lexior ouvre un dossier déjà marqué.");
+            lethalLines.push_back("Tentative risquée précédemment constatée. Le verdict s'en souvient.");
         }
         else if (boss.getBossId() == 26)
         {
-            std::cout << "L'écho d'Obérion te reconnaît sans colère." << std::endl;
-            std::cout << "Tu as déjà tenté de séparer la vie de ses conséquences." << std::endl;
+            lethalLines.push_back("L'écho d'Obérion te reconnaît sans colère.");
+            lethalLines.push_back("Tu as déjà tenté de séparer la vie de ses conséquences.");
         }
         else if (boss.getBossId() == 27)
         {
-            std::cout << "FireFlight soupire comme quelqu'un qui relit un vieux log." << std::endl;
-            std::cout << "Ah. C'est toi qui as tenté un code en Léthal. J'avais laissé une note pour ça." << std::endl;
+            lethalLines.push_back("FireFlight soupire comme quelqu'un qui relit un vieux log.");
+            lethalLines.push_back("Ah. C'est toi qui as tenté un code en Léthal. J'avais laissé une note pour ça.");
         }
         else
         {
-            std::cout << "Moiran déroule un fil déjà taché par une tentative interdite." << std::endl;
-            std::cout << "Tu as voulu sortir du destin en Léthal. Le destin a simplement noté ton nom." << std::endl;
+            lethalLines.push_back("Moiran déroule un fil déjà taché par une tentative interdite.");
+            lethalLines.push_back("Tu as voulu sortir du destin en Léthal. Le destin a simplement noté ton nom.");
         }
+        showBossPveLines("TRACE LÉTHAL", "boss.pve.lethal_cheat_memory", lethalLines);
     }
-
-    std::cout << std::endl;
 
     Console::pauseSeconds(3);
 
     int turn = random.chooseFirstTurn();
 
-    std::cout << "Prépare-toi..." << std::endl;
+    MessageScreen::show(
+        "COMBAT BOSS",
+        "boss.pve.combat_start",
+        {
+            "Prépare-toi...",
+            "Le combat contre " + boss.getName() + " commence maintenant."
+        },
+        false
+    );
     Console::pauseSeconds(2);
-    std::cout << "Le combat contre " << boss.getName() << " commence maintenant." << std::endl;
-    std::cout << std::endl;
 
     int playerMaxHpBeforeBossFight = player1.getMaxHp();
     int playerHpBeforeBossFight = player1.getHp();
@@ -1632,21 +1795,33 @@ void BossPveMode::run(
         {
             int recovered = player1.getZelefMaxHpStolen();
             player1.restoreZelefCorrosionLoss();
-            std::cout << std::endl;
-            std::cout << "Tu fais face au sang noir qui t'avait marqué." << std::endl;
-            std::cout << "Rends-moi ce que tu m'as pris il y a longtemps." << std::endl;
-            std::cout << "PV maximum récupérés : " << recovered << std::endl;
-            std::cout << "Effet retiré : Corrosion présente." << std::endl;
+            MessageScreen::show(
+                "CORROSION RENDUE",
+                "boss.zelef.corrosion_recovered",
+                {
+                    "Tu fais face au sang noir qui t'avait marqué.",
+                    "Rends-moi ce que tu m'as pris il y a longtemps.",
+                    "PV maximum récupérés : " + std::to_string(recovered) + ".",
+                    "Effet retiré : Corrosion présente."
+                },
+                false
+            );
         }
 
         if (boss.getBossId() == 5 && player1.hasGrinkaBossTheftPresent())
         {
             player1.restoreGrinkaBossTheft();
-            std::cout << std::endl;
-            std::cout << "Grinka lâche un sac de butin avec un sourire beaucoup moins royal." << std::endl;
-            std::cout << "Rends-moi ce que tu m'as pris il y a longtemps." << std::endl;
-            std::cout << "Les biens volés par ce boss reviennent dans ton inventaire." << std::endl;
-            std::cout << "Effet retiré : Volé par un boss." << std::endl;
+            MessageScreen::show(
+                "BUTIN RÉCUPÉRÉ",
+                "boss.grinka.theft_recovered",
+                {
+                    "Grinka lâche un sac de butin avec un sourire beaucoup moins royal.",
+                    "Rends-moi ce que tu m'as pris il y a longtemps.",
+                    "Les biens volés par ce boss reviennent dans ton inventaire.",
+                    "Effet retiré : Volé par un boss."
+                },
+                false
+            );
         }
 
         CombatReward bossReward = CombatRewardSystem::calculateBossReward(
@@ -1712,11 +1887,15 @@ void BossPveMode::runTeam(
 
     if (coopAvailableBossIds.empty())
     {
-        std::cout << "Aucun boss commun n'est disponible pour ce groupe." << std::endl;
-        std::cout << "Un joueur secondaire bloque probablement l'accès à tous les boss accessibles au joueur 1." << std::endl;
-        std::cout << "Faites progresser les registres de boss des personnages secondaires, ou lancez un boss déjà commun." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
+        MessageScreen::show(
+            "AUCUN BOSS COMMUN",
+            "boss.coop.none_available",
+            {
+                "Aucun boss commun n'est disponible pour ce groupe.",
+                "Un joueur secondaire bloque probablement l'accès à tous les boss accessibles au joueur 1.",
+                "Faites progresser les registres de boss des personnages secondaires, ou lancez un boss déjà commun."
+            }
+        );
         return;
     }
 
@@ -1742,18 +1921,24 @@ void BossPveMode::runTeam(
 
         if (!leader.isBossUnlocked(bossChoice))
         {
-            std::cout << "Cette entité n'est pas encore détectée dans le registre du joueur principal." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
+            MessageScreen::show(
+                "ENTITÉ INCONNUE",
+                "boss.coop.locked_leader_unknown",
+                {"Cette entité n'est pas encore détectée dans le registre du joueur principal."}
+            );
             return;
         }
 
         if (leader.isBossRecentlyDefeated(bossChoice))
         {
-            std::cout << "Cette entité vient d'être affrontée par le joueur principal." << std::endl;
-            std::cout << "Le registre refuse de la stabiliser tout de suite." << std::endl;
-            std::cout << std::endl;
-            Console::waitForEnter();
+            MessageScreen::show(
+                "ENTITÉ INSTABLE",
+                "boss.coop.recently_defeated",
+                {
+                    "Cette entité vient d'être affrontée par le joueur principal.",
+                    "Le registre refuse de la stabiliser tout de suite."
+                }
+            );
             return;
         }
 
@@ -1805,15 +1990,23 @@ void BossPveMode::runTeam(
     BossPowerAnalysis powerAnalysis = analyzeBossPower(simulatedLeader, boss, difficulty);
     displayBossPowerAnalysis(simulatedLeader, boss, difficulty, powerAnalysis);
 
-    std::cout << "Analyse coop : le boss reste calibré depuis le joueur principal, mais il pourra cibler n'importe quel allié vivant." << std::endl;
-    std::cout << "Si un joueur secondaire n'aide presque pas, son registre ne progressera pas vraiment." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "ANALYSE COOP",
+        "boss.coop.power_context",
+        {
+            "Analyse coop : le boss reste calibré depuis le joueur principal, mais il pourra cibler n'importe quel allié vivant.",
+            "Si un joueur secondaire n'aide presque pas, son registre ne progressera pas vraiment."
+        },
+        false
+    );
 
     if (!askBossFightConfirmation(powerAnalysis))
     {
-        std::cout << "Le groupe recule avant que la faille ne se referme sur lui." << std::endl;
-        std::cout << std::endl;
-        Console::waitForEnter();
+        MessageScreen::show(
+            "FAILLE REFERMÉE",
+            "boss.coop.confirmation.back",
+            {"Le groupe recule avant que la faille ne se referme sur lui."}
+        );
         return;
     }
 
@@ -1826,13 +2019,19 @@ void BossPveMode::runTeam(
         Console::pauseSeconds(3);
     }
 
-    std::cout << "Préparation du boss coop..." << std::endl;
+    MessageScreen::show(
+        "PRÉPARATION BOSS COOP",
+        "boss.coop.preparation",
+        {
+            "Préparation du boss coop...",
+            boss.getName() + " est entré dans l'arène.",
+            boss.getName() + " est de type : " + boss.getType() + ".",
+            "Chaque joueur a temporairement évolué selon sa classe, puis reviendra à son état réel après le combat.",
+            "Les invocations actives peuvent maintenant aider en boss coop, mais restent en dernière priorité de placement."
+        },
+        false
+    );
     Console::pauseSeconds(1);
-    std::cout << boss.getName() << " est entré dans l'arène." << std::endl;
-    std::cout << boss.getName() << " est de type : " << boss.getType() << "." << std::endl;
-    std::cout << "Chaque joueur a temporairement évolué selon sa classe, puis reviendra à son état réel après le combat." << std::endl;
-    std::cout << "Les invocations actives peuvent maintenant aider en boss coop, mais restent en dernière priorité de placement." << std::endl;
-    std::cout << std::endl;
 
     for (std::size_t i = 0; i < party.size(); ++i)
     {
@@ -1849,9 +2048,15 @@ void BossPveMode::runTeam(
 
     while (countAliveBossParty(party) > 0 && !boss.isDead())
     {
-        std::cout << "========== TOUR DE GROUPE BOSS " << round << " ==========" << std::endl;
-        std::cout << boss.getName() << " : " << boss.getHp() << "/" << boss.getMaxHp() << " PV." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "TOUR DE GROUPE BOSS",
+            "boss.coop.round." + std::to_string(round),
+            {
+                "Tour " + std::to_string(round) + ".",
+                boss.getName() + " : " + std::to_string(boss.getHp()) + "/" + std::to_string(boss.getMaxHp()) + " PV."
+            },
+            false
+        );
         displayBossCoopPartyStatus(party, extractBossDownedFlags(contributions));
 
         for (std::size_t i = 0; i < party.size(); ++i)
@@ -1862,8 +2067,12 @@ void BossPveMode::runTeam(
                 continue;
             }
 
-            std::cout << "Tour de " << player->getName() << " [J" << (i + 1) << "]." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "TOUR JOUEUR",
+                "boss.coop.player_turn",
+                {"Tour de " + player->getName() + " [J" + std::to_string(i + 1) + "]."},
+                false
+            );
 
             int healingDoneThisTurn = 0;
             int bossHpBeforeTurn = boss.getHp();
@@ -1924,7 +2133,12 @@ void BossPveMode::runTeam(
             break;
         }
 
-        std::cout << "Tour de " << boss.getName() << " : cible " << target->getName() << "." << std::endl;
+        MessageScreen::show(
+            "TOUR DU BOSS",
+            "boss.coop.boss_turn",
+            {"Tour de " + boss.getName() + " : cible " + target->getName() + "."},
+            false
+        );
         int targetHpBeforeBossTurn = target->getHp();
         bool bossTurnFinished = false;
         while (!bossTurnFinished && !target->isDead())
@@ -1994,7 +2208,11 @@ void BossPveMode::runTeam(
                 {
                     player->recordDeath();
                     player->reviveWithHealthPercentage(DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty));
-                    std::cout << player->getName() << " est réveillé après la défaite du groupe. Mort comptabilisée." << std::endl;
+                    showBossPveLines(
+                        "RÉVEIL APRÈS DÉFAITE",
+                        "boss.coop.defeat.revive",
+                        {player->getName() + " est réveillé après la défaite du groupe. Mort comptabilisée."}
+                    );
                 }
             }
         }
@@ -2032,7 +2250,11 @@ void BossPveMode::runTeam(
                 resolveBossLethalGroupDeathSave(*player, random);
                 if (player->isDead())
                 {
-                    std::cout << player->getName() << " reste au sol : aucune récompense supplémentaire après sa chute." << std::endl;
+                    showBossPveLines(
+                        "AUCUNE RÉCOMPENSE",
+                        "boss.coop.reward.dead",
+                        {player->getName() + " reste au sol : aucune récompense supplémentaire après sa chute."}
+                    );
                     continue;
                 }
             }
@@ -2040,7 +2262,11 @@ void BossPveMode::runTeam(
             {
                 player->recordDeath();
                 player->reviveWithHealthPercentage(DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty));
-                std::cout << player->getName() << " est réveillé à la fin du combat. La mort est comptabilisée." << std::endl;
+                showBossPveLines(
+                    "RÉVEIL APRÈS COMBAT",
+                    "boss.coop.reward.revive",
+                    {player->getName() + " est réveillé à la fin du combat. La mort est comptabilisée."}
+                );
             }
         }
 
@@ -2051,17 +2277,22 @@ void BossPveMode::runTeam(
             contributions[i]
         );
 
-        std::cout << player->getName() << " :" << std::endl;
+        std::vector<std::string> contributionLines;
+        contributionLines.push_back(player->getName() + " :");
         if (contributions[i].turnsTaken <= 0)
         {
-            std::cout << "Participation insuffisante : le registre ne donne presque rien." << std::endl;
+            contributionLines.push_back("Participation insuffisante : le registre ne donne presque rien.");
         }
+        contributionLines.push_back(
+            "Participation boss : tours " + std::to_string(contributions[i].turnsTaken)
+            + ", dégâts " + std::to_string(contributions[i].damageDealt)
+            + ", soins " + std::to_string(contributions[i].healingDone)
+            + ", dégâts encaissés " + std::to_string(contributions[i].damageTaken) + "."
+        );
+        showBossPveLines("PARTICIPATION BOSS", "boss.coop.reward.contribution", contributionLines);
+
         CombatRewardSystem::displayReward(individualReward);
         CombatRewardSystem::giveRewardToPlayer(*player, individualReward);
-        std::cout << "Participation boss : tours " << contributions[i].turnsTaken
-                  << ", dégâts " << contributions[i].damageDealt
-                  << ", soins " << contributions[i].healingDone
-                  << ", dégâts encaissés " << contributions[i].damageTaken << "." << std::endl;
 
         if (contributions[i].turnsTaken > 0)
         {
@@ -2070,16 +2301,22 @@ void BossPveMode::runTeam(
             bool newEntityDetected = player->recordBossVictoryInRegistry(boss.getBossId());
             if (newEntityDetected)
             {
-                std::cout << "Registre de " << player->getName() << " : une nouvelle entité est devenue détectable." << std::endl;
+                showBossPveLines(
+                    "REGISTRE BOSS",
+                    "boss.coop.reward.new_entity",
+                    {"Registre de " + player->getName() + " : une nouvelle entité est devenue détectable."}
+                );
             }
 
             LootGenerator::giveDefeatedBossLoot(*player, boss, random, difficulty);
         }
         else
         {
-            std::cout << "Aucun loot de boss : le personnage n'a pas réellement participé." << std::endl;
+            showBossPveLines(
+                "AUCUN LOOT",
+                "boss.coop.reward.no_loot",
+                {"Aucun loot de boss : le personnage n'a pas réellement participé."}
+            );
         }
-
-        std::cout << std::endl;
     }
 }

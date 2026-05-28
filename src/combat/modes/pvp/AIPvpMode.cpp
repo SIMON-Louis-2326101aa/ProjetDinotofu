@@ -297,12 +297,16 @@ void AIPvpMode::run(Player& player1, Random& random)
         false
     );
 
-    std::cout << "Aperçu de son équipement :" << std::endl;
+    MessageScreen::show(
+        "ÉQUIPEMENT ADVERSAIRE",
+        "pvp.ai.opponent.equipment_intro",
+        {"Aperçu de son équipement :"},
+        false
+    );
     ai.displaySimpleEquipment();
 
     if (SpecialCharacterDialogueCatalog::hasDialogueFor(ai.getName()))
     {
-        std::cout << std::endl;
         SpecialCharacterDialogueCatalog::displayEntranceDialogue(ai.getName());
     }
 
@@ -319,7 +323,6 @@ void AIPvpMode::run(Player& player1, Random& random)
         );
     }
 
-    std::cout << std::endl;
     Console::pauseSeconds(2);
 
     std::vector<Summon> playerSummons = SummonCombatSystem::createInitialSummonsFor(player1);

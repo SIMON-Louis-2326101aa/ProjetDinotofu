@@ -35,6 +35,9 @@ cp README.md READMEFR.md SYSTEMES_PREVUS.txt SPECIAL_CHARACTERS_AND_CHEATS.txt B
 cp output/Dinotofu.exe "${STAGING_DIR}/Dinotofu.exe"
 cp tools/windows/DinotofuLauncher.ps1 "${STAGING_DIR}/DinotofuLauncher.ps1"
 cp tools/windows/Lancer-Dinotofu.cmd "${STAGING_DIR}/Lancer-Dinotofu.cmd"
+cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${STAGING_DIR}/Lancer-Dinotofu-Terminal.cmd"
+mkdir -p "${STAGING_DIR}/tools"
+cp -r tools/gui "${STAGING_DIR}/tools/gui"
 cat > "${STAGING_DIR}/dinotofu-installer.config.json" <<JSON
 {
   "repo": "${REPO_NAME}",
@@ -63,6 +66,8 @@ mkdir -p "${INSTALLER_DIR}"
 cp tools/windows/DinotofuInstaller.ps1 "${INSTALLER_DIR}/DinotofuInstaller.ps1"
 cp tools/windows/DinotofuLauncher.ps1 "${INSTALLER_DIR}/DinotofuLauncher.ps1"
 cp tools/windows/Installer-Dinotofu.cmd "${INSTALLER_DIR}/Installer-Dinotofu.cmd"
+cp tools/windows/Lancer-Dinotofu.cmd "${INSTALLER_DIR}/Lancer-Dinotofu.cmd"
+cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${INSTALLER_DIR}/Lancer-Dinotofu-Terminal.cmd"
 cat > "${INSTALLER_DIR}/dinotofu-installer.config.json" <<JSON
 {
   "repo": "${REPO_NAME}",
@@ -77,8 +82,12 @@ Dinotofu Installer Windows
 2. Le script telecharge la derniere release Windows depuis GitHub.
 3. Par defaut, il installe Dinotofu dans %%USERPROFILE%%\Downloads\ProjetDinotofu.
 4. Tu peux choisir un autre dossier parent, mais le dossier final s'appellera toujours ProjetDinotofu.
-5. Il cree un raccourci sur le bureau.
-6. Le launcher verifie les mises a jour au lancement.
+5. Il cree exactement deux raccourcis sur le bureau :
+   - ProjetDinotofu Launcher
+   - ProjetDinotofu Launcher Terminal version
+6. Le raccourci principal lance le mode Auto : vraie IG si elle existe, sinon IG experimentale, sinon terminal.
+7. Le raccourci Terminal version force toujours le terminal, sans IG.
+8. Dans le dossier du jeu, Lancer-Dinotofu.cmd et Lancer-Dinotofu-Terminal.cmd sont les deux entrees techniques utilisees par ces raccourcis.
 
 Aucun WSL n'est requis pour la version Windows. La release Windows doit contenir Dinotofu.exe.
 Si Windows bloque l'execution, clic droit sur le fichier, Proprietes, puis Debloquer si l'option existe.

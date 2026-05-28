@@ -7,7 +7,7 @@
 
 #include "core/Console.hpp"
 #include "entity/Player.hpp"
-#include "interface/menu/common/MenuFrame.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "item/Inventory.hpp"
 #include "progression/Level.hpp"
@@ -20,6 +20,21 @@
 
 namespace
 {
+
+    MenuOptionItemData makeStatisticsItemData(const std::string& actionType, const std::string& name, const std::string& detail)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "progression";
+        itemData.section = "Statistiques / progression";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = "Consultable";
+        itemData.important = actionType == "inspect";
+        return itemData;
+    }
+
     std::string skillNameFromId(const std::string& id)
     {
         static const std::map<std::string, std::string> names = {
@@ -52,30 +67,34 @@ namespace
         return id;
     }
 
-    void displaySkillList(const std::string& title, const std::vector<std::string>& skills)
+    void appendSkillList(std::vector<std::string>& lines, const std::string& title, const std::vector<std::string>& skills)
     {
-        std::cout << title << std::endl;
+        lines.push_back(title);
         if (skills.empty())
         {
-            std::cout << "- Aucune pour le moment." << std::endl;
+            lines.push_back("- Aucune pour le moment.");
             return;
         }
 
         for (const std::string& skillId : skills)
         {
-            std::cout << "- " << skillNameFromId(skillId) << std::endl;
+            lines.push_back("- " + skillNameFromId(skillId));
         }
     }
 
-    void displayProgressLine(const std::string& label, int current, int target)
+    std::string progressLine(const std::string& label, int current, int target)
     {
         if (current >= target)
         {
-            std::cout << "- " << label << " : trace maîtrisée" << std::endl;
-            return;
+            return "- " + label + " : trace maîtrisée";
         }
 
-        std::cout << "- " << label << " : " << current << "/" << target << std::endl;
+        return "- " + label + " : " + std::to_string(current) + "/" + std::to_string(target);
+    }
+
+    void showStatisticsScreen(const std::string& title, const std::string& screenId, const std::vector<std::string>& lines)
+    {
+        MessageScreen::show(title, screenId, lines);
     }
 }
 
@@ -83,26 +102,25 @@ namespace
 MenuScreen StatisticsMenu::buildHubScreen()
 {
     MenuScreen screen("STATISTIQUES", "statistics.hub");
-    screen.addOption(1, "Résumé du personnage", "Identité, niveau, expérience et état général.", true, "statistics.summary");
-    screen.addOption(2, "Statistiques de combat", "Combats, boss, JcJ, morts et difficulté.", true, "statistics.combat");
-    screen.addOption(3, "Équipement et objets récents", "Équipement actuel et traces d'utilisation.", true, "statistics.equipment");
-    screen.addOption(4, "Compétences / progression", "Passifs, techniques et traces d'apprentissage.", true, "statistics.skills");
-    screen.addOption(5, "États spéciaux et conséquences", "Altérations, clones, dettes et marques de boss.", true, "statistics.states");
-    screen.addOption(6, "Affichage complet historique", "Afficher les statistiques longues du personnage.", true, "statistics.full_history");
+    screen.addOption(1, "Résumé du personnage", "Identité, niveau, expérience et état général.", true, "statistics.summary", makeStatisticsItemData("inspect", "Résumé du personnage", "Identité, niveau, expérience et état général."));
+    screen.addOption(2, "Statistiques de combat", "Combats, boss, JcJ, morts et difficulté.", true, "statistics.combat", makeStatisticsItemData("inspect", "Statistiques de combat", "Combats, boss, JcJ, morts et difficulté."));
+    screen.addOption(3, "Équipement et objets récents", "Équipement actuel et traces d'utilisation.", true, "statistics.equipment", makeStatisticsItemData("inspect", "Équipement et objets récents", "Équipement actuel et traces d'utilisation."));
+    screen.addOption(4, "Compétences / progression", "Passifs, techniques et traces d'apprentissage.", true, "statistics.skills", makeStatisticsItemData("inspect", "Compétences / progression", "Passifs, techniques et traces d'apprentissage."));
+    screen.addOption(5, "États spéciaux et conséquences", "Altérations, clones, dettes et marques de boss.", true, "statistics.states", makeStatisticsItemData("inspect", "États spéciaux", "Altérations, clones, dettes et marques de boss."));
+    screen.addOption(6, "Affichage complet historique", "Afficher les statistiques longues du personnage.", true, "statistics.full_history", makeStatisticsItemData("inspect", "Historique complet", "Afficher les statistiques longues du personnage."));
     screen.addBackOption("Retour", "statistics.back");
     return screen;
 }
 
-// EN: open displays the statistics hub and returns to the caller without consuming combat turns.
-// FR: open affiche le menu central des statistiques et revient à l'appelant sans consommer de tour.
 void StatisticsMenu::open(const Player& player, DifficultyMode difficulty)
 {
     const bool difficultyKnown = true;
     while (true)
     {
-        TerminalInterface::renderMenuScreen(buildHubScreen());
-
-        int choice = Console::askNumberBetween(0, 6, "Choix invalide. Entre un chiffre entre 0 et 6.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            buildHubScreen(),
+            "Choix invalide. Choisis une option affichée."
+        );
         Console::clear();
 
         if (choice == 0)
@@ -132,17 +150,22 @@ void StatisticsMenu::open(const Player& player, DifficultyMode difficulty)
         }
         else if (choice == 6)
         {
+            MessageScreen::show(
+                "HISTORIQUE COMPLET",
+                "statistics.full_history.intro",
+                {
+                    "Affichage long du personnage.",
+                    "Cette vue garde encore le registre complet, même si certaines lignes restent très compactes."
+                }
+            );
             player.displayStats();
             player.displayCareerStatistics(difficulty);
+            Console::waitForEnter();
+            Console::clear();
         }
-
-        Console::waitForEnter();
-        Console::clear();
     }
 }
 
-// EN: open displays statistics when the caller does not know the current difficulty context.
-// FR: open affiche les statistiques quand l'appelant ne connaît pas le contexte de difficulté actuel.
 void StatisticsMenu::open(const Player& player)
 {
     const bool difficultyKnown = false;
@@ -150,9 +173,10 @@ void StatisticsMenu::open(const Player& player)
 
     while (true)
     {
-        TerminalInterface::renderMenuScreen(buildHubScreen());
-
-        int choice = Console::askNumberBetween(0, 6, "Choix invalide. Entre un chiffre entre 0 et 6.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            buildHubScreen(),
+            "Choix invalide. Choisis une option affichée."
+        );
         Console::clear();
 
         if (choice == 0)
@@ -182,176 +206,178 @@ void StatisticsMenu::open(const Player& player)
         }
         else if (choice == 6)
         {
+            MessageScreen::show(
+                "HISTORIQUE COMPLET",
+                "statistics.full_history.intro.unknown_difficulty",
+                {
+                    "Affichage long du personnage.",
+                    "La difficulté exacte n'est pas transmise par ce chemin de menu.",
+                    "Cette vue garde encore le registre complet, même si certaines lignes restent très compactes."
+                }
+            );
             player.displayStats();
             player.displayCareerStatistics(difficulty);
-            std::cout << "Note : difficulté exacte non transmise par ce chemin de menu." << std::endl;
-            std::cout << std::endl;
+            Console::waitForEnter();
+            Console::clear();
         }
-
-        Console::waitForEnter();
-        Console::clear();
     }
 }
 
-// EN: displaySummary prints a compact character overview.
-// FR: displaySummary affiche un résumé compact du personnage.
 void StatisticsMenu::displaySummary(const Player& player)
 {
-    MenuFrame::title("RÉSUMÉ DU PERSONNAGE");
-    std::cout << "Nom : " << player.getName() << std::endl;
-    std::cout << "Race : " << player.getRaceText() << std::endl;
-    std::cout << "Classe : " << player.getType() << std::endl;
-    std::cout << "Niveau : " << player.getLevel() << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back("Nom : " + player.getName());
+    lines.push_back("Race : " + player.getRaceText());
+    lines.push_back("Classe : " + player.getType());
+    lines.push_back("Niveau : " + std::to_string(player.getLevel()));
 
     int nextLevelExperience = Level::getExperienceRequiredForNextLevel(player.getLevel());
     if (nextLevelExperience > 0)
     {
-        std::cout << "Expérience : " << player.getExperience() << "/" << nextLevelExperience << std::endl;
+        lines.push_back("Expérience : " + std::to_string(player.getExperience()) + "/" + std::to_string(nextLevelExperience));
     }
     else
     {
-        std::cout << "Expérience : niveau maximum" << std::endl;
+        lines.push_back("Expérience : niveau maximum");
     }
 
-    std::cout << "PV : " << player.getHp() << "/" << player.getMaxHp() << std::endl;
-    std::cout << "Or : " << player.getInventory().getGold() << std::endl;
-    std::cout << "État : " << (player.isAlteredByCheats() ? "Altéré" : "Normal") << std::endl;
-    std::cout << "Clone : " << (player.isClone() ? "oui" : "non") << std::endl;
-    std::cout << std::endl;
+    lines.push_back("PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()));
+    lines.push_back("Or : " + std::to_string(player.getInventory().getGold()));
+    lines.push_back("État : " + std::string(player.isAlteredByCheats() ? "Altéré" : "Normal"));
+    lines.push_back("Clone : " + std::string(player.isClone() ? "oui" : "non"));
+
+    showStatisticsScreen("RÉSUMÉ DU PERSONNAGE", "statistics.summary.detail", lines);
 }
 
-// EN: displayCombatStats prints combat, boss, PvP and death counters.
-// FR: displayCombatStats affiche les compteurs de combat, boss, JcJ et morts.
 void StatisticsMenu::displayCombatStats(const Player& player, DifficultyMode difficulty, bool difficultyKnown)
 {
-    MenuFrame::title("STATISTIQUES DE COMBAT");
-    std::cout << "Combats lancés : " << player.getCombatsStarted() << std::endl;
-    std::cout << "Victoires : " << player.getVictories() << std::endl;
-    std::cout << "Défaites : " << player.getDefeats() << std::endl;
-    std::cout << "Fuites réussies : " << player.getEscapes() << std::endl;
-    std::cout << "Ennemis vaincus : " << player.getEnemiesKilled() << std::endl;
-    std::cout << "Boss vaincus : " << player.getBossesKilled() << std::endl;
-    std::cout << "JcJ remportés : " << player.getPvpVictories() << std::endl;
-    std::cout << "JcJ perdus : " << player.getPvpDefeats() << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back("Combats lancés : " + std::to_string(player.getCombatsStarted()));
+    lines.push_back("Victoires : " + std::to_string(player.getVictories()));
+    lines.push_back("Défaites : " + std::to_string(player.getDefeats()));
+    lines.push_back("Fuites réussies : " + std::to_string(player.getEscapes()));
+    lines.push_back("Ennemis vaincus : " + std::to_string(player.getEnemiesKilled()));
+    lines.push_back("Boss vaincus : " + std::to_string(player.getBossesKilled()));
+    lines.push_back("JcJ remportés : " + std::to_string(player.getPvpVictories()));
+    lines.push_back("JcJ perdus : " + std::to_string(player.getPvpDefeats()));
 
     if (difficultyKnown && difficulty == DifficultyMode::Lethal)
     {
-        std::cout << "Morts du personnage : [STATISTIQUE CORROMPUE]" << std::endl;
-        std::cout << "Vous ne deviez pas mourir." << std::endl;
+        lines.push_back("Morts du personnage : [STATISTIQUE CORROMPUE]");
+        lines.push_back("Vous ne deviez pas mourir.");
     }
     else
     {
-        std::cout << "Morts du personnage : " << player.getDeaths() << std::endl;
+        lines.push_back("Morts du personnage : " + std::to_string(player.getDeaths()));
 
         if (!difficultyKnown)
         {
-            std::cout << "Note : le contexte de difficulté exact n'est pas connu depuis ce sous-menu." << std::endl;
+            lines.push_back("Note : le contexte de difficulté exact n'est pas connu depuis ce sous-menu.");
         }
     }
 
     const std::vector<std::string>& eliminations = player.getPvpLethalEliminations();
     if (!eliminations.empty())
     {
-        std::cout << "Éliminations Léthal en JcJ :" << std::endl;
+        lines.push_back("Éliminations Léthal en JcJ :");
         for (const std::string& entry : eliminations)
         {
-            std::cout << "- " << entry << std::endl;
+            lines.push_back("- " + entry);
         }
     }
 
-    std::cout << std::endl;
+    showStatisticsScreen("STATISTIQUES DE COMBAT", "statistics.combat.detail", lines);
 }
 
-// EN: displayEquipmentUsage prints currently equipped and recently used equipment information.
-// FR: displayEquipmentUsage affiche l'équipement actuel et l'historique récent d'utilisation.
 void StatisticsMenu::displayEquipmentUsage(const Player& player)
 {
-    player.displaySimpleEquipment();
+    std::vector<std::string> lines;
+    lines.push_back("Équipement actuel :");
+    lines.push_back("- Arme : " + player.getEquippedWeapon().getName());
+    lines.push_back("- Armure : " + player.getEquippedArmor().getName());
+    lines.push_back("");
+    lines.push_back("Équipement récent :");
 
-    MenuFrame::title("ÉQUIPEMENT RÉCENT");
     const std::vector<std::string>& usage = player.getRecentCombatEquipmentUsage();
-
     if (usage.empty())
     {
-        std::cout << "Aucun historique récent d'équipement." << std::endl;
-        std::cout << std::endl;
-        return;
+        lines.push_back("- Aucun historique récent d'équipement.");
     }
-
-    std::map<std::string, int> counts;
-    for (const std::string& itemName : usage)
+    else
     {
-        counts[itemName]++;
+        std::map<std::string, int> counts;
+        for (const std::string& itemName : usage)
+        {
+            counts[itemName]++;
+        }
+
+        for (const auto& pair : counts)
+        {
+            lines.push_back("- " + pair.first + " : " + std::to_string(pair.second) + " apparition(s) récente(s)");
+        }
     }
 
-    for (const auto& pair : counts)
-    {
-        std::cout << "- " << pair.first << " : " << pair.second << " apparition(s) récente(s)" << std::endl;
-    }
-
-    std::cout << std::endl;
+    showStatisticsScreen("ÉQUIPEMENT ET OBJETS RÉCENTS", "statistics.equipment.detail", lines);
 }
 
-// EN: displaySkillStats prints unlocked skills and skill progress.
-// FR: displaySkillStats affiche les compétences débloquées et leur progression.
 void StatisticsMenu::displaySkillStats(const Player& player)
 {
-    MenuFrame::title("COMPÉTENCES");
+    std::vector<std::string> lines;
+    appendSkillList(lines, "Passives connues :", player.getUnlockedPassiveSkills());
+    lines.push_back("");
+    appendSkillList(lines, "Actives connues :", player.getUnlockedActiveSkills());
+    lines.push_back("");
+    lines.push_back("Traces d'entraînement visibles :");
+    lines.push_back(progressLine("Armes courtes / dagues", player.getDaggerKillProgress(), 5));
+    lines.push_back(progressLine("Arcs et tirs", player.getBowKillProgress(), 8));
+    lines.push_back(progressLine("Combat à mains nues", player.getBareHandKillProgress(), 10));
+    lines.push_back(progressLine("Bâtons et canalisation", player.getStaffKillProgress(), 6));
+    lines.push_back(progressLine("Épées et discipline", player.getSwordKillProgress(), 7));
+    lines.push_back(progressLine("Haches et ouverture", player.getAxeKillProgress(), 7));
+    lines.push_back(progressLine("Marteaux et fracture de garde", player.getHammerKillProgress(), 7));
+    lines.push_back(progressLine("Lances et contrôle de distance", player.getSpearKillProgress(), 7));
+    lines.push_back("");
+    lines.push_back("Ces traces montrent ce que ton personnage répète assez souvent pour l'intégrer à son style.");
 
-    displaySkillList("Passives connues :", player.getUnlockedPassiveSkills());
-    std::cout << std::endl;
-
-    displaySkillList("Actives connues :", player.getUnlockedActiveSkills());
-    std::cout << std::endl;
-
-    std::cout << "Traces d'entraînement visibles :" << std::endl;
-    displayProgressLine("Armes courtes / dagues", player.getDaggerKillProgress(), 5);
-    displayProgressLine("Arcs et tirs", player.getBowKillProgress(), 8);
-    displayProgressLine("Combat à mains nues", player.getBareHandKillProgress(), 10);
-    displayProgressLine("Bâtons et canalisation", player.getStaffKillProgress(), 6);
-    displayProgressLine("Épées et discipline", player.getSwordKillProgress(), 7);
-    displayProgressLine("Haches et ouverture", player.getAxeKillProgress(), 7);
-    displayProgressLine("Marteaux et fracture de garde", player.getHammerKillProgress(), 7);
-    displayProgressLine("Lances et contrôle de distance", player.getSpearKillProgress(), 7);
-
-    std::cout << std::endl;
-    std::cout << "Ces traces montrent ce que ton personnage répète assez souvent pour l'intégrer à son style." << std::endl;
-    std::cout << std::endl;
+    showStatisticsScreen("COMPÉTENCES", "statistics.skills.detail", lines);
 }
 
-// EN: displaySpecialStates prints altered, clone and boss consequence states.
-// FR: displaySpecialStates affiche les états altéré, clone et conséquences de boss.
 void StatisticsMenu::displaySpecialStates(const Player& player)
 {
-    MenuFrame::title("ÉTATS SPÉCIAUX");
-    std::cout << "Altéré : " << (player.isAlteredByCheats() ? "oui" : "non") << std::endl;
-    std::cout << "Clone : " << (player.isClone() ? "oui" : "non") << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back("Altéré : " + std::string(player.isAlteredByCheats() ? "oui" : "non"));
+    lines.push_back("Clone : " + std::string(player.isClone() ? "oui" : "non"));
 
     if (player.hasWorldGazePenalty())
     {
-        std::cout << "Regard du monde : actif" << std::endl;
-        std::cout << "Tentatives de rupture Léthal : " << player.getLethalCheatAttemptCount() << std::endl;
+        lines.push_back("Regard du monde : actif");
+        lines.push_back("Tentatives de rupture Léthal : " + std::to_string(player.getLethalCheatAttemptCount()));
     }
     else if (player.getLethalCheatAttemptCount() > 0)
     {
-        std::cout << "Trace interdite : ancienne tentative de cheat Léthal détectée" << std::endl;
-        std::cout << "Tentatives : " << player.getLethalCheatAttemptCount() << std::endl;
+        lines.push_back("Trace interdite : ancienne tentative de cheat Léthal détectée");
+        lines.push_back("Tentatives : " + std::to_string(player.getLethalCheatAttemptCount()));
     }
 
     if (player.hasZelefCorrosionPresent())
     {
-        std::cout << "Corrosion présente : " << player.getZelefMaxHpStolen() << " PV max retenus" << std::endl;
+        lines.push_back("Corrosion présente : " + std::to_string(player.getZelefMaxHpStolen()) + " PV max retenus");
     }
 
     if (player.hasGrinkaBossTheftPresent())
     {
-        std::cout << "Volé par un boss : Grinka détient encore quelque chose." << std::endl;
+        lines.push_back("Volé par un boss : Grinka détient encore quelque chose.");
     }
 
     if (player.hasBossEquipmentSeal())
     {
-        std::cout << "Équipement scellé : " << player.getBossEquipmentSealReason() << std::endl;
+        lines.push_back("Équipement scellé : " + player.getBossEquipmentSealReason());
     }
 
-    std::cout << std::endl;
+    if (lines.size() == 2)
+    {
+        lines.push_back("Aucune conséquence spéciale majeure visible pour le moment.");
+    }
+
+    showStatisticsScreen("ÉTATS SPÉCIAUX", "statistics.states.detail", lines);
 }

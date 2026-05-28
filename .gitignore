@@ -45,6 +45,7 @@ import_accounts/**
 # =========================
 *.log
 *.tmp
+gui_debug/
 
 # =========================
 # Linux
@@ -86,3 +87,7 @@ desktop.ini
 # Release packaging local
 # =========================
 release_packages/
+
+# Python temporary files
+__pycache__/
+*.pyc

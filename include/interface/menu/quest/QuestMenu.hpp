@@ -26,6 +26,9 @@ private:
     // EN: completeQuestAtClient declares or implements a focused behavior used by this module.
     // FR: completeQuestAtClient déclare ou implémente un comportement précis utilisé par ce module.
     static void completeQuestAtClient(Player& player, const std::string& clientName);
+    // EN: openReadyQuestTurnInMenu opens a focused hand-in menu for ready quests.
+    // FR: openReadyQuestTurnInMenu ouvre un menu ciblé pour rendre les quêtes prêtes.
+    static void openReadyQuestTurnInMenu(Player& player);
     // EN: openExplorationMenu declares or implements a focused behavior used by this module.
     // FR: openExplorationMenu déclare ou implémente un comportement précis utilisé par ce module.
     static void openExplorationMenu(Player& player, DifficultyMode difficulty);

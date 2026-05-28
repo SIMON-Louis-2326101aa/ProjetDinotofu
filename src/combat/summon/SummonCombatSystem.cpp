@@ -10,9 +10,14 @@
 #include "combat/summon/SummonRules.hpp"
 #include "combat/action/SpecialCombatEffects.hpp"
 #include "core/Console.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 #include <iostream>
 #include <map>
+#include <string>
+#include <vector>
 
 
 namespace
@@ -21,6 +26,43 @@ namespace
     {
         static std::map<std::string, int> pools;
         return pools;
+    }
+
+    void showSummonNotice(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines,
+        bool waitAndClear = true
+    )
+    {
+        MessageScreen::show(title, screenId, lines, waitAndClear);
+    }
+
+    void showSummonActionResult(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines
+    )
+    {
+        showSummonNotice(title, screenId, lines, false);
+    }
+
+    std::string hpLine(const Entity& entity, int hpBefore)
+    {
+        return "PV " + entity.getName() + " : "
+            + std::to_string(hpBefore)
+            + " -> "
+            + std::to_string(entity.getHp())
+            + "/"
+            + std::to_string(entity.getMaxHp())
+            + ".";
+    }
+
+    std::string summonDurationText(const Summon& summon)
+    {
+        return "Durée : " + std::to_string(summon.getDurationTurns())
+            + " tour(s) | maintien : " + std::to_string(summon.getMaintenanceCost())
+            + " | slots : " + std::to_string(summon.getSlotCost());
     }
 
     // EN: calculateMaxSummonLink declares or implements a focused behavior used by this module.
@@ -112,11 +154,14 @@ namespace
             return true;
         }
 
-        std::cout << summon.getName()
-                  << " vacille : "
-                  << summon.getOwnerName()
-                  << " n'a plus assez de lien d'invocation pour la maintenir."
-                  << std::endl;
+        showSummonNotice(
+            "LIEN D'INVOCATION FAIBLE",
+            "combat.summon.link.too_low",
+            {
+                summon.getName() + " vacille.",
+                summon.getOwnerName() + " n'a plus assez de lien d'invocation pour la maintenir."
+            }
+        );
         summon.decreaseDuration();
         return false;
     }
@@ -190,37 +235,17 @@ void SummonCombatSystem::displaySummonArrival(
     }
 
     int maxSlots = SummonRules::getMaxSummonSlots(owner.getName(), owner.getType());
-
-    std::cout << owner.getName()
-              << " n'entre pas vraiment seul dans le combat."
-              << std::endl;
-    std::cout << "Slots d'invocation utilisés : "
-              << calculateUsedSlots(summons)
-              << "/"
-              << maxSlots
-              << std::endl;
-    std::cout << "Lien d'invocation disponible : "
-              << getSummonLinkRemaining(owner.getName())
-              << " point(s) pour ce combat."
-              << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back(owner.getName() + " n'entre pas vraiment seul dans le combat.");
+    lines.push_back("Slots d'invocation utilisés : " + std::to_string(calculateUsedSlots(summons)) + "/" + std::to_string(maxSlots) + ".");
+    lines.push_back("Lien d'invocation disponible : " + std::to_string(getSummonLinkRemaining(owner.getName())) + " point(s) pour ce combat.");
 
     for (const Summon& summon : summons)
     {
-        std::cout << "- "
-                  << summon.getName()
-                  << " apparaît aux côtés de "
-                  << owner.getName()
-                  << " | slots : "
-                  << summon.getSlotCost()
-                  << " | maintien : "
-                  << summon.getMaintenanceCost()
-                  << " | durée : "
-                  << summon.getDurationTurns()
-                  << " tour(s)."
-                  << std::endl;
+        lines.push_back("- " + summon.getName() + " apparaît aux côtés de " + owner.getName() + " | " + summonDurationText(summon) + ".");
     }
 
-    std::cout << std::endl;
+    showSummonNotice("INVOCATIONS ENTRANTES", "combat.summon.arrival", lines);
 }
 
 
@@ -234,38 +259,39 @@ SummonControlMode SummonCombatSystem::askPlayerSummonControlMode(
         return SummonControlMode::Automatic;
     }
 
-    std::cout << "Comment veux-tu gérer les invocations de "
-              << owner.getName()
-              << " ?"
-              << std::endl;
-    std::cout << std::endl;
-    std::cout << "1 : Attaque automatique" << std::endl;
-    std::cout << "    Les invocations attaquent seules après ton tour." << std::endl;
-    std::cout << std::endl;
-    std::cout << "2 : Contrôle manuel" << std::endl;
-    std::cout << "    Tu joues aussi tes invocations quand ton tour est terminé." << std::endl;
-    std::cout << std::endl;
-    std::cout << "> ";
+    MenuScreen screen("CONTRÔLE DES INVOCATIONS", "combat.summon.control_mode");
+    screen.addLine("Invocateur : " + owner.getName());
+    screen.addLine("Invocations actives : " + std::to_string(summons.size()));
+    screen.addOption(1, "Attaque automatique", "Les invocations attaquent seules après ton tour.", true, "combat.summon.mode.automatic");
+    screen.addOption(2, "Contrôle manuel", "Tu joues aussi tes invocations quand ton tour est terminé.", true, "combat.summon.mode.manual");
 
-    int choice = Console::askNumberBetween(
-        1,
-        2,
-        "Veuillez entrer 1 pour automatique ou 2 pour manuel."
+    int choice = TerminalInterface::askMenuChoiceFromOptions(
+        screen,
+        "Choisis 1 pour automatique ou 2 pour manuel."
     );
-
-    std::cout << std::endl;
+    Console::clear();
 
     if (choice == 2)
     {
-        std::cout << "Contrôle manuel activé pour tes invocations." << std::endl;
-        std::cout << "Elles suivront tes ordres tant que le lien d'invocation tient." << std::endl;
-        std::cout << std::endl;
+        showSummonNotice(
+            "CONTRÔLE MANUEL",
+            "combat.summon.control_mode.manual",
+            {
+                "Contrôle manuel activé pour tes invocations.",
+                "Elles suivront tes ordres tant que le lien d'invocation tient."
+            }
+        );
         return SummonControlMode::Manual;
     }
 
-    std::cout << "Tes invocations choisissent leurs cibles selon leur instinct." << std::endl;
-    std::cout << "Elles agiront seules après ton tour." << std::endl;
-    std::cout << std::endl;
+    showSummonNotice(
+        "CONTRÔLE AUTOMATIQUE",
+        "combat.summon.control_mode.automatic",
+        {
+            "Tes invocations choisissent leurs cibles selon leur instinct.",
+            "Elles agiront seules après ton tour."
+        }
+    );
 
     return SummonControlMode::Automatic;
 }
@@ -276,6 +302,18 @@ void SummonCombatSystem::playSummonTurnsAgainstEntity(
     Random& random
 )
 {
+    if (hasActiveSummons(summons))
+    {
+        showSummonActionResult(
+            "TOUR DES INVOCATIONS",
+            "combat.summon.auto.entity.start",
+            {
+                "Mode : automatique.",
+                "Cible principale : " + target.getName() + "."
+            }
+        );
+    }
+
     for (Summon& summon : summons)
     {
         if (target.isDead())
@@ -313,6 +351,18 @@ void SummonCombatSystem::playSummonTurnsAgainstWave(
     Random& random
 )
 {
+    if (hasActiveSummons(summons))
+    {
+        showSummonActionResult(
+            "TOUR DES INVOCATIONS",
+            "combat.summon.auto.wave.start",
+            {
+                "Mode : automatique.",
+                "Les invocations choisissent une cible active dans la vague."
+            }
+        );
+    }
+
     for (Summon& summon : summons)
     {
         if (!wave.hasEnemiesLeft())
@@ -372,7 +422,14 @@ void SummonCombatSystem::playPlayerSummonTurnsAgainstEntity(
         return;
     }
 
-    std::cout << "========== TOUR DES INVOCATIONS ==========" << std::endl;
+    showSummonActionResult(
+        "TOUR DES INVOCATIONS",
+        "combat.summon.manual.entity.start",
+        {
+            "Mode : contrôle manuel.",
+            "Chaque invocation encore liée peut recevoir un ordre."
+        }
+    );
 
     for (Summon& summon : summons)
     {
@@ -394,8 +451,11 @@ void SummonCombatSystem::playPlayerSummonTurnsAgainstEntity(
         playManualSummonTurnAgainstEntity(summon, target, random);
     }
 
-    std::cout << "==========================================" << std::endl;
-    std::cout << std::endl;
+    showSummonActionResult(
+        "FIN DU TOUR DES INVOCATIONS",
+        "combat.summon.manual.entity.end",
+        {"Les ordres manuels de ce tour sont terminés."}
+    );
 
     removeInactiveSummons(summons);
 }
@@ -413,7 +473,14 @@ void SummonCombatSystem::playPlayerSummonTurnsAgainstWave(
         return;
     }
 
-    std::cout << "========== TOUR DES INVOCATIONS ==========" << std::endl;
+    showSummonActionResult(
+        "TOUR DES INVOCATIONS",
+        "combat.summon.manual.wave.start",
+        {
+            "Mode : contrôle manuel.",
+            "Chaque invocation peut choisir une cible active dans la vague."
+        }
+    );
 
     for (Summon& summon : summons)
     {
@@ -436,8 +503,11 @@ void SummonCombatSystem::playPlayerSummonTurnsAgainstWave(
         wave.removeDeadAndReplace();
     }
 
-    std::cout << "==========================================" << std::endl;
-    std::cout << std::endl;
+    showSummonActionResult(
+        "FIN DU TOUR DES INVOCATIONS",
+        "combat.summon.manual.wave.end",
+        {"Les ordres manuels contre la vague sont terminés."}
+    );
 
     removeInactiveSummons(summons);
 }
@@ -448,51 +518,39 @@ void SummonCombatSystem::playManualSummonTurnAgainstEntity(
     Random& random
 )
 {
-    std::cout << summon.getName()
-              << " attend ton ordre."
-              << " Durée restante : "
-              << summon.getDurationTurns()
-              << " tour(s)."
-              << std::endl;
-    std::cout << "Lien restant pour "
-              << summon.getOwnerName()
-              << " : "
-              << getSummonLinkRemaining(summon.getOwnerName())
-              << " point(s)."
-              << std::endl;
-    std::cout << "0 : Ne rien faire" << std::endl;
-    std::cout << "1 : Attaquer " << target.getName() << std::endl;
-
-    int maxChoice = 1;
+    MenuScreen screen("ORDRE D'INVOCATION", "combat.summon.manual.entity");
+    screen.addLine(summon.getName() + " attend ton ordre.");
+    screen.addLine(summonDurationText(summon));
+    screen.addLine("Lien restant pour " + summon.getOwnerName() + " : " + std::to_string(getSummonLinkRemaining(summon.getOwnerName())) + " point(s).");
+    screen.addBackOption("Ne rien faire", "combat.summon.manual.wait");
+    screen.addOption(1, "Attaquer " + target.getName(), "Attaque normale de l'invocation.", true, "combat.summon.manual.attack");
 
     if (hasSpecialAbility(summon))
     {
-        std::cout << "2 : Technique d'invocation" << std::endl;
-        maxChoice = 2;
+        screen.addOption(2, "Technique d'invocation", "Utiliser l'effet spécial de cette invocation.", true, "combat.summon.manual.special");
     }
 
-    std::cout << "3 : Maintenir le lien (+1 tour, pas d'attaque)" << std::endl;
-    std::cout << "4 : Sacrifier l'invocation" << std::endl;
-    maxChoice = 4;
+    screen.addOption(3, "Maintenir le lien", "+1 tour, pas d'attaque.", true, "combat.summon.manual.maintain");
+    screen.addOption(4, "Sacrifier l'invocation", "Rupture violente du lien contre la cible.", true, "combat.summon.manual.sacrifice");
 
-    std::cout << "> ";
-
-    int choice = Console::askNumberBetween(
-        0,
-        maxChoice,
-        "Veuillez entrer un choix disponible."
+    int choice = TerminalInterface::askMenuChoiceFromOptions(
+        screen,
+        "Choisis une action disponible pour cette invocation."
     );
+    Console::clear();
 
     if (choice == 0)
     {
-        std::cout << summon.getName()
-                  << " reste en retrait, mais le lien d'invocation continue de se consumer."
-                  << std::endl;
+        showSummonNotice(
+            "INVOCATION EN RETRAIT",
+            "combat.summon.manual.wait.result",
+            {summon.getName() + " reste en retrait, mais le lien d'invocation continue de se consumer."}
+        );
         summon.decreaseDuration();
         return;
     }
 
-    if (choice == 2)
+    if (choice == 2 && hasSpecialAbility(summon))
     {
         executeSummonSpecialAbility(summon, target, random);
         return;
@@ -530,37 +588,40 @@ void SummonCombatSystem::playManualSummonTurnAgainstWave(
         return;
     }
 
-    std::cout << summon.getName()
-              << " attend ton ordre."
-              << " Durée restante : "
-              << summon.getDurationTurns()
-              << " tour(s)."
-              << std::endl;
-    std::cout << std::endl;
-
-    wave.displayActiveEnemies();
-
-    std::cout << "0 : Ne rien faire" << std::endl;
-
+    MenuScreen targetScreen("CIBLE DE L'INVOCATION", "combat.summon.manual.wave.target");
+    targetScreen.addLine(summon.getName() + " attend ton ordre.");
+    targetScreen.addLine(summonDurationText(summon));
     if (hasSpecialAbility(summon))
     {
-        std::cout << "Astuce : choisis une cible, puis l'invocation pourra utiliser sa technique spéciale." << std::endl;
+        targetScreen.addLine("Astuce : choisis une cible, puis l'invocation pourra utiliser sa technique spéciale.");
+    }
+    targetScreen.addBackOption("Ne rien faire", "combat.summon.manual.wave.wait");
+
+    for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+    {
+        Monster& monster = wave.getActiveEnemy(i);
+        targetScreen.addOption(
+            i + 1,
+            monster.getName(),
+            std::to_string(monster.getHp()) + "/" + std::to_string(monster.getMaxHp()) + " PV",
+            true,
+            "combat.summon.manual.wave.target." + std::to_string(i)
+        );
     }
 
-    std::cout << "Choisis une cible pour l'invocation." << std::endl;
-    std::cout << "> ";
-
-    int choice = Console::askNumberBetween(
-        0,
-        wave.getActiveEnemyCount(),
-        "Veuillez entrer 0 ou le numéro d'une cible active."
+    int choice = TerminalInterface::askMenuChoiceFromOptions(
+        targetScreen,
+        "Choisis 0 ou une cible active."
     );
+    Console::clear();
 
     if (choice == 0)
     {
-        std::cout << summon.getName()
-                  << " reste en retrait, mais le lien d'invocation continue de se consumer."
-                  << std::endl;
+        showSummonNotice(
+            "INVOCATION EN RETRAIT",
+            "combat.summon.manual.wave.wait.result",
+            {summon.getName() + " reste en retrait, mais le lien d'invocation continue de se consumer."}
+        );
         summon.decreaseDuration();
         return;
     }
@@ -569,17 +630,19 @@ void SummonCombatSystem::playManualSummonTurnAgainstWave(
 
     if (hasSpecialAbility(summon))
     {
-        std::cout << "1 : Attaque normale" << std::endl;
-        std::cout << "2 : Technique d'invocation" << std::endl;
-        std::cout << "3 : Maintenir le lien (+1 tour, pas d'attaque)" << std::endl;
-        std::cout << "4 : Sacrifier l'invocation" << std::endl;
-        std::cout << "> ";
+        MenuScreen actionScreen("ACTION DE L'INVOCATION", "combat.summon.manual.wave.action");
+        actionScreen.addLine("Invocation : " + summon.getName());
+        actionScreen.addLine("Cible : " + target.getName() + " | " + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp()) + " PV");
+        actionScreen.addOption(1, "Attaque normale", "Frappe directe de l'invocation.", true, "combat.summon.manual.wave.attack");
+        actionScreen.addOption(2, "Technique d'invocation", "Utilise l'effet spécial disponible.", true, "combat.summon.manual.wave.special");
+        actionScreen.addOption(3, "Maintenir le lien", "+1 tour, pas d'attaque.", true, "combat.summon.manual.wave.maintain");
+        actionScreen.addOption(4, "Sacrifier l'invocation", "Rupture violente du lien contre la cible.", true, "combat.summon.manual.wave.sacrifice");
 
-        int actionChoice = Console::askNumberBetween(
-            1,
-            4,
-            "Veuillez choisir une action disponible."
+        int actionChoice = TerminalInterface::askMenuChoiceFromOptions(
+            actionScreen,
+            "Choisis une action disponible."
         );
+        Console::clear();
 
         if (actionChoice == 2)
         {
@@ -613,26 +676,29 @@ bool SummonCombatSystem::maintainSummonLink(Summon& summon)
 
     if (!spendSummonLink(summon))
     {
-        std::cout << summon.getName()
-                  << " tente de renforcer le lien, mais la réserve d'invocation est vide."
-                  << std::endl;
+        showSummonNotice(
+            "LIEN VIDE",
+            "combat.summon.maintain.failed",
+            {
+                summon.getName() + " tente de renforcer le lien, mais la réserve d'invocation est vide.",
+                "La durée de l'invocation diminue normalement."
+            }
+        );
         summon.decreaseDuration();
         return false;
     }
 
     summon.extendDuration(1);
 
-    std::cout << summon.getName()
-              << " concentre son lien au lieu d'attaquer."
-              << std::endl;
-    std::cout << "Coût de maintien théorique : "
-              << cost
-              << " point(s) de lien consommés."
-              << std::endl;
-    std::cout << "Durée restante : "
-              << summon.getDurationTurns()
-              << " tour(s)."
-              << std::endl;
+    showSummonNotice(
+        "LIEN MAINTENU",
+        "combat.summon.maintain.result",
+        {
+            summon.getName() + " concentre son lien au lieu d'attaquer.",
+            "Coût de maintien théorique : " + std::to_string(cost) + " point(s) de lien consommés.",
+            "Durée restante : " + std::to_string(summon.getDurationTurns()) + " tour(s)."
+        }
+    );
 
     return true;
 }
@@ -645,13 +711,19 @@ void SummonCombatSystem::sacrificeSummonAgainstEntity(
 {
     if (!summon.canBeSacrificed())
     {
-        std::cout << summon.getName()
-                  << " refuse d'être sacrifiée : son lien n'est pas de cette nature."
-                  << std::endl;
+        showSummonNotice(
+            "SACRIFICE REFUSÉ",
+            "combat.summon.sacrifice.refused",
+            {
+                summon.getName() + " refuse d'être sacrifiée : son lien n'est pas de cette nature.",
+                "La durée de l'invocation diminue normalement."
+            }
+        );
         summon.decreaseDuration();
         return;
     }
 
+    int hpBefore = target.getHp();
     int damage = random.between(summon.getMinDamage() + summon.getSlotCost() * 3, summon.getMaxDamage() + summon.getMaintenanceCost() * 6);
 
     if (summon.getName() == "Expérience instable")
@@ -666,40 +738,36 @@ void SummonCombatSystem::sacrificeSummonAgainstEntity(
     target.takeDamage(damage);
     summon.markSacrificed();
 
-    std::cout << summon.getName()
-              << " rompt volontairement son lien et se sacrifie."
-              << std::endl;
-    std::cout << target.getName()
-              << " subit "
-              << damage
-              << " dégâts de rupture d'invocation."
-              << std::endl;
+    showSummonNotice(
+        "SACRIFICE D'INVOCATION",
+        "combat.summon.sacrifice.result",
+        {
+            summon.getName() + " rompt volontairement son lien et se sacrifie.",
+            target.getName() + " subit " + std::to_string(damage) + " dégâts de rupture d'invocation.",
+            "PV cible : " + std::to_string(hpBefore) + " -> " + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp()) + "."
+        }
+    );
 }
 
 // EN: removeInactiveSummons declares or implements a focused behavior used by this module.
 // FR: removeInactiveSummons déclare ou implémente un comportement précis utilisé par ce module.
 void SummonCombatSystem::removeInactiveSummons(std::vector<Summon>& summons)
 {
+    std::vector<std::string> lines;
     int index = 0;
 
     while (index < static_cast<int>(summons.size()))
     {
         if (summons[index].isDead())
         {
-            std::cout << summons[index].getName()
-                      << " disparaît après avoir été détruit."
-                      << std::endl;
-
+            lines.push_back(summons[index].getName() + " disparaît après avoir été détruit.");
             summons.erase(summons.begin() + index);
             continue;
         }
 
         if (summons[index].isExpired())
         {
-            std::cout << summons[index].getName()
-                      << " se dissipe : son lien d'invocation arrive à sa limite."
-                      << std::endl;
-
+            lines.push_back(summons[index].getName() + " se dissipe : son lien d'invocation arrive à sa limite.");
             summons.erase(summons.begin() + index);
             continue;
         }
@@ -707,9 +775,14 @@ void SummonCombatSystem::removeInactiveSummons(std::vector<Summon>& summons)
         ++index;
     }
 
-    if (!summons.empty())
+    if (!lines.empty())
     {
-        std::cout << std::endl;
+        lines.push_back("Invocations encore actives : " + std::to_string(summons.size()) + ".");
+        showSummonActionResult(
+            "LIENS D'INVOCATION",
+            "combat.summon.cleanup",
+            lines
+        );
     }
 }
 
@@ -825,8 +898,7 @@ int SummonCombatSystem::chooseStrategicTargetableSummonIndex(
 // FR: displayTargetableSummons déclare ou implémente un comportement précis utilisé par ce module.
 void SummonCombatSystem::displayTargetableSummons(const std::vector<Summon>& summons)
 {
-    std::cout << "========== INVOCATIONS CIBLABLES ==========" << std::endl;
-
+    MenuScreen screen("INVOCATIONS CIBLABLES", "combat.summon.targetable.list");
     bool hasVisibleSummon = false;
 
     for (int i = 0; i < static_cast<int>(summons.size()); ++i)
@@ -839,30 +911,29 @@ void SummonCombatSystem::displayTargetableSummons(const std::vector<Summon>& sum
         }
 
         hasVisibleSummon = true;
-
-        std::cout << i + 1
-                  << " : "
-                  << summon.getName()
-                  << " | "
-                  << summon.getHp()
-                  << "/"
-                  << summon.getMaxHp()
-                  << " PV | durée : "
-                  << summon.getDurationTurns()
-                  << " tour(s) | slots : "
-                  << summon.getSlotCost()
-                  << " | maintien : "
-                  << summon.getMaintenanceCost()
-                  << std::endl;
+        screen.addOption(
+            i + 1,
+            summon.getName(),
+            std::to_string(summon.getHp()) + "/" + std::to_string(summon.getMaxHp())
+                + " PV | durée " + std::to_string(summon.getDurationTurns())
+                + " tour(s) | slots " + std::to_string(summon.getSlotCost())
+                + " | maintien " + std::to_string(summon.getMaintenanceCost()),
+            true,
+            "combat.summon.targetable." + std::to_string(i)
+        );
     }
 
     if (!hasVisibleSummon)
     {
-        std::cout << "Aucune invocation ciblable." << std::endl;
+        screen.addLine("Aucune invocation ciblable.");
+    }
+    else
+    {
+        screen.addLine("Ces invocations peuvent être visées par les ennemis ou par certains effets.");
     }
 
-    std::cout << "==========================================" << std::endl;
-    std::cout << std::endl;
+    screen.setDisplayOnlyInput("Liste affichée sans saisie obligatoire.");
+    TerminalInterface::renderMenuScreen(screen, false);
 }
 
 void SummonCombatSystem::entityAttacksSummon(
@@ -873,17 +944,20 @@ void SummonCombatSystem::entityAttacksSummon(
 {
     bool dodged = false;
     bool critical = false;
+    int hpBefore = summon.getHp();
 
     int damage = attacker.attack(random, dodged, critical);
 
     if (dodged)
     {
-        std::cout << attacker.getName()
-                  << " attaque "
-                  << summon.getName()
-                  << ", mais l'invocation esquive."
-                  << std::endl;
-        std::cout << std::endl;
+        showSummonActionResult(
+            "ATTAQUE SUR INVOCATION",
+            "combat.summon.enemy_attack.dodged",
+            {
+                attacker.getName() + " vise " + summon.getName() + ".",
+                "Résultat : l'invocation esquive."
+            }
+        );
         return;
     }
 
@@ -904,28 +978,27 @@ void SummonCombatSystem::entityAttacksSummon(
 
     summon.takeDamage(damage);
 
-    std::cout << attacker.getName()
-              << " frappe l'invocation "
-              << summon.getName()
-              << " et inflige "
-              << damage
-              << " dégâts";
-
-    if (critical)
-    {
-        std::cout << " critiques";
-    }
-
-    std::cout << "." << std::endl;
+    std::vector<std::string> lines;
+    lines.push_back(attacker.getName() + " frappe l'invocation " + summon.getName() + ".");
+    lines.push_back(
+        "Dégâts" + std::string(critical ? " critiques" : "") + " : "
+        + std::to_string(damage) + "."
+    );
+    lines.push_back(
+        "PV invocation : " + std::to_string(hpBefore) + " -> "
+        + std::to_string(summon.getHp()) + "/" + std::to_string(summon.getMaxHp()) + "."
+    );
 
     if (summon.isDead())
     {
-        std::cout << summon.getName()
-                  << " se fissure sous le choc. Son lien avec le monde vacille."
-                  << std::endl;
+        lines.push_back(summon.getName() + " se fissure sous le choc. Son lien avec le monde vacille.");
     }
 
-    std::cout << std::endl;
+    showSummonActionResult(
+        "ATTAQUE SUR INVOCATION",
+        "combat.summon.enemy_attack.result",
+        lines
+    );
 }
 
 
@@ -952,27 +1025,33 @@ void SummonCombatSystem::executeSummonAttack(
 )
 {
     bool dodged = false;
+    int hpBefore = target.getHp();
     int damage = rollSummonDamage(summon, random, dodged);
 
     if (dodged)
     {
-        std::cout << summon.getName()
-                  << " attaque "
-                  << target.getName()
-                  << ", mais la cible esquive."
-                  << std::endl;
+        showSummonActionResult(
+            "ATTAQUE D'INVOCATION",
+            "combat.summon.attack.dodged",
+            {
+                summon.getName() + " attaque " + target.getName() + ".",
+                "Résultat : la cible esquive."
+            }
+        );
         return;
     }
 
     target.takeDamage(damage);
 
-    std::cout << summon.getName()
-              << " frappe "
-              << target.getName()
-              << " et inflige "
-              << damage
-              << " dégâts."
-              << std::endl;
+    showSummonActionResult(
+        "ATTAQUE D'INVOCATION",
+        "combat.summon.attack.result",
+        {
+            summon.getName() + " frappe " + target.getName() + ".",
+            "Dégâts infligés : " + std::to_string(damage) + ".",
+            hpLine(target, hpBefore)
+        }
+    );
 }
 
 bool SummonCombatSystem::executeSummonSpecialAbility(
@@ -981,24 +1060,29 @@ bool SummonCombatSystem::executeSummonSpecialAbility(
     Random& random
 )
 {
+    int hpBefore = target.getHp();
+
     if (summon.getName() == "Flamme kitsune")
     {
         int damage = random.between(summon.getMinDamage() + 3, summon.getMaxDamage() + 8);
         target.takeDamage(damage);
         summon.decreaseDuration();
 
-        std::cout << "La Flamme kitsune danse autour de la cible."
-                  << std::endl;
-        std::cout << target.getName()
-                  << " subit "
-                  << damage
-                  << " dégâts brûlants."
-                  << std::endl;
+        showSummonActionResult(
+            "TECHNIQUE D'INVOCATION",
+            "combat.summon.special.kitsune_flame",
+            {
+                "La Flamme kitsune danse autour de la cible.",
+                target.getName() + " subit " + std::to_string(damage) + " dégât(s) brûlants.",
+                hpLine(target, hpBefore)
+            }
+        );
         return true;
     }
 
     if (summon.getName() == "Serviteur osseux")
     {
+        int selfHpBefore = summon.getHp();
         int selfDamage = summon.getMaxHp() / 4;
         int damage = random.between(summon.getMinDamage() + 4, summon.getMaxDamage() + 7);
 
@@ -1011,15 +1095,16 @@ bool SummonCombatSystem::executeSummonSpecialAbility(
         target.takeDamage(damage);
         summon.decreaseDuration();
 
-        std::cout << "Le Serviteur osseux sacrifie une partie de son ossature."
-                  << std::endl;
-        std::cout << target.getName()
-                  << " reçoit "
-                  << damage
-                  << " dégâts. L'invocation perd "
-                  << selfDamage
-                  << " PV."
-                  << std::endl;
+        showSummonActionResult(
+            "TECHNIQUE D'INVOCATION",
+            "combat.summon.special.bone_servant",
+            {
+                "Le Serviteur osseux sacrifie une partie de son ossature.",
+                target.getName() + " reçoit " + std::to_string(damage) + " dégât(s).",
+                "PV invocation : " + std::to_string(selfHpBefore) + " -> " + std::to_string(summon.getHp()) + "/" + std::to_string(summon.getMaxHp()) + ".",
+                hpLine(target, hpBefore)
+            }
+        );
         return true;
     }
 
@@ -1030,71 +1115,84 @@ bool SummonCombatSystem::executeSummonSpecialAbility(
         summon.takeDamage(summon.getMaxHp());
         summon.setDurationTurns(0);
 
-        std::cout << "L'Expérience instable éclate dans un rire impossible."
-                  << std::endl;
-        std::cout << target.getName()
-                  << " subit "
-                  << damage
-                  << " dégâts, mais l'invocation se détruit."
-                  << std::endl;
+        showSummonActionResult(
+            "TECHNIQUE D'INVOCATION",
+            "combat.summon.special.unstable_experiment",
+            {
+                "L'Expérience instable éclate dans un rire impossible.",
+                target.getName() + " subit " + std::to_string(damage) + " dégât(s).",
+                "L'invocation se détruit en rompant son propre lien.",
+                hpLine(target, hpBefore)
+            }
+        );
         return true;
     }
 
     if (summon.getName() == "Bête arcanique")
     {
+        int summonHpBefore = summon.getHp();
         int damage = random.between(summon.getMinDamage() + 2, summon.getMaxDamage() + 5);
         target.takeDamage(damage);
         summon.heal(4);
         summon.decreaseDuration();
 
-        std::cout << "La Bête arcanique mord et se nourrit du mana ambiant."
-                  << std::endl;
-        std::cout << target.getName()
-                  << " subit "
-                  << damage
-                  << " dégâts. L'invocation récupère quelques PV."
-                  << std::endl;
+        showSummonActionResult(
+            "TECHNIQUE D'INVOCATION",
+            "combat.summon.special.arcane_beast",
+            {
+                "La Bête arcanique mord et se nourrit du mana ambiant.",
+                target.getName() + " subit " + std::to_string(damage) + " dégât(s).",
+                "PV invocation : " + std::to_string(summonHpBefore) + " -> " + std::to_string(summon.getHp()) + "/" + std::to_string(summon.getMaxHp()) + ".",
+                hpLine(target, hpBefore)
+            }
+        );
         return true;
     }
 
     if (summon.getName() == "Esprit mineur")
     {
+        int summonHpBefore = summon.getHp();
         int damage = random.between(summon.getMinDamage(), summon.getMaxDamage() + 3);
         target.takeDamage(damage);
         summon.heal(2);
         summon.decreaseDuration();
 
-        std::cout << "L'Esprit mineur pulse doucement avant l'impact."
-                  << std::endl;
-        std::cout << target.getName()
-                  << " subit "
-                  << damage
-                  << " dégâts."
-                  << std::endl;
+        showSummonActionResult(
+            "TECHNIQUE D'INVOCATION",
+            "combat.summon.special.minor_spirit",
+            {
+                "L'Esprit mineur pulse doucement avant l'impact.",
+                target.getName() + " subit " + std::to_string(damage) + " dégât(s).",
+                "PV invocation : " + std::to_string(summonHpBefore) + " -> " + std::to_string(summon.getHp()) + "/" + std::to_string(summon.getMaxHp()) + ".",
+                hpLine(target, hpBefore)
+            }
+        );
         return true;
     }
 
     if (summon.getName() == "Ombre récente")
     {
+        int summonHpBefore = summon.getHp();
         int damage = random.between(summon.getMinDamage() + 5, summon.getMaxDamage() + 11);
         target.takeDamage(damage);
+        std::vector<std::string> lines;
 
         if (random.between(1, 100) <= 35)
         {
             summon.heal(3);
-            std::cout << "L'Ombre récente mord dans une faille et se recompose légèrement." << std::endl;
+            lines.push_back("L'Ombre récente mord dans une faille et se recompose légèrement.");
         }
         else
         {
             summon.decreaseDuration();
-            std::cout << "L'Ombre récente frappe sans bruit, puis son contour vacille." << std::endl;
+            lines.push_back("L'Ombre récente frappe sans bruit, puis son contour vacille.");
         }
 
-        std::cout << target.getName()
-                  << " subit "
-                  << damage
-                  << " dégâts d'ombre."
-                  << std::endl;
+        lines.push_back(target.getName() + " subit " + std::to_string(damage) + " dégât(s) d'ombre.");
+        lines.push_back("PV invocation : " + std::to_string(summonHpBefore) + " -> " + std::to_string(summon.getHp()) + "/" + std::to_string(summon.getMaxHp()) + ".");
+        lines.push_back(hpLine(target, hpBefore));
+
+        showSummonActionResult("TECHNIQUE D'INVOCATION", "combat.summon.special.recent_shadow", lines);
         return true;
     }
 
@@ -1103,34 +1201,43 @@ bool SummonCombatSystem::executeSummonSpecialAbility(
         int sign = random.between(1, 13);
         int damage = random.between(summon.getMinDamage(), summon.getMaxDamage()) + sign;
         target.takeDamage(damage);
+        std::vector<std::string> lines;
 
         if (sign == 13)
         {
             summon.setDurationTurns(summon.getDurationTurns() + 1);
-            std::cout << "Le treizième signe répond : l'éclat tient un tour de plus." << std::endl;
+            lines.push_back("Le treizième signe répond : l'éclat tient un tour de plus.");
         }
         else
         {
             summon.decreaseDuration();
         }
 
-        std::cout << "L'Éclat zodiacal tire le signe "
-                  << sign
-                  << "/13 et inflige "
-                  << damage
-                  << " dégâts."
-                  << std::endl;
+        lines.push_back("Signe tiré : " + std::to_string(sign) + "/13.");
+        lines.push_back(target.getName() + " subit " + std::to_string(damage) + " dégât(s).");
+        lines.push_back(hpLine(target, hpBefore));
+
+        showSummonActionResult("TECHNIQUE D'INVOCATION", "combat.summon.special.zodiac_shard", lines);
         return true;
     }
 
     if (summon.getName() == "Totem gardien")
     {
+        int summonHpBefore = summon.getHp();
         int damage = random.between(summon.getMinDamage(), summon.getMaxDamage() + 2);
         target.takeDamage(damage);
         summon.heal(5);
         summon.decreaseDuration();
-        std::cout << "Le Totem gardien absorbe une partie du choc et pulse vers la cible." << std::endl;
-        std::cout << target.getName() << " subit " << damage << " dégâts. Le totem consolide son ancrage." << std::endl;
+        showSummonActionResult(
+            "TECHNIQUE D'INVOCATION",
+            "combat.summon.special.guardian_totem",
+            {
+                "Le Totem gardien absorbe une partie du choc et pulse vers la cible.",
+                target.getName() + " subit " + std::to_string(damage) + " dégât(s).",
+                "PV invocation : " + std::to_string(summonHpBefore) + " -> " + std::to_string(summon.getHp()) + "/" + std::to_string(summon.getMaxHp()) + ".",
+                hpLine(target, hpBefore)
+            }
+        );
         return true;
     }
 
@@ -1139,8 +1246,15 @@ bool SummonCombatSystem::executeSummonSpecialAbility(
         int damage = random.between(summon.getMinDamage() + 1, summon.getMaxDamage() + 5);
         target.takeDamage(damage);
         summon.decreaseDuration();
-        std::cout << "Le Corbeau familier pique les yeux de la cible et ouvre une fenêtre d'attaque." << std::endl;
-        std::cout << target.getName() << " subit " << damage << " dégâts précis." << std::endl;
+        showSummonActionResult(
+            "TECHNIQUE D'INVOCATION",
+            "combat.summon.special.familiar_raven",
+            {
+                "Le Corbeau familier pique les yeux de la cible et ouvre une fenêtre d'attaque.",
+                target.getName() + " subit " + std::to_string(damage) + " dégât(s) précis.",
+                hpLine(target, hpBefore)
+            }
+        );
         return true;
     }
 
@@ -1149,8 +1263,16 @@ bool SummonCombatSystem::executeSummonSpecialAbility(
         int damage = random.between(summon.getMinDamage(), summon.getMaxDamage() + 8);
         target.takeDamage(damage);
         if (random.between(1, 100) <= 40) summon.extendDuration(1); else summon.decreaseDuration();
-        std::cout << "L'Éclat de miroir renvoie une image brisée de l'attaque à venir." << std::endl;
-        std::cout << target.getName() << " subit " << damage << " dégâts instables." << std::endl;
+        showSummonActionResult(
+            "TECHNIQUE D'INVOCATION",
+            "combat.summon.special.mirror_shard",
+            {
+                "L'Éclat de miroir renvoie une image brisée de l'attaque à venir.",
+                target.getName() + " subit " + std::to_string(damage) + " dégât(s) instables.",
+                "Durée restante : " + std::to_string(summon.getDurationTurns()) + " tour(s).",
+                hpLine(target, hpBefore)
+            }
+        );
         return true;
     }
 

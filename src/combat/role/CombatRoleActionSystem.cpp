@@ -9,11 +9,13 @@
 #include "combat/role/CombatRoleSystem.hpp"
 #include "combat/threat/ThreatSystem.hpp"
 #include "combat/system/DefensePostureSystem.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include <iostream>
 #include <algorithm>
 #include <cctype>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -51,10 +53,14 @@ void CombatRoleActionSystem::tryActivateAutomaticRoleReaction(
         {
             entity.clearHealingThreat();
 
-            std::cout << entity.getName()
-                      << " disparaît assez longtemps du regard ennemi pour réduire sa menace."
-                      << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "MENACE RÉDUITE",
+                "combat.role.assassin.threat_drop",
+                {
+                    entity.getName() + " disparaît assez longtemps du regard ennemi pour réduire sa menace."
+                },
+                false
+            );
         }
     }
 }
@@ -66,20 +72,28 @@ bool CombatRoleActionSystem::activateManualProvocation(
 {
     if (!CombatRoleSystem::isTank(entity))
     {
-        std::cout << entity.getName()
-                  << " tente de provoquer l'ennemi, mais ce rôle ne lui correspond pas vraiment."
-                  << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "PROVOCATION IMPOSSIBLE",
+            "combat.role.provocation.refused",
+            {
+                entity.getName() + " tente de provoquer l'ennemi, mais ce rôle ne lui correspond pas vraiment."
+            }
+        );
         return false;
     }
 
     entity.startProvocation(turns);
 
-    std::cout << entity.getName()
-              << " utilise Provocation. Les ennemis auront beaucoup plus de mal à ignorer sa présence."
-              << std::endl;
-    std::cout << "La posture de défense se verrouille dans le même mouvement." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "PROVOCATION",
+        "combat.role.provocation.active",
+        {
+            entity.getName() + " utilise Provocation.",
+            "Les ennemis auront beaucoup plus de mal à ignorer sa présence.",
+            "La posture de défense se verrouille dans le même mouvement.",
+            "Durée : " + std::to_string(turns) + " tour(s)."
+        }
+    );
 
     DefensePostureSystem::enterDefensePosture(entity);
 
@@ -137,23 +151,20 @@ bool CombatRoleActionSystem::tryActivateAllyProtection(
     protector.startProvocation(2);
     DefensePostureSystem::enterDefensePosture(protector);
 
+    std::vector<std::string> lines;
     if (isHazakProtectingHestia)
     {
-        std::cout << "Hazak n'aime pas jouer les boucliers, mais Hestia ne doit pas voir ça." << std::endl;
-        std::cout << "Il coupe la trajectoire ennemie avant que le coup ne l'atteigne." << std::endl;
+        lines.push_back("Hazak n'aime pas jouer les boucliers, mais Hestia ne doit pas voir ça.");
+        lines.push_back("Il coupe la trajectoire ennemie avant que le coup ne l'atteigne.");
     }
     else
     {
-        std::cout << protector.getName()
-                  << " se place devant "
-                  << endangeredAlly.getName()
-                  << " pour absorber la pression."
-                  << std::endl;
+        lines.push_back(protector.getName() + " se place devant " + endangeredAlly.getName() + " pour absorber la pression.");
     }
 
-    std::cout << "Provocation : le groupe devient plus dur à contourner." << std::endl;
-    std::cout << std::endl;
+    lines.push_back("Provocation : le groupe devient plus dur à contourner.");
 
+    MessageScreen::show("PROTECTION ALLIÉE", "combat.role.ally_protection", lines, false);
     return true;
 }
 
@@ -202,18 +213,21 @@ bool CombatRoleActionSystem::tryActivateSupportRecovery(
     {
         healAmount += random.between(8, 16);
     }
+    const int beforeHp = ally.getHp();
     ally.heal(healAmount);
     support.markHealingThreat();
 
-    std::cout << support.getName()
-              << " improvise un soutien rapide pour "
-              << ally.getName()
-              << ". +"
-              << healAmount
-              << " PV."
-              << std::endl;
-    std::cout << "Menace : même un petit soutien peut attirer l'attention." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "SOUTIEN RAPIDE",
+        "combat.role.support_recovery",
+        {
+            support.getName() + " improvise un soutien rapide pour " + ally.getName() + ".",
+            "PV : " + std::to_string(beforeHp) + " -> " + std::to_string(ally.getHp()) + "/" + std::to_string(ally.getMaxHp()),
+            "Soin brut : +" + std::to_string(healAmount) + " PV.",
+            "Menace : même un petit soutien peut attirer l'attention."
+        },
+        false
+    );
 
     return true;
 }
@@ -222,38 +236,36 @@ bool CombatRoleActionSystem::tryActivateSupportRecovery(
 // FR: displayRoleIdentity déclare ou implémente un comportement précis utilisé par ce module.
 void CombatRoleActionSystem::displayRoleIdentity(const Entity& entity)
 {
+    std::vector<std::string> lines;
+
     if (CombatRoleSystem::isTank(entity))
     {
-        std::cout << entity.getName()
-                  << " possède un profil de tank : il peut attirer la pression ennemie."
-                  << std::endl;
+        lines.push_back(entity.getName() + " possède un profil de tank.");
+        lines.push_back("Il peut attirer la pression ennemie.");
     }
     else if (CombatRoleSystem::isHealer(entity))
     {
-        std::cout << entity.getName()
-                  << " possède un profil de soigneur : soigner un allié attirera l'attention ennemie."
-                  << std::endl;
+        lines.push_back(entity.getName() + " possède un profil de soigneur.");
+        lines.push_back("Soigner un allié attirera l'attention ennemie.");
         if (nameIs(entity, "Hestia"))
         {
-            std::cout << "Particularité : Hestia soigne/protège plus fort que ses stats ne le laissent croire." << std::endl;
+            lines.push_back("Particularité : Hestia soigne/protège plus fort que ses stats ne le laissent croire.");
         }
     }
     else if (CombatRoleSystem::isSummoner(entity))
     {
-        std::cout << entity.getName()
-                  << " possède un profil d'invocateur : le duel peut devenir un combat de groupe."
-                  << std::endl;
+        lines.push_back(entity.getName() + " possède un profil d'invocateur.");
+        lines.push_back("Le duel peut devenir un combat de groupe.");
     }
     else if (CombatRoleSystem::isAssassin(entity))
     {
-        std::cout << entity.getName()
-                  << " possède un profil d'assassin : menace plus discrète, mais coups dangereux."
-                  << std::endl;
+        lines.push_back(entity.getName() + " possède un profil d'assassin.");
+        lines.push_back("Menace plus discrète, mais coups dangereux.");
     }
     else
     {
         return;
     }
 
-    std::cout << std::endl;
+    MessageScreen::show("PROFIL DE RÔLE", "combat.role.identity", lines, false);
 }

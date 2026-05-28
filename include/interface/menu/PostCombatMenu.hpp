@@ -12,9 +12,9 @@
 class PostCombatMenu
 {
 public:
-    static MenuScreen buildScreen(const Player& player);
-    static void display(const Player& player);
-    static int getMaxChoice(const Player& player);
+    static MenuScreen buildScreen(const Player& player, bool hasLastCombatRecap = false);
+    static void display(const Player& player, bool hasLastCombatRecap = false);
+    static int getMaxChoice(const Player& player, bool hasLastCombatRecap = false);
 };
 
 #endif

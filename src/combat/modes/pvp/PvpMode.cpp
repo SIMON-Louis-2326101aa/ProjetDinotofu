@@ -145,6 +145,86 @@ namespace
         );
     }
 
+
+    MenuOptionItemData makePvpCreationItemData(
+        const std::string& kind,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = ""
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = kind;
+        itemData.section = "Création J2";
+        itemData.actionType = "select";
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.important = false;
+        return itemData;
+    }
+
+    MenuScreen buildPvpClassCategoryScreen(const std::string& playerName)
+    {
+        MenuScreen screen("FAMILLE DE CLASSE J2", "pvp.local.j2.class_category");
+        screen.addLine(playerName + " doit choisir une famille de classe.");
+        screen.addLine("Les numéros restent visibles pour garder le lien avec le terminal.");
+
+        for (int choice = 1; choice <= ClassCatalog::getClassCategoryCount(); ++choice)
+        {
+            const std::string categoryName = ClassCatalog::getClassCategoryNameByChoice(choice);
+            const int classCount = ClassCatalog::getPlayableClassCountByCategoryChoice(choice);
+            screen.addOption(
+                choice,
+                categoryName,
+                std::to_string(classCount) + " classe(s) disponibles.",
+                true,
+                "pvp.local.j2.class_category." + std::to_string(choice),
+                makePvpCreationItemData("class_category", categoryName, std::to_string(classCount) + " classe(s) disponibles.")
+            );
+        }
+
+        return screen;
+    }
+
+    MenuScreen buildPvpClassChoiceScreen(int categoryChoice)
+    {
+        const std::string categoryName = ClassCatalog::getClassCategoryNameByChoice(categoryChoice);
+        MenuScreen screen("CLASSE J2", "pvp.local.j2.class_choice");
+        screen.addLine("Famille sélectionnée : " + categoryName + ".");
+        screen.addLine("Choisis la classe qui portera le duel.");
+
+        const std::vector<ClassOptionInfo> classes = ClassCatalog::getClassOptionsByCategoryChoice(categoryChoice);
+        for (int index = 0; index < static_cast<int>(classes.size()); ++index)
+        {
+            const ClassOptionInfo& option = classes[index];
+            MenuOptionItemData itemData = makePvpCreationItemData(
+                "class",
+                option.name,
+                option.role,
+                "PV " + std::to_string(option.maxHp)
+                    + " · Dégâts " + std::to_string(option.minDamage) + "-" + std::to_string(option.maxDamage)
+                    + " · Crit " + std::to_string(option.criticalDamage)
+            );
+            itemData.progress = option.categoryName;
+            itemData.quantity = "Soin x" + std::to_string(option.healingPotionCount);
+            itemData.reward = "Dégâts x" + std::to_string(option.damagePotionCount);
+
+            screen.addOption(
+                index + 1,
+                option.name,
+                option.role + " | PV " + std::to_string(option.maxHp)
+                    + " | Dégâts " + std::to_string(option.minDamage) + "-" + std::to_string(option.maxDamage),
+                true,
+                "pvp.local.j2.class_choice." + std::to_string(index + 1),
+                itemData
+            );
+        }
+
+        return screen;
+    }
+
     // EN: askDifficultyForSecondPlayer declares or implements a focused behavior used by this module.
     // FR: askDifficultyForSecondPlayer déclare ou implémente un comportement précis utilisé par ce module.
     DifficultyMode askDifficultyForSecondPlayer()
@@ -170,56 +250,37 @@ namespace
     // FR: createManualPlayer déclare ou implémente un comportement précis utilisé par ce module.
     Player createManualPlayer(const std::string& playerLabel, DifficultyMode difficulty)
     {
-        std::cout << playerLabel << ", quel est ton nom ?" << std::endl;
-        std::cout << "> ";
-
-        std::string playerName;
-        std::getline(std::cin >> std::ws, playerName);
-
-        while (playerName.empty())
-        {
-            std::cout << "Entre un vrai nom." << std::endl;
-            std::cout << "> ";
-            std::getline(std::cin >> std::ws, playerName);
-        }
-
-        Console::clear();
-
-        std::cout << "Très bien, " << playerName << "." << std::endl;
-        std::cout << "Choisis d'abord ta famille de classe." << std::endl;
-        std::cout << std::endl;
-
-        ClassCatalog::displayClassCategories();
-
-        std::cout << std::endl;
-        std::cout << "> ";
-
-        int categoryChoice = Console::askNumberBetween(
+        std::string playerName = MessageScreen::askText(
+            "NOM DU JOUEUR 2",
+            "pvp.local.j2.manual_name",
+            {
+                playerLabel + ", quel est ton nom ?",
+                "Ce personnage peut rester éphémère selon le chemin choisi."
+            },
+            "Nom du joueur 2",
+            "Nom affiché pendant le duel local.",
+            false,
             1,
-            ClassCatalog::getClassCategoryCount(),
-            "Veuillez entrer un chiffre correspondant à une famille affichée."
+            32
         );
 
         Console::clear();
 
-        std::cout << "Famille sélectionnée : "
-                  << ClassCatalog::getClassCategoryNameByChoice(categoryChoice)
-                  << "."
-                  << std::endl;
-        std::cout << "Choisis maintenant ta classe." << std::endl;
-        std::cout << std::endl;
+        int categoryChoice = TerminalInterface::askMenuChoice(
+            buildPvpClassCategoryScreen(playerName),
+            1,
+            ClassCatalog::getClassCategoryCount(),
+            "Veuillez choisir une famille affichée."
+        );
 
-        ClassCatalog::displayClassesByCategoryChoice(categoryChoice);
+        Console::clear();
 
         int maxClassChoice = ClassCatalog::getPlayableClassCountByCategoryChoice(categoryChoice);
-
-        std::cout << "Veuillez entrer uniquement le chiffre correspondant." << std::endl;
-        std::cout << "> ";
-
-        int classChoice = Console::askNumberBetween(
+        int classChoice = TerminalInterface::askMenuChoice(
+            buildPvpClassChoiceScreen(categoryChoice),
             1,
             maxClassChoice,
-            "Veuillez entrer un chiffre correspondant à une classe affichée."
+            "Veuillez choisir une classe affichée."
         );
 
         Player player(playerName, ClassCatalog::createClassByCategoryChoice(categoryChoice, classChoice));
@@ -413,7 +474,7 @@ namespace
 
     // EN: stealOneWeapon declares or implements a focused behavior used by this module.
     // FR: stealOneWeapon déclare ou implémente un comportement précis utilisé par ce module.
-    bool stealOneWeapon(Player& winner, Player& loser, Random& random, int chance)
+    bool stealOneWeapon(Player& winner, Player& loser, Random& random, int chance, std::vector<std::string>& lootLines)
     {
         if (random.between(1, 100) > chance)
         {
@@ -436,7 +497,7 @@ namespace
 
             winner.getInventory().addWeapon(weapon);
             loser.getInventory().removeWeapon(i);
-            std::cout << winner.getName() << " récupère l'arme : " << weapon.getName() << "." << std::endl;
+            lootLines.push_back(winner.getName() + " récupère l'arme : " + weapon.getName() + ".");
             return true;
         }
 
@@ -445,7 +506,7 @@ namespace
 
     // EN: stealOneArmor declares or implements a focused behavior used by this module.
     // FR: stealOneArmor déclare ou implémente un comportement précis utilisé par ce module.
-    bool stealOneArmor(Player& winner, Player& loser, Random& random, int chance)
+    bool stealOneArmor(Player& winner, Player& loser, Random& random, int chance, std::vector<std::string>& lootLines)
     {
         if (random.between(1, 100) > chance)
         {
@@ -468,7 +529,7 @@ namespace
 
             winner.getInventory().addArmor(armor);
             loser.getInventory().removeArmor(i);
-            std::cout << winner.getName() << " récupère l'armure : " << armor.getName() << "." << std::endl;
+            lootLines.push_back(winner.getName() + " récupère l'armure : " + armor.getName() + ".");
             return true;
         }
 
@@ -479,7 +540,7 @@ namespace
 
     // EN: stealEquippedWeaponOnLethalDeath declares or implements a focused behavior used by this module.
     // FR: stealEquippedWeaponOnLethalDeath déclare ou implémente un comportement précis utilisé par ce module.
-    bool stealEquippedWeaponOnLethalDeath(Player& winner, Player& loser, Random& random)
+    bool stealEquippedWeaponOnLethalDeath(Player& winner, Player& loser, Random& random, std::vector<std::string>& lootLines)
     {
         int index = loser.getEquippedWeaponIndex();
 
@@ -507,8 +568,7 @@ namespace
 
         if (random.between(1, 100) > chance)
         {
-            std::cout << "L'arme équipée de " << loser.getName()
-                      << " échappe au pillage dans le chaos du duel." << std::endl;
+            lootLines.push_back("L'arme équipée de " + loser.getName() + " échappe au pillage dans le chaos du duel.");
             return false;
         }
 
@@ -516,14 +576,13 @@ namespace
         winner.getInventory().addWeapon(weapon);
         loser.getInventory().removeWeapon(index);
 
-        std::cout << winner.getName() << " récupère l'arme portée par le défunt : "
-                  << weapon.getName() << "." << std::endl;
+        lootLines.push_back(winner.getName() + " récupère l'arme portée par le défunt : " + weapon.getName() + ".");
         return true;
     }
 
     // EN: stealEquippedArmorOnLethalDeath declares or implements a focused behavior used by this module.
     // FR: stealEquippedArmorOnLethalDeath déclare ou implémente un comportement précis utilisé par ce module.
-    bool stealEquippedArmorOnLethalDeath(Player& winner, Player& loser, Random& random)
+    bool stealEquippedArmorOnLethalDeath(Player& winner, Player& loser, Random& random, std::vector<std::string>& lootLines)
     {
         int index = loser.getEquippedArmorIndex();
 
@@ -551,8 +610,7 @@ namespace
 
         if (random.between(1, 100) > chance)
         {
-            std::cout << "L'armure équipée de " << loser.getName()
-                      << " est trop endommagée pour être récupérée proprement." << std::endl;
+            lootLines.push_back("L'armure équipée de " + loser.getName() + " est trop endommagée pour être récupérée proprement.");
             return false;
         }
 
@@ -560,8 +618,7 @@ namespace
         winner.getInventory().addArmor(armor);
         loser.getInventory().removeArmor(index);
 
-        std::cout << winner.getName() << " récupère l'armure portée par le défunt : "
-                  << armor.getName() << "." << std::endl;
+        lootLines.push_back(winner.getName() + " récupère l'armure portée par le défunt : " + armor.getName() + ".");
         return true;
     }
 
@@ -697,7 +754,7 @@ namespace
 
     // EN: stealOneWeaponWithValueCap declares or implements a focused behavior used by this module.
     // FR: stealOneWeaponWithValueCap déclare ou implémente un comportement précis utilisé par ce module.
-    bool stealOneWeaponWithValueCap(Player& winner, Player& loser, Random& random, int chance, int& stolenValue, int valueCap)
+    bool stealOneWeaponWithValueCap(Player& winner, Player& loser, Random& random, int chance, int& stolenValue, int valueCap, std::vector<std::string>& lootLines)
     {
         if (random.between(1, 100) > chance)
         {
@@ -727,8 +784,7 @@ namespace
             winner.getInventory().addWeapon(weapon);
             loser.getInventory().removeWeapon(i);
             stolenValue += value;
-            std::cout << winner.getName() << " récupère l'arme : " << weapon.getName()
-                      << " (valeur estimée " << value << ")." << std::endl;
+            lootLines.push_back(winner.getName() + " récupère l'arme : " + weapon.getName() + " (valeur estimée " + std::to_string(value) + ").");
             return true;
         }
 
@@ -737,7 +793,7 @@ namespace
 
     // EN: stealOneArmorWithValueCap declares or implements a focused behavior used by this module.
     // FR: stealOneArmorWithValueCap déclare ou implémente un comportement précis utilisé par ce module.
-    bool stealOneArmorWithValueCap(Player& winner, Player& loser, Random& random, int chance, int& stolenValue, int valueCap)
+    bool stealOneArmorWithValueCap(Player& winner, Player& loser, Random& random, int chance, int& stolenValue, int valueCap, std::vector<std::string>& lootLines)
     {
         if (random.between(1, 100) > chance)
         {
@@ -767,8 +823,7 @@ namespace
             winner.getInventory().addArmor(armor);
             loser.getInventory().removeArmor(i);
             stolenValue += value;
-            std::cout << winner.getName() << " récupère l'armure : " << armor.getName()
-                      << " (valeur estimée " << value << ")." << std::endl;
+            lootLines.push_back(winner.getName() + " récupère l'armure : " + armor.getName() + " (valeur estimée " + std::to_string(value) + ").");
             return true;
         }
 
@@ -779,8 +834,9 @@ namespace
     // FR: applyDeadlyDuelReward déclare ou implémente un comportement précis utilisé par ce module.
     void applyDeadlyDuelReward(Player& winner, Player& loser, Random& random, bool lethalDuel, int winnerPreFightValue)
     {
-        std::cout << std::endl;
-        std::cout << "========== BUTIN DU DUEL MORTEL ==========" << std::endl;
+        std::vector<std::string> lootLines;
+        lootLines.push_back("Vainqueur : " + winner.getName() + ".");
+        lootLines.push_back("Perdant : " + loser.getName() + ".");
 
         int valueCap = lethalDuel ? 1000000000 : std::max(1, winnerPreFightValue);
         int stolenValue = 0;
@@ -796,17 +852,16 @@ namespace
         {
             winner.getInventory().earnGold(stolenGold);
             stolenValue += stolenGold;
-            std::cout << "Or récupéré : " << stolenGold << "." << std::endl;
+            lootLines.push_back("Or récupéré : " + std::to_string(stolenGold) + ".");
         }
         else
         {
-            std::cout << "Aucun or récupérable." << std::endl;
+            lootLines.push_back("Aucun or récupérable.");
         }
 
         if (!lethalDuel)
         {
-            std::cout << "Limite anti-abus : le perdant ne pourra pas perdre plus que la valeur estimée de son adversaire avant duel ("
-                      << valueCap << " pièces)." << std::endl;
+            lootLines.push_back("Limite anti-abus : le perdant ne pourra pas perdre plus que la valeur estimée de son adversaire avant duel (" + std::to_string(valueCap) + " pièces).");
         }
 
         int stealChance = lethalDuel ? 78 : 35;
@@ -816,42 +871,46 @@ namespace
 
         if (lethalDuel)
         {
-            itemStolen = stealEquippedWeaponOnLethalDeath(winner, loser, random) || itemStolen;
-            itemStolen = stealEquippedArmorOnLethalDeath(winner, loser, random) || itemStolen;
+            itemStolen = stealEquippedWeaponOnLethalDeath(winner, loser, random, lootLines) || itemStolen;
+            itemStolen = stealEquippedArmorOnLethalDeath(winner, loser, random, lootLines) || itemStolen;
         }
 
         for (int i = 0; i < attempts; ++i)
         {
             if (lethalDuel)
             {
-                itemStolen = stealOneWeapon(winner, loser, random, stealChance) || itemStolen;
-                itemStolen = stealOneArmor(winner, loser, random, stealChance) || itemStolen;
+                itemStolen = stealOneWeapon(winner, loser, random, stealChance, lootLines) || itemStolen;
+                itemStolen = stealOneArmor(winner, loser, random, stealChance, lootLines) || itemStolen;
             }
             else
             {
-                itemStolen = stealOneWeaponWithValueCap(winner, loser, random, stealChance, stolenValue, valueCap) || itemStolen;
-                itemStolen = stealOneArmorWithValueCap(winner, loser, random, stealChance, stolenValue, valueCap) || itemStolen;
+                itemStolen = stealOneWeaponWithValueCap(winner, loser, random, stealChance, stolenValue, valueCap, lootLines) || itemStolen;
+                itemStolen = stealOneArmorWithValueCap(winner, loser, random, stealChance, stolenValue, valueCap, lootLines) || itemStolen;
             }
         }
 
         if (!itemStolen)
         {
-            std::cout << "Aucun équipement non lié n'a été récupéré." << std::endl;
+            lootLines.push_back("Aucun équipement non lié n'a été récupéré.");
         }
 
         int xpReward = lethalDuel ? 260 : 70;
         winner.gainExperience(xpReward);
-        std::cout << "Expérience gagnée : " << xpReward << "." << std::endl;
+        lootLines.push_back("Expérience gagnée : " + std::to_string(xpReward) + ".");
 
         if (lethalDuel)
         {
-            std::cout << "Duel Léthal : le perdant est considéré comme mort définitivement." << std::endl;
-            std::cout << "Les objets liés à l'âme ou au corps restent protégés." << std::endl;
-            std::cout << "Les reliques et objets rares ont une forte chance d'être récupérés, mais pas une garantie absolue." << std::endl;
+            lootLines.push_back("Duel Léthal : le perdant est considéré comme mort définitivement.");
+            lootLines.push_back("Les objets liés à l'âme ou au corps restent protégés.");
+            lootLines.push_back("Les reliques et objets rares ont une forte chance d'être récupérés, mais pas une garantie absolue.");
         }
 
-        std::cout << "==========================================" << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            lethalDuel ? "BUTIN DU DUEL LÉTHAL" : "BUTIN DU DUEL MORTEL",
+            lethalDuel ? "pvp.deadly_duel.loot.lethal" : "pvp.deadly_duel.loot.limited",
+            lootLines,
+            false
+        );
     }
 
     bool askDeadlyDuelIfAllowed(
@@ -1125,18 +1184,31 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
         {
             if (SaveManager::movePlayableCharacterToDead(player2Slot.accountName, player2.getName()))
             {
-                std::cout << "J2 est mort en duel Léthal : le personnage rejoint le registre des morts." << std::endl;
+                MessageScreen::show(
+                    "SAUVEGARDE J2",
+                    "pvp.local.player2.save.dead_registry",
+                    {"J2 est mort en duel Léthal : le personnage rejoint le registre des morts."},
+                    false
+                );
             }
             else
             {
-                std::cout << "Attention : le registre des morts refuse d'emporter J2 proprement." << std::endl;
+                MessageScreen::show(
+                    "SAUVEGARDE J2",
+                    "pvp.local.player2.save.dead_registry_failed",
+                    {"Attention : le registre des morts refuse d'emporter J2 proprement."},
+                    false
+                );
             }
         }
         else
         {
-            std::cout << "Sauvegarde J2 mise à jour : " << player2.getName() << "." << std::endl;
+            MessageScreen::show(
+                "SAUVEGARDE J2",
+                "pvp.local.player2.save.updated",
+                {"Sauvegarde J2 mise à jour : " + player2.getName() + "."},
+                false
+            );
         }
-
-        std::cout << std::endl;
     }
 }

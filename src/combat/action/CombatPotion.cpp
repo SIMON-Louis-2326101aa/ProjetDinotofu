@@ -9,6 +9,7 @@
 #include "combat/threat/ThreatSystem.hpp"
 
 #include "core/Console.hpp"
+#include "interface/menu/common/MessageScreen.hpp"
 
 #include "entity/Player.hpp"
 
@@ -16,6 +17,8 @@
 #include "item/consumable/ConsumableType.hpp"
 
 #include <iostream>
+#include <string>
+#include <vector>
 
 bool CombatPotion::executeHealingPotion(
     Entity& entity,
@@ -31,12 +34,15 @@ bool CombatPotion::executeHealingPotion(
 
         if (potionIndex == -1)
         {
-            std::cout << player->getName()
-                      << " fouille son inventaire..."
-                      << std::endl;
-            std::cout << "Mais aucune potion de soin n'est disponible." << std::endl;
-            std::cout << "Il peut encore tenter autre chose." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "POTION DE SOIN INTROUVABLE",
+                "combat.potion.healing.missing.player",
+                {
+                    player->getName() + " fouille son inventaire...",
+                    "Mais aucune potion de soin n'est disponible.",
+                    "Il peut encore tenter autre chose."
+                }
+            );
 
             return false;
         }
@@ -48,29 +54,19 @@ bool CombatPotion::executeHealingPotion(
             player->getInventory().removeConsumable(potionIndex);
         }
 
+        int hpBefore = player->getHp();
         player->heal(potion.getPower());
         ThreatSystem::markSelfHealingAction(*player);
 
-        std::cout << player->getName()
-                  << " utilise : "
-                  << potion.getName()
-                  << "."
-                  << std::endl;
-
-        std::cout << "Ses blessures se referment, et il récupère "
-                  << potion.getPower()
-                  << " PV."
-                  << std::endl;
-
-        std::cout << player->getName()
-                  << " possède maintenant "
-                  << player->getHp()
-                  << "/"
-                  << player->getMaxHp()
-                  << " PV."
-                  << std::endl;
-
-        std::cout << std::endl;
+        MessageScreen::show(
+            "POTION DE SOIN",
+            "combat.potion.healing.result.player",
+            {
+                player->getName() + " utilise : " + potion.getName() + ".",
+                "Soin : +" + std::to_string(player->getHp() - hpBefore) + " PV.",
+                "PV : " + std::to_string(hpBefore) + " -> " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp()) + "."
+            }
+        );
 
         return true;
     }
@@ -79,19 +75,27 @@ bool CombatPotion::executeHealingPotion(
     {
         ThreatSystem::markSelfHealingAction(entity);
 
-        std::cout << entity.getName()
-                  << " utilise une potion de soin."
-                  << std::endl;
-        std::cout << "Sa vitalité revient lentement." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "POTION DE SOIN",
+            "combat.potion.healing.result.entity",
+            {
+                entity.getName() + " utilise une potion de soin.",
+                "Sa vitalité revient lentement.",
+                "PV actuels : " + std::to_string(entity.getHp()) + "/" + std::to_string(entity.getMaxHp()) + "."
+            }
+        );
 
         return true;
     }
 
-    std::cout << entity.getName()
-              << " n'a plus aucune potion de soin."
-              << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "POTION DE SOIN INTROUVABLE",
+        "combat.potion.healing.missing.entity",
+        {
+            entity.getName() + " n'a plus aucune potion de soin.",
+            "L'action est annulée."
+        }
+    );
 
     return false;
 }
@@ -114,12 +118,15 @@ bool CombatPotion::executeDamagePotion(
 
         if (potionIndex == -1)
         {
-            std::cout << player->getName()
-                      << " cherche une potion de rage dans son inventaire..."
-                      << std::endl;
-            std::cout << "Mais aucune potion offensive n'est disponible." << std::endl;
-            std::cout << "Il peut encore tenter autre chose." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "POTION OFFENSIVE INTROUVABLE",
+                "combat.potion.damage.missing.player",
+                {
+                    player->getName() + " cherche une potion de rage dans son inventaire...",
+                    "Mais aucune potion offensive n'est disponible.",
+                    "Il peut encore tenter autre chose."
+                }
+            );
 
             return false;
         }
@@ -133,31 +140,43 @@ bool CombatPotion::executeDamagePotion(
 
         usedBonus = potion.getPower();
 
-        std::cout << player->getName()
-                  << " utilise : "
-                  << potion.getName()
-                  << "."
-                  << std::endl;
+        MessageScreen::show(
+            "POTION OFFENSIVE",
+            "combat.potion.damage.consume.player",
+            {
+                player->getName() + " utilise : " + potion.getName() + ".",
+                "Bonus de puissance : +" + std::to_string(usedBonus) + ".",
+                "L'attaque renforcée va être résolue."
+            },
+            false
+        );
     }
     else
     {
         if (!attacker.consumeDamagePotion())
         {
-            std::cout << attacker.getName()
-                      << " cherche une potion offensive, mais sa rage est déjà épuisée."
-                      << std::endl;
-            std::cout << "Il peut encore tenter autre chose." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "POTION OFFENSIVE ÉPUISÉE",
+                "combat.potion.damage.missing.entity",
+                {
+                    attacker.getName() + " cherche une potion offensive, mais sa rage est déjà épuisée.",
+                    "Il peut encore tenter autre chose."
+                }
+            );
 
             return false;
         }
     }
 
-    std::cout << attacker.getName()
-              << " sent ses forces monter d'un coup."
-              << std::endl;
-    std::cout << "Une rage brutale s'empare de lui..." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "RAGE OFFENSIVE",
+        "combat.potion.damage.charge",
+        {
+            attacker.getName() + " sent ses forces monter d'un coup.",
+            "Une rage brutale s'empare de lui..."
+        },
+        false
+    );
 
     Console::pauseSeconds(1);
 

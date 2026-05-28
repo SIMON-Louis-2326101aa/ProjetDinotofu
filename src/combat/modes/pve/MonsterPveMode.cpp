@@ -19,6 +19,7 @@
 #include "combat/TurnManager.hpp"
 #include "interface/menu/potions/CombatPotionUtils.hpp"
 #include "interface/TerminalInterface.hpp"
+#include "interface/CombatDisplay.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/model/MenuScreen.hpp"
 
@@ -228,6 +229,32 @@ namespace
             );
         }
     }
+
+    void displayWaveCombatSnapshot(
+        const Player& player,
+        const EnemyCombatQueue& wave,
+        const std::vector<Summon>& summons,
+        const std::string& title,
+        const std::string& phase,
+        int turnNumber
+    )
+    {
+        GuiCombatStateSnapshot snapshot = CombatDisplay::buildWaveSnapshot(
+            player,
+            wave,
+            summons,
+            title,
+            phase,
+            turnNumber
+        );
+
+        if (!player.isDead())
+        {
+            snapshot.currentActorName = player.getName();
+        }
+
+        CombatDisplay::displayCombatState(snapshot, false);
+    }
 }
 
 void MonsterPveMode::run(
@@ -323,6 +350,15 @@ void MonsterPveMode::run(
             && wave.hasEnemiesLeft()
             && !escapeSucceeded)
         {
+            displayWaveCombatSnapshot(
+                player,
+                wave,
+                playerSummons,
+                "ÉTAT DU COMBAT",
+                "Tour du joueur",
+                combatTurnCount + 1
+            );
+
             playerTurnFinished = PlayerWaveCombatTurn::play(
                 player,
                 wave,
@@ -338,8 +374,12 @@ void MonsterPveMode::run(
 
             if (!playerTurnFinished && !escapeSucceeded)
             {
-                std::cout << "Ton tour n'est pas encore consommé." << std::endl;
-                std::cout << std::endl;
+                MessageScreen::show(
+                    "ACTION NON CONSOMMÉE",
+                    "combat.pve.turn.not_consumed",
+                    {"Ton tour n'est pas encore consommé."},
+                    false
+                );
             }
         }
 
@@ -367,6 +407,15 @@ void MonsterPveMode::run(
                 wave,
                 playerSummons,
                 random
+            );
+
+            displayWaveCombatSnapshot(
+                player,
+                wave,
+                playerSummons,
+                "ÉTAT DU COMBAT",
+                "Après la riposte ennemie",
+                combatTurnCount
             );
         }
     }
@@ -483,8 +532,12 @@ void MonsterPveMode::run(
         int updated = player.getQuestLog().progressCombatQuestsByFamily(evolvedKilled, "Créature évoluée");
         if (updated > 0)
         {
-            std::cout << "Le bestiaire et les quêtes liées aux créatures évoluées progressent." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "PROGRESSION BESTIAIRE",
+                "combat.pve.evolved_quest.progress",
+                {"Le bestiaire et les quêtes liées aux créatures évoluées progressent."},
+                false
+            );
         }
     }
 }
@@ -507,10 +560,15 @@ bool MonsterPveMode::runExplorationWave(
     }
     wave.initializeFrontLine();
 
-    std::cout << "========== ÉVÉNEMENT D'EXPLORATION ==========" << std::endl;
-    std::cout << title << std::endl;
-    std::cout << "La rencontre se referme autour de toi : il faut tenir la ligne." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "ÉVÉNEMENT D'EXPLORATION",
+        "exploration.wave.intro",
+        {
+            title,
+            "La rencontre se referme autour de toi : il faut tenir la ligne."
+        },
+        false
+    );
 
     WaveCombatSystem::displayFrontLineArrival(wave);
     recordWaveEncountersInBestiary(wave);
@@ -558,6 +616,15 @@ bool MonsterPveMode::runExplorationWave(
             && wave.hasEnemiesLeft()
             && !escapeSucceeded)
         {
+            displayWaveCombatSnapshot(
+                player,
+                wave,
+                playerSummons,
+                "ÉTAT DE L'ÉVÉNEMENT",
+                "Tour du joueur",
+                combatTurnCount + 1
+            );
+
             playerTurnFinished = PlayerWaveCombatTurn::play(
                 player,
                 wave,
@@ -573,8 +640,12 @@ bool MonsterPveMode::runExplorationWave(
 
             if (!playerTurnFinished && !escapeSucceeded)
             {
-                std::cout << "Ton tour n'est pas encore consommé." << std::endl;
-                std::cout << std::endl;
+                MessageScreen::show(
+                    "ACTION NON CONSOMMÉE",
+                    "exploration.wave.turn.not_consumed",
+                    {"Ton tour n'est pas encore consommé."},
+                    false
+                );
             }
         }
 
@@ -599,14 +670,29 @@ bool MonsterPveMode::runExplorationWave(
                 playerSummons,
                 random
             );
+
+            displayWaveCombatSnapshot(
+                player,
+                wave,
+                playerSummons,
+                "ÉTAT DE L'ÉVÉNEMENT",
+                "Après la riposte ennemie",
+                combatTurnCount
+            );
         }
     }
 
     if (escapeSucceeded)
     {
-        std::cout << "Tu as fui l'événement d'exploration." << std::endl;
-        std::cout << "Les récompenses sont limitées à ce qui a réellement été accompli." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "FUITE D'EXPLORATION",
+            "exploration.wave.escape.success",
+            {
+                "Tu as fui l'événement d'exploration.",
+                "Les récompenses sont limitées à ce qui a réellement été accompli."
+            },
+            false
+        );
 
         CombatReward reward = CombatRewardSystem::calculatePlayerEscapeReward(
             wave,
@@ -627,9 +713,15 @@ bool MonsterPveMode::runExplorationWave(
 
     if (player.isDead())
     {
-        std::cout << player.getName() << " tombe pendant l'événement d'exploration." << std::endl;
-        std::cout << "La zone ne faisait pas que menacer : elle a vraiment frappé." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "DÉFAITE D'EXPLORATION",
+            "exploration.wave.defeat",
+            {
+                player.getName() + " tombe pendant l'événement d'exploration.",
+                "La zone ne faisait pas que menacer : elle a vraiment frappé."
+            },
+            false
+        );
 
         player.recordDefeat();
         player.recordDeath();
@@ -653,14 +745,14 @@ bool MonsterPveMode::runExplorationWave(
             DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty)
         );
 
-        std::cout << player.getName()
-                  << " revient à lui avec "
-                  << player.getHp()
-                  << "/"
-                  << player.getMaxHp()
-                  << " PV."
-                  << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "RETOUR À LA VIE",
+            "exploration.wave.revive",
+            {
+                player.getName() + " revient à lui avec " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + " PV."
+            },
+            false
+        );
         return false;
     }
 
@@ -697,8 +789,12 @@ bool MonsterPveMode::runExplorationWave(
         int updated = player.getQuestLog().progressCombatQuestsByFamily(evolvedKilled, "Créature évoluée");
         if (updated > 0)
         {
-            std::cout << "Le bestiaire et les quêtes liées aux créatures évoluées progressent." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "PROGRESSION BESTIAIRE",
+                "exploration.wave.evolved_quest.progress",
+                {"Le bestiaire et les quêtes liées aux créatures évoluées progressent."},
+                false
+            );
         }
     }
 
@@ -813,6 +909,56 @@ namespace
         return total;
     }
 
+    std::vector<Summon> flattenCoopSummons(const std::vector<std::vector<Summon>>& partySummons)
+    {
+        std::vector<Summon> flattened;
+
+        for (const std::vector<Summon>& summons : partySummons)
+        {
+            for (const Summon& summon : summons)
+            {
+                if (!summon.isDead() && !summon.isExpired())
+                {
+                    flattened.push_back(summon);
+                }
+            }
+        }
+
+        return flattened;
+    }
+
+    void displayPartyWaveCombatSnapshot(
+        std::vector<Player*>& party,
+        const EnemyCombatQueue& wave,
+        const std::vector<std::vector<Summon>>& partySummons,
+        const std::string& phase,
+        int round,
+        const std::string& actorName = ""
+    )
+    {
+        std::vector<Entity*> entities;
+        for (Player* player : party)
+        {
+            if (player != nullptr)
+            {
+                entities.push_back(player);
+            }
+        }
+
+        std::vector<Summon> flattenedSummons = flattenCoopSummons(partySummons);
+        GuiCombatStateSnapshot snapshot = CombatDisplay::buildWavePartySnapshot(
+            entities,
+            wave,
+            flattenedSummons,
+            "ÉTAT DU COMBAT COOP",
+            phase,
+            round
+        );
+
+        snapshot.currentActorName = actorName;
+        CombatDisplay::displayCombatState(snapshot, false);
+    }
+
     bool monsterCanUseHealingTools(const Monster& monster)
     {
         std::string profile = monster.getName() + " " + monster.getRaceText() + " " + monster.getType();
@@ -881,11 +1027,16 @@ namespace
                 monster.useHealingPotion(0);
                 ally.heal(healAmount);
                 monster.markHealingThreat();
-                std::cout << monster.getName() << " utilise une potion/technique de soin sur " << ally.getName() << "." << std::endl;
-                std::cout << "Ce n'est pas un réflexe animal : seul un ennemi capable de comprendre le soin peut faire ça." << std::endl;
-                std::cout << ally.getName() << " récupère " << healAmount << " PV et possède maintenant "
-                          << ally.getHp() << "/" << ally.getMaxHp() << " PV." << std::endl;
-                std::cout << std::endl;
+                MessageScreen::show(
+                    "SOIN ENNEMI",
+                    "pve.monster.healing.ally",
+                    {
+                        monster.getName() + " utilise une potion/technique de soin sur " + ally.getName() + ".",
+                        "Ce n'est pas un réflexe animal : seul un ennemi capable de comprendre le soin peut faire ça.",
+                        ally.getName() + " récupère " + std::to_string(healAmount) + " PV et possède maintenant " + std::to_string(ally.getHp()) + "/" + std::to_string(ally.getMaxHp()) + " PV."
+                    },
+                    false
+                );
                 return true;
             }
         }
@@ -901,16 +1052,23 @@ namespace
             return false;
         }
 
-        std::cout << monster.getName() << " utilise une potion de secours sur lui-même." << std::endl;
-        std::cout << "Ce geste ne protège personne d'autre : c'est un pur réflexe de survie." << std::endl;
         monster.useHealingPotion(healAmount);
-        std::cout << std::endl;
+        MessageScreen::show(
+            "SOIN ENNEMI",
+            "pve.monster.healing.self",
+            {
+                monster.getName() + " utilise une potion de secours sur lui-même.",
+                "Ce geste ne protège personne d'autre : c'est un pur réflexe de survie.",
+                "PV actuels : " + std::to_string(monster.getHp()) + "/" + std::to_string(monster.getMaxHp()) + "."
+            },
+            false
+        );
         return true;
     }
 
     void displayCoopPartyStatus(const std::vector<Player*>& party, const std::vector<bool>& wasDowned)
     {
-        std::cout << "========== ÉTAT DU GROUPE ==========" << std::endl;
+        std::vector<std::string> lines;
         for (std::size_t i = 0; i < party.size(); ++i)
         {
             Player* player = party[i];
@@ -919,22 +1077,22 @@ namespace
                 continue;
             }
 
-            std::cout << "J" << (i + 1) << " ["
-                      << CombatGroupBuilder::getFormationSlotLabel(static_cast<int>(i))
-                      << "] - " << player->getName()
-                      << " : " << player->getHp() << "/" << player->getMaxHp() << " PV";
+            std::string line = "J" + std::to_string(i + 1)
+                + " [" + CombatGroupBuilder::getFormationSlotLabel(static_cast<int>(i)) + "] - "
+                + player->getName()
+                + " : " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp()) + " PV";
             if (player->isDead())
             {
-                std::cout << " [au sol]";
+                line += " [au sol]";
             }
             else if (i < wasDowned.size() && wasDowned[i])
             {
-                std::cout << " [a déjà chuté]";
+                line += " [a déjà chuté]";
             }
-            std::cout << std::endl;
+            lines.push_back(line);
         }
-        std::cout << "====================================" << std::endl;
-        std::cout << std::endl;
+
+        MessageScreen::show("ÉTAT DU GROUPE", "pve.coop.party_status", lines, false);
     }
 
     std::vector<bool> extractDownedFlags(const std::vector<CoopContribution>& contributions)
@@ -1001,12 +1159,12 @@ namespace
             return false;
         }
 
-        std::cout << "Action de soutien disponible pour " << healer.getName() << "." << std::endl;
-        std::cout << "0 : Jouer normalement" << std::endl;
-        std::cout << "1 : Utiliser une potion de soin sur un allié" << std::endl;
-        std::cout << "> ";
-
-        int supportChoice = Console::askNumberBetween(0, 1, "Choisis 0 ou 1.");
+        MenuScreen supportScreen("SOUTIEN D'ÉQUIPE", "pve.party.support.choice");
+        supportScreen.addSubtitle("Tour de " + healer.getName());
+        supportScreen.addLine("Un allié peut recevoir une potion de soin avant l'action normale.");
+        supportScreen.addOption(0, "Jouer normalement", "Ne consomme pas de potion.", true, "party.support.skip");
+        supportScreen.addOption(1, "Utiliser une potion de soin sur un allié", "Consomme le tour de soutien de " + healer.getName() + ".", true, "party.support.heal_ally");
+        int supportChoice = TerminalInterface::askMenuChoiceFromOptions(supportScreen, "Choisis une option affichée.");
         Console::clear();
 
         if (supportChoice == 0)
@@ -1015,26 +1173,32 @@ namespace
         }
 
         std::vector<Player*> targets;
-        std::cout << "Choisis l'allié à soigner." << std::endl;
-        std::cout << "0 : Annuler" << std::endl;
+        MenuScreen targetScreen("CHOIX DE L'ALLIÉ", "pve.party.support.target");
+        targetScreen.addSubtitle("Potion de soutien de " + healer.getName());
+        targetScreen.addLine("Choisis l'allié à soigner ou à relever.");
+        targetScreen.addOption(0, "Annuler", "Retour au tour normal.", true, "party.support.target.cancel");
 
         for (Player* ally : party)
         {
             if (ally != nullptr && ally != &healer && (ally->isDead() || ally->getHp() < ally->getMaxHp()))
             {
                 targets.push_back(ally);
-                std::cout << targets.size() << " : " << ally->getName();
+                std::string label = ally->getName();
                 if (ally->isDead())
                 {
-                    std::cout << " [au sol]";
+                    label += " [au sol]";
                 }
-                std::cout << " (" << ally->getHp() << "/" << ally->getMaxHp() << " PV)"
-                          << std::endl;
+                targetScreen.addOption(
+                    static_cast<int>(targets.size()),
+                    label,
+                    std::to_string(ally->getHp()) + "/" + std::to_string(ally->getMaxHp()) + " PV",
+                    true,
+                    "party.support.target"
+                );
             }
         }
 
-        std::cout << "> ";
-        int targetChoice = Console::askNumberBetween(0, static_cast<int>(targets.size()), "Choisis une cible affichée.");
+        int targetChoice = TerminalInterface::askMenuChoiceFromOptions(targetScreen, "Choisis une cible affichée.");
         Console::clear();
 
         if (targetChoice == 0)
@@ -1044,18 +1208,23 @@ namespace
 
         Player* target = targets[targetChoice - 1];
 
-        std::cout << "Choisis la potion à utiliser." << std::endl;
-        std::cout << "0 : Annuler" << std::endl;
+        MenuScreen potionScreen("CHOIX DE LA POTION", "pve.party.support.potion");
+        potionScreen.addSubtitle("Cible : " + target->getName());
+        potionScreen.addLine("Choisis la potion de soin à utiliser.");
+        potionScreen.addOption(0, "Annuler", "Ne consomme rien.", true, "party.support.potion.cancel");
         for (int i = 0; i < static_cast<int>(potionIndices.size()); ++i)
         {
             Consumable potion = healer.getInventory().getConsumable(potionIndices[i]);
-            std::cout << (i + 1) << " : " << potion.getName()
-                      << " | soin " << potion.getPower()
-                      << std::endl;
+            potionScreen.addOption(
+                i + 1,
+                potion.getName(),
+                "Soin : " + std::to_string(potion.getPower()) + " PV",
+                true,
+                "party.support.potion.healing"
+            );
         }
 
-        std::cout << "> ";
-        int potionChoice = Console::askNumberBetween(0, static_cast<int>(potionIndices.size()), "Choisis une potion affichée.");
+        int potionChoice = TerminalInterface::askMenuChoiceFromOptions(potionScreen, "Choisis une potion affichée.");
         Console::clear();
 
         if (potionChoice == 0)
@@ -1066,8 +1235,15 @@ namespace
         int consumableIndex = potionIndices[potionChoice - 1];
         if (!healer.getInventory().hasConsumable(consumableIndex))
         {
-            std::cout << "Cette potion n'est plus disponible." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "POTION INTROUVABLE",
+                "pve.party.support.potion.missing",
+                {
+                    "Cette potion n'est plus disponible.",
+                    "Le soutien est annulé."
+                },
+                false
+            );
             return false;
         }
 
@@ -1091,17 +1267,18 @@ namespace
             healer.getInventory().removeConsumable(consumableIndex);
         }
 
-        std::cout << healer.getName() << " devient soigneur ce tour-ci et utilise "
-                  << potion.getName() << " sur " << target->getName() << "." << std::endl;
+        std::vector<std::string> resultLines;
+        resultLines.push_back(healer.getName() + " devient soigneur ce tour-ci.");
+        resultLines.push_back("Potion utilisée : " + potion.getName() + ".");
+        resultLines.push_back("Cible : " + target->getName() + ".");
         if (revivedTarget)
         {
-            std::cout << target->getName() << " est réveillé par la potion avant de récupérer ses forces." << std::endl;
+            resultLines.push_back(target->getName() + " est réveillé par la potion avant de récupérer ses forces.");
         }
-        std::cout << target->getName() << " récupère " << potion.getPower()
-                  << " PV et possède maintenant " << target->getHp()
-                  << "/" << target->getMaxHp() << " PV." << std::endl;
-        std::cout << "Le tour de " << healer.getName() << " est consommé." << std::endl;
-        std::cout << std::endl;
+        resultLines.push_back(target->getName() + " récupère " + std::to_string(potion.getPower()) + " PV.");
+        resultLines.push_back("PV actuels : " + std::to_string(target->getHp()) + "/" + std::to_string(target->getMaxHp()) + ".");
+        resultLines.push_back("Le tour de " + healer.getName() + " est consommé.");
+        MessageScreen::show("SOUTIEN RÉUSSI", "pve.party.support.result", resultLines, false);
         return true;
     }
 
@@ -1114,57 +1291,55 @@ namespace
 
         int green = 0;
         int red = 0;
-
-        std::cout << "Léthal coop : " << player.getName() << " est au sol." << std::endl;
-        std::cout << "Les dés de survie commencent : 3 pastilles vertes pour revenir, 3 rouges pour disparaître." << std::endl;
-        std::cout << std::endl;
+        std::vector<std::string> lines;
+        lines.push_back("Léthal coop : " + player.getName() + " est au sol.");
+        lines.push_back("Les dés de survie commencent : 3 pastilles vertes pour revenir, 3 rouges pour disparaître.");
 
         while (green < 3 && red < 3)
         {
             int roll = random.between(1, 20);
-            std::cout << "Dé de survie : " << roll << std::endl;
+            lines.push_back("Dé de survie : " + std::to_string(roll) + ".");
 
             if (roll == 20)
             {
                 player.reviveWithHealthPercentage(1);
                 if (player.getHp() <= 0) player.heal(1);
-                std::cout << "20 naturel : " << player.getName() << " se relève immédiatement à 1 PV et pourra rejouer." << std::endl;
-                std::cout << std::endl;
+                lines.push_back("20 naturel : " + player.getName() + " se relève immédiatement à 1 PV et pourra rejouer.");
+                MessageScreen::show("SURVIE LÉTHALE COOP", "pve.coop.lethal_death_save.success_natural", lines, false);
                 return;
             }
 
             if (roll == 1)
             {
                 red += 2;
-                std::cout << "1 naturel : deux pastilles rouges apparaissent d'un coup." << std::endl;
+                lines.push_back("1 naturel : deux pastilles rouges apparaissent d'un coup.");
             }
             else if (roll >= 11)
             {
                 ++green;
-                std::cout << "Pastille verte : " << green << "/3." << std::endl;
+                lines.push_back("Pastille verte : " + std::to_string(green) + "/3.");
             }
             else
             {
                 ++red;
-                std::cout << "Pastille rouge : " << red << "/3." << std::endl;
+                lines.push_back("Pastille rouge : " + std::to_string(red) + "/3.");
             }
 
             if (green >= 3)
             {
                 player.reviveWithHealthPercentage(1);
                 if (player.getHp() <= 0) player.heal(1);
-                std::cout << player.getName() << " revient à 1 PV. La mort n'est pas comptée." << std::endl;
-                std::cout << std::endl;
+                lines.push_back(player.getName() + " revient à 1 PV. La mort n'est pas comptée.");
+                MessageScreen::show("SURVIE LÉTHALE COOP", "pve.coop.lethal_death_save.success", lines, false);
                 return;
             }
         }
 
         player.recordDeath();
-        std::cout << player.getName() << " reçoit trois pastilles rouges : mort définitive en approche, sauf exception divine ou divination." << std::endl;
-        std::cout << std::endl;
+        lines.push_back(player.getName() + " reçoit trois pastilles rouges : mort définitive en approche, sauf exception divine ou divination.");
+        MessageScreen::show("SURVIE LÉTHALE COOP", "pve.coop.lethal_death_save.failure", lines, false);
     }
 }
-
 void MonsterPveMode::runTeam(
     std::vector<Player*>& party,
     Random& random,
@@ -1179,11 +1354,16 @@ void MonsterPveMode::runTeam(
     Player& leader = *party[0];
 
     Console::clear();
-    std::cout << "========== PvE COOP ==========" << std::endl;
-    std::cout << "Joueur principal : " << leader.getName() << std::endl;
-    std::cout << "Les données de voyage, niveau de session, événements et monstres suivent le joueur 1." << std::endl;
-    std::cout << "Les récompenses resteront individuelles selon participation, chance et écart de niveau." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "PvE COOP",
+        "pve.coop.intro",
+        {
+            "Joueur principal : " + leader.getName() + ".",
+            "Les données de voyage, niveau de session, événements et monstres suivent le joueur 1.",
+            "Les récompenses resteront individuelles selon participation, chance et écart de niveau."
+        },
+        false
+    );
     CombatGroupBuilder::displayFormationRules();
 
     WaveCombatSystem::displayWaveIntroduction();
@@ -1215,9 +1395,20 @@ void MonsterPveMode::runTeam(
 
     while (countAlivePlayers(party) > 0 && wave.hasEnemiesLeft() && !escapeSucceeded)
     {
-        std::cout << "========== TOUR DE GROUPE " << round << " ==========" << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "TOUR DE GROUPE " + std::to_string(round),
+            "pve.coop.round." + std::to_string(round),
+            {"Le groupe se replace avant la prochaine séquence d'actions."},
+            false
+        );
         displayCoopPartyStatus(party, extractDownedFlags(contributions));
+        displayPartyWaveCombatSnapshot(
+            party,
+            wave,
+            partySummons,
+            "Début du tour de groupe",
+            round
+        );
 
         for (std::size_t i = 0; i < party.size(); ++i)
         {
@@ -1227,8 +1418,21 @@ void MonsterPveMode::runTeam(
                 continue;
             }
 
-            std::cout << "Tour de " << player->getName() << " [joueur " << (i + 1) << "]." << std::endl;
-            std::cout << std::endl;
+            MessageScreen::show(
+                "TOUR ALLIÉ",
+                "pve.coop.player_turn." + std::to_string(i + 1),
+                {"Tour de " + player->getName() + " [joueur " + std::to_string(i + 1) + "]."},
+                false
+            );
+
+            displayPartyWaveCombatSnapshot(
+                party,
+                wave,
+                partySummons,
+                "Action d'un joueur allié",
+                round,
+                player->getName()
+            );
 
             int healingDoneThisTurn = 0;
             int enemyHpBeforeTurn = sumActiveEnemyHp(wave);
@@ -1297,7 +1501,12 @@ void MonsterPveMode::runTeam(
                 break;
             }
 
-            std::cout << "Tour de " << monster.getName() << " : cible " << target->getName() << "." << std::endl;
+            MessageScreen::show(
+                "TOUR ENNEMI",
+                "pve.coop.enemy_turn." + std::to_string(enemyIndex),
+                {"Tour de " + monster.getName() + " : cible " + target->getName() + "."},
+                false
+            );
             if (!tryMonsterUseRareHealing(monster, wave, enemyIndex, random))
             {
                 int targetHpBefore = target->getHp();
@@ -1324,21 +1533,39 @@ void MonsterPveMode::runTeam(
             ++enemyIndex;
         }
 
+        displayPartyWaveCombatSnapshot(
+            party,
+            wave,
+            partySummons,
+            "Après la riposte ennemie",
+            round
+        );
+
         wave.removeDeadAndReplace();
         ++round;
     }
 
     if (escapeSucceeded)
     {
-        std::cout << "Le groupe a ouvert une sortie." << std::endl;
-        std::cout << "Chaque personnage récupère seulement une part de ce qu'il a réellement aidé à obtenir." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "FUITE DE GROUPE",
+            "pve.coop.escape.success",
+            {
+                "Le groupe a ouvert une sortie.",
+                "Chaque personnage récupère seulement une part de ce qu'il a réellement aidé à obtenir."
+            },
+            false
+        );
     }
 
     if (countAlivePlayers(party) == 0 && wave.hasEnemiesLeft())
     {
-        std::cout << "Tout le groupe est tombé." << std::endl;
-        std::cout << std::endl;
+        MessageScreen::show(
+            "GROUPE AU SOL",
+            "pve.coop.party_defeat",
+            {"Tout le groupe est tombé."},
+            false
+        );
 
         for (Player* player : party)
         {
@@ -1366,7 +1593,12 @@ void MonsterPveMode::runTeam(
         ? CombatRewardSystem::calculatePlayerEscapeReward(wave, difficulty)
         : CombatRewardSystem::calculateWaveReward(wave, difficulty, leader, initialHp[0], round, random);
 
-    std::cout << "========== RÉCOMPENSES INDIVIDUELLES COOP ==========" << std::endl;
+    MessageScreen::show(
+        "RÉCOMPENSES INDIVIDUELLES COOP",
+        "pve.coop.rewards.start",
+        {"Les récompenses sont calculées selon la participation réelle de chaque personnage."},
+        false
+    );
 
     for (std::size_t i = 0; i < party.size(); ++i)
     {
@@ -1382,12 +1614,22 @@ void MonsterPveMode::runTeam(
             player->reviveWithHealthPercentage(
                 DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty)
             );
-            std::cout << player->getName() << " est réveillé à la fin du combat. La mort est comptabilisée." << std::endl;
+            MessageScreen::show(
+                "RÉVEIL DE FIN DE COMBAT",
+                "pve.coop.reward.revive." + std::to_string(i + 1),
+                {player->getName() + " est réveillé à la fin du combat. La mort est comptabilisée."},
+                false
+            );
         }
 
         if (player->isDead())
         {
-            std::cout << player->getName() << " reste au sol : aucune récompense supplémentaire après sa chute." << std::endl;
+            MessageScreen::show(
+                "AUCUNE RÉCOMPENSE",
+                "pve.coop.reward.down." + std::to_string(i + 1),
+                {player->getName() + " reste au sol : aucune récompense supplémentaire après sa chute."},
+                false
+            );
             continue;
         }
 
@@ -1398,15 +1640,27 @@ void MonsterPveMode::runTeam(
             contributions[i]
         );
 
-        std::cout << player->getName() << " :" << std::endl;
+        MessageScreen::show(
+            "RÉCOMPENSE DE " + player->getName(),
+            "pve.coop.reward.player." + std::to_string(i + 1),
+            {"Résumé de participation et récompense individuelle."},
+            false
+        );
         CombatRewardSystem::displayReward(individualReward);
         CombatRewardSystem::giveRewardToPlayer(*player, individualReward);
         player->recordVictory();
         player->recordEnemyKills(wave.getDefeatedEnemyCount());
-        std::cout << "Participation : tours " << contributions[i].turnsTaken
-                  << ", dégâts " << contributions[i].damageDealt
-                  << ", soins " << contributions[i].healingDone
-                  << ", dégâts encaissés " << contributions[i].damageTaken << "." << std::endl;
+        MessageScreen::show(
+            "PARTICIPATION",
+            "pve.coop.reward.participation." + std::to_string(i + 1),
+            {
+                "Tours joués : " + std::to_string(contributions[i].turnsTaken) + ".",
+                "Dégâts infligés : " + std::to_string(contributions[i].damageDealt) + ".",
+                "Soins effectués : " + std::to_string(contributions[i].healingDone) + ".",
+                "Dégâts encaissés : " + std::to_string(contributions[i].damageTaken) + "."
+            },
+            false
+        );
         LootGenerator::giveDefeatedWaveLoot(*player, wave, random, difficulty);
     }
 

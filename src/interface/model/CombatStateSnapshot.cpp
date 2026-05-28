@@ -140,6 +140,74 @@ GuiCombatStateSnapshot CombatStateSnapshot::fromGroups(
     return snapshot;
 }
 
+GuiCombatStateSnapshot CombatStateSnapshot::fromWave(
+    const Entity& playerSideEntity,
+    const EnemyCombatQueue& wave,
+    const std::vector<Summon>& playerSummons,
+    const std::string& title,
+    const std::string& phase,
+    int turnNumber
+)
+{
+    std::vector<Entity*> playerSideEntities;
+    playerSideEntities.push_back(const_cast<Entity*>(&playerSideEntity));
+
+    return fromWaveParty(
+        playerSideEntities,
+        wave,
+        playerSummons,
+        title,
+        phase,
+        turnNumber
+    );
+}
+
+GuiCombatStateSnapshot CombatStateSnapshot::fromWaveParty(
+    const std::vector<Entity*>& playerSideEntities,
+    const EnemyCombatQueue& wave,
+    const std::vector<Summon>& playerSummons,
+    const std::string& title,
+    const std::string& phase,
+    int turnNumber
+)
+{
+    GuiCombatStateSnapshot snapshot;
+    snapshot.screenId = "combat.snapshot.wave";
+    snapshot.title = title;
+    snapshot.phase = phase;
+    snapshot.turnNumber = turnNumber;
+    snapshot.escapeAvailable = true;
+
+    for (const Entity* entity : playerSideEntities)
+    {
+        if (entity == nullptr)
+        {
+            continue;
+        }
+
+        const bool mainFighter = snapshot.playerUnits.empty();
+        addUnitToSnapshot(
+            snapshot,
+            fromEntity(
+                *entity,
+                "Allié",
+                mainFighter ? "Combattant" : "Allié",
+                !entity->isDead()
+            )
+        );
+    }
+
+    for (const Summon& summon : playerSummons)
+    {
+        addUnitToSnapshot(snapshot, fromSummon(summon, "Allié", !summon.isDead() && !summon.isExpired()));
+    }
+
+    addWaveEnemiesToSnapshot(snapshot, wave);
+    addWaveSummaryToSnapshot(snapshot, wave);
+
+    return snapshot;
+}
+
 std::vector<std::string> CombatStateSnapshot::toDisplayLines(const GuiCombatStateSnapshot& snapshot)
 {
     std::vector<std::string> lines;
@@ -152,6 +220,34 @@ std::vector<std::string> CombatStateSnapshot::toDisplayLines(const GuiCombatStat
     if (snapshot.turnNumber > 0)
     {
         lines.push_back("Tour : " + std::to_string(snapshot.turnNumber));
+    }
+
+    if (!snapshot.currentActorName.empty())
+    {
+        lines.push_back("Acteur : " + snapshot.currentActorName);
+    }
+
+    if (!snapshot.currentTargetName.empty())
+    {
+        lines.push_back("Cible : " + snapshot.currentTargetName);
+    }
+
+    if (snapshot.escapeAvailable)
+    {
+        lines.push_back("Fuite : tentative possible si le mode de combat l'autorise.");
+    }
+
+    if (!snapshot.summaryLines.empty())
+    {
+        if (!lines.empty())
+        {
+            lines.push_back("");
+        }
+        lines.push_back("Résumé");
+        for (const std::string& line : snapshot.summaryLines)
+        {
+            lines.push_back("- " + line);
+        }
     }
 
     auto appendGroup = [&lines](const std::string& title, const std::vector<GuiCombatUnitSnapshot>& units)
@@ -307,4 +403,59 @@ void CombatStateSnapshot::addUnitToSnapshot(GuiCombatStateSnapshot& snapshot, co
     }
 
     snapshot.neutralUnits.push_back(unit);
+}
+
+
+void CombatStateSnapshot::addWaveEnemiesToSnapshot(GuiCombatStateSnapshot& snapshot, const EnemyCombatQueue& wave)
+{
+    for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+    {
+        const Monster& monster = wave.getActiveEnemy(i);
+        GuiCombatUnitSnapshot unit = fromEntity(monster, "Adversaire", "Ennemi actif", !monster.isDead());
+        unit.unitId = "wave.enemy.active." + std::to_string(i);
+        unit.targetChoice = i + 1;
+        unit.targetActionId = "combat.target.select." + std::to_string(i);
+
+        if (monster.isElite())
+        {
+            unit.statusLabels.push_back("Élite");
+        }
+
+        if (monster.isEvolved())
+        {
+            unit.statusLabels.push_back("Variation évoluée");
+        }
+
+        addUnitToSnapshot(snapshot, unit);
+    }
+
+    for (int i = 0; i < wave.getWaitingEnemyCount(); ++i)
+    {
+        const Monster& monster = wave.getWaitingEnemy(i);
+        GuiCombatUnitSnapshot unit = fromEntity(monster, "Adversaire", "En attente", false);
+        unit.unitId = "wave.enemy.waiting." + std::to_string(i);
+        unit.statusLabels.push_back("Hors première ligne");
+
+        if (monster.isElite())
+        {
+            unit.statusLabels.push_back("Élite");
+        }
+
+        if (monster.isEvolved())
+        {
+            unit.statusLabels.push_back("Variation évoluée");
+        }
+
+        addUnitToSnapshot(snapshot, unit);
+    }
+}
+
+void CombatStateSnapshot::addWaveSummaryToSnapshot(GuiCombatStateSnapshot& snapshot, const EnemyCombatQueue& wave)
+{
+    snapshot.summaryLines.push_back("Ennemis actifs : " + std::to_string(wave.getActiveEnemyCount()));
+    snapshot.summaryLines.push_back("Ennemis en attente : " + std::to_string(wave.getWaitingEnemyCount()));
+    snapshot.summaryLines.push_back("Ennemis blessés encore en vie : " + std::to_string(wave.getDamagedAliveEnemyCount()));
+    snapshot.summaryLines.push_back("Ennemis vaincus : " + std::to_string(wave.getDefeatedEnemyCount()));
+    snapshot.summaryLines.push_back("Ennemis en fuite : " + std::to_string(wave.getEscapedEnemyCount()));
+    snapshot.summaryLines.push_back("Total restant : " + std::to_string(wave.getTotalRemainingEnemyCount()));
 }

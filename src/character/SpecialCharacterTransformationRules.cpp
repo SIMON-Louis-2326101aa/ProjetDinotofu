@@ -8,6 +8,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include "interface/menu/common/MessageScreen.hpp"
+
 #include <iostream>
 
 namespace
@@ -69,8 +71,14 @@ bool SpecialCharacterTransformationRules::shouldSanctusTransformAfterDamageDealt
 // FR: displaySanctusToSkuroForeshadowing déclare ou implémente un comportement précis utilisé par ce module.
 void SpecialCharacterTransformationRules::displaySanctusToSkuroForeshadowing()
 {
-    std::cout << "Quelque chose se fissure derrière la lumière de Sanctus." << std::endl;
-    std::cout << "Ce n'est pas une deuxième personne. C'est la même histoire, après la première tête coupée." << std::endl;
-    std::cout << "Si la protection se brise trop fort, Skuro pourrait répondre à sa place." << std::endl;
-    std::cout << std::endl;
+    MessageScreen::show(
+        "PRÉSAGE",
+        "character.transformation.sanctus_skuro",
+        {
+            "Quelque chose se fissure derrière la lumière de Sanctus.",
+            "Ce n'est pas une deuxième personne. C'est la même histoire, après la première tête coupée.",
+            "Si la protection se brise trop fort, Skuro pourrait répondre à sa place."
+        },
+        false
+    );
 }

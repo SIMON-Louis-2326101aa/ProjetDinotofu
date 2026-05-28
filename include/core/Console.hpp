@@ -25,6 +25,10 @@ public:
     // FR: askNumberBetween déclare ou implémente un comportement précis utilisé par ce module.
     static int askNumberBetween(int min, int max, const std::string& errorMessage);
 
+    // EN: readLine can receive terminal input or a queued GUI input line.
+    // FR: readLine peut recevoir une saisie terminal ou une ligne envoyée par l'IG.
+    static bool readLine(std::string& line, bool trimLeadingWhitespace = false);
+
     // EN: flushAvailableInputBuffer declares or implements a focused behavior used by this module.
     // FR: flushAvailableInputBuffer déclare ou implémente un comportement précis utilisé par ce module.
     static void flushAvailableInputBuffer();
