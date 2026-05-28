@@ -82,7 +82,7 @@ function Ask-InstallDir {
 
 function Assert-RepoConfigured {
     if ([string]::IsNullOrWhiteSpace($Repo) -or $Repo -eq "TON_COMPTE/TON_REPO" -or $Repo -notmatch "^[^/]+/[^/]+$") {
-        throw "Repo GitHub non configure. Utilise un pack installer genere par la release GitHub, ou relance avec : -Repo \"tonPseudo/tonDepot\""
+        throw "Repo GitHub non configure. Utilise un pack installer genere par la release GitHub, ou relance avec : -Repo 'tonPseudo/tonDepot'"
     }
 }
 

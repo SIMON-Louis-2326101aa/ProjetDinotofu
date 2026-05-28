@@ -251,7 +251,7 @@ jobs:
 
           Fichiers :
           - Dinotofu-Windows-v${RELEASE_VERSION}.zip : jeu Windows pret a lancer.
-          - DinotofuInstaller-Windows-v${RELEASE_VERSION}.zip : installer/launcher Windows a envoyer aux joueurs.
+          - DinotofuInstaller-Windows-v${RELEASE_VERSION}.zip : installer/launcher Windows.
           - Dinotofu-Linux-v${RELEASE_VERSION}.zip : jeu Linux pret a lancer.
           - DinotofuInstaller-Linux-v${RELEASE_VERSION}.zip : installer/launcher Linux.
           - dinotofu_source_${RELEASE_VERSION}_no_exe.zip : source propre sans executable.
