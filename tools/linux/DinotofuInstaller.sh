@@ -216,7 +216,7 @@ Type=Application
 Name=ProjetDinotofu Launcher
 Comment=Lancer Dinotofu avec le launcher principal
 Exec=${INSTALL_DIR}/Lancer-Dinotofu.sh
-Terminal=true
+Terminal=false
 Categories=Game;
 DESKTOP
 cat > "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" <<DESKTOP

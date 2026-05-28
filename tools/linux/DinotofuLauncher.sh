@@ -15,6 +15,7 @@ for arg in "$@"; do
         --no-update) NO_UPDATE="true" ;;
         --terminal|--mode=terminal) LAUNCH_MODE="terminal" ;;
         --gui|--mode=gui) LAUNCH_MODE="gui" ;;
+        --auto|--mode=auto) LAUNCH_MODE="auto" ;;
         --install-dir=*) INSTALL_DIR="${arg#--install-dir=}"; INSTALL_DIR_FROM_ARG="true" ;;
     esac
 done
@@ -60,6 +61,7 @@ if [[ -f "${INSTALL_DIR}/version.txt" ]]; then
     local_version="$(normalize_version "$(cat "${INSTALL_DIR}/version.txt")")"
 fi
 
+UPDATE_APPLIED="false"
 if [[ "$NO_UPDATE" != "true" && -n "$REPO" && "$REPO" != "TON_COMPTE/TON_REPO" && "$REPO" == */* ]] && command -v curl >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
     tmp_json="$(mktemp)"
     if curl -fsSL -H "User-Agent: DinotofuLauncher" "https://api.github.com/repos/${REPO}/releases/latest" -o "$tmp_json"; then
@@ -74,14 +76,39 @@ PY
             echo "Mise a jour disponible : ${local_version} -> ${remote_version}"
             if [[ -x "${INSTALL_DIR}/Installer-Dinotofu.sh" ]]; then
                 "${INSTALL_DIR}/Installer-Dinotofu.sh" --skip-launch --no-prompt
+                UPDATE_APPLIED="true"
             elif [[ -x "${INSTALL_DIR}/DinotofuInstaller.sh" ]]; then
                 "${INSTALL_DIR}/DinotofuInstaller.sh" --skip-launch --no-prompt
+                UPDATE_APPLIED="true"
             fi
         fi
     fi
     rm -f "$tmp_json"
 fi
 
+if [[ "$UPDATE_APPLIED" == "true" && -x "${INSTALL_DIR}/DinotofuLauncher.sh" ]]; then
+    echo "Redemarrage du launcher apres mise a jour."
+    exec "${INSTALL_DIR}/DinotofuLauncher.sh" --no-update "--mode=${LAUNCH_MODE}"
+fi
+
+
+find_free_port() {
+    local preferred="$1"
+    python3 - "$preferred" <<'PYPORT' 2>/dev/null || echo "$preferred"
+import socket
+import sys
+preferred = int(sys.argv[1])
+for port in range(preferred, preferred + 20):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError:
+            continue
+        print(port)
+        raise SystemExit(0)
+print(preferred)
+PYPORT
+}
 
 wait_for_gui_server() {
     local port="$1"
@@ -130,6 +157,9 @@ start_gui_preview() {
     local fallback_gui_file="${INSTALL_DIR}/tools/gui/dinotofu_gui_preview.html"
     local server_script="${INSTALL_DIR}/tools/gui/serve_gui_preview.py"
     local port="${DINOTOFU_GUI_PREVIEW_PORT:-8787}"
+    if command -v python3 >/dev/null 2>&1; then
+        port="$(find_free_port "$port")"
+    fi
 
     if [[ ! -f "$gui_file" && -f "$fallback_gui_file" ]]; then
         gui_file="$fallback_gui_file"

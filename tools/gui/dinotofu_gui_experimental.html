@@ -300,102 +300,222 @@
       main, .dual, .combat-grid { grid-template-columns: 1fr; }
       .controls { position: static; }
     }
+
+
+    /* =========================================================
+       PLAYER-FIRST V2.0.04 LAYOUT
+       ========================================================= */
+    body { min-height: 100vh; }
+    .game-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10, 15, 27, 0.96);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .game-header h1 { margin: 0; }
+    .game-shell {
+      width: min(1720px, calc(100vw - 1.25rem));
+      margin: 0.65rem auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+      gap: 0.75rem;
+      align-items: start;
+    }
+    .output-panel,
+    .player-panel { min-height: calc(100vh - 6.2rem); }
+    .output-panel { padding: 0.75rem; }
+    .player-panel {
+      position: sticky;
+      top: 5.5rem;
+      max-height: calc(100vh - 6.2rem);
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .inner-panel { min-width: 0; }
+    .simple-topbar {
+      position: static;
+      margin-bottom: 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem;
+    }
+    .player-main-box,
+    .guardian-box,
+    .advanced-box {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.035);
+      padding: 0.85rem;
+    }
+    .player-main-box h2 { margin-top: 0; }
+    .manual-answer-grid { margin-top: 0.7rem; }
+    .player-actions {
+      margin-top: 0.75rem;
+      display: grid;
+      gap: 0.65rem;
+    }
+    .player-actions .action-sections { display: grid; gap: 0.65rem; }
+    .player-actions .action-section { margin: 0; }
+    .player-actions .actions { grid-template-columns: 1fr; }
+    .player-actions .action-card {
+      min-height: auto;
+      padding: 0.7rem;
+    }
+    .compact-actions { margin-top: 0.65rem; }
+    .full-width { width: 100%; }
+    .guardian-panel { margin-top: 0.65rem; }
+    .guardian-panel textarea {
+      width: 100%;
+      min-height: 82px;
+      resize: vertical;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #07101e;
+      color: var(--text);
+      padding: 0.7rem;
+      box-sizing: border-box;
+    }
+    .guardian-messages {
+      margin-top: 0.65rem;
+      display: grid;
+      gap: 0.5rem;
+      max-height: 210px;
+      overflow: auto;
+    }
+    .guardian-message {
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      border-radius: 12px;
+      padding: 0.6rem;
+      background: rgba(15, 23, 42, 0.68);
+      white-space: pre-wrap;
+    }
+    .guardian-message.player { border-color: rgba(96, 165, 250, 0.45); }
+    .guardian-message.npc { border-color: rgba(34, 197, 94, 0.34); }
+    .advanced-box summary,
+    .cheat-details summary { cursor: pointer; color: var(--accent); font-weight: 700; }
+    .advanced-box > * + * { margin-top: 0.75rem; }
+    .advanced-box .status { margin-top: 0.55rem; }
+    .cheat-list { max-height: 280px; }
+    .input-contract,
+    .last-input,
+    .queue-list { display: none; }
+    @media (max-width: 1120px) {
+      .game-shell { grid-template-columns: 1fr; }
+      .player-panel {
+        position: static;
+        max-height: none;
+        min-height: auto;
+      }
+      .output-panel { min-height: auto; }
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>ProjetDinotofu — interface graphique experimentale</h1>
-    <p class="subtitle">Version de transition : le terminal reste jouable, cette fenetre affiche les ecrans JSON exportes par le jeu.</p>
+  <header class="game-header">
+    <div>
+      <h1>Dinotofu — interface graphique</h1>
+      <p class="subtitle">Le jeu tourne en arrière-plan. Cette fenêtre doit rester l'écran principal du joueur.</p>
+    </div>
+    <span id="versionBadge" class="badge">Schéma ? · Version ?</span>
   </header>
 
-  <main>
-    <aside class="panel controls">
-      <h2>Connexion au jeu</h2>
-      <p class="hint">
-        Le launcher principal lance normalement le jeu avec <code>DINOTOFU_GUI_DEBUG_DIR</code> puis ouvre cette page.
-        Les boutons peuvent envoyer un choix au jeu quand le launcher lance le mode IG experimental. La page lit maintenant un etat combine via <code>/gui/snapshot</code>, puis garde le terminal comme secours.
-      </p>
-
-      <div class="button-row">
-        <button id="liveButton">Live auto</button>
-        <button id="menuButton" class="secondary">Menu</button>
-        <button id="combatButton" class="secondary">Combat</button>
-        <button id="reloadButton" class="ghost">Recharger</button>
-      </div>
-
-      <label for="jsonFile">Charger un JSON manuellement</label>
-      <input id="jsonFile" type="file" accept="application/json,.json" />
-
-      <div class="section">
-        <h3>Saisie IG</h3>
-        <label for="commandInput">Choix, texte, code triche ou confirmation</label>
-        <div id="inputExpectation" class="input-expectation">Aucun écran chargé pour le moment.</div>
-        <div class="command-grid">
-          <input id="commandInput" type="text" placeholder="Ex : 1, 0, SUPPRIMER, fuckgrindinggimifight..." autocomplete="off" />
-          <button id="sendCommandButton">Envoyer</button>
-        </div>
-        <div class="quick-row">
-          <button id="enterButton" class="secondary">Entrée</button>
-          <button id="backButton" class="secondary">0 Retour</button>
-          <button id="clearCommandButton" class="ghost">Effacer</button>
-          <button id="clearQueueButton" class="ghost">Vider file IG</button>
-        </div>
-        <div class="toggle-grid">
-          <label class="toggle-line"><input id="safeQueueToggle" type="checkbox" checked /> Bloquer les nouveaux envois tant qu'une commande attend encore d'etre lue par le jeu.</label>
-          <label class="toggle-line"><input id="keyboardShortcutToggle" type="checkbox" checked /> Activer les raccourcis clavier 0-9, Entree, PageUp/PageDown quand le champ texte n'est pas selectionne.</label>
-        </div>
-        <div id="suggestedCommands" class="suggestion-row" aria-label="Commandes suggerees"></div>
-        <div id="commandValidation" class="validation-message"></div>
-        <p class="input-note">
-          Ce champ sert aussi pour les noms, les quantites, les mots de confirmation et les codes caches.
-          Si l'envoi echoue, utilise le raccourci Terminal version.
-        </p>
-
-        <div class="manual-panel">
-          <h4>Commandes manuelles / codes debug</h4>
-          <p class="input-note">
-            Visible pour l'instant pendant les tests. Plus tard, cette zone pourra etre cachee ou deplacee dans un acces discret.
-            Attention : certains codes marquent le personnage comme Altere.
-          </p>
-          <input id="cheatSearch" class="cheat-search" type="text" placeholder="Filtrer les codes : boss, gold, dev..." autocomplete="off" />
-          <div id="cheatList" class="cheat-list"><div class="empty">Chargement des codes...</div></div>
-        </div>
-      </div>
-
-      <div class="section">
-        <h3>Etat</h3>
-        <div id="status" class="status">En attente de JSON...</div>
-        <div id="serverStatus" class="status" style="margin-top:0.55rem;">Serveur local : verification...</div>
-        <div id="liveMeta" class="live-meta"></div>
-      </div>
-
-      <div class="section">
-        <h3>Mode de secours</h3>
-        <p class="hint">
-          Si cette page ne s'actualise pas, le raccourci <strong>ProjetDinotofu Launcher Terminal version</strong> lance toujours le jeu terminal seul.
-        </p>
-      </div>
-    </aside>
-
-    <section class="layout">
-      <div class="panel topbar">
+  <main class="game-shell">
+    <section class="panel output-panel">
+      <div class="topbar simple-topbar">
         <div class="tabs">
-          <button id="tabBoth" class="secondary active">Menu + Combat</button>
-          <button id="tabMenu" class="secondary">Menu seul</button>
-          <button id="tabCombat" class="secondary">Combat seul</button>
+          <button id="tabBoth" class="secondary active">Vue complète</button>
+          <button id="tabMenu" class="secondary">Menu</button>
+          <button id="tabCombat" class="secondary">Combat</button>
         </div>
-        <div class="menu-filter" title="Filtre uniquement l'affichage IG, pas la saisie terminale.">
-          <input id="menuFilterInput" type="text" placeholder="Filtrer l'ecran : potion, arme, quete..." autocomplete="off" />
-          <button id="clearMenuFilterButton" class="ghost" type="button">Filtre</button>
+        <div class="menu-filter" title="Filtre uniquement l'affichage IG, pas la saisie envoyée au jeu.">
+          <input id="menuFilterInput" type="text" placeholder="Filtrer l'écran : potion, arme, quête..." autocomplete="off" />
+          <button id="clearMenuFilterButton" class="ghost" type="button">Effacer</button>
         </div>
-        <span id="versionBadge" class="badge">Schema ? · Version ?</span>
       </div>
 
       <div id="renderRoot" class="dual">
-        <section id="menuRoot" class="panel"><div class="empty">Aucun menu charge.</div></section>
-        <section id="combatRoot" class="panel"><div class="empty">Aucun combat charge.</div></section>
+        <section id="menuRoot" class="panel inner-panel"><div class="empty">Aucun menu chargé.</div></section>
+        <section id="combatRoot" class="panel inner-panel"><div class="empty">Aucun combat chargé.</div></section>
       </div>
     </section>
+
+    <aside class="panel player-panel">
+      <section class="player-main-box">
+        <h2>Actions du joueur</h2>
+        <div id="inputExpectation" class="input-expectation">Aucun écran chargé pour le moment.</div>
+
+        <div class="command-grid manual-answer-grid">
+          <input id="commandInput" type="text" placeholder="Écris ta réponse ici..." autocomplete="off" />
+          <button id="sendCommandButton">Envoyer</button>
+        </div>
+
+        <div id="commandValidation" class="validation-message"></div>
+        <div id="suggestedCommands" class="suggestion-row" aria-label="Commandes suggérées"></div>
+        <div id="playerActions" class="player-actions"><div class="empty">Les choix apparaîtront ici.</div></div>
+
+        <div class="quick-row compact-actions">
+          <button id="enterButton" class="secondary">Entrée</button>
+          <button id="backButton" class="secondary">0 Retour</button>
+          <button id="clearCommandButton" class="ghost">Effacer</button>
+        </div>
+      </section>
+
+      <section class="guardian-box">
+        <button id="guardianToggle" class="secondary full-width" type="button">Parler au gardien du monde</button>
+        <div id="guardianPanel" class="guardian-panel" hidden>
+          <p class="hint">Cette zone ne modifie pas encore la partie : le gardien répond automatiquement pour donner une ambiance et garder un espace d'écriture propre.</p>
+          <textarea id="guardianInput" rows="3" placeholder="Écris quelque chose au gardien..."></textarea>
+          <div class="quick-row">
+            <button id="guardianSend" type="button">Envoyer au gardien</button>
+            <button id="guardianClear" class="ghost" type="button">Vider</button>
+          </div>
+          <div id="guardianMessages" class="guardian-messages"><div class="guardian-message npc">Le gardien observe silencieusement le fil du monde.</div></div>
+        </div>
+      </section>
+
+      <details class="advanced-box">
+        <summary>Options avancées / secours</summary>
+        <div class="button-row">
+          <button id="liveButton">Live auto</button>
+          <button id="menuButton" class="secondary">Menu JSON</button>
+          <button id="combatButton" class="secondary">Combat JSON</button>
+          <button id="reloadButton" class="ghost">Recharger</button>
+        </div>
+
+        <label for="jsonFile">Charger un JSON manuellement</label>
+        <input id="jsonFile" type="file" accept="application/json,.json" />
+
+        <div class="quick-row">
+          <button id="clearQueueButton" class="ghost">Vider file IG</button>
+        </div>
+
+        <div class="toggle-grid">
+          <label class="toggle-line"><input id="safeQueueToggle" type="checkbox" checked /> Bloquer les doubles envois tant qu'une commande attend encore.</label>
+          <label class="toggle-line"><input id="keyboardShortcutToggle" type="checkbox" checked /> Raccourcis clavier 0-9, Entrée, PageUp/PageDown.</label>
+        </div>
+
+        <details class="cheat-details">
+          <summary>Codes cachés / debug</summary>
+          <p class="input-note">Certains codes marquent définitivement le personnage comme Altéré.</p>
+          <input id="cheatSearch" class="cheat-search" type="text" placeholder="Filtrer les codes : boss, gold, dev..." autocomplete="off" />
+          <div id="cheatList" class="cheat-list"><div class="empty">Chargement des codes...</div></div>
+        </details>
+
+        <div id="status" class="status">En attente de JSON...</div>
+        <div id="serverStatus" class="status">Serveur local : vérification...</div>
+        <div id="liveMeta" class="live-meta"></div>
+      </details>
+    </aside>
   </main>
 
   <script>
@@ -422,10 +542,17 @@
     const cheatSearch = document.getElementById('cheatSearch');
     const cheatList = document.getElementById('cheatList');
     const suggestedCommands = document.getElementById('suggestedCommands');
+    const playerActions = document.getElementById('playerActions');
     const commandValidation = document.getElementById('commandValidation');
     const liveMeta = document.getElementById('liveMeta');
     const menuFilterInput = document.getElementById('menuFilterInput');
     const clearMenuFilterButton = document.getElementById('clearMenuFilterButton');
+    const guardianToggle = document.getElementById('guardianToggle');
+    const guardianPanel = document.getElementById('guardianPanel');
+    const guardianInput = document.getElementById('guardianInput');
+    const guardianSend = document.getElementById('guardianSend');
+    const guardianClear = document.getElementById('guardianClear');
+    const guardianMessages = document.getElementById('guardianMessages');
     const tabs = {
       both: document.getElementById('tabBoth'),
       menu: document.getElementById('tabMenu'),
@@ -874,8 +1001,11 @@
     }
 
     function renderAll() {
-      menuRoot.innerHTML = state.lastMenu ? renderMenu(state.lastMenu) : '<div class="empty">Aucun menu charge.</div>';
-      combatRoot.innerHTML = state.lastCombat ? renderCombat(state.lastCombat) : '<div class="empty">Aucun combat charge.</div>';
+      menuRoot.innerHTML = state.lastMenu ? renderMenu(state.lastMenu) : '<div class="empty">Aucun menu chargé.</div>';
+      combatRoot.innerHTML = state.lastCombat ? renderCombat(state.lastCombat) : '<div class="empty">Aucun combat chargé.</div>';
+      if (playerActions) {
+        playerActions.innerHTML = state.lastMenu ? renderPlayerActions(state.lastMenu) : '<div class="empty">Les choix apparaîtront ici.</div>';
+      }
       refreshChrome();
     }
 
@@ -1190,6 +1320,28 @@
       return `${renderMenuFilterNotice(actions.length, filteredActions.length, 'action')}<div class="action-sections">${order.map(group => renderActionGroup(group, grouped[group] || [])).join('')}</div>`;
     }
 
+    function renderPlayerActions(snapshot) {
+      if (!snapshot || snapshot.type !== 'menu') return '<div class="empty">Aucune action disponible.</div>';
+      const actions = Array.isArray(snapshot.actions) ? snapshot.actions : [];
+      const mode = snapshot.inputMode || 'choice';
+      if (mode === 'text' || mode === 'quantity' || mode === 'confirmation') {
+        const hint = snapshot.inputHint || snapshot.primarySubmitLabel || 'Réponse attendue';
+        return `
+          <div class="manual-only-box">
+            <div class="input-warning">${escapeHtml(hint)}</div>
+            <p class="input-note">Cet écran attend une réponse écrite : utilise surtout la zone de texte juste au-dessus.</p>
+          </div>
+          ${renderNavigationOnlyActions(actions)}`;
+      }
+      return renderActionsByGroup(actions);
+    }
+
+    function renderNavigationOnlyActions(actions) {
+      const navigation = Array.isArray(actions) ? actions.filter(action => ['back', 'pagination'].includes(action.role || '') || ['navigation'].includes(action.group || '')) : [];
+      if (!navigation.length) return '';
+      return `<div class="action-sections">${renderActionGroup('navigation', navigation)}</div>`;
+    }
+
     function renderInputDebug() {
       const status = state.lastServerStatus;
       if (!status) return '';
@@ -1257,22 +1409,24 @@
 
       const actions = Array.isArray(menu.actions) ? menu.actions.filter(action => action.enabled !== false) : [];
       const recommendedChoice = String(menu.recommendedChoice ?? '-1');
-      for (const action of actions.slice(0, 7)) {
-        const command = String(action.number ?? '');
-        addCommand({
-          command,
-          label: action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim(),
-          primary: command === recommendedChoice && mode === 'choice',
-          kind: 'choice',
-          actionId: action.actionId || '',
-          actionLabel: action.label || '',
-          actionDisplayLabel: action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim(),
-          actionRole: action.role || '',
-          actionStyle: action.style || '',
-          actionGroup: action.group || getActionGroup(action),
-          knowledgeSensitive: !!action.knowledgeSensitive,
-          recommendationReason: action.recommendationReason || ''
-        });
+      if (mode === 'choice') {
+        for (const action of actions.slice(0, 7)) {
+          const command = String(action.number ?? '');
+          addCommand({
+            command,
+            label: action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim(),
+            primary: command === recommendedChoice,
+            kind: 'choice',
+            actionId: action.actionId || '',
+            actionLabel: action.label || '',
+            actionDisplayLabel: action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim(),
+            actionRole: action.role || '',
+            actionStyle: action.style || '',
+            actionGroup: action.group || getActionGroup(action),
+            knowledgeSensitive: !!action.knowledgeSensitive,
+            recommendationReason: action.recommendationReason || ''
+          });
+        }
       }
 
       if (!commands.some(item => item.command === '0')) {
@@ -1379,30 +1533,20 @@
     }
 
     function renderMenu(snapshot) {
-      const actions = Array.isArray(snapshot.actions) ? snapshot.actions : [];
       return `
         ${renderHeader(snapshot, 'menu')}
         ${renderContextTags(snapshot)}
         ${renderPagination(snapshot)}
-        ${renderScreenSummary(snapshot)}
         ${renderSpecializedPanel(snapshot)}
-        ${renderInputContract(snapshot)}
         <div class="line-list">
           <div class="line">Saisie attendue : ${escapeHtml(snapshot.inputIntent || snapshot.inputMode || 'choix')}${snapshot.inputHint ? ' — ' + escapeHtml(snapshot.inputHint) : ''}</div>
           ${snapshot.inputMode === 'quantity' && snapshot.hasNumericRange ? `<div class="line">Limites de quantité : ${escapeHtml(snapshot.numericMin)} à ${escapeHtml(snapshot.numericMax)}</div>` : ''}
           ${snapshot.inputMode === 'text' && snapshot.hasTextLengthRange ? `<div class="line">Longueur texte : ${escapeHtml(snapshot.textMinLength || 0)} à ${escapeHtml(snapshot.textMaxLength || '∞')} caractères</div>` : ''}
-          ${snapshot.recommendedChoice >= 0 ? `<div class="line">Mise en avant IG : ${escapeHtml(snapshot.recommendedChoice)}${snapshot.recommendedChoiceLabel ? ' — ' + escapeHtml(snapshot.recommendedChoiceLabel) : ''}</div>` : ''}
-          ${snapshot.recommendationReason ? `<div class="line">Sécurité recommandation : ${escapeHtml(snapshot.recommendationReason)}</div>` : ''}
           ${snapshot.hasKnowledgeSensitiveAction ? `<div class="line">Prudence : une option touche à une connaissance sensible, elle n'est pas mise en avant automatiquement.</div>` : ''}
         </div>
-        ${renderInputDebug()}
         ${renderLines('Sous-titres', snapshot.subtitles)}
         ${renderLines('Informations', snapshot.lines)}
-        <div class="section">
-          <h3>Actions disponibles</h3>
-          ${renderActionsByGroup(actions)}
-        </div>
-        ${renderLines('Bas d\'ecran', snapshot.footerLines)}`;
+        ${renderLines('Bas d\'écran', snapshot.footerLines)}`;
     }
 
     function renderAction(action) {
@@ -1545,6 +1689,39 @@
             </div>
           </article>`;
       }).join('');
+    }
+
+    function guardianReplyFor(text) {
+      const clean = String(text || '').trim().toLowerCase();
+      if (!clean) return "Le gardien attend une vraie phrase avant de troubler le silence.";
+      if (clean.includes('bug') || clean.includes('bloque') || clean.includes('erreur')) {
+        return "Je vois une fissure dans l'interface. Recharge l'écran, puis garde la version terminale comme porte de secours si le monde résiste.";
+      }
+      if (clean.includes('boss') || clean.includes('mourir') || clean.includes('mort')) {
+        return "Les boss n'offrent pas toujours une sortie. Prépare ton équipement, lis tes indices, et n'oublie pas : survivre est déjà une stratégie.";
+      }
+      if (clean.includes('aide') || clean.includes('quoi faire') || clean.includes('perdu')) {
+        return "Regarde la zone Actions du joueur. Quand le monde attend un nom, un nombre ou une confirmation, écris directement dans la zone de texte.";
+      }
+      return "Le gardien t'entend. Tes mots ne changent pas encore le destin, mais ils restent gravés dans le bord du monde.";
+    }
+
+    function appendGuardianMessage(kind, text) {
+      if (!guardianMessages) return;
+      const node = document.createElement('div');
+      node.className = 'guardian-message ' + kind;
+      node.textContent = text;
+      guardianMessages.appendChild(node);
+      guardianMessages.scrollTop = guardianMessages.scrollHeight;
+    }
+
+    function sendGuardianMessage() {
+      const text = guardianInput?.value || '';
+      if (!guardianInput) return;
+      appendGuardianMessage('player', text.trim() || '[silence]');
+      appendGuardianMessage('npc', guardianReplyFor(text));
+      guardianInput.value = '';
+      guardianInput.focus();
     }
 
     async function loadCheatCatalog() {
@@ -1767,6 +1944,24 @@
       });
     });
 
+    if (playerActions) {
+      playerActions.addEventListener('click', event => {
+        const actionButton = event.target.closest('[data-choice]');
+        if (!actionButton || actionButton.disabled) return;
+        sendInput(actionButton.dataset.choice || '', 'choix menu', {
+          actionId: actionButton.dataset.actionId || '',
+          actionLabel: actionButton.dataset.actionLabel || '',
+          actionDisplayLabel: actionButton.dataset.actionDisplayLabel || actionButton.dataset.actionLabel || '',
+          actionRole: actionButton.dataset.actionRole || '',
+          actionStyle: actionButton.dataset.actionStyle || '',
+          actionGroup: actionButton.dataset.actionGroup || '',
+          knowledgeSensitive: actionButton.dataset.knowledgeSensitive === 'true',
+          recommendationReason: actionButton.dataset.recommendationReason || '',
+          commandKind: 'menu_action'
+        });
+      });
+    }
+
     renderRoot.addEventListener('keydown', event => {
       const itemCard = event.target.closest('[data-item-choice]');
       const focusCard = event.target.closest('[data-focus-choice]');
@@ -1859,6 +2054,27 @@
           });
         } else {
           setStatus('Code place dans la saisie : ' + code + '\nTu peux le modifier ou l envoyer.');
+        }
+      });
+    }
+
+    if (guardianToggle && guardianPanel) {
+      guardianToggle.addEventListener('click', () => {
+        guardianPanel.hidden = !guardianPanel.hidden;
+        if (!guardianPanel.hidden) guardianInput?.focus();
+      });
+    }
+    if (guardianSend) guardianSend.addEventListener('click', sendGuardianMessage);
+    if (guardianClear && guardianMessages) {
+      guardianClear.addEventListener('click', () => {
+        guardianMessages.innerHTML = '<div class="guardian-message npc">Le gardien observe silencieusement le fil du monde.</div>';
+      });
+    }
+    if (guardianInput) {
+      guardianInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          sendGuardianMessage();
         }
       });
     }

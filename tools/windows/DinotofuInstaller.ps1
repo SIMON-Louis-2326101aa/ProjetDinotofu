@@ -234,14 +234,27 @@ function Ensure-LauncherCmd {
         [string]$Mode
     )
 
-    $content = @(
-        "@echo off",
-        "chcp 65001 >nul",
-        "setlocal",
-        "set PYTHONUTF8=1",
-        "set PYTHONIOENCODING=utf-8",
-        "powershell -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode $Mode"
-    ) -join "`r`n"
+    if ($Mode -eq "Auto") {
+        $content = @(
+            "@echo off",
+            "chcp 65001 >nul",
+            "setlocal",
+            "set PYTHONUTF8=1",
+            "set PYTHONIOENCODING=utf-8",
+            "start `"`" /min powershell -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode Auto",
+            "exit /b"
+        ) -join "`r`n"
+    }
+    else {
+        $content = @(
+            "@echo off",
+            "chcp 65001 >nul",
+            "setlocal",
+            "set PYTHONUTF8=1",
+            "set PYTHONIOENCODING=utf-8",
+            "powershell -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode $Mode"
+        ) -join "`r`n"
+    }
 
     $content | Set-Content -Path $TargetPath -Encoding ASCII
 }

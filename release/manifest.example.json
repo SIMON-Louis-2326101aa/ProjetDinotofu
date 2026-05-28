@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.0.03",
-  "releaseTag": "v2.0.03",
+  "version": "2.0.04",
+  "releaseTag": "v2.0.04",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "Palier V2 : interface graphique expérimentale stabilisée avec snapshots menus/combat, cartes métier, contrats de saisie, validation de file de commandes et terminal de secours."
+  "notes": "Palier V2 : V2.0.04 : launcher plus propre après mise à jour, terminal Windows UTF-8 renforcé et interface graphique expérimentale simplifiée côté joueur."
 }

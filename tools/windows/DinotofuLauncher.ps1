@@ -218,6 +218,34 @@ function Apply-Update {
     Write-InstalledConfig
 }
 
+function Restart-LauncherAfterUpdate {
+    $updatedLauncher = Join-Path $InstallDir "DinotofuLauncher.ps1"
+    if (-not (Test-Path $updatedLauncher)) { return }
+
+    Write-Step "Redemarrage du launcher apres mise a jour"
+    $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $updatedLauncher, "-Mode", $Mode, "-NoUpdateCheck")
+    if (-not [string]::IsNullOrWhiteSpace($Repo)) { $arguments += @("-Repo", $Repo) }
+    if (-not [string]::IsNullOrWhiteSpace($AssetPattern)) { $arguments += @("-AssetPattern", $AssetPattern) }
+    Start-Process -FilePath "powershell.exe" -ArgumentList $arguments -WorkingDirectory $InstallDir | Out-Null
+    exit 0
+}
+
+function Find-FreeGuiPort {
+    param([int]$PreferredPort = 8787)
+
+    for ($candidate = $PreferredPort; $candidate -lt ($PreferredPort + 20); $candidate++) {
+        try {
+            $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse("127.0.0.1"), $candidate)
+            $listener.Start()
+            $listener.Stop()
+            return $candidate
+        }
+        catch { }
+    }
+
+    return $PreferredPort
+}
+
 function Get-FirstExistingPath {
     param([string[]]$Candidates)
     foreach ($candidate in $Candidates) {
@@ -285,14 +313,24 @@ function Test-GuiServerReady {
 }
 
 function Start-GameExecutable {
-    param([string]$ExecutablePath, [string]$Label, [string]$GuiDebugDir = "")
+    param(
+        [string]$ExecutablePath,
+        [string]$Label,
+        [string]$GuiDebugDir = "",
+        [switch]$HiddenWindow,
+        [switch]$UseTerminalWrapper
+    )
 
     Write-Step "Lancement de $Label"
     $oldDebugDir = $env:DINOTOFU_GUI_DEBUG_DIR
     $oldInputMode = $env:DINOTOFU_GUI_INPUT_MODE
     $oldInputFile = $env:DINOTOFU_GUI_INPUT_FILE
     $oldInputQueueDir = $env:DINOTOFU_GUI_INPUT_QUEUE_DIR
+    $oldPythonUtf8 = $env:PYTHONUTF8
+    $oldPythonIo = $env:PYTHONIOENCODING
     try {
+        $env:PYTHONUTF8 = "1"
+        $env:PYTHONIOENCODING = "utf-8"
         if (-not [string]::IsNullOrWhiteSpace($GuiDebugDir)) {
             New-Item -ItemType Directory -Path $GuiDebugDir -Force | Out-Null
             $env:DINOTOFU_GUI_DEBUG_DIR = $GuiDebugDir
@@ -300,7 +338,26 @@ function Start-GameExecutable {
             $env:DINOTOFU_GUI_INPUT_FILE = Join-Path $GuiDebugDir "pending_input.txt"
             $env:DINOTOFU_GUI_INPUT_QUEUE_DIR = Join-Path $GuiDebugDir "input_queue"
         }
-        Start-Process -FilePath $ExecutablePath -WorkingDirectory (Split-Path $ExecutablePath)
+
+        $workingDir = Split-Path $ExecutablePath
+        if ($UseTerminalWrapper) {
+            $command = "chcp 65001 >nul & `"$ExecutablePath`""
+            $startParams = @{
+                FilePath = "cmd.exe"
+                ArgumentList = @("/d", "/c", $command)
+                WorkingDirectory = $workingDir
+            }
+            if ($HiddenWindow) { $startParams.WindowStyle = "Hidden" }
+            Start-Process @startParams | Out-Null
+        }
+        else {
+            $startParams = @{
+                FilePath = $ExecutablePath
+                WorkingDirectory = $workingDir
+            }
+            if ($HiddenWindow) { $startParams.WindowStyle = "Hidden" }
+            Start-Process @startParams | Out-Null
+        }
     }
     finally {
         if ($null -eq $oldDebugDir) { Remove-Item Env:DINOTOFU_GUI_DEBUG_DIR -ErrorAction SilentlyContinue }
@@ -311,6 +368,10 @@ function Start-GameExecutable {
         else { $env:DINOTOFU_GUI_INPUT_FILE = $oldInputFile }
         if ($null -eq $oldInputQueueDir) { Remove-Item Env:DINOTOFU_GUI_INPUT_QUEUE_DIR -ErrorAction SilentlyContinue }
         else { $env:DINOTOFU_GUI_INPUT_QUEUE_DIR = $oldInputQueueDir }
+        if ($null -eq $oldPythonUtf8) { Remove-Item Env:PYTHONUTF8 -ErrorAction SilentlyContinue }
+        else { $env:PYTHONUTF8 = $oldPythonUtf8 }
+        if ($null -eq $oldPythonIo) { Remove-Item Env:PYTHONIOENCODING -ErrorAction SilentlyContinue }
+        else { $env:PYTHONIOENCODING = $oldPythonIo }
     }
 }
 
@@ -330,6 +391,7 @@ function Start-ExperimentalGui {
     if (-not [string]::IsNullOrWhiteSpace($env:DINOTOFU_GUI_PREVIEW_PORT)) {
         try { $port = [int]$env:DINOTOFU_GUI_PREVIEW_PORT } catch { $port = 8787 }
     }
+    $port = Find-FreeGuiPort -PreferredPort $port
 
     $pythonSpec = Get-PythonLaunchSpec
 
@@ -343,7 +405,7 @@ function Start-ExperimentalGui {
         if ($pythonSpec.PrefixArgs) { $arguments += $pythonSpec.PrefixArgs }
         $arguments += @($serverScript, "--root", $InstallDir, "--port", "$port", "--gui-debug-dir", $GuiDebugDir)
 
-        $serverProcess = Start-Process -FilePath $pythonSpec.FilePath -ArgumentList $arguments -WindowStyle Minimized -PassThru -RedirectStandardOutput $serverOut -RedirectStandardError $serverErr
+        $serverProcess = Start-Process -FilePath $pythonSpec.FilePath -ArgumentList $arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput $serverOut -RedirectStandardError $serverErr
         if (Test-GuiServerReady -Port $port -TimeoutMilliseconds 8000) {
             Start-Process "http://127.0.0.1:$port/tools/gui/dinotofu_gui_experimental.html" | Out-Null
         }
@@ -391,7 +453,7 @@ function Launch-Game {
         if (-not [string]::IsNullOrWhiteSpace($terminal)) {
             $debugDir = Join-Path $InstallDir "gui_debug"
             if (Start-ExperimentalGui -GuiDebugDir $debugDir) {
-                Start-GameExecutable -ExecutablePath $terminal -Label "Dinotofu Terminal avec export IG" -GuiDebugDir $debugDir
+                Start-GameExecutable -ExecutablePath $terminal -Label "moteur Dinotofu en arriere-plan IG" -GuiDebugDir $debugDir -HiddenWindow -UseTerminalWrapper
                 return
             }
         }
@@ -403,7 +465,7 @@ function Launch-Game {
 
     $terminalFallback = Get-FirstExistingPath $terminalCandidates
     if (-not [string]::IsNullOrWhiteSpace($terminalFallback)) {
-        Start-GameExecutable -ExecutablePath $terminalFallback -Label "Dinotofu Terminal"
+        Start-GameExecutable -ExecutablePath $terminalFallback -Label "Dinotofu Terminal" -UseTerminalWrapper
         return
     }
 
@@ -413,6 +475,7 @@ function Launch-Game {
     Read-Host "Appuie sur Entree pour fermer"
 }
 
+$updateApplied = $false
 if (-not $NoUpdateCheck -and (Is-RepoConfigured)) {
     try {
         Write-Step "Verification des mises a jour"
@@ -425,7 +488,10 @@ if (-not $NoUpdateCheck -and (Is-RepoConfigured)) {
 
         if ((Compare-VersionText $localVersion $remoteVersion) -lt 0) {
             $asset = Select-ReleaseAsset -Release $release -Pattern $AssetPattern
-            if ($asset) { Apply-Update -Release $release -Asset $asset }
+            if ($asset) {
+                Apply-Update -Release $release -Asset $asset
+                $updateApplied = $true
+            }
             else { Write-Warning "Mise a jour trouvee, mais aucun asset Windows ne correspond a $AssetPattern." }
         }
         else {
@@ -439,6 +505,10 @@ if (-not $NoUpdateCheck -and (Is-RepoConfigured)) {
 }
 elseif (-not (Is-RepoConfigured)) {
     Write-Warning "Repo GitHub non configure dans le launcher. Lancement sans auto-update."
+}
+
+if ($updateApplied) {
+    Restart-LauncherAfterUpdate
 }
 
 Launch-Game

@@ -46,6 +46,7 @@ make clean >/dev/null 2>&1 || true
 make -j"$(nproc 2>/dev/null || echo 2)" \
     CXX="${CROSS_CXX}" \
     APP_NAME="Dinotofu.exe" \
+    CXXFLAGS="-std=c++17 -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8" \
     LDFLAGS="-static -static-libgcc -static-libstdc++"
 
 mkdir -p "${STAGING_DIR}"

@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <ctime>
 #include <clocale>
+#include <locale>
 
 #if defined(_WIN32)
 #define NOMINMAX
@@ -310,7 +311,25 @@ namespace
 // FR: configureTerminalEncoding déclare ou implémente un comportement précis utilisé par ce module.
 void Console::configureTerminalEncoding()
 {
-    std::setlocale(LC_ALL, "");
+    if (std::setlocale(LC_ALL, "") == nullptr)
+    {
+        std::setlocale(LC_ALL, "C.UTF-8");
+    }
+#if defined(_WIN32)
+    std::setlocale(LC_ALL, ".UTF-8");
+#endif
+
+    try
+    {
+        std::locale::global(std::locale(""));
+        std::cout.imbue(std::locale());
+        std::cin.imbue(std::locale());
+    }
+    catch (...)
+    {
+        // Some minimal Windows terminals do not expose a named UTF-8 locale.
+        // The code page switch below still keeps narrow UTF-8 output usable.
+    }
 
 #if defined(_WIN32)
     // EN: Dinotofu texts are encoded in UTF-8. Windows terminals may still start
