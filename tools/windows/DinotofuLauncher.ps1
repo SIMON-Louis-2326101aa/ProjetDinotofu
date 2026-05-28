@@ -207,6 +207,8 @@ function Apply-Update {
     Download-WithProgress -Url $Asset.browser_download_url -OutFile $tempZip
 
     Write-Step "Installation de la mise a jour"
+    Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
+    Start-Sleep -Milliseconds 400
     Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
     $rootCandidate = Get-ChildItem $tempExtract -Directory | Select-Object -First 1
     if ($rootCandidate) { $sourceDir = $rootCandidate.FullName } else { $sourceDir = $tempExtract }
@@ -265,6 +267,71 @@ function Test-CommandAvailable {
     return $null -ne (Get-Command $CommandName -ErrorAction SilentlyContinue)
 }
 
+function ConvertTo-ProcessArgumentsString {
+    param([string[]]$Arguments = @())
+
+    $parts = @()
+    foreach ($argument in $Arguments) {
+        $value = [string]$argument
+        if ([string]::IsNullOrEmpty($value)) {
+            $parts += '""'
+            continue
+        }
+
+        $escaped = $value -replace '"', '\"'
+        if ($escaped -match '[\s"]') {
+            $parts += '"' + $escaped + '"'
+        }
+        else {
+            $parts += $escaped
+        }
+    }
+
+    return ($parts -join ' ')
+}
+
+function Stop-DinotofuBackgroundProcesses {
+    param([string]$RootDir)
+
+    if ([string]::IsNullOrWhiteSpace($RootDir)) { return }
+
+    $pidFiles = @(
+        (Join-Path $RootDir "gui_debug\server.pid"),
+        (Join-Path $RootDir "gui_debug\game.pid")
+    )
+
+    foreach ($pidFile in $pidFiles) {
+        if (-not (Test-Path $pidFile)) { continue }
+        try {
+            $rawPid = (Get-Content $pidFile -Raw).Trim()
+            if ($rawPid -match '^\d+$') {
+                $oldPid = [int]$rawPid
+                if ($oldPid -ne $PID) {
+                    Stop-Process -Id $oldPid -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+        catch { }
+        Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+    }
+
+    try {
+        $normalizedRoot = [System.IO.Path]::GetFullPath($RootDir)
+        $processes = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+            $_.ProcessId -ne $PID -and $_.CommandLine -and (
+                $_.CommandLine -like "*$normalizedRoot*" -or
+                $_.CommandLine -like "*serve_gui_preview.py*" -or
+                $_.CommandLine -like "*DINOTOFU_GUI_DEBUG_DIR*"
+            )
+        }
+
+        foreach ($process in $processes) {
+            Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch { }
+}
+
 function Start-HiddenProcessNoWindow {
     param(
         [string]$FilePath,
@@ -275,8 +342,16 @@ function Start-HiddenProcessNoWindow {
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
     $startInfo.FileName = $FilePath
     if ($ArgumentList) {
-        foreach ($argument in $ArgumentList) {
-            [void]$startInfo.ArgumentList.Add($argument)
+        $nativeArgumentListAvailable = $false
+        try { $nativeArgumentListAvailable = ($null -ne $startInfo.ArgumentList) } catch { $nativeArgumentListAvailable = $false }
+
+        if ($nativeArgumentListAvailable) {
+            foreach ($argument in $ArgumentList) {
+                [void]$startInfo.ArgumentList.Add($argument)
+            }
+        }
+        else {
+            $startInfo.Arguments = ConvertTo-ProcessArgumentsString -Arguments $ArgumentList
         }
     }
     if (-not [string]::IsNullOrWhiteSpace($WorkingDirectory)) {
@@ -375,7 +450,10 @@ function Start-GameExecutable {
         if ($HiddenWindow) {
             # EN: hidden IG backend is launched directly. Wrapping it in cmd.exe can create a stray terminal.
             # FR: le moteur IG cache est lance directement. Le wrapper cmd.exe peut creer un terminal fantome.
-            Start-HiddenProcessNoWindow -FilePath $ExecutablePath -ArgumentList @() -WorkingDirectory $workingDir | Out-Null
+            $hiddenProcess = Start-HiddenProcessNoWindow -FilePath $ExecutablePath -ArgumentList @() -WorkingDirectory $workingDir
+            if ($hiddenProcess -and -not [string]::IsNullOrWhiteSpace($GuiDebugDir)) {
+                $hiddenProcess.Id | Set-Content -Path (Join-Path $GuiDebugDir "game.pid") -Encoding ASCII
+            }
         }
         elseif ($UseTerminalWrapper) {
             $command = "chcp 65001 >nul & `"$ExecutablePath`""
@@ -432,6 +510,7 @@ function Start-ExperimentalGui {
         $arguments += @($serverScript, "--root", $InstallDir, "--port", "$port", "--gui-debug-dir", $GuiDebugDir)
 
         $serverProcess = Start-HiddenProcessNoWindow -FilePath $pythonSpec.FilePath -ArgumentList $arguments -WorkingDirectory $InstallDir
+        if ($serverProcess) { $serverProcess.Id | Set-Content -Path (Join-Path $GuiDebugDir "server.pid") -Encoding ASCII }
         if (Test-GuiServerReady -Port $port -TimeoutMilliseconds 8000) {
             Start-Process "http://127.0.0.1:$port/tools/gui/dinotofu_gui_experimental.html" | Out-Null
         }
@@ -453,6 +532,11 @@ function Start-ExperimentalGui {
 }
 
 function Launch-Game {
+    if ($Mode -ne "Terminal") {
+        Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
+        Start-Sleep -Milliseconds 200
+    }
+
     $guiCandidates = @(
         (Join-Path $InstallDir "DinotofuGUI.exe"),
         (Join-Path $InstallDir "DinotofuGui.exe"),

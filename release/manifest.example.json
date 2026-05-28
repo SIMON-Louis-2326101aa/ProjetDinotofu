@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.0.07",
-  "releaseTag": "v2.0.07",
+  "version": "2.0.08",
+  "releaseTag": "v2.0.08",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "V2.0.07 : correction launcher IG Windows sans terminaux fantômes, démarrage py/jeu caché renforcé, bouton Retour IG sécurisé et encodage terminal renforcé."
+  "notes": "V2.0.08 : correction launcher compatible PowerShell ancien, fermeture des processus Python/IG restants avant mise à jour et installation plus robuste."
 }

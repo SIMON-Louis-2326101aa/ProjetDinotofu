@@ -104,6 +104,7 @@ for required_file in \
     tools/windows/DinotofuLauncher.ps1 \
     tools/windows/Installer-Dinotofu.cmd \
     tools/windows/Lancer-Dinotofu.cmd \
+    tools/windows/Lancer-Dinotofu.vbs \
     tools/windows/Lancer-Dinotofu-Terminal.cmd \
     tools/linux/DinotofuInstaller.sh \
     tools/linux/DinotofuLauncher.sh \
@@ -115,7 +116,7 @@ done
 
 grep -q "ProjetDinotofu Launcher.lnk" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows principal n'est pas declare correctement."
 grep -q "ProjetDinotofu Launcher Terminal version.lnk" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows terminal n'est pas declare correctement."
-grep -q "Lancer-Dinotofu.cmd" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows principal doit cibler Lancer-Dinotofu.cmd."
+grep -q "Lancer-Dinotofu.vbs" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows principal doit cibler Lancer-Dinotofu.vbs."
 grep -q "Lancer-Dinotofu-Terminal.cmd" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows terminal doit cibler Lancer-Dinotofu-Terminal.cmd."
 grep -q -- "-Mode Auto" tools/windows/Lancer-Dinotofu.cmd || fail "Lancer-Dinotofu.cmd doit lancer le mode Auto."
 grep -q -- "-Mode Terminal" tools/windows/Lancer-Dinotofu-Terminal.cmd || fail "Lancer-Dinotofu-Terminal.cmd doit lancer le mode Terminal."

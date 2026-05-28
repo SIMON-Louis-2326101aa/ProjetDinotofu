@@ -189,6 +189,48 @@ function Restore-PlayerData {
     Copy-Item -Path (Join-Path $BackupDir "*") -Destination $ToDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+function Stop-DinotofuBackgroundProcesses {
+    param([string]$RootDir)
+
+    if ([string]::IsNullOrWhiteSpace($RootDir)) { return }
+
+    $pidFiles = @(
+        (Join-Path $RootDir "gui_debug\server.pid"),
+        (Join-Path $RootDir "gui_debug\game.pid")
+    )
+
+    foreach ($pidFile in $pidFiles) {
+        if (-not (Test-Path $pidFile)) { continue }
+        try {
+            $rawPid = (Get-Content $pidFile -Raw).Trim()
+            if ($rawPid -match '^\d+$') {
+                $oldPid = [int]$rawPid
+                if ($oldPid -ne $PID) {
+                    Stop-Process -Id $oldPid -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+        catch { }
+        Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
+    }
+
+    try {
+        $normalizedRoot = [System.IO.Path]::GetFullPath($RootDir)
+        $processes = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
+            $_.ProcessId -ne $PID -and $_.CommandLine -and (
+                $_.CommandLine -like "*$normalizedRoot*" -or
+                $_.CommandLine -like "*serve_gui_preview.py*" -or
+                $_.CommandLine -like "*DINOTOFU_GUI_DEBUG_DIR*"
+            )
+        }
+
+        foreach ($process in $processes) {
+            Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch { }
+}
+
 function Write-InstalledConfig {
     param([string]$TargetDir)
     $configObject = [ordered]@{
@@ -346,6 +388,8 @@ if ($rootCandidate) { $sourceDir = $rootCandidate.FullName } else { $sourceDir =
 
 Write-Step "Installation dans $InstallDir"
 Backup-PlayerData -FromDir $InstallDir -BackupDir $backupDir
+Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
+Start-Sleep -Milliseconds 400
 New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
 Copy-Item -Path (Join-Path $sourceDir "*") -Destination $InstallDir -Recurse -Force
 Restore-PlayerData -BackupDir $backupDir -ToDir $InstallDir
