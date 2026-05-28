@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.00.11",
-  "releaseTag": "v2.00.11",
+  "version": "2.00.12",
+  "releaseTag": "v2.00.12",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "V2.00.11 : nettoyage des cartes sauvegarde/création en IG, retrait du filtre, bouton Retour isolé, choix nombreux compactés et bouton Continuer réparé après difficulté/race/création."
+  "notes": "V2.00.12 : nettoyage de la vue IG nom/personnage, suppression des blocs sauvegarde parasites, choix nombreux allégés, Continuer renforcé et accents PowerShell fiabilisés."
 }

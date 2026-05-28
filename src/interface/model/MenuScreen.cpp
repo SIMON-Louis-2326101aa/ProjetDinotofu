@@ -319,7 +319,7 @@ namespace
         if (containsAny(text, {"monster.stats", "boss.stats", "entity.stats", "player.stats", "player.attributes", "player.skills", "player.career", "career.statistics"})) return "progression";
         if (containsAny(text, {"activity.", "activite", "activité", "activités", "activity", "combats", "boutiques / lieux", "pnj notables", "échange / don", "echange / don", "menu après-combat", "menu apres-combat"})) return "activite";
         if (containsAny(text, {"session.party", "session coop", "session solo", "multi local", "groupe actif"})) return "session";
-        if (containsAny(text, {"character.creation", "difficulté", "difficulte", "race validée", "race validee", "personnage gravé", "personnage grave", "nom gravé", "nom grave"})) return "creation";
+        if (containsAny(text, {"save.characters.create", "character.creation", "difficulté", "difficulte", "race validée", "race validee", "personnage gravé", "personnage grave", "nom gravé", "nom grave"})) return "creation";
         if (containsAny(text, {"catalog", "catalogue", "classes", "races", "race", "personnages spéciaux", "personnages speciaux", "groupes spéciaux", "groupes speciaux", "monstres préparés", "monstres prepares", "boss disponibles"})) return "catalogue";
         if (containsAny(text, {"post_combat", "apres combat", "après combat", "recompense", "récompense"})) return "apres_combat";
         if (containsAny(text, {"quick_heal", "potion", "potions", "curative", "defensive", "défensive", "offensive", "buff", "debuff"})) return "potions";

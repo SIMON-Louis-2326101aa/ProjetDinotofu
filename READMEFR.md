@@ -4,7 +4,7 @@ Dinotofu est un RPG / jeu d'arène en C++17. La version terminal reste le socle 
    
 ## Version actuelle   
    
-- Version actuelle : **V2.00.11**   
+- Version actuelle : **V2.00.12**   
 - Dernière version de personnage encore acceptable avant recommandation forte de recréation : **V1.32.03**   
 - Personnages beaucoup plus anciens que **V1.32.03** : recréation conseillée, car trop de systèmes ont changé.   
 - Passage V1 récent vers V2 : adaptation moyenne seulement, car le palier V2 valide surtout l'IG et ne doit pas forcer les sauvegardes récentes à repartir de zéro.   
@@ -37,7 +37,8 @@ L'IG actuelle sert à rendre le jeu jouable depuis une page locale tout en garda
 - les actions JSON exposent leurs métadonnées métier : type, statut, prix, quantité, progression, propriétaire, récompense ou détail ;   
 - la saisie libre, les confirmations, les quantités, les codes cachés et les choix numériques sont décrits dans le contrat IG ;   
 - le navigateur et le serveur local refusent les commandes envoyées depuis un ancien écran ou une file déjà occupée ;   
-- le terminal reste disponible comme affichage de secours, sans être supprimé.   
+- le terminal reste disponible comme affichage de secours, sans être supprimé ;   
+- sur PowerShell, la sortie terminal utilise une conversion Unicode plus robuste pour préserver les accents français.   
    
 ## Commandes utiles   
    
@@ -91,7 +92,7 @@ Sur les versions desktop Windows/Linux, l'installateur ou le launcher doit crée
    
 ## Grandes directions seulement   
    
-1. Stabiliser les retours joueurs sur le palier **V2.00.11**.   
+1. Stabiliser les retours joueurs sur le palier **V2.00.12**.   
 2. Ajouter ensuite contenu, dialogues/lore vivants, compétences et polish progressif.   
 3. Passer en **V3.0.0** quand le premier chapitre d'histoire est codé.   
 4. Garder le multijoueur en ligne pour une grosse version future beaucoup plus tard.   

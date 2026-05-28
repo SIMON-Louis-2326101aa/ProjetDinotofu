@@ -305,7 +305,7 @@
 
 
     /* =========================================================
-       CLEAN PLAYER VIEW V2.00.11 LAYOUT
+       CLEAN PLAYER VIEW V2.00.12 LAYOUT
        ========================================================= */
     body { min-height: 100vh; }
     .game-header {
@@ -462,11 +462,12 @@
     .simple-topbar { justify-content: flex-start; }
     .choice-back-row { display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.65rem; }
     .choice-back-row .action-card { width: 100%; border-color: rgba(123,183,255,0.32); background: rgba(123,183,255,0.07); }
-    .action-card.compact { padding: 0.58rem 0.65rem; min-height: 2.75rem; }
-    .action-card.compact .action-main { align-items: center; font-size: 0.92rem; }
-    .action-section.compact-many { padding: 0.6rem; }
-    .actions.compact-many { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 0.42rem; }
-    .choices-section h3 { margin-bottom: 0.45rem; }
+    .action-card.compact { padding: 0.5rem 0.58rem; min-height: 2.45rem; }
+    .action-card.compact .action-main { align-items: center; font-size: 0.9rem; }
+    .action-card.compact [data-action-status] { display: none; }
+    .action-section.compact-many { padding: 0.55rem; }
+    .actions.compact-many { grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); gap: 0.36rem; }
+    .choices-section { margin-top: 0.65rem; }
     .submenu-actions button { width: 100%; text-align: left; }
     .info-card-source,
     .notice-meta,
@@ -1329,10 +1330,18 @@
         </div>`;
     }
 
+    function shouldHideSpecializedPanel(snapshot) {
+      if (!snapshot || snapshot.type !== 'menu') return true;
+      const mode = String(snapshot.inputMode || 'choice').toLowerCase();
+      const view = String(snapshot.specializedView || 'generic').toLowerCase();
+      if (view === 'generic') return true;
+      if (view === 'save') return true;
+      return ['text', 'quantity', 'confirmation', 'continue', 'display'].includes(mode);
+    }
+
     function renderSpecializedPanel(snapshot) {
-      if (!snapshot || snapshot.type !== 'menu') return '';
+      if (shouldHideSpecializedPanel(snapshot)) return '';
       const view = snapshot.specializedView || 'generic';
-      if (view === 'generic') return '';
       const allCards = Array.isArray(snapshot.focusCards) ? snapshot.focusCards : [];
       const cards = allCards.filter(card => matchesMenuFilter(card.id, card.label, card.detail, card.actionLabel, card.actionDisplayLabel, card.actionId));
       const renderedInfoCards = renderInfoCards(snapshot);
@@ -1514,7 +1523,7 @@
       if (snapshot.inputMode === 'continue') return renderContinueControl(snapshot);
       if (snapshot.inputMode !== 'choice') return '';
       const actions = Array.isArray(snapshot.actions) ? snapshot.actions.filter(action => !isUtilityAction(action)) : [];
-      return `<div class="section choices-section"><h3>Choix disponibles</h3>${renderActionsByGroup(actions)}</div>`;
+      return `<div class="section choices-section">${renderActionsByGroup(actions)}</div>`;
     }
 
     function renderPlayerActions(snapshot) {
@@ -1659,7 +1668,7 @@
 
       if (!value) {
         if (mode === 'display') return { level: '', message: 'Cet écran est en lecture seule.', blocking: true };
-        if (menu.acceptsEmptyInput) return { level: mode === 'continue' ? 'ok' : '', message: mode === 'continue' ? 'Entrée vide valide pour continuer.' : '', blocking: false };
+        if (menu.acceptsEmptyInput || mode === 'continue') return { level: mode === 'continue' ? 'ok' : '', message: mode === 'continue' ? 'Entrée vide valide pour continuer.' : '', blocking: false };
         return { level: 'warn', message: 'Cet écran attend une saisie avant envoi.', blocking: true };
       }
 
@@ -1740,18 +1749,10 @@
     }
 
     function renderReadableInputLines(snapshot) {
-      const lines = [];
-      if (snapshot.inputMode === 'quantity' && snapshot.hasNumericRange) {
-        lines.push(`Quantité attendue : ${escapeHtml(snapshot.numericMin)} à ${escapeHtml(snapshot.numericMax)}`);
-      }
-      if (snapshot.inputMode === 'text' && snapshot.hasTextLengthRange) {
-        lines.push(`Texte attendu : ${escapeHtml(snapshot.textMinLength || 0)} à ${escapeHtml(snapshot.textMaxLength || '∞')} caractères`);
-      }
-      if (snapshot.inputHint && snapshot.inputMode !== 'choice') {
-        lines.push(snapshot.inputHint);
-      }
-      if (!lines.length) return '';
-      return `<div class="line-list">${lines.map(line => `<div class="line">${escapeHtml(line)}</div>`).join('')}</div>`;
+      // FR: l'indication de saisie vit dans le panneau "Réponse attendue".
+      // La vue principale reste réservée au vrai contenu joueur : informations,
+      // dialogues, affichage pur et choix disponibles.
+      return '';
     }
 
     function renderMenu(snapshot) {

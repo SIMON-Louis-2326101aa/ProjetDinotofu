@@ -29,6 +29,223 @@
 
 namespace
 {
+
+#if defined(_WIN32)
+    bool isWindowsConsoleHandle(HANDLE handle)
+    {
+        if (handle == nullptr || handle == INVALID_HANDLE_VALUE)
+        {
+            return false;
+        }
+
+        DWORD mode = 0;
+        return GetConsoleMode(handle, &mode) != 0;
+    }
+
+    std::wstring utf8ToWide(const std::string& text)
+    {
+        if (text.empty())
+        {
+            return {};
+        }
+
+        int size = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), static_cast<int>(text.size()), nullptr, 0);
+        if (size <= 0)
+        {
+            size = MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0);
+        }
+
+        if (size <= 0)
+        {
+            return {};
+        }
+
+        std::wstring output(static_cast<std::size_t>(size), L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), output.data(), size);
+        return output;
+    }
+
+    std::string wideToUtf8(const std::wstring& text)
+    {
+        if (text.empty())
+        {
+            return {};
+        }
+
+        int size = WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), nullptr, 0, nullptr, nullptr);
+        if (size <= 0)
+        {
+            return {};
+        }
+
+        std::string output(static_cast<std::size_t>(size), '\0');
+        WideCharToMultiByte(CP_UTF8, 0, text.data(), static_cast<int>(text.size()), output.data(), size, nullptr, nullptr);
+        return output;
+    }
+
+    bool writeUtf8ToWindowsConsole(HANDLE handle, const std::string& text)
+    {
+        if (!isWindowsConsoleHandle(handle))
+        {
+            return false;
+        }
+
+        const std::wstring wideText = utf8ToWide(text);
+        if (wideText.empty() && !text.empty())
+        {
+            return false;
+        }
+
+        std::size_t writtenTotal = 0;
+        while (writtenTotal < wideText.size())
+        {
+            const DWORD chunkSize = static_cast<DWORD>(std::min<std::size_t>(wideText.size() - writtenTotal, 32000));
+            DWORD written = 0;
+            if (WriteConsoleW(handle, wideText.data() + writtenTotal, chunkSize, &written, nullptr) == 0)
+            {
+                return false;
+            }
+            writtenTotal += written;
+        }
+
+        return true;
+    }
+
+    class WindowsUtf8ConsoleBuffer final : public std::streambuf
+    {
+    public:
+        WindowsUtf8ConsoleBuffer(HANDLE handleValue, std::streambuf* fallbackValue)
+            : handle(handleValue), fallback(fallbackValue)
+        {
+        }
+
+    protected:
+        int overflow(int character) override
+        {
+            if (character == traits_type::eof())
+            {
+                return sync() == 0 ? traits_type::not_eof(character) : traits_type::eof();
+            }
+
+            pending.push_back(static_cast<char>(character));
+            if (character == '\n' || pending.size() >= 4096)
+            {
+                sync();
+            }
+
+            return character;
+        }
+
+        std::streamsize xsputn(const char* text, std::streamsize count) override
+        {
+            if (count <= 0)
+            {
+                return 0;
+            }
+
+            pending.append(text, static_cast<std::size_t>(count));
+            if (pending.find('\n') != std::string::npos || pending.size() >= 4096)
+            {
+                sync();
+            }
+
+            return count;
+        }
+
+        int sync() override
+        {
+            if (pending.empty())
+            {
+                return 0;
+            }
+
+            const std::string text = pending;
+            pending.clear();
+
+            if (!writeUtf8ToWindowsConsole(handle, text) && fallback != nullptr)
+            {
+                fallback->sputn(text.data(), static_cast<std::streamsize>(text.size()));
+                fallback->pubsync();
+            }
+
+            return 0;
+        }
+
+    private:
+        HANDLE handle = nullptr;
+        std::streambuf* fallback = nullptr;
+        std::string pending;
+    };
+
+    void installWindowsUtf8ConsoleBuffers()
+    {
+        static bool installed = false;
+        if (installed)
+        {
+            return;
+        }
+
+        HANDLE outputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+        HANDLE errorHandle = GetStdHandle(STD_ERROR_HANDLE);
+        if (!isWindowsConsoleHandle(outputHandle) && !isWindowsConsoleHandle(errorHandle))
+        {
+            return;
+        }
+
+        static WindowsUtf8ConsoleBuffer outputBuffer(outputHandle, std::cout.rdbuf());
+        static WindowsUtf8ConsoleBuffer errorBuffer(errorHandle, std::cerr.rdbuf());
+        if (isWindowsConsoleHandle(outputHandle))
+        {
+            std::cout.rdbuf(&outputBuffer);
+        }
+        if (isWindowsConsoleHandle(errorHandle))
+        {
+            std::cerr.rdbuf(&errorBuffer);
+        }
+        installed = true;
+    }
+
+    bool readUtf8LineFromWindowsConsole(std::string& line)
+    {
+        HANDLE inputHandle = GetStdHandle(STD_INPUT_HANDLE);
+        if (!isWindowsConsoleHandle(inputHandle))
+        {
+            return false;
+        }
+
+        std::wstring wideLine;
+        wchar_t buffer[256];
+        while (true)
+        {
+            DWORD readCount = 0;
+            if (ReadConsoleW(inputHandle, buffer, static_cast<DWORD>(sizeof(buffer) / sizeof(buffer[0])), &readCount, nullptr) == 0)
+            {
+                return false;
+            }
+
+            if (readCount == 0)
+            {
+                continue;
+            }
+
+            for (DWORD index = 0; index < readCount; ++index)
+            {
+                const wchar_t character = buffer[index];
+                if (character == L'\r')
+                {
+                    continue;
+                }
+                if (character == L'\n')
+                {
+                    line = wideToUtf8(wideLine);
+                    return true;
+                }
+                wideLine.push_back(character);
+            }
+        }
+    }
+#endif
+
     bool isTruthyEnvironmentValue(const char* value)
     {
         if (value == nullptr)
@@ -377,6 +594,7 @@ void Console::configureTerminalEncoding()
     // démarrent encore avec une ancienne page de code, ce qui casse les accents.
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
+    installWindowsUtf8ConsoleBuffers();
 #endif
 }
 
@@ -447,6 +665,17 @@ bool Console::readLine(std::string& line, bool trimLeadingWhitespace)
         }
         return true;
     }
+
+#if defined(_WIN32)
+    if (readUtf8LineFromWindowsConsole(line))
+    {
+        if (trimLeadingWhitespace)
+        {
+            trimLeadingWhitespaceInPlace(line);
+        }
+        return true;
+    }
+#endif
 
     if (trimLeadingWhitespace)
     {
