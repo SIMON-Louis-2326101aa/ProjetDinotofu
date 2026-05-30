@@ -12,6 +12,7 @@
 #include "item/weapon/Weapon.hpp"
 #include "item/armor/Armor.hpp"
 
+#include <cstddef>
 #include <string>
 
 class EquipmentDisplay
@@ -19,7 +20,9 @@ class EquipmentDisplay
 public:
     static MenuScreen buildMainScreen();
     static MenuScreen buildWeaponListScreen(const Player& player);
+    static MenuScreen buildWeaponListScreen(const Player& player, std::size_t pageIndex, std::size_t itemsPerPage);
     static MenuScreen buildArmorListScreen(const Player& player);
+    static MenuScreen buildArmorListScreen(const Player& player, std::size_t pageIndex, std::size_t itemsPerPage);
     static MenuScreen buildSelectedWeaponScreen(const Weapon& weapon);
     static MenuScreen buildSelectedArmorScreen(const Armor& armor);
 

@@ -15,6 +15,10 @@ public:
     // FR: configureTerminalEncoding prépare l'encodage UTF-8 du terminal quand c'est possible.
     static void configureTerminalEncoding();
 
+    // EN: printLine writes one UTF-8 terminal line through the central console layer.
+    // FR: printLine écrit une ligne terminal UTF-8 via le socle console central.
+    static void printLine(const std::string& text);
+
     // EN: clear declares or implements a focused behavior used by this module.
     // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
     static void clear();

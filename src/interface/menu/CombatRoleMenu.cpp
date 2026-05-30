@@ -12,15 +12,97 @@
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 
+#include <string>
+
+
+namespace
+{
+    MenuOptionItemData buildRoleActionData(
+        const Entity& entity,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status,
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "combat_role";
+        itemData.section = "Compétences de rôle";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.owner = entity.getName();
+        itemData.progress = "PV : " + std::to_string(entity.getHp()) + "/" + std::to_string(entity.getMaxHp());
+        itemData.important = important;
+        return itemData;
+    }
+}
+
 MenuScreen CombatRoleMenu::buildScreen(const Entity& entity)
 {
     MenuScreen screen("COMPÉTENCES DE RÔLE", "combat.role");
     screen.addSubtitle("Rôle actif de " + entity.getName());
     screen.addBackOption("Retour", "combat.role.back");
-    screen.addOption(1, "Voir mon rôle", "Résumé de la menace, du style de combat et du rôle actuel.", true, "combat.role.identity");
-    screen.addOption(2, "Provocation", "Attirer l'attention et activer une posture défensive.", true, "combat.role.provoke");
-    screen.addOption(3, "Réduire ma menace", CombatRoleSystem::isAssassin(entity) ? "Profil assassin détecté." : "Action verrouillée : demande une vraie approche d'assassin.", CombatRoleSystem::isAssassin(entity), "combat.role.reduce_threat");
-    screen.addOption(4, "Protection / soin d'allié", "Aucun allié stable à portée dans ce combat.", false, "combat.role.ally_support");
+    screen.addOption(
+        1,
+        "Voir mon rôle",
+        "Résumé de la menace, du style de combat et du rôle actuel.",
+        true,
+        "combat.role.identity",
+        buildRoleActionData(
+            entity,
+            "inspect",
+            "Voir mon rôle",
+            "Résumé de la menace, du style de combat et du rôle actuel.",
+            "Information"
+        )
+    );
+    screen.addOption(
+        2,
+        "Provocation",
+        "Attirer l'attention et activer une posture défensive.",
+        true,
+        "combat.role.provoke",
+        buildRoleActionData(
+            entity,
+            "provoke",
+            "Provocation",
+            "Attire l'attention et active automatiquement la posture de défense.",
+            "Action consommée",
+            true
+        )
+    );
+    screen.addOption(
+        3,
+        "Réduire ma menace",
+        CombatRoleSystem::isAssassin(entity) ? "Profil assassin détecté." : "Action verrouillée : demande une vraie approche d'assassin.",
+        CombatRoleSystem::isAssassin(entity),
+        "combat.role.reduce_threat",
+        buildRoleActionData(
+            entity,
+            "reduce_threat",
+            "Réduire ma menace",
+            "Efface provocation et menace de soin si le profil le permet.",
+            CombatRoleSystem::isAssassin(entity) ? "Disponible" : "Verrouillé"
+        )
+    );
+    screen.addOption(
+        4,
+        "Protection / soin d'allié",
+        "Aucun allié stable à portée dans ce combat.",
+        false,
+        "combat.role.ally_support",
+        buildRoleActionData(
+            entity,
+            "support",
+            "Protection / soin d'allié",
+            "Prévu pour les combats de groupe plus stables.",
+            "Indisponible"
+        )
+    );
     return screen;
 }
 

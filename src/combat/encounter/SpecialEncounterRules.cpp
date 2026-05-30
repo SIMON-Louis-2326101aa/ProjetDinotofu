@@ -24,6 +24,12 @@ CombatIntent SpecialEncounterRules::getIntentForSpecialGroup(const std::vector<s
     bool hasAoi = containsName(names, "Aoi");
     bool hasKanade = containsName(names, "Kanadé");
     bool hasSanctus = containsName(names, "Sanctus");
+    bool hasLesBrasCasses = hasHazak && hasFail && hasAoi && hasKanade && hasSanctus;
+
+    if (hasLesBrasCasses)
+    {
+        return CombatIntent::Training;
+    }
 
     if (hasHazak && hasHestia)
     {
@@ -81,6 +87,12 @@ std::string SpecialEncounterRules::getIntentText(
     bool hasKanade = containsName(names, "Kanadé");
     bool hasSanctus = containsName(names, "Sanctus");
     bool hasHenrique = containsName(names, "Henrique");
+    bool hasLesBrasCasses = hasHazak && hasFail && hasAoi && hasKanade && hasSanctus;
+
+    if (hasLesBrasCasses)
+    {
+        return "Intention : rencontre PvE héroïque. Les bras cassés testent ton niveau en groupe complet, sans chercher la mort par défaut, mais avec beaucoup trop d'ego pour promettre un combat propre.";
+    }
 
     if (hasHazak && hasHestia && hasSanctus)
     {
@@ -163,6 +175,16 @@ bool SpecialEncounterRules::canBecomeDeathMatch(const std::vector<std::string>& 
     bool hasHazak = containsName(names, "Hazak");
     bool hasSkuro = containsName(names, "Skuro");
     bool hasHestia = containsName(names, "Hestia");
+    bool hasLesBrasCasses = hasHazak
+        && containsName(names, "Fail")
+        && containsName(names, "Aoi")
+        && containsName(names, "Kanadé")
+        && containsName(names, "Sanctus");
+
+    if (hasLesBrasCasses)
+    {
+        return false;
+    }
 
     if (hasHazak && hasHestia)
     {

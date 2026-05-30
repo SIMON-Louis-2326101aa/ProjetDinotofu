@@ -90,5 +90,26 @@ std::vector<ShopItem> LibraryInformationCatalog::createCommonInformationOffers()
             0,
             1,
             true
-        )    };
+        ),
+        ShopItem(
+            "legend_child_tales",
+            "Contes et légendes pour enfant",
+            "Ajoute un premier rayonnage de légendes optionnelles, dont l’origine des Bras cassés.",
+            ShopItemCategory::Information,
+            75,
+            0,
+            1,
+            true
+        ),
+        ShopItem(
+            "legend_trigger_notes",
+            "Notes de conteur : légendes rares",
+            "Explique comment certaines légendes peuvent apparaître par PNJ, bibliothèque ou salle sans devenir obligatoires.",
+            ShopItemCategory::Information,
+            90,
+            0,
+            1,
+            true
+        )
+    };
 }

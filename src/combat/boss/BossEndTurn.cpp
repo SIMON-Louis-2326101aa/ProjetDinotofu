@@ -284,6 +284,21 @@ bool BossEndTurn::handleBossEndTurn(
             endTurnNarration << "L'abîme d'Aldebaroth continue de salir l'air." << std::endl;
             dealOngoingDamage(player, 8 + boss.getSpecialEffect() * 2, endTurnNarration);
         }
+        else if (boss.getBossId() == 25)
+        {
+            endTurnNarration << "La création et la destruction continuent de se mordre dans ton ombre." << std::endl;
+            dealOngoingDamage(player, 7 + boss.getSpecialEffect() * 2, endTurnNarration);
+        }
+        else if (boss.getBossId() == 26)
+        {
+            endTurnNarration << "L'écho d'Obérion écrase brièvement les règles autour de ton corps." << std::endl;
+            dealOngoingDamage(player, 8 + boss.getSpecialEffect() * 2, endTurnNarration);
+        }
+        else if (boss.getBossId() == 27)
+        {
+            endTurnNarration << "Le patch temporaire de FireFlight continue de modifier les marges du combat." << std::endl;
+            dealOngoingDamage(player, 8 + boss.getSpecialEffect() * 2, endTurnNarration);
+        }
         else if (boss.getBossId() == 28)
         {
             endTurnNarration << "Le Souffle sans Visage retient encore une partie de l'air." << std::endl;

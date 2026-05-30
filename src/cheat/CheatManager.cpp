@@ -340,6 +340,7 @@ void CheatManager::displayKnownAlterations(const Player& player)
         screen.addLine("Aucune altération connue.");
     }
 
+    screen.setDisplayOnlyInput("État des altérations affiché sans saisie directe.");
     TerminalInterface::renderMenuScreen(screen, false);
 }
 

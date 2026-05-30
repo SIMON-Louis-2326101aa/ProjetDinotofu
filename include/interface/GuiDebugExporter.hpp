@@ -20,6 +20,7 @@ public:
 
     static void exportMenu(const MenuScreen& screen, const std::string& fileStem = "latest_menu");
     static void exportCombat(const GuiCombatStateSnapshot& snapshot, const std::string& fileStem = "latest_combat");
+    static void exportContinueFromLastMenu(const std::string& hint = "Valide pour continuer.");
 
 private:
     static std::string outputDirectory();

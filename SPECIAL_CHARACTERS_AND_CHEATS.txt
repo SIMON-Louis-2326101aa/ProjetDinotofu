@@ -115,3 +115,26 @@ Cheat en Léthal :
 - Malus temporaire de PV max.
 - Ajout de notes brouillées dans le bestiaire.
 - Réactions futures possibles de Lexior, Moiran, l'Anomalie, Obérion et FireFlight.
+
+MISE A JOUR 2.00.19 - GROUPE ET BESTIAIRE
+- Groupe connu à l'avance : Les bras cassés.
+- Membres : Hazak, Fail, Aoi, Kanadé, Sanctus.
+- Rôle : groupe d'aventuriers complet, maintenant croisable en PvE de groupe.
+- Réputation : ils ont libéré et aidé plusieurs villages/habitants, sont vus comme des héros, mais ne sont pas appréciés de tous à cause de leur ego et de leur tendance à ne pas toujours respecter les règles. Leur nom vient aussi du bras coupé de Hazak par un orc, régénéré après deux semaines, et de leurs conneries qui finissent presque toujours par réussir.
+- Bestiaire : seuls ces cinq personnages et le nom du groupe peuvent être visibles/connus au départ.
+- Les autres personnages spéciaux doivent rester déblocables progressivement dans le temps, par rencontre, rumeur, bibliothèque, arène, histoire ou événement crédible.
+
+
+MISE A JOUR 2.00.19 - APPLICATION CODE
+- Les bras cassés au complet peuvent apparaître dans les rencontres PvE de groupe : Hazak, Fail, Aoi, Kanadé, Sanctus.
+- Le groupe complet possède ses lignes d'entrée, de victoire et de défaite.
+- Le combat du groupe complet est traité comme une rencontre PvE héroïque / entraînement sérieux : dangereux, mais pas mortel par défaut.
+- Les personnages spéciaux rencontrés réellement par le joueur sont enregistrés dans la catégorie Personnages spéciaux du bestiaire runtime.
+- Les autres personnages spéciaux ne doivent pas devenir connus gratuitement dans l'interface : leur vrai nom passe par une rencontre, une rumeur ou une preuve crédible.
+
+MISE A JOUR 2.01.00 - APPLICATION CODE
+- Pas de nouveau personnage spécial dans cette passe.
+- Conservation du groupe Les bras cassés et du bestiaire progressif.
+- Ajout d'un vrai déclencheur rare de légende pour Les bras cassés en rencontre PvE de groupe.
+- Ajout de l'origine du nom : Hazak a perdu un bras face à un orc, puis l'a régénéré après deux semaines ; le groupe garde aussi ce surnom car il fait plein de conneries qui finissent presque toujours par réussir.
+- La légende est lisible depuis Légendes / contes et peut être débloquée via la bibliothèque.

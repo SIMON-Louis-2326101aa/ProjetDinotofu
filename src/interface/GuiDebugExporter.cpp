@@ -15,6 +15,21 @@
 #include <fstream>
 #include <sstream>
 
+namespace
+{
+    MenuScreen& lastExportedMenuScreen()
+    {
+        static MenuScreen screen;
+        return screen;
+    }
+
+    bool& hasLastExportedMenuScreen()
+    {
+        static bool value = false;
+        return value;
+    }
+}
+
 bool GuiDebugExporter::isEnabled()
 {
     return !outputDirectory().empty();
@@ -27,8 +42,28 @@ void GuiDebugExporter::exportMenu(const MenuScreen& screen, const std::string& f
         return;
     }
 
+    lastExportedMenuScreen() = screen;
+    hasLastExportedMenuScreen() = true;
+
     writeJsonFile(fileStem, GraphicalInterface::screenToJson(screen));
     updateGuiState("menu", fileStem, &screen, nullptr);
+}
+
+void GuiDebugExporter::exportContinueFromLastMenu(const std::string& hint)
+{
+    if (!isEnabled() || !hasLastExportedMenuScreen())
+    {
+        return;
+    }
+
+    MenuScreen screen = lastExportedMenuScreen();
+    if (!screen.getOptions().empty())
+    {
+        return;
+    }
+
+    screen.setContinueInput(hint.empty() ? "Valide pour continuer." : hint);
+    exportMenu(screen, "latest_menu");
 }
 
 void GuiDebugExporter::exportCombat(const GuiCombatStateSnapshot& snapshot, const std::string& fileStem)

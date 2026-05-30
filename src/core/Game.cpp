@@ -74,6 +74,57 @@ namespace
         return itemData;
     }
 
+    MenuOptionItemData makeActivityItemData(
+        const std::string& section,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = "",
+        const std::string& progress = "",
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "activity";
+        itemData.section = section;
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.progress = progress;
+        itemData.owner = "Ville / hors combat";
+        itemData.important = important;
+        return itemData;
+    }
+
+    MenuOptionItemData makeCreationItemData(
+        const std::string& kind,
+        const std::string& section,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = "",
+        const std::string& progress = "",
+        const std::string& reward = "",
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = kind;
+        itemData.section = section;
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.progress = progress;
+        itemData.reward = reward;
+        itemData.owner = "Création de personnage";
+        itemData.important = important;
+        return itemData;
+    }
+
     std::string guardianAnswerFor(const std::string& rawText)
     {
         std::string normalized;
@@ -237,6 +288,7 @@ namespace
         {
             MenuScreen screen("ARME À TRANSFÉRER", "exchange.weapon.empty");
             screen.addLine(giver.getName() + " n'a aucune arme transférable dans son sac.");
+            screen.setDisplayOnlyInput("Aucune arme transférable : retour automatique au choix précédent.");
             TerminalInterface::renderMenuScreen(screen, false);
             return -1;
         }
@@ -324,6 +376,7 @@ namespace
         {
             MenuScreen screen("ARMURE À TRANSFÉRER", "exchange.armor.empty");
             screen.addLine(giver.getName() + " n'a aucune armure transférable dans son sac.");
+            screen.setDisplayOnlyInput("Aucune armure transférable : retour automatique au choix précédent.");
             TerminalInterface::renderMenuScreen(screen, false);
             return -1;
         }
@@ -410,6 +463,7 @@ namespace
         {
             MenuScreen screen("CONSOMMABLE À TRANSFÉRER", "exchange.consumable.empty");
             screen.addLine(giver.getName() + " n'a aucun consommable dans son sac.");
+            screen.setDisplayOnlyInput("Aucun consommable transférable : retour automatique au choix précédent.");
             TerminalInterface::renderMenuScreen(screen, false);
             return -1;
         }
@@ -478,6 +532,7 @@ namespace
         {
             MenuScreen screen("MATÉRIAU À TRANSFÉRER", "exchange.material.empty");
             screen.addLine(giver.getName() + " n'a aucun matériau dans son sac.");
+            screen.setDisplayOnlyInput("Aucun matériau transférable : retour automatique au choix précédent.");
             TerminalInterface::renderMenuScreen(screen, false);
             return -1;
         }
@@ -631,11 +686,46 @@ void Game::chooseDifficulty()
 {
     MenuScreen screen("DIFFICULTÉ", "character.creation.difficulty");
     screen.addSubtitle("Ce choix influence le kit de départ, les récompenses, la mort et le respawn.");
-    screen.addOption(1, "Facile", "Plus d'or, plus de sécurité, retour à 75% PV après une mort non définitive.", true, "difficulty.easy");
-    screen.addOption(2, "Normal", "L'expérience Dinotofu standard.", true, "difficulty.normal");
-    screen.addOption(3, "Difficile", "Moins de ressources, pénalités plus dures, retour à 30% PV.", true, "difficulty.hard");
-    screen.addOption(4, "Cauchemar", "Très punitif, retour à 10% PV, et la mort commence vraiment à avoir des dents.", true, "difficulty.nightmare");
-    screen.addOption(5, "Léthal", "Le registre ne pardonne pas : une vraie chute peut effacer ton nom.", true, "difficulty.lethal");
+    screen.addOption(
+        1,
+        "Facile",
+        "Plus d'or, plus de sécurité, retour à 75% PV après une mort non définitive.",
+        true,
+        "difficulty.easy",
+        makeCreationItemData("difficulty", "Création - difficulté", "select", "Facile", "Départ plus permissif avec davantage de sécurité.", "Sécurisé", "Respawn non définitif : 75% PV", "Ressources de départ améliorées")
+    );
+    screen.addOption(
+        2,
+        "Normal",
+        "L'expérience Dinotofu standard.",
+        true,
+        "difficulty.normal",
+        makeCreationItemData("difficulty", "Création - difficulté", "select", "Normal", "Équilibre prévu pour la majorité des premières parties.", "Standard", "Règles normales", "Kit de départ standard")
+    );
+    screen.addOption(
+        3,
+        "Difficile",
+        "Moins de ressources, pénalités plus dures, retour à 30% PV.",
+        true,
+        "difficulty.hard",
+        makeCreationItemData("difficulty", "Création - difficulté", "select", "Difficile", "Moins de ressources et pénalités de mort plus fortes.", "Punitif", "Respawn non définitif : 30% PV", "Récompenses et pertes plus tendues", true)
+    );
+    screen.addOption(
+        4,
+        "Cauchemar",
+        "Très punitif, retour à 10% PV, et la mort commence vraiment à avoir des dents.",
+        true,
+        "difficulty.nightmare",
+        makeCreationItemData("difficulty", "Création - difficulté", "select", "Cauchemar", "Mode très dur placé juste avant le Léthal.", "Très dangereux", "Respawn non définitif : 10% PV", "Pertes sévères", true)
+    );
+    screen.addOption(
+        5,
+        "Léthal",
+        "Le registre ne pardonne pas : une vraie chute peut effacer ton nom.",
+        true,
+        "difficulty.lethal",
+        makeCreationItemData("difficulty", "Création - difficulté", "select", "Léthal", "Mort définitive possible : le personnage peut quitter le registre des vivants.", "Permadeath", "Historique des morts définitives", "Statistiques corrompues possibles", true)
+    );
 
     int choice = TerminalInterface::askMenuChoiceFromOptions(
         screen,
@@ -715,7 +805,21 @@ void Game::choosePlayerRace()
             characterRaceToText(race),
             hint.str(),
             true,
-            "character.race.select"
+            "character.race.select",
+            makeCreationItemData(
+                "race",
+                "Création - race",
+                "select",
+                characterRaceToText(race),
+                RaceCatalog::getShortDescription(race),
+                RaceCatalog::getGameplayIdentity(race),
+                "PV " + std::to_string(bonus.maxHpBonus)
+                    + " | Dégâts " + std::to_string(bonus.minDamageBonus)
+                    + "/" + std::to_string(bonus.maxDamageBonus)
+                    + " | Critique " + std::to_string(bonus.criticalDamageBonus),
+                race == CharacterRace::Demon ? "Commerce plus tendu" : "Origine validée",
+                race == CharacterRace::Demon
+            )
         );
     }
 
@@ -756,12 +860,23 @@ void Game::choosePlayerClass()
     for (std::size_t i = 0; i < categories.size(); ++i)
     {
         ClassCategory category = categories[i];
+        const std::string categoryName = classCategoryToText(category);
+        const std::string categoryCount = std::to_string(ClassCatalog::getPlayableClassCountByCategory(category)) + " classes disponibles";
         categoryScreen.addOption(
             static_cast<int>(i + 1),
-            classCategoryToText(category),
-            std::to_string(ClassCatalog::getPlayableClassCountByCategory(category)) + " classes disponibles",
+            categoryName,
+            categoryCount,
             true,
-            "character.class.category.select"
+            "character.class.category.select",
+            makeCreationItemData(
+                "class_category",
+                "Création - famille de classe",
+                "select",
+                categoryName,
+                "Choisir une famille pour filtrer les classes jouables.",
+                categoryCount,
+                "Étape 1/2 du choix de classe"
+            )
         );
     }
 
@@ -792,7 +907,20 @@ void Game::choosePlayerClass()
             info.name,
             hint.str(),
             true,
-            "character.class.select"
+            "character.class.select",
+            makeCreationItemData(
+                "class",
+                "Création - classe",
+                "select",
+                info.name,
+                info.role,
+                "Classe jouable",
+                "PV " + std::to_string(info.maxHp)
+                    + " | Dégâts " + std::to_string(info.minDamage)
+                    + "-" + std::to_string(info.maxDamage)
+                    + " | Critique " + std::to_string(info.criticalDamage),
+                "Potions " + std::to_string(info.healingPotionCount) + "/" + std::to_string(info.damagePotionCount)
+            )
         );
     }
 
@@ -1148,6 +1276,7 @@ void Game::configurePartyMode()
     if (choice == 1)
     {
         MenuScreen confirmation("SESSION SOLO", "session.party.confirmation.solo");
+        confirmation.setContinueInput("Valide pour ouvrir les activités disponibles.");
         confirmation.addLine("Session solo sélectionnée.");
         TerminalInterface::renderMenuScreen(confirmation, false);
         Console::waitForEnter();
@@ -1156,6 +1285,7 @@ void Game::configurePartyMode()
     }
 
     MenuScreen coopIntro("SESSION COOP", "session.party.confirmation.coop");
+    coopIntro.setContinueInput("Valide pour choisir les autres joueurs.");
     coopIntro.addLine("Le joueur 1 reste le point d'ancrage : voyage, boss, niveau de session, événements et monstres.");
     coopIntro.addLine("Les autres joueurs interviennent surtout en combat, avec leur inventaire et leurs récompenses individuelles.");
     TerminalInterface::renderMenuScreen(coopIntro, false);
@@ -1176,6 +1306,7 @@ void Game::configurePartyMode()
     }
 
     MenuScreen result("GROUPE", "session.party.result");
+    result.setContinueInput("Valide pour ouvrir les activités disponibles.");
 
     if (partyPlayers.empty())
     {
@@ -1199,15 +1330,78 @@ void Game::chooseGameMode()
     {
         MenuScreen screen("ACTIVITÉS", "activity.main");
         screen.addSubtitle("Choisis la prochaine route de " + mainPlayer.getName() + ".");
-        screen.addOption(1, "Histoire", "La grande route du monde, encore scellée par les archives.", true, "activity.story");
-        screen.addOption(2, "Combats", "PvE monstres, boss, groupes d'adversaires et JcJ.", true, "activity.combat");
-        screen.addOption(3, "Exploration", "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues.", true, "activity.exploration");
-        screen.addOption(4, "Quêtes", "Guilde, journal, demandes de PNJ et progression de quêtes.", true, "activity.quests");
-        screen.addOption(5, "Boutiques / lieux visitables", "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux.", true, "activity.locations");
-        screen.addOption(6, "PNJ notables", "Parler aux clients et personnages disponibles sans passer par une boutique.", true, "activity.npcs");
-        screen.addOption(7, "Échange / don", "Transférer des ressources entre personnages compatibles.", true, "activity.exchange");
-        screen.addOption(8, "Gestion après-combat", "Ouvre le récap, les statistiques, les lieux, les quêtes et les actions entre deux combats.", true, "activity.post_combat");
-        screen.addOption(9, "Information sur toutes les options", "Ouvre un guide clair sur les routes possibles.", true, "activity.info");
+        screen.addOption(
+            1,
+            "Histoire",
+            "La grande route du monde, encore scellée par les archives.",
+            true,
+            "activity.story",
+            makeActivityItemData("Routes principales", "story", "Histoire", "Grande route principale gardée visible, mais gardée pour la V3 quand l'IG sera propre.", "Scellé", "V3 plus tard", true)
+        );
+        screen.addOption(
+            2,
+            "Combats",
+            "PvE monstres, boss, groupes d'adversaires et JcJ.",
+            true,
+            "activity.combat",
+            makeActivityItemData("Routes principales", "combat", "Combats", "Accès aux duels IA, JcJ local, PvE monstres et boss sans passer par l'histoire.", "Disponible", "Chemin jouable", true)
+        );
+        screen.addOption(
+            3,
+            "Exploration",
+            "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues.",
+            true,
+            "activity.exploration",
+            makeActivityItemData("Terrain", "travel", "Exploration", "Sorties par biome avec risques, ressources, coffres, pièges, mimics et rencontres imprévues.", "Disponible", "Chemin jouable", true)
+        );
+        screen.addOption(
+            4,
+            "Quêtes",
+            "Guilde, journal, demandes de PNJ et progression de quêtes.",
+            true,
+            "activity.quests",
+            makeActivityItemData("Ville", "quest", "Quêtes", "Accès au journal, à la guilde, aux demandes de PNJ et aux validations d'objectifs.", "Disponible", "Ville / progression")
+        );
+        screen.addOption(
+            5,
+            "Boutiques / lieux visitables",
+            "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux.",
+            true,
+            "activity.locations",
+            makeActivityItemData("Ville", "travel", "Boutiques / lieux visitables", "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux centralisés hors combat.", "Disponible", "Ville / économie")
+        );
+        screen.addOption(
+            6,
+            "PNJ notables",
+            "Parler aux clients et personnages disponibles sans passer par une boutique.",
+            true,
+            "activity.npcs",
+            makeActivityItemData("Ville", "talk", "PNJ notables", "Discussion directe avec les clients ou personnages disponibles, sans forcer une boutique.", "Disponible", "Ville / dialogues")
+        );
+        screen.addOption(
+            7,
+            "Échange / don",
+            "Transférer des ressources entre personnages compatibles.",
+            true,
+            "activity.exchange",
+            makeActivityItemData("Gestion", "barter", "Échange / don", "Transfert protégé d'objets, matériaux ou or entre personnages compatibles.", "Disponible", "Gestion de compte")
+        );
+        screen.addOption(
+            8,
+            "Gestion après-combat",
+            "Ouvre le récap, les statistiques, les lieux, les quêtes et les actions entre deux combats.",
+            true,
+            "activity.post_combat",
+            makeActivityItemData("Gestion", "inspect", "Gestion après-combat", "Récap, statistiques, inventaire, équipement, lieux, quêtes et actions entre deux combats.", "Disponible", "Hub de gestion", true)
+        );
+        screen.addOption(
+            9,
+            "Information sur toutes les options",
+            "Ouvre un guide clair sur les routes possibles.",
+            true,
+            "activity.info",
+            makeActivityItemData("Aide", "inspect", "Information sur toutes les options", "Guide court des routes jouables, utile quand l'IG doit expliquer sans noyer le joueur.", "Aide", "Lecture")
+        );
         addOutOfCombatUtilityOptions(screen, true, true);
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(
@@ -1242,10 +1436,38 @@ void Game::chooseGameMode()
         {
             MenuScreen combatScreen("COMBATS", "activity.combat.menu");
             combatScreen.addBackOption();
-            combatScreen.addOption(1, "PvP IA", "Duel contre une IA, avec personnages spéciaux possibles selon le mode.", true, "combat.ai_pvp");
-            combatScreen.addOption(2, "PvP 2 joueurs / JcJ", "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.", true, "combat.local_pvp");
-            combatScreen.addOption(3, "PvE monstres", "Vagues de monstres, loots, matériaux, qualité de récupération et progression.", true, "combat.monster_pve");
-            combatScreen.addOption(4, "PvE Boss", "Combat contre un boss avec identité, décryptage et fragments spéciaux.", true, "combat.boss_pve");
+            combatScreen.addOption(
+                1,
+                "PvP IA",
+                "Duel contre une IA, avec personnages spéciaux possibles selon le mode.",
+                true,
+                "combat.ai_pvp",
+                makeActivityItemData("Combats", "combat", "PvP IA", "Duel contre une IA, avec personnages spéciaux possibles selon le mode.", "Disponible", "Combat volontaire")
+            );
+            combatScreen.addOption(
+                2,
+                "PvP 2 joueurs / JcJ",
+                "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.",
+                true,
+                "combat.local_pvp",
+                makeActivityItemData("Combats", "combat", "PvP 2 joueurs / JcJ", "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.", "Disponible", "Combat volontaire")
+            );
+            combatScreen.addOption(
+                3,
+                "PvE monstres",
+                "Vagues de monstres, loots, matériaux, qualité de récupération et progression.",
+                true,
+                "combat.monster_pve",
+                makeActivityItemData("Combats", "combat", "PvE monstres", "Vagues de monstres, loots, matériaux, qualité de récupération et progression.", "Disponible", "Farm / progression", true)
+            );
+            combatScreen.addOption(
+                4,
+                "PvE Boss",
+                "Combat contre un boss avec identité, décryptage et fragments spéciaux.",
+                true,
+                "combat.boss_pve",
+                makeActivityItemData("Combats", "combat", "PvE Boss", "Combat contre un boss avec identité, décryptage et fragments spéciaux. La fuite de boss reste impossible.", "Dangereux", "Boss / fragments", true)
+            );
 
             int combatChoice = TerminalInterface::askMenuChoiceFromOptions(
                 combatScreen,
@@ -1316,6 +1538,7 @@ void Game::displaySelectedMode()
     Console::clear();
 
     MenuScreen screen("ACTIVITÉ SÉLECTIONNÉE", "activity.selected");
+    screen.setContinueInput("Valide pour lancer cette activité.");
     screen.addLine("Activité : " + getSelectedModeName());
     screen.addLine("Difficulté : " + getDifficultyName());
 

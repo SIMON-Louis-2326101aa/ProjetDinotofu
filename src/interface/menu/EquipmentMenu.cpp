@@ -10,6 +10,7 @@
 #include "interface/menu/equipment/EquipmentDisplay.hpp"
 #include "interface/menu/equipment/EquipmentComparison.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "combat/system/CombatClassSystem.hpp"
 
@@ -47,7 +48,10 @@ namespace
         if (player.hasEquippedWeapon())
         {
             Weapon weapon = player.getEquippedWeapon();
-            lines.push_back("Arme équipée : " + weapon.getName() + " (" + equipmentWeaponDurabilityText(weapon) + ")" + (weapon.isBroken() ? " - Cassée" : ""));
+            lines.push_back("- Arme équipée : " + weapon.getName()
+                + " | Durabilité : " + equipmentWeaponDurabilityText(weapon)
+                + " | État : " + (weapon.isBroken() ? "Cassée" : "Utilisable")
+                + " | Dégâts : +" + std::to_string(weapon.getMinDamageBonus()) + " à +" + std::to_string(weapon.getMaxDamageBonus()));
 
             if (!weapon.isBroken() && !player.hasBossEquipmentSeal())
             {
@@ -67,17 +71,21 @@ namespace
         }
         else
         {
-            lines.push_back("Arme équipée : Aucune");
+            lines.push_back("- Arme équipée : Aucune");
         }
 
         if (player.hasEquippedArmor())
         {
             Armor armor = player.getEquippedArmor();
-            lines.push_back("Armure équipée : " + armor.getName() + " (" + equipmentArmorDurabilityText(armor) + ")" + (armor.isBroken() ? " - Cassée" : ""));
+            lines.push_back("- Armure équipée : " + armor.getName()
+                + " | Durabilité : " + equipmentArmorDurabilityText(armor)
+                + " | État : " + (armor.isBroken() ? "Cassée" : "Utilisable")
+                + " | PV max : +" + std::to_string(armor.getMaxHpBonus())
+                + " | Réduction : " + std::to_string(armor.getDamageReduction()));
         }
         else
         {
-            lines.push_back("Armure équipée : Aucune");
+            lines.push_back("- Armure équipée : Aucune");
         }
 
         lines.push_back("Or : " + std::to_string(player.getInventory().getGold()) + " pièces");
@@ -88,15 +96,15 @@ namespace
     {
         std::vector<std::string> lines;
 
-        lines.push_back("=== Arme équipée ===");
         if (player.hasEquippedWeapon())
         {
             Weapon weapon = player.getEquippedWeapon();
-            lines.push_back("Nom : " + weapon.getName());
+            lines.push_back("- Arme équipée : " + weapon.getName()
+                + " | Durabilité : " + equipmentWeaponDurabilityText(weapon)
+                + " | État : " + (weapon.isBroken() ? "Cassée" : player.hasBossEquipmentSeal() ? "Sceau de boss" : "Utilisable"));
             lines.push_back("Description : " + weapon.getDescription());
             lines.push_back("Bonus dégâts : +" + std::to_string(weapon.getMinDamageBonus()) + " à +" + std::to_string(weapon.getMaxDamageBonus()));
             lines.push_back("Bonus critique : +" + std::to_string(weapon.getCriticalBonus()));
-            lines.push_back("Durabilité : " + equipmentWeaponDurabilityText(weapon));
 
             if (weapon.isBroken())
             {
@@ -119,24 +127,24 @@ namespace
         }
         else
         {
-            lines.push_back("Aucune arme équipée.");
+            lines.push_back("- Arme équipée : Aucune");
         }
 
         lines.push_back("");
-        lines.push_back("=== Armure équipée ===");
         if (player.hasEquippedArmor())
         {
             Armor armor = player.getEquippedArmor();
-            lines.push_back("Nom : " + armor.getName());
+            lines.push_back("- Armure équipée : " + armor.getName()
+                + " | Durabilité : " + equipmentArmorDurabilityText(armor)
+                + " | État : " + (armor.isBroken() ? "Cassée" : "Utilisable"));
             lines.push_back("Description : " + armor.getDescription());
             lines.push_back("Bonus PV max : +" + std::to_string(armor.getMaxHpBonus()));
             lines.push_back("Réduction dégâts : " + std::to_string(armor.getDamageReduction()));
-            lines.push_back("Durabilité : " + equipmentArmorDurabilityText(armor));
             lines.push_back(armor.isBroken() ? "État : cassée, ses bonus ne s'appliquent plus." : "État : Utilisable");
         }
         else
         {
-            lines.push_back("Aucune armure équipée.");
+            lines.push_back("- Armure équipée : Aucune");
         }
 
         lines.push_back("");
@@ -266,60 +274,97 @@ bool EquipmentMenu::equipWeaponFromInventory(Player& player)
         return false;
     }
 
-    MenuScreen weaponListScreen = EquipmentDisplay::buildWeaponListScreen(player);
-    int choice = TerminalInterface::askMenuChoiceFromOptions(
-        weaponListScreen,
-        "Choix invalide. Entre un numéro d'arme visible, ou -1 pour revenir."
-    );
+    constexpr std::size_t itemsPerPage = 10;
+    std::size_t pageIndex = 0;
 
-    Console::clear();
-
-    if (choice == -1)
+    while (true)
     {
+        const std::size_t totalItems = static_cast<std::size_t>(player.getInventory().getWeaponCount());
+        const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages - 1;
+        }
+
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
+
+        MenuScreen weaponListScreen = EquipmentDisplay::buildWeaponListScreen(player, pageIndex, itemsPerPage);
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            weaponListScreen,
+            "Choix invalide. Choisis une arme affichée, une page ou 0 pour revenir."
+        );
+
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return false;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const int visibleCount = static_cast<int>(last - first);
+        if (choice < 1 || choice > visibleCount)
+        {
+            showEquipmentNotice("ARME INTROUVABLE", "equipment.weapon.invalid_choice", {"Ce numéro ne correspond à aucune arme affichée.", "Change de page ou choisis une entrée visible."});
+            continue;
+        }
+
+        const int weaponIndex = static_cast<int>(first) + choice - 1;
+
+        if (!player.getInventory().hasWeapon(weaponIndex))
+        {
+            showEquipmentNotice("ARME INTROUVABLE", "equipment.weapon.missing", {"Cette arme n'existe pas dans ton inventaire.", "Le registre se mettra à jour au prochain affichage."});
+            continue;
+        }
+
+        Weapon newWeapon = player.getInventory().getWeapon(weaponIndex);
+
+        MenuScreen selectedWeaponScreen = EquipmentDisplay::buildSelectedWeaponScreen(newWeapon);
+        int action = TerminalInterface::askMenuChoiceFromOptions(
+            selectedWeaponScreen,
+            "Choix invalide. Choisis une action visible pour cette arme."
+        );
+
+        Console::clear();
+
+        if (action == 0)
+        {
+            continue;
+        }
+
+        if (action == 1)
+        {
+            showEquipmentWeaponInspection(newWeapon);
+            continue;
+        }
+
+        if (action == 2)
+        {
+            EquipmentComparison::displayWeaponComparison(player, newWeapon);
+            continue;
+        }
+
+        if (!player.equipWeapon(weaponIndex))
+        {
+            showEquipmentNotice("ARME NON ÉQUIPÉE", "equipment.weapon.equip.failed", {"Impossible d'équiper cette arme.", "Elle a peut-être été déplacée, retirée ou rendue indisponible."});
+            continue;
+        }
+
+        showEquipmentWeaponEquipResult(player, player.getEquippedWeapon());
         return false;
     }
-
-    if (!player.getInventory().hasWeapon(choice))
-    {
-        showEquipmentNotice("ARME INTROUVABLE", "equipment.weapon.missing", {"Cette arme n'existe pas dans ton inventaire.", "Le registre se mettra à jour au prochain affichage."});
-        return false;
-    }
-
-    Weapon newWeapon = player.getInventory().getWeapon(choice);
-
-    MenuScreen selectedWeaponScreen = EquipmentDisplay::buildSelectedWeaponScreen(newWeapon);
-    int action = TerminalInterface::askMenuChoiceFromOptions(
-        selectedWeaponScreen,
-        "Choix invalide. Choisis une action visible pour cette arme."
-    );
-
-    Console::clear();
-
-    if (action == 0)
-    {
-        return false;
-    }
-
-    if (action == 1)
-    {
-        showEquipmentWeaponInspection(newWeapon);
-        return false;
-    }
-
-    if (action == 2)
-    {
-        EquipmentComparison::displayWeaponComparison(player, newWeapon);
-        return false;
-    }
-
-    if (!player.equipWeapon(choice))
-    {
-        showEquipmentNotice("ARME NON ÉQUIPÉE", "equipment.weapon.equip.failed", {"Impossible d'équiper cette arme.", "Elle a peut-être été déplacée, retirée ou rendue indisponible."});
-        return false;
-    }
-
-    showEquipmentWeaponEquipResult(player, player.getEquippedWeapon());
-    return false;
 }
 
 // EN: equipArmorFromInventory declares or implements a focused behavior used by this module.
@@ -332,58 +377,95 @@ bool EquipmentMenu::equipArmorFromInventory(Player& player)
         return false;
     }
 
-    MenuScreen armorListScreen = EquipmentDisplay::buildArmorListScreen(player);
-    int choice = TerminalInterface::askMenuChoiceFromOptions(
-        armorListScreen,
-        "Choix invalide. Entre un numéro d'armure visible, ou -1 pour revenir."
-    );
+    constexpr std::size_t itemsPerPage = 10;
+    std::size_t pageIndex = 0;
 
-    Console::clear();
-
-    if (choice == -1)
+    while (true)
     {
+        const std::size_t totalItems = static_cast<std::size_t>(player.getInventory().getArmorCount());
+        const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages - 1;
+        }
+
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
+
+        MenuScreen armorListScreen = EquipmentDisplay::buildArmorListScreen(player, pageIndex, itemsPerPage);
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            armorListScreen,
+            "Choix invalide. Choisis une armure affichée, une page ou 0 pour revenir."
+        );
+
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return false;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const int visibleCount = static_cast<int>(last - first);
+        if (choice < 1 || choice > visibleCount)
+        {
+            showEquipmentNotice("ARMURE INTROUVABLE", "equipment.armor.invalid_choice", {"Ce numéro ne correspond à aucune armure affichée.", "Change de page ou choisis une entrée visible."});
+            continue;
+        }
+
+        const int armorIndex = static_cast<int>(first) + choice - 1;
+
+        if (!player.getInventory().hasArmor(armorIndex))
+        {
+            showEquipmentNotice("ARMURE INTROUVABLE", "equipment.armor.missing", {"Cette armure n'existe pas dans ton inventaire.", "Le registre se mettra à jour au prochain affichage."});
+            continue;
+        }
+
+        Armor newArmor = player.getInventory().getArmor(armorIndex);
+
+        MenuScreen selectedArmorScreen = EquipmentDisplay::buildSelectedArmorScreen(newArmor);
+        int action = TerminalInterface::askMenuChoiceFromOptions(
+            selectedArmorScreen,
+            "Choix invalide. Choisis une action visible pour cette armure."
+        );
+
+        Console::clear();
+
+        if (action == 0)
+        {
+            continue;
+        }
+
+        if (action == 1)
+        {
+            showEquipmentArmorInspection(newArmor);
+            continue;
+        }
+
+        if (action == 2)
+        {
+            EquipmentComparison::displayArmorComparison(player, newArmor);
+            continue;
+        }
+
+        if (!player.equipArmor(armorIndex))
+        {
+            showEquipmentNotice("ARMURE NON ÉQUIPÉE", "equipment.armor.equip.failed", {"Impossible d'équiper cette armure.", "Elle a peut-être été déplacée, retirée ou rendue indisponible."});
+            continue;
+        }
+
+        showEquipmentArmorEquipResult(player, player.getEquippedArmor());
         return false;
     }
-
-    if (!player.getInventory().hasArmor(choice))
-    {
-        showEquipmentNotice("ARMURE INTROUVABLE", "equipment.armor.missing", {"Cette armure n'existe pas dans ton inventaire.", "Le registre se mettra à jour au prochain affichage."});
-        return false;
-    }
-
-    Armor newArmor = player.getInventory().getArmor(choice);
-
-    MenuScreen selectedArmorScreen = EquipmentDisplay::buildSelectedArmorScreen(newArmor);
-    int action = TerminalInterface::askMenuChoiceFromOptions(
-        selectedArmorScreen,
-        "Choix invalide. Choisis une action visible pour cette armure."
-    );
-
-    Console::clear();
-
-    if (action == 0)
-    {
-        return false;
-    }
-
-    if (action == 1)
-    {
-        showEquipmentArmorInspection(newArmor);
-        return false;
-    }
-
-    if (action == 2)
-    {
-        EquipmentComparison::displayArmorComparison(player, newArmor);
-        return false;
-    }
-
-    if (!player.equipArmor(choice))
-    {
-        showEquipmentNotice("ARMURE NON ÉQUIPÉE", "equipment.armor.equip.failed", {"Impossible d'équiper cette armure.", "Elle a peut-être été déplacée, retirée ou rendue indisponible."});
-        return false;
-    }
-
-    showEquipmentArmorEquipResult(player, player.getEquippedArmor());
-    return false;
 }

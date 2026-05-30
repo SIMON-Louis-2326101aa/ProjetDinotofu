@@ -37,6 +37,89 @@ namespace
 
         return -1;
     }
+
+    MenuOptionItemData buildEnemyTargetItemData(const Monster& enemy)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = enemy.isInvocation() ? "summon" : "enemy";
+        itemData.section = "Cibles";
+        itemData.actionType = "target";
+        itemData.name = enemy.getName();
+        itemData.status = "PV : " + std::to_string(enemy.getHp()) + "/" + std::to_string(enemy.getMaxHp());
+        itemData.owner = enemy.getRaceText();
+
+        if (enemy.isInvocation())
+        {
+            itemData.detail = "Invocation ennemie active";
+        }
+        else if (enemy.isEvolved())
+        {
+            itemData.detail = "Variation évoluée";
+        }
+        else if (enemy.isElite())
+        {
+            itemData.detail = "Élite";
+        }
+        else
+        {
+            itemData.detail = "Cible active";
+        }
+
+        if (enemy.isProvoking())
+        {
+            itemData.progress = "Provocation active";
+            itemData.important = true;
+        }
+        else if (enemy.hasHealingThreat())
+        {
+            itemData.progress = "Soigneur marqué";
+            itemData.important = true;
+        }
+        else
+        {
+            itemData.important = enemy.getMaxHp() > 0 && enemy.getHp() * 100 <= enemy.getMaxHp() * 35;
+        }
+
+        return itemData;
+    }
+
+
+    MenuOptionItemData buildSelectedTargetActionData(
+        const Monster& target,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = target.isInvocation() ? "summon" : "enemy";
+        itemData.section = "Cible sélectionnée";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = "PV : " + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp());
+        itemData.owner = target.getName();
+
+        if (target.isProvoking())
+        {
+            itemData.progress = "Provocation active";
+            itemData.important = true;
+        }
+        else if (target.hasHealingThreat())
+        {
+            itemData.progress = "Soigneur marqué";
+            itemData.important = true;
+        }
+        else
+        {
+            itemData.important = important;
+        }
+
+        return itemData;
+    }
 }
 
 bool CombatTargetMenu::openForAttack(
@@ -133,7 +216,8 @@ int CombatTargetMenu::chooseTarget(const EnemyCombatQueue& wave)
             enemy.getName(),
             hint,
             !enemy.isDead(),
-            "combat.target.select." + std::to_string(i)
+            "combat.target.select." + std::to_string(i),
+            buildEnemyTargetItemData(enemy)
         );
     }
 
@@ -217,6 +301,7 @@ bool CombatTargetMenu::openTargetMenu(
             MenuScreen targetScreen("CIBLE SÉLECTIONNÉE", "combat.target_actions");
             targetScreen.addLine("Cible : " + target.getName());
             targetScreen.addLine("Race : " + target.getRaceText());
+            targetScreen.addLine("PV : " + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp()));
 
             if (target.isInvocation())
             {
@@ -231,24 +316,77 @@ bool CombatTargetMenu::openTargetMenu(
                 targetScreen.addLine("Statut : Ennemi standard");
             }
 
-            targetScreen.addOption(0, "Retour au menu principal", "", true, "combat.target.back");
+            targetScreen.addOption(
+                0,
+                "Retour au menu principal",
+                "",
+                true,
+                "combat.target.back"
+            );
 
             if (boostedAttack)
             {
-                targetScreen.addOption(1, "Utiliser la potion de rage sur cette cible", "", true, "combat.target.use_rage_potion");
+                targetScreen.addOption(
+                    1,
+                    "Utiliser la potion de rage sur cette cible",
+                    "Consomme l'effet préparé et attaque immédiatement.",
+                    true,
+                    "combat.target.use_rage_potion",
+                    buildSelectedTargetActionData(
+                        target,
+                        "attack",
+                        "Potion de rage",
+                        "Attaque renforcée sur la cible sélectionnée.",
+                        true
+                    )
+                );
             }
             else
             {
-                targetScreen.addOption(1, "Attaquer cette cible", "", true, "combat.target.attack");
+                targetScreen.addOption(
+                    1,
+                    "Attaquer cette cible",
+                    "Consomme l'action du tour.",
+                    true,
+                    "combat.target.attack",
+                    buildSelectedTargetActionData(
+                        target,
+                        "attack",
+                        "Attaquer",
+                        "Attaque simple sur la cible sélectionnée.",
+                        true
+                    )
+                );
             }
 
-            targetScreen.addOption(2, "Inspecter cette cible", "Voir les informations de combat connues.", true, "combat.target.inspect");
-            targetScreen.addOption(3, "Choisir une autre cible", "", true, "combat.target.change");
-            TerminalInterface::renderMenuScreen(targetScreen);
-
-            int choice = Console::askNumberBetween(
-                0,
+            targetScreen.addOption(
+                2,
+                "Inspecter cette cible",
+                "Voir les informations de combat connues.",
+                true,
+                "combat.target.inspect",
+                buildSelectedTargetActionData(
+                    target,
+                    "inspect",
+                    "Inspecter",
+                    "Affiche les statistiques connues puis revient à cette cible."
+                )
+            );
+            targetScreen.addOption(
                 3,
+                "Choisir une autre cible",
+                "Retourner à la liste des cibles actives.",
+                true,
+                "combat.target.change",
+                buildSelectedTargetActionData(
+                    target,
+                    "target",
+                    "Changer de cible",
+                    "Revient à la liste des cibles sans consommer l'action."
+                )
+            );
+            int choice = TerminalInterface::askMenuChoiceFromOptions(
+                targetScreen,
                 "Choix invalide. Entre un chiffre entre 0 et 3."
             );
 

@@ -271,6 +271,7 @@ void DeathPenaltySystem::displayNonLethalDeathPenalty(
     }
 
     screen.addFooterLine("Objets liés au corps, à l'âme ou au personnage : une marque profonde les protège.");
+    screen.setDisplayOnlyInput("Résumé de pénalité affiché sans saisie directe.");
     TerminalInterface::renderMenuScreen(screen, false);
 }
 
@@ -283,6 +284,7 @@ void DeathPenaltySystem::displayLethalDeathCorruption()
     screen.addLine("Vous ne deviez pas mourir.");
     screen.addLine("Statut : personnage supprimé du registre des vivants.");
     screen.addLine("Connais-tu quelqu'un capable d'échapper à la mort ? Moi non...");
+    screen.setDisplayOnlyInput("Message létal affiché sans choix joueur.");
     TerminalInterface::renderMenuScreen(screen, false);
 }
 
@@ -293,6 +295,7 @@ void DeathPenaltySystem::displayLethalCurrentDeathStatistic()
     MenuScreen screen("STATISTIQUE CORROMPUE", "death.lethal.current_statistic");
     screen.addLine("Morts du personnage : [STATISTIQUE CORROMPUE]");
     screen.addLine("But de mission : survivre.");
+    screen.setDisplayOnlyInput("Statistique corrompue affichée sans choix joueur.");
     TerminalInterface::renderMenuScreen(screen, false);
 }
 
@@ -315,5 +318,6 @@ void DeathPenaltySystem::displayLethalSurvivalAnomaly()
     screen.addLine("Tes bénédictions se sont consumées.");
     screen.addLine("Mais ton nom existe encore.");
     screen.addLine("Mais le registre continue de te regarder.");
+    screen.setDisplayOnlyInput("Anomalie de survie affichée sans choix joueur.");
     TerminalInterface::renderMenuScreen(screen, false);
 }

@@ -19,6 +19,7 @@
 #include "entity/Race.hpp"
 #include "progression/DifficultyMode.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "lore/LegendTriggerSystem.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -234,65 +235,70 @@ EnemyCombatQueue AdventurerGroupEncounter::createSpecialGroup(
 {
     EnemyCombatQueue queue;
     int encounterLevel = player.getLevel();
-    int groupChoice = random.between(1, 12);
+    int groupChoice = random.between(1, 13);
     std::vector<std::string> names;
 
     switch (groupChoice)
     {
         case 1:
-            names = {"Hazak", "Henrique"};
+            names = {"Hazak", "Fail", "Aoi", "Kanadé", "Sanctus"};
             break;
 
         case 2:
-            names = {"Mattzelda", "Louis", "Trexof"};
+            names = {"Hazak", "Henrique"};
             break;
 
         case 3:
-            names = {"Aoi", "Kanadé", "Sanctus"};
+            names = {"Mattzelda", "Louis", "Trexof"};
             break;
 
         case 4:
-            names = {"Hazak", "Hestia"};
+            names = {"Aoi", "Kanadé", "Sanctus"};
             break;
 
         case 5:
-            names = {"Fail", "Hazak"};
+            names = {"Hazak", "Hestia"};
             break;
 
         case 6:
-            names = {"Skuro"};
-            addRandomSkuroCompatibleSpecialName(random, names);
+            names = {"Fail", "Hazak"};
             break;
 
         case 7:
             names = {"Skuro"};
             addRandomSkuroCompatibleSpecialName(random, names);
-            addRandomSkuroCompatibleSpecialName(random, names);
             break;
 
         case 8:
-            names = {"Fire Flight", "Matt (PRO)"};
+            names = {"Skuro"};
+            addRandomSkuroCompatibleSpecialName(random, names);
+            addRandomSkuroCompatibleSpecialName(random, names);
             break;
 
         case 9:
-            names = {"Hestia", "Sanctus", "Hazak"};
+            names = {"Fire Flight", "Matt (PRO)"};
             break;
 
         case 10:
-            names = {"Fail", "Aoi", "Kanadé"};
+            names = {"Hestia", "Sanctus", "Hazak"};
             break;
 
         case 11:
-            names = {"Louis", "Fire Flight", "Trexof"};
+            names = {"Fail", "Aoi", "Kanadé"};
             break;
 
         case 12:
+            names = {"Louis", "Fire Flight", "Trexof"};
+            break;
+
+        case 13:
         default:
             names = {"Henrique", "Mattzelda", "Skuro"};
             break;
     }
 
     announceSpecialGroup(names);
+    LegendTriggerSystem::maybeDisplaySpecialGroupLegend(names, random);
     announceRelationshipBonus(names);
     SpecialCombatEffects::registerSpecialGroupContext(names);
 
@@ -379,6 +385,17 @@ void AdventurerGroupEncounter::applyRelationshipBonus(
     bool hasSanctus = containsName(groupNames, "Sanctus");
     bool hasFail = containsName(groupNames, "Fail");
     bool hasSkuro = containsName(groupNames, "Skuro");
+    bool hasLesBrasCasses = hasHazak && hasFail && hasAoi && hasKanade && hasSanctus;
+
+    if (hasLesBrasCasses)
+    {
+        if (characterName == "Hazak") opponent.applyFlatStatBonus(18, 3, 4, 6);
+        if (characterName == "Fail") opponent.applyFlatStatBonus(12, 2, 8, 9);
+        if (characterName == "Aoi") opponent.applyFlatStatBonus(14, 1, 5, 5);
+        if (characterName == "Kanadé") opponent.applyFlatStatBonus(12, 2, 7, 8);
+        if (characterName == "Sanctus") opponent.applyFlatStatBonus(40, 0, 3, 1);
+        return;
+    }
 
     if (hasHazak && hasHestia)
     {
@@ -439,7 +456,18 @@ void AdventurerGroupEncounter::announceRelationshipBonus(
 {
     std::vector<std::string> lines;
 
-    if (containsName(groupNames, "Hazak") && containsName(groupNames, "Hestia"))
+    if (containsName(groupNames, "Hazak")
+        && containsName(groupNames, "Fail")
+        && containsName(groupNames, "Aoi")
+        && containsName(groupNames, "Kanadé")
+        && containsName(groupNames, "Sanctus"))
+    {
+        lines.push_back("Relation active : Les bras cassés au complet.");
+        lines.push_back("Le groupe tient une vraie formation de cinq : assassin, mage fou, flammes, zodiaque et rempart.");
+        lines.push_back("Leur nom vient d'une vieille histoire de bras coupé, d'orc, de régénération et de catastrophes qui finissent quand même en réussite.");
+        lines.push_back("Ils jouent aux héros, mais leur ego rend l'arène beaucoup moins prévisible.");
+    }
+    else if (containsName(groupNames, "Hazak") && containsName(groupNames, "Hestia"))
     {
         lines.push_back("Relation active : Hazak protège Hestia.");
         lines.push_back("Ses attaques deviennent plus précises, mais le combat reste non-massacre.");

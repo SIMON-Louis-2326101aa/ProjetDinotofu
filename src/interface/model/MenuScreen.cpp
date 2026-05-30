@@ -174,6 +174,89 @@ namespace
         snapshot.infoCards.push_back(card);
     }
 
+    void addSyntheticInfoCard(
+        GuiMenuSnapshot& snapshot,
+        const std::string& label,
+        const std::string& value,
+        const std::string& kind,
+        bool important = false
+    )
+    {
+        if (label.empty() || value.empty())
+        {
+            return;
+        }
+
+        for (const GuiMenuInfoSnapshot& existing : snapshot.infoCards)
+        {
+            if (toLowerAscii(existing.label) == toLowerAscii(label) && toLowerAscii(existing.value) == toLowerAscii(value))
+            {
+                return;
+            }
+        }
+
+        GuiMenuInfoSnapshot card;
+        card.id = "info." + std::to_string(snapshot.infoCards.size() + 1);
+        card.label = label;
+        card.value = value;
+        card.source = "input";
+        card.kind = kind;
+        card.important = important;
+        snapshot.infoCards.push_back(card);
+    }
+
+    void populateInputContractCards(GuiMenuSnapshot& snapshot)
+    {
+        if (snapshot.inputMode == "display")
+        {
+            addSyntheticInfoCard(snapshot, "Saisie", "lecture seule", "input", false);
+            return;
+        }
+
+        if (snapshot.inputMode == "continue")
+        {
+            addSyntheticInfoCard(snapshot, "Saisie", "Entrée pour continuer", "input", false);
+            return;
+        }
+
+        if (snapshot.inputMode == "quantity")
+        {
+            addSyntheticInfoCard(snapshot, "Saisie", "quantité", "count", true);
+            if (snapshot.hasNumericRange)
+            {
+                addSyntheticInfoCard(
+                    snapshot,
+                    "Limites",
+                    std::to_string(snapshot.numericMin) + " à " + std::to_string(snapshot.numericMax),
+                    "count",
+                    true
+                );
+            }
+            return;
+        }
+
+        if (snapshot.inputMode == "confirmation")
+        {
+            addSyntheticInfoCard(snapshot, "Saisie", "confirmation exacte", "danger", true);
+            if (!snapshot.confirmationKeyword.empty())
+            {
+                addSyntheticInfoCard(snapshot, "Mot requis", snapshot.confirmationKeyword, "danger", true);
+            }
+            return;
+        }
+
+        if (snapshot.inputMode == "text")
+        {
+            addSyntheticInfoCard(snapshot, "Saisie", snapshot.acceptsEmptyInput ? "texte libre optionnel" : "texte libre requis", "input", !snapshot.acceptsEmptyInput);
+            if (snapshot.hasTextLengthRange)
+            {
+                std::string lengthText = std::to_string(snapshot.textMinLength) + " à ";
+                lengthText += snapshot.textMaxLength > 0 ? std::to_string(snapshot.textMaxLength) : "∞";
+                addSyntheticInfoCard(snapshot, "Longueur", lengthText, "count", false);
+            }
+        }
+    }
+
     void populateInfoCards(GuiMenuSnapshot& snapshot)
     {
         if (snapshot.specializedView == "generic")
@@ -326,6 +409,7 @@ namespace
         if (containsAny(text, {"shop", "boutique", "achat", "vente", "marchand", "stock", "troquer", "troc"})) return "boutique";
         if (containsAny(text, {"exploration", "biome", "biomes", "intensité", "intensite", "sortie prudente", "sortie normale", "sortie audacieuse"})) return "exploration";
         if (containsAny(text, {"quest", "quete", "quête", "guilde", "demande", "mission", "lieux visitables"})) return "quete";
+        if (containsAny(text, {"bestiary.legends", "registre des légendes", "registre des legendes", "légendes découvertes", "legendes decouvertes", "contes pour enfant", "salles de boss découvertes", "salles de boss decouvertes", "déclencheurs et rumeurs", "declencheurs et rumeurs", "règles du registre", "regles du registre"})) return "legendes";
         if (containsAny(text, {"bestiary", "bestiaire", "knowledge", "connaissance", "statistique", "statistics", "stats", "materiau", "matériau", "material", "player.", "joueur", "monstre", "monster", "entité", "entite", "attribut", "attributs", "compétence", "competence", "compétences", "competences", "skill", "career", "parcours"})) return "progression";
         if (containsAny(text, {"inventory", "inventaire", "item", "objet", "consommable"})) return "inventaire";
         if (containsAny(text, {"equipment", "equipement", "équipement", "arme", "armure"})) return "equipement";
@@ -347,6 +431,7 @@ namespace
         if (screenCategory == "exploration") return "exploration";
         if (screenCategory == "quete") return "quest";
         if (screenCategory == "progression") return "progression";
+        if (screenCategory == "legendes") return "legends";
         if (screenCategory == "catalogue") return "catalog";
         if (screenCategory == "activite") return "activity";
         if (screenCategory == "session") return "session";
@@ -368,6 +453,7 @@ namespace
         if (specializedView == "exploration") return "Exploration";
         if (specializedView == "quest") return "Quêtes";
         if (specializedView == "progression") return "Progression";
+        if (specializedView == "legends") return "Légendes";
         if (specializedView == "catalog") return "Catalogue";
         if (specializedView == "activity") return "Activités";
         if (specializedView == "session") return "Session";
@@ -389,6 +475,7 @@ namespace
         if (specializedView == "exploration") return "Sépare biomes, risques, intensités, ressources et objectifs de terrain.";
         if (specializedView == "quest") return "Prépare les blocs journal, guilde, clients et lieux liés aux quêtes.";
         if (specializedView == "progression") return "Prépare les blocs bestiaire, matériaux, statistiques et connaissances.";
+        if (specializedView == "legends") return "Sépare les récits, contes, rumeurs et salles de boss des fiches tactiques.";
         if (specializedView == "catalog") return "Transforme les listes de races, classes, monstres, boss et personnages spéciaux en cartes consultables.";
         if (specializedView == "activity") return "Regroupe les grandes routes jouables : histoire, combats, exploration, quêtes, lieux et gestion.";
         if (specializedView == "session") return "Structure le choix solo/coop local et les personnages secondaires.";
@@ -662,6 +749,7 @@ namespace
     {
         const std::string text = snapshot.screenId + " " + snapshot.specializedView + " " + action.actionId + " " + action.label + " " + action.hint;
 
+        if (snapshot.specializedView == "legends" || containsAny(text, {"bestiary.legends", "légende", "legende", "conte", "rumeur"})) return "legend";
         if (snapshot.specializedView == "activity" || containsAny(action.actionId, {"activity."})) return "activity";
         if (snapshot.specializedView == "session" || containsAny(snapshot.screenId, {"session.party"})) return "session";
         if (snapshot.specializedView == "creation" || containsAny(snapshot.screenId, {"character.creation", "save.characters.create"})) return "creation";
@@ -727,6 +815,7 @@ namespace
     {
         const std::string text = snapshot.screenId + " " + action.actionId + " " + action.label;
 
+        if (snapshot.specializedView == "legends" || containsAny(text, {"bestiary.legends", "légende", "legende", "conte", "rumeur"})) return "Registre des légendes";
         if (snapshot.specializedView == "activity" || containsAny(action.actionId, {"activity."})) return "Activités";
         if (snapshot.specializedView == "session" || containsAny(snapshot.screenId, {"session.party"})) return "Session";
         if (snapshot.specializedView == "creation" || containsAny(snapshot.screenId, {"character.creation", "save.characters.create"})) return "Création";
@@ -763,6 +852,7 @@ namespace
         if (snapshot.specializedView == "exploration") return "Exploration";
         if (snapshot.specializedView == "quest") return "Quêtes";
         if (snapshot.specializedView == "progression") return "Progression";
+        if (snapshot.specializedView == "legends") return "Registre des légendes";
         if (snapshot.specializedView == "catalog") return "Catalogue";
         if (snapshot.specializedView == "activity") return "Activités";
         if (snapshot.specializedView == "session") return "Session";
@@ -780,10 +870,21 @@ namespace
         if (containsAny(text, {"buyback", "racheter", "rachat"})) return "buyback";
         if (containsAny(text, {"buy", "acheter", "achat"})) return "buy";
         if (containsAny(text, {"sell", "vendre", "vente", "revente"})) return "sell";
+        if (containsAny(text, {"import", "importer"})) return "import";
+        if (containsAny(text, {"export", "extraire", "transférer", "transferer", "dossier portable"})) return "export";
+        if (containsAny(text, {"transfer_owner", "donner", "maître", "maitre", "transfert de maîtrise", "transfert de maitrise"})) return "transfer";
+        if (containsAny(text, {"heavy_adaptation", "adaptation lourde", "adapter", "retisser", "retissé", "retissee"})) return "adapt";
+        if (containsAny(text, {"clone", "cloner"})) return "clone";
+        if (containsAny(text, {"delete", "supprimer", "suppression"})) return "delete";
+        if (containsAny(text, {"login", "connecter", "connexion"})) return "login";
+        if (containsAny(text, {"play", "incarner", "jouer"})) return "play";
+        if (containsAny(text, {"guardian", "gardien"})) return "guardian";
         if (containsAny(text, {"barter", "troquer", "troc"})) return "barter";
         if (containsAny(text, {"equip", "équiper", "equiper"})) return "equip";
         if (containsAny(text, {"use", "utiliser", "boire"})) return "use";
         if (containsAny(text, {"repair", "réparer", "reparer"})) return "repair";
+        if (containsAny(text, {"compare", "comparer", "comparaison"})) return "compare";
+        if (containsAny(text, {"bestiary.legends", "lire", "récit", "recit", "légende", "legende", "conte", "rumeur"})) return "read";
         if (containsAny(text, {"inspect", "inspecter", "voir", "consulter", "journal"})) return "inspect";
         if (containsAny(text, {"catalog", "catalogue", "classe", "race", "boss", "monstre", "personnage spécial", "personnage special"})) return "inspect";
         if (containsAny(text, {"activity.story", "histoire"})) return "story";
@@ -791,6 +892,11 @@ namespace
         if (containsAny(text, {"session.", "solo", "coop", "multi local"})) return "session";
         if (containsAny(text, {"character.creation", "difficulty", "difficulté", "difficulte", "race", "class", "classe"})) return "create";
         if (containsAny(text, {"exploration", "biome", "intensité", "intensite", "sortie prudente", "sortie normale", "sortie audacieuse"})) return "travel";
+        if (containsAny(text, {"provocation", "provoke", "provoquer"})) return "provoke";
+        if (containsAny(text, {"reduce_threat", "réduire ma menace", "reduire ma menace", "menace réduite", "menace reduite"})) return "reduce_threat";
+        if (containsAny(text, {"ally_support", "protection", "soin d'allié", "soin d'allie", "support"})) return "support";
+        if (containsAny(text, {"attack", "attaque", "attaquer", "frapper", "potion de rage"})) return "attack";
+        if (containsAny(text, {"target", "cible", "cibles", "choix de cible"})) return "target";
         if (containsAny(text, {"quest", "quête", "quete", "mission", "guilde"})) return "quest";
         if (containsAny(text, {"death", "mort", "morts", "lethal", "létal", "survie", "corrompue"})) return "death";
         if (containsAny(text, {"cheat", "triche", "altéré", "altere", "altération", "alteration", "données altérées", "donnees alterees"})) return "altered_data";
@@ -807,15 +913,31 @@ namespace
         if (actionType == "buyback") return "Racheter";
         if (actionType == "buy") return "Acheter";
         if (actionType == "sell") return "Vendre";
+        if (actionType == "import") return "Importer";
+        if (actionType == "export") return "Extraire";
+        if (actionType == "transfer") return "Transférer";
+        if (actionType == "adapt") return "Adapter";
+        if (actionType == "clone") return "Cloner";
+        if (actionType == "delete") return "Supprimer";
+        if (actionType == "login") return "Connexion";
+        if (actionType == "play") return "Incarner";
+        if (actionType == "guardian") return "Gardien";
         if (actionType == "barter") return "Troquer";
         if (actionType == "equip") return "Équiper";
         if (actionType == "use") return "Utiliser";
         if (actionType == "repair") return "Réparer";
         if (actionType == "inspect") return "Inspecter";
+        if (actionType == "compare") return "Comparer";
+        if (actionType == "read") return "Lire";
         if (actionType == "story") return "Histoire";
         if (actionType == "combat") return "Combat";
         if (actionType == "session") return "Session";
         if (actionType == "create") return "Créer";
+        if (actionType == "attack") return "Attaquer";
+        if (actionType == "target") return "Cibler";
+        if (actionType == "provoke") return "Provoquer";
+        if (actionType == "reduce_threat") return "Menace";
+        if (actionType == "support") return "Soutien";
         if (actionType == "quest") return "Quête";
         if (actionType == "save") return "Sauvegarder";
         if (actionType == "death") return "Consulter";
@@ -834,9 +956,14 @@ namespace
             return false;
         }
 
-        if (snapshot.specializedView == "combat" || snapshot.specializedView == "generic")
+        if (snapshot.specializedView == "generic")
         {
             return false;
+        }
+
+        if (snapshot.specializedView == "combat")
+        {
+            return action.hasItemMetadata;
         }
 
         const std::string text = snapshot.screenId + " " + action.actionId + " " + action.label;
@@ -863,6 +990,7 @@ namespace
                snapshot.specializedView == "exploration" ||
                snapshot.specializedView == "quest" ||
                snapshot.specializedView == "progression" ||
+               snapshot.specializedView == "legends" ||
                snapshot.specializedView == "catalog" ||
                snapshot.specializedView == "activity" ||
                snapshot.specializedView == "session" ||
@@ -1221,6 +1349,15 @@ namespace
             addFocusCard(snapshot, "exploration.quest", "Objectifs", "Repérer les zones liées aux quêtes actives.", {"objectif", "quête probable", "quete probable", "quest"});
             addFocusCard(snapshot, "exploration.resources", "Ressources", "Matériaux, plantes, coffres et traces possibles.", {"matériau", "materiau", "ressource", "coffre", "plante", "traces"});
         }
+        else if (snapshot.specializedView == "legends")
+        {
+            addFocusCard(snapshot, "legends.register", "Fiches légendes", "Entrées enregistrées comme fiches classiques du bestiaire.", {"fiches", "registre", "bestiary.legends.register"});
+            addFocusCard(snapshot, "legends.discovered", "Légendes découvertes", "Récits déjà rencontrés, lus, achetés ou débloqués.", {"découvertes", "decouvertes", "bestiary.legends.discovered"});
+            addFocusCard(snapshot, "legends.groups", "Groupes et héros", "Rumeurs sur les groupes connus et héros chaotiques.", {"groupes", "héros", "heros", "bras cassés", "bras casses"});
+            addFocusCard(snapshot, "legends.children", "Contes pour enfant", "Versions adoucies, populaires ou drôles des récits.", {"contes", "enfant", "children"});
+            addFocusCard(snapshot, "legends.boss_rooms", "Salles de boss", "Traces rares entendues ou lues avant certaines arènes.", {"salles", "boss", "boss_rooms"});
+            addFocusCard(snapshot, "legends.triggers", "Rumeurs", "Notes de PNJ, bibliothèque ou lieux déclencheurs.", {"rumeurs", "déclencheurs", "declencheurs", "triggers"});
+        }
         else if (snapshot.specializedView == "quest")
         {
             addFocusCard(snapshot, "quest.journal", "Journal", "Consulter les quêtes actives et terminées.", {"journal", "quest.hub.journal", "quest.guild.journal"});
@@ -1245,9 +1382,13 @@ namespace
         else if (snapshot.specializedView == "activity")
         {
             addFocusCard(snapshot, "activity.story", "Histoire", "Route principale visible, encore scellée par les archives.", {"histoire", "story", "activity.story"});
-            addFocusCard(snapshot, "activity.combat", "Combats", "PvE, boss, groupes et JcJ local.", {"combat", "combats", "pvp", "pve", "boss"});
-            addFocusCard(snapshot, "activity.exploration", "Exploration", "Biomes, ressources, coffres, pièges et rencontres.", {"exploration", "biome", "biomes"});
-            addFocusCard(snapshot, "activity.management", "Gestion", "Après-combat, inventaire, sauvegarde, quêtes et lieux.", {"gestion", "après-combat", "apres-combat", "boutiques", "lieux", "quêtes", "quetes", "sauvegarder"});
+            addFocusCard(snapshot, "activity.combat", "Combats", "PvE, boss, groupes et JcJ local.", {"combat", "combats", "pvp", "pve", "boss", "combat.ai_pvp", "combat.local_pvp", "combat.monster_pve", "combat.boss_pve"});
+            addFocusCard(snapshot, "activity.exploration", "Exploration", "Biomes, ressources, coffres, pièges et rencontres.", {"exploration", "biome", "biomes", "activity.exploration"});
+            addFocusCard(snapshot, "activity.quests", "Quêtes", "Journal, guilde, demandes de PNJ et validation d'objectifs.", {"quêtes", "quetes", "quest", "guilde", "activity.quests"});
+            addFocusCard(snapshot, "activity.locations", "Lieux", "Boutiques, forge, herboristerie, bibliothèque et lieux sociaux.", {"boutiques", "lieux", "forge", "herboristerie", "bibliothèque", "bibliotheque", "activity.locations"});
+            addFocusCard(snapshot, "activity.npcs", "PNJ", "Discussion directe avec les clients et personnages notables.", {"pnj", "npc", "parler", "discuter", "activity.npcs"});
+            addFocusCard(snapshot, "activity.exchange", "Échange", "Don ou transfert protégé entre personnages compatibles.", {"échange", "echange", "don", "transférer", "transferer", "activity.exchange"});
+            addFocusCard(snapshot, "activity.management", "Gestion", "Après-combat, inventaire, sauvegarde, quêtes et lieux.", {"gestion", "après-combat", "apres-combat", "post_combat", "sauvegarder", "activity.post_combat"});
         }
         else if (snapshot.specializedView == "session")
         {
@@ -1323,6 +1464,10 @@ namespace
         }
         else if (snapshot.specializedView == "combat")
         {
+            addFocusCard(snapshot, "combat.target", "Cible", "Choisir ou changer une cible active sans masquer le numéro terminal.", {"target", "cible", "cibles", "combat.target"});
+            addFocusCard(snapshot, "combat.attack", "Attaque", "Action offensive visible, sans recommandation forcée.", {"attack", "attaque", "attaquer", "frapper"});
+            addFocusCard(snapshot, "combat.inspect", "Inspection", "Consulter les informations connues puis revenir au flux de combat.", {"inspect", "inspecter", "observation"});
+            addFocusCard(snapshot, "combat.role", "Rôle", "Provocation, menace et soutien quand le système le permet.", {"combat.role", "provocation", "menace", "rôle", "role"});
             addFocusCard(snapshot, "combat.heal", "Soin", "Signalé seulement dans les cas pertinents.", {"heal", "soin", "quick_heal", "potion de soin", "recommend_heal"});
             addFocusCard(snapshot, "combat.potions", "Potions", "Ouvrir les consommables de combat.", {"potion", "potions"});
             addFocusCard(snapshot, "combat.equipment", "Équipement", "Changer ou consulter l'équipement.", {"équipement", "equipement", "equipment"});
@@ -1827,6 +1972,8 @@ GuiMenuSnapshot MenuScreen::toGuiSnapshot() const
         snapshot.recommendationReason = "Plusieurs actions possibles : aucune mise en avant pour garder le choix libre.";
         addUniqueTag(snapshot.contextTags, "choix libre");
     }
+
+    populateInputContractCards(snapshot);
 
     if (snapshot.specializedView != "generic")
     {

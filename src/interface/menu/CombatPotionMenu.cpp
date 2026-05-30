@@ -8,6 +8,7 @@
 #include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/CombatMenu.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 #include "interface/menu/potions/CombatPotionDisplay.hpp"
 #include "interface/menu/potions/CombatPotionUse.hpp"
 #include "interface/menu/potions/CombatPotionUtils.hpp"
@@ -32,10 +33,20 @@ bool CombatPotionMenu::openQuickHealing(Player& player)
         return false;
     }
 
+    const std::size_t itemsPerPage = 10;
+    std::size_t pageIndex = 0;
+
     while (true)
     {
+        const std::size_t totalPages = PagedMenu::pageCount(indices.size(), itemsPerPage);
+
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages - 1;
+        }
+
         int choice = TerminalInterface::askMenuChoiceFromOptions(
-            CombatPotionDisplay::buildQuickHealingScreen(player, indices),
+            CombatPotionDisplay::buildQuickHealingScreen(player, indices, pageIndex, itemsPerPage),
             "Choix invalide. Sélectionne une potion affichée."
         );
 
@@ -46,7 +57,27 @@ bool CombatPotionMenu::openQuickHealing(Player& player)
             return false;
         }
 
-        int consumableIndex = indices[choice - 1];
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t visibleCount = PagedMenu::lastIndexExclusive(indices.size(), pageIndex, itemsPerPage) - first;
+
+        if (choice < 1 || choice > static_cast<int>(visibleCount))
+        {
+            continue;
+        }
+
+        int consumableIndex = indices[first + static_cast<std::size_t>(choice - 1)];
 
         if (!player.getInventory().hasConsumable(consumableIndex))
         {
@@ -65,13 +96,13 @@ bool CombatPotionMenu::openQuickHealing(Player& player)
 
         if (action == 0)
         {
-            return false;
+            continue;
         }
 
         if (action == 1)
         {
             CombatPotionDisplay::showPotionDetails(potion);
-            return false;
+            continue;
         }
 
         if (action == 2)
@@ -333,10 +364,20 @@ bool CombatPotionMenu::openPotionSelection(
         return false;
     }
 
+    const std::size_t itemsPerPage = 10;
+    std::size_t pageIndex = 0;
+
     while (true)
     {
+        const std::size_t totalPages = PagedMenu::pageCount(indices.size(), itemsPerPage);
+
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages - 1;
+        }
+
         int choice = TerminalInterface::askMenuChoiceFromOptions(
-            CombatPotionDisplay::buildFilteredPotionsScreen(player, indices),
+            CombatPotionDisplay::buildFilteredPotionsScreen(player, indices, pageIndex, itemsPerPage),
             "Choix invalide. Sélectionne une potion affichée."
         );
 
@@ -347,7 +388,27 @@ bool CombatPotionMenu::openPotionSelection(
             return false;
         }
 
-        int consumableIndex = indices[choice - 1];
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t visibleCount = PagedMenu::lastIndexExclusive(indices.size(), pageIndex, itemsPerPage) - first;
+
+        if (choice < 1 || choice > static_cast<int>(visibleCount))
+        {
+            continue;
+        }
+
+        int consumableIndex = indices[first + static_cast<std::size_t>(choice - 1)];
 
         if (!player.getInventory().hasConsumable(consumableIndex))
         {
@@ -366,13 +427,13 @@ bool CombatPotionMenu::openPotionSelection(
 
         if (action == 0)
         {
-            return false;
+            continue;
         }
 
         if (action == 1)
         {
             CombatPotionDisplay::showPotionDetails(potion);
-            return false;
+            continue;
         }
 
         if (action == 2)

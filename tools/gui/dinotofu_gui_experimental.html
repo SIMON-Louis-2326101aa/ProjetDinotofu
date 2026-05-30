@@ -305,7 +305,7 @@
 
 
     /* =========================================================
-       CLEAN PLAYER VIEW V2.00.16 LAYOUT
+       CLEAN PLAYER VIEW LAYOUT
        ========================================================= */
     body { min-height: 100vh; }
     .game-header {
@@ -465,8 +465,61 @@
     .action-card.compact { padding: 0.5rem 0.58rem; min-height: 2.45rem; }
     .action-card.compact .action-main { align-items: center; font-size: 0.9rem; }
     .action-card.compact [data-action-status] { display: none; }
+    .choice-label {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      min-width: 0;
+    }
+    .choice-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 2rem;
+      height: 1.65rem;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      color: var(--accent) !important;
+      font-weight: 950;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .choice-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .choice-subtext {
+      margin: 0.38rem 0 0 2.5rem;
+      color: var(--muted);
+      font-size: 0.83rem;
+      line-height: 1.35;
+      text-align: left;
+    }
+    .choice-metadata {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      margin: 0.42rem 0 0 2.5rem;
+    }
+    .choice-metadata span {
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 999px;
+      padding: 0.12rem 0.45rem;
+      color: var(--muted);
+      background: rgba(255,255,255,0.035);
+      font-size: 0.74rem;
+      font-weight: 750;
+    }
+    .choice-back-row .choice-text,
+    .action-card.back-top .choice-text { white-space: normal; }
     .action-section.compact-many { padding: 0.55rem; }
-    .actions.compact-many { grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); gap: 0.36rem; }
+    .actions.compact-many { grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); gap: 0.36rem; }
+    .actions.few-choices { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
     .choices-section { margin-top: 0.65rem; }
     .submenu-actions button { width: 100%; text-align: left; }
     .info-card-source,
@@ -486,7 +539,7 @@
       font-size: 1rem;
     }
 
-    /* V2.00.16 : vue joueur vraiment propre.
+    /* Vue joueur vraiment propre.
        Les indications techniques de saisie restent dans le code, mais ne polluent plus l'IG. */
     #inputExpectation,
     #suggestedCommands,
@@ -561,6 +614,102 @@
     .answer-panel .player-compact-head h2 { font-size: 1rem; }
     .answer-panel .player-compact-head .badge { display: none; }
     .debug-hidden { display: none !important; }
+
+
+    /* Contraste lisible partout.
+       Fond sombre = texte clair. Fond clair/accent = texte sombre. */
+    .panel,
+    .inner-panel,
+    .player-panel,
+    .player-main-box,
+    .guardian-box,
+    .advanced-box,
+    .line,
+    .action-card,
+    .item-card,
+    .notice-card,
+    .info-card,
+    .focus-card,
+    .summary-item,
+    .input-expectation,
+    .answer-panel,
+    .continue-panel,
+    .specialized-panel,
+    .summary-panel {
+      color: var(--text) !important;
+    }
+    .line,
+    .action-card,
+    .item-card,
+    .notice-card,
+    .info-card,
+    .focus-card,
+    .summary-item {
+      background-color: rgba(255,255,255,0.035);
+    }
+    .action-card .action-hint,
+    .action-card .action-role,
+    .item-card-detail,
+    .item-card-fact,
+    .notice-card,
+    .info-card-label,
+    .focus-card-detail,
+    .line-list .line,
+    .hint,
+    .input-note,
+    .badge,
+    .tag {
+      color: var(--muted) !important;
+    }
+    .action-card .action-main,
+    .action-card .action-main span:first-child,
+    .item-card-title,
+    .info-card-value,
+    .focus-card-title,
+    .screen-title h2,
+    .player-compact-head h2 {
+      color: var(--text) !important;
+    }
+    button:not(.secondary):not(.ghost):not(.action-card):not(.continue-button),
+    .continue-button,
+    .suggestion-chip.primary,
+    .focus-card-choice,
+    .item-card-choice,
+    input[type="file"]::file-selector-button {
+      color: #111318 !important;
+    }
+    button.secondary,
+    button.ghost,
+    .action-card,
+    .submenu-actions button.secondary {
+      color: var(--text) !important;
+    }
+    .choices-section .action-card,
+    .choices-section .action-card.primary,
+    .choices-section .action-card.recommended,
+    .choices-section .action-card.danger {
+      border-color: var(--line) !important;
+      background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018)) !important;
+      box-shadow: none !important;
+      color: var(--text) !important;
+    }
+    .notice-card.important,
+    .info-card.important,
+    .summary-panel,
+    .manual-panel,
+    .specialized-panel,
+    .continue-panel {
+      border-color: var(--line) !important;
+      background: rgba(255,255,255,0.035) !important;
+      color: var(--text) !important;
+    }
+    .choices-section .actions.main {
+      grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    }
+    .choices-section .action-card {
+      min-height: 2.7rem;
+    }
+
     @media (max-width: 980px) {
       .game-shell { grid-template-columns: 1fr; }
       .output-panel { min-height: auto; }
@@ -884,18 +1033,127 @@
       return match ? match[1] : text;
     }
 
-    function findMenuActionByNumber(number) {
-      const menu = state.lastMenu;
-      if (!menu || !Array.isArray(menu.actions)) return null;
+    function collectMenuTextLines(menu) {
+      if (!menu) return [];
+      return [
+        ...(Array.isArray(menu.subtitles) ? menu.subtitles : []),
+        ...(Array.isArray(menu.lines) ? menu.lines : []),
+        ...(Array.isArray(menu.footerLines) ? menu.footerLines : [])
+      ].map(line => String(line || '')).filter(Boolean);
+    }
+
+    function inferActionLabelFromTextLines(menu, number) {
       const wanted = String(number);
-      return menu.actions.find(action => String(action.number ?? '') === wanted && action.enabled !== false) || null;
+      const choiceRegex = /^\s*(?:[•*\-]\s*)?(\d{1,3})\s*(?:[-:.)]|→|=>)\s*(.+?)\s*$/;
+
+      for (const line of collectMenuTextLines(menu)) {
+        const match = line.match(choiceRegex);
+        if (!match || match[1] !== wanted) continue;
+
+        const label = match[2]
+          .replace(/\s{2,}/g, ' ')
+          .replace(/^(choix|option)\s+\d+\s*[-:.)]?\s*/i, '')
+          .trim();
+
+        if (label && !isTechnicalDisplayLine(label)) {
+          return label;
+        }
+      }
+
+      return '';
+    }
+
+    function parseChoiceActionsFromText(menu, existingNumbers) {
+      if (!menu || menu.inputMode !== 'choice') return [];
+
+      const validChoiceSet = Array.isArray(menu.validChoices) && menu.validChoices.length
+        ? new Set(menu.validChoices.map(choice => String(choice)))
+        : null;
+      const parsed = [];
+      const seen = new Set(existingNumbers);
+      const choiceRegex = /^\s*(?:[•*\-]\s*)?(\d{1,3})\s*(?:[-:.)]|→|=>)\s*(.+?)\s*$/;
+
+      for (const line of collectMenuTextLines(menu)) {
+        const match = String(line || '').match(choiceRegex);
+        if (!match) continue;
+
+        const choice = match[1];
+        if (seen.has(choice)) continue;
+        if (validChoiceSet && !validChoiceSet.has(choice)) continue;
+
+        const rawLabel = match[2].replace(/\s{2,}/g, ' ').trim();
+        if (!rawLabel || isTechnicalDisplayLine(rawLabel)) continue;
+
+        const normalized = normalizeSearchText(rawLabel);
+        if (!normalized || normalized.includes('choix disponible') || normalized.includes('options disponible')) continue;
+
+        const isBack = choice === '0' || normalized.includes('retour') || normalized.includes('annuler');
+        parsed.push({
+          number: choice,
+          label: rawLabel,
+          actionDisplayLabel: choice + ' - ' + rawLabel,
+          hint: 'Choix reconstruit par sécurité depuis le texte du menu exporté.',
+          actionId: 'fallback.text.choice.' + choice,
+          role: isBack ? 'back' : 'normal',
+          group: isBack ? 'navigation' : 'main',
+          enabled: true
+        });
+        seen.add(choice);
+      }
+
+      return parsed;
+    }
+
+    function getMenuActionsWithFallback(menu = state.lastMenu) {
+      if (!menu) return [];
+      const baseActions = Array.isArray(menu.actions) ? menu.actions.filter(Boolean) : [];
+      const baseChoices = baseActions.filter(action => !isUtilityAction(action));
+      const validChoices = Array.isArray(menu.validChoices) ? menu.validChoices : [];
+      const existingNumbers = new Set(baseActions.map(action => String(action.number ?? '')));
+
+      // FR: certains écrans C++ exposent encore seulement des choix valides ou
+      // des lignes texte de terminal. L'IG reconstruit alors des boutons sûrs
+      // pour éviter un écran mort après difficulté, reprise solo, confirmations,
+      // anciens sous-menus ou exports incomplets.
+      if (menu.inputMode !== 'choice') {
+        return baseActions;
+      }
+
+      const fallbackFromValidChoices = baseChoices.length > 0 ? [] : validChoices
+        .map(choice => String(choice))
+        .filter(choice => choice !== '' && !existingNumbers.has(choice))
+        .map(choice => {
+          const isBack = choice === '0';
+          const inferredLabel = inferActionLabelFromTextLines(menu, choice);
+          const label = inferredLabel || (isBack ? 'Retour' : 'Choix ' + choice);
+          return {
+            number: choice,
+            label,
+            actionDisplayLabel: choice + ' - ' + label,
+            hint: inferredLabel
+              ? 'Choix reconstruit par sécurité depuis les choix valides et le texte du menu.'
+              : 'Choix reconstruit par sécurité depuis la liste des choix valides.',
+            actionId: 'fallback.choice.' + choice,
+            role: isBack ? 'back' : 'normal',
+            group: isBack ? 'navigation' : 'main',
+            enabled: true
+          };
+        });
+
+      const afterValidNumbers = new Set([...existingNumbers, ...fallbackFromValidChoices.map(action => String(action.number ?? ''))]);
+      const fallbackFromText = baseChoices.length > 0 ? [] : parseChoiceActionsFromText(menu, afterValidNumbers);
+
+      return [...baseActions, ...fallbackFromValidChoices, ...fallbackFromText];
+    }
+
+    function findMenuActionByNumber(number) {
+      const wanted = String(number);
+      return getMenuActionsWithFallback().find(action => String(action.number ?? '') === wanted && action.enabled !== false) || null;
     }
 
     function findAnyMenuActionByNumber(number) {
-      const menu = state.lastMenu;
-      if (!menu || !Array.isArray(menu.actions)) return null;
       const wanted = String(number);
-      return menu.actions.find(action => String(action.number ?? '') === wanted) || null;
+      return getMenuActionsWithFallback().find(action => String(action.number ?? '') === wanted) || null;
     }
 
     function isCombatContextActive() {
@@ -908,9 +1166,7 @@
     }
 
     function currentVisibleMenuActions() {
-      const menu = state.lastMenu;
-      if (!menu || !Array.isArray(menu.actions)) return [];
-      return menu.actions.filter(action => action && action.enabled !== false);
+      return getMenuActionsWithFallback().filter(action => action && action.enabled !== false);
     }
 
     function isBackAction(action) {
@@ -1024,11 +1280,12 @@
 
     function findMenuActionForUnit(unit) {
       const menu = state.lastMenu;
-      if (!menu || !Array.isArray(menu.actions) || !unit) return null;
+      if (!menu || !unit) return null;
+      const actions = getMenuActionsWithFallback(menu);
 
       const targetActionId = String(unit.targetActionId || '');
       if (targetActionId) {
-        const directAction = menu.actions.find(action => action.enabled !== false && action.actionId === targetActionId);
+        const directAction = actions.find(action => action.enabled !== false && action.actionId === targetActionId);
         if (directAction) return directAction;
       }
 
@@ -1041,7 +1298,7 @@
       const unitName = normalizeSearchText(unit.name);
       if (!unitName) return null;
 
-      return menu.actions.find(action => {
+      return actions.find(action => {
         if (action.enabled === false) return false;
         const label = normalizeSearchText(action.label || '');
         const hint = normalizeSearchText(action.hint || '');
@@ -1123,6 +1380,10 @@
         button.classList.toggle('disabled', shouldDisable);
         const status = button.querySelector('[data-action-status]');
         if (status) status.textContent = !baseEnabled ? 'Bloqué' : (locked ? 'Attente' : 'Envoyer');
+      });
+      document.querySelectorAll('.continue-button[data-choice]').forEach(button => {
+        button.disabled = locked;
+        button.classList.toggle('disabled', locked);
       });
       document.querySelectorAll('[data-item-choice], [data-focus-choice], [data-unit-choice]').forEach(card => {
         card.classList.toggle('locked', locked);
@@ -1326,11 +1587,26 @@
         buy: 'Acheter',
         buyback: 'Racheter',
         sell: 'Vendre',
+        import: 'Importer',
+        export: 'Extraire',
+        transfer: 'Transférer',
+        adapt: 'Adapter',
+        clone: 'Cloner',
+        delete: 'Supprimer',
+        login: 'Connexion',
+        play: 'Incarner',
+        guardian: 'Gardien',
         barter: 'Troquer',
         equip: 'Équiper',
         use: 'Utiliser',
         repair: 'Réparer',
         inspect: 'Inspecter',
+        read: 'Lire',
+        story: 'Histoire',
+        combat: 'Combat',
+        session: 'Session',
+        create: 'Créer',
+        target: 'Cibler',
         quest: 'Quête',
         save: 'Sauvegarder',
         death: 'Consulter',
@@ -1352,7 +1628,7 @@
       const quantity = card.quantity ? `<span class="item-card-qty">x${escapeHtml(card.quantity)}</span>` : '';
       const status = card.status ? `<span class="item-card-status">${escapeHtml(card.status)}</span>` : '';
       const actionTypeLabel = card.actionTypeLabel || getItemActionTypeLabel(card.actionType || 'open');
-      const actionType = '';
+      const actionType = actionTypeLabel ? `<span class="item-card-actiontype">${escapeHtml(actionTypeLabel)}</span>` : '';
       const facts = [
         card.price ? ['Prix', card.price] : null,
         card.stock ? ['Stock', card.stock] : null,
@@ -1432,7 +1708,7 @@
     }
 
     function renderSpecializedPanel(snapshot) {
-      // V2.00.16 : les anciennes vues spécialisées créaient encore des blocs jaunes,
+      // Vue joueur propre : les anciennes vues spécialisées créaient encore des blocs jaunes,
       // des cartes de choix dupliquées et des titres techniques de sauvegarde.
       // La vue joueur propre garde maintenant uniquement le texte pur + les choix
       // principaux rendus plus bas par renderMainViewActions().
@@ -1513,15 +1789,22 @@
       if (!normalized) return true;
       const exact = new Set([
         'choix disponibles',
+        'options disponibles',
+        'autres choix',
+        'actions disponibles',
         'texte libre attendu',
         'texte attendu',
         'saisie demandee',
-        'reponse attendue'
+        'reponse attendue',
+        'vue terminale',
+        'menu terminal'
       ]);
       if (exact.has(normalized.replace(/[.:]+$/g, ''))) return true;
       if (/^vue (sauvegarde|creation|inventaire|equipement|potions|boutique|exploration|quetes|progression|catalogue|activites|session|apres combat|mort|donnees alterees|combat)\b/.test(normalized)) return true;
       if (/^resume ig\b/.test(normalized)) return true;
+      if (/^etat ig\b/.test(normalized)) return true;
       if (/^contrat json\b/.test(normalized)) return true;
+      if (/^vue (debug|technique)\b/.test(normalized)) return true;
       if (/^saisie\s*:/.test(normalized)) return true;
       if (/^input\s*:/.test(normalized)) return true;
       if (/^specialized\s*:/.test(normalized)) return true;
@@ -1590,24 +1873,39 @@
 
       if (!sortedActions.length) return '<div class="empty">Aucun choix disponible.</div>';
 
-      const backActions = sortedActions.filter(isBackAction);
-      const backNumbers = new Set(backActions.map(action => String(action.number ?? '')));
-      const mainActions = sortedActions.filter(action => !backNumbers.has(String(action.number ?? '')));
-      const compact = mainActions.length >= 10;
+      const navigationActions = sortedActions.filter(action => getActionGroup(action) === 'navigation' || isBackAction(action));
+      const navigationNumbers = new Set(navigationActions.map(action => String(action.number ?? '')));
+      const dangerActions = sortedActions.filter(action => !navigationNumbers.has(String(action.number ?? '')) && getActionGroup(action) === 'danger');
+      const lockedActions = sortedActions.filter(action => !navigationNumbers.has(String(action.number ?? '')) && getActionGroup(action) === 'locked');
+      const dangerNumbers = new Set(dangerActions.map(action => String(action.number ?? '')));
+      const lockedNumbers = new Set(lockedActions.map(action => String(action.number ?? '')));
+      const mainActions = sortedActions.filter(action => {
+        const number = String(action.number ?? '');
+        return !navigationNumbers.has(number) && !dangerNumbers.has(number) && !lockedNumbers.has(number);
+      });
+      const compact = mainActions.length >= 13;
+      const fewChoices = mainActions.length > 0 && mainActions.length <= 5;
+      const backActions = navigationActions.filter(isBackAction);
+      const otherNavigation = navigationActions.filter(action => !isBackAction(action));
       const backHtml = backActions.length
-        ? `<div class="choice-back-row">${backActions.map(action => renderAction(action, { compact: true, backTop: true })).join('')}</div>`
+        ? `<div class="choice-back-row">${backActions.map(action => renderAction(action, { compact: true, backTop: true, uniformChoices: true })).join('')}</div>`
         : '';
       const mainHtml = mainActions.length
         ? `<div class="action-section main ${compact ? 'compact-many' : ''}">
-            <div class="actions main ${compact ? 'compact-many' : ''}">${mainActions.map(action => renderAction(action, { compact, uniformChoices: true })).join('')}</div>
+            <div class="actions main ${compact ? 'compact-many' : ''} ${fewChoices ? 'few-choices' : ''}">${mainActions.map(action => renderAction(action, { compact, uniformChoices: true })).join('')}</div>
           </div>`
         : '';
+      const navigationHtml = otherNavigation.length
+        ? `<div class="action-section navigation compact-many"><div class="actions navigation compact-many">${otherNavigation.map(action => renderAction(action, { compact: true, uniformChoices: true })).join('')}</div></div>`
+        : '';
+      const dangerHtml = renderActionGroup('danger', dangerActions);
+      const lockedHtml = renderActionGroup('locked', lockedActions);
 
-      return `<div class="action-sections">${backHtml}${mainHtml}</div>`;
+      return `<div class="action-sections">${backHtml}${mainHtml}${navigationHtml}${dangerHtml}${lockedHtml}</div>`;
     }
 
     function renderContinueControl(snapshot) {
-      if (!snapshot || snapshot.type !== 'menu' || snapshot.inputMode !== 'continue') return '';
+      if (!snapshot || snapshot.type !== 'menu' || (snapshot.inputMode !== 'continue' && snapshot.acceptsEmptyInput !== true)) return '';
       const locked = !canSendInputNow();
       const disabledAttribute = locked ? ' disabled' : '';
       const label = snapshot.primarySubmitLabel || 'Continuer';
@@ -1619,8 +1917,8 @@
 
     function renderMainViewActions(snapshot) {
       if (!snapshot || snapshot.type !== 'menu') return '';
-      const actions = Array.isArray(snapshot.actions) ? snapshot.actions.filter(action => !isUtilityAction(action)) : [];
-      if (snapshot.inputMode === 'continue') return renderContinueControl(snapshot);
+      const actions = getMenuActionsWithFallback(snapshot).filter(action => !isUtilityAction(action));
+      if (snapshot.inputMode === 'continue' || (snapshot.acceptsEmptyInput === true && actions.length === 0)) return renderContinueControl(snapshot);
       if (['text', 'quantity', 'confirmation'].includes(snapshot.inputMode || '')) {
         const navigation = renderNavigationOnlyActions(actions);
         return navigation ? `<div class="section choices-section navigation-only">${navigation}</div>` : '';
@@ -1631,7 +1929,7 @@
 
     function renderPlayerActions(snapshot) {
       if (!snapshot || snapshot.type !== 'menu') return '<div class="empty">Aucune action disponible.</div>';
-      const actions = Array.isArray(snapshot.actions) ? snapshot.actions : [];
+      const actions = getMenuActionsWithFallback(snapshot);
       const mode = snapshot.inputMode || 'choice';
       if (mode === 'text' || mode === 'quantity' || mode === 'confirmation') {
         const hint = snapshot.inputHint || snapshot.primarySubmitLabel || 'Réponse';
@@ -1651,7 +1949,7 @@
       const backActions = navigation.filter(isBackAction);
       const otherNavigation = navigation.filter(action => !isBackAction(action));
       const backHtml = backActions.length
-        ? `<div class="choice-back-row">${backActions.map(action => renderAction(action, { compact: true, backTop: true })).join('')}</div>`
+        ? `<div class="choice-back-row">${backActions.map(action => renderAction(action, { compact: true, backTop: true, uniformChoices: true })).join('')}</div>`
         : '';
       const otherHtml = otherNavigation.length
         ? `<div class="action-section navigation compact-many"><div class="actions navigation compact-many">${otherNavigation.map(action => renderAction(action, { compact: true })).join('')}</div></div>`
@@ -1891,12 +2189,22 @@
       const role = action.role || (action.dangerous ? 'danger' : 'normal');
       const uniformChoices = Boolean(options.uniformChoices);
       const styleClass = uniformChoices
-        ? (role === 'danger' || action.dangerous ? 'danger' : '')
+        ? ''
         : (['primary', 'back', 'pagination', 'danger'].includes(role) ? role : '');
       const recommendedClass = uniformChoices ? '' : (action.recommended ? 'recommended' : '');
       const itemClass = action.hasItemMetadata && !uniformChoices ? 'item-action' : '';
       const importantClass = action.itemImportant && !uniformChoices ? 'item-important' : '';
       const showChoiceDetails = !compact && !uniformChoices;
+      const showUniformMetadata = uniformChoices && !compact && action.hasItemMetadata;
+      const uniformDetail = showUniformMetadata ? (action.itemDetail || action.hint || '') : '';
+      const uniformFacts = showUniformMetadata ? [
+        action.itemActionType ? ['Action', getItemActionTypeLabel(action.itemActionType)] : null,
+        action.itemSection ? ['Section', action.itemSection] : null,
+        action.itemStatus ? ['Statut', action.itemStatus] : null,
+        action.itemProgress ? ['Progression', action.itemProgress] : null,
+        action.itemReward ? ['Gain', action.itemReward] : null,
+        action.itemOwner ? ['Lien', action.itemOwner] : null
+      ].filter(Boolean).slice(0, 3) : [];
       const facts = action.hasItemMetadata && showChoiceDetails ? [
         action.itemActionType ? ['Action', getItemActionTypeLabel(action.itemActionType)] : null,
         action.itemKind ? ['Type', action.itemKind] : null,
@@ -1910,18 +2218,34 @@
         action.itemReward ? ['Gain', action.itemReward] : null,
         action.itemOwner ? ['Lien', action.itemOwner] : null
       ].filter(Boolean) : [];
-      const displayLabel = action.actionDisplayLabel || `${action.number} - ${action.label || ''}`.trim();
+      const rawNumber = String(action.number ?? '').trim();
+      const displayLabel = action.actionDisplayLabel || `${rawNumber} - ${action.label || ''}`.trim();
+      const cleanLabel = String(action.label || displayLabel).replace(/^\s*-?\d+\s*[-:.)]\s*/, '').trim() || displayLabel;
+      const choiceMarkup = uniformChoices
+        ? `<span class="choice-label"><span class="choice-number">${escapeHtml(rawNumber || '?')}</span><span class="choice-text">${escapeHtml(cleanLabel)}</span></span>`
+        : `<span>${escapeHtml(displayLabel)}</span>`;
       return `
         <button type="button" class="action-card ${styleClass} ${recommendedClass} ${itemClass} ${importantClass} ${compact ? 'compact' : ''} ${backTop ? 'back-top' : ''} ${enabled && !locked ? '' : 'disabled'}" data-choice="${escapeHtml(action.number)}" data-base-enabled="${enabled ? 'true' : 'false'}" data-action-id="${escapeHtml(action.actionId || '')}" data-action-label="${escapeHtml(action.label || '')}" data-action-display-label="${escapeHtml(displayLabel)}" data-action-role="${escapeHtml(role)}" data-action-style="${escapeHtml(action.style || '')}" data-action-group="${escapeHtml(action.group || getActionGroup(action))}" data-knowledge-sensitive="${action.knowledgeSensitive ? 'true' : 'false'}" data-recommendation-reason="${escapeHtml(action.recommendationReason || '')}"${disabledAttribute}>
           <div class="action-main">
-            <span>${escapeHtml(displayLabel)}</span>
+            ${choiceMarkup}
             <span data-action-status>${!enabled ? 'Bloqué' : (locked ? 'Attente' : 'Envoyer')}</span>
           </div>
           ${action.recommended && showChoiceDetails ? '<div class="action-role">Conseillé</div>' : ''}
           ${action.hint && showChoiceDetails ? `<div class="action-hint">${escapeHtml(action.hint)}</div>` : ''}
           ${action.hasItemMetadata && action.itemDetail && showChoiceDetails ? `<div class="action-hint">${escapeHtml(action.itemDetail)}</div>` : ''}
+          ${uniformDetail ? `<div class="choice-subtext">${escapeHtml(uniformDetail)}</div>` : ''}
+          ${uniformFacts.length ? `<div class="choice-metadata">${uniformFacts.map(([label, value]) => `<span>${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('')}</div>` : ''}
           ${facts.length && showChoiceDetails ? `<div class="action-facts">${facts.map(([label, value]) => `<span class="action-fact">${escapeHtml(label)} : ${escapeHtml(value)}</span>`).join('')}</div>` : ''}
         </button>`;
+    }
+
+    function renderCombatContextActions() {
+      if (state.view !== 'combat' || !isCombatContextActive()) return '';
+      const currentMenu = state.lastMenu;
+      if (!currentMenu || currentMenu.type !== 'menu') return '';
+
+      const html = renderMainViewActions(currentMenu);
+      return html ? `<div class="combat-actions-section"><h3>Actions du tour</h3>${html}</div>` : '';
     }
 
     function renderCombat(snapshot) {
@@ -1934,6 +2258,7 @@
           <div class="line">Cible : ${escapeHtml(snapshot.currentTargetName || '-')}</div>
           <div class="line">Fuite disponible : ${snapshot.escapeAvailable ? 'oui' : 'non'}</div>
         </div>
+        ${renderCombatContextActions()}
         ${renderLines('Resume', snapshot.summaryLines)}
         <div class="section combat-grid">
           ${renderUnitColumn('Camp joueur', snapshot.playerUnits, snapshot)}

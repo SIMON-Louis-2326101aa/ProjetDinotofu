@@ -10,6 +10,7 @@
 #include "interface/model/MenuScreen.hpp"
 #include "item/consumable/Consumable.hpp"
 
+#include <cstddef>
 #include <vector>
 
 class CombatPotionDisplay
@@ -17,11 +18,25 @@ class CombatPotionDisplay
 public:
     static MenuScreen buildMainScreen();
     static MenuScreen buildMainScreen(const Player& player);
-    static MenuScreen buildQuickHealingScreen(const Player& player, const std::vector<int>& indices);
+    static MenuScreen buildQuickHealingScreen(
+        const Player& player,
+        const std::vector<int>& indices,
+        std::size_t pageIndex = 0,
+        std::size_t itemsPerPage = 10
+    );
     static MenuScreen buildSelectedHealingPotionScreen(const Consumable& potion);
     static MenuScreen buildSelectedPotionScreen(const Consumable& potion);
-    static MenuScreen buildFilteredPotionsScreen(const Player& player, const std::vector<int>& indices);
-    static MenuScreen buildPotionOverviewScreen(const Player& player);
+    static MenuScreen buildFilteredPotionsScreen(
+        const Player& player,
+        const std::vector<int>& indices,
+        std::size_t pageIndex = 0,
+        std::size_t itemsPerPage = 10
+    );
+    static MenuScreen buildPotionOverviewScreen(
+        const Player& player,
+        std::size_t pageIndex = 0,
+        std::size_t itemsPerPage = 10
+    );
 
     static void displayMainMenu();
 

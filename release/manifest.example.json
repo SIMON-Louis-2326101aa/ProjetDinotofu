@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.00.16",
-  "releaseTag": "v2.00.16",
+  "version": "2.01.20",
+  "releaseTag": "v2.01.20",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "V2.00.16 : passe complète de stabilisation IG, suppression renforcée des blocs techniques/jaunes, choix uniformisés et nettoyage des lignes parasites."
+  "notes": "V2.01.20 : option --version ajoutée, actions de cible sélectionnée et compétences de rôle mieux structurées côté IG."
 }

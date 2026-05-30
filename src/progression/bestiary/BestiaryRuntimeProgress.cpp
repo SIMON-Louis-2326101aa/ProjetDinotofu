@@ -184,6 +184,15 @@ namespace
             record.drops = "Obtention par achat, troc, boss, exploration ou secret.";
             record.strategy = "Ne pas consommer un objet rare sans savoir s'il est apprenable, jetable ou unique.";
         }
+        else if (record.category == "Légendes / contes")
+        {
+            record.dangerRank = "Lore optionnel";
+            record.habitat = "Bibliothèque, PNJ conteur, salle ancienne, rumeur ou déclencheur rare.";
+            record.weaknesses = "Aucune faiblesse : ce contenu ne doit pas bloquer la progression.";
+            record.resistances = "Doit rester rare, lisible et non répétitif.";
+            record.drops = "Fragments de lore, rumeurs, pistes ou ambiance.";
+            record.strategy = "Lire quand l'envie est là ; ignorer sans perdre la jouabilité principale.";
+        }
     }
 
     // EN: findRecord declares or implements a focused behavior used by this module.
@@ -743,6 +752,47 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
             "Nécromancie instable",
             "Invocations",
             "Avertissement lu : relever une ombre n'est jamais gratuit. Les os, le mana, les morts récents et l'état mental du nécromancien laissent toujours une dette."
+        );
+        return;
+    }
+
+    if (informationId == "legend_child_tales")
+    {
+        unlockEntry(
+            "Légendes de bibliothèque",
+            "Légendes / contes",
+            "Rayonnage ouvert : la bibliothèque commence à classer les légendes, les contes pour enfant et les rumeurs anciennes sans forcer le joueur à lire tout le lore."
+        );
+        unlockEntry(
+            "Conte des Bras cassés",
+            "Légendes / contes",
+            "Conte acheté : cinq héros chaotiques libèrent des villages, sauvent des habitants, contestent parfois les règles et repartent sous les applaudissements... ou les soupirs des responsables locaux."
+        );
+        unlockEntry(
+            "Conte pour enfant : les cinq héros trop bruyants",
+            "Légendes / contes",
+            "Archive ouverte : version adoucie des Bras cassés, lisible depuis le registre des légendes sans révéler les salles de boss."
+        );
+        unlockEntry(
+            "Origine du nom des Bras cassés",
+            "Légendes / contes",
+            "Rumeur achetée : Hazak aurait perdu un bras face à un orc avant de réussir à le régénérer après deux semaines. Le surnom vient aussi de leurs catastrophes répétées qui finissent malgré tout en réussite."
+        );
+        return;
+    }
+
+
+    if (informationId == "legend_trigger_notes")
+    {
+        unlockEntry(
+            "Rumeur du conteur prudent",
+            "Légendes / contes",
+            "Note achetée : les conteurs sérieux ne racontent pas une légende à chaque salle. Ils attendent un lieu, un PNJ ou un moment qui mérite vraiment de laisser une trace."
+        );
+        unlockEntry(
+            "Note : légendes sans obligation",
+            "Légendes / contes",
+            "Note achetée : les légendes doivent enrichir le monde sans bloquer le jeu. Tu peux les ignorer, puis revenir les lire dans le registre quand tu veux."
         );
         return;
     }

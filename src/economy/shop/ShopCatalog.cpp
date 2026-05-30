@@ -332,6 +332,14 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("weapon_training_notes", "Notes d'entraînement aux techniques", "Première couche de compétences de classe/arme débloquées par niveau.", ShopItemCategory::Information, 135, 0, 1, true));
             }
+            if (rotation % 7 == 3)
+            {
+                shop.addItem(ShopItem("legend_child_tales", "Contes et légendes pour enfant", "Ajoute quelques rappels de lore léger, dont l’origine des Bras cassés.", ShopItemCategory::Information, 75, 0, 1, true));
+            }
+            if (rotation % 7 == 5)
+            {
+                shop.addItem(ShopItem("legend_trigger_notes", "Notes de conteur : légendes rares", "Explique les déclencheurs de légendes sans spoiler les salles de boss.", ShopItemCategory::Information, 90, 0, 1, true));
+            }
             break;
 
 

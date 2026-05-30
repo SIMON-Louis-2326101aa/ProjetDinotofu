@@ -23,6 +23,8 @@ namespace
         const std::string& name,
         const std::string& detail,
         const std::string& status = "",
+        const std::string& progress = "",
+        const std::string& owner = "",
         bool important = false
     )
     {
@@ -34,8 +36,24 @@ namespace
         data.name = name;
         data.detail = detail;
         data.status = status;
+        data.progress = progress;
+        data.owner = owner;
         data.important = important;
         return data;
+    }
+
+    MenuOptionItemData makeAccountSummaryItem(const AccountSaveSummary& account)
+    {
+        const std::size_t characterCount = SaveManager::listPlayableCharacters(account.accountName).size();
+        return makeAccountMenuItem(
+            "select",
+            account.accountName,
+            "Compte local disponible.",
+            "Disponible",
+            "Personnages jouables : " + std::to_string(characterCount),
+            "Dossier : " + account.path,
+            false
+        );
     }
 }
 
@@ -46,21 +64,24 @@ std::string AccountMenu::open()
         std::vector<AccountSaveSummary> accounts = SaveManager::listAccounts();
 
         MenuScreen accountListScreen("COMPTES LOCAUX", "save.accounts.list");
+        accountListScreen.addSubtitle("Sauvegardes locales");
+        accountListScreen.addLine("Comptes trouvés : " + std::to_string(accounts.size()) + ".");
+        accountListScreen.addLine("Choisis un compte existant, crée un compte, ou importe un dossier portable.");
         accountListScreen.addOption(
             0,
             "Créer / utiliser un nouveau compte",
             "Prépare un compte local ou reprend le compte local par défaut.",
             true,
             "save.accounts.create_or_use",
-            makeAccountMenuItem("create", "Nouveau compte", "Créer ou utiliser un compte local.")
+            makeAccountMenuItem("create", "Nouveau compte", "Créer ou utiliser un compte local.", "Disponible", "Compte actif immédiat")
         );
         accountListScreen.addOption(
-            -1,
+            50,
             "Importer un compte extrait",
             "Récupère un dossier portable exporté depuis une autre installation.",
             true,
             "save.accounts.import",
-            makeAccountMenuItem("import", "Importer", "Importer un compte portable.", "Dossier requis", true)
+            makeAccountMenuItem("import", "Importer", "Importer un compte portable.", "Dossier requis", "Dossier exporté", "assets/saves/import_accounts/", true)
         );
 
         for (int i = 0; i < static_cast<int>(accounts.size()); i++)
@@ -71,18 +92,16 @@ std::string AccountMenu::open()
                 "Compte local disponible.",
                 true,
                 "save.accounts.select." + std::to_string(i + 1),
-                makeAccountMenuItem("select", accounts[i].accountName, "Compte local disponible.", "Disponible")
+                makeAccountSummaryItem(accounts[i])
             );
         }
 
-        int choice = TerminalInterface::askMenuChoice(
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
             accountListScreen,
-            -1,
-            static_cast<int>(accounts.size()),
-            "Veuillez choisir un compte affiché, 0 pour créer, ou -1 pour importer."
+            "Veuillez choisir un compte affiché, 0 pour créer, ou 50 pour importer."
         );
 
-        if (choice == -1)
+        if (choice == 50)
         {
             std::string packagePath = MessageScreen::askText(
                 "IMPORT DE COMPTE",
@@ -159,7 +178,10 @@ std::string AccountMenu::open()
         Console::clear();
 
         MenuScreen accountActionScreen("COMPTE SÉLECTIONNÉ", "save.accounts.actions");
+        accountActionScreen.addSubtitle("Compte local sélectionné");
         accountActionScreen.addLine("Compte : " + selectedAccount.accountName);
+        accountActionScreen.addLine("Dossier : " + selectedAccount.path);
+        accountActionScreen.addLine("Personnages jouables liés : " + std::to_string(SaveManager::listPlayableCharacters(selectedAccount.accountName).size()) + ".");
         accountActionScreen.addOption(0, "Retour", "", true, "save.accounts.actions.back");
         accountActionScreen.addOption(
             1,
@@ -167,7 +189,7 @@ std::string AccountMenu::open()
             "Utiliser ce compte pour choisir ou créer un personnage.",
             true,
             "save.accounts.actions.login",
-            makeAccountMenuItem("login", "Se connecter", "Compte : " + selectedAccount.accountName, "Action normale")
+            makeAccountMenuItem("login", "Se connecter", "Compte : " + selectedAccount.accountName, "Action normale", "Ouvre la liste des personnages")
         );
         accountActionScreen.addOption(
             2,
@@ -175,7 +197,7 @@ std::string AccountMenu::open()
             "Crée un dossier portable pour déplacer les données du compte.",
             true,
             "save.accounts.actions.export",
-            makeAccountMenuItem("export", "Extraire / transférer", "Compte : " + selectedAccount.accountName, "Transfert")
+            makeAccountMenuItem("export", "Extraire / transférer", "Compte : " + selectedAccount.accountName, "Transfert", "Dossier portable", "Dossier source : " + selectedAccount.path, true)
         );
         accountActionScreen.addOption(
             3,
@@ -183,7 +205,7 @@ std::string AccountMenu::open()
             "Action définitive, confirmation obligatoire.",
             true,
             "save.accounts.actions.delete",
-            makeAccountMenuItem("delete", "Supprimer", "Compte : " + selectedAccount.accountName, "Irréversible", true)
+            makeAccountMenuItem("delete", "Supprimer", "Compte : " + selectedAccount.accountName, "Irréversible", "Supprime aussi les personnages liés", "Confirmation : SUPPRIMER", true)
         );
 
         int accountAction = TerminalInterface::askMenuChoice(

@@ -503,7 +503,9 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "monster_family_evolution_notes"
         || id == "weapon_training_notes"
         || id == "magic_learning_notes"
-        || id == "elemental_weakness_notes";
+        || id == "elemental_weakness_notes"
+        || id == "legend_child_tales"
+        || id == "legend_trigger_notes";
 }
 
 bool ShopTransactionSystem::buyItem(

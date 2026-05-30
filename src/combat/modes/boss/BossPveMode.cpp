@@ -24,6 +24,7 @@
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/model/MenuScreen.hpp"
+#include "lore/LegendTriggerSystem.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -599,6 +600,7 @@ namespace
             screen.addLine("Le nom reste brouillé, mais sa pression suffit déjà à salir les pages du registre.");
         }
 
+        screen.setDisplayOnlyInput("Analyse de boss affichée sans saisie directe.");
         return screen;
     }
 
@@ -1585,6 +1587,8 @@ void BossPveMode::run(
         displayFireFlightFirstEntrance(player1);
         Console::pauseSeconds(3);
     }
+
+    LegendTriggerSystem::maybeDisplayBossRoomLegend(boss, random);
 
     MessageScreen::show(
         "PRÉPARATION DU BOSS",

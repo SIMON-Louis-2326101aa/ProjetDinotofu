@@ -510,6 +510,7 @@ void CombatRewardSystem::displayReward(
         screen.addLine("Or gagné : " + std::to_string(reward.getGold()) + " pièces");
     }
 
+    screen.setDisplayOnlyInput("Résumé de récompense affiché sans saisie directe.");
     TerminalInterface::renderMenuScreen(screen, false);
 }
 
@@ -532,5 +533,6 @@ void CombatRewardSystem::displayPartialReward(
         screen.addLine("Or récupéré : " + std::to_string(reward.getGold()) + " pièces");
     }
 
+    screen.setDisplayOnlyInput("Résumé de récompense partielle affiché sans saisie directe.");
     TerminalInterface::renderMenuScreen(screen, false);
 }

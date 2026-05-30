@@ -17,6 +17,28 @@
 
 namespace
 {
+    MenuOptionItemData makeInventoryRouteItemData(
+        const std::string& kind,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = "",
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = kind;
+        itemData.section = "Inventaire - menu principal";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.owner = "Sac du personnage";
+        itemData.important = important;
+        return itemData;
+    }
+
     MenuOptionItemData makeInventoryWeaponItemData(const Weapon& weapon, const std::string& actionType)
     {
         MenuOptionItemData itemData;
@@ -90,14 +112,70 @@ namespace
 MenuScreen InventoryDisplay::buildMainScreen()
 {
     MenuScreen screen("INVENTAIRE", "inventory.main");
-    screen.addOption(1, "Bestiaire (objet spécial)", "Consulter les créatures, boss, matériaux et informations connues.", true, "inventory.bestiary");
-    screen.addOption(2, "Voir tout (affichage simple)", "Résumé court de l'or, des objets et des ressources.", true, "inventory.full_simple");
-    screen.addOption(3, "Armes", "Voir, inspecter, équiper ou réparer les armes.", true, "inventory.weapons");
-    screen.addOption(4, "Armures", "Voir, inspecter, équiper ou réparer les protections.", true, "inventory.armors");
-    screen.addOption(5, "Consommables", "Potions et objets utilisables.", true, "inventory.consumables");
-    screen.addOption(6, "Matériaux / plantes / infos", "Ressources, notes, fragments et composants.", true, "inventory.materials");
-    screen.addOption(7, "Craft / schémas de fabrication", "Fabriquer ou améliorer avec les recettes connues.", true, "inventory.craft");
-    screen.addOption(8, "Consulter mes quêtes", "Ouvrir le journal de quêtes.", true, "inventory.quests");
+    screen.addOption(
+        1,
+        "Bestiaire (objet spécial)",
+        "Consulter les créatures, boss, matériaux et informations connues.",
+        true,
+        "inventory.bestiary",
+        makeInventoryRouteItemData("bestiary", "inspect", "Bestiaire", "Créatures, boss, matériaux, légendes et connaissances progressives.", "Objet spécial", true)
+    );
+    screen.addOption(
+        2,
+        "Voir tout (affichage simple)",
+        "Résumé court de l'or, des objets et des ressources.",
+        true,
+        "inventory.full_simple",
+        makeInventoryRouteItemData("inventory_summary", "inspect", "Voir tout", "Résumé court : or, armes, armures, consommables et matériaux sans descriptions longues.", "Affichage simple")
+    );
+    screen.addOption(
+        3,
+        "Armes",
+        "Voir, inspecter, équiper ou réparer les armes.",
+        true,
+        "inventory.weapons",
+        makeInventoryRouteItemData("weapon", "open", "Armes", "Liste des armes avec inspection, équipement, réparation et lien bestiaire.", "Équipement offensif")
+    );
+    screen.addOption(
+        4,
+        "Armures",
+        "Voir, inspecter, équiper ou réparer les protections.",
+        true,
+        "inventory.armors",
+        makeInventoryRouteItemData("armor", "open", "Armures", "Liste des protections avec inspection, équipement, réparation et lien bestiaire.", "Équipement défensif")
+    );
+    screen.addOption(
+        5,
+        "Consommables",
+        "Potions et objets utilisables.",
+        true,
+        "inventory.consumables",
+        makeInventoryRouteItemData("consumable", "use", "Consommables", "Potions et objets utilisables, avec actions qui peuvent parfois consommer le tour.", "Utilisable")
+    );
+    screen.addOption(
+        6,
+        "Matériaux / plantes / infos",
+        "Ressources, notes, fragments et composants.",
+        true,
+        "inventory.materials",
+        makeInventoryRouteItemData("material", "inspect", "Matériaux / plantes / infos", "Ressources, composants, notes, fragments et connaissances liées aux objets.", "Ressources")
+    );
+    screen.addOption(
+        7,
+        "Craft / schémas de fabrication",
+        "Fabriquer ou améliorer avec les recettes connues.",
+        true,
+        "inventory.craft",
+        makeInventoryRouteItemData("craft", "create", "Craft / schémas", "Fabriquer, améliorer ou expérimenter avec les recettes connues.", "Fabrication")
+    );
+    screen.addOption(
+        8,
+        "Consulter mes quêtes",
+        "Ouvrir le journal de quêtes.",
+        true,
+        "inventory.quests",
+        makeInventoryRouteItemData("quest", "quest", "Journal de quêtes", "Voir les quêtes suivies, terminées ou à rendre.", "Progression")
+    );
     screen.addBackOption("Retour", "inventory.back");
     return screen;
 }
@@ -281,6 +359,7 @@ void InventoryDisplay::displaySelectedMaterial(const Material& material)
 MenuScreen InventoryDisplay::buildUnavailableMaterialsScreen()
 {
     MenuScreen screen("MATÉRIAUX", "inventory.materials.empty");
+    screen.setDisplayOnlyInput("Section vide affichée sans saisie directe.");
     screen.addLine("Aucun matériau exploitable dans cette section.");
     screen.addLine("Quand tu en possèdes, ils peuvent servir à réparer, améliorer ou fabriquer de l'équipement.");
     return screen;

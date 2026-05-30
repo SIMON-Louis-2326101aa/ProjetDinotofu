@@ -55,6 +55,21 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getEntranceLines(
     bool hasSkuro = containsName(names, "Skuro");
     bool hasFireFlight = containsName(names, "Fire Flight");
     bool hasMattPro = containsName(names, "Matt (PRO)");
+    bool hasLesBrasCasses = hasHazak && hasFail && hasAoi && hasKanade && hasSanctus;
+
+    if (hasLesBrasCasses)
+    {
+        return {
+            "Cinq silhouettes prennent place sans demander l'autorisation à l'arène.",
+            "Fail : On nous appelle encore Les bras cassés ?",
+            "Kanadé : Depuis l'histoire de l'orc et du bras de Hazak, ça colle trop bien.",
+            "Hazak : Une régénération de deux semaines ne justifie pas un nom aussi stupide.",
+            "Aoi : Ça vient aussi de nos... méthodes.",
+            "Sanctus : Formation. Maintenant.",
+            "Fail : Formation ? Je pensais qu'on appelait ça un accident organisé.",
+            "Hazak : Faites moins de bruit. On les abat proprement."
+        };
+    }
 
     if (hasHazak && hasHenrique)
     {
@@ -116,6 +131,21 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getEntranceLines(
 
 std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getVictoryLines(const std::vector<std::string>& names)
 {
+    if (containsName(names, "Hazak")
+        && containsName(names, "Fail")
+        && containsName(names, "Aoi")
+        && containsName(names, "Kanadé")
+        && containsName(names, "Sanctus"))
+    {
+        return {
+            "Sanctus reste debout devant les autres comme si perdre l'équilibre était une faute morale.",
+            "Fail : Résultat validé. Beaucoup de bruit, peu de décès, excellent ratio.",
+            "Kanadé : On appelle ça une victoire. Point.",
+            "Aoi : Les flammes se calment... je crois.",
+            "Hazak : La prochaine fois, moins de spectacle."
+        };
+    }
+
     if (containsName(names, "Hazak") && containsName(names, "Hestia"))
     {
         return {"Hazak nettoie sa lame sans regarder Hestia.", "Hazak : C'est terminé. Tu n'as pas besoin de retenir cette image.", "Hestia : Merci... je crois."};
@@ -156,6 +186,24 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getVictoryLines(c
 
 std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getDefeatLines(const std::vector<std::string>& names)
 {
+    if (containsName(names, "Hazak")
+        && containsName(names, "Fail")
+        && containsName(names, "Aoi")
+        && containsName(names, "Kanadé")
+        && containsName(names, "Sanctus"))
+    {
+        return {
+            "Le groupe recule enfin, moins brisé dans le corps que dans l'ego.",
+            "Fail : Techniquement, cette défaite renforce le nom du groupe.",
+            "Hazak : Un mot de plus et je te laisse repousser ton prochain membre tout seul.",
+            "Kanadé : Je déteste officiellement cette arène.",
+            "Fail : Échec humiliant, donc scientifiquement précieux.",
+            "Aoi : On... on devrait partir avant que ça recommence.",
+            "Sanctus : Retraite ordonnée.",
+            "Hazak : Retraite, oui. Ordonnée, non."
+        };
+    }
+
     if (containsName(names, "Hazak") && containsName(names, "Henrique"))
     {
         return {"Henrique tend la main à Hazak avant même de vérifier ses propres blessures.", "Hazak : Ne m'aide pas.", "Henrique : Trop tard."};

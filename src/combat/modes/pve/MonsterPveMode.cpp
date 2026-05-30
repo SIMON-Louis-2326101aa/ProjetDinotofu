@@ -44,6 +44,21 @@
 
 namespace
 {
+    bool isSpecialCharacterMonster(const Monster& monster)
+    {
+        return SpecialCharacterDialogueCatalog::hasDialogueFor(monster.getName());
+    }
+
+    std::string buildMonsterBestiaryCategory(const Monster& monster)
+    {
+        if (isSpecialCharacterMonster(monster))
+        {
+            return "Personnages spéciaux";
+        }
+
+        return "Entités hostiles / ennemis";
+    }
+
     std::string buildMonsterBestiaryDescription(const Monster& monster)
     {
         std::string description = monster.getName()
@@ -52,6 +67,11 @@ namespace
             + " | Niveau : "
             + std::to_string(monster.getLevel())
             + ".";
+
+        if (isSpecialCharacterMonster(monster))
+        {
+            description += " Personnage spécial découvert en rencontre PvE/arène. Le registre révèle son nom seulement après rencontre réelle, pas gratuitement dès le départ.";
+        }
 
         if (monster.isElite())
         {
@@ -389,7 +409,7 @@ namespace
             const Monster& monster = wave.getActiveEnemy(i);
             BestiaryRuntimeProgress::recordEncounter(
                 monster.getName(),
-                "Entités hostiles / ennemis",
+                buildMonsterBestiaryCategory(monster),
                 buildMonsterBestiaryDescription(monster)
             );
         }
@@ -399,7 +419,7 @@ namespace
             const Monster& monster = wave.getWaitingEnemy(i);
             BestiaryRuntimeProgress::recordEncounter(
                 monster.getName(),
-                "Entités hostiles / ennemis",
+                buildMonsterBestiaryCategory(monster),
                 buildMonsterBestiaryDescription(monster)
             );
         }
@@ -503,7 +523,7 @@ namespace
             const Monster& monster = wave.getDefeatedEnemy(i);
             BestiaryRuntimeProgress::recordKill(
                 monster.getName(),
-                "Entités hostiles / ennemis",
+                buildMonsterBestiaryCategory(monster),
                 buildMonsterBestiaryDescription(monster)
             );
         }

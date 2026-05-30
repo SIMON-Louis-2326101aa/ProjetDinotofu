@@ -24,6 +24,7 @@ class VersionInfo
 public:
     static std::string currentVersion();
     static std::string recreateRecommendedBeforeVersion();
+    static std::string importantSaveUpdateVersion();
     static std::string currentDateText();
 
     static VersionNumber parse(const std::string& versionText);

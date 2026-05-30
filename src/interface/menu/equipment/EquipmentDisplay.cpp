@@ -7,7 +7,9 @@
 
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -63,13 +65,33 @@ MenuScreen EquipmentDisplay::buildMainScreen()
 
 MenuScreen EquipmentDisplay::buildWeaponListScreen(const Player& player)
 {
-    MenuScreen screen("CHANGER ARME", "equipment.weapon.list");
+    const std::size_t totalItems = static_cast<std::size_t>(std::max(0, player.getInventory().getWeaponCount()));
+    const std::size_t itemsPerPage = totalItems == 0 ? 1 : totalItems;
+    return buildWeaponListScreen(player, 0, itemsPerPage);
+}
 
-    for (int i = 0; i < player.getInventory().getWeaponCount(); ++i)
+MenuScreen EquipmentDisplay::buildWeaponListScreen(const Player& player, std::size_t pageIndex, std::size_t itemsPerPage)
+{
+    MenuScreen screen("CHANGER ARME", "equipment.weapon.list");
+    const std::size_t totalItems = static_cast<std::size_t>(std::max(0, player.getInventory().getWeaponCount()));
+    const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+
+    if (pageIndex >= totalPages)
     {
-        Weapon weapon = player.getInventory().getWeapon(i);
+        pageIndex = totalPages - 1;
+    }
+
+    const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+    const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
+
+    screen.addSubtitle(PagedMenu::pageInfoText(pageIndex, totalPages, totalItems));
+    screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
+
+    for (std::size_t i = first; i < last; ++i)
+    {
+        Weapon weapon = player.getInventory().getWeapon(static_cast<int>(i));
         screen.addOption(
-            i,
+            static_cast<int>(i - first + 1),
             weapon.getName(),
             "Choisir cette arme puis inspecter, comparer ou équiper.",
             true,
@@ -78,20 +100,40 @@ MenuScreen EquipmentDisplay::buildWeaponListScreen(const Player& player)
         );
     }
 
-    screen.addOption(-1, "Retour", "Revenir sans changer d'arme.", true, "equipment.weapon.back");
-    screen.addFooterLine("Choisis l'arme à équiper, ou -1 pour revenir.");
+    PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+    screen.addFooterLine("Choisis une arme affichée. Le numéro visible correspond à l'entrée de cette page.");
     return screen;
 }
 
 MenuScreen EquipmentDisplay::buildArmorListScreen(const Player& player)
 {
-    MenuScreen screen("CHANGER TENUE", "equipment.armor.list");
+    const std::size_t totalItems = static_cast<std::size_t>(std::max(0, player.getInventory().getArmorCount()));
+    const std::size_t itemsPerPage = totalItems == 0 ? 1 : totalItems;
+    return buildArmorListScreen(player, 0, itemsPerPage);
+}
 
-    for (int i = 0; i < player.getInventory().getArmorCount(); ++i)
+MenuScreen EquipmentDisplay::buildArmorListScreen(const Player& player, std::size_t pageIndex, std::size_t itemsPerPage)
+{
+    MenuScreen screen("CHANGER TENUE", "equipment.armor.list");
+    const std::size_t totalItems = static_cast<std::size_t>(std::max(0, player.getInventory().getArmorCount()));
+    const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+
+    if (pageIndex >= totalPages)
     {
-        Armor armor = player.getInventory().getArmor(i);
+        pageIndex = totalPages - 1;
+    }
+
+    const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+    const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
+
+    screen.addSubtitle(PagedMenu::pageInfoText(pageIndex, totalPages, totalItems));
+    screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
+
+    for (std::size_t i = first; i < last; ++i)
+    {
+        Armor armor = player.getInventory().getArmor(static_cast<int>(i));
         screen.addOption(
-            i,
+            static_cast<int>(i - first + 1),
             armor.getName(),
             "Choisir cette protection puis inspecter, comparer ou équiper.",
             true,
@@ -100,8 +142,8 @@ MenuScreen EquipmentDisplay::buildArmorListScreen(const Player& player)
         );
     }
 
-    screen.addOption(-1, "Retour", "Revenir sans changer de tenue.", true, "equipment.armor.back");
-    screen.addFooterLine("Choisis l'armure à équiper, ou -1 pour revenir.");
+    PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+    screen.addFooterLine("Choisis une armure affichée. Le numéro visible correspond à l'entrée de cette page.");
     return screen;
 }
 
@@ -112,7 +154,7 @@ MenuScreen EquipmentDisplay::buildSelectedWeaponScreen(const Weapon& weapon)
     screen.addLine("Durabilité : " + weaponDurabilityText(weapon));
     screen.addBackOption("Retour", "equipment.weapon.back");
     screen.addOption(1, "Inspecter", "Voir la description et les détails de l'arme.", true, "equipment.weapon.inspect", makeWeaponItemData(weapon, "inspect"));
-    screen.addOption(2, "Comparer", "Comparer avec l'arme actuellement équipée.", true, "equipment.weapon.compare", makeWeaponItemData(weapon, "inspect"));
+    screen.addOption(2, "Comparer", "Comparer avec l'arme actuellement équipée.", true, "equipment.weapon.compare", makeWeaponItemData(weapon, "compare"));
     screen.addOption(3, "Équiper", "Remplacer l'arme actuelle par cette arme.", true, "equipment.weapon.equip", makeWeaponItemData(weapon, "equip"));
     return screen;
 }
@@ -124,7 +166,7 @@ MenuScreen EquipmentDisplay::buildSelectedArmorScreen(const Armor& armor)
     screen.addLine("Durabilité : " + armorDurabilityText(armor));
     screen.addBackOption("Retour", "equipment.armor.back");
     screen.addOption(1, "Inspecter", "Voir la description et les détails de l'armure.", true, "equipment.armor.inspect", makeArmorItemData(armor, "inspect"));
-    screen.addOption(2, "Comparer", "Comparer avec l'armure actuellement équipée.", true, "equipment.armor.compare", makeArmorItemData(armor, "inspect"));
+    screen.addOption(2, "Comparer", "Comparer avec l'armure actuellement équipée.", true, "equipment.armor.compare", makeArmorItemData(armor, "compare"));
     screen.addOption(3, "Équiper", "Remplacer l'armure actuelle par cette armure.", true, "equipment.armor.equip", makeArmorItemData(armor, "equip"));
     return screen;
 }

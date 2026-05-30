@@ -6,6 +6,7 @@
 #include "interface/menu/potions/CombatPotionDisplay.hpp"
 
 #include "core/Console.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/potions/CombatPotionUtils.hpp"
@@ -14,6 +15,7 @@
 #include "item/consumable/Consumable.hpp"
 
 #include <iostream>
+#include <algorithm>
 #include <string>
 
 namespace
@@ -73,24 +75,43 @@ MenuScreen CombatPotionDisplay::buildMainScreen(const Player& player)
 
 MenuScreen CombatPotionDisplay::buildQuickHealingScreen(
     const Player& player,
-    const std::vector<int>& indices
+    const std::vector<int>& indices,
+    std::size_t pageIndex,
+    std::size_t itemsPerPage
 )
 {
     MenuScreen screen("POTION DE SOIN RAPIDE", "potions.quick_heal");
+    const std::size_t totalPages = PagedMenu::pageCount(indices.size(), itemsPerPage);
+    const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
+    const std::size_t first = PagedMenu::firstIndex(safePageIndex, itemsPerPage);
+    const std::size_t last = PagedMenu::lastIndexExclusive(indices.size(), safePageIndex, itemsPerPage);
 
-    for (int i = 0; i < static_cast<int>(indices.size()); ++i)
+    screen.addSubtitle("Soins affichés : " + PagedMenu::rangeText(first, last, indices.size()));
+    screen.setPagination(safePageIndex, totalPages);
+
+    for (std::size_t i = first; i < last; ++i)
     {
         int inventoryIndex = indices[i];
         Consumable potion = player.getInventory().getConsumable(inventoryIndex);
 
         screen.addOption(
-            i + 1,
+            static_cast<int>(i - first + 1),
             potion.getName(),
             "Soin : " + std::to_string(potion.getPower()) + " PV",
             true,
             "potions.quick_heal.use",
             makePotionItemData(potion, "use", "Soin rapide")
         );
+    }
+
+    if (safePageIndex > 0)
+    {
+        screen.addOption(98, "Page précédente", "Voir les potions de soin précédentes.", true, "potions.quick_heal.previous");
+    }
+
+    if (safePageIndex + 1 < totalPages)
+    {
+        screen.addOption(99, "Page suivante", "Voir les potions de soin suivantes.", true, "potions.quick_heal.next");
     }
 
     screen.addBackOption("Retour", "potions.quick_heal.back");
@@ -123,17 +144,26 @@ MenuScreen CombatPotionDisplay::buildSelectedPotionScreen(const Consumable& poti
 
 MenuScreen CombatPotionDisplay::buildFilteredPotionsScreen(
     const Player& player,
-    const std::vector<int>& indices
+    const std::vector<int>& indices,
+    std::size_t pageIndex,
+    std::size_t itemsPerPage
 )
 {
     MenuScreen screen("LISTE DES POTIONS", "potions.filtered");
+    const std::size_t totalPages = PagedMenu::pageCount(indices.size(), itemsPerPage);
+    const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
+    const std::size_t first = PagedMenu::firstIndex(safePageIndex, itemsPerPage);
+    const std::size_t last = PagedMenu::lastIndexExclusive(indices.size(), safePageIndex, itemsPerPage);
 
-    for (int i = 0; i < static_cast<int>(indices.size()); ++i)
+    screen.addSubtitle("Potions affichées : " + PagedMenu::rangeText(first, last, indices.size()));
+    screen.setPagination(safePageIndex, totalPages);
+
+    for (std::size_t i = first; i < last; ++i)
     {
         int inventoryIndex = indices[i];
         Consumable potion = player.getInventory().getConsumable(inventoryIndex);
         screen.addOption(
-            i + 1,
+            static_cast<int>(i - first + 1),
             potion.getName(),
             "Puissance : " + std::to_string(potion.getPower()),
             true,
@@ -142,13 +172,27 @@ MenuScreen CombatPotionDisplay::buildFilteredPotionsScreen(
         );
     }
 
-    screen.addFooterLine("Choisis une potion.");
-    screen.addFooterLine("Entre son numéro dans la liste, ou 0 pour revenir.");
+    if (safePageIndex > 0)
+    {
+        screen.addOption(98, "Page précédente", "Voir les potions précédentes.", true, "potions.filtered.previous");
+    }
+
+    if (safePageIndex + 1 < totalPages)
+    {
+        screen.addOption(99, "Page suivante", "Voir les potions suivantes.", true, "potions.filtered.next");
+    }
+
+    screen.addFooterLine("Choisis une potion visible sur cette page.");
+    screen.addFooterLine("0 revient au menu des potions, 98/99 changent de page si disponible.");
     screen.addBackOption("Retour", "potions.filtered.back");
     return screen;
 }
 
-MenuScreen CombatPotionDisplay::buildPotionOverviewScreen(const Player& player)
+MenuScreen CombatPotionDisplay::buildPotionOverviewScreen(
+    const Player& player,
+    std::size_t pageIndex,
+    std::size_t itemsPerPage
+)
 {
     MenuScreen screen("POTIONS DISPONIBLES", "potions.overview");
     const std::vector<Consumable>& consumables = player.getInventory().getConsumables();
@@ -160,12 +204,19 @@ MenuScreen CombatPotionDisplay::buildPotionOverviewScreen(const Player& player)
         return screen;
     }
 
-    screen.addSubtitle("Total : " + std::to_string(consumables.size()) + " potion(s)");
-    for (int i = 0; i < static_cast<int>(consumables.size()); ++i)
+    const std::size_t totalPages = PagedMenu::pageCount(consumables.size(), itemsPerPage);
+    const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
+    const std::size_t first = PagedMenu::firstIndex(safePageIndex, itemsPerPage);
+    const std::size_t last = PagedMenu::lastIndexExclusive(consumables.size(), safePageIndex, itemsPerPage);
+
+    screen.addSubtitle("Potions affichées : " + PagedMenu::rangeText(first, last, consumables.size()));
+    screen.setPagination(safePageIndex, totalPages);
+
+    for (std::size_t i = first; i < last; ++i)
     {
         const Consumable& potion = consumables[i];
         screen.addOption(
-            i + 1,
+            static_cast<int>(i - first + 1),
             potion.getName(),
             CombatPotionUtils::typeToText(potion.getType()) + " | Puissance : " + std::to_string(potion.getPower()),
             false,
@@ -173,7 +224,19 @@ MenuScreen CombatPotionDisplay::buildPotionOverviewScreen(const Player& player)
             makePotionItemData(potion, "overview", "Potions disponibles")
         );
     }
-    screen.setContinueInput("Valide pour revenir au combat.");
+
+    if (safePageIndex > 0)
+    {
+        screen.addOption(98, "Page précédente", "Voir les potions précédentes.", true, "potions.overview.previous");
+    }
+
+    if (safePageIndex + 1 < totalPages)
+    {
+        screen.addOption(99, "Page suivante", "Voir les potions suivantes.", true, "potions.overview.next");
+    }
+
+    screen.addBackOption("Retour", "potions.overview.back");
+    screen.addFooterLine("Cette vue est consultative : les potions listées ne consomment pas d'action.");
     return screen;
 }
 
@@ -202,9 +265,53 @@ void CombatPotionDisplay::displaySelectedPotion(const Consumable& potion)
 
 void CombatPotionDisplay::displayPotions(const Player& player)
 {
-    TerminalInterface::renderMenuScreen(buildPotionOverviewScreen(player), false);
-    Console::waitForEnter();
-    Console::clear();
+    if (player.getInventory().getConsumables().empty())
+    {
+        TerminalInterface::renderMenuScreen(buildPotionOverviewScreen(player), false);
+        Console::waitForEnter();
+        Console::clear();
+        return;
+    }
+
+    const std::size_t itemsPerPage = 10;
+    std::size_t pageIndex = 0;
+
+    while (true)
+    {
+        const std::size_t totalPages = PagedMenu::pageCount(
+            player.getInventory().getConsumables().size(),
+            itemsPerPage
+        );
+
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages - 1;
+        }
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            buildPotionOverviewScreen(player, pageIndex, itemsPerPage),
+            "Choix invalide. Utilise 0, 98 ou 99."
+        );
+
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+    }
 }
 
 void CombatPotionDisplay::showPotionDetails(const Consumable& potion)

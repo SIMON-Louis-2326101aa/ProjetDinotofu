@@ -267,10 +267,12 @@ namespace
         return std::max(0, maxQuantity);
     }
 
-    std::string formatBarterRequirements(const ShopItem& item)
+    std::string formatBarterRequirements(const ShopItem& item, int multiplier = 1)
     {
         std::vector<BarterRequirement> requirements = getBlackMarketBarterRequirements(item);
         std::string text;
+
+        multiplier = std::max(1, multiplier);
 
         for (std::size_t i = 0; i < requirements.size(); ++i)
         {
@@ -279,7 +281,7 @@ namespace
                 text += " + ";
             }
 
-            text += requirements[i].label + " x" + std::to_string(requirements[i].quantity);
+            text += requirements[i].label + " x" + std::to_string(requirements[i].quantity * multiplier);
         }
 
         return text;
@@ -753,7 +755,7 @@ namespace
 
             if (barterOffer)
             {
-                label += " | Troc : " + formatBarterRequirements(items[i]);
+                label += " | Troc/unité : " + formatBarterRequirements(items[i]);
                 label += barterMax > 0
                     ? " | Troc possible x" + std::to_string(barterMax)
                     : " | Troc impossible maintenant";
@@ -782,7 +784,7 @@ namespace
             }
             if (barterOffer)
             {
-                itemData.reward = "Troc : " + formatBarterRequirements(items[i]);
+                itemData.reward = "Demande/unité : " + formatBarterRequirements(items[i]);
                 itemData.maxQuantity = barterMax > 0 ? std::to_string(barterMax) : "0";
             }
             itemData.important = soldOut || !canBuyNow || barterOffer;
@@ -936,16 +938,18 @@ namespace
         if (maxBuyQuantity > 0)
         {
             screen.addLine("Quantité achetable maintenant : max x" + std::to_string(maxBuyQuantity));
+            screen.addLine("Achat maximum estimé : " + std::to_string(finalBuyPrice * maxBuyQuantity) + " or");
         }
 
         if (hasBlackMarketBarterOffer(shop, item))
         {
             int maxBarterQuantity = getMaxBarterQuantity(item, player);
-            screen.addLine("Troc du marché noir : " + formatBarterRequirements(item));
+            screen.addLine("Troc du marché noir par unité : " + formatBarterRequirements(item));
 
             if (maxBarterQuantity > 0)
             {
                 screen.addLine("Quantité échangeable maintenant : max x" + std::to_string(maxBarterQuantity));
+                screen.addLine("Demande totale au maximum : " + formatBarterRequirements(item, maxBarterQuantity));
             }
             else
             {
@@ -1012,7 +1016,7 @@ namespace
                 barterData.actionType = "barter";
                 barterData.name = item.getName();
                 barterData.detail = item.getDescription();
-                barterData.reward = "Demande : " + formatBarterRequirements(item);
+                barterData.reward = "Demande/unité : " + formatBarterRequirements(item);
                 barterData.stock = item.getStock() >= 0 ? std::to_string(item.getStock()) : "non limité";
                 barterData.maxQuantity = std::to_string(maxBarterQuantity);
                 barterData.status = maxBarterQuantity > 0 ? "Troc possible" : "Composants insuffisants";
@@ -1039,6 +1043,8 @@ namespace
     void openSellMenu(Player& player, const ShopInventory& shop)
     {
         bool selling = true;
+        std::size_t pageIndex = 0;
+        const std::size_t itemsPerPage = 10;
 
         while (selling)
         {
@@ -1047,19 +1053,40 @@ namespace
             MenuScreen sellScreen("REVENTE", "shop.sell");
             sellScreen.addLine("Boutique : " + shop.getName());
             sellScreen.addLine("Or actuel : " + std::to_string(player.getInventory().getGold()) + " pièces");
+            sellScreen.addLine("Les entrées protégées ou incompatibles restent visibles, mais ne peuvent pas être vendues.");
             sellScreen.addBackOption("Retour", "shop.sell.back");
 
             if (maxChoice <= 0)
             {
                 sellScreen.addLine("Rien à vendre ici pour le moment.");
-                TerminalInterface::askMenuChoice(sellScreen, 0, 0, "Entre 0 pour revenir.");
+                TerminalInterface::askMenuChoiceFromOptions(
+                    sellScreen,
+                    "Entre 0 pour revenir."
+                );
                 Console::clear();
                 return;
             }
 
-            for (int i = 0; i < maxChoice; ++i)
+            const std::size_t totalEntries = static_cast<std::size_t>(maxChoice);
+            const std::size_t totalPages = PagedMenu::pageCount(totalEntries, itemsPerPage);
+            if (pageIndex >= totalPages)
             {
-                const SellableEntryUiInfo entryInfo = getSellableEntryUiInfo(player, shop.getType(), i);
+                pageIndex = totalPages > 0 ? totalPages - 1 : 0;
+            }
+
+            const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(totalEntries, pageIndex, itemsPerPage);
+            const int localCount = static_cast<int>(last - first);
+
+            sellScreen.setPagination(pageIndex, totalPages);
+            sellScreen.addLine("Page " + std::to_string(pageIndex + 1) + " / " + std::to_string(totalPages));
+            sellScreen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalEntries));
+
+            for (std::size_t i = first; i < last; ++i)
+            {
+                const int localIndex = static_cast<int>(i - first + 1);
+                const int inventoryIndex = static_cast<int>(i);
+                const SellableEntryUiInfo entryInfo = getSellableEntryUiInfo(player, shop.getType(), inventoryIndex);
                 MenuOptionItemData itemData;
                 itemData.structured = true;
                 itemData.kind = "shop";
@@ -1074,20 +1101,29 @@ namespace
                 itemData.important = !entryInfo.sellable || !entryInfo.status.empty();
 
                 sellScreen.addOption(
-                    i + 1,
+                    localIndex,
                     entryInfo.label,
                     entryInfo.sellable
                         ? "Vendre cet objet ou une quantité si plusieurs exemplaires sont disponibles."
                         : "Cette entrée reste visible, mais le marchand ne peut pas l'acheter.",
                     entryInfo.sellable,
-                    "shop.sell.select." + std::to_string(i),
+                    "shop.sell.select." + std::to_string(inventoryIndex),
                     itemData
                 );
             }
 
+            if (pageIndex > 0)
+            {
+                sellScreen.addOption(98, "Page précédente", "Voir les objets précédents.", true, "shop.sell.previous");
+            }
+            if (pageIndex + 1 < totalPages)
+            {
+                sellScreen.addOption(99, "Page suivante", "Voir les objets suivants.", true, "shop.sell.next");
+            }
+
             int choice = TerminalInterface::askMenuChoiceFromOptions(
                 sellScreen,
-                "Choix refusé : sélectionne une entrée vendable ou 0 pour revenir."
+                "Choix refusé : sélectionne une entrée affichée, 98/99 pour tourner les pages, ou 0 pour revenir."
             );
 
             if (choice == 0)
@@ -1096,7 +1132,32 @@ namespace
                 continue;
             }
 
-            int index = choice - 1;
+            if (choice == 98 && pageIndex > 0)
+            {
+                pageIndex--;
+                continue;
+            }
+
+            if (choice == 99 && pageIndex + 1 < totalPages)
+            {
+                pageIndex++;
+                continue;
+            }
+
+            if (choice < 1 || choice > localCount)
+            {
+                showShopResult(
+                    "CHOIX INDISPONIBLE",
+                    "shop.sell.invalid_choice",
+                    {
+                        "Cette entrée n'existe pas sur la page de revente actuelle.",
+                        "Utilise uniquement les choix affichés par la boutique."
+                    }
+                );
+                continue;
+            }
+
+            int index = static_cast<int>(first) + choice - 1;
 
             if (!ShopTransactionSystem::canShopBuyInventoryEntry(player, shop.getType(), index))
             {
@@ -1207,6 +1268,8 @@ namespace
     void openBuybackMenu(Player& player, const ShopInventory& shop)
     {
         bool buyingBack = true;
+        std::size_t pageIndex = 0;
+        const std::size_t itemsPerPage = 10;
 
         while (buyingBack)
         {
@@ -1222,16 +1285,36 @@ namespace
             if (count <= 0)
             {
                 screen.addLine("Aucun objet à racheter dans cette boutique.");
-                TerminalInterface::askMenuChoice(screen, 0, 0, "Entre 0 pour revenir.");
+                TerminalInterface::askMenuChoiceFromOptions(
+                    screen,
+                    "Entre 0 pour revenir."
+                );
                 return;
             }
 
-            for (int i = 0; i < count; ++i)
+            const std::size_t totalEntries = static_cast<std::size_t>(count);
+            const std::size_t totalPages = PagedMenu::pageCount(totalEntries, itemsPerPage);
+            if (pageIndex >= totalPages)
             {
-                const std::string name = ShopTransactionSystem::getBuybackEntryName(shop.getType(), i);
-                const std::string kindLabel = ShopTransactionSystem::getBuybackEntryKindLabel(shop.getType(), i);
-                const int quantity = ShopTransactionSystem::getBuybackEntryQuantity(shop.getType(), i);
-                const int price = ShopTransactionSystem::getBuybackEntryPrice(shop.getType(), i);
+                pageIndex = totalPages > 0 ? totalPages - 1 : 0;
+            }
+
+            const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(totalEntries, pageIndex, itemsPerPage);
+            const int localCount = static_cast<int>(last - first);
+
+            screen.setPagination(pageIndex, totalPages);
+            screen.addLine("Page " + std::to_string(pageIndex + 1) + " / " + std::to_string(totalPages));
+            screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalEntries));
+
+            for (std::size_t i = first; i < last; ++i)
+            {
+                const int localIndex = static_cast<int>(i - first + 1);
+                const int buybackIndex = static_cast<int>(i);
+                const std::string name = ShopTransactionSystem::getBuybackEntryName(shop.getType(), buybackIndex);
+                const std::string kindLabel = ShopTransactionSystem::getBuybackEntryKindLabel(shop.getType(), buybackIndex);
+                const int quantity = ShopTransactionSystem::getBuybackEntryQuantity(shop.getType(), buybackIndex);
+                const int price = ShopTransactionSystem::getBuybackEntryPrice(shop.getType(), buybackIndex);
                 const bool affordable = player.getInventory().getGold() >= price;
                 const std::string label = name
                     + (quantity > 1 ? " x" + std::to_string(quantity) : "")
@@ -1252,20 +1335,29 @@ namespace
                 itemData.important = !affordable;
 
                 screen.addOption(
-                    i + 1,
+                    localIndex,
                     label,
                     affordable
                         ? itemData.detail
                         : "Entrée visible, mais il manque de l'or pour la récupérer maintenant.",
                     affordable,
-                    "shop.buyback.select." + std::to_string(i + 1),
+                    "shop.buyback.select." + std::to_string(buybackIndex),
                     itemData
                 );
             }
 
+            if (pageIndex > 0)
+            {
+                screen.addOption(98, "Page précédente", "Voir les rachats précédents.", true, "shop.buyback.previous");
+            }
+            if (pageIndex + 1 < totalPages)
+            {
+                screen.addOption(99, "Page suivante", "Voir les rachats suivants.", true, "shop.buyback.next");
+            }
+
             int choice = TerminalInterface::askMenuChoiceFromOptions(
                 screen,
-                "Choix refusé : sélectionne une entrée récupérable ou 0 pour revenir."
+                "Choix refusé : sélectionne une entrée affichée, 98/99 pour tourner les pages, ou 0 pour revenir."
             );
             if (choice == 0)
             {
@@ -1273,7 +1365,32 @@ namespace
                 continue;
             }
 
-            const int buybackIndex = choice - 1;
+            if (choice == 98 && pageIndex > 0)
+            {
+                pageIndex--;
+                continue;
+            }
+
+            if (choice == 99 && pageIndex + 1 < totalPages)
+            {
+                pageIndex++;
+                continue;
+            }
+
+            if (choice < 1 || choice > localCount)
+            {
+                showShopResult(
+                    "CHOIX INDISPONIBLE",
+                    "shop.buyback.invalid_choice",
+                    {
+                        "Cette entrée n'existe pas sur la page de rachat actuelle.",
+                        "Utilise uniquement les choix affichés par la boutique."
+                    }
+                );
+                continue;
+            }
+
+            const int buybackIndex = static_cast<int>(first) + choice - 1;
             const std::string buybackName = ShopTransactionSystem::getBuybackEntryName(shop.getType(), buybackIndex);
             const int buybackQuantity = ShopTransactionSystem::getBuybackEntryQuantity(shop.getType(), buybackIndex);
             const int buybackPrice = ShopTransactionSystem::getBuybackEntryPrice(shop.getType(), buybackIndex);
@@ -1507,9 +1624,13 @@ namespace
                                     "Prix unitaire : " + std::to_string(finalPrice) + " or",
                                     "Total prévu : " + std::to_string(expectedTotalPrice) + " or",
                                     "Or disponible : " + std::to_string(goldBeforePurchase) + " pièces",
+                                    "Or après achat prévu : " + std::to_string(goldBeforePurchase - expectedTotalPrice) + " pièces",
                                     stockBeforePurchase >= 0
                                         ? "Stock avant achat : " + std::to_string(stockBeforePurchase)
-                                        : "Stock avant achat : non limité"
+                                        : "Stock avant achat : non limité",
+                                    stockBeforePurchase >= 0
+                                        ? "Stock après achat prévu : " + std::to_string(std::max(0, stockBeforePurchase - quantity))
+                                        : "Stock après achat prévu : non limité"
                                 },
                                 "Confirmer l'achat",
                                 "Annuler l'achat",
@@ -1609,6 +1730,7 @@ namespace
                             }
 
                             const std::string barterRequirements = formatBarterRequirements(item);
+                            const std::string totalBarterRequirements = formatBarterRequirements(item, quantity);
                             const int stockBeforeBarter = item.getStock();
                             const bool confirmBarter = askShopConfirmation(
                                 "CONFIRMER LE TROC",
@@ -1619,10 +1741,16 @@ namespace
                                     quantity > 1
                                         ? "Demande par unité : " + barterRequirements
                                         : "Demande : " + barterRequirements,
+                                    quantity > 1
+                                        ? "Demande totale : " + totalBarterRequirements
+                                        : "Demande totale : " + barterRequirements,
                                     "Maximum échangeable maintenant : x" + std::to_string(maxBarterQuantity),
                                     stockBeforeBarter >= 0
                                         ? "Stock avant échange : " + std::to_string(stockBeforeBarter)
                                         : "Stock avant échange : non limité",
+                                    stockBeforeBarter >= 0
+                                        ? "Stock après échange prévu : " + std::to_string(std::max(0, stockBeforeBarter - quantity))
+                                        : "Stock après échange prévu : non limité",
                                     "Le marché noir ne promet jamais que l'offre reviendra."
                                 },
                                 "Confirmer le troc",
@@ -1678,6 +1806,7 @@ namespace
                                             quantity > 1
                                                 ? "Coût par unité : " + barterRequirements
                                                 : "Coût : " + barterRequirements,
+                                            "Coût total consommé : " + formatBarterRequirements(item, tradedCount),
                                             item.getStock() >= 0
                                                 ? "Stock restant : " + std::to_string(item.getStock())
                                                 : "Stock restant : non limité",

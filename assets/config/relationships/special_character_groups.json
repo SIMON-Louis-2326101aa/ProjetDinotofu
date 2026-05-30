@@ -4,6 +4,19 @@
     "classicRandomGroupChancePercent": 75,
     "groups": [
         {
+            "id": "les_bras_casses",
+            "members": [
+                "Hazak",
+                "Fail",
+                "Aoi",
+                "Kanadé",
+                "Sanctus"
+            ],
+            "relationship": "complete_adventurer_party",
+            "defaultCombatIntent": "heroic_pve_group_not_default_death_match",
+            "notes": "Groupe de cinq aventuriers reconnus comme héros pour avoir libéré et aidé plusieurs villages/habitants. Le nom vient de Hazak, chef du groupe, qui s'est fait couper le bras par un orc avant de réussir à se régénérer après deux semaines, et aussi du fait que le groupe fait beaucoup de conneries mais finit presque toujours par réussir. Ils ne sont pas toujours appréciés à cause de leur ego et de leur tendance à ne pas trop respecter les règles. Croisable en PvE de groupe."
+        },
+        {
             "id": "hazak_henrique",
             "members": [
                 "Hazak",
@@ -117,7 +130,10 @@
         "Matt (PRO) does not talk directly: he fights silently and treats the opponent with respect.",
         "Skuro can only appear with Hazak, Henrique, Aoi, Fail or Kanadé for now.",
         "Sanctus and Skuro are the same person in the story. Sanctus can later transform into Skuro after taking or dealing a huge hit.",
-        "Skuro was born from Sanctus breaking after cutting his first head."
+        "Skuro was born from Sanctus breaking after cutting his first head.",
+        "Les bras cassés = Hazak, Fail, Aoi, Kanadé et Sanctus.",
+        "Origine du nom : Hazak s'est fait couper le bras par un orc, puis a réussi à le régénérer après deux semaines. Le surnom vient aussi des catastrophes du groupe qui finissent presque toujours par réussir.",
+        "Ces cinq personnages peuvent être connus plus tôt dans le bestiaire, contrairement à la plupart des autres personnages spéciaux qui doivent se débloquer progressivement."
     ],
     "soloSpecials": [
         {

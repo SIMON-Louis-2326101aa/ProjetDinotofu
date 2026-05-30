@@ -5,6 +5,8 @@
 
 #include "core/Console.hpp"
 
+#include "interface/GuiDebugExporter.hpp"
+
 #include <cstdlib>
 #include <chrono>
 #include <thread>
@@ -600,6 +602,11 @@ void Console::configureTerminalEncoding()
 
 // EN: clear declares or implements a focused behavior used by this module.
 // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
+void Console::printLine(const std::string& text)
+{
+    std::cout << text << std::endl;
+}
+
 void Console::clear()
 {
 #if defined(_WIN32)
@@ -701,6 +708,12 @@ bool Console::readLine(std::string& line, bool trimLeadingWhitespace)
 // FR: waitForEnter déclare ou implémente un comportement précis utilisé par ce module.
 void Console::waitForEnter()
 {
+    // FR: si l'IG affiche un écran sans choix puis que le moteur attend Entrée,
+    // on réexporte ce même écran avec un vrai bouton Continuer. Sans ça, la vue
+    // peut rester bloquée sur une lecture seule, notamment après création/reprise.
+    // EN: keep GUI wait screens actionable.
+    GuiDebugExporter::exportContinueFromLastMenu("Valide pour continuer.");
+
     flushAvailableInputBuffer();
 
     std::cout << std::endl;

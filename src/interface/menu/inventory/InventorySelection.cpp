@@ -2640,6 +2640,12 @@ bool InventorySelection::openWeapons(Player& player)
     {
         const std::size_t totalItems = static_cast<std::size_t>(player.getInventory().getWeaponCount());
         const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages - 1;
+        }
+
         const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
         const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
 
@@ -2685,7 +2691,10 @@ bool InventorySelection::openWeapons(Player& player)
         PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
         screen.addFooterLine("Sélectionne une arme affichée.");
 
-        int choice = TerminalInterface::askMenuChoice(screen, 0, 99, "Choix invalide.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Choix invalide. Choisis une entrée visible, une page disponible ou 0 pour revenir."
+        );
         Console::clear();
 
         if (choice == 0)
@@ -2732,18 +2741,19 @@ bool InventorySelection::openWeapons(Player& player)
         if (action == 1)
         {
             showWeaponInspectionScreen(weapon);
-            return false;
+            continue;
         }
 
         if (action == 3)
         {
             BestiaryMenu::displayObjectEntry(weapon.getName());
-            return false;
+            continue;
         }
 
         if (action == 4)
         {
-            return repairSelectedWeapon(player, index);
+            repairSelectedWeapon(player, index);
+            continue;
         }
 
         if (action == 2)
@@ -2751,6 +2761,7 @@ bool InventorySelection::openWeapons(Player& player)
             bool equipped = player.equipWeapon(index);
             Weapon equippedWeapon = equipped ? player.getEquippedWeapon() : weapon;
             showEquipWeaponResultScreen(player, equippedWeapon, equipped);
+            continue;
         }
 
         return false;
@@ -2778,6 +2789,12 @@ bool InventorySelection::openArmors(Player& player)
     {
         const std::size_t totalItems = static_cast<std::size_t>(player.getInventory().getArmorCount());
         const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages - 1;
+        }
+
         const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
         const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
 
@@ -2822,7 +2839,10 @@ bool InventorySelection::openArmors(Player& player)
         PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
         screen.addFooterLine("Sélectionne une armure affichée.");
 
-        int choice = TerminalInterface::askMenuChoice(screen, 0, 99, "Choix invalide.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Choix invalide. Choisis une entrée visible, une page disponible ou 0 pour revenir."
+        );
         Console::clear();
 
         if (choice == 0)
@@ -2869,18 +2889,19 @@ bool InventorySelection::openArmors(Player& player)
         if (action == 1)
         {
             showArmorInspectionScreen(armor);
-            return false;
+            continue;
         }
 
         if (action == 3)
         {
             BestiaryMenu::displayObjectEntry(armor.getName());
-            return false;
+            continue;
         }
 
         if (action == 4)
         {
-            return repairSelectedArmor(player, index);
+            repairSelectedArmor(player, index);
+            continue;
         }
 
         if (action == 2)
@@ -2888,6 +2909,7 @@ bool InventorySelection::openArmors(Player& player)
             bool equipped = player.equipArmor(index);
             Armor equippedArmor = equipped ? player.getEquippedArmor() : armor;
             showEquipArmorResultScreen(player, equippedArmor, equipped);
+            continue;
         }
 
         return false;
@@ -2911,14 +2933,21 @@ bool InventorySelection::openConsumables(Player& player)
         return false;
     }
 
-    std::vector<ConsumableGroup> groups = InventoryUtils::groupConsumables(player);
     constexpr std::size_t itemsPerPage = 10;
     std::size_t pageIndex = 0;
 
     while (true)
     {
+        std::vector<ConsumableGroup> groups = InventoryUtils::groupConsumables(player);
+        hasRepairKits = hasAnyRepairKit(player);
         const std::size_t totalItems = groups.size();
         const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages - 1;
+        }
+
         const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
         const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
 
@@ -2964,9 +2993,11 @@ bool InventorySelection::openConsumables(Player& player)
         if (groups.empty())
         {
             screen.addLine("Aucun consommable utilisable directement ici.");
-            screen.addLine("Les kits se lancent depuis l'équipement à réparer.");
+            screen.addLine(hasRepairKits
+                ? "Les kits se lancent depuis l'équipement à réparer."
+                : "La section est maintenant vide.");
             screen.addBackOption();
-            TerminalInterface::askMenuChoice(screen, 0, 0, "Entre 0 pour revenir.");
+            TerminalInterface::askMenuChoiceFromOptions(screen, "Entre 0 pour revenir.");
             Console::clear();
             return false;
         }
@@ -2974,7 +3005,10 @@ bool InventorySelection::openConsumables(Player& player)
         PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
         screen.addFooterLine("Sélectionne un consommable affiché.");
 
-        int choice = TerminalInterface::askMenuChoice(screen, 0, 99, "Choix invalide.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Choix invalide. Choisis une entrée visible, une page disponible ou 0 pour revenir."
+        );
         Console::clear();
 
         if (choice == 0)
@@ -3022,13 +3056,13 @@ bool InventorySelection::openConsumables(Player& player)
         if (action == 1)
         {
             showConsumableInspectionScreen(consumable);
-            return false;
+            continue;
         }
 
         if (action == 3)
         {
             BestiaryMenu::displayObjectEntry(consumable.getName());
-            return false;
+            continue;
         }
 
         if (action == 2)
@@ -3040,7 +3074,7 @@ bool InventorySelection::openConsumables(Player& player)
                     "inventory.consumable.use.locked",
                     {"Ce consommable demande une cible ou un effet spécial.", "Utilise plutôt l'option Potions du menu de combat."}
                 );
-                return false;
+                continue;
             }
 
             int hpBefore = player.getHp();
@@ -3082,6 +3116,12 @@ bool InventorySelection::openMaterials(Player& player)
         const std::vector<Material>& materials = player.getInventory().getMaterials();
         const std::size_t totalItems = materials.size();
         const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
+
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages - 1;
+        }
+
         const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
         const std::size_t last = PagedMenu::lastIndexExclusive(totalItems, pageIndex, itemsPerPage);
 
@@ -3127,7 +3167,10 @@ bool InventorySelection::openMaterials(Player& player)
         PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
         screen.addFooterLine("Sélectionne une entrée affichée.");
 
-        int choice = TerminalInterface::askMenuChoice(screen, 0, 99, "Choix invalide.");
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Choix invalide. Choisis une entrée visible, une page disponible ou 0 pour revenir."
+        );
         Console::clear();
 
         if (choice == 0)
@@ -3174,24 +3217,25 @@ bool InventorySelection::openMaterials(Player& player)
         if (action == 1)
         {
             showMaterialInspectionScreen(material);
-            return false;
+            continue;
         }
 
         if (action == 2)
         {
             BestiaryMenu::displayObjectEntry(material.getName());
-            return false;
+            continue;
         }
 
         if (action == 3)
         {
             displayMaterialUtility(material);
-            return false;
+            continue;
         }
 
         if (action == 4)
         {
-            return useMaterialIfPossible(player, material);
+            useMaterialIfPossible(player, material);
+            continue;
         }
 
         return false;
@@ -3317,6 +3361,7 @@ bool InventorySelection::openCraft(Player& player)
         int maxCrafts = maxCraftsForRecipe(player, recipe);
 
         MenuScreen detailScreen("SCHÉMA DE CRAFT", "inventory.craft.detail");
+        detailScreen.setDisplayOnlyInput("Détail temporaire avant la quantité ou la confirmation de craft.");
         detailScreen.addLine("Schéma : " + recipe.name);
         detailScreen.addLine("Catégorie : " + recipe.category);
         detailScreen.addLine("Nombre maximum possible : " + std::to_string(maxCrafts));

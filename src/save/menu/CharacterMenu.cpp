@@ -144,6 +144,7 @@ namespace
         }
 
         MenuScreen screen("TRACE DE VERSION", "save.characters.version.warning");
+        screen.setDisplayOnlyInput("Alerte temporaire avant le menu d'actions du personnage.");
         screen.addLine(message);
         screen.addLine("Profil concerné : " + accountName);
         screen.addLine("Personnage concerné : " + character.characterName);
@@ -186,8 +187,22 @@ namespace
         screen.addLine("Profil concerné : " + accountName);
         screen.addLine("Personnage concerné : " + character.characterName);
         screen.addOption(0, "Retour", "", true, "save.characters.legacy.back");
-        screen.addOption(1, "Procéder au rituel d'oubli contrôlé", "Le personnage sera recréé proprement pour cette version.", true, "save.characters.legacy.recreate");
-        screen.addOption(2, "Subir une adaptation lourde", "Ajoute les sécurités manquantes sans remplacer tes gains.", true, "save.characters.legacy.heavy_adaptation");
+        screen.addOption(
+            1,
+            "Procéder au rituel d'oubli contrôlé",
+            "Le personnage sera recréé proprement pour cette version.",
+            true,
+            "save.characters.legacy.recreate",
+            makeCharacterMenuItem("create", "Rituel d'oubli contrôlé", "Recréer proprement ce personnage pour la version actuelle.", "Recréation conseillée", "Nom conservé, fiche retissée", "Profil : " + accountName, true)
+        );
+        screen.addOption(
+            2,
+            "Subir une adaptation lourde",
+            "Ajoute les sécurités manquantes sans remplacer tes gains.",
+            true,
+            "save.characters.legacy.heavy_adaptation",
+            makeCharacterMenuItem("adapt", "Adaptation lourde", "Appliquer les sécurités manquantes sans effacer les gains.", "Adaptation", "Équipement et protections retissés", "Profil : " + accountName, true)
+        );
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(
             screen,
@@ -386,6 +401,8 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
 
         Console::clear();
         MenuScreen selectedCharacterScreen("PERSONNAGE SÉLECTIONNÉ", "save.characters.selected.summary");
+        selectedCharacterScreen.setDisplayOnlyInput("Résumé temporaire avant le choix des actions du personnage.");
+        selectedCharacterScreen.addSubtitle("Résumé du personnage");
         selectedCharacterScreen.addLine("Personnage : " + selectedCharacter.characterName);
         selectedCharacterScreen.addLine("Race / classe : " + selectedCharacter.raceName + " / " + selectedCharacter.className);
         selectedCharacterScreen.addLine("Niveau : " + std::to_string(selectedCharacter.level));
@@ -420,7 +437,9 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
         displayVersionCompatibilityWarning(accountName, selectedCharacter);
 
         MenuScreen characterActionScreen("ACTIONS DU PERSONNAGE", "save.characters.actions");
+        characterActionScreen.addSubtitle("Actions disponibles");
         characterActionScreen.addLine("Personnage : " + selectedCharacter.characterName);
+        characterActionScreen.addLine("Race / classe : " + selectedCharacter.raceName + " / " + selectedCharacter.className + " | Niveau " + std::to_string(selectedCharacter.level));
         characterActionScreen.addLine("Action irréversible disponible : le maître actuel peut changer vraiment.");
         characterActionScreen.addOption(0, "Retour", "", true, "save.characters.actions.back");
         characterActionScreen.addOption(

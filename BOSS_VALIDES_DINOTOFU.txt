@@ -1,59 +1,108 @@
 BOSS / AVATARS VALIDÉS - DINOTOFU
+Audit réel du code : V2.01.20
 
-Règles globales :
-- En combat de boss, la fuite est impossible. Le jeu doit l'expliquer avec une phrase de lore liée au boss ou à l'arène.
+Règles globales validées :
+- En combat de boss, la fuite est impossible et doit être justifiée par une phrase de lore/arène.
 - Les vrais dieux, déesses et divinités ne sont jamais affrontés à pleine puissance.
 - Quand une entité porte une appellation divine, utiliser une forme affaiblie : avatar, fragment, écho, reflet, copie, manifestation instable ou vestige.
 - Les trois premiers boss visibles dès le départ sont Fitoria, Zelef et Atlas.
 - Les autres boss apparaissent d'abord comme ??? ou variations d'énergie anormale jusqu'à découverte.
-- Les ultimes de boss ne se débloquent qu'après le passage sous le seuil des 50% PV.
-- FireFlight est le boss final et doit rester verrouillé tant que le personnage n'a pas assez prouvé sa valeur.
+- Les ultimes de boss se débloquent après le passage sous le seuil des 50% PV.
+- FireFlight reste le boss final verrouillé tant que le personnage n'a pas assez prouvé sa valeur.
 
-Boss de base :
-1. Fitoria - Ange lumineux, jugement, chaînes, soin contrôlé, Sentence céleste.
-2. Zelef - Démon brutal, corruption, saignement, vol de vie, Coeur démoniaque, Corrosion présente si le boss gagne.
-3. Atlas - Protecteur universel déchu, plaques d'armure, fissures, contre-garde, Dernier rempart.
+Vérification code V2.01.20 :
+- src/boss/BossCatalog.cpp contient 35 boss numérotés de 1 à 35.
+- src/combat/boss/BossUltimate.cpp contient un ultime dédié pour les boss 1 à 35.
+- Correction V2.00.19 : les blocs d'ultime dupliqués 28, 29, 30 et 31 ont été nettoyés. La version gardée est la plus complète, notamment pour Moiran et les réactions aux altérations.
+- src/combat/boss/BossEndTurn.cpp contient les effets de fin de tour des ultimes pour les boss 1 à 35.
+- Correction V2.00.19 : les effets actifs de fin de tour manquants pour 25, 26 et 27 ont été ajoutés.
+- src/combat/modes/boss/BossPveMode.cpp contient déjà certaines conséquences spéciales : Grinka, Zelef, Hitogami, FireFlight, réactions aux cheats Léthal pour Anomalie/Lexior/Obérion/FireFlight/Moiran.
 
-Boss et concepts validés :
-4. Écho de Lyknir - meute, traque, marque de proie, instinct de prédateur, Chasse sans lune.
-5. Grinka - reine gobeline, avarice, dette, taxe, vol, enchère gobeline, Dette royale.
-6. Avatar d'Azelanos - ténèbres, puissance grandissante avec la durée, couronne obscure.
-7. Fragment de Thamarys - dragon, phases, écailles adaptatives, souffle élémentaire.
-8. Mojo - esprit mythique de la forêt, boss-épreuve, mémoire de la forêt, victoire alternative respectueuse.
-9. Reflet d'Inakari - kitsune, illusions, clones, fausses récompenses, tromperie.
-10. Le Jugement Silencieux - justice muette, ombre volée, malédiction sociale.
-11. L'Horloge des Chuchotements - temps, blessures retardées, souvenirs, réécriture de décision.
-12. L'Enfant des Os Enfouis - désert, ancienneté, profanation, golem d'os et de sable à bas PV.
-13. Avatar de Boros - guerre, duel, brutalité, jauge de conflit, Hymne du carnage.
-14. Avatar d'Anastasia - amour, liens, attachement, morts totales du personnage, Serment qui saigne.
-15. Avatar de Lexior - justice, jugement des actions passées, blocage du stuff le plus utilisé, Verdict des actes répétés.
-16. Fragment de Luna / Onyrae - lune, rêves, illusions, rêve/cauchemar, Éclipse onirique.
-17. Fragment de Syvaranelya - phases Feu/Terre/Eau/Vent, fusion ou séparation élémentaire.
-18. Écho d'Hitogami - adaptation humaine, compassion envers les humains, hostilité envers gobelins et races non humaines, relève unique.
-19. Écho de Sérendys - chance consciente, paris, relance du destin, inversion rare/commun.
-20. Le Gardien du Seuil - boss d'épreuve, réactions aux situations, verrous de progression.
-21. Le Roi Sans Salle - roi oublié, cour invisible, ordres fantômes, Couronnement des ruines.
-22. La Bête qui n'avait pas de nom - identité instable, descriptions variables, instinct, Hurlement sans nom.
-23. Aldebaroth - démon né du négatif du monde, pression démoniaque, rancœur, abîme des fautes.
-24. Asterion / Nihilon - création et destruction, duo lié, compte à rebours fatal si un seul reste debout.
-25. Écho fragmenté d'Obérion - origine, autorité cosmique, combat ramené aux poings et sans armure après le seuil critique.
-26. Le Souffle sans Visage - perte d'identité, respiration, asphyxie, visage emprunté.
-27. La Marionnette aux Mille Clous - douleur, fils, clous, mouvement forcé, théâtre des douleurs.
-28. Manifestation de Moiran - destin, lignes possibles, conséquences, réactions aux cheats et tentatives en Léthal.
-29. Le Cerf des Âmes Égarées - âmes-lanternes, confession, repos des morts, procession funéraire.
-30. Gorvald - roi des Orcs, fureur royale, duel brutal, honneur guerrier.
-31. Serana - reine Vampire, soif royale, vol de vie, charme, banquet de sang.
-32. Draiite - reine Araignée, toiles, cocons, poison, contrôle de terrain.
-33. Les Jumelles du Miroir Fendu - vérité/mensonge, désir, reflet corrompu, futur trompeur.
-34. L'Anomalie - anti-interface, glitch, options mensongères, ordre d'actions déplacé, race temporaire, stats corrigées.
-35. FireFlight - créateur/dev/aventurier, boss final, interface instable, quatrième mur, test final.
+Roster codé et statut réel :
+1. Fitoria - CODÉ. Ange lumineux, jugement, chaînes, soin contrôlé, Sentence céleste.
+2. Zelef - CODÉ. Démon brutal, corruption, saignement, vol de vie, Coeur démoniaque, Corrosion si le boss gagne.
+3. Atlas - CODÉ. Protecteur universel déchu, plaques d'armure, fissures, contre-garde, Dernier rempart.
+4. Écho de Lyknir - CODÉ. Meute, traque, marque de proie, instinct de prédateur, Chasse sans lune.
+5. Grinka - CODÉ. Dette, taxes, vol, enchère gobeline, Dette royale. Conséquences réelles si elle gagne : vol d'or/stuff/XP sans or négatif.
+6. Avatar d'Azelanos - CODÉ. Ténèbres, montée avec la durée, couronne obscure.
+7. Fragment de Thamarys - CODÉ. Dragon, écailles adaptatives, souffle de l'origine.
+8. Mojo - CODÉ. Esprit de forêt, mémoire de la forêt, approche respectueuse prise en compte dans l'ultime.
+9. Reflet d'Inakari - CODÉ. Illusions, miroirs, fausses récompenses/tromperie.
+10. Le Jugement Silencieux - CODÉ. Justice muette, ombre volée, pression sociale.
+11. L'Anomalie - CODÉ. Anti-interface, glitch, option impossible et réactions aux personnages altérés.
+12. L'Horloge des Chuchotements - CODÉ. Temps, blessures retardées, souvenirs, réécriture.
+13. L'Enfant des Os Enfouis - CODÉ. Désert, ancienneté, profanation, golem d'os et de sable à bas PV.
+14. Avatar de Boros - CODÉ. Guerre, duel, brutalité, jauge de conflit, Hymne du carnage.
+15. Avatar d'Anastasia - CODÉ. Amour, liens, attachement, morts totales, Serment qui saigne.
+16. Avatar de Lexior - CODÉ. Justice, jugement d'actions passées, sceau d'équipement, réactions aux cheats Léthal.
+17. Fragment de Luna / Onyrae - CODÉ. Lune, rêves, illusions, cauchemar, Éclipse onirique.
+18. Fragment de Syvaranelya - CODÉ. Phases Feu/Terre/Eau/Vent, fusion ou séparation élémentaire.
+19. Écho d'Hitogami - CODÉ. Adaptation humaine, possibilité de relève unique.
+20. Écho de Sérendys - CODÉ. Chance consciente, paris, relance du destin, inversion rare/commun.
+21. Le Gardien du Seuil - CODÉ. Boss d'épreuve, verrous de progression.
+22. Le Roi Sans Salle - CODÉ. Roi oublié, cour invisible, ordres fantômes.
+23. La Bête qui n'avait pas de nom - CODÉ. Identité instable, instinct, hurlement sans nom.
+24. Aldebaroth - CODÉ. Démon du négatif, pression démoniaque, rancœur, abîme des fautes. Ne doit pas dépendre des cheats.
+25. Asterion et Nihilon - CODÉ PARTIEL AVANCÉ. Duo représenté par une seule entité avec état spécial et compte à rebours fatal ; pas encore deux barres de PV séparées.
+26. Écho fragmenté d'Obérion - CODÉ AVANCÉ. Origine nue / duel sans arme et sans armure via sceau d'équipement, réactions aux altérations.
+27. Avatar affaibli de FireFlight - CODÉ AVANCÉ. Boss final, verrou d'invitations, dialogues spéciaux, réactions aux cheats, test final après chute.
+28. Le Souffle sans Visage - CODÉ. Respiration, asphyxie, identité effacée.
+29. La Marionnette aux Mille Clous - CODÉ. Fils, clous, douleur, soin sale, posture défensive prise en compte.
+30. Manifestation de Moiran - CODÉ AVANCÉ. Destin, lignes possibles, réactions aux cheats et aux tentatives en Léthal.
+31. Le Cerf des Âmes Égarées - CODÉ. Âmes-lanternes, procession funéraire, défense respectueuse prise en compte.
+32. Gorvald - CODÉ. Roi des Orcs, fureur royale, duel brutal, honneur guerrier.
+33. Serana - CODÉ. Reine vampire, soif royale, vol de vie, banquet de sang.
+34. Draiite - CODÉ. Reine araignée, soie noire, cocons, poison, contrôle de terrain.
+35. Les Jumelles du Miroir Fendu - CODÉ. Vérité/mensonge, désir, reflet corrompu, futur trompeur.
 
-Règles spéciales importantes :
-- La Bête sans nom doit changer de description d'un combat à l'autre pour donner l'impression d'une créature jamais totalement identique.
-- L'Anomalie peut afficher des options impossibles, corrompre l'interface, mentir sur les textes d'action ou déplacer les règles avec avertissement.
-- Obérion, Lexior, l'Anomalie, Moiran et FireFlight peuvent réagir aux personnages altérés ou aux tentatives de cheat en Léthal.
-- Aldebaroth ne doit pas être lié aux altérations : son thème est la négativité du monde, pas la triche.
-- FireFlight doit reconnaître certains personnages spéciaux et ajouter une couche de dialogue s'ils sont altérés.
-- FireFlight déclenche un test final après sa chute : plusieurs fragments d'ultimes s'abattent pendant trois cycles, avec interface volontairement chaotique.
+Points boss encore à améliorer plus tard :
+- Équilibrage global des PV, dégâts, récompenses, prix, XP, or, loot et difficultés.
+- Asterion/Nihilon : décider si on garde l'entité unique ou si on code un vrai duo à deux barres liées.
+- Mojo : renforcer une vraie victoire alternative respectueuse si souhaité.
+- Inakari / Anomalie : améliorer les mensonges d'interface sans casser la lisibilité IG.
+- FireFlight : enrichir encore les dialogues selon personnages spéciaux, altérations et historique du joueur.
+- Boss 32 à 35 : vérifier en jeu leur rythme, leurs récompenses et leurs conditions de déblocage.
 
-Boss considérés comme clôturés côté roster principal. Les futurs ajouts doivent être du polish, de l'équilibrage ou de nouveaux boss explicitement validés.
+Conclusion audit :
+Le roster principal des 35 boss est bien présent dans le code. Les anciens décalages du TXT ont été corrigés pour correspondre aux vrais IDs du code. Les futurs ajouts doivent être du polish, de l'équilibrage, des récompenses/déblocages, ou de nouveaux boss explicitement validés.
+
+Note V2.01.01 : aucun nouveau boss ajouté dans cette passe. L'audit boss reste valable ; les triggers rares de légendes évitent maintenant de se répéter en boucle pendant une même session.
+
+Note V2.01.01 complémentaire : les textes visibles du bestiaire boss ne parlent plus de "Boss validé" mais de traces de boss. Aucun changement d'équilibrage boss dans cette passe.
+
+Note V2.01.03 : aucun nouveau boss ajouté. Les changements de cette passe concernent surtout la persistance des légendes déjà lues et des dialogues PNJ/guilde.
+
+Note V2.01.03 : aucun nouveau boss ajouté. La passe ajoute surtout l'accès propre aux légendes de salle de boss dans une section séparée du bestiaire et marque la V2.01.03 comme jalon de sauvegarde important côté registre/lore.
+
+Note V2.01.04 : aucun boss ajouté ou retiré. Les changements concernent le registre de légendes du bestiaire : les légendes de salles de boss ne sont plus listées comme lecture normale avant découverte, pour réduire les spoilers.
+
+Note V2.01.05 : aucun boss ajouté ou retiré. Cette passe ajoute surtout des notes de conteur/déclencheurs de légendes et préparait un premier relèvement du seuil de recréation, corrigé ensuite en V2.01.06.
+
+Note V2.01.06 : aucun boss ajouté ou retiré. Cette passe corrige uniquement le seuil de recréation conseillé vers V2.01.03 et réaligne la documentation de version.
+
+Note V2.01.07 : aucun boss ajouté ou retiré. Cette passe améliore seulement la lisibilité IG du registre des légendes et les métadonnées des récits liés aux boss/groupes/rumeurs.
+
+Note V2.01.08 : aucun boss ajouté ou retiré. Cette passe améliore seulement la lisibilité IG du menu Activités et du sous-menu Combats ; le rappel "fuite de boss impossible" est textuel, sans changer la mécanique déjà validée.
+
+Note V2.01.09 : aucun boss ajouté ou retiré. Cette passe améliore seulement la lisibilité IG de la création de personnage, de l'inventaire principal et des labels d'actions de sauvegarde/export ; aucune mécanique boss n'a été modifiée.
+
+Note V2.01.10 : aucun boss ajouté ou retiré. Cette passe améliore seulement la lisibilité IG des menus de comptes/personnages et évite certains écrans transitoires piégeux côté sauvegarde.
+
+Note V2.01.11 : aucun boss ajouté ou retiré. Cette passe marque surtout l'analyse de boss comme écran lecture seule côté IG et améliore les contrats de saisie généraux.
+
+Note V2.01.12 : aucun boss ajouté ou retiré. Cette passe touche seulement les menus d'équipement, la pagination IG et les métadonnées d'action comparer.
+
+Note V2.01.13 : aucun boss ajouté ou retiré. Cette passe touche seulement le confort d'inventaire IG, les retours à la liste et la validation stricte des choix affichés.
+Note V2.01.14 : aucun boss ajouté ou retiré. Cette passe touche seulement les boutiques IG, avec pagination de la revente et du rachat et choix visibles plus sûrs.
+
+Note V2.01.15 : aucun boss ajouté ou retiré. Cette passe touche seulement les boutiques IG, avec achat et troc plus lisibles dans les confirmations et résultats.
+
+Note V2.01.16 : aucun boss ajouté ou retiré. Cette passe touche seulement les menus de rendu de quêtes IG/terminal, avec pagination et retours de liste plus propres.
+
+Note V2.01.17 : aucun boss ajouté ou retiré. Cette passe touche seulement les potions de combat IG/terminal, avec pagination des listes, aperçu consultatif navigable et retours à la liste après inspection.
+
+Note V2.01.18 : aucun boss ajouté ou retiré. Cette passe touche seulement le Registre des légendes et l'information de stabilité README : les archives de légendes sont paginées et la version terminal est indiquée comme plus stable que l'IG expérimentale.
+
+Note V2.01.19 : aucun boss ajouté ou retiré. Cette passe touche seulement le confort IG des combats : cartes de cibles, statut de menace/provocation/soigneur marqué et séparation plus propre entre actions principales et navigation/pagination.
+
+Note V2.01.20 : aucun boss ajouté ou retiré. Cette passe ajoute seulement --version et améliore les cartes IG de cible sélectionnée, d'attaque/inspection et de compétences de rôle.

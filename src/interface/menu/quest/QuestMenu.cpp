@@ -752,6 +752,109 @@ namespace
         return "Aucune demande active avec ce contact.";
     }
 
+    std::vector<std::string> clientAmbientDialogueLines(
+        const Player& player,
+        const std::string& clientName,
+        const ClientQuestCounts& counts
+    )
+    {
+        std::vector<std::string> lines;
+
+        if (clientName == "Maître de guilde")
+        {
+            lines.push_back("La gérante de guilde lève les yeux de son registre avant même que tu t'approches du comptoir.");
+
+            if (counts.ready > 0)
+            {
+                lines.push_back("Elle tapote une pile de contrats terminés : certains tampons t'attendent déjà.");
+            }
+            else if (counts.active > 0)
+            {
+                lines.push_back("Elle ne sourit pas vraiment, mais son regard glisse vers les contrats que tu n'as pas encore fermés.");
+            }
+            else
+            {
+                lines.push_back("Elle te rappelle que les petites missions propres valent mieux qu'une grande mort ridicule.");
+            }
+
+            return lines;
+        }
+
+        if (clientName == "Forgeron")
+        {
+            lines.push_back("Le forgeron frappe le métal une dernière fois avant de parler, comme si la phrase devait aussi être trempée.");
+            lines.push_back(player.getLevel() >= 8
+                ? "À ton niveau, il ne demande plus seulement du fer : il veut des preuves que la route n'a pas menti."
+                : "Il commence par une demande simple, mais ses yeux vérifient déjà l'état de ton équipement.");
+        }
+        else if (clientName == "Alchimiste")
+        {
+            lines.push_back("L'alchimiste tient un flacon trop coloré pour être entièrement rassurant.");
+            lines.push_back("Elle promet que cette fois, la fumée devrait rester dans le récipient. Le mot 'devrait' fait tout le travail.");
+        }
+        else if (clientName == "Villageois nerveux")
+        {
+            lines.push_back("Le villageois regarde derrière lui avant chaque phrase.");
+            lines.push_back("Il ne sait pas nommer la menace, mais il sait très bien ce que ça fait quand les volets restent fermés trop tôt.");
+        }
+        else if (clientName == "Marchand inquiet")
+        {
+            lines.push_back("Le marchand protège sa bourse d'une main et sa dignité de l'autre.");
+            lines.push_back("Il insiste sur le fait qu'il n'a pas peur, seulement une relation très prudente avec les routes commerciales.");
+        }
+        else if (clientName == "Vendeur de composants")
+        {
+            lines.push_back("Le vendeur de composants désigne des bocaux où certaines choses bougent encore un peu.");
+            lines.push_back("Il cherche des restes propres, pas une soupe héroïque impossible à identifier.");
+        }
+        else if (clientName == "Vendeur de matériaux")
+        {
+            lines.push_back("Le vendeur de matériaux passe un doigt sur une étagère presque vide.");
+            lines.push_back("Il préfère payer une bonne pierre aujourd'hui plutôt qu'expliquer demain pourquoi tout l'atelier attend un miracle.");
+        }
+        else if (clientName == "Herboriste")
+        {
+            lines.push_back("L'herboriste parle doucement, mais ses ciseaux claquent avec une précision inquiétante.");
+            lines.push_back("Elle veut des plantes intactes, pas des souvenirs verts collés au fond du sac.");
+        }
+        else if (clientName == "Armurier")
+        {
+            lines.push_back("L'armurier examine une cuirasse cabossée et soupire comme si le métal l'avait personnellement déçu.");
+            lines.push_back("Il ne cherche pas seulement de quoi réparer : il cherche de quoi éviter que le prochain porteur revienne en pièces.");
+        }
+        else if (clientName == "Vendeur d'armes")
+        {
+            lines.push_back("Le vendeur d'armes aligne ses lames par taille, par prix, puis par mauvaise idée potentielle.");
+            lines.push_back("Il demande des ressources capables de tenir un vrai choc, pas juste de briller sous la lampe.");
+        }
+        else if (clientName == "Vendeur de consommables")
+        {
+            lines.push_back("Le vendeur de consommables recompte des flacons scellés d'un air trop sérieux pour un simple marchand.");
+            lines.push_back("Il rappelle qu'une potion vide au mauvais moment ressemble beaucoup à un dernier regret.");
+        }
+        else if (clientName == "Bibliothécaire")
+        {
+            lines.push_back("La bibliothécaire referme un livre épais en gardant un doigt sur la page, comme si le savoir pouvait s'enfuir.");
+            lines.push_back("Elle ne promet pas une vérité complète, seulement assez de traces pour reconnaître un mensonge plus tard.");
+        }
+        else
+        {
+            lines.push_back(clientName + " t'accueille avec une prudence qui sent la recommandation récente.");
+            lines.push_back("Ce contact n'a pas encore de comptoir officiel, mais son problème semble déjà bien réel.");
+        }
+
+        if (counts.ready > 0)
+        {
+            lines.push_back("Le contact remarque aussi que tu as déjà quelque chose à rendre ici.");
+        }
+        else if (counts.active > 0)
+        {
+            lines.push_back("Il garde un oeil sur les demandes en cours, sans presser plus que nécessaire.");
+        }
+
+        return lines;
+    }
+
     struct ReadyQuestClientEntry
     {
         std::string clientName;
@@ -3257,6 +3360,11 @@ void QuestMenu::openGuild(Player& player)
         screen.addLine("La guilde centralise les quêtes officielles.");
         screen.addLine("Tu peux avoir jusqu'à 3 quêtes de guilde actives.");
         screen.addLine("Contrats de guilde : " + clientQuestStatusText(guildCounts));
+        std::vector<std::string> guildAmbientLines = clientAmbientDialogueLines(player, "Maître de guilde", guildCounts);
+        for (const std::string& line : guildAmbientLines)
+        {
+            screen.addLine(line);
+        }
         screen.addBackOption("Retour", "quest.guild.back");
 
         MenuOptionItemData boardData = makeQuestNavigationItemData(
@@ -3786,6 +3894,9 @@ void QuestMenu::talkToClient(Player& player, const std::string& clientName)
         }
 
         std::vector<std::string> introLines;
+        std::vector<std::string> ambientLines = clientAmbientDialogueLines(player, clientName, counts);
+        introLines.insert(introLines.end(), ambientLines.begin(), ambientLines.end());
+
         if (isRecommendedClientName(clientName))
         {
             int usedRequests = player.getQuestLog().getClientQuestCount(clientName);
@@ -3929,12 +4040,25 @@ void QuestMenu::talkToClient(Player& player, const std::string& clientName)
 // FR: openReadyQuestTurnInMenu déclare ou implémente un comportement précis utilisé par ce module.
 void QuestMenu::openReadyQuestTurnInMenu(Player& player)
 {
+    constexpr std::size_t clientsPerPage = 8;
+    std::size_t pageIndex = 0;
+
     while (true)
     {
         const std::vector<ReadyQuestClientEntry> entries = collectReadyQuestClients(player);
+        const std::size_t totalPages = PagedMenu::pageCount(entries.size(), clientsPerPage);
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages == 0 ? 0 : totalPages - 1;
+        }
+
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, clientsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(entries.size(), pageIndex, clientsPerPage);
+
         MenuScreen screen("QUÊTES PRÊTES À RENDRE", "quest.ready_turn_in");
         screen.addLine("Choisis le contact concerné : la validation se fait auprès de la personne ou de l'organisme qui a confié la demande.");
         screen.addLine("Rappel : la guilde valide des contrats officiels ; les PNJ confirment surtout des pourparlers et services rendus.");
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, entries.size()));
         screen.addBackOption("Retour", "quest.ready_turn_in.back");
 
         if (entries.empty())
@@ -3945,7 +4069,7 @@ void QuestMenu::openReadyQuestTurnInMenu(Player& player)
             return;
         }
 
-        for (int i = 0; i < static_cast<int>(entries.size()); ++i)
+        for (std::size_t i = first; i < last; ++i)
         {
             const ReadyQuestClientEntry& entry = entries[i];
             MenuOptionItemData itemData;
@@ -3957,6 +4081,7 @@ void QuestMenu::openReadyQuestTurnInMenu(Player& player)
             itemData.detail = "Première entrée : " + entry.firstTitle;
             itemData.status = readyQuestClientStatusText(entry);
             itemData.reward = entry.firstReward;
+            itemData.progress = "Contact " + std::to_string(i + 1) + "/" + std::to_string(entries.size());
             itemData.owner = entry.clientName;
             itemData.important = true;
 
@@ -3967,7 +4092,7 @@ void QuestMenu::openReadyQuestTurnInMenu(Player& player)
             }
 
             screen.addOption(
-                i + 1,
+                static_cast<int>(10 + (i - first)),
                 label,
                 entry.guildReadyCount > 0 && entry.personalReadyCount == 0
                     ? "Rendre un contrat officiel auprès de ce contact."
@@ -3978,6 +4103,8 @@ void QuestMenu::openReadyQuestTurnInMenu(Player& player)
             );
         }
 
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+
         int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
 
@@ -3986,9 +4113,22 @@ void QuestMenu::openReadyQuestTurnInMenu(Player& player)
             return;
         }
 
-        if (choice >= 1 && choice <= static_cast<int>(entries.size()))
+        if (choice == 98 && pageIndex > 0)
         {
-            completeQuestAtClient(player, entries[choice - 1].clientName);
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const int localClientIndex = choice - 10;
+        if (localClientIndex >= 0 && first + static_cast<std::size_t>(localClientIndex) < last)
+        {
+            completeQuestAtClient(player, entries[first + static_cast<std::size_t>(localClientIndex)].clientName);
             continue;
         }
 
@@ -4004,147 +4144,204 @@ void QuestMenu::openReadyQuestTurnInMenu(Player& player)
 // FR: completeQuestAtClient déclare ou implémente un comportement précis utilisé par ce module.
 void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientName)
 {
-    std::vector<Quest>& quests = player.getQuestLog().getQuests();
-    std::vector<int> readyIndexes;
+    constexpr std::size_t questsPerPage = 5;
+    std::size_t pageIndex = 0;
 
-    for (int i = 0; i < static_cast<int>(quests.size()); ++i)
+    while (true)
     {
-        if (quests[i].client == clientName && !quests[i].turnedIn && isReadyToTurnIn(player, quests[i]))
+        std::vector<Quest>& quests = player.getQuestLog().getQuests();
+        std::vector<int> readyIndexes;
+
+        for (int i = 0; i < static_cast<int>(quests.size()); ++i)
         {
-            readyIndexes.push_back(i);
-        }
-    }
-
-    if (readyIndexes.empty())
-    {
-        MessageScreen::show(
-            "AUCUNE QUÊTE À RENDRE",
-            "quest.turn_in.empty",
+            if (quests[i].client == clientName && !quests[i].turnedIn && isReadyToTurnIn(player, quests[i]))
             {
-                "Aucune quête prête à être rendue à " + clientName + ".",
-                clientName == "Maître de guilde"
-                    ? "Les contrats officiels doivent être terminés avant d'être tamponnés."
-                    : "Pour les demandes PNJ, le journal peut estimer une avancée, mais le contact doit encore confirmer la fin."
+                readyIndexes.push_back(i);
             }
-        );
-        return;
-    }
-
-    MenuScreen screen("QUÊTES À RENDRE", "quest.turn_in.list");
-    screen.addSubtitle(clientName);
-    screen.addLine(clientName == "Maître de guilde"
-        ? "Sélectionne le contrat officiel à tamponner auprès de la guilde."
-        : "Sélectionne la demande à confirmer auprès de ce contact. Ce n'est pas un tampon officiel, plutôt une validation de parole donnée.");
-    screen.addBackOption("Retour", "quest.turn_in.back");
-
-    for (int i = 0; i < static_cast<int>(readyIndexes.size()); ++i)
-    {
-        const Quest& quest = quests[readyIndexes[i]];
-        std::string label = quest.guildQuest
-            ? "[Contrat officiel - Rang " + quest.rank + "] " + quest.title + " | " + questRewardText(quest)
-            : "[Pourparler PNJ - Rang estimé " + quest.rank + "] " + quest.title + " | " + approximateQuestRewardText(quest);
-
-        if (isMaterialDeliveryQuest(quest))
-        {
-            label += " | " + quest.requiredMaterialName
-                + " " + std::to_string(player.getInventory().countMaterialById(quest.requiredMaterialId))
-                + " (équiv. " + std::to_string(player.getInventory().countMaterialQualityPointsById(quest.requiredMaterialId) / 2)
-                + ")/" + std::to_string(quest.requiredMaterialQuantity);
         }
 
-        MenuOptionItemData itemData;
-        itemData.structured = true;
-        itemData.kind = "quest";
-        itemData.section = "Quêtes à rendre";
-        itemData.actionType = "turn_in";
-        itemData.name = quest.title;
-        itemData.detail = quest.objective;
-        itemData.status = "Prête à rendre";
-        itemData.reward = quest.guildQuest ? questRewardText(quest) : approximateQuestRewardText(quest);
-        itemData.progress = std::to_string(quest.progress) + "/" + std::to_string(quest.target);
-        itemData.owner = quest.client;
-        itemData.important = true;
-
-        screen.addOption(
-            i + 1,
-            label,
-            quest.guildQuest
-                ? "Tamponner ce contrat officiel et recevoir les récompenses."
-                : "Confirmer cette demande informelle auprès du PNJ.",
-            true,
-            "quest.turn_in.select." + std::to_string(i + 1),
-            itemData
-        );
-    }
-
-    int choice = TerminalInterface::askMenuChoice(screen, 0, static_cast<int>(readyIndexes.size()), "Choix invalide.");
-    Console::clear();
-
-    if (choice == 0)
-    {
-        return;
-    }
-
-    Quest& quest = quests[readyIndexes[choice - 1]];
-
-    if (!askQuestTurnInConfirmation(player, quest, clientName))
-    {
-        return;
-    }
-
-    const int goldBefore = player.getInventory().getGold();
-    const int experienceBefore = player.getExperience();
-    const int levelBefore = player.getLevel();
-
-    std::vector<std::string> resultLines;
-    resultLines.push_back(quest.guildQuest
-        ? "La guilde vérifie le contrat, puis appose son tampon."
-        : quest.client + " confirme que le service rendu correspond bien à ce qui avait été demandé.");
-    resultLines.push_back(quest.guildQuest
-        ? "Nature : contrat officiel validé."
-        : "Nature : demande informelle confirmée par le contact.");
-
-    if (!quest.requiredMaterialId.empty() && quest.requiredMaterialQuantity > 0)
-    {
-        int owned = player.getInventory().countMaterialQualityPointsById(quest.requiredMaterialId) / 2;
-
-        if (owned < quest.requiredMaterialQuantity)
+        if (readyIndexes.empty())
         {
             MessageScreen::show(
-                "LIVRAISON INCOMPLÈTE",
-                "quest.turn_in.missing_materials",
+                "AUCUNE QUÊTE À RENDRE",
+                "quest.turn_in.empty",
                 {
-                    "Il manque des matériaux pour rendre cette quête.",
-                    quest.requiredMaterialName + " requis : " + std::to_string(quest.requiredMaterialQuantity)
-                        + " (possédé : " + std::to_string(owned) + ")"
+                    "Aucune quête prête à être rendue à " + clientName + ".",
+                    clientName == "Maître de guilde"
+                        ? "Les contrats officiels doivent être terminés avant d'être tamponnés."
+                        : "Pour les demandes PNJ, le journal peut estimer une avancée, mais le contact doit encore confirmer la fin."
                 }
             );
             return;
         }
 
-        player.getInventory().removeMaterialQuantityByIdFlexible(quest.requiredMaterialId, quest.requiredMaterialQuantity);
-        resultLines.push_back("Matériaux remis : " + quest.requiredMaterialName + " x" + std::to_string(quest.requiredMaterialQuantity));
-    }
+        const std::size_t totalPages = PagedMenu::pageCount(readyIndexes.size(), questsPerPage);
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages == 0 ? 0 : totalPages - 1;
+        }
 
-    quest.completed = true;
-    quest.progress = quest.target;
-    quest.turnedIn = true;
-    player.gainExperience(quest.rewardExperience);
-    player.getInventory().earnGold(quest.rewardGold);
-    applyQuestExtraReward(player, quest);
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, questsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(readyIndexes.size(), pageIndex, questsPerPage);
 
-    appendQuestRewardResultLines(resultLines, quest);
-    resultLines.push_back("Or : " + std::to_string(goldBefore) + " -> " + std::to_string(player.getInventory().getGold()));
-    resultLines.push_back("XP : " + std::to_string(experienceBefore) + " -> " + std::to_string(player.getExperience()));
-    if (player.getLevel() != levelBefore)
-    {
-        resultLines.push_back("Niveau : " + std::to_string(levelBefore) + " -> " + std::to_string(player.getLevel()));
+        MenuScreen screen("QUÊTES À RENDRE", "quest.turn_in.list");
+        screen.addSubtitle(clientName);
+        screen.addLine(clientName == "Maître de guilde"
+            ? "Sélectionne le contrat officiel à tamponner auprès de la guilde."
+            : "Sélectionne la demande à confirmer auprès de ce contact. Ce n'est pas un tampon officiel, plutôt une validation de parole donnée.");
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, readyIndexes.size()));
+        screen.addBackOption("Retour", "quest.turn_in.back");
+
+        for (std::size_t i = first; i < last; ++i)
+        {
+            const Quest& quest = quests[readyIndexes[i]];
+            std::string label = quest.guildQuest
+                ? "[Contrat officiel - Rang " + quest.rank + "] " + quest.title + " | " + questRewardText(quest)
+                : "[Pourparler PNJ - Rang estimé " + quest.rank + "] " + quest.title + " | " + approximateQuestRewardText(quest);
+
+            if (isMaterialDeliveryQuest(quest))
+            {
+                label += " | " + quest.requiredMaterialName
+                    + " " + std::to_string(player.getInventory().countMaterialById(quest.requiredMaterialId))
+                    + " (équiv. " + std::to_string(player.getInventory().countMaterialQualityPointsById(quest.requiredMaterialId) / 2)
+                    + ")/" + std::to_string(quest.requiredMaterialQuantity);
+            }
+
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "quest";
+            itemData.section = "Quêtes à rendre";
+            itemData.actionType = "turn_in";
+            itemData.name = quest.title;
+            itemData.detail = quest.objective;
+            itemData.status = quest.guildQuest ? "Prête à tamponner" : "Prête à confirmer";
+            itemData.reward = quest.guildQuest ? questRewardText(quest) : approximateQuestRewardText(quest);
+            itemData.progress = std::to_string(quest.progress) + "/" + std::to_string(quest.target);
+            itemData.owner = quest.client;
+            itemData.important = true;
+
+            screen.addOption(
+                static_cast<int>(10 + (i - first)),
+                label,
+                quest.guildQuest
+                    ? "Tamponner ce contrat officiel et recevoir les récompenses."
+                    : "Confirmer cette demande informelle auprès du PNJ.",
+                true,
+                "quest.turn_in.select." + std::to_string(i + 1),
+                itemData
+            );
+        }
+
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const int localQuestIndex = choice - 10;
+        if (localQuestIndex < 0 || first + static_cast<std::size_t>(localQuestIndex) >= last)
+        {
+            MessageScreen::show(
+                "QUÊTE INVALIDE",
+                "quest.turn_in.invalid",
+                {"Ce choix ne correspond à aucune quête prête sur cette page."}
+            );
+            continue;
+        }
+
+        Quest& quest = quests[readyIndexes[first + static_cast<std::size_t>(localQuestIndex)]];
+
+        if (!askQuestTurnInConfirmation(player, quest, clientName))
+        {
+            continue;
+        }
+
+        const int goldBefore = player.getInventory().getGold();
+        const int experienceBefore = player.getExperience();
+        const int levelBefore = player.getLevel();
+
+        std::vector<std::string> resultLines;
+        resultLines.push_back(quest.guildQuest
+            ? "La guilde vérifie le contrat, puis appose son tampon."
+            : quest.client + " confirme que le service rendu correspond bien à ce qui avait été demandé.");
+        resultLines.push_back(quest.guildQuest
+            ? "Nature : contrat officiel validé."
+            : "Nature : demande informelle confirmée par le contact.");
+
+        if (!quest.requiredMaterialId.empty() && quest.requiredMaterialQuantity > 0)
+        {
+            int owned = player.getInventory().countMaterialQualityPointsById(quest.requiredMaterialId) / 2;
+
+            if (owned < quest.requiredMaterialQuantity)
+            {
+                MessageScreen::show(
+                    "LIVRAISON INCOMPLÈTE",
+                    "quest.turn_in.missing_materials",
+                    {
+                        "Il manque des matériaux pour rendre cette quête.",
+                        quest.requiredMaterialName + " requis : " + std::to_string(quest.requiredMaterialQuantity)
+                            + " (possédé : " + std::to_string(owned) + ")"
+                    }
+                );
+                continue;
+            }
+
+            player.getInventory().removeMaterialQuantityByIdFlexible(quest.requiredMaterialId, quest.requiredMaterialQuantity);
+            resultLines.push_back("Matériaux remis : " + quest.requiredMaterialName + " x" + std::to_string(quest.requiredMaterialQuantity));
+        }
+
+        quest.completed = true;
+        quest.progress = quest.target;
+        quest.turnedIn = true;
+        player.gainExperience(quest.rewardExperience);
+        player.getInventory().earnGold(quest.rewardGold);
+        applyQuestExtraReward(player, quest);
+
+        appendQuestRewardResultLines(resultLines, quest);
+        resultLines.push_back("Or : " + std::to_string(goldBefore) + " -> " + std::to_string(player.getInventory().getGold()));
+        resultLines.push_back("XP : " + std::to_string(experienceBefore) + " -> " + std::to_string(player.getExperience()));
+        if (player.getLevel() != levelBefore)
+        {
+            resultLines.push_back("Niveau : " + std::to_string(levelBefore) + " -> " + std::to_string(player.getLevel()));
+        }
+
+        MessageScreen::show(
+            quest.guildQuest ? "CONTRAT VALIDÉ" : "DEMANDE VALIDÉE",
+            quest.guildQuest ? "quest.turn_in.guild_completed" : "quest.turn_in.personal_completed",
+            resultLines
+        );
+
+        bool hasMoreReadyForClient = false;
+        for (const Quest& remainingQuest : quests)
+        {
+            if (remainingQuest.client == clientName && !remainingQuest.turnedIn && isReadyToTurnIn(player, remainingQuest))
+            {
+                hasMoreReadyForClient = true;
+                break;
+            }
+        }
+
+        if (!hasMoreReadyForClient)
+        {
+            return;
+        }
     }
-    MessageScreen::show(
-        quest.guildQuest ? "CONTRAT VALIDÉ" : "DEMANDE VALIDÉE",
-        quest.guildQuest ? "quest.turn_in.guild_completed" : "quest.turn_in.personal_completed",
-        resultLines
-    );
 }
 
 // EN: maybeOfferRandomInterception declares or implements a focused behavior used by this module.

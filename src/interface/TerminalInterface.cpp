@@ -47,7 +47,20 @@ namespace
 
 void TerminalInterface::renderMenuScreen(const MenuScreen& screen, bool showPrompt)
 {
-    GuiDebugExporter::exportMenu(screen);
+    // FR: beaucoup d'écrans d'information sont suivis d'un Console::waitForEnter().
+    // Pour le terminal, rien ne change. Pour l'IG, on exporte alors un vrai bouton
+    // "Continuer" au lieu d'un écran lecture seule sans action. Cela évite les
+    // blocages du type validation de session solo / reprise de partie / résultats.
+    // EN: display screens followed by waitForEnter need an explicit GUI continue action.
+    MenuScreen guiScreen = screen;
+    if (!showPrompt &&
+        screen.getInputMode() == "choice" &&
+        screen.getOptions().empty())
+    {
+        guiScreen.setContinueInput("Appuie sur Entrée pour continuer.");
+    }
+
+    GuiDebugExporter::exportMenu(guiScreen);
 
     MenuFrame::title(screen.getTitle());
 

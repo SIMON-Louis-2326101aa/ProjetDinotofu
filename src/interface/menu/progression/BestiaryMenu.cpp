@@ -10,6 +10,7 @@
 #include "core/Console.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "lore/LegendTriggerSystem.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
@@ -285,17 +286,26 @@ namespace
             {"Invocations", "Ombre récente", "Ombre née d'un lien violent.", "L'Ombre récente suit les traces de Hazak. Certaines ombres ne naissent qu'après un acte violent ou un lien trop sombre.", "Secret partiel", 0, 0},
             {"Invocations", "Éclat zodiacal", "Fragment magique lié aux signes.", "L'Éclat zodiacal tire un signe sur treize. Le treizième signe peut prolonger son existence et rappelle les anciens sorts zodiacaux liés à Kanadé.", "Fiche d'invocation", 0, 0},
             {"Boss", "???", "Nom inconnu.", "Un boss ne révèle son vrai nom que s'il le prononce, à l'entrée, à 50%, avant sa défaite, ou via des écrits crédibles trouvés avant.", "Identité verrouillée", 0, 0},
-            // EN: "Matt declares or implements a focused behavior used by this module.
-            // FR: "Matt déclare ou implémente un comportement précis utilisé par ce module.
-            {"Personnages spéciaux", "Matt (PRO)", "Combattant silencieux et respectueux.", "Référence directe à Matt de Wii Sports. Il ne parle pas vraiment : il combat proprement, avec respect, et des bonus globaux légers.", "Spécial", 0, 0},
-            {"Personnages spéciaux", "Hazak", "Assassin elfe noir, sombre et efficace.", "Hazak prend les gens de haut, cherche la victoire et protège Hestia d'une violence trop traumatisante. Meilleur ami d'Henrique.", "Spécial", 0, 0},
-            {"Personnages spéciaux", "Sanctus / Skuro", "Protecteur pouvant vriller en exécuteur sombre.", "Sanctus protège, entrave et s'appuie sur un dieu de lumière. S'il prend trop cher ou inflige trop cher, Skuro peut ressortir.", "Spécial", 0, 0},
-            {"Personnages spéciaux", "Aoi", "Kitsune timide, mage de flammes et invocatrice de flammes.", "Aoi protège ses incantations et devient très dangereuse si on lui laisse le temps de préparer sa magie.", "Spécial", 0, 0},
-            {"Personnages spéciaux", "Kanadé", "Semi-dragonne rageuse aux sorts zodiacaux.", "Kanadé râle souvent, mais elle avance quand même. Ses sorts les plus étranges tournent autour des treize signes du zodiaque.", "Spécial", 0, 0},
-            {"Personnages spéciaux", "Hestia", "Humaine peureuse aux origines divines oubliées.", "Hestia était une divinité avant de perdre ses souvenirs. Elle préfère éviter le combat, mais possède une magie de protection anormalement haute.", "Spécial", 0, 0},
-            {"Personnages spéciaux", "Henrique", "Chevalier fonceur capable de revenir une fois.", "Henrique est le meilleur ami de Hazak. Il fonce dans le tas et possède une étrange capacité de retour à la vie.", "Spécial", 0, 0},
-            {"Personnages spéciaux", "Louis", "Artificier naïf qui cherche des amis.", "Louis vise bien, utilise plusieurs projectiles et reste fondamentalement sympathique malgré le chaos de l'arène.", "Spécial", 0, 0},
-            {"Personnages spéciaux", "Trexof", "Assassin humain et bêta-testeur principal.", "Trexof possède de légers bonus et fait partie du groupe proche de Mattzelda et Louis.", "Spécial", 0, 0},
+            // EN: Special characters are not all revealed from the start.
+            // FR: Les personnages spéciaux ne sont pas tous révélés dès le départ.
+            {"Personnages spéciaux", "Les bras cassés", "Groupe d'aventuriers déjà connu.", "Hazak, Fail, Aoi, Kanadé et Sanctus forment un groupe de cinq héros chaotiques. Ils ont libéré plusieurs villages et habitants, mais leur ego et leur rapport très libre aux règles ne plaisent pas à tout le monde.", "Groupe connu", 0, 0},
+            {"Personnages spéciaux", "Hazak", "Assassin elfe noir, sombre et efficace.", "Hazak prend les gens de haut, cherche la victoire et protège Hestia d'une violence trop traumatisante. Il fait partie des Bras cassés.", "Fiche connue", 0, 0},
+            {"Personnages spéciaux", "Fail", "Mage fou de race fée, imprévisible et dangereux.", "Fail expérimente, dérègle les situations et possède parfois des sorts uniques. Son contrat de non-agression avec Hazak n'empêche pas tout le monde de le craindre.", "Fiche connue", 0, 0},
+            {"Personnages spéciaux", "Aoi", "Kitsune timide, mage de flammes et invocatrice de flammes.", "Aoi protège ses incantations et devient très dangereuse si on lui laisse le temps de préparer sa magie. Elle fait partie des Bras cassés.", "Fiche connue", 0, 0},
+            {"Personnages spéciaux", "Kanadé", "Semi-dragonne rageuse aux sorts zodiacaux.", "Kanadé râle souvent, mais elle avance quand même. Ses sorts les plus étranges tournent autour des treize signes du zodiaque.", "Fiche connue", 0, 0},
+            {"Personnages spéciaux", "Sanctus", "Protecteur semi-mage lié à la lumière.", "Sanctus protège, entrave et s'appuie sur une croyance lumineuse. Il fait partie des Bras cassés et sert souvent de point d'ancrage au groupe.", "Fiche connue", 0, 0},
+            {"Personnages spéciaux", "Matt (PRO)", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué par rencontre, rumeur fiable, arène ou progression. Tant que ton personnage ne le connaît pas, le bestiaire garde volontairement ses détails cachés.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Skuro", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué progressivement. Le registre sait qu'une silhouette lourde existe, mais pas encore pourquoi elle compte.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Hestia", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué par l'histoire, une rencontre ou une information crédible. Le bestiaire ne révèle pas ses origines à l'avance.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Henrique", "Identité spéciale non confirmée.", "Ce personnage spécial doit être découvert en jeu. Le registre garde ses liens et capacités cachés tant que le joueur ne les a pas vus.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Louis", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué progressivement. Le bestiaire évite de spoiler son rôle, ses amis et son style de combat.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Trexof", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué par progression ou rencontre. Ses liens et son statut de testeur restent cachés au départ.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Mattzelda", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué progressivement. Le registre ne dévoile pas encore son profil de colosse humain.", "Identité verrouillée", 0, 0},
+            {"Légendes / contes", "Légendes de bibliothèque", "Rayonnage de récits du monde.", "La bibliothèque classe des légendes longues, des histoires pour enfant et des récits incomplets. Ces textes ajoutent du lore sans bloquer le voyage.", "Archive de bibliothèque", 0, 0},
+            {"Légendes / contes", "Légendes de salle de boss", "Certains lieux racontent plus qu'un combat.", "Certaines salles anciennes ou certains conteurs laissent parfois une légende rare. Le registre les traite comme des moments spéciaux, pas comme un rituel obligatoire avant chaque boss.", "Rumeur de salle", 0, 0},
+            {"Légendes / contes", "Conte des Bras cassés", "Un conte populaire parle d'un groupe trop bruyant pour être discret.", "Les enfants retiennent surtout la version drôle : cinq héros sauvent un village, se disputent avec les règles, puis repartent comme si le chaos était une méthode officielle. La vraie réputation reste plus nuancée.", "Conte connu", 0, 0},
+            {"Légendes / contes", "Conte pour enfant : les cinq héros trop bruyants", "Version adoucie et drôle des Bras cassés.", "Cette entrée est rangée dans le Registre des légendes. Elle sert à lire le lore progressivement, sans mélanger les récits avec les monstres ou les boss.", "Conte connu", 0, 0},
+            {"Légendes / contes", "Origine du nom des Bras cassés", "Rumeur sur le bras perdu de Hazak.", "On raconte que Hazak, chef du groupe, s'est fait couper le bras par un orc avant de réussir à se régénérer après deux semaines. Le nom vient aussi du fait que le groupe fait beaucoup de conneries, mais finit presque toujours par réussir.", "Rumeur connue", 0, 0},
             {"Matériaux et plantes", "Fleur bleue de montagne", "Plante calme et rare.", "Clin d'œil à la fleur bleue de Zelda BOTW. Elle sert aux remèdes, quêtes et secrets liés aux plantes.", "Renseignement de base", 0, 0},
             {"Matériaux et plantes", "Oreille de gobelin", "Composant commun de monstre.", "Matériau simple récupérable sur certains gobelins. Utile pour les premières ventes, les contrats et les crafts simples.", "Loot possible", 0, 0},
             {"Matériaux et plantes", "Peau de bête robuste", "Matériau de réparation épaisse.", "Sert déjà à fabriquer un kit moyen via rafistolage renforcé. Aussi recherchée pour les armures, les tanks et l'équipement de survie.", "Loot rare", 0, 0},
@@ -328,18 +338,18 @@ namespace
             {"Boss", "Fitoria", "Ange de jugement lumineux.", "Fitoria juge, enchaîne, soigne de façon contrôlée et libère Sentence céleste après son passage sous les 50% PV.", "Révélé par le registre initial", 1, 0},
             {"Boss", "Zelef", "Démon de corruption et de sang noir.", "Zelef peut voler de la vie, corrompre et laisser une Corrosion présente si le joueur perd. Le vaincre peut rendre ce qu'il a pris.", "Révélé par le registre initial", 1, 0},
             {"Boss", "Atlas", "Protecteur universel déchu.", "Atlas encaisse avec ses plaques, fissures et contre-gardes. Son Dernier rempart transforme sa défense en menace.", "Révélé par le registre initial", 1, 0},
-            {"Boss", "Lyknir", "Écho de la Meute.", "Lyknir traque les habitudes du joueur. Son instinct de prédateur n'est pas moral : il lit une proie, pas une faute.", "Boss validé", 0, 0},
-            {"Boss", "Grinka", "Reine gobeline de l'avarice.", "Grinka transforme le combat en dette, taxe et enchère gobeline. Si elle gagne, certaines pertes deviennent réelles jusqu'à revanche.", "Boss validé", 0, 0},
-            {"Boss", "Fragment de Thamarys", "Fragment draconique.", "Thamarys possède des écailles à briser et un souffle d'origine. Le combattre revient à apprendre quelle défense draconique est encore debout.", "Boss validé", 0, 0},
-            {"Boss", "Mojo", "Esprit mythique de la forêt.", "Mojo peut être vaincu brutalement ou apaisé. La victoire respectueuse ouvre une récompense et une lecture très différentes.", "Boss validé", 0, 0},
-            {"Boss", "Reflet d'Inakari", "Reflet kitsune trompeur.", "Inakari ment avec élégance, propose de fausses récompenses et transforme les choix en miroirs dangereux.", "Boss validé", 0, 0},
+            {"Boss", "Lyknir", "Écho de la Meute.", "Lyknir traque les habitudes du joueur. Son instinct de prédateur n'est pas moral : il lit une proie, pas une faute.", "Trace de boss", 0, 0},
+            {"Boss", "Grinka", "Reine gobeline de l'avarice.", "Grinka transforme le combat en dette, taxe et enchère gobeline. Si elle gagne, certaines pertes deviennent réelles jusqu'à revanche.", "Trace de boss", 0, 0},
+            {"Boss", "Fragment de Thamarys", "Fragment draconique.", "Thamarys possède des écailles à briser et un souffle d'origine. Le combattre revient à apprendre quelle défense draconique est encore debout.", "Trace de boss", 0, 0},
+            {"Boss", "Mojo", "Esprit mythique de la forêt.", "Mojo peut être vaincu brutalement ou apaisé. La victoire respectueuse ouvre une récompense et une lecture très différentes.", "Trace de boss", 0, 0},
+            {"Boss", "Reflet d'Inakari", "Reflet kitsune trompeur.", "Inakari ment avec élégance, propose de fausses récompenses et transforme les choix en miroirs dangereux.", "Trace de boss", 0, 0},
             {"Boss", "L'Anomalie", "Erreur fière qui attaque l'interface.", "L'Anomalie corrompt les menus, invente de fausses sorties et réagit aux personnages altérés ou aux tentatives interdites.", "Boss finalisé", 0, 0},
             {"Boss", "Manifestation de Moiran", "Manifestation affaiblie du Destin.", "Moiran ne joue pas la chance : il observe la trajectoire. Les cheats, les morts et les lignes refusées deviennent des preuves.", "Boss finalisé", 0, 0},
             {"Boss", "Écho fragmenté d'Obérion", "Fragment approuvé de l'origine.", "Obérion ramène le combat à l'Origine nue : au-delà de 50%, l'arme et l'armure cessent d'être reconnues.", "Boss finalisé", 0, 0},
             {"Boss", "Avatar affaibli de FireFlight", "Créateur, aventurier, boss final.", "FireFlight est verrouillé derrière les invitations de boss. Après sa chute, il lance un test final de trois tours contre les souvenirs d'ultimes.", "Boss final", 0, 0},
             {"Divinités / lore", "FireFlight", "Créateur du monde et trace du créateur.", "FireFlight peut être personnage, boss, créateur et regard derrière le jeu. Ses dialogues changent avec les personnages spéciaux et les altérations.", "Lore sensible", 0, 0},
-            {"Divinités / lore", "Moiran", "Destin créé par l'Ordre et le Temps.", "Moiran ferme des routes plutôt que de lancer des dés. Il réagit aux cheats, surtout aux cheats tentés en Léthal.", "Lore validé", 0, 0},
-            {"Divinités / lore", "Obérion", "Dieu universel et père des primordiaux.", "Obérion complet dépasse le combat actuel. Seuls des fragments approuvés sont affrontables sans briser l'échelle du monde.", "Lore validé", 0, 0},
+            {"Divinités / lore", "Moiran", "Destin créé par l'Ordre et le Temps.", "Moiran ferme des routes plutôt que de lancer des dés. Il réagit aux cheats, surtout aux cheats tentés en Léthal.", "Trace divine", 0, 0},
+            {"Divinités / lore", "Obérion", "Dieu universel et père des primordiaux.", "Obérion complet dépasse le combat actuel. Seuls des fragments approuvés sont affrontables sans briser l'échelle du monde.", "Trace divine", 0, 0},
             {"Objets rares", "Invitations de boss", "Lettres nécessaires pour FireFlight.", "Chaque boss vaincu peut laisser une invitation. Quand toutes les lettres existent, l'entrée du boss final accepte enfin de s'ouvrir.", "Système boss final", 0, 0},
             {"Objets rares", "Fragments de boss avancés", "Matériaux uniques de boss.", "Fragments de nom perdu, miroir fendu, noyau de version instable, sceaux et traces divines nourrissent les crafts ou reliques majeures.", "Fiche archivée", 0, 0},
             {"Objets rares", "Particularités de craft", "Effets faibles nés de matériaux exceptionnels.", "Un objet crafté peut recevoir une petite particularité si plus de 50% de sa valeur de craft vient de matériaux exceptionnels. Les classes d'artisanat augmentent maintenant légèrement cette chance.", "Étude active", 0, 0},
@@ -911,10 +921,267 @@ namespace
             {
                 "La bibliothèque débloque des renseignements qui montent le niveau de connaissance du bestiaire.",
                 "Les secrets, les boss et les noms importants devront toujours se mériter.",
+                "La bibliothèque accueille aussi des légendes, contes pour enfant, notes de conteur et rumeurs anciennes.",
                 "",
                 "Un nom de boss ne sera pas donné gratuitement si personne ne l'a prononcé."
             }
         );
+    }
+
+    MenuOptionItemData makeLegendOptionData(
+        const std::string& name,
+        const std::string& detail,
+        const std::string& section,
+        const std::string& source,
+        const std::string& progress = "",
+        bool important = false
+    )
+    {
+        MenuOptionItemData data;
+        data.structured = true;
+        data.kind = "legend";
+        data.section = section.empty() ? "Registre des légendes" : section;
+        data.actionType = "read";
+        data.name = name;
+        data.detail = detail;
+        data.owner = source;
+        data.progress = progress;
+        data.important = important;
+        return data;
+    }
+
+    MenuOptionItemData makeLegendOptionData(const LegendArchiveEntry& entry, bool discovered)
+    {
+        return makeLegendOptionData(
+            entry.title,
+            entry.shortDescription,
+            entry.category,
+            entry.source,
+            discovered ? "Découverte" : "Archive / règle",
+            entry.category == "Salles de boss" || entry.category == "Groupes et héros"
+        );
+    }
+
+    bool isLegendEntryDiscovered(const LegendArchiveEntry& entry)
+    {
+        if (entry.category == "Règles du registre")
+        {
+            return true;
+        }
+
+        if (BestiaryRuntimeProgress::getEncounterCount(entry.title) > 0)
+        {
+            return true;
+        }
+
+        // FR: l'achat du rayonnage de bibliothèque donne accès aux contes légers,
+        // sans révéler d'avance les légendes de salles de boss.
+        const bool libraryLegendsUnlocked = BestiaryRuntimeProgress::getEncounterCount("Légendes de bibliothèque") > 0;
+        if (libraryLegendsUnlocked && (entry.category == "Contes pour enfant" || entry.id == "bras_casses_origin"))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    int countLegendEntries(const std::string& categoryFilter, bool discoveredOnly)
+    {
+        int count = 0;
+        const std::vector<LegendArchiveEntry> allEntries = LegendTriggerSystem::getArchiveEntries();
+        for (const LegendArchiveEntry& entry : allEntries)
+        {
+            if (categoryFilter != "Toutes" && entry.category != categoryFilter)
+            {
+                continue;
+            }
+
+            if (!discoveredOnly || isLegendEntryDiscovered(entry))
+            {
+                ++count;
+            }
+        }
+
+        return count;
+    }
+
+    void displayLegendArchiveList(const std::string& title, const std::string& categoryFilter, bool discoveredOnly)
+    {
+        const std::vector<LegendArchiveEntry> allEntries = LegendTriggerSystem::getArchiveEntries();
+        std::vector<LegendArchiveEntry> entries;
+
+        for (const LegendArchiveEntry& entry : allEntries)
+        {
+            if (categoryFilter != "Toutes" && entry.category != categoryFilter)
+            {
+                continue;
+            }
+
+            if (discoveredOnly && !isLegendEntryDiscovered(entry))
+            {
+                continue;
+            }
+
+            entries.push_back(entry);
+        }
+
+        const std::size_t itemsPerPage = 8;
+        std::size_t pageIndex = 0;
+
+        while (true)
+        {
+            const std::size_t totalPages = PagedMenu::pageCount(entries.size(), itemsPerPage);
+            if (pageIndex >= totalPages)
+            {
+                pageIndex = totalPages - 1;
+            }
+
+            const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(entries.size(), pageIndex, itemsPerPage);
+
+            MenuScreen screen(title, "bestiary.legends.archive.list");
+            screen.addLine("Section spéciale du bestiaire : les légendes sont rangées à part des monstres, boss et matériaux.");
+            screen.addLine("Catégorie : " + categoryFilter);
+            screen.addLine(discoveredOnly
+                ? "Filtre : seulement les légendes déjà découvertes, lues ou ouvertes par la bibliothèque."
+                : "Filtre : archives complètes de développement, à éviter en jeu normal si tu veux garder les surprises.");
+
+            if (entries.empty())
+            {
+                screen.addLine("Aucune légende découverte dans cette sous-section pour le moment.");
+                screen.addLine("Indice : la bibliothèque, certains PNJ ou quelques salles de boss pourront remplir ce registre petit à petit.");
+            }
+            else
+            {
+                screen.addLine("Page " + std::to_string(pageIndex + 1) + " / " + std::to_string(totalPages));
+                screen.addLine("Récits affichés : " + PagedMenu::rangeText(first, last, entries.size()));
+            }
+
+            for (std::size_t i = first; i < last; ++i)
+            {
+                const int localChoice = static_cast<int>(i - first + 1);
+                const LegendArchiveEntry& entry = entries[i];
+                const bool discovered = isLegendEntryDiscovered(entry);
+                screen.addOption(
+                    localChoice,
+                    entry.title,
+                    entry.category + " · " + entry.source + " · " + entry.shortDescription,
+                    true,
+                    "bestiary.legends.archive.read." + std::to_string(i),
+                    makeLegendOptionData(entry, discovered)
+                );
+            }
+
+            if (pageIndex > 0)
+            {
+                screen.addOption(98, "Page précédente", "Afficher les récits précédents.", true, "bestiary.legends.archive.previous");
+            }
+            if (pageIndex + 1 < totalPages)
+            {
+                screen.addOption(99, "Page suivante", "Afficher les récits suivants.", true, "bestiary.legends.archive.next");
+            }
+            screen.addOption(0, "Retour", "Revenir aux sections de légendes.", true, "bestiary.legends.archive.back");
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+
+            if (choice == 0)
+            {
+                return;
+            }
+
+            if (choice == 98 && pageIndex > 0)
+            {
+                pageIndex--;
+                Console::clear();
+                continue;
+            }
+
+            if (choice == 99 && pageIndex + 1 < totalPages)
+            {
+                pageIndex++;
+                Console::clear();
+                continue;
+            }
+
+            const int visibleCount = static_cast<int>(last - first);
+            if (choice < 1 || choice > visibleCount)
+            {
+                MessageScreen::show(
+                    "LÉGENDE NON AFFICHÉE",
+                    "bestiary.legends.archive.not_visible",
+                    {
+                        "Cette légende n'est pas visible sur la page actuelle.",
+                        "Utilise les options de page ou choisis un récit affiché."
+                    }
+                );
+                Console::clear();
+                continue;
+            }
+
+            const std::size_t selectedIndex = first + static_cast<std::size_t>(choice - 1);
+            LegendTriggerSystem::displayArchiveEntry(entries[selectedIndex].id);
+            Console::clear();
+        }
+    }
+
+    void displayLegendsArchive()
+    {
+        while (true)
+        {
+            const int discoveredTotal = countLegendEntries("Toutes", true);
+            const int archiveTotal = countLegendEntries("Toutes", false);
+
+            MenuScreen screen("REGISTRE DES LÉGENDES", "bestiary.legends.hub");
+            screen.addLine("Section particulière du bestiaire : ici, on range les récits, contes, rumeurs et traces rares.");
+            screen.addLine("Les légendes ne sont pas mélangées avec les fiches de monstres : elles servent au lore, pas à forcer une stratégie.");
+            screen.addLine("Certaines peuvent venir d'un PNJ, d'une salle de boss, d'une bibliothèque ou d'un déclencheur rare.");
+            screen.addLine("Progression du registre : " + std::to_string(discoveredTotal) + " / " + std::to_string(archiveTotal) + " légende(s) visibles sans spoiler forcé.");
+
+            screen.addOption(0, "Retour", "Revenir au bestiaire.", true, "bestiary.legends.back");
+            screen.addOption(1, "Fiches bestiaire des légendes", "Voir les entrées Légendes / contes enregistrées comme fiches classiques.", true, "bestiary.legends.register", makeLegendOptionData("Fiches bestiaire des légendes", "Entrées légendes rangées comme fiches classiques, utiles si tu veux rester dans le bestiaire normal.", "Accès", "Bestiaire", "Fiches classiques", true));
+            screen.addOption(2, "Légendes découvertes", "Lire seulement les légendes déjà rencontrées, achetées ou débloquées.", true, "bestiary.legends.discovered", makeLegendOptionData("Légendes découvertes", "Lecture sans spoiler forcé : uniquement les récits déjà ouverts par rencontre, achat ou déclencheur.", "Accès", "Registre", std::to_string(discoveredTotal) + " / " + std::to_string(archiveTotal), true));
+            screen.addOption(3, "Groupes et héros découverts", "Rumeurs de groupes connus, héros chaotiques et réputations.", true, "bestiary.legends.groups", makeLegendOptionData("Groupes et héros découverts", "Rumeurs sur les groupes connus, les héros chaotiques et les réputations qui circulent.", "Groupes et héros", "Rumeurs de ville", std::to_string(countLegendEntries("Groupes et héros", true)) + " visible(s)", true));
+            screen.addOption(4, "Contes pour enfant découverts", "Versions adoucies, drôles ou populaires des récits.", true, "bestiary.legends.children", makeLegendOptionData("Contes pour enfant découverts", "Versions adoucies, drôles ou populaires des récits, souvent obtenues via bibliothèque.", "Contes pour enfant", "Bibliothèque", std::to_string(countLegendEntries("Contes pour enfant", true)) + " visible(s)"));
+            screen.addOption(5, "Salles de boss découvertes", "Traces rares réellement entendues ou lues avant certaines arènes.", true, "bestiary.legends.boss_rooms", makeLegendOptionData("Salles de boss découvertes", "Traces rares réellement entendues ou lues avant certaines arènes, sans déclenchement systématique.", "Salles de boss", "Arènes / boss", std::to_string(countLegendEntries("Salles de boss", true)) + " visible(s)", true));
+            screen.addOption(6, "Déclencheurs et rumeurs", "Notes de PNJ, bibliothèque ou lieux qui expliquent quand une légende peut apparaître.", true, "bestiary.legends.triggers", makeLegendOptionData("Déclencheurs et rumeurs", "Notes de PNJ, bibliothèque ou lieux qui expliquent quand une légende peut apparaître.", "Déclencheurs et rumeurs", "PNJ / bibliothèque", std::to_string(countLegendEntries("Déclencheurs et rumeurs", true)) + " visible(s)"));
+            screen.addOption(7, "Règles du registre", "Notes qui expliquent comment les légendes apparaissent sans devenir lourdes.", true, "bestiary.legends.rules", makeLegendOptionData("Règles du registre", "Notes de fonctionnement : les récits restent optionnels, rares et rangés à part du bestiaire tactique.", "Règles du registre", "Système", std::to_string(countLegendEntries("Règles du registre", false)) + " note(s)", true));
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+
+            if (choice == 0)
+            {
+                return;
+            }
+
+            if (choice == 1)
+            {
+                displayEntryList("Légendes / contes");
+            }
+            else if (choice == 2)
+            {
+                displayLegendArchiveList("LÉGENDES DÉCOUVERTES", "Toutes", true);
+            }
+            else if (choice == 3)
+            {
+                displayLegendArchiveList("GROUPES ET HÉROS DÉCOUVERTS", "Groupes et héros", true);
+            }
+            else if (choice == 4)
+            {
+                displayLegendArchiveList("CONTES POUR ENFANT DÉCOUVERTS", "Contes pour enfant", true);
+            }
+            else if (choice == 5)
+            {
+                displayLegendArchiveList("SALLES DE BOSS DÉCOUVERTES", "Salles de boss", true);
+            }
+            else if (choice == 6)
+            {
+                displayLegendArchiveList("DÉCLENCHEURS ET RUMEURS", "Déclencheurs et rumeurs", true);
+            }
+            else if (choice == 7)
+            {
+                displayLegendArchiveList("RÈGLES DU REGISTRE", "Règles du registre", false);
+            }
+        }
     }
 
 
@@ -1080,18 +1347,19 @@ void BestiaryMenu::open()
         screen.addOption(6, "Boss", "", true, "bestiary.bosses");
         screen.addOption(7, "Personnages spéciaux", "", true, "bestiary.special_characters");
         screen.addOption(8, "Matériaux et plantes", "", true, "bestiary.materials");
-        screen.addOption(9, "Divinités / lore", "", true, "bestiary.lore");
-        screen.addOption(10, "Objets rares", "", true, "bestiary.rare_items");
-        screen.addOption(11, "Effets et altérations", "", true, "bestiary.effects");
-        screen.addOption(12, "Habitats / zones", "", true, "bestiary.habitats");
-        screen.addOption(13, "Journal des matériaux", "", true, "bestiary.material_journal");
-        screen.addOption(14, "Journal des invocations", "", true, "bestiary.summon_journal");
-        screen.addOption(15, "Acheter des informations communes", "", true, "bestiary.info_shop");
-        screen.addOption(16, "Journal du craft", "", true, "bestiary.craft_journal");
-        screen.addOption(17, "Index tactique", "", true, "bestiary.tactical_index");
-        screen.addOption(18, "Synthèse du bestiaire", "", true, "bestiary.summary");
-        screen.addOption(19, "Registre par niveau de connaissance", "", true, "bestiary.knowledge_levels");
-        screen.addOption(20, "Carnet de traque", "", true, "bestiary.hunting_notebook");
+        screen.addOption(9, "Registre des légendes", "Section séparée : contes, rumeurs rares, salles de boss et histoires pour enfant.", true, "bestiary.legends");
+        screen.addOption(10, "Divinités / lore", "", true, "bestiary.lore");
+        screen.addOption(11, "Objets rares", "", true, "bestiary.rare_items");
+        screen.addOption(12, "Effets et altérations", "", true, "bestiary.effects");
+        screen.addOption(13, "Habitats / zones", "", true, "bestiary.habitats");
+        screen.addOption(14, "Journal des matériaux", "", true, "bestiary.material_journal");
+        screen.addOption(15, "Journal des invocations", "", true, "bestiary.summon_journal");
+        screen.addOption(16, "Acheter des informations communes", "", true, "bestiary.info_shop");
+        screen.addOption(17, "Journal du craft", "", true, "bestiary.craft_journal");
+        screen.addOption(18, "Index tactique", "", true, "bestiary.tactical_index");
+        screen.addOption(19, "Synthèse du bestiaire", "", true, "bestiary.summary");
+        screen.addOption(20, "Registre par niveau de connaissance", "", true, "bestiary.knowledge_levels");
+        screen.addOption(21, "Carnet de traque", "", true, "bestiary.hunting_notebook");
         int choice = TerminalInterface::askMenuChoiceFromOptions(
             screen,
             "Choix invalide. Choisis une option affichée."
@@ -1112,18 +1380,19 @@ void BestiaryMenu::open()
         else if (choice == 6) displayEntryList("Boss");
         else if (choice == 7) displayEntryList("Personnages spéciaux");
         else if (choice == 8) displayEntryList("Matériaux et plantes");
-        else if (choice == 9) displayEntryList("Divinités / lore");
-        else if (choice == 10) displayEntryList("Objets rares");
-        else if (choice == 11) displayEntryList("Effets et altérations");
-        else if (choice == 12) displayEntryList("Habitats / zones");
-        else if (choice == 13) displayMaterialJournal();
-        else if (choice == 14) displaySummonJournal();
-        else if (choice == 15) displayInformationShopPreview();
-        else if (choice == 16) displayCraftJournal();
-        else if (choice == 17) displayTacticalIndex();
-        else if (choice == 18) displayKnowledgeSummary();
-        else if (choice == 19) displayKnowledgeLevelBrowser();
-        else if (choice == 20) displayHuntingNotebook();
+        else if (choice == 9) displayLegendsArchive();
+        else if (choice == 10) displayEntryList("Divinités / lore");
+        else if (choice == 11) displayEntryList("Objets rares");
+        else if (choice == 12) displayEntryList("Effets et altérations");
+        else if (choice == 13) displayEntryList("Habitats / zones");
+        else if (choice == 14) displayMaterialJournal();
+        else if (choice == 15) displaySummonJournal();
+        else if (choice == 16) displayInformationShopPreview();
+        else if (choice == 17) displayCraftJournal();
+        else if (choice == 18) displayTacticalIndex();
+        else if (choice == 19) displayKnowledgeSummary();
+        else if (choice == 20) displayKnowledgeLevelBrowser();
+        else if (choice == 21) displayHuntingNotebook();
     }
 }
 
