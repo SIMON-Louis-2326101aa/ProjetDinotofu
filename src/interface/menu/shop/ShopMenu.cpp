@@ -18,6 +18,7 @@
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
+#include "lore/LegendTriggerSystem.hpp"
 #include "item/material/MaterialCatalog.hpp"
 #include "item/material/Material.hpp"
 
@@ -792,15 +793,17 @@ namespace
             screen.addOption(localIndex, label, "", true, "shop.stock.select." + std::to_string(i), itemData);
         }
 
-        if (pageIndex > 0)
-        {
-            screen.addOption(98, "Page précédente", "", true, "shop.stock.previous");
-        }
-        if (pageIndex + 1 < totalPages)
-        {
-            screen.addOption(99, "Page suivante", "", true, "shop.stock.next");
-        }
-        screen.addOption(0, "Retour", "", true, "shop.stock.back");
+        PagedMenu::addNavigationOptions(
+            screen,
+            pageIndex,
+            totalPages,
+            "shop.stock.back",
+            "shop.stock.previous",
+            "shop.stock.next",
+            "Revenir au menu de la boutique.",
+            "Voir les articles précédents.",
+            "Voir les articles suivants."
+        );
 
         return screen;
     }
@@ -1054,11 +1057,11 @@ namespace
             sellScreen.addLine("Boutique : " + shop.getName());
             sellScreen.addLine("Or actuel : " + std::to_string(player.getInventory().getGold()) + " pièces");
             sellScreen.addLine("Les entrées protégées ou incompatibles restent visibles, mais ne peuvent pas être vendues.");
-            sellScreen.addBackOption("Retour", "shop.sell.back");
 
             if (maxChoice <= 0)
             {
                 sellScreen.addLine("Rien à vendre ici pour le moment.");
+                sellScreen.addBackOption("Retour", "shop.sell.back");
                 TerminalInterface::askMenuChoiceFromOptions(
                     sellScreen,
                     "Entre 0 pour revenir."
@@ -1112,14 +1115,17 @@ namespace
                 );
             }
 
-            if (pageIndex > 0)
-            {
-                sellScreen.addOption(98, "Page précédente", "Voir les objets précédents.", true, "shop.sell.previous");
-            }
-            if (pageIndex + 1 < totalPages)
-            {
-                sellScreen.addOption(99, "Page suivante", "Voir les objets suivants.", true, "shop.sell.next");
-            }
+            PagedMenu::addNavigationOptions(
+                sellScreen,
+                pageIndex,
+                totalPages,
+                "shop.sell.back",
+                "shop.sell.previous",
+                "shop.sell.next",
+                "Revenir au menu de la boutique.",
+                "Voir les objets précédents.",
+                "Voir les objets suivants."
+            );
 
             int choice = TerminalInterface::askMenuChoiceFromOptions(
                 sellScreen,
@@ -1280,11 +1286,11 @@ namespace
             screen.addLine("Or actuel : " + std::to_string(player.getInventory().getGold()) + " pièces");
             screen.addLine("Les objets vendus ici peuvent être rachetés jusqu'au prochain combat.");
             screen.addLine("Le prix est plus haut que la revente : frais, paperasse, mauvaise foi du marchand, bref la vie.");
-            screen.addBackOption("Retour", "shop.buyback.back");
 
             if (count <= 0)
             {
                 screen.addLine("Aucun objet à racheter dans cette boutique.");
+                screen.addBackOption("Retour", "shop.buyback.back");
                 TerminalInterface::askMenuChoiceFromOptions(
                     screen,
                     "Entre 0 pour revenir."
@@ -1346,14 +1352,17 @@ namespace
                 );
             }
 
-            if (pageIndex > 0)
-            {
-                screen.addOption(98, "Page précédente", "Voir les rachats précédents.", true, "shop.buyback.previous");
-            }
-            if (pageIndex + 1 < totalPages)
-            {
-                screen.addOption(99, "Page suivante", "Voir les rachats suivants.", true, "shop.buyback.next");
-            }
+            PagedMenu::addNavigationOptions(
+                screen,
+                pageIndex,
+                totalPages,
+                "shop.buyback.back",
+                "shop.buyback.previous",
+                "shop.buyback.next",
+                "Revenir au menu de la boutique.",
+                "Voir les rachats précédents.",
+                "Voir les rachats suivants."
+            );
 
             int choice = TerminalInterface::askMenuChoiceFromOptions(
                 screen,
@@ -1454,6 +1463,12 @@ namespace
     void openSingleShop(Player& player, ShopInventory& shop)
     {
         bool stayInShop = true;
+
+        if (shop.getType() == ShopType::Library)
+        {
+            Random loreRandom;
+            LegendTriggerSystem::maybeDisplayLibraryLoreWhisper(loreRandom);
+        }
 
         while (stayInShop)
         {

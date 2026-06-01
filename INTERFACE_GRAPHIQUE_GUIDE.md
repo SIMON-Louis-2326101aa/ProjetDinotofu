@@ -1,6 +1,6 @@
 # Dinotofu — interface graphique expérimentale   
 
-Version jeu : **V2.01.04**   
+Version jeu : **V2.01.27**   
 Version de personnage encore acceptable avant recréation conseillée : **V2.01.03**   
 
 ## But de l'IG   
@@ -40,11 +40,12 @@ Ne pas bump `schemaVersion` pour : couleur, style, texte HTML, positionnement, m
 - Les contrats de saisie couvrent choix, texte, quantité, confirmation, Entrée vide et codes cachés.   
 - Le serveur bloque les commandes d'ancien écran et les files déjà occupées.   
 - Les recommandations ne doivent pas révéler une faiblesse inconnue.   
+- Les butins/récompenses post-combat et le panneau de guilde sont maintenant mieux découpés en cartes IG et pagination.   
 - Le terminal reste le secours.   
 
 ## Prochaines directions   
 
-- Stabiliser les retours joueurs sur la V2.01.04.   
+- Stabiliser les retours joueurs sur la V2.01.27.   
 - Ajouter ensuite contenu, dialogues/lore vivants, compétences et polish progressif.   
 - Passer en V3.00.00 avec le premier chapitre d'histoire codé.   
 

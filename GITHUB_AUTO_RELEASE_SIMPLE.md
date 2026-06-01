@@ -1,6 +1,6 @@
 # Dinotofu — automatisation GitHub simple   
 
-Version actuelle : **V2.01.04**   
+Version actuelle : **V2.01.27**   
 Dernière version de personnage encore acceptable : **V2.01.03**   
 
 ## Principe   
@@ -14,7 +14,7 @@ src/core/VersionInfo.cpp
 Il prépare ensuite les releases et assets autour du tag correspondant, par exemple :   
 
 ```text   
-v2.01.04   
+v2.01.27   
 ```   
 
 ## Ce que tu dois faire   

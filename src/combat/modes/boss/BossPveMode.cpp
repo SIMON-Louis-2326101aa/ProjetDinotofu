@@ -704,6 +704,10 @@ namespace
     void applyGrinkaVictoryPenalty(Player& player, Random& random)
     {
         std::vector<std::string> lines;
+        lines.push_back("Conséquence : Dette royale encaissée");
+        lines.push_back("Boss : Grinka");
+        lines.push_back("Effet visible : Volé par un boss si un bien est conservé par Grinka");
+        lines.push_back("Récupération future : rebattre Grinka pour réclamer ce qui a été pris");
         lines.push_back("Grinka a gagné. Ses taxes ne sont plus une menace de combat : elles deviennent réelles.");
 
         int gold = player.getInventory().getGold();
@@ -748,6 +752,7 @@ namespace
             }
         }
 
+        lines.push_back("Dette négative : impossible");
         lines.push_back("Aucune dette ne descend sous zéro : Grinka vole ce qui existe, pas ce qui n'existe pas.");
         MessageScreen::show("DETTE ROYALE ENCAISSÉE", "boss.grinka.victory_penalty", lines, false);
     }
@@ -770,9 +775,12 @@ namespace
             "CORROSION ANCRÉE",
             "boss.zelef.victory_penalty",
             {
+                "Conséquence : corrosion ancrée",
+                "Boss : Zelef",
+                "PV maximum retenus : " + std::to_string(lostMaxHp),
+                "Effet visible : Corrosion présente",
+                "Récupération future : rebattre Zelef pour récupérer les PV maximum volés",
                 "Zelef a gagné. La corrosion ne quitte pas entièrement ton corps.",
-                "PV maximum retenus par Zelef : " + std::to_string(lostMaxHp) + ".",
-                "Effet visible sur le personnage : Corrosion présente.",
                 "Si tu bats Zelef lors d'un prochain affrontement, tu pourras récupérer ce qu'il t'a pris."
             },
             false
@@ -935,6 +943,241 @@ namespace
         bool wasDowned = false;
     };
 
+    constexpr std::size_t BOSS_COOP_SUPPORT_PAGE_SIZE = 8;
+
+    MenuOptionItemData makeBossCoopSupportData(
+        const Player& healer,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status,
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "boss_coop_support";
+        itemData.section = "Soutien boss coop";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.owner = healer.getName();
+        itemData.progress = "PV : " + std::to_string(healer.getHp()) + "/" + std::to_string(healer.getMaxHp());
+        itemData.important = important;
+        return itemData;
+    }
+
+    MenuOptionItemData makeBossCoopHealingTargetData(
+        const Player& healer,
+        const Player& target,
+        std::size_t partyIndex
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "ally";
+        itemData.section = "Cibles de soin";
+        itemData.actionType = "support";
+        itemData.name = target.getName();
+        itemData.detail = target.isDead() ? "Allié au sol à réveiller" : "Allié blessé à soigner";
+        itemData.status = "PV : " + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp());
+        itemData.owner = healer.getName();
+        itemData.progress = "J" + std::to_string(partyIndex + 1)
+            + " - " + CombatGroupBuilder::getFormationSlotLabel(static_cast<int>(partyIndex));
+        itemData.important = target.isDead()
+            || (target.getMaxHp() > 0 && target.getHp() * 100 <= target.getMaxHp() * 35);
+        return itemData;
+    }
+
+    MenuOptionItemData makeBossCoopPotionData(
+        const Player& healer,
+        const Consumable& potion,
+        int inventoryIndex
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "potion";
+        itemData.section = "Potions de soutien";
+        itemData.actionType = "heal";
+        itemData.name = potion.getName();
+        itemData.detail = potion.getDescription();
+        itemData.status = "Soin : " + std::to_string(potion.getPower());
+        itemData.price = "Valeur : " + std::to_string(potion.getValue()) + " or";
+        itemData.stock = "Index inventaire : " + std::to_string(inventoryIndex + 1);
+        itemData.owner = healer.getName();
+        itemData.important = potion.getPower() >= 35;
+        return itemData;
+    }
+
+    Player* askBossCoopHealingTarget(Player& healer, std::vector<Player*>& party)
+    {
+        std::vector<Player*> targets;
+        std::vector<std::size_t> partyIndexes;
+
+        for (std::size_t i = 0; i < party.size(); ++i)
+        {
+            Player* ally = party[i];
+            if (ally != nullptr && ally != &healer && (ally->isDead() || ally->getHp() < ally->getMaxHp()))
+            {
+                targets.push_back(ally);
+                partyIndexes.push_back(i);
+            }
+        }
+
+        if (targets.empty())
+        {
+            return nullptr;
+        }
+
+        std::size_t pageIndex = 0;
+
+        while (true)
+        {
+            const std::size_t totalPages = std::max<std::size_t>(
+                1,
+                (targets.size() + BOSS_COOP_SUPPORT_PAGE_SIZE - 1) / BOSS_COOP_SUPPORT_PAGE_SIZE
+            );
+            const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
+            const std::size_t start = safePageIndex * BOSS_COOP_SUPPORT_PAGE_SIZE;
+            const std::size_t end = std::min(targets.size(), start + BOSS_COOP_SUPPORT_PAGE_SIZE);
+
+            MenuScreen targetScreen("CIBLE DU SOIN", "boss.coop.support.target");
+            targetScreen.setPagination(safePageIndex, totalPages);
+            targetScreen.addSubtitle("Page " + std::to_string(safePageIndex + 1) + "/" + std::to_string(totalPages));
+            targetScreen.addLine("Choisis l'allié à soigner ou réveiller.");
+            targetScreen.addOption(0, "Annuler", "Revenir au tour normal.", true, "boss.coop.support.target.cancel");
+
+            for (std::size_t index = start; index < end; ++index)
+            {
+                Player* ally = targets[index];
+                const std::size_t partyIndex = partyIndexes[index];
+                std::string label = "J" + std::to_string(partyIndex + 1) + " - " + ally->getName();
+                if (ally->isDead())
+                {
+                    label += " [au sol]";
+                }
+
+                targetScreen.addOption(
+                    static_cast<int>(index - start + 1),
+                    label,
+                    std::to_string(ally->getHp()) + "/" + std::to_string(ally->getMaxHp()) + " PV",
+                    true,
+                    "boss.coop.support.target.select." + std::to_string(partyIndex + 1),
+                    makeBossCoopHealingTargetData(healer, *ally, partyIndex)
+                );
+            }
+
+            if (safePageIndex > 0)
+            {
+                targetScreen.addOption(98, "Page précédente", "Revoir les alliés précédents.", true, "boss.coop.support.target.previous_page");
+            }
+            if (safePageIndex + 1 < totalPages)
+            {
+                targetScreen.addOption(99, "Page suivante", "Voir les alliés suivants.", true, "boss.coop.support.target.next_page");
+            }
+
+            int targetChoice = TerminalInterface::askMenuChoiceFromOptions(targetScreen, "Choisis une cible affichée.");
+            Console::clear();
+
+            if (targetChoice == 0)
+            {
+                return nullptr;
+            }
+            if (targetChoice == 98 && safePageIndex > 0)
+            {
+                pageIndex = safePageIndex - 1;
+                continue;
+            }
+            if (targetChoice == 99 && safePageIndex + 1 < totalPages)
+            {
+                pageIndex = safePageIndex + 1;
+                continue;
+            }
+
+            const std::size_t selectedIndex = start + static_cast<std::size_t>(targetChoice - 1);
+            if (selectedIndex < targets.size())
+            {
+                return targets[selectedIndex];
+            }
+        }
+    }
+
+    int askBossCoopSupportPotionIndex(Player& healer, const std::vector<int>& potionIndices)
+    {
+        if (potionIndices.empty())
+        {
+            return -1;
+        }
+
+        std::size_t pageIndex = 0;
+
+        while (true)
+        {
+            const std::size_t totalPages = std::max<std::size_t>(
+                1,
+                (potionIndices.size() + BOSS_COOP_SUPPORT_PAGE_SIZE - 1) / BOSS_COOP_SUPPORT_PAGE_SIZE
+            );
+            const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
+            const std::size_t start = safePageIndex * BOSS_COOP_SUPPORT_PAGE_SIZE;
+            const std::size_t end = std::min(potionIndices.size(), start + BOSS_COOP_SUPPORT_PAGE_SIZE);
+
+            MenuScreen potionScreen("POTION DE SOUTIEN", "boss.coop.support.potion");
+            potionScreen.setPagination(safePageIndex, totalPages);
+            potionScreen.addSubtitle("Page " + std::to_string(safePageIndex + 1) + "/" + std::to_string(totalPages));
+            potionScreen.addLine("Choisis la potion à utiliser.");
+            potionScreen.addOption(0, "Annuler", "Garder la potion pour plus tard.", true, "boss.coop.support.potion.cancel");
+
+            for (std::size_t index = start; index < end; ++index)
+            {
+                const int inventoryIndex = potionIndices[index];
+                Consumable potion = healer.getInventory().getConsumable(inventoryIndex);
+                potionScreen.addOption(
+                    static_cast<int>(index - start + 1),
+                    potion.getName(),
+                    "Soin " + std::to_string(potion.getPower()) + " | valeur " + std::to_string(potion.getValue()),
+                    true,
+                    "boss.coop.support.potion.select." + std::to_string(inventoryIndex + 1),
+                    makeBossCoopPotionData(healer, potion, inventoryIndex)
+                );
+            }
+
+            if (safePageIndex > 0)
+            {
+                potionScreen.addOption(98, "Page précédente", "Revoir les potions précédentes.", true, "boss.coop.support.potion.previous_page");
+            }
+            if (safePageIndex + 1 < totalPages)
+            {
+                potionScreen.addOption(99, "Page suivante", "Voir les potions suivantes.", true, "boss.coop.support.potion.next_page");
+            }
+
+            int potionChoice = TerminalInterface::askMenuChoiceFromOptions(potionScreen, "Choisis une potion affichée.");
+            Console::clear();
+
+            if (potionChoice == 0)
+            {
+                return -1;
+            }
+            if (potionChoice == 98 && safePageIndex > 0)
+            {
+                pageIndex = safePageIndex - 1;
+                continue;
+            }
+            if (potionChoice == 99 && safePageIndex + 1 < totalPages)
+            {
+                pageIndex = safePageIndex + 1;
+                continue;
+            }
+
+            const std::size_t selectedIndex = start + static_cast<std::size_t>(potionChoice - 1);
+            if (selectedIndex < potionIndices.size())
+            {
+                return potionIndices[selectedIndex];
+            }
+        }
+    }
+
     std::vector<bool> extractBossDownedFlags(const std::vector<BossCoopContribution>& contributions)
     {
         std::vector<bool> flags;
@@ -1070,8 +1313,36 @@ namespace
 
         MenuScreen supportScreen("SOUTIEN COOP BOSS", "boss.coop.support.choice");
         supportScreen.addLine("Action de soutien disponible pour " + healer.getName() + ".");
-        supportScreen.addOption(1, "Utiliser une potion de soin sur un allié", "Le tour de ce personnage sera consommé.", true, "boss.coop.support.heal");
-        supportScreen.addOption(0, "Jouer normalement", "Ne pas prendre le rôle de soigneur ce tour-ci.", true, "boss.coop.support.skip");
+        supportScreen.addLine("Le soin coop consomme le tour du personnage qui aide.");
+        supportScreen.addOption(
+            1,
+            "Utiliser une potion de soin sur un allié",
+            "Le tour de ce personnage sera consommé.",
+            true,
+            "boss.coop.support.heal",
+            makeBossCoopSupportData(
+                healer,
+                "heal",
+                "Potion de soin allié",
+                "Choisir un allié blessé ou au sol, puis une potion.",
+                "Action consommée",
+                true
+            )
+        );
+        supportScreen.addOption(
+            0,
+            "Jouer normalement",
+            "Ne pas prendre le rôle de soigneur ce tour-ci.",
+            true,
+            "boss.coop.support.skip",
+            makeBossCoopSupportData(
+                healer,
+                "attack",
+                "Jouer normalement",
+                "Garde le tour normal : attaque, potion personnelle, défense ou autre action disponible.",
+                "Sans soutien"
+            )
+        );
 
         int supportChoice = TerminalInterface::askMenuChoiceFromOptions(supportScreen, "Choisis 0 ou 1.");
         Console::clear();
@@ -1081,65 +1352,19 @@ namespace
             return false;
         }
 
-        std::vector<Player*> targets;
-        MenuScreen targetScreen("CIBLE DU SOIN", "boss.coop.support.target");
-        targetScreen.addLine("Choisis l'allié à soigner ou réveiller.");
-        targetScreen.addOption(0, "Annuler", "Revenir au tour normal.", true, "boss.coop.support.target.cancel");
+        Player* target = askBossCoopHealingTarget(healer, party);
 
-        for (Player* ally : party)
-        {
-            if (ally != nullptr && ally != &healer && (ally->isDead() || ally->getHp() < ally->getMaxHp()))
-            {
-                targets.push_back(ally);
-                std::string label = ally->getName();
-                if (ally->isDead())
-                {
-                    label += " [au sol]";
-                }
-                targetScreen.addOption(
-                    static_cast<int>(targets.size()),
-                    label,
-                    std::to_string(ally->getHp()) + "/" + std::to_string(ally->getMaxHp()) + " PV",
-                    true,
-                    "boss.coop.support.target.select"
-                );
-            }
-        }
-
-        int targetChoice = TerminalInterface::askMenuChoiceFromOptions(targetScreen, "Choisis une cible affichée.");
-        Console::clear();
-
-        if (targetChoice == 0)
+        if (target == nullptr)
         {
             return false;
         }
 
-        Player* target = targets[targetChoice - 1];
+        int consumableIndex = askBossCoopSupportPotionIndex(healer, potionIndices);
 
-        MenuScreen potionScreen("POTION DE SOUTIEN", "boss.coop.support.potion");
-        potionScreen.addLine("Choisis la potion à utiliser.");
-        potionScreen.addOption(0, "Annuler", "Garder la potion pour plus tard.", true, "boss.coop.support.potion.cancel");
-        for (int i = 0; i < static_cast<int>(potionIndices.size()); ++i)
-        {
-            Consumable potion = healer.getInventory().getConsumable(potionIndices[i]);
-            potionScreen.addOption(
-                i + 1,
-                potion.getName(),
-                "Soin " + std::to_string(potion.getPower()),
-                true,
-                "boss.coop.support.potion.select"
-            );
-        }
-
-        int potionChoice = TerminalInterface::askMenuChoiceFromOptions(potionScreen, "Choisis une potion affichée.");
-        Console::clear();
-
-        if (potionChoice == 0)
+        if (consumableIndex < 0)
         {
             return false;
         }
-
-        int consumableIndex = potionIndices[potionChoice - 1];
         if (!healer.getInventory().hasConsumable(consumableIndex))
         {
             showBossPveLines(
@@ -1375,6 +1600,26 @@ namespace
     }
 
 
+    MenuOptionItemData makeBossChoiceTypeItemData(
+        const std::string& name,
+        const std::string& detail,
+        const std::string& actionType,
+        bool coop
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "boss";
+        itemData.section = coop ? "Boss coop" : "Boss";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = coop ? "Compatible groupe" : "Registre personnel";
+        itemData.owner = coop ? "Groupe" : "Joueur";
+        itemData.important = true;
+        return itemData;
+    }
+
     MenuScreen buildBossChoiceTypeScreen(const std::string& playerName, bool coop)
     {
         MenuScreen screen(coop ? "BOSS COOP" : "REGISTRE DES BOSS", coop ? "boss.coop.choice_type" : "boss.choice_type");
@@ -1383,22 +1628,76 @@ namespace
         if (coop)
         {
             screen.addLine("Le boss choisi doit être compatible avec tout le groupe.");
-            screen.addOption(1, "Boss aléatoire compatible", "Le registre choisit parmi les boss débloqués par tous.", true, "boss.choice.random.coop");
-            screen.addOption(2, "Choisir le boss", "Afficher les entités accessibles au groupe.", true, "boss.choice.manual.coop");
+            screen.addOption(
+                1,
+                "Boss aléatoire compatible",
+                "Le registre choisit parmi les boss débloqués par tous.",
+                true,
+                "boss.choice.random.coop",
+                makeBossChoiceTypeItemData("Boss aléatoire compatible", "Le registre choisit parmi les boss débloqués par tous.", "select", true)
+            );
+            screen.addOption(
+                2,
+                "Choisir le boss",
+                "Afficher les entités accessibles au groupe.",
+                true,
+                "boss.choice.manual.coop",
+                makeBossChoiceTypeItemData("Choisir le boss", "Afficher les entités accessibles au groupe.", "select", true)
+            );
         }
         else
         {
-            screen.addOption(1, "Boss aléatoire", "Le registre choisit une entité disponible.", true, "boss.choice.random");
-            screen.addOption(2, "Choisir le boss", "Afficher les entités que tu peux stabiliser.", true, "boss.choice.manual");
+            screen.addOption(
+                1,
+                "Boss aléatoire",
+                "Le registre choisit une entité disponible.",
+                true,
+                "boss.choice.random",
+                makeBossChoiceTypeItemData("Boss aléatoire", "Le registre choisit une entité disponible.", "select", false)
+            );
+            screen.addOption(
+                2,
+                "Choisir le boss",
+                "Afficher les entités que tu peux stabiliser.",
+                true,
+                "boss.choice.manual",
+                makeBossChoiceTypeItemData("Choisir le boss", "Afficher les entités que tu peux stabiliser.", "select", false)
+            );
         }
 
         return screen;
     }
 
+    constexpr std::size_t BOSS_SELECTION_PAGE_SIZE = 8;
+
+    MenuOptionItemData makeBossSelectionItemData(
+        int bossId,
+        bool enabled,
+        bool coop,
+        const std::string& hint
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "boss";
+        itemData.section = coop ? "Boss coop" : "Boss";
+        itemData.actionType = "select";
+        itemData.name = BossCatalog::getRegistryDisplayName(bossId);
+        itemData.detail = hint;
+        itemData.status = enabled
+            ? (coop ? "Accessible au groupe" : "Accessible")
+            : (coop ? "Bloqué par le groupe" : "Verrouillé");
+        itemData.progress = "Identifiant : " + std::to_string(bossId);
+        itemData.owner = coop ? "Registre commun" : "Registre personnel";
+        itemData.important = enabled;
+        return itemData;
+    }
+
     MenuScreen buildBossSelectionScreen(
         const std::vector<int>& visibleBossIds,
         const std::vector<int>& enabledBossIds,
-        bool coop
+        bool coop,
+        std::size_t pageIndex
     )
     {
         MenuScreen screen(coop ? "SÉLECTION DU BOSS COOP" : "SÉLECTION DU BOSS", coop ? "boss.coop.selection" : "boss.selection");
@@ -1406,9 +1705,21 @@ namespace
             ? "Sélectionne l'entité que le groupe veut affronter."
             : "Sélectionne l'entité que tu veux exterminer.");
 
-        for (int id : visibleBossIds)
+        const std::size_t totalPages = std::max<std::size_t>(
+            1,
+            (visibleBossIds.size() + BOSS_SELECTION_PAGE_SIZE - 1) / BOSS_SELECTION_PAGE_SIZE
+        );
+        const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
+        const std::size_t start = safePageIndex * BOSS_SELECTION_PAGE_SIZE;
+        const std::size_t end = std::min(visibleBossIds.size(), start + BOSS_SELECTION_PAGE_SIZE);
+
+        screen.setPagination(safePageIndex, totalPages);
+        screen.addSubtitle("Page " + std::to_string(safePageIndex + 1) + "/" + std::to_string(totalPages));
+
+        for (std::size_t index = start; index < end; ++index)
         {
-            bool enabled = std::find(enabledBossIds.begin(), enabledBossIds.end(), id) != enabledBossIds.end();
+            const int id = visibleBossIds[index];
+            const bool enabled = std::find(enabledBossIds.begin(), enabledBossIds.end(), id) != enabledBossIds.end();
             std::string hint = BossCatalog::getRegistryHint(id);
             if (!enabled)
             {
@@ -1422,15 +1733,63 @@ namespace
                 BossCatalog::getRegistryDisplayName(id),
                 hint,
                 enabled,
-                coop ? "boss.coop.select" : "boss.select"
+                coop ? "boss.coop.select." + std::to_string(id) : "boss.select." + std::to_string(id),
+                makeBossSelectionItemData(id, enabled, coop, hint)
             );
         }
 
         screen.addOption(0, "Retour", "Refermer le registre.", true, "boss.selection.back");
+
+        if (safePageIndex > 0)
+        {
+            screen.addOption(98, "Page précédente", "Revoir les boss précédents.", true, "boss.selection.previous_page");
+        }
+        if (safePageIndex + 1 < totalPages)
+        {
+            screen.addOption(99, "Page suivante", "Voir les boss suivants.", true, "boss.selection.next_page");
+        }
+
         screen.addFooterLine("Les boss vaincus récemment sont temporairement instables.");
         screen.addFooterLine("Leurs statistiques exactes restent inconnues avant l'arène.");
 
         return screen;
+    }
+
+    int askBossSelectionChoice(
+        const std::vector<int>& visibleBossIds,
+        const std::vector<int>& enabledBossIds,
+        bool coop
+    )
+    {
+        std::size_t pageIndex = 0;
+
+        while (true)
+        {
+            Console::clear();
+            MenuScreen screen = buildBossSelectionScreen(visibleBossIds, enabledBossIds, coop, pageIndex);
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(
+                screen,
+                "Veuillez entrer un identifiant de boss affiché."
+            );
+
+            if (choice == 98 && pageIndex > 0)
+            {
+                --pageIndex;
+                continue;
+            }
+
+            const std::size_t totalPages = std::max<std::size_t>(
+                1,
+                (visibleBossIds.size() + BOSS_SELECTION_PAGE_SIZE - 1) / BOSS_SELECTION_PAGE_SIZE
+            );
+            if (choice == 99 && pageIndex + 1 < totalPages)
+            {
+                ++pageIndex;
+                continue;
+            }
+
+            return choice;
+        }
     }
 
 }
@@ -1490,11 +1849,10 @@ void BossPveMode::run(
     }
     else
     {
-        Console::clear();
-
-        bossChoice = TerminalInterface::askMenuChoiceFromOptions(
-            buildBossSelectionScreen(player1.getUnlockedBossIds(), availableBossIds, false),
-            "Veuillez entrer un identifiant de boss affiché."
+        bossChoice = askBossSelectionChoice(
+            player1.getUnlockedBossIds(),
+            availableBossIds,
+            false
         );
 
         if (bossChoice == 0)
@@ -1803,10 +2161,12 @@ void BossPveMode::run(
                 "CORROSION RENDUE",
                 "boss.zelef.corrosion_recovered",
                 {
+                    "Récupération : corruption rendue",
+                    "Boss : Zelef",
+                    "PV maximum récupérés : " + std::to_string(recovered),
+                    "Effet retiré : Corrosion présente",
                     "Tu fais face au sang noir qui t'avait marqué.",
-                    "Rends-moi ce que tu m'as pris il y a longtemps.",
-                    "PV maximum récupérés : " + std::to_string(recovered) + ".",
-                    "Effet retiré : Corrosion présente."
+                    "Rends-moi ce que tu m'as pris il y a longtemps."
                 },
                 false
             );
@@ -1819,10 +2179,12 @@ void BossPveMode::run(
                 "BUTIN RÉCUPÉRÉ",
                 "boss.grinka.theft_recovered",
                 {
+                    "Récupération : butin volé rendu",
+                    "Boss : Grinka",
+                    "Effet retiré : Volé par un boss",
+                    "Inventaire : biens volés réinjectés",
                     "Grinka lâche un sac de butin avec un sourire beaucoup moins royal.",
-                    "Rends-moi ce que tu m'as pris il y a longtemps.",
-                    "Les biens volés par ce boss reviennent dans ton inventaire.",
-                    "Effet retiré : Volé par un boss."
+                    "Rends-moi ce que tu m'as pris il y a longtemps."
                 },
                 false
             );
@@ -1912,10 +2274,10 @@ void BossPveMode::runTeam(
     }
     else
     {
-        Console::clear();
-        bossChoice = TerminalInterface::askMenuChoiceFromOptions(
-            buildBossSelectionScreen(leader.getUnlockedBossIds(), coopAvailableBossIds, true),
-            "Veuillez entrer un identifiant de boss affiché."
+        bossChoice = askBossSelectionChoice(
+            leader.getUnlockedBossIds(),
+            coopAvailableBossIds,
+            true
         );
 
         if (bossChoice == 0)
@@ -2175,6 +2537,11 @@ void BossPveMode::runTeam(
         "RÉSULTAT BOSS COOP",
         "combat.boss.coop.result",
         {
+            "Résultat : " + std::string(boss.isDead() ? "victoire du groupe" : "défaite du groupe"),
+            "Boss : " + boss.getName(),
+            "État du boss : " + std::string(boss.isDead() ? "vaincu" : "encore debout"),
+            "PV du boss : " + std::to_string(boss.getHp()) + "/" + std::to_string(boss.getMaxHp()),
+            "Tours de boss enregistrés : " + std::to_string(bossCombatTurnCount),
             boss.getName() + " : " + std::string(boss.isDead() ? "vaincu" : "encore debout") + "."
         },
         false

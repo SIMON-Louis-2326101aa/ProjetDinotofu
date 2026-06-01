@@ -16,6 +16,7 @@
 #include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 #include "interface/model/MenuScreen.hpp"
 
 #include <string>
@@ -84,39 +85,69 @@ bool CombatGroupTargetMenu::openSingleEnemyAttack(
         return true;
     }
 
-    MenuScreen screen("CHOIX DE CIBLE", "combat_group.target_select");
-    screen.addBackOption();
+    constexpr std::size_t itemsPerPage = 6;
+    std::size_t pageIndex = 0;
+    int selectedIndex = -1;
 
-    for (int i = 0; i < static_cast<int>(targetableSlots.size()); ++i)
+    while (selectedIndex < 0)
     {
-        CombatUnitSlot* slot = targetableSlots[i];
-        std::string hint = slot->getKind() == CombatUnitKind::Summon
-            ? "invocation"
-            : "cible principale";
+        const std::size_t totalPages = PagedMenu::pageCount(targetableSlots.size(), itemsPerPage);
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(targetableSlots.size(), pageIndex, itemsPerPage);
 
-        screen.addOption(
-            i + 1,
-            slot->getDisplayName(),
-            hint,
-            true,
-            "combat_group.target." + std::to_string(i),
-            buildTargetItemData(*slot)
+        MenuScreen screen("CHOIX DE CIBLE", "combat_group.target_select");
+        screen.addLine(PagedMenu::pageInfoText(pageIndex, totalPages, targetableSlots.size()));
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+
+        for (std::size_t i = first; i < last; ++i)
+        {
+            CombatUnitSlot* slot = targetableSlots[i];
+            std::string hint = slot->getKind() == CombatUnitKind::Summon
+                ? "invocation"
+                : "cible principale";
+
+            screen.addOption(
+                static_cast<int>(i - first + 1),
+                slot->getDisplayName(),
+                hint,
+                true,
+                "combat_group.target." + std::to_string(i),
+                buildTargetItemData(*slot)
+            );
+        }
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Cible invalide. Choisis une cible affichée, 98/99 pour naviguer, ou 0 pour revenir."
         );
+
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return false;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const int visibleCount = static_cast<int>(last - first);
+        if (choice >= 1 && choice <= visibleCount)
+        {
+            selectedIndex = static_cast<int>(first) + choice - 1;
+        }
     }
 
-    int choice = TerminalInterface::askMenuChoiceFromOptions(
-        screen,
-        "Cible invalide. Choisis une cible affichée, ou 0 pour revenir."
-    );
-
-    Console::clear();
-
-    if (choice == 0)
-    {
-        return false;
-    }
-
-    CombatUnitSlot* selectedSlot = targetableSlots[choice - 1];
+    CombatUnitSlot* selectedSlot = targetableSlots[selectedIndex];
 
     if (selectedSlot->getEntity() != nullptr)
     {

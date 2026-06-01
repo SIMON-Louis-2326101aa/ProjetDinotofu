@@ -21,6 +21,17 @@ public:
     static std::string pageInfoText(std::size_t pageIndex, std::size_t totalPages, std::size_t totalItems);
     static std::string rangeText(std::size_t firstInclusive, std::size_t lastExclusive, std::size_t totalItems);
     static void addNavigationOptions(MenuScreen& screen, std::size_t pageIndex, std::size_t totalPages);
+    static void addNavigationOptions(
+        MenuScreen& screen,
+        std::size_t pageIndex,
+        std::size_t totalPages,
+        const std::string& backActionId,
+        const std::string& previousActionId,
+        const std::string& nextActionId,
+        const std::string& backHint = "Revenir à l'écran précédent.",
+        const std::string& previousHint = "Revoir les entrées précédentes.",
+        const std::string& nextHint = "Voir les entrées suivantes."
+    );
 
     static void printPageInfo(std::size_t pageIndex, std::size_t totalPages, std::size_t totalItems);
     static void printNavigation(std::size_t pageIndex, std::size_t totalPages);

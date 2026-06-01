@@ -12,6 +12,7 @@
 #include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 #include "interface/model/MenuScreen.hpp"
 
 #include <iostream>
@@ -63,6 +64,89 @@ namespace
         return "Durée : " + std::to_string(summon.getDurationTurns())
             + " tour(s) | maintien : " + std::to_string(summon.getMaintenanceCost())
             + " | slots : " + std::to_string(summon.getSlotCost());
+    }
+
+    int getSummonLinkRemaining(const std::string& ownerName);
+
+    MenuOptionItemData makeSummonControlItemData(
+        const Player& owner,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "summon_control";
+        itemData.section = "Invocations";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.owner = owner.getName();
+        itemData.progress = "Lien disponible : " + std::to_string(getSummonLinkRemaining(owner.getName()));
+        itemData.important = actionType == "summon_manual";
+        return itemData;
+    }
+
+    MenuOptionItemData makeSummonActionItemData(
+        const Summon& summon,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = "Disponible",
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "summon_action";
+        itemData.section = "Ordre d'invocation";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.owner = summon.getOwnerName();
+        itemData.progress = "PV : " + std::to_string(summon.getHp()) + "/" + std::to_string(summon.getMaxHp())
+            + " | Durée : " + std::to_string(summon.getDurationTurns())
+            + " | Lien : " + std::to_string(getSummonLinkRemaining(summon.getOwnerName()));
+        itemData.important = important;
+        return itemData;
+    }
+
+    MenuOptionItemData makeSummonTargetItemData(const Summon& summon, const Monster& monster)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = monster.isInvocation() ? "summon_target" : "enemy";
+        itemData.section = "Cibles d'invocation";
+        itemData.actionType = "target";
+        itemData.name = monster.getName();
+        itemData.detail = "Cible choisie par " + summon.getName();
+        itemData.status = "PV : " + std::to_string(monster.getHp()) + "/" + std::to_string(monster.getMaxHp());
+        itemData.owner = summon.getOwnerName();
+        itemData.progress = "Invocation : " + summon.getName() + " | " + summonDurationText(summon);
+        itemData.important = monster.getMaxHp() > 0 && monster.getHp() * 100 <= monster.getMaxHp() * 35;
+        return itemData;
+    }
+
+    MenuOptionItemData makeTargetableSummonItemData(const Summon& summon)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "summon_target";
+        itemData.section = "Invocations ciblables";
+        itemData.actionType = "target";
+        itemData.name = summon.getName();
+        itemData.detail = "Invocation pouvant recevoir certains effets, attaques ennemies ou protections.";
+        itemData.status = "PV : " + std::to_string(summon.getHp()) + "/" + std::to_string(summon.getMaxHp());
+        itemData.owner = summon.getOwnerName();
+        itemData.progress = "Durée : " + std::to_string(summon.getDurationTurns())
+            + " tour(s) | slots " + std::to_string(summon.getSlotCost())
+            + " | maintien " + std::to_string(summon.getMaintenanceCost());
+        itemData.important = summon.getMaxHp() > 0 && summon.getHp() * 100 <= summon.getMaxHp() * 35;
+        return itemData;
     }
 
     // EN: calculateMaxSummonLink declares or implements a focused behavior used by this module.
@@ -262,8 +346,22 @@ SummonControlMode SummonCombatSystem::askPlayerSummonControlMode(
     MenuScreen screen("CONTRÔLE DES INVOCATIONS", "combat.summon.control_mode");
     screen.addLine("Invocateur : " + owner.getName());
     screen.addLine("Invocations actives : " + std::to_string(summons.size()));
-    screen.addOption(1, "Attaque automatique", "Les invocations attaquent seules après ton tour.", true, "combat.summon.mode.automatic");
-    screen.addOption(2, "Contrôle manuel", "Tu joues aussi tes invocations quand ton tour est terminé.", true, "combat.summon.mode.manual");
+    screen.addOption(
+        1,
+        "Attaque automatique",
+        "Les invocations attaquent seules après ton tour.",
+        true,
+        "combat.summon.mode.automatic",
+        makeSummonControlItemData(owner, "summon_auto", "Attaque automatique", "Les invocations choisissent leur cible sans ouvrir de sous-menu.", "Simple")
+    );
+    screen.addOption(
+        2,
+        "Contrôle manuel",
+        "Tu joues aussi tes invocations quand ton tour est terminé.",
+        true,
+        "combat.summon.mode.manual",
+        makeSummonControlItemData(owner, "summon_manual", "Contrôle manuel", "Ouvre des ordres détaillés pour chaque invocation active.", "Plus précis")
+    );
 
     int choice = TerminalInterface::askMenuChoiceFromOptions(
         screen,
@@ -523,15 +621,43 @@ void SummonCombatSystem::playManualSummonTurnAgainstEntity(
     screen.addLine(summonDurationText(summon));
     screen.addLine("Lien restant pour " + summon.getOwnerName() + " : " + std::to_string(getSummonLinkRemaining(summon.getOwnerName())) + " point(s).");
     screen.addBackOption("Ne rien faire", "combat.summon.manual.wait");
-    screen.addOption(1, "Attaquer " + target.getName(), "Attaque normale de l'invocation.", true, "combat.summon.manual.attack");
+    screen.addOption(
+        1,
+        "Attaquer " + target.getName(),
+        "Attaque normale de l'invocation.",
+        true,
+        "combat.summon.manual.attack",
+        makeSummonActionItemData(summon, "attack", "Attaque normale", "Frappe directe sur " + target.getName() + ".", "Dégâts " + std::to_string(summon.getMinDamage()) + "-" + std::to_string(summon.getMaxDamage()), true)
+    );
 
     if (hasSpecialAbility(summon))
     {
-        screen.addOption(2, "Technique d'invocation", "Utiliser l'effet spécial de cette invocation.", true, "combat.summon.manual.special");
+        screen.addOption(
+            2,
+            "Technique d'invocation",
+            "Utiliser l'effet spécial de cette invocation.",
+            true,
+            "combat.summon.manual.special",
+            makeSummonActionItemData(summon, "special", "Technique d'invocation", "Utilise l'effet spécial disponible sans révéler de faiblesse cachée.", "Technique disponible", true)
+        );
     }
 
-    screen.addOption(3, "Maintenir le lien", "+1 tour, pas d'attaque.", true, "combat.summon.manual.maintain");
-    screen.addOption(4, "Sacrifier l'invocation", "Rupture violente du lien contre la cible.", true, "combat.summon.manual.sacrifice");
+    screen.addOption(
+        3,
+        "Maintenir le lien",
+        "+1 tour, pas d'attaque.",
+        true,
+        "combat.summon.manual.maintain",
+        makeSummonActionItemData(summon, "support", "Maintenir le lien", "Consomme le lien pour prolonger la durée de l'invocation.", "+1 tour")
+    );
+    screen.addOption(
+        4,
+        "Sacrifier l'invocation",
+        "Rupture violente du lien contre la cible.",
+        summon.canBeSacrificed(),
+        "combat.summon.manual.sacrifice",
+        makeSummonActionItemData(summon, "danger", "Sacrifier l'invocation", "Détruit l'invocation pour infliger un effet violent à la cible.", summon.canBeSacrificed() ? "Dangereux" : "Impossible", true)
+    );
 
     int choice = TerminalInterface::askMenuChoiceFromOptions(
         screen,
@@ -588,55 +714,118 @@ void SummonCombatSystem::playManualSummonTurnAgainstWave(
         return;
     }
 
-    MenuScreen targetScreen("CIBLE DE L'INVOCATION", "combat.summon.manual.wave.target");
-    targetScreen.addLine(summon.getName() + " attend ton ordre.");
-    targetScreen.addLine(summonDurationText(summon));
-    if (hasSpecialAbility(summon))
-    {
-        targetScreen.addLine("Astuce : choisis une cible, puis l'invocation pourra utiliser sa technique spéciale.");
-    }
-    targetScreen.addBackOption("Ne rien faire", "combat.summon.manual.wave.wait");
+    constexpr std::size_t itemsPerPage = 6;
+    std::size_t pageIndex = 0;
+    const int activeEnemyCount = wave.getActiveEnemyCount();
+    const std::size_t totalPages = PagedMenu::pageCount(static_cast<std::size_t>(activeEnemyCount), itemsPerPage);
+    int selectedEnemyIndex = -1;
 
-    for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+    while (selectedEnemyIndex < 0)
     {
-        Monster& monster = wave.getActiveEnemy(i);
-        targetScreen.addOption(
-            i + 1,
-            monster.getName(),
-            std::to_string(monster.getHp()) + "/" + std::to_string(monster.getMaxHp()) + " PV",
-            true,
-            "combat.summon.manual.wave.target." + std::to_string(i)
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(static_cast<std::size_t>(activeEnemyCount), pageIndex, itemsPerPage);
+        std::vector<int> visibleEnemyIndexes;
+
+        MenuScreen targetScreen("CIBLE DE L'INVOCATION", "combat.summon.manual.wave.target");
+        targetScreen.addLine(summon.getName() + " attend ton ordre.");
+        targetScreen.addLine(summonDurationText(summon));
+        targetScreen.addLine(PagedMenu::pageInfoText(pageIndex, totalPages, static_cast<std::size_t>(activeEnemyCount)));
+        if (hasSpecialAbility(summon))
+        {
+            targetScreen.addLine("Astuce : choisis une cible, puis l'invocation pourra utiliser sa technique spéciale.");
+        }
+        PagedMenu::addNavigationOptions(targetScreen, pageIndex, totalPages);
+
+        for (std::size_t i = first; i < last; ++i)
+        {
+            Monster& monster = wave.getActiveEnemy(static_cast<int>(i));
+            const int visibleNumber = static_cast<int>(visibleEnemyIndexes.size()) + 1;
+            visibleEnemyIndexes.push_back(static_cast<int>(i));
+
+            targetScreen.addOption(
+                visibleNumber,
+                monster.getName(),
+                std::to_string(monster.getHp()) + "/" + std::to_string(monster.getMaxHp()) + " PV",
+                !monster.isDead(),
+                "combat.summon.manual.wave.target." + std::to_string(i),
+                makeSummonTargetItemData(summon, monster)
+            );
+        }
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            targetScreen,
+            "Choisis une cible affichée, 98/99 pour naviguer, ou 0 pour revenir."
         );
+        Console::clear();
+
+        if (choice == 0)
+        {
+            showSummonNotice(
+                "INVOCATION EN RETRAIT",
+                "combat.summon.manual.wave.wait.result",
+                {summon.getName() + " reste en retrait, mais le lien d'invocation continue de se consumer."}
+            );
+            summon.decreaseDuration();
+            return;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        if (choice >= 1 && choice <= static_cast<int>(visibleEnemyIndexes.size()))
+        {
+            selectedEnemyIndex = visibleEnemyIndexes[choice - 1];
+        }
     }
 
-    int choice = TerminalInterface::askMenuChoiceFromOptions(
-        targetScreen,
-        "Choisis 0 ou une cible active."
-    );
-    Console::clear();
-
-    if (choice == 0)
-    {
-        showSummonNotice(
-            "INVOCATION EN RETRAIT",
-            "combat.summon.manual.wave.wait.result",
-            {summon.getName() + " reste en retrait, mais le lien d'invocation continue de se consumer."}
-        );
-        summon.decreaseDuration();
-        return;
-    }
-
-    Monster& target = wave.getActiveEnemy(choice - 1);
+    Monster& target = wave.getActiveEnemy(selectedEnemyIndex);
 
     if (hasSpecialAbility(summon))
     {
         MenuScreen actionScreen("ACTION DE L'INVOCATION", "combat.summon.manual.wave.action");
         actionScreen.addLine("Invocation : " + summon.getName());
         actionScreen.addLine("Cible : " + target.getName() + " | " + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp()) + " PV");
-        actionScreen.addOption(1, "Attaque normale", "Frappe directe de l'invocation.", true, "combat.summon.manual.wave.attack");
-        actionScreen.addOption(2, "Technique d'invocation", "Utilise l'effet spécial disponible.", true, "combat.summon.manual.wave.special");
-        actionScreen.addOption(3, "Maintenir le lien", "+1 tour, pas d'attaque.", true, "combat.summon.manual.wave.maintain");
-        actionScreen.addOption(4, "Sacrifier l'invocation", "Rupture violente du lien contre la cible.", true, "combat.summon.manual.wave.sacrifice");
+        actionScreen.addOption(
+            1,
+            "Attaque normale",
+            "Frappe directe de l'invocation.",
+            true,
+            "combat.summon.manual.wave.attack",
+            makeSummonActionItemData(summon, "attack", "Attaque normale", "Frappe directe sur " + target.getName() + ".", "Dégâts " + std::to_string(summon.getMinDamage()) + "-" + std::to_string(summon.getMaxDamage()), true)
+        );
+        actionScreen.addOption(
+            2,
+            "Technique d'invocation",
+            "Utilise l'effet spécial disponible.",
+            true,
+            "combat.summon.manual.wave.special",
+            makeSummonActionItemData(summon, "special", "Technique d'invocation", "Utilise l'effet spécial disponible sans spoiler la cible.", "Technique disponible", true)
+        );
+        actionScreen.addOption(
+            3,
+            "Maintenir le lien",
+            "+1 tour, pas d'attaque.",
+            true,
+            "combat.summon.manual.wave.maintain",
+            makeSummonActionItemData(summon, "support", "Maintenir le lien", "Prolonge l'invocation au lieu de frapper cette cible.", "+1 tour")
+        );
+        actionScreen.addOption(
+            4,
+            "Sacrifier l'invocation",
+            "Rupture violente du lien contre la cible.",
+            summon.canBeSacrificed(),
+            "combat.summon.manual.wave.sacrifice",
+            makeSummonActionItemData(summon, "danger", "Sacrifier l'invocation", "Détruit l'invocation pour une rupture violente contre " + target.getName() + ".", summon.canBeSacrificed() ? "Dangereux" : "Impossible", true)
+        );
 
         int actionChoice = TerminalInterface::askMenuChoiceFromOptions(
             actionScreen,
@@ -919,7 +1108,8 @@ void SummonCombatSystem::displayTargetableSummons(const std::vector<Summon>& sum
                 + " tour(s) | slots " + std::to_string(summon.getSlotCost())
                 + " | maintien " + std::to_string(summon.getMaintenanceCost()),
             true,
-            "combat.summon.targetable." + std::to_string(i)
+            "combat.summon.targetable." + std::to_string(i),
+            makeTargetableSummonItemData(summon)
         );
     }
 

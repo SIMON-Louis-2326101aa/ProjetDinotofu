@@ -50,6 +50,49 @@ namespace
         }
     }
 
+    std::string normalizeCardKey(const std::string& value)
+    {
+        std::string normalized = toLowerAscii(value);
+        normalized.erase(std::remove_if(normalized.begin(), normalized.end(), [](unsigned char c) {
+            return std::isspace(c) || c == '-' || c == '_' || c == ':' || c == '|';
+        }), normalized.end());
+        return normalized;
+    }
+
+    bool hasEquivalentItemCard(
+        const GuiMenuSnapshot& snapshot,
+        const std::string& name,
+        const std::string& section,
+        const std::string& kind
+    )
+    {
+        const std::string wantedName = normalizeCardKey(name);
+        const std::string wantedSection = normalizeCardKey(section);
+        const std::string wantedKind = normalizeCardKey(kind);
+
+        if (wantedName.empty())
+        {
+            return false;
+        }
+
+        for (const GuiMenuItemSnapshot& card : snapshot.itemCards)
+        {
+            if (normalizeCardKey(card.name) != wantedName)
+            {
+                continue;
+            }
+
+            const bool sameSection = wantedSection.empty() || normalizeCardKey(card.section) == wantedSection;
+            const bool sameKind = wantedKind.empty() || normalizeCardKey(card.kind) == wantedKind;
+            if (sameSection || sameKind)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
 
 
     std::string trimCopy(const std::string& value)
@@ -99,14 +142,18 @@ namespace
         if (containsAny(text, {"pv", "hp", "vie", "sante", "santé", "soin", "heal"})) return "health";
         if (containsAny(text, {"mort", "morts", "lethal", "létal", "perdu", "perdue", "perdus", "brisée", "brise", "volée", "volee", "survie", "corrompue", "effondrement"})) return "death";
         if (containsAny(text, {"or", "gold", "prix", "cout", "coût", "argent", "monnaie", "vente", "achat", "valeur", "pièce", "pièces", "pieces"})) return "economy";
-        if (containsAny(text, {"niveau", "level", "xp", "experience", "expérience", "rang", "classe", "compétence", "competence", "skill", "progression"})) return "progression";
+        if (containsAny(text, {"niveau", "level", "xp", "experience", "expérience", "rang", "classe", "compétence", "competence", "skill", "progression", "maîtrise", "maitrise"})) return "progression";
         if (containsAny(text, {"force", "dextérité", "dexterite", "constitution", "intelligence", "sagesse", "charisme", "attribut"})) return "attribute";
+        if (containsAny(text, {"participation", "tours joués", "tours joues", "tours", "contribution"})) return "participation";
         if (containsAny(text, {"dégâts", "degats", "damage", "critique", "attaque", "puissance"})) return "damage";
         if (containsAny(text, {"durabilite", "durabilité", "arme", "armure", "equipement", "équipement", "réduction", "reduction", "bonus"})) return "equipment";
         if (containsAny(text, {"race", "type", "nom", "catégorie", "categorie", "qualité", "qualite"})) return "identity";
         if (containsAny(text, {"stock", "quantite", "quantité", "nombre", "exemplaire"})) return "count";
-        if (containsAny(text, {"danger", "boss", "risque", "alerte"})) return "danger";
+        if (containsAny(text, {"fuite réussie", "fuite reussie", "abandon du duel", "sort de l'arène", "sort de l'arene"})) return "success";
+        if (containsAny(text, {"fuite échouée", "fuite echouee", "fuite impossible", "tour est perdu", "abandon", "danger", "boss", "risque", "alerte"})) return "danger";
         if (containsAny(text, {"quete", "quête", "mission", "objectif", "guilde"})) return "quest";
+        if (containsAny(text, {"légende", "legende", "récit", "recit", "conte", "rumeur", "bibliothèque", "bibliotheque"})) return "legend";
+        if (containsAny(text, {"dialogue", "dit", "réplique", "replique", "interlocuteur", "langue probable"})) return "dialogue";
         if (containsAny(text, {"description", "lore", "utilité", "utilite", "texte"})) return "lore";
 
         return "info";
@@ -268,6 +315,11 @@ namespace
             snapshot.specializedView == "equipment" ||
             snapshot.specializedView == "inventory" ||
             snapshot.specializedView == "progression" ||
+            snapshot.specializedView == "legends" ||
+            snapshot.specializedView == "dialogue" ||
+            snapshot.specializedView == "death" ||
+            snapshot.specializedView == "altered_data" ||
+            snapshot.specializedView == "post_combat" ||
             snapshot.specializedView == "combat"
                 ? 14
                 : 8;
@@ -294,10 +346,13 @@ namespace
         const std::string text = trimCopy(rawText);
 
         if (containsAny(text, {"mort", "morts", "lethal", "létal", "survie", "corrompue", "effondrement"})) return "death";
-        if (containsAny(text, {"danger", "boss", "risque", "alerte"})) return "danger";
-        if (containsAny(text, {"attention", "impossible", "indisponible", "verrouille", "verrouillé", "bloque", "bloqué", "pas assez"})) return "warning";
+        if (containsAny(text, {"fuite réussie", "fuite reussie", "abandon du duel", "sort de l'arène", "sort de l'arene"})) return "success";
+        if (containsAny(text, {"fuite échouée", "fuite echouee", "fuite impossible", "tour est perdu", "abandon", "danger", "boss", "risque", "alerte"})) return "danger";
+        if (containsAny(text, {"attention", "impossible", "indisponible", "verrouille", "verrouillé", "bloque", "bloqué", "pas assez", "participation insuffisante"})) return "warning";
         if (containsAny(text, {"victoire", "reussite", "réussite", "terminee", "terminée", "obtenu", "gagne", "gagné", "recompense", "récompense"})) return "success";
         if (containsAny(text, {"quete", "quête", "mission", "objectif", "client", "guilde"})) return "quest";
+        if (containsAny(text, {"légende", "legende", "conte", "rumeur", "bibliothèque", "bibliotheque", "rayonnage"})) return "legend";
+        if (containsAny(text, {"dialogue", "interlocuteur", "langue probable", "compréhension", "comprehension"})) return "dialogue";
         if (containsAny(text, {"aucun", "aucune", "vide", "rien"})) return "empty";
         if (containsAny(text, {"choisis", "choisir", "selectionne", "sélectionne", "appuie", "utilise", "entre un", "saisis"})) return "help";
         if (text.size() >= 72) return "lore";
@@ -366,6 +421,62 @@ namespace
         snapshot.noticeCards.push_back(card);
     }
 
+    void addSyntheticNoticeCard(
+        GuiMenuSnapshot& snapshot,
+        const std::string& text,
+        const std::string& source,
+        const std::string& kind,
+        bool important = false
+    )
+    {
+        if (text.empty())
+        {
+            return;
+        }
+
+        for (const GuiMenuNoticeSnapshot& existing : snapshot.noticeCards)
+        {
+            if (toLowerAscii(existing.text) == toLowerAscii(text))
+            {
+                return;
+            }
+        }
+
+        GuiMenuNoticeSnapshot card;
+        card.id = "notice." + std::to_string(snapshot.noticeCards.size() + 1);
+        card.text = text;
+        card.source = source;
+        card.kind = kind;
+        card.important = important;
+        snapshot.noticeCards.push_back(card);
+    }
+
+    void addListLoadNoticeIfNeeded(GuiMenuSnapshot& snapshot)
+    {
+        if (snapshot.inputMode != "choice" || snapshot.actionCount < 12)
+        {
+            return;
+        }
+
+        if (snapshot.hasPagination)
+        {
+            addSyntheticNoticeCard(
+                snapshot,
+                "Pagination active : les choix 98/99 servent uniquement à changer de page.",
+                "pagination",
+                "help"
+            );
+            return;
+        }
+
+        addSyntheticNoticeCard(
+            snapshot,
+            "Liste chargée : les numéros restent affichés pour éviter les mauvais clics.",
+            "layout",
+            "help"
+        );
+    }
+
     void populateNoticeCards(GuiMenuSnapshot& snapshot)
     {
         if (snapshot.specializedView == "generic")
@@ -401,10 +512,13 @@ namespace
         if (containsAny(text, {"item.material.display", "item.consumable.display", "item.display", "material.display", "consumable.display"})) return "inventaire";
         if (containsAny(text, {"monster.stats", "boss.stats", "entity.stats", "player.stats", "player.attributes", "player.skills", "player.career", "career.statistics"})) return "progression";
         if (containsAny(text, {"activity.", "activite", "activité", "activités", "activity", "combats", "boutiques / lieux", "pnj notables", "échange / don", "echange / don", "menu après-combat", "menu apres-combat"})) return "activite";
+        if (containsAny(text, {"enemy_dialogue", "dialogue d'introduction", "dialogue introduction", "dialogue d'intro", "wave.intro", "encounter.intro", "character.special.dialogue", "special_group.dialogue", "pnj.dialogue", "npc.dialogue"})) return "dialogue";
+        if (containsAny(text, {"combat.escape", "fuite", "abandon du duel", "combat.role", "compétences de rôle", "competences de role", "pvp.ai", "duel ia"})) return "combat";
+        if (containsAny(text, {"boss.selection", "boss.coop.selection", "boss.choice_type", "boss.coop.choice_type", "sélection du boss", "selection du boss", "registre des boss"})) return "catalogue";
         if (containsAny(text, {"session.party", "session coop", "session solo", "multi local", "groupe actif"})) return "session";
         if (containsAny(text, {"save.characters.create", "character.creation", "difficulté", "difficulte", "race validée", "race validee", "personnage gravé", "personnage grave", "nom gravé", "nom grave"})) return "creation";
         if (containsAny(text, {"catalog", "catalogue", "classes", "races", "race", "personnages spéciaux", "personnages speciaux", "groupes spéciaux", "groupes speciaux", "monstres préparés", "monstres prepares", "boss disponibles"})) return "catalogue";
-        if (containsAny(text, {"post_combat", "apres combat", "après combat", "recompense", "récompense"})) return "apres_combat";
+        if (containsAny(text, {"combat.reward", "boss.coop.reward", "pve.coop.reward", "post_combat", "apres combat", "après combat", "consequence", "conséquence", "consequences", "conséquences", "recompense", "récompense", "loot", "butin", "récompenses", "recompenses", "récupération", "recuperation"})) return "apres_combat";
         if (containsAny(text, {"quick_heal", "potion", "potions", "curative", "defensive", "défensive", "offensive", "buff", "debuff"})) return "potions";
         if (containsAny(text, {"shop", "boutique", "achat", "vente", "marchand", "stock", "troquer", "troc"})) return "boutique";
         if (containsAny(text, {"exploration", "biome", "biomes", "intensité", "intensite", "sortie prudente", "sortie normale", "sortie audacieuse"})) return "exploration";
@@ -413,9 +527,9 @@ namespace
         if (containsAny(text, {"bestiary", "bestiaire", "knowledge", "connaissance", "statistique", "statistics", "stats", "materiau", "matériau", "material", "player.", "joueur", "monstre", "monster", "entité", "entite", "attribut", "attributs", "compétence", "competence", "compétences", "competences", "skill", "career", "parcours"})) return "progression";
         if (containsAny(text, {"inventory", "inventaire", "item", "objet", "consommable"})) return "inventaire";
         if (containsAny(text, {"equipment", "equipement", "équipement", "arme", "armure"})) return "equipement";
-        if (containsAny(text, {"death", "mort", "morts", "lethal", "létal", "penalty", "pénalité", "penalite", "anomalie de survie", "survie", "corrompue"})) return "mort";
+        if (containsAny(text, {"death", "mort", "morts", "lethal", "létal", "penalty", "pénalité", "penalite", "anomalie de survie", "survie", "volé par un boss", "vole par un boss", "corrosion présente", "corrosion presente", "corrompue"})) return "mort";
         if (containsAny(text, {"save", "sauvegarde", "account", "compte", "character", "personnage"})) return "sauvegarde";
-        if (containsAny(text, {"cheat", "triche", "alter", "altéré", "altere", "données altérées", "donnees alterees"})) return "donnees_alterees";
+        if (containsAny(text, {"cheat", "triche", "alter", "altéré", "altere", "altération", "alteration", "données altérées", "donnees alterees", "statistique corrompue"})) return "donnees_alterees";
         if (containsAny(text, {"combat", "battle", "boss", "target", "cible", "pvp", "duel", "arène", "arene"})) return "combat";
         if (containsAny(text, {"story", "histoire", "archives", "chapitre"})) return "progression";
 
@@ -432,6 +546,7 @@ namespace
         if (screenCategory == "quete") return "quest";
         if (screenCategory == "progression") return "progression";
         if (screenCategory == "legendes") return "legends";
+        if (screenCategory == "dialogue") return "dialogue";
         if (screenCategory == "catalogue") return "catalog";
         if (screenCategory == "activite") return "activity";
         if (screenCategory == "session") return "session";
@@ -454,6 +569,7 @@ namespace
         if (specializedView == "quest") return "Quêtes";
         if (specializedView == "progression") return "Progression";
         if (specializedView == "legends") return "Légendes";
+        if (specializedView == "dialogue") return "Dialogue";
         if (specializedView == "catalog") return "Catalogue";
         if (specializedView == "activity") return "Activités";
         if (specializedView == "session") return "Session";
@@ -476,6 +592,7 @@ namespace
         if (specializedView == "quest") return "Prépare les blocs journal, guilde, clients et lieux liés aux quêtes.";
         if (specializedView == "progression") return "Prépare les blocs bestiaire, matériaux, statistiques et connaissances.";
         if (specializedView == "legends") return "Sépare les récits, contes, rumeurs et salles de boss des fiches tactiques.";
+        if (specializedView == "dialogue") return "Présente les paroles de PNJ, ennemis ou groupes spéciaux sans les confondre avec des actions de combat.";
         if (specializedView == "catalog") return "Transforme les listes de races, classes, monstres, boss et personnages spéciaux en cartes consultables.";
         if (specializedView == "activity") return "Regroupe les grandes routes jouables : histoire, combats, exploration, quêtes, lieux et gestion.";
         if (specializedView == "session") return "Structure le choix solo/coop local et les personnages secondaires.";
@@ -563,7 +680,31 @@ namespace
             "vulnerabilite", "vulnérabilité", "vulnerable", "vulnérable",
             "element oppose", "élément opposé", "element opposé", "élément oppose",
             "weakness", "resistance", "vulnerability", "counter element",
-            "secret tactique", "information cachee", "information cachée"
+            "contre-element", "contre élément", "meilleur élément", "meilleur element",
+            "secret tactique", "information cachee", "information cachée",
+            "bestiaire requis", "connaissance requise", "non découvert", "non decouvert",
+            "caché", "cache", "scanné", "scanne", "analyse inconnue",
+            "recommandation tactique", "action recommandée", "action recommandee"
+        });
+    }
+
+    bool isKnowledgeSensitiveScreen(const GuiMenuSnapshot& snapshot)
+    {
+        const std::string text = snapshot.screenId + " " + snapshot.title;
+        return containsAny(text, {
+            "weakness", "faiblesse", "resistance", "résistance",
+            "bestiary.unknown", "knowledge.locked", "connaissance cachee", "connaissance cachée"
+        });
+    }
+
+    bool combatScreenCanPromoteLineItemCards(const GuiMenuSnapshot& snapshot)
+    {
+        const std::string text = snapshot.screenId + " " + snapshot.title;
+        return containsAny(text, {
+            "combat.result", "combat.pve.", "combat.loot.", "combat.escape", "combat.role", "exploration.wave.",
+            "combat.encounter.adventurer_group",
+            "boss.grinka", "boss.zelef", "boss.reward", "boss.registry", "boss.escape",
+            "pvp.ai.result", "pvp.ai.opponent", "pvp.ai.summon", "pvp.local.result", "pvp.local.player2.save", "pvp.deadly_duel.loot"
         });
     }
 
@@ -749,12 +890,23 @@ namespace
     {
         const std::string text = snapshot.screenId + " " + snapshot.specializedView + " " + action.actionId + " " + action.label + " " + action.hint;
 
+        if (snapshot.specializedView == "dialogue" || containsAny(text, {"enemy_dialogue", "special_group.dialogue", "dialogue", "parole", "réplique", "replique", "langue probable", "compréhension", "comprehension"})) return "dialogue";
         if (snapshot.specializedView == "legends" || containsAny(text, {"bestiary.legends", "légende", "legende", "conte", "rumeur"})) return "legend";
         if (snapshot.specializedView == "activity" || containsAny(action.actionId, {"activity."})) return "activity";
         if (snapshot.specializedView == "session" || containsAny(snapshot.screenId, {"session.party"})) return "session";
         if (snapshot.specializedView == "creation" || containsAny(snapshot.screenId, {"character.creation", "save.characters.create"})) return "creation";
+        if (containsAny(text, {"page.previous", "page.next", "previous_page", "next_page", "page précédente", "page precedente", "page suivante", "retour"})) return "navigation";
+        if (containsAny(text, {"combat.reward", "récompense", "recompense", "xp +", "or +", "or récupéré", "or recupere"})) return "reward";
+        if (containsAny(text, {"combat.role", "compétence de rôle", "competence de role", "provocation", "menace", "soutien d'allié", "soutien d'allie"})) return "combat_role";
+        if (containsAny(text, {"combat.escape", "fuite", "fuir", "abandon du duel", "échappatoire", "echappatoire"})) return "escape";
+        if (containsAny(text, {"pvp.ai.opponent", "adversaire ia", "arène ia", "arene ia", "duel ia"})) return "combat_route";
+        if (containsAny(text, {"npc", "pnj", "client", "contact", "parler", "discuter", "maître de guilde", "maitre de guilde", "forgeron", "alchimiste", "bibliothécaire", "bibliothecaire"})) return "npc";
+        if (containsAny(text, {"location", "lieu", "lieux", "forge", "bibliothèque", "bibliotheque", "place du village", "route commerciale", "herboristerie", "armurerie"})) return "location";
+        if (containsAny(text, {"coffre", "chest"})) return "chest";
+        if (containsAny(text, {"piège", "piege", "trap", "embuscade"})) return "trap";
         if (containsAny(text, {"special_characters", "personnage spécial", "personnages spéciaux", "personnage special", "personnages speciaux"})) return "special_character";
         if (containsAny(text, {"special_groups", "groupe spécial", "groupes spéciaux", "groupe special", "groupes speciaux"})) return "special_group";
+        if (containsAny(text, {"summon", "invocation", "invocations", "sacrifice", "maintien du lien", "lien d'invocation"})) return "summon";
         if (containsAny(text, {"classes", "classe", "class"})) return "class";
         if (containsAny(text, {"races", "race"})) return "race";
         if (containsAny(text, {"monsters", "monstres", "monstre"})) return "monster";
@@ -763,7 +915,8 @@ namespace
         if (containsAny(text, {"weapon", "arme"})) return "weapon";
         if (containsAny(text, {"armor", "armure", "tenue"})) return "armor";
         if (containsAny(text, {"consumable", "potion", "consommable", "soin", "curative"})) return "consumable";
-        if (containsAny(text, {"material", "materiau", "matériau", "plante", "ressource"})) return "material";
+        if (containsAny(text, {"loot", "butin", "fragment de boss", "fragment unique", "récupère", "recupere", "récupéré", "recupere", "laisse quelque chose", "matériau récupéré", "materiau recupere"})) return "loot";
+        if (containsAny(text, {"material", "materiau", "matériau", "plante", "ressource", "fragment", "résidu", "residu", "poussière", "poussiere"})) return "material";
         if (containsAny(text, {"shop", "boutique", "achat", "vente", "troc", "stock"})) return "shop";
         if (containsAny(text, {"exploration", "biome", "intensité", "intensite", "sortie prudente", "sortie normale", "sortie audacieuse"})) return "exploration";
         if (containsAny(text, {"quest", "quete", "quête", "mission", "guilde", "client"})) return "quest";
@@ -781,6 +934,8 @@ namespace
         if (containsAny(text, {"verrouillé", "verrouille", "bloqué", "bloque", "indisponible"})) return "verrouillé";
         if (containsAny(text, {"terminée", "terminee", "complétée", "completee"})) return "terminé";
         if (containsAny(text, {"active", "actif", "en cours"})) return "actif";
+        if (containsAny(text, {"surveillé", "surveille", "plafonné", "plafonne"})) return "surveillé";
+        if (containsAny(text, {"aucune", "aucun", "+0"})) return "vide";
         if (containsAny(text, {"rare", "épique", "epique", "légendaire", "legendaire", "relique", "héroïque", "heroique"})) return "important";
         return "";
     }
@@ -798,9 +953,13 @@ namespace
         return part;
     }
 
-    std::string findMetadataPart(const std::vector<std::string>& parts, const std::vector<std::string>& needles)
+    std::string findMetadataPartFromIndex(
+        const std::vector<std::string>& parts,
+        const std::vector<std::string>& needles,
+        std::size_t startIndex
+    )
     {
-        for (std::size_t i = 1; i < parts.size(); ++i)
+        for (std::size_t i = startIndex; i < parts.size(); ++i)
         {
             const std::string part = trimCopy(parts[i]);
             if (containsAny(part, needles))
@@ -811,14 +970,25 @@ namespace
         return "";
     }
 
+    std::string findMetadataPart(const std::vector<std::string>& parts, const std::vector<std::string>& needles)
+    {
+        return findMetadataPartFromIndex(parts, needles, 1);
+    }
+
     std::string inferItemCardSection(const GuiMenuSnapshot& snapshot, const GuiMenuActionSnapshot& action)
     {
         const std::string text = snapshot.screenId + " " + action.actionId + " " + action.label;
 
+        if (snapshot.specializedView == "dialogue" || containsAny(text, {"enemy_dialogue", "special_group.dialogue", "dialogue", "parole", "réplique", "replique"})) return "Dialogue";
         if (snapshot.specializedView == "legends" || containsAny(text, {"bestiary.legends", "légende", "legende", "conte", "rumeur"})) return "Registre des légendes";
         if (snapshot.specializedView == "activity" || containsAny(action.actionId, {"activity."})) return "Activités";
         if (snapshot.specializedView == "session" || containsAny(snapshot.screenId, {"session.party"})) return "Session";
         if (snapshot.specializedView == "creation" || containsAny(snapshot.screenId, {"character.creation", "save.characters.create"})) return "Création";
+        if (containsAny(text, {"page.previous", "page.next", "previous_page", "next_page", "page précédente", "page precedente", "page suivante", "retour"})) return "Navigation";
+        if (containsAny(text, {"combat.reward", "récompense", "recompense", "xp +", "or +", "or récupéré", "or recupere"})) return "Récompenses";
+        if (containsAny(text, {"combat.role", "provocation", "menace", "soutien d'allié", "soutien d'allie"})) return "Compétences de rôle";
+        if (containsAny(text, {"combat.escape", "fuite", "fuir", "abandon du duel", "échappatoire", "echappatoire"})) return "Fuite / abandon";
+        if (containsAny(text, {"pvp.ai.opponent", "adversaire ia", "arène ia", "arene ia", "duel ia"})) return "Arène IA";
         if (containsAny(text, {"special_characters", "personnage spécial", "personnages spéciaux", "personnage special", "personnages speciaux"})) return "Personnages spéciaux";
         if (containsAny(text, {"special_groups", "groupe spécial", "groupes spéciaux", "groupe special", "groupes speciaux"})) return "Groupes spéciaux";
         if (containsAny(text, {"classes", "classe", "class"})) return "Classes";
@@ -829,9 +999,12 @@ namespace
         if (containsAny(text, {"weapon", "armes", "arme"})) return "Armes";
         if (containsAny(text, {"armor", "armure", "armures", "tenue"})) return "Armures";
         if (containsAny(text, {"consumable", "consommable", "potion", "potions"})) return "Consommables";
-        if (containsAny(text, {"material", "materiau", "matériau", "plante", "plantes", "ressource"})) return "Matériaux";
+        if (containsAny(text, {"loot", "butin", "fragment unique", "fragment de boss", "récupère", "recupere", "récupéré", "recupere"})) return "Butin / récompenses";
+        if (containsAny(text, {"material", "materiau", "matériau", "plante", "plantes", "ressource", "fragment", "résidu", "residu", "poussière", "poussiere"})) return "Matériaux";
         if (containsAny(text, {"craft", "schema", "schéma", "fabrication"})) return "Craft";
         if (containsAny(text, {"shop", "boutique", "acheter", "vendre", "vente", "prix", "stock", "troquer", "troc"})) return "Boutique";
+        if (containsAny(text, {"coffre", "chest"})) return "Coffres";
+        if (containsAny(text, {"piège", "piege", "trap", "embuscade"})) return "Risques";
         if (containsAny(text, {"exploration", "biome", "biomes", "intensité", "intensite", "sortie prudente", "sortie normale", "sortie audacieuse"})) return "Exploration";
         if (containsAny(text, {"guild", "guilde", "quest", "quête", "quete", "mission", "client", "journal"})) return "Quêtes";
         if (containsAny(text, {"monster.stats", "monstre", "monster"})) return "Monstres";
@@ -867,6 +1040,17 @@ namespace
     {
         const std::string text = action.actionId + " " + action.label + " " + action.hint;
 
+        if (containsAny(text, {"page.previous", "previous_page", "page précédente", "page precedente"})) return "previous_page";
+        if (containsAny(text, {"page.next", "next_page", "page suivante"})) return "next_page";
+        if (containsAny(text, {"retour", "back", "annuler", "cancel"})) return "back";
+        if (containsAny(text, {"combat.reward", "récompense", "recompense", "xp +", "or +"})) return "reward";
+        if (containsAny(text, {"turn_in", "rendre", "tamponner", "valider ce contrat", "confirmer cette demande"})) return "turn_in";
+        if (containsAny(text, {"accept", "accepter le contrat", "accepter la demande"})) return "accept";
+        if (containsAny(text, {"inspect_contract", "relire le contrat"})) return "inspect_contract";
+        if (containsAny(text, {"estimate_request", "relire les estimations", "estimation"})) return "estimate_request";
+        if (containsAny(text, {"select", "sélectionner", "selectionner", "choisir"})) return "select";
+        if (containsAny(text, {"talk", "parler", "discuter", "écouter", "ecouter"})) return "talk";
+        if (containsAny(text, {"loot", "butin", "récupère", "recupere", "récupéré", "recupere", "laisse un fragment", "laisse quelque chose"})) return "loot";
         if (containsAny(text, {"buyback", "racheter", "rachat"})) return "buyback";
         if (containsAny(text, {"buy", "acheter", "achat"})) return "buy";
         if (containsAny(text, {"sell", "vendre", "vente", "revente"})) return "sell";
@@ -891,12 +1075,24 @@ namespace
         if (containsAny(text, {"activity.combat", "combat.", "combats"})) return "combat";
         if (containsAny(text, {"session.", "solo", "coop", "multi local"})) return "session";
         if (containsAny(text, {"character.creation", "difficulty", "difficulté", "difficulte", "race", "class", "classe"})) return "create";
+        if (containsAny(text, {"ouvrir le coffre", "forcer le coffre", "coffre"})) return "open";
+        if (containsAny(text, {"ignorer", "laisser", "contourner", "éviter", "eviter"})) return "ignore";
+        if (containsAny(text, {"examiner", "approcher prudemment", "fouiller"})) return "inspect";
         if (containsAny(text, {"exploration", "biome", "intensité", "intensite", "sortie prudente", "sortie normale", "sortie audacieuse"})) return "travel";
+        if (containsAny(text, {"summon_manual", "invocation manuelle", "invoquer", "invocation"})) return "summon";
+        if (containsAny(text, {"summon_auto", "automatique"})) return "summon_auto";
+        if (containsAny(text, {"maintain", "maintenir", "maintien"})) return "maintain";
+        if (containsAny(text, {"sacrifice", "sacrifier", "sacrifice d'invocation"})) return "sacrifice";
         if (containsAny(text, {"provocation", "provoke", "provoquer"})) return "provoke";
         if (containsAny(text, {"reduce_threat", "réduire ma menace", "reduire ma menace", "menace réduite", "menace reduite"})) return "reduce_threat";
         if (containsAny(text, {"ally_support", "protection", "soin d'allié", "soin d'allie", "support"})) return "support";
+        if (containsAny(text, {"defend", "défense", "defense", "posture de défense", "posture de defense"})) return "defend";
+        if (containsAny(text, {"wait", "passer son tour", "attendre"})) return "wait";
+        if (containsAny(text, {"flee", "fuir", "fuite"})) return "flee";
         if (containsAny(text, {"attack", "attaque", "attaquer", "frapper", "potion de rage"})) return "attack";
         if (containsAny(text, {"target", "cible", "cibles", "choix de cible"})) return "target";
+        if (containsAny(text, {"combat.role", "provocation", "réduire ma menace", "reduire ma menace", "menace", "soutien"})) return "role";
+        if (containsAny(text, {"escape", "fuite", "fuir", "abandon du duel", "échappatoire", "echappatoire"})) return "flee";
         if (containsAny(text, {"quest", "quête", "quete", "mission", "guilde"})) return "quest";
         if (containsAny(text, {"death", "mort", "morts", "lethal", "létal", "survie", "corrompue"})) return "death";
         if (containsAny(text, {"cheat", "triche", "altéré", "altere", "altération", "alteration", "données altérées", "donnees alterees"})) return "altered_data";
@@ -910,6 +1106,11 @@ namespace
 
     std::string labelForItemActionType(const std::string& actionType)
     {
+        if (actionType == "turn_in") return "Rendre";
+        if (actionType == "accept") return "Accepter";
+        if (actionType == "inspect_contract") return "Relire";
+        if (actionType == "estimate_request") return "Estimer";
+        if (actionType == "loot") return "Butin";
         if (actionType == "buyback") return "Racheter";
         if (actionType == "buy") return "Acheter";
         if (actionType == "sell") return "Vendre";
@@ -922,6 +1123,10 @@ namespace
         if (actionType == "login") return "Connexion";
         if (actionType == "play") return "Incarner";
         if (actionType == "guardian") return "Gardien";
+        if (actionType == "previous_page") return "Page précédente";
+        if (actionType == "next_page") return "Page suivante";
+        if (actionType == "back") return "Retour";
+        if (actionType == "reward") return "Récompense";
         if (actionType == "barter") return "Troquer";
         if (actionType == "equip") return "Équiper";
         if (actionType == "use") return "Utiliser";
@@ -933,11 +1138,22 @@ namespace
         if (actionType == "combat") return "Combat";
         if (actionType == "session") return "Session";
         if (actionType == "create") return "Créer";
+        if (actionType == "summon") return "Invoquer";
+        if (actionType == "summon_manual") return "Manuel";
+        if (actionType == "summon_auto") return "Auto";
+        if (actionType == "maintain") return "Maintenir";
+        if (actionType == "sacrifice") return "Sacrifier";
+        if (actionType == "danger") return "Danger";
+        if (actionType == "special") return "Spécial";
         if (actionType == "attack") return "Attaquer";
         if (actionType == "target") return "Cibler";
+        if (actionType == "role") return "Rôle";
         if (actionType == "provoke") return "Provoquer";
         if (actionType == "reduce_threat") return "Menace";
         if (actionType == "support") return "Soutien";
+        if (actionType == "defend") return "Défendre";
+        if (actionType == "wait") return "Attendre";
+        if (actionType == "flee") return "Fuir";
         if (actionType == "quest") return "Quête";
         if (actionType == "save") return "Sauvegarder";
         if (actionType == "death") return "Consulter";
@@ -946,12 +1162,19 @@ namespace
         if (actionType == "travel") return "Voyager";
         if (actionType == "talk") return "Parler";
         if (actionType == "select") return "Choisir";
+        if (actionType == "open") return "Ouvrir";
+        if (actionType == "ignore") return "Ignorer";
         return "Ouvrir";
     }
 
     bool shouldCreateItemCard(const GuiMenuSnapshot& snapshot, const GuiMenuActionSnapshot& action)
     {
-        if (!action.enabled || action.number < 0 || action.group != "main" || action.dangerous)
+        if (!action.enabled || action.number < 0 || action.group != "main")
+        {
+            return false;
+        }
+
+        if (action.dangerous && !action.hasItemMetadata)
         {
             return false;
         }
@@ -1152,11 +1375,11 @@ namespace
             if (status.empty()) status = inferItemCardStatus(line);
         }
 
-        price = findMetadataPart(detailParts, {"prix", "or", "gold"});
-        stock = findMetadataPart(detailParts, {"stock", "quantité", "quantite", "exemplaire"});
-        reward = findMetadataPart(detailParts, {"récompense", "recompense", "reward", "xp", "butin"});
-        progress = findMetadataPart(detailParts, {"progression", "objectif", "état", "etat", "niveau"});
-        owner = findMetadataPart(detailParts, {"client", "origine", "interlocuteur", "lieu", "famille", "race", "classe native", "type", "catégorie", "categorie"});
+        price = findMetadataPartFromIndex(detailParts, {"prix", "or", "gold"}, 0);
+        stock = findMetadataPartFromIndex(detailParts, {"stock", "quantité", "quantite", "exemplaire"}, 0);
+        reward = findMetadataPartFromIndex(detailParts, {"récompense", "recompense", "reward", "xp", "butin"}, 0);
+        progress = findMetadataPartFromIndex(detailParts, {"progression", "objectif", "état", "etat", "niveau"}, 0);
+        owner = findMetadataPartFromIndex(detailParts, {"client", "origine", "interlocuteur", "lieu", "famille", "race", "classe native", "type", "catégorie", "categorie"}, 0);
 
         GuiMenuActionSnapshot lineAction;
         lineAction.label = block.front();
@@ -1181,15 +1404,24 @@ namespace
         card.actionNumber = entryNumber;
         card.actionDisplayLabel = entryNumber >= 0 ? std::to_string(entryNumber) + " - " + name : name;
         card.available = false;
-        card.important = !status.empty() || !reward.empty() || card.kind == "boss" || card.kind == "special_character" || card.kind == "class" || card.kind == "race";
+        card.important = !status.empty() || !reward.empty() || card.kind == "boss" || card.kind == "special_character"
+            || card.kind == "class" || card.kind == "race" || card.kind == "escape" || card.kind == "combat_role";
         card.metadataSource = "lines";
+
+        if (hasEquivalentItemCard(snapshot, card.name, card.section, card.kind))
+        {
+            return;
+        }
 
         snapshot.itemCards.push_back(card);
     }
 
     void populateLineItemCards(GuiMenuSnapshot& snapshot, std::size_t maxCards)
     {
-        if (!snapshot.itemCards.empty() || snapshot.lines.empty() || snapshot.specializedView == "combat" || snapshot.specializedView == "generic")
+        const bool blockCombatLines = snapshot.specializedView == "combat"
+            && !combatScreenCanPromoteLineItemCards(snapshot);
+
+        if (!snapshot.itemCards.empty() || snapshot.lines.empty() || blockCombatLines || snapshot.specializedView == "generic")
         {
             return;
         }
@@ -1304,7 +1536,16 @@ namespace
             card.actionLabel = action.label;
             card.actionDisplayLabel = action.actionDisplayLabel;
             card.available = action.enabled;
-            card.important = important || !status.empty() || !reward.empty() || !progress.empty() || card.kind == "weapon" || card.kind == "armor" || card.kind == "quest";
+            card.important = important || !status.empty() || !reward.empty() || !progress.empty()
+                || card.kind == "weapon" || card.kind == "armor" || card.kind == "quest"
+                || card.kind == "boss" || card.kind == "npc" || card.kind == "location"
+                || card.kind == "chest" || card.kind == "trap" || card.kind == "escape"
+                || card.kind == "dialogue" || card.kind == "combat_role" || card.kind == "combat_route";
+
+            if (hasEquivalentItemCard(snapshot, card.name, card.section, card.kind))
+            {
+                continue;
+            }
 
             snapshot.itemCards.push_back(card);
         }
@@ -1314,6 +1555,11 @@ namespace
 
     void populateFocusCards(GuiMenuSnapshot& snapshot)
     {
+        if (snapshot.inputMode == "display" || snapshot.inputMode == "continue")
+        {
+            addFocusCard(snapshot, "screen.reading", "Lecture", "Écran informatif : aucune action cachée n'est attendue avant Continuer/Retour.", {"continuer", "lecture", "display", "message"});
+        }
+
         if (snapshot.specializedView == "inventory")
         {
             addFocusCard(snapshot, "inventory.all", "Voir tout", "Liste complète ou catégorie générale.", {"voir tout", "inventory.all", "inventaire.tout", "all"});
@@ -1358,11 +1604,19 @@ namespace
             addFocusCard(snapshot, "legends.boss_rooms", "Salles de boss", "Traces rares entendues ou lues avant certaines arènes.", {"salles", "boss", "boss_rooms"});
             addFocusCard(snapshot, "legends.triggers", "Rumeurs", "Notes de PNJ, bibliothèque ou lieux déclencheurs.", {"rumeurs", "déclencheurs", "declencheurs", "triggers"});
         }
+        else if (snapshot.specializedView == "dialogue")
+        {
+            addFocusCard(snapshot, "dialogue.speaker", "Interlocuteur", "Nom, groupe ou source probable de la parole affichée.", {"interlocuteur", "pnj", "npc", "ennemi", "groupe", "source"});
+            addFocusCard(snapshot, "dialogue.language", "Langue", "Aide à distinguer une langue comprise d'une langue inconnue.", {"langue", "compréhension", "comprehension", "inconnue"});
+            addFocusCard(snapshot, "dialogue.intent", "Intention", "Menace, rumeur, demande ou ambiance sans forcer une action.", {"menace", "rumeur", "demande", "ambiance", "avertissement"});
+            addFocusCard(snapshot, "dialogue.continue", "Continuer", "Avancer après lecture du dialogue.", {"continuer", "retour", "lecture"});
+        }
         else if (snapshot.specializedView == "quest")
         {
             addFocusCard(snapshot, "quest.journal", "Journal", "Consulter les quêtes actives et terminées.", {"journal", "quest.hub.journal", "quest.guild.journal"});
             addFocusCard(snapshot, "quest.guild", "Guilde", "Panneau, rangs et missions de guilde.", {"guilde", "guild"});
             addFocusCard(snapshot, "quest.turn_in", "Rendre", "Rendre une quête terminée.", {"rendre", "turn_in", "terminée", "terminee"});
+            addFocusCard(snapshot, "quest.npc", "PNJ", "Parler aux contacts et clients notables.", {"pnj", "npc", "client", "contact", "parler", "discuter"});
             addFocusCard(snapshot, "quest.locations", "Lieux", "Accéder aux lieux visitables.", {"lieux", "locations", "exploration"});
         }
         else if (snapshot.specializedView == "progression")
@@ -1406,6 +1660,7 @@ namespace
         }
         else if (snapshot.specializedView == "post_combat")
         {
+            addFocusCard(snapshot, "post.loot", "Butin", "Voir les gains, pertes, fragments et récupérations du dernier combat.", {"loot", "butin", "récompense", "recompense", "récupération", "recuperation"});
             addFocusCard(snapshot, "post.shop", "Boutiques", "Acheter, vendre ou consulter les offres.", {"boutique", "shop"});
             addFocusCard(snapshot, "post.inventory", "Inventaire", "Gérer objets, équipement et potions.", {"inventaire", "inventory", "équipement", "equipement", "potions"});
             addFocusCard(snapshot, "post.quests", "Quêtes", "Consulter ou rendre des quêtes.", {"quête", "quete", "quest"});
@@ -1829,6 +2084,10 @@ GuiMenuSnapshot MenuScreen::toGuiSnapshot() const
         addUniqueTag(snapshot.contextTags, "pagination");
         addUniqueTag(snapshot.contextTags, "page:" + std::to_string(snapshot.pageNumber) + "/" + std::to_string(snapshot.totalPages));
     }
+    else if (options.size() >= 12)
+    {
+        addUniqueTag(snapshot.contextTags, "liste chargée");
+    }
 
     int recommendationCandidateIndex = -1;
     int recommendationCandidateCount = 0;
@@ -1932,6 +2191,7 @@ GuiMenuSnapshot MenuScreen::toGuiSnapshot() const
                 action.group == "main" &&
                 !action.dangerous &&
                 !action.knowledgeSensitive &&
+                !isKnowledgeSensitiveScreen(snapshot) &&
                 !isCombatAttackAction(option);
 
             if (combatHealRecommendation)
@@ -1980,6 +2240,7 @@ GuiMenuSnapshot MenuScreen::toGuiSnapshot() const
         addUniqueTag(snapshot.contextTags, "vue:" + snapshot.specializedView);
         populateInfoCards(snapshot);
         populateNoticeCards(snapshot);
+        addListLoadNoticeIfNeeded(snapshot);
         populateItemCards(snapshot);
         populateFocusCards(snapshot);
         if (!snapshot.infoCards.empty())

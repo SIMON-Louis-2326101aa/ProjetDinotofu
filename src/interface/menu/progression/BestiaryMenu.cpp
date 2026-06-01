@@ -48,6 +48,18 @@ namespace
         std::string strategy;
     };
 
+    struct SpecialDiscoveryEntry
+    {
+        std::string name;
+        std::string knownLabel;
+        std::string hiddenLabel;
+        std::string family;
+        std::string unlockHint;
+        bool knownFromStart;
+    };
+
+    void displayLegendArchiveList(const std::string& title, const std::string& categoryFilter, bool discoveredOnly);
+
     std::string lowerCopy(const std::string& value)
     {
         std::string output = value;
@@ -660,15 +672,17 @@ namespace
                 screen.addOption(localChoice, label, "Inspecter cette fiche du bestiaire.", true, "bestiary.entry.select." + std::to_string(i), itemData);
             }
 
-            if (pageIndex > 0)
-            {
-                screen.addOption(98, "Page précédente", "", true, "bestiary.entry.previous");
-            }
-            if (pageIndex + 1 < totalPages)
-            {
-                screen.addOption(99, "Page suivante", "", true, "bestiary.entry.next");
-            }
-            screen.addOption(0, "Retour", "", true, "bestiary.entry.back");
+            PagedMenu::addNavigationOptions(
+                screen,
+                pageIndex,
+                totalPages,
+                "bestiary.entry.back",
+                "bestiary.entry.previous",
+                "bestiary.entry.next",
+                "Revenir aux catégories du bestiaire.",
+                "Afficher les fiches précédentes.",
+                "Afficher les fiches suivantes."
+            );
             int choice = TerminalInterface::askMenuChoiceFromOptions(
                 screen,
                 "Choix invalide."
@@ -719,6 +733,252 @@ namespace
     void displayEntryList(const std::string& category)
     {
         displayEntrySelectionList(category, filterEntries(category));
+    }
+
+    std::vector<SpecialDiscoveryEntry> getSpecialDiscoveryEntries()
+    {
+        return {
+            {"Les bras cassés", "Les bras cassés", "Groupe de héros déjà connu", "Groupe connu", "Déjà présent dans les rumeurs publiques et les contes de taverne.", true},
+            {"Hazak", "Hazak", "Assassin elfe noir", "Bras cassés", "Connu de base avec le groupe, puis complété par rencontre, victoire ou rumeur fiable.", true},
+            {"Fail", "Fail", "Mage fou de race fée", "Bras cassés", "Connu de base avec le groupe, puis complété par rencontre, victoire ou rumeur fiable.", true},
+            {"Aoi", "Aoi", "Kitsune de flammes", "Bras cassés", "Connu de base avec le groupe, puis complété par rencontre, victoire ou rumeur fiable.", true},
+            {"Kanadé", "Kanadé", "Semi-dragonne zodiacale", "Bras cassés", "Connu de base avec le groupe, puis complété par rencontre, victoire ou rumeur fiable.", true},
+            {"Sanctus", "Sanctus", "Protecteur lumineux", "Bras cassés", "Connu de base avec le groupe, puis complété par rencontre, victoire ou rumeur fiable.", true},
+            {"Matt (PRO)", "Matt (PRO)", "Champion d'arène non confirmé", "Arène spéciale", "Rencontre d'arène, défi spécial ou rumeur fiable avant affichage complet du nom.", false},
+            {"Skuro", "Skuro", "Silhouette lourde non confirmée", "Arène spéciale", "Rencontre, transformation crédible ou information de registre avant dévoilement.", false},
+            {"Hestia", "Hestia", "Mage protégée non confirmée", "Liens spéciaux", "Rencontre, rumeur de groupe ou trace liée à une protection magique.", false},
+            {"Henrique", "Henrique", "Nom non confirmé", "Liens spéciaux", "Rencontre ou information crédible avant de révéler ses liens.", false},
+            {"Louis", "Louis", "Artificier non confirmé", "Trio d'arène", "Rencontre, défi ou rumeur fiable avant de révéler son rôle.", false},
+            {"Trexof", "Trexof", "Analyste non confirmé", "Trio d'arène", "Rencontre, défi ou rumeur fiable avant de révéler son style.", false},
+            {"Mattzelda", "Mattzelda", "Colosse non confirmé", "Trio d'arène", "Rencontre, défi ou rumeur fiable avant de révéler son profil.", false}
+        };
+    }
+
+    bool tryFindBestiaryEntryByName(const std::string& name, BestiaryPreviewEntry& output)
+    {
+        for (const BestiaryPreviewEntry& entry : filterEntries("Personnages spéciaux"))
+        {
+            if (entry.name == name)
+            {
+                output = entry;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool isSpecialDiscoveryKnown(const SpecialDiscoveryEntry& discovery)
+    {
+        if (discovery.knownFromStart)
+        {
+            return true;
+        }
+
+        BestiaryPreviewEntry entry;
+        return tryFindBestiaryEntryByName(discovery.name, entry) && calculateKnowledgeLevel(entry) > 0;
+    }
+
+    std::string specialDiscoveryProgressText(const SpecialDiscoveryEntry& discovery)
+    {
+        BestiaryPreviewEntry entry;
+
+        if (!tryFindBestiaryEntryByName(discovery.name, entry))
+        {
+            return discovery.knownFromStart ? "Connu de base" : "0 - inconnu / verrouillé";
+        }
+
+        return knowledgeLabel(entry)
+            + " | Rencontres : " + std::to_string(entry.encounters)
+            + " | Victoires : " + std::to_string(entry.kills);
+    }
+
+    MenuOptionItemData makeSpecialDiscoveryItemData(
+        const SpecialDiscoveryEntry& discovery,
+        bool known,
+        const std::string& progress
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "special_character_tracker";
+        itemData.section = "Personnages spéciaux";
+        itemData.actionType = known ? "inspect" : "locked";
+        itemData.name = known ? discovery.knownLabel : "???";
+        itemData.detail = known ? discovery.hiddenLabel : "Identité gardée par le registre.";
+        itemData.status = known ? "Découvert" : "Verrouillé";
+        itemData.progress = progress;
+        itemData.owner = discovery.family;
+        itemData.reward = discovery.unlockHint;
+        itemData.important = !known || discovery.knownFromStart;
+        return itemData;
+    }
+
+    void displaySpecialDiscoveryTracker()
+    {
+        const std::vector<SpecialDiscoveryEntry> entries = getSpecialDiscoveryEntries();
+        constexpr std::size_t itemsPerPage = 7;
+        std::size_t pageIndex = 0;
+
+        while (true)
+        {
+            const std::size_t totalPages = PagedMenu::pageCount(entries.size(), itemsPerPage);
+            const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(entries.size(), pageIndex, itemsPerPage);
+
+            int knownCount = 0;
+            for (const SpecialDiscoveryEntry& discovery : entries)
+            {
+                if (isSpecialDiscoveryKnown(discovery))
+                {
+                    ++knownCount;
+                }
+            }
+
+            MenuScreen screen("SUIVI DES PERSONNAGES SPÉCIAUX", "bestiary.special.discovery_tracker");
+            screen.addLine("Ce suivi évite de révéler tous les personnages spéciaux gratuitement.");
+            screen.addLine("Un nom verrouillé devient lisible après rencontre, défi d'arène, victoire ou renseignement crédible.");
+            screen.addLine("Découverts : " + std::to_string(knownCount) + " / " + std::to_string(entries.size()) + " | Verrouillés : " + std::to_string(static_cast<int>(entries.size()) - knownCount));
+            screen.addLine("Page " + std::to_string(pageIndex + 1) + " / " + std::to_string(totalPages));
+            screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, entries.size()));
+
+            for (std::size_t index = first; index < last; ++index)
+            {
+                const SpecialDiscoveryEntry& discovery = entries[index];
+                const bool known = isSpecialDiscoveryKnown(discovery);
+                const std::string progress = specialDiscoveryProgressText(discovery);
+                const std::string visibleName = known ? discovery.knownLabel : "???";
+                const std::string label = visibleName
+                    + " | " + discovery.family
+                    + " | " + progress;
+
+                screen.addOption(
+                    static_cast<int>(index - first + 1),
+                    label,
+                    known ? "Ouvrir la fiche si elle existe dans le bestiaire." : discovery.unlockHint,
+                    true,
+                    "bestiary.special.discovery." + std::to_string(index),
+                    makeSpecialDiscoveryItemData(discovery, known, progress)
+                );
+            }
+
+            PagedMenu::addNavigationOptions(
+                screen,
+                pageIndex,
+                totalPages,
+                "bestiary.special.discovery.back",
+                "bestiary.special.discovery.previous",
+                "bestiary.special.discovery.next",
+                "Revenir au menu des personnages spéciaux.",
+                "Afficher les personnages précédents.",
+                "Afficher les personnages suivants."
+            );
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+            Console::clear();
+
+            if (choice == 0)
+            {
+                return;
+            }
+
+            if (choice == 98 && pageIndex > 0)
+            {
+                --pageIndex;
+                continue;
+            }
+
+            if (choice == 99 && pageIndex + 1 < totalPages)
+            {
+                ++pageIndex;
+                continue;
+            }
+
+            const std::size_t selectedIndex = first + static_cast<std::size_t>(choice - 1);
+            if (choice < 1 || selectedIndex >= last || selectedIndex >= entries.size())
+            {
+                MessageScreen::show(
+                    "PERSONNAGE NON AFFICHÉ",
+                    "bestiary.special.discovery.not_visible",
+                    {"Ce personnage n'est pas visible sur la page actuelle."}
+                );
+                Console::clear();
+                continue;
+            }
+
+            const SpecialDiscoveryEntry& selected = entries[selectedIndex];
+            if (!isSpecialDiscoveryKnown(selected))
+            {
+                MessageScreen::show(
+                    "IDENTITÉ VERROUILLÉE",
+                    "bestiary.special.discovery.locked",
+                    {
+                        "Le registre sait qu'une trace existe, mais il refuse de donner un nom sans preuve.",
+                        selected.unlockHint
+                    }
+                );
+                Console::clear();
+                continue;
+            }
+
+            BestiaryPreviewEntry entry;
+            if (tryFindBestiaryEntryByName(selected.name, entry))
+            {
+                displayEntryDetail(entry);
+                Console::waitForEnter();
+                Console::clear();
+            }
+            else
+            {
+                MessageScreen::show(
+                    "TRACE CONNUE",
+                    "bestiary.special.discovery.known_without_sheet",
+                    {
+                        selected.knownLabel + " est connu par réputation, mais sa fiche détaillée n'est pas encore assez complète.",
+                        selected.unlockHint
+                    }
+                );
+                Console::clear();
+            }
+        }
+    }
+
+    void displaySpecialCharactersHub()
+    {
+        while (true)
+        {
+            MenuScreen screen("PERSONNAGES SPÉCIAUX", "bestiary.special.hub");
+            screen.addLine("Cette section garde les personnages spéciaux à part des monstres classiques.");
+            screen.addLine("Les Bras cassés sont déjà connus par réputation ; les autres profils doivent être découverts progressivement.");
+
+            screen.addOption(0, "Retour", "Revenir au bestiaire.", true, "bestiary.special.back");
+            screen.addOption(1, "Fiches découvertes", "Ouvrir les fiches classiques de personnages spéciaux.", true, "bestiary.special.entries");
+            screen.addOption(2, "Suivi de découverte", "Voir qui est connu, verrouillé ou encore à confirmer.", true, "bestiary.special.discovery_tracker");
+            screen.addOption(3, "Rumeurs et groupes", "Ouvrir les légendes liées aux groupes et aux héros découverts.", true, "bestiary.special.legends");
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+            Console::clear();
+
+            if (choice == 0)
+            {
+                return;
+            }
+
+            if (choice == 1)
+            {
+                displayEntryList("Personnages spéciaux");
+            }
+            else if (choice == 2)
+            {
+                displaySpecialDiscoveryTracker();
+            }
+            else if (choice == 3)
+            {
+                displayLegendArchiveList("GROUPES ET HÉROS DÉCOUVERTS", "Groupes et héros", true);
+            }
+
+            Console::clear();
+        }
     }
 
     void displayKnowledgeLevelBrowser()
@@ -1072,15 +1332,17 @@ namespace
                 );
             }
 
-            if (pageIndex > 0)
-            {
-                screen.addOption(98, "Page précédente", "Afficher les récits précédents.", true, "bestiary.legends.archive.previous");
-            }
-            if (pageIndex + 1 < totalPages)
-            {
-                screen.addOption(99, "Page suivante", "Afficher les récits suivants.", true, "bestiary.legends.archive.next");
-            }
-            screen.addOption(0, "Retour", "Revenir aux sections de légendes.", true, "bestiary.legends.archive.back");
+            PagedMenu::addNavigationOptions(
+                screen,
+                pageIndex,
+                totalPages,
+                "bestiary.legends.archive.back",
+                "bestiary.legends.archive.previous",
+                "bestiary.legends.archive.next",
+                "Revenir aux sections de légendes.",
+                "Afficher les récits précédents.",
+                "Afficher les récits suivants."
+            );
 
             int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
 
@@ -1378,7 +1640,7 @@ void BestiaryMenu::open()
         else if (choice == 4) displayEntryList("Entités passives / alliées");
         else if (choice == 5) displayEntryList("Invocations");
         else if (choice == 6) displayEntryList("Boss");
-        else if (choice == 7) displayEntryList("Personnages spéciaux");
+        else if (choice == 7) displaySpecialCharactersHub();
         else if (choice == 8) displayEntryList("Matériaux et plantes");
         else if (choice == 9) displayLegendsArchive();
         else if (choice == 10) displayEntryList("Divinités / lore");

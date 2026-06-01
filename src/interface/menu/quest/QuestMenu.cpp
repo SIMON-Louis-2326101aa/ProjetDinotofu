@@ -23,6 +23,7 @@
 #include <vector>
 #include <algorithm>
 #include <cstddef>
+#include <cctype>
 #include <set>
 #include <utility>
 #include <sstream>
@@ -176,6 +177,112 @@ namespace
         return itemData;
     }
 
+    std::string toLowerChoiceText(std::string text)
+    {
+        std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return text;
+    }
+
+    bool choiceTextContainsAny(const std::string& text, const std::vector<std::string>& needles)
+    {
+        const std::string lowerText = toLowerChoiceText(text);
+        for (const std::string& needle : needles)
+        {
+            if (lowerText.find(toLowerChoiceText(needle)) != std::string::npos)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    MenuOptionItemData makeChoiceScreenItemData(
+        const std::string& screenId,
+        const std::string& title,
+        int choiceNumber,
+        const std::string& label
+    )
+    {
+        const std::string context = screenId + " " + title + " " + label;
+
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.name = label;
+        itemData.detail = "Choix " + std::to_string(choiceNumber) + " de l'écran : " + title + ".";
+        itemData.progress = "Choix " + std::to_string(choiceNumber);
+        itemData.status = "Disponible";
+        itemData.section = "Choix contextuel";
+        itemData.kind = "entry";
+        itemData.actionType = "select";
+
+        if (choiceTextContainsAny(context, {"coffre", "chest"}))
+        {
+            itemData.kind = "chest";
+            itemData.section = "Coffres";
+            itemData.actionType = choiceTextContainsAny(context, {"ignorer", "laisser", "partir", "retour"}) ? "ignore" : "open";
+            itemData.status = choiceTextContainsAny(context, {"piégé", "piege", "risque", "instable"}) ? "Risque possible" : "À examiner";
+            itemData.important = true;
+        }
+        else if (choiceTextContainsAny(context, {"piège", "piege", "embuscade", "bruit", "trace", "odeur", "ombre"}))
+        {
+            itemData.kind = "trap";
+            itemData.section = "Risques";
+            itemData.actionType = choiceTextContainsAny(context, {"ignorer", "contourner", "éviter", "eviter"}) ? "ignore" : "inspect";
+            itemData.status = "À surveiller";
+            itemData.important = true;
+        }
+        else if (choiceTextContainsAny(context, {"client", "pnj", "parler", "demande", "contact"}))
+        {
+            itemData.kind = "npc";
+            itemData.section = "PNJ / demandes";
+            itemData.actionType = choiceTextContainsAny(context, {"accepter"}) ? "accept" : "talk";
+            itemData.status = choiceTextContainsAny(context, {"à rendre", "a rendre", "termin"}) ? "À rendre" : "Dialogue";
+            itemData.owner = label;
+        }
+        else if (choiceTextContainsAny(context, {"guilde", "quête", "quete", "mission", "contrat"}))
+        {
+            itemData.kind = "quest";
+            itemData.section = "Quêtes";
+            itemData.actionType = choiceTextContainsAny(context, {"accepter"}) ? "accept" : "quest";
+            itemData.status = "Suivi de quête";
+            itemData.important = true;
+        }
+        else if (choiceTextContainsAny(context, {"forêt", "foret", "plaine", "route", "marais", "ruines", "cimetière", "cimetiere", "biome", "exploration"}))
+        {
+            itemData.kind = "exploration";
+            itemData.section = "Exploration";
+            itemData.actionType = "travel";
+            itemData.status = "Sortie";
+        }
+        else if (choiceTextContainsAny(context, {"affronter", "combat", "monstre", "mini-boss", "boss"}))
+        {
+            itemData.kind = "monster";
+            itemData.section = choiceTextContainsAny(context, {"boss"}) ? "Boss" : "Combat";
+            itemData.actionType = "combat";
+            itemData.status = choiceTextContainsAny(context, {"mini-boss", "boss"}) ? "Danger" : "Rencontre";
+            itemData.important = true;
+        }
+        else if (choiceTextContainsAny(context, {"lieu", "forge", "bibliothèque", "bibliotheque", "boutique", "herboristerie", "place", "armurerie"}))
+        {
+            itemData.kind = "location";
+            itemData.section = "Lieux";
+            itemData.actionType = "travel";
+            itemData.status = "Visitables";
+        }
+        else if (choiceTextContainsAny(context, {"retour", "revenir", "quitter"}))
+        {
+            itemData.kind = "navigation";
+            itemData.section = "Navigation";
+            itemData.actionType = "continue";
+            itemData.status = "Retour";
+        }
+
+        return itemData;
+    }
+
     void applyQuestExtraReward(Player& player, const Quest& quest)
     {
         if (!quest.rewardMaterialId.empty() && quest.rewardMaterialQuantity > 0)
@@ -221,11 +328,14 @@ namespace
                 option.second,
                 "",
                 true,
-                screenId + ".choice." + std::to_string(option.first)
+                screenId + ".choice." + std::to_string(option.first),
+                makeChoiceScreenItemData(screenId, title, option.first, option.second)
             );
         }
 
-        return TerminalInterface::askMenuChoice(screen, minChoice, maxChoice, invalidMessage);
+        (void)minChoice;
+        (void)maxChoice;
+        return TerminalInterface::askMenuChoiceFromOptions(screen, invalidMessage);
     }
 
 
@@ -1150,7 +1260,7 @@ namespace
         screen.addOption(1, quest.guildQuest ? "Accepter le contrat" : "Accepter la demande", "Ajouter cette entrée au journal.", true, screenId + ".accept", acceptData);
         screen.addOption(0, "Refuser", quest.guildQuest ? "Laisser ce contrat sur le panneau." : "Laisser ce pourparler pour le moment.", true, screenId + ".decline");
 
-        return TerminalInterface::askMenuChoice(screen, 0, 1, "Choix invalide.");
+        return TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
     }
 
 
@@ -1230,7 +1340,7 @@ namespace
             );
             screen.addOption(0, "Retour", "Ne rien rendre pour le moment.", true, "quest.turn_in.confirm.back");
 
-            int choice = TerminalInterface::askMenuChoice(screen, 0, 2, "Choix invalide.");
+            int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
             Console::clear();
 
             if (choice == 1)
@@ -3428,70 +3538,101 @@ void QuestMenu::acceptGuildQuest(Player& player)
     questLog.ensureGuildBoardReady(player.getLevel(), player.getCombatsStarted());
 
     const std::vector<Quest>& board = questLog.getGuildBoardOffers();
-    MenuScreen screen("PANNEAU DE GUILDE", "quest.guild.board");
-    screen.addLine("Quêtes actives : " + std::to_string(questLog.getActiveGuildQuestCount()) + "/3");
-    screen.addLine("Offres visibles : " + std::to_string(board.size()) + "/" + std::to_string(questLog.getGuildBoardTargetSize()));
+    constexpr std::size_t itemsPerPage = 6;
+    std::size_t pageIndex = 0;
+    int choice = 0;
 
-    int remainingBeforeRefresh = questLog.getGuildBoardCombatsBeforeRefresh(player.getCombatsStarted());
-    if (remainingBeforeRefresh <= 0)
+    while (true)
     {
-        screen.addLine("Le panneau sera réécrit au prochain passage.");
-    }
-    else
-    {
-        screen.addLine("Le panneau actuel reste affiché encore " + std::to_string(remainingBeforeRefresh)
-            + " combat" + (remainingBeforeRefresh > 1 ? "s" : "") + ".");
-    }
-
-    if (questLog.getGuildBoardPendingReplacements() > 0)
-    {
-        screen.addLine("Des places prises seront remplacées après le prochain combat.");
-    }
-
-    if (board.empty())
-    {
-        screen.addLine("Le panneau est vide pour l'instant. Repasse après un combat.");
-    }
-
-    screen.addBackOption("Retour", "quest.guild.board.back");
-
-    for (int i = 0; i < static_cast<int>(board.size()); ++i)
-    {
-        std::string label = questCardLabel(board[i]);
-        if (questLog.hasQuest(board[i].id))
+        const std::size_t totalPages = PagedMenu::pageCount(board.size(), itemsPerPage);
+        if (pageIndex >= totalPages)
         {
-            label += " | Statut : déjà prise";
+            pageIndex = totalPages > 0 ? totalPages - 1 : 0;
         }
 
-        MenuOptionItemData itemData;
-        itemData.structured = true;
-        itemData.kind = "quest";
-        itemData.section = "Panneau de guilde";
-        itemData.actionType = "quest";
-        itemData.name = board[i].title;
-        itemData.detail = board[i].objective;
-        itemData.status = questLog.hasQuest(board[i].id) ? "Déjà prise" : "Disponible";
-        itemData.reward = questRewardText(board[i]);
-        itemData.progress = "Rang " + board[i].rank;
-        itemData.owner = "Guilde";
-        itemData.important = !questLog.hasQuest(board[i].id);
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(board.size(), pageIndex, itemsPerPage);
 
-        screen.addOption(
-            i + 1,
-            label,
-            "Accepter cette quête de guilde si une place est libre.",
-            true,
-            "quest.guild.board.accept." + std::to_string(i + 1),
-            itemData
-        );
-    }
+        MenuScreen screen("PANNEAU DE GUILDE", "quest.guild.board");
+        screen.addLine("Quêtes actives : " + std::to_string(questLog.getActiveGuildQuestCount()) + "/3");
+        screen.addLine("Offres visibles : " + std::to_string(board.size()) + "/" + std::to_string(questLog.getGuildBoardTargetSize()));
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, board.size()));
 
-    int choice = TerminalInterface::askMenuChoice(screen, 0, static_cast<int>(board.size()), "Choix invalide.");
-    Console::clear();
+        int remainingBeforeRefresh = questLog.getGuildBoardCombatsBeforeRefresh(player.getCombatsStarted());
+        if (remainingBeforeRefresh <= 0)
+        {
+            screen.addLine("Le panneau sera réécrit au prochain passage.");
+        }
+        else
+        {
+            screen.addLine("Le panneau actuel reste affiché encore " + std::to_string(remainingBeforeRefresh)
+                + " combat" + (remainingBeforeRefresh > 1 ? "s" : "") + ".");
+        }
 
-    if (choice == 0)
-    {
-        return;
+        if (questLog.getGuildBoardPendingReplacements() > 0)
+        {
+            screen.addLine("Des places prises seront remplacées après le prochain combat.");
+        }
+
+        if (board.empty())
+        {
+            screen.addLine("Le panneau est vide pour l'instant. Repasse après un combat.");
+        }
+
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+
+        for (std::size_t i = first; i < last; ++i)
+        {
+            std::string label = questCardLabel(board[i]);
+            if (questLog.hasQuest(board[i].id))
+            {
+                label += " | Statut : déjà prise";
+            }
+
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "quest";
+            itemData.section = "Panneau de guilde";
+            itemData.actionType = "quest";
+            itemData.name = board[i].title;
+            itemData.detail = board[i].objective;
+            itemData.status = questLog.hasQuest(board[i].id) ? "Déjà prise" : "Disponible";
+            itemData.reward = questRewardText(board[i]);
+            itemData.progress = "Rang " + board[i].rank;
+            itemData.owner = "Guilde";
+            itemData.important = !questLog.hasQuest(board[i].id);
+
+            screen.addOption(
+                static_cast<int>(i) + 1,
+                label,
+                "Accepter cette quête de guilde si une place est libre.",
+                true,
+                "quest.guild.board.accept." + std::to_string(i + 1),
+                itemData
+            );
+        }
+
+        choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        break;
     }
 
     Quest selectedQuest = board[choice - 1];
@@ -3609,19 +3750,34 @@ void QuestMenu::openLocations(Player& player)
         {12, "Ouvrir l'inventaire", "Consulter objets et connaissances avant de repartir.", "", false, true}
     };
 
+    constexpr std::size_t locationsPerPage = 8;
+    std::size_t pageIndex = 0;
+
     while (true)
     {
+        const std::size_t totalPages = PagedMenu::pageCount(entries.size(), locationsPerPage);
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages == 0 ? 0 : totalPages - 1;
+        }
+
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, locationsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(entries.size(), pageIndex, locationsPerPage);
+
         MenuScreen screen("LIEUX VISITABLES", "quest.locations");
+        screen.setPagination(pageIndex, totalPages);
         screen.addLine("Chaque lieu peut servir à parler, rendre une demande ou vérifier un contact.");
         screen.addLine("Les demandes PNJ restent des pourparlers : seules les quêtes de guilde sont des contrats officiels.");
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, entries.size()));
         screen.addBackOption("Retour", "quest.locations.back");
 
-        for (const LocationEntry& entry : entries)
+        for (std::size_t i = first; i < last; ++i)
         {
+            const LocationEntry& entry = entries[i];
             if (entry.inventory)
             {
                 screen.addOption(
-                    entry.choice,
+                    static_cast<int>(i - first + 1),
                     entry.label,
                     entry.detail,
                     true,
@@ -3652,9 +3808,10 @@ void QuestMenu::openLocations(Player& player)
             itemData.actionType = entry.guild ? "quest" : itemData.actionType;
             itemData.name = entry.label;
             itemData.owner = entry.client;
+            itemData.progress = "Lieu " + std::to_string(i + 1) + "/" + std::to_string(entries.size());
 
             screen.addOption(
-                entry.choice,
+                static_cast<int>(i - first + 1),
                 label,
                 entry.detail + " " + clientQuestHintText(counts),
                 true,
@@ -3662,6 +3819,8 @@ void QuestMenu::openLocations(Player& player)
                 itemData
             );
         }
+
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
@@ -3671,29 +3830,47 @@ void QuestMenu::openLocations(Player& player)
             return;
         }
 
-        if (choice == 12)
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        if (choice < 1 || static_cast<std::size_t>(choice) > (last - first))
+        {
+            MessageScreen::show(
+                "LIEU INDISPONIBLE",
+                "quest.locations.invalid_choice",
+                {
+                    "Cette entrée n'existe pas sur la page actuelle.",
+                    "Utilise les choix affichés ou les boutons de pagination."
+                }
+            );
+            continue;
+        }
+
+        const LocationEntry& selected = entries[first + static_cast<std::size_t>(choice - 1)];
+
+        if (selected.inventory)
         {
             InventoryMenu::open(player);
             Console::clear();
             continue;
         }
 
-        for (const LocationEntry& entry : entries)
+        if (selected.guild)
         {
-            if (choice != entry.choice)
-            {
-                continue;
-            }
-
-            if (entry.guild)
-            {
-                openGuild(player);
-            }
-            else
-            {
-                talkToClient(player, entry.client);
-            }
-            break;
+            openGuild(player);
+        }
+        else
+        {
+            talkToClient(player, selected.client);
         }
     }
 }
@@ -3702,6 +3879,9 @@ void QuestMenu::openLocations(Player& player)
 // FR: openNotableNpcMenu déclare ou implémente un comportement précis utilisé par ce module.
 void QuestMenu::openNotableNpcMenu(Player& player)
 {
+    constexpr std::size_t clientsPerPage = 8;
+    std::size_t pageIndex = 0;
+
     while (true)
     {
         std::vector<std::pair<std::string, std::string>> entries = {
@@ -3725,13 +3905,32 @@ void QuestMenu::openNotableNpcMenu(Player& player)
             entries.push_back({clientName, "Recommandé par un habitant"});
         }
 
+        const std::size_t totalPages = PagedMenu::pageCount(entries.size(), clientsPerPage);
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages == 0 ? 0 : totalPages - 1;
+        }
+
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, clientsPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(entries.size(), pageIndex, clientsPerPage);
+
         MenuScreen screen("PNJ NOTABLES", "quest.notable_npc");
+        screen.setPagination(pageIndex, totalPages);
         screen.addLine("Sélectionne un contact pour parler, consulter ses demandes ou rendre ce qui est terminé.");
         screen.addLine("Les PNJ donnent des demandes de vive voix : le journal les estime, il ne les certifie pas comme la guilde.");
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, entries.size()));
         screen.addBackOption("Retour", "quest.notable_npc.back");
 
+        if (entries.empty())
+        {
+            screen.addLine("Aucun PNJ notable n'est disponible pour l'instant.");
+            TerminalInterface::askMenuChoiceFromOptions(screen, "Entre 0 pour revenir.");
+            Console::clear();
+            return;
+        }
+
         bool printedRecommendedHeader = false;
-        for (int i = 0; i < static_cast<int>(entries.size()); ++i)
+        for (std::size_t i = first; i < last; ++i)
         {
             if (!printedRecommendedHeader && entries[i].second == "Recommandé par un habitant")
             {
@@ -3761,9 +3960,10 @@ void QuestMenu::openNotableNpcMenu(Player& player)
                 ? "Contrats officiels / panneau de guilde"
                 : clientQuestStatusText(counts);
             itemData.actionType = entries[i].first == "Maître de guilde" ? "quest" : itemData.actionType;
+            itemData.progress = "Contact " + std::to_string(i + 1) + "/" + std::to_string(entries.size());
 
             screen.addOption(
-                i + 1,
+                static_cast<int>(i - first + 1),
                 label,
                 entries[i].first == "Maître de guilde"
                     ? "Ouvrir le panneau officiel de guilde."
@@ -3776,9 +3976,10 @@ void QuestMenu::openNotableNpcMenu(Player& player)
 
         if (recommendedClients.empty())
         {
-            screen.addLine("--- Recommandés par un habitant ---");
-            screen.addLine("Aucun nom recommandé pour l'instant.");
+            screen.addFooterLine("Recommandés par un habitant : aucun nom pour l'instant.");
         }
+
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
@@ -3788,7 +3989,32 @@ void QuestMenu::openNotableNpcMenu(Player& player)
             return;
         }
 
-        const std::string selectedClient = entries[choice - 1].first;
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        if (choice < 1 || static_cast<std::size_t>(choice) > (last - first))
+        {
+            MessageScreen::show(
+                "CONTACT INDISPONIBLE",
+                "quest.notable_npc.invalid_choice",
+                {
+                    "Cette entrée n'existe pas sur la page actuelle.",
+                    "Utilise les choix affichés ou les boutons de pagination."
+                }
+            );
+            continue;
+        }
+
+        const std::string selectedClient = entries[first + static_cast<std::size_t>(choice - 1)].first;
         if (selectedClient == "Maître de guilde")
         {
             openGuild(player);

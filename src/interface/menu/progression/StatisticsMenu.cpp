@@ -12,6 +12,8 @@
 #include "item/Inventory.hpp"
 #include "progression/Level.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <map>
 #include <string>
@@ -90,6 +92,78 @@ namespace
         }
 
         return "- " + label + " : " + std::to_string(current) + "/" + std::to_string(target);
+    }
+
+    std::string toLowerLocal(std::string value)
+    {
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char character) {
+            return static_cast<char>(std::tolower(character));
+        });
+        return value;
+    }
+
+    std::string masteryState(int current, int target)
+    {
+        if (target <= 0 || current >= target)
+        {
+            return "maîtrisée";
+        }
+
+        if (current <= 0)
+        {
+            return "à découvrir";
+        }
+
+        if (current * 2 >= target)
+        {
+            return "proche";
+        }
+
+        return "en éveil";
+    }
+
+    void appendSkillRoadmap(std::vector<std::string>& lines, const Player& player)
+    {
+        const std::string playerClass = toLowerLocal(player.getType());
+
+        lines.push_back("");
+        lines.push_back("Pistes de maîtrise visibles :");
+
+        if (playerClass.find("assassin") != std::string::npos)
+        {
+            lines.push_back("- Voie de classe | Source : assassin | État : mobilité et exécution à renforcer");
+        }
+        else if (playerClass.find("colosse") != std::string::npos)
+        {
+            lines.push_back("- Voie de classe | Source : colosse | État : endurance et protection à renforcer");
+        }
+        else if (playerClass.find("mage") != std::string::npos)
+        {
+            lines.push_back("- Voie de classe | Source : mage | État : canalisation et grimoires à renforcer");
+        }
+        else
+        {
+            lines.push_back("- Voie de classe | Source : " + player.getType() + " | État : style de combat à stabiliser");
+        }
+
+        lines.push_back("- Héritage racial | Source : " + player.getRaceText() + " | État : affinités à observer en combat");
+        lines.push_back(
+            "- Arme dominante | Source : " + player.getEquippedWeapon().getName()
+            + " | État : " + masteryState(
+                std::max({
+                    player.getDaggerKillProgress(),
+                    player.getBowKillProgress(),
+                    player.getBareHandKillProgress(),
+                    player.getStaffKillProgress(),
+                    player.getSwordKillProgress(),
+                    player.getAxeKillProgress(),
+                    player.getHammerKillProgress(),
+                    player.getSpearKillProgress()
+                }),
+                7
+            )
+        );
+        lines.push_back("- Apprentissage libre | Source : bibliothèques, grimoires, essais et conditions spéciales | État : verrouillé par rareté et prérequis");
     }
 
     void showStatisticsScreen(const std::string& title, const std::string& screenId, const std::vector<std::string>& lines)
@@ -338,6 +412,7 @@ void StatisticsMenu::displaySkillStats(const Player& player)
     lines.push_back(progressLine("Lances et contrôle de distance", player.getSpearKillProgress(), 7));
     lines.push_back("");
     lines.push_back("Ces traces montrent ce que ton personnage répète assez souvent pour l'intégrer à son style.");
+    appendSkillRoadmap(lines, player);
 
     showStatisticsScreen("COMPÉTENCES", "statistics.skills.detail", lines);
 }

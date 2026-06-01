@@ -6,7 +6,9 @@
 #ifndef INCLUDE_CORE_CONSOLE_HPP
 #define INCLUDE_CORE_CONSOLE_HPP
 
+#include <functional>
 #include <string>
+#include <vector>
 
 class Console
 {
@@ -36,6 +38,10 @@ public:
     // EN: readLine can receive terminal input or a queued GUI input line.
     // FR: readLine peut recevoir une saisie terminal ou une ligne envoyée par l'IG.
     static bool readLine(std::string& line, bool trimLeadingWhitespace = false);
+
+    // EN: Captures legacy terminal output and returns cleaned non-empty lines.
+    // FR: Capture les anciens affichages terminal et renvoie les lignes utiles nettoyées.
+    static std::vector<std::string> captureLines(const std::function<void()>& action);
 
     // EN: flushAvailableInputBuffer declares or implements a focused behavior used by this module.
     // FR: flushAvailableInputBuffer déclare ou implémente un comportement précis utilisé par ce module.

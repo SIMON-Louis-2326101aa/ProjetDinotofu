@@ -20,23 +20,40 @@ void CombatDisplay::displayCombatResult(
 {
     std::vector<std::string> lines;
 
+    // FR: ces lignes restent lisibles en terminal, mais donnent aussi à l'IG
+    // des paires label/valeur propres pour créer des cartes de résultat.
+    lines.push_back("Combattant 1 : " + combattant1.getName());
+    lines.push_back("PV combattant 1 : " + std::to_string(combattant1.getHp()) + "/" + std::to_string(combattant1.getMaxHp()));
+    lines.push_back("Combattant 2 : " + combattant2.getName());
+    lines.push_back("PV combattant 2 : " + std::to_string(combattant2.getHp()) + "/" + std::to_string(combattant2.getMaxHp()));
+
     if (combattant1.isDead() && combattant2.isDead())
     {
+        lines.push_back("Résultat : double effondrement");
+        lines.push_back("Vainqueur : aucun");
         lines.push_back("Les deux combattants s'effondrent en même temps.");
         lines.push_back("L'arène reste silencieuse... aucun vainqueur clair.");
     }
     else if (combattant1.isDead())
     {
+        lines.push_back("Résultat : victoire de " + combattant2.getName());
+        lines.push_back("Vainqueur : " + combattant2.getName());
+        lines.push_back("Vaincu : " + combattant1.getName());
         lines.push_back(combattant1.getName() + " tombe au sol.");
         lines.push_back(combattant2.getName() + " remporte le duel.");
     }
     else if (combattant2.isDead())
     {
+        lines.push_back("Résultat : victoire de " + combattant1.getName());
+        lines.push_back("Vainqueur : " + combattant1.getName());
+        lines.push_back("Vaincu : " + combattant2.getName());
         lines.push_back(combattant2.getName() + " tombe au sol.");
         lines.push_back(combattant1.getName() + " remporte le duel.");
     }
     else
     {
+        lines.push_back("Résultat : arrêt sans vainqueur");
+        lines.push_back("Vainqueur : aucun");
         lines.push_back("Le combat s'arrête sans vainqueur.");
     }
 

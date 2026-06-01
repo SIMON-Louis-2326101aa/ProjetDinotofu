@@ -13,6 +13,7 @@
 #include <iostream>
 #include <limits>
 #include <sstream>
+#include <streambuf>
 #include <string>
 #include <algorithm>
 #include <filesystem>
@@ -605,6 +606,53 @@ void Console::configureTerminalEncoding()
 void Console::printLine(const std::string& text)
 {
     std::cout << text << std::endl;
+}
+
+std::vector<std::string> Console::captureLines(const std::function<void()>& action)
+{
+    std::ostringstream capture;
+    std::streambuf* previousBuffer = std::cout.rdbuf(capture.rdbuf());
+
+    try
+    {
+        action();
+    }
+    catch (...)
+    {
+        std::cout.rdbuf(previousBuffer);
+        throw;
+    }
+
+    std::cout.rdbuf(previousBuffer);
+
+    std::vector<std::string> lines;
+    std::istringstream input(capture.str());
+    std::string line;
+
+    while (std::getline(input, line))
+    {
+        if (!line.empty() && line.back() == '\r')
+        {
+            line.pop_back();
+        }
+
+        const auto first = std::find_if(line.begin(), line.end(), [](unsigned char c) {
+            return !std::isspace(c);
+        });
+
+        if (first == line.end())
+        {
+            continue;
+        }
+
+        const auto last = std::find_if(line.rbegin(), line.rend(), [](unsigned char c) {
+            return !std::isspace(c);
+        }).base();
+
+        lines.emplace_back(first, last);
+    }
+
+    return lines;
 }
 
 void Console::clear()

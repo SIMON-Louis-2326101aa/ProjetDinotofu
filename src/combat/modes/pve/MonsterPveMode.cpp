@@ -21,6 +21,7 @@
 #include "interface/TerminalInterface.hpp"
 #include "interface/CombatDisplay.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 #include "interface/model/MenuScreen.hpp"
 
 #include "combat/turn/wave/PlayerWaveCombatTurn.hpp"
@@ -299,42 +300,80 @@ namespace
         return "\"...\"";
     }
 
+    std::string randomLineFromChoices(const std::vector<std::string>& choices, Random& random)
+    {
+        if (choices.empty())
+        {
+            return "\"...\"";
+        }
+
+        return choices[static_cast<std::size_t>(random.between(0, static_cast<int>(choices.size()) - 1))];
+    }
+
     std::string understoodDialogueLineForRace(Race race, Random& random)
     {
         if (race == Race::Gobelin || race == Race::Hobgobelin)
         {
-            return random.between(1, 2) == 1
-                ? "\"Tu as l'air d'avoir une bourse et peu d'amis. Mauvaise combinaison.\""
-                : "\"On prend les vivants, les sacs, puis on discute du reste.\"";
+            return randomLineFromChoices({
+                "\"Tu as l'air d'avoir une bourse et peu d'amis. Mauvaise combinaison.\"",
+                "\"On prend les vivants, les sacs, puis on discute du reste.\"",
+                "\"Pas besoin d'être grand pour compter l'or mieux que toi.\""
+            }, random);
         }
         if (race == Race::Orc)
         {
-            return random.between(1, 2) == 1
-                ? "\"Tiens ta ligne. Si tu recules, je le verrai.\""
-                : "\"Un bon combat vaut mieux qu'une longue excuse.\"";
+            return randomLineFromChoices({
+                "\"Tiens ta ligne. Si tu recules, je le verrai.\"",
+                "\"Un bon combat vaut mieux qu'une longue excuse.\"",
+                "\"Crie si tu veux. Le bruit ne bloque pas les haches.\""
+            }, random);
         }
         if (race == Race::Demon)
         {
-            return random.between(1, 2) == 1
-                ? "\"Ta peur fait plus de bruit que ton arme.\""
-                : "\"Approche. Les pactes les plus courts sont les plus honnêtes.\"";
+            return randomLineFromChoices({
+                "\"Ta peur fait plus de bruit que ton arme.\"",
+                "\"Approche. Les pactes les plus courts sont les plus honnêtes.\"",
+                "\"Je ne promets rien. C'est déjà plus franc que la plupart des contrats.\""
+            }, random);
         }
         if (race == Race::Dragon || race == Race::Draconide || race == Race::SemiDragon)
         {
-            return random.between(1, 2) == 1
-                ? "\"Chaque pas de plus sera gravé dans tes os.\""
-                : "\"Je respecte le courage. Je punis l'arrogance.\"";
+            return randomLineFromChoices({
+                "\"Chaque pas de plus sera gravé dans tes os.\"",
+                "\"Je respecte le courage. Je punis l'arrogance.\"",
+                "\"Un souffle suffit parfois à corriger une légende trop sûre d'elle.\""
+            }, random);
+        }
+        if (race == Race::Elfe || race == Race::ElfeNoir || race == Race::Fee || race == Race::Kitsune)
+        {
+            return randomLineFromChoices({
+                "\"La forêt t'a laissé entrer. Elle ne t'a pas promis la sortie.\"",
+                "\"Joli pas. Mauvais silence.\"",
+                "\"Tu portes l'odeur des chemins qui dérangent les anciens lieux.\""
+            }, random);
+        }
+        if (race == Race::Ange || race == Race::Aasimar)
+        {
+            return randomLineFromChoices({
+                "\"La lumière n'excuse pas tout. Elle révèle surtout ce que tu fais maintenant.\"",
+                "\"Avance proprement, ou tombe proprement.\"",
+                "\"Même la grâce garde une lame pour les intrus.\""
+            }, random);
         }
         if (race == Race::Esprit || race == Race::AnomalieArcanique || race == Race::Aberration)
         {
-            return random.between(1, 2) == 1
-                ? "\"Tu entres dans une histoire qui ne t'a pas encore choisi.\""
-                : "\"Ton nom tremble dans la marge du monde.\"";
+            return randomLineFromChoices({
+                "\"Tu entres dans une histoire qui ne t'a pas encore choisi.\"",
+                "\"Ton nom tremble dans la marge du monde.\"",
+                "\"Je parle depuis un endroit où tes règles arrivent en retard.\""
+            }, random);
         }
 
-        return random.between(1, 2) == 1
-            ? "\"Pas un pas de plus. Les problèmes commencent toujours comme ça.\""
-            : "\"Rentre chez toi pendant que tu as encore assez de jambes pour le faire.\"";
+        return randomLineFromChoices({
+            "\"Pas un pas de plus. Les problèmes commencent toujours comme ça.\"",
+            "\"Rentre chez toi pendant que tu as encore assez de jambes pour le faire.\"",
+            "\"Je ne te connais pas. Ça rendra ce combat plus simple.\""
+        }, random);
     }
 
     const Monster* pickDialogueCandidateFromWave(const EnemyCombatQueue& wave, Random& random)
@@ -378,6 +417,10 @@ namespace
         const bool understood = playerUnderstandsMonsterRace(player, speaker->getRace());
         const std::string language = languageFamilyForMonsterRace(speaker->getRace());
         std::vector<std::string> lines;
+        lines.push_back("Interlocuteur : " + speaker->getName());
+        lines.push_back("Langue probable : " + language);
+        lines.push_back(std::string("Compréhension : ") + (understood ? "mots compris" : "mots non compris"));
+        lines.push_back("");
         lines.push_back(speaker->getName() + " s'avance assez pour parler avant que le combat ne commence vraiment.");
 
         if (understood)
@@ -388,7 +431,7 @@ namespace
         else
         {
             lines.push_back(foreignDialogueLineForRace(speaker->getRace(), random));
-            lines.push_back("Langue probable : " + language + ". Tu ne comprends pas les mots, mais l'intention hostile passe très bien.");
+            lines.push_back("Tu ne comprends pas les mots, mais l'intention hostile passe très bien.");
         }
 
         MessageScreen::show(
@@ -554,6 +597,26 @@ namespace
 
         CombatDisplay::displayCombatState(snapshot, false);
     }
+
+
+    void showPostCombatRouteScreen(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines
+    )
+    {
+        MenuScreen screen(title, screenId);
+        screen.addSubtitle("Bilan de route de combat");
+
+        for (const std::string& line : lines)
+        {
+            screen.addLine(line);
+        }
+
+        screen.setDisplayOnlyInput("Résumé affiché sans saisie directe.");
+        TerminalInterface::renderMenuScreen(screen, false);
+    }
+
 }
 
 void MonsterPveMode::run(
@@ -722,14 +785,17 @@ void MonsterPveMode::run(
 
     if (escapeSucceeded)
     {
-        MessageScreen::show(
+        showPostCombatRouteScreen(
             "FUITE RÉUSSIE",
             "combat.pve.escape.success",
             {
-                "Tu as quitté le combat.",
-                "Tu ne récupéreras qu'une partie des récompenses liées à ce qui s'est réellement passé."
-            },
-            false
+                "Résultat : fuite validée",
+                "Route : combat PvE",
+                "Tours joués : " + std::to_string(combatTurnCount),
+                "Ennemis vaincus : " + std::to_string(wave.getDefeatedEnemyCount()),
+                "Récompense : partielle, basée seulement sur ce qui s'est réellement passé",
+                "Conséquence : aucune mort enregistrée"
+            }
         );
 
         CombatReward reward = CombatRewardSystem::calculatePlayerEscapeReward(
@@ -752,14 +818,18 @@ void MonsterPveMode::run(
 
     if (player.isDead())
     {
-        MessageScreen::show(
+        showPostCombatRouteScreen(
             "DÉFAITE",
             "combat.pve.defeat",
             {
-                player.getName() + " tombe face à la vague ennemie.",
-                "L'arène se referme dans un silence brutal."
-            },
-            false
+                "Résultat : défaite",
+                "Route : combat PvE",
+                "Personnage : " + player.getName(),
+                "Tours joués : " + std::to_string(combatTurnCount),
+                "Ennemis vaincus avant chute : " + std::to_string(wave.getDefeatedEnemyCount()),
+                "Mort : enregistrée selon la difficulté",
+                "Action suivante : application de la règle de mort"
+            }
         );
 
         player.recordDefeat();
@@ -785,14 +855,17 @@ void MonsterPveMode::run(
             DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty)
         );
 
-        MessageScreen::show(
+        showPostCombatRouteScreen(
             "RETOUR À LA VIE",
             "combat.pve.revive",
             {
-                player.getName() + " revient à lui avec " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + " PV.",
-                "Tu as survécu, mais la mort a laissé sa trace."
-            },
-            false
+                "Résultat : personnage restauré",
+                "Personnage : " + player.getName(),
+                "PV après retour : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()),
+                "Difficulté : mort non définitive",
+                "Conséquence : pénalité de mort déjà appliquée",
+                "Note : tu as survécu, mais la mort a laissé sa trace"
+            }
         );
 
         return;
@@ -800,14 +873,17 @@ void MonsterPveMode::run(
 
     displaySpecialDefeatDialogues(wave);
 
-    MessageScreen::show(
+    showPostCombatRouteScreen(
         "VICTOIRE PVE",
         "combat.pve.victory",
         {
-            "Tous les monstres de la vague ont été vaincus.",
-            player.getName() + " reste debout au milieu des corps et de la poussière."
-        },
-        false
+            "Résultat : victoire",
+            "Route : combat PvE",
+            "Personnage : " + player.getName(),
+            "Tours joués : " + std::to_string(combatTurnCount),
+            "Ennemis vaincus : " + std::to_string(wave.getDefeatedEnemyCount()),
+            "Action suivante : récompenses complètes puis butin"
+        }
     );
 
     CombatReward reward = CombatRewardSystem::calculateWaveReward(
@@ -985,14 +1061,17 @@ bool MonsterPveMode::runExplorationWave(
 
     if (escapeSucceeded)
     {
-        MessageScreen::show(
+        showPostCombatRouteScreen(
             "FUITE D'EXPLORATION",
             "exploration.wave.escape.success",
             {
-                "Tu as fui l'événement d'exploration.",
-                "Les récompenses sont limitées à ce qui a réellement été accompli."
-            },
-            false
+                "Résultat : fuite d'événement",
+                "Route : exploration",
+                "Tours joués : " + std::to_string(combatTurnCount),
+                "Ennemis vaincus : " + std::to_string(wave.getDefeatedEnemyCount()),
+                "Récompense : partielle, actions réelles uniquement",
+                "Conséquence : exploration interrompue proprement"
+            }
         );
 
         CombatReward reward = CombatRewardSystem::calculatePlayerEscapeReward(
@@ -1014,14 +1093,18 @@ bool MonsterPveMode::runExplorationWave(
 
     if (player.isDead())
     {
-        MessageScreen::show(
+        showPostCombatRouteScreen(
             "DÉFAITE D'EXPLORATION",
             "exploration.wave.defeat",
             {
-                player.getName() + " tombe pendant l'événement d'exploration.",
-                "La zone ne faisait pas que menacer : elle a vraiment frappé."
-            },
-            false
+                "Résultat : défaite d'événement",
+                "Route : exploration",
+                "Personnage : " + player.getName(),
+                "Tours joués : " + std::to_string(combatTurnCount),
+                "Ennemis vaincus avant chute : " + std::to_string(wave.getDefeatedEnemyCount()),
+                "Mort : enregistrée selon la difficulté",
+                "Action suivante : application de la règle de mort"
+            }
         );
 
         player.recordDefeat();
@@ -1046,26 +1129,34 @@ bool MonsterPveMode::runExplorationWave(
             DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty)
         );
 
-        MessageScreen::show(
+        showPostCombatRouteScreen(
             "RETOUR À LA VIE",
             "exploration.wave.revive",
             {
-                player.getName() + " revient à lui avec " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + " PV."
-            },
-            false
+                "Résultat : personnage restauré",
+                "Route : exploration",
+                "Personnage : " + player.getName(),
+                "PV après retour : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()),
+                "Difficulté : mort non définitive",
+                "Conséquence : pénalité de mort déjà appliquée"
+            }
         );
         return false;
     }
 
     displaySpecialDefeatDialogues(wave);
 
-    MessageScreen::show(
+    showPostCombatRouteScreen(
         "ÉVÉNEMENT TERMINÉ",
         "exploration.wave.victory",
         {
-            "L'événement d'exploration est terminé : les ennemis sont vaincus."
-        },
-        false
+            "Résultat : événement terminé",
+            "Route : exploration",
+            "Personnage : " + player.getName(),
+            "Tours joués : " + std::to_string(combatTurnCount),
+            "Ennemis vaincus : " + std::to_string(wave.getDefeatedEnemyCount()),
+            "Action suivante : récompenses d'exploration"
+        }
     );
 
     CombatReward reward = CombatRewardSystem::calculateWaveReward(
@@ -1443,6 +1534,74 @@ namespace
         return false;
     }
 
+    constexpr std::size_t PVE_PARTY_SUPPORT_PAGE_SIZE = 8;
+
+    MenuOptionItemData makePvePartySupportData(
+        const Player& healer,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status,
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "pve_party_support";
+        itemData.section = "Soutien PvE coop";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.owner = healer.getName();
+        itemData.progress = "PV : " + std::to_string(healer.getHp()) + "/" + std::to_string(healer.getMaxHp());
+        itemData.important = important;
+        return itemData;
+    }
+
+    MenuOptionItemData makePvePartyHealingTargetData(
+        const Player& healer,
+        const Player& target,
+        std::size_t partyIndex
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "ally";
+        itemData.section = "Cibles de soin PvE";
+        itemData.actionType = "support";
+        itemData.name = target.getName();
+        itemData.detail = target.isDead() ? "Allié au sol à relever" : "Allié blessé à soigner";
+        itemData.status = "PV : " + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp());
+        itemData.owner = healer.getName();
+        itemData.progress = "J" + std::to_string(partyIndex + 1)
+            + " - " + CombatGroupBuilder::getFormationSlotLabel(static_cast<int>(partyIndex));
+        itemData.important = target.isDead()
+            || (target.getMaxHp() > 0 && target.getHp() * 100 <= target.getMaxHp() * 35);
+        return itemData;
+    }
+
+    MenuOptionItemData makePvePartyPotionData(
+        const Player& healer,
+        const Consumable& potion,
+        int inventoryIndex
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "potion";
+        itemData.section = "Potions de soutien PvE";
+        itemData.actionType = "heal";
+        itemData.name = potion.getName();
+        itemData.detail = potion.getDescription();
+        itemData.status = "Soin : " + std::to_string(potion.getPower()) + " PV";
+        itemData.price = "Valeur : " + std::to_string(potion.getValue()) + " or";
+        itemData.stock = "Index inventaire : " + std::to_string(inventoryIndex + 1);
+        itemData.owner = healer.getName();
+        itemData.important = potion.getPower() >= 35;
+        return itemData;
+    }
+
     bool tryUseHealingPotionOnAlly(Player& healer, std::vector<Player*>& party, int& healingDone)
     {
         if (!hasAllyNeedingPotion(party, healer))
@@ -1463,8 +1622,22 @@ namespace
         MenuScreen supportScreen("SOUTIEN D'ÉQUIPE", "pve.party.support.choice");
         supportScreen.addSubtitle("Tour de " + healer.getName());
         supportScreen.addLine("Un allié peut recevoir une potion de soin avant l'action normale.");
-        supportScreen.addOption(0, "Jouer normalement", "Ne consomme pas de potion.", true, "party.support.skip");
-        supportScreen.addOption(1, "Utiliser une potion de soin sur un allié", "Consomme le tour de soutien de " + healer.getName() + ".", true, "party.support.heal_ally");
+        supportScreen.addOption(
+            0,
+            "Jouer normalement",
+            "Ne consomme pas de potion.",
+            true,
+            "party.support.skip",
+            makePvePartySupportData(healer, "skip", "Jouer normalement", "Ne consomme pas de potion.", "Action normale")
+        );
+        supportScreen.addOption(
+            1,
+            "Utiliser une potion de soin sur un allié",
+            "Consomme le tour de soutien de " + healer.getName() + ".",
+            true,
+            "party.support.heal_ally",
+            makePvePartySupportData(healer, "heal", "Potion de soutien", "Soigner ou relever un allié avant l'action normale.", "Consomme le tour", true)
+        );
         int supportChoice = TerminalInterface::askMenuChoiceFromOptions(supportScreen, "Choisis une option affichée.");
         Console::clear();
 
@@ -1474,66 +1647,147 @@ namespace
         }
 
         std::vector<Player*> targets;
-        MenuScreen targetScreen("CHOIX DE L'ALLIÉ", "pve.party.support.target");
-        targetScreen.addSubtitle("Potion de soutien de " + healer.getName());
-        targetScreen.addLine("Choisis l'allié à soigner ou à relever.");
-        targetScreen.addOption(0, "Annuler", "Retour au tour normal.", true, "party.support.target.cancel");
-
-        for (Player* ally : party)
+        std::vector<std::size_t> targetPartyIndexes;
+        for (std::size_t i = 0; i < party.size(); ++i)
         {
+            Player* ally = party[i];
             if (ally != nullptr && ally != &healer && (ally->isDead() || ally->getHp() < ally->getMaxHp()))
             {
                 targets.push_back(ally);
+                targetPartyIndexes.push_back(i);
+            }
+        }
+
+        if (targets.empty())
+        {
+            return false;
+        }
+
+        std::size_t targetPageIndex = 0;
+        Player* target = nullptr;
+        while (target == nullptr)
+        {
+            const std::size_t totalPages = PagedMenu::pageCount(targets.size(), PVE_PARTY_SUPPORT_PAGE_SIZE);
+            if (targetPageIndex >= totalPages) targetPageIndex = totalPages - 1;
+            const std::size_t firstIndex = PagedMenu::firstIndex(targetPageIndex, PVE_PARTY_SUPPORT_PAGE_SIZE);
+            const std::size_t lastIndex = PagedMenu::lastIndexExclusive(targets.size(), targetPageIndex, PVE_PARTY_SUPPORT_PAGE_SIZE);
+
+            MenuScreen targetScreen("CHOIX DE L'ALLIÉ", "pve.party.support.target");
+            targetScreen.addSubtitle("Potion de soutien de " + healer.getName());
+            targetScreen.addLine("Alliés affichés : " + PagedMenu::rangeText(firstIndex, lastIndex, targets.size()));
+            targetScreen.addLine("Choisis l'allié à soigner ou à relever.");
+            targetScreen.addOption(
+                0,
+                "Annuler",
+                "Retour au tour normal.",
+                true,
+                "party.support.target.cancel",
+                makePvePartySupportData(healer, "cancel", "Annuler", "Retour au tour normal.", "Annulé")
+            );
+
+            for (std::size_t i = firstIndex; i < lastIndex; ++i)
+            {
+                Player* ally = targets[i];
                 std::string label = ally->getName();
                 if (ally->isDead())
                 {
                     label += " [au sol]";
                 }
                 targetScreen.addOption(
-                    static_cast<int>(targets.size()),
+                    static_cast<int>(i - firstIndex + 1),
                     label,
                     std::to_string(ally->getHp()) + "/" + std::to_string(ally->getMaxHp()) + " PV",
                     true,
-                    "party.support.target"
+                    "party.support.target",
+                    makePvePartyHealingTargetData(healer, *ally, targetPartyIndexes[i])
                 );
+            }
+            PagedMenu::addNavigationOptions(targetScreen, targetPageIndex, totalPages);
+
+            int targetChoice = TerminalInterface::askMenuChoiceFromOptions(targetScreen, "Choisis une cible affichée.");
+            Console::clear();
+
+            if (targetChoice == 0)
+            {
+                return false;
+            }
+            if (targetChoice == 98 && targetPageIndex > 0)
+            {
+                --targetPageIndex;
+                continue;
+            }
+            if (targetChoice == 99 && targetPageIndex + 1 < totalPages)
+            {
+                ++targetPageIndex;
+                continue;
+            }
+
+            const std::size_t selectedIndex = firstIndex + static_cast<std::size_t>(targetChoice - 1);
+            if (selectedIndex < targets.size() && selectedIndex < lastIndex)
+            {
+                target = targets[selectedIndex];
             }
         }
 
-        int targetChoice = TerminalInterface::askMenuChoiceFromOptions(targetScreen, "Choisis une cible affichée.");
-        Console::clear();
-
-        if (targetChoice == 0)
+        std::size_t potionPageIndex = 0;
+        int consumableIndex = -1;
+        while (consumableIndex < 0)
         {
-            return false;
-        }
+            const std::size_t totalPages = PagedMenu::pageCount(potionIndices.size(), PVE_PARTY_SUPPORT_PAGE_SIZE);
+            if (potionPageIndex >= totalPages) potionPageIndex = totalPages - 1;
+            const std::size_t firstIndex = PagedMenu::firstIndex(potionPageIndex, PVE_PARTY_SUPPORT_PAGE_SIZE);
+            const std::size_t lastIndex = PagedMenu::lastIndexExclusive(potionIndices.size(), potionPageIndex, PVE_PARTY_SUPPORT_PAGE_SIZE);
 
-        Player* target = targets[targetChoice - 1];
-
-        MenuScreen potionScreen("CHOIX DE LA POTION", "pve.party.support.potion");
-        potionScreen.addSubtitle("Cible : " + target->getName());
-        potionScreen.addLine("Choisis la potion de soin à utiliser.");
-        potionScreen.addOption(0, "Annuler", "Ne consomme rien.", true, "party.support.potion.cancel");
-        for (int i = 0; i < static_cast<int>(potionIndices.size()); ++i)
-        {
-            Consumable potion = healer.getInventory().getConsumable(potionIndices[i]);
+            MenuScreen potionScreen("CHOIX DE LA POTION", "pve.party.support.potion");
+            potionScreen.addSubtitle("Cible : " + target->getName());
+            potionScreen.addLine("Potions affichées : " + PagedMenu::rangeText(firstIndex, lastIndex, potionIndices.size()));
+            potionScreen.addLine("Choisis la potion de soin à utiliser.");
             potionScreen.addOption(
-                i + 1,
-                potion.getName(),
-                "Soin : " + std::to_string(potion.getPower()) + " PV",
+                0,
+                "Annuler",
+                "Ne consomme rien.",
                 true,
-                "party.support.potion.healing"
+                "party.support.potion.cancel",
+                makePvePartySupportData(healer, "cancel", "Annuler", "Ne consomme rien.", "Annulé")
             );
+            for (std::size_t i = firstIndex; i < lastIndex; ++i)
+            {
+                Consumable potion = healer.getInventory().getConsumable(potionIndices[i]);
+                potionScreen.addOption(
+                    static_cast<int>(i - firstIndex + 1),
+                    potion.getName(),
+                    "Soin : " + std::to_string(potion.getPower()) + " PV",
+                    true,
+                    "party.support.potion.healing",
+                    makePvePartyPotionData(healer, potion, potionIndices[i])
+                );
+            }
+            PagedMenu::addNavigationOptions(potionScreen, potionPageIndex, totalPages);
+
+            int potionChoice = TerminalInterface::askMenuChoiceFromOptions(potionScreen, "Choisis une potion affichée.");
+            Console::clear();
+
+            if (potionChoice == 0)
+            {
+                return false;
+            }
+            if (potionChoice == 98 && potionPageIndex > 0)
+            {
+                --potionPageIndex;
+                continue;
+            }
+            if (potionChoice == 99 && potionPageIndex + 1 < totalPages)
+            {
+                ++potionPageIndex;
+                continue;
+            }
+
+            const std::size_t selectedIndex = firstIndex + static_cast<std::size_t>(potionChoice - 1);
+            if (selectedIndex < potionIndices.size() && selectedIndex < lastIndex)
+            {
+                consumableIndex = potionIndices[selectedIndex];
+            }
         }
-
-        int potionChoice = TerminalInterface::askMenuChoiceFromOptions(potionScreen, "Choisis une potion affichée.");
-        Console::clear();
-
-        if (potionChoice == 0)
-        {
-            return false;
-        }
-
-        int consumableIndex = potionIndices[potionChoice - 1];
         if (!healer.getInventory().hasConsumable(consumableIndex))
         {
             MessageScreen::show(

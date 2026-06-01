@@ -29,34 +29,105 @@
 #include "interface/menu/progression/StatisticsMenu.hpp"
 
 #include <functional>
-#include <iostream>
-#include <sstream>
-#include <streambuf>
 #include <vector>
 
 namespace
 {
+    MenuOptionItemData buildAttackTypeItemData(
+        const std::string& attackerName,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status,
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "combat_attack";
+        itemData.section = "Styles d'attaque";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.owner = attackerName;
+        itemData.important = important;
+        return itemData;
+    }
+
+    MenuOptionItemData buildCombatInterfaceItemData(
+        const Entity& entity,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = "Information",
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "combat_interface";
+        itemData.section = "Interface de combat";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.owner = entity.getName();
+        itemData.progress = "PV : " + std::to_string(entity.getHp()) + "/" + std::to_string(entity.getMaxHp());
+        itemData.important = important;
+        return itemData;
+    }
+
     MenuScreen buildAttackTypeScreen(const std::string& attackerName)
     {
         MenuScreen screen("TYPE D'ATTAQUE", "combat.attack_type");
         screen.addSubtitle("Action offensive de " + attackerName);
         screen.addLine("Choisis le style d'attaque à exécuter.");
         screen.addBackOption("Retour", "combat.attack.back");
-        screen.addOption(1, "Attaque simple", "Frappe fiable avec l'arme équipée.", true, "combat.attack.simple");
-        screen.addOption(2, "Technique d'arme", "Utilise le style propre à ton arme actuelle.", true, "combat.attack.weapon_technique");
-        screen.addOption(3, "Attaque lourde", "Plus risquée, plus violente.", true, "combat.attack.heavy");
-        screen.addOption(4, "Attaque rapide", "Moins brutale, mais plus nerveuse.", true, "combat.attack.quick");
-        screen.addOption(5, "Compétence de classe", "Tente l'action spéciale liée au rôle.", true, "combat.attack.class_skill");
+        screen.addOption(
+            1,
+            "Attaque simple",
+            "Frappe fiable avec l'arme équipée.",
+            true,
+            "combat.attack.simple",
+            buildAttackTypeItemData(attackerName, "attack", "Attaque simple", "Frappe fiable avec l'arme équipée.", "Offense stable", true)
+        );
+        screen.addOption(
+            2,
+            "Technique d'arme",
+            "Utilise le style propre à ton arme actuelle.",
+            true,
+            "combat.attack.weapon_technique",
+            buildAttackTypeItemData(attackerName, "attack", "Technique d'arme", "Action liée au type d'arme équipée.", "Dépend de l'arme")
+        );
+        screen.addOption(
+            3,
+            "Attaque lourde",
+            "Plus risquée, plus violente.",
+            true,
+            "combat.attack.heavy",
+            buildAttackTypeItemData(attackerName, "attack", "Attaque lourde", "Cherche un gros impact, mais laisse plus d'ouverture.", "Risque augmenté")
+        );
+        screen.addOption(
+            4,
+            "Attaque rapide",
+            "Moins brutale, mais plus nerveuse.",
+            true,
+            "combat.attack.quick",
+            buildAttackTypeItemData(attackerName, "attack", "Attaque rapide", "Action plus nerveuse, pensée pour garder le rythme.", "Offense rapide")
+        );
+        screen.addOption(
+            5,
+            "Compétence de classe",
+            "Tente l'action spéciale liée au rôle.",
+            true,
+            "combat.attack.class_skill",
+            buildAttackTypeItemData(attackerName, "attack", "Compétence de classe", "Action spéciale liée à la classe et au cooldown.", "Rôle / classe")
+        );
         return screen;
     }
 
 
-
-    std::vector<std::string> captureHumanTurnText(const std::function<void()>& action)
-    {
-        action();
-        return {};
-    }
 
     void showCapturedHumanTurnText(
         const std::string& title,
@@ -64,11 +135,9 @@ namespace
         const std::vector<std::string>& lines
     )
     {
-        (void)title;
-        (void)screenId;
         if (!lines.empty())
         {
-            MessageScreen::show(title, screenId, lines, false);
+            MessageScreen::show(title, screenId, lines, true);
         }
     }
 
@@ -400,14 +469,14 @@ bool HumanCombatTurn::openObservationInterface(
     MenuScreen screen("INTERFACE DE COMBAT", "combat.interface.duel");
     screen.addSubtitle(interfacePlayer.getName() + " face à " + target.getName());
     screen.addBackOption("Retour", "combat.interface.back");
-    screen.addOption(1, "Voir l'état du combat", "PV et situation directe.", true, "combat.interface.state");
-    screen.addOption(2, "Voir mes statistiques", "Ouvre les statistiques du combattant.", true, "combat.interface.stats");
-    screen.addOption(3, "Résumé équipement", "Affichage simple de l'équipement.", true, "combat.interface.equipment");
-    screen.addOption(4, "Compétences de rôle", "Actions et rappels liés au rôle.", true, "combat.interface.role");
-    screen.addOption(5, "Observer / analyser l'adversaire", "Lecture terrain de l'ennemi.", true, "combat.interface.observe");
-    screen.addOption(6, "Voir l'adversaire dans le bestiaire", "Ouvre l'entrée connue.", true, "combat.interface.bestiary");
-    screen.addOption(7, "Ordres aux alliés", "Indisponible sans allié stable.", true, "combat.interface.allies");
-    screen.addOption(8, "Contrôle des invocations", "Rappel des ordres actuels.", true, "combat.interface.summons");
+    screen.addOption(1, "Voir l'état du combat", "PV et situation directe.", true, "combat.interface.state", buildCombatInterfaceItemData(interfacePlayer, "inspect", "État du combat", "PV et situation directe.", "Résumé"));
+    screen.addOption(2, "Voir mes statistiques", "Ouvre les statistiques du combattant.", true, "combat.interface.stats", buildCombatInterfaceItemData(interfacePlayer, "inspect", "Mes statistiques", "Ouvre les statistiques du combattant.", "Détails joueur"));
+    screen.addOption(3, "Résumé équipement", "Affichage simple de l'équipement.", true, "combat.interface.equipment", buildCombatInterfaceItemData(interfacePlayer, "inspect", "Résumé équipement", "Affichage simple de l'équipement.", "Équipement"));
+    screen.addOption(4, "Compétences de rôle", "Actions et rappels liés au rôle.", true, "combat.interface.role", buildCombatInterfaceItemData(interfacePlayer, "inspect", "Compétences de rôle", "Actions et rappels liés au rôle.", "Rôle"));
+    screen.addOption(5, "Observer / analyser l'adversaire", "Lecture terrain de l'ennemi.", true, "combat.interface.observe", buildCombatInterfaceItemData(target, "inspect", "Observer l'adversaire", "Lecture terrain de l'ennemi.", "Observation", true));
+    screen.addOption(6, "Voir l'adversaire dans le bestiaire", "Ouvre l'entrée connue.", true, "combat.interface.bestiary", buildCombatInterfaceItemData(target, "inspect", "Bestiaire adverse", "Ouvre l'entrée connue sans révéler de faiblesse cachée.", "Bestiaire"));
+    screen.addOption(7, "Ordres aux alliés", "Indisponible sans allié stable.", true, "combat.interface.allies", buildCombatInterfaceItemData(interfacePlayer, "support", "Ordres aux alliés", "Indisponible sans allié stable.", "Indisponible"));
+    screen.addOption(8, "Contrôle des invocations", "Rappel des ordres actuels.", true, "combat.interface.summons", buildCombatInterfaceItemData(interfacePlayer, "support", "Contrôle des invocations", "Rappel des ordres actuels.", "Rappel"));
 
     int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
 
@@ -441,7 +510,7 @@ bool HumanCombatTurn::openObservationInterface(
             showCapturedHumanTurnText(
                 "STATISTIQUES",
                 "combat.interface.stats.raw_entity",
-                captureHumanTurnText([&]() { interfacePlayer.displayStats(); })
+                Console::captureLines([&]() { interfacePlayer.displayStats(); })
             );
             return false;
         }
@@ -463,7 +532,7 @@ bool HumanCombatTurn::openObservationInterface(
         showCapturedHumanTurnText(
             "ÉQUIPEMENT",
             "combat.interface.equipment.summary",
-            captureHumanTurnText([&]() { player->displaySimpleEquipment(); })
+            Console::captureLines([&]() { player->displaySimpleEquipment(); })
         );
         return false;
     }
@@ -478,7 +547,7 @@ bool HumanCombatTurn::openObservationInterface(
         showCapturedHumanTurnText(
             "OBSERVATION",
             "combat.interface.observe.target",
-            captureHumanTurnText([&]() { ObservationSystem::displayTerminalStats(target); })
+            Console::captureLines([&]() { ObservationSystem::displayTerminalStats(target); })
         );
         return false;
     }
@@ -542,15 +611,15 @@ bool HumanCombatTurn::inspectCombatTarget(
     MenuScreen screen("INTERFACE DE COMBAT", "combat.interface.summoner_duel");
     screen.addSubtitle(interfacePlayer.getName() + " face à " + target.getName());
     screen.addBackOption("Retour", "combat.interface.back");
-    screen.addOption(1, "Voir l'état du combat", "PV, menace principale et invocations ciblables.", true, "combat.interface.state");
-    screen.addOption(2, "Voir mes statistiques", "Ouvre les statistiques du combattant.", true, "combat.interface.stats");
-    screen.addOption(3, "Résumé équipement", "Affichage simple de l'équipement.", true, "combat.interface.equipment");
-    screen.addOption(4, "Compétences de rôle", "Actions et rappels liés au rôle.", true, "combat.interface.role");
-    screen.addOption(5, "Observer / analyser l'adversaire principal", "Lecture terrain de l'invocateur.", true, "combat.interface.observe_main");
-    screen.addOption(6, "Voir l'adversaire dans le bestiaire", "Ouvre l'entrée connue.", true, "combat.interface.bestiary");
-    screen.addOption(7, "Voir les invocations adverses", "Liste les renforts ciblables.", true, "combat.interface.enemy_summons");
-    screen.addOption(8, "Ordres aux alliés", "Indisponible sans allié stable.", true, "combat.interface.allies");
-    screen.addOption(9, "Contrôle des invocations", "Rappel des ordres actuels.", true, "combat.interface.summons");
+    screen.addOption(1, "Voir l'état du combat", "PV, menace principale et invocations ciblables.", true, "combat.interface.state", buildCombatInterfaceItemData(interfacePlayer, "inspect", "État du combat", "PV, menace principale et invocations ciblables.", "Résumé", true));
+    screen.addOption(2, "Voir mes statistiques", "Ouvre les statistiques du combattant.", true, "combat.interface.stats", buildCombatInterfaceItemData(interfacePlayer, "inspect", "Mes statistiques", "Ouvre les statistiques du combattant.", "Détails joueur"));
+    screen.addOption(3, "Résumé équipement", "Affichage simple de l'équipement.", true, "combat.interface.equipment", buildCombatInterfaceItemData(interfacePlayer, "inspect", "Résumé équipement", "Affichage simple de l'équipement.", "Équipement"));
+    screen.addOption(4, "Compétences de rôle", "Actions et rappels liés au rôle.", true, "combat.interface.role", buildCombatInterfaceItemData(interfacePlayer, "inspect", "Compétences de rôle", "Actions et rappels liés au rôle.", "Rôle"));
+    screen.addOption(5, "Observer / analyser l'adversaire principal", "Lecture terrain de l'invocateur.", true, "combat.interface.observe_main", buildCombatInterfaceItemData(target, "inspect", "Observer l'adversaire principal", "Lecture terrain de l'invocateur.", "Observation", true));
+    screen.addOption(6, "Voir l'adversaire dans le bestiaire", "Ouvre l'entrée connue.", true, "combat.interface.bestiary", buildCombatInterfaceItemData(target, "inspect", "Bestiaire adverse", "Ouvre l'entrée connue sans révéler de faiblesse cachée.", "Bestiaire"));
+    screen.addOption(7, "Voir les invocations adverses", "Liste les renforts ciblables.", true, "combat.interface.enemy_summons", buildCombatInterfaceItemData(target, "target", "Invocations adverses", "Liste les renforts ciblables.", "Cibles secondaires"));
+    screen.addOption(8, "Ordres aux alliés", "Indisponible sans allié stable.", true, "combat.interface.allies", buildCombatInterfaceItemData(interfacePlayer, "support", "Ordres aux alliés", "Indisponible sans allié stable.", "Indisponible"));
+    screen.addOption(9, "Contrôle des invocations", "Rappel des ordres actuels.", true, "combat.interface.summons", buildCombatInterfaceItemData(interfacePlayer, "support", "Contrôle des invocations", "Rappel des ordres actuels.", "Rappel"));
 
     int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
 
@@ -581,7 +650,7 @@ bool HumanCombatTurn::inspectCombatTarget(
             showCapturedHumanTurnText(
                 "INVOCATIONS ADVERSAIRES",
                 "combat.interface.enemy_summons.list",
-                captureHumanTurnText([&]() { SummonCombatSystem::displayTargetableSummons(enemySummons); })
+                Console::captureLines([&]() { SummonCombatSystem::displayTargetableSummons(enemySummons); })
             );
         }
 
@@ -597,7 +666,7 @@ bool HumanCombatTurn::inspectCombatTarget(
             showCapturedHumanTurnText(
                 "STATISTIQUES",
                 "combat.interface.stats.raw_entity",
-                captureHumanTurnText([&]() { interfacePlayer.displayStats(); })
+                Console::captureLines([&]() { interfacePlayer.displayStats(); })
             );
             return false;
         }
@@ -619,7 +688,7 @@ bool HumanCombatTurn::inspectCombatTarget(
         showCapturedHumanTurnText(
             "ÉQUIPEMENT",
             "combat.interface.equipment.summary",
-            captureHumanTurnText([&]() { player->displaySimpleEquipment(); })
+            Console::captureLines([&]() { player->displaySimpleEquipment(); })
         );
         return false;
     }
@@ -634,7 +703,7 @@ bool HumanCombatTurn::inspectCombatTarget(
         showCapturedHumanTurnText(
             "OBSERVATION",
             "combat.interface.observe.target",
-            captureHumanTurnText([&]() { ObservationSystem::displayTerminalStats(target); })
+            Console::captureLines([&]() { ObservationSystem::displayTerminalStats(target); })
         );
         return false;
     }
@@ -652,7 +721,7 @@ bool HumanCombatTurn::inspectCombatTarget(
             showCapturedHumanTurnText(
                 "INVOCATIONS ADVERSAIRES",
                 "combat.interface.enemy_summons.list",
-                captureHumanTurnText([&]() { SummonCombatSystem::displayTargetableSummons(enemySummons); })
+                Console::captureLines([&]() { SummonCombatSystem::displayTargetableSummons(enemySummons); })
             );
         }
         else
@@ -710,11 +779,7 @@ bool HumanCombatTurn::handleEscape(
 
         if (player != nullptr)
         {
-            showCapturedHumanTurnText(
-                "FUITE CONTRE BOSS",
-                "combat.escape.boss_attempt",
-                captureHumanTurnText([&]() { EscapeSystem::playerAttemptsBossEscape(*player, *targetBoss); })
-            );
+            EscapeSystem::playerAttemptsBossEscape(*player, *targetBoss);
         }
         else
         {
@@ -737,11 +802,7 @@ bool HumanCombatTurn::handleEscape(
         return false;
     }
 
-    showCapturedHumanTurnText(
-        "TENTATIVE DE FUITE",
-        "combat.escape.duel_attempt",
-        captureHumanTurnText([&]() { EscapeSystem::playerAttemptsDuelEscape(*player, defender, random); })
-    );
+    EscapeSystem::playerAttemptsDuelEscape(*player, defender, random);
 
     return true;
 }

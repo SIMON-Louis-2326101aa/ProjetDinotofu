@@ -23,7 +23,10 @@
 #include "interface/CombatDisplay.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 #include "interface/model/MenuScreen.hpp"
+#include "lore/LegendTriggerSystem.hpp"
+#include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 
 #include <iostream>
 #include <string>
@@ -31,6 +34,167 @@
 
 namespace
 {
+    bool isCatalogSpecialOpponentName(const std::string& name)
+    {
+        for (const SpecialCharacter& character : SpecialCharacterCatalog::getAllSpecialCharacters())
+        {
+            if (character.getName() == name)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    std::string buildSpecialOpponentBestiaryDescription(const Player& opponent)
+    {
+        return "Rencontre d'arène IA : " + opponent.getName()
+            + " | Race : " + opponent.getRaceText()
+            + " | Classe : " + opponent.getType()
+            + ". Le registre confirme ce profil seulement après une rencontre réelle, un défi provoqué ou une rumeur fiable.";
+    }
+
+    void recordSpecialOpponentEncounterIfNeeded(const Player& opponent)
+    {
+        if (!isCatalogSpecialOpponentName(opponent.getName()))
+        {
+            return;
+        }
+
+        BestiaryRuntimeProgress::recordEncounter(
+            opponent.getName(),
+            "Personnages spéciaux",
+            buildSpecialOpponentBestiaryDescription(opponent)
+        );
+    }
+
+    void recordSpecialOpponentVictoryIfNeeded(const Player& opponent)
+    {
+        if (!isCatalogSpecialOpponentName(opponent.getName()))
+        {
+            return;
+        }
+
+        BestiaryRuntimeProgress::recordKill(
+            opponent.getName(),
+            "Personnages spéciaux",
+            buildSpecialOpponentBestiaryDescription(opponent)
+        );
+    }
+
+    MenuOptionItemData makeAiClassItemData(
+        const std::string& kind,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = ""
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = kind;
+        itemData.section = "Adversaire IA";
+        itemData.actionType = "select";
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        return itemData;
+    }
+
+    int askAiClassChoice(const std::string& targetName, int categoryChoice)
+    {
+        std::vector<ClassOptionInfo> classOptions = ClassCatalog::getClassOptionsByCategoryChoice(categoryChoice);
+        constexpr std::size_t itemsPerPage = 8;
+        std::size_t pageIndex = 0;
+        const std::size_t totalPages = PagedMenu::pageCount(classOptions.size(), itemsPerPage);
+
+        while (true)
+        {
+            const std::size_t firstIndex = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+            const std::size_t lastIndex = PagedMenu::lastIndexExclusive(classOptions.size(), pageIndex, itemsPerPage);
+
+            MenuScreen classScreen("CLASSE DE " + targetName, "pvp.ai.class.choice");
+            classScreen.setPagination(pageIndex, totalPages);
+            classScreen.addLine("Famille sélectionnée : " + ClassCatalog::getClassCategoryNameByChoice(categoryChoice) + ".");
+            classScreen.addLine("Choisis une classe précise pour fixer le rythme du duel.");
+            classScreen.addLine("Page : " + std::to_string(pageIndex + 1) + "/" + std::to_string(totalPages));
+            classScreen.addLine("Classes affichées : " + PagedMenu::rangeText(firstIndex, lastIndex, classOptions.size()));
+
+            for (std::size_t index = firstIndex; index < lastIndex; ++index)
+            {
+                const ClassOptionInfo& info = classOptions[index];
+                const int localChoice = static_cast<int>(index - firstIndex + 1);
+                MenuOptionItemData itemData = makeAiClassItemData(
+                    "class",
+                    info.name,
+                    info.role,
+                    "PV " + std::to_string(info.maxHp)
+                        + " · Dégâts " + std::to_string(info.minDamage) + "-" + std::to_string(info.maxDamage)
+                        + " · Crit " + std::to_string(info.criticalDamage)
+                );
+                itemData.progress = info.categoryName;
+                itemData.quantity = "Soin x" + std::to_string(info.healingPotionCount);
+                itemData.reward = "Dégâts x" + std::to_string(info.damagePotionCount);
+
+                classScreen.addOption(
+                    localChoice,
+                    info.name,
+                    "Rôle : " + info.role
+                        + " | PV " + std::to_string(info.maxHp)
+                        + " | Dégâts " + std::to_string(info.minDamage) + "-" + std::to_string(info.maxDamage)
+                        + " | Crit " + std::to_string(info.criticalDamage),
+                    true,
+                    "pvp.ai.class.choice." + std::to_string(index + 1),
+                    itemData
+                );
+            }
+
+            if (totalPages > 1 && pageIndex > 0)
+            {
+                classScreen.addOption(98, "Page précédente", "Voir les classes précédentes.", true, "pvp.ai.class.choice.page.previous");
+            }
+
+            if (totalPages > 1 && pageIndex + 1 < totalPages)
+            {
+                classScreen.addOption(99, "Page suivante", "Voir les classes suivantes.", true, "pvp.ai.class.choice.page.next");
+            }
+
+            int classChoice = TerminalInterface::askMenuChoiceFromOptions(
+                classScreen,
+                "Veuillez choisir une classe visible sur la page."
+            );
+
+            if (classChoice == 98 && pageIndex > 0)
+            {
+                --pageIndex;
+                Console::clear();
+                continue;
+            }
+
+            if (classChoice == 99 && pageIndex + 1 < totalPages)
+            {
+                ++pageIndex;
+                Console::clear();
+                continue;
+            }
+
+            const std::size_t selectedIndex = firstIndex + static_cast<std::size_t>(classChoice - 1);
+            if (selectedIndex >= classOptions.size() || selectedIndex >= lastIndex)
+            {
+                Console::clear();
+                MessageScreen::show(
+                    "CHOIX REFUSÉ",
+                    "pvp.ai.class.choice.invalid_page",
+                    {"Cette classe n'est pas visible sur la page actuelle."},
+                    false
+                );
+                continue;
+            }
+
+            return static_cast<int>(selectedIndex + 1);
+        }
+    }
+
     PlayerClass askClassManually(const std::string& targetName)
     {
         Console::clear();
@@ -41,12 +205,15 @@ namespace
 
         for (int i = 1; i <= ClassCatalog::getClassCategoryCount(); ++i)
         {
+            const std::string categoryName = ClassCatalog::getClassCategoryNameByChoice(i);
+            const std::string classCountText = std::to_string(ClassCatalog::getPlayableClassCountByCategoryChoice(i)) + " classes disponibles";
             categoryScreen.addOption(
                 i,
-                ClassCatalog::getClassCategoryNameByChoice(i),
-                std::to_string(ClassCatalog::getPlayableClassCountByCategoryChoice(i)) + " classes disponibles",
+                categoryName,
+                classCountText,
                 true,
-                "pvp.ai.class.category." + std::to_string(i)
+                "pvp.ai.class.category." + std::to_string(i),
+                makeAiClassItemData("class_category", categoryName, classCountText)
             );
         }
 
@@ -57,30 +224,7 @@ namespace
 
         Console::clear();
 
-        std::vector<ClassOptionInfo> classOptions = ClassCatalog::getClassOptionsByCategoryChoice(categoryChoice);
-        MenuScreen classScreen("CLASSE DE " + targetName, "pvp.ai.class.choice");
-        classScreen.addLine("Famille sélectionnée : " + ClassCatalog::getClassCategoryNameByChoice(categoryChoice) + ".");
-        classScreen.addLine("Choisis une classe précise pour fixer le rythme du duel.");
-
-        for (std::size_t i = 0; i < classOptions.size(); ++i)
-        {
-            const ClassOptionInfo& info = classOptions[i];
-            classScreen.addOption(
-                static_cast<int>(i + 1),
-                info.name,
-                "Rôle : " + info.role
-                    + " | PV " + std::to_string(info.maxHp)
-                    + " | Dégâts " + std::to_string(info.minDamage) + "-" + std::to_string(info.maxDamage)
-                    + " | Crit " + std::to_string(info.criticalDamage),
-                true,
-                "pvp.ai.class.choice." + std::to_string(i + 1)
-            );
-        }
-
-        int classChoice = TerminalInterface::askMenuChoiceFromOptions(
-            classScreen,
-            "Veuillez choisir une classe affichée."
-        );
+        int classChoice = askAiClassChoice(targetName, categoryChoice);
 
         return ClassCatalog::createClassByCategoryChoice(categoryChoice, classChoice);
     }
@@ -88,6 +232,32 @@ namespace
     void applyMattProUniversalBonus(Player& matt)
     {
         matt.applyFlatStatBonus(20, 2, 4, 6);
+    }
+
+    void showAiPvpConclusion(
+        const Player& player,
+        const Player& opponent,
+        bool playerWon,
+        bool playerWasRevived,
+        int initialHp
+    )
+    {
+        MenuScreen screen("BILAN DUEL IA", "pvp.ai.result.conclusion");
+        screen.addSubtitle("Résumé de sortie d'arène");
+        screen.addLine("Résultat : " + std::string(playerWon ? "victoire du joueur" : "défaite du joueur"));
+        screen.addLine("Mode : arène IA non létale");
+        screen.addLine("Joueur : " + player.getName());
+        screen.addLine("Adversaire : " + opponent.getName());
+        screen.addLine("- " + player.getName() + " | rôle : joueur | PV " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()));
+        screen.addLine("- " + opponent.getName() + " | rôle : adversaire IA | PV " + std::to_string(opponent.getHp()) + "/" + std::to_string(opponent.getMaxHp()));
+        screen.addLine("PV joueur avant duel : " + std::to_string(initialHp));
+        screen.addLine("PV joueur après bilan : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()));
+        screen.addLine("Statistiques : JcJ et combat mises à jour");
+        screen.addLine("Mort définitive : non");
+        screen.addLine("Restauration : " + std::string(playerWasRevived ? "réveil automatique appliqué" : "non nécessaire"));
+        screen.addLine("Dommages permanents : aucun dans cette arène IA");
+        screen.setDisplayOnlyInput("Résumé affiché sans saisie directe.");
+        TerminalInterface::renderMenuScreen(screen, false);
     }
 
     Player createMattOpponent(Random& random)
@@ -106,8 +276,22 @@ namespace
 
         MenuScreen screen("CLASSE DE MATT (PRO)", "pvp.ai.matt.class_mode");
         screen.addLine("Choisis comment Matt obtiendra sa classe.");
-        screen.addOption(1, "Classe aléatoire", "L'arène décide, comme prévu.", true, "pvp.ai.matt.random");
-        screen.addOption(2, "Choisir sa classe toi-même", "Pas très fair-play, mais accepté.", true, "pvp.ai.matt.manual");
+        screen.addOption(
+            1,
+            "Classe aléatoire",
+            "L'arène décide, comme prévu.",
+            true,
+            "pvp.ai.matt.random",
+            makeAiClassItemData("combat_route", "Classe aléatoire", "L'arène fixe seule le style de Matt (PRO).", "Défi spécial")
+        );
+        screen.addOption(
+            2,
+            "Choisir sa classe toi-même",
+            "Pas très fair-play, mais accepté.",
+            true,
+            "pvp.ai.matt.manual",
+            makeAiClassItemData("combat_route", "Choisir sa classe", "Le joueur force la classe de Matt (PRO).", "Donnée altérée")
+        );
 
         int classChoiceType = TerminalInterface::askMenuChoiceFromOptions(
             screen,
@@ -141,54 +325,126 @@ namespace
         return ai;
     }
 
+    MenuOptionItemData makeSpecialOpponentItemData(const SpecialCharacter& character)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "special_character";
+        itemData.section = "Personnages spéciaux";
+        itemData.actionType = "select";
+        itemData.name = character.getName();
+        itemData.detail = character.getCombatStyle();
+        itemData.status = "Défi provoqué";
+        itemData.owner = "Arène IA";
+        itemData.progress = "Classe native : " + character.getNativeClass();
+        itemData.reward = "Race : " + character.getRaceText();
+        itemData.important = character.getName() == "Matt (PRO)";
+        return itemData;
+    }
+
     Player createChosenSpecialOpponent()
     {
         Console::clear();
 
         std::vector<SpecialCharacter> characters = SpecialCharacterCatalog::getAllSpecialCharacters();
-        MenuScreen screen("PERSONNAGES SPÉCIAUX", "pvp.ai.special.choice");
-        screen.addLine("Le code a ouvert une porte que l'arène garde normalement rare.");
-        screen.addLine("Tu peux provoquer un personnage spécial précis, y compris Matt (PRO).");
+        constexpr std::size_t itemsPerPage = 8;
+        std::size_t pageIndex = 0;
+        const std::size_t totalPages = PagedMenu::pageCount(characters.size(), itemsPerPage);
 
-        for (std::size_t index = 0; index < characters.size(); ++index)
+        while (true)
         {
-            const SpecialCharacter& character = characters[index];
-            screen.addOption(
-                static_cast<int>(index + 1),
-                character.getName(),
-                "Race : " + character.getRaceText()
-                    + " | Classe native : " + character.getNativeClass()
-                    + " | " + character.getCombatStyle(),
-                true,
-                "pvp.ai.special." + std::to_string(index + 1)
-            );
-        }
+            const std::size_t firstIndex = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+            const std::size_t lastIndex = PagedMenu::lastIndexExclusive(characters.size(), pageIndex, itemsPerPage);
 
-        int choice = TerminalInterface::askMenuChoiceFromOptions(
-            screen,
-            "Veuillez choisir un personnage spécial affiché."
-        );
+            MenuScreen screen("PERSONNAGES SPÉCIAUX", "pvp.ai.special.choice");
+            screen.setPagination(pageIndex, totalPages);
+            screen.addLine("Le code a ouvert une porte que l'arène garde normalement rare.");
+            screen.addLine("Tu peux provoquer un personnage spécial précis, y compris Matt (PRO).");
+            screen.addLine("Page : " + std::to_string(pageIndex + 1) + "/" + std::to_string(totalPages));
+            screen.addLine("Entrées affichées : " + PagedMenu::rangeText(firstIndex, lastIndex, characters.size()));
 
-        const SpecialCharacter& selected = characters[static_cast<std::size_t>(choice - 1)];
-
-        Player opponent(selected.getName(), ClassCatalog::createClassByName(selected.getNativeClass()));
-        opponent.setRace(selected.getRace());
-        opponent.initializeStarterInventory();
-
-        SpecialCharacterNativeBonus::applyForSpecialCharacter(opponent, selected);
-
-        Console::clear();
-        MessageScreen::show(
-            "DÉFI PROVOQUÉ",
-            "pvp.ai.special.called",
+            for (std::size_t index = firstIndex; index < lastIndex; ++index)
             {
-                selected.getName() + " a été appelé directement par le registre altéré.",
-                "Ce n'est plus une rencontre rare : c'est un défi provoqué."
-            },
-            false
-        );
+                const SpecialCharacter& character = characters[index];
+                const int localChoice = static_cast<int>(index - firstIndex + 1);
+                screen.addOption(
+                    localChoice,
+                    character.getName(),
+                    "Race : " + character.getRaceText()
+                        + " | Classe native : " + character.getNativeClass()
+                        + " | " + character.getCombatStyle(),
+                    true,
+                    "pvp.ai.special." + std::to_string(index + 1),
+                    makeSpecialOpponentItemData(character)
+                );
+            }
 
-        return opponent;
+            if (totalPages > 1 && pageIndex > 0)
+            {
+                screen.addOption(98, "Page précédente", "Voir les personnages spéciaux précédents.", true, "pvp.ai.special.page.previous");
+            }
+
+            if (totalPages > 1 && pageIndex + 1 < totalPages)
+            {
+                screen.addOption(99, "Page suivante", "Voir les personnages spéciaux suivants.", true, "pvp.ai.special.page.next");
+            }
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(
+                screen,
+                "Veuillez choisir un personnage spécial affiché."
+            );
+
+            if (choice == 98 && pageIndex > 0)
+            {
+                --pageIndex;
+                Console::clear();
+                continue;
+            }
+
+            if (choice == 99 && pageIndex + 1 < totalPages)
+            {
+                ++pageIndex;
+                Console::clear();
+                continue;
+            }
+
+            const std::size_t selectedIndex = firstIndex + static_cast<std::size_t>(choice - 1);
+            if (selectedIndex >= characters.size() || selectedIndex >= lastIndex)
+            {
+                Console::clear();
+                MessageScreen::show(
+                    "CHOIX REFUSÉ",
+                    "pvp.ai.special.choice.invalid_page",
+                    {"Ce personnage n'est pas visible sur la page actuelle."},
+                    false
+                );
+                continue;
+            }
+
+            const SpecialCharacter& selected = characters[selectedIndex];
+
+            Player opponent(selected.getName(), ClassCatalog::createClassByName(selected.getNativeClass()));
+            opponent.setRace(selected.getRace());
+            opponent.initializeStarterInventory();
+
+            SpecialCharacterNativeBonus::applyForSpecialCharacter(opponent, selected);
+
+            Console::clear();
+            MessageScreen::show(
+                "DÉFI PROVOQUÉ",
+                "pvp.ai.special.called",
+                {
+                    "Personnage : " + selected.getName(),
+                    "Race : " + selected.getRaceText(),
+                    "Classe native : " + selected.getNativeClass(),
+                    selected.getName() + " a été appelé directement par le registre altéré.",
+                    "Ce n'est plus une rencontre rare : c'est un défi provoqué."
+                },
+                false
+            );
+
+            return opponent;
+        }
     }
 
     Player createClassicOpponentFromChosenClass(Random& random)
@@ -230,7 +486,8 @@ void AIPvpMode::run(Player& player1, Random& random)
         "Matt (PRO)",
         "L'adversaire référence. Il est meilleur globalement, peu importe sa classe.",
         true,
-        "pvp.ai.opponent.matt"
+        "pvp.ai.opponent.matt",
+        makeAiClassItemData("combat_route", "Matt (PRO)", "Adversaire spécial de référence, meilleur globalement.", "Défi spécial")
     );
     opponentScreen.addOption(
         2,
@@ -238,14 +495,21 @@ void AIPvpMode::run(Player& player1, Random& random)
         "Nom, race et classe aléatoires. Personnage spécial possible : "
             + std::to_string(RandomCharacterGenerator::SPECIAL_ARENA_SPAWN_PERCENTAGE) + "%.",
         true,
-        "pvp.ai.opponent.random"
+        "pvp.ai.opponent.random",
+        makeAiClassItemData(
+            "combat_route",
+            "Tirage d'arène aléatoire",
+            "Nom, race et classe tirés par l'arène.",
+            "Spécial possible : " + std::to_string(RandomCharacterGenerator::SPECIAL_ARENA_SPAWN_PERCENTAGE) + "%"
+        )
     );
     opponentScreen.addOption(
         3,
         "Choisir une classe d'adversaire",
         "Tu choisis le style de combat. Aucun personnage spécial ne peut apparaître avec cette option.",
         true,
-        "pvp.ai.opponent.manual_class"
+        "pvp.ai.opponent.manual_class",
+        makeAiClassItemData("combat_route", "Classe imposée", "Le joueur choisit seulement le style de combat adverse.", "Aucun spécial")
     );
 
     if (player1.hasSpecialChallengeAccess())
@@ -255,7 +519,8 @@ void AIPvpMode::run(Player& player1, Random& random)
             "Spéciaux",
             "Liste tous les personnages spéciaux et permet d'en provoquer un directement. Donnée altérée.",
             true,
-            "pvp.ai.opponent.special"
+            "pvp.ai.opponent.special",
+            makeAiClassItemData("combat_route", "Spéciaux", "Provoquer directement un personnage spécial du registre.", "Donnée altérée")
         );
     }
 
@@ -282,6 +547,9 @@ void AIPvpMode::run(Player& player1, Random& random)
     {
         ai = createChosenSpecialOpponent();
     }
+
+    recordSpecialOpponentEncounterIfNeeded(ai);
+    LegendTriggerSystem::maybeDisplaySpecialOpponentLegend(ai.getName(), random);
 
     Console::clear();
 
@@ -324,6 +592,8 @@ void AIPvpMode::run(Player& player1, Random& random)
     }
 
     Console::pauseSeconds(2);
+
+    const int playerInitialHp = player1.getHp();
 
     std::vector<Summon> playerSummons = SummonCombatSystem::createInitialSummonsFor(player1);
     std::vector<Summon> aiSummons = SummonCombatSystem::createInitialSummonsFor(ai);
@@ -464,4 +734,33 @@ void AIPvpMode::run(Player& player1, Random& random)
     }
 
     CombatDisplay::displayCombatResult(player1, ai);
+
+    const bool playerWon = !player1.isDead() && ai.isDead();
+    bool playerWasRevived = false;
+
+    if (playerWon)
+    {
+        player1.recordPvpVictory();
+        player1.recordVictory();
+        recordSpecialOpponentVictoryIfNeeded(ai);
+    }
+    else
+    {
+        player1.recordPvpDefeat();
+        player1.recordDefeat();
+
+        if (player1.isDead())
+        {
+            player1.reviveWithHealthPercentage(35);
+            playerWasRevived = true;
+        }
+    }
+
+    showAiPvpConclusion(
+        player1,
+        ai,
+        playerWon,
+        playerWasRevived,
+        playerInitialHp
+    );
 }

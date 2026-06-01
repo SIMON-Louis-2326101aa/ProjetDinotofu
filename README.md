@@ -4,7 +4,7 @@ Dinotofu is a C++17 RPG / arena game. The terminal version remains the stable ba
 
 ## Current version   
 
-- Current version: **V2.01.20**   
+- Current version: **V2.04.06**   
 - Last character version still acceptable before a strong recreation recommendation: **V2.01.03**   
 - Characters older than **V2.01.03**: recreation recommended, because the GUI/save/bestiary/legend baseline changed too much since the older milestones.   
 - V1 to V2 transition or too-old V2 save: strong recreation recommendation, because old characters are now too far from the V2.01.03 baseline.   
@@ -33,17 +33,40 @@ The current GUI is designed to make the game playable from a local page while ke
 
 V2 milestone state:   
 
+- V2.04.06 intentionally updates the release target and improves shared paginated navigation, potion/shop/bestiary long lists, and dialogue snapshots separated from combat actions;   
+- V2.04.05 improves structured reward screens, pagination navigation metadata and the visible skill/progression roadmap;   
+- V2.01.34 rectifies version metadata and improves GUI snapshots for AI PvP opponent routes, escape/role combat results, large-list notices and difficulty/session transitions;   
 - main menus, activities, sessions, character creation, saves, inventory, equipment, potions, shops, quests, exploration, progression, catalogues, combat and bosses expose GUI snapshots;   
 - long equipment, inventory, potion, stock, resale and buyback lists use clearer pagination with `0` for back and `98/99` for page navigation when needed;   
 - clickable cards keep their visible number so the player can still understand the terminal link;   
+- long solo/coop boss selections are now paginated, with structured boss cards and `98/99` page navigation;   
+- AI PvP special-character selection is now paginated and exposes GUI cards with race, native class, style and challenge status;   
+- the bestiary now has a dedicated special-character hub with discovered sheets, locked/unlocked tracking and access to group rumors;   
+- special AI PvP opponents now feed the progressive bestiary instead of staying invisible outside combat;   
+- local PvP J2 and manual AI PvP class choices are now paginated and expose GUI cards with role, category, potions and base stats;   
+- combat results, coop boss results and reward screens now expose more structured lines for cleaner GUI cards;   
+- loot, reward and post-combat recovery screens are now classified more cleanly in the GUI, with dedicated cards for fragments, materials and consequences;   
+- the guild board now uses `98/99` pagination to avoid compact long lists and wrong contract choices;   
+- coop boss support and PvE coop support now expose GUI cards for the healing action, ally target and potion choice, with `98/99` pagination if these lists become long;   
+- manual summon orders now expose cleaner GUI cards: automatic/manual mode, action, target, duration, remaining link and sacrifice availability;   
+- summon target selection and group-combat target selection now use `98/99` pagination to avoid overly long lists when several units or summons are present;   
+- inspecting an already decrypted target now uses a readable GUI screen instead of raw terminal output;   
+- selected-target screens now show the player, target, threat priority and wave summary more clearly;   
+- visitable locations and notable NPC lists now also use `98/99` pagination, so future recommended contacts do not break the display;   
+- the library can rarely trigger two additional soft lore fragments after the storyteller notebook is bought, without revealing free weaknesses;   
 - JSON actions expose business metadata: type, status, price, quantity, stock, progress, owner, reward or detail;   
+- still-generic contextual choices for exploration, chests, traps, NPCs, contracts and locations are now converted into safer GUI cards instead of bare lines;   
+- intelligent enemy intro dialogues now expose speaker, likely language and understanding state, making them easier to read in the GUI;   
+- two new boss-room legends were added to the register: Azelanos / cracked crown and the Anomaly / lying menu;   
+- main combat actions and attack styles now expose dedicated GUI cards: attack, quick heal, potions, equipment, defense, wait and flee;   
+- several older player-turn text displays, such as stats, equipment and observation, are now captured and shown through GUI read-only screens instead of staying terminal-only;   
 - structured Legend Register choices now display a short GUI detail, section, source and progression when useful;   
+- the library can now sell a wandering storyteller notebook, unlocking two new Legend Register rumors about library and NPC lore triggers;   
 - free input, confirmations, quantities, hidden codes and numeric choices are described through the GUI input contract and dedicated input cards;   
 - several transient reward, death, boss, craft, exchange and altered-data screens are marked as display-only to avoid false clicks;   
 - the browser and local server reject commands sent from an outdated screen or when the input queue is already occupied;   
 - for now, the terminal version is the most stable one; the GUI remains experimental and still needs screen-by-screen stabilization;   
 - the terminal remains available as fallback display instead of being removed ;   
-- on PowerShell, terminal output now uses a more robust Unicode path to preserve French accents.   
 
 ## Useful commands   
 
@@ -67,6 +90,12 @@ Print the version only without starting the interactive game:
 ./output/Dinotofu --version   
 # or   
 ./output/Dinotofu -v   
+```   
+
+Quickly check terminal accents/UTF-8:   
+
+```bash   
+./output/Dinotofu --encoding-check   
 ```   
 
 Clean:   
@@ -114,10 +143,10 @@ On desktop Windows/Linux builds, the installer or launcher must create two clear
 
 ## Main directions only   
 
-1. Stabilize player feedback on the **V2.01.20** milestone, especially GUI flow, long inventory/shop/quest/potion lists, returning to lists after actions, combat routes, dead-screen safety, visible updater launch, the legend register and progressive special-character bestiary.   
-2. Then add content, living dialogue/lore, skills and progressive polish.   
-3. Move to **V3.00.00** when the first story chapter is coded.   
-4. Keep online multiplayer for a much later major version.   
+1. Keep stabilizing the last GUI combat and summon routes, especially rare cases with many units or return-to-list flows.   
+2. Continue structuring complex menus: long quests, special groups, rare events, rewards and consequences.   
+3. Strengthen global balancing: classes, monsters, bosses, XP/gold, loot, rewards, prices and difficulties.   
+4. Then add content, living dialogue/lore, skills and progressive polish.   
 
 ## Special developer note   
 

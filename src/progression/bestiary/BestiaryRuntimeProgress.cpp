@@ -608,6 +608,66 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
             "Entités passives / alliées",
             "Notes achetées : groupe proche. Sanctus protège, Aoi stabilise ses flammes, Kanadé déteste perdre et lance une magie très variable."
         );
+        unlockEntry(
+            "Les bras cassés",
+            "Personnages spéciaux",
+            "Notes achetées : groupe d'aventuriers chaotique, connu pour libérer des villages en respectant les règles seulement quand elles survivent à Hazak, Fail, Aoi, Kanadé et Sanctus."
+        );
+        unlockEntry(
+            "Hestia",
+            "Personnages spéciaux",
+            "Rumeur fiable : mage terrifiée dont la magie devient plus dangereuse sous pression. Hazak et Sanctus la protègent plus souvent qu'ils ne l'admettent."
+        );
+        unlockEntry(
+            "Skuro",
+            "Personnages spéciaux",
+            "Rumeur fiable : combattant lourd attiré par les coupes propres, les dégâts massifs et les arènes où le métal peut vraiment mordre."
+        );
+        return;
+    }
+
+    if (informationId == "special_identity_rumors")
+    {
+        unlockEntry(
+            "Matt (PRO)",
+            "Personnages spéciaux",
+            "Dossier de rumeur : adversaire spécial à posture parfaite, bonus légers et IA propre. Sa réputation suffit maintenant à confirmer son existence sans détailler toutes ses valeurs."
+        );
+        unlockEntry(
+            "Louis",
+            "Personnages spéciaux",
+            "Dossier de rumeur : artificier précis, naïf mais sympathique, capable de multiplier les projectiles et de transformer un plan simple en pluie mécanique."
+        );
+        unlockEntry(
+            "Trexof",
+            "Personnages spéciaux",
+            "Dossier de rumeur : profil humain spécial qui observe les limites du combat, teste les failles et traite chaque échange comme une stratégie à résoudre."
+        );
+        unlockEntry(
+            "Mattzelda",
+            "Personnages spéciaux",
+            "Dossier de rumeur : colosse humain blagueur, très difficile à bouger et beaucoup trop content quand un plan se transforme en bagarre."
+        );
+        unlockEntry(
+            "Henrique",
+            "Personnages spéciaux",
+            "Dossier de rumeur : chevalier spécial capable de revenir une fois, fonce globalement dans le tas et refuse qu'une première chute termine vraiment son histoire."
+        );
+        unlockEntry(
+            "Rumeur du trio qui transforme un test en bagarre",
+            "Légendes / contes",
+            "Dossier lu : une rumeur de groupe confirme Mattzelda, Louis et Trexof comme traces possibles, sans révéler tous leurs calculs ni leurs liens exacts."
+        );
+        unlockEntry(
+            "Rumeur de la mage qu'on ne laisse pas seule",
+            "Légendes / contes",
+            "Dossier lu : Hestia semble protégée par des profils plus durs qu'elle, surtout quand l'arène devient trop violente."
+        );
+        unlockEntry(
+            "Rumeur du commandant qui ne comprend pas l'hostilité",
+            "Légendes / contes",
+            "Dossier lu : Fire Flight peut apparaître comme commandant spécial bien avant que son vrai rôle final soit compris."
+        );
         return;
     }
 
@@ -793,6 +853,31 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
             "Note : légendes sans obligation",
             "Légendes / contes",
             "Note achetée : les légendes doivent enrichir le monde sans bloquer le jeu. Tu peux les ignorer, puis revenir les lire dans le registre quand tu veux."
+        );
+        return;
+    }
+
+    if (informationId == "legend_storyteller_routes")
+    {
+        unlockEntry(
+            "Rumeur de la bibliothécaire qui classe les silences",
+            "Légendes / contes",
+            "Carnet acheté : la bibliothèque peut servir de déclencheur doux pour ouvrir des récits sans transformer les légendes en passage obligatoire."
+        );
+        unlockEntry(
+            "Rumeur du conteur qui change de table",
+            "Légendes / contes",
+            "Carnet acheté : certains PNJ de taverne pourront plus tard raconter des fragments précis selon les rencontres, sans donner de faiblesse gratuite."
+        );
+        unlockEntry(
+            "Rumeur du rayonnage qui respire",
+            "Légendes / contes",
+            "Carnet acheté : une étagère de bibliothèque peut parfois ouvrir un fragment de lore quand le voyage a laissé une trace crédible."
+        );
+        unlockEntry(
+            "Note de la porte qui refuse le récit",
+            "Légendes / contes",
+            "Carnet acheté : certaines salles doivent parfois rester silencieuses pour ne pas transformer un mystère de boss en solution gratuite."
         );
         return;
     }

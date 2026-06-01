@@ -11,6 +11,22 @@
 #include <iostream>
 #include <sstream>
 
+namespace
+{
+    MenuOptionItemData makeNavigationItemData(const std::string& actionType, const std::string& name, const std::string& detail)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "navigation";
+        itemData.section = "Navigation";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = "Disponible";
+        return itemData;
+    }
+}
+
 std::size_t PagedMenu::pageCount(std::size_t totalItems, std::size_t itemsPerPage)
 {
     if (itemsPerPage == 0 || totalItems == 0)
@@ -58,19 +74,62 @@ std::string PagedMenu::pageInfoText(std::size_t pageIndex, std::size_t totalPage
 
 void PagedMenu::addNavigationOptions(MenuScreen& screen, std::size_t pageIndex, std::size_t totalPages)
 {
+    addNavigationOptions(
+        screen,
+        pageIndex,
+        totalPages,
+        "back",
+        "page.previous",
+        "page.next"
+    );
+}
+
+void PagedMenu::addNavigationOptions(
+    MenuScreen& screen,
+    std::size_t pageIndex,
+    std::size_t totalPages,
+    const std::string& backActionId,
+    const std::string& previousActionId,
+    const std::string& nextActionId,
+    const std::string& backHint,
+    const std::string& previousHint,
+    const std::string& nextHint
+)
+{
     screen.setPagination(pageIndex, totalPages);
-    screen.addBackOption();
+    screen.addOption(
+        0,
+        "Retour",
+        backHint,
+        true,
+        backActionId,
+        makeNavigationItemData("back", "Retour", backHint)
+    );
 
     if (totalPages > 1)
     {
         if (pageIndex > 0)
         {
-            screen.addOption(98, "Page précédente", "", true, "page.previous");
+            screen.addOption(
+                98,
+                "Page précédente",
+                previousHint,
+                true,
+                previousActionId,
+                makeNavigationItemData("previous_page", "Page précédente", previousHint)
+            );
         }
 
         if (pageIndex + 1 < totalPages)
         {
-            screen.addOption(99, "Page suivante", "", true, "page.next");
+            screen.addOption(
+                99,
+                "Page suivante",
+                nextHint,
+                true,
+                nextActionId,
+                makeNavigationItemData("next_page", "Page suivante", nextHint)
+            );
         }
     }
 }

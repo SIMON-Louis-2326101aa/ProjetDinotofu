@@ -12,6 +12,7 @@
 #include "interface/CombatDisplay.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "save/SaveManager.hpp"
@@ -123,6 +124,45 @@ namespace
         );
     }
 
+    void showLocalPvpResultScreen(
+        const Player& winner,
+        const Player& loser,
+        bool deadlyDuel,
+        bool lethalDeadlyDuel
+    )
+    {
+        MenuScreen screen("BILAN PVP LOCAL", "pvp.local.result.conclusion");
+        screen.addSubtitle("Résumé de sortie de duel");
+        screen.addLine("Résultat : victoire de " + winner.getName());
+        screen.addLine("Vaincu : " + loser.getName());
+        screen.addLine("Mode : " + std::string(deadlyDuel ? "duel sérieux" : "duel amical"));
+        screen.addLine("Léthal : " + std::string(lethalDeadlyDuel ? "oui" : "non"));
+        screen.addLine("PV vainqueur : " + std::to_string(winner.getHp()) + "/" + std::to_string(winner.getMaxHp()));
+        screen.addLine("PV vaincu : " + std::to_string(loser.getHp()) + "/" + std::to_string(loser.getMaxHp()));
+        screen.addLine("Statistiques : victoire/défaite JcJ mises à jour");
+        screen.addLine("Sauvegarde J2 : traitée après ce bilan si J2 est persistant");
+        screen.setDisplayOnlyInput("Résumé affiché sans saisie directe.");
+        TerminalInterface::renderMenuScreen(screen, false);
+    }
+
+    void showPlayer2SaveStatusScreen(
+        const Player& player2,
+        const std::string& accountName,
+        const std::string& status,
+        const std::string& detail
+    )
+    {
+        MenuScreen screen("SAUVEGARDE J2", "pvp.local.player2.save.status");
+        screen.addSubtitle("Bilan de persistance du deuxième joueur");
+        screen.addLine("Joueur : " + player2.getName());
+        screen.addLine("Compte : " + accountName);
+        screen.addLine("Statut : " + status);
+        screen.addLine("Détail : " + detail);
+        screen.addLine("PV actuels : " + std::to_string(player2.getHp()) + "/" + std::to_string(player2.getMaxHp()));
+        screen.setDisplayOnlyInput("Résumé affiché sans saisie directe.");
+        TerminalInterface::renderMenuScreen(screen, false);
+    }
+
     // EN: applyFriendlyDuelSymbolicReward declares or implements a focused behavior used by this module.
     // FR: applyFriendlyDuelSymbolicReward déclare ou implémente un comportement précis utilisé par ce module.
     void applyFriendlyDuelSymbolicReward(Player& winner)
@@ -188,17 +228,27 @@ namespace
         return screen;
     }
 
-    MenuScreen buildPvpClassChoiceScreen(int categoryChoice)
+    MenuScreen buildPvpClassChoiceScreen(
+        int categoryChoice,
+        const std::vector<ClassOptionInfo>& classes,
+        std::size_t pageIndex,
+        std::size_t totalPages,
+        std::size_t firstIndex,
+        std::size_t lastIndex
+    )
     {
         const std::string categoryName = ClassCatalog::getClassCategoryNameByChoice(categoryChoice);
         MenuScreen screen("CLASSE J2", "pvp.local.j2.class_choice");
+        screen.setPagination(pageIndex, totalPages);
         screen.addLine("Famille sélectionnée : " + categoryName + ".");
         screen.addLine("Choisis la classe qui portera le duel.");
+        screen.addLine("Page : " + std::to_string(pageIndex + 1) + "/" + std::to_string(totalPages));
+        screen.addLine("Classes affichées : " + PagedMenu::rangeText(firstIndex, lastIndex, classes.size()));
 
-        const std::vector<ClassOptionInfo> classes = ClassCatalog::getClassOptionsByCategoryChoice(categoryChoice);
-        for (int index = 0; index < static_cast<int>(classes.size()); ++index)
+        for (std::size_t index = firstIndex; index < lastIndex; ++index)
         {
             const ClassOptionInfo& option = classes[index];
+            const int localChoice = static_cast<int>(index - firstIndex + 1);
             MenuOptionItemData itemData = makePvpCreationItemData(
                 "class",
                 option.name,
@@ -212,7 +262,7 @@ namespace
             itemData.reward = "Dégâts x" + std::to_string(option.damagePotionCount);
 
             screen.addOption(
-                index + 1,
+                localChoice,
                 option.name,
                 option.role + " | PV " + std::to_string(option.maxHp)
                     + " | Dégâts " + std::to_string(option.minDamage) + "-" + std::to_string(option.maxDamage),
@@ -222,7 +272,74 @@ namespace
             );
         }
 
+        if (totalPages > 1 && pageIndex > 0)
+        {
+            screen.addOption(98, "Page précédente", "Voir les classes précédentes.", true, "pvp.local.j2.class_choice.page.previous");
+        }
+
+        if (totalPages > 1 && pageIndex + 1 < totalPages)
+        {
+            screen.addOption(99, "Page suivante", "Voir les classes suivantes.", true, "pvp.local.j2.class_choice.page.next");
+        }
+
         return screen;
+    }
+
+    int askPvpClassChoice(int categoryChoice)
+    {
+        const std::vector<ClassOptionInfo> classes = ClassCatalog::getClassOptionsByCategoryChoice(categoryChoice);
+        constexpr std::size_t itemsPerPage = 8;
+        std::size_t pageIndex = 0;
+        const std::size_t totalPages = PagedMenu::pageCount(classes.size(), itemsPerPage);
+
+        while (true)
+        {
+            const std::size_t firstIndex = PagedMenu::firstIndex(pageIndex, itemsPerPage);
+            const std::size_t lastIndex = PagedMenu::lastIndexExclusive(classes.size(), pageIndex, itemsPerPage);
+
+            MenuScreen screen = buildPvpClassChoiceScreen(
+                categoryChoice,
+                classes,
+                pageIndex,
+                totalPages,
+                firstIndex,
+                lastIndex
+            );
+
+            int choice = TerminalInterface::askMenuChoiceFromOptions(
+                screen,
+                "Veuillez choisir une classe visible sur la page."
+            );
+
+            if (choice == 98 && pageIndex > 0)
+            {
+                --pageIndex;
+                Console::clear();
+                continue;
+            }
+
+            if (choice == 99 && pageIndex + 1 < totalPages)
+            {
+                ++pageIndex;
+                Console::clear();
+                continue;
+            }
+
+            const std::size_t selectedIndex = firstIndex + static_cast<std::size_t>(choice - 1);
+            if (selectedIndex >= classes.size() || selectedIndex >= lastIndex)
+            {
+                Console::clear();
+                MessageScreen::show(
+                    "CHOIX REFUSÉ",
+                    "pvp.local.j2.class_choice.invalid_page",
+                    {"Cette classe n'est pas visible sur la page actuelle."},
+                    false
+                );
+                continue;
+            }
+
+            return static_cast<int>(selectedIndex + 1);
+        }
     }
 
     // EN: askDifficultyForSecondPlayer declares or implements a focused behavior used by this module.
@@ -266,22 +383,14 @@ namespace
 
         Console::clear();
 
-        int categoryChoice = TerminalInterface::askMenuChoice(
+        int categoryChoice = TerminalInterface::askMenuChoiceFromOptions(
             buildPvpClassCategoryScreen(playerName),
-            1,
-            ClassCatalog::getClassCategoryCount(),
             "Veuillez choisir une famille affichée."
         );
 
         Console::clear();
 
-        int maxClassChoice = ClassCatalog::getPlayableClassCountByCategoryChoice(categoryChoice);
-        int classChoice = TerminalInterface::askMenuChoice(
-            buildPvpClassChoiceScreen(categoryChoice),
-            1,
-            maxClassChoice,
-            "Veuillez choisir une classe affichée."
-        );
+        int classChoice = askPvpClassChoice(categoryChoice);
 
         Player player(playerName, ClassCatalog::createClassByCategoryChoice(categoryChoice, classChoice));
         player.initializeStarterInventory(difficulty);
@@ -1141,6 +1250,8 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
     Player* winner = player1.isDead() ? &player2 : &player1;
     Player* loser = player1.isDead() ? &player1 : &player2;
 
+    showLocalPvpResultScreen(*winner, *loser, deadlyDuel, lethalDeadlyDuel);
+
     winner->recordPvpVictory();
     loser->recordPvpDefeat();
 
@@ -1184,30 +1295,30 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
         {
             if (SaveManager::movePlayableCharacterToDead(player2Slot.accountName, player2.getName()))
             {
-                MessageScreen::show(
-                    "SAUVEGARDE J2",
-                    "pvp.local.player2.save.dead_registry",
-                    {"J2 est mort en duel Léthal : le personnage rejoint le registre des morts."},
-                    false
+                showPlayer2SaveStatusScreen(
+                    player2,
+                    player2Slot.accountName,
+                    "registre des morts",
+                    "J2 est mort en duel Léthal : le personnage rejoint le registre des morts."
                 );
             }
             else
             {
-                MessageScreen::show(
-                    "SAUVEGARDE J2",
-                    "pvp.local.player2.save.dead_registry_failed",
-                    {"Attention : le registre des morts refuse d'emporter J2 proprement."},
-                    false
+                showPlayer2SaveStatusScreen(
+                    player2,
+                    player2Slot.accountName,
+                    "alerte registre",
+                    "Attention : le registre des morts refuse d'emporter J2 proprement."
                 );
             }
         }
         else
         {
-            MessageScreen::show(
-                "SAUVEGARDE J2",
-                "pvp.local.player2.save.updated",
-                {"Sauvegarde J2 mise à jour : " + player2.getName() + "."},
-                false
+            showPlayer2SaveStatusScreen(
+                player2,
+                player2Slot.accountName,
+                "mise à jour",
+                "Sauvegarde J2 mise à jour après le duel local."
             );
         }
     }

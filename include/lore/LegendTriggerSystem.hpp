@@ -40,6 +40,14 @@ public:
     // EN: Rarely displays a short special group legend before a PvE group encounter.
     // FR: Affiche rarement une courte légende de groupe spécial avant une rencontre PvE de groupe.
     static void maybeDisplaySpecialGroupLegend(const std::vector<std::string>& names, Random& random);
+
+    // EN: Rarely displays an arena rumor when a special AI opponent is encountered.
+    // FR: Affiche rarement une rumeur d'arène quand un adversaire IA spécial apparaît.
+    static void maybeDisplaySpecialOpponentLegend(const std::string& name, Random& random);
+
+    // EN: Rarely displays a soft library/tavern lore whisper after the matching archive is unlocked.
+    // FR: Affiche rarement une rumeur douce de bibliothèque/taverne après déblocage de l'archive correspondante.
+    static void maybeDisplayLibraryLoreWhisper(Random& random);
 };
 
 #endif

@@ -136,6 +136,161 @@ namespace
         };
     }
 
+    LegendArchiveEntry makeSpecialArenaRumor()
+    {
+        return LegendArchiveEntry{
+            "special_arena_named_opponent",
+            "Rumeur des adversaires spéciaux",
+            "Déclencheurs et rumeurs",
+            "Arène IA / gradins nerveux",
+            "Une rumeur explique pourquoi certains noms ne doivent pas apparaître dans le registre avant d'avoir été vus.",
+            {
+                "Dans les gradins, personne ne prononce les grands noms trop vite.",
+                "On dit que certains adversaires ne sont pas de simples tirages : ils portent déjà une histoire, un groupe, ou une dette que le registre ne veut pas révéler gratuitement.",
+                "Quand l'arène confirme enfin l'un de ces profils, la fiche cesse d'être une silhouette et devient une trace réelle.",
+                "La rumeur ne donne pas une faiblesse. Elle rappelle seulement qu'un nom spécial doit se gagner par rencontre, défi ou preuve crédible."
+            }
+        };
+    }
+
+    LegendArchiveEntry makeFriendlyTrioRumor()
+    {
+        return LegendArchiveEntry{
+            "special_trio_friends_rumor",
+            "Rumeur du trio qui transforme un test en bagarre",
+            "Groupes et héros",
+            "Arène / banc des spectateurs",
+            "Une rumeur parle de Mattzelda, Louis et Trexof sans transformer leur rencontre en fiche gratuite.",
+            {
+                "Certains spectateurs prétendent avoir vu trois profils arriver ensemble : un mur qui plaisante, un artificier qui cherche des amis, et un testeur qui compte déjà les failles.",
+                "Le trio ne ressemble pas à une compagnie officielle. Il ressemble plutôt à une mauvaise idée qui a appris à marcher droit pendant quelques minutes.",
+                "La rumeur confirme seulement leur existence possible. Le registre gardera le reste tant que l'arène ne les aura pas vraiment placés devant toi.",
+                "Dans Dinotofu, un nom spécial doit avoir une trace. Pas une révélation gratuite."
+            }
+        };
+    }
+
+    LegendArchiveEntry makeProtectedHestiaRumor()
+    {
+        return LegendArchiveEntry{
+            "special_hestia_protected_rumor",
+            "Rumeur de la mage qu'on ne laisse pas seule",
+            "Groupes et héros",
+            "Taverne / table trop silencieuse",
+            "Une rumeur lie Hestia à Hazak et Sanctus sans dévoiler toute son histoire.",
+            {
+                "Les gens qui connaissent Hestia baissent la voix quand ils parlent d'elle.",
+                "Ils disent qu'elle pourrait éviter presque tous les combats si la peur ne la poussait pas parfois en avant les yeux fermés.",
+                "Hazak ne parle pas de compassion. Sanctus ne parle pas de peur. Pourtant, quand elle apparaît, il y a souvent quelqu'un entre elle et la violence.",
+                "Le registre note cette protection comme une rumeur de groupe, pas comme une faiblesse tactique."
+            }
+        };
+    }
+
+    LegendArchiveEntry makeFireFlightCommandRumor()
+    {
+        return LegendArchiveEntry{
+            "special_fireflight_command_rumor",
+            "Rumeur du commandant qui ne comprend pas l'hostilité",
+            "Groupes et héros",
+            "Camp d'entraînement / salves lointaines",
+            "Une rumeur présente Fire Flight comme meneur spécial avant ses vraies révélations de boss final.",
+            {
+                "On raconte qu'un commandant observe parfois les combats comme s'il cherchait encore une raison de ne pas tirer.",
+                "Il comprend les lignes, les salves et les positions. Il comprend beaucoup moins pourquoi des humains ou semi-humains choisissent d'être ennemis.",
+                "Quand il donne un ordre, l'air se remplit de projectiles avant même qu'on sache si la diplomatie a officiellement échoué.",
+                "Le registre garde cette rumeur séparée de son rôle final. Certaines vérités doivent arriver beaucoup plus tard."
+            }
+        };
+    }
+
+
+    LegendArchiveEntry makeLivingLibraryKeeper()
+    {
+        return LegendArchiveEntry{
+            "legend_living_library_keeper",
+            "Rumeur de la bibliothécaire qui classe les silences",
+            "Déclencheurs et rumeurs",
+            "Bibliothèque / comptoir des récits",
+            "Une note explique que certains récits apparaissent par achat d'information, discussion ou retour après une rencontre marquante.",
+            {
+                "La bibliothécaire ne range pas seulement les livres : elle range aussi les choses que les aventuriers refusent d'avouer.",
+                "Un combat trop étrange, un nom confirmé, une salle ancienne ou un PNJ bavard peut déplacer un récit du silence vers le registre.",
+                "Elle prévient pourtant les joueurs pressés : acheter une rumeur ne doit pas donner la solution d'un boss.",
+                "Une bonne archive donne une ambiance, une piste ou une mémoire. La faiblesse exacte, elle, se mérite sur le terrain."
+            }
+        };
+    }
+
+    LegendArchiveEntry makeTavernStorytellerRoute()
+    {
+        return LegendArchiveEntry{
+            "legend_tavern_storyteller_route",
+            "Rumeur du conteur qui change de table",
+            "Déclencheurs et rumeurs",
+            "Taverne / PNJ conteur",
+            "Un conteur de passage annonce que certaines légendes pourront être racontées par PNJ plutôt que par menu fixe.",
+            {
+                "Dans certaines tavernes, un vieux conteur commence toujours par dire qu'il ne connaît rien.",
+                "Puis il décrit une cicatrice, un emblème, une salle ou un groupe avec assez de détails pour que le registre se mette à gratter tout seul.",
+                "Il ne raconte jamais tout. Un bon conteur garde une porte fermée pour que l'aventurier ait encore envie de l'ouvrir.",
+                "Le système pourra plus tard utiliser ces PNJ comme déclencheurs doux : pas obligatoires, mais utiles pour donner vie au monde entre deux combats."
+            }
+        };
+    }
+
+
+    LegendArchiveEntry makeBreathingShelfRumor()
+    {
+        return LegendArchiveEntry{
+            "legend_breathing_shelf",
+            "Rumeur du rayonnage qui respire",
+            "Déclencheurs et rumeurs",
+            "Bibliothèque / étagère scellée",
+            "Une étagère vivante rappelle que certains récits ne doivent sortir qu'après une vraie trace dans le monde.",
+            {
+                "Au fond de la bibliothèque, un rayonnage semble respirer quand un aventurier approche avec trop de questions.",
+                "La bibliothécaire dit qu'il ne s'ouvre pas pour la curiosité, seulement pour les traces : un nom confirmé, une salle ancienne, une dette étrange ou un combat qui refuse de rester normal.",
+                "Les pages y sont classées comme des créatures timides. Si on les force, elles deviennent fausses.",
+                "La rumeur sert surtout de garde-fou : le lore doit surgir quand le voyage le mérite, pas quand le menu manque de décoration."
+            }
+        };
+    }
+
+    LegendArchiveEntry makeClosedDoorRumor()
+    {
+        return LegendArchiveEntry{
+            "legend_closed_boss_door",
+            "Note de la porte qui refuse le récit",
+            "Règles du registre",
+            "Salle ancienne / porte silencieuse",
+            "Une note prévient que certaines salles de boss doivent parfois rester muettes pour garder leur mystère.",
+            {
+                "Toutes les portes anciennes ne parlent pas.",
+                "Certaines savent qu'un avertissement trop précis devient une solution déguisée, et qu'une solution gratuite enlève la peur avant même le premier tour.",
+                "Quand une porte reste silencieuse, ce n'est donc pas un bug du monde : c'est parfois sa manière de protéger le combat.",
+                "Le registre notera ce silence plus tard, si le joueur survit assez longtemps pour lui donner un sens."
+            }
+        };
+    }
+
+    bool isSpecialArenaName(const std::string& name)
+    {
+        return name == "Matt (PRO)"
+            || name == "Skuro"
+            || name == "Sanctus"
+            || name == "Hestia"
+            || name == "Fire Flight"
+            || name == "Louis"
+            || name == "Hazak"
+            || name == "Fail"
+            || name == "Aoi"
+            || name == "Kanadé"
+            || name == "Trexof"
+            || name == "Mattzelda"
+            || name == "Henrique";
+    }
+
     LegendArchiveEntry makeBossRoomGeneric(const Boss& boss)
     {
         return LegendArchiveEntry{
@@ -149,6 +304,40 @@ namespace
                 "Parfois, elle donne seulement une peur ancienne, un avertissement, ou une phrase que personne n'a osé graver jusqu'au bout.",
                 "L'entité devant toi n'est pas seulement une statistique. Elle a laissé assez de traces pour que le lieu se souvienne d'elle.",
                 "Le registre note la rumeur, mais il refuse encore d'en faire une vérité complète."
+            }
+        };
+    }
+
+    LegendArchiveEntry makeBossAzelanosCrown()
+    {
+        return LegendArchiveEntry{
+            "boss_azelanos_cracked_crown",
+            "Légende de la couronne fissurée",
+            "Salles de boss",
+            "Salle de boss / couronne noire",
+            "Une vieille salle raconte qu'un roi démon affaibli reste dangereux tant qu'il croit encore porter sa couronne.",
+            {
+                "Au centre de la salle, une marque circulaire ressemble moins à un trône qu'à une cicatrice.",
+                "La légende dit qu'Azelanos n'a pas perdu sa couronne d'un seul coup : elle s'est fissurée chaque fois qu'un serviteur a cessé d'avoir peur.",
+                "Pourtant, un fragment suffit parfois à faire plier les ombres autour de lui.",
+                "Le registre classe cette trace comme avertissement : une forme affaiblie peut encore se comporter comme un roi si personne n'ose lui rappeler sa chute."
+            }
+        };
+    }
+
+    LegendArchiveEntry makeBossAnomalyFalseMenu()
+    {
+        return LegendArchiveEntry{
+            "boss_anomaly_false_menu",
+            "Rumeur du menu qui mentait",
+            "Salles de boss",
+            "Salle de boss / interface griffée",
+            "Une rumeur prévient que certaines anomalies ne frappent pas seulement le personnage, mais aussi la confiance dans l'interface.",
+            {
+                "Sur une dalle, quelqu'un a gravé plusieurs numéros, puis les a barrés avec colère.",
+                "La rumeur dit qu'une option peut garder son visage tout en changeant son intention, ou inversement.",
+                "Les survivants ne conseillent pas de paniquer : ils conseillent de lire, relire, puis accepter que le monde puisse tricher avec style.",
+                "Le registre ne donne pas la solution. Il rappelle seulement qu'une interface trop propre peut devenir suspecte quand l'Anomalie s'ennuie."
             }
         };
     }
@@ -187,6 +376,9 @@ namespace
                     }
                 };
 
+            case 6:
+                return makeBossAzelanosCrown();
+
             case 7:
                 return LegendArchiveEntry{
                     "boss_thamarys_scale_fragment",
@@ -216,6 +408,9 @@ namespace
                         "Le registre classe cette trace comme légende, pas comme ordre."
                     }
                 };
+
+            case 11:
+                return makeBossAnomalyFalseMenu();
 
             case 27:
                 return LegendArchiveEntry{
@@ -256,6 +451,14 @@ std::vector<LegendArchiveEntry> LegendTriggerSystem::getArchiveEntries()
     return {
         makeBrasCassesOrigin(),
         makeChildTale(),
+        makeSpecialArenaRumor(),
+        makeFriendlyTrioRumor(),
+        makeProtectedHestiaRumor(),
+        makeFireFlightCommandRumor(),
+        makeLivingLibraryKeeper(),
+        makeTavernStorytellerRoute(),
+        makeBreathingShelfRumor(),
+        makeClosedDoorRumor(),
         LegendArchiveEntry{
             "boss_lyknir_pack_echo",
             "Légende de la meute sans lune",
@@ -282,6 +485,7 @@ std::vector<LegendArchiveEntry> LegendTriggerSystem::getArchiveEntries()
                 "Le registre note surtout ceci : un gobelin organisé est plus dangereux qu'un gobelin courageux."
             }
         },
+        makeBossAzelanosCrown(),
         LegendArchiveEntry{
             "boss_thamarys_scale_fragment",
             "Légende de l'écaille qui refuse de tomber",
@@ -308,6 +512,7 @@ std::vector<LegendArchiveEntry> LegendTriggerSystem::getArchiveEntries()
                 "Le registre classe cette trace comme légende, pas comme ordre."
             }
         },
+        makeBossAnomalyFalseMenu(),
         LegendArchiveEntry{
             "boss_fireflight_creator_gate",
             "Légende de la porte du créateur",
@@ -388,9 +593,9 @@ void LegendTriggerSystem::maybeDisplayBossRoomLegend(const Boss& boss, Random& r
 {
     int chance = 14;
 
-    if (boss.getBossId() == 4 || boss.getBossId() == 5 || boss.getBossId() == 7 || boss.getBossId() == 8)
+    if (boss.getBossId() == 4 || boss.getBossId() == 5 || boss.getBossId() == 6 || boss.getBossId() == 7 || boss.getBossId() == 8 || boss.getBossId() == 11)
     {
-        chance = 22;
+        chance = boss.getBossId() == 11 ? 24 : 22;
     }
     else if (boss.getBossId() == 27)
     {
@@ -437,6 +642,36 @@ void LegendTriggerSystem::maybeDisplaySpecialGroupLegend(const std::vector<std::
         return;
     }
 
+    if (containsName(names, "Mattzelda") && containsName(names, "Louis") && containsName(names, "Trexof") && random.between(1, 100) <= 22)
+    {
+        LegendArchiveEntry entry = makeFriendlyTrioRumor();
+        if (reserveAutomaticLegendDisplay("trio." + entry.id, entry))
+        {
+            showLegend(entry, "legend.trigger.group.friendly_trio", false);
+        }
+        return;
+    }
+
+    if (containsName(names, "Hazak") && containsName(names, "Hestia") && random.between(1, 100) <= 24)
+    {
+        LegendArchiveEntry entry = makeProtectedHestiaRumor();
+        if (reserveAutomaticLegendDisplay("hestia." + entry.id, entry))
+        {
+            showLegend(entry, "legend.trigger.group.protected_hestia", false);
+        }
+        return;
+    }
+
+    if (containsName(names, "Fire Flight") && random.between(1, 100) <= 16)
+    {
+        LegendArchiveEntry entry = makeFireFlightCommandRumor();
+        if (reserveAutomaticLegendDisplay("fireflight." + entry.id, entry))
+        {
+            showLegend(entry, "legend.trigger.group.fireflight_command", false);
+        }
+        return;
+    }
+
     if (containsName(names, "Hazak") && random.between(1, 100) <= 12)
     {
         LegendArchiveEntry entry = makeBrasCassesOrigin();
@@ -446,3 +681,52 @@ void LegendTriggerSystem::maybeDisplaySpecialGroupLegend(const std::vector<std::
         }
     }
 }
+
+void LegendTriggerSystem::maybeDisplaySpecialOpponentLegend(const std::string& name, Random& random)
+{
+    if (!isSpecialArenaName(name))
+    {
+        return;
+    }
+
+    if (random.between(1, 100) > 18)
+    {
+        return;
+    }
+
+    LegendArchiveEntry entry = makeSpecialArenaRumor();
+    if (!reserveAutomaticLegendDisplay("arena." + entry.id, entry))
+    {
+        return;
+    }
+
+    showLegend(entry, "legend.trigger.arena.special_opponent", true);
+}
+
+void LegendTriggerSystem::maybeDisplayLibraryLoreWhisper(Random& random)
+{
+    const bool storytellerRouteKnown = BestiaryRuntimeProgress::getEncounterCount("Rumeur du conteur qui change de table") > 0
+        || BestiaryRuntimeProgress::getEncounterCount("Rumeur de la bibliothécaire qui classe les silences") > 0;
+
+    if (!storytellerRouteKnown)
+    {
+        return;
+    }
+
+    if (random.between(1, 100) > 14)
+    {
+        return;
+    }
+
+    LegendArchiveEntry entry = random.between(1, 100) <= 55
+        ? makeBreathingShelfRumor()
+        : makeClosedDoorRumor();
+
+    if (!reserveAutomaticLegendDisplay("library." + entry.id, entry))
+    {
+        return;
+    }
+
+    showLegend(entry, "legend.trigger.library.whisper", true);
+}
+

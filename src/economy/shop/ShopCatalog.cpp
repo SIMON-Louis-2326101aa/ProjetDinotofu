@@ -277,6 +277,10 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("special_adventurer_notes", "Notes sur les groupes spéciaux", "Débloque des notes de bestiaire sur les groupes de personnages spéciaux.", ShopItemCategory::Information, 95, 0, 1, true));
             }
+            if (rotation % 5 == 2)
+            {
+                shop.addItem(ShopItem("special_identity_rumors", "Dossier de rumeurs spéciales", "Confirme quelques personnages spéciaux sans offrir toutes leurs fiches gratuitement.", ShopItemCategory::Information, 145, 0, 1, true));
+            }
             if (rotation % 3 == 1)
             {
                 shop.addItem(ShopItem("summoning_notes", "Manuel d'invocations instables", "Ajoute des notes sur les invocations, les places actives et les ombres anciennes.", ShopItemCategory::Book, 90, 12, 1, true));
@@ -339,6 +343,10 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 7 == 5)
             {
                 shop.addItem(ShopItem("legend_trigger_notes", "Notes de conteur : légendes rares", "Explique les déclencheurs de légendes sans spoiler les salles de boss.", ShopItemCategory::Information, 90, 0, 1, true));
+            }
+            if (rotation % 8 == 6)
+            {
+                shop.addItem(ShopItem("legend_storyteller_routes", "Carnet des conteurs itinérants", "Ajoute des rumeurs de bibliothèque et de taverne pour le futur lore PNJ.", ShopItemCategory::Information, 105, 0, 1, true));
             }
             break;
 

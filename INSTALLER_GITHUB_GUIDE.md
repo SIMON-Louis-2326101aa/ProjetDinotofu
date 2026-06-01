@@ -1,6 +1,6 @@
 # Dinotofu — GitHub Releases, installers et launchers   
 
-Version actuelle : **V2.01.04**   
+Version actuelle : **V2.01.27**   
 Dernière version de personnage encore acceptable : **V2.01.03**   
 
 ## Objectif   

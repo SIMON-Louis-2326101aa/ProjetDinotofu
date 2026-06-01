@@ -707,7 +707,6 @@ void LootGenerator::giveDefeatedWaveLoot(
     for (int i = 0; i < wave.getDefeatedEnemyCount(); ++i)
     {
         progressedQuests += player.getQuestLog().progressCombatQuestsForMonster(wave.getDefeatedEnemy(i));
-        progressedQuests += player.getQuestLog().progressCombatQuestsForMonster(wave.getDefeatedEnemy(i));
     }
 
     int completedDeliveryQuests = player.getQuestLog().refreshMaterialDeliveryQuests(player.getInventory());

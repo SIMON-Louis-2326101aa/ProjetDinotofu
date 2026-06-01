@@ -11,6 +11,32 @@
 #include <sstream>
 #include <string>
 
+namespace
+{
+    MenuOptionItemData buildCombatTurnActionData(
+        const Entity& entity,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = "Disponible",
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "combat_action";
+        itemData.section = "Actions de combat";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.owner = entity.getName();
+        itemData.progress = "PV : " + std::to_string(entity.getHp()) + "/" + std::to_string(entity.getMaxHp());
+        itemData.important = important;
+        return itemData;
+    }
+}
+
 MenuScreen CombatMenu::buildTurnScreen(const Entity& entity)
 {
     MenuScreen screen("COMBAT", "combat.turn");
@@ -31,15 +57,91 @@ MenuScreen CombatMenu::buildTurnScreen(const Entity& entity)
         ? "combat.quick_heal.recommend_heal.low_hp"
         : "combat.quick_heal";
 
-    screen.addOption(1, "Attaquer", "Attaque simple, technique d'arme, attaque lourde/rapide ou compétence.", true, "combat.attack");
-    screen.addOption(2, "Potion de soin rapide", "Liste seulement les potions de soin utilisables rapidement.", true, quickHealActionId);
-    screen.addOption(3, "Potions", "Curatif, défensif, buff, offensive ou debuff.", true, "combat.potions");
-    screen.addOption(4, "Équipement", "Voir ou changer rapidement l'arme et la tenue.", true, "combat.equipment");
-    screen.addOption(5, "Inventaire / bestiaire", "Consulter les objets, matériaux et informations connues.", true, "combat.inventory");
-    screen.addOption(6, "Posture de défense", "Renforce la survie jusqu'au prochain tour.", true, "combat.defend");
-    screen.addOption(7, "Passer son tour", "Ne rien faire volontairement.", true, "combat.wait");
-    screen.addOption(8, "Fuir", "Impossible contre un boss, variable contre les autres ennemis.", true, "combat.flee");
-    screen.addOption(0, "Interface / aide rapide", "Rappelle les règles principales du combat.", true, "combat.help");
+    screen.addOption(
+        1,
+        "Attaquer",
+        "Attaque simple, technique d'arme, attaque lourde/rapide ou compétence.",
+        true,
+        "combat.attack",
+        buildCombatTurnActionData(
+            entity,
+            "attack",
+            "Attaquer",
+            "Ouvre les styles offensifs disponibles pour ce tour.",
+            "Action principale",
+            true
+        )
+    );
+    screen.addOption(
+        2,
+        "Potion de soin rapide",
+        "Liste seulement les potions de soin utilisables rapidement.",
+        true,
+        quickHealActionId,
+        buildCombatTurnActionData(
+            entity,
+            "use",
+            "Potion de soin rapide",
+            "Raccourci vers les potions de soin utilisables immédiatement.",
+            hasHealingTool ? "Potion disponible" : "Aucune potion détectée",
+            lowHealth && hasHealingTool
+        )
+    );
+    screen.addOption(
+        3,
+        "Potions",
+        "Curatif, défensif, buff, offensive ou debuff.",
+        true,
+        "combat.potions",
+        buildCombatTurnActionData(entity, "use", "Potions", "Ouvre toutes les familles de potions de combat.")
+    );
+    screen.addOption(
+        4,
+        "Équipement",
+        "Voir ou changer rapidement l'arme et la tenue.",
+        true,
+        "combat.equipment",
+        buildCombatTurnActionData(entity, "equip", "Équipement", "Consulte ou modifie l'équipement sans consommer le tour.")
+    );
+    screen.addOption(
+        5,
+        "Inventaire / bestiaire",
+        "Consulter les objets, matériaux et informations connues.",
+        true,
+        "combat.inventory",
+        buildCombatTurnActionData(entity, "inspect", "Inventaire / bestiaire", "Consulte les objets et les informations connues sans révéler de faiblesse cachée.")
+    );
+    screen.addOption(
+        6,
+        "Posture de défense",
+        "Renforce la survie jusqu'au prochain tour.",
+        true,
+        "combat.defend",
+        buildCombatTurnActionData(entity, "defend", "Posture de défense", "Consomme le tour pour améliorer la survie immédiate.", "Action défensive")
+    );
+    screen.addOption(
+        7,
+        "Passer son tour",
+        "Ne rien faire volontairement.",
+        true,
+        "combat.wait",
+        buildCombatTurnActionData(entity, "wait", "Passer son tour", "Abandonne volontairement l'action de ce tour.", "Action volontaire")
+    );
+    screen.addOption(
+        8,
+        "Fuir",
+        "Impossible contre un boss, variable contre les autres ennemis.",
+        true,
+        "combat.flee",
+        buildCombatTurnActionData(entity, "flee", "Fuir", "Tente de quitter le combat quand le contexte le permet.", "Risque : tour consommé")
+    );
+    screen.addOption(
+        0,
+        "Interface / aide rapide",
+        "Rappelle les règles principales du combat.",
+        true,
+        "combat.help"
+    );
 
     return screen;
 }

@@ -259,7 +259,7 @@ bool CombatTargetMenu::openTargetMenu(
                 "CIBLE INDISPONIBLE",
                 "combat.target.unavailable",
                 {"Cette cible n'est plus disponible."},
-                false
+                true
             );
             return false;
         }
@@ -287,7 +287,7 @@ bool CombatTargetMenu::openTargetMenu(
                 "CIBLE FORCÉE",
                 "combat.target.forced",
                 lines,
-                false
+                true
             );
             return false;
         }
@@ -299,6 +299,7 @@ bool CombatTargetMenu::openTargetMenu(
         while (stayOnThisTarget && !target.isDead())
         {
             MenuScreen targetScreen("CIBLE SÉLECTIONNÉE", "combat.target_actions");
+            targetScreen.addLine("Attaquant : " + player.getName() + " | PV " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()));
             targetScreen.addLine("Cible : " + target.getName());
             targetScreen.addLine("Race : " + target.getRaceText());
             targetScreen.addLine("PV : " + std::to_string(target.getHp()) + "/" + std::to_string(target.getMaxHp()));
@@ -314,6 +315,20 @@ bool CombatTargetMenu::openTargetMenu(
             else
             {
                 targetScreen.addLine("Statut : Ennemi standard");
+            }
+
+            if (target.isProvoking())
+            {
+                targetScreen.addLine("Priorité : provocation active, cette cible attire forcément l'attention.");
+            }
+            else if (target.hasHealingThreat())
+            {
+                targetScreen.addLine("Priorité : soigneur marqué, l'aggro tactique est temporairement fixée.");
+            }
+
+            for (const std::string& summaryLine : wave.getQueueSummaryLines())
+            {
+                targetScreen.addFooterLine(summaryLine);
             }
 
             targetScreen.addOption(

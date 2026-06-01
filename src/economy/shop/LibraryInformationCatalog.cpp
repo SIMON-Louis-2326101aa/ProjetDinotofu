@@ -92,6 +92,16 @@ std::vector<ShopItem> LibraryInformationCatalog::createCommonInformationOffers()
             true
         ),
         ShopItem(
+            "special_identity_rumors",
+            "Dossier de rumeurs spéciales",
+            "Confirme quelques personnages spéciaux sans ouvrir toutes leurs fiches gratuitement.",
+            ShopItemCategory::Information,
+            145,
+            0,
+            1,
+            true
+        ),
+        ShopItem(
             "legend_child_tales",
             "Contes et légendes pour enfant",
             "Ajoute un premier rayonnage de légendes optionnelles, dont l’origine des Bras cassés.",
@@ -107,6 +117,16 @@ std::vector<ShopItem> LibraryInformationCatalog::createCommonInformationOffers()
             "Explique comment certaines légendes peuvent apparaître par PNJ, bibliothèque ou salle sans devenir obligatoires.",
             ShopItemCategory::Information,
             90,
+            0,
+            1,
+            true
+        ),
+        ShopItem(
+            "legend_storyteller_routes",
+            "Carnet des conteurs itinérants",
+            "Ajoute des rumeurs de bibliothèque et de taverne sur la manière dont le lore peut apparaître sans bloquer l'action.",
+            ShopItemCategory::Information,
+            105,
             0,
             1,
             true

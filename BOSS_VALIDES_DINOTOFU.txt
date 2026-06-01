@@ -1,5 +1,5 @@
 BOSS / AVATARS VALIDÉS - DINOTOFU
-Audit réel du code : V2.01.20
+Audit réel du code : V2.01.29
 
 Règles globales validées :
 - En combat de boss, la fuite est impossible et doit être justifiée par une phrase de lore/arène.
@@ -10,7 +10,7 @@ Règles globales validées :
 - Les ultimes de boss se débloquent après le passage sous le seuil des 50% PV.
 - FireFlight reste le boss final verrouillé tant que le personnage n'a pas assez prouvé sa valeur.
 
-Vérification code V2.01.20 :
+Vérification code V2.01.29 :
 - src/boss/BossCatalog.cpp contient 35 boss numérotés de 1 à 35.
 - src/combat/boss/BossUltimate.cpp contient un ultime dédié pour les boss 1 à 35.
 - Correction V2.00.19 : les blocs d'ultime dupliqués 28, 29, 30 et 31 ont été nettoyés. La version gardée est la plus complète, notamment pour Moiran et les réactions aux altérations.
@@ -106,3 +106,23 @@ Note V2.01.18 : aucun boss ajouté ou retiré. Cette passe touche seulement le R
 Note V2.01.19 : aucun boss ajouté ou retiré. Cette passe touche seulement le confort IG des combats : cartes de cibles, statut de menace/provocation/soigneur marqué et séparation plus propre entre actions principales et navigation/pagination.
 
 Note V2.01.20 : aucun boss ajouté ou retiré. Cette passe ajoute seulement --version et améliore les cartes IG de cible sélectionnée, d'attaque/inspection et de compétences de rôle.
+
+
+Note V2.01.21 : aucun boss ajouté ou retiré. Cette passe touche seulement la sélection IG/terminal des boss solo et coop, avec pagination 8 par page et cartes boss structurées.
+
+Note V2.01.23 : aucun boss ajouté ou retiré. Cette passe touche seulement le soutien boss coop, avec choix de cible/potion structurés et paginés pour l'IG/terminal.
+
+Note V2.01.24 : aucun boss ajouté ou retiré. Cette passe touche seulement les menus de classes PvP J2/PvP IA, avec pagination 8 par page et cartes IG structurées.
+
+
+Note V2.01.25 : aucun boss ajouté ou retiré. Cette passe améliore seulement la lisibilité IG des conséquences de Grinka/Zelef, des récupérations de biens/PV volés et des bilans de combat autour des boss.
+
+Note V2.01.26 : aucun boss ajouté ou retiré. Cette passe améliore les menus d'échange/don, la pagination des comptes/personnages cibles et les cartes IG des ressources transférables.
+
+
+Note V2.01.27 : aucun boss ajouté ou retiré. Cette passe améliore seulement le classement IG des butins/récompenses/récupérations après combat, la pagination du panneau de guilde et une correction de progression de quêtes de combat.
+
+Note V2.01.28 : aucun boss ajouté ou retiré. Cette passe touche seulement le soutien PvE coop, avec choix d’action/cible/potion structurés et paginés pour l’IG/terminal.
+
+
+Note V2.01.29 : aucun boss ajouté ou retiré. Cette passe touche seulement le bestiaire spécial progressif, les adversaires spéciaux PvP IA et une rumeur d’arène liée au registre des légendes.

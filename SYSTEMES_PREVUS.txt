@@ -1,5 +1,5 @@
 SYSTÈMES PRÉVUS / AUDIT GLOBAL - DINOTOFU
-Version auditée : V2.01.20
+Version auditée : V2.04.06
 
 Priorité actuelle décidée :
 - Finir la stabilité, la jouabilité et la lisibilité de l'interface graphique expérimentale avant d'ajouter du gros contenu.
@@ -7,10 +7,10 @@ Priorité actuelle décidée :
 - Le mode histoire et la V3.00.00 sont repoussés à la fin, quand l'IG et les systèmes de base seront propres.
 - Les tests/builds/vérifications sont implicites à chaque passe et ne doivent pas être listés comme tâches restantes génériques.
 
-État général vérifié dans le ZIP V2.01.20 :
-- Version actuelle : 2.01.20, format x.yy.zz conservé.
-- README/manifest mis à jour sur 2.01.20.
-- IG V2.01.20 : --version existe pour les vérifications rapides, et les cartes de cible sélectionnée / compétences de rôle sont mieux structurées.
+État général vérifié dans le ZIP V2.04.06 :
+- Version actuelle : 2.04.06, format x.yy.zz conservé.
+- README/manifest mis à jour sur 2.04.06.
+- IG V2.04.06 : navigation paginée plus structurée sur les longues listes restantes, dialogues séparés du combat dans les snapshots, README/manifest à jour.
 - Boss : 35 boss présents dans le catalogue, ultimes dédiés 1 à 35, effets de fin d'ultime 1 à 35.
 - Correction boss conservée : suppression des blocs d'ultime dupliqués 28-31 et ajout des ticks d'ultime manquants pour 25-27.
 - Lancement Windows Auto : la fenêtre reste visible pendant la vérification/téléchargement/installation des mises à jour, puis l'IG/le backend se lancent ensuite.
@@ -20,13 +20,14 @@ Priorité actuelle décidée :
 - Groupe PvE V2.00.19 conservé : Les bras cassés au complet peuvent maintenant apparaître comme groupe de 5 : Hazak, Fail, Aoi, Kanadé, Sanctus.
 
 Chantiers prioritaires à continuer maintenant :
-1. IG - continuer les écrans de combat encore anciens : boss, PvP IA, compétences de rôle, inspection/retour après cible, fuite et écrans de résultat.
-2. IG - finir l’uniformisation visuelle restante des gros menus : cartes, badges, couleurs, zones Retour/navigation et lignes d’information.
+1. IG - terminer l'audit des chemins rares : mort, fuite, boss, récompenses, boutique, sauvegarde/chargement, erreurs et écrans informatifs anciens.
+2. IG - poursuivre l’uniformisation visuelle restante : badges, couleurs, zones Retour/navigation et lignes d’information.
 3. IG - supprimer les derniers blocs parasites ou doublons dans les écrans spécialisés dès qu’ils réapparaissent.
-4. IG - alléger les menus avec énormément d’options : ne pas surcharger les cartes, grouper proprement et éviter les blocs illisibles.
-5. Terminal - continuer l'aération des choix et des dialogues pour éviter l'effet gros bloc unique.
-6. Windows/PowerShell - vérifier sur vraie machine Windows que les accents restent propres avec chcp 65001, OutputEncoding/InputEncoding UTF-8 et le wrapper terminal.
-7. Sauvegarde/reprise - vérifier toutes les transitions après reprendre en solo et après choix de difficulté, car ce sont les points qui ont déjà cassé le flow.
+4. IG - continuer l'allègement des menus encore très chargés, surtout inventaire massif, registres, historiques et écrans de progression.
+5. Bestiaire/légendes - continuer les découvertes progressives et persistantes sans spoiler les identités/boss trop tôt.
+6. Dialogues/lore vivant - ajouter plus tard les dialogues PNJ, boutiques et quêtes de guilde quand les écrans IG seront stables.
+7. Équilibrage global plus tard : classes, monstres, boss, XP/or, loot, difficultés, récompenses, prix et marché noir/troc.
+8. Après stabilisation complète de l'IG : commencer seulement ensuite le contenu lourd, puis le mode histoire V3.00.00.
 
 Systèmes déjà présents mais à compléter/polir :
 - Bestiaire : catégories, affichage simple/détaillé, progression de connaissances, registre boss, enregistrement des personnages spéciaux rencontrés et premiers récits de légendes existent. À compléter avec persistance plus fine, découvertes de faiblesse et infos achetables.
@@ -54,15 +55,33 @@ Bestiaire / personnages spéciaux à prévoir :
 - Leur réputation : héros ayant libéré et aidé plusieurs villages/habitants, mais pas toujours appréciés à cause de leur ego et de leur tendance à ne pas respecter toutes les règles. Le nom vient de Hazak, qui a perdu un bras face à un orc avant de le régénérer après deux semaines, et de leurs nombreuses conneries qui finissent malgré tout en réussite.
 
 Tâches restantes concrètes et courtes :
-- Finir l'audit IG écran par écran et réparer les chemins cassés.
-- Continuer à paginer/nettoyer les longues listes restantes : bestiaire avancé, boss, dialogues, récompenses et menus de progression.
-- Uniformiser les choix/cartes et l'emplacement du Retour.
-- Finaliser l'aération terminal et valider les accents PowerShell sur Windows réel.
+- Finir l'audit IG écran par écran et réparer les derniers chemins cassés, surtout boss/récompenses/conséquences rares.
+- Continuer à paginer/nettoyer les longues listes restantes : bestiaire avancé, dialogues, récompenses et menus de progression.
+- Uniformiser les choix/cartes, badges et emplacement du Retour/navigation.
 - Compléter la persistance et les conditions fines du déblocage progressif du bestiaire spécial.
 - Étendre le système de légendes : PNJ conteurs, rumeurs de ville, zones, bibliothèque plus fournie et meilleures conditions de découverte.
 - Repasser sur équilibrage global : classes, monstres, boss, XP, or, loot, récompenses, prix et difficultés.
 - Enrichir les dialogues utiles sans lancer encore le vrai chapitre histoire.
 - Garder la V3.00.00 pour le vrai mode histoire quand l'IG sera stable.
+
+MISE A JOUR 2.04.05 - RÉCOMPENSES STRUCTURÉES / NAVIGATION / COMPÉTENCES
+- Version montée en 2.04.05.
+- Les écrans de récompense complète et partielle affichent maintenant des lignes structurées par catégorie : XP, or, état et source.
+- Les gains d'or élevés reçoivent un état de registre plus visible, pour mieux surveiller les récompenses sans changer brutalement l'économie.
+- La classification IG reconnaît mieux les récompenses, la navigation, les pages précédentes/suivantes et les retours.
+- Les cartes issues de lignes structurées lisent maintenant aussi la première métadonnée après le nom, ce qui évite de perdre des champs comme Récompense, Or ou État.
+- Le helper PagedMenu fournit des métadonnées structurées pour Retour, Page précédente et Page suivante.
+- L'écran Compétences ajoute des pistes de maîtrise lisibles : voie de classe, héritage racial, arme dominante et apprentissage libre.
+
+MISE A JOUR 2.01.34 - VERSIONS / IG COMBAT RARE / TRANSITIONS
+- Version montée en 2.01.34.
+- Métadonnées de version rectifiées dans le code, README, READMEFR et manifeste.
+- Les routes PvP IA exposent maintenant des cartes structurées pour Matt (PRO), tirage aléatoire, classe imposée et accès aux personnages spéciaux.
+- Le bilan PvP IA ajoute des lignes de combattants plus lisibles pour produire des cartes de résumé côté IG.
+- La classification IG reconnaît mieux les écrans de fuite, abandon, rôle de combat, PvP IA et listes chargées.
+- Les menus très chargés ajoutent une note IG de pagination ou de liste dense pour limiter les mauvais clics.
+- Les transitions de difficulté et de session solo/coop affichent davantage de détails : risque, respawn, récompenses, joueur actif, difficulté et groupe validé.
+- Le TXT de reprise a été mis à jour pour conserver une liste courte des tâches restantes.
 
 MISE A JOUR 2.01.00 - TRIGGERS RARES DE LÉGENDES
 - Version montée en 2.01.00 car le système de légendes passe d'une base d'archive à un vrai déclencheur en jeu.
@@ -247,3 +266,137 @@ MISE A JOUR 2.01.20 - --VERSION / CIBLE SÉLECTIONNÉE ET RÔLES IG
 - Les badges IG reconnaissent maintenant Attaquer, Provoquer, Menace et Soutien.
 - Les focus cards de combat couvrent mieux cible, attaque, inspection, rôle, soin, potions, équipement et fuite.
 - Build C++ complet effectué avec succès sur V2.01.20.
+
+
+MISE A JOUR 2.01.21 - SÉLECTION DE BOSS IG PAGINÉE
+- Version montée en 2.01.21 pour continuer la stabilisation IG des combats de boss sans ajouter de boss ni de gros contenu.
+- La sélection manuelle de boss solo est maintenant paginée : 8 boss visibles par page, retour 0, navigation 98/99.
+- La sélection manuelle de boss coop utilise la même pagination afin de ne pas afficher une longue liste compacte quand beaucoup de boss sont débloqués.
+- Chaque entrée de boss sélectionnable expose des métadonnées structurées : type boss, section solo/coop, statut accessible/verrouillé, identifiant et registre concerné.
+- Les choix acceptés restent limités aux boss réellement affichés sur la page courante, ce qui évite les numéros fantômes côté terminal/IG.
+- Build C++ complet effectué avec succès sur V2.01.21.
+
+
+MISE A JOUR 2.01.23 - SOUTIEN BOSS COOP IG STRUCTURÉ
+- Version montée en 2.01.23 pour continuer la stabilisation IG des combats de boss coop sans ajouter de boss ni de gros contenu.
+- Le choix “Utiliser une potion de soin sur un allié” expose maintenant des métadonnées IG structurées : action, propriétaire, statut et détail.
+- Le choix de cible de soin boss coop est maintenant construit comme une vraie liste de cartes alliées : J1/J2/J3, PV, état au sol/blessé, rôle de cible et importance.
+- Le choix de potion de soutien boss coop expose maintenant nom, description, puissance de soin, valeur et index inventaire dans les cartes IG.
+- Les listes de cibles et de potions de soutien boss coop utilisent une pagination 8 par page avec retour 0 et pages 98/99 si nécessaire.
+- Compilation C++ complète effectuée avec succès sur V2.01.23.
+
+MISE A JOUR 2.01.24 - CLASSES PVP J2 / PVP IA PAGINÉES
+- Version montée en 2.01.24 pour continuer la stabilisation IG des menus de duel sans ajouter de gros contenu.
+- Le choix de classe du Joueur 2 en PvP local utilise maintenant une pagination 8 entrées par page avec navigation 98/99.
+- Les classes J2 acceptent uniquement les choix visibles sur la page courante, ce qui évite les numéros fantômes dans les longues listes.
+- Le choix manuel de classe en PvP IA utilise la même logique paginée pour Matt (PRO) et les adversaires classiques réglés par le joueur.
+- Les cartes IG des catégories/classes affichent rôle, famille, potions, dégâts, PV et critique quand ces infos sont disponibles.
+- Compilation C++ complète effectuée avec succès sur V2.01.24.
+
+
+MISE A JOUR 2.01.25 - BILANS COMBAT / CONSÉQUENCES BOSS / RECOMMANDATIONS IG
+- Version montée en 2.01.25 pour continuer la stabilisation IG des chemins de combat sans ajouter de gros contenu.
+- Les sorties PvE et événements d'exploration utilisent maintenant des écrans de bilan structurés : résultat, route, tours, ennemis vaincus, récompense partielle/complète et conséquence.
+- Le PvP IA enregistre maintenant le bilan JcJ/combat et réveille automatiquement le joueur en arène IA non létale si le duel l'a mis à terre.
+- Le PvP local affiche un bilan plus clair avant la gestion de sauvegarde J2, puis un écran dédié quand J2 est sauvegardé, envoyé au registre des morts ou en alerte.
+- Les conséquences Grinka/Zelef affichent des lignes structurées pour l'IG : effet visible, récupération future, biens/PV récupérés et statut retiré.
+- Les groupes classiques/spéciaux et certaines relations de groupe affichent plus de métadonnées lisibles par cartes IG.
+- Le générateur de snapshots bloque encore plus strictement les recommandations tactiques liées à des faiblesses/résistances ou connaissances cachées.
+- Compilation C++ complète effectuée avec succès sur V2.01.25.
+
+MISE A JOUR 2.01.26 - ÉCHANGES/DONS PAGINÉS ET CARTES IG DE RESSOURCES
+- Version montée en 2.01.26 pour continuer la stabilisation IG des menus complexes sans ajouter de gros contenu.
+- La sélection du compte cible dans Échange/Don est maintenant paginée : 8 comptes visibles par page, retour 0, navigation 98/99.
+- La sélection du personnage cible est maintenant paginée et bloque directement le personnage actuel comme choix désactivé, au lieu de laisser le joueur tomber ensuite sur un refus.
+- Les comptes et personnages cibles exposent des métadonnées de carte IG : section, statut, progression, nom et détail.
+- Les armes, armures, consommables et matériaux transférables exposent maintenant des cartes IG structurées avec propriétaire, type, valeur, quantité/stock et statut transférable/non transférable.
+- Les objets équipés ou portés restent visibles pour comprendre pourquoi ils ne peuvent pas être donnés, mais ils sont clairement désactivés dans le flux.
+- Compilation C++ complète effectuée avec succès sur V2.01.26.
+
+
+MISE A JOUR 2.01.27 - BUTINS IG, PANNEAU DE GUILDE ET QUÊTES COMBAT
+- Version montée en 2.01.27 pour continuer la stabilisation IG des récompenses, conséquences et menus complexes.
+- Les écrans de butin, récompense et récupération post-combat sont mieux reconnus par le générateur de snapshots : loot/butin/récupération passent dans une vue après-combat plus claire.
+- Les lignes de fragments, matériaux et butins peuvent maintenant produire des cartes IG plus lisibles avec section Butin / récompenses et type d'action dédié.
+- Le panneau de guilde est paginé à 6 contrats par page, avec retour 0 et navigation 98/99, ce qui évite les listes trop longues en terminal comme en IG.
+- Les confirmations de quêtes utilisent davantage la validation par options réellement affichées au lieu de simples plages numériques.
+- Correction d'un doublon : les quêtes de combat ne progressent plus deux fois pour le même monstre vaincu dans une vague.
+- Compilation C++ complète effectuée avec succès sur V2.01.27.
+- Contrôle release/package effectué avec succès sur V2.01.27.
+
+MISE A JOUR 2.01.28 - SOUTIEN PVE COOP PAGINÉ ET CARTES IG
+- Version montée en 2.01.28 pour continuer la stabilisation IG des derniers chemins de combat coop sans ajouter de gros contenu.
+- Le soutien d'équipe en PvE coop expose maintenant des métadonnées IG structurées pour le choix d'action : jouer normalement ou utiliser une potion de soin.
+- Le choix de cible de soin PvE coop est maintenant construit comme une liste de cartes alliées : nom, PV, état au sol/blessé, position J1/J2/J3 et priorité visuelle.
+- Le choix de potion de soutien PvE coop expose nom, description, puissance de soin, valeur, propriétaire et index inventaire.
+- Les listes de cibles et de potions de soutien PvE coop utilisent une pagination 8 par page avec retour 0 et navigation 98/99 si nécessaire.
+- Compilation C++ complète effectuée avec succès sur V2.01.28.
+- Contrôle release/package effectué avec succès sur V2.01.28.
+
+
+MISE A JOUR 2.01.30 - BESTIAIRE SPÉCIAL PROGRESSIF ET RUMEURS D'ARÈNE
+- Version montée en 2.01.30 pour continuer la stabilisation du bestiaire spécial, du PvP IA et des écrans de suivi sans ajouter de gros contenu.
+- Le menu Personnages spéciaux du bestiaire devient un hub : fiches découvertes, suivi de découverte et rumeurs/groupes liés.
+- Le suivi de découverte affiche les personnages connus, verrouillés ou à confirmer avec pagination 7 par page, retour 0 et navigation 98/99.
+- Les profils non découverts restent masqués par ???, avec une indication de condition de découverte au lieu d'un spoil gratuit.
+- Les adversaires spéciaux rencontrés en PvP IA alimentent maintenant la catégorie Personnages spéciaux du bestiaire ; une victoire améliore aussi la trace connue.
+- Une rumeur rare d'arène peut se déclencher quand un adversaire spécial apparaît, puis être conservée dans le registre des légendes.
+- Les cartes IG du suivi spécial exposent section, statut, progression, groupe/famille et indice de découverte.
+- Compilation C++ complète effectuée avec succès sur V2.01.30.
+- Contrôle release/package effectué avec succès sur V2.01.30.
+
+
+MISE A JOUR 2.01.30 - ACTIONS DE COMBAT IG ET CAPTURE DES ANCIENS AFFICHAGES
+- Version montée en 2.01.30 pour continuer la stabilisation IG des combats sans ajouter de gros contenu.
+- Le menu principal du tour joueur expose maintenant des métadonnées IG structurées pour attaquer, soin rapide, potions, équipement, inventaire/bestiaire, défense, attente et fuite.
+- Le choix du style d'attaque expose maintenant des cartes IG dédiées : attaque simple, technique d'arme, attaque lourde, attaque rapide et compétence de classe.
+- Le sous-menu d'interface/aide rapide en combat expose des cartes IG pour état du combat, statistiques, équipement, rôle, observation, bestiaire, alliés et invocations.
+- Les anciens affichages texte du tour joueur peuvent maintenant être capturés puis réaffichés via MessageScreen, ce qui évite que statistiques, équipement ou observation restent uniquement visibles côté terminal.
+- Les tentatives de fuite passent directement par les écrans structurés existants pour éviter les doublons liés à la capture texte.
+- Ajout de l'argument `--encoding-check` pour afficher une phrase riche en accents et vérifier rapidement le rendu UTF-8 du terminal.
+- Compilation C++ complète effectuée avec succès sur V2.01.30.
+
+
+MISE A JOUR 2.01.31 - INVOCATIONS IG, CIBLES PAGINÉES ET RUMEURS PNJ
+- Version montée en 2.01.31 pour continuer les points 1, 2, 3 et 5 : combat IG, légendes, menus longs et lore léger.
+- Le choix automatique/manuel des invocations expose maintenant des métadonnées IG structurées : section, action, propriétaire, détail et lien restant.
+- Les actions manuelles des invocations exposent des cartes IG : attaque normale, technique, maintien du lien et sacrifice, avec PV, durée et lien restant.
+- Les cibles des invocations contre une vague sont paginées 6 par page avec retour 0 et navigation 98/99, au lieu d'une liste qui peut devenir trop longue.
+- Le menu de ciblage des groupes de combat est aussi paginé 6 par page, ce qui prépare mieux les futurs combats avec beaucoup d'unités, alliés ou invocations.
+- Le registre des légendes reçoit deux nouvelles rumeurs déclenchables par bibliothèque/PNJ : bibliothécaire des silences et conteur itinérant.
+- La bibliothèque peut vendre le Carnet des conteurs itinérants, qui débloque ces rumeurs sans révéler de faiblesse de boss.
+- Compilation C++ complète effectuée avec succès sur V2.01.31.
+- Contrôle release/package effectué avec succès sur V2.01.31.
+
+MISE A JOUR 2.01.32 - VERSIONS RECTIFIÉES, INSPECTION IG ET LIEUX PAGINÉS
+- Version montée en 2.01.32 après rectification complète des mentions README/manifest/SYSTEMES_PREVUS.
+- L'inspection d'une cible dont les statistiques sont déjà visibles passe maintenant par un écran IG de lecture avec PV, dégâts, potions, posture et altérations visibles, au lieu d'un affichage terminal brut.
+- L'écran de cible sélectionnée affiche maintenant l'attaquant, les PV du joueur, la priorité de menace et le résumé de vague en pied d'écran.
+- Les invocations ciblables exposent aussi des métadonnées IG structurées : PV, durée, slots, maintien et propriétaire.
+- Les cartes IG reconnaissent mieux les actions d'invocation, maintien, sacrifice, danger et spécial, afin d'uniformiser les badges et libellés d'action.
+- Les lieux visitables et les PNJ notables sont désormais paginés avec retour 0 et navigation 98/99, pour absorber les futurs contacts recommandés sans longs menus compacts.
+- La bibliothèque peut déclencher rarement deux fragments de lore supplémentaires après achat du carnet de conteurs : rayonnage qui respire et porte qui refuse le récit.
+- Le carnet des conteurs débloque aussi ces deux entrées dans le registre sans donner de faiblesse gratuite.
+- Compilation C++ complète effectuée avec succès sur V2.01.32.
+- Contrôle release/package effectué avec succès sur V2.01.32.
+
+MISE A JOUR 2.01.34 - CHOIX CONTEXTUELS IG, DIALOGUES ET LÉGENDES DE SALLE
+- Version montée en 2.01.34 pour continuer les points 1, 2, 3, 4 et 5 demandés : stabilisation IG, uniformisation des cartes, réduction des blocs parasites et suivi version.
+- Les écrans génériques de choix utilisés par l’exploration convertissent maintenant les options de coffre, piège, embuscade, PNJ, lieu, contrat, combat et retour en métadonnées IG structurées.
+- Les cartes IG reconnaissent mieux les entrées PNJ, lieux, coffres et pièges, avec sections, statuts et libellés d’action plus cohérents.
+- Les écrans de registre/sélection de boss sont mieux classés comme catalogues et leurs choix aléatoire/manuel exposent des cartes structurées.
+- Les dialogues d’introduction des ennemis intelligents ont plus de variantes et exposent l’interlocuteur, la langue probable et l’état de compréhension pour améliorer la lisibilité IG.
+- Deux légendes de salle rejoignent le registre et les déclencheurs rares : Avatar d’Azelanos / couronne fissurée, et L’Anomalie / menu qui ment.
+- Le point Windows/PowerShell reste un point de validation réelle sur machine Windows : impossible à confirmer depuis l’environnement Linux de correction, mais les fichiers gardent la configuration UTF-8 et le wrapper déjà présent.
+- Compilation C++ complète effectuée avec succès sur V2.01.34.
+- Contrôle release/package effectué avec succès sur V2.01.34 après nettoyage des dossiers générés.
+
+MISE A JOUR 2.04.06 - VERSION CIBLE, NAVIGATION PAGINEE ET DIALOGUES IG
+- Version montée volontairement en 2.04.06 dans le code, README FR/EN, manifest et suivi système.
+- Les helpers de pagination exposent maintenant une navigation structurée réutilisable avec actionId personnalisables : retour, page précédente et page suivante restent des cartes IG propres au lieu d'options brutes.
+- Les longues listes de potions, boutique, revente, rachat, bestiaire, suivi des personnages spéciaux et registre des légendes utilisent cette navigation commune avec 0 / 98 / 99.
+- Les écrans de dialogue sont séparés de la catégorie combat côté snapshot IG : ils obtiennent leur propre vue, titre, aide, cartes de focus et classification métier.
+- Les dialogues, langues inconnues, rumeurs et répliques de PNJ/ennemis/groupes spéciaux sont donc plus lisibles sans être interprétés comme des actions offensives.
+- Les cartes IG marquent les entrées de dialogue comme importantes quand elles sont présentes, pour éviter qu'elles disparaissent derrière du texte brut.
+- Compilation C++ complète effectuée avec succès sur V2.04.06.
+- ./output/Dinotofu --version vérifié : Dinotofu V2.04.06.

@@ -87,6 +87,83 @@ namespace
 
 
 
+    std::string rewardProgressStatus(int value, bool partial)
+    {
+        if (value <= 0)
+        {
+            return "aucune trace";
+        }
+
+        if (partial)
+        {
+            return "partiel";
+        }
+
+        return "complet";
+    }
+
+    std::string rewardGoldStatus(int gold, bool partial)
+    {
+        if (gold <= 0)
+        {
+            return "aucun or direct";
+        }
+
+        if (gold >= 500)
+        {
+            return "gain très élevé, surveillé";
+        }
+
+        if (gold >= 250)
+        {
+            return "gain élevé";
+        }
+
+        if (partial)
+        {
+            return "part récupérée";
+        }
+
+        return "gain normal";
+    }
+
+    void addRewardBreakdownLines(MenuScreen& screen, const CombatReward& reward, bool partial, const std::string& reason)
+    {
+        if (!reason.empty())
+        {
+            screen.addLine("Raison : " + reason);
+            screen.addLine("");
+        }
+
+        const int experience = reward.getExperience();
+        const int gold = reward.getGold();
+
+        screen.addLine(
+            "- Expérience | Récompense : XP +" + std::to_string(experience)
+            + " | État : " + rewardProgressStatus(experience, partial)
+            + " | Source : combat terminé"
+        );
+        screen.addLine(
+            "- Or | Or : +" + std::to_string(gold) + " pièces"
+            + " | État : " + rewardGoldStatus(gold, partial)
+            + " | Source : registre de combat"
+        );
+
+        if (experience <= 0 && gold <= 0)
+        {
+            screen.addLine("Aucune récompense récupérée.");
+        }
+        else if (gold >= 500)
+        {
+            screen.addLine("Le registre marchand marque ce gain comme exceptionnel.");
+        }
+
+        screen.addFooterLine(partial ? "Type : récompense partielle" : "Type : récompense complète");
+        screen.addFooterLine("Lecture : gains séparés par catégorie");
+    }
+
+
+
     std::string normalizeRewardText(std::string value)
     {
         std::transform(value.begin(), value.end(), value.begin(), [](unsigned char character) {
@@ -499,16 +576,11 @@ void CombatRewardSystem::displayReward(
 )
 {
     MenuScreen screen("RÉCOMPENSES", "combat.reward.full");
-
-    if (reward.getExperience() <= 0 && reward.getGold() <= 0)
-    {
-        screen.addLine("Aucune récompense récupérée.");
-    }
-    else
-    {
-        screen.addLine("Expérience gagnée : " + std::to_string(reward.getExperience()));
-        screen.addLine("Or gagné : " + std::to_string(reward.getGold()) + " pièces");
-    }
+    screen.addSubtitle("Bilan de récompense complète");
+    screen.addLine(reward.getExperience() <= 0 && reward.getGold() <= 0
+        ? "Statut : aucune récompense"
+        : "Statut : récompense obtenue");
+    addRewardBreakdownLines(screen, reward, false, "");
 
     screen.setDisplayOnlyInput("Résumé de récompense affiché sans saisie directe.");
     TerminalInterface::renderMenuScreen(screen, false);
@@ -520,18 +592,11 @@ void CombatRewardSystem::displayPartialReward(
 )
 {
     MenuScreen screen("RÉCOMPENSES PARTIELLES", "combat.reward.partial");
-    screen.addLine(reason);
-    screen.addLine("");
-
-    if (reward.getExperience() <= 0 && reward.getGold() <= 0)
-    {
-        screen.addLine("Aucune récompense récupérée.");
-    }
-    else
-    {
-        screen.addLine("Expérience récupérée : " + std::to_string(reward.getExperience()));
-        screen.addLine("Or récupéré : " + std::to_string(reward.getGold()) + " pièces");
-    }
+    screen.addSubtitle("Bilan de récompense partielle");
+    screen.addLine(reward.getExperience() <= 0 && reward.getGold() <= 0
+        ? "Statut : aucune récompense partielle"
+        : "Statut : récompense partielle obtenue");
+    addRewardBreakdownLines(screen, reward, true, reason);
 
     screen.setDisplayOnlyInput("Résumé de récompense partielle affiché sans saisie directe.");
     TerminalInterface::renderMenuScreen(screen, false);

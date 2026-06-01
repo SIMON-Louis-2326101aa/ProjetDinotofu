@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.01.20",
-  "releaseTag": "v2.01.20",
+  "version": "2.04.06",
+  "releaseTag": "v2.04.06",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "V2.01.20 : option --version ajoutée, actions de cible sélectionnée et compétences de rôle mieux structurées côté IG."
+  "notes": "V2.04.06 : version cible de stabilisation IG avec navigation de longues listes mieux structurée, dialogues séparés des combats et README/manifest à jour."
 }

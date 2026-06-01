@@ -25,10 +25,18 @@ int main(int argc, char* argv[])
             return 0;
         }
 
+        if (argument == "--encoding-check")
+        {
+            Console::printLine("Dinotofu V" + VersionInfo::currentVersion());
+            Console::printLine("Contrôle encodage terminal : accents français, Épée, ténèbres, forêt, dégâts, Léthal.");
+            Console::printLine("Si cette ligne est lisible, le terminal accepte correctement l'UTF-8 pour Dinotofu.");
+            return 0;
+        }
+
         if (argument == "--help" || argument == "-h")
         {
             Console::printLine("Dinotofu V" + VersionInfo::currentVersion());
-            Console::printLine("Usage : ./Dinotofu [--version] [--help]");
+            Console::printLine("Usage : ./Dinotofu [--version] [--encoding-check] [--help]");
             Console::printLine("Sans argument, le jeu se lance normalement.");
             return 0;
         }

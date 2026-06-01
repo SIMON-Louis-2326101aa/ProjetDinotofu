@@ -104,17 +104,17 @@ MenuScreen CombatPotionDisplay::buildQuickHealingScreen(
         );
     }
 
-    if (safePageIndex > 0)
-    {
-        screen.addOption(98, "Page précédente", "Voir les potions de soin précédentes.", true, "potions.quick_heal.previous");
-    }
-
-    if (safePageIndex + 1 < totalPages)
-    {
-        screen.addOption(99, "Page suivante", "Voir les potions de soin suivantes.", true, "potions.quick_heal.next");
-    }
-
-    screen.addBackOption("Retour", "potions.quick_heal.back");
+    PagedMenu::addNavigationOptions(
+        screen,
+        safePageIndex,
+        totalPages,
+        "potions.quick_heal.back",
+        "potions.quick_heal.previous",
+        "potions.quick_heal.next",
+        "Revenir au menu des potions.",
+        "Voir les potions de soin précédentes.",
+        "Voir les potions de soin suivantes."
+    );
     return screen;
 }
 
@@ -172,19 +172,19 @@ MenuScreen CombatPotionDisplay::buildFilteredPotionsScreen(
         );
     }
 
-    if (safePageIndex > 0)
-    {
-        screen.addOption(98, "Page précédente", "Voir les potions précédentes.", true, "potions.filtered.previous");
-    }
-
-    if (safePageIndex + 1 < totalPages)
-    {
-        screen.addOption(99, "Page suivante", "Voir les potions suivantes.", true, "potions.filtered.next");
-    }
-
     screen.addFooterLine("Choisis une potion visible sur cette page.");
     screen.addFooterLine("0 revient au menu des potions, 98/99 changent de page si disponible.");
-    screen.addBackOption("Retour", "potions.filtered.back");
+    PagedMenu::addNavigationOptions(
+        screen,
+        safePageIndex,
+        totalPages,
+        "potions.filtered.back",
+        "potions.filtered.previous",
+        "potions.filtered.next",
+        "Revenir au menu des potions.",
+        "Voir les potions précédentes.",
+        "Voir les potions suivantes."
+    );
     return screen;
 }
 
@@ -225,17 +225,17 @@ MenuScreen CombatPotionDisplay::buildPotionOverviewScreen(
         );
     }
 
-    if (safePageIndex > 0)
-    {
-        screen.addOption(98, "Page précédente", "Voir les potions précédentes.", true, "potions.overview.previous");
-    }
-
-    if (safePageIndex + 1 < totalPages)
-    {
-        screen.addOption(99, "Page suivante", "Voir les potions suivantes.", true, "potions.overview.next");
-    }
-
-    screen.addBackOption("Retour", "potions.overview.back");
+    PagedMenu::addNavigationOptions(
+        screen,
+        safePageIndex,
+        totalPages,
+        "potions.overview.back",
+        "potions.overview.previous",
+        "potions.overview.next",
+        "Revenir au menu des potions.",
+        "Voir les potions précédentes.",
+        "Voir les potions suivantes."
+    );
     screen.addFooterLine("Cette vue est consultative : les potions listées ne consomment pas d'action.");
     return screen;
 }

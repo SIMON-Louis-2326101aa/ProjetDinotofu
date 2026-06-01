@@ -471,6 +471,7 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "small_repair_kit"
         || id == "reinforced_repair_kit"
         || id == "special_adventurer_notes"
+        || id == "special_identity_rumors"
         || id == "summoning_notes"
         || id == "boss_identity_scrap"
         || id == "potion_recipe_page"
@@ -505,7 +506,8 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "magic_learning_notes"
         || id == "elemental_weakness_notes"
         || id == "legend_child_tales"
-        || id == "legend_trigger_notes";
+        || id == "legend_trigger_notes"
+        || id == "legend_storyteller_routes";
 }
 
 bool ShopTransactionSystem::buyItem(

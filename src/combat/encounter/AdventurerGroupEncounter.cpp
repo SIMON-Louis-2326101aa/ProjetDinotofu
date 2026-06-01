@@ -20,6 +20,7 @@
 #include "progression/DifficultyMode.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "lore/LegendTriggerSystem.hpp"
+#include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -211,10 +212,12 @@ EnemyCombatQueue AdventurerGroupEncounter::createClassicRandomGroup(
         "GROUPE CLASSIQUE",
         "combat.encounter.adventurer_group.classic",
         {
+            "Type : groupe d'aventuriers classique",
+            "Taille du groupe : " + std::to_string(groupSize),
+            "Personnages spéciaux : non",
+            "Niveau de rencontre : " + std::to_string(encounterLevel),
             "Un groupe d'aventuriers inconnus entre dans l'arène.",
-            "Noms, races et classes sont générés par l'arène.",
-            "Aucun personnage spécial ici.",
-            "Taille du groupe : " + std::to_string(groupSize)
+            "Noms, races et classes sont générés par l'arène."
         }
     );
 
@@ -462,14 +465,16 @@ void AdventurerGroupEncounter::announceRelationshipBonus(
         && containsName(groupNames, "Kanadé")
         && containsName(groupNames, "Sanctus"))
     {
-        lines.push_back("Relation active : Les bras cassés au complet.");
+        lines.push_back("Relation active : Les bras cassés au complet");
+        lines.push_back("Formation : assassin, mage fou, flammes, zodiaque et rempart");
         lines.push_back("Le groupe tient une vraie formation de cinq : assassin, mage fou, flammes, zodiaque et rempart.");
         lines.push_back("Leur nom vient d'une vieille histoire de bras coupé, d'orc, de régénération et de catastrophes qui finissent quand même en réussite.");
         lines.push_back("Ils jouent aux héros, mais leur ego rend l'arène beaucoup moins prévisible.");
     }
     else if (containsName(groupNames, "Hazak") && containsName(groupNames, "Hestia"))
     {
-        lines.push_back("Relation active : Hazak protège Hestia.");
+        lines.push_back("Relation active : Hazak protège Hestia");
+        lines.push_back("Danger : combat sérieux non-massacre");
         lines.push_back("Ses attaques deviennent plus précises, mais le combat reste non-massacre.");
     }
     else if (containsName(groupNames, "Aoi") && containsName(groupNames, "Kanadé") && containsName(groupNames, "Sanctus"))
@@ -483,7 +488,9 @@ void AdventurerGroupEncounter::announceRelationshipBonus(
     }
     else if (containsName(groupNames, "Skuro"))
     {
-        lines.push_back("Relation active : Skuro rend le groupe plus dangereux, mais aussi plus instable.");
+        lines.push_back("Relation active : Skuro présent");
+        lines.push_back("Danger : très élevé et instable");
+        lines.push_back("Skuro rend le groupe plus dangereux, mais aussi plus instable.");
     }
     else if (containsName(groupNames, "Hestia") && containsName(groupNames, "Sanctus") && containsName(groupNames, "Hazak"))
     {
@@ -522,16 +529,35 @@ void AdventurerGroupEncounter::announceRelationshipBonus(
 void AdventurerGroupEncounter::announceSpecialGroup(const std::vector<std::string>& names)
 {
     std::vector<std::string> lines;
+    lines.push_back("Type : groupe spécial d'aventuriers");
+    lines.push_back("Probabilité : environ 25% des tirages d'aventuriers");
+    lines.push_back("Membres : " + std::to_string(names.size()));
     lines.push_back("Un groupe spécial répond à l'appel de l'arène.");
-    lines.push_back("Ces groupes représentent environ 25% des tirages d'aventuriers.");
 
+    int memberNumber = 1;
     for (const std::string& name : names)
     {
-        lines.push_back("- " + name);
+        lines.push_back("[" + std::to_string(memberNumber) + "] " + name + " | Type : personnage spécial | Rôle : membre du groupe");
+        BestiaryRuntimeProgress::recordEncounter(
+            name,
+            "Personnages spéciaux",
+            "Rencontre réelle : " + name + " a été vu dans un groupe spécial d'aventuriers. Le suivi du bestiaire peut maintenant confirmer son existence."
+        );
+        ++memberNumber;
+    }
+
+    if (names.size() >= 3)
+    {
+        BestiaryRuntimeProgress::recordEncounter(
+            "Groupe spécial rencontré",
+            "Personnages spéciaux",
+            "Rencontre réelle : plusieurs personnages spéciaux sont apparus ensemble. Les fiches individuelles restent progressives, mais la trace de groupe est confirmée."
+        );
     }
 
     CombatIntent intent = SpecialEncounterRules::getIntentForSpecialGroup(names);
-    lines.push_back(SpecialEncounterRules::getIntentText(intent, names));
+    lines.push_back("Intention du groupe : " + SpecialEncounterRules::getIntentText(intent, names));
+    lines.push_back("Combat à mort possible : " + std::string(SpecialEncounterRules::canBecomeDeathMatch(names) ? "oui, si le contexte dégénère" : "non par défaut"));
 
     showEncounterScreen(
         "GROUPE SPÉCIAL",

@@ -125,6 +125,160 @@ namespace
         return itemData;
     }
 
+    MenuOptionItemData makeSessionItemData(
+        const Player& player,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = "",
+        const std::string& progress = "",
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "session";
+        itemData.section = "Session";
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.progress = progress.empty() ? "Joueur 1 : " + player.getName() : progress;
+        itemData.owner = player.getName();
+        itemData.important = important;
+        return itemData;
+    }
+
+    std::string difficultyModeLabel(DifficultyMode difficulty)
+    {
+        switch (difficulty)
+        {
+            case DifficultyMode::Easy:
+                return "Facile";
+            case DifficultyMode::Hard:
+                return "Difficile";
+            case DifficultyMode::Nightmare:
+                return "Cauchemar";
+            case DifficultyMode::Lethal:
+                return "Léthal";
+            case DifficultyMode::Normal:
+            default:
+                return "Normal";
+        }
+    }
+
+    std::string difficultyRespawnSummary(DifficultyMode difficulty)
+    {
+        switch (difficulty)
+        {
+            case DifficultyMode::Easy:
+                return "Respawn non définitif : environ 75% PV.";
+            case DifficultyMode::Hard:
+                return "Respawn non définitif : environ 30% PV.";
+            case DifficultyMode::Nightmare:
+                return "Respawn non définitif : environ 10% PV.";
+            case DifficultyMode::Lethal:
+                return "Respawn : mort définitive possible, sauf exception narrative rarissime.";
+            case DifficultyMode::Normal:
+            default:
+                return "Respawn non définitif : règles standards.";
+        }
+    }
+
+    std::string difficultyRiskSummary(DifficultyMode difficulty)
+    {
+        switch (difficulty)
+        {
+            case DifficultyMode::Easy:
+                return "Risque : plus permissif, pertes limitées.";
+            case DifficultyMode::Hard:
+                return "Risque : pertes et durabilité plus tendues.";
+            case DifficultyMode::Nightmare:
+                return "Risque : très punitif, équipement rarement intouchable.";
+            case DifficultyMode::Lethal:
+                return "Risque : le registre peut perdre ton personnage.";
+            case DifficultyMode::Normal:
+            default:
+                return "Risque : équilibre standard.";
+        }
+    }
+
+    std::string difficultyRewardSummary(DifficultyMode difficulty)
+    {
+        switch (difficulty)
+        {
+            case DifficultyMode::Easy:
+                return "Récompenses : départ plus confortable.";
+            case DifficultyMode::Hard:
+                return "Récompenses : gains à surveiller face aux prix.";
+            case DifficultyMode::Nightmare:
+                return "Récompenses : chaque gain compte davantage.";
+            case DifficultyMode::Lethal:
+                return "Récompenses : progression risquée, trace de mort spéciale.";
+            case DifficultyMode::Normal:
+            default:
+                return "Récompenses : valeurs de référence.";
+        }
+    }
+
+    MenuOptionItemData makeExchangeItemData(
+        const Player& owner,
+        const std::string& kind,
+        const std::string& section,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = "",
+        const std::string& progress = "",
+        const std::string& reward = "",
+        int price = 0,
+        int stock = 0,
+        int quantity = 0,
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = kind;
+        itemData.section = section;
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.progress = progress;
+        itemData.reward = reward;
+        itemData.price = price;
+        itemData.stock = stock;
+        itemData.quantity = quantity;
+        itemData.owner = owner.getName();
+        itemData.important = important || status.find("équip") != std::string::npos || status.find("port") != std::string::npos;
+        return itemData;
+    }
+
+    MenuOptionItemData makeExchangeAccountItemData(
+        const std::string& section,
+        const std::string& actionType,
+        const std::string& name,
+        const std::string& detail,
+        const std::string& status = "",
+        const std::string& progress = "",
+        bool important = false
+    )
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "exchange";
+        itemData.section = section;
+        itemData.actionType = actionType;
+        itemData.name = name;
+        itemData.detail = detail;
+        itemData.status = status;
+        itemData.progress = progress;
+        itemData.owner = "Registre local";
+        itemData.important = important;
+        return itemData;
+    }
+
     std::string guardianAnswerFor(const std::string& rawText)
     {
         std::string normalized;
@@ -280,6 +434,176 @@ namespace
         );
     }
 
+
+    int askExchangeAccountIndex(
+        const std::vector<AccountSaveSummary>& accounts,
+        const std::string& currentAccountName
+    )
+    {
+        if (accounts.empty())
+        {
+            return -1;
+        }
+
+        constexpr std::size_t itemsPerPage = 8;
+        std::size_t page = 0;
+
+        while (true)
+        {
+            const std::size_t totalPages = PagedMenu::pageCount(accounts.size(), itemsPerPage);
+            const std::size_t first = PagedMenu::firstIndex(page, itemsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(accounts.size(), page, itemsPerPage);
+
+            MenuScreen screen("ÉCHANGE / DON", "exchange.account.select");
+            screen.addSubtitle("Choisis le compte cible.");
+            screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, accounts.size()));
+
+            for (std::size_t i = first; i < last; ++i)
+            {
+                const AccountSaveSummary& account = accounts[i];
+                const bool currentAccount = account.accountName == currentAccountName;
+                screen.addOption(
+                    static_cast<int>(i - first + 1),
+                    account.accountName,
+                    currentAccount ? "Ton compte actuel : seuls les autres personnages peuvent être ciblés." : "Compte local disponible.",
+                    true,
+                    "exchange.account.select",
+                    makeExchangeAccountItemData(
+                        "Comptes disponibles",
+                        "select_account",
+                        account.accountName,
+                        currentAccount ? "Compte actuel." : "Compte local disponible pour l'échange.",
+                        currentAccount ? "Compte actuel" : "Disponible",
+                        PagedMenu::rangeText(first, last, accounts.size()),
+                        currentAccount
+                    )
+                );
+            }
+
+            PagedMenu::addNavigationOptions(screen, page, totalPages);
+
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(
+                screen,
+                "Veuillez choisir un compte affiché."
+            );
+            Console::clear();
+
+            if (choice == 0)
+            {
+                return -1;
+            }
+
+            if (choice == 98 && page > 0)
+            {
+                --page;
+                continue;
+            }
+
+            if (choice == 99 && page + 1 < totalPages)
+            {
+                ++page;
+                continue;
+            }
+
+            const int visibleCount = static_cast<int>(last - first);
+            if (choice >= 1 && choice <= visibleCount)
+            {
+                return static_cast<int>(first + static_cast<std::size_t>(choice - 1));
+            }
+        }
+    }
+
+    int askExchangeCharacterIndex(
+        const std::vector<CharacterSaveSummary>& characters,
+        const std::string& targetAccount,
+        const std::string& currentAccountName,
+        const std::string& currentCharacterName
+    )
+    {
+        if (characters.empty())
+        {
+            return -1;
+        }
+
+        constexpr std::size_t itemsPerPage = 8;
+        std::size_t page = 0;
+
+        while (true)
+        {
+            const std::size_t totalPages = PagedMenu::pageCount(characters.size(), itemsPerPage);
+            const std::size_t first = PagedMenu::firstIndex(page, itemsPerPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(characters.size(), page, itemsPerPage);
+
+            MenuScreen screen("PERSONNAGE CIBLE", "exchange.character.select");
+            screen.addSubtitle("Compte cible : " + targetAccount);
+            screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, characters.size()));
+
+            for (std::size_t i = first; i < last; ++i)
+            {
+                const CharacterSaveSummary& character = characters[i];
+                const bool sameCharacter = targetAccount == currentAccountName && character.characterName == currentCharacterName;
+                const std::string label = character.characterName
+                    + " | " + character.raceName
+                    + " / " + character.className
+                    + " | Niveau " + std::to_string(character.level);
+
+                std::string status = sameCharacter ? "Personnage actuel" : "Disponible";
+                if (character.clone)
+                {
+                    status += " | clone";
+                }
+
+                screen.addOption(
+                    static_cast<int>(i - first + 1),
+                    label,
+                    sameCharacter ? "C'est ton personnage actuel : échange impossible avec soi-même." : "Maître : " + character.currentOwnerAccountName,
+                    !sameCharacter,
+                    "exchange.character.select",
+                    makeExchangeAccountItemData(
+                        "Personnages disponibles",
+                        "select_character",
+                        character.characterName,
+                        character.raceName + " / " + character.className,
+                        status,
+                        "Niveau " + std::to_string(character.level) + " | Version " + character.gameVersion,
+                        sameCharacter || character.clone
+                    )
+                );
+            }
+
+            PagedMenu::addNavigationOptions(screen, page, totalPages);
+
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(
+                screen,
+                "Veuillez choisir un personnage affiché."
+            );
+            Console::clear();
+
+            if (choice == 0)
+            {
+                return -1;
+            }
+
+            if (choice == 98 && page > 0)
+            {
+                --page;
+                continue;
+            }
+
+            if (choice == 99 && page + 1 < totalPages)
+            {
+                ++page;
+                continue;
+            }
+
+            const int visibleCount = static_cast<int>(last - first);
+            if (choice >= 1 && choice <= visibleCount)
+            {
+                return static_cast<int>(first + static_cast<std::size_t>(choice - 1));
+            }
+        }
+    }
+
     int askExchangeWeaponIndex(const Player& giver)
     {
         const std::vector<Weapon>& weapons = giver.getInventory().getWeapons();
@@ -333,7 +657,22 @@ namespace
                     weapon.getName(),
                     hint.str(),
                     !equipped,
-                    "exchange.weapon.select"
+                    "exchange.weapon.select",
+                    makeExchangeItemData(
+                        giver,
+                        "weapon",
+                        "Armes transférables",
+                        "select_weapon",
+                        weapon.getName(),
+                        hint.str(),
+                        equipped ? "Équipée - non transférable" : "Transférable",
+                        "Valeur estimée " + std::to_string(estimateWeaponTradeValue(weapon)),
+                        "",
+                        estimateWeaponTradeValue(weapon),
+                        1,
+                        1,
+                        equipped
+                    )
                 );
             }
 
@@ -420,7 +759,22 @@ namespace
                     armor.getName(),
                     hint.str(),
                     !equipped,
-                    "exchange.armor.select"
+                    "exchange.armor.select",
+                    makeExchangeItemData(
+                        giver,
+                        "armor",
+                        "Armures transférables",
+                        "select_armor",
+                        armor.getName(),
+                        hint.str(),
+                        equipped ? "Portée - non transférable" : "Transférable",
+                        "Valeur estimée " + std::to_string(estimateArmorTradeValue(armor)),
+                        "",
+                        estimateArmorTradeValue(armor),
+                        1,
+                        1,
+                        equipped
+                    )
                 );
             }
 
@@ -489,7 +843,21 @@ namespace
                     consumable.getName(),
                     "Puissance " + std::to_string(consumable.getPower()) + " | Valeur " + std::to_string(consumable.getValue()),
                     true,
-                    "exchange.consumable.select"
+                    "exchange.consumable.select",
+                    makeExchangeItemData(
+                        giver,
+                        "consumable",
+                        "Consommables transférables",
+                        "select_consumable",
+                        consumable.getName(),
+                        "Puissance " + std::to_string(consumable.getPower()),
+                        "Transférable",
+                        "Valeur " + std::to_string(consumable.getValue()),
+                        "",
+                        consumable.getValue(),
+                        1,
+                        1
+                    )
                 );
             }
 
@@ -558,7 +926,22 @@ namespace
                     material.getName() + " x" + std::to_string(material.getQuantity()),
                     material.getCategory() + " | Qualité " + material.getQualityLabel() + " | Valeur " + std::to_string(material.getValue()),
                     true,
-                    "exchange.material.select"
+                    "exchange.material.select",
+                    makeExchangeItemData(
+                        giver,
+                        "material",
+                        "Matériaux transférables",
+                        "select_material",
+                        material.getName(),
+                        material.getCategory() + " | Qualité " + material.getQualityLabel(),
+                        "Transférable",
+                        "Valeur unitaire " + std::to_string(material.getValue()),
+                        "",
+                        material.getValue(),
+                        material.getQuantity(),
+                        material.getQuantity(),
+                        material.getQualityPricePercent() > 120
+                    )
                 );
             }
 
@@ -760,7 +1143,12 @@ void Game::chooseDifficulty()
 
     MenuScreen confirmation("DIFFICULTÉ VALIDÉE", "character.creation.difficulty.confirmation");
     confirmation.setContinueInput("Valide pour continuer vers la suite de création.");
+    confirmation.addSubtitle("Transition de création");
     confirmation.addLine("Difficulté sélectionnée : " + getDifficultyName() + ".");
+    confirmation.addLine(difficultyRiskSummary(selectedDifficulty));
+    confirmation.addLine(difficultyRespawnSummary(selectedDifficulty));
+    confirmation.addLine(difficultyRewardSummary(selectedDifficulty));
+    confirmation.addLine("Prochaine étape : " + std::string(specialIdentityValidated ? "classe" : "race"));
     confirmation.addLine("Ton départ sera ajusté en conséquence.");
 
     if (specialIdentityValidated)
@@ -1251,7 +1639,11 @@ bool Game::addSecondaryPlayerToParty(int playerNumber)
     partyPlayers.push_back(secondaryPlayer);
 
     MenuScreen successScreen("JOUEUR AJOUTÉ", "session.party.secondary.added");
+    successScreen.addSubtitle("Résumé du joueur secondaire");
     successScreen.addLine("Joueur " + std::to_string(playerNumber) + " ajouté : " + secondaryPlayer.getName() + " (" + secondaryAccount + ").");
+    successScreen.addLine("Race / classe : " + secondaryPlayer.getRaceText() + " / " + secondaryPlayer.getType());
+    successScreen.addLine("Difficulté personnelle : " + difficultyModeLabel(secondaryDifficulty));
+    successScreen.addLine("PV : " + std::to_string(secondaryPlayer.getHp()) + "/" + std::to_string(secondaryPlayer.getMaxHp()));
     TerminalInterface::renderMenuScreen(successScreen, false);
     Console::waitForEnter();
     Console::clear();
@@ -1266,9 +1658,30 @@ void Game::configurePartyMode()
 
     MenuScreen screen("SESSION", "session.party.mode");
     screen.addSubtitle("Le joueur 1 reste le point d'ancrage de la partie.");
-    screen.addOption(1, "Solo", "Un seul personnage actif.", true, "session.solo");
-    screen.addOption(2, "Multi local - 2 joueurs", "Un allié joueur intervient surtout en combat et récompenses individuelles.", true, "session.coop.2");
-    screen.addOption(3, "Multi local - 3 joueurs", "Deux alliés joueurs avec inventaires et récompenses séparés.", true, "session.coop.3");
+    screen.addOption(
+        1,
+        "Solo",
+        "Un seul personnage actif.",
+        true,
+        "session.solo",
+        makeSessionItemData(mainPlayer, "session", "Solo", "Un seul personnage actif.", "Classique", "Difficulté : " + getDifficultyName())
+    );
+    screen.addOption(
+        2,
+        "Multi local - 2 joueurs",
+        "Un allié joueur intervient surtout en combat et récompenses individuelles.",
+        true,
+        "session.coop.2",
+        makeSessionItemData(mainPlayer, "session", "Multi local - 2 joueurs", "Un allié joueur intervient surtout en combat.", "Coop locale", "Récompenses individuelles", true)
+    );
+    screen.addOption(
+        3,
+        "Multi local - 3 joueurs",
+        "Deux alliés joueurs avec inventaires et récompenses séparés.",
+        true,
+        "session.coop.3",
+        makeSessionItemData(mainPlayer, "session", "Multi local - 3 joueurs", "Deux alliés joueurs rejoignent surtout les combats.", "Coop locale", "Récompenses individuelles", true)
+    );
 
     int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une session affichée.");
     Console::clear();
@@ -1277,7 +1690,14 @@ void Game::configurePartyMode()
     {
         MenuScreen confirmation("SESSION SOLO", "session.party.confirmation.solo");
         confirmation.setContinueInput("Valide pour ouvrir les activités disponibles.");
+        confirmation.addSubtitle("Joueur actif");
         confirmation.addLine("Session solo sélectionnée.");
+        confirmation.addLine("Personnage : " + mainPlayer.getName());
+        confirmation.addLine("Race / classe : " + mainPlayer.getRaceText() + " / " + mainPlayer.getType());
+        confirmation.addLine("Difficulté : " + getDifficultyName());
+        confirmation.addLine("PV : " + std::to_string(mainPlayer.getHp()) + "/" + std::to_string(mainPlayer.getMaxHp()));
+        confirmation.addLine("Or : " + std::to_string(mainPlayer.getInventory().getGold()) + " pièces");
+        confirmation.addLine("Prochaine étape : activités disponibles.");
         TerminalInterface::renderMenuScreen(confirmation, false);
         Console::waitForEnter();
         Console::clear();
@@ -1286,8 +1706,11 @@ void Game::configurePartyMode()
 
     MenuScreen coopIntro("SESSION COOP", "session.party.confirmation.coop");
     coopIntro.setContinueInput("Valide pour choisir les autres joueurs.");
+    coopIntro.addSubtitle("Règle de session");
     coopIntro.addLine("Le joueur 1 reste le point d'ancrage : voyage, boss, niveau de session, événements et monstres.");
+    coopIntro.addLine("Joueur 1 : " + mainPlayer.getName() + " | " + mainPlayer.getRaceText() + " / " + mainPlayer.getType() + " | " + getDifficultyName());
     coopIntro.addLine("Les autres joueurs interviennent surtout en combat, avec leur inventaire et leurs récompenses individuelles.");
+    coopIntro.addLine("Boss coop : tous les joueurs doivent avoir l'accès requis.");
     TerminalInterface::renderMenuScreen(coopIntro, false);
     Console::waitForEnter();
     Console::clear();
@@ -1310,11 +1733,25 @@ void Game::configurePartyMode()
 
     if (partyPlayers.empty())
     {
+        result.addSubtitle("Retour solo");
         result.addLine("Aucun joueur secondaire validé. Session solo conservée.");
+        result.addLine("Personnage : " + mainPlayer.getName());
+        result.addLine("Difficulté : " + getDifficultyName());
     }
     else
     {
+        result.addSubtitle("Groupe validé");
         result.addLine("Groupe actif : " + std::to_string(partyPlayers.size() + 1) + " joueurs.");
+        result.addLine("- J1 " + mainPlayer.getName() + " | " + mainPlayer.getRaceText() + " / " + mainPlayer.getType() + " | " + getDifficultyName());
+        for (std::size_t i = 0; i < partyPlayers.size(); ++i)
+        {
+            result.addLine(
+                "- J" + std::to_string(i + 2) + " " + partyPlayers[i].getName()
+                + " | " + partyPlayers[i].getRaceText()
+                + " / " + partyPlayers[i].getType()
+                + " | " + difficultyModeLabel(partyDifficulties[i])
+            );
+        }
     }
 
     TerminalInterface::renderMenuScreen(result, false);
@@ -2088,33 +2525,14 @@ void Game::openExchangeMenu()
         return;
     }
 
-    MenuScreen accountScreen("ÉCHANGE / DON", "exchange.account.select");
-    accountScreen.addSubtitle("Choisis le compte cible.");
-    accountScreen.addBackOption();
+    int accountChoice = askExchangeAccountIndex(accounts, accountName);
 
-    for (int i = 0; i < static_cast<int>(accounts.size()); ++i)
-    {
-        accountScreen.addOption(
-            i + 1,
-            accounts[i].accountName,
-            accounts[i].accountName == accountName ? "Ton compte actuel : seuls les autres personnages peuvent être ciblés." : "Compte local disponible.",
-            true,
-            "exchange.account.select"
-        );
-    }
-
-    int accountChoice = TerminalInterface::askMenuChoiceFromOptions(
-        accountScreen,
-        "Veuillez choisir un compte affiché."
-    );
-    Console::clear();
-
-    if (accountChoice == 0)
+    if (accountChoice < 0)
     {
         return;
     }
 
-    std::string targetAccount = accounts[accountChoice - 1].accountName;
+    std::string targetAccount = accounts[static_cast<std::size_t>(accountChoice)].accountName;
     std::vector<CharacterSaveSummary> characters = SaveManager::listPlayableCharacters(targetAccount);
 
     if (characters.empty())
@@ -2128,41 +2546,19 @@ void Game::openExchangeMenu()
         return;
     }
 
-    MenuScreen characterScreen("PERSONNAGE CIBLE", "exchange.character.select");
-    characterScreen.addSubtitle("Compte cible : " + targetAccount);
-    characterScreen.addBackOption();
-
-    for (int i = 0; i < static_cast<int>(characters.size()); ++i)
-    {
-        const CharacterSaveSummary& character = characters[i];
-        std::string label = character.characterName
-            + " | " + character.raceName
-            + " / " + character.className
-            + " | Niveau " + std::to_string(character.level);
-
-        bool sameCharacter = targetAccount == accountName && character.characterName == mainPlayer.getName();
-
-        characterScreen.addOption(
-            i + 1,
-            label,
-            sameCharacter ? "C'est ton personnage actuel : échange impossible avec soi-même." : "Maître : " + character.currentOwnerAccountName,
-            true,
-            "exchange.character.select"
-        );
-    }
-
-    int characterChoice = TerminalInterface::askMenuChoiceFromOptions(
-        characterScreen,
-        "Veuillez choisir un personnage affiché."
+    int characterChoice = askExchangeCharacterIndex(
+        characters,
+        targetAccount,
+        accountName,
+        mainPlayer.getName()
     );
-    Console::clear();
 
-    if (characterChoice == 0)
+    if (characterChoice < 0)
     {
         return;
     }
 
-    CharacterSaveSummary targetSummary = characters[characterChoice - 1];
+    CharacterSaveSummary targetSummary = characters[static_cast<std::size_t>(characterChoice)];
 
     if (targetAccount == accountName && targetSummary.characterName == mainPlayer.getName())
     {
