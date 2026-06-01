@@ -38,7 +38,14 @@ bool CombatPotionMenu::openQuickHealing(Player& player)
 
     while (true)
     {
-        const std::size_t totalPages = PagedMenu::pageCount(indices.size(), itemsPerPage);
+        std::vector<PotionStack> stacks = CombatPotionUtils::groupPotionIndices(player, indices);
+        const std::size_t totalPages = PagedMenu::pageCount(stacks.size(), itemsPerPage);
+
+        if (stacks.empty())
+        {
+            CombatPotionDisplay::showEmptyCategory("soin rapide");
+            return false;
+        }
 
         if (pageIndex >= totalPages)
         {
@@ -70,14 +77,15 @@ bool CombatPotionMenu::openQuickHealing(Player& player)
         }
 
         const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
-        const std::size_t visibleCount = PagedMenu::lastIndexExclusive(indices.size(), pageIndex, itemsPerPage) - first;
+        const std::size_t visibleCount = PagedMenu::lastIndexExclusive(stacks.size(), pageIndex, itemsPerPage) - first;
 
         if (choice < 1 || choice > static_cast<int>(visibleCount))
         {
             continue;
         }
 
-        int consumableIndex = indices[first + static_cast<std::size_t>(choice - 1)];
+        PotionStack selectedStack = stacks[first + static_cast<std::size_t>(choice - 1)];
+        int consumableIndex = selectedStack.firstIndex;
 
         if (!player.getInventory().hasConsumable(consumableIndex))
         {
@@ -88,7 +96,7 @@ bool CombatPotionMenu::openQuickHealing(Player& player)
         Consumable potion = player.getInventory().getConsumable(consumableIndex);
 
         int action = TerminalInterface::askMenuChoiceFromOptions(
-            CombatPotionDisplay::buildSelectedHealingPotionScreen(potion),
+            CombatPotionDisplay::buildSelectedHealingPotionScreen(potion, selectedStack.amount),
             "Choix invalide. Entre 0, 1 ou 2."
         );
 
@@ -369,7 +377,14 @@ bool CombatPotionMenu::openPotionSelection(
 
     while (true)
     {
-        const std::size_t totalPages = PagedMenu::pageCount(indices.size(), itemsPerPage);
+        std::vector<PotionStack> stacks = CombatPotionUtils::groupPotionIndices(player, indices);
+        const std::size_t totalPages = PagedMenu::pageCount(stacks.size(), itemsPerPage);
+
+        if (stacks.empty())
+        {
+            CombatPotionDisplay::showEmptyCategory(CombatPotionUtils::typeToText(type));
+            return false;
+        }
 
         if (pageIndex >= totalPages)
         {
@@ -401,14 +416,15 @@ bool CombatPotionMenu::openPotionSelection(
         }
 
         const std::size_t first = PagedMenu::firstIndex(pageIndex, itemsPerPage);
-        const std::size_t visibleCount = PagedMenu::lastIndexExclusive(indices.size(), pageIndex, itemsPerPage) - first;
+        const std::size_t visibleCount = PagedMenu::lastIndexExclusive(stacks.size(), pageIndex, itemsPerPage) - first;
 
         if (choice < 1 || choice > static_cast<int>(visibleCount))
         {
             continue;
         }
 
-        int consumableIndex = indices[first + static_cast<std::size_t>(choice - 1)];
+        PotionStack selectedStack = stacks[first + static_cast<std::size_t>(choice - 1)];
+        int consumableIndex = selectedStack.firstIndex;
 
         if (!player.getInventory().hasConsumable(consumableIndex))
         {
@@ -419,7 +435,7 @@ bool CombatPotionMenu::openPotionSelection(
         Consumable potion = player.getInventory().getConsumable(consumableIndex);
 
         int action = TerminalInterface::askMenuChoiceFromOptions(
-            CombatPotionDisplay::buildSelectedPotionScreen(potion),
+            CombatPotionDisplay::buildSelectedPotionScreen(potion, selectedStack.amount),
             "Choix invalide. Entre 0, 1 ou 2."
         );
 

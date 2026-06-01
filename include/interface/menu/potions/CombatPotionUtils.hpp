@@ -12,6 +12,18 @@
 #include <string>
 #include <vector>
 
+struct PotionStack
+{
+    int firstIndex;
+    int amount;
+    std::string name;
+    ConsumableType type;
+    int power;
+    int value;
+
+    PotionStack();
+};
+
 class CombatPotionUtils
 {
 public:
@@ -19,6 +31,15 @@ public:
         const Player& player,
         ConsumableType type
     );
+
+    static std::vector<PotionStack> groupPotionIndices(
+        const Player& player,
+        const std::vector<int>& indices
+    );
+
+    static std::vector<PotionStack> groupPotions(const Player& player);
+    static std::string stackText(int amount);
+    static std::string stackLabel(const std::string& name, int amount);
 
     // EN: typeToText declares or implements a focused behavior used by this module.
     // FR: typeToText déclare ou implémente un comportement précis utilisé par ce module.

@@ -1584,7 +1584,8 @@ namespace
     MenuOptionItemData makePvePartyPotionData(
         const Player& healer,
         const Consumable& potion,
-        int inventoryIndex
+        int inventoryIndex,
+        int amount = 1
     )
     {
         MenuOptionItemData itemData;
@@ -1593,6 +1594,7 @@ namespace
         itemData.section = "Potions de soutien PvE";
         itemData.actionType = "heal";
         itemData.name = potion.getName();
+        itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = potion.getDescription();
         itemData.status = "Soin : " + std::to_string(potion.getPower()) + " PV";
         itemData.price = "Valeur : " + std::to_string(potion.getValue()) + " or";
@@ -1733,14 +1735,20 @@ namespace
         int consumableIndex = -1;
         while (consumableIndex < 0)
         {
-            const std::size_t totalPages = PagedMenu::pageCount(potionIndices.size(), PVE_PARTY_SUPPORT_PAGE_SIZE);
+            std::vector<PotionStack> potionStacks = CombatPotionUtils::groupPotionIndices(healer, potionIndices);
+            if (potionStacks.empty())
+            {
+                return false;
+            }
+
+            const std::size_t totalPages = PagedMenu::pageCount(potionStacks.size(), PVE_PARTY_SUPPORT_PAGE_SIZE);
             if (potionPageIndex >= totalPages) potionPageIndex = totalPages - 1;
             const std::size_t firstIndex = PagedMenu::firstIndex(potionPageIndex, PVE_PARTY_SUPPORT_PAGE_SIZE);
-            const std::size_t lastIndex = PagedMenu::lastIndexExclusive(potionIndices.size(), potionPageIndex, PVE_PARTY_SUPPORT_PAGE_SIZE);
+            const std::size_t lastIndex = PagedMenu::lastIndexExclusive(potionStacks.size(), potionPageIndex, PVE_PARTY_SUPPORT_PAGE_SIZE);
 
             MenuScreen potionScreen("CHOIX DE LA POTION", "pve.party.support.potion");
             potionScreen.addSubtitle("Cible : " + target->getName());
-            potionScreen.addLine("Potions affichées : " + PagedMenu::rangeText(firstIndex, lastIndex, potionIndices.size()));
+            potionScreen.addLine("Piles affichées : " + PagedMenu::rangeText(firstIndex, lastIndex, potionStacks.size()));
             potionScreen.addLine("Choisis la potion de soin à utiliser.");
             potionScreen.addOption(
                 0,
@@ -1752,14 +1760,15 @@ namespace
             );
             for (std::size_t i = firstIndex; i < lastIndex; ++i)
             {
-                Consumable potion = healer.getInventory().getConsumable(potionIndices[i]);
+                const PotionStack& stack = potionStacks[i];
+                Consumable potion = healer.getInventory().getConsumable(stack.firstIndex);
                 potionScreen.addOption(
                     static_cast<int>(i - firstIndex + 1),
-                    potion.getName(),
-                    "Soin : " + std::to_string(potion.getPower()) + " PV",
+                    CombatPotionUtils::stackLabel(potion.getName(), stack.amount),
+                    "Soin : " + std::to_string(potion.getPower()) + " PV | Quantité : " + std::to_string(stack.amount),
                     true,
                     "party.support.potion.healing",
-                    makePvePartyPotionData(healer, potion, potionIndices[i])
+                    makePvePartyPotionData(healer, potion, stack.firstIndex, stack.amount)
                 );
             }
             PagedMenu::addNavigationOptions(potionScreen, potionPageIndex, totalPages);
@@ -1783,9 +1792,9 @@ namespace
             }
 
             const std::size_t selectedIndex = firstIndex + static_cast<std::size_t>(potionChoice - 1);
-            if (selectedIndex < potionIndices.size() && selectedIndex < lastIndex)
+            if (selectedIndex < potionStacks.size() && selectedIndex < lastIndex)
             {
-                consumableIndex = potionIndices[selectedIndex];
+                consumableIndex = potionStacks[selectedIndex].firstIndex;
             }
         }
         if (!healer.getInventory().hasConsumable(consumableIndex))

@@ -993,7 +993,8 @@ namespace
     MenuOptionItemData makeBossCoopPotionData(
         const Player& healer,
         const Consumable& potion,
-        int inventoryIndex
+        int inventoryIndex,
+        int amount = 1
     )
     {
         MenuOptionItemData itemData;
@@ -1002,6 +1003,7 @@ namespace
         itemData.section = "Potions de soutien";
         itemData.actionType = "heal";
         itemData.name = potion.getName();
+        itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = potion.getDescription();
         itemData.status = "Soin : " + std::to_string(potion.getPower());
         itemData.price = "Valeur : " + std::to_string(potion.getValue()) + " or";
@@ -1115,13 +1117,19 @@ namespace
 
         while (true)
         {
+            std::vector<PotionStack> potionStacks = CombatPotionUtils::groupPotionIndices(healer, potionIndices);
+            if (potionStacks.empty())
+            {
+                return -1;
+            }
+
             const std::size_t totalPages = std::max<std::size_t>(
                 1,
-                (potionIndices.size() + BOSS_COOP_SUPPORT_PAGE_SIZE - 1) / BOSS_COOP_SUPPORT_PAGE_SIZE
+                (potionStacks.size() + BOSS_COOP_SUPPORT_PAGE_SIZE - 1) / BOSS_COOP_SUPPORT_PAGE_SIZE
             );
             const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
             const std::size_t start = safePageIndex * BOSS_COOP_SUPPORT_PAGE_SIZE;
-            const std::size_t end = std::min(potionIndices.size(), start + BOSS_COOP_SUPPORT_PAGE_SIZE);
+            const std::size_t end = std::min(potionStacks.size(), start + BOSS_COOP_SUPPORT_PAGE_SIZE);
 
             MenuScreen potionScreen("POTION DE SOUTIEN", "boss.coop.support.potion");
             potionScreen.setPagination(safePageIndex, totalPages);
@@ -1131,15 +1139,16 @@ namespace
 
             for (std::size_t index = start; index < end; ++index)
             {
-                const int inventoryIndex = potionIndices[index];
+                const PotionStack& stack = potionStacks[index];
+                const int inventoryIndex = stack.firstIndex;
                 Consumable potion = healer.getInventory().getConsumable(inventoryIndex);
                 potionScreen.addOption(
                     static_cast<int>(index - start + 1),
-                    potion.getName(),
-                    "Soin " + std::to_string(potion.getPower()) + " | valeur " + std::to_string(potion.getValue()),
+                    CombatPotionUtils::stackLabel(potion.getName(), stack.amount),
+                    "Soin " + std::to_string(potion.getPower()) + " | quantité " + std::to_string(stack.amount) + " | valeur " + std::to_string(potion.getValue()),
                     true,
                     "boss.coop.support.potion.select." + std::to_string(inventoryIndex + 1),
-                    makeBossCoopPotionData(healer, potion, inventoryIndex)
+                    makeBossCoopPotionData(healer, potion, inventoryIndex, stack.amount)
                 );
             }
 
@@ -1171,9 +1180,9 @@ namespace
             }
 
             const std::size_t selectedIndex = start + static_cast<std::size_t>(potionChoice - 1);
-            if (selectedIndex < potionIndices.size())
+            if (selectedIndex < potionStacks.size())
             {
-                return potionIndices[selectedIndex];
+                return potionStacks[selectedIndex].firstIndex;
             }
         }
     }

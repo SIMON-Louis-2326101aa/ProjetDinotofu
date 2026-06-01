@@ -76,6 +76,62 @@ namespace
             return 1;
         }
     }
+
+    struct ConsumableInventoryStack
+    {
+        int firstIndex;
+        int amount;
+        std::string name;
+        ConsumableType type;
+        int power;
+    };
+
+    std::string formatConsumableInventoryStackLabel(const std::string& name, int amount)
+    {
+        if (amount < 1)
+        {
+            amount = 1;
+        }
+
+        return name + " (*" + std::to_string(amount) + ")";
+    }
+
+    std::vector<ConsumableInventoryStack> groupConsumablesForInventory(const std::vector<Consumable>& consumables)
+    {
+        std::vector<ConsumableInventoryStack> groups;
+
+        for (int i = 0; i < static_cast<int>(consumables.size()); ++i)
+        {
+            const Consumable& consumable = consumables[i];
+            bool found = false;
+
+            for (ConsumableInventoryStack& group : groups)
+            {
+                if (group.name == consumable.getName()
+                    && group.type == consumable.getType()
+                    && group.power == consumable.getPower())
+                {
+                    group.amount++;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                ConsumableInventoryStack group;
+                group.firstIndex = i;
+                group.amount = 1;
+                group.name = consumable.getName();
+                group.type = consumable.getType();
+                group.power = consumable.getPower();
+                groups.push_back(group);
+            }
+        }
+
+        return groups;
+    }
+
     void showInventoryScreen(
         const std::string& title,
         const std::string& screenId,
@@ -747,9 +803,16 @@ void Inventory::displayConsumableList() const
         return;
     }
 
-    for (int i = 0; i < static_cast<int>(consumables.size()); i++)
+    std::vector<ConsumableInventoryStack> consumableGroups = groupConsumablesForInventory(consumables);
+
+    for (int i = 0; i < static_cast<int>(consumableGroups.size()); i++)
     {
-        lines.push_back("[" + std::to_string(i) + "] " + consumables[i].getName());
+        const ConsumableInventoryStack& group = consumableGroups[i];
+        lines.push_back(
+            "[" + std::to_string(group.firstIndex) + "] "
+            + formatConsumableInventoryStackLabel(group.name, group.amount)
+            + " | Puissance : " + std::to_string(group.power)
+        );
     }
 
     if (hasRepairKit)

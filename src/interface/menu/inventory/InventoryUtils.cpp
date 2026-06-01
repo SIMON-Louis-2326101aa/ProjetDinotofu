@@ -63,6 +63,21 @@ std::string InventoryUtils::armorDurabilityText(const Armor& armor)
     return std::to_string(armor.getDurability()) + "/" + std::to_string(armor.getMaxDurability());
 }
 
+std::string InventoryUtils::stackText(int amount)
+{
+    if (amount < 1)
+    {
+        amount = 1;
+    }
+
+    return "(*" + std::to_string(amount) + ")";
+}
+
+std::string InventoryUtils::stackLabel(const std::string& name, int amount)
+{
+    return name + " " + stackText(amount);
+}
+
 std::vector<ConsumableGroup> InventoryUtils::groupConsumables(const Player& player)
 {
     std::vector<ConsumableGroup> groups;

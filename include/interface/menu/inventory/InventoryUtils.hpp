@@ -42,6 +42,9 @@ public:
     // FR: armorDurabilityText déclare ou implémente un comportement précis utilisé par ce module.
     static std::string armorDurabilityText(const Armor& armor);
 
+    static std::string stackText(int amount);
+    static std::string stackLabel(const std::string& name, int amount);
+
     // EN: groupConsumables declares or implements a focused behavior used by this module.
     // FR: groupConsumables déclare ou implémente un comportement précis utilisé par ce module.
     static std::vector<ConsumableGroup> groupConsumables(const Player& player);

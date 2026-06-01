@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.04.06",
-  "releaseTag": "v2.04.06",
+  "version": "2.04.08",
+  "releaseTag": "v2.04.08",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "V2.04.06 : version cible de stabilisation IG avec navigation de longues listes mieux structurée, dialogues séparés des combats et README/manifest à jour."
+  "notes": "V2.04.08 : affichage des potions en piles dans l’inventaire, les menus de potions et les soins de soutien, avec sélection conservée sur une potion utilisable."
 }

@@ -20,7 +20,7 @@ public:
     static MenuScreen buildMainScreen();
     static MenuScreen buildSelectedWeaponScreen(const Weapon& weapon);
     static MenuScreen buildSelectedArmorScreen(const Armor& armor);
-    static MenuScreen buildSelectedConsumableScreen(const Consumable& consumable);
+    static MenuScreen buildSelectedConsumableScreen(const Consumable& consumable, int amount = 1);
     static MenuScreen buildSelectedMaterialScreen(const Material& material);
     static MenuScreen buildUnavailableMaterialsScreen();
 

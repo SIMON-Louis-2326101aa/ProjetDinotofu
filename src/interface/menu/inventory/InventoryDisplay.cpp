@@ -12,6 +12,7 @@
 #include "item/Inventory.hpp"
 #include "item/consumable/Consumable.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
@@ -74,7 +75,7 @@ namespace
         return itemData;
     }
 
-    MenuOptionItemData makeInventoryConsumableItemData(const Consumable& consumable, const std::string& actionType, const std::string& status = "")
+    MenuOptionItemData makeInventoryConsumableItemData(const Consumable& consumable, const std::string& actionType, const std::string& status = "", int amount = 1)
     {
         MenuOptionItemData itemData;
         itemData.structured = true;
@@ -82,6 +83,7 @@ namespace
         itemData.section = "Inventaire - consommable sélectionné";
         itemData.actionType = actionType;
         itemData.name = consumable.getName();
+        itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = InventoryUtils::consumableTypeToText(consumable.getType());
         itemData.status = status;
         itemData.progress = "Puissance : " + std::to_string(consumable.getPower());
@@ -238,8 +240,7 @@ MenuScreen InventoryDisplay::buildSimpleFullInventoryScreen(const Player& player
     {
         const ConsumableGroup& group = groups[i];
         screen.addLine(
-            "[" + std::to_string(i) + "] " + group.name
-            + " x" + std::to_string(group.amount)
+            "[" + std::to_string(i) + "] " + InventoryUtils::stackLabel(group.name, group.amount)
             + " | " + InventoryUtils::consumableTypeToText(group.type)
             + " | Puissance : " + std::to_string(group.power)
         );
@@ -310,25 +311,28 @@ void InventoryDisplay::displaySelectedArmor(const Armor& armor)
     TerminalInterface::renderMenuScreen(buildSelectedArmorScreen(armor));
 }
 
-MenuScreen InventoryDisplay::buildSelectedConsumableScreen(const Consumable& consumable)
+MenuScreen InventoryDisplay::buildSelectedConsumableScreen(const Consumable& consumable, int amount)
 {
+    amount = std::max(1, amount);
+
     MenuScreen screen("CONSOMMABLE SÉLECTIONNÉ", "inventory.consumable.selected");
-    screen.addLine("Consommable : " + consumable.getName());
+    screen.addLine("Consommable : " + InventoryUtils::stackLabel(consumable.getName(), amount));
+    screen.addLine("Quantité dans la pile : " + std::to_string(amount));
     screen.addLine("Type : " + InventoryUtils::consumableTypeToText(consumable.getType()));
     screen.addLine("Puissance : " + std::to_string(consumable.getPower()));
     screen.addBackOption("Retour", "inventory.consumable.back");
-    screen.addOption(1, "Inspecter", "Lire la description complète.", true, "inventory.consumable.inspect", makeInventoryConsumableItemData(consumable, "inspect"));
+    screen.addOption(1, "Inspecter", "Lire la description complète.", true, "inventory.consumable.inspect", makeInventoryConsumableItemData(consumable, "inspect", "", amount));
 
     if (consumable.getType() == ConsumableType::Healing)
     {
-        screen.addOption(2, "Utiliser", "Boire cette potion de soin hors combat.", true, "inventory.consumable.use", makeInventoryConsumableItemData(consumable, "use", "Utilisable hors combat"));
+        screen.addOption(2, "Utiliser", "Boire une potion de cette pile hors combat.", true, "inventory.consumable.use", makeInventoryConsumableItemData(consumable, "use", "Utilisable hors combat", amount));
     }
     else
     {
-        screen.addOption(2, "Utiliser depuis le menu Potions en combat", "Ce type demande une situation de combat.", false, "inventory.consumable.use_locked", makeInventoryConsumableItemData(consumable, "use", "Combat requis"));
+        screen.addOption(2, "Utiliser depuis le menu Potions en combat", "Ce type demande une situation de combat.", false, "inventory.consumable.use_locked", makeInventoryConsumableItemData(consumable, "use", "Combat requis", amount));
     }
 
-    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.consumable.bestiary", makeInventoryConsumableItemData(consumable, "inspect"));
+    screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.consumable.bestiary", makeInventoryConsumableItemData(consumable, "inspect", "", amount));
     return screen;
 }
 

@@ -4,7 +4,7 @@ Dinotofu est un RPG / jeu d'arène en C++17. La version terminal reste le socle 
 
 ## Version actuelle   
 
-- Version actuelle : **V2.04.06**   
+- Version actuelle : **V2.04.08**   
 - Dernière version de personnage encore acceptable avant recommandation forte de recréation : **V2.01.03**   
 - Personnages antérieurs à **V2.01.03** : recréation conseillée, car le socle IG/sauvegarde/bestiaire/légendes a trop changé depuis les anciens paliers.   
 - Passage V1 vers V2 ou sauvegarde V2 trop ancienne : recommandation forte de recréation, car le jeu a trop changé avant le socle V2.01.03.   
@@ -33,7 +33,8 @@ L'IG actuelle sert à rendre le jeu jouable depuis une page locale tout en garda
 
 État du palier V2 :   
 
-- la V2.04.06 met volontairement à jour la cible de version et améliore la navigation paginée commune, les longues listes potions/boutique/bestiaire et les snapshots de dialogues séparés des actions de combat ;   
+- la V2.04.08 affiche les potions en piles dans l’inventaire, les menus de potions et les soins de soutien, par exemple `Potion de soin (*3)` ;   
+- la V2.04.07 corrige les services de guilde, ajoute des directions jouables aux quêtes en terminal et marque les objectifs de quête probables depuis les écrans d’activités/modes ;   
 - la V2.04.05 améliore les écrans de récompense structurés, les métadonnées de navigation paginée et les pistes visibles de compétences/progression ;   
 - la V2.01.34 rectifie les métadonnées de version et améliore les snapshots IG des routes PvP IA, résultats de fuite/rôle, notices de listes chargées et transitions difficulté/session ;   
 - les menus principaux, activités, sessions, création, sauvegardes, inventaire, équipement, potions, boutiques, quêtes, exploration, progression, catalogues, combats et boss exposent des snapshots IG ;   

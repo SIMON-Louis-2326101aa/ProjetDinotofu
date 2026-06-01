@@ -24,8 +24,8 @@ public:
         std::size_t pageIndex = 0,
         std::size_t itemsPerPage = 10
     );
-    static MenuScreen buildSelectedHealingPotionScreen(const Consumable& potion);
-    static MenuScreen buildSelectedPotionScreen(const Consumable& potion);
+    static MenuScreen buildSelectedHealingPotionScreen(const Consumable& potion, int amount = 1);
+    static MenuScreen buildSelectedPotionScreen(const Consumable& potion, int amount = 1);
     static MenuScreen buildFilteredPotionsScreen(
         const Player& player,
         const std::vector<int>& indices,

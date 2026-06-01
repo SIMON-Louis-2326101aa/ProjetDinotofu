@@ -20,7 +20,7 @@
 
 namespace
 {
-    MenuOptionItemData makePotionItemData(const Consumable& potion, const std::string& actionType, const std::string& section = "Potions")
+    MenuOptionItemData makePotionItemData(const Consumable& potion, const std::string& actionType, const std::string& section = "Potions", int amount = 1)
     {
         MenuOptionItemData itemData;
         itemData.structured = true;
@@ -28,6 +28,7 @@ namespace
         itemData.section = section;
         itemData.actionType = actionType;
         itemData.name = potion.getName();
+        itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = CombatPotionUtils::typeToText(potion.getType());
         itemData.progress = "Puissance : " + std::to_string(potion.getPower());
         itemData.price = std::to_string(potion.getValue()) + " or";
@@ -61,7 +62,13 @@ MenuScreen CombatPotionDisplay::buildMainScreen(const Player& player)
     const bool hasDebuff = !CombatPotionUtils::getPotionIndices(player, ConsumableType::Debuff).empty();
     const bool hasSpecial = !CombatPotionUtils::getPotionIndices(player, ConsumableType::Special).empty();
 
-    screen.addSubtitle("Potions disponibles : " + std::to_string(player.getInventory().getConsumables().size()));
+    screen.addSubtitle(
+        "Potions disponibles : "
+        + std::to_string(CombatPotionUtils::groupPotions(player).size())
+        + " piles / "
+        + std::to_string(player.getInventory().getConsumables().size())
+        + " objets"
+    );
     screen.addBackOption("Retour", "potions.back");
     screen.addOption(1, "Voir les potions", hasAnyPotion ? "Liste toutes les potions de l'inventaire." : "Aucune potion à afficher.", hasAnyPotion, "potions.list");
     screen.addOption(2, "Utiliser une potion curative", hasHealing ? "Soin et récupération." : "Aucune potion curative disponible.", hasHealing, "potions.healing");
@@ -81,26 +88,27 @@ MenuScreen CombatPotionDisplay::buildQuickHealingScreen(
 )
 {
     MenuScreen screen("POTION DE SOIN RAPIDE", "potions.quick_heal");
-    const std::size_t totalPages = PagedMenu::pageCount(indices.size(), itemsPerPage);
+    std::vector<PotionStack> stacks = CombatPotionUtils::groupPotionIndices(player, indices);
+    const std::size_t totalPages = PagedMenu::pageCount(stacks.size(), itemsPerPage);
     const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
     const std::size_t first = PagedMenu::firstIndex(safePageIndex, itemsPerPage);
-    const std::size_t last = PagedMenu::lastIndexExclusive(indices.size(), safePageIndex, itemsPerPage);
+    const std::size_t last = PagedMenu::lastIndexExclusive(stacks.size(), safePageIndex, itemsPerPage);
 
-    screen.addSubtitle("Soins affichés : " + PagedMenu::rangeText(first, last, indices.size()));
+    screen.addSubtitle("Soins affichés : " + PagedMenu::rangeText(first, last, stacks.size()));
     screen.setPagination(safePageIndex, totalPages);
 
     for (std::size_t i = first; i < last; ++i)
     {
-        int inventoryIndex = indices[i];
-        Consumable potion = player.getInventory().getConsumable(inventoryIndex);
+        const PotionStack& stack = stacks[i];
+        Consumable potion = player.getInventory().getConsumable(stack.firstIndex);
 
         screen.addOption(
             static_cast<int>(i - first + 1),
-            potion.getName(),
-            "Soin : " + std::to_string(potion.getPower()) + " PV",
+            CombatPotionUtils::stackLabel(potion.getName(), stack.amount),
+            "Soin : " + std::to_string(potion.getPower()) + " PV | Quantité : " + std::to_string(stack.amount),
             true,
             "potions.quick_heal.use",
-            makePotionItemData(potion, "use", "Soin rapide")
+            makePotionItemData(potion, "use", "Soin rapide", stack.amount)
         );
     }
 
@@ -118,27 +126,33 @@ MenuScreen CombatPotionDisplay::buildQuickHealingScreen(
     return screen;
 }
 
-MenuScreen CombatPotionDisplay::buildSelectedHealingPotionScreen(const Consumable& potion)
+MenuScreen CombatPotionDisplay::buildSelectedHealingPotionScreen(const Consumable& potion, int amount)
 {
+    amount = std::max(1, amount);
+
     MenuScreen screen("POTION SÉLECTIONNÉE", "potions.healing.selected");
-    screen.addLine("Potion : " + potion.getName());
+    screen.addLine("Potion : " + CombatPotionUtils::stackLabel(potion.getName(), amount));
+    screen.addLine("Quantité dans la pile : " + std::to_string(amount));
     screen.addLine("Description : " + potion.getDescription());
     screen.addLine("Soin : " + std::to_string(potion.getPower()) + " PV");
     screen.addBackOption("Retour", "potions.healing.back");
-    screen.addOption(1, "Inspecter", "Lire les détails de la potion.", true, "potions.healing.inspect", makePotionItemData(potion, "inspect", "Potion sélectionnée"));
-    screen.addOption(2, "Utiliser", "Consommer cette potion maintenant.", true, "potions.healing.use", makePotionItemData(potion, "use", "Potion sélectionnée"));
+    screen.addOption(1, "Inspecter", "Lire les détails de la potion.", true, "potions.healing.inspect", makePotionItemData(potion, "inspect", "Potion sélectionnée", amount));
+    screen.addOption(2, "Utiliser", "Consommer une potion de cette pile maintenant.", true, "potions.healing.use", makePotionItemData(potion, "use", "Potion sélectionnée", amount));
     return screen;
 }
 
-MenuScreen CombatPotionDisplay::buildSelectedPotionScreen(const Consumable& potion)
+MenuScreen CombatPotionDisplay::buildSelectedPotionScreen(const Consumable& potion, int amount)
 {
+    amount = std::max(1, amount);
+
     MenuScreen screen("POTION SÉLECTIONNÉE", "potions.selected");
-    screen.addLine("Potion : " + potion.getName());
+    screen.addLine("Potion : " + CombatPotionUtils::stackLabel(potion.getName(), amount));
+    screen.addLine("Quantité dans la pile : " + std::to_string(amount));
     screen.addLine("Type : " + CombatPotionUtils::typeToText(potion.getType()));
     screen.addLine("Puissance : " + std::to_string(potion.getPower()));
     screen.addBackOption("Retour", "potions.selected.back");
-    screen.addOption(1, "Inspecter", "Lire les détails de la potion.", true, "potions.selected.inspect", makePotionItemData(potion, "inspect", "Potion sélectionnée"));
-    screen.addOption(2, "Utiliser", "Consommer ou lancer cette potion selon son type.", true, "potions.selected.use", makePotionItemData(potion, "use", "Potion sélectionnée"));
+    screen.addOption(1, "Inspecter", "Lire les détails de la potion.", true, "potions.selected.inspect", makePotionItemData(potion, "inspect", "Potion sélectionnée", amount));
+    screen.addOption(2, "Utiliser", "Consommer ou lancer une potion de cette pile selon son type.", true, "potions.selected.use", makePotionItemData(potion, "use", "Potion sélectionnée", amount));
     return screen;
 }
 
@@ -150,25 +164,26 @@ MenuScreen CombatPotionDisplay::buildFilteredPotionsScreen(
 )
 {
     MenuScreen screen("LISTE DES POTIONS", "potions.filtered");
-    const std::size_t totalPages = PagedMenu::pageCount(indices.size(), itemsPerPage);
+    std::vector<PotionStack> stacks = CombatPotionUtils::groupPotionIndices(player, indices);
+    const std::size_t totalPages = PagedMenu::pageCount(stacks.size(), itemsPerPage);
     const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
     const std::size_t first = PagedMenu::firstIndex(safePageIndex, itemsPerPage);
-    const std::size_t last = PagedMenu::lastIndexExclusive(indices.size(), safePageIndex, itemsPerPage);
+    const std::size_t last = PagedMenu::lastIndexExclusive(stacks.size(), safePageIndex, itemsPerPage);
 
-    screen.addSubtitle("Potions affichées : " + PagedMenu::rangeText(first, last, indices.size()));
+    screen.addSubtitle("Potions affichées : " + PagedMenu::rangeText(first, last, stacks.size()));
     screen.setPagination(safePageIndex, totalPages);
 
     for (std::size_t i = first; i < last; ++i)
     {
-        int inventoryIndex = indices[i];
-        Consumable potion = player.getInventory().getConsumable(inventoryIndex);
+        const PotionStack& stack = stacks[i];
+        Consumable potion = player.getInventory().getConsumable(stack.firstIndex);
         screen.addOption(
             static_cast<int>(i - first + 1),
-            potion.getName(),
-            "Puissance : " + std::to_string(potion.getPower()),
+            CombatPotionUtils::stackLabel(potion.getName(), stack.amount),
+            "Puissance : " + std::to_string(potion.getPower()) + " | Quantité : " + std::to_string(stack.amount),
             true,
             "potions.filtered.select",
-            makePotionItemData(potion, "select", "Potions filtrées")
+            makePotionItemData(potion, "select", "Potions filtrées", stack.amount)
         );
     }
 
@@ -196,6 +211,7 @@ MenuScreen CombatPotionDisplay::buildPotionOverviewScreen(
 {
     MenuScreen screen("POTIONS DISPONIBLES", "potions.overview");
     const std::vector<Consumable>& consumables = player.getInventory().getConsumables();
+    std::vector<PotionStack> stacks = CombatPotionUtils::groupPotions(player);
 
     if (consumables.empty())
     {
@@ -204,24 +220,25 @@ MenuScreen CombatPotionDisplay::buildPotionOverviewScreen(
         return screen;
     }
 
-    const std::size_t totalPages = PagedMenu::pageCount(consumables.size(), itemsPerPage);
+    const std::size_t totalPages = PagedMenu::pageCount(stacks.size(), itemsPerPage);
     const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
     const std::size_t first = PagedMenu::firstIndex(safePageIndex, itemsPerPage);
-    const std::size_t last = PagedMenu::lastIndexExclusive(consumables.size(), safePageIndex, itemsPerPage);
+    const std::size_t last = PagedMenu::lastIndexExclusive(stacks.size(), safePageIndex, itemsPerPage);
 
-    screen.addSubtitle("Potions affichées : " + PagedMenu::rangeText(first, last, consumables.size()));
+    screen.addSubtitle("Piles affichées : " + PagedMenu::rangeText(first, last, stacks.size()));
     screen.setPagination(safePageIndex, totalPages);
 
     for (std::size_t i = first; i < last; ++i)
     {
-        const Consumable& potion = consumables[i];
+        const PotionStack& stack = stacks[i];
+        Consumable potion = player.getInventory().getConsumable(stack.firstIndex);
         screen.addOption(
             static_cast<int>(i - first + 1),
-            potion.getName(),
-            CombatPotionUtils::typeToText(potion.getType()) + " | Puissance : " + std::to_string(potion.getPower()),
+            CombatPotionUtils::stackLabel(potion.getName(), stack.amount),
+            CombatPotionUtils::typeToText(potion.getType()) + " | Puissance : " + std::to_string(potion.getPower()) + " | Quantité : " + std::to_string(stack.amount),
             false,
             "potions.overview.item",
-            makePotionItemData(potion, "overview", "Potions disponibles")
+            makePotionItemData(potion, "overview", "Potions disponibles", stack.amount)
         );
     }
 
@@ -279,7 +296,7 @@ void CombatPotionDisplay::displayPotions(const Player& player)
     while (true)
     {
         const std::size_t totalPages = PagedMenu::pageCount(
-            player.getInventory().getConsumables().size(),
+            CombatPotionUtils::groupPotions(player).size(),
             itemsPerPage
         );
 

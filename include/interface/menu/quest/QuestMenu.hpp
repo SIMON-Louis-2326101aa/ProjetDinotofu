@@ -26,6 +26,9 @@ private:
     // EN: completeQuestAtClient declares or implements a focused behavior used by this module.
     // FR: completeQuestAtClient déclare ou implémente un comportement précis utilisé par ce module.
     static void completeQuestAtClient(Player& player, const std::string& clientName);
+    // EN: resolveGuildServiceQuest progresses guild service contracts from the terminal guild desk.
+    // FR: resolveGuildServiceQuest fait progresser les contrats de service depuis le comptoir de guilde.
+    static void resolveGuildServiceQuest(Player& player);
     // EN: openReadyQuestTurnInMenu opens a focused hand-in menu for ready quests.
     // FR: openReadyQuestTurnInMenu ouvre un menu ciblé pour rendre les quêtes prêtes.
     static void openReadyQuestTurnInMenu(Player& player);

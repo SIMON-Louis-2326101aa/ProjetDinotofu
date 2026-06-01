@@ -151,13 +151,16 @@ namespace
         MessageScreen::show("INSPECTION - ARMURE", "inventory.armor.inspect.details", lines);
     }
 
-    void showConsumableInspectionScreen(const Consumable& consumable)
+    void showConsumableInspectionScreen(const Consumable& consumable, int amount = 1)
     {
+        amount = std::max(1, amount);
+
         MessageScreen::show(
             "INSPECTION - CONSOMMABLE",
             "inventory.consumable.inspect.details",
             {
-                "Nom : " + consumable.getName(),
+                "Nom : " + InventoryUtils::stackLabel(consumable.getName(), amount),
+                "Quantité dans la pile : " + std::to_string(amount),
                 "Description : " + consumable.getDescription(),
                 "Type : " + InventoryUtils::consumableTypeToText(consumable.getType()),
                 "Puissance : " + std::to_string(consumable.getPower()),
@@ -2959,8 +2962,7 @@ bool InventorySelection::openConsumables(Player& player)
         {
             const ConsumableGroup& group = groups[i];
             std::ostringstream label;
-            label << group.name
-                  << " x" << group.amount
+            label << InventoryUtils::stackLabel(group.name, group.amount)
                   << " | " << InventoryUtils::consumableTypeToText(group.type)
                   << " | Puissance : " << group.power;
 
@@ -3035,7 +3037,8 @@ bool InventorySelection::openConsumables(Player& player)
             continue;
         }
 
-        int index = groups[first + static_cast<std::size_t>(choice - 1)].firstIndex;
+        ConsumableGroup selectedGroup = groups[first + static_cast<std::size_t>(choice - 1)];
+        int index = selectedGroup.firstIndex;
 
         if (!player.getInventory().hasConsumable(index))
         {
@@ -3045,7 +3048,7 @@ bool InventorySelection::openConsumables(Player& player)
 
         Consumable consumable = player.getInventory().getConsumable(index);
 
-        MenuScreen selectedConsumableScreen = InventoryDisplay::buildSelectedConsumableScreen(consumable);
+        MenuScreen selectedConsumableScreen = InventoryDisplay::buildSelectedConsumableScreen(consumable, selectedGroup.amount);
         int action = TerminalInterface::askMenuChoiceFromOptions(
             selectedConsumableScreen,
             "Choix invalide. Choisis une action visible pour ce consommable."
@@ -3055,7 +3058,7 @@ bool InventorySelection::openConsumables(Player& player)
 
         if (action == 1)
         {
-            showConsumableInspectionScreen(consumable);
+            showConsumableInspectionScreen(consumable, selectedGroup.amount);
             continue;
         }
 

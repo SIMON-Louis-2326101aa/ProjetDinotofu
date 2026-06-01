@@ -4,7 +4,7 @@ Dinotofu is a C++17 RPG / arena game. The terminal version remains the stable ba
 
 ## Current version   
 
-- Current version: **V2.04.06**   
+- Current version: **V2.04.08**   
 - Last character version still acceptable before a strong recreation recommendation: **V2.01.03**   
 - Characters older than **V2.01.03**: recreation recommended, because the GUI/save/bestiary/legend baseline changed too much since the older milestones.   
 - V1 to V2 transition or too-old V2 save: strong recreation recommendation, because old characters are now too far from the V2.01.03 baseline.   
@@ -33,7 +33,8 @@ The current GUI is designed to make the game playable from a local page while ke
 
 V2 milestone state:   
 
-- V2.04.06 intentionally updates the release target and improves shared paginated navigation, potion/shop/bestiary long lists, and dialogue snapshots separated from combat actions;   
+- V2.04.08 stacks matching potions in inventory, potion menus and support-heal menus, for example `Healing Potion (*3)`;   
+- V2.04.07 fixes guild service contracts, adds playable quest directions in terminal menus, and marks likely quest objectives from the activity/mode screens;   
 - V2.04.05 improves structured reward screens, pagination navigation metadata and the visible skill/progression roadmap;   
 - V2.01.34 rectifies version metadata and improves GUI snapshots for AI PvP opponent routes, escape/role combat results, large-list notices and difficulty/session transitions;   
 - main menus, activities, sessions, character creation, saves, inventory, equipment, potions, shops, quests, exploration, progression, catalogues, combat and bosses expose GUI snapshots;   

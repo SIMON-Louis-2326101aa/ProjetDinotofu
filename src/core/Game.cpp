@@ -74,6 +74,116 @@ namespace
         return itemData;
     }
 
+
+    std::string lowerActivityText(std::string value)
+    {
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return value;
+    }
+
+    bool activityQuestIsActive(const Quest& quest)
+    {
+        return quest.accepted && !quest.completed && !quest.turnedIn;
+    }
+
+    bool activityQuestIsReady(const Quest& quest)
+    {
+        return quest.accepted && quest.completed && !quest.turnedIn;
+    }
+
+    bool hasLikelyCombatQuest(const Player& player)
+    {
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (activityQuestIsActive(quest) && quest.objectiveType == "combat")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool hasLikelyBossQuest(const Player& player)
+    {
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (!activityQuestIsActive(quest))
+            {
+                continue;
+            }
+
+            const std::string text = lowerActivityText(quest.title + " " + quest.objective + " " + quest.targetFamily);
+            if (quest.objectiveType == "combat" && (text.find("boss") != std::string::npos || text.find("élite") != std::string::npos || text.find("elite") != std::string::npos || text.find("menace") != std::string::npos))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool hasLikelyExplorationQuest(const Player& player)
+    {
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (!activityQuestIsActive(quest))
+            {
+                continue;
+            }
+
+            if (quest.objectiveType == "exploration" || quest.objectiveType == "bestiaire")
+            {
+                return true;
+            }
+
+            if (quest.objectiveType == "livraison")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool hasLikelyQuestHubObjective(const Player& player)
+    {
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (activityQuestIsReady(quest))
+            {
+                return true;
+            }
+
+            if (activityQuestIsActive(quest) && quest.guildQuest && quest.objectiveType == "service")
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool hasLikelyLocationOrNpcQuest(const Player& player)
+    {
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (!quest.guildQuest && !quest.turnedIn && quest.accepted)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    std::string questActivityTag(bool likely)
+    {
+        return likely ? " [Objectif de quête probable]" : "";
+    }
+
+    std::string questActivityProgress(const std::string& fallback, bool likely)
+    {
+        return likely ? fallback + " / objectif actif possible" : fallback;
+    }
+
     MenuOptionItemData makeActivityItemData(
         const std::string& section,
         const std::string& actionType,
@@ -1767,6 +1877,11 @@ void Game::chooseGameMode()
     {
         MenuScreen screen("ACTIVITÉS", "activity.main");
         screen.addSubtitle("Choisis la prochaine route de " + mainPlayer.getName() + ".");
+
+        const bool combatQuestLikely = hasLikelyCombatQuest(mainPlayer);
+        const bool explorationQuestLikely = hasLikelyExplorationQuest(mainPlayer);
+        const bool questHubLikely = hasLikelyQuestHubObjective(mainPlayer);
+        const bool locationNpcQuestLikely = hasLikelyLocationOrNpcQuest(mainPlayer);
         screen.addOption(
             1,
             "Histoire",
@@ -1777,43 +1892,43 @@ void Game::chooseGameMode()
         );
         screen.addOption(
             2,
-            "Combats",
-            "PvE monstres, boss, groupes d'adversaires et JcJ.",
+            "Combats" + questActivityTag(combatQuestLikely),
+            "PvE monstres, boss, groupes d'adversaires et JcJ." + questActivityTag(combatQuestLikely),
             true,
             "activity.combat",
-            makeActivityItemData("Routes principales", "combat", "Combats", "Accès aux duels IA, JcJ local, PvE monstres et boss sans passer par l'histoire.", "Disponible", "Chemin jouable", true)
+            makeActivityItemData("Routes principales", "combat", "Combats", "Accès aux duels IA, JcJ local, PvE monstres et boss sans passer par l'histoire.", combatQuestLikely ? "Quête probable" : "Disponible", questActivityProgress("Chemin jouable", combatQuestLikely), true)
         );
         screen.addOption(
             3,
-            "Exploration",
-            "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues.",
+            "Exploration" + questActivityTag(explorationQuestLikely),
+            "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues." + questActivityTag(explorationQuestLikely),
             true,
             "activity.exploration",
-            makeActivityItemData("Terrain", "travel", "Exploration", "Sorties par biome avec risques, ressources, coffres, pièges, mimics et rencontres imprévues.", "Disponible", "Chemin jouable", true)
+            makeActivityItemData("Terrain", "travel", "Exploration", "Sorties par biome avec risques, ressources, coffres, pièges, mimics et rencontres imprévues.", explorationQuestLikely ? "Quête probable" : "Disponible", questActivityProgress("Chemin jouable", explorationQuestLikely), true)
         );
         screen.addOption(
             4,
-            "Quêtes",
-            "Guilde, journal, demandes de PNJ et progression de quêtes.",
+            "Quêtes" + questActivityTag(questHubLikely),
+            "Guilde, journal, demandes de PNJ et progression de quêtes." + questActivityTag(questHubLikely),
             true,
             "activity.quests",
-            makeActivityItemData("Ville", "quest", "Quêtes", "Accès au journal, à la guilde, aux demandes de PNJ et aux validations d'objectifs.", "Disponible", "Ville / progression")
+            makeActivityItemData("Ville", "quest", "Quêtes", "Accès au journal, à la guilde, aux demandes de PNJ et aux validations d'objectifs.", questHubLikely ? "Quête probable" : "Disponible", questActivityProgress("Ville / progression", questHubLikely), questHubLikely)
         );
         screen.addOption(
             5,
-            "Boutiques / lieux visitables",
-            "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux.",
+            "Boutiques / lieux visitables" + questActivityTag(locationNpcQuestLikely),
+            "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux." + questActivityTag(locationNpcQuestLikely),
             true,
             "activity.locations",
-            makeActivityItemData("Ville", "travel", "Boutiques / lieux visitables", "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux centralisés hors combat.", "Disponible", "Ville / économie")
+            makeActivityItemData("Ville", "travel", "Boutiques / lieux visitables", "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux centralisés hors combat.", locationNpcQuestLikely ? "Quête probable" : "Disponible", questActivityProgress("Ville / économie", locationNpcQuestLikely), locationNpcQuestLikely)
         );
         screen.addOption(
             6,
-            "PNJ notables",
-            "Parler aux clients et personnages disponibles sans passer par une boutique.",
+            "PNJ notables" + questActivityTag(locationNpcQuestLikely),
+            "Parler aux clients et personnages disponibles sans passer par une boutique." + questActivityTag(locationNpcQuestLikely),
             true,
             "activity.npcs",
-            makeActivityItemData("Ville", "talk", "PNJ notables", "Discussion directe avec les clients ou personnages disponibles, sans forcer une boutique.", "Disponible", "Ville / dialogues")
+            makeActivityItemData("Ville", "talk", "PNJ notables", "Discussion directe avec les clients ou personnages disponibles, sans forcer une boutique.", locationNpcQuestLikely ? "Quête probable" : "Disponible", questActivityProgress("Ville / dialogues", locationNpcQuestLikely), locationNpcQuestLikely)
         );
         screen.addOption(
             7,
@@ -1871,6 +1986,8 @@ void Game::chooseGameMode()
 
         if (choice == 2)
         {
+            const bool monsterQuestLikely = hasLikelyCombatQuest(mainPlayer);
+            const bool bossQuestLikely = hasLikelyBossQuest(mainPlayer);
             MenuScreen combatScreen("COMBATS", "activity.combat.menu");
             combatScreen.addBackOption();
             combatScreen.addOption(
@@ -1891,19 +2008,19 @@ void Game::chooseGameMode()
             );
             combatScreen.addOption(
                 3,
-                "PvE monstres",
-                "Vagues de monstres, loots, matériaux, qualité de récupération et progression.",
+                "PvE monstres" + questActivityTag(monsterQuestLikely),
+                "Vagues de monstres, loots, matériaux, qualité de récupération et progression." + questActivityTag(monsterQuestLikely),
                 true,
                 "combat.monster_pve",
-                makeActivityItemData("Combats", "combat", "PvE monstres", "Vagues de monstres, loots, matériaux, qualité de récupération et progression.", "Disponible", "Farm / progression", true)
+                makeActivityItemData("Combats", "combat", "PvE monstres", "Vagues de monstres, loots, matériaux, qualité de récupération et progression.", monsterQuestLikely ? "Quête probable" : "Disponible", questActivityProgress("Farm / progression", monsterQuestLikely), true)
             );
             combatScreen.addOption(
                 4,
-                "PvE Boss",
-                "Combat contre un boss avec identité, décryptage et fragments spéciaux.",
+                "PvE Boss" + questActivityTag(bossQuestLikely),
+                "Combat contre un boss avec identité, décryptage et fragments spéciaux." + questActivityTag(bossQuestLikely),
                 true,
                 "combat.boss_pve",
-                makeActivityItemData("Combats", "combat", "PvE Boss", "Combat contre un boss avec identité, décryptage et fragments spéciaux. La fuite de boss reste impossible.", "Dangereux", "Boss / fragments", true)
+                makeActivityItemData("Combats", "combat", "PvE Boss", "Combat contre un boss avec identité, décryptage et fragments spéciaux. La fuite de boss reste impossible.", bossQuestLikely ? "Quête probable" : "Dangereux", questActivityProgress("Boss / fragments", bossQuestLikely), true)
             );
 
             int combatChoice = TerminalInterface::askMenuChoiceFromOptions(

@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <random>
 #include <string>
 #include <vector>
@@ -337,6 +338,72 @@ namespace
         return reward;
     }
 
+
+    std::string lowerQuestCatalogText(std::string value)
+    {
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return value;
+    }
+
+    bool questCatalogTextContains(const std::string& haystack, const std::string& needle)
+    {
+        return lowerQuestCatalogText(haystack).find(lowerQuestCatalogText(needle)) != std::string::npos;
+    }
+
+    std::string suggestedGuildQuestLocation(const GuildTemplate& questTemplate)
+    {
+        const std::string combined = questTemplate.type + " " + questTemplate.family + " " + questTemplate.objective + " " + questTemplate.title;
+
+        if (questTemplate.type == "service")
+        {
+            return "Comptoir de guilde / ville";
+        }
+
+        if (questCatalogTextContains(combined, "ruine") || questCatalogTextContains(combined, "relais") || questCatalogTextContains(combined, "archive"))
+        {
+            return "Ruines effondrées";
+        }
+
+        if (questCatalogTextContains(combined, "mort") || questCatalogTextContains(combined, "ombre") || questCatalogTextContains(combined, "os"))
+        {
+            return "Cimetière oublié";
+        }
+
+        if (questCatalogTextContains(combined, "slime") || questCatalogTextContains(combined, "gélatine") || questCatalogTextContains(combined, "gelatine"))
+        {
+            return "Mares gélatineuses";
+        }
+
+        if (questCatalogTextContains(combined, "marais") || questCatalogTextContains(combined, "noy"))
+        {
+            return "Marais trouble";
+        }
+
+        if (questCatalogTextContains(combined, "forêt") || questCatalogTextContains(combined, "foret") || questCatalogTextContains(combined, "plante"))
+        {
+            return "Forêt ancienne";
+        }
+
+        if (questCatalogTextContains(combined, "montagne") || questCatalogTextContains(combined, "froid") || questCatalogTextContains(combined, "métal") || questCatalogTextContains(combined, "metal") || questCatalogTextContains(combined, "forge"))
+        {
+            return "Montagne froide / Ruines effondrées";
+        }
+
+        if (questCatalogTextContains(combined, "route") || questCatalogTextContains(combined, "livraison") || questCatalogTextContains(combined, "village") || questCatalogTextContains(combined, "client") || questCatalogTextContains(combined, "humano"))
+        {
+            return "Route commerciale";
+        }
+
+        if (questCatalogTextContains(combined, "mini-boss") || questCatalogTextContains(combined, "menace") || questCatalogTextContains(combined, "élite") || questCatalogTextContains(combined, "elite"))
+        {
+            return "Exploration audacieuse / zone adaptée au niveau";
+        }
+
+        return "Plaine sauvage";
+    }
+
     // EN: chooseGuildTemplate declares or implements a focused behavior used by this module.
     // FR: chooseGuildTemplate déclare ou implémente un comportement précis utilisé par ce module.
     GuildTemplate chooseGuildTemplate(const std::vector<GuildTemplate>& templates, int playerLevel)
@@ -382,7 +449,7 @@ namespace
 
         return buildQuest(
             questId(idPrefix, playerLevel),
-            finalRank, questTemplate.title, "Guilde", "Maître de guilde", "Guilde",
+            finalRank, questTemplate.title, "Guilde", "Maître de guilde", suggestedGuildQuestLocation(questTemplate),
             questTemplate.objective, questTemplate.type, questTemplate.family,
             questExperience(finalRank, playerLevel, questTemplate.target),
             adjustedQuestGold(finalRank, playerLevel, questTemplate.target, questTemplate.type, givesObjectReward),
@@ -511,7 +578,7 @@ std::vector<Quest> QuestCatalog::createGuildBoard(int playerLevel)
         {"F", "Aider un garde qui débute", "Écarter une petite menace sans transformer la mission en duel héroïque inutile.", "combat", "Créatures faibles", 1, 1},
         {"F", "Retrouver le seau de Madame Brune", "Rendre un petit service local. Pas glorieux, mais la guilde paie parfois en contacts plutôt qu'en or.", "service", "Service local", 1, 1},
         {"F", "Compter les caisses du dépôt", "Vérifier un stock de base sans se faire enfermer par erreur dans la réserve.", "service", "Guilde / inventaire", 1, 1},
-        {"F", "Porter une lettre pas urgente", "Livrer un message de village sans prétendre que c'est une mission de héros.", "exploration", "Village / livraison", 1, 1}
+        {"F", "Porter une lettre pas urgente", "Livrer un message de village sans prétendre que c'est une mission de héros.", "service", "Village / comptoir", 1, 1}
     };
     registerTemplates(fTemplates);
 
@@ -520,7 +587,7 @@ std::vector<Quest> QuestCatalog::createGuildBoard(int playerLevel)
         {"E", "Cartographier un détour douteux", "Explorer une zone simple et revenir avec assez de détails pour corriger la carte de la guilde.", "exploration", "Route / exploration", 2, 2},
         {"E", "Surveiller une caisse suspecte", "Vérifier une livraison abandonnée et survivre à ce qui pourrait se cacher dedans.", "exploration", "Route commerciale", 2, 2},
         {"E", "Retrouver un client qui se cache", "Identifier un client paniqué qui doit de l'argent à trois personnes différentes.", "service", "Clientèle locale", 1, 2},
-        {"E", "Récupérer des outils oubliés", "Rapporter du petit matériel abandonné près d'une zone encore raisonnable.", "livraison", "Matériel de guilde", 2, 2}
+        {"E", "Récupérer des outils oubliés", "Rapporter du petit matériel abandonné près d'une zone encore raisonnable.", "exploration", "Route commerciale / matériel", 2, 2}
     };
     registerTemplates(eTemplates);
 
@@ -638,6 +705,36 @@ std::vector<Quest> QuestCatalog::createGuildBoard(int playerLevel)
     }
 
     std::shuffle(board.begin(), board.end(), questGenerator());
+
+    if (!board.empty())
+    {
+        bool onlyServices = true;
+        for (const Quest& quest : board)
+        {
+            if (quest.objectiveType != "service")
+            {
+                onlyServices = false;
+                break;
+            }
+        }
+
+        if (onlyServices)
+        {
+            for (const GuildTemplate& candidate : fillerTemplates)
+            {
+                if (candidate.type == "service" || !hasAvailableGuildTemplate(std::vector<GuildTemplate>{candidate}, playerLevel))
+                {
+                    continue;
+                }
+
+                if (!boardAlreadyHasTitle(board, candidate.title))
+                {
+                    board[0] = buildGuildQuest("guild_forced_playable", playerLevel, candidate);
+                    break;
+                }
+            }
+        }
+    }
 
     if (static_cast<int>(board.size()) > desiredBoardSize)
     {

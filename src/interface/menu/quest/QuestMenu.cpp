@@ -30,6 +30,9 @@
 
 namespace
 {
+    std::string questPlayableLocationHint(const Quest& quest);
+    std::string questProgressMethodText(const Quest& quest);
+
     std::string questStateText(const Quest& quest)
     {
         if (quest.turnedIn)
@@ -98,10 +101,7 @@ namespace
             lines.push_back("Elle reste vague, ce qui est rarement bon signe dans une guilde qui vend normalement le danger au mot près.");
         }
 
-        if (!quest.location.empty())
-        {
-            lines.push_back("Zone annoncée : " + quest.location + ". La gérante précise que la carte donne une direction, pas une promesse de sécurité.");
-        }
+        lines.push_back("Zone/action annoncée : " + questPlayableLocationHint(quest) + ". La gérante précise que le panneau donne une piste jouable, pas une promesse de sécurité.");
 
         if (!quest.targetFamily.empty())
         {
@@ -141,10 +141,7 @@ namespace
             lines.push_back("Il ajoute quelques détails personnels, pas assez pour faire un roman, mais assez pour que la mission ressemble enfin à autre chose qu'une ligne de menu.");
         }
 
-        if (!quest.location.empty())
-        {
-            lines.push_back("Lieu évoqué : " + quest.location + ". Le client n'est pas certain de tout, mais il sait exactement où la peur a commencé.");
-        }
+        lines.push_back("Lieu ou action évoquée : " + questPlayableLocationHint(quest) + ". Le client n'est pas certain de tout, mais il sait où chercher en premier.");
 
         if (!quest.targetFamily.empty())
         {
@@ -470,6 +467,113 @@ namespace
         return quest.guildQuest ? "Contrat officiel de guilde" : "Demande informelle de PNJ";
     }
 
+
+    bool questContainsText(const Quest& quest, const std::string& needle)
+    {
+        const std::string combined = quest.location + " " + quest.targetFamily + " " + quest.objective + " " + quest.title + " " + quest.objectiveType;
+        return toLowerChoiceText(combined).find(toLowerChoiceText(needle)) != std::string::npos;
+    }
+
+    std::string questPlayableLocationHint(const Quest& quest)
+    {
+        if (quest.objectiveType == "service")
+        {
+            return quest.guildQuest ? "Guilde > Traiter un service de guilde" : "Retourner voir le contact concerné";
+        }
+
+        if (quest.objectiveType == "combat")
+        {
+            if (questContainsText(quest, "humano") || questContainsText(quest, "embuscade") || questContainsText(quest, "route")) return "Route commerciale ou combat contre humanoïdes";
+            if (questContainsText(quest, "mort") || questContainsText(quest, "ombre") || questContainsText(quest, "os")) return "Cimetière oublié / Ruines effondrées";
+            if (questContainsText(quest, "mini-boss") || questContainsText(quest, "menace") || questContainsText(quest, "élite") || questContainsText(quest, "elite")) return "Exploration audacieuse ou combat adapté au niveau";
+            return "Combats PvE classiques contre la famille indiquée";
+        }
+
+        if (quest.objectiveType == "livraison" && !quest.requiredMaterialId.empty())
+        {
+            return "Explorer/récupérer le matériau demandé, puis revenir au contact";
+        }
+
+        if (quest.objectiveType == "livraison")
+        {
+            return "Exploration > Route commerciale";
+        }
+
+        if (quest.objectiveType == "exploration" || quest.objectiveType == "bestiaire")
+        {
+            if (questContainsText(quest, "ruine") || questContainsText(quest, "relais") || questContainsText(quest, "archive")) return "Exploration > Ruines effondrées";
+            if (questContainsText(quest, "cimetière") || questContainsText(quest, "cimetiere") || questContainsText(quest, "mort") || questContainsText(quest, "ombre")) return "Exploration > Cimetière oublié";
+            if (questContainsText(quest, "slime") || questContainsText(quest, "gélatine") || questContainsText(quest, "gelatine")) return "Exploration > Mares gélatineuses";
+            if (questContainsText(quest, "marais") || questContainsText(quest, "boue") || questContainsText(quest, "noy")) return "Exploration > Marais trouble";
+            if (questContainsText(quest, "forêt") || questContainsText(quest, "foret") || questContainsText(quest, "plante")) return "Exploration > Forêt ancienne";
+            if (questContainsText(quest, "montagne") || questContainsText(quest, "froid") || questContainsText(quest, "métal") || questContainsText(quest, "metal") || questContainsText(quest, "forge")) return "Exploration > Montagne froide ou Ruines effondrées";
+            if (questContainsText(quest, "route") || questContainsText(quest, "livraison") || questContainsText(quest, "village") || questContainsText(quest, "client") || questContainsText(quest, "caisse")) return "Exploration > Route commerciale";
+            if (quest.location.empty() || questContainsText(quest, "guilde")) return "Exploration > zone marquée [Objectif de quête probable]";
+            return "Exploration > " + quest.location;
+        }
+
+        if (quest.location.empty())
+        {
+            return "À confirmer depuis le journal ou le contact";
+        }
+
+        return quest.location;
+    }
+
+    std::string questProgressMethodText(const Quest& quest)
+    {
+        if (quest.objectiveType == "service")
+        {
+            return quest.guildQuest
+                ? "Va à la guilde et choisis Traiter un service de guilde."
+                : "Retourne parler au PNJ concerné pour confirmer le service.";
+        }
+
+        if (quest.objectiveType == "combat")
+        {
+            return "Lance des combats correspondant à la cible/famille indiquée.";
+        }
+
+        if (quest.objectiveType == "exploration" || quest.objectiveType == "bestiaire")
+        {
+            return "Passe par Exploration et choisis la zone conseillée ; les traces et découvertes font avancer le journal.";
+        }
+
+        if (quest.objectiveType == "livraison")
+        {
+            if (!quest.requiredMaterialId.empty())
+            {
+                return "Récupère le matériau demandé, puis rends la quête au contact.";
+            }
+
+            return "Passe par Exploration dans la zone conseillée ; cette livraison se traite comme une sortie de terrain.";
+        }
+
+        return "Suis la cible et le lieu conseillés, puis reviens voir le contact.";
+    }
+
+    bool isActiveGuildServiceQuest(const Quest& quest)
+    {
+        return quest.guildQuest
+            && quest.accepted
+            && !quest.completed
+            && !quest.turnedIn
+            && quest.objectiveType == "service";
+    }
+
+    int countActiveGuildServiceQuests(const Player& player)
+    {
+        int count = 0;
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (isActiveGuildServiceQuest(quest))
+            {
+                count++;
+            }
+        }
+        return count;
+    }
+
     std::string approximateQuestRewardText(const Quest& quest)
     {
         if (quest.guildQuest)
@@ -513,8 +617,8 @@ namespace
         if (quest.guildQuest)
         {
             label << "[Contrat de guilde - Rang " << quest.rank << "] " << quest.title
-                  << " | Client : " << quest.client
-                  << " | Lieu : " << quest.location
+                  << " | À rendre : Maître de guilde"
+                  << " | Zone/action : " << questPlayableLocationHint(quest)
                   << " | Objectif : " << quest.objective
                   << " | Progression : " << quest.progress << "/" << quest.target
                   << " | État : " << questStateText(quest)
@@ -524,7 +628,7 @@ namespace
         {
             label << "[Demande PNJ - Rang estimé " << quest.rank << "] " << quest.title
                   << " | Contact : " << quest.client
-                  << " | Zone supposée : " << quest.location
+                  << " | Zone/action : " << questPlayableLocationHint(quest)
                   << " | Objectif résumé : " << quest.objective
                   << " | Avancée : " << quest.progress << "/" << quest.target
                   << " | État : " << questStateText(quest)
@@ -547,10 +651,12 @@ namespace
         lines.push_back("Origine : " + quest.origin);
         lines.push_back("Client : " + quest.client);
         lines.push_back("Rang : " + quest.rank);
-        lines.push_back("Lieu : " + quest.location);
+        lines.push_back("À rendre : Maître de guilde");
+        lines.push_back("Zone/action jouable : " + questPlayableLocationHint(quest));
         lines.push_back("Type : " + (quest.objectiveType.empty() ? std::string("général") : quest.objectiveType));
         lines.push_back("Cible : " + (quest.targetFamily.empty() ? std::string("générale") : quest.targetFamily));
         lines.push_back("Objectif : " + quest.objective);
+        lines.push_back("Comment faire : " + questProgressMethodText(quest));
         lines.push_back("Progression : " + std::to_string(quest.progress) + "/" + std::to_string(quest.target));
         lines.push_back("État : " + questStateText(quest));
         lines.push_back("Récompenses : " + questRewardText(quest));
@@ -571,9 +677,10 @@ namespace
         lines.push_back("Ce n'est pas un contrat officiel : le journal ne peut pas tout certifier.");
         lines.push_back("Contact : " + quest.client);
         lines.push_back("Rang supposé : " + quest.rank);
-        lines.push_back("Zone probable : " + (quest.location.empty() ? std::string("à confirmer sur le terrain") : quest.location));
+        lines.push_back("Zone/action probable : " + questPlayableLocationHint(quest));
         lines.push_back("Type supposé : " + (quest.objectiveType.empty() ? std::string("service général") : quest.objectiveType));
         lines.push_back("Objectif rapporté : " + quest.objective);
+        lines.push_back("Comment faire : " + questProgressMethodText(quest));
         lines.push_back("Avancée notée : " + std::to_string(quest.progress) + "/" + std::to_string(quest.target));
         lines.push_back("État : " + questStateText(quest));
         lines.push_back(approximateQuestRewardText(quest));
@@ -701,7 +808,7 @@ namespace
             case QuestJournalFilter::Exploration:
                 return "Objectifs qui progressent par notes, traces, terrain ou bestiaire.";
             case QuestJournalFilter::Delivery:
-                return "Demandes qui réclament des matériaux ou objets précis.";
+                return "Demandes de livraison : matériaux précis, objets ou sorties de terrain liées à un transport.";
             case QuestJournalFilter::TurnedIn:
                 return "Archives des quêtes déjà rendues.";
         }
@@ -724,9 +831,9 @@ namespace
             case QuestJournalFilter::Combat:
                 return !quest.turnedIn && quest.objectiveType == "combat";
             case QuestJournalFilter::Exploration:
-                return !quest.turnedIn && (quest.objectiveType == "exploration" || quest.objectiveType == "bestiaire");
+                return !quest.turnedIn && (quest.objectiveType == "exploration" || quest.objectiveType == "bestiaire" || (quest.objectiveType == "livraison" && !isMaterialDeliveryQuest(quest)));
             case QuestJournalFilter::Delivery:
-                return !quest.turnedIn && isMaterialDeliveryQuest(quest);
+                return !quest.turnedIn && (isMaterialDeliveryQuest(quest) || quest.objectiveType == "livraison");
             case QuestJournalFilter::TurnedIn:
                 return quest.turnedIn;
         }
@@ -1229,8 +1336,9 @@ namespace
         screen.addLine("Nature : " + questKindText(quest));
         screen.addLine((quest.guildQuest ? "Contrat proposé : [Rang " : "Demande proposée : [Rang estimé ") + quest.rank + "] " + quest.title);
         screen.addLine((quest.guildQuest ? "Client officiel : " : "Contact : ") + quest.client);
-        screen.addLine((quest.guildQuest ? "Lieu : " : "Zone probable : ") + quest.location);
+        screen.addLine((quest.guildQuest ? "Zone/action jouable : " : "Zone/action probable : ") + questPlayableLocationHint(quest));
         screen.addLine((quest.guildQuest ? "Objectif : " : "Objectif raconté : ") + quest.objective);
+        screen.addLine("Comment faire : " + questProgressMethodText(quest));
         screen.addLine((quest.guildQuest ? "Récompenses : " : "Estimation : ") + (quest.guildQuest ? questRewardText(quest) : approximateQuestRewardText(quest)));
 
         if (!quest.guildQuest)
@@ -1279,7 +1387,7 @@ namespace
                 : clientName + " peut confirmer cette demande, sans registre officiel de guilde.");
             screen.addLine("Titre : " + quest.title);
             screen.addLine(quest.guildQuest ? "Client officiel : " + quest.client : "Contact : " + quest.client);
-            screen.addLine(quest.guildQuest ? "Lieu : " + quest.location : "Zone supposée : " + quest.location);
+            screen.addLine(quest.guildQuest ? "Zone/action jouable : " + questPlayableLocationHint(quest) : "Zone/action probable : " + questPlayableLocationHint(quest));
             screen.addLine(quest.guildQuest ? "Objectif vérifié : " + quest.objective : "Objectif rapporté : " + quest.objective);
             screen.addLine("Progression : " + std::to_string(quest.progress) + "/" + std::to_string(quest.target));
             screen.addLine(quest.guildQuest
@@ -1504,11 +1612,99 @@ namespace
         return lowerCopy(value).find(lowerCopy(needle)) != std::string::npos;
     }
 
+    bool questTextImpliesBiome(const std::string& value, const std::string& biomeName)
+    {
+        const std::string text = lowerCopy(value);
+        const std::string biome = lowerCopy(biomeName);
+
+        if (text.empty())
+        {
+            return false;
+        }
+
+        if (text.find(biome) != std::string::npos || biome.find(text) != std::string::npos)
+        {
+            return true;
+        }
+
+        if (biome.find("route") != std::string::npos)
+        {
+            return text.find("route") != std::string::npos
+                || text.find("livraison") != std::string::npos
+                || text.find("village") != std::string::npos
+                || text.find("client") != std::string::npos
+                || text.find("caisse") != std::string::npos
+                || text.find("marchand") != std::string::npos
+                || text.find("humano") != std::string::npos
+                || text.find("embuscade") != std::string::npos;
+        }
+
+        if (biome.find("plaine") != std::string::npos)
+        {
+            return text.find("plaine") != std::string::npos
+                || text.find("trace") != std::string::npos
+                || text.find("créatures faibles") != std::string::npos
+                || text.find("creatures faibles") != std::string::npos;
+        }
+
+        if (biome.find("ruines") != std::string::npos)
+        {
+            return text.find("ruine") != std::string::npos
+                || text.find("relais") != std::string::npos
+                || text.find("archive") != std::string::npos
+                || text.find("poussière arcanique") != std::string::npos
+                || text.find("poussiere arcanique") != std::string::npos;
+        }
+
+        if (biome.find("cimetière") != std::string::npos || biome.find("cimetiere") != std::string::npos)
+        {
+            return text.find("cimetière") != std::string::npos
+                || text.find("cimetiere") != std::string::npos
+                || text.find("mort") != std::string::npos
+                || text.find("ombre") != std::string::npos
+                || text.find("os") != std::string::npos;
+        }
+
+        if (biome.find("gélatine") != std::string::npos || biome.find("gelatine") != std::string::npos)
+        {
+            return text.find("slime") != std::string::npos
+                || text.find("gélatine") != std::string::npos
+                || text.find("gelatine") != std::string::npos;
+        }
+
+        if (biome.find("forêt") != std::string::npos || biome.find("foret") != std::string::npos)
+        {
+            return text.find("forêt") != std::string::npos
+                || text.find("foret") != std::string::npos
+                || text.find("plante") != std::string::npos
+                || text.find("feuille") != std::string::npos;
+        }
+
+        if (biome.find("montagne") != std::string::npos)
+        {
+            return text.find("montagne") != std::string::npos
+                || text.find("froid") != std::string::npos
+                || text.find("métal") != std::string::npos
+                || text.find("metal") != std::string::npos
+                || text.find("forge") != std::string::npos;
+        }
+
+        if (biome.find("marais") != std::string::npos)
+        {
+            return text.find("marais") != std::string::npos
+                || text.find("boue") != std::string::npos
+                || text.find("noy") != std::string::npos;
+        }
+
+        return false;
+    }
+
     bool questTextMentionsBiome(const Quest& quest, const std::string& biomeName)
     {
-        return textContainsInsensitive(quest.location, biomeName)
-            || textContainsInsensitive(quest.targetFamily, biomeName)
-            || textContainsInsensitive(quest.objective, biomeName);
+        return questTextImpliesBiome(quest.location, biomeName)
+            || questTextImpliesBiome(quest.targetFamily, biomeName)
+            || questTextImpliesBiome(quest.objective, biomeName)
+            || questTextImpliesBiome(quest.title, biomeName);
     }
 
     bool questCanUseBiomeMaterials(const Quest& quest, const ExplorationBiome& biome)
@@ -1893,7 +2089,6 @@ namespace
     int progressExplorationQuests(Player& player, const std::string& biomeName, int amount)
     {
         int updated = 0;
-        std::string biome = lowerCopy(biomeName);
 
         for (Quest& quest : player.getQuestLog().getQuests())
         {
@@ -1902,16 +2097,15 @@ namespace
                 continue;
             }
 
-            if (quest.objectiveType != "exploration" && quest.objectiveType != "bestiaire")
+            if (quest.objectiveType != "exploration" && quest.objectiveType != "bestiaire" && !(quest.objectiveType == "livraison" && quest.requiredMaterialId.empty()))
             {
                 continue;
             }
 
-            std::string target = lowerCopy(quest.targetFamily);
-            std::string location = lowerCopy(quest.location);
+            const bool hasPreciseHint = !quest.location.empty() || !quest.targetFamily.empty() || !quest.objective.empty();
+            const bool matchesBiome = questTextMentionsBiome(quest, biomeName);
 
-            if (!target.empty() && target.find(biome) == std::string::npos && biome.find(target) == std::string::npos
-                && !location.empty() && location.find(biome) == std::string::npos)
+            if (hasPreciseHint && !matchesBiome)
             {
                 continue;
             }
@@ -3466,10 +3660,12 @@ void QuestMenu::openGuild(Player& player)
     while (true)
     {
         const ClientQuestCounts guildCounts = countQuestsForClient(player, "Maître de guilde");
+        const int activeServiceCount = countActiveGuildServiceQuests(player);
         MenuScreen screen("GUILDE", "quest.guild");
         screen.addLine("La guilde centralise les quêtes officielles.");
         screen.addLine("Tu peux avoir jusqu'à 3 quêtes de guilde actives.");
         screen.addLine("Contrats de guilde : " + clientQuestStatusText(guildCounts));
+        screen.addLine("Services de guilde à traiter au comptoir : " + std::to_string(activeServiceCount) + ".");
         std::vector<std::string> guildAmbientLines = clientAmbientDialogueLines(player, "Maître de guilde", guildCounts);
         for (const std::string& line : guildAmbientLines)
         {
@@ -3498,6 +3694,17 @@ void QuestMenu::openGuild(Player& player)
         turnInData.status = guildCounts.ready > 0 ? std::to_string(guildCounts.ready) + " prêt(s)" : "Indisponible";
         turnInData.important = guildCounts.ready > 0;
 
+        MenuOptionItemData serviceData = makeQuestNavigationItemData(
+            "quest",
+            "Guilde",
+            "service",
+            "Services de guilde",
+            activeServiceCount > 0 ? "Traiter les petits contrats locaux directement au comptoir." : "Aucun service de guilde à traiter.",
+            "Maître de guilde"
+        );
+        serviceData.status = activeServiceCount > 0 ? std::to_string(activeServiceCount) + " service(s)" : "Indisponible";
+        serviceData.important = activeServiceCount > 0;
+
         screen.addOption(1, "Voir le panneau de quêtes", "Consulter les contrats officiels disponibles.", true, "quest.guild.board", boardData);
         screen.addOption(2, "Rendre une quête de guilde terminée" + (guildCounts.ready > 0 ? " [" + std::to_string(guildCounts.ready) + "]" : ""),
             guildCounts.ready > 0 ? "Valider un contrat terminé." : "Aucun contrat de guilde prêt à rendre.",
@@ -3506,6 +3713,12 @@ void QuestMenu::openGuild(Player& player)
             turnInData
         );
         screen.addOption(3, "Consulter le journal", "Lire le journal complet des quêtes.", true, "quest.guild.journal");
+        screen.addOption(4, "Traiter un service de guilde" + (activeServiceCount > 0 ? " [" + std::to_string(activeServiceCount) + "]" : ""),
+            activeServiceCount > 0 ? "Avancer un contrat de service local." : "Aucun service actif à traiter.",
+            activeServiceCount > 0,
+            "quest.guild.service",
+            serviceData
+        );
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
@@ -3527,6 +3740,154 @@ void QuestMenu::openGuild(Player& player)
         {
             displayQuestJournal(player);
         }
+        else if (choice == 4)
+        {
+            resolveGuildServiceQuest(player);
+        }
+    }
+}
+
+
+// EN: resolveGuildServiceQuest declares or implements a focused behavior used by this module.
+// FR: resolveGuildServiceQuest déclare ou implémente un comportement précis utilisé par ce module.
+void QuestMenu::resolveGuildServiceQuest(Player& player)
+{
+    constexpr std::size_t servicesPerPage = 5;
+    std::size_t pageIndex = 0;
+
+    while (true)
+    {
+        std::vector<Quest>& quests = player.getQuestLog().getQuests();
+        std::vector<int> serviceIndexes;
+
+        for (int i = 0; i < static_cast<int>(quests.size()); ++i)
+        {
+            if (isActiveGuildServiceQuest(quests[i]))
+            {
+                serviceIndexes.push_back(i);
+            }
+        }
+
+        if (serviceIndexes.empty())
+        {
+            MessageScreen::show(
+                "AUCUN SERVICE À TRAITER",
+                "quest.guild.service.empty",
+                {
+                    "Aucun service de guilde n'attend au comptoir.",
+                    "Les contrats de combat et d'exploration se font dehors ; les services se règlent ici."
+                }
+            );
+            return;
+        }
+
+        const std::size_t totalPages = PagedMenu::pageCount(serviceIndexes.size(), servicesPerPage);
+        if (pageIndex >= totalPages)
+        {
+            pageIndex = totalPages == 0 ? 0 : totalPages - 1;
+        }
+
+        const std::size_t first = PagedMenu::firstIndex(pageIndex, servicesPerPage);
+        const std::size_t last = PagedMenu::lastIndexExclusive(serviceIndexes.size(), pageIndex, servicesPerPage);
+
+        MenuScreen screen("SERVICES DE GUILDE", "quest.guild.service");
+        screen.addLine("Ces contrats ne demandent pas de chercher une zone floue : ils se règlent depuis le comptoir de guilde.");
+        screen.addLine("Chaque traitement avance le service. Une fois terminé, il passe dans les quêtes prêtes à rendre.");
+        screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, serviceIndexes.size()));
+        screen.addBackOption("Retour", "quest.guild.service.back");
+
+        for (std::size_t i = first; i < last; ++i)
+        {
+            const Quest& quest = quests[serviceIndexes[i]];
+            std::string label = "[Service - Rang " + quest.rank + "] " + quest.title
+                + " | Progression : " + std::to_string(quest.progress) + "/" + std::to_string(quest.target)
+                + " | " + questRewardText(quest);
+
+            MenuOptionItemData itemData;
+            itemData.structured = true;
+            itemData.kind = "quest";
+            itemData.section = "Services de guilde";
+            itemData.actionType = "service";
+            itemData.name = quest.title;
+            itemData.detail = quest.objective;
+            itemData.status = "À traiter au comptoir";
+            itemData.reward = questRewardText(quest);
+            itemData.progress = std::to_string(quest.progress) + "/" + std::to_string(quest.target);
+            itemData.owner = "Maître de guilde";
+            itemData.important = true;
+
+            screen.addOption(
+                static_cast<int>(10 + (i - first)),
+                label,
+                "Traiter une étape de ce service local.",
+                true,
+                "quest.guild.service.select." + std::to_string(i + 1),
+                itemData
+            );
+        }
+
+        PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+
+        if (choice == 98 && pageIndex > 0)
+        {
+            --pageIndex;
+            continue;
+        }
+
+        if (choice == 99 && pageIndex + 1 < totalPages)
+        {
+            ++pageIndex;
+            continue;
+        }
+
+        const int localQuestIndex = choice - 10;
+        if (localQuestIndex < 0 || first + static_cast<std::size_t>(localQuestIndex) >= last)
+        {
+            MessageScreen::show(
+                "SERVICE INDISPONIBLE",
+                "quest.guild.service.invalid",
+                {"Ce choix ne correspond à aucun service affiché."}
+            );
+            continue;
+        }
+
+        Quest& quest = quests[serviceIndexes[first + static_cast<std::size_t>(localQuestIndex)]];
+        const int before = quest.progress;
+        quest.progress = std::min(quest.target, quest.progress + 1);
+        if (quest.progress >= quest.target)
+        {
+            quest.completed = true;
+        }
+
+        std::vector<std::string> lines;
+        lines.push_back("Service traité : " + quest.title);
+        lines.push_back("La gérante te fait régler l'affaire au comptoir, avec juste assez de paperasse pour rappeler que c'est une guilde.");
+        lines.push_back("Progression : " + std::to_string(before) + "/" + std::to_string(quest.target)
+            + " -> " + std::to_string(quest.progress) + "/" + std::to_string(quest.target));
+
+        if (quest.completed)
+        {
+            lines.push_back("Service terminé : tu peux maintenant le rendre auprès du Maître de guilde.");
+            lines.push_back("Chemin rapide : Quêtes > Rendre une quête prête, ou Guilde > Rendre une quête de guilde terminée.");
+        }
+        else
+        {
+            lines.push_back("Le service demande encore une étape au comptoir avant d'être tamponnable.");
+        }
+
+        MessageScreen::show(
+            quest.completed ? "SERVICE TERMINÉ" : "SERVICE AVANCÉ",
+            quest.completed ? "quest.guild.service.completed" : "quest.guild.service.progressed",
+            lines
+        );
     }
 }
 
@@ -3698,7 +4059,8 @@ void QuestMenu::acceptGuildQuest(Player& player)
         std::vector<std::string> dialogue = guildQuestAcceptedDialogueLines(selectedQuest);
         lines.insert(lines.end(), dialogue.begin(), dialogue.end());
         lines.push_back("Objectif : " + selectedQuest.objective);
-        lines.push_back("Zone probable : " + selectedQuest.location);
+        lines.push_back("Zone/action jouable : " + questPlayableLocationHint(selectedQuest));
+        lines.push_back("Comment faire : " + questProgressMethodText(selectedQuest));
         lines.push_back("Récompenses : " + questRewardText(selectedQuest));
         lines.push_back("Une nouvelle place sera préparée après ton prochain combat.");
 

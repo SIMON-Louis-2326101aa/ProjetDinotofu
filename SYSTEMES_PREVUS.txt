@@ -1,5 +1,5 @@
 SYSTÈMES PRÉVUS / AUDIT GLOBAL - DINOTOFU
-Version auditée : V2.04.06
+Version auditée : V2.04.08
 
 Priorité actuelle décidée :
 - Finir la stabilité, la jouabilité et la lisibilité de l'interface graphique expérimentale avant d'ajouter du gros contenu.
@@ -7,10 +7,10 @@ Priorité actuelle décidée :
 - Le mode histoire et la V3.00.00 sont repoussés à la fin, quand l'IG et les systèmes de base seront propres.
 - Les tests/builds/vérifications sont implicites à chaque passe et ne doivent pas être listés comme tâches restantes génériques.
 
-État général vérifié dans le ZIP V2.04.06 :
-- Version actuelle : 2.04.06, format x.yy.zz conservé.
-- README/manifest mis à jour sur 2.04.06.
-- IG V2.04.06 : navigation paginée plus structurée sur les longues listes restantes, dialogues séparés du combat dans les snapshots, README/manifest à jour.
+État général vérifié dans le ZIP V2.04.08 :
+- Version actuelle : 2.04.08, format x.yy.zz conservé.
+- README/manifest mis à jour sur 2.04.08.
+- V2.04.08 : potions regroupées en piles dans l’inventaire, les menus de potions et les soins de soutien, README/manifest à jour.
 - Boss : 35 boss présents dans le catalogue, ultimes dédiés 1 à 35, effets de fin d'ultime 1 à 35.
 - Correction boss conservée : suppression des blocs d'ultime dupliqués 28-31 et ajout des ticks d'ultime manquants pour 25-27.
 - Lancement Windows Auto : la fenêtre reste visible pendant la vérification/téléchargement/installation des mises à jour, puis l'IG/le backend se lancent ensuite.
@@ -400,3 +400,19 @@ MISE A JOUR 2.04.06 - VERSION CIBLE, NAVIGATION PAGINEE ET DIALOGUES IG
 - Les cartes IG marquent les entrées de dialogue comme importantes quand elles sont présentes, pour éviter qu'elles disparaissent derrière du texte brut.
 - Compilation C++ complète effectuée avec succès sur V2.04.06.
 - ./output/Dinotofu --version vérifié : Dinotofu V2.04.06.
+
+MISE A JOUR 2.04.07 - QUETES DE GUILDE, SERVICES ET INDICES DE ROUTE
+- Les contrats de service de guilde ont maintenant une action jouable en terminal : Guilde > Traiter un service de guilde.
+- Les services avancent au comptoir puis deviennent prêts à rendre auprès du Maître de guilde.
+- Les contrats de guilde n'affichent plus seulement un lieu RP vague : ils indiquent une zone/action jouable et une méthode claire pour progresser.
+- Les anciennes quêtes d'exploration ou de livraison floues comme Village / livraison peuvent maintenant correspondre aux biomes jouables, notamment Route commerciale.
+- Le panneau de guilde évite de proposer uniquement des services quand d'autres contrats jouables existent.
+- Les écrans Activités et Combat affichent [Objectif de quête probable] quand une quête active peut progresser dans ce mode.
+- Compilation C++ complète effectuée avec succès sur V2.04.07.
+
+MISE A JOUR 2.04.08 - PILES DE POTIONS EN TERMINAL ET MENUS DE COMBAT
+- Les consommables identiques sont maintenant regroupés visuellement en piles dans l'inventaire terminal, par exemple Potion de soin (*3).
+- La sélection des consommables conserve un seul choix par pile tout en utilisant bien l'index du premier objet disponible pour consommer une seule potion.
+- Les menus Potions, Soin rapide, catégories de potions, aperçu des potions, soutien PvE coop et soutien boss coop affichent aussi les piles au lieu de répéter chaque potion identique.
+- Les écrans de potion sélectionnée et d'inspection indiquent la quantité disponible dans la pile.
+- Compilation C++ complète effectuée avec succès sur V2.04.08.
