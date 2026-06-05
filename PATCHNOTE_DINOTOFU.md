@@ -762,6 +762,22 @@ PNJ importants du chapitre :
 - Création/organisation de `PATCHNOTE_DINOTOFU.md` comme seul endroit autorisé pour les notes de version.
 - Conservation de la base importante de recréation : **V3.00.00**.
 
+
+## V3.07.03 — Réparation des launchers si l’exécutable manque
+
+- Correction du launcher Windows : si `version.txt` annonce la bonne version mais qu’aucun `Dinotofu.exe` ou `DinotofuGUI.exe` n’est présent, le launcher force une réparation depuis la release GitHub.
+- Correction équivalente côté Linux : si la version locale est à jour mais que l’exécutable manque, le launcher relance l’installation/réparation.
+- Ajout d’un message plus clair si la release GitHub ne contient pas l’asset Windows attendu : `Dinotofu-Windows-v*.zip`.
+- Objectif : éviter les installations hybrides où le dossier annonce une version récente sans contenir de jeu lançable.
+
+## V3.07.04 — Releases GitHub générées au push
+
+- Correction du workflow GitHub Actions pour correspondre au vrai fonctionnement du projet : pousser le source doit permettre de générer les releases jouables automatiquement.
+- Le workflow lit la version du projet, crée le tag si nécessaire, compile Linux et Windows, puis publie les ZIP jouables dans la release GitHub.
+- Si une release existe déjà mais qu’il manque les ZIP jouables Windows/Linux, elle est considérée comme incomplète et les assets sont régénérés.
+- Les assets attendus sont vérifiés explicitement : `Dinotofu-Windows-v*.zip`, `DinotofuInstaller-Windows-v*.zip`, `Dinotofu-Linux-v*.zip` et `DinotofuInstaller-Linux-v*.zip`.
+- Objectif : que le ZIP source reste propre, sans exécutable, pendant que GitHub Actions fabrique les versions Windows/Linux destinées aux joueurs.
+
 ---
 
 # Prochaine phase proposée

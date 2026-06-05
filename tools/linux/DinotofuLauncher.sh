@@ -61,6 +61,41 @@ if [[ -f "${INSTALL_DIR}/version.txt" ]]; then
     local_version="$(normalize_version "$(cat "${INSTALL_DIR}/version.txt")")"
 fi
 
+installed_runnable_exists() {
+    local candidates=(
+        "${INSTALL_DIR}/DinotofuGUI"
+        "${INSTALL_DIR}/DinotofuGui"
+        "${INSTALL_DIR}/output/DinotofuGUI"
+        "${INSTALL_DIR}/output/DinotofuGui"
+        "${INSTALL_DIR}/bin/DinotofuGUI"
+        "${INSTALL_DIR}/bin/DinotofuGui"
+        "${INSTALL_DIR}/Dinotofu"
+        "${INSTALL_DIR}/output/Dinotofu"
+        "${INSTALL_DIR}/bin/Dinotofu"
+    )
+
+    local candidate
+    for candidate in "${candidates[@]}"; do
+        if [[ -x "$candidate" || -f "$candidate" ]]; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+run_installer_repair() {
+    if [[ -x "${INSTALL_DIR}/Installer-Dinotofu.sh" ]]; then
+        "${INSTALL_DIR}/Installer-Dinotofu.sh" --skip-launch --no-prompt
+        return 0
+    fi
+    if [[ -x "${INSTALL_DIR}/DinotofuInstaller.sh" ]]; then
+        "${INSTALL_DIR}/DinotofuInstaller.sh" --skip-launch --no-prompt
+        return 0
+    fi
+    return 1
+}
+
 UPDATE_APPLIED="false"
 if [[ "$NO_UPDATE" != "true" && -n "$REPO" && "$REPO" != "TON_COMPTE/TON_REPO" && "$REPO" == */* ]] && command -v curl >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
     tmp_json="$(mktemp)"
@@ -74,11 +109,12 @@ PY
         remote_version="$(normalize_version "$remote_tag")"
         if [[ -n "$remote_version" && "$remote_version" != "$local_version" ]]; then
             echo "Mise a jour disponible : ${local_version} -> ${remote_version}"
-            if [[ -x "${INSTALL_DIR}/Installer-Dinotofu.sh" ]]; then
-                "${INSTALL_DIR}/Installer-Dinotofu.sh" --skip-launch --no-prompt
+            if run_installer_repair; then
                 UPDATE_APPLIED="true"
-            elif [[ -x "${INSTALL_DIR}/DinotofuInstaller.sh" ]]; then
-                "${INSTALL_DIR}/DinotofuInstaller.sh" --skip-launch --no-prompt
+            fi
+        elif [[ -n "$remote_version" ]] && ! installed_runnable_exists; then
+            echo "Installation incomplete : aucun executable local trouve malgre une version a jour. Reparation depuis la release GitHub."
+            if run_installer_repair; then
                 UPDATE_APPLIED="true"
             fi
         fi

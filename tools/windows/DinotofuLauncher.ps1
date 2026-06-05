@@ -119,6 +119,26 @@ function Get-LocalVersion {
     return "0.00.00"
 }
 
+function Test-InstalledRunnable {
+    $candidates = @(
+        (Join-Path $InstallDir "DinotofuGUI.exe"),
+        (Join-Path $InstallDir "DinotofuGui.exe"),
+        (Join-Path $InstallDir "output\DinotofuGUI.exe"),
+        (Join-Path $InstallDir "output\DinotofuGui.exe"),
+        (Join-Path $InstallDir "bin\DinotofuGUI.exe"),
+        (Join-Path $InstallDir "bin\DinotofuGui.exe"),
+        (Join-Path $InstallDir "Dinotofu.exe"),
+        (Join-Path $InstallDir "output\Dinotofu.exe"),
+        (Join-Path $InstallDir "bin\Dinotofu.exe")
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) { return $true }
+    }
+
+    return $false
+}
+
 function Get-LatestRelease {
     param([string]$Repository)
     $uri = "https://api.github.com/repos/$Repository/releases/latest"
@@ -278,7 +298,7 @@ function ConvertTo-ProcessArgumentsString {
             continue
         }
 
-        $escaped = $value -replace '"', '\"'
+        $escaped = $value -replace '"', '"'
         if ($escaped -match '[\s"]') {
             $parts += '"' + $escaped + '"'
         }
@@ -597,13 +617,23 @@ if (-not $NoUpdateCheck -and (Is-RepoConfigured)) {
         Write-Host "Version locale : $localVersion"
         Write-Host "Version disponible : $remoteVersion"
 
-        if ((Compare-VersionText $localVersion $remoteVersion) -lt 0) {
+        $installationRunnable = Test-InstalledRunnable
+        $mustRepairInstall = -not $installationRunnable
+
+        if ((Compare-VersionText $localVersion $remoteVersion) -lt 0 -or $mustRepairInstall) {
+            if ($mustRepairInstall -and (Compare-VersionText $localVersion $remoteVersion) -ge 0) {
+                Write-Warning "Installation incomplete : aucun executable local trouve malgre une version a jour. Reparation depuis la release GitHub."
+            }
+
             $asset = Select-ReleaseAsset -Release $release -Pattern $AssetPattern
             if ($asset) {
                 Apply-Update -Release $release -Asset $asset
                 $updateApplied = $true
             }
-            else { Write-Warning "Mise a jour trouvee, mais aucun asset Windows ne correspond a $AssetPattern." }
+            else {
+                Write-Warning "Mise a jour ou reparation necessaire, mais aucun asset Windows ne correspond a $AssetPattern."
+                Write-Warning "La release GitHub doit contenir Dinotofu-Windows-v*.zip, pas seulement le ZIP source."
+            }
         }
         else {
             Write-Host "Dinotofu est deja a jour."

@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "3.07.02",
-  "releaseTag": "v3.07.02",
+  "version": "3.07.04",
+  "releaseTag": "v3.07.04",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "V3.07.02 : patch documentation publication. Les historiques de versions sont regroupés dans PATCHNOTE_DINOTOFU.md, les README gardent l'installation GitHub et la note spéciale du développeur."
+  "notes": "Patch publication Git : le workflow répare les releases incomplètes et régénère les ZIP Windows/Linux si les assets jouables manquent."
 }

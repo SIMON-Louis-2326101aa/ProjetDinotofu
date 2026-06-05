@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       force_release:
-        description: "Recréer la release même si le tag de version existe déjà"
+        description: "Recreer ou reparer la release meme si le tag de version existe deja"
         required: false
         default: "false"
         type: choice
@@ -23,9 +23,6 @@ concurrency:
   group: dinotofu-release-${{ github.ref }}
   cancel-in-progress: false
 
-env:
-  DINOTOFU_RELEASE_BRANCH_MODE: "auto-version-tag"
-
 jobs:
   prepare-release:
     runs-on: ubuntu-latest
@@ -36,14 +33,14 @@ jobs:
       reason: ${{ steps.prepare.outputs.reason }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Make scripts executable
         run: chmod +x scripts/*.sh
 
-      - name: Decide release tag
+      - name: Decide release tag and repair needs
         id: prepare
         env:
           FORCE_RELEASE: ${{ github.event.inputs.force_release }}
@@ -56,47 +53,65 @@ jobs:
           SHOULD_PUBLISH="false"
           REASON=""
 
+          REQUIRED_ASSETS=(
+            "Dinotofu-Windows-v${VERSION}.zip"
+            "DinotofuInstaller-Windows-v${VERSION}.zip"
+            "Dinotofu-Linux-v${VERSION}.zip"
+            "DinotofuInstaller-Linux-v${VERSION}.zip"
+          )
+
           echo "Version detectee dans le code : ${VERSION}"
+          echo "Tag attendu : ${TAG}"
 
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            TAG="${GITHUB_REF_NAME}"
+          TAG_EXISTS="false"
+          RELEASE_EXISTS="false"
+          RELEASE_HAS_REQUIRED_ASSETS="false"
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            TAG_EXISTS="true"
+          fi
+
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            RELEASE_EXISTS="true"
+          fi
+
+          if [[ "${RELEASE_EXISTS}" == "true" ]]; then
+            ASSET_NAMES="$(gh release view "${TAG}" --json assets --jq '.assets[].name' || true)"
+            echo "Assets deja presents dans ${TAG} :"
+            printf '%s\n' "${ASSET_NAMES:-aucun}"
+
+            missing=0
+            for required in "${REQUIRED_ASSETS[@]}"; do
+              if ! printf '%s\n' "${ASSET_NAMES}" | grep -Fxq "${required}"; then
+                echo "Asset manquant : ${required}"
+                missing=$((missing + 1))
+              fi
+            done
+
+            if [[ "${missing}" -eq 0 ]]; then
+              RELEASE_HAS_REQUIRED_ASSETS="true"
+            fi
+          fi
+
+          if [[ "${TAG_EXISTS}" == "false" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "${TAG}" -m "Dinotofu ${TAG}"
+            git push origin "${TAG}"
             SHOULD_PUBLISH="true"
-            REASON="workflow lance depuis le tag ${TAG}"
-            TAG_VERSION="${TAG#v}"
-            if [[ "${TAG_VERSION}" != "${VERSION}" ]]; then
-              echo "::warning::Le tag ${TAG} ne correspond pas a la version du code ${VERSION}."
-            fi
+            REASON="nouveau tag ${TAG} cree automatiquement depuis la version du code"
+          elif [[ "${FORCE_RELEASE:-false}" == "true" ]]; then
+            SHOULD_PUBLISH="true"
+            REASON="force_release demande : reconstruction des assets de ${TAG}"
+          elif [[ "${RELEASE_EXISTS}" == "false" ]]; then
+            SHOULD_PUBLISH="true"
+            REASON="le tag ${TAG} existe deja mais la release GitHub manque"
+          elif [[ "${RELEASE_HAS_REQUIRED_ASSETS}" == "false" ]]; then
+            SHOULD_PUBLISH="true"
+            REASON="la release ${TAG} existe mais il manque au moins un ZIP Windows/Linux jouable"
           else
-            echo "Push sur branche ${GITHUB_REF_NAME}. Tag attendu : ${TAG}"
-
-            TAG_EXISTS="false"
-            RELEASE_EXISTS="false"
-
-            if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-              TAG_EXISTS="true"
-            fi
-
-            if gh release view "${TAG}" >/dev/null 2>&1; then
-              RELEASE_EXISTS="true"
-            fi
-
-            if [[ "${TAG_EXISTS}" == "false" ]]; then
-              git config user.name "github-actions[bot]"
-              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-              git tag -a "${TAG}" -m "Dinotofu ${TAG}"
-              git push origin "${TAG}"
-              SHOULD_PUBLISH="true"
-              REASON="nouveau tag ${TAG} cree automatiquement depuis la version du code"
-            elif [[ "${FORCE_RELEASE:-false}" == "true" ]]; then
-              SHOULD_PUBLISH="true"
-              REASON="force_release demande : mise a jour de la release ${TAG}"
-            elif [[ "${RELEASE_EXISTS}" == "false" ]]; then
-              SHOULD_PUBLISH="true"
-              REASON="le tag ${TAG} existe deja mais la release GitHub manque : publication reprise"
-            else
-              SHOULD_PUBLISH="false"
-              REASON="le tag ${TAG} et la release GitHub existent deja : aucune nouvelle release"
-            fi
+            SHOULD_PUBLISH="false"
+            REASON="le tag ${TAG} et les ZIP Windows/Linux attendus existent deja"
           fi
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -112,7 +127,7 @@ jobs:
     steps:
       - name: Nothing to publish
         run: |
-          echo "Aucune release générée."
+          echo "Aucune release generee."
           echo "Raison : ${{ needs.prepare-release.outputs.reason }}"
           echo "Pour publier une nouvelle release automatiquement, augmente la version dans src/core/VersionInfo.cpp puis push sur main/master."
 
@@ -122,7 +137,7 @@ jobs:
     if: needs.prepare-release.outputs.should_publish == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
 
@@ -159,7 +174,7 @@ jobs:
     if: needs.prepare-release.outputs.should_publish == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare-release.outputs.tag }}
 
@@ -218,11 +233,13 @@ jobs:
           fi
 
           cat > release_notes.md <<EOF
-          Release automatique Dinotofu ${RELEASE_TAG}.
+          Dinotofu ${RELEASE_TAG}
+
+          Publication automatique depuis le depot source.
 
           Raison : ${RELEASE_REASON}
 
-          Fichiers :
+          Fichiers utiles :
           - Dinotofu-Windows-v${RELEASE_VERSION}.zip : jeu Windows pret a lancer.
           - DinotofuInstaller-Windows-v${RELEASE_VERSION}.zip : installer/launcher Windows.
           - Dinotofu-Linux-v${RELEASE_VERSION}.zip : jeu Linux pret a lancer.
