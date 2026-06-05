@@ -42,6 +42,13 @@ namespace
     {
         CharacterRace race = player.getRace();
 
+        // Les passifs raciaux débloqués servent aussi en combat : une résistance feu de race réduit les brûlures,
+        // une faiblesse aux flammes les rend plus violentes. L'environnement et le combat partagent donc la même logique.
+        if (player.hasPassiveSkill("minor_fire_resistance") && elementId == "fire") resistance += 10;
+        if (player.hasPassiveSkill("infernal_fire_resistance") && elementId == "fire") resistance += 22;
+        if (player.hasPassiveSkill("minor_cold_resistance") && elementId == "frost") resistance += 12;
+        if (player.hasPassiveSkill("fire_vulnerability") && elementId == "fire") weakness += 14;
+
         if (race == CharacterRace::Tiefling || race == CharacterRace::Demon)
         {
             if (elementId == "fire") resistance += 25;
@@ -72,6 +79,30 @@ namespace
             if (elementId == "shock") resistance += 10;
             if (elementId == "fire") weakness += 12;
             if (elementId == "bleeding") weakness += 8;
+        }
+
+        if (race == CharacterRace::SemiLizard)
+        {
+            if (elementId == "fire") resistance += 12;
+            if (elementId == "frost") weakness += 10;
+        }
+
+        if (race == CharacterRace::SemiBird)
+        {
+            if (elementId == "fire") weakness += 18;
+            if (elementId == "shock") resistance += 6;
+        }
+
+        if (race == CharacterRace::SemiWolf || race == CharacterRace::SemiDog)
+        {
+            if (elementId == "frost") resistance += 6;
+            if (elementId == "bleeding") resistance += 4;
+        }
+
+        if (race == CharacterRace::SemiCat || race == CharacterRace::SemiFox)
+        {
+            if (elementId == "poison") resistance += 4;
+            if (elementId == "bleeding") weakness += 3;
         }
 
         if (race == CharacterRace::HalfDragon)
@@ -136,8 +167,16 @@ namespace
     void addEquipmentAffinity(const Player& player, const std::string& elementId, int& resistance, int& weakness)
     {
         std::string equipmentText;
-        if (player.hasEquippedWeapon()) equipmentText += " " + player.getEquippedWeapon().getName();
-        if (player.hasEquippedArmor()) equipmentText += " " + player.getEquippedArmor().getName();
+        if (player.hasEquippedWeapon())
+        {
+            Weapon weapon = player.getEquippedWeapon();
+            equipmentText += " " + weapon.getName() + " " + weapon.getDescription() + " " + weapon.getEnchantmentSummaryText();
+        }
+        if (player.hasEquippedArmor())
+        {
+            Armor armor = player.getEquippedArmor();
+            equipmentText += " " + armor.getName() + " " + armor.getDescription() + " " + armor.getEnchantmentSummaryText();
+        }
 
         if (equipmentText.empty()) return;
 
@@ -164,6 +203,17 @@ namespace
         if (containsAny(equipmentText, {"draconique", "écaille", "ecaille"}))
         {
             if (elementId == "fire" || elementId == "frost") resistance += 18;
+        }
+
+        if (containsAny(equipmentText, {"ignifug", "anti-chaleur", "braises", "voile anti-chaleur", "rune anti-feu", "rune thermique", "charme d\'équilibre thermique"}))
+        {
+            if (elementId == "fire") resistance += 26;
+        }
+
+        if (containsAny(equipmentText, {"parka", "glaciale", "isolant", "anti-givre", "thermique", "rune anti-froid", "rune thermique", "charme d\'équilibre thermique"}))
+        {
+            if (elementId == "frost") resistance += 24;
+            if (elementId == "fire" && containsAny(equipmentText, {"isolant", "thermique"})) resistance += 6;
         }
     }
 

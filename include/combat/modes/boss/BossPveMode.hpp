@@ -9,6 +9,7 @@
 #include "entity/Player.hpp"
 #include "core/Random.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 #include <vector>
 
 class BossPveMode
@@ -21,13 +22,15 @@ public:
     static void run(
         Player& player1,
         Random& random,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        DeathRuleMode deathRule
     );
 
     static void runTeam(
         std::vector<Player*>& party,
         Random& random,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        DeathRuleMode deathRule
     );
 };
 

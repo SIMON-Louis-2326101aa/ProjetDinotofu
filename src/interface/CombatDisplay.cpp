@@ -5,6 +5,8 @@
 
 #include "interface/CombatDisplay.hpp"
 
+#include "core/Console.hpp"
+
 #include "character/SpecialCharacterDialogueCatalog.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/GuiDebugExporter.hpp"

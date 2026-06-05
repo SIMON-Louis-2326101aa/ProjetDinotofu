@@ -9,6 +9,7 @@
 #include "entity/Player.hpp"
 #include "core/Random.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 
 #include <string>
 
@@ -21,7 +22,7 @@ private:
 public:
     // EN: run declares or implements a focused behavior used by this module.
     // FR: run déclare ou implémente un comportement précis utilisé par ce module.
-    static void run(Player& player1, Random& random, const std::string& account1, DifficultyMode difficulty1);
+    static void run(Player& player1, Random& random, const std::string& account1, DifficultyMode difficulty1, DeathRuleMode deathRule1);
 };
 
 #endif

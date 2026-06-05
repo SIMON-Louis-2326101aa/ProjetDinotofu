@@ -30,7 +30,7 @@ namespace
         itemData.name = potion.getName();
         itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = CombatPotionUtils::typeToText(potion.getType());
-        itemData.progress = "Puissance : " + std::to_string(potion.getPower());
+        itemData.progress = "Puissance : " + potion.getPowerDisplayText();
         itemData.price = std::to_string(potion.getValue()) + " or";
         itemData.important = potion.isHealing();
         return itemData;
@@ -105,7 +105,7 @@ MenuScreen CombatPotionDisplay::buildQuickHealingScreen(
         screen.addOption(
             static_cast<int>(i - first + 1),
             CombatPotionUtils::stackLabel(potion.getName(), stack.amount),
-            "Soin : " + std::to_string(potion.getPower()) + " PV | Quantité : " + std::to_string(stack.amount),
+            "Soin : " + potion.getPowerDisplayText() + " | Quantité : " + std::to_string(stack.amount),
             true,
             "potions.quick_heal.use",
             makePotionItemData(potion, "use", "Soin rapide", stack.amount)
@@ -134,7 +134,7 @@ MenuScreen CombatPotionDisplay::buildSelectedHealingPotionScreen(const Consumabl
     screen.addLine("Potion : " + CombatPotionUtils::stackLabel(potion.getName(), amount));
     screen.addLine("Quantité dans la pile : " + std::to_string(amount));
     screen.addLine("Description : " + potion.getDescription());
-    screen.addLine("Soin : " + std::to_string(potion.getPower()) + " PV");
+    screen.addLine("Soin : " + potion.getPowerDisplayText());
     screen.addBackOption("Retour", "potions.healing.back");
     screen.addOption(1, "Inspecter", "Lire les détails de la potion.", true, "potions.healing.inspect", makePotionItemData(potion, "inspect", "Potion sélectionnée", amount));
     screen.addOption(2, "Utiliser", "Consommer une potion de cette pile maintenant.", true, "potions.healing.use", makePotionItemData(potion, "use", "Potion sélectionnée", amount));
@@ -149,7 +149,7 @@ MenuScreen CombatPotionDisplay::buildSelectedPotionScreen(const Consumable& poti
     screen.addLine("Potion : " + CombatPotionUtils::stackLabel(potion.getName(), amount));
     screen.addLine("Quantité dans la pile : " + std::to_string(amount));
     screen.addLine("Type : " + CombatPotionUtils::typeToText(potion.getType()));
-    screen.addLine("Puissance : " + std::to_string(potion.getPower()));
+    screen.addLine("Puissance : " + potion.getPowerDisplayText());
     screen.addBackOption("Retour", "potions.selected.back");
     screen.addOption(1, "Inspecter", "Lire les détails de la potion.", true, "potions.selected.inspect", makePotionItemData(potion, "inspect", "Potion sélectionnée", amount));
     screen.addOption(2, "Utiliser", "Consommer ou lancer une potion de cette pile selon son type.", true, "potions.selected.use", makePotionItemData(potion, "use", "Potion sélectionnée", amount));
@@ -180,7 +180,7 @@ MenuScreen CombatPotionDisplay::buildFilteredPotionsScreen(
         screen.addOption(
             static_cast<int>(i - first + 1),
             CombatPotionUtils::stackLabel(potion.getName(), stack.amount),
-            "Puissance : " + std::to_string(potion.getPower()) + " | Quantité : " + std::to_string(stack.amount),
+            "Puissance : " + potion.getPowerDisplayText() + " | Quantité : " + std::to_string(stack.amount),
             true,
             "potions.filtered.select",
             makePotionItemData(potion, "select", "Potions filtrées", stack.amount)
@@ -235,7 +235,7 @@ MenuScreen CombatPotionDisplay::buildPotionOverviewScreen(
         screen.addOption(
             static_cast<int>(i - first + 1),
             CombatPotionUtils::stackLabel(potion.getName(), stack.amount),
-            CombatPotionUtils::typeToText(potion.getType()) + " | Puissance : " + std::to_string(potion.getPower()) + " | Quantité : " + std::to_string(stack.amount),
+            CombatPotionUtils::typeToText(potion.getType()) + " | Puissance : " + potion.getPowerDisplayText() + " | Quantité : " + std::to_string(stack.amount),
             false,
             "potions.overview.item",
             makePotionItemData(potion, "overview", "Potions disponibles", stack.amount)
@@ -340,7 +340,7 @@ void CombatPotionDisplay::showPotionDetails(const Consumable& potion)
             "Nom : " + potion.getName(),
             "Description : " + potion.getDescription(),
             "Type : " + CombatPotionUtils::typeToText(potion.getType()),
-            "Puissance : " + std::to_string(potion.getPower()),
+            "Puissance : " + potion.getPowerDisplayText(),
             "Valeur : " + std::to_string(potion.getValue()) + " or"
         }
     );

@@ -22,7 +22,9 @@
 
 #include "item/Inventory.hpp"
 #include "item/weapon/Weapon.hpp"
+#include "item/weapon/WeaponCatalog.hpp"
 #include "item/armor/Armor.hpp"
+#include "item/armor/ArmorCatalog.hpp"
 #include "item/consumable/Consumable.hpp"
 #include "item/consumable/ConsumableType.hpp"
 #include "item/consumable/ConsumableCatalog.hpp"
@@ -237,7 +239,8 @@ namespace
             "inventory.consumable.use.heal.result",
             {
                 player.getName() + " utilise : " + consumable.getName() + ".",
-                "Soin théorique : " + std::to_string(consumable.getPower()) + " PV.",
+                "Soin théorique : " + consumable.getPowerDisplayText() + ".",
+                "Soin réel : +" + std::to_string(player.getHp() - hpBefore) + " PV.",
                 "PV avant : " + std::to_string(hpBefore) + "/" + std::to_string(player.getMaxHp()),
                 "PV après : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()),
                 player.hasInfiniteConsumables() ? "Code actif : le consommable n'est pas retiré." : "Consommable retiré de l'inventaire."
@@ -537,7 +540,24 @@ namespace
     // FR: blacksmithSaveKitDurabilityChance déclare ou implémente un comportement précis utilisé par ce module.
     int blacksmithSaveKitDurabilityChance(const Player& player)
     {
-        return isBlacksmith(player) ? 60 : 0;
+        int chance = isBlacksmith(player) ? 60 : 0;
+
+        // FR: Entretien de terrain = bonus très faible, pas une réparation gratuite.
+        // EN: Field maintenance = very small bonus, not free repairs.
+        if (player.hasPassiveSkill("field_maintenance"))
+        {
+            chance += 8;
+        }
+        if (player.hasPassiveSkill("weapon_care_habit"))
+        {
+            chance += 4;
+        }
+        if (player.hasPassiveSkill("material_sorting_habit"))
+        {
+            chance += 2;
+        }
+
+        return std::min(chance, 78);
     }
 
     // EN: alchemistSaveCatalystChance declares or implements a focused behavior used by this module.
@@ -791,12 +811,26 @@ namespace
 
     // EN: confirmRepairCost declares or implements a focused behavior used by this module.
     // FR: confirmRepairCost déclare ou implémente un comportement précis utilisé par ce module.
-    bool confirmRepairCost(Player& player, const std::string& itemName, bool armorRepair, const RepairKitChoice& kitChoice)
+    bool confirmRepairCost(Player& player, const std::string& itemName, bool armorRepair, const RepairKitChoice& kitChoice, int currentDurability, int maxDurability, int targetDurability)
     {
         MenuScreen screen("CONFIRMATION RÉPARATION", "inventory.repair.confirm");
         screen.addLine("Équipement : " + itemName);
+        screen.addLine("Durabilité : " + std::to_string(currentDurability) + "/" + std::to_string(maxDurability)
+            + " -> " + std::to_string(targetDurability) + "/" + std::to_string(maxDurability));
         screen.addLine("Kit : " + kitChoice.label + " | " + repairKitStatusText(kitChoice.id));
         screen.addLine("Seuil permis : " + std::to_string(kitChoice.thresholdPercent) + "% de la durabilité maximale.");
+        if (player.hasPassiveSkill("field_maintenance"))
+        {
+            screen.addLine("Entretien de terrain : tu sais mieux où poser le kit, ce qui donne une petite chance d'économiser son usure.");
+        }
+        if (player.hasPassiveSkill("weapon_care_habit"))
+        {
+            screen.addLine("Soin d'arme : petit bonus supplémentaire si tu répares avant que l'équipement soit totalement ruiné.");
+        }
+        if (player.hasPassiveSkill("material_sorting_habit"))
+        {
+            screen.addLine("Tri des composants : les matériaux de réparation sont mieux distingués, sans rendre la réparation gratuite.");
+        }
         screen.addLine("Matériaux nécessaires :");
 
         for (const std::string& line : buildRepairMaterialCostLines(player, armorRepair, kitChoice.thresholdPercent))
@@ -889,7 +923,7 @@ namespace
             return false;
         }
 
-        if (!confirmRepairCost(player, weapon->getName(), false, kitChoice))
+        if (!confirmRepairCost(player, weapon->getName(), false, kitChoice, weapon->getDurability(), weapon->getMaxDurability(), cap))
         {
             return false;
         }
@@ -971,7 +1005,7 @@ namespace
             return false;
         }
 
-        if (!confirmRepairCost(player, armor->getName(), true, kitChoice))
+        if (!confirmRepairCost(player, armor->getName(), true, kitChoice, armor->getDurability(), armor->getMaxDurability(), cap))
         {
             return false;
         }
@@ -1033,6 +1067,18 @@ namespace
         else if (material.getId() == "arcane_dust")
         {
             lines.push_back("Usages connus : enchantements, catalyseurs de sorts et équipements magiques.");
+        }
+        else if (material.getId() == "runic_iron_shard")
+        {
+            lines.push_back("Usages connus : lames runiques, cottes renforcées, réparation de rainures et stabilisation d'armes intermédiaires.");
+        }
+        else if (material.getId() == "polished_scale_plate")
+        {
+            lines.push_back("Usages connus : harnais d'écailles, protections semi-lourdes et renforts qui demandent plus d'entretien.");
+        }
+        else if (material.getId() == "amber_tempering_oil")
+        {
+            lines.push_back("Usages connus : trempe d'armes, stabilisation de catalyseurs et réveil d'effets latents simples.");
         }
         else if (material.getId() == "slime_residue")
         {
@@ -2121,6 +2167,195 @@ namespace
         return true;
     }
 
+    bool craftRunicIronBlade(Player& player)
+    {
+        std::vector<RecipeIngredient> ingredients = {{"runic_iron_shard", 3}, {"rusted_metal_fragment", 4}, {"amber_tempering_oil", 1}, {"arcane_dust", 1}};
+
+        if (!hasRecipeIngredients(player, "runic_iron_shard", 3)
+            || !hasRecipeIngredients(player, "rusted_metal_fragment", 4)
+            || !hasRecipeIngredients(player, "amber_tempering_oil", 1)
+            || !hasRecipeIngredients(player, "arcane_dust", 1))
+        {
+            inventoryNotice << "Recette incomplète : il faut 3 Éclats de fer runique, 4 Fragments de métal rouillé, 1 Huile de trempe ambrée et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
+            return false;
+        }
+
+        bool exceptionalMajority = recipeUsesExceptionalMajority(player, ingredients);
+        consumeRecipeIngredient(player, "runic_iron_shard", 3, exceptionalMajority);
+        consumeRecipeIngredient(player, "rusted_metal_fragment", 4, exceptionalMajority);
+        consumeRecipeIngredient(player, "amber_tempering_oil", 1, exceptionalMajority);
+        consumeRecipeIngredient(player, "arcane_dust", 1, exceptionalMajority);
+
+        addCraftedWeaponWithExceptionalChance(player, WeaponCatalog::createRunicIronBlade(), exceptionalMajority);
+        inventoryNotice << "Tu graves une rainure propre dans la lame : la Lame de fer runique est prête." << std::endl;
+        inventoryNotice << "Effet actif en combat : brise-garde léger si la cible se protège." << std::endl;
+        inventoryNotice << std::endl;
+        return true;
+    }
+
+    bool craftAmberEdgeDagger(Player& player)
+    {
+        std::vector<RecipeIngredient> ingredients = {{"amber_tempering_oil", 2}, {"rusted_metal_fragment", 3}, {"shadow_thread", 1}, {"wolf_fang", 1}};
+
+        if (!hasRecipeIngredients(player, "amber_tempering_oil", 2)
+            || !hasRecipeIngredients(player, "rusted_metal_fragment", 3)
+            || !hasRecipeIngredients(player, "shadow_thread", 1)
+            || !hasRecipeIngredients(player, "wolf_fang", 1))
+        {
+            inventoryNotice << "Recette incomplète : il faut 2 Huiles de trempe ambrée, 3 Fragments de métal rouillé, 1 Fil d'ombre et 1 Croc de loup." << std::endl;
+            inventoryNotice << std::endl;
+            return false;
+        }
+
+        bool exceptionalMajority = recipeUsesExceptionalMajority(player, ingredients);
+        consumeRecipeIngredient(player, "amber_tempering_oil", 2, exceptionalMajority);
+        consumeRecipeIngredient(player, "rusted_metal_fragment", 3, exceptionalMajority);
+        consumeRecipeIngredient(player, "shadow_thread", 1, exceptionalMajority);
+        consumeRecipeIngredient(player, "wolf_fang", 1, exceptionalMajority);
+
+        addCraftedWeaponWithExceptionalChance(player, WeaponCatalog::createAmberEdgeDagger(), exceptionalMajority);
+        inventoryNotice << "La trempe ambrée accroche le tranchant : la Dague d'ambre vive est prête." << std::endl;
+        inventoryNotice << "Effet actif en combat : saignement faible surtout sur cible fragilisée." << std::endl;
+        inventoryNotice << std::endl;
+        return true;
+    }
+
+    bool craftAshenLongbow(Player& player)
+    {
+        std::vector<RecipeIngredient> ingredients = {{"kitsune_ember", 1}, {"beast_hide", 2}, {"worn_leather_piece", 2}, {"amber_tempering_oil", 1}};
+
+        if (!hasRecipeIngredients(player, "kitsune_ember", 1)
+            || !hasRecipeIngredients(player, "beast_hide", 2)
+            || !hasRecipeIngredients(player, "worn_leather_piece", 2)
+            || !hasRecipeIngredients(player, "amber_tempering_oil", 1))
+        {
+            inventoryNotice << "Recette incomplète : il faut 1 Braise kitsune, 2 Peaux de bête robustes, 2 Morceaux de cuir abîmé et 1 Huile de trempe ambrée." << std::endl;
+            inventoryNotice << std::endl;
+            return false;
+        }
+
+        bool exceptionalMajority = recipeUsesExceptionalMajority(player, ingredients);
+        consumeRecipeIngredient(player, "kitsune_ember", 1, exceptionalMajority);
+        consumeRecipeIngredient(player, "beast_hide", 2, exceptionalMajority);
+        consumeRecipeIngredient(player, "worn_leather_piece", 2, exceptionalMajority);
+        consumeRecipeIngredient(player, "amber_tempering_oil", 1, exceptionalMajority);
+
+        addCraftedWeaponWithExceptionalChance(player, WeaponCatalog::createAshenLongbow(), exceptionalMajority);
+        inventoryNotice << "La corde garde une chaleur sèche : l'Arc long cendré est prêt." << std::endl;
+        inventoryNotice << "Effet actif en combat : amorce de brûlure, meilleure avec munitions de cendre." << std::endl;
+        inventoryNotice << std::endl;
+        return true;
+    }
+
+    bool craftChannelingScepter(Player& player)
+    {
+        std::vector<RecipeIngredient> ingredients = {{"runic_iron_shard", 2}, {"arcane_dust", 3}, {"amber_tempering_oil", 1}, {"unstable_core", 1}};
+
+        if (!hasRecipeIngredients(player, "runic_iron_shard", 2)
+            || !hasRecipeIngredients(player, "arcane_dust", 3)
+            || !hasRecipeIngredients(player, "amber_tempering_oil", 1)
+            || !hasRecipeIngredients(player, "unstable_core", 1))
+        {
+            inventoryNotice << "Recette incomplète : il faut 2 Éclats de fer runique, 3 Poussières arcaniques, 1 Huile de trempe ambrée et 1 Noyau instable." << std::endl;
+            inventoryNotice << std::endl;
+            return false;
+        }
+
+        bool exceptionalMajority = recipeUsesExceptionalMajority(player, ingredients);
+        consumeRecipeIngredient(player, "runic_iron_shard", 2, exceptionalMajority);
+        consumeRecipeIngredient(player, "arcane_dust", 3, exceptionalMajority);
+        consumeRecipeIngredient(player, "amber_tempering_oil", 1, exceptionalMajority);
+        consumeRecipeIngredient(player, "unstable_core", 1, exceptionalMajority);
+
+        addCraftedWeaponWithExceptionalChance(player, WeaponCatalog::createChannelingScepter(), exceptionalMajority);
+        inventoryNotice << "Le noyau cesse de vibrer contre les runes : le Sceptre canalisateur est prêt." << std::endl;
+        inventoryNotice << "Effet actif en combat : stabilisation légère des attaques magiques." << std::endl;
+        inventoryNotice << std::endl;
+        return true;
+    }
+
+    bool craftRunicChainmail(Player& player)
+    {
+        std::vector<RecipeIngredient> ingredients = {{"runic_iron_shard", 4}, {"rusted_metal_fragment", 5}, {"worn_leather_piece", 2}, {"arcane_dust", 1}};
+
+        if (!hasRecipeIngredients(player, "runic_iron_shard", 4)
+            || !hasRecipeIngredients(player, "rusted_metal_fragment", 5)
+            || !hasRecipeIngredients(player, "worn_leather_piece", 2)
+            || !hasRecipeIngredients(player, "arcane_dust", 1))
+        {
+            inventoryNotice << "Recette incomplète : il faut 4 Éclats de fer runique, 5 Fragments de métal rouillé, 2 Morceaux de cuir abîmé et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
+            return false;
+        }
+
+        bool exceptionalMajority = recipeUsesExceptionalMajority(player, ingredients);
+        consumeRecipeIngredient(player, "runic_iron_shard", 4, exceptionalMajority);
+        consumeRecipeIngredient(player, "rusted_metal_fragment", 5, exceptionalMajority);
+        consumeRecipeIngredient(player, "worn_leather_piece", 2, exceptionalMajority);
+        consumeRecipeIngredient(player, "arcane_dust", 1, exceptionalMajority);
+
+        addCraftedArmorWithExceptionalChance(player, ArmorCatalog::createRunicChainmail(), exceptionalMajority);
+        inventoryNotice << "Tu relies les mailles autour de runes simples : la Cotte runique de garde est prête." << std::endl;
+        inventoryNotice << "Effet actif en combat : meilleure absorption des chocs faibles." << std::endl;
+        inventoryNotice << std::endl;
+        return true;
+    }
+
+    bool craftShadowThreadCoat(Player& player)
+    {
+        std::vector<RecipeIngredient> ingredients = {{"shadow_thread", 4}, {"worn_leather_piece", 3}, {"amber_tempering_oil", 1}, {"arcane_dust", 1}};
+
+        if (!hasRecipeIngredients(player, "shadow_thread", 4)
+            || !hasRecipeIngredients(player, "worn_leather_piece", 3)
+            || !hasRecipeIngredients(player, "amber_tempering_oil", 1)
+            || !hasRecipeIngredients(player, "arcane_dust", 1))
+        {
+            inventoryNotice << "Recette incomplète : il faut 4 Fils d'ombre, 3 Morceaux de cuir abîmé, 1 Huile de trempe ambrée et 1 Poussière arcanique." << std::endl;
+            inventoryNotice << std::endl;
+            return false;
+        }
+
+        bool exceptionalMajority = recipeUsesExceptionalMajority(player, ingredients);
+        consumeRecipeIngredient(player, "shadow_thread", 4, exceptionalMajority);
+        consumeRecipeIngredient(player, "worn_leather_piece", 3, exceptionalMajority);
+        consumeRecipeIngredient(player, "amber_tempering_oil", 1, exceptionalMajority);
+        consumeRecipeIngredient(player, "arcane_dust", 1, exceptionalMajority);
+
+        addCraftedArmorWithExceptionalChance(player, ArmorCatalog::createShadowThreadCoat(), exceptionalMajority);
+        inventoryNotice << "Les coutures deviennent presque invisibles : le Manteau cousu d'ombre est prêt." << std::endl;
+        inventoryNotice << "Effet actif en combat : bon contre coups rapides, moins fiable contre chocs lourds." << std::endl;
+        inventoryNotice << std::endl;
+        return true;
+    }
+
+    bool craftPolishedScaleHarness(Player& player)
+    {
+        std::vector<RecipeIngredient> ingredients = {{"polished_scale_plate", 4}, {"draconic_scale_fragment", 2}, {"beast_hide", 2}, {"amber_tempering_oil", 1}};
+
+        if (!hasRecipeIngredients(player, "polished_scale_plate", 4)
+            || !hasRecipeIngredients(player, "draconic_scale_fragment", 2)
+            || !hasRecipeIngredients(player, "beast_hide", 2)
+            || !hasRecipeIngredients(player, "amber_tempering_oil", 1))
+        {
+            inventoryNotice << "Recette incomplète : il faut 4 Plaques d'écailles polies, 2 Fragments d'écaille draconique, 2 Peaux de bête robustes et 1 Huile de trempe ambrée." << std::endl;
+            inventoryNotice << std::endl;
+            return false;
+        }
+
+        bool exceptionalMajority = recipeUsesExceptionalMajority(player, ingredients);
+        consumeRecipeIngredient(player, "polished_scale_plate", 4, exceptionalMajority);
+        consumeRecipeIngredient(player, "draconic_scale_fragment", 2, exceptionalMajority);
+        consumeRecipeIngredient(player, "beast_hide", 2, exceptionalMajority);
+        consumeRecipeIngredient(player, "amber_tempering_oil", 1, exceptionalMajority);
+
+        addCraftedArmorWithExceptionalChance(player, ArmorCatalog::createPolishedScaleHarness(), exceptionalMajority);
+        inventoryNotice << "Les plaques se superposent sans trop gêner le mouvement : le Harnais d'écailles polies est prêt." << std::endl;
+        inventoryNotice << "Effet actif en combat : excellente absorption, mais entretien plus coûteux sur gros impacts." << std::endl;
+        inventoryNotice << std::endl;
+        return true;
+    }
+
     // EN: craftPrecisionHarvestTools declares or implements a focused behavior used by this module.
     // FR: craftPrecisionHarvestTools déclare ou implémente un comportement précis utilisé par ce module.
     bool craftPrecisionHarvestTools(Player& player)
@@ -2407,6 +2642,14 @@ namespace
         recipes.push_back({"Dague dentelée de traque", "Arme rare", {{"goblin_ear", 2}, {"wolf_fang", 2}, {"rusted_metal_fragment", 2}}, false, true, craftSerratedMonsterDagger});
         recipes.push_back({"Robe stabilisée du laboratoire", "Armure magique", {{"unstable_core", 1}, {"slime_residue", 2}, {"arcane_dust", 2}, {"worn_leather_piece", 1}}, false, false, craftStabilizedMageRobe});
         recipes.push_back({"Marteau lesté d'arène", "Arme lourde", {{"battle_torn_badge", 1}, {"rusted_metal_fragment", 6}, {"beast_hide", 1}, {"cracked_bone", 2}}, false, true, craftWeightedOrcHammer});
+
+        recipes.push_back({"Lame de fer runique", "Arme intermédiaire", {{"runic_iron_shard", 3}, {"rusted_metal_fragment", 4}, {"amber_tempering_oil", 1}, {"arcane_dust", 1}}, false, true, craftRunicIronBlade});
+        recipes.push_back({"Dague d'ambre vive", "Arme intermédiaire", {{"amber_tempering_oil", 2}, {"rusted_metal_fragment", 3}, {"shadow_thread", 1}, {"wolf_fang", 1}}, false, true, craftAmberEdgeDagger});
+        recipes.push_back({"Arc long cendré", "Arme intermédiaire", {{"kitsune_ember", 1}, {"beast_hide", 2}, {"worn_leather_piece", 2}, {"amber_tempering_oil", 1}}, false, true, craftAshenLongbow});
+        recipes.push_back({"Sceptre canalisateur", "Arme magique intermédiaire", {{"runic_iron_shard", 2}, {"arcane_dust", 3}, {"amber_tempering_oil", 1}, {"unstable_core", 1}}, false, true, craftChannelingScepter});
+        recipes.push_back({"Cotte runique de garde", "Armure intermédiaire", {{"runic_iron_shard", 4}, {"rusted_metal_fragment", 5}, {"worn_leather_piece", 2}, {"arcane_dust", 1}}, false, true, craftRunicChainmail});
+        recipes.push_back({"Manteau cousu d'ombre", "Armure furtive", {{"shadow_thread", 4}, {"worn_leather_piece", 3}, {"amber_tempering_oil", 1}, {"arcane_dust", 1}}, false, true, craftShadowThreadCoat});
+        recipes.push_back({"Harnais d'écailles polies", "Armure de monstre", {{"polished_scale_plate", 4}, {"draconic_scale_fragment", 2}, {"beast_hide", 2}, {"amber_tempering_oil", 1}}, false, true, craftPolishedScaleHarness});
 
         // EN: recipes.push_back declares or implements a focused behavior used by this module.
         // FR: recipes.push_back déclare ou implémente un comportement précis utilisé par ce module.
@@ -3081,7 +3324,7 @@ bool InventorySelection::openConsumables(Player& player)
             }
 
             int hpBefore = player.getHp();
-            player.heal(consumable.getPower());
+            player.heal(consumable.getHealingAmountForMaxHp(player.getMaxHp()));
             ThreatSystem::markSelfHealingAction(player);
 
             if (!player.hasInfiniteConsumables())

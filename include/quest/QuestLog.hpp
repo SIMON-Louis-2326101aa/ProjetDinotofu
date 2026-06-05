@@ -42,12 +42,14 @@ public:
     // EN: canAcceptGuildQuest declares or implements a focused behavior used by this module.
     // FR: canAcceptGuildQuest déclare ou implémente un comportement précis utilisé par ce module.
     bool canAcceptGuildQuest() const;
+    bool canAcceptGuildQuest(int activeLimit) const;
     // EN: canAcceptPersonalQuestForClient declares or implements a focused behavior used by this module.
     // FR: canAcceptPersonalQuestForClient déclare ou implémente un comportement précis utilisé par ce module.
     bool canAcceptPersonalQuestForClient(const std::string& client) const;
     // EN: addQuest declares or implements a focused behavior used by this module.
     // FR: addQuest déclare ou implémente un comportement précis utilisé par ce module.
     bool addQuest(const Quest& quest);
+    bool addQuestWithGuildLimit(const Quest& quest, int activeLimit);
     // EN: progressQuest declares or implements a focused behavior used by this module.
     // FR: progressQuest déclare ou implémente un comportement précis utilisé par ce module.
     bool progressQuest(const std::string& questId, int amount);
@@ -67,6 +69,7 @@ public:
     // EN: turnInQuest declares or implements a focused behavior used by this module.
     // FR: turnInQuest déclare ou implémente un comportement précis utilisé par ce module.
     bool turnInQuest(const std::string& questId);
+    int expireOverdueQuests(int currentDay);
     // EN: hasTurnInReadyQuestForClient declares or implements a focused behavior used by this module.
     // FR: hasTurnInReadyQuestForClient déclare ou implémente un comportement précis utilisé par ce module.
     bool hasTurnInReadyQuestForClient(const std::string& client) const;
@@ -74,7 +77,7 @@ public:
     // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
     const std::vector<Quest>& getGuildBoardOffers() const;
     std::vector<Quest>& getGuildBoardOffers();
-    void ensureGuildBoardReady(int playerLevel, int currentCombatsStarted);
+    void ensureGuildBoardReady(int playerLevel, int currentCombatsStarted, int targetSizeBonus = 0);
     bool removeGuildBoardOfferAt(int offerIndex, int currentCombatsStarted);
     int getGuildBoardCombatsBeforeRefresh(int currentCombatsStarted) const;
     int getGuildBoardPendingReplacements() const;

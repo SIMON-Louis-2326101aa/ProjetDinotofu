@@ -639,10 +639,34 @@ void BossUltimate::executeBossUltimate(
     {
         int authority = boss.getSpecialEffect();
         bool devLimit = random.between(1, 100) <= 45;
+        Player* concretePlayer = dynamic_cast<Player*>(&player);
 
         appendUltimateLine(ultimateLines, "Une fenêtre invisible s'ouvre dans l'air.");
         appendUltimateLine(ultimateLines, "FireFlight ne lève pas son arme. Il lève la main vers le monde.");
         ultimateLines.push_back("");
+
+        if (concretePlayer != nullptr && concretePlayer->isGodModeEnabled())
+        {
+            const bool hijackGodCheat = random.between(1, 100) <= 50;
+            if (hijackGodCheat)
+            {
+                concretePlayer->disableGodModeForFireFlight();
+                const int recovered = 35 + authority * 4;
+                boss.heal(recovered);
+                appendUltimateLine(ultimateLines, "Interface FireFlight : [idontwanttodie] détourné.");
+                appendUltimateLine(ultimateLines, "Tu avais appelé une divinité pour refuser la mort. Elle vient de changer de camp.");
+                appendUltimateLine(ultimateLines, "Le cheat de la divinité soigne FireFlight de ", recovered, " PV avant de disparaître de tes mains.");
+                ultimateLines.push_back("");
+            }
+            else
+            {
+                concretePlayer->disableGodModeForFireFlight();
+                appendUltimateLine(ultimateLines, "Interface FireFlight : suppression propre de [idontwanttodie].");
+                appendUltimateLine(ultimateLines, "FireFlight lit la ligne, soupire, puis l'efface sans rage.");
+                appendUltimateLine(ultimateLines, "Il dit : \"Une vraie fin ne se teste pas avec une immortalité empruntée.\"");
+                ultimateLines.push_back("");
+            }
+        }
 
         if (devLimit)
         {
@@ -848,6 +872,36 @@ void BossUltimate::executeBossUltimate(
         }
         applyDirectDamage(player, damage, &ultimateLines);
         appendUltimateLine(ultimateLines, "Les Jumelles te laissent avec une question : as-tu évité le mensonge, ou seulement préféré l'autre ?");
+        ultimateLines.push_back("");
+    }
+
+    else if (boss.getBossId() == 36)
+    {
+        int sync = boss.getSpecialEffect();
+        int damage = 36 + sync * 5 + random.between(12, 28);
+
+        appendUltimateLine(ultimateLines, "La Source de l'Anomalie devient presque lisible.");
+        appendUltimateLine(ultimateLines, "C'est ça le pire : pendant une seconde, tout semble stable.");
+        ultimateLines.push_back("");
+        appendUltimateLine(ultimateLines, "Compilation de la vraie erreur.");
+        ultimateLines.push_back("");
+        appendUltimateLine(ultimateLines, "[INTERFACE] options réécrites : 1/attaquer 2/attendre 3/te viser 4/????");
+
+        if (player.isInDefensePosture())
+        {
+            damage = damage * 75 / 100;
+            appendUltimateLine(ultimateLines, "Tu refuses le faux menu. La Source se dissipe sur une partie de l'impact.");
+        }
+        else
+        {
+            appendUltimateLine(ultimateLines, "Tu cherches une cible stable. La Source sourit depuis les textures.");
+        }
+
+        applyDirectDamage(player, damage, &ultimateLines);
+        boss.heal(12 + sync * 2);
+        boss.setSpecialEffect(sync + 3);
+        appendUltimateLine(ultimateLines, "La Source récupère quelques PV en rechargeant un morceau d'arène.");
+        appendUltimateLine(ultimateLines, "Synchronisation corrompue : ", boss.getSpecialEffect());
         ultimateLines.push_back("");
     }
     else

@@ -106,7 +106,7 @@ std::string SpecialEncounterRules::getIntentText(
 
     if (hasLouis && hasFireFlight && hasTrexof)
     {
-        return "Intention : test de créateur entre amis. Fire Flight commande, Louis improvise, Trexof cherche la faille utile.";
+        return "Intention : duel d'improvisation entre amis. Fire Flight commande, Louis improvise, Trexof cherche la faille utile.";
     }
 
     if (hasHenrique && hasMattzelda && hasSkuro)

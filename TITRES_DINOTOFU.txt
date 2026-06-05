@@ -1,0 +1,846 @@
+LISTE DES TITRES DINOTOFU
+
+But du document : référence développeur/source pour les titres, leurs conditions et leur logique d'affichage.
+Côté joueur, les titres secrets restent cachés en ???? tant qu'ils ne sont pas obtenus.
+Un personnage peut équiper jusqu'à 3 titres ; les bonus doivent rester très faibles et surtout lore/dialogues/réputation.
+
+Total : 150 titres
+Visibles avant obtention : 23
+Cachés avant obtention : 127
+
+
+============================================================
+SYSTÈME
+============================================================
+- Bienvenue dans Dinotofu
+  Affichage avant obtention : visible
+  Obtention : Lancer le jeu avec un personnage chargé ou créé.
+  Effet : Titre de session : prouve que le personnage a ouvert le registre du jeu. Effet très faible : peut déclencher de petites lignes d'accueil.
+  Requis pour le titre ultime : oui
+- Voix du terminal
+  Affichage avant obtention : visible
+  Obtention : Lancer le jeu depuis la version terminal.
+  Effet : Titre de session : identité terminal/console assumée. Effet très faible : peut modifier certaines répliques d'interface ou de registre.
+  Requis pour le titre ultime : oui
+- Une sorte de titre ?
+  Affichage avant obtention : visible
+  Obtention : Obtenir son premier titre, quel qu'il soit.
+  Effet : Et une sorte de description...
+  Requis pour le titre ultime : oui
+
+============================================================
+GUILDE
+============================================================
+- Aventurier
+  Affichage avant obtention : visible
+  Obtention : Réussir l'inscription officielle de la guilde.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier rang F
+  Affichage avant obtention : visible
+  Obtention : Valider des contrats officiels après inscription.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier rang E
+  Affichage avant obtention : visible
+  Obtention : Monter le dossier de guilde avec assez de contrats et de niveau.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier rang D
+  Affichage avant obtention : visible
+  Obtention : Atteindre le rang D de guilde.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier rang C
+  Affichage avant obtention : visible
+  Obtention : Atteindre le rang C de guilde.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier rang B
+  Affichage avant obtention : visible
+  Obtention : Atteindre le rang B de guilde.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier rang A
+  Affichage avant obtention : visible
+  Obtention : Atteindre le rang A de guilde.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Main fiable de la guilde
+  Affichage avant obtention : visible
+  Obtention : Valider plusieurs contrats simples sans être un poids pour le panneau.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier rang S
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre le rang S de guilde.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier rang SS
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre le rang SS de guilde.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier rang SSS
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre le rang SSS de guilde.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier - Héros mondial
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre le rang Héros mondial.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier - Légende
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre le rang Légende.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Aventurier - Rang divin
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre le rang Dieu.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Le registre n'a plus de rang
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre le rang maximum actuel de guilde.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Niveau maximum, problème minimum
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre le niveau maximum du personnage.
+  Effet : Titre de progression : peut déclencher des réactions de PNJ qui comprennent que le niveau n'est plus le vrai problème.
+  Requis pour le titre ultime : oui
+- Nom scellé par la guilde
+  Affichage avant obtention : secret / ????
+  Obtention : Valider une mission que le panneau préfère ne pas expliquer.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Sang-froid de rang S
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer un contrat de rang S ou supérieur sans que la guilde le banalise.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Vétéran des contrats scellés
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler des contrats très dangereux ou confidentiels.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Mandataire des rois
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir une mission de portée royale ou mondiale.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Ligne vivante du registre
+  Affichage avant obtention : secret / ????
+  Obtention : Approcher les contrats que les registres modifient eux-mêmes.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+VILLE / GUILDE
+============================================================
+- Aide de quartier
+  Affichage avant obtention : visible
+  Obtention : Rendre service aux habitants par des contrats sobres.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Négociateur de crise
+  Affichage avant obtention : secret / ????
+  Obtention : Résoudre une mission sociale ou politique sans transformer le problème en bagarre.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Main des réparations
+  Affichage avant obtention : secret / ????
+  Obtention : Aider une ville abîmée avec des actions concrètes et modestes.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Rumeur calmée
+  Affichage avant obtention : secret / ????
+  Obtention : Empêcher un panneau, une rumeur ou un témoin de déclencher une panique inutile.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+QUÊTES / INVENTAIRE
+============================================================
+- Sac discipliné
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir une quête de tri de sac ou d'inventaire trop chargé sans perdre l'objet important.
+  Effet : Influence faible : les intendants et marchands font davantage confiance à ton sens du tri.
+  Requis pour le titre ultime : oui
+
+============================================================
+QUÊTES / ÉQUIPEMENT
+============================================================
+- Armurier qui écoute
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir une quête d'armure mal ajustée en respectant la morphologie d'une race ou sous-race.
+  Effet : Influence faible : forgerons et semi-humains réagissent mieux à tes conseils d'ajustement.
+  Requis pour le titre ultime : oui
+- Intendant de terrain
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir une mission de préparation d'inventaire, équipement ou durabilité.
+  Effet : Influence faible : la guilde te voit comme quelqu'un qui prépare son sac avant de mourir bêtement.
+  Requis pour le titre ultime : oui
+- Chaîne tenue
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer une suite de demandes, délais ou priorités sans casser le fil de mission.
+  Effet : Influence faible : le comptoir fait davantage confiance à ta gestion des priorités.
+  Requis pour le titre ultime : oui
+- Partenaire fiable
+  Affichage avant obtention : secret / ????
+  Obtention : Valider une mission liée à la participation ou aux récompenses de groupe.
+  Effet : Influence faible : les alliés et la guilde remarquent que tu ne triches pas sur la participation.
+  Requis pour le titre ultime : oui
+
+============================================================
+BIOMES / EXPLORATION
+============================================================
+- Éclaireur de route
+  Affichage avant obtention : visible
+  Obtention : Valider des missions de route, de piste ou d'exploration lisible.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Cartographe de biome
+  Affichage avant obtention : secret / ????
+  Obtention : Corriger ou explorer une mission où le terrain compte vraiment.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Marcheur de frontières
+  Affichage avant obtention : secret / ????
+  Obtention : Explorer une limite de biome ou de carte instable.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Pied sûr des ruines
+  Affichage avant obtention : secret / ????
+  Obtention : Revenir de ruines, carrières, caveaux ou ateliers dangereux.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Respiration de brume
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre à une mission où la brume, l'eau ou les canaux troublent la route.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Corniche tenue
+  Affichage avant obtention : secret / ????
+  Obtention : Revenir d'une falaise, montagne ou route draconique sans y laisser le dossier.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Frontière refusée
+  Affichage avant obtention : secret / ????
+  Obtention : Stabiliser une région que les cartes refusent de garder.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+BESTIAIRE / MATÉRIAUX
+============================================================
+- Archiviste de terrain
+  Affichage avant obtention : visible
+  Obtention : Rapporter des observations utiles au registre.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Trieur de matériaux
+  Affichage avant obtention : visible
+  Obtention : Aider la guilde à classer des composants ou lots douteux.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Inspecteur de reliques
+  Affichage avant obtention : secret / ????
+  Obtention : Classer une ressource rare, ancienne ou liée à un boss.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Lecteur de traces
+  Affichage avant obtention : secret / ????
+  Obtention : Compléter un dossier de terrain sans révéler une faiblesse gratuite.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Catalogue vivant
+  Affichage avant obtention : secret / ????
+  Obtention : Étudier une archive ou un bestiaire qui semble te lire en retour.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Main qui ne vend pas tout
+  Affichage avant obtention : secret / ????
+  Obtention : Conserver assez de logique dans les matériaux rares pour ne pas les brader.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Œil des composants maudits
+  Affichage avant obtention : secret / ????
+  Obtention : Identifier un lot dont la qualité ou la rareté ment.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+CHASSE
+============================================================
+- Chasseur de guilde
+  Affichage avant obtention : visible
+  Obtention : Valider une première chasse chiffrée officielle.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Chasseur confirmé
+  Affichage avant obtention : visible
+  Obtention : Valider une chasse chiffrée de rang B ou plus.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Nettoyeur de nuisibles
+  Affichage avant obtention : visible
+  Obtention : Valider une chasse contre rats, slimes, gobelins ou insectoïdes mineurs.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Pisteur de bêtes
+  Affichage avant obtention : visible
+  Obtention : Valider une chasse contre loups, ours ou bêtes lourdes.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Gardien des tombes
+  Affichage avant obtention : visible
+  Obtention : Valider une chasse de squelettes, goules, revenants ou morts-vivants.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Briseur d'automates
+  Affichage avant obtention : visible
+  Obtention : Valider une chasse de golems, automates, armures vivantes, statues ou pantins animés.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Grand chasseur de guilde
+  Affichage avant obtention : secret / ????
+  Obtention : Valider une chasse chiffrée de rang S ou plus.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Ratier des caves
+  Affichage avant obtention : secret / ????
+  Obtention : Nettoyer assez de nuisibles pour que les caves respirent.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Gobelinophobe administratif
+  Affichage avant obtention : secret / ????
+  Obtention : Valider des contrats gobelins avec preuves de guilde.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Fléau des slimes
+  Affichage avant obtention : secret / ????
+  Obtention : Faire assez de nettoyage gélatineux pour marquer le registre.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Morsure rendue
+  Affichage avant obtention : secret / ????
+  Obtention : Valider des chasses de loups ou bêtes à crocs.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Tisseur coupé
+  Affichage avant obtention : secret / ????
+  Obtention : Nettoyer des nids ou fils insectoïdes sans y laisser la mission.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Os remis au silence
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler des contrats morts-vivants ou funéraires.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Traqueur de draconides
+  Affichage avant obtention : secret / ????
+  Obtention : Valider une chasse de draconides ou drakes.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Tueur de dragon
+  Affichage avant obtention : secret / ????
+  Obtention : Valider une chasse officielle visant des dragons.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Fléau infernal
+  Affichage avant obtention : secret / ????
+  Obtention : Valider une chasse visant des démons ou présences infernales.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Bourreau des nids impossibles
+  Affichage avant obtention : secret / ????
+  Obtention : Éteindre une source de monstres qui refuse les rapports normaux.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Ça compte comme entraînement
+  Affichage avant obtention : secret / ????
+  Obtention : Tuer au moins 10 monstres.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Nettoyeur professionnel
+  Affichage avant obtention : secret / ????
+  Obtention : Tuer au moins 100 monstres.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Le compteur a abandonné
+  Affichage avant obtention : secret / ????
+  Obtention : Tuer au moins 1 000 monstres.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Pourquoi ils étaient autant ?
+  Affichage avant obtention : secret / ????
+  Obtention : Tuer au moins 10 000 monstres.
+  Effet : Titre drôle de massacre administratif : surtout utilisé pour réactions de guilde et registres.
+  Requis pour le titre ultime : oui
+
+============================================================
+DRÔLE / SURVIE
+============================================================
+- Première chute officielle
+  Affichage avant obtention : visible
+  Obtention : Mourir au moins une fois en mode non définitif.
+  Effet : Titre roleplay : rappelle que le personnage a déjà connu une vraie chute.
+  Requis pour le titre ultime : oui
+- Survivant administratif
+  Affichage avant obtention : visible
+  Obtention : Revenir après une mort que le registre a dû noter.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+ÉCONOMIE
+============================================================
+- Millionnaire qui recompte
+  Affichage avant obtention : secret / ????
+  Obtention : Posséder au moins 1 000 000 de pièces.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Banquier de l'impossible
+  Affichage avant obtention : secret / ????
+  Obtention : Posséder au moins 10 000 000 de pièces.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Le coffre a peur de toi
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler une richesse assez absurde pour inquiéter les marchands.
+  Effet : Titre drôle et économique : peut provoquer des réactions de marchands ou de banquiers.
+  Requis pour le titre ultime : oui
+- Contrôleur de prix
+  Affichage avant obtention : secret / ????
+  Obtention : Corriger ou vérifier une mission liée aux prix, taxes, stocks ou monnaies.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Commis de crise
+  Affichage avant obtention : secret / ????
+  Obtention : Aider une ville ou un comptoir pendant une tension économique réelle.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Livreur sous tension
+  Affichage avant obtention : secret / ????
+  Obtention : Mener un convoi ou une livraison fragile malgré les routes et les coûts.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Marchand qui recompte
+  Affichage avant obtention : secret / ????
+  Obtention : Démêler une facture, une monnaie ou un registre qui ne tombe pas juste.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+SEMI-HUMAINS / SOUS-RACES
+============================================================
+- Médiateur semi-humain
+  Affichage avant obtention : secret / ????
+  Obtention : Désamorcer une mission liée aux races, sous-races ou malentendus sociaux.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Parole sans morsure
+  Affichage avant obtention : secret / ????
+  Obtention : Faire respecter une différence raciale sans en faire un pouvoir gratuit.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+DRÔLE / CHASSE
+============================================================
+- Encore un slime ?
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler une réputation liée aux slimes ou aux nuisibles répétitifs.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+ANOMALIE
+============================================================
+- Lecteur d'anomalies
+  Affichage avant obtention : secret / ????
+  Obtention : Valider un contrat de guilde lié aux interfaces fausses, hallucinations ou anomalies.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Œil fissuré
+  Affichage avant obtention : secret / ????
+  Obtention : Subir ou résoudre assez d'affichages impossibles pour apprendre à douter proprement.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Celui qui recompte les cibles
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre à des missions où le nombre d'ennemis ment.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Erreur impossible
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre une source d'interface corrompue.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Erreur de surface
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre la première émanation de l'Anomalie.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Source dissipée
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre la Source stable de l'Anomalie.
+  Effet : Titre secret : l'interface reconnaît que le joueur a brisé la source sans vraiment la tuer.
+  Requis pour le titre ultime : oui
+- Texture qui respire
+  Affichage avant obtention : secret / ????
+  Obtention : Voir la Source de l'Anomalie se dissiper dans les textures.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Menu qui répond
+  Affichage avant obtention : secret / ????
+  Obtention : Être reconnu par une anomalie qui n'aurait pas dû lire le joueur.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Débogueur de cauchemar
+  Affichage avant obtention : secret / ????
+  Obtention : Faire face à une corruption d'interface sans suivre ses provocations.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+DRÔLE / ANOMALIE
+============================================================
+- Je lis les menus maintenant
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre à une situation où l'interface mentait assez pour devenir traumatisante.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MALÉDICTIONS
+============================================================
+- Exorcisé par revanche
+  Affichage avant obtention : secret / ????
+  Obtention : Briser une malédiction de boss en rebattant sa source.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Porteur de trace
+  Affichage avant obtention : secret / ????
+  Obtention : Continuer malgré une trace de boss ancrée hors combat.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Ancre brisée
+  Affichage avant obtention : secret / ????
+  Obtention : Retirer une trace que l'église ne pouvait pas exorciser seule.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Sang noir rendu
+  Affichage avant obtention : secret / ????
+  Obtention : Reprendre ce que Zelef avait marqué.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Proie qui mord
+  Affichage avant obtention : secret / ????
+  Obtention : Revenir face à Lyknir avec la marque encore fraîche.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Rancune éteinte
+  Affichage avant obtention : secret / ????
+  Obtention : Faire taire une rancune abyssale à sa source.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+BOSS
+============================================================
+- Tombeur de boss
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre un boss officiel.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Briseur de chaînes célestes
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre Fitoria.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Survivant du sang noir
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre Zelef.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Fissure du dernier rempart
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre Atlas.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Voleur de reine
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre Grinka.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Couronne brisée
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre l'Avatar d'Azelanos.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Écaille de tempête
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre le Fragment de Thamarys.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Ami des forêts furieuses
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre Mojo.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Renard du vrai reflet
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre le Reflet d'Inakari.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Acquitté du silence
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre le Jugement Silencieux.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Minute volée
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre l'Horloge des Chuchotements.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Nom sous les os
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre l'Enfant des Os Enfouis.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Survivant de la guerre
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre l'Avatar de Boros.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Cœur non soumis
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre l'Avatar d'Anastasia.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Justiciable debout
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre l'Avatar de Lexior.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Éveillé du cauchemar
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre le Fragment de Luna / Onyrae.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Main des quatre éléments
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre le Fragment de Syvaranelya.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Humain hors du registre
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre l'Écho d'Hitogami.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Chance retournée
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre l'Écho de Sérendys.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Passe-seuil
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre le Gardien du Seuil.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Sujet sans royaume
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre le Roi Sans Salle.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Nom donné à l'inconnu
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre la Bête qui n'avait pas de nom.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Entre création et ruine
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre Asterion et Nihilon.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Écho d'univers
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre l'Écho fragmenté d'Obérion.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Regard du créateur
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre l'Avatar affaibli de FireFlight, considéré comme boss final actuel.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Respiration volée
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre le Souffle sans Visage.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Clou retiré
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre la Marionnette aux Mille Clous.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Destin écarté
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre la Manifestation de Moiran.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Berger des âmes
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre le Cerf des Âmes Égarées.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Briseur de horde
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre Gorvald.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Sang royal refusé
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre Serana.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Filet arraché
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre Draiite.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Vérité sans miroir
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre les Jumelles du Miroir Fendu.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Avant la dernière porte
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre tous les boss disponibles sauf le boss final actuel.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Une invitation ?
+  Affichage avant obtention : secret / ????
+  Obtention : Obtenir la preuve qu'il ne reste plus que le dernier boss actuel.
+  Effet : Titre de seuil final : peut servir à ouvrir des dialogues, invitations ou avertissements de fin.
+  Requis pour le titre ultime : oui
+- Celui qui a tout vaincu
+  Affichage avant obtention : secret / ????
+  Obtention : Battre le boss final actuel après avoir vaincu les autres boss.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+COOP
+============================================================
+- Compagnon de revanche
+  Affichage avant obtention : secret / ????
+  Obtention : Participer à une victoire de boss qui libère une trace d'un allié.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Partage de prime propre
+  Affichage avant obtention : secret / ????
+  Obtention : Recevoir une récompense de groupe avec vraie participation.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Dernier debout du groupe
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre à une victoire de groupe quand le combat a vraiment coûté cher.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+HISTOIRE
+============================================================
+- Fin de chapitre
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer le mode histoire principal lorsqu'il sera branché.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Et ce n'était que le début...
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer le mode histoire et révéler que la suite commence seulement.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+COMPLÉTION
+============================================================
+- La fin ???
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre la vraie conclusion globale du jeu.
+  Effet : Titre de conclusion : volontairement exclu du prérequis du titre ultime.
+  Requis pour le titre ultime : non
+- Complétionniste de l'impossible
+  Affichage avant obtention : secret / ????
+  Obtention : Posséder tous les titres requis sauf lui-même et La fin ???.
+  Effet : Titre ultime : preuve que le personnage a presque tout accompli dans le registre.
+  Requis pour le titre ultime : non
+
+============================================================
+DRÔLE
+============================================================
+- J'ai glissé chef
+  Affichage avant obtention : secret / ????
+  Obtention : Tomber ou mourir d'une façon assez ridicule pour que le registre ait honte.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Promis c'était calculé
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre à une situation qui ressemble beaucoup trop à une erreur.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Le plan était de survivre
+  Affichage avant obtention : secret / ????
+  Obtention : Gagner ou revenir d'un combat alors que le plan stratégique était flou.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Pas payé assez cher pour ça
+  Affichage avant obtention : secret / ????
+  Obtention : Accepter ou terminer une mission dont la récompense semblait trop petite pour le chaos.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Désolé la guilde
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler assez d'échecs, de dégâts ou d'anomalies pour embarrasser le comptoir.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Potion avant réflexion
+  Affichage avant obtention : secret / ????
+  Obtention : Abuser des consommables ou survivre grâce à une potion prise au dernier moment.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Inventaire trop lourd
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler assez d'objets ou matériaux pour que le sac devienne une menace.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+- Presque héroïque
+  Affichage avant obtention : secret / ????
+  Obtention : Faire quelque chose d'utile, mais pas assez propre pour que la guilde appelle ça héroïque.
+  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Requis pour le titre ultime : oui
+
+- Arme entretenue
+  Catégorie : Équipement / durabilité
+  Visibilité avant obtention : caché
+  Obtention : Débloquer ou utiliser une habitude de soin d'arme avant une sortie risquée.
+  Effet : Influence faible : forgerons et guildes remarquent que tu prépares ton arme avant qu'elle ne casse.
+  Compte pour le titre ultime : oui
+
+- Armure qui respire
+  Catégorie : Équipement / durabilité
+  Visibilité avant obtention : caché
+  Obtention : Respecter assez souvent l'ajustement d'une armure, surtout avec races ou sous-races.
+  Effet : Influence faible : les artisans réagissent mieux à tes remarques d'ajustement.
+  Compte pour le titre ultime : oui
+
+- Retour par le bon chemin
+  Catégorie : Biomes / exploration
+  Visibilité avant obtention : caché
+  Obtention : Accumuler assez de routes, fuites ou explorations pour apprendre à revenir proprement.
+  Effet : Influence faible : améliore surtout les dialogues de route et d'exploration.
+  Compte pour le titre ultime : oui

@@ -40,6 +40,21 @@ const char* shopTypeToText(ShopType type)
         case ShopType::Alchemist:
             return "Alchimiste PNJ";
 
+        case ShopType::Enchanter:
+            return "Enchanteur";
+
+        case ShopType::CityService:
+            return "Services de ville";
+
+        case ShopType::Lodging:
+            return "Auberge et logement";
+
+        case ShopType::Transport:
+            return "Relais et transports";
+
+        case ShopType::Church:
+            return "Église et exorciste";
+
         case ShopType::BlackMarket:
             return "Marché noir";
 

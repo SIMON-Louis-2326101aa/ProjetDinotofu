@@ -194,7 +194,7 @@ namespace
             "Rumeur du commandant qui ne comprend pas l'hostilité",
             "Groupes et héros",
             "Camp d'entraînement / salves lointaines",
-            "Une rumeur présente Fire Flight comme meneur spécial avant ses vraies révélations de boss final.",
+            "Une rumeur présente Fire Flight comme meneur spécial avant ses vraies révélations de test final.",
             {
                 "On raconte qu'un commandant observe parfois les combats comme s'il cherchait encore une raison de ne pas tirer.",
                 "Il comprend les lignes, les salves et les positions. Il comprend beaucoup moins pourquoi des humains ou semi-humains choisissent d'être ennemis.",
@@ -204,6 +204,42 @@ namespace
         };
     }
 
+
+    LegendArchiveEntry makeCurseCounterRites()
+    {
+        return LegendArchiveEntry{
+            "curse_counter_rites",
+            "Les trois manières de rompre une trace",
+            "Malédictions et rites",
+            "Bibliothèque / rayon exorcisme",
+            "Une note explique pourquoi certaines malédictions exigent autre chose qu'un exorcisme classique.",
+            {
+                "Les prêtres répètent souvent qu'une malédiction n'est pas toujours une maladie.",
+                "Si elle vient d'un objet, il faut parfois isoler ou détruire l'objet source au lieu de purifier le porteur.",
+                "Si elle vient d'un serment, il faut une vérité, un témoin ou une rupture symbolique : l'eau bénite seule ne suffit pas.",
+                "Si elle vient d'une légende, la bibliothèque cherche la contre-version : l'histoire qui sait comment se terminer.",
+                "Le registre garde cette règle sans donner de chiffres. Comprendre la famille d'une trace ne révèle pas encore son effet exact."
+            }
+        };
+    }
+
+    LegendArchiveEntry makeCurseCursedPatients()
+    {
+        return LegendArchiveEntry{
+            "curse_cursed_patients",
+            "Le patient n'est pas la malédiction",
+            "Malédictions et PNJ",
+            "Église / registre de Frère Calixte",
+            "Une archive pose les bases des malédictions sur personnages non-joueurs.",
+            {
+                "Frère Calixte refuse d'écrire un nom de patient à côté d'un nom de malédiction avant diagnostic.",
+                "Un habitant peut trembler, perdre le sommeil ou porter une aura étrange sans savoir ce qui l'atteint.",
+                "L'église commence donc par des catégories vagues : santé, sommeil, esprit, présence sociale, équipement, corruption.",
+                "Un mauvais diagnostic n'est pas inutile : il écarte des pistes et évite de traiter un innocent comme une énigme déjà résolue.",
+                "Le registre rappelle surtout ceci : aider un PNJ maudit, ce n'est pas cliquer sur soigner. C'est comprendre ce qu'il porte."
+            }
+        };
+    }
 
     LegendArchiveEntry makeLivingLibraryKeeper()
     {
@@ -455,6 +491,8 @@ std::vector<LegendArchiveEntry> LegendTriggerSystem::getArchiveEntries()
         makeFriendlyTrioRumor(),
         makeProtectedHestiaRumor(),
         makeFireFlightCommandRumor(),
+        makeCurseCounterRites(),
+        makeCurseCursedPatients(),
         makeLivingLibraryKeeper(),
         makeTavernStorytellerRoute(),
         makeBreathingShelfRumor(),
@@ -527,6 +565,71 @@ std::vector<LegendArchiveEntry> LegendTriggerSystem::getArchiveEntries()
             }
         },
         LegendArchiveEntry{
+            "legend_camp_abandoned_pot",
+            "Rumeur de la marmite encore tiède",
+            "Déclencheurs et rumeurs",
+            "Campement abandonné / feu couvert de cendres",
+            "Une petite rumeur de route explique qu'un camp vide peut être plus inquiétant qu'un camp hostile.",
+            {
+                "La marmite ne bout plus, mais elle n'est pas froide.",
+                "Dans les récits de caravane, ce détail suffit à faire taire les plus bruyants : quelqu'un est parti trop vite, ou quelqu'un attend que tu poses la mauvaise question.",
+                "Les vieux pisteurs ne disent pas de fuir. Ils disent de compter les bols, les empreintes et les sacs encore fermés.",
+                "Le registre classe cette scène comme trace de terrain : petite, mais assez nette pour mériter prudence."
+            }
+        },
+        LegendArchiveEntry{
+            "legend_bridge_three_tolls",
+            "Conte du pont aux trois péages",
+            "Contes pour enfant",
+            "Bibliothèque / histoire de route",
+            "Un conte drôle transforme les taxes de pont, les gobelins et les mauvais négociateurs en leçon de survie.",
+            {
+                "Le premier péage demandait une pièce. Le second demandait deux pièces. Le troisième demandait le sac entier, parce que le gobelin avait appris les mathématiques chez Grinka.",
+                "Un enfant demanda pourquoi le héros ne passait pas à la nage. Le conteur répondit que les rivières taxent aussi, mais avec des dents.",
+                "La morale change selon la région : négocie avant le pont, combats après l'embuscade, et ne donne jamais ton meilleur couteau à un gobelin qui sait écrire.",
+                "Le registre garde le conte parce qu'il explique mieux la route commerciale que certains rapports officiels."
+            }
+        },
+        LegendArchiveEntry{
+            "legend_class_wall_of_names",
+            "Mur des classes trop nombreuses",
+            "Règles du registre",
+            "Salle d'inscription / plaques de bois",
+            "Une note justifie pourquoi les classes sont rangées par familles plutôt qu'affichées en un seul mur illisible.",
+            {
+                "Le mur d'inscription a déjà essayé d'afficher toutes les classes d'un coup.",
+                "Trois apprentis se sont perdus avant d'avoir choisi une arme, un mage a signé dans la mauvaise case, et un forgeron a demandé si le mur pouvait être réparé avec du cuir.",
+                "Depuis, la guilde range les profils par familles : contact, distance, magie, invocation, soutien, hybride et artisanat.",
+                "Ce n'est pas moins complet. C'est juste plus humain pour ceux qui veulent revenir en arrière avant de choisir leur avenir."
+            }
+        },
+        LegendArchiveEntry{
+            "legend_guild_cook_first_soup",
+            "Conte de la soupe qui sauva une expédition",
+            "Groupes et héros",
+            "Cuisine de guilde / louche cabossée",
+            "Une histoire donne de la valeur aux classes artisanales et aux préparations avant le combat.",
+            {
+                "Personne ne voulait engager le cuisinier. Il ne portait ni épée rare, ni grimoire, ni armure brillante.",
+                "Puis la neige a bloqué le col, les potions ont gelé, et le héros le plus puissant du groupe a failli s'évanouir avant même de voir le monstre.",
+                "Le cuisinier a sorti une soupe épaisse, trop salée, presque insultante. Tout le monde a survécu assez longtemps pour atteindre l'abri.",
+                "Depuis, certains vétérans disent qu'une ration réussie vaut parfois mieux qu'un critique magnifique lancé trop tard."
+            }
+        },
+        LegendArchiveEntry{
+            "legend_recycler_three_nails",
+            "Rumeur du récupérateur aux trois clous",
+            "Déclencheurs et rumeurs",
+            "Atelier de guilde / caisse de rebut",
+            "Une rumeur valorise les matériaux faibles, les crafts sales et les personnages qui gardent tout.",
+            {
+                "Le récupérateur jurait pouvoir réparer une armure avec trois clous, une lanière et l'orgueil d'un chevalier.",
+                "Il avait tort pour l'orgueil : il en fallait deux doses.",
+                "Mais l'armure a tenu jusqu'à la porte suivante, ce qui suffit parfois à transformer une blague en métier.",
+                "Le registre rappelle ici qu'un matériau médiocre n'est pas inutile. Il attend juste une bonne mauvaise idée."
+            }
+        },
+        LegendArchiveEntry{
             "legend_prudent_storyteller",
             "Rumeur du conteur prudent",
             "Déclencheurs et rumeurs",
@@ -563,6 +666,84 @@ std::vector<LegendArchiveEntry> LegendTriggerSystem::getArchiveEntries()
                 "Un PNJ, une bibliothèque, une salle de boss ou une rumeur peut en raconter une, mais le jeu ne doit pas forcer une lecture avant chaque combat.",
                 "Le joueur doit pouvoir ignorer le lore sans casser sa progression, puis revenir le lire quand il en a envie.",
                 "Le registre classe donc ces récits comme traces optionnelles, pas comme objectifs obligatoires."
+            }
+        },
+        LegendArchiveEntry{
+            "legend_hammer_that_remembered",
+            "Conte du marteau qui se souvenait trop",
+            "Contes pour enfant",
+            "Bibliothèque / rayon artisanat",
+            "Petit conte autour des armes, de l'usure et des réparations qui coûtent moins cher que l'orgueil.",
+            {
+                "Un apprenti jurait que son marteau était incassable, parce qu'il n'avait jamais encore frappé quelque chose de plus dur que lui.",
+                "Le vieux forgeron le laissa partir. Le soir même, le marteau revint en deux morceaux et l'apprenti en une seule leçon.",
+                "Depuis, les enfants apprennent qu'un outil courageux reste un outil : il faut l'entretenir avant de lui demander de sauver une vie.",
+                "La morale plaît aux forgerons, beaucoup moins aux héros qui préfèrent appeler ça une malédiction."
+            }
+        },
+        LegendArchiveEntry{
+            "legend_bookshelf_bites_back",
+            "Rumeur de l'étagère qui rend les coups",
+            "Déclencheurs et rumeurs",
+            "Ruines effondrées / archive ouverte",
+            "Une rumeur justifie les constructions étranges et les archives hostiles ajoutées au contenu.",
+            {
+                "Dans certaines ruines, les livres ne sont pas protégés par des gardes. Ils sont les gardes.",
+                "Un aventurier trop pressé aurait frappé une étagère pour l'ouvrir plus vite. Elle lui aurait rendu la politesse avec trois volumes et une écharde.",
+                "Les érudits appellent cela une défense mémorielle. Les guerriers appellent cela un meuble énervé.",
+                "Le registre conseille de lire la pièce avant de frapper le mobilier."
+            }
+        },
+        LegendArchiveEntry{
+            "legend_false_toll_smile",
+            "Rumeur du péager qui souriait trop",
+            "Déclencheurs et rumeurs",
+            "Route commerciale / borne cassée",
+            "Une rumeur de route explique l'arrivée de nouveaux faux péagers et bandits administratifs.",
+            {
+                "Il portait un tampon, une corde et un sourire beaucoup trop officiel pour être honnête.",
+                "Il réclamait une taxe de passage, une taxe de retour, puis une taxe de contestation de taxe.",
+                "Le marchand paya la première. L'aventurier répondit à la seconde. Le pont n'avait jamais été aussi calme après cela.",
+                "La guilde classe ce genre d'individu comme menace sociale avant menace martiale, ce qui ne l'empêche pas de mordre."
+            }
+        },
+        LegendArchiveEntry{
+            "legend_silent_silver_slime",
+            "Note sur le slime d'argent silencieux",
+            "Déclencheurs et rumeurs",
+            "Mares gélatineuses / surface trop lisse",
+            "Une note de terrain donne une ambiance aux slimes rares sans révéler une solution parfaite.",
+            {
+                "Les chasseurs disent qu'un slime normal fait au moins le bruit d'un sac mouillé quand il approche.",
+                "Celui-là ne fait rien. Pas un clapotis, pas une bulle, pas même un bruit de digestion.",
+                "On ne sait pas s'il absorbe les sons ou s'il déteste simplement prévenir ses proies.",
+                "Le registre recommande de surveiller l'eau quand elle devient trop polie pour être naturelle."
+            }
+        },
+        LegendArchiveEntry{
+            "legend_mosquito_queen_fever",
+            "Rumeur de la reine moustique de fièvre",
+            "Déclencheurs et rumeurs",
+            "Marais trouble / moustiquaire trouée",
+            "Un récit court pour donner de la présence aux insectoïdes rares du marais.",
+            {
+                "Les anciens du marais ne craignent pas le bourdonnement. Ils craignent le moment où tous les bourdonnements s'accordent.",
+                "On dit alors qu'une reine passe, et que même les fioles bien bouchées commencent à transpirer.",
+                "La rumeur ne dit pas de fuir le marais. Elle dit de compter ses antidotes avant de trouver le nid.",
+                "Ceux qui oublient reviennent souvent avec plus de fièvre que d'héroïsme."
+            }
+        },
+        LegendArchiveEntry{
+            "legend_archive_field_worker",
+            "Note de l'archiviste de terrain",
+            "Règles du registre",
+            "Comptoir de guilde / carnet taché",
+            "Une note méta-lore explique pourquoi les classes de connaissance ont une place dans l'aventure.",
+            {
+                "L'archiviste de terrain n'a pas besoin de tuer plus fort que les autres pour être utile.",
+                "Il sait reconnaître une trace, dater une morsure, lire un symbole et éviter qu'un groupe confonde une faiblesse avec une superstition.",
+                "Dans un monde où les monstres évoluent, oublier d'écrire peut tuer autant qu'oublier de parer.",
+                "Le registre considère donc le savoir comme une ressource, pas comme une décoration."
             }
         }
     };

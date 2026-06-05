@@ -10,8 +10,27 @@
 #include "entity/Monster.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <string>
 #include <vector>
+
+namespace
+{
+    std::string normalizeEquipmentEffectText(std::string value)
+    {
+        for (char& character : value)
+        {
+            character = static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
+        }
+        return value;
+    }
+
+    bool equipmentNameContains(const std::string& text, const std::string& needle)
+    {
+        return normalizeEquipmentEffectText(text).find(normalizeEquipmentEffectText(needle)) != std::string::npos;
+    }
+}
 
 // EN: calculateReceivedDamage declares or implements a focused behavior used by this module.
 // FR: calculateReceivedDamage déclare ou implémente un comportement précis utilisé par ce module.
@@ -33,6 +52,37 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
         if (armor != nullptr && !armor->isBroken())
         {
             int armorAbsorption = armor->getDamageReduction();
+            const std::string armorName = armor->getName();
+
+            if (equipmentNameContains(armorName, "cotte runique") || equipmentNameContains(armorName, "runique de garde"))
+            {
+                if (rawDamage <= 24)
+                {
+                    armorAbsorption += 2;
+                    rapport.equipmentEffectLines.push_back("Rune de garde : la cotte runique amortit mieux un choc faible.");
+                }
+            }
+            else if (equipmentNameContains(armorName, "manteau cousu d'ombre") || equipmentNameContains(armorName, "cousu d'ombre"))
+            {
+                if (rawDamage <= 18)
+                {
+                    armorAbsorption += 2;
+                    rapport.equipmentEffectLines.push_back("Fil d'ombre : le manteau dévie légèrement un coup rapide.");
+                }
+                else if (rawDamage >= 34 && armorAbsorption > 1)
+                {
+                    armorAbsorption -= 1;
+                    rapport.equipmentEffectLines.push_back("Fil d'ombre : le tissu léger encaisse moins bien ce choc lourd.");
+                }
+            }
+            else if (equipmentNameContains(armorName, "harnais d'écailles") || equipmentNameContains(armorName, "écailles polies"))
+            {
+                if (rawDamage >= 15)
+                {
+                    armorAbsorption += 2;
+                    rapport.equipmentEffectLines.push_back("Écailles polies : les plaques répartissent mieux l'impact.");
+                }
+            }
 
             if (armorAbsorption > remainingDamage)
             {
@@ -47,6 +97,14 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
                 if (!defendingPlayer->hasIndestructibleEquipment())
                 {
                     armor->loseDurability(1);
+
+                    if ((equipmentNameContains(armorName, "harnais d'écailles") || equipmentNameContains(armorName, "écailles polies"))
+                        && rawDamage >= 30
+                        && !armor->isBroken())
+                    {
+                        armor->loseDurability(1);
+                        rapport.armorExtraDurabilityLost = true;
+                    }
                 }
 
                 if (armor->isBroken())
@@ -146,6 +204,16 @@ std::vector<std::string> DamageSystem::buildDamageReportLines(const Entity& defe
             "Armure : " + defender.getName()
             + " encaisse le choc, mais n'absorbe aucun dégât."
         );
+    }
+
+    for (const std::string& effectLine : rapport.equipmentEffectLines)
+    {
+        lines.push_back(effectLine);
+    }
+
+    if (rapport.armorExtraDurabilityLost)
+    {
+        lines.push_back("Entretien : les écailles polies encaissent fort, mais l'impact use davantage les fixations.");
     }
 
     if (rapport.armorBrokenDuringImpact)

@@ -56,6 +56,12 @@ int CombatClassSystem::getBaseEscapeChance(const Entity& entity)
         className.find("ombrelame") != std::string::npos ||
         className.find("moine") != std::string::npos ||
         className.find("duelliste") != std::string::npos ||
+        className.find("pugiliste") != std::string::npos ||
+        className.find("sabreur") != std::string::npos ||
+        className.find("aéromancien") != std::string::npos ||
+        className.find("aeromancien") != std::string::npos ||
+        className.find("danseur lunaire") != std::string::npos ||
+        className.find("messager arm") != std::string::npos ||
         className.find("légère") != std::string::npos ||
         className.find("legere") != std::string::npos)
     {
@@ -68,7 +74,10 @@ int CombatClassSystem::getBaseEscapeChance(const Entity& entity)
         className.find("chasseur") != std::string::npos ||
         className.find("lanceur de dagues") != std::string::npos ||
         className.find("tireur") != std::string::npos ||
-        className.find("artificier") != std::string::npos)
+        className.find("artificier") != std::string::npos ||
+        className.find("javelinier") != std::string::npos ||
+        className.find("trappeur") != std::string::npos ||
+        className.find("guetteur") != std::string::npos)
     {
         return 62;
     }
@@ -110,7 +119,11 @@ int CombatClassSystem::getBaseDamageReductionPercentage(const Entity& entity)
         return 0;
     }
 
-    if (className.find("gardien") != std::string::npos || className.find("tank sac") != std::string::npos)
+    if (className.find("gardien") != std::string::npos
+        || className.find("tank sac") != std::string::npos
+        || className.find("chevalier bouclier") != std::string::npos
+        || className.find("porte-bannière") != std::string::npos
+        || className.find("porte-banniere") != std::string::npos)
     {
         return 16;
     }
@@ -128,7 +141,12 @@ int CombatClassSystem::getBaseDamageReductionPercentage(const Entity& entity)
         className.find("clerc") != std::string::npos ||
         className.find("prêtre") != std::string::npos ||
         className.find("pretre") != std::string::npos ||
-        className.find("druide") != std::string::npos)
+        className.find("druide") != std::string::npos
+        || className.find("géomancien") != std::string::npos
+        || className.find("geomancien") != std::string::npos
+        || className.find("hydromancien") != std::string::npos
+        || className.find("lame tellurique") != std::string::npos
+        || className.find("juge novice") != std::string::npos)
     {
         return 6;
     }
@@ -142,7 +160,11 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
     std::string className = normalizeClassText(entity.getType());
 
     if (className.find("gardien") != std::string::npos
-        || className.find("tank sac") != std::string::npos)
+        || className.find("tank sac") != std::string::npos
+        || className.find("chevalier bouclier") != std::string::npos
+        || className.find("porte-bannière") != std::string::npos
+        || className.find("porte-banniere") != std::string::npos
+        || className.find("intendant") != std::string::npos)
     {
         return 82;
     }
@@ -163,7 +185,9 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
 
     if (className.find("berserker") != std::string::npos
         || className.find("briseur lourd") != std::string::npos
-        || className.find("barbare") != std::string::npos)
+        || className.find("barbare") != std::string::npos
+        || className.find("faucheur") != std::string::npos
+        || className.find("ravageur") != std::string::npos)
     {
         return 115;
     }
@@ -171,14 +195,22 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
     if (className.find("duelliste") != std::string::npos
         || className.find("guerrier") != std::string::npos
         || className.find("chevalier runique") != std::string::npos
-        || className.find("mage-lame") != std::string::npos)
+        || className.find("mage-lame") != std::string::npos
+        || className.find("sabreur") != std::string::npos
+        || className.find("lame tellurique") != std::string::npos
+        || className.find("chaman de guerre") != std::string::npos)
     {
         return 106;
     }
 
     if (className.find("pyromancien") != std::string::npos
         || className.find("mage flame") != std::string::npos
-        || className.find("mage fou") != std::string::npos)
+        || className.find("mage fou") != std::string::npos
+        || className.find("électromancien") != std::string::npos
+        || className.find("electromancien") != std::string::npos
+        || className.find("démoniste") != std::string::npos
+        || className.find("demoniste") != std::string::npos
+        || className.find("chronomancien") != std::string::npos)
     {
         return 113;
     }
@@ -187,7 +219,14 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
         || className.find("sorcier") != std::string::npos
         || className.find("ensorceleur") != std::string::npos
         || className.find("arcaniste") != std::string::npos
-        || className.find("occultiste") != std::string::npos)
+        || className.find("occultiste") != std::string::npos
+        || className.find("hydromancien") != std::string::npos
+        || className.find("géomancien") != std::string::npos
+        || className.find("geomancien") != std::string::npos
+        || className.find("aéromancien") != std::string::npos
+        || className.find("aeromancien") != std::string::npos
+        || className.find("runiste") != std::string::npos
+        || className.find("enchanteur") != std::string::npos)
     {
         return 108;
     }
@@ -196,7 +235,11 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
         || className.find("prêtre") != std::string::npos
         || className.find("pretre") != std::string::npos
         || className.find("barde") != std::string::npos
-        || className.find("alchimiste") != std::string::npos)
+        || className.find("alchimiste") != std::string::npos
+        || className.find("médecin") != std::string::npos
+        || className.find("medecin") != std::string::npos
+        || className.find("infirmier") != std::string::npos
+        || className.find("intendant") != std::string::npos)
     {
         return 94;
     }
@@ -208,7 +251,7 @@ int CombatClassSystem::getOutgoingFlatBonus(const Entity& entity)
 {
     std::string className = normalizeClassText(entity.getType());
 
-    if (className.find("lancier") != std::string::npos)
+    if (className.find("lancier") != std::string::npos || className.find("javelinier") != std::string::npos)
     {
         return 3;
     }
@@ -217,7 +260,9 @@ int CombatClassSystem::getOutgoingFlatBonus(const Entity& entity)
         || className.find("rôdeur") != std::string::npos
         || className.find("rodeur") != std::string::npos
         || className.find("arbal") != std::string::npos
-        || className.find("tireur") != std::string::npos)
+        || className.find("tireur") != std::string::npos
+        || className.find("guetteur") != std::string::npos
+        || className.find("trappeur") != std::string::npos)
     {
         return 2;
     }
@@ -232,7 +277,10 @@ int CombatClassSystem::getOutgoingFlatBonus(const Entity& entity)
         return 4;
     }
 
-    if (className.find("moine") != std::string::npos || className.find("duelliste") != std::string::npos)
+    if (className.find("moine") != std::string::npos
+        || className.find("pugiliste") != std::string::npos
+        || className.find("sabreur") != std::string::npos
+        || className.find("duelliste") != std::string::npos)
     {
         return 2;
     }
@@ -253,19 +301,19 @@ bool CombatClassSystem::hasWeaponAffinity(
     switch (weaponType)
     {
         case WeaponType::Sword:
-            return containsAny(className, {"épéiste", "epeiste", "chevalier", "guerrier", "duelliste", "paladin", "templier", "mage-lame"});
+            return containsAny(className, {"épéiste", "epeiste", "chevalier", "guerrier", "duelliste", "paladin", "templier", "mage-lame", "sabreur", "faucheur", "lame tellurique", "juge novice"});
         case WeaponType::Dagger:
-            return containsAny(className, {"assassin", "ombrelame", "voleur", "lanceur de dagues", "dague"});
+            return containsAny(className, {"assassin", "ombrelame", "voleur", "lanceur de dagues", "dague", "danseur lunaire", "messager arm"});
         case WeaponType::Spear:
-            return containsAny(className, {"lancier", "garde", "chevalier", "sentinelle"});
+            return containsAny(className, {"lancier", "javelinier", "garde", "chevalier", "sentinelle"});
         case WeaponType::Bow:
-            return containsAny(className, {"archer", "rôdeur", "rodeur", "chasseur", "tireur", "arbal"})
+            return containsAny(className, {"archer", "rôdeur", "rodeur", "chasseur", "tireur", "arbal", "trappeur", "guetteur", "messager arm"})
                 || weapon.find("arbal") != std::string::npos;
         case WeaponType::Staff:
-            return containsAny(className, {"mage", "sorcier", "arcaniste", "clerc", "prêtre", "pretre", "druide", "invoc", "nécro", "necro", "occultiste"});
+            return containsAny(className, {"mage", "sorcier", "arcaniste", "clerc", "prêtre", "pretre", "druide", "invoc", "nécro", "necro", "occultiste", "mancien", "démoniste", "demoniste", "runiste", "enchanteur", "oracle"});
         case WeaponType::Axe:
         case WeaponType::Hammer:
-            return containsAny(className, {"berserker", "barbare", "briseur", "colosse", "forgeron", "gardien", "orc"});
+            return containsAny(className, {"berserker", "barbare", "briseur", "colosse", "forgeron", "gardien", "orc", "faucheur", "siège", "siege", "lame tellurique"});
         case WeaponType::BareHands:
             return containsAny(className, {"moine", "pugiliste", "bagarreur"});
         default:
@@ -314,3 +362,172 @@ std::string CombatClassSystem::getWeaponAffinityLabel(
         default: return "";
     }
 }
+
+namespace
+{
+    bool classContainsAny(const std::string& className, std::initializer_list<const char*> terms)
+    {
+        return containsAny(className, terms);
+    }
+
+    bool isSwiftWeaponClass(const std::string& className)
+    {
+        return classContainsAny(className, {"assassin", "ombrelame", "duelliste", "sabreur", "danseur lunaire", "lanceur de dagues", "messager arm", "pugiliste", "moine"});
+    }
+
+    bool isRangedWeaponClass(const std::string& className)
+    {
+        return classContainsAny(className, {"archer", "rôdeur", "rodeur", "chasseur", "arbal", "tireur", "trappeur", "guetteur", "pisteur", "frondeur", "fauconnier", "javelinier"});
+    }
+
+    bool isHeavyWeaponClass(const std::string& className)
+    {
+        return classContainsAny(className, {"barbare", "berserker", "briseur", "colosse", "gardien", "martelier", "forgeron", "ravageur", "lame tellurique", "chevalier bouclier", "tank"});
+    }
+
+    bool isMartialWeaponClass(const std::string& className)
+    {
+        return classContainsAny(className, {"chevalier", "guerrier", "gladiateur", "maître d'armes", "maitre d'armes", "paladin", "templier", "lancier", "hallebardier", "épéiste", "epeiste", "faucheur"});
+    }
+
+    bool isMagicalWeaponClass(const std::string& className)
+    {
+        return classContainsAny(className, {"mage", "mancien", "sorcier", "ensorceleur", "arcaniste", "occultiste", "démoniste", "demoniste", "invoc", "nécro", "necro", "runiste", "enchanteur", "oracle", "bibliomancien"});
+    }
+
+    bool isSupportWeaponClass(const std::string& className)
+    {
+        return classContainsAny(className, {"clerc", "prêtre", "pretre", "barde", "médecin", "medecin", "infirmier", "intendant", "aumônier", "aumonier", "archiviste"});
+    }
+
+    bool isCraftWeaponClass(const std::string& className)
+    {
+        return classContainsAny(className, {"artificier", "forgeron", "alchimiste", "cuisinier", "cartographe", "récupérateur", "recuperateur", "runiste", "enchanteur", "bricoleur", "mécanicien", "mecanicien"});
+    }
+
+    bool isWeaponClearlyAwkward(const std::string& className, WeaponType weaponType, const std::string& weaponName)
+    {
+        const bool swift = isSwiftWeaponClass(className);
+        const bool ranged = isRangedWeaponClass(className);
+        const bool heavy = isHeavyWeaponClass(className);
+        const bool martial = isMartialWeaponClass(className);
+        const bool magical = isMagicalWeaponClass(className);
+        const bool support = isSupportWeaponClass(className);
+        const bool craft = isCraftWeaponClass(className);
+
+        if (weaponType == WeaponType::BareHands)
+        {
+            return !classContainsAny(className, {"moine", "pugiliste", "bagarreur", "cogneur"});
+        }
+
+        if (magical && !martial && !craft)
+        {
+            return weaponType == WeaponType::Axe || weaponType == WeaponType::Hammer || weaponType == WeaponType::Bow;
+        }
+
+        if (swift)
+        {
+            return weaponType == WeaponType::Axe || weaponType == WeaponType::Hammer || weaponType == WeaponType::Staff;
+        }
+
+        if (ranged)
+        {
+            return weaponType == WeaponType::Hammer || weaponType == WeaponType::Axe || (weaponType == WeaponType::Staff && weaponName.find("arbal") == std::string::npos);
+        }
+
+        if ((heavy || martial) && !magical)
+        {
+            return weaponType == WeaponType::Staff || weaponType == WeaponType::Bow;
+        }
+
+        if (support && !martial && !magical)
+        {
+            return weaponType == WeaponType::Axe || weaponType == WeaponType::Hammer;
+        }
+
+        return false;
+    }
+}
+
+int CombatClassSystem::getWeaponHandlingAccuracyAdjustment(
+    const Entity& entity,
+    WeaponType weaponType,
+    const std::string& weaponName
+)
+{
+    const std::string className = normalizeClassText(entity.getType());
+    const std::string weapon = normalizeClassText(weaponName);
+
+    if (hasWeaponAffinity(entity, weaponType, weaponName))
+    {
+        if (classContainsAny(className, {"maître d'armes", "maitre d'armes", "duelliste", "tireur", "sabreur", "archer", "lancier"}))
+        {
+            return 16;
+        }
+        return 10;
+    }
+
+    if (isWeaponClearlyAwkward(className, weaponType, weapon))
+    {
+        if (weaponType == WeaponType::BareHands)
+        {
+            return -18;
+        }
+        return -12;
+    }
+
+    return 0;
+}
+
+int CombatClassSystem::getWeaponHandlingDamagePercent(
+    const Entity& entity,
+    WeaponType weaponType,
+    const std::string& weaponName
+)
+{
+    const std::string className = normalizeClassText(entity.getType());
+    const std::string weapon = normalizeClassText(weaponName);
+
+    if (hasWeaponAffinity(entity, weaponType, weaponName))
+    {
+        if (classContainsAny(className, {"maître d'armes", "maitre d'armes", "briseur", "berserker", "faucheur", "tireur", "pyromancien", "mage-lame", "chevalier runique"}))
+        {
+            return 108;
+        }
+        return 104;
+    }
+
+    if (isWeaponClearlyAwkward(className, weaponType, weapon))
+    {
+        if (weaponType == WeaponType::BareHands)
+        {
+            return 78;
+        }
+        return 88;
+    }
+
+    return 100;
+}
+
+std::string CombatClassSystem::getWeaponHandlingLabel(
+    const Entity& entity,
+    WeaponType weaponType,
+    const std::string& weaponName
+)
+{
+    const int accuracy = getWeaponHandlingAccuracyAdjustment(entity, weaponType, weaponName);
+    const int damagePercent = getWeaponHandlingDamagePercent(entity, weaponType, weaponName);
+
+    if (accuracy > 0 || damagePercent > 100)
+    {
+        return "arme cohérente avec la classe : geste plus fiable et impact mieux transmis";
+    }
+
+    if (accuracy < 0 || damagePercent < 100)
+    {
+        return "arme maladroite pour la classe : précision instable et dégâts moins bien transmis";
+    }
+
+    return "arme utilisable sans vraie affinité ni gros malus";
+}
+

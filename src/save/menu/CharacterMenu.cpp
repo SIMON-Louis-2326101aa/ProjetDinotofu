@@ -12,6 +12,7 @@
 #include "character/SpecialCharacterNameGuard.hpp"
 #include "core/Console.hpp"
 #include "core/VersionInfo.hpp"
+#include "progression/DeathRuleRules.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/model/MenuScreen.hpp"
@@ -32,6 +33,7 @@ namespace
         result.specialIdentityValidated = false;
         result.playerName = "";
         result.difficulty = DifficultyMode::Normal;
+        result.deathRule = DeathRuleRules::defaultForDifficulty(result.difficulty);
         result.forcedRace = CharacterRace::Human;
         return result;
     }
@@ -330,6 +332,7 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
                 + " | " + characters[i].raceName
                 + " / " + characters[i].className
                 + " | Niveau " + std::to_string(characters[i].level)
+                + " | " + DeathRuleRules::displayName(characters[i].deathRule)
                 + (characters[i].clone ? " | CLONE" : "");
 
             if (!versionLabel.empty())
@@ -406,6 +409,7 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
         selectedCharacterScreen.addLine("Personnage : " + selectedCharacter.characterName);
         selectedCharacterScreen.addLine("Race / classe : " + selectedCharacter.raceName + " / " + selectedCharacter.className);
         selectedCharacterScreen.addLine("Niveau : " + std::to_string(selectedCharacter.level));
+        selectedCharacterScreen.addLine("Règle de mort : " + DeathRuleRules::displayName(selectedCharacter.deathRule));
         selectedCharacterScreen.addLine("Créateur : " + selectedCharacter.creatorAccountName);
         selectedCharacterScreen.addLine("Joueur / maître actuel : " + selectedCharacter.currentOwnerAccountName);
         selectedCharacterScreen.addLine("Créé le : " + selectedCharacter.createdAt + " | V" + selectedCharacter.createdForVersion);
@@ -528,7 +532,8 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
             result.characterLoaded = SaveManager::loadPlayerSnapshot(
                 selectedCharacter,
                 player,
-                result.difficulty
+                result.difficulty,
+                result.deathRule
             );
 
             std::vector<std::string> adaptationChanges;
@@ -536,7 +541,7 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
             if (result.characterLoaded && legacyDecision == LegacyCharacterDecision::HeavyAdaptation)
             {
                 adaptationChanges = player.applyHeavyVersionAdaptation(result.difficulty);
-                if (!SaveManager::savePlayerSnapshot(player, accountName, result.difficulty))
+                if (!SaveManager::savePlayerSnapshot(player, accountName, result.difficulty, result.deathRule))
                 {
                     adaptationChanges.push_back("Attention : adaptation appliquée en mémoire, mais sauvegarde immédiate impossible.");
                 }
@@ -547,7 +552,7 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
             {
                 player.markAdaptedToCurrentVersion();
 
-                if (SaveManager::savePlayerSnapshot(player, accountName, result.difficulty))
+                if (SaveManager::savePlayerSnapshot(player, accountName, result.difficulty, result.deathRule))
                 {
                     adaptationChanges.push_back("Marque de version mise à jour vers V" + VersionInfo::currentVersion() + ".");
                 }
@@ -567,6 +572,7 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
                     "Personnage incarné : " + result.playerName + ".",
                     "Race : " + player.getRaceText(),
                     "Classe : " + player.getType(),
+                    "Règle de mort : " + DeathRuleRules::displayName(result.deathRule),
                     "PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()),
                     "Or : " + std::to_string(player.getInventory().getGold()) + " pièces"
                 };

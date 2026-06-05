@@ -255,6 +255,8 @@ std::vector<std::string> EnemyCombatQueue::getActiveEnemyDisplayLines() const
         line << (i + 1)
              << " : "
              << monster.getName()
+             << " | Niv. "
+             << monster.getLevel()
              << " | "
              << monster.getHp()
              << "/"

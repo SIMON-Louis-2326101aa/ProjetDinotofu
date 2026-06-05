@@ -622,7 +622,8 @@ namespace
 void MonsterPveMode::run(
     Player& player,
     Random& random,
-    DifficultyMode difficulty
+    DifficultyMode difficulty,
+    DeathRuleMode deathRule
 )
 {
     Console::clear();
@@ -835,7 +836,7 @@ void MonsterPveMode::run(
         player.recordDefeat();
         player.recordDeath();
 
-        if (DifficultyRules::isPermanentDeath(difficulty))
+        if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
         {
             DeathPenaltySystem::displayLethalDeathCorruption();
             return;
@@ -923,6 +924,7 @@ bool MonsterPveMode::runExplorationWave(
     Player& player,
     Random& random,
     DifficultyMode difficulty,
+    DeathRuleMode deathRule,
     const std::vector<Monster>& monsters,
     const std::string& title
 )
@@ -1110,7 +1112,7 @@ bool MonsterPveMode::runExplorationWave(
         player.recordDefeat();
         player.recordDeath();
 
-        if (DifficultyRules::isPermanentDeath(difficulty))
+        if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
         {
             DeathPenaltySystem::displayLethalDeathCorruption();
             return false;
@@ -1596,7 +1598,7 @@ namespace
         itemData.name = potion.getName();
         itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = potion.getDescription();
-        itemData.status = "Soin : " + std::to_string(potion.getPower()) + " PV";
+        itemData.status = "Soin : " + potion.getPowerDisplayText();
         itemData.price = "Valeur : " + std::to_string(potion.getValue()) + " or";
         itemData.stock = "Index inventaire : " + std::to_string(inventoryIndex + 1);
         itemData.owner = healer.getName();
@@ -1765,7 +1767,7 @@ namespace
                 potionScreen.addOption(
                     static_cast<int>(i - firstIndex + 1),
                     CombatPotionUtils::stackLabel(potion.getName(), stack.amount),
-                    "Soin : " + std::to_string(potion.getPower()) + " PV | Quantité : " + std::to_string(stack.amount),
+                    "Soin : " + potion.getPowerDisplayText() + " | Quantité : " + std::to_string(stack.amount),
                     true,
                     "party.support.potion.healing",
                     makePvePartyPotionData(healer, potion, stack.firstIndex, stack.amount)
@@ -1822,7 +1824,8 @@ namespace
             }
         }
         int beforeHealHp = target->getHp();
-        target->heal(potion.getPower());
+        const int announcedHeal = potion.getHealingAmountForMaxHp(target->getMaxHp());
+        target->heal(announcedHeal);
         healingDone += std::max(0, target->getHp() - beforeHealHp);
         healer.markHealingThreat();
 
@@ -1839,7 +1842,7 @@ namespace
         {
             resultLines.push_back(target->getName() + " est réveillé par la potion avant de récupérer ses forces.");
         }
-        resultLines.push_back(target->getName() + " récupère " + std::to_string(potion.getPower()) + " PV.");
+        resultLines.push_back(target->getName() + " récupère " + std::to_string(target->getHp() - beforeHealHp) + " PV (soin annoncé : " + potion.getPowerDisplayText() + ").");
         resultLines.push_back("PV actuels : " + std::to_string(target->getHp()) + "/" + std::to_string(target->getMaxHp()) + ".");
         resultLines.push_back("Le tour de " + healer.getName() + " est consommé.");
         MessageScreen::show("SOUTIEN RÉUSSI", "pve.party.support.result", resultLines, false);
@@ -1856,7 +1859,7 @@ namespace
         int green = 0;
         int red = 0;
         std::vector<std::string> lines;
-        lines.push_back("Léthal coop : " + player.getName() + " est au sol.");
+        lines.push_back("Mort définitive coop : " + player.getName() + " est au sol.");
         lines.push_back("Les dés de survie commencent : 3 pastilles vertes pour revenir, 3 rouges pour disparaître.");
 
         while (green < 3 && red < 3)
@@ -1869,7 +1872,7 @@ namespace
                 player.reviveWithHealthPercentage(1);
                 if (player.getHp() <= 0) player.heal(1);
                 lines.push_back("20 naturel : " + player.getName() + " se relève immédiatement à 1 PV et pourra rejouer.");
-                MessageScreen::show("SURVIE LÉTHALE COOP", "pve.coop.lethal_death_save.success_natural", lines, false);
+                MessageScreen::show("SURVIE EN MORT DÉFINITIVE COOP", "pve.coop.lethal_death_save.success_natural", lines, false);
                 return;
             }
 
@@ -1894,20 +1897,21 @@ namespace
                 player.reviveWithHealthPercentage(1);
                 if (player.getHp() <= 0) player.heal(1);
                 lines.push_back(player.getName() + " revient à 1 PV. La mort n'est pas comptée.");
-                MessageScreen::show("SURVIE LÉTHALE COOP", "pve.coop.lethal_death_save.success", lines, false);
+                MessageScreen::show("SURVIE EN MORT DÉFINITIVE COOP", "pve.coop.lethal_death_save.success", lines, false);
                 return;
             }
         }
 
         player.recordDeath();
         lines.push_back(player.getName() + " reçoit trois pastilles rouges : mort définitive en approche, sauf exception divine ou divination.");
-        MessageScreen::show("SURVIE LÉTHALE COOP", "pve.coop.lethal_death_save.failure", lines, false);
+        MessageScreen::show("SURVIE EN MORT DÉFINITIVE COOP", "pve.coop.lethal_death_save.failure", lines, false);
     }
 }
 void MonsterPveMode::runTeam(
     std::vector<Player*>& party,
     Random& random,
-    DifficultyMode difficulty
+    DifficultyMode difficulty,
+    DeathRuleMode deathRule
 )
 {
     if (party.empty() || party[0] == nullptr)
@@ -2137,7 +2141,7 @@ void MonsterPveMode::runTeam(
             if (player == nullptr) continue;
 
             player->recordDefeat();
-            if (DifficultyRules::isPermanentDeath(difficulty))
+            if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
             {
                 resolveLethalGroupDeathSaves(*player, random);
             }
@@ -2173,7 +2177,7 @@ void MonsterPveMode::runTeam(
             continue;
         }
 
-        if (player->isDead() && !DifficultyRules::isPermanentDeath(difficulty))
+        if (player->isDead() && !DifficultyRules::isPermanentDeath(difficulty, deathRule))
         {
             player->recordDeath();
             player->reviveWithHealthPercentage(

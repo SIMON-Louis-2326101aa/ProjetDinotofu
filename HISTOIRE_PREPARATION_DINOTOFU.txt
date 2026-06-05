@@ -1,0 +1,60 @@
+DINOTOFU — PRÉPARATION HISTOIRE CHAPITRES 1 À 5
+
+Méthode choisie
+---------------
+Avant de continuer à coder l'histoire au fil de l'eau, il faut écrire la trame jusqu'au chapitre 5 :
+- résumé de chaque chapitre ;
+- PNJ importants ;
+- quêtes principales non refusables ;
+- moments d'attente/réparation où le joueur doit s'occuper ;
+- boss ou menaces obligatoires ;
+- conséquences sur la ville, les routes, les boutiques et le bac à sable.
+
+Chapitre 1 — La ville qui tient à peine
+---------------------------------------
+Rôle : tutorial narratif et stabilisation de base.
+Objectifs : présenter Mira, faire le tour des référents, débloquer les premières demandes principales, stabiliser les murs et ouvrir la route du relais.
+Boss obligatoire : aucun vrai boss majeur, seulement des menaces proches et des combats de mise en danger.
+
+Chapitre 2 — Le relais silencieux
+---------------------------------
+Rôle : premier arc de route.
+Objectifs : comprendre le relais, sauver Nell, prouver que la route se réécrit, créer un contre-registre, repérer le nœud noir et garder une route courte ouverte.
+Menace obligatoire : une présence liée à la borne noire, connue d'abord par traces et rumeurs, puis nommée seulement quand le lore le justifie.
+
+Chapitre 3 — Les routes qui répondent mal
+-----------------------------------------
+Rôle : montrer que le problème dépasse la ville.
+Pistes possibles : routes qui ramènent au mauvais endroit, convoi revenu sans équipage, PNJ qui se souvient d'un village jamais visité, bornes qui changent selon l'heure.
+Objectifs possibles : escorter un petit convoi, choisir quelle route sécuriser, découvrir une première zone volontairement réécrite.
+Boss obligatoire possible : un gardien de route qui ne protège plus les vivants, seulement la version corrigée de la carte.
+
+Chapitre 4 — Le village qui n'a pas la même date
+------------------------------------------------
+Rôle : basculer vers le mystère profond.
+Pistes possibles : village sauvé dans une ancienne version de l'histoire, habitants qui reconnaissent le joueur sans l'avoir rencontré, registres contradictoires.
+Objectifs possibles : sauver un PNJ important, choisir quelles preuves garder, comprendre qu'une force corrige le monde au lieu de seulement l'attaquer.
+Boss obligatoire possible : une autorité locale altérée, pas forcément mauvaise, mais devenue impossible à raisonner.
+
+Chapitre 5 — La première vérité de la fissure
+---------------------------------------------
+Rôle : révélation de milieu d'histoire.
+Pistes possibles : les monstres ne sont pas tous naturels, certaines routes ne sont pas cassées mais réécrites, certains boss protègent une vérité au lieu d'un trésor.
+Objectifs possibles : ouvrir une bibliothèque/zone de légendes, classer les preuves avec Soryn, choisir une route dangereuse, affronter le premier vrai gardien de vérité.
+Boss obligatoire possible : menace nommée par légende, avec préparation obligatoire et effets sur la ville après victoire.
+
+Règles de quêtes principales
+----------------------------
+- Une quête principale n'est pas refusable.
+- Elle peut demander de parler à quelqu'un, attendre des réparations, faire des quêtes secondaires, rapporter des preuves, escorter, enquêter ou battre une menace.
+- Quand l'histoire demande de level up, le texte doit rester naturel : aider la ville, patrouiller, laisser le temps aux réparations, renforcer les stocks, pas “va farmer”.
+- Une quête qui vise un boss doit éviter le spoil complet si le boss n'est pas encore connu. Utiliser une trace, un surnom, une rumeur, une marque ou un titre approximatif.
+
+Boss obligatoires à décider ensemble
+------------------------------------
+À définir proprement avant codage :
+- boss de borne noire / route courte ;
+- boss de route corrigée ;
+- boss du village à date impossible ;
+- premier gardien de vérité ;
+- liens éventuels avec les boss déjà existants et les boss particuliers.

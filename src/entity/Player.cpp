@@ -5,6 +5,7 @@
 
 #include "entity/Player.hpp"
 #include "core/VersionInfo.hpp"
+#include "economy/Money.hpp"
 
 #include "item/weapon/WeaponCatalog.hpp"
 #include "item/armor/ArmorCatalog.hpp"
@@ -12,16 +13,157 @@
 #include "item/material/MaterialCatalog.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "progression/Level.hpp"
+#include "progression/TitleCatalog.hpp"
 #include "character/RaceCatalog.hpp"
 #include "combat/system/CombatClassSystem.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <random>
+#include <sstream>
 #include <vector>
 
 
 namespace
 {
+
+    std::string normalizeLegacyTitleName(const std::string& title)
+    {
+        if (title == "Premier titre du registre")
+        {
+            return "Une sorte de titre ?";
+        }
+        return title;
+    }
+    std::vector<std::string> splitCurseTokenList(const std::string& value)
+    {
+        std::vector<std::string> tokens;
+        std::stringstream stream(value);
+        std::string token;
+        while (std::getline(stream, token, ','))
+        {
+            token.erase(std::remove_if(token.begin(), token.end(), [](unsigned char c) { return std::isspace(c) != 0; }), token.end());
+            if (!token.empty() && std::find(tokens.begin(), tokens.end(), token) == tokens.end())
+            {
+                tokens.push_back(token);
+            }
+        }
+        return tokens;
+    }
+
+    std::string joinCurseTokenList(const std::vector<std::string>& tokens)
+    {
+        std::string result;
+        for (const std::string& token : tokens)
+        {
+            if (token.empty()) continue;
+            if (!result.empty()) result += ",";
+            result += token;
+        }
+        return result;
+    }
+
+    bool curseTokenListContains(const std::string& value, const std::string& token)
+    {
+        const std::vector<std::string> tokens = splitCurseTokenList(value);
+        return std::find(tokens.begin(), tokens.end(), token) != tokens.end();
+    }
+
+    bool addCurseTokenToList(std::string& value, const std::string& token)
+    {
+        if (token.empty()) return false;
+        std::vector<std::string> tokens = splitCurseTokenList(value);
+        if (std::find(tokens.begin(), tokens.end(), token) != tokens.end())
+        {
+            return false;
+        }
+        tokens.push_back(token);
+        value = joinCurseTokenList(tokens);
+        return true;
+    }
+
+    std::string curseCategoryLabel(const std::string& category)
+    {
+        if (category == "health") return "santé";
+        if (category == "attack") return "attaque";
+        if (category == "mana") return "mana";
+        if (category == "precision") return "précision";
+        if (category == "defense") return "défense";
+        if (category == "sleep") return "sommeil";
+        if (category == "luck") return "chance";
+        if (category == "equipment") return "équipement";
+        if (category == "spirit") return "esprit";
+        if (category == "corruption") return "corruption";
+        if (category == "travel") return "voyage";
+        if (category == "social") return "présence sociale";
+        if (category == "interface") return "interface";
+        if (category == "hallucination") return "hallucinations";
+        return category;
+    }
+
+    std::string curseSeverityForLevel(int level)
+    {
+        if (level >= 4) return "critique";
+        if (level >= 3) return "majeure";
+        if (level == 2) return "moyenne";
+        return "mineure";
+    }
+
+    void refreshCursePresentationFromLevel(PlayerCurse& curse)
+    {
+        curse.curseLevel = std::max(1, curse.curseLevel);
+        curse.maxCurseLevel = std::max(curse.curseLevel, curse.maxCurseLevel);
+        if (curse.severity.empty() || curse.evolvesOverTime)
+        {
+            curse.severity = curseSeverityForLevel(curse.curseLevel);
+        }
+
+        if (curse.id == "runic_backlash")
+        {
+            curse.name = "Contrecoup runique niv." + std::to_string(curse.curseLevel);
+            if (curse.curseLevel >= 4)
+            {
+                curse.description = "La rune brisée ne colle plus seulement à la peau : elle cherche maintenant une logique plus profonde dans le personnage.";
+            }
+        }
+        else if (curse.id == "lyknir_prey_mark" && curse.curseLevel > 1)
+        {
+            curse.name = "Marque de proie de Lyknir niv." + std::to_string(curse.curseLevel);
+        }
+        else if (curse.id == "anomaly_interface_desync" || curse.id == "anomaly_source_core_desync")
+        {
+            curse.name = (curse.id == "anomaly_source_core_desync" ? "Désynchronisation de la Source niv." : "Désynchronisation de l'Anomalie niv.") + std::to_string(curse.curseLevel);
+            if (curse.curseLevel >= 4)
+            {
+                curse.description = "L'Anomalie ne perturbe plus seulement les sens : elle laisse croire au personnage que l'interface, les cibles et même son propre nom peuvent mentir.";
+            }
+        }
+
+        if (curse.becomesSpecialRemovalWhenTooHigh && curse.curseLevel > curse.churchRemovalMaxLevel)
+        {
+            curse.removableByChurch = false;
+            curse.lifeLong = true;
+            curse.expiresAtDay = -1;
+            if (!curse.highLevelRemovalHint.empty())
+            {
+                curse.removalHint = curse.highLevelRemovalHint;
+            }
+        }
+    }
+
+    int defaultLocalSubscriptionRenewalPrice(const std::string& subscriptionId)
+    {
+        if (subscriptionId == "lodging_modest_weekly") return 110;
+        if (subscriptionId == "stable_relay_weekly") return 135;
+        if (subscriptionId == "guild_adventurer_standard_weekly") return 160;
+        if (subscriptionId == "guild_adventurer_silver_weekly") return 260;
+        if (subscriptionId == "trade_route_weekly") return 240;
+        if (subscriptionId == "merchant_cotisation_weekly") return 210;
+        return 0;
+    }
+
     bool isDistanceStarterClass(const std::string& className)
     {
         std::string normalized = className;
@@ -34,7 +176,11 @@ namespace
             || normalized.find("chasseur") != std::string::npos
             || normalized.find("lanceur de dagues") != std::string::npos
             || normalized.find("tireur") != std::string::npos
-            || normalized.find("artificier") != std::string::npos;
+            || normalized.find("artificier") != std::string::npos
+            || normalized.find("javelinier") != std::string::npos
+            || normalized.find("trappeur") != std::string::npos
+            || normalized.find("guetteur") != std::string::npos
+            || normalized.find("messager arm") != std::string::npos;
     }
 
     bool usesStarterAmmunition(const std::string& className)
@@ -49,7 +195,11 @@ namespace
             || normalized.find("chasseur") != std::string::npos
             || normalized.find("lanceur de dagues") != std::string::npos
             || normalized.find("tireur") != std::string::npos
-            || normalized.find("artificier") != std::string::npos;
+            || normalized.find("artificier") != std::string::npos
+            || normalized.find("javelinier") != std::string::npos
+            || normalized.find("trappeur") != std::string::npos
+            || normalized.find("guetteur") != std::string::npos
+            || normalized.find("messager arm") != std::string::npos;
     }
 
     bool inventoryHasWeaponNamed(const Inventory& inventory, const std::string& name)
@@ -75,9 +225,57 @@ namespace
         return inventory.countMaterialById(id) > 0;
     }
 
+    int countRecentEquipmentUsageContaining(const std::vector<std::string>& usage, const std::string& token)
+    {
+        int count = 0;
+        for (const std::string& entry : usage)
+        {
+            if (entry.find(token) != std::string::npos)
+            {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    int countRecentFullLoadoutUsage(const std::vector<std::string>& usage)
+    {
+        int count = 0;
+        for (const std::string& entry : usage)
+        {
+            if (entry.find("Arme:") != std::string::npos && entry.find("Armure:") != std::string::npos)
+            {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    bool hasRecentFullLoadoutUsage(const std::vector<std::string>& usage, int requiredCount)
+    {
+        return countRecentFullLoadoutUsage(usage) >= requiredCount;
+    }
+
     std::string playerSkillDisplayName(const std::string& skillId)
     {
         if (skillId == "night_vision") return "Vision nocturne";
+        if (skillId == "dwarven_mine_sense") return "Sens des galeries";
+        if (skillId == "elven_fine_perception") return "Perception elfique";
+        if (skillId == "halfling_lucky_step") return "Pas chanceux";
+        if (skillId == "dragon_weather_blood") return "Sang draconique d'endurance";
+        if (skillId == "temperature_adaptation") return "Adaptation aux températures";
+        if (skillId == "minor_fire_resistance") return "Résistance légère au feu";
+        if (skillId == "infernal_fire_resistance") return "Résistance infernale au feu";
+        if (skillId == "minor_cold_resistance") return "Résistance légère au froid";
+        if (skillId == "fire_vulnerability") return "Faiblesse aux flammes";
+        if (skillId == "semi_wolf_tracking") return "Flair de meute";
+        if (skillId == "semi_fox_cunning") return "Ruse de renard";
+        if (skillId == "semi_dog_loyal_scent") return "Flair loyal";
+        if (skillId == "semi_cat_reflexes") return "Réflexes félins";
+        if (skillId == "semi_lizard_scales") return "Écailles tempérées";
+        if (skillId == "semi_bird_open_sky") return "Vue des hauteurs";
+        if (skillId == "orcish_forced_march") return "Marche forcée orque";
+        if (skillId == "fairy_mana_sense") return "Sens féerique du mana";
         if (skillId == "survival_breath") return "Souffle de survie";
         if (skillId == "ranger_eye") return "Œil de rôdeur";
         if (skillId == "steady_guard") return "Garde stable";
@@ -100,6 +298,18 @@ namespace
         if (skillId == "scar_tissue") return "Peau des survivants";
         if (skillId == "escape_reader") return "Lecture de fuite";
         if (skillId == "boss_memory") return "Mémoire de boss";
+        if (skillId == "armor_habit") return "Habitude d'armure";
+        if (skillId == "loadout_memory") return "Mémoire d'équipement";
+        if (skillId == "field_maintenance") return "Entretien de terrain";
+        if (skillId == "curse_anchor_awareness") return "Conscience d'ancrage";
+        if (skillId == "material_sorting_habit") return "Tri des composants";
+        if (skillId == "equipment_identity") return "Identité d'équipement";
+        if (skillId == "guild_route_memory") return "Mémoire de route de guilde";
+        if (skillId == "bestiary_family_reader") return "Lecture des familles";
+        if (skillId == "weapon_care_habit") return "Soin d'arme";
+        if (skillId == "armor_fit_memory") return "Mémoire d'ajustement";
+        if (skillId == "cautious_pathing") return "Pas prudent";
+        if (skillId == "threat_route_planner") return "Plan de route dangereux";
         if (skillId == "learned_arcane_mark") return "Marque élémentaire étudiée";
         if (skillId == "learned_arcane_binding") return "Entrave arcanique étudiée";
         if (skillId == "learned_elemental_ward") return "Voile élémentaire étudié";
@@ -113,6 +323,17 @@ namespace
     std::string playerSkillDescription(const std::string& skillId)
     {
         if (skillId == "night_vision") return "Passif racial : tes yeux s'habituent mieux aux zones sombres et aux détails cachés.";
+        if (skillId == "temperature_adaptation") return "Passif racial : meilleure tolérance aux zones de température pénible, sans remplacer une vraie tenue de survie.";
+        if (skillId == "minor_fire_resistance") return "Passif racial : petite résistance au feu/chaleur. Elle aide aussi contre les brûlures de combat, mais reste insuffisante face aux zones extrêmes.";
+        if (skillId == "infernal_fire_resistance") return "Passif racial : forte résistance aux flammes ordinaires et à la chaleur, efficace contre les brûlures de combat et les biomes chauds non extrêmes.";
+        if (skillId == "minor_cold_resistance") return "Passif racial : meilleure tenue au froid et au givre, utile en exploration froide et contre les ralentissements de froid.";
+        if (skillId == "fire_vulnerability") return "Faiblesse raciale : les flammes s'accrochent plus facilement. Les races ailées/fragiles doivent se méfier des brûlures.";
+        if (skillId == "semi_wolf_tracking") return "Passif semi-humain : flair de meute, très utile sur routes sauvages, forêt et recherches de traces.";
+        if (skillId == "semi_fox_cunning") return "Passif semi-humain : ruse de renard, utile pour les détours secondaires et les sorties de nuit prudentes.";
+        if (skillId == "semi_dog_loyal_scent") return "Passif semi-humain : flair loyal, bon pour escortes, protection et recherche de personnes.";
+        if (skillId == "semi_cat_reflexes") return "Passif semi-humain : réflexes félins, vision et appuis plus sûrs quand la nuit complique tout.";
+        if (skillId == "semi_lizard_scales") return "Passif semi-humain : écailles tempérées, chaleur un peu mieux supportée mais froid plus pénible.";
+        if (skillId == "semi_bird_open_sky") return "Passif semi-humain : vue des hauteurs, excellente lecture des zones ouvertes mais vulnérabilité aux flammes.";
         if (skillId == "survival_breath") return "Passif : petit instinct de survie débloqué par l'expérience. Ton corps apprend à encaisser l'instant où tout bascule.";
         if (skillId == "ranger_eye") return "Passif : meilleure lecture des ouvertures à distance, gagné en utilisant régulièrement un arc.";
         if (skillId == "steady_guard") return "Passif de chevalier : posture plus stable lorsque tu tiens ta ligne.";
@@ -135,6 +356,18 @@ namespace
         if (skillId == "scar_tissue") return "Passif de survie : les défaites et morts apprennent au corps à rester dangereux même quand tout va mal.";
         if (skillId == "escape_reader") return "Passif de prudence : les fuites réussies apprennent à mieux lire les distances et les sorties.";
         if (skillId == "boss_memory") return "Passif de boss : chaque vraie victoire majeure laisse une mémoire de rythme contre les ennemis importants.";
+        if (skillId == "armor_habit") return "Passif d'équipement : après plusieurs combats avec une armure portée, ton corps connaît mieux son poids et ses angles morts.";
+        if (skillId == "loadout_memory") return "Passif d'équipement : l'habitude d'un ensemble arme/armure rend les transitions plus naturelles.";
+        if (skillId == "field_maintenance") return "Passif de durabilité : tu repères plus vite les signes d'usure inquiétants sur l'équipement utilisé.";
+        if (skillId == "curse_anchor_awareness") return "Passif de survie occulte : les malédictions de boss restent sur le personnage hors combat jusqu'à ce que la source soit rebattue ; ton instinct commence à les reconnaître.";
+        if (skillId == "material_sorting_habit") return "Passif d'inventaire : à force de garder des composants variés, tu repères mieux ce qui doit être vendu, gardé ou trié.";
+        if (skillId == "equipment_identity") return "Passif de profil : avec trois titres équipés et un équipement connu, ton identité devient plus lisible dans les dialogues sans donner de gros bonus.";
+        if (skillId == "guild_route_memory") return "Passif de guilde : les contrats répétés rendent les routes, comptoirs et délais plus faciles à lire.";
+        if (skillId == "bestiary_family_reader") return "Passif de bestiaire : après beaucoup de monstres vaincus, tu reconnais mieux les familles sans découvrir gratuitement leurs faiblesses.";
+        if (skillId == "weapon_care_habit") return "Passif de durabilité : tu entretiens mieux l'arme que tu utilises vraiment ; très faible aide aux réparations, surtout en préparation de terrain.";
+        if (skillId == "armor_fit_memory") return "Passif d'équipement : tu repères mieux les sangles, ouvertures et frottements d'une armure portée longtemps, surtout avec races/sous-races.";
+        if (skillId == "cautious_pathing") return "Passif d'exploration : après routes, fuites et retours difficiles, tu lis un peu mieux les détours sans transformer ça en téléportation gratuite.";
+        if (skillId == "threat_route_planner") return "Passif de guilde : les chasses et explorations répétées t'apprennent à préparer la route avant le combat, pas seulement après la blessure.";
         if (skillId == "learned_arcane_mark") return "Sort appris par étude : marque élémentaire simple, réservée aux vrais canalisateurs.";
         if (skillId == "learned_arcane_binding") return "Sort appris par grimoire : entrave la cible sans exister forcément en parchemin commun.";
         if (skillId == "learned_elemental_ward") return "Sort appris par grimoire : voile défensif utilisable avec un catalyseur correct.";
@@ -180,6 +413,11 @@ Player::Player() : Entity()
     spearKillProgress = 0;
 
     combatsStarted = 0;
+    worldDaysElapsed = 0;
+    worldDayProgressUnits = 0;
+    activeCurses.clear();
+    localSubscriptionRenewalPaidThisWeek = 0;
+    pendingWorldTimeReportLines.clear();
     victories = 0;
     defeats = 0;
     escapes = 0;
@@ -191,6 +429,8 @@ Player::Player() : Entity()
     pvpLethalEliminations.clear();
     unlockedBossIds = {1, 2, 3};
     recentBossIds.clear();
+    defeatedBossIds.clear();
+    recentBossCooldownExpiresAtDay = -1;
     recentCombatEquipmentUsage.clear();
     bossEquipmentSealActive = false;
     bossEquipmentSealReason = "";
@@ -234,6 +474,14 @@ Player::Player() : Entity()
     lastAdaptedVersion = VersionInfo::currentVersion();
     creatorAccountName = "";
     currentOwnerAccountName = "";
+    titles.clear();
+    activeTitle = "";
+    activeTitles.clear();
+    interfaceHintFrequency = "faible";
+    storyChapter = 0;
+    storyStep = 0;
+    storyCityDevelopmentLevel = 0;
+    storyModeStarted = false;
     nextAmmunitionChoiceId = "";
     lastConsumedAmmunitionId = "";
 }
@@ -270,6 +518,11 @@ Player::Player(
     spearKillProgress = 0;
 
     combatsStarted = 0;
+    worldDaysElapsed = 0;
+    worldDayProgressUnits = 0;
+    activeCurses.clear();
+    localSubscriptionRenewalPaidThisWeek = 0;
+    pendingWorldTimeReportLines.clear();
     victories = 0;
     defeats = 0;
     escapes = 0;
@@ -281,6 +534,8 @@ Player::Player(
     pvpLethalEliminations.clear();
     unlockedBossIds = {1, 2, 3};
     recentBossIds.clear();
+    defeatedBossIds.clear();
+    recentBossCooldownExpiresAtDay = -1;
     recentCombatEquipmentUsage.clear();
     bossEquipmentSealActive = false;
     bossEquipmentSealReason = "";
@@ -324,6 +579,14 @@ Player::Player(
     lastAdaptedVersion = VersionInfo::currentVersion();
     creatorAccountName = "";
     currentOwnerAccountName = "";
+    titles.clear();
+    activeTitle = "";
+    activeTitles.clear();
+    interfaceHintFrequency = "faible";
+    storyChapter = 0;
+    storyStep = 0;
+    storyCityDevelopmentLevel = 0;
+    storyModeStarted = false;
     nextAmmunitionChoiceId = "";
     lastConsumedAmmunitionId = "";
 }
@@ -396,6 +659,392 @@ void Player::setVersionMetadata(const std::string& createdAt, const std::string&
     createdAtText = createdAt.empty() ? "Inconnue" : createdAt;
     createdForVersion = createdFor.empty() ? "inconnue" : createdFor;
     lastAdaptedVersion = lastAdapted.empty() ? createdForVersion : lastAdapted;
+}
+
+const std::vector<std::string>& Player::getTitles() const
+{
+    return titles;
+}
+
+const std::string& Player::getActiveTitle() const
+{
+    return activeTitle;
+}
+
+const std::vector<std::string>& Player::getActiveTitles() const
+{
+    return activeTitles;
+}
+
+std::string Player::getActiveTitleSummary() const
+{
+    if (activeTitles.empty())
+    {
+        return "Aucun";
+    }
+
+    std::string summary;
+    for (std::size_t i = 0; i < activeTitles.size(); ++i)
+    {
+        if (i > 0)
+        {
+            summary += " / ";
+        }
+        summary += activeTitles[i];
+    }
+    return summary;
+}
+
+const std::string& Player::getInterfaceHintFrequency() const
+{
+    return interfaceHintFrequency;
+}
+
+std::string Player::getInterfaceHintFrequencyLabel() const
+{
+    if (interfaceHintFrequency == "null")
+    {
+        return "null";
+    }
+    if (interfaceHintFrequency == "normal")
+    {
+        return "normal";
+    }
+    if (interfaceHintFrequency == "forte")
+    {
+        return "forte";
+    }
+    return "faible";
+}
+
+void Player::setInterfaceHintFrequency(const std::string& frequency)
+{
+    if (frequency == "null" || frequency == "faible" || frequency == "normal" || frequency == "forte")
+    {
+        interfaceHintFrequency = frequency;
+        return;
+    }
+
+    interfaceHintFrequency = "faible";
+}
+
+bool Player::areInterfaceHintsDisabled() const
+{
+    return interfaceHintFrequency == "null";
+}
+
+bool Player::areInterfaceHintsFrequent() const
+{
+    return interfaceHintFrequency == "forte";
+}
+
+int Player::getStoryChapter() const
+{
+    return storyChapter;
+}
+
+int Player::getStoryStep() const
+{
+    return storyStep;
+}
+
+int Player::getStoryCityDevelopmentLevel() const
+{
+    return storyCityDevelopmentLevel;
+}
+
+bool Player::hasStoryModeStarted() const
+{
+    return storyModeStarted;
+}
+
+std::string Player::getStoryProgressLabel() const
+{
+    if (!storyModeStarted || storyChapter <= 0)
+    {
+        return "Histoire non commencée";
+    }
+
+    if (storyChapter >= 99)
+    {
+        return "Archives ouvertes par altération";
+    }
+
+    return "Chapitre " + std::to_string(storyChapter)
+        + " | étape " + std::to_string(storyStep)
+        + " | développement ville " + std::to_string(storyCityDevelopmentLevel);
+}
+
+void Player::setLoadedStoryProgress(int chapter, int step, int cityDevelopment, bool started)
+{
+    storyChapter = chapter < 0 ? 0 : chapter;
+    storyStep = step < 0 ? 0 : step;
+    storyCityDevelopmentLevel = cityDevelopment < 0 ? 0 : cityDevelopment;
+    storyModeStarted = started || storyChapter > 0 || storyStep > 0 || storyCityDevelopmentLevel > 0;
+}
+
+bool Player::startStoryMode()
+{
+    bool changed = false;
+    if (!storyModeStarted)
+    {
+        storyModeStarted = true;
+        changed = true;
+    }
+    if (storyChapter < 1)
+    {
+        storyChapter = 1;
+        changed = true;
+    }
+    if (storyStep < 1)
+    {
+        storyStep = 1;
+        changed = true;
+    }
+    if (storyCityDevelopmentLevel < 1)
+    {
+        storyCityDevelopmentLevel = 1;
+        changed = true;
+    }
+    return changed;
+}
+
+bool Player::setStoryProgress(int chapter, int step, int cityDevelopment)
+{
+    const int normalizedChapter = chapter < 0 ? 0 : chapter;
+    const int normalizedStep = step < 0 ? 0 : step;
+    const int normalizedCity = cityDevelopment < 0 ? 0 : cityDevelopment;
+
+    const bool changed = storyChapter != normalizedChapter
+        || storyStep != normalizedStep
+        || storyCityDevelopmentLevel != normalizedCity
+        || (!storyModeStarted && normalizedChapter > 0);
+
+    storyChapter = normalizedChapter;
+    storyStep = normalizedStep;
+    storyCityDevelopmentLevel = normalizedCity;
+    if (normalizedChapter > 0 || normalizedStep > 0 || normalizedCity > 0)
+    {
+        storyModeStarted = true;
+    }
+
+    return changed;
+}
+
+std::vector<std::string> Player::describeActiveTitleEffects() const
+{
+    std::vector<std::string> lines;
+    if (activeTitles.empty())
+    {
+        lines.push_back("- Aucun titre équipé : aucune influence de réputation affichée.");
+        return lines;
+    }
+
+    for (std::size_t i = 0; i < activeTitles.size(); ++i)
+    {
+        const std::string& title = activeTitles[i];
+        lines.push_back("- Emplacement " + std::to_string(i + 1) + " : " + title);
+        lines.push_back("  > Influence : " + TitleCatalog::effectFor(title));
+        lines.push_back("  > Bonus : très faible et surtout lore/dialogues ; aucun gros bonus brut de combat.");
+    }
+
+    lines.push_back("Note : les trois titres équipés servent à afficher l'identité du personnage. Ils peuvent orienter de petites réactions sociales, mais ne doivent pas remplacer les compétences, l'équipement ou le niveau.");
+    return lines;
+}
+
+bool Player::hasTitle(const std::string& title) const
+{
+    const std::string normalizedTitle = normalizeLegacyTitleName(title);
+    return std::find(titles.begin(), titles.end(), normalizedTitle) != titles.end();
+}
+
+bool Player::grantTitle(const std::string& title)
+{
+    const std::string normalizedTitle = normalizeLegacyTitleName(title);
+    if (normalizedTitle.empty() || hasTitle(normalizedTitle))
+    {
+        return false;
+    }
+
+    const std::string firstTitle = "Une sorte de titre ?";
+    const bool shouldGrantFirstTitle = normalizedTitle != firstTitle && !hasTitle(firstTitle);
+
+    titles.push_back(normalizedTitle);
+    if (shouldGrantFirstTitle)
+    {
+        titles.push_back(firstTitle);
+    }
+
+    if (activeTitles.empty())
+    {
+        activeTitles.push_back(normalizedTitle);
+        activeTitle = normalizedTitle;
+    }
+    else if (activeTitle.empty())
+    {
+        activeTitle = activeTitles.front();
+    }
+
+    const std::string ultimateTitle = "Complétionniste de l'impossible";
+    if (normalizedTitle != ultimateTitle
+        && !hasTitle(ultimateTitle)
+        && TitleCatalog::hasAllUltimatePrerequisites(titles))
+    {
+        titles.push_back(ultimateTitle);
+    }
+
+    return true;
+}
+
+bool Player::setActiveTitle(const std::string& title)
+{
+    const std::string normalizedTitle = normalizeLegacyTitleName(title);
+    if (normalizedTitle.empty())
+    {
+        activeTitle.clear();
+        activeTitles.clear();
+        return true;
+    }
+
+    if (!hasTitle(normalizedTitle))
+    {
+        return false;
+    }
+
+    activeTitles.erase(std::remove(activeTitles.begin(), activeTitles.end(), normalizedTitle), activeTitles.end());
+    activeTitles.insert(activeTitles.begin(), normalizedTitle);
+    while (activeTitles.size() > 3)
+    {
+        activeTitles.pop_back();
+    }
+
+    activeTitle = activeTitles.front();
+    return true;
+}
+
+bool Player::setActiveTitleSlot(int slotIndex, const std::string& title)
+{
+    const std::string normalizedTitle = normalizeLegacyTitleName(title);
+    if (slotIndex < 0 || slotIndex >= 3)
+    {
+        return false;
+    }
+
+    if (normalizedTitle.empty())
+    {
+        return unequipActiveTitleSlot(slotIndex);
+    }
+
+    if (!hasTitle(normalizedTitle))
+    {
+        return false;
+    }
+
+    activeTitles.erase(std::remove(activeTitles.begin(), activeTitles.end(), normalizedTitle), activeTitles.end());
+    while (activeTitles.size() <= static_cast<std::size_t>(slotIndex))
+    {
+        activeTitles.push_back("");
+    }
+
+    activeTitles[static_cast<std::size_t>(slotIndex)] = normalizedTitle;
+    activeTitles.erase(std::remove(activeTitles.begin(), activeTitles.end(), std::string()), activeTitles.end());
+    while (activeTitles.size() > 3)
+    {
+        activeTitles.pop_back();
+    }
+
+    activeTitle = activeTitles.empty() ? std::string() : activeTitles.front();
+    return true;
+}
+
+bool Player::unequipActiveTitleSlot(int slotIndex)
+{
+    if (slotIndex < 0 || slotIndex >= 3)
+    {
+        return false;
+    }
+
+    if (static_cast<std::size_t>(slotIndex) >= activeTitles.size())
+    {
+        return true;
+    }
+
+    activeTitles.erase(activeTitles.begin() + slotIndex);
+    activeTitle = activeTitles.empty() ? std::string() : activeTitles.front();
+    return true;
+}
+
+bool Player::equipTitle(const std::string& title)
+{
+    const std::string normalizedTitle = normalizeLegacyTitleName(title);
+    if (normalizedTitle.empty() || !hasTitle(normalizedTitle))
+    {
+        return false;
+    }
+
+    if (std::find(activeTitles.begin(), activeTitles.end(), normalizedTitle) != activeTitles.end())
+    {
+        return true;
+    }
+
+    if (activeTitles.size() >= 3)
+    {
+        return false;
+    }
+
+    activeTitles.push_back(normalizedTitle);
+    if (activeTitle.empty())
+    {
+        activeTitle = activeTitles.front();
+    }
+    return true;
+}
+
+void Player::setLoadedTitles(const std::vector<std::string>& loadedTitles, const std::string& loadedActiveTitle)
+{
+    setLoadedTitles(loadedTitles, loadedActiveTitle, {});
+}
+
+void Player::setLoadedTitles(const std::vector<std::string>& loadedTitles, const std::string& loadedActiveTitle, const std::vector<std::string>& loadedActiveTitles)
+{
+    titles.clear();
+    activeTitles.clear();
+
+    for (const std::string& title : loadedTitles)
+    {
+        const std::string normalizedTitle = normalizeLegacyTitleName(title);
+        if (!normalizedTitle.empty() && !hasTitle(normalizedTitle))
+        {
+            titles.push_back(normalizedTitle);
+        }
+    }
+
+    for (const std::string& title : loadedActiveTitles)
+    {
+        const std::string normalizedTitle = normalizeLegacyTitleName(title);
+        if (!normalizedTitle.empty()
+            && hasTitle(normalizedTitle)
+            && std::find(activeTitles.begin(), activeTitles.end(), normalizedTitle) == activeTitles.end())
+        {
+            activeTitles.push_back(normalizedTitle);
+            if (activeTitles.size() >= 3)
+            {
+                break;
+            }
+        }
+    }
+
+    const std::string normalizedLoadedActiveTitle = normalizeLegacyTitleName(loadedActiveTitle);
+    if (activeTitles.empty() && !normalizedLoadedActiveTitle.empty() && hasTitle(normalizedLoadedActiveTitle))
+    {
+        activeTitles.push_back(normalizedLoadedActiveTitle);
+    }
+    else if (activeTitles.empty() && !titles.empty())
+    {
+        activeTitles.push_back(titles.front());
+    }
+
+    activeTitle = activeTitles.empty() ? std::string() : activeTitles.front();
 }
 
 void Player::markAdaptedToCurrentVersion()
@@ -525,6 +1174,7 @@ void Player::setRace(CharacterRace selectedRace)
 {
     race = selectedRace;
     applyRaceStartingBonus(selectedRace);
+    refreshLevelAndIdentitySkills();
 }
 
 
@@ -896,12 +1546,84 @@ void Player::refreshLevelAndIdentitySkills()
 {
     CharacterRace currentRace = getRace();
 
-    if (currentRace == CharacterRace::DarkElf
-        || currentRace == CharacterRace::Kitsune
-        || currentRace == CharacterRace::Vampire
-        || currentRace == CharacterRace::Demon)
+    if (RaceCatalog::hasInnateNightVision(currentRace))
     {
         unlockPassiveSkill("night_vision", "Vision nocturne");
+    }
+
+    if (currentRace == CharacterRace::Kitsune || currentRace == CharacterRace::HalfDragon)
+    {
+        unlockPassiveSkill("temperature_adaptation", "Adaptation aux températures");
+        unlockPassiveSkill("minor_fire_resistance", currentRace == CharacterRace::Kitsune ? "Résistance légère au feu kitsune" : "Résistance légère au feu draconique");
+    }
+
+    if (currentRace == CharacterRace::Tiefling || currentRace == CharacterRace::Demon)
+    {
+        unlockPassiveSkill("infernal_fire_resistance", currentRace == CharacterRace::Tiefling ? "Résistance infernale tieffeline" : "Résistance infernale démoniaque");
+    }
+
+    if (currentRace == CharacterRace::Dwarf || currentRace == CharacterRace::Vampire || currentRace == CharacterRace::HalfDragon)
+    {
+        unlockPassiveSkill("minor_cold_resistance", currentRace == CharacterRace::Vampire ? "Résistance froide vampirique" : "Résistance légère au froid");
+    }
+
+    if (RaceCatalog::hasFireWeakness(currentRace))
+    {
+        std::string fireWeaknessName = "Faiblesse raciale au feu";
+        if (currentRace == CharacterRace::Fairy) fireWeaknessName = "Faiblesse des ailes aux flammes";
+        else if (currentRace == CharacterRace::Vampire) fireWeaknessName = "Faiblesse vampirique au feu";
+        else if (currentRace == CharacterRace::SemiBird) fireWeaknessName = "Faiblesse des plumes aux flammes";
+        unlockPassiveSkill("fire_vulnerability", fireWeaknessName);
+    }
+
+    if (currentRace == CharacterRace::SemiWolf)
+    {
+        unlockPassiveSkill("semi_wolf_tracking", "Flair de meute");
+    }
+    else if (currentRace == CharacterRace::SemiFox)
+    {
+        unlockPassiveSkill("semi_fox_cunning", "Flair rusé de renard");
+    }
+    else if (currentRace == CharacterRace::SemiDog)
+    {
+        unlockPassiveSkill("semi_dog_loyal_scent", "Flair loyal");
+    }
+    else if (currentRace == CharacterRace::SemiCat)
+    {
+        unlockPassiveSkill("semi_cat_reflexes", "Réflexes félins");
+    }
+    else if (currentRace == CharacterRace::SemiLizard)
+    {
+        unlockPassiveSkill("semi_lizard_scales", "Écailles tempérées");
+        unlockPassiveSkill("minor_fire_resistance", "Résistance légère au feu lézard");
+    }
+    else if (currentRace == CharacterRace::SemiBird)
+    {
+        unlockPassiveSkill("semi_bird_open_sky", "Vue des hauteurs");
+    }
+    else if (currentRace == CharacterRace::Dwarf || currentRace == CharacterRace::Gnome)
+    {
+        unlockPassiveSkill("dwarven_mine_sense", currentRace == CharacterRace::Dwarf ? "Sens des galeries" : "Sens des galeries gnome");
+    }
+    else if (currentRace == CharacterRace::Elf)
+    {
+        unlockPassiveSkill("elven_fine_perception", "Perception elfique");
+    }
+    else if (currentRace == CharacterRace::Halfling)
+    {
+        unlockPassiveSkill("halfling_lucky_step", "Pas chanceux");
+    }
+    else if (currentRace == CharacterRace::HalfDragon)
+    {
+        unlockPassiveSkill("dragon_weather_blood", "Sang draconique d'endurance");
+    }
+    else if (currentRace == CharacterRace::Orc)
+    {
+        unlockPassiveSkill("orcish_forced_march", "Marche forcée orque");
+    }
+    else if (currentRace == CharacterRace::Fairy || currentRace == CharacterRace::Aasimar)
+    {
+        unlockPassiveSkill("fairy_mana_sense", currentRace == CharacterRace::Fairy ? "Sens féerique du mana" : "Sens lumineux du mana");
     }
 
     if (level >= 3)
@@ -975,6 +1697,107 @@ void Player::refreshCareerSkillProgress()
     {
         unlockPassiveSkill("boss_memory", "Mémoire de boss");
     }
+
+    if (countRecentEquipmentUsageContaining(recentCombatEquipmentUsage, "Armure:") >= 5)
+    {
+        unlockPassiveSkill("armor_habit", "Habitude d'armure");
+    }
+
+    if (hasRecentFullLoadoutUsage(recentCombatEquipmentUsage, 5))
+    {
+        unlockPassiveSkill("loadout_memory", "Mémoire d'équipement");
+    }
+
+    if (inventory.getMaterialCount() >= 12)
+    {
+        unlockPassiveSkill("material_sorting_habit", "Tri des composants");
+    }
+
+    if (activeTitles.size() >= 3 && hasEquippedWeapon() && hasEquippedArmor())
+    {
+        unlockPassiveSkill("equipment_identity", "Identité d'équipement");
+    }
+
+    if (victories >= 10 && escapes >= 1)
+    {
+        unlockPassiveSkill("guild_route_memory", "Mémoire de route de guilde");
+    }
+
+    if (enemiesKilled >= 250)
+    {
+        unlockPassiveSkill("bestiary_family_reader", "Lecture des familles");
+    }
+
+    if (worldDaysElapsed >= 12 && escapes >= 1)
+    {
+        unlockPassiveSkill("cautious_pathing", "Pas prudent");
+    }
+
+    if (victories >= 15 && enemiesKilled >= 60)
+    {
+        unlockPassiveSkill("threat_route_planner", "Plan de route dangereux");
+    }
+
+    const bool wornWeapon = hasEquippedWeapon()
+        && !getEquippedWeapon().isIndestructible()
+        && getEquippedWeapon().getMaxDurability() > 0
+        && getEquippedWeapon().getDurability() * 100 / getEquippedWeapon().getMaxDurability() <= 45;
+    const bool wornArmor = hasEquippedArmor()
+        && !getEquippedArmor().isIndestructible()
+        && getEquippedArmor().getMaxDurability() > 0
+        && getEquippedArmor().getDurability() * 100 / getEquippedArmor().getMaxDurability() <= 45;
+    if (combatsStarted >= 6 && (wornWeapon || wornArmor))
+    {
+        unlockPassiveSkill("field_maintenance", "Entretien de terrain");
+    }
+
+    if (combatsStarted >= 10 && wornWeapon)
+    {
+        unlockPassiveSkill("weapon_care_habit", "Soin d'arme");
+    }
+
+    if (combatsStarted >= 10 && wornArmor && countRecentEquipmentUsageContaining(recentCombatEquipmentUsage, "Armure:") >= 5)
+    {
+        unlockPassiveSkill("armor_fit_memory", "Mémoire d'ajustement");
+    }
+
+    for (const PlayerCurse& curse : activeCurses)
+    {
+        if (curse.bossIdRequiredToBreak > 0 && combatsStarted >= 3)
+        {
+            unlockPassiveSkill("curse_anchor_awareness", "Conscience d'ancrage");
+            break;
+        }
+    }
+
+    if (hasPassiveSkill("weapon_care_habit"))
+    {
+        grantTitle("Arme entretenue");
+    }
+    if (hasPassiveSkill("armor_fit_memory"))
+    {
+        grantTitle("Armure qui respire");
+    }
+    if (hasPassiveSkill("cautious_pathing"))
+    {
+        grantTitle("Retour par le bon chemin");
+    }
+
+    if (level >= MAX_LEVEL)
+    {
+        grantTitle("Niveau maximum, problème minimum");
+    }
+
+    const int currentGold = inventory.getGold();
+    if (currentGold >= 1000000)
+    {
+        grantTitle("Millionnaire qui recompte");
+    }
+    if (currentGold >= 10000000)
+    {
+        grantTitle("Banquier de l'impossible");
+        grantTitle("Le coffre a peur de toi");
+    }
 }
 
 void Player::setLoadedSkillState(
@@ -1000,6 +1823,7 @@ void Player::setLoadedSkillState(
     axeKillProgress = axeProgress < 0 ? 0 : axeProgress;
     hammerKillProgress = hammerProgress < 0 ? 0 : hammerProgress;
     spearKillProgress = spearProgress < 0 ? 0 : spearProgress;
+    refreshLevelAndIdentitySkills();
 }
 
 // EN: displaySkillProgress declares or implements a focused behavior used by this module.
@@ -1055,6 +1879,21 @@ void Player::displaySkillProgress() const
     lines.push_back("- Fuites vers Lecture de fuite : " + std::to_string(escapes) + "/2");
     lines.push_back("- Boss vaincus vers Mémoire de boss : " + std::to_string(bossesKilled) + "/1");
 
+    lines.push_back("");
+    lines.push_back("Habitudes d'équipement :");
+    lines.push_back("- Combats récents avec armure vers Habitude d'armure : " + std::to_string(countRecentEquipmentUsageContaining(recentCombatEquipmentUsage, "Armure:")) + "/5");
+    lines.push_back("- Combats récents avec arme + armure vers Mémoire d'équipement : " + std::to_string(countRecentFullLoadoutUsage(recentCombatEquipmentUsage)) + "/5");
+    lines.push_back("- Entretien de terrain : se débloque avec plusieurs combats et de l'équipement vraiment usé.");
+    lines.push_back("- Tri des composants : " + std::to_string(inventory.getMaterialCount()) + "/12 types/piles de matériaux dans l'inventaire.");
+    lines.push_back("- Identité d'équipement : trois titres équipés + arme/armure portées.");
+    lines.push_back("- Mémoire de route de guilde : victoires répétées + au moins une fuite apprise.");
+    lines.push_back("- Lecture des familles : " + std::to_string(enemiesKilled) + "/250 monstres vaincus.");
+    lines.push_back("- Pas prudent : " + std::to_string(worldDaysElapsed) + "/12 jours vécus + " + std::to_string(escapes) + "/1 fuite apprise.");
+    lines.push_back("- Plan de route dangereux : " + std::to_string(victories) + "/15 victoires + " + std::to_string(enemiesKilled) + "/60 monstres vaincus.");
+    lines.push_back("- Soin d'arme : 10 combats + arme équipée vraiment usée.");
+    lines.push_back("- Mémoire d'ajustement : 10 combats + armure usée portée sur plusieurs combats.");
+    lines.push_back("- Conscience d'ancrage : se débloque si une malédiction de boss reste sur le personnage hors combat.");
+
     showPlayerScreen("COMPÉTENCES", "player.skill_progress", lines, false);
 }
 
@@ -1065,6 +1904,1338 @@ void Player::displaySkillProgress() const
 int Player::getCombatsStarted() const
 {
     return combatsStarted;
+}
+
+int Player::getWorldDaysElapsed() const
+{
+    return worldDaysElapsed;
+}
+
+int Player::getWorldDayProgressUnits() const
+{
+    return worldDayProgressUnits;
+}
+
+int Player::getWorldDayUnitsPerDay() const
+{
+    return 5;
+}
+
+int Player::getCurrentWorldDayNumber() const
+{
+    return worldDaysElapsed + 1;
+}
+
+std::string Player::getCurrentWeekdayName() const
+{
+    static const std::vector<std::string> names = {
+        "dimanche",
+        "lundi",
+        "mardi",
+        "mercredi",
+        "jeudi",
+        "vendredi",
+        "samedi"
+    };
+
+    const int dayIndex = ((getCurrentWorldDayNumber() - 1) % static_cast<int>(names.size()) + static_cast<int>(names.size())) % static_cast<int>(names.size());
+    return names[static_cast<std::size_t>(dayIndex)];
+}
+
+std::string Player::getCurrentDayPartName() const
+{
+    const int unit = std::max(0, std::min(worldDayProgressUnits, getWorldDayUnitsPerDay() - 1));
+    if (unit == 0) return "Matin";
+    if (unit == 1) return "Midi";
+    if (unit == 2) return "Après-midi";
+    if (unit == 3) return "Soir";
+    return "Nuit";
+}
+
+std::string Player::formatWorldDateLine() const
+{
+    return "Jour " + std::to_string(getCurrentWorldDayNumber()) + " (" + getCurrentWeekdayName() + ")";
+}
+
+std::string Player::formatWorldDayPartLine() const
+{
+    const int part = std::max(0, std::min(worldDayProgressUnits, getWorldDayUnitsPerDay() - 1)) + 1;
+    return getCurrentDayPartName() + " " + std::to_string(part) + "/" + std::to_string(getWorldDayUnitsPerDay());
+}
+
+std::string Player::formatWorldDateTimeLine() const
+{
+    return formatWorldDateLine() + " — " + formatWorldDayPartLine();
+}
+
+std::string Player::formatWorldTimeChange(int beforeDay, int beforeProgress) const
+{
+    const int unitsPerDay = getWorldDayUnitsPerDay();
+    if (beforeDay < 0) beforeDay = 0;
+    if (beforeProgress < 0) beforeProgress = 0;
+    if (beforeProgress >= unitsPerDay)
+    {
+        beforeDay += beforeProgress / unitsPerDay;
+        beforeProgress %= unitsPerDay;
+    }
+
+    const int beforeDayNumber = beforeDay + 1;
+    static const std::vector<std::string> names = {"dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"};
+    static const std::vector<std::string> moments = {"Matin", "Midi", "Après-midi", "Soir", "Nuit"};
+    const int beforeWeekdayIndex = ((beforeDayNumber - 1) % static_cast<int>(names.size()) + static_cast<int>(names.size())) % static_cast<int>(names.size());
+    const int beforeMomentIndex = std::max(0, std::min(beforeProgress, unitsPerDay - 1));
+    const std::string beforeMoment = moments[static_cast<std::size_t>(beforeMomentIndex)];
+
+    return "Date : Jour " + std::to_string(beforeDayNumber) + " (" + names[static_cast<std::size_t>(beforeWeekdayIndex)] + ") -> " + formatWorldDateLine()
+        + " | Moment : " + beforeMoment + " " + std::to_string(beforeMomentIndex + 1) + "/" + std::to_string(unitsPerDay)
+        + " -> " + formatWorldDayPartLine() + ".";
+}
+
+void Player::processEndOfWorldDay()
+{
+    int paidToday = 0;
+    int renewedToday = 0;
+    std::vector<std::string> dayLines;
+
+    for (PlayerLocalSubscription& subscription : localSubscriptions)
+    {
+        if (subscription.expiresAtDay != worldDaysElapsed)
+        {
+            continue;
+        }
+
+        const std::string subscriptionName = subscription.name.empty() ? subscription.id : subscription.name;
+
+        if (subscription.cancellationRequested)
+        {
+            dayLines.push_back("Abonnement terminé : " + subscriptionName + " (annulation demandée, aucun renouvellement payé).");
+            continue;
+        }
+
+        int renewalPrice = subscription.renewalPrice > 0
+            ? subscription.renewalPrice
+            : defaultLocalSubscriptionRenewalPrice(subscription.id);
+
+        if (renewalPrice <= 0)
+        {
+            dayLines.push_back("Abonnement expiré : " + subscriptionName + " (aucun tarif de renouvellement connu).");
+            continue;
+        }
+
+        subscription.renewalPrice = renewalPrice;
+        if (inventory.spendGold(renewalPrice))
+        {
+            subscription.expiresAtDay = worldDaysElapsed + 7;
+            subscription.cancellationRequested = false;
+            paidToday += renewalPrice;
+            ++renewedToday;
+            dayLines.push_back(
+                "Renouvellement payé : " + subscriptionName
+                + " — " + Money::formatGoldWithRaw(renewalPrice)
+                + " (actif jusqu'à la fin du jour " + std::to_string(subscription.expiresAtDay + 1) + ")."
+            );
+        }
+        else
+        {
+            dayLines.push_back(
+                "Renouvellement impossible : " + subscriptionName
+                + " demandait " + Money::formatGoldWithRaw(renewalPrice)
+                + ", mais l'or est insuffisant. L'abonnement s'arrête."
+            );
+        }
+    }
+
+    const int sleepPressure = getCursePressureForCategory("sleep");
+    const int equipmentPressure = getCursePressureForCategory("equipment");
+    const int socialPressure = getCursePressureForCategory("social");
+    const int manaPressure = getCursePressureForCategory("mana");
+    const int spiritPressure = getCursePressureForCategory("spirit");
+    const int corruptionPressure = getCursePressureForCategory("corruption");
+    const int interfacePressure = getCursePressureForCategory("interface");
+    const int hallucinationPressure = getCursePressureForCategory("hallucination");
+    if (sleepPressure + equipmentPressure + socialPressure + manaPressure + spiritPressure + corruptionPressure + interfacePressure + hallucinationPressure > 0)
+    {
+        static std::mt19937 generator(std::random_device{}());
+        std::uniform_int_distribution<int> chance(1, 100);
+        if (sleepPressure > 0 && chance(generator) <= std::min(45, 12 + sleepPressure * 6))
+        {
+            dayLines.push_back(
+                getKnownCursePressureForCategory("sleep") > 0
+                    ? "Sommeil maudit : le repos compte, mais il laisse un rêve collé derrière les paupières."
+                    : "Sommeil étrange : tu te réveilles avec l'impression d'avoir oublié un rêve important."
+            );
+        }
+        if (equipmentPressure > 0 && chance(generator) <= std::min(35, 8 + equipmentPressure * 5))
+        {
+            dayLines.push_back(
+                getKnownCursePressureForCategory("equipment") > 0
+                    ? "Équipement maudit : l'arme ou l'armure répond avec un léger retard quand tu la ranges."
+                    : "Équipement étrange : une boucle, une lame ou une couture semble avoir bougé sans raison."
+            );
+        }
+        if (socialPressure > 0 && chance(generator) <= std::min(30, 7 + socialPressure * 4))
+        {
+            dayLines.push_back(
+                getKnownCursePressureForCategory("social") > 0
+                    ? "Présence sociale troublée : quelques regards restent trop longtemps sur toi."
+                    : "Présence étrange : tu as l'impression qu'une conversation s'arrête quand tu arrives."
+            );
+        }
+        if (manaPressure > 0 && chance(generator) <= std::min(35, 8 + manaPressure * 5))
+        {
+            dayLines.push_back(
+                getKnownCursePressureForCategory("mana") > 0
+                    ? "Mana instable : ta réserve magique semble respirer à contretemps."
+                    : "Sensation étrange : quelque chose circule mal, sans que tu saches si c'est magique ou nerveux."
+            );
+        }
+        if (spiritPressure > 0 && chance(generator) <= std::min(32, 7 + spiritPressure * 4))
+        {
+            dayLines.push_back(
+                getKnownCursePressureForCategory("spirit") > 0
+                    ? "Esprit troublé : une pensée étrangère revient toujours au même endroit."
+                    : "Esprit étrange : tu perds une phrase simple, puis elle revient comme si quelqu'un l'avait gardée pour toi."
+            );
+        }
+        if (corruptionPressure > 0 && chance(generator) <= std::min(30, 6 + corruptionPressure * 4))
+        {
+            dayLines.push_back(
+                getKnownCursePressureForCategory("corruption") > 0
+                    ? "Corruption diagnostiquée : la trace sombre ne progresse pas forcément, mais elle réagit au repos."
+                    : "Sensation sombre : une fatigue sale reste sur la peau même après t'être posé."
+            );
+        }
+        if (interfacePressure > 0 && chance(generator) <= std::min(42, 10 + interfacePressure * 5))
+        {
+            dayLines.push_back(
+                getKnownCursePressureForCategory("interface") > 0
+                    ? "Interface maudite : une ligne de menu apparaît hors combat, affiche [PV=???], puis se ferme toute seule."
+                    : "Interface étrange : pendant une seconde, un choix inexistant semble flotter devant toi."
+            );
+        }
+        if (hallucinationPressure > 0 && chance(generator) <= std::min(42, 10 + hallucinationPressure * 5))
+        {
+            dayLines.push_back(
+                getKnownCursePressureForCategory("hallucination") > 0
+                    ? "Hallucination diagnostiquée : les contours doublent brièvement, comme si ta vision refusait de choisir une seule réalité."
+                    : "Trouble de la vision : un passant se dédouble, puis redevient normal quand tu clignes des yeux."
+            );
+        }
+    }
+
+    const int cityRepairDaysBefore = inventory.countMaterialById("city_repair_days_marker");
+    if (cityRepairDaysBefore > 0)
+    {
+        inventory.removeMaterialQuantityById("city_repair_days_marker", 1);
+        const int cityRepairDaysAfter = std::max(0, cityRepairDaysBefore - 1);
+        if (cityRepairDaysAfter > 0)
+        {
+            dayLines.push_back("Ville : les réparations continuent. Boutiques ouvertes au compte-gouttes pendant encore " + std::to_string(cityRepairDaysAfter) + " jour(s).");
+        }
+        else
+        {
+            const int noticeCount = inventory.countMaterialById("city_damage_notice");
+            if (noticeCount > 0)
+            {
+                inventory.removeMaterialQuantityById("city_damage_notice", noticeCount);
+            }
+            dayLines.push_back("Ville : les réparations principales sont terminées. Les boutiques reprennent un rythme normal.");
+        }
+    }
+
+    const int cityEventRecentDaysBefore = inventory.countMaterialById("city_event_recent_days_marker");
+    if (cityEventRecentDaysBefore > 0)
+    {
+        inventory.removeMaterialQuantityById("city_event_recent_days_marker", 1);
+        const int cityEventRecentDaysAfter = std::max(0, cityEventRecentDaysBefore - 1);
+        if (cityEventRecentDaysAfter > 0)
+        {
+            dayLines.push_back("Ville : les affiches récentes occupent encore les organisateurs pendant " + std::to_string(cityEventRecentDaysAfter) + " jour(s). Les événements exceptionnels restent moins probables.");
+        }
+    }
+
+    const int defenseGratitudeDaysBefore = inventory.countMaterialById("city_defense_gratitude_days_marker");
+    if (defenseGratitudeDaysBefore > 0)
+    {
+        inventory.removeMaterialQuantityById("city_defense_gratitude_days_marker", 1);
+        const int defenseGratitudeDaysAfter = std::max(0, defenseGratitudeDaysBefore - 1);
+        if (defenseGratitudeDaysAfter > 0)
+        {
+            dayLines.push_back("Ville : la reconnaissance après la défense tient encore " + std::to_string(defenseGratitudeDaysAfter) + " jour(s) chez les commerçants locaux.");
+        }
+        else
+        {
+            dayLines.push_back("Ville : les petites remises de défense s'effacent. Les marchands reviennent à leurs prix habituels.");
+        }
+    }
+
+    if (!dayLines.empty())
+    {
+        pendingWorldTimeReportLines.push_back(
+            "Fin de journée : " + std::to_string(renewedToday)
+            + " renouvellement(s) payé(s), total " + Money::formatGoldWithRaw(paidToday) + "."
+        );
+        pendingWorldTimeReportLines.insert(pendingWorldTimeReportLines.end(), dayLines.begin(), dayLines.end());
+    }
+
+    localSubscriptionRenewalPaidThisWeek += paidToday;
+}
+
+void Player::appendWeeklyRenewalSummaryIfNeeded()
+{
+    if (worldDaysElapsed > 0 && worldDaysElapsed % 7 == 0)
+    {
+        pendingWorldTimeReportLines.push_back(
+            "Bilan de fin de semaine : renouvellements d'abonnements payés cette semaine = "
+            + Money::formatGoldWithRaw(localSubscriptionRenewalPaidThisWeek) + "."
+        );
+        localSubscriptionRenewalPaidThisWeek = 0;
+    }
+}
+
+void Player::advanceWorldDays(int days)
+{
+    if (days <= 0)
+    {
+        return;
+    }
+
+    for (int i = 0; i < days; ++i)
+    {
+        processEndOfWorldDay();
+        ++worldDaysElapsed;
+        removeExpiredLocalSubscriptions();
+        processCurseEscalations();
+        removeExpiredCurses();
+        appendWeeklyRenewalSummaryIfNeeded();
+        maybeAppendCurseMalaiseLine(i + 1);
+    }
+}
+
+void Player::advanceWorldDayUnits(int units)
+{
+    if (units <= 0)
+    {
+        return;
+    }
+
+    worldDayProgressUnits += units;
+
+    const int unitsPerDay = getWorldDayUnitsPerDay();
+    while (worldDayProgressUnits >= unitsPerDay)
+    {
+        processEndOfWorldDay();
+        ++worldDaysElapsed;
+        worldDayProgressUnits -= unitsPerDay;
+        removeExpiredLocalSubscriptions();
+        processCurseEscalations();
+        removeExpiredCurses();
+        appendWeeklyRenewalSummaryIfNeeded();
+    }
+
+    removeExpiredLocalSubscriptions();
+    removeExpiredCurses();
+    maybeAppendCurseMalaiseLine(units);
+}
+
+const std::vector<PlayerLocalSubscription>& Player::getLocalSubscriptions() const
+{
+    return localSubscriptions;
+}
+
+bool Player::hasActiveLocalSubscription(const std::string& subscriptionId) const
+{
+    for (const PlayerLocalSubscription& subscription : localSubscriptions)
+    {
+        if (subscription.id == subscriptionId && subscription.expiresAtDay >= worldDaysElapsed)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Player::isLocalSubscriptionCancellationRequested(const std::string& subscriptionId) const
+{
+    for (const PlayerLocalSubscription& subscription : localSubscriptions)
+    {
+        if (subscription.id == subscriptionId && subscription.expiresAtDay >= worldDaysElapsed)
+        {
+            return subscription.cancellationRequested;
+        }
+    }
+
+    return false;
+}
+
+int Player::getLocalSubscriptionExpiresAtDay(const std::string& subscriptionId) const
+{
+    for (const PlayerLocalSubscription& subscription : localSubscriptions)
+    {
+        if (subscription.id == subscriptionId && subscription.expiresAtDay >= worldDaysElapsed)
+        {
+            return subscription.expiresAtDay;
+        }
+    }
+
+    return -1;
+}
+
+void Player::activateLocalSubscription(const std::string& subscriptionId, const std::string& name, int durationDays, int renewalPrice)
+{
+    if (subscriptionId.empty())
+    {
+        return;
+    }
+
+    if (durationDays <= 0)
+    {
+        durationDays = 7;
+    }
+
+    if (renewalPrice <= 0)
+    {
+        renewalPrice = defaultLocalSubscriptionRenewalPrice(subscriptionId);
+    }
+
+    const int newExpiresAtDay = worldDaysElapsed + durationDays - 1;
+    for (PlayerLocalSubscription& subscription : localSubscriptions)
+    {
+        if (subscription.id == subscriptionId)
+        {
+            subscription.name = name.empty() ? subscription.id : name;
+            subscription.expiresAtDay = newExpiresAtDay;
+            subscription.cancellationRequested = false;
+            subscription.renewalPrice = renewalPrice;
+            return;
+        }
+    }
+
+    PlayerLocalSubscription subscription;
+    subscription.id = subscriptionId;
+    subscription.name = name.empty() ? subscriptionId : name;
+    subscription.expiresAtDay = newExpiresAtDay;
+    subscription.cancellationRequested = false;
+    subscription.renewalPrice = renewalPrice;
+    localSubscriptions.push_back(subscription);
+}
+
+bool Player::requestLocalSubscriptionCancellation(const std::string& subscriptionId)
+{
+    for (PlayerLocalSubscription& subscription : localSubscriptions)
+    {
+        if (subscription.id == subscriptionId && subscription.expiresAtDay >= worldDaysElapsed)
+        {
+            subscription.cancellationRequested = true;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void Player::removeExpiredLocalSubscriptions()
+{
+    localSubscriptions.erase(
+        std::remove_if(localSubscriptions.begin(), localSubscriptions.end(), [this](const PlayerLocalSubscription& subscription) {
+            return subscription.expiresAtDay >= 0 && subscription.expiresAtDay < worldDaysElapsed;
+        }),
+        localSubscriptions.end()
+    );
+}
+
+void Player::setLoadedLocalSubscriptions(const std::vector<PlayerLocalSubscription>& subscriptions)
+{
+    localSubscriptions.clear();
+    for (PlayerLocalSubscription subscription : subscriptions)
+    {
+        if (subscription.id.empty() || subscription.expiresAtDay < worldDaysElapsed)
+        {
+            continue;
+        }
+
+        if (subscription.name.empty())
+        {
+            subscription.name = subscription.id;
+        }
+        if (subscription.renewalPrice <= 0)
+        {
+            subscription.renewalPrice = defaultLocalSubscriptionRenewalPrice(subscription.id);
+        }
+        localSubscriptions.push_back(subscription);
+    }
+}
+
+
+const std::vector<PlayerCurse>& Player::getActiveCurses() const
+{
+    return activeCurses;
+}
+
+int Player::getActiveCurseCount() const
+{
+    return static_cast<int>(activeCurses.size());
+}
+
+bool Player::hasActiveCurse(const std::string& curseId) const
+{
+    for (const PlayerCurse& curse : activeCurses)
+    {
+        if (curse.id == curseId)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Player::addOrRefreshCurse(const PlayerCurse& curse)
+{
+    if (curse.id.empty())
+    {
+        return false;
+    }
+
+    PlayerCurse prepared = curse;
+    if (prepared.name.empty()) prepared.name = prepared.id;
+    if (prepared.appliedAtDay < 0) prepared.appliedAtDay = worldDaysElapsed;
+    prepared.exorcismProgress = std::max(0, prepared.exorcismProgress);
+    prepared.exorcismRequiredVisits = std::max(0, prepared.exorcismRequiredVisits);
+    prepared.diagnosisLevel = std::max(0, std::min(3, prepared.diagnosisLevel));
+    prepared.curseLevel = std::max(1, prepared.curseLevel);
+    prepared.maxCurseLevel = std::max(prepared.curseLevel, prepared.maxCurseLevel);
+    prepared.escalationIntervalDays = std::max(0, prepared.escalationIntervalDays);
+    if (prepared.evolvesOverTime && prepared.nextEscalationDay < 0 && prepared.escalationIntervalDays > 0 && prepared.curseLevel < prepared.maxCurseLevel)
+    {
+        prepared.nextEscalationDay = worldDaysElapsed + prepared.escalationIntervalDays;
+    }
+    if (!prepared.evolvesOverTime)
+    {
+        prepared.nextEscalationDay = -1;
+    }
+    refreshCursePresentationFromLevel(prepared);
+
+    for (PlayerCurse& active : activeCurses)
+    {
+        if (active.id == prepared.id)
+        {
+            const int preservedProgress = std::max(active.exorcismProgress, prepared.exorcismProgress);
+            const int preservedDiagnosis = std::max(active.diagnosisLevel, prepared.diagnosisLevel);
+            const std::string preservedDiscovered = active.discoveredSymptomCategories.empty() ? prepared.discoveredSymptomCategories : active.discoveredSymptomCategories;
+            const std::string preservedExcluded = active.excludedSymptomCategories.empty() ? prepared.excludedSymptomCategories : active.excludedSymptomCategories;
+            active = prepared;
+            active.diagnosisLevel = std::min(3, preservedDiagnosis);
+            active.discoveredSymptomCategories = preservedDiscovered;
+            active.excludedSymptomCategories = preservedExcluded;
+            active.exorcismProgress = std::min(preservedProgress, std::max(0, active.exorcismRequiredVisits));
+            refreshCursePresentationFromLevel(active);
+            return false;
+        }
+    }
+
+    activeCurses.push_back(prepared);
+    return true;
+}
+
+bool Player::removeCurse(const std::string& curseId)
+{
+    const std::size_t before = activeCurses.size();
+    activeCurses.erase(
+        std::remove_if(activeCurses.begin(), activeCurses.end(), [&curseId](const PlayerCurse& curse) {
+            return curse.id == curseId;
+        }),
+        activeCurses.end()
+    );
+
+    return activeCurses.size() != before;
+}
+
+int Player::removeExpiredCurses()
+{
+    const std::size_t before = activeCurses.size();
+    activeCurses.erase(
+        std::remove_if(activeCurses.begin(), activeCurses.end(), [this](const PlayerCurse& curse) {
+            return curse.expiresAtDay >= 0 && curse.expiresAtDay < worldDaysElapsed;
+        }),
+        activeCurses.end()
+    );
+
+    return static_cast<int>(before - activeCurses.size());
+}
+
+void Player::setLoadedCurses(const std::vector<PlayerCurse>& curses)
+{
+    activeCurses.clear();
+    for (PlayerCurse curse : curses)
+    {
+        if (curse.id.empty())
+        {
+            continue;
+        }
+        if (curse.expiresAtDay >= 0 && curse.expiresAtDay < worldDaysElapsed)
+        {
+            continue;
+        }
+        if (curse.name.empty()) curse.name = curse.id;
+        if (curse.appliedAtDay < 0) curse.appliedAtDay = worldDaysElapsed;
+        curse.exorcismProgress = std::max(0, curse.exorcismProgress);
+        curse.exorcismRequiredVisits = std::max(0, curse.exorcismRequiredVisits);
+        curse.diagnosisLevel = std::max(0, std::min(3, curse.diagnosisLevel));
+        curse.curseLevel = std::max(1, curse.curseLevel);
+        curse.maxCurseLevel = std::max(curse.curseLevel, curse.maxCurseLevel);
+        curse.escalationIntervalDays = std::max(0, curse.escalationIntervalDays);
+        if (!curse.evolvesOverTime)
+        {
+            curse.nextEscalationDay = -1;
+        }
+        refreshCursePresentationFromLevel(curse);
+        if (curse.exorcismRequiredVisits > 0)
+        {
+            curse.exorcismProgress = std::min(curse.exorcismProgress, curse.exorcismRequiredVisits);
+        }
+        activeCurses.push_back(curse);
+    }
+}
+
+bool Player::revealCurseSymptomCategory(const std::string& curseId, const std::string& category)
+{
+    for (PlayerCurse& curse : activeCurses)
+    {
+        if (curse.id != curseId)
+        {
+            continue;
+        }
+
+        if (!curseTokenListContains(curse.symptomCategories, category))
+        {
+            return false;
+        }
+
+        addCurseTokenToList(curse.discoveredSymptomCategories, category);
+        if (curse.diagnosisLevel < 1)
+        {
+            curse.diagnosisLevel = 1;
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool Player::excludeCurseSymptomCategory(const std::string& curseId, const std::string& category)
+{
+    for (PlayerCurse& curse : activeCurses)
+    {
+        if (curse.id != curseId)
+        {
+            continue;
+        }
+
+        if (curseTokenListContains(curse.symptomCategories, category))
+        {
+            return false;
+        }
+
+        return addCurseTokenToList(curse.excludedSymptomCategories, category);
+    }
+
+    return false;
+}
+
+int Player::autoExcludeWrongCurseSymptomCategories(const std::string& curseId, int percentToExclude)
+{
+    static const std::vector<std::string> allCategories = {
+        "health", "attack", "mana", "precision", "defense", "sleep",
+        "luck", "equipment", "spirit", "corruption", "travel", "social"
+    };
+
+    percentToExclude = std::max(0, std::min(100, percentToExclude));
+    for (PlayerCurse& curse : activeCurses)
+    {
+        if (curse.id != curseId)
+        {
+            continue;
+        }
+
+        std::vector<std::string> candidates;
+        for (const std::string& category : allCategories)
+        {
+            if (curseTokenListContains(curse.symptomCategories, category)) continue;
+            if (curseTokenListContains(curse.excludedSymptomCategories, category)) continue;
+            candidates.push_back(category);
+        }
+
+        if (candidates.empty())
+        {
+            return 0;
+        }
+
+        static std::mt19937 generator(std::random_device{}());
+        std::shuffle(candidates.begin(), candidates.end(), generator);
+        const int toRemove = std::max(1, static_cast<int>((candidates.size() * percentToExclude + 99) / 100));
+        int removed = 0;
+        for (const std::string& category : candidates)
+        {
+            if (removed >= toRemove) break;
+            if (addCurseTokenToList(curse.excludedSymptomCategories, category))
+            {
+                ++removed;
+            }
+        }
+        return removed;
+    }
+
+    return 0;
+}
+
+bool Player::setCurseDiagnosisLevel(const std::string& curseId, int level)
+{
+    level = std::max(0, std::min(3, level));
+    for (PlayerCurse& curse : activeCurses)
+    {
+        if (curse.id == curseId)
+        {
+            if (level <= curse.diagnosisLevel)
+            {
+                return false;
+            }
+            curse.diagnosisLevel = level;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Player::advanceChurchExorcism(const std::string& curseId)
+{
+    for (std::size_t i = 0; i < activeCurses.size(); ++i)
+    {
+        PlayerCurse& curse = activeCurses[i];
+        if (curse.id != curseId)
+        {
+            continue;
+        }
+        if (!curse.removableByChurch || curse.bossIdRequiredToBreak > 0 || curse.diagnosisLevel < 1)
+        {
+            return false;
+        }
+
+        if (curse.exorcismRequiredVisits <= 1)
+        {
+            activeCurses.erase(activeCurses.begin() + static_cast<std::ptrdiff_t>(i));
+            return true;
+        }
+
+        curse.exorcismProgress = std::min(curse.exorcismRequiredVisits, curse.exorcismProgress + 1);
+        if (curse.exorcismProgress >= curse.exorcismRequiredVisits)
+        {
+            activeCurses.erase(activeCurses.begin() + static_cast<std::ptrdiff_t>(i));
+        }
+        return true;
+    }
+
+    return false;
+}
+
+int Player::processCurseEscalations()
+{
+    int escalated = 0;
+    for (PlayerCurse& curse : activeCurses)
+    {
+        if (!curse.evolvesOverTime || curse.escalationIntervalDays <= 0 || curse.curseLevel >= curse.maxCurseLevel)
+        {
+            continue;
+        }
+
+        if (curse.nextEscalationDay < 0)
+        {
+            curse.nextEscalationDay = curse.appliedAtDay + curse.escalationIntervalDays;
+        }
+
+        if (worldDaysElapsed < curse.nextEscalationDay)
+        {
+            continue;
+        }
+
+        while (curse.curseLevel < curse.maxCurseLevel
+            && curse.nextEscalationDay >= 0
+            && worldDaysElapsed >= curse.nextEscalationDay)
+        {
+            ++curse.curseLevel;
+            ++escalated;
+            curse.nextEscalationDay += curse.escalationIntervalDays;
+        }
+
+        refreshCursePresentationFromLevel(curse);
+
+        if (curse.becomesSpecialRemovalWhenTooHigh && curse.curseLevel > curse.churchRemovalMaxLevel)
+        {
+            pendingWorldTimeReportLines.push_back(
+                "Aggravation : une malédiction a dépassé ce que l'église peut retirer seule. Il faudra une autre solution."
+            );
+        }
+        else
+        {
+            pendingWorldTimeReportLines.push_back(
+                "Aggravation : une trace maudite semble plus lourde qu'hier. Un diagnostic à l'église serait prudent."
+            );
+        }
+    }
+
+    return escalated;
+}
+
+int Player::removeCursesLockedByBoss(int bossId)
+{
+    if (bossId <= 0)
+    {
+        return 0;
+    }
+
+    const std::size_t before = activeCurses.size();
+    activeCurses.erase(
+        std::remove_if(activeCurses.begin(), activeCurses.end(), [bossId](const PlayerCurse& curse) {
+            return curse.bossIdRequiredToBreak == bossId;
+        }),
+        activeCurses.end()
+    );
+
+    return static_cast<int>(before - activeCurses.size());
+}
+
+
+bool Player::hasCurseEligibleForSpecialSolution(const std::string& solutionId) const
+{
+    for (const PlayerCurse& curse : activeCurses)
+    {
+        if (curse.diagnosisLevel < 3)
+        {
+            continue;
+        }
+
+        if (solutionId == "destroy_source_object"
+            && (curse.id == "haunted_chest_echo" || curse.id == "anchored_relic_shadow" || curse.id == "cursed_equipment_whisper"))
+        {
+            return true;
+        }
+
+        if (solutionId == "break_oath" && curse.id == "oath_binding_trace")
+        {
+            return true;
+        }
+
+        if (solutionId == "break_pact" && curse.id == "voluntary_pact_mark")
+        {
+            return true;
+        }
+
+        if (solutionId == "read_counter_legend"
+            && (curse.id == "unread_legend_weight" || curse.id == "boss_threshold_omen"))
+        {
+            return true;
+        }
+
+        if (solutionId == "seal_source" && (curse.id == "boss_threshold_omen" || curse.id == "abandoned_altar_brand"))
+        {
+            return true;
+        }
+
+        if (solutionId == "confirm_source_defeated" && curse.id == "boss_threshold_omen")
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+int Player::resolveSpecialCurseSolution(const std::string& solutionId)
+{
+    const std::size_t before = activeCurses.size();
+
+    activeCurses.erase(
+        std::remove_if(activeCurses.begin(), activeCurses.end(), [&solutionId](const PlayerCurse& curse) {
+            if (curse.diagnosisLevel < 3)
+            {
+                return false;
+            }
+
+            if (solutionId == "destroy_source_object")
+            {
+                return curse.id == "haunted_chest_echo" || curse.id == "anchored_relic_shadow" || curse.id == "cursed_equipment_whisper";
+            }
+
+            if (solutionId == "break_oath")
+            {
+                return curse.id == "oath_binding_trace";
+            }
+
+            if (solutionId == "break_pact")
+            {
+                return curse.id == "voluntary_pact_mark";
+            }
+
+            if (solutionId == "read_counter_legend")
+            {
+                return curse.id == "unread_legend_weight" || curse.id == "boss_threshold_omen";
+            }
+
+            if (solutionId == "seal_source")
+            {
+                return curse.id == "boss_threshold_omen" || curse.id == "abandoned_altar_brand";
+            }
+
+            if (solutionId == "confirm_source_defeated")
+            {
+                return curse.id == "boss_threshold_omen";
+            }
+
+            return false;
+        }),
+        activeCurses.end()
+    );
+
+    return static_cast<int>(before - activeCurses.size());
+}
+
+int Player::getCursePressureForCategory(const std::string& category) const
+{
+    if (category.empty())
+    {
+        return 0;
+    }
+
+    int pressure = 0;
+    for (const PlayerCurse& curse : activeCurses)
+    {
+        if (curseTokenListContains(curse.symptomCategories, category))
+        {
+            pressure += std::max(1, curse.curseLevel);
+        }
+    }
+
+    return std::min(12, pressure);
+}
+
+int Player::getKnownCursePressureForCategory(const std::string& category) const
+{
+    if (category.empty())
+    {
+        return 0;
+    }
+
+    int pressure = 0;
+    for (const PlayerCurse& curse : activeCurses)
+    {
+        if (!curseTokenListContains(curse.symptomCategories, category))
+        {
+            continue;
+        }
+
+        const bool categoryKnown = curse.diagnosisLevel >= 3
+            || curseTokenListContains(curse.discoveredSymptomCategories, category);
+        if (categoryKnown)
+        {
+            pressure += std::max(1, curse.curseLevel);
+        }
+    }
+
+    return std::min(12, pressure);
+}
+
+bool Player::hasHighRunicBacklashNeedingEnchanter() const
+{
+    for (const PlayerCurse& curse : activeCurses)
+    {
+        if (curse.id == "runic_backlash"
+            && curse.becomesSpecialRemovalWhenTooHigh
+            && curse.curseLevel > curse.churchRemovalMaxLevel)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool Player::stabilizeHighRunicBacklashForEnchanter()
+{
+    for (PlayerCurse& curse : activeCurses)
+    {
+        if (curse.id != "runic_backlash"
+            || !curse.becomesSpecialRemovalWhenTooHigh
+            || curse.curseLevel <= curse.churchRemovalMaxLevel)
+        {
+            continue;
+        }
+
+        curse.removableByChurch = true;
+        curse.lifeLong = false;
+        curse.expiresAtDay = -1;
+        curse.exorcismProgress = 0;
+        curse.exorcismRequiredVisits = std::max(curse.exorcismRequiredVisits, 3);
+        curse.removalHint = "retourner à l'église après stabilisation runique pour accomplir un rite total.";
+        curse.highLevelRemovalHint = "la rune est stabilisée : l'église peut reprendre le relais, mais pas en un seul passage.";
+        curse.churchRemovalMaxLevel = std::max(curse.churchRemovalMaxLevel, curse.curseLevel);
+        refreshCursePresentationFromLevel(curse);
+        return true;
+    }
+
+    return false;
+}
+
+std::vector<std::string> Player::describeActiveCurses() const
+{
+    std::vector<std::string> lines;
+    if (activeCurses.empty())
+    {
+        lines.push_back("Aucune malédiction active connue.");
+        return lines;
+    }
+
+    for (const PlayerCurse& curse : activeCurses)
+    {
+        const bool unknown = curse.diagnosisLevel <= 0;
+        std::string line = "- " + (unknown ? "?????" : curse.name);
+        line += " | connaissance : " + std::to_string(std::max(0, std::min(3, curse.diagnosisLevel))) + "/3";
+        if (curse.diagnosisLevel >= 1)
+        {
+            line += " | niveau : " + std::to_string(std::max(1, curse.curseLevel)) + "/" + std::to_string(std::max(1, curse.maxCurseLevel));
+        }
+
+        if (curse.diagnosisLevel >= 2 && !curse.origin.empty())
+        {
+            line += " | origine : " + curse.origin;
+        }
+
+        if (curse.diagnosisLevel >= 2)
+        {
+            if (curse.evolvesOverTime && curse.curseLevel < curse.maxCurseLevel && curse.nextEscalationDay >= 0)
+            {
+                line += " | aggravation possible après le jour " + std::to_string(curse.nextEscalationDay + 1);
+            }
+            if (curse.expiresAtDay >= 0)
+            {
+                line += " | expire après le jour " + std::to_string(curse.expiresAtDay + 1);
+            }
+            else if (curse.lifeLong)
+            {
+                line += " | durée : vie entière / indéfinie";
+            }
+            else
+            {
+                line += " | durée : indéfinie";
+            }
+        }
+        else
+        {
+            line += " | durée : ?????";
+        }
+        lines.push_back(line);
+
+        const std::vector<std::string> discovered = splitCurseTokenList(curse.discoveredSymptomCategories);
+        if (!discovered.empty())
+        {
+            std::string categoriesLine = "  Symptômes confirmés : ";
+            for (std::size_t i = 0; i < discovered.size(); ++i)
+            {
+                if (i > 0) categoriesLine += ", ";
+                categoriesLine += curseCategoryLabel(discovered[i]);
+            }
+            lines.push_back(categoriesLine + ".");
+        }
+        else
+        {
+            lines.push_back(unknown ? "  Symptômes : ?????" : "  Symptômes : piste encore vague, rien de précis confirmé.");
+        }
+
+        const std::vector<std::string> excluded = splitCurseTokenList(curse.excludedSymptomCategories);
+        if (!excluded.empty())
+        {
+            std::string excludedLine = "  Pistes presque écartées : ";
+            for (std::size_t i = 0; i < excluded.size(); ++i)
+            {
+                if (i > 0) excludedLine += ", ";
+                excludedLine += curseCategoryLabel(excluded[i]);
+            }
+            lines.push_back(excludedLine + ".");
+        }
+
+        if (curse.diagnosisLevel >= 3 && !curse.description.empty())
+        {
+            lines.push_back("  Lecture complète : " + curse.description);
+        }
+
+        if (curse.diagnosisLevel < 1)
+        {
+            lines.push_back("  Exorcisme : refusé tant que la trace n'est pas connue au moins au niveau 1.");
+        }
+        else if (curse.bossIdRequiredToBreak > 0)
+        {
+            lines.push_back("  Ancrage hors combat : la trace reste sur le personnage jusqu'à ce que le boss lié soit rebattu.");
+            lines.push_back("  Exorcisme : impossible ici. Condition : " + (curse.diagnosisLevel >= 3 ? curse.removalHint : "source trop forte, recherche totale conseillée."));
+        }
+        else if (curse.removableByChurch)
+        {
+            if (curse.evolvesOverTime && curse.becomesSpecialRemovalWhenTooHigh && curse.curseLevel <= curse.churchRemovalMaxLevel)
+            {
+                lines.push_back("  Attention : si cette malédiction monte trop haut, l'église risque de ne plus suffire.");
+            }
+            if (curse.exorcismRequiredVisits > 1)
+            {
+                lines.push_back("  Exorcisme : " + std::to_string(curse.exorcismProgress) + "/" + std::to_string(curse.exorcismRequiredVisits) + " passage(s) terminé(s).");
+            }
+            else
+            {
+                lines.push_back("  Exorcisme : retirable par un prêtre/exorciste.");
+            }
+        }
+        else if (!curse.removalHint.empty() && curse.diagnosisLevel >= 3)
+        {
+            lines.push_back("  Condition spéciale : " + curse.removalHint);
+        }
+        else
+        {
+            lines.push_back("  Condition spéciale : ?????");
+        }
+    }
+
+    return lines;
+}
+
+void Player::recordLyknirDefeatCurse()
+{
+    PlayerCurse curse;
+    curse.id = "lyknir_prey_mark";
+    curse.name = "Marque de proie de Lyknir";
+    curse.origin = "Écho de Lyknir";
+    curse.description = "La meute garde ton odeur. Les prêtres peuvent la reconnaître, mais aucun rite ordinaire ne la rompt.";
+    curse.removalHint = "vaincre Lyknir et reprendre symboliquement ta place de chasseur.";
+    curse.severity = "majeure";
+    curse.symptomCategories = "spirit,travel,precision";
+    curse.discoveredSymptomCategories = "";
+    curse.excludedSymptomCategories = "";
+    curse.diagnosisLevel = 0;
+    curse.appliedAtDay = worldDaysElapsed;
+    curse.expiresAtDay = -1;
+    curse.exorcismProgress = 0;
+    curse.exorcismRequiredVisits = 0;
+    curse.curseLevel = 1;
+    curse.maxCurseLevel = 3;
+    curse.evolvesOverTime = true;
+    curse.escalationIntervalDays = 3;
+    curse.nextEscalationDay = worldDaysElapsed + curse.escalationIntervalDays;
+    curse.churchRemovalMaxLevel = 0;
+    curse.becomesSpecialRemovalWhenTooHigh = false;
+    curse.highLevelRemovalHint = "vaincre Lyknir : plus la chasse dure, plus son odeur reste sur toi.";
+    curse.removableByChurch = false;
+    curse.bossIdRequiredToBreak = 4;
+    curse.lifeLong = false;
+    addOrRefreshCurse(curse);
+}
+
+void Player::maybeAppendCurseMalaiseLine(int salt)
+{
+    if (activeCurses.empty())
+    {
+        return;
+    }
+
+    static std::mt19937 generator(std::random_device{}());
+    std::uniform_int_distribution<int> chance(1, 100);
+
+    const PlayerCurse* anomalyCurse = nullptr;
+    for (const PlayerCurse& activeCurse : activeCurses)
+    {
+        if (activeCurse.id == "anomaly_interface_desync" || activeCurse.id == "anomaly_source_core_desync")
+        {
+            anomalyCurse = &activeCurse;
+            break;
+        }
+    }
+
+    if (anomalyCurse != nullptr)
+    {
+        const int anomalyLevel = std::max(1, anomalyCurse->curseLevel);
+        const int anomalyChance = std::min(45, 12 + anomalyLevel * 6);
+        if (chance(generator) <= anomalyChance)
+        {
+            std::vector<std::vector<std::string>> anomalyPanels = {
+                {
+                    "[INTERFACE] Rapport hors combat remplacé pendant une seconde.",
+                    "1 : Continuer / 2 : Se retourner / 3 : Ne pas croire tes yeux / 4 : ▓▒░??",
+                    "Trouble de la vision : les contours se décalent, puis le menu se recale avec un léger retard."
+                },
+                {
+                    "[PV=???] [ZONE=ville?] [CIBLE=toi/eux/personne]",
+                    "Une ligne parasite traverse l'air : 0xAN0M4L13::hors_combat::regarde_mieux",
+                    "L'affichage se referme avant de pouvoir mentir plus fort."
+                },
+                {
+                    "Pendant un instant, la rue prend le cadre d'une arène PvE.",
+                    "Cibles détectées : 5. Cibles réelles : 0 ou 1. Confiance : non.",
+                    "Les passants redeviennent des passants, mais ton interface garde une trace de griffure."
+                },
+                {
+                    "Le titre du menu tremble : FIN DE JOURNÉE / FIN DE TOI / FIN DE ???",
+                    "L'Anomalie grésille : \"Même sans combat, tu cherches encore quel bouton va te sauver ?\"",
+                    "Les caractères se rangent d'eux-mêmes avant que la corruption devienne dangereuse."
+                },
+                {
+                    "Un faux choix apparaît hors combat : 1 Attaquer, 2 Fuir, 3 S'excuser auprès de soi-même.",
+                    "Ton instinct comprend que ce n'est qu'un mensonge visuel, pas un vrai ordre.",
+                    "L'Anomalie souffle dans le texte : \"Tu hésites même quand rien ne t'attaque.\""
+                },
+                {
+                    "▓▒░ RAPPORT_CASSÉ ░▒▓  NOM=" + getName() + " / NOM=??? / NOM=la cible",
+                    "Trouble de la vision : ton ombre semble sélectionner une option à ta place.",
+                    "L'interface revient lentement, comme si elle n'était pas certaine de t'appartenir."
+                }
+            };
+
+            if (anomalyCurse->diagnosisLevel <= 0)
+            {
+                anomalyPanels.push_back({
+                    "[INTERFACE] Une couche inconnue se superpose au monde hors combat.",
+                    "Tu n'as pas encore de nom propre à mettre sur ce parasite visuel.",
+                    "Le menu disparaît en laissant seulement quelques caractères : ?A?N?O?"
+                });
+            }
+            else
+            {
+                anomalyPanels.push_back({
+                    "Désynchronisation confirmée : l'Anomalie mord encore l'interface hors combat.",
+                    "Tant qu'elle n'est pas rebattue, les menus peuvent clignoter, mentir ou provoquer sans prévenir.",
+                    "La perturbation reste moins violente qu'en combat, mais elle n'a pas disparu."
+                });
+            }
+
+            if (anomalyLevel >= 3)
+            {
+                anomalyPanels.push_back({
+                    "[ERREUR VISUELLE PERSISTANTE] Journal / Inventaire / Cible / Toi : ordre illisible.",
+                    "L'Anomalie chuchote : \"Je n'ai pas besoin d'être dans l'arène pour toucher tes yeux.\"",
+                    "Quelques symboles restent imprimés derrière tes paupières : ░0░x░A░N░0░"
+                });
+            }
+
+            std::uniform_int_distribution<int> anomalyPick(0, static_cast<int>(anomalyPanels.size()) - 1);
+            const std::vector<std::string>& pickedPanel = anomalyPanels[static_cast<std::size_t>(anomalyPick(generator))];
+            pendingWorldTimeReportLines.insert(pendingWorldTimeReportLines.end(), pickedPanel.begin(), pickedPanel.end());
+            return;
+        }
+    }
+
+    if (chance(generator) > 12)
+    {
+        return;
+    }
+
+    const PlayerCurse& curse = activeCurses[static_cast<std::size_t>(std::abs(salt + worldDaysElapsed + worldDayProgressUnits)) % activeCurses.size()];
+    std::vector<std::string> lines;
+    if (curse.diagnosisLevel <= 0)
+    {
+        lines = {
+            "Ton personnage murmure : \"Je ne sais pas ce que j'ai... mais quelque chose cloche.\"",
+            "Ton personnage ralentit un instant : \"Pourquoi j'ai l'impression que mon corps ment ?\"",
+            "Ton personnage serre les dents : \"Ce n'est pas de la fatigue normale... enfin, je crois.\""
+        };
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "mana"))
+    {
+        lines = {"Ton personnage frissonne : \"Ma magie ne circule pas comme d'habitude...\""};
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "health"))
+    {
+        lines = {"Ton personnage souffle : \"J'ai l'impression d'être malade sans vraiment l'être.\""};
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "sleep"))
+    {
+        lines = {
+            "Ton personnage cligne des yeux : \"J'ai rêvé d'un endroit où je n'ai jamais mis les pieds...\"",
+            "Ton personnage murmure : \"Même réveillé, j'ai l'impression qu'un cauchemar continue.\""
+        };
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "equipment"))
+    {
+        lines = {"Ton personnage vérifie son équipement : \"Quelque chose répond trop lentement quand je le touche.\""};
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "interface"))
+    {
+        lines = {
+            "Ton personnage fixe le vide : \"L'interface vient d'afficher un choix qui n'existe pas...\"",
+            "Ton personnage cligne des yeux : \"Pourquoi mon nom vient d'apparaître à la place de la cible ?\""
+        };
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "hallucination"))
+    {
+        lines = {
+            "Ton personnage se retourne : \"J'ai entendu des pas derrière moi... alors qu'il n'y a personne.\"",
+            "Ton personnage murmure : \"J'ai vu une équipe ennemie entière, puis plus rien.\""
+        };
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "social"))
+    {
+        lines = {"Ton personnage baisse la voix : \"Les gens me regardent bizarrement... ou alors je l'imagine.\""};
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "spirit"))
+    {
+        lines = {"Ton personnage se fige : \"J'ai pensé quelque chose... mais ce n'était pas vraiment ma phrase.\""};
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "corruption"))
+    {
+        lines = {"Ton personnage essuie sa paume : \"Cette trace laisse une sensation sale, même quand rien ne se voit.\""};
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "luck"))
+    {
+        lines = {"Ton personnage soupire : \"Même les petits hasards tombent mal aujourd'hui.\""};
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "travel"))
+    {
+        lines = {"Ton personnage regarde derrière lui : \"La route donne l'impression de ne pas vouloir finir.\""};
+    }
+    else if (curseTokenListContains(curse.discoveredSymptomCategories, "attack") || curseTokenListContains(curse.discoveredSymptomCategories, "precision"))
+    {
+        lines = {"Ton personnage regarde ses mains : \"Mes gestes sont bizarres aujourd'hui...\""};
+    }
+    else
+    {
+        lines = {
+            "Ton personnage murmure : \"Cette trace ne me laisse pas tranquille.\"",
+            "Ton personnage détourne le regard : \"Je me sens étrange... mais pas assez pour comprendre pourquoi.\""
+        };
+    }
+
+    if (!lines.empty())
+    {
+        std::uniform_int_distribution<int> pick(0, static_cast<int>(lines.size()) - 1);
+        pendingWorldTimeReportLines.push_back(lines[static_cast<std::size_t>(pick(generator))]);
+    }
+}
+
+int Player::getLocalSubscriptionRenewalPaidThisWeek() const
+{
+    return localSubscriptionRenewalPaidThisWeek;
+}
+
+void Player::setLocalSubscriptionRenewalPaidThisWeek(int amount)
+{
+    localSubscriptionRenewalPaidThisWeek = std::max(0, amount);
+}
+
+const std::vector<std::string>& Player::getPendingWorldTimeReportLines() const
+{
+    return pendingWorldTimeReportLines;
+}
+
+std::vector<std::string> Player::consumeWorldTimeReportLines()
+{
+    std::vector<std::string> lines = pendingWorldTimeReportLines;
+    pendingWorldTimeReportLines.clear();
+    return lines;
 }
 
 // EN: getVictories declares or implements a focused behavior used by this module.
@@ -1143,6 +3314,11 @@ const std::vector<int>& Player::getUnlockedBossIds() const
 const std::vector<int>& Player::getRecentBossIds() const
 {
     return recentBossIds;
+}
+
+int Player::getRecentBossCooldownExpiresAtDay() const
+{
+    return recentBossCooldownExpiresAtDay;
 }
 
 // EN: getRecentCombatEquipmentUsage declares or implements a focused behavior used by this module.
@@ -1248,6 +3424,11 @@ bool Player::isBossUnlocked(int bossId) const
 // FR: isBossRecentlyDefeated déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::isBossRecentlyDefeated(int bossId) const
 {
+    if (recentBossCooldownExpiresAtDay >= 0 && worldDaysElapsed >= recentBossCooldownExpiresAtDay)
+    {
+        return false;
+    }
+
     for (int id : recentBossIds)
     {
         if (id == bossId)
@@ -1257,6 +3438,36 @@ bool Player::isBossRecentlyDefeated(int bossId) const
     }
 
     return false;
+}
+
+bool Player::isBossDefeated(int bossId) const
+{
+    return std::find(defeatedBossIds.begin(), defeatedBossIds.end(), bossId) != defeatedBossIds.end();
+}
+
+const std::vector<int>& Player::getDefeatedBossIds() const
+{
+    return defeatedBossIds;
+}
+
+bool hasDefeatedEveryBossExceptFinalInternal(const std::vector<int>& defeatedIds, int finalBossId)
+{
+    const int maximumBossId = 36;
+
+    for (int id = 1; id <= maximumBossId; ++id)
+    {
+        if (id == finalBossId)
+        {
+            continue;
+        }
+
+        if (std::find(defeatedIds.begin(), defeatedIds.end(), id) == defeatedIds.end())
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 std::vector<int> Player::getAvailableBossIds() const
@@ -1297,6 +3508,7 @@ bool Player::unlockNextBossVariation()
         30,
         11,
         26,
+        36,
         27
     };
 
@@ -1304,6 +3516,11 @@ bool Player::unlockNextBossVariation()
     {
         if (!isBossUnlocked(nextId))
         {
+            if (nextId == 27 && !hasDefeatedEveryBossExceptFinalInternal(defeatedBossIds, 27))
+            {
+                return false;
+            }
+
             unlockedBossIds.push_back(nextId);
             return true;
         }
@@ -1321,6 +3538,11 @@ bool Player::recordBossVictoryInRegistry(int bossId)
         return false;
     }
 
+    if (!isBossDefeated(bossId))
+    {
+        defeatedBossIds.push_back(bossId);
+    }
+
     recentBossIds.push_back(bossId);
 
     while (recentBossIds.size() > 2)
@@ -1328,12 +3550,14 @@ bool Player::recordBossVictoryInRegistry(int bossId)
         recentBossIds.erase(recentBossIds.begin());
     }
 
+    recentBossCooldownExpiresAtDay = worldDaysElapsed + 3;
+
     return unlockNextBossVariation();
 }
 
 // EN: setLoadedBossRegistry declares or implements a focused behavior used by this module.
 // FR: setLoadedBossRegistry déclare ou implémente un comportement précis utilisé par ce module.
-void Player::setLoadedBossRegistry(const std::vector<int>& unlockedIds, const std::vector<int>& recentIds)
+void Player::setLoadedBossRegistry(const std::vector<int>& unlockedIds, const std::vector<int>& recentIds, const std::vector<int>& defeatedIds, int recentCooldownExpiresAtDay)
 {
     unlockedBossIds.clear();
 
@@ -1374,6 +3598,17 @@ void Player::setLoadedBossRegistry(const std::vector<int>& unlockedIds, const st
     {
         recentBossIds.erase(recentBossIds.begin());
     }
+
+    defeatedBossIds.clear();
+    for (int id : defeatedIds)
+    {
+        if (id > 0 && !isBossDefeated(id))
+        {
+            defeatedBossIds.push_back(id);
+        }
+    }
+
+    this->recentBossCooldownExpiresAtDay = recentCooldownExpiresAtDay;
 }
 
 
@@ -1662,6 +3897,8 @@ void Player::setClone(bool clone)
 
 void Player::setLoadedStatistics(
     int loadedCombatsStarted,
+    int loadedWorldDaysElapsed,
+    int loadedWorldDayProgressUnits,
     int loadedVictories,
     int loadedDefeats,
     int loadedEscapes,
@@ -1673,6 +3910,19 @@ void Player::setLoadedStatistics(
 )
 {
     combatsStarted = loadedCombatsStarted < 0 ? 0 : loadedCombatsStarted;
+    worldDaysElapsed = loadedWorldDaysElapsed < 0 ? combatsStarted : loadedWorldDaysElapsed;
+    if (worldDaysElapsed < combatsStarted)
+    {
+        worldDaysElapsed = combatsStarted;
+    }
+
+    worldDayProgressUnits = loadedWorldDayProgressUnits < 0 ? 0 : loadedWorldDayProgressUnits;
+    if (worldDayProgressUnits >= getWorldDayUnitsPerDay())
+    {
+        worldDaysElapsed += worldDayProgressUnits / getWorldDayUnitsPerDay();
+        worldDayProgressUnits %= getWorldDayUnitsPerDay();
+    }
+
     victories = loadedVictories < 0 ? 0 : loadedVictories;
     defeats = loadedDefeats < 0 ? 0 : loadedDefeats;
     escapes = loadedEscapes < 0 ? 0 : loadedEscapes;
@@ -1688,6 +3938,7 @@ void Player::setLoadedStatistics(
 void Player::recordCombatStarted()
 {
     combatsStarted++;
+    advanceWorldDays(1);
     resetClassSkillCooldown();
     recordCurrentEquipmentUsage();
     refreshCareerSkillProgress();
@@ -1725,6 +3976,12 @@ void Player::recordEscape()
 void Player::recordDeath()
 {
     deaths++;
+    if (deaths >= 1)
+    {
+        grantTitle("Première chute officielle");
+        grantTitle("Survivant administratif");
+        grantTitle("J'ai glissé chef");
+    }
     refreshCareerSkillProgress();
 }
 
@@ -1738,6 +3995,24 @@ void Player::recordEnemyKills(int amount)
     }
 
     enemiesKilled += amount;
+
+    if (enemiesKilled >= 10)
+    {
+        grantTitle("Ça compte comme entraînement");
+    }
+    if (enemiesKilled >= 100)
+    {
+        grantTitle("Nettoyeur professionnel");
+    }
+    if (enemiesKilled >= 1000)
+    {
+        grantTitle("Le compteur a abandonné");
+    }
+    if (enemiesKilled >= 10000)
+    {
+        grantTitle("Pourquoi ils étaient autant ?");
+    }
+
     recordGameplaySkillProgressForKills(amount);
 }
 
@@ -1783,6 +4058,9 @@ void Player::setLoadedPvpLethalEliminations(const std::vector<std::string>& elim
 void Player::displayCareerStatistics(DifficultyMode difficulty) const
 {
     std::vector<std::string> lines;
+    lines.push_back("Date actuelle : " + formatWorldDateLine());
+    lines.push_back("Moment actuel : " + formatWorldDayPartLine());
+    lines.push_back("Jours écoulés : " + std::to_string(worldDaysElapsed));
     lines.push_back("Combats lancés : " + std::to_string(combatsStarted));
     lines.push_back("Victoires : " + std::to_string(victories));
     lines.push_back("Défaites : " + std::to_string(defeats));
@@ -2184,6 +4462,40 @@ void Player::enableStorySkip()
     storySkipEnabled = true;
 }
 
+bool Player::hasActiveCheatPower() const
+{
+    return godModeEnabled
+        || infiniteConsumablesEnabled
+        || indestructibleEquipmentEnabled
+        || equipmentProtectionEnabled
+        || storySkipEnabled
+        || specialChallengeAccessUnlocked;
+}
+
+int Player::clearActiveCheatPowersForFireFlight()
+{
+    int cleared = 0;
+    if (godModeEnabled) { godModeEnabled = false; ++cleared; }
+    if (infiniteConsumablesEnabled) { infiniteConsumablesEnabled = false; ++cleared; }
+    if (indestructibleEquipmentEnabled) { indestructibleEquipmentEnabled = false; ++cleared; }
+    if (equipmentProtectionEnabled) { equipmentProtectionEnabled = false; ++cleared; }
+    if (storySkipEnabled) { storySkipEnabled = false; ++cleared; }
+    if (specialChallengeAccessUnlocked) { specialChallengeAccessUnlocked = false; ++cleared; }
+    return cleared;
+}
+
+bool Player::disableGodModeForFireFlight()
+{
+    if (!godModeEnabled)
+    {
+        return false;
+    }
+
+    godModeEnabled = false;
+    godModeKnown = true;
+    return true;
+}
+
 // EN: markCreatorMessageSeen declares or implements a focused behavior used by this module.
 // FR: markCreatorMessageSeen déclare ou implémente un comportement précis utilisé par ce module.
 void Player::markCreatorMessageSeen()
@@ -2440,6 +4752,18 @@ Armor Player::getEquippedArmor() const
 bool Player::equipArmor(int index)
 {
     if (!inventory.hasArmor(index))
+    {
+        return false;
+    }
+
+    const Armor candidateArmor = inventory.getArmor(index);
+    std::string armorProbe = candidateArmor.getName() + " " + candidateArmor.getDescription();
+    std::transform(armorProbe.begin(), armorProbe.end(), armorProbe.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
+    if (armorProbe.find("non ajust") != std::string::npos
+        || armorProbe.find("mauvaise taille") != std::string::npos)
     {
         return false;
     }
@@ -3090,6 +5414,19 @@ void Player::displayStats() const
     lines.push_back("Nom : " + name);
     lines.push_back("Race : " + getRaceText());
     lines.push_back("Classe : " + type);
+    lines.push_back("Titres équipés : " + getActiveTitleSummary());
+    lines.push_back("Titres possédés : " + std::to_string(titles.size()));
+    if (!titles.empty())
+    {
+        std::string titleLine = "Liste des titres : ";
+        for (std::size_t i = 0; i < titles.size(); ++i)
+        {
+            if (i > 0) titleLine += ", ";
+            const bool equipped = std::find(activeTitles.begin(), activeTitles.end(), titles[i]) != activeTitles.end();
+            titleLine += titles[i] + (equipped ? std::string(" [équipé]") : std::string());
+        }
+        lines.push_back(titleLine);
+    }
     lines.push_back("Niveau : " + std::to_string(level));
 
     int nextLevelExperience = Level::getExperienceRequiredForNextLevel(level);
@@ -3161,6 +5498,7 @@ void Player::displayStats() const
     lines.push_back("");
     lines.push_back("Potions de soin : " + std::to_string(inventory.countConsumables(ConsumableType::Healing)));
     lines.push_back("Potions de rage : " + std::to_string(inventory.countConsumables(ConsumableType::Damage)));
+    lines.push_back("Argent : " + Money::formatGoldWithRaw(inventory.getGold()));
     lines.push_back("Créé le : " + createdAtText + " | V" + createdForVersion);
     lines.push_back("Dernière adaptation faite pour la V" + lastAdaptedVersion);
 
@@ -3252,7 +5590,7 @@ void Player::displaySimpleEquipment() const
         lines.push_back("Armure équipée : Aucune");
     }
 
-    lines.push_back("Or : " + std::to_string(inventory.getGold()) + " pièces");
+    lines.push_back("Argent : " + Money::formatGoldWithRaw(inventory.getGold()));
     showPlayerScreen("ÉQUIPEMENT", "player.equipment.simple", lines, false);
 }
 
@@ -3356,7 +5694,7 @@ void Player::displayDetailedEquipment() const
     }
 
     lines.push_back("");
-    lines.push_back("Or : " + std::to_string(inventory.getGold()) + " pièces");
+    lines.push_back("Argent : " + Money::formatGoldWithRaw(inventory.getGold()));
     showPlayerScreen("ÉQUIPEMENT DÉTAILLÉ", "player.equipment.detailed", lines, false);
 }
 

@@ -31,9 +31,13 @@ struct Quest
     int progress = 0;
     int target = 0;
     bool guildQuest = false;
+    int availableFromDay = 0;
+    int expiresAtDay = -1;
     bool accepted = false;
     bool completed = false;
     bool turnedIn = false;
+    bool failed = false;
+    std::string failureReason;
 };
 
 #endif

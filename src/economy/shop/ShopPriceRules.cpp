@@ -27,6 +27,18 @@ int ShopPriceRules::applyBuyModifier(
     {
         modifiedPrice = modifiedPrice * 115 / 100;
     }
+    else if (isSociallyDistrustedRace(raceName))
+    {
+        modifiedPrice = modifiedPrice * 108 / 100;
+    }
+    else if (isTrustedTradeRace(raceName))
+    {
+        modifiedPrice = modifiedPrice * 96 / 100;
+    }
+    else if (isCleverBargainRace(raceName))
+    {
+        modifiedPrice = modifiedPrice * 98 / 100;
+    }
 
     std::string loweredClass = normalizeText(className);
 
@@ -62,6 +74,18 @@ int ShopPriceRules::applySellModifier(
     if (isDemonLikeRace(raceName))
     {
         modifiedPrice = modifiedPrice * 85 / 100;
+    }
+    else if (isSociallyDistrustedRace(raceName))
+    {
+        modifiedPrice = modifiedPrice * 92 / 100;
+    }
+    else if (isTrustedTradeRace(raceName))
+    {
+        modifiedPrice = modifiedPrice * 103 / 100;
+    }
+    else if (isCleverBargainRace(raceName))
+    {
+        modifiedPrice = modifiedPrice * 105 / 100;
     }
 
     std::string loweredClass = normalizeText(className);
@@ -101,6 +125,34 @@ bool ShopPriceRules::isDemonLikeRace(const std::string& raceName)
 
     return loweredRace.find("démon") != std::string::npos
         || loweredRace.find("demon") != std::string::npos;
+}
+
+bool ShopPriceRules::isSociallyDistrustedRace(const std::string& raceName)
+{
+    std::string loweredRace = normalizeText(raceName);
+
+    return loweredRace.find("vampire") != std::string::npos
+        || loweredRace.find("tieffelin") != std::string::npos
+        || loweredRace.find("drow") != std::string::npos
+        || loweredRace.find("elfe noir") != std::string::npos;
+}
+
+bool ShopPriceRules::isTrustedTradeRace(const std::string& raceName)
+{
+    std::string loweredRace = normalizeText(raceName);
+
+    return loweredRace.find("humain") != std::string::npos
+        || loweredRace.find("halfelin") != std::string::npos
+        || loweredRace.find("semi-chien") != std::string::npos;
+}
+
+bool ShopPriceRules::isCleverBargainRace(const std::string& raceName)
+{
+    std::string loweredRace = normalizeText(raceName);
+
+    return loweredRace.find("semi-renard") != std::string::npos
+        || loweredRace.find("kitsune") != std::string::npos
+        || loweredRace.find("gnome") != std::string::npos;
 }
 
 std::string ShopPriceRules::normalizeText(std::string value)

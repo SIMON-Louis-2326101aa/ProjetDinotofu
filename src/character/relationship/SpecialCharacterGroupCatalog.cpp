@@ -25,7 +25,7 @@ std::vector<std::string> SpecialCharacterGroupCatalog::getRoadmapLines()
         "Fire Flight / Matt (PRO) : duo de commandement et de pression.",
         "Hestia / Sanctus / Hazak : protection sacrée, aucun massacre accepté.",
         "Fail / Aoi / Kanadé : laboratoire magique, instable mais puissant.",
-        "Louis / Fire Flight / Trexof : test de créateur entre amis, projectiles et failles utiles.",
+        "Louis / Fire Flight / Trexof : duel d'improvisation entre amis, projectiles et failles utiles.",
         "Henrique / Mattzelda / Skuro : charge instable, humour, endurance et violence lourde.",
         "Matt (PRO) peut aussi apparaître seul en Combat IA ou via un tirage spécial d'arène.",
         "Groupe aléatoire normal : aventuriers random sans personnage spécial.",

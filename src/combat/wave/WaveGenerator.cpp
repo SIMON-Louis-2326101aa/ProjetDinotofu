@@ -35,7 +35,7 @@ namespace
 
         if (monsterLevel > player.getLevel())
         {
-            chance += 5;
+            chance += 2;
         }
 
         if (player.getLevel() >= 10)

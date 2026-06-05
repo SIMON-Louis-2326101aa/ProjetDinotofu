@@ -54,7 +54,8 @@ CombatRole CombatRoleSystem::getRole(const Entity& entity)
         || contains(type, "gardien")
         // EN: contains declares or implements a focused behavior used by this module.
         // FR: contains déclare ou implémente un comportement précis utilisé par ce module.
-        || contains(type, "tank"))
+        || contains(type, "tank")
+        || contains(type, "protecteur"))
     {
         return CombatRole::Tank;
     }
@@ -70,7 +71,9 @@ CombatRole CombatRoleSystem::getRole(const Entity& entity)
         || contains(type, "soigneur")
         || contains(name, "shaman")
         || contains(name, "chamane")
-        || contains(name, "oracle"))
+        || contains(name, "oracle")
+        || contains(type, "médecin")
+        || contains(type, "medecin"))
     {
         return CombatRole::Healer;
     }
@@ -85,7 +88,11 @@ CombatRole CombatRoleSystem::getRole(const Entity& entity)
         || contains(type, "pactisant")
         // EN: contains declares or implements a focused behavior used by this module.
         // FR: contains déclare ou implémente un comportement précis utilisé par ce module.
-        || contains(type, "dompteur"))
+        || contains(type, "dompteur")
+        || contains(type, "marionnettiste")
+        || contains(type, "totémiste")
+        || contains(type, "totemiste")
+        || contains(type, "corbeaumancien"))
     {
         return CombatRole::Summoner;
     }
@@ -110,7 +117,8 @@ CombatRole CombatRoleSystem::getRole(const Entity& entity)
         || contains(type, "soutien")
         // EN: contains declares or implements a focused behavior used by this module.
         // FR: contains déclare ou implémente un comportement précis utilisé par ce module.
-        || contains(type, "alchimiste"))
+        || contains(type, "alchimiste")
+        || contains(type, "cuisinier"))
     {
         return CombatRole::Support;
     }
@@ -123,7 +131,14 @@ CombatRole CombatRoleSystem::getRole(const Entity& entity)
         || contains(type, "mage-lame")
         // EN: contains declares or implements a focused behavior used by this module.
         // FR: contains déclare ou implémente un comportement précis utilisé par ce module.
-        || contains(type, "artificier"))
+        || contains(type, "artificier")
+        || contains(type, "chevalier draconique")
+        || contains(type, "rôdeur arcanique")
+        || contains(type, "rodeur arcanique")
+        || contains(type, "moine solaire")
+        || contains(type, "cartographe")
+        || contains(type, "récupérateur")
+        || contains(type, "recuperateur"))
     {
         return CombatRole::Hybrid;
     }

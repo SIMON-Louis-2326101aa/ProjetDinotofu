@@ -86,7 +86,7 @@ namespace
         itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = InventoryUtils::consumableTypeToText(consumable.getType());
         itemData.status = status;
-        itemData.progress = "Puissance : " + std::to_string(consumable.getPower());
+        itemData.progress = "Puissance : " + consumable.getPowerDisplayText();
         itemData.price = std::to_string(consumable.getValue()) + " or";
         itemData.important = consumable.isHealing();
         return itemData;
@@ -319,7 +319,7 @@ MenuScreen InventoryDisplay::buildSelectedConsumableScreen(const Consumable& con
     screen.addLine("Consommable : " + InventoryUtils::stackLabel(consumable.getName(), amount));
     screen.addLine("Quantité dans la pile : " + std::to_string(amount));
     screen.addLine("Type : " + InventoryUtils::consumableTypeToText(consumable.getType()));
-    screen.addLine("Puissance : " + std::to_string(consumable.getPower()));
+    screen.addLine("Puissance : " + consumable.getPowerDisplayText());
     screen.addBackOption("Retour", "inventory.consumable.back");
     screen.addOption(1, "Inspecter", "Lire la description complète.", true, "inventory.consumable.inspect", makeInventoryConsumableItemData(consumable, "inspect", "", amount));
 

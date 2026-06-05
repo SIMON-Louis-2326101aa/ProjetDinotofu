@@ -9,6 +9,9 @@
 #include "item/Item.hpp"
 #include "item/weapon/WeaponType.hpp"
 
+#include <string>
+#include <vector>
+
 class Weapon : public Item
 {
 private:
@@ -20,6 +23,10 @@ private:
 
     int durability;
     int maxDurability;
+
+    std::vector<std::string> enchantments;
+
+    void downgradeExceptionalQualityAfterBreak();
 
 public:
     // EN: Weapon declares or implements a focused behavior used by this module.
@@ -74,6 +81,14 @@ public:
     // EN: fullyRepair declares or implements a focused behavior used by this module.
     // FR: fullyRepair déclare ou implémente un comportement précis utilisé par ce module.
     void fullyRepair();
+
+    int getEnchantmentCount() const;
+    std::vector<std::string> getEnchantments() const;
+    std::string getEnchantmentSummaryText() const;
+    std::string getEnchantmentsSaveText() const;
+    void addEnchantment(const std::string& enchantmentLabel);
+    bool removeLastEnchantment();
+    void loadEnchantmentsFromSaveText(const std::string& saveText);
 
     std::vector<std::string> toDisplayLines() const override;
 

@@ -5,6 +5,7 @@
 
 #include "progression/DifficultyRules.hpp"
 #include "progression/difficulty/DifficultyProfile.hpp"
+#include "progression/DeathRuleRules.hpp"
 
 // EN: getPlayerPveEscapeDefeatedRewardPercentage declares or implements a focused behavior used by this module.
 // FR: getPlayerPveEscapeDefeatedRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
@@ -179,6 +180,11 @@ int DifficultyRules::getDeathArmorTheftChance(DifficultyMode difficulty)
 bool DifficultyRules::isPermanentDeath(DifficultyMode difficulty)
 {
     return difficulty == DifficultyMode::Lethal;
+}
+
+bool DifficultyRules::isPermanentDeath(DifficultyMode difficulty, DeathRuleMode deathRule)
+{
+    return DeathRuleRules::isDefinitive(difficulty, deathRule);
 }
 
 // EN: clampMinimum declares or implements a focused behavior used by this module.

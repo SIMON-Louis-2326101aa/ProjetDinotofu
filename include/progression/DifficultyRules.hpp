@@ -7,6 +7,7 @@
 #define INCLUDE_PROGRESSION_DIFFICULTYRULES_HPP
 
 #include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 
 class DifficultyRules
 {
@@ -90,6 +91,7 @@ public:
     // EN: isPermanentDeath declares or implements a focused behavior used by this module.
     // FR: isPermanentDeath déclare ou implémente un comportement précis utilisé par ce module.
     static bool isPermanentDeath(DifficultyMode difficulty);
+    static bool isPermanentDeath(DifficultyMode difficulty, DeathRuleMode deathRule);
 
 private:
     // EN: clampMinimum declares or implements a focused behavior used by this module.

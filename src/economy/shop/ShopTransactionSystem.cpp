@@ -72,6 +72,88 @@ namespace
         return safeSellPrice + std::max(1, safeSellPrice / 4);
     }
 
+    int durabilitySellPercent(int durability, int maxDurability)
+    {
+        if (maxDurability < 0)
+        {
+            return 112;
+        }
+
+        if (maxDurability <= 0 || durability <= 0)
+        {
+            return 18;
+        }
+
+        int percent = std::clamp(durability * 100 / maxDurability, 1, 100);
+
+        // FR: une arme/armure neuve se revend mieux, mais une pièce cassée chute vraiment.
+        if (percent >= 95) return 100;
+        if (percent >= 75) return 86;
+        if (percent >= 50) return 68;
+        if (percent >= 25) return 45;
+        return 28;
+    }
+
+    int enchantmentSellPercent(int count)
+    {
+        if (count <= 0)
+        {
+            return 100;
+        }
+
+        // FR: chaque enchantement augmente la valeur, surtout les premiers.
+        int percent = 100;
+        for (int i = 1; i <= count; ++i)
+        {
+            if (i <= 2) percent += 18;
+            else if (i <= 5) percent += 12;
+            else percent += 6;
+        }
+
+        return std::clamp(percent, 100, 230);
+    }
+
+    int goodBuyerSellPercent(ShopType shopType, bool weapon, bool armor, const std::string& playerClass)
+    {
+        int percent = 100;
+
+        if (weapon && shopType == ShopType::Weapon) percent += 14;
+        if (armor && shopType == ShopType::Armor) percent += 14;
+        if ((weapon || armor) && shopType == ShopType::Blacksmith) percent += 8;
+
+        std::string lowered = playerClass;
+        std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+
+        if ((weapon || armor)
+            && (lowered.find("forgeron") != std::string::npos
+                || lowered.find("artificier") != std::string::npos))
+        {
+            percent += 4;
+        }
+
+        return std::clamp(percent, 80, 135);
+    }
+
+    int equipmentSellBaseValue(const Weapon& weapon, ShopType shopType, const Player& player)
+    {
+        int basePrice = std::max(1, weapon.getValue() / 3);
+        basePrice = basePrice * durabilitySellPercent(weapon.getDurability(), weapon.getMaxDurability()) / 100;
+        basePrice = basePrice * enchantmentSellPercent(weapon.getEnchantmentCount()) / 100;
+        basePrice = basePrice * goodBuyerSellPercent(shopType, true, false, player.getType()) / 100;
+        return std::max(1, basePrice);
+    }
+
+    int equipmentSellBaseValue(const Armor& armor, ShopType shopType, const Player& player)
+    {
+        int basePrice = std::max(1, armor.getValue() / 3);
+        basePrice = basePrice * durabilitySellPercent(armor.getDurability(), armor.getMaxDurability()) / 100;
+        basePrice = basePrice * enchantmentSellPercent(armor.getEnchantmentCount()) / 100;
+        basePrice = basePrice * goodBuyerSellPercent(shopType, false, true, player.getType()) / 100;
+        return std::max(1, basePrice);
+    }
+
     std::vector<int> visibleBuybackIndexes(ShopType shopType)
     {
         std::vector<int> indexes;
@@ -165,6 +247,11 @@ namespace
             || type == ShopType::Library
             || type == ShopType::Blacksmith
             || type == ShopType::Alchemist
+            || type == ShopType::Enchanter
+            || type == ShopType::CityService
+            || type == ShopType::Lodging
+            || type == ShopType::Transport
+            || type == ShopType::Church
             || type == ShopType::BlackMarket;
     }
 
@@ -185,20 +272,36 @@ namespace
     {
         return id == "goblin_ear"
             || id == "wolf_fang"
-            || id == "rusted_metal_fragment"
-            || id == "worn_leather_piece"
             || id == "mountain_blue_flower"
             || id == "bitter_healing_leaf"
-            || id == "cracked_bone"
             || id == "arcane_dust"
             || id == "slime_residue"
-            || id == "battle_torn_badge"
             || id == "beast_hide"
             || id == "shadow_thread"
             || id == "kitsune_ember"
             || id == "draconic_scale_fragment"
             || id == "unstable_core"
-            || id == "anomaly_glitch_fragment";
+            || id == "anomaly_glitch_fragment"
+            || id == "runic_iron_shard"
+            || id == "polished_scale_plate"
+            || id == "amber_tempering_oil"
+
+            || id == "mycelium_lantern"
+            || id == "echoing_resin"
+            || id == "sun_dried_clay"
+            || id == "moonlit_salt"
+            || id == "glass_map_fragment"
+            || id == "living_vine_fiber"
+            || id == "cold_iron_nail"
+            || id == "tiny_gear_spring"
+            || id == "cracked_bell_clapper"
+            || id == "exorcism_incense"
+            || id == "blue_mist_reed"
+            || id == "mistglass_pearl"
+            || id == "white_bone_chalk"
+            || id == "buried_giant_chip"
+            || id == "weeping_stone_tear"
+            || id == "petrified_rose_petals";
     }
 
     // EN: prefersPureQuality declares or implements a focused behavior used by this module.
@@ -207,15 +310,32 @@ namespace
     {
         return id == "goblin_ear"
             || id == "wolf_fang"
-            || id == "cracked_bone"
             || id == "slime_residue"
-            || id == "battle_torn_badge"
             || id == "beast_hide"
             || id == "shadow_thread"
             || id == "kitsune_ember"
             || id == "draconic_scale_fragment"
             || id == "unstable_core"
-            || id == "anomaly_glitch_fragment";
+            || id == "anomaly_glitch_fragment"
+            || id == "runic_iron_shard"
+            || id == "polished_scale_plate"
+
+            || id == "mycelium_lantern"
+            || id == "echoing_resin"
+            || id == "sun_dried_clay"
+            || id == "moonlit_salt"
+            || id == "glass_map_fragment"
+            || id == "living_vine_fiber"
+            || id == "cold_iron_nail"
+            || id == "tiny_gear_spring"
+            || id == "cracked_bell_clapper"
+            || id == "exorcism_incense"
+            || id == "blue_mist_reed"
+            || id == "mistglass_pearl"
+            || id == "white_bone_chalk"
+            || id == "buried_giant_chip"
+            || id == "weeping_stone_tear"
+            || id == "petrified_rose_petals";
     }
 
     // EN: createShopMaterialWithPossibleRareQuality declares or implements a focused behavior used by this module.
@@ -433,6 +553,16 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "wandering_ember_scroll"
         || id == "minor_purification_scroll"
         || id == "crawling_venom_scroll"
+        || id == "stabilizing_tea"
+        || id == "miner_bracing_tonic"
+        || id == "cartographer_focus_ink"
+        || id == "moon_salt_purifier"
+        || id == "glass_step_scroll"
+        || id == "vine_snare_scroll"
+        || id == "archivist_focus_ink"
+        || id == "cliff_basil_tea"
+        || id == "carnival_diversion_ticket"
+        || id == "firefly_guard_vial"
         || id == "rusty_sword"
         || id == "training_dagger"
         || id == "training_spear"
@@ -441,11 +571,58 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "training_throwing_bandolier"
         || id == "training_staff"
         || id == "heavy_training_axe"
+        || id == "iron_sword"
+        || id == "reinforced_dagger"
+        || id == "guard_spear"
+        || id == "hunting_bow"
+        || id == "apprentice_staff"
+        || id == "heavy_iron_axe"
+        || id == "workshop_hammer"
+        || id == "patrol_crossbow"
+        || id == "balanced_rapier"
+        || id == "mercenary_sabre"
+        || id == "curved_ambush_dagger"
+        || id == "militia_longbow"
+        || id == "bound_oak_staff"
+        || id == "runic_iron_blade"
+        || id == "amber_edge_dagger"
+        || id == "ashen_longbow"
+        || id == "channeling_scepter"
+        || id == "relay_falchion"
+        || id == "whistling_mine_hammer"
+        || id == "singing_resin_staff"
+        || id == "cold_lantern_bow"
+        || id == "red_clay_sabre"
+        || id == "broken_map_dagger"
+        || id == "firefly_iron_rapier"
+        || id == "drowned_ledger_mace"
+        || id == "grey_cliff_spear"
+        || id == "broken_carnival_whip"
         || id == "worn_leather_armor"
+        || id == "reinforced_leather_armor"
+        || id == "guard_chainmail"
+        || id == "runed_apprentice_robe"
+        || id == "crude_plate_armor"
+        || id == "traveler_scale_vest"
+        || id == "threaded_rune_robe"
+        || id == "militia_half_plate"
+        || id == "runic_chainmail"
+        || id == "shadow_thread_coat"
+        || id == "polished_scale_harness"
+        || id == "damaged_cartographer_coat"
+        || id == "sun_dried_clay_breastplate"
+        || id == "living_fiber_robe"
+        || id == "whistling_miner_harness"
+        || id == "drowned_archivist_vest"
+        || id == "grey_drake_harness"
+        || id == "patchwork_carnival_cape"
         || id == "goblin_ear"
         || id == "wolf_fang"
         || id == "rusted_metal_fragment"
         || id == "worn_leather_piece"
+        || id == "runic_iron_shard"
+        || id == "polished_scale_plate"
+        || id == "amber_tempering_oil"
         || id == "mountain_blue_flower"
         || id == "bitter_healing_leaf"
         || id == "common_goblin_notes"
@@ -462,6 +639,8 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "occult_bramble_grimoire"
         || id == "cracked_bone"
         || id == "arcane_dust"
+        || id == "minor_fire_rune_note"
+        || id == "minor_cold_rune_note"
         || id == "slime_residue"
         || id == "battle_torn_badge"
         || id == "weak_repair_kit"
@@ -500,6 +679,28 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "venom_arrows"
         || id == "shock_bolts"
         || id == "smoke_knives"
+        || id == "mycelium_lantern"
+        || id == "echoing_resin"
+        || id == "sun_dried_clay"
+        || id == "moonlit_salt"
+        || id == "old_coin_bundle"
+        || id == "glass_map_fragment"
+        || id == "living_vine_fiber"
+        || id == "cold_iron_nail"
+        || id == "witch_bottle"
+        || id == "forgotten_camp_tag"
+        || id == "tiny_gear_spring"
+        || id == "inked_contract_scrap"
+        || id == "firefly_iron_shell"
+        || id == "whispering_archive_page"
+        || id == "grey_drake_scale"
+        || id == "carnival_ticket_shred"
+        || id == "mirror_glass_bead"
+        || id == "tideworn_ink"
+        || id == "cliff_basil_leaf"
+        || id == "rusted_gear_core"
+        || id == "salted_rope_knot"
+        || id == "luminous_moth_wing"
         || id == "slime_color_codex"
         || id == "monster_family_evolution_notes"
         || id == "weapon_training_notes"
@@ -507,7 +708,23 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "elemental_weakness_notes"
         || id == "legend_child_tales"
         || id == "legend_trigger_notes"
-        || id == "legend_storyteller_routes";
+        || id == "legend_storyteller_routes"
+        || id == "curse_counter_rites_notes"
+        || id == "city_service_stamp"
+        || id == "municipal_proof_letter"
+        || id == "lodging_bed_token"
+        || id == "stable_stall_ticket"
+        || id == "caravan_seat_ticket"
+        || id == "guarded_transport_pass"
+        || id == "route_toll_receipt"
+        || id == "local_reputation_note"
+        || id == "local_service_letter"
+        || id == "holy_water_vial"
+        || id == "sanctuary_candle"
+        || id == "exorcist_note"
+        || id == "travel_pass_note"
+        || id == "warm_meal_voucher"
+        || id == "client_recommendation";
 }
 
 bool ShopTransactionSystem::buyItem(
@@ -555,6 +772,14 @@ bool ShopTransactionSystem::buyItem(
     else if (item.getId() == "major_healing_potion")
     {
         player.getInventory().addConsumable(ConsumableCatalog::createMajorHealingPotion());
+    }
+    else if (item.getId() == "vitality_healing_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createVitalityHealingPotion());
+    }
+    else if (item.getId() == "royal_vitality_healing_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createRoyalVitalityHealingPotion());
     }
     else if (item.getId() == "minor_damage_potion")
     {
@@ -644,6 +869,46 @@ bool ShopTransactionSystem::buyItem(
     {
         player.getInventory().addConsumable(ConsumableCatalog::createCrawlingVenomScroll());
     }
+    else if (item.getId() == "stabilizing_tea")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createStabilizingTea());
+    }
+    else if (item.getId() == "miner_bracing_tonic")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createMinerBracingTonic());
+    }
+    else if (item.getId() == "cartographer_focus_ink")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createCartographerFocusInk());
+    }
+    else if (item.getId() == "moon_salt_purifier")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createMoonSaltPurifier());
+    }
+    else if (item.getId() == "glass_step_scroll")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createGlassStepScroll());
+    }
+    else if (item.getId() == "vine_snare_scroll")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createVineSnareScroll());
+    }
+    else if (item.getId() == "archivist_focus_ink")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createArchivistFocusInk());
+    }
+    else if (item.getId() == "cliff_basil_tea")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createCliffBasilTea());
+    }
+    else if (item.getId() == "carnival_diversion_ticket")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createCarnivalDiversionTicket());
+    }
+    else if (item.getId() == "firefly_guard_vial")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createFireflyGuardVial());
+    }
     else if (item.getId() == "rusty_sword")
     {
         player.getInventory().addWeapon(WeaponCatalog::createRustySword());
@@ -676,9 +941,197 @@ bool ShopTransactionSystem::buyItem(
     {
         player.getInventory().addWeapon(WeaponCatalog::createHeavyTrainingAxe());
     }
+    else if (item.getId() == "iron_sword")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createIronSword());
+    }
+    else if (item.getId() == "reinforced_dagger")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createReinforcedDagger());
+    }
+    else if (item.getId() == "guard_spear")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createGuardSpear());
+    }
+    else if (item.getId() == "hunting_bow")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createHuntingBow());
+    }
+    else if (item.getId() == "apprentice_staff")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createApprenticeStaff());
+    }
+    else if (item.getId() == "heavy_iron_axe")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createHeavyIronAxe());
+    }
+    else if (item.getId() == "workshop_hammer")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createWorkshopHammer());
+    }
+    else if (item.getId() == "patrol_crossbow")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createPatrolCrossbow());
+    }
+    else if (item.getId() == "balanced_rapier")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createBalancedRapier());
+    }
+    else if (item.getId() == "mercenary_sabre")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createMercenarySabre());
+    }
+    else if (item.getId() == "curved_ambush_dagger")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createCurvedAmbushDagger());
+    }
+    else if (item.getId() == "militia_longbow")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createMilitiaLongbow());
+    }
+    else if (item.getId() == "bound_oak_staff")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createBoundOakStaff());
+    }
+    else if (item.getId() == "runic_iron_blade")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createRunicIronBlade());
+    }
+    else if (item.getId() == "amber_edge_dagger")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createAmberEdgeDagger());
+    }
+    else if (item.getId() == "ashen_longbow")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createAshenLongbow());
+    }
+    else if (item.getId() == "channeling_scepter")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createChannelingScepter());
+    }
+    else if (item.getId() == "relay_falchion")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createRelayFalchion());
+    }
+    else if (item.getId() == "whistling_mine_hammer")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createWhistlingMineHammer());
+    }
+    else if (item.getId() == "singing_resin_staff")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createSingingResinStaff());
+    }
+    else if (item.getId() == "cold_lantern_bow")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createColdLanternBow());
+    }
+    else if (item.getId() == "red_clay_sabre")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createRedClaySabre());
+    }
+    else if (item.getId() == "broken_map_dagger")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createBrokenMapDagger());
+    }
+    else if (item.getId() == "firefly_iron_rapier")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createFireflyIronRapier());
+    }
+    else if (item.getId() == "drowned_ledger_mace")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createDrownedLedgerMace());
+    }
+    else if (item.getId() == "grey_cliff_spear")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createGreyCliffSpear());
+    }
+    else if (item.getId() == "broken_carnival_whip")
+    {
+        player.getInventory().addWeapon(WeaponCatalog::createBrokenCarnivalWhip());
+    }
     else if (item.getId() == "worn_leather_armor")
     {
         player.getInventory().addArmor(ArmorCatalog::createWornLeatherArmor());
+    }
+    else if (item.getId() == "reinforced_leather_armor")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createReinforcedLeatherArmor());
+    }
+    else if (item.getId() == "guard_chainmail")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createGuardChainmail());
+    }
+    else if (item.getId() == "runed_apprentice_robe")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createRunedApprenticeRobe());
+    }
+    else if (item.getId() == "crude_plate_armor")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createCrudePlateArmor());
+    }
+    else if (item.getId() == "traveler_scale_vest")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createTravelerScaleVest());
+    }
+    else if (item.getId() == "threaded_rune_robe")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createThreadedRuneRobe());
+    }
+    else if (item.getId() == "militia_half_plate")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createMilitiaHalfPlate());
+    }
+    else if (item.getId() == "runic_chainmail")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createRunicChainmail());
+    }
+    else if (item.getId() == "shadow_thread_coat")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createShadowThreadCoat());
+    }
+    else if (item.getId() == "polished_scale_harness")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createPolishedScaleHarness());
+    }
+    else if (item.getId() == "damaged_cartographer_coat")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createDamagedCartographerCoat());
+    }
+    else if (item.getId() == "sun_dried_clay_breastplate")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createSunDriedClayBreastplate());
+    }
+    else if (item.getId() == "living_fiber_robe")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createLivingFiberRobe());
+    }
+    else if (item.getId() == "whistling_miner_harness")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createWhistlingMinerHarness());
+    }
+    else if (item.getId() == "drowned_archivist_vest")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createDrownedArchivistVest());
+    }
+    else if (item.getId() == "grey_drake_harness")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createGreyDrakeHarness());
+    }
+    else if (item.getId() == "patchwork_carnival_cape")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createPatchworkCarnivalCape());
+    }
+    else if (item.getId() == "cold_survival_parka")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createColdSurvivalParka());
+    }
+    else if (item.getId() == "heat_survival_suit")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createHeatSurvivalSuit());
+    }
+    else if (item.getId() == "insulated_explorer_coat")
+    {
+        player.getInventory().addArmor(ArmorCatalog::createInsulatedExplorerCoat());
     }
     else
     {
@@ -802,11 +1255,11 @@ int ShopTransactionSystem::getSellPriceForEntry(
 
     if (shopType == ShopType::Weapon && player.getInventory().hasWeapon(index))
     {
-        basePrice = player.getInventory().getWeapon(index).getValue() / 3;
+        basePrice = equipmentSellBaseValue(player.getInventory().getWeapon(index), shopType, player);
     }
     else if (shopType == ShopType::Armor && player.getInventory().hasArmor(index))
     {
-        basePrice = player.getInventory().getArmor(index).getValue() / 3;
+        basePrice = equipmentSellBaseValue(player.getInventory().getArmor(index), shopType, player);
     }
     else if (shopType == ShopType::Consumable && player.getInventory().hasConsumable(index))
     {

@@ -14,6 +14,7 @@ class Consumable : public Item
 private:
     ConsumableType type;
     int power;
+    bool percentageBasedHealing;
 
 public:
     // EN: Consumable declares or implements a focused behavior used by this module.
@@ -25,7 +26,8 @@ public:
         const std::string& description,
         int value,
         ConsumableType type,
-        int power
+        int power,
+        bool percentageBasedHealing = false
     );
 
     // EN: getType declares or implements a focused behavior used by this module.
@@ -34,6 +36,9 @@ public:
     // EN: getPower declares or implements a focused behavior used by this module.
     // FR: getPower déclare ou implémente un comportement précis utilisé par ce module.
     int getPower() const;
+    bool isPercentageBasedHealing() const;
+    int getHealingAmountForMaxHp(int maxHp) const;
+    std::string getPowerDisplayText() const;
 
     // EN: isHealing declares or implements a focused behavior used by this module.
     // FR: isHealing déclare ou implémente un comportement précis utilisé par ce module.

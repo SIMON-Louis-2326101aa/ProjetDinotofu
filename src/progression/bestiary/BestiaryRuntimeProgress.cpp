@@ -601,7 +601,7 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
         unlockEntry(
             "Mattzelda / Louis / Trexof",
             "Entités passives / alliées",
-            "Notes achetées : trio de potes. Mattzelda encaisse, Louis improvise, Trexof analyse chaque échange comme une partie à résoudre."
+            "Notes achetées : trio de potes. Mattzelda encaisse, Louis improvise, Trexof lit chaque échange comme une énigme à résoudre."
         );
         unlockEntry(
             "Aoi / Kanadé / Sanctus",
@@ -878,6 +878,26 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
             "Note de la porte qui refuse le récit",
             "Légendes / contes",
             "Carnet acheté : certaines salles doivent parfois rester silencieuses pour ne pas transformer un mystère de boss en solution gratuite."
+        );
+        return;
+    }
+
+    if (informationId == "curse_counter_rites_notes")
+    {
+        unlockEntry(
+            "Les trois manières de rompre une trace",
+            "Légendes / contes",
+            "Archive achetée : certaines malédictions exigent un objet source à détruire, un serment à briser, une contre-légende à lire ou une source à vaincre/sceller."
+        );
+        unlockEntry(
+            "Le patient n'est pas la malédiction",
+            "Légendes / contes",
+            "Archive achetée : les PNJ pourront porter des traces diagnostiquées séparément, avec des catégories vagues et des erreurs de piste utiles."
+        );
+        unlockEntry(
+            "Familles de malédictions",
+            "Malédictions",
+            "Note achetée : santé, attaque, mana, précision, défense, sommeil, chance, équipement, esprit, corruption, voyage et présence sociale restent des familles de symptômes, pas des valeurs révélées."
         );
         return;
     }

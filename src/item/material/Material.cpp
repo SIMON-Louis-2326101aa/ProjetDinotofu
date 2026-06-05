@@ -7,6 +7,7 @@
 
 #include "item/material/Material.hpp"
 
+#include <algorithm>
 #include <cctype>
 #include "interface/menu/common/MessageScreen.hpp"
 
@@ -29,6 +30,53 @@ namespace
         if (quality == "high" || quality == "haute") return "high";
         if (quality == "low" || quality == "faible") return "low";
         return "normal";
+    }
+
+    std::string lowerMaterialText(std::string value)
+    {
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return value;
+    }
+
+    bool materialUsesPurityVocabulary(const std::string& id, const std::string& name, const std::string& category)
+    {
+        const std::string probe = lowerMaterialText(id + " " + name + " " + category);
+
+        return probe.find("minerai") != std::string::npos
+            || probe.find("metal") != std::string::npos
+            || probe.find("métal") != std::string::npos
+            || probe.find("fragment de métal") != std::string::npos
+            || probe.find("poussi") != std::string::npos
+            || probe.find("résidu") != std::string::npos
+            || probe.find("residu") != std::string::npos
+            || probe.find("slime") != std::string::npos
+            || probe.find("cristal") != std::string::npos
+            || probe.find("arcane") != std::string::npos;
+    }
+
+    bool isIntrinsicallyDamagedMaterial(const std::string& id, const std::string& name, const std::string& category)
+    {
+        const std::string probe = lowerMaterialText(id + " " + name + " " + category);
+
+        if (probe.find("fragment de boss") != std::string::npos)
+        {
+            return false;
+        }
+
+        return id == "rusted_metal_fragment"
+            || id == "worn_leather_piece"
+            || id == "battle_torn_badge"
+            || id == "cracked_bone"
+            || probe.find("abîmé") != std::string::npos
+            || probe.find("abime") != std::string::npos
+            || probe.find("rouillé") != std::string::npos
+            || probe.find("rouille") != std::string::npos
+            || probe.find("fissuré") != std::string::npos
+            || probe.find("fissure") != std::string::npos
+            || probe.find("cassé") != std::string::npos
+            || probe.find("casse") != std::string::npos;
     }
 
     // EN: startsWith declares or implements a focused behavior used by this module.
@@ -139,8 +187,16 @@ std::string Material::getQuality() const
 
 std::string Material::getQualityLabel() const
 {
-    if (quality == "pure") return "Pur";
-    if (quality == "impure") return "Impur";
+    if (quality == "pure")
+    {
+        return materialUsesPurityVocabulary(id, getName(), category) ? "Pur" : "Haute qualité";
+    }
+
+    if (quality == "impure")
+    {
+        return materialUsesPurityVocabulary(id, getName(), category) ? "Impur" : "Qualité faible";
+    }
+
     if (quality == "exceptional") return "Exceptionnel";
     if (quality == "high") return "Haute qualité";
     if (quality == "low") return "Faible qualité";
@@ -178,7 +234,17 @@ bool Material::hasSpecialQuality() const
 // FR: setQuality déclare ou implémente un comportement précis utilisé par ce module.
 void Material::setQuality(const std::string& quality)
 {
-    this->quality = normalizeQuality(quality);
+    std::string normalized = normalizeQuality(quality);
+
+    if (isIntrinsicallyDamagedMaterial(id, getName(), category)
+        && (normalized == "exceptional" || normalized == "pure" || normalized == "high"))
+    {
+        // FR: Un composant déjà abîmé/rouillé/fissuré ne peut pas être vendu ou looté comme haute qualité.
+        // EN: Already damaged/rusted/cracked components cannot logically become high or exceptional quality.
+        normalized = "normal";
+    }
+
+    this->quality = normalized;
 }
 
 // EN: getQuantity declares or implements a focused behavior used by this module.

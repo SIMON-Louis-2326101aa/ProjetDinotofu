@@ -1,0 +1,74 @@
+PERSONNAGES SPÉCIAUX ET CHEATS - DINOTOFU
+
+Règle générale :
+- Les personnages spéciaux ont des noms protégés.
+- Si le joueur entre un nom spécial à la création, le jeu demande une date spéciale.
+- Si la date est correcte, la race est verrouillée selon le personnage, mais la classe reste choisissable.
+- Une classe native peut donner un bonus natif.
+- Matt (PRO) n'est pas jouable normalement.
+
+Dates spéciales :
+- Trexof : 09/09/2005
+- Fail : 10/10/2024
+- Skuro : 06/12/2024
+- Sanctus : 06/12/2024
+- Hazak : 08/11/2024
+- Kanadé : 06/12/2024
+- Aoi : 01/12/2024
+- Mattzelda : 15/07/2005
+- FireFlight / Fire Flight : non incarnable, aucune date spéciale active.
+- Louis : 01/02/2005
+- Henrique : 29/11/2024
+- Hestia : 11/11/1111
+- Matt (PRO) : non jouable.
+
+Personnages spéciaux :
+- Hazak : assassin elfe noir, sombre, efficace, direct, meilleur ami d'Henrique, a sauvé Hestia, contrat de non-agression avec Fail.
+- Skuro : tank violent à épée lourde, forme sombre liée à Sanctus.
+- Sanctus : tank/semi-mage protecteur, lumière, provocation, posture défensive, lien direct avec Skuro.
+- Kanadé : mage semi-dragonne, magie liée aux signes du zodiaque, rageuse, déteste être assimilée aux lézards/semi-lézards car beaucoup la prennent déjà pour ça.
+- Aoi : kitsune, mage flame/invocatrice avec katana, timide, protège ses incantations.
+- Fail : mage fou, fée, expérimente pour éliminer la menace.
+- Hestia : ancienne divinité amnésique, humaine actuelle, peureuse, magie très forte, dôme protecteur unique.
+- FireFlight : dev/commandant/créateur, sous 50% PV il esquive mieux et critique presque toujours. Non incarnable : boss/test final, pas personnage joueur.
+- Louis : artificier précis, projectiles multiples, naïf, cherche des amis.
+- Mattzelda : colosse humain, blagueur.
+- Trexof : assassin humain, analyste instinctif des failles.
+- Henrique : chevalier, fonce dans le tas, peut revenir une fois à la vie.
+- Matt (PRO) : adversaire spécial très fort, respectueux, silencieux.
+
+Relations et groupes :
+- Hazak / Henrique.
+- Mattzelda / Louis / Trexof.
+- Aoi / Kanadé / Sanctus.
+- Hazak / Hestia.
+- Fail / Hazak.
+- Skuro avec personnages compatibles.
+- FireFlight / Matt (PRO).
+
+Règles spéciales de groupe :
+- Hazak protège davantage Hestia et peut punir une attaque contre elle.
+- Hazak et Henrique ont une coordination offensive.
+- Aoi et Kanadé se renforcent, Sanctus stabilise et protège.
+- Mattzelda, Louis et Trexof ont des synergies de trio.
+- Fail profite de son contrat de non-agression avec Hazak pour mieux viser.
+- Si Hazak ou Skuro est présent, un combat peut devenir très dangereux selon le contexte.
+- Si Hazak est avec Hestia, il évite normalement de transformer le combat en massacre pour ne pas la traumatiser.
+
+Effets spéciaux en combat :
+- Hazak : ouverture brutale, contrat de silence, pression froide.
+- Skuro : attaques lourdes à faible réussite mais dégâts très élevés.
+- Kanadé : magie zodiacale aléatoire, treizième signe dans les moments critiques.
+- Aoi : cercle des flammes kitsune et protection d'incantation.
+- Sanctus : provocation, posture défensive, rempart de croyance.
+- Fail : prototype interdit et expériences instables.
+- Hestia : dôme protecteur unique, magie croissante.
+- FireFlight : comportement de boss/dev, esquive/critique sous seuil critique.
+- Louis : salves et projectiles secondaires.
+- Henrique : retour unique à la vie.
+- Mattzelda : résistance, humour, posture.
+- Matt (PRO) : puissance globale très élevée.
+
+FICHIER SÉPARÉ :
+- Les cheats sont maintenant documentés dans CHEATS_DINOTOFU.txt.
+- Ce fichier reste réservé aux personnages spéciaux, groupes, dates, relations et règles de rencontre.

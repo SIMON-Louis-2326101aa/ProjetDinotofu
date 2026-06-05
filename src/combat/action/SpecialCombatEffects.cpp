@@ -307,7 +307,7 @@ bool SpecialCombatEffects::specialCharacterDodgesBeforeDamage(
         showSpecialCombatMessage(
             "ESQUIVE SPÉCIALE",
             "combat.special.trexof.dodge",
-            {"Trexof recule d'un pas : réflexe de testeur, piège évité."}
+            {"Trexof recule d'un pas : vieux réflexe de survie, piège évité."}
         );
         return true;
     }
@@ -582,7 +582,7 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         else if (testRoll <= 30)
         {
             rawDamage += 4;
-            showSpecialCombatMessage("EFFET SPÉCIAL - TREXOF", "combat.special.trexof.angle_fix", {"Trexof corrige son angle en plein test : +4 dégâts bruts."});
+            showSpecialCombatMessage("EFFET SPÉCIAL - TREXOF", "combat.special.trexof.angle_fix", {"Trexof corrige son angle au dernier instant : +4 dégâts bruts."});
         }
     }
 
@@ -663,7 +663,7 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
     if (isName(attacker, "Trexof") && isGroupedWith(attacker, "Mattzelda"))
     {
         rawDamage += 4;
-        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.trexof_mattzelda", {"Mattzelda attire l'attention assez longtemps pour que Trexof teste une ouverture : +4 dégâts bruts."});
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.trexof_mattzelda", {"Mattzelda attire l'attention assez longtemps pour que Trexof exploite une ouverture : +4 dégâts bruts."});
     }
 
     if (isName(attacker, "Fail") && isGroupedWith(attacker, "Hazak"))
@@ -749,7 +749,7 @@ void SpecialCombatEffects::applySpecialCharacterAfterDamage(
         showSpecialCombatMessage(
             "SECOND TEST",
             "combat.special.trexof.after_damage",
-            {"Trexof valide un second test sur la même ouverture : " + std::to_string(extraDamage) + " dégâts supplémentaires."}
+            {"Trexof frappe une seconde fois la même ouverture : " + std::to_string(extraDamage) + " dégâts supplémentaires."}
         );
     }
 

@@ -1,56 +1,34 @@
 # Dinotofu — automatisation GitHub simple   
 
-Version actuelle : **V2.01.27**   
-Dernière version de personnage encore acceptable : **V2.01.03**   
+Ce document décrit comment préparer une publication GitHub propre sans transformer les README en journal de versions.   
 
 ## Principe   
 
-Quand le code est poussé sur GitHub, le workflow lit la version dans :   
+La version du jeu est lue depuis `src/core/VersionInfo.cpp`. Le manifeste de release doit rester aligné avec cette version dans `release/manifest.example.json`.   
 
-```text   
-src/core/VersionInfo.cpp   
-```   
+Les notes détaillées vont dans `PATCHNOTE_DINOTOFU.md`. Les README restent centrés sur l'installation, la présentation du jeu et la note du développeur.   
 
-Il prépare ensuite les releases et assets autour du tag correspondant, par exemple :   
+## Avant publication   
 
-```text   
-v2.01.27   
-```   
-
-## Ce que tu dois faire   
-
-1. Modifier le code.   
-2. Mettre à jour la version si la passe le mérite.   
-3. Lancer les contrôles locaux.   
-4. Commit/push.   
-5. Laisser GitHub Actions générer les fichiers de release.   
+1. Vérifier la version dans le code et le manifeste.   
+2. Compiler le projet.   
+3. Lancer les contrôles de release.   
+4. Nettoyer les dossiers générés.   
+5. Créer le ZIP source propre.   
+6. Publier sur GitHub avec les assets Windows/Linux prévus.   
 
 ## Commandes utiles   
 
 ```bash   
-make clean   
-make release-check   
-```   
-
-Pour créer une archive source propre :   
-
-```bash   
+make -j4   
+./output/Dinotofu --version   
+./scripts/validate_release_tree.sh   
 ./scripts/package_source_clean.sh   
 ```   
 
-## Archives generees   
-
-Les releases/installers Windows/Linux sont les seules archives de diffusion GitHub. Le ZIP source sert seulement au développement local.   
-
 ## Règles importantes   
 
-- Pas de sauvegardes privées dans les ZIP.   
-- Le ZIP source local reste propre et n’est pas publié comme asset GitHub.   
-- Pas de long historique de versions dans les docs joueur.   
-- Garder seulement la version actuelle, la compatibilité personnage, les gros jalons et les consignes utiles.   
-
-## Jalons   
-
-- V2.01.03 : persistance plus fine des légendes déjà lues et dialogues PNJ/guilde.   
-- V3.00.00 : premier chapitre d'histoire.   
-- Multijoueur en ligne : future grosse version beaucoup plus tard.   
+- Ne pas mettre d'historique de versions dans les README, guides ou fichiers de conception.   
+- Utiliser `PATCHNOTE_DINOTOFU.md` pour les notes de patch.   
+- Ne jamais inclure `build/`, `output/`, `gui_debug/`, un exécutable ou un fichier de reprise local dans le ZIP source.   
+- Garder la version actuelle visible dans les README, car les scripts de validation en ont besoin.   

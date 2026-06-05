@@ -242,7 +242,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getLowHealthLines(cons
 
     if (normalizedName == "trexof")
     {
-        return {"Trexof change sa prise sur son arme.", "Limite trouvée. Maintenant, on voit si elle casse."};
+        return {"Trexof change sa prise sur son arme.", "Ouverture trouvée. Maintenant, on voit si elle cède."};
     }
 
     if (normalizedName == "mattzelda")
@@ -277,7 +277,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getCombatActionLines(
         if (normalizedName == "matt (pro)") return {"Matt attaque sans annonce. Propre, direct, presque vexant."};
         if (normalizedName == "aoi") return {"Aoi frappe surtout pour garder la distance et protéger ses incantations."};
         if (normalizedName == "kanade") return {"Kanadé attaque en râlant, comme si chaque coup était la faute de l'arène."};
-        if (normalizedName == "trexof") return {"Trexof vise une ouverture précise, plus testeur que bourrin."};
+        if (normalizedName == "trexof") return {"Trexof vise une ouverture précise, plus froidement qu'il ne frappe fort."};
         if (normalizedName == "henrique") return {"Henrique charge comme si reculer était une erreur de traduction."};
         if (normalizedName == "fire flight") return {"Fire Flight donne l'impression de commander une salve entière, même seul."};
     }
@@ -308,7 +308,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getVictoryLines(const 
     if (normalizedName == "sanctus") return {"Sanctus ne célèbre pas. Il vérifie seulement que personne derrière lui n'est tombé."};
     if (normalizedName == "hestia") return {"Hestia ouvre un œil, surprise d'être encore debout.", "C'est... fini ?"};
     if (normalizedName == "louis") return {"Louis range ses outils avec soulagement.", "On peut être amis maintenant ? Non ? Trop tôt ?"};
-    if (normalizedName == "trexof") return {"Trexof hoche la tête.", "Test concluant. Tu étais plus solide que je pensais."};
+    if (normalizedName == "trexof") return {"Trexof hoche la tête.", "Je vois. Tu étais plus solide que je pensais."};
     if (normalizedName == "henrique") return {"Henrique souffle, droit malgré les impacts.", "Un pas de plus. Toujours."};
     if (normalizedName == "fire flight") return {"Fire Flight abaisse son arme.", "La ligne a tenu. C'était le seul objectif."};
 

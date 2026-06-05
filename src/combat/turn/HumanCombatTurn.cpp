@@ -28,7 +28,9 @@
 #include "interface/menu/progression/BestiaryMenu.hpp"
 #include "interface/menu/progression/StatisticsMenu.hpp"
 
+#include <algorithm>
 #include <functional>
+#include <string>
 #include <vector>
 
 namespace
@@ -151,6 +153,103 @@ namespace
         (void)screenId;
         return action();
     }
+
+    int getKnownOrHiddenCursePressure(const Player& player, const std::string& category)
+    {
+        return player.getCursePressureForCategory(category) + player.getKnownCursePressureForCategory(category);
+    }
+
+    void maybeShowInterfaceCursePulse(Entity& attacker, const Entity& defender, Random& random, bool enemySummonsPresent)
+    {
+        Player* player = dynamic_cast<Player*>(&attacker);
+        if (player == nullptr)
+        {
+            return;
+        }
+
+        const int interfacePressure = player->getCursePressureForCategory("interface");
+        const int hallucinationPressure = player->getCursePressureForCategory("hallucination");
+        const int pressure = interfacePressure + hallucinationPressure;
+        if (pressure <= 0)
+        {
+            return;
+        }
+
+        const int chance = std::min(48, 8 + pressure * 4);
+        if (random.between(1, 100) > chance)
+        {
+            return;
+        }
+
+        const int knownInterface = player->getKnownCursePressureForCategory("interface");
+        const int knownHallucination = player->getKnownCursePressureForCategory("hallucination");
+        const int variant = random.between(1, 8);
+
+        std::vector<std::string> lines;
+        if (knownInterface > 0 || knownHallucination > 0)
+        {
+            lines.push_back("Symptôme confirmé : la malédiction perturbe la lecture du combat.");
+        }
+        else
+        {
+            lines.push_back("Quelque chose brouille la vision de combat, mais la cause reste inconnue.");
+        }
+
+        if (variant == 1)
+        {
+            lines.push_back("L'interface affiche une option vide, puis la retire avant que tu puisses la choisir.");
+            lines.push_back("Trouble de la vision : les contours doublent, puis reviennent avec une demi-seconde de retard.");
+        }
+        else if (variant == 2)
+        {
+            lines.push_back("Pendant un instant, le combat ressemble à un PvE contre plusieurs silhouettes.");
+            lines.push_back(enemySummonsPresent
+                ? "Les invocations réelles et les fausses silhouettes se mélangent avant de redevenir lisibles."
+                : "Les silhouettes disparaissent : il n'y avait qu'une seule menace devant toi.");
+        }
+        else if (variant == 3)
+        {
+            lines.push_back("La cible prend ton nom pendant un battement de coeur.");
+            lines.push_back("Tu as presque l'impression de devoir te battre contre toi-même.");
+        }
+        else if (variant == 4)
+        {
+            lines.push_back("Les PV affichés hésitent, reviennent, puis jurent qu'ils n'ont jamais bougé.");
+            lines.push_back(defender.getName() + " reste pourtant bien devant toi.");
+        }
+        else if (variant == 5)
+        {
+            lines.push_back("Un curseur invisible sélectionne une action que tu n'as pas demandée.");
+            lines.push_back("Tu reprends le contrôle, mais l'interface garde une seconde de retard.");
+        }
+        else if (variant == 6)
+        {
+            lines.push_back("La ligne de cible se corrompt : [#7A?] CIBLE=" + attacker.getName() + " / CIBLE=" + defender.getName() + " / CIBLE=???");
+            lines.push_back("Quelques caractères restent imprimés derrière tes paupières : 0xAN0M4L13::regarde_mieux.");
+        }
+        else if (variant == 7)
+        {
+            lines.push_back("Une voix grésille dans l'affichage : \"Tu regardes les chiffres parce que tu n'oses pas regarder la cible.\"");
+            lines.push_back("Le menu répond avant toi : \"Mauvais choix. Pas encore choisi, mais mauvais quand même.\"");
+        }
+        else
+        {
+            lines.push_back("Les PV, le nom de la cible et le tour actuel se mélangent en caractères cassés : HP? TOI? EUX? [!!]");
+            lines.push_back("L'Anomalie provoque : \"Même ton interface hésite à te défendre.\"");
+        }
+
+        if (getKnownOrHiddenCursePressure(*player, "interface") >= 5 || getKnownOrHiddenCursePressure(*player, "hallucination") >= 5)
+        {
+            lines.push_back("Pression élevée : cette perturbation risque de revenir tant que la source n'est pas brisée.");
+        }
+
+        MessageScreen::show(
+            "VISION BROUILLÉE",
+            "combat.interface.curse_pulse",
+            lines,
+            false
+        );
+    }
 }
 
 bool HumanCombatTurn::play(
@@ -162,6 +261,8 @@ bool HumanCombatTurn::play(
 )
 {
     (void)potionHealAmount;
+
+    maybeShowInterfaceCursePulse(attacker, defender, random, false);
 
     const MenuScreen turnScreen = CombatMenu::buildTurnScreen(attacker);
     int option = TerminalInterface::askMenuChoiceFromOptions(
@@ -331,6 +432,13 @@ bool HumanCombatTurn::playWithEnemySummons(
 )
 {
     (void)potionHealAmount;
+
+    maybeShowInterfaceCursePulse(
+        attacker,
+        defender,
+        random,
+        SummonCombatSystem::hasTargetableSummons(enemySummons)
+    );
 
     const MenuScreen turnScreen = CombatMenu::buildTurnScreen(attacker);
 

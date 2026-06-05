@@ -1,0 +1,142 @@
+BOSS DINOTOFU — ROSTER, NIVEAUX, LORE ET RÈGLES
+
+Règles globales :
+- Les trois premiers boss visibles dès le départ sont Fitoria, Zelef et Atlas.
+- Les autres boss apparaissent comme ??? ou variations d’énergie anormale jusqu’à découverte.
+- Le niveau affiché est recommandé, pas obligatoire : le joueur peut tenter plus tôt à ses risques et périls.
+- Les ultimes de boss se débloquent après le passage sous 50% PV.
+- Les vrais dieux/déesses/divinités ne sont pas affrontés à pleine puissance : avatar, écho, fragment, reflet, manifestation ou source limitée.
+- Les malédictions de boss restent sur le personnage hors combat jusqu’à ce que le boss-source soit rebattu.
+- L’église peut diagnostiquer certaines traces, mais ne retire pas les malédictions de boss à la place de la revanche.
+- FireFlight reste le boss final actuel avec le palier [255].
+
+NOTE HIÉRARCHIE / LORE :
+- L’Émanation de l’Anomalie arrive assez tôt pour introduire les problèmes d’interface.
+- La Source stable de l’Anomalie est presque finale : elle n’est pas tuée, elle se dissipe dans l’air et les textures.
+- Obérion reste un écho fragmenté : cela justifie son placement sans ajouter un vrai Obérion au-dessus du roster.
+- FireFlight est globalement au-dessus de tout le roster actuel, y compris l’écho d’Obérion.
+
+LISTE ACTUELLE :
+01. Fitoria — [15]
+    Affichage : visible au départ.
+    Rôle : Ange lumineux, jugement, chaînes, soin contrôlé, Sentence céleste.
+02. Zelef — [18]
+    Affichage : visible au départ.
+    Rôle : Démon brutal, corruption, saignement, vol de vie, Coeur démoniaque, corrosion possible.
+03. Atlas — [22]
+    Affichage : visible au départ.
+    Rôle : Protecteur universel déchu, plaques, fissures, contre-garde, Dernier rempart.
+04. Écho de Lyknir — [26]
+    Affichage : caché avant découverte.
+    Rôle : Meute, traque, marque de proie, Chasse sans lune.
+05. Grinka — [30]
+    Affichage : caché avant découverte.
+    Rôle : Reine gobeline bénie par l’Avarice, dette, taxes, vol, enchère.
+06. Avatar d'Azelanos — [34]
+    Affichage : caché avant découverte.
+    Rôle : Ténèbres, durée dangereuse, couronne obscure, malédiction de boss.
+07. Fragment de Thamarys — [38]
+    Affichage : caché avant découverte.
+    Rôle : Fragment draconique divin, écailles adaptatives, souffle de l’origine.
+08. Mojo — [42]
+    Affichage : caché avant découverte.
+    Rôle : Esprit mythique de la forêt, mémoire de la forêt, approche respectueuse.
+09. Reflet d'Inakari — [46]
+    Affichage : caché avant découverte.
+    Rôle : Illusions, miroirs, fausses récompenses, malédiction de reflet.
+10. Le Jugement Silencieux — [50]
+    Affichage : caché avant découverte.
+    Rôle : Justice muette, ombre volée, pression sociale.
+11. Émanation de l'Anomalie — [55]
+    Affichage : caché avant découverte.
+    Rôle : Fragment/émanation : introduit les bugs d’interface, hallucinations et faux choix tôt, sans être la vraie Source.
+12. L'Horloge des Chuchotements — [60]
+    Affichage : caché avant découverte.
+    Rôle : Temps, blessures retardées, souvenirs, réécriture.
+13. L'Enfant des Os Enfouis — [65]
+    Affichage : caché avant découverte.
+    Rôle : Désert, ancienneté, profanation, golem d’os et de sable à bas PV.
+14. Avatar de Boros — [70]
+    Affichage : caché avant découverte.
+    Rôle : Guerre, duel, brutalité, jauge de conflit, hymne du carnage.
+15. Avatar d'Anastasia — [75]
+    Affichage : caché avant découverte.
+    Rôle : Amour, liens, attachement, morts totales, serment qui saigne.
+16. Avatar de Lexior — [80]
+    Affichage : caché avant découverte.
+    Rôle : Justice, jugement d’actions passées, sceau d’équipement, réactions aux cheats.
+17. Fragment de Luna / Onyrae — [85]
+    Affichage : caché avant découverte.
+    Rôle : Lune, rêve, cauchemar, perception fissurée, malédiction onirique.
+18. Fragment de Syvaranelya — [90]
+    Affichage : caché avant découverte.
+    Rôle : Phases Feu/Terre/Eau/Vent, fusion ou séparation élémentaire.
+19. Écho d'Hitogami — [95]
+    Affichage : caché avant découverte.
+    Rôle : Adaptation humaine, possibilité de relève unique.
+20. Écho de Sérendys — [100]
+    Affichage : caché avant découverte.
+    Rôle : Chance consciente, paris, relance du destin, inversion rare/commun.
+21. Le Gardien du Seuil — [108]
+    Affichage : caché avant découverte.
+    Rôle : Boss d’épreuve, verrous de progression.
+22. Le Roi Sans Salle — [116]
+    Affichage : caché avant découverte.
+    Rôle : Roi oublié, cour invisible, ordres fantômes.
+23. La Bête qui n'avait pas de nom — [124]
+    Affichage : caché avant découverte.
+    Rôle : Identité instable, instinct, hurlement sans nom.
+24. Aldebaroth — [132]
+    Affichage : caché avant découverte.
+    Rôle : Démon primordial affaibli, négativité, pression démoniaque, malédiction lourde.
+25. Asterion et Nihilon — [140]
+    Affichage : caché avant découverte.
+    Rôle : Duo Création/Destruction représenté par une entité avec compte à rebours fatal.
+26. Écho fragmenté d'Obérion — [150]
+    Affichage : caché avant découverte.
+    Rôle : Fragment du dieu universel : puissant, mais pas Obérion entier. Sceau arme/armure.
+28. Le Souffle sans Visage — [158]
+    Affichage : caché avant découverte.
+    Rôle : Respiration, asphyxie, identité effacée.
+29. La Marionnette aux Mille Clous — [166]
+    Affichage : caché avant découverte.
+    Rôle : Fils, clous, douleur, soin sale, posture défensive utile.
+30. Manifestation de Moiran — [176]
+    Affichage : caché avant découverte.
+    Rôle : Destin, lignes possibles, réactions aux cheats/mort définitive.
+31. Le Cerf des Âmes Égarées — [184]
+    Affichage : caché avant découverte.
+    Rôle : Âmes-lanternes, procession funéraire, défense respectueuse.
+32. Gorvald — [192]
+    Affichage : caché avant découverte.
+    Rôle : Roi des Orcs, fureur royale, duel brutal, honneur guerrier.
+33. Serana — [200]
+    Affichage : caché avant découverte.
+    Rôle : Reine Vampire, soif royale, vol de vie, banquet de sang.
+34. Draiite — [208]
+    Affichage : caché avant découverte.
+    Rôle : Reine Araignée, soie noire, cocons, poison, contrôle de terrain.
+35. Les Jumelles du Miroir Fendu — [220]
+    Affichage : caché avant découverte.
+    Rôle : Vérité/mensonge, désir, reflet corrompu, futur trompeur.
+36. Source stable de l'Anomalie — [248]
+    Affichage : caché avant découverte.
+    Rôle : Vraie Source : stable juste assez pour combattre, se dissipe dans l’air et les textures après défaite.
+27. Avatar affaibli de FireFlight — [255] — BOSS FINAL
+    Affichage : boss final verrouillé.
+    Rôle : Avatar limité du créateur/dev, invitations requises, test final, au-dessus de tout le roster actuel.
+
+MALÉDICTIONS DE BOSS CONFIGURÉES :
+- Zelef : sang noir / corrosion selon contexte.
+- Lyknir : marque de proie.
+- Azelanos : Couronne obscure d’Azelanos.
+- Inakari : Reflet mensonger d’Inakari.
+- Émanation de l’Anomalie : Désynchronisation de l’Anomalie.
+- Source stable de l’Anomalie : Désynchronisation de la Source.
+- Luna / Onyrae : Éclipse onirique persistante.
+- Aldebaroth : Rancune abyssale d’Aldebaroth.
+- Jumelles du Miroir Fendu : Reflet fendu de Velyssia.
+
+FICHIERS REMPLACÉS / REGROUPÉS :
+- Ce fichier remplace BOSS_VALIDES_DINOTOFU.txt et BOSS_NIVEAUX_RECOMMANDES_DINOTOFU.txt.
+- Les notes futures sur boss/niveaux/malédictions/lore boss doivent aller ici.

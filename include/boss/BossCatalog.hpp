@@ -22,6 +22,8 @@ public:
     static void displayAvailableBosses(const std::vector<int>& bossIds);
     static std::string getRegistryDisplayName(int bossId);
     static std::string getRegistryHint(int bossId);
+    static int getRecommendedLevel(int bossId);
+    static std::string getRecommendedLevelText(int bossId);
     // EN: getMaximumBossId declares or implements a focused behavior used by this module.
     // FR: getMaximumBossId déclare ou implémente un comportement précis utilisé par ce module.
     static int getMaximumBossId();

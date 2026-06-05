@@ -358,6 +358,7 @@ std::string GraphicalInterface::combatSnapshotToJson(const GuiCombatStateSnapsho
             json << GraphicalInterface::indent(indentLevel + 2) << "\"type\": \"" << GraphicalInterface::escapeJson(unit.type) << "\",\n";
             json << GraphicalInterface::indent(indentLevel + 2) << "\"side\": \"" << GraphicalInterface::escapeJson(unit.side) << "\",\n";
             json << GraphicalInterface::indent(indentLevel + 2) << "\"kind\": \"" << GraphicalInterface::escapeJson(unit.kind) << "\",\n";
+            json << GraphicalInterface::indent(indentLevel + 2) << "\"level\": " << unit.level << ",\n";
             json << GraphicalInterface::indent(indentLevel + 2) << "\"hp\": " << unit.hp << ",\n";
             json << GraphicalInterface::indent(indentLevel + 2) << "\"maxHp\": " << unit.maxHp << ",\n";
             json << GraphicalInterface::indent(indentLevel + 2) << "\"minDamage\": " << unit.minDamage << ",\n";

@@ -47,6 +47,7 @@ public:
     // EN: createEvolvedVariant declares or implements a focused behavior used by this module.
     // FR: createEvolvedVariant déclare ou implémente un comportement précis utilisé par ce module.
     static Monster createEvolvedVariant(const Monster& baseMonster, Random& random);
+    static Monster createEliteVariant(const Monster& baseMonster, Random& random);
     // EN: createAllPreviewMonsters declares or implements a focused behavior used by this module.
     // FR: createAllPreviewMonsters déclare ou implémente un comportement précis utilisé par ce module.
     static std::vector<Monster> createAllPreviewMonsters();

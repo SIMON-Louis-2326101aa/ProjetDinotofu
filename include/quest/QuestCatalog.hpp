@@ -29,6 +29,24 @@ public:
     // EN: createMerchantDeliveryRequest declares or implements a focused behavior used by this module.
     // FR: createMerchantDeliveryRequest déclare ou implémente un comportement précis utilisé par ce module.
     static Quest createMerchantDeliveryRequest(int playerLevel);
+    // EN: createMerchantQuestionRequest declares or implements a focused behavior used by this module.
+    // FR: createMerchantQuestionRequest déclare ou implémente un comportement précis utilisé par ce module.
+    static Quest createMerchantQuestionRequest(int playerLevel);
+    // EN: createLibrarianKnowledgeQuestionRequest declares or implements a focused behavior used by this module.
+    // FR: createLibrarianKnowledgeQuestionRequest déclare ou implémente un comportement précis utilisé par ce module.
+    static Quest createLibrarianKnowledgeQuestionRequest(int playerLevel);
+    // EN: createAdministrativePaperworkRequest declares or implements a focused behavior used by this module.
+    // FR: createAdministrativePaperworkRequest déclare ou implémente un comportement précis utilisé par ce module.
+    static Quest createAdministrativePaperworkRequest(int playerLevel);
+    // EN: createAlchemistFormulaQuestionRequest declares or implements a focused behavior used by this module.
+    // FR: createAlchemistFormulaQuestionRequest déclare ou implémente un comportement précis utilisé par ce module.
+    static Quest createAlchemistFormulaQuestionRequest(int playerLevel);
+    // EN: createTransportLogisticsQuestionRequest declares or implements a focused behavior used by this module.
+    // FR: createTransportLogisticsQuestionRequest déclare ou implémente un comportement précis utilisé par ce module.
+    static Quest createTransportLogisticsQuestionRequest(int playerLevel);
+    // EN: createInnkeeperServiceQuestionRequest declares or implements a focused behavior used by this module.
+    // FR: createInnkeeperServiceQuestionRequest déclare ou implémente un comportement précis utilisé par ce module.
+    static Quest createInnkeeperServiceQuestionRequest(int playerLevel);
     // EN: createMonsterMaterialVendorRequest declares or implements a focused behavior used by this module.
     // FR: createMonsterMaterialVendorRequest déclare ou implémente un comportement précis utilisé par ce module.
     static Quest createMonsterMaterialVendorRequest(int playerLevel);

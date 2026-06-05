@@ -8,6 +8,7 @@
 
 #include "entity/Player.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 
 #include <string>
 
@@ -20,6 +21,10 @@ private:
     // EN: openGuild declares or implements a focused behavior used by this module.
     // FR: openGuild déclare ou implémente un comportement précis utilisé par ce module.
     static void openGuild(Player& player);
+    static void openGuildRegistration(Player& player);
+    // EN: openMainQuestSection displays non-refusable story objectives separately from optional requests.
+    // FR: openMainQuestSection affiche les objectifs d'histoire non refusables séparément des demandes optionnelles.
+    static void openMainQuestSection(Player& player);
     // EN: acceptGuildQuest declares or implements a focused behavior used by this module.
     // FR: acceptGuildQuest déclare ou implémente un comportement précis utilisé par ce module.
     static void acceptGuildQuest(Player& player);
@@ -34,7 +39,7 @@ private:
     static void openReadyQuestTurnInMenu(Player& player);
     // EN: openExplorationMenu declares or implements a focused behavior used by this module.
     // FR: openExplorationMenu déclare ou implémente un comportement précis utilisé par ce module.
-    static void openExplorationMenu(Player& player, DifficultyMode difficulty);
+    static void openExplorationMenu(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule);
 
 public:
     // EN: openQuestHub declares or implements a focused behavior used by this module.
@@ -48,16 +53,19 @@ public:
     static void consultOnly(const Player& player);
     // EN: openExploration declares or implements a focused behavior used by this module.
     // FR: openExploration déclare ou implémente un comportement précis utilisé par ce module.
-    static void openExploration(Player& player, DifficultyMode difficulty);
+    static void openExploration(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule);
     // EN: openLocations declares or implements a focused behavior used by this module.
     // FR: openLocations déclare ou implémente un comportement précis utilisé par ce module.
     static void openLocations(Player& player);
     // EN: openNotableNpcMenu declares or implements a focused behavior used by this module.
     // FR: openNotableNpcMenu déclare ou implémente un comportement précis utilisé par ce module.
     static void openNotableNpcMenu(Player& player);
+    // EN: syncMainStoryQuests adds or updates non-refusable story quest records when story state advances.
+    // FR: syncMainStoryQuests ajoute ou met à jour les quêtes principales non refusables selon l'avancée histoire.
+    static void syncMainStoryQuests(Player& player);
     // EN: maybeOfferRandomInterception declares or implements a focused behavior used by this module.
     // FR: maybeOfferRandomInterception déclare ou implémente un comportement précis utilisé par ce module.
-    static void maybeOfferRandomInterception(Player& player, DifficultyMode difficulty);
+    static void maybeOfferRandomInterception(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule);
 };
 
 #endif

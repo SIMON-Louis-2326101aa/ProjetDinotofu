@@ -16,6 +16,7 @@
 #include "interface/model/MenuScreen.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "progression/DifficultyRules.hpp"
+#include "progression/DeathRuleRules.hpp"
 
 #include <cctype>
 #include <vector>
@@ -71,7 +72,7 @@ namespace
         player.applyLethalCheatAttemptPenalty();
 
         MessageScreen::show(
-            "ÉVÉNEMENT LÉTHAL",
+            "ÉVÉNEMENT DE MORT DÉFINITIVE",
             "cheat.lethal.refusal",
             {
                 "Le code n'entre pas.",
@@ -80,7 +81,7 @@ namespace
                 anomalyVoice + " : Tu as essayé d'écrire dans une page qui te regarde déjà.",
                 moiranVoice + " : Tu as tenté de sortir de ta propre fin. Même les chemins interdits laissent des traces.",
                 oberionVoice + " : Une simulation peut tricher. Une vie ne négocie pas son poids.",
-                fireVoice + " : Non. Pas en Léthal. Pas avec un vrai personnage.",
+                fireVoice + " : Non. Pas avec une mort définitive. Pas avec un vrai personnage.",
                 "Malus appliqués :",
                 "- PV actuels divisés environ par deux, sans te tuer directement.",
                 "- 25% de ton or disparaît.",
@@ -88,11 +89,11 @@ namespace
             }
         );
 
-        recordLethalCheatVoice("Avatar de Lexior", "Note brouillée : une voix de justice a réagi à une tentative de triche en mode Léthal.");
-        recordLethalCheatVoice("L'Anomalie", "Note brouillée : une anomalie a ri devant une tentative de triche en mode Léthal.");
-        recordLethalCheatVoice("Manifestation de Moiran", "Note brouillée : le Destin a reconnu une tentative de sortie de ligne en mode Léthal.");
+        recordLethalCheatVoice("Avatar de Lexior", "Note brouillée : une voix de justice a réagi à une tentative de triche en mort définitive.");
+        recordLethalCheatVoice("L'Anomalie", "Note brouillée : une anomalie a ri devant une tentative de triche en mort définitive.");
+        recordLethalCheatVoice("Manifestation de Moiran", "Note brouillée : le Destin a reconnu une tentative de sortie de ligne en mort définitive.");
         recordLethalCheatVoice("Écho fragmenté d'Obérion", "Note brouillée : une autorité primordiale a refusé de mélanger simulation et vie réelle.");
-        recordLethalCheatVoice("Avatar affaibli de FireFlight", "Note brouillée : le créateur limité a bloqué une commande interdite en mode Léthal.");
+        recordLethalCheatVoice("Avatar affaibli de FireFlight", "Note brouillée : le créateur limité a bloqué une commande interdite en mort définitive.");
     }
 }
 
@@ -344,7 +345,7 @@ void CheatManager::displayKnownAlterations(const Player& player)
     TerminalInterface::renderMenuScreen(screen, false);
 }
 
-void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty)
+void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule)
 {
     bool menuOpen = true;
 
@@ -394,7 +395,7 @@ void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty
 
             if (!code.empty())
             {
-                activateCode(player, difficulty, code);
+                activateCode(player, difficulty, deathRule, code);
                 Console::waitForEnter();
                 Console::clear();
             }
@@ -412,14 +413,14 @@ void CheatManager::openAlteredDataMenu(Player& player, DifficultyMode difficulty
 
 // EN: tryActivateHiddenCode declares or implements a focused behavior used by this module.
 // FR: tryActivateHiddenCode déclare ou implémente un comportement précis utilisé par ce module.
-bool CheatManager::tryActivateHiddenCode(Player& player, DifficultyMode difficulty, const std::string& code)
+bool CheatManager::tryActivateHiddenCode(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule, const std::string& code)
 {
-    return activateCode(player, difficulty, code, false);
+    return activateCode(player, difficulty, deathRule, code, false);
 }
 
 // EN: activateCode declares or implements a focused behavior used by this module.
 // FR: activateCode déclare ou implémente un comportement précis utilisé par ce module.
-bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const std::string& code, bool displayUnknownMessage)
+bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule, const std::string& code, bool displayUnknownMessage)
 {
     std::string normalizedCode = normalizeCode(code);
 
@@ -428,7 +429,7 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
         return false;
     }
 
-    if (DifficultyRules::isPermanentDeath(difficulty) && isKnownCheatCommand(normalizedCode))
+    if (DifficultyRules::isPermanentDeath(difficulty, deathRule) && isKnownCheatCommand(normalizedCode))
     {
         triggerLethalCheatEvent(player);
         return true;
@@ -595,7 +596,7 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, const
                 "Effet : l'arène arrête de te faire grinder les rencontres spéciales.",
                 "État : accès aux personnages spéciaux débloqué.",
                 "État : toutes les variations de boss non finales sont détectées.",
-                "Note : FireFlight reste verrouillé. Un vrai boss final ne s'ouvre pas avec un raccourci."
+                "Note : FireFlight reste verrouillé. Certains tests ne s'ouvrent pas avec un raccourci."
             }
         );
         return true;

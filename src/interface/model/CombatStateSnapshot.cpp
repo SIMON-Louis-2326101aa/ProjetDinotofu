@@ -5,6 +5,9 @@
 
 #include "interface/model/CombatStateSnapshot.hpp"
 
+#include "entity/Monster.hpp"
+#include "entity/Player.hpp"
+
 #include "combat/group/CombatSide.hpp"
 #include "combat/group/CombatUnitKind.hpp"
 #include "combat/group/CombatUnitSlot.hpp"
@@ -25,6 +28,14 @@ GuiCombatUnitSnapshot CombatStateSnapshot::fromEntity(
     unit.type = entity.getType();
     unit.side = side;
     unit.kind = kind;
+    if (const Monster* monster = dynamic_cast<const Monster*>(&entity))
+    {
+        unit.level = monster->getLevel();
+    }
+    else if (const Player* player = dynamic_cast<const Player*>(&entity))
+    {
+        unit.level = player->getLevel();
+    }
     unit.hp = entity.getHp();
     unit.maxHp = entity.getMaxHp();
     unit.minDamage = entity.getMinDamage();
@@ -266,7 +277,7 @@ std::vector<std::string> CombatStateSnapshot::toDisplayLines(const GuiCombatStat
 
         for (const GuiCombatUnitSnapshot& unit : units)
         {
-            std::string line = "- " + unit.name + " [" + unit.kind + "] " + healthText(unit);
+            std::string line = "- " + unit.name + " [" + unit.kind + (unit.level > 0 ? " | Niv. " + std::to_string(unit.level) : "") + "] " + healthText(unit);
 
             if (!unit.type.empty())
             {

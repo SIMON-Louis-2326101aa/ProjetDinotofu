@@ -10,6 +10,7 @@
 
 #include "entity/Player.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 
 #include <string>
 
@@ -41,11 +42,11 @@ private:
 public:
     // EN: openAlteredDataMenu declares or implements a focused behavior used by this module.
     // FR: openAlteredDataMenu déclare ou implémente un comportement précis utilisé par ce module.
-    static void openAlteredDataMenu(Player& player, DifficultyMode difficulty);
+    static void openAlteredDataMenu(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule);
     // EN: tryActivateHiddenCode declares or implements a focused behavior used by this module.
     // FR: tryActivateHiddenCode déclare ou implémente un comportement précis utilisé par ce module.
-    static bool tryActivateHiddenCode(Player& player, DifficultyMode difficulty, const std::string& code);
-    static bool activateCode(Player& player, DifficultyMode difficulty, const std::string& code, bool displayUnknownMessage = true);
+    static bool tryActivateHiddenCode(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule, const std::string& code);
+    static bool activateCode(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule, const std::string& code, bool displayUnknownMessage = true);
 };
 
 #endif

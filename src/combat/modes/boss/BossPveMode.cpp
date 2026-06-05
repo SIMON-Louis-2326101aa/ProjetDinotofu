@@ -25,6 +25,7 @@
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "lore/LegendTriggerSystem.hpp"
+#include "item/material/MaterialCatalog.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -177,6 +178,87 @@ namespace
         }
     }
 
+    bool maybeTriggerFireFlightCheatPurgeAtSeventyFive(Boss& boss, Player& player, bool& alreadyTriggered)
+    {
+        if (alreadyTriggered || boss.getBossId() != 27 || boss.getMaxHp() <= 0 || boss.isDead())
+        {
+            return false;
+        }
+
+        if (boss.getHp() * 100 > boss.getMaxHp() * 75)
+        {
+            return false;
+        }
+
+        alreadyTriggered = true;
+        const int cleared = player.clearActiveCheatPowersForFireFlight();
+        if (cleared <= 0)
+        {
+            showBossPveLines(
+                "INTERFACE FIREFLIGHT",
+                "boss.fireflight.cheat_purge.empty",
+                {
+                    "FireFlight ouvre une interface que tu ne contrôles pas.",
+                    "Seuil atteint : 75% de PV restants.",
+                    "Il cherche des altérations actives... puis referme la fenêtre.",
+                    "Aucun cheat actif à supprimer. Il sourit : \"Bien. Alors on peut continuer proprement.\""
+                },
+                false
+            );
+            return false;
+        }
+
+        showBossPveLines(
+            "INTERFACE FIREFLIGHT",
+            "boss.fireflight.cheat_purge.75",
+            {
+                "FireFlight s'arrête au moment exact où ses PV passent sous le seuil des 75%.",
+                "Une fenêtre apparaît au-dessus de l'arène : [ACTIVE_CHEATS] -> PURGE.",
+                "Il dit : \"Je tolère les traces. Pas les raccourcis qui jouent à ta place.\"",
+                "Cheats actifs annulés pour ce combat : " + std::to_string(cleared) + ".",
+                "État Altéré conservé : le passé reste écrit, mais les effets actifs viennent d'être coupés."
+            },
+            false
+        );
+        return true;
+    }
+
+    void maybeTriggerFireFlightCheatPurgeForParty(Boss& boss, std::vector<Player*>& party, bool& alreadyTriggered)
+    {
+        if (alreadyTriggered || boss.getBossId() != 27 || boss.getMaxHp() <= 0 || boss.isDead())
+        {
+            return;
+        }
+
+        if (boss.getHp() * 100 > boss.getMaxHp() * 75)
+        {
+            return;
+        }
+
+        alreadyTriggered = true;
+        int cleared = 0;
+        for (Player* member : party)
+        {
+            if (member != nullptr)
+            {
+                cleared += member->clearActiveCheatPowersForFireFlight();
+            }
+        }
+
+        showBossPveLines(
+            "INTERFACE FIREFLIGHT",
+            "boss.fireflight.coop.cheat_purge.75",
+            {
+                "FireFlight coupe le tour de groupe au seuil des 75%.",
+                "Interface : [PARTY_ACTIVE_CHEATS] -> PURGE.",
+                "Il dit : \"Plus vous êtes nombreux, moins je laisse les raccourcis parler à votre place.\"",
+                "Cheats actifs annulés dans le groupe : " + std::to_string(cleared) + ".",
+                "Les personnages restent Altérés si leur histoire l'était déjà, mais les effets actifs sont neutralisés."
+            },
+            false
+        );
+    }
+
     // EN: displayFireFlightSpecialCharacterDialogue declares or implements a focused behavior used by this module.
     // FR: displayFireFlightSpecialCharacterDialogue déclare ou implémente un comportement précis utilisé par ce module.
     void displayFireFlightSpecialCharacterDialogue(const Player& player)
@@ -239,7 +321,7 @@ namespace
         }
         else if (name == "trexof")
         {
-            narration << "Trexof. Assassin, testeur, et probablement déjà en train de calculer où l'arène peut céder." << std::endl;
+            narration << "Trexof. Assassin, calme, et probablement déjà en train de lire l'endroit où l'arène peut céder." << std::endl;
             narration << "Je te connais assez pour savoir que tu vas chercher la faille propre." << std::endl;
             narration << "Indice : les boss qui semblent punir une habitude révèlent souvent leur contre si tu changes de rythme deux tours avant l'ulti." << std::endl;
         }
@@ -576,6 +658,7 @@ namespace
         const Player& player,
         const Boss& boss,
         DifficultyMode difficulty,
+        DeathRuleMode deathRule,
         const BossPowerAnalysis& analysis
     )
     {
@@ -587,10 +670,39 @@ namespace
         screen.addLine("Puissance estimée de l'entité : " + getPowerLabel(analysis.risk) + ".");
         screen.addLine(getPowerWarningText(analysis.risk));
 
-        if (DifficultyRules::isPermanentDeath(difficulty))
+        const int recommendedLevel = BossCatalog::getRecommendedLevel(boss.getBossId());
+        screen.addLine("");
+        screen.addLine("Niveau du personnage : " + std::to_string(player.getLevel())
+            + " | Niveau conseillé : [" + std::to_string(recommendedLevel) + "].");
+        if (player.getLevel() < recommendedLevel)
+        {
+            const int missingLevels = recommendedLevel - player.getLevel();
+            if (boss.getBossId() == 27)
+            {
+                screen.addLine("FireFlight est marqué [255] : tu peux forcer la porte si elle est débloquée, mais le registre appelle ça un dernier test, pas un duel normal.");
+            }
+            else if (missingLevels >= 40)
+            {
+                screen.addLine("Avertissement de niveau : tu es très loin du palier conseillé. Le combat reste possible, mais l'arène ressemble presque à un suicide volontaire.");
+            }
+            else if (missingLevels >= 15)
+            {
+                screen.addLine("Avertissement de niveau : tu es nettement sous le palier conseillé. Prépare potions, équipement et plan de secours.");
+            }
+            else
+            {
+                screen.addLine("Avertissement de niveau : tu es un peu sous le palier conseillé. C'est jouable, mais pas gratuit.");
+            }
+        }
+        else
+        {
+            screen.addLine("Palier conseillé atteint ou dépassé : le risque réel dépend encore de l'équipement, des potions, de la difficulté et de ta stratégie.");
+        }
+
+        if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
         {
             screen.addLine("");
-            screen.addLine("Difficulté Léthal détectée.");
+            screen.addLine("Mort définitive détectée.");
             screen.addLine("Si tu meurs ici, ce personnage peut devenir une simple trace dans le registre des morts.");
         }
 
@@ -608,10 +720,11 @@ namespace
         const Player& player,
         const Boss& boss,
         DifficultyMode difficulty,
+        DeathRuleMode deathRule,
         const BossPowerAnalysis& analysis
     )
     {
-        TerminalInterface::renderMenuScreen(buildBossPowerAnalysisScreen(player, boss, difficulty, analysis), false);
+        TerminalInterface::renderMenuScreen(buildBossPowerAnalysisScreen(player, boss, difficulty, deathRule, analysis), false);
     }
 
     // EN: runFireFlightFinalTest declares or implements a focused behavior used by this module.
@@ -692,7 +805,7 @@ namespace
             {
                 "FireFlight sourit.",
                 "Cette fois, je n'ai plus de test à ajouter.",
-                "Le boss final reconnaît ta victoire."
+                "Le test final reconnaît ta victoire."
             },
             false
         );
@@ -771,19 +884,562 @@ namespace
 
         player.recordZelefCorrosionLoss(lostMaxHp);
 
-        MessageScreen::show(
-            "CORROSION ANCRÉE",
-            "boss.zelef.victory_penalty",
-            {
+        PlayerCurse curse;
+        curse.id = "zelef_black_blood_stain";
+        curse.name = "Souillure de sang noir de Zelef";
+        curse.severity = "majeure";
+        curse.origin = "Défaite contre Zelef";
+        curse.description = "La corrosion de Zelef ne vole pas seulement des PV maximum : elle laisse une trace sombre qui refuse les rites ordinaires.";
+        curse.removalHint = "rebattre Zelef : seul le sang noir affronté à sa source rend la souillure muette.";
+        curse.symptomCategories = "corruption,health,spirit";
+        curse.discoveredSymptomCategories = "";
+        curse.excludedSymptomCategories = "";
+        curse.diagnosisLevel = 0;
+        curse.appliedAtDay = player.getWorldDaysElapsed();
+        curse.expiresAtDay = -1;
+        curse.exorcismProgress = 0;
+        curse.exorcismRequiredVisits = 0;
+        curse.curseLevel = 2;
+        curse.maxCurseLevel = 2;
+        curse.evolvesOverTime = false;
+        curse.escalationIntervalDays = 0;
+        curse.nextEscalationDay = -1;
+        curse.churchRemovalMaxLevel = 0;
+        curse.becomesSpecialRemovalWhenTooHigh = false;
+        curse.removableByChurch = false;
+        curse.bossIdRequiredToBreak = 2;
+        curse.lifeLong = false;
+        player.addOrRefreshCurse(curse);
+        const bool titleUnlocked = player.grantTitle("Porteur de trace");
+
+        std::vector<std::string> zelefLines = {
                 "Conséquence : corrosion ancrée",
                 "Boss : Zelef",
                 "PV maximum retenus : " + std::to_string(lostMaxHp),
                 "Effet visible : Corrosion présente",
-                "Récupération future : rebattre Zelef pour récupérer les PV maximum volés",
+                "Trace maudite : ????? tant que l'église ne l'a pas diagnostiquée.",
+                "Récupération future : rebattre Zelef pour récupérer les PV maximum volés et faire taire la souillure",
+                "Ancrage : la souillure reste sur le personnage même hors combat, jusqu'à ce que Zelef soit rebattu.",
                 "Zelef a gagné. La corrosion ne quitte pas entièrement ton corps.",
                 "Si tu bats Zelef lors d'un prochain affrontement, tu pourras récupérer ce qu'il t'a pris."
+        };
+        if (titleUnlocked)
+        {
+            zelefLines.push_back("Titre obtenu : Porteur de trace.");
+        }
+
+        MessageScreen::show(
+            "CORROSION ANCRÉE",
+            "boss.zelef.victory_penalty",
+            zelefLines,
+            false
+        );
+    }
+
+    void showNonCursingBossDefeatReminder(const Boss& boss)
+    {
+        MessageScreen::show(
+            "DÉFAITE CONTRE UN BOSS",
+            "boss.defeat.no_automatic_curse",
+            {
+                "Conséquence : défaite de boss enregistrée.",
+                "Boss : " + boss.getName(),
+                "Règle actuelle : tous les boss ne posent pas une malédiction.",
+                "Seules les entités réellement obscures, corruptrices ou capables de maudire peuvent laisser une trace persistante."
             },
             false
+        );
+    }
+
+    void applyLyknirVictoryCurse(Player& player)
+    {
+        const bool alreadyMarked = player.hasActiveCurse("lyknir_prey_mark");
+        player.recordLyknirDefeatCurse();
+        const bool titleUnlocked = player.grantTitle("Porteur de trace");
+
+        std::vector<std::string> lyknirLines = {
+            "Conséquence : malédiction de chasse",
+            "Boss : Lyknir",
+            "Effet visible : Marque de proie de Lyknir",
+            "Durée : indéfinie tant que Lyknir n'est pas vaincu.",
+            "Église : diagnostic possible, exorcisme impossible.",
+            "Récupération future : rebattre Lyknir et reprendre ta place de chasseur."
+        };
+        if (titleUnlocked)
+        {
+            lyknirLines.push_back("Titre obtenu : Porteur de trace.");
+        }
+
+        MessageScreen::show(
+            alreadyMarked ? "MARQUE DE PROIE RENFORCÉE" : "MARQUE DE PROIE",
+            "boss.lyknir.victory_curse",
+            lyknirLines,
+            false
+        );
+    }
+
+    struct BossDefeatCurseBlueprint
+    {
+        int bossId = 0;
+        std::string id;
+        std::string name;
+        std::string origin;
+        std::string description;
+        std::string removalHint;
+        std::string categories;
+        int level = 1;
+        int maxLevel = 1;
+        bool evolves = false;
+        int escalationIntervalDays = 0;
+    };
+
+    bool getBossDefeatCurseBlueprint(const Boss& boss, BossDefeatCurseBlueprint& blueprint)
+    {
+        switch (boss.getBossId())
+        {
+            case 6:
+                blueprint = {
+                    6,
+                    "azelanos_shadow_crown",
+                    "Couronne obscure d'Azelanos",
+                    "Défaite contre l'Avatar d'Azelanos",
+                    "Un morceau de couronne d'ombre reste posé derrière les pensées. Il alourdit la défense, la magie et la résistance morale.",
+                    "vaincre l'Avatar d'Azelanos et laisser la couronne se fissurer à sa source.",
+                    "corruption,spirit,defense,mana",
+                    2,
+                    4,
+                    true,
+                    3
+                };
+                return true;
+            case 9:
+                blueprint = {
+                    9,
+                    "inakari_false_reflection",
+                    "Reflet mensonger d'Inakari",
+                    "Défaite contre le Reflet d'Inakari",
+                    "Un miroir minuscule reste dans le regard. Les gestes, la chance et les réactions sociales deviennent moins fiables.",
+                    "vaincre Inakari et briser le reflet qui a appris ton visage.",
+                    "hallucination,precision,luck,social",
+                    1,
+                    3,
+                    true,
+                    4
+                };
+                return true;
+            case 11:
+                blueprint = {
+                    11,
+                    "anomaly_interface_desync",
+                    "Désynchronisation de l'Anomalie",
+                    "Défaite contre l'Anomalie",
+                    "L'Anomalie accroche une erreur persistante au personnage : l'interface peut clignoter, mentir, mélanger les cibles, provoquer le joueur, afficher des caractères corrompus ou faire croire à un faux PvE, même hors combat.",
+                    "rebattre l'Anomalie pour forcer l'interface à reconnaître la vraie cible.",
+                    "interface,hallucination,spirit,precision,social,corruption",
+                    3,
+                    5,
+                    true,
+                    2
+                };
+                return true;
+            case 36:
+                blueprint = {
+                    36,
+                    "anomaly_source_core_desync",
+                    "Désynchronisation de la Source",
+                    "Défaite contre la Source stable de l'Anomalie",
+                    "La Source ne crée plus seulement des parasites : elle inscrit une erreur stable dans la perception du personnage. Hors combat, l'interface peut se décaler, choisir de faux intitulés, provoquer, masquer une option ou afficher une cible impossible.",
+                    "rebattre la Source stable de l'Anomalie pour dissiper l'erreur dans l'air et les textures.",
+                    "interface,hallucination,spirit,precision,social,corruption",
+                    4,
+                    6,
+                    true,
+                    1
+                };
+                return true;
+            case 17:
+                blueprint = {
+                    17,
+                    "luna_onyrae_waking_eclipse",
+                    "Éclipse onirique persistante",
+                    "Défaite contre le Fragment de Luna / Onyrae",
+                    "Le rêve ne s'arrête plus exactement au réveil. Les cauchemars, la magie et la perception restent fissurés.",
+                    "vaincre le fragment lunaire et laisser le rêve accepter la fin du combat.",
+                    "sleep,hallucination,spirit,mana",
+                    2,
+                    4,
+                    true,
+                    3
+                };
+                return true;
+            case 24:
+                blueprint = {
+                    24,
+                    "aldebaroth_abyss_grudge",
+                    "Rancune abyssale d'Aldebaroth",
+                    "Défaite contre Aldebaroth",
+                    "Le négatif du monde trouve une accroche dans le corps. La santé, l'attaque, l'aura sociale et l'esprit deviennent plus lourds à porter.",
+                    "vaincre Aldebaroth et faire taire la rancune à sa source.",
+                    "corruption,spirit,health,attack,social",
+                    3,
+                    4,
+                    true,
+                    3
+                };
+                return true;
+            case 35:
+                blueprint = {
+                    35,
+                    "velyssia_split_mirror",
+                    "Reflet fendu de Velyssia",
+                    "Défaite contre les Jumelles du Miroir Fendu",
+                    "Une version mensongère du personnage répond parfois avant lui. Les reflets sociaux, la précision et la chance deviennent instables.",
+                    "vaincre les Jumelles et obliger vérité et mensonge à se séparer.",
+                    "hallucination,social,precision,luck",
+                    2,
+                    3,
+                    true,
+                    4
+                };
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    PlayerCurse createBossLockedCurse(Player& player, const BossDefeatCurseBlueprint& blueprint)
+    {
+        PlayerCurse curse;
+        curse.id = blueprint.id;
+        curse.name = blueprint.name;
+        curse.severity = blueprint.level >= 3 ? "majeure" : (blueprint.level == 2 ? "moyenne" : "mineure");
+        curse.origin = blueprint.origin;
+        curse.description = blueprint.description;
+        curse.removalHint = blueprint.removalHint;
+        curse.symptomCategories = blueprint.categories;
+        curse.discoveredSymptomCategories = "";
+        curse.excludedSymptomCategories = "";
+        curse.diagnosisLevel = 0;
+        curse.appliedAtDay = player.getWorldDaysElapsed();
+        curse.expiresAtDay = -1;
+        curse.exorcismProgress = 0;
+        curse.exorcismRequiredVisits = 0;
+        curse.curseLevel = std::max(1, blueprint.level);
+        curse.maxCurseLevel = std::max(curse.curseLevel, blueprint.maxLevel);
+        curse.evolvesOverTime = blueprint.evolves;
+        curse.escalationIntervalDays = blueprint.evolves ? std::max(1, blueprint.escalationIntervalDays) : 0;
+        curse.nextEscalationDay = blueprint.evolves ? player.getWorldDaysElapsed() + curse.escalationIntervalDays : -1;
+        curse.churchRemovalMaxLevel = 0;
+        curse.becomesSpecialRemovalWhenTooHigh = false;
+        curse.highLevelRemovalHint = blueprint.removalHint;
+        curse.removableByChurch = false;
+        curse.bossIdRequiredToBreak = blueprint.bossId;
+        curse.lifeLong = false;
+        return curse;
+    }
+
+    bool applyConfiguredBossDefeatCurse(Player& player, const Boss& boss)
+    {
+        BossDefeatCurseBlueprint blueprint;
+        if (!getBossDefeatCurseBlueprint(boss, blueprint))
+        {
+            return false;
+        }
+
+        const bool alreadyActive = player.hasActiveCurse(blueprint.id);
+        PlayerCurse curse = createBossLockedCurse(player, blueprint);
+        player.addOrRefreshCurse(curse);
+        const bool titleUnlocked = player.grantTitle("Porteur de trace");
+
+        std::vector<std::string> lines = {
+            "Conséquence : malédiction de boss",
+            "Boss : " + boss.getName(),
+            "Effet visible : " + blueprint.name,
+            "Durée : indéfinie tant que la source n'est pas vaincue.",
+            "Ancrage : la trace reste sur le personnage même hors combat, jusqu'à ce que ce boss soit rebattu.",
+            "Église : diagnostic possible, exorcisme impossible tant que la source reste debout.",
+            "Récupération future : " + blueprint.removalHint
+        };
+
+        if (boss.getBossId() == 11 || boss.getBossId() == 36)
+        {
+            lines.push_back("Perturbation spéciale : l'interface peut afficher de fausses cibles, un faux combat PvE, des caractères corrompus, des provocations ou une impression de te battre contre toi-même.");
+            lines.push_back("Symptôme récurrent : trouble de la vision — puis vérifie deux fois qui est vraiment devant toi, même hors combat.");
+            if (boss.getBossId() == 36)
+            {
+                lines.push_back("Source : cette version est stable juste assez longtemps pour être combattue ; si elle gagne, la trace est plus profonde que celle du fragment précoce.");
+            }
+        }
+        if (titleUnlocked)
+        {
+            lines.push_back("Titre obtenu : Porteur de trace.");
+        }
+
+        MessageScreen::show(
+            alreadyActive ? "MALÉDICTION RAVIVÉE" : "MALÉDICTION ACCROCHÉE",
+            "boss.defeat.configured_curse." + std::to_string(boss.getBossId()),
+            lines,
+            false
+        );
+
+        return true;
+    }
+
+    void applyBossVictoryConsequenceAfterDefeat(
+        Player& player,
+        const Boss& boss,
+        Random& random,
+        int playerMaxHpBeforeFight,
+        bool showNonCursingReminder
+    )
+    {
+        if (boss.getBossId() == 1 || boss.getBossId() == 3)
+        {
+            if (showNonCursingReminder)
+            {
+                showNonCursingBossDefeatReminder(boss);
+            }
+            return;
+        }
+
+        if (boss.getBossId() == 2)
+        {
+            applyZelefVictoryPenalty(player, playerMaxHpBeforeFight);
+            return;
+        }
+
+        if (boss.getBossId() == 5)
+        {
+            applyGrinkaVictoryPenalty(player, random);
+            return;
+        }
+
+        if (boss.getBossId() == 4)
+        {
+            applyLyknirVictoryCurse(player);
+            return;
+        }
+
+        applyConfiguredBossDefeatCurse(player, boss);
+    }
+
+    void recoverConfiguredBossCurseAfterVictory(Player& player, const Boss& boss)
+    {
+        BossDefeatCurseBlueprint blueprint;
+        if (!getBossDefeatCurseBlueprint(boss, blueprint))
+        {
+            return;
+        }
+
+        if (!player.hasActiveCurse(blueprint.id))
+        {
+            return;
+        }
+
+        const int removedCurses = player.removeCursesLockedByBoss(boss.getBossId());
+        if (removedCurses <= 0)
+        {
+            return;
+        }
+
+        std::vector<std::string> lines = {
+            "Récupération : malédiction de boss rompue",
+            "Boss : " + boss.getName(),
+            "Effet retiré : " + blueprint.name,
+            "La source a été affrontée en vrai : la trace n'a plus assez d'autorité pour rester."
+        };
+
+        if (boss.getBossId() == 11 || boss.getBossId() == 36)
+        {
+            lines.push_back("L'interface tremble une dernière fois, puis rend la vraie cible au joueur.");
+            if (boss.getBossId() == 36)
+            {
+                lines.push_back("La Source ne meurt pas : elle se dissipe dans l'air et les textures, comme un décor qui refuse de rester chargé.");
+            }
+        }
+
+        MessageScreen::show(
+            "SOURCE BRISÉE",
+            "boss.victory.configured_curse_recovered." + std::to_string(boss.getBossId()),
+            lines,
+            false
+        );
+    }
+
+
+    bool hasCurseLockedByBoss(const Player& player, int bossId)
+    {
+        if (bossId <= 0)
+        {
+            return false;
+        }
+
+        for (const PlayerCurse& curse : player.getActiveCurses())
+        {
+            if (curse.bossIdRequiredToBreak == bossId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool wouldHaveDefeatedBoss(const Player& player, int currentBossId, int searchedBossId)
+    {
+        if (currentBossId == searchedBossId)
+        {
+            return true;
+        }
+        const std::vector<int>& defeated = player.getDefeatedBossIds();
+        return std::find(defeated.begin(), defeated.end(), searchedBossId) != defeated.end();
+    }
+
+    bool wouldHaveDefeatedEveryBossExceptFinal(const Player& player, int currentBossId, int finalBossId)
+    {
+        const int maximumBossId = BossCatalog::getMaximumBossId();
+        for (int id = 1; id <= maximumBossId; ++id)
+        {
+            if (id == finalBossId)
+            {
+                continue;
+            }
+            if (!wouldHaveDefeatedBoss(player, currentBossId, id))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool wouldHaveDefeatedEveryBossIncludingFinal(const Player& player, int currentBossId)
+    {
+        const int maximumBossId = BossCatalog::getMaximumBossId();
+        for (int id = 1; id <= maximumBossId; ++id)
+        {
+            if (!wouldHaveDefeatedBoss(player, currentBossId, id))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    std::string bossVictoryTitleForId(int bossId)
+    {
+        switch (bossId)
+        {
+            case 1: return "Briseur de chaînes célestes";
+            case 2: return "Survivant du sang noir";
+            case 3: return "Fissure du dernier rempart";
+            case 4: return "Proie qui mord";
+            case 5: return "Voleur de reine";
+            case 6: return "Couronne brisée";
+            case 7: return "Écaille de tempête";
+            case 8: return "Ami des forêts furieuses";
+            case 9: return "Renard du vrai reflet";
+            case 10: return "Acquitté du silence";
+            case 11: return "Erreur de surface";
+            case 12: return "Minute volée";
+            case 13: return "Nom sous les os";
+            case 14: return "Survivant de la guerre";
+            case 15: return "Cœur non soumis";
+            case 16: return "Justiciable debout";
+            case 17: return "Éveillé du cauchemar";
+            case 18: return "Main des quatre éléments";
+            case 19: return "Humain hors du registre";
+            case 20: return "Chance retournée";
+            case 21: return "Passe-seuil";
+            case 22: return "Sujet sans royaume";
+            case 23: return "Nom donné à l'inconnu";
+            case 24: return "Rancune éteinte";
+            case 25: return "Entre création et ruine";
+            case 26: return "Écho d'univers";
+            case 27: return "Regard du créateur";
+            case 36: return "Source dissipée";
+            case 28: return "Respiration volée";
+            case 29: return "Clou retiré";
+            case 30: return "Destin écarté";
+            case 31: return "Berger des âmes";
+            case 32: return "Briseur de horde";
+            case 33: return "Sang royal refusé";
+            case 34: return "Filet arraché";
+            case 35: return "Vérité sans miroir";
+            default: return "";
+        }
+    }
+
+    void grantBossVictoryTitles(Player& player, const Boss& boss, bool coopParticipant)
+    {
+        std::vector<std::string> obtained;
+        auto grant = [&](const std::string& title) {
+            if (!title.empty() && player.grantTitle(title))
+            {
+                obtained.push_back(title);
+            }
+        };
+
+        const bool hadBossLockedCurse = hasCurseLockedByBoss(player, boss.getBossId());
+        grant("Tombeur de boss");
+        grant(bossVictoryTitleForId(boss.getBossId()));
+
+        const int finalBossId = 27;
+        if (boss.getBossId() != finalBossId
+            && wouldHaveDefeatedEveryBossExceptFinal(player, boss.getBossId(), finalBossId))
+        {
+            grant("Avant la dernière porte");
+            grant("Une invitation ?");
+        }
+        if (boss.getBossId() == finalBossId && wouldHaveDefeatedEveryBossIncludingFinal(player, boss.getBossId()))
+        {
+            grant("Celui qui a tout vaincu");
+            grant("La fin ???");
+        }
+
+        if (boss.getBossId() == 2 && (player.hasActiveCurse("zelef_black_blood_stain") || player.hasZelefCorrosionPresent()))
+        {
+            grant("Sang noir rendu");
+        }
+        if (hadBossLockedCurse)
+        {
+            grant("Exorcisé par revanche");
+            grant("Ancre brisée");
+        }
+        if (boss.getBossId() == 11)
+        {
+            grant("Débogueur de cauchemar");
+            grant("Menu qui répond");
+        }
+        if (boss.getBossId() == 36)
+        {
+            grant("Texture qui respire");
+            grant("Source dissipée");
+        }
+        if (coopParticipant)
+        {
+            grant("Partage de prime propre");
+            if (hadBossLockedCurse)
+            {
+                grant("Compagnon de revanche");
+            }
+        }
+
+        if (obtained.empty())
+        {
+            return;
+        }
+
+        std::vector<std::string> lines;
+        lines.push_back("La carte du personnage révèle de nouveaux titres. Les titres secrets obtenus ne restent plus en ????.");
+        for (const std::string& title : obtained)
+        {
+            lines.push_back("Titre obtenu : " + title + ".");
+        }
+
+        showBossPveLines(
+            "TITRES DE BOSS",
+            "boss.victory.titles." + std::to_string(boss.getBossId()),
+            lines
         );
     }
 
@@ -847,7 +1503,7 @@ namespace
                 continue;
             }
 
-            if (!player.isBossUnlocked(id))
+            if (!player.isBossDefeated(id))
             {
                 return false;
             }
@@ -868,7 +1524,7 @@ namespace
                 "Mais la porte ne s'ouvre pas.",
                 "Une phrase est gravée dans l'air :",
                 "Prouve ta valeur devant chaque variation majeure. Rassemble toutes les invitations.",
-                "FireFlight n'est pas un boss de passage.",
+                "FireFlight n'est pas une rencontre de passage.",
                 "C'est le dernier test du jeu actuel."
             },
             false
@@ -1005,7 +1661,7 @@ namespace
         itemData.name = potion.getName();
         itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = potion.getDescription();
-        itemData.status = "Soin : " + std::to_string(potion.getPower());
+        itemData.status = "Soin : " + potion.getPowerDisplayText();
         itemData.price = "Valeur : " + std::to_string(potion.getValue()) + " or";
         itemData.stock = "Index inventaire : " + std::to_string(inventoryIndex + 1);
         itemData.owner = healer.getName();
@@ -1145,7 +1801,7 @@ namespace
                 potionScreen.addOption(
                     static_cast<int>(index - start + 1),
                     CombatPotionUtils::stackLabel(potion.getName(), stack.amount),
-                    "Soin " + std::to_string(potion.getPower()) + " | quantité " + std::to_string(stack.amount) + " | valeur " + std::to_string(potion.getValue()),
+                    "Soin " + potion.getPowerDisplayText() + " | quantité " + std::to_string(stack.amount) + " | valeur " + std::to_string(potion.getValue()),
                     true,
                     "boss.coop.support.potion.select." + std::to_string(inventoryIndex + 1),
                     makeBossCoopPotionData(healer, potion, inventoryIndex, stack.amount)
@@ -1395,7 +2051,8 @@ namespace
             }
         }
         int beforeHealHp = target->getHp();
-        target->heal(potion.getPower());
+        const int announcedHeal = potion.getHealingAmountForMaxHp(target->getMaxHp());
+        target->heal(announcedHeal);
         healingDone += std::max(0, target->getHp() - beforeHealHp);
         healer.markHealingThreat();
 
@@ -1426,12 +2083,12 @@ namespace
         int green = 0;
         int red = 0;
         std::vector<std::string> lines;
-        lines.push_back("Léthal coop boss : " + player.getName() + " est au sol.");
+        lines.push_back("Mort définitive coop boss : " + player.getName() + " est au sol.");
         lines.push_back("3 pastilles vertes le ramènent. 3 rouges le rayent du registre, sauf intervention capable de briser le destin.");
 
         auto showSave = [&]()
         {
-            showBossPveLines("SURVIE LÉTHAL COOP", "boss.coop.lethal.save", lines);
+            showBossPveLines("SURVIE EN MORT DÉFINITIVE COOP", "boss.coop.lethal.save", lines);
         };
 
         while (green < 3 && red < 3)
@@ -1679,11 +2336,30 @@ namespace
 
     constexpr std::size_t BOSS_SELECTION_PAGE_SIZE = 8;
 
+    bool idInList(const std::vector<int>& ids, int bossId)
+    {
+        return std::find(ids.begin(), ids.end(), bossId) != ids.end();
+    }
+
+    std::string bossSelectionDisplayName(int bossId, const std::vector<int>& defeatedBossIds)
+    {
+        std::string name = BossCatalog::getRegistryDisplayName(bossId);
+
+        if (idInList(defeatedBossIds, bossId))
+        {
+            Boss knownBoss = BossCatalog::createBoss(bossId);
+            name = knownBoss.getName() + " [Battu]";
+        }
+
+        return name + " " + BossCatalog::getRecommendedLevelText(bossId);
+    }
+
     MenuOptionItemData makeBossSelectionItemData(
         int bossId,
         bool enabled,
         bool coop,
-        const std::string& hint
+        const std::string& hint,
+        const std::vector<int>& defeatedBossIds
     )
     {
         MenuOptionItemData itemData;
@@ -1691,12 +2367,15 @@ namespace
         itemData.kind = "boss";
         itemData.section = coop ? "Boss coop" : "Boss";
         itemData.actionType = "select";
-        itemData.name = BossCatalog::getRegistryDisplayName(bossId);
+        itemData.name = bossSelectionDisplayName(bossId, defeatedBossIds);
         itemData.detail = hint;
-        itemData.status = enabled
-            ? (coop ? "Accessible au groupe" : "Accessible")
-            : (coop ? "Bloqué par le groupe" : "Verrouillé");
-        itemData.progress = "Identifiant : " + std::to_string(bossId);
+        itemData.status = idInList(defeatedBossIds, bossId)
+            ? "Déjà battu"
+            : (enabled
+                ? (coop ? "Accessible au groupe" : "Accessible")
+                : (coop ? "Bloqué par le groupe" : "Verrouillé"));
+        itemData.progress = "Identifiant : " + std::to_string(bossId)
+            + " | Niveau conseillé : " + std::to_string(BossCatalog::getRecommendedLevel(bossId));
         itemData.owner = coop ? "Registre commun" : "Registre personnel";
         itemData.important = enabled;
         return itemData;
@@ -1705,6 +2384,7 @@ namespace
     MenuScreen buildBossSelectionScreen(
         const std::vector<int>& visibleBossIds,
         const std::vector<int>& enabledBossIds,
+        const std::vector<int>& defeatedBossIds,
         bool coop,
         std::size_t pageIndex
     )
@@ -1713,6 +2393,8 @@ namespace
         screen.addLine(coop
             ? "Sélectionne l'entité que le groupe veut affronter."
             : "Sélectionne l'entité que tu veux exterminer.");
+        screen.addLine("Les niveaux affichés sont recommandés, pas bloquants : avant ce palier, c'est à tes risques et périls.");
+        screen.addLine("Le premier vrai palier de boss commence à 15 ; FireFlight reste noté [255].");
 
         const std::size_t totalPages = std::max<std::size_t>(
             1,
@@ -1729,7 +2411,9 @@ namespace
         {
             const int id = visibleBossIds[index];
             const bool enabled = std::find(enabledBossIds.begin(), enabledBossIds.end(), id) != enabledBossIds.end();
-            std::string hint = BossCatalog::getRegistryHint(id);
+            std::string hint = BossCatalog::getRegistryHint(id)
+                + " Niveau conseillé : " + std::to_string(BossCatalog::getRecommendedLevel(id))
+                + " (non bloquant).";
             if (!enabled)
             {
                 hint += coop
@@ -1739,11 +2423,11 @@ namespace
 
             screen.addOption(
                 id,
-                BossCatalog::getRegistryDisplayName(id),
+                bossSelectionDisplayName(id, defeatedBossIds),
                 hint,
                 enabled,
                 coop ? "boss.coop.select." + std::to_string(id) : "boss.select." + std::to_string(id),
-                makeBossSelectionItemData(id, enabled, coop, hint)
+                makeBossSelectionItemData(id, enabled, coop, hint, defeatedBossIds)
             );
         }
 
@@ -1767,6 +2451,7 @@ namespace
     int askBossSelectionChoice(
         const std::vector<int>& visibleBossIds,
         const std::vector<int>& enabledBossIds,
+        const std::vector<int>& defeatedBossIds,
         bool coop
     )
     {
@@ -1775,7 +2460,7 @@ namespace
         while (true)
         {
             Console::clear();
-            MenuScreen screen = buildBossSelectionScreen(visibleBossIds, enabledBossIds, coop, pageIndex);
+            MenuScreen screen = buildBossSelectionScreen(visibleBossIds, enabledBossIds, defeatedBossIds, coop, pageIndex);
             const int choice = TerminalInterface::askMenuChoiceFromOptions(
                 screen,
                 "Veuillez entrer un identifiant de boss affiché."
@@ -1806,7 +2491,8 @@ namespace
 void BossPveMode::run(
     Player& player1,
     Random& random,
-    DifficultyMode difficulty
+    DifficultyMode difficulty,
+    DeathRuleMode deathRule
 )
 {
     MessageScreen::show(
@@ -1827,9 +2513,14 @@ void BossPveMode::run(
         "Veuillez entrer un chiffre valide : 1 ou 2."
     );
 
+    std::vector<int> visibleBossIds = player1.getUnlockedBossIds();
     std::vector<int> availableBossIds = player1.getAvailableBossIds();
     if (!hasAllInvitationsBeforeFireFlight(player1))
     {
+        visibleBossIds.erase(
+            std::remove(visibleBossIds.begin(), visibleBossIds.end(), 27),
+            visibleBossIds.end()
+        );
         availableBossIds.erase(
             std::remove(availableBossIds.begin(), availableBossIds.end(), 27),
             availableBossIds.end()
@@ -1843,7 +2534,7 @@ void BossPveMode::run(
             "boss.pve.none_available",
             {
                 "Aucune entité stable n'est disponible pour le moment.",
-                "Affronte deux autres boss différents pour laisser le registre respirer."
+                "Affronte d'autres boss ou laisse quelques jours passer pour stabiliser le registre."
             }
         );
         return;
@@ -1859,8 +2550,9 @@ void BossPveMode::run(
     else
     {
         bossChoice = askBossSelectionChoice(
-            player1.getUnlockedBossIds(),
+            visibleBossIds,
             availableBossIds,
+            player1.getDefeatedBossIds(),
             false
         );
 
@@ -1913,7 +2605,7 @@ void BossPveMode::run(
     Console::clear();
 
     BossPowerAnalysis powerAnalysis = analyzeBossPower(simulatedPlayer, boss, difficulty);
-    displayBossPowerAnalysis(simulatedPlayer, boss, difficulty, powerAnalysis);
+    displayBossPowerAnalysis(simulatedPlayer, boss, difficulty, deathRule, powerAnalysis);
 
     if (!askBossFightConfirmation(powerAnalysis))
     {
@@ -1971,13 +2663,13 @@ void BossPveMode::run(
     Console::pauseSeconds(2);
 
     if (player1.getLethalCheatAttemptCount() > 0
-        && (boss.getBossId() == 11 || boss.getBossId() == 16 || boss.getBossId() == 26 || boss.getBossId() == 27 || boss.getBossId() == 30))
+        && (boss.getBossId() == 11 || boss.getBossId() == 16 || boss.getBossId() == 26 || boss.getBossId() == 27 || boss.getBossId() == 30 || boss.getBossId() == 36))
     {
         std::vector<std::string> lethalLines;
-        if (boss.getBossId() == 11)
+        if (boss.getBossId() == 11 || boss.getBossId() == 36)
         {
-            lethalLines.push_back("L'Anomalie incline la tête.");
-            lethalLines.push_back("Ah. C'était donc toi qui avais essayé de griffer la page depuis le mode Léthal.");
+            lethalLines.push_back(boss.getBossId() == 36 ? "La Source de l'Anomalie stabilise ton ancien refus." : "L'Anomalie incline la tête.");
+            lethalLines.push_back("Ah. C'était donc toi qui avais essayé de griffer la page depuis une mort définitive.");
         }
         else if (boss.getBossId() == 16)
         {
@@ -1992,14 +2684,14 @@ void BossPveMode::run(
         else if (boss.getBossId() == 27)
         {
             lethalLines.push_back("FireFlight soupire comme quelqu'un qui relit un vieux log.");
-            lethalLines.push_back("Ah. C'est toi qui as tenté un code en Léthal. J'avais laissé une note pour ça.");
+            lethalLines.push_back("Ah. C'est toi qui as tenté un code en mort définitive. J'avais laissé une note pour ça.");
         }
         else
         {
             lethalLines.push_back("Moiran déroule un fil déjà taché par une tentative interdite.");
-            lethalLines.push_back("Tu as voulu sortir du destin en Léthal. Le destin a simplement noté ton nom.");
+            lethalLines.push_back("Tu as voulu sortir du destin en mort définitive. Le destin a simplement noté ton nom.");
         }
-        showBossPveLines("TRACE LÉTHAL", "boss.pve.lethal_cheat_memory", lethalLines);
+        showBossPveLines("TRACE DE MORT DÉFINITIVE", "boss.pve.lethal_cheat_memory", lethalLines);
     }
 
     Console::pauseSeconds(3);
@@ -2021,6 +2713,7 @@ void BossPveMode::run(
     int playerHpBeforeBossFight = player1.getHp();
     int bossCombatTurnCount = 0;
     bool hitogamiAlreadyRevived = false;
+    bool fireFlightCheatPurgeAt75Done = false;
 
     while (!player1.isDead() && !boss.isDead())
     {
@@ -2039,6 +2732,7 @@ void BossPveMode::run(
             if (turnFinished)
             {
                 ++bossCombatTurnCount;
+                maybeTriggerFireFlightCheatPurgeAtSeventyFive(boss, player1, fireFlightCheatPurgeAt75Done);
                 maybeReviveHitogamiOnce(boss, hitogamiAlreadyRevived, difficulty);
                 TurnManager::checkBossDecryption(boss);
                 boss.reduceUltimateCooldown();
@@ -2075,17 +2769,15 @@ void BossPveMode::run(
         player1.recordDefeat();
         player1.recordDeath();
 
-        if (boss.getBossId() == 2)
-        {
-            applyZelefVictoryPenalty(player1, playerMaxHpBeforeBossFight);
-        }
+        applyBossVictoryConsequenceAfterDefeat(
+            player1,
+            boss,
+            random,
+            playerMaxHpBeforeBossFight,
+            true
+        );
 
-        if (boss.getBossId() == 5)
-        {
-            applyGrinkaVictoryPenalty(player1, random);
-        }
-
-        if (DifficultyRules::isPermanentDeath(difficulty))
+        if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
         {
             DeathPenaltySystem::displayLethalDeathCorruption();
             return;
@@ -2123,7 +2815,7 @@ void BossPveMode::run(
             player1.recordDefeat();
             player1.recordDeath();
 
-            if (DifficultyRules::isPermanentDeath(difficulty))
+            if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
             {
                 DeathPenaltySystem::displayLethalDeathCorruption();
                 return;
@@ -2145,7 +2837,24 @@ void BossPveMode::run(
         player1.recordVictory();
         player1.recordBossKill();
 
+        grantBossVictoryTitles(player1, boss, false);
+
         bool newEntityDetected = player1.recordBossVictoryInRegistry(boss.getBossId());
+
+        if (player1.hasActiveCurse("boss_threshold_omen"))
+        {
+            player1.getInventory().addMaterial(MaterialCatalog::createById("source_defeat_notice", 1));
+            MessageScreen::show(
+                "TRACE DE SEUIL",
+                "boss.threshold_omen.source_defeated",
+                {
+                    "La victoire laisse une preuve nette : la source liée à un seuil a réellement été affrontée.",
+                    "Objet reçu : Note de source vaincue x1.",
+                    "Avec un diagnostic total, l'église pourra confirmer la rupture au lieu de sceller au hasard."
+                },
+                false
+            );
+        }
 
         if (newEntityDetected)
         {
@@ -2162,24 +2871,53 @@ void BossPveMode::run(
             );
         }
 
+
+
+        if (boss.getBossId() == 4 && player1.hasActiveCurse("lyknir_prey_mark"))
+        {
+            const int removedCurses = player1.removeCursesLockedByBoss(4);
+            if (removedCurses > 0)
+            {
+                MessageScreen::show(
+                    "MARQUE BRISÉE",
+                    "boss.lyknir.curse_recovered",
+                    {
+                        "Récupération : malédiction de chasse rompue",
+                        "Boss : Lyknir",
+                        "Effet retiré : Marque de proie de Lyknir",
+                        "La meute garde le silence. Cette fois, tu n'es plus la proie."
+                    },
+                    false
+                );
+            }
+        }
+
         if (boss.getBossId() == 2 && player1.hasZelefCorrosionPresent())
         {
             int recovered = player1.getZelefMaxHpStolen();
             player1.restoreZelefCorrosionLoss();
+            const int removedZelefCurses = player1.removeCursesLockedByBoss(2);
+            std::vector<std::string> lines = {
+                "Récupération : corruption rendue",
+                "Boss : Zelef",
+                "PV maximum récupérés : " + std::to_string(recovered),
+                "Effet retiré : Corrosion présente",
+                "Tu fais face au sang noir qui t'avait marqué.",
+                "Rends-moi ce que tu m'as pris il y a longtemps."
+            };
+            if (removedZelefCurses > 0)
+            {
+                lines.push_back("Trace maudite rompue : Souillure de sang noir de Zelef.");
+            }
             MessageScreen::show(
                 "CORROSION RENDUE",
                 "boss.zelef.corrosion_recovered",
-                {
-                    "Récupération : corruption rendue",
-                    "Boss : Zelef",
-                    "PV maximum récupérés : " + std::to_string(recovered),
-                    "Effet retiré : Corrosion présente",
-                    "Tu fais face au sang noir qui t'avait marqué.",
-                    "Rends-moi ce que tu m'as pris il y a longtemps."
-                },
+                lines,
                 false
             );
         }
+
+        recoverConfiguredBossCurseAfterVictory(player1, boss);
 
         if (boss.getBossId() == 5 && player1.hasGrinkaBossTheftPresent())
         {
@@ -2215,7 +2953,8 @@ void BossPveMode::run(
 void BossPveMode::runTeam(
     std::vector<Player*>& party,
     Random& random,
-    DifficultyMode difficulty
+    DifficultyMode difficulty,
+    DeathRuleMode deathRule
 )
 {
     if (party.empty() || party[0] == nullptr)
@@ -2242,9 +2981,14 @@ void BossPveMode::runTeam(
         "Veuillez entrer 1 ou 2."
     );
 
+    std::vector<int> leaderVisibleBossIds = leader.getUnlockedBossIds();
     std::vector<int> leaderAvailableBossIds = leader.getAvailableBossIds();
     if (!hasAllInvitationsBeforeFireFlight(leader))
     {
+        leaderVisibleBossIds.erase(
+            std::remove(leaderVisibleBossIds.begin(), leaderVisibleBossIds.end(), 27),
+            leaderVisibleBossIds.end()
+        );
         leaderAvailableBossIds.erase(
             std::remove(leaderAvailableBossIds.begin(), leaderAvailableBossIds.end(), 27),
             leaderAvailableBossIds.end()
@@ -2284,8 +3028,9 @@ void BossPveMode::runTeam(
     else
     {
         bossChoice = askBossSelectionChoice(
-            leader.getUnlockedBossIds(),
+            leaderVisibleBossIds,
             coopAvailableBossIds,
+            leader.getDefeatedBossIds(),
             true
         );
 
@@ -2336,6 +3081,7 @@ void BossPveMode::runTeam(
 
     std::vector<std::unique_ptr<TemporaryClassGuard>> classGuards;
     std::vector<int> initialHp;
+    std::vector<int> initialMaxHp;
     std::vector<BossCoopContribution> contributions(party.size());
     std::vector<std::vector<Summon>> partySummons(party.size());
     std::vector<SummonControlMode> summonControlModes(party.size(), SummonControlMode::Automatic);
@@ -2346,6 +3092,7 @@ void BossPveMode::runTeam(
         if (player == nullptr)
         {
             initialHp.push_back(0);
+            initialMaxHp.push_back(0);
             continue;
         }
 
@@ -2354,6 +3101,7 @@ void BossPveMode::runTeam(
         player->applyClass(evolvedClass);
         classGuards.back()->markActive();
         initialHp.push_back(player->getHp());
+        initialMaxHp.push_back(player->getMaxHp());
         partySummons[partyIndex] = SummonCombatSystem::createInitialSummonsFor(*player);
     }
 
@@ -2363,7 +3111,7 @@ void BossPveMode::runTeam(
     simulatedLeader.applyClass(ClassCatalog::createEvolvedClassFromClass(leader.getType()));
     scaleBossForCoop(boss, static_cast<int>(party.size()));
     BossPowerAnalysis powerAnalysis = analyzeBossPower(simulatedLeader, boss, difficulty);
-    displayBossPowerAnalysis(simulatedLeader, boss, difficulty, powerAnalysis);
+    displayBossPowerAnalysis(simulatedLeader, boss, difficulty, deathRule, powerAnalysis);
 
     MessageScreen::show(
         "ANALYSE COOP",
@@ -2420,6 +3168,7 @@ void BossPveMode::runTeam(
     int round = 1;
     int bossCombatTurnCount = 0;
     bool hitogamiAlreadyRevived = false;
+    bool fireFlightCheatPurgeAt75Done = false;
 
     while (countAliveBossParty(party) > 0 && !boss.isDead())
     {
@@ -2485,6 +3234,7 @@ void BossPveMode::runTeam(
                 contributions[i].healingDone += healingDoneThisTurn;
                 if (healingDoneThisTurn > 0) contributions[i].supportActions++;
                 ++bossCombatTurnCount;
+                maybeTriggerFireFlightCheatPurgeForParty(boss, party, fireFlightCheatPurgeAt75Done);
                 maybeReviveHitogamiOnce(boss, hitogamiAlreadyRevived, difficulty);
                 TurnManager::checkBossDecryption(boss);
             }
@@ -2573,14 +3323,24 @@ void BossPveMode::runTeam(
             false
         );
 
-        for (Player* player : party)
+        for (std::size_t partyIndex = 0; partyIndex < party.size(); ++partyIndex)
         {
+            Player* player = party[partyIndex];
             if (player == nullptr) continue;
             player->recordDefeat();
-
+            const int maxHpBeforeFight = partyIndex < initialMaxHp.size() && initialMaxHp[partyIndex] > 0
+                ? initialMaxHp[partyIndex]
+                : player->getMaxHp();
+            applyBossVictoryConsequenceAfterDefeat(
+                *player,
+                boss,
+                random,
+                maxHpBeforeFight,
+                player == &leader
+            );
             if (player->isDead())
             {
-                if (DifficultyRules::isPermanentDeath(difficulty))
+                if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
                 {
                     resolveBossLethalGroupDeathSave(*player, random);
                 }
@@ -2596,7 +3356,6 @@ void BossPveMode::runTeam(
                 }
             }
         }
-
         Console::waitForEnter();
         return;
     }
@@ -2615,6 +3374,16 @@ void BossPveMode::runTeam(
         false
     );
 
+    bool atLeastOnePartyMemberDownAtReward = false;
+    for (Player* partyMember : party)
+    {
+        if (partyMember != nullptr && partyMember->isDead())
+        {
+            atLeastOnePartyMemberDownAtReward = true;
+            break;
+        }
+    }
+
     for (std::size_t i = 0; i < party.size(); ++i)
     {
         Player* player = party[i];
@@ -2625,7 +3394,7 @@ void BossPveMode::runTeam(
 
         if (player->isDead())
         {
-            if (DifficultyRules::isPermanentDeath(difficulty))
+            if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
             {
                 resolveBossLethalGroupDeathSave(*player, random);
                 if (player->isDead())
@@ -2678,7 +3447,28 @@ void BossPveMode::runTeam(
         {
             player->recordVictory();
             player->recordBossKill();
+            grantBossVictoryTitles(*player, boss, true);
+            if (!player->isDead() && atLeastOnePartyMemberDownAtReward && player->grantTitle("Dernier debout du groupe"))
+            {
+                showBossPveLines(
+                    "TITRE DE COOP",
+                    "boss.coop.title.last_standing",
+                    {player->getName() + " obtient le titre : Dernier debout du groupe."}
+                );
+            }
             bool newEntityDetected = player->recordBossVictoryInRegistry(boss.getBossId());
+            if (player->hasActiveCurse("boss_threshold_omen"))
+            {
+                player->getInventory().addMaterial(MaterialCatalog::createById("source_defeat_notice", 1));
+                showBossPveLines(
+                    "TRACE DE SEUIL",
+                    "boss.coop.threshold_omen.source_defeated",
+                    {
+                        player->getName() + " reçoit une Note de source vaincue : la victoire de groupe compte comme vraie preuve.",
+                        "L'église pourra l'utiliser seulement avec un diagnostic total de la trace concernée."
+                    }
+                );
+            }
             if (newEntityDetected)
             {
                 showBossPveLines(
@@ -2687,6 +3477,36 @@ void BossPveMode::runTeam(
                     {"Registre de " + player->getName() + " : une nouvelle entité est devenue détectable."}
                 );
             }
+
+
+
+            if (boss.getBossId() == 4 && player->hasActiveCurse("lyknir_prey_mark"))
+            {
+                int removedCurses = player->removeCursesLockedByBoss(4);
+                if (removedCurses > 0)
+                {
+                    showBossPveLines(
+                        "MARQUE BRISÉE",
+                        "boss.coop.lyknir.curse_recovered",
+                        {player->getName() + " perd la Marque de proie de Lyknir : la victoire de groupe compte vraiment."}
+                    );
+                }
+            }
+
+            if (boss.getBossId() == 2 && player->hasActiveCurse("zelef_black_blood_stain"))
+            {
+                int removedCurses = player->removeCursesLockedByBoss(2);
+                if (removedCurses > 0)
+                {
+                    showBossPveLines(
+                        "SANG NOIR APAISÉ",
+                        "boss.coop.zelef.curse_recovered",
+                        {player->getName() + " perd la Souillure de sang noir de Zelef : la source a été affrontée en vrai."}
+                    );
+                }
+            }
+
+            recoverConfiguredBossCurseAfterVictory(*player, boss);
 
             LootGenerator::giveDefeatedBossLoot(*player, boss, random, difficulty);
         }

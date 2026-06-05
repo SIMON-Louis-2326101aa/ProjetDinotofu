@@ -10,6 +10,7 @@
 #include "entity/Player.hpp"
 #include "entity/Monster.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 #include <string>
 #include <vector>
 
@@ -19,19 +20,22 @@ public:
     static void run(
         Player& player,
         Random& random,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        DeathRuleMode deathRule
     );
 
     static void runTeam(
         std::vector<Player*>& party,
         Random& random,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        DeathRuleMode deathRule
     );
 
     static bool runExplorationWave(
         Player& player,
         Random& random,
         DifficultyMode difficulty,
+        DeathRuleMode deathRule,
         const std::vector<Monster>& monsters,
         const std::string& title
     );

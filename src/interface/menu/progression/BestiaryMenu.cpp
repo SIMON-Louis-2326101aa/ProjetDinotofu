@@ -311,7 +311,7 @@ namespace
             {"Personnages spéciaux", "Hestia", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué par l'histoire, une rencontre ou une information crédible. Le bestiaire ne révèle pas ses origines à l'avance.", "Identité verrouillée", 0, 0},
             {"Personnages spéciaux", "Henrique", "Identité spéciale non confirmée.", "Ce personnage spécial doit être découvert en jeu. Le registre garde ses liens et capacités cachés tant que le joueur ne les a pas vus.", "Identité verrouillée", 0, 0},
             {"Personnages spéciaux", "Louis", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué progressivement. Le bestiaire évite de spoiler son rôle, ses amis et son style de combat.", "Identité verrouillée", 0, 0},
-            {"Personnages spéciaux", "Trexof", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué par progression ou rencontre. Ses liens et son statut de testeur restent cachés au départ.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Trexof", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué par progression ou rencontre. Ses liens et son vrai style restent cachés au départ.", "Identité verrouillée", 0, 0},
             {"Personnages spéciaux", "Mattzelda", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué progressivement. Le registre ne dévoile pas encore son profil de colosse humain.", "Identité verrouillée", 0, 0},
             {"Légendes / contes", "Légendes de bibliothèque", "Rayonnage de récits du monde.", "La bibliothèque classe des légendes longues, des histoires pour enfant et des récits incomplets. Ces textes ajoutent du lore sans bloquer le voyage.", "Archive de bibliothèque", 0, 0},
             {"Légendes / contes", "Légendes de salle de boss", "Certains lieux racontent plus qu'un combat.", "Certaines salles anciennes ou certains conteurs laissent parfois une légende rare. Le registre les traite comme des moments spéciaux, pas comme un rituel obligatoire avant chaque boss.", "Rumeur de salle", 0, 0},
@@ -346,6 +346,37 @@ namespace
             {"Races", "Résistances et faiblesses", "Les éléments réagissent avec races, classes et matières.", "Le feu, le froid, le poison, le choc, le saignement et les vulnérabilités ne doivent pas être universels. Le métal attire mieux certains chocs, les plantes craignent davantage le feu, les corps organiques réagissent différemment au poison, et l'équipement porté peut aider ou aggraver l'effet.", "Étude active", 0, 0},
             {"Matériaux et plantes", "Dégradation de récolte", "La façon de combattre peut abîmer un composant.", "Flèches, feu, explosions ou armes lourdes peuvent produire des composants troués, brûlés ou écrasés. La maîtrise d'arme réduit peu à peu ces risques.", "Renseignement commun", 0, 0},
             {"Matériaux et plantes", "Récolte propre", "Une récolte bien faite peut améliorer une qualité.", "Une récolte propre peut faire passer impur vers normal, normal vers pur/haute qualité, puis exceptionnel. L'achat direct d'exceptionnel reste impossible.", "Renseignement commun", 0, 0},
+            {"Classes", "Gladiateur", "Classe de contact orientée arène.", "Le Gladiateur cherche la pression constante : pas aussi noble qu'un Chevalier, pas aussi suicidaire qu'un Berserker, mais très bon pour garder l'adversaire dans le rythme qu'il impose.", "Classe jouable", 0, 0},
+            {"Classes", "Ravageur", "Briseur frontal très risqué.", "Le Ravageur existe pour casser une garde, une armure ou une ligne ennemie. Il frappe fort, mais son style laisse des ouvertures si le combat dure trop.", "Classe jouable", 0, 0},
+            {"Classes", "Maître d'armes", "Combattant martial polyvalent.", "Le Maître d'armes préfère comprendre l'équipement avant d'agir. Il n'a pas encore de système complet de styles, mais sa présence prépare les futures spécialisations d'armes.", "Classe jouable", 0, 0},
+            {"Classes", "Pisteur", "Classe de distance liée aux traces.", "Le Pisteur donne une identité plus sauvage aux combattants à distance : lire un terrain, prévoir une proie, choisir la munition utile plutôt que tirer au hasard.", "Classe jouable", 0, 0},
+            {"Classes", "Frondeur tactique", "Harceleur à distance économique.", "Le Frondeur tactique représente les profils qui gagnent par petites ouvertures, gestion de consommables et gêne répétée. Il sera utile quand les munitions auront encore plus de poids.", "Classe jouable", 0, 0},
+            {"Classes", "Éclaireur d'élite", "Distance mobile et préparation.", "L'Éclaireur d'élite sert à ceux qui veulent commencer les combats avec de l'information, choisir les cibles et sortir avant que la ligne casse.", "Classe jouable", 0, 0},
+            {"Classes", "Électromancien", "Mage du choc et des réactions métalliques.", "L'Électromancien prépare les futurs liens entre équipement métallique, humidité, choc et interruptions. Il est fort quand l'ennemi porte trop de métal sans protection.", "Classe jouable", 0, 0},
+            {"Classes", "Gravemage", "Mage de runes lentes.", "Le Gravemage ne cherche pas toujours le gros chiffre immédiat. Il prépare, verrouille, grave et force le combat à respecter une cadence moins nerveuse.", "Classe jouable", 0, 0},
+            {"Classes", "Miragien", "Mage d'illusions et d'erreurs.", "Le Miragien annonce les mécaniques futures de confusion, faux choix, images et lectures trompeuses, sans donner gratuitement les pouvoirs d'Inakari.", "Classe jouable", 0, 0},
+            {"Classes", "Marionnettiste", "Invocateur à fils et contrôle.", "Le Marionnettiste préfère manipuler une présence fragile plutôt que se battre seul. Sa logique prépare les invocations contrôlées et les ennemis à pantins.", "Classe jouable", 0, 0},
+            {"Classes", "Totémiste", "Invocateur de soutien de zone.", "Le Totémiste pose une présence qui aide le combat à durer : protection, patience, zone de repos ou pression rituelle selon les futurs totems.", "Classe jouable", 0, 0},
+            {"Classes", "Corbeaumancien", "Invocateur de familier et mauvais présages.", "Le Corbeaumancien donne une place aux familiers de reconnaissance, petites malédictions et messages. Il peut devenir très lore avec les cimetières et les ruines.", "Classe jouable", 0, 0},
+            {"Classes", "Oracle", "Support de lecture du danger.", "L'Oracle n'est pas forcément un soigneur pur : il devine, prévient, détourne et explique parfois une menace avant que l'équipe comprenne pourquoi elle saigne.", "Classe jouable", 0, 0},
+            {"Classes", "Protecteur", "Tank d'interception.", "Le Protecteur sert à incarner la garde d'un allié précis. Il ne tape pas forcément fort, mais il existe pour décider qui a le droit d'atteindre la cible fragile.", "Classe jouable", 0, 0},
+            {"Classes", "Médecin de terrain", "Support pratique et non sacré.", "Le Médecin de terrain permet d'avoir du soin sans forcément passer par la foi ou la lumière. Pansements, remèdes, stabilisation et survie deviennent son identité.", "Classe jouable", 0, 0},
+            {"Classes", "Chevalier draconique", "Hybride martial à écailles.", "Le Chevalier draconique prépare un style entre arme lourde, résistance, souffle mineur et matériaux draconiques, sans devenir un dragon complet gratuitement.", "Classe jouable", 0, 0},
+            {"Classes", "Rôdeur arcanique", "Hybride distance-magie.", "Le Rôdeur arcanique mélange munitions, terrain et magie légère. Il devrait aimer les flèches spéciales et les grimoires utilitaires.", "Classe jouable", 0, 0},
+            {"Classes", "Moine solaire", "Hybride discipline-lumière.", "Le Moine solaire ajoute un profil de contact plus lumineux que le Moine classique, avec une identité de contre-pression et purification future.", "Classe jouable", 0, 0},
+            {"Classes", "Cuisinier de guilde", "Artisan des rations et petits buffs.", "Le Cuisinier de guilde n'est pas une blague gratuite : en aventure longue, une bonne ration peut éviter de gaspiller une potion chère avant un boss.", "Classe jouable", 0, 0},
+            {"Classes", "Cartographe", "Artisan de lecture de zone.", "Le Cartographe sert à renforcer l'exploration : cartes, dangers probables, coffres, traces, biomes et contrats de terrain.", "Classe jouable", 0, 0},
+            {"Classes", "Récupérateur", "Artisan du loot propre.", "Le Récupérateur représente le joueur qui garde tout, démonte tout et finit par fabriquer une solution avec trois bouts de cuir et un clou suspect.", "Classe jouable", 0, 0},
+            {"Entités hostiles / ennemis", "Moustique des hautes herbes", "Petit insectoïde des plaines.", "Faible seul, mais pénible quand il arrive après un combat déjà long. Son rôle est de rappeler que toutes les menaces ne doivent pas être énormes pour coûter une ressource.", "Entrée de terrain", 0, 0},
+            {"Entités hostiles / ennemis", "Pousse mordante", "Jeune plante hostile.", "Elle mord les bottes, accroche les tissus et apprend au joueur que même une plante faible peut gêner le mouvement si on la sous-estime.", "Entrée de terrain", 0, 0},
+            {"Entités hostiles / ennemis", "Renard cendré", "Petite bête attirée par les feux.", "Il rôde autour des campements et des restes de braises. Pas vraiment démoniaque, mais assez malin pour sentir où un sac a été mal fermé.", "Entrée de terrain", 0, 0},
+            {"Entités hostiles / ennemis", "Slime rose nerveux", "Gelée bondissante.", "La couleur rose n'est pas forcément mignonne : cette gelée rebondit, change d'angle et peut rendre un combat simple plus ridicule que prévu.", "Entrée de terrain", 0, 0},
+            {"Entités hostiles / ennemis", "Armure cabossée", "Construction hantée faible.", "Ancienne protection vide qui avance encore. Le poison ne sert presque à rien ; les fissures, chocs et armes lourdes racontent mieux la solution.", "Entrée de terrain", 0, 0},
+            {"Entités hostiles / ennemis", "Mage de verre", "Lanceur fragile mais dangereux.", "Le Mage de verre tombe vite si on l'atteint, mais il peut brûler une mauvaise décision en un tour. Le laisser libre est souvent plus cher qu'une potion.", "Entrée de terrain", 0, 0},
+            {"Entités hostiles / ennemis", "Golem d'atelier", "Construction créée pour travailler, pas discuter.", "Il frappe comme une machine qui n'a jamais compris la notion de pause. Le démonter proprement peut garder de meilleurs matériaux.", "Entrée de terrain", 0, 0},
+            {"Habitats / zones", "Campement abandonné", "Micro-zone de repos piégé.", "Un feu éteint, des sacs éventrés et une corde trop bien placée peuvent annoncer bandits, bêtes opportunistes ou une rumeur utile avant le prochain chemin.", "Carte mineure", 0, 0},
+            {"Habitats / zones", "Pont marchand", "Passage étroit et social.", "Un pont concentre embuscades, taxes, contrôles, rencontres de PNJ et choix de fuite. Bon lieu pour tester intimidation, réputation et contrats.", "Carte mineure", 0, 0},
+            {"Habitats / zones", "Clairière aux braises", "Zone forestière marquée par le feu.", "Les braises attirent renards cendrés, slimes rouges, kitsune rumeurs et plantes sèches. Un bon endroit pour faire exister le feu sans lancer un boss.", "Carte mineure", 0, 0},
             {"Boss", "??? - boss non révélé", "Identité verrouillée.", "Cette entrée volontairement floue rappelle que le nom d'un boss ne doit pas être ajouté gratuitement. Il faut une révélation directe ou un écrit crédible.", "Verrouillé", 0, 0},
             {"Boss", "Fitoria", "Ange de jugement lumineux.", "Fitoria juge, enchaîne, soigne de façon contrôlée et libère Sentence céleste après son passage sous les 50% PV.", "Révélé par le registre initial", 1, 0},
             {"Boss", "Zelef", "Démon de corruption et de sang noir.", "Zelef peut voler de la vie, corrompre et laisser une Corrosion présente si le joueur perd. Le vaincre peut rendre ce qu'il a pris.", "Révélé par le registre initial", 1, 0},
@@ -355,21 +386,36 @@ namespace
             {"Boss", "Fragment de Thamarys", "Fragment draconique.", "Thamarys possède des écailles à briser et un souffle d'origine. Le combattre revient à apprendre quelle défense draconique est encore debout.", "Trace de boss", 0, 0},
             {"Boss", "Mojo", "Esprit mythique de la forêt.", "Mojo peut être vaincu brutalement ou apaisé. La victoire respectueuse ouvre une récompense et une lecture très différentes.", "Trace de boss", 0, 0},
             {"Boss", "Reflet d'Inakari", "Reflet kitsune trompeur.", "Inakari ment avec élégance, propose de fausses récompenses et transforme les choix en miroirs dangereux.", "Trace de boss", 0, 0},
-            {"Boss", "L'Anomalie", "Erreur fière qui attaque l'interface.", "L'Anomalie corrompt les menus, invente de fausses sorties et réagit aux personnages altérés ou aux tentatives interdites.", "Boss finalisé", 0, 0},
-            {"Boss", "Manifestation de Moiran", "Manifestation affaiblie du Destin.", "Moiran ne joue pas la chance : il observe la trajectoire. Les cheats, les morts et les lignes refusées deviennent des preuves.", "Boss finalisé", 0, 0},
-            {"Boss", "Écho fragmenté d'Obérion", "Fragment approuvé de l'origine.", "Obérion ramène le combat à l'Origine nue : au-delà de 50%, l'arme et l'armure cessent d'être reconnues.", "Boss finalisé", 0, 0},
-            {"Boss", "Avatar affaibli de FireFlight", "Créateur, aventurier, boss final.", "FireFlight est verrouillé derrière les invitations de boss. Après sa chute, il lance un test final de trois tours contre les souvenirs d'ultimes.", "Boss final", 0, 0},
-            {"Divinités / lore", "FireFlight", "Créateur du monde et trace du créateur.", "FireFlight peut être personnage, boss, créateur et regard derrière le jeu. Ses dialogues changent avec les personnages spéciaux et les altérations.", "Lore sensible", 0, 0},
-            {"Divinités / lore", "Moiran", "Destin créé par l'Ordre et le Temps.", "Moiran ferme des routes plutôt que de lancer des dés. Il réagit aux cheats, surtout aux cheats tentés en Léthal.", "Trace divine", 0, 0},
+            {"Boss", "L'Anomalie", "Nom presque effacé.", "Aucun dossier exploitable : les témoins sont morts, brisés ou réinitialisés. Le registre refuse les informations tactiques avant une vraie confrontation.", "Nom seulement", 0, 0},
+            {"Boss", "Manifestation de Moiran", "Trace de destin avancée.", "Moiran reste un boss avancé lié aux lignes possibles et aux altérations, mais il n'est plus classé dans les boss particuliers finaux. Les détails tactiques restent à découvrir par vraie rencontre.", "Trace de boss", 0, 0},
+            {"Boss", "Écho fragmenté d'Obérion", "Nom presque effacé.", "Fragment d'origine trop haut pour un registre ordinaire. Les informations exploitables restent bloquées tant que le joueur ne l'a pas réellement affronté.", "Trace finale verrouillée", 0, 0},
+            {"Secret", "Avatar affaibli de FireFlight", "Identité finale scellée.", "Aucune information avant la fin : cette entrée n'est censée exister qu'après avoir surmonté toutes les épreuves majeures concernées.", "Verrouillé final secret", 0, 0},
+            {"Divinités / lore", "FireFlight", "Créateur du monde et trace du créateur.", "FireFlight peut être personnage, créateur, test final et regard derrière le jeu. Ses dialogues changent avec les personnages spéciaux et les altérations.", "Lore sensible", 0, 0},
+            {"Divinités / lore", "Moiran", "Trace de destin.", "La trace existe dans le lore du destin, sans être rangée avec les figures particulières finales comme L'Anomalie, Obérion ou FireFlight.", "Trace divine", 0, 0},
             {"Divinités / lore", "Obérion", "Dieu universel et père des primordiaux.", "Obérion complet dépasse le combat actuel. Seuls des fragments approuvés sont affrontables sans briser l'échelle du monde.", "Trace divine", 0, 0},
-            {"Objets rares", "Invitations de boss", "Lettres nécessaires pour FireFlight.", "Chaque boss vaincu peut laisser une invitation. Quand toutes les lettres existent, l'entrée du boss final accepte enfin de s'ouvrir.", "Système boss final", 0, 0},
+            {"Objets rares", "Invitations scellées", "Lettres nécessaires pour FireFlight.", "Chaque grande épreuve peut laisser une invitation. Quand toutes les lettres existent, l'entrée du test final accepte enfin de s'ouvrir.", "Système final secret", 0, 0},
             {"Objets rares", "Fragments de boss avancés", "Matériaux uniques de boss.", "Fragments de nom perdu, miroir fendu, noyau de version instable, sceaux et traces divines nourrissent les crafts ou reliques majeures.", "Fiche archivée", 0, 0},
             {"Objets rares", "Particularités de craft", "Effets faibles nés de matériaux exceptionnels.", "Un objet crafté peut recevoir une petite particularité si plus de 50% de sa valeur de craft vient de matériaux exceptionnels. Les classes d'artisanat augmentent maintenant légèrement cette chance.", "Étude active", 0, 0},
             {"Habitats / zones", "Traces de territoire", "Les zones racontent parfois le monstre avant le combat.", "Griffures sur un arbre, os déplacés, gel anormal, suie récente ou silence soudain peuvent ajouter une entrée sans tuer la créature. Une trace ne donne pas tout : elle confirme surtout l'existence et le terrain probable.", "Méthode d'observation", 0, 0},
             {"Habitats / zones", "Cadavre étudié", "Une victoire n'est pas la seule manière d'apprendre.", "Un corps ancien, une mue, un nid abandonné ou une arme cassée peut révéler faiblesse, résistance ou butin possible. Les informations restent moins fiables qu'une vraie rencontre, mais elles aident à préparer la chasse.", "Méthode d'observation", 0, 0},
             {"Matériaux et plantes", "Qualité de dépouille", "La manière de vaincre change ce qui reste.", "Une dépouille brûlée, explosée ou percée trop violemment peut donner moins de composants propres. Une mise à mort contrôlée, une arme adaptée ou une récolte calme augmente les chances de matière propre.", "Méthode d'observation", 0, 0},
             {"Objets rares", "Pages de terrain annotées", "Certaines pages ne donnent pas un sort, mais une lecture du monde.", "Les pages trouvées ou achetées peuvent ajouter une fiche, améliorer une famille ou donner une piste de butin. Elles ne remplacent pas l'expérience, mais peuvent éviter de mourir idiot devant une faiblesse évidente.", "Renseignement de bibliothèque", 0, 0},
-            {"Boss", "Rumeurs de boss", "Une rumeur ne suffit pas à révéler un nom.", "Le registre peut noter une silhouette, un titre ou un comportement sans donner l'identité complète. Le nom reste caché tant que le boss ne l'a pas offert lui-même ou qu'un écrit fiable ne le confirme pas.", "Renseignement incomplet", 0, 0}
+            {"Boss", "Rumeurs de boss", "Une rumeur ne suffit pas à révéler un nom.", "Le registre peut noter une silhouette, un titre ou un comportement sans donner l'identité complète. Le nom reste caché tant que le boss ne l'a pas offert lui-même ou qu'un écrit fiable ne le confirme pas.", "Renseignement incomplet", 0, 0},
+            {"Classes jouables", "Hallebardier", "Contact à grande allonge.", "Profil martial pensé pour tenir une ligne : il aime commencer le combat à bonne distance, punir les approches et éviter d'être encerclé.", "Classe jouable", 0, 0},
+            {"Classes jouables", "Martelier", "Briseur lourd orienté armures.", "Il apporte une réponse naturelle aux constructions, armures mortes et ennemis trop solides pour les petites lames.", "Classe jouable", 0, 0},
+            {"Classes jouables", "Arquebusier expérimental", "Distance lourde et risquée.", "Tire très fort mais demande préparation, munitions et acceptation du raté. Une classe drôle si on aime les gros coups qui ne pardonnent pas.", "Classe jouable", 0, 0},
+            {"Classes jouables", "Bibliomancien", "Mage de savoir et grimoires.", "Il valorise les livres, indices et préparations. Fragile, mais très intéressant pour un joueur qui veut lier magie et progression de connaissance.", "Classe jouable", 0, 0},
+            {"Classes jouables", "Reliquaire vivant", "Invocateur d'artefacts temporaires.", "Il ne se contente pas d'appeler des bêtes : il anime des objets, charges et reliques instables, avec un risque cohérent avec le craft futur.", "Classe jouable", 0, 0},
+            {"Classes jouables", "Archiviste de terrain", "Support de connaissance.", "Il soutient moins par les dégâts que par l'identification, la préparation et la lecture des menaces. Très cohérent avec le bestiaire progressif.", "Classe jouable", 0, 0},
+            {"Classes jouables", "Herboriste de combat", "Artisan de remèdes en situation dangereuse.", "Il donne une raison jouable de valoriser les plantes, antidotes et récoltes propres sans transformer tout le monde en mage.", "Classe jouable", 0, 0},
+            {"Entités hostiles / ennemis", "Faux péager souriant", "Humain hostile de route.", "Un bon exemple d'ennemi non monstrueux : peu de résistance naturelle, mais rusé, socialement pénible et parfois accompagné.", "Observation de terrain", 0, 0},
+            {"Entités hostiles / ennemis", "Escalier qui mord", "Piège-construction presque vivant.", "Les ruines ne doivent pas seulement contenir des monstres classiques. Certains dangers peuvent être une salle, un meuble ou un mécanisme qui refuse de rester mort.", "Observation de terrain", 0, 0},
+            {"Entités hostiles / ennemis", "Slime d'argent silencieux", "Gelée rare absorbant les vibrations.", "Il encourage à ne pas spammer la même logique contre toutes les gelées rares : les sons, chocs et réactions peuvent être modifiés.", "Rare", 0, 0},
+            {"Entités hostiles / ennemis", "Bibliothèque agressive", "Construction possédée par trop de notes.", "Menace de ruine idéale pour lier combat, livre, archive et humour noir. Elle peut justifier poussière arcanique, pages et savoir abîmé.", "Rare", 0, 0},
+            {"Entités hostiles / ennemis", "Reine moustique de fièvre", "Insectoïde rare de marais.", "Elle rend les soins et antidotes importants, mais doit rester rare pour ne pas transformer chaque marais en punition permanente.", "Rare", 0, 0},
+            {"Quêtes / guilde", "Contrats de service", "Petites missions utiles mais peu rentables.", "Les services donnent parfois faveurs, recommandations ou lettres plutôt que beaucoup d'or. Ils remplissent le monde sans devenir meilleur farm.", "Règle économique", 0, 0},
+            {"Quêtes / guilde", "Contrats de bestiaire", "Missions de connaissance.", "Elles ne demandent pas toujours de tuer : observer, confirmer une famille ou récupérer un indice suffit parfois à faire progresser le registre.", "Règle de progression", 0, 0},
+            {"Légendes / contes", "Objets qui racontent", "Un meuble, une porte ou un outil peut devenir une trace lore.", "La V2.08.00 ajoute davantage de petits récits pour que le contenu donne une impression de monde vivant sans forcer une lecture constante.", "Archive", 0, 0}
         };
 
         return entries;
@@ -476,6 +522,20 @@ namespace
     {
         const std::string statusLower = lowerCopy(entry.status);
 
+        if (statusLower.find("final secret") != std::string::npos
+            || statusLower.find("verrouillé final") != std::string::npos
+            || statusLower.find("verrouille final") != std::string::npos)
+        {
+            return 0;
+        }
+
+        if (statusLower.find("nom seulement") != std::string::npos
+            || statusLower.find("trace finale verrouillée") != std::string::npos
+            || statusLower.find("trace finale verrouillee") != std::string::npos)
+        {
+            return 1;
+        }
+
         if (statusLower.find("verrouill") != std::string::npos
             || statusLower.find("identité verrouillée") != std::string::npos)
         {
@@ -512,7 +572,6 @@ namespace
         if (entry.kills >= 3
             || statusLower.find("renseignement acheté") != std::string::npos
             || statusLower.find("spécial") != std::string::npos
-            || statusLower.find("boss final") != std::string::npos
             || statusLower.find("lore valid") != std::string::npos)
         {
             level = 3;
@@ -1092,29 +1151,73 @@ namespace
     // FR: displayMaterialJournal déclare ou implémente un comportement précis utilisé par ce module.
     void displayMaterialJournal()
     {
+        std::vector<std::string> lines;
+        lines.push_back("Ce journal complète le bestiaire : il explique comment un composant peut être trouvé, abîmé, amélioré ou utilisé.");
+        lines.push_back("");
+        lines.push_back("Qualités principales :");
+        lines.push_back("- composants de monstre : impur / normal / pur / exceptionnel");
+        lines.push_back("- plantes et matériaux classiques : faible qualité / normal / haute qualité / exceptionnel");
+        lines.push_back("");
+        lines.push_back("Règles utiles :");
+        lines.push_back("- deux qualités différentes ne stackent pas ensemble ;");
+        lines.push_back("- une action brutale peut dégrader un composant ;");
+        lines.push_back("- une récolte propre peut améliorer la qualité d'un cran ;");
+        lines.push_back("- les matériaux exceptionnels ne sont pas achetables directement ;");
+        lines.push_back("- si plus de 50% de la valeur d'un craft vient d'exceptionnel, une particularité faible peut apparaître.");
+        lines.push_back("");
+
+        const std::vector<MaterialKnowledgeRecord> records = MaterialKnowledgeProgress::getRecords();
+        lines.push_back("Matériaux réellement observés :");
+        if (records.empty())
+        {
+            lines.push_back("- Aucun composant suivi pour le moment. Récupérer un matériau l'ajoutera au journal et au bestiaire.");
+        }
+        else
+        {
+            int shown = 0;
+            for (const MaterialKnowledgeRecord& record : records)
+            {
+                std::string quality = record.quality.empty() ? "normal" : record.quality;
+                std::string state = "utilisable";
+
+                if (record.bestQualityWeight >= 4)
+                {
+                    state = "excellent pour craft à particularité";
+                }
+                else if (record.bestQualityWeight <= 1)
+                {
+                    state = "qualité faible/impure, rendement réduit";
+                }
+                else if (record.discoveredQuantity >= 5)
+                {
+                    state = "bien connu par l'expérience";
+                }
+
+                lines.push_back("- " + record.name
+                    + " [" + quality + "] x" + std::to_string(record.discoveredQuantity)
+                    + " | " + record.category
+                    + " | " + state);
+                ++shown;
+
+                if (shown >= 10)
+                {
+                    lines.push_back("- ... autres composants suivis dans les fiches Matériaux et plantes.");
+                    break;
+                }
+            }
+        }
+
+        lines.push_back("");
+        lines.push_back("Exemples de lecture de terrain :");
+        lines.push_back("- Oreille de gobelin : peut être trouée, brûlée ou propre selon le combat ;");
+        lines.push_back("- Peau de bête robuste : utile aux kits et armures ;");
+        lines.push_back("- Braise kitsune : composant magique sensible aux invocations ;");
+        lines.push_back("- Noyau instable : puissant mais dangereux pour l'alchimie et les expériences.");
+
         showBestiaryInfoScreen(
             "JOURNAL DES MATÉRIAUX",
             "bestiary.material_journal.detail",
-            {
-                "Ce journal complète le bestiaire : il explique comment un composant peut être trouvé, abîmé, amélioré ou utilisé.",
-                "",
-                "Qualités principales :",
-                "- composants de monstre : impur / normal / pur / exceptionnel",
-                "- plantes et matériaux classiques : faible qualité / normal / haute qualité / exceptionnel",
-                "",
-                "Règles utiles :",
-                "- deux qualités différentes ne stackent pas ensemble ;",
-                "- une action brutale peut dégrader un composant ;",
-                "- une récolte propre peut améliorer la qualité d'un cran ;",
-                "- les matériaux exceptionnels ne sont pas achetables directement ;",
-                "- si plus de 50% de la valeur d'un craft vient d'exceptionnel, une particularité faible peut apparaître.",
-                "",
-                "Exemples suivis par le journal :",
-                "- Oreille de gobelin : peut être trouée, brûlée ou propre selon le combat ;",
-                "- Peau de bête robuste : utile aux kits et armures ;",
-                "- Braise kitsune : composant magique sensible aux invocations ;",
-                "- Noyau instable : puissant mais dangereux pour l'alchimie et les expériences."
-            }
+            lines
         );
     }
 
@@ -1622,6 +1725,7 @@ void BestiaryMenu::open()
         screen.addOption(19, "Synthèse du bestiaire", "", true, "bestiary.summary");
         screen.addOption(20, "Registre par niveau de connaissance", "", true, "bestiary.knowledge_levels");
         screen.addOption(21, "Carnet de traque", "", true, "bestiary.hunting_notebook");
+        screen.addOption(22, "Classes jouables", "Fiches courtes des familles/classes ajoutées sans surcharger la création.", true, "bestiary.playable_classes");
         int choice = TerminalInterface::askMenuChoiceFromOptions(
             screen,
             "Choix invalide. Choisis une option affichée."
@@ -1655,6 +1759,7 @@ void BestiaryMenu::open()
         else if (choice == 19) displayKnowledgeSummary();
         else if (choice == 20) displayKnowledgeLevelBrowser();
         else if (choice == 21) displayHuntingNotebook();
+        else if (choice == 22) displayEntryList("Classes jouables");
     }
 }
 

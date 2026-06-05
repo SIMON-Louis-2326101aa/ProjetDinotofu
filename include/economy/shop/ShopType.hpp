@@ -19,6 +19,11 @@ enum class ShopType
     Library,
     Blacksmith,
     Alchemist,
+    Enchanter,
+    CityService,
+    Lodging,
+    Transport,
+    Church,
     BlackMarket,
     Unknown
 };

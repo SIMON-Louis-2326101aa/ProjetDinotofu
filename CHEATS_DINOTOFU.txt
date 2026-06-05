@@ -1,0 +1,121 @@
+CHEATS DINOTOFU — CODES, EFFETS ET RÈGLES
+
+Règles générales :
+- Les cheats restent cachés hors combat tant que le personnage n’est pas Altéré.
+- Au premier cheat accepté, le personnage devient Altéré définitivement.
+- Les altérations peuvent parfois être désactivées, mais le statut Altéré reste.
+- Un personnage Altéré ne peut pas agir en JcJ réel et ne peut pas échanger de vraies ressources.
+- En mort définitive, les cheats sont refusés et peuvent déclencher une punition temporaire.
+- FireFlight, Lexior, Moiran, Obérion et l’Anomalie peuvent réagir à certaines altérations ou tentatives interdites.
+
+CODES CONNUS :
+- idontwanttodie
+  Catégorie : archive
+  Effet : Mode divin : la perte de PV est bloquée.
+  Réutilisable : non
+  Marque Altéré : oui
+- infinituseforeverything
+  Catégorie : archive
+  Effet : Les consommables ne diminuent plus.
+  Réutilisable : non
+  Marque Altéré : oui
+- bedrockequipment
+  Catégorie : archive
+  Effet : L'équipement devient indestructible.
+  Réutilisable : non
+  Marque Altéré : oui
+- myweaponandnotother
+  Catégorie : archive
+  Effet : L'équipement ne peut plus être volé ou perdu.
+  Réutilisable : non
+  Marque Altéré : oui
+- skipallstory
+  Catégorie : archive
+  Effet : Débloque les connaissances de récit/bestiaire prévues par ce code.
+  Réutilisable : non
+  Marque Altéré : oui
+- skipalllevels
+  Catégorie : archive
+  Effet : Amène le personnage au niveau maximum.
+  Réutilisable : non
+  Marque Altéré : oui
+- 1302313
+  Catégorie : secret
+  Effet : Message personnel du créateur.
+  Réutilisable : non
+  Marque Altéré : non
+- 13023131302313
+  Catégorie : combat_sequence
+  Effet : Séquence divine : scène spéciale, ennemi abattu et soin complet si accepté.
+  Réutilisable : non
+  Marque Altéré : oui
+- iamnotgoblinfood
+  Catégorie : fun
+  Effet : Les gobelins craignent le personnage pour une future rencontre.
+  Réutilisable : non
+  Marque Altéré : oui
+- letmecook
+  Catégorie : fun
+  Effet : Bonus temporaire de chance critique.
+  Réutilisable : non
+  Marque Altéré : oui
+- whereismyplotarmor
+  Catégorie : fun
+  Effet : Bénédiction temporaire anti-mort.
+  Réutilisable : non
+  Marque Altéré : oui
+- talktothedev
+  Catégorie : secret
+  Effet : Note secrète du créateur.
+  Réutilisable : non
+  Marque Altéré : non
+- oopsallbosses
+  Catégorie : chaos
+  Effet : Mode chaotique orienté boss/vagues spéciales.
+  Réutilisable : non
+  Marque Altéré : oui
+- randomizemyfate
+  Catégorie : chaos
+  Effet : Classe, arme et inventaire réattribués aléatoirement.
+  Réutilisable : non
+  Marque Altéré : oui
+- resetmycharacter
+  Catégorie : danger
+  Effet : Réinitialise ou détruit puis recrée le personnage courant.
+  Réutilisable : non
+  Marque Altéré : oui
+- switchmyclassandweapon
+  Catégorie : archive
+  Effet : Change la classe et donne un équipement cohérent avec la progression.
+  Réutilisable : non
+  Marque Altéré : oui
+- helpmerefundmyaction
+  Catégorie : recovery
+  Effet : Annule une action ou vente accidentelle. Maximum 3 fois par personnage.
+  Réutilisable : oui
+  Limite : 3 fois par personnage
+  Marque Altéré : oui
+- givemesomegolds
+  Catégorie : archive
+  Effet : Donne entre 100 et 1000 pièces d’or.
+  Réutilisable : oui
+  Marque Altéré : oui
+- givemealevel
+  Catégorie : archive
+  Effet : Donne un niveau.
+  Réutilisable : oui
+  Marque Altéré : oui
+- fuckgrindinggimifight
+  Catégorie : arena_shortcut
+  Effet : Ouvre les combats spéciaux en arène, révèle les boss non finaux et marque le personnage Altéré.
+  Réutilisable : non
+  Marque Altéré : oui
+
+NOTES SPÉCIALES :
+- 1302313 : message personnel du créateur.
+- 13023131302313 : séquence divine de combat, scène spéciale, soin complet et ennemi abattu si accepté.
+- fuckgrindinggimifight : raccourci anti-grind, révèle les boss non finaux mais ne débloque pas FireFlight.
+- oopsallbosses : chaos orienté boss/vagues spéciales.
+- randomizemyfate : réattribue classe, arme et inventaire.
+
+Ce fichier remplace la partie cheats de SPECIAL_CHARACTERS_AND_CHEATS.txt.

@@ -101,6 +101,30 @@ Consumable ConsumableCatalog::createMajorHealingPotion()
     );
 }
 
+Consumable ConsumableCatalog::createVitalityHealingPotion()
+{
+    return Consumable(
+        "Potion de vitalité proportionnelle",
+        "Soin stable qui récupère un pourcentage des PV max. Plus utile sur les personnages robustes que sur les blessés fragiles.",
+        155,
+        ConsumableType::Healing,
+        35,
+        true
+    );
+}
+
+Consumable ConsumableCatalog::createRoyalVitalityHealingPotion()
+{
+    return Consumable(
+        "Potion de vitalité royale",
+        "Soin rare à pourcentage élevé. Une fiole chère, pensée pour les tanks et les combats où les PV max comptent vraiment.",
+        340,
+        ConsumableType::Healing,
+        60,
+        true
+    );
+}
+
 Consumable ConsumableCatalog::createGreaterDamagePotion()
 {
     return Consumable(
@@ -309,4 +333,55 @@ Consumable ConsumableCatalog::createCrawlingVenomScroll()
         ConsumableType::Special,
         25
     );
+}
+
+Consumable ConsumableCatalog::createStabilizingTea()
+{
+    return Consumable("Thé stabilisant", "Infusion calme utilisée avant les sorties longues. Petit soin, petit ancrage, zéro héroïsme inutile.", 48, ConsumableType::Healing, 34);
+}
+
+Consumable ConsumableCatalog::createMinerBracingTonic()
+{
+    return Consumable("Tonique de mineur", "Tonique épais qui aide à encaisser un coup lourd ou une chute. Pas bon, mais efficace.", 82, ConsumableType::Buff, 27);
+}
+
+Consumable ConsumableCatalog::createCartographerFocusInk()
+{
+    return Consumable("Encre de concentration", "Petite fiole à respirer ou verser sur un outil. Aide les gestes précis, tirs, croquis et pièges.", 92, ConsumableType::Buff, 29);
+}
+
+Consumable ConsumableCatalog::createMoonSaltPurifier()
+{
+    return Consumable("Purificateur au sel lunaire", "Mélange pâle qui nettoie certaines altérations faibles et rend un souffle de PV.", 118, ConsumableType::Healing, 46);
+}
+
+Consumable ConsumableCatalog::createGlassStepScroll()
+{
+    return Consumable("Parchemin de pas de verre", "Sort jetable d'évitement bref : pratique pour survivre à un mauvais engagement, mais le tracé se brise aussitôt.", 170, ConsumableType::Special, 31);
+}
+
+Consumable ConsumableCatalog::createVineSnareScroll()
+{
+    return Consumable("Parchemin de ronce-lien", "Sort jetable végétal. Il gêne une cible, surtout si elle bouge trop ou compte fuir proprement.", 160, ConsumableType::Special, 30);
+}
+
+
+Consumable ConsumableCatalog::createArchivistFocusInk()
+{
+    return Consumable("Encre de concentration d'archiviste", "Encre à respirer très brièvement avant une lecture ou un rapport. Aide la précision, mais donne envie de corriger tout le monde.", 105, ConsumableType::Buff, 31);
+}
+
+Consumable ConsumableCatalog::createCliffBasilTea()
+{
+    return Consumable("Tisane de basilic des falaises", "Infusion salée qui calme le vertige, rend quelques PV et stabilise une sortie dangereuse.", 88, ConsumableType::Healing, 42);
+}
+
+Consumable ConsumableCatalog::createCarnivalDiversionTicket()
+{
+    return Consumable("Ticket de diversion de foire", "Objet jetable étrange : claque le ticket, détourne l'attention et offre une petite fenêtre défensive ou de fuite.", 150, ConsumableType::Special, 28);
+}
+
+Consumable ConsumableCatalog::createFireflyGuardVial()
+{
+    return Consumable("Fiole de garde-lucioles", "Fiole lumineuse qui brouille les attaques faibles et donne un court appui défensif aux explorateurs prudents.", 132, ConsumableType::Buff, 33);
 }

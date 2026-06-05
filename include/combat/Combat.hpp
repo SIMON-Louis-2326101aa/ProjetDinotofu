@@ -9,6 +9,7 @@
 #include "entity/Player.hpp"
 #include "core/Random.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 #include <vector>
 
 class Combat
@@ -19,29 +20,33 @@ private:
 public:
     // EN: launchTwoPlayerPvp declares or implements a focused behavior used by this module.
     // FR: launchTwoPlayerPvp déclare ou implémente un comportement précis utilisé par ce module.
-    void launchTwoPlayerPvp(Player& player1, const std::string& accountName, DifficultyMode difficulty);
+    void launchTwoPlayerPvp(Player& player1, const std::string& accountName, DifficultyMode difficulty, DeathRuleMode deathRule);
     // EN: launchAIPvp declares or implements a focused behavior used by this module.
     // FR: launchAIPvp déclare ou implémente un comportement précis utilisé par ce module.
     void launchAIPvp(Player& player1);
 
     void launchBossPve(
         Player& player1,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        DeathRuleMode deathRule
     );
 
     void launchBossPveTeam(
         std::vector<Player*>& party,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        DeathRuleMode deathRule
     );
 
     void launchMonsterPve(
         Player& player1,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        DeathRuleMode deathRule
     );
 
     void launchMonsterPveTeam(
         std::vector<Player*>& party,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        DeathRuleMode deathRule
     );
 };
 

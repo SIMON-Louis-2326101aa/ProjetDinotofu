@@ -33,6 +33,9 @@ private:
     // EN: isDemonLikeRace declares or implements a focused behavior used by this module.
     // FR: isDemonLikeRace déclare ou implémente un comportement précis utilisé par ce module.
     static bool isDemonLikeRace(const std::string& raceName);
+    static bool isSociallyDistrustedRace(const std::string& raceName);
+    static bool isTrustedTradeRace(const std::string& raceName);
+    static bool isCleverBargainRace(const std::string& raceName);
     // EN: normalizeText declares or implements a focused behavior used by this module.
     // FR: normalizeText déclare ou implémente un comportement précis utilisé par ce module.
     static std::string normalizeText(std::string value);

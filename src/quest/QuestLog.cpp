@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cctype>
 #include <vector>
+#include <random>
 
 namespace
 {
@@ -22,11 +23,25 @@ namespace
     }
 
 
+    bool questLogTextContainsAny(const std::string& value, const std::vector<std::string>& needles)
+    {
+        const std::string normalized = normalizeQuestText(value);
+        for (const std::string& needle : needles)
+        {
+            if (normalized.find(normalizeQuestText(needle)) != std::string::npos)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     std::vector<std::string> monsterQuestFamilies(const Monster& monster)
     {
         std::vector<std::string> families;
 
         families.push_back("Créatures locales");
+        families.push_back(monster.getName());
         families.push_back(monster.getRaceText());
         families.push_back(monster.getType());
 
@@ -79,6 +94,12 @@ namespace
             case Race::AnomalieArcanique:
                 families.push_back("Menace avancée");
                 break;
+            case Race::Construction:
+                families.push_back("Créatures artificielles");
+                families.push_back("Automate / golem / armure animée");
+                families.push_back("Construction / forge");
+                families.push_back("Atelier abandonné / Ruines effondrées");
+                break;
             case Race::Elementaire:
             case Race::Esprit:
                 families.push_back("Bestiaire / observation");
@@ -89,22 +110,71 @@ namespace
         }
 
         std::string name = normalizeQuestText(monster.getName());
+        if (name.find("rat") != std::string::npos)
+        {
+            families.push_back("Rat");
+            families.push_back("Rats de cave");
+            families.push_back("Bêtes faibles");
+        }
         if (name.find("loup") != std::string::npos || name.find("sanglier") != std::string::npos || name.find("ours") != std::string::npos)
         {
             families.push_back("Forêt ancienne / créatures naturelles");
             families.push_back("Plaine sauvage / créatures locales");
+            families.push_back("Bêtes faibles");
+            if (name.find("loup") != std::string::npos) families.push_back("Loup");
+            if (name.find("sanglier") != std::string::npos) families.push_back("Sanglier");
+            if (name.find("ours") != std::string::npos)
+            {
+                families.push_back("Ours");
+                families.push_back("Bêtes lourdes");
+            }
         }
         if (name.find("slime") != std::string::npos)
         {
+            families.push_back("Slime");
+            families.push_back("Slimes faibles");
             families.push_back("Marais trouble / slimes et noyés");
         }
         if (name.find("gobelin") != std::string::npos || name.find("bandit") != std::string::npos || name.find("pillard") != std::string::npos)
         {
             families.push_back("Route commerciale / humanoïdes et embuscades");
+            if (name.find("gobelin") != std::string::npos) families.push_back("Gobelin");
+            if (name.find("bandit") != std::string::npos || name.find("pillard") != std::string::npos) families.push_back("Bandit");
+        }
+        if (name.find("araignée") != std::string::npos || name.find("araignee") != std::string::npos)
+        {
+            families.push_back("Araignée");
+            families.push_back("Insectoïdes");
+            families.push_back("Insectoïdes / poison");
         }
         if (name.find("squelette") != std::string::npos || name.find("goule") != std::string::npos || name.find("revenant") != std::string::npos)
         {
             families.push_back("Ruines effondrées / morts-vivants et reliques");
+            if (name.find("squelette") != std::string::npos) families.push_back("Squelette");
+            if (name.find("goule") != std::string::npos) families.push_back("Goule");
+            if (name.find("revenant") != std::string::npos) families.push_back("Revenant");
+        }
+        if (name.find("draconide") != std::string::npos || name.find("drake") != std::string::npos)
+        {
+            families.push_back("Draconide");
+            families.push_back("Falaises des drakes gris");
+        }
+        if (name.find("dragon") != std::string::npos)
+        {
+            families.push_back("Dragon");
+            families.push_back("Dragon / territoire");
+        }
+        if (name.find("démon") != std::string::npos || name.find("demon") != std::string::npos)
+        {
+            families.push_back("Démon");
+            families.push_back("Menace catastrophique");
+        }
+        if (questLogTextContainsAny(monster.getName() + " " + monster.getType() + " " + monster.getRaceText(), {"armure", "golem", "sentinelle", "automate", "mannequin", "pantin", "statue", "totem", "épouvantail", "epouvantail", "reliure", "oiseau de pierre", "chaîne", "chaine"}))
+        {
+            families.push_back("Construction");
+            families.push_back("Créatures artificielles");
+            families.push_back("Automate / golem / armure animée");
+            families.push_back("Construction / forge");
         }
         if (name.find("yéti") != std::string::npos || name.find("roche") != std::string::npos || name.find("givre") != std::string::npos)
         {
@@ -131,8 +201,12 @@ namespace
             return true;
         }
 
+        const bool targetArtificial = questLogTextContainsAny(target, {"construction", "automate", "golem", "armure", "sentinelle", "mannequin", "pantin", "artificielle"});
+        const bool encounterArtificial = questLogTextContainsAny(encounter, {"construction", "automate", "golem", "armure", "sentinelle", "mannequin", "pantin", "artificielle"});
+
         return target.find(encounter) != std::string::npos
             || encounter.find(target) != std::string::npos
+            || (targetArtificial && encounterArtificial)
             || (target.find("menace") != std::string::npos && encounter.find("menace") != std::string::npos)
             || (target.find("créature") != std::string::npos && encounter.find("créature") != std::string::npos)
             || (target.find("creature") != std::string::npos && encounter.find("creature") != std::string::npos)
@@ -167,7 +241,7 @@ bool QuestLog::hasQuest(const std::string& questId) const
 {
     for (const Quest& quest : quests)
     {
-        if (quest.id == questId && !quest.turnedIn)
+        if (quest.id == questId && !quest.turnedIn && !quest.failed)
         {
             return true;
         }
@@ -184,7 +258,7 @@ int QuestLog::getActiveGuildQuestCount() const
 
     for (const Quest& quest : quests)
     {
-        if (quest.guildQuest && quest.accepted && !quest.turnedIn)
+        if (quest.guildQuest && quest.accepted && !quest.turnedIn && !quest.failed)
         {
             count++;
         }
@@ -202,7 +276,7 @@ int QuestLog::getActivePersonalQuestCountForClient(const std::string& client) co
 
     for (const Quest& quest : quests)
     {
-        if (!quest.guildQuest && quest.client == client && quest.accepted && !quest.turnedIn)
+        if (!quest.guildQuest && quest.client == client && quest.accepted && !quest.turnedIn && !quest.failed)
         {
             count++;
         }
@@ -215,7 +289,13 @@ int QuestLog::getActivePersonalQuestCountForClient(const std::string& client) co
 // FR: canAcceptGuildQuest déclare ou implémente un comportement précis utilisé par ce module.
 bool QuestLog::canAcceptGuildQuest() const
 {
-    return getActiveGuildQuestCount() < 3;
+    return canAcceptGuildQuest(3);
+}
+
+bool QuestLog::canAcceptGuildQuest(int activeLimit) const
+{
+    activeLimit = std::max(1, activeLimit);
+    return getActiveGuildQuestCount() < activeLimit;
 }
 
 // EN: canAcceptPersonalQuestForClient declares or implements a focused behavior used by this module.
@@ -229,12 +309,17 @@ bool QuestLog::canAcceptPersonalQuestForClient(const std::string& client) const
 // FR: addQuest déclare ou implémente un comportement précis utilisé par ce module.
 bool QuestLog::addQuest(const Quest& quest)
 {
+    return addQuestWithGuildLimit(quest, 3);
+}
+
+bool QuestLog::addQuestWithGuildLimit(const Quest& quest, int activeLimit)
+{
     if (hasQuest(quest.id))
     {
         return false;
     }
 
-    if (quest.guildQuest && !canAcceptGuildQuest())
+    if (quest.guildQuest && !canAcceptGuildQuest(activeLimit))
     {
         return false;
     }
@@ -254,7 +339,7 @@ bool QuestLog::progressQuest(const std::string& questId, int amount)
 {
     for (Quest& quest : quests)
     {
-        if (quest.id == questId && quest.accepted && !quest.turnedIn)
+        if (quest.id == questId && quest.accepted && !quest.turnedIn && !quest.failed)
         {
             quest.progress += amount;
 
@@ -277,7 +362,7 @@ bool QuestLog::completeQuest(const std::string& questId)
 {
     for (Quest& quest : quests)
     {
-        if (quest.id == questId && quest.accepted && !quest.turnedIn)
+        if (quest.id == questId && quest.accepted && !quest.turnedIn && !quest.failed)
         {
             quest.progress = quest.target;
             quest.completed = true;
@@ -294,7 +379,7 @@ bool QuestLog::turnInQuest(const std::string& questId)
 {
     for (Quest& quest : quests)
     {
-        if (quest.id == questId && quest.completed && !quest.turnedIn)
+        if (quest.id == questId && quest.completed && !quest.turnedIn && !quest.failed)
         {
             quest.turnedIn = true;
             return true;
@@ -302,6 +387,36 @@ bool QuestLog::turnInQuest(const std::string& questId)
     }
 
     return false;
+}
+
+int QuestLog::expireOverdueQuests(int currentDay)
+{
+    int expired = 0;
+
+    if (currentDay < 0)
+    {
+        currentDay = 0;
+    }
+
+    for (Quest& quest : quests)
+    {
+        if (!quest.accepted || quest.completed || quest.turnedIn || quest.failed)
+        {
+            continue;
+        }
+
+        if (quest.expiresAtDay < 0 || currentDay <= quest.expiresAtDay)
+        {
+            continue;
+        }
+
+        quest.failed = true;
+        quest.failureReason = "Délai dépassé : cette demande devait être terminée avant la fin du jour "
+            + std::to_string(quest.expiresAtDay) + ".";
+        ++expired;
+    }
+
+    return expired;
 }
 
 // EN: progressCombatQuests declares or implements a focused behavior used by this module.
@@ -324,7 +439,7 @@ int QuestLog::progressCombatQuestsByFamily(int defeatedEnemyCount, const std::st
 
     for (Quest& quest : quests)
     {
-        if (!quest.accepted || quest.completed || quest.turnedIn)
+        if (!quest.accepted || quest.completed || quest.turnedIn || quest.failed)
         {
             continue;
         }
@@ -372,7 +487,7 @@ int QuestLog::progressCombatQuestsForMonster(const Monster& monster, int amount)
 
     for (Quest& quest : quests)
     {
-        if (!quest.accepted || quest.completed || quest.turnedIn)
+        if (!quest.accepted || quest.completed || quest.turnedIn || quest.failed)
         {
             continue;
         }
@@ -424,7 +539,7 @@ int QuestLog::refreshMaterialDeliveryQuests(const Inventory& inventory)
 
     for (Quest& quest : quests)
     {
-        if (!quest.accepted || quest.completed || quest.turnedIn)
+        if (!quest.accepted || quest.completed || quest.turnedIn || quest.failed)
         {
             continue;
         }
@@ -453,7 +568,7 @@ bool QuestLog::hasTurnInReadyQuestForClient(const std::string& client) const
 {
     for (const Quest& quest : quests)
     {
-        if (quest.client == client && quest.completed && !quest.turnedIn)
+        if (quest.client == client && quest.completed && !quest.turnedIn && !quest.failed)
         {
             return true;
         }
@@ -478,6 +593,25 @@ std::vector<Quest>& QuestLog::getGuildBoardOffers()
 
 namespace
 {
+    int rollQuestOfferLifetimeDays()
+    {
+        static std::mt19937 generator(std::random_device{}());
+        std::uniform_int_distribution<int> distribution(3, 4);
+        return distribution(generator);
+    }
+
+    void assignQuestOfferLifetime(Quest& quest, int currentDay)
+    {
+        if (currentDay < 0) currentDay = 0;
+        quest.availableFromDay = currentDay;
+        quest.expiresAtDay = currentDay + rollQuestOfferLifetimeDays();
+    }
+
+    bool isExpiredQuestOffer(const Quest& quest, int currentDay)
+    {
+        return quest.expiresAtDay >= 0 && currentDay >= quest.expiresAtDay;
+    }
+
     bool questOfferMatches(const Quest& a, const Quest& b)
     {
         return a.id == b.id || a.title == b.title;
@@ -497,57 +631,45 @@ namespace
     }
 }
 
-void QuestLog::ensureGuildBoardReady(int playerLevel, int currentCombatsStarted)
+void QuestLog::ensureGuildBoardReady(int playerLevel, int currentDay, int targetSizeBonus)
 {
-    if (currentCombatsStarted < 0)
+    if (currentDay < 0)
     {
-        currentCombatsStarted = 0;
+        currentDay = 0;
     }
 
-    const bool expired = guildBoardCreatedAtCombat < 0
-        || currentCombatsStarted - guildBoardCreatedAtCombat >= 3;
+    guildBoardOffers.erase(
+        std::remove_if(
+            guildBoardOffers.begin(),
+            guildBoardOffers.end(),
+            [currentDay](const Quest& offer) { return isExpiredQuestOffer(offer, currentDay); }
+        ),
+        guildBoardOffers.end()
+    );
 
-    if (expired || guildBoardOffers.empty() || guildBoardTargetSize < 3)
+    const int desiredTargetSize = std::max(6, std::min(10, 6 + std::max(0, targetSizeBonus)));
+    if (guildBoardTargetSize < desiredTargetSize)
     {
-        guildBoardOffers = QuestCatalog::createGuildBoard(playerLevel);
-        guildBoardCreatedAtCombat = currentCombatsStarted;
-        guildBoardTargetSize = static_cast<int>(guildBoardOffers.size());
-        if (guildBoardTargetSize < 3) guildBoardTargetSize = 3;
-        if (guildBoardTargetSize > 8) guildBoardTargetSize = 8;
-        guildBoardPendingReplacements = 0;
-        guildBoardReplacementDueAtCombat = -1;
-        return;
+        guildBoardTargetSize = desiredTargetSize;
+    }
+    if (guildBoardTargetSize > 10)
+    {
+        guildBoardTargetSize = 10;
     }
 
-    if (guildBoardPendingReplacements > 0
-        && guildBoardReplacementDueAtCombat >= 0
-        && currentCombatsStarted >= guildBoardReplacementDueAtCombat)
+    if (guildBoardCreatedAtCombat < 0)
     {
-        std::vector<Quest> candidates = QuestCatalog::createGuildBoard(playerLevel);
-        int added = 0;
+        guildBoardCreatedAtCombat = currentDay;
+    }
 
-        for (const Quest& candidate : candidates)
-        {
-            if (static_cast<int>(guildBoardOffers.size()) >= guildBoardTargetSize)
-            {
-                break;
-            }
-
-            if (hasQuest(candidate.id) || offerAlreadyVisible(guildBoardOffers, candidate))
-            {
-                continue;
-            }
-
-            guildBoardOffers.push_back(candidate);
-            added++;
-        }
-
+    auto addFreshCandidates = [&](int maxAttempts) {
         int attempts = 0;
-        while (static_cast<int>(guildBoardOffers.size()) < guildBoardTargetSize && attempts < 5)
+        while (static_cast<int>(guildBoardOffers.size()) < guildBoardTargetSize && attempts < maxAttempts)
         {
             attempts++;
-            std::vector<Quest> moreCandidates = QuestCatalog::createGuildBoard(playerLevel);
-            for (const Quest& candidate : moreCandidates)
+            std::vector<Quest> candidates = QuestCatalog::createGuildBoard(playerLevel);
+
+            for (Quest candidate : candidates)
             {
                 if (static_cast<int>(guildBoardOffers.size()) >= guildBoardTargetSize)
                 {
@@ -559,11 +681,25 @@ void QuestLog::ensureGuildBoardReady(int playerLevel, int currentCombatsStarted)
                     continue;
                 }
 
+                assignQuestOfferLifetime(candidate, currentDay);
                 guildBoardOffers.push_back(candidate);
-                added++;
             }
         }
+    };
 
+    if (guildBoardOffers.empty())
+    {
+        guildBoardTargetSize = desiredTargetSize;
+        guildBoardCreatedAtCombat = currentDay;
+    }
+
+    addFreshCandidates(6);
+
+    if (guildBoardPendingReplacements > 0
+        && guildBoardReplacementDueAtCombat >= 0
+        && currentDay >= guildBoardReplacementDueAtCombat)
+    {
+        addFreshCandidates(4);
         guildBoardPendingReplacements = 0;
         guildBoardReplacementDueAtCombat = -1;
     }
@@ -588,14 +724,28 @@ bool QuestLog::removeGuildBoardOfferAt(int offerIndex, int currentCombatsStarted
     return true;
 }
 
-int QuestLog::getGuildBoardCombatsBeforeRefresh(int currentCombatsStarted) const
+int QuestLog::getGuildBoardCombatsBeforeRefresh(int currentDay) const
 {
-    if (guildBoardCreatedAtCombat < 0)
+    if (guildBoardOffers.empty())
     {
         return 0;
     }
 
-    int remaining = 3 - (currentCombatsStarted - guildBoardCreatedAtCombat);
+    int remaining = 3;
+    bool foundTimedOffer = false;
+
+    for (const Quest& offer : guildBoardOffers)
+    {
+        if (offer.expiresAtDay < 0)
+        {
+            continue;
+        }
+
+        foundTimedOffer = true;
+        remaining = std::min(remaining, offer.expiresAtDay - currentDay);
+    }
+
+    if (!foundTimedOffer) return 0;
     if (remaining < 0) return 0;
     if (remaining > 3) return 3;
     return remaining;
@@ -655,11 +805,20 @@ void QuestLog::setLoadedGuildBoardState(
     guildBoardPendingReplacements = pendingReplacements;
     guildBoardReplacementDueAtCombat = replacementDueAtCombat;
 
+    for (Quest& offer : guildBoardOffers)
+    {
+        if (offer.expiresAtDay < 0)
+        {
+            assignQuestOfferLifetime(offer, guildBoardCreatedAtCombat < 0 ? 0 : guildBoardCreatedAtCombat);
+        }
+    }
+
     if (guildBoardTargetSize < static_cast<int>(guildBoardOffers.size()))
     {
         guildBoardTargetSize = static_cast<int>(guildBoardOffers.size());
     }
     if (guildBoardTargetSize < 0) guildBoardTargetSize = 0;
+    if (guildBoardTargetSize > 10) guildBoardTargetSize = 10;
     if (guildBoardPendingReplacements < 0) guildBoardPendingReplacements = 0;
 }
 

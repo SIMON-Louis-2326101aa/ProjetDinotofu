@@ -7,6 +7,7 @@
 
 #include "interface/menu/common/MessageScreen.hpp"
 
+#include <algorithm>
 #include <vector>
 #include <string>
 
@@ -16,6 +17,7 @@ Consumable::Consumable() : Item()
 {
     type = ConsumableType::Unknown;
     power = 0;
+    percentageBasedHealing = false;
 }
 
 Consumable::Consumable(
@@ -23,13 +25,15 @@ Consumable::Consumable(
     const std::string& description,
     int value,
     ConsumableType type,
-    int power
+    int power,
+    bool percentageBasedHealing
 // EN: Item declares or implements a focused behavior used by this module.
 // FR: Item déclare ou implémente un comportement précis utilisé par ce module.
 ) : Item(name, description, value)
 {
     this->type = type;
     this->power = power;
+    this->percentageBasedHealing = percentageBasedHealing;
 }
 
 // EN: getType declares or implements a focused behavior used by this module.
@@ -44,6 +48,36 @@ ConsumableType Consumable::getType() const
 int Consumable::getPower() const
 {
     return power;
+}
+
+bool Consumable::isPercentageBasedHealing() const
+{
+    return type == ConsumableType::Healing && percentageBasedHealing;
+}
+
+int Consumable::getHealingAmountForMaxHp(int maxHp) const
+{
+    if (maxHp < 1)
+    {
+        maxHp = 1;
+    }
+
+    if (isPercentageBasedHealing())
+    {
+        return std::max(1, maxHp * power / 100);
+    }
+
+    return power;
+}
+
+std::string Consumable::getPowerDisplayText() const
+{
+    if (isPercentageBasedHealing())
+    {
+        return std::to_string(power) + "% des PV max";
+    }
+
+    return std::to_string(power);
 }
 
 // EN: isHealing declares or implements a focused behavior used by this module.
@@ -90,7 +124,7 @@ std::vector<std::string> Consumable::toDisplayLines() const
         "Description : " + description,
         "Valeur : " + std::to_string(value) + " pièces",
         "Type : " + consumableTypeLabel(type),
-        "Puissance : " + std::to_string(power),
+        "Puissance : " + getPowerDisplayText(),
         "======================="
     };
 }

@@ -12,9 +12,9 @@
 
 // EN: launchTwoPlayerPvp declares or implements a focused behavior used by this module.
 // FR: launchTwoPlayerPvp déclare ou implémente un comportement précis utilisé par ce module.
-void Combat::launchTwoPlayerPvp(Player& player1, const std::string& accountName, DifficultyMode difficulty)
+void Combat::launchTwoPlayerPvp(Player& player1, const std::string& accountName, DifficultyMode difficulty, DeathRuleMode deathRule)
 {
-    PvpMode::run(player1, random, accountName, difficulty);
+    PvpMode::run(player1, random, accountName, difficulty, deathRule);
 }
 
 // EN: launchAIPvp declares or implements a focused behavior used by this module.
@@ -26,32 +26,36 @@ void Combat::launchAIPvp(Player& player1)
 
 void Combat::launchBossPve(
     Player& player1,
-    DifficultyMode difficulty
+    DifficultyMode difficulty,
+    DeathRuleMode deathRule
 )
 {
-    BossPveMode::run(player1, random, difficulty);
+    BossPveMode::run(player1, random, difficulty, deathRule);
 }
 
 void Combat::launchBossPveTeam(
     std::vector<Player*>& party,
-    DifficultyMode difficulty
+    DifficultyMode difficulty,
+    DeathRuleMode deathRule
 )
 {
-    BossPveMode::runTeam(party, random, difficulty);
+    BossPveMode::runTeam(party, random, difficulty, deathRule);
 }
 
 void Combat::launchMonsterPve(
     Player& player1,
-    DifficultyMode difficulty
+    DifficultyMode difficulty,
+    DeathRuleMode deathRule
 )
 {
-    MonsterPveMode::run(player1, random, difficulty);
+    MonsterPveMode::run(player1, random, difficulty, deathRule);
 }
 
 void Combat::launchMonsterPveTeam(
     std::vector<Player*>& party,
-    DifficultyMode difficulty
+    DifficultyMode difficulty,
+    DeathRuleMode deathRule
 )
 {
-    MonsterPveMode::runTeam(party, random, difficulty);
+    MonsterPveMode::runTeam(party, random, difficulty, deathRule);
 }

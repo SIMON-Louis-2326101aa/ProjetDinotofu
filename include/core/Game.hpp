@@ -12,6 +12,7 @@
 #include "entity/Player.hpp"
 #include "core/GameMode.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 #include "character/CharacterRace.hpp"
 #include "interface/model/MenuScreen.hpp"
 
@@ -46,12 +47,15 @@ private:
     Player mainPlayer;
     GameMode selectedMode;
     DifficultyMode selectedDifficulty;
+    DeathRuleMode selectedDeathRule;
     CharacterRace selectedRace;
     bool characterLoaded;
     bool specialIdentityValidated;
+    bool ephemeralSandboxSession;
     std::vector<Player> partyPlayers;
     std::vector<std::string> partyAccountNames;
     std::vector<DifficultyMode> partyDifficulties;
+    std::vector<DeathRuleMode> partyDeathRules;
     LastCombatRecap lastCombatRecap;
 
     // EN: displayIntroduction declares or implements a focused behavior used by this module.
@@ -66,6 +70,7 @@ private:
     // EN: chooseDifficulty declares or implements a focused behavior used by this module.
     // FR: chooseDifficulty déclare ou implémente un comportement précis utilisé par ce module.
     void chooseDifficulty();
+    void chooseDeathRule();
     // EN: choosePlayerRace declares or implements a focused behavior used by this module.
     // FR: choosePlayerRace déclare ou implémente un comportement précis utilisé par ce module.
     void choosePlayerRace();
@@ -96,6 +101,16 @@ private:
     // EN: launchStoryModePlaceholder declares or implements a focused behavior used by this module.
     // FR: launchStoryModePlaceholder déclare ou implémente un comportement précis utilisé par ce module.
     void launchStoryModePlaceholder();
+    bool shouldResetCharacterForStoryStart() const;
+    void resetMainPlayerForStoryStart();
+    void playStoryWhiteFogPrologue();
+    void playStoryChapterOne();
+    void playStoryChapterTwo();
+    void startNewStoryFromMenu();
+    void continueStoryRoute();
+    void openStoryChapterSelectionMenu();
+    void launchEphemeralSandboxCloneFromStory();
+    void showStoryCompletionSandboxRule() const;
     // EN: launchChallengeBoard declares or implements a focused behavior used by this module.
     // FR: launchChallengeBoard déclare ou implémente un comportement précis utilisé par ce module.
     void launchChallengeBoard();
@@ -104,6 +119,8 @@ private:
     bool openPostCombatMenu();
     void addOutOfCombatUtilityOptions(MenuScreen& screen, bool inventoryAvailable = true, bool saveAvailable = true) const;
     bool handleOutOfCombatUtilityChoice(int choice, bool inventoryAvailable = true);
+    void openOutOfCombatUtilityMenu(bool inventoryAvailable = true);
+    void openInterfaceSettingsMenu();
     void openGuardianInputMenu();
     // EN: openExchangeMenu declares or implements a focused behavior used by this module.
     // FR: openExchangeMenu déclare ou implémente un comportement précis utilisé par ce module.
@@ -113,6 +130,7 @@ private:
     void saveCurrentProgress(const std::string& reason) const;
 
     std::string getDifficultyName() const;
+    std::string getDeathRuleName() const;
 
 public:
     // EN: Game declares or implements a focused behavior used by this module.

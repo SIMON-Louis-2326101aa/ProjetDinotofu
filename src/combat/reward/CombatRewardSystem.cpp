@@ -254,7 +254,7 @@ namespace
         int gold = 0;
         if (damageReceived > 0 && baseGoldDivider > 0)
         {
-            gold = std::min(35, damageReceived / baseGoldDivider);
+            gold = std::min(12, damageReceived / baseGoldDivider);
         }
 
         return CombatReward(experience, gold);
@@ -267,24 +267,24 @@ CombatReward CombatRewardSystem::calculateMonsterReward(const Monster& monster, 
 {
     int monsterLevel = monster.getLevel();
 
-    int experience = 18 + monsterLevel * 10;
+    int experience = 6 + monsterLevel * 4;
     int gold = givesNormalGoldReward(monster.getRace())
-        ? 5 + monsterLevel * 3
+        ? 1 + monsterLevel
         : calculateRareScavengedGold(monster, random);
 
     if (monster.isElite())
     {
-        experience += 12 + monsterLevel * 13;
+        experience += 6 + monsterLevel * 4;
         gold += givesNormalGoldReward(monster.getRace())
-            ? 10 + monsterLevel * 5
+            ? 2 + monsterLevel * 2
             : 0;
     }
 
     if (monster.isEvolved())
     {
-        experience += 20 + monsterLevel * 8;
+        experience += 8 + monsterLevel * 3;
         gold += givesNormalGoldReward(monster.getRace())
-            ? 8 + monsterLevel * 4
+            ? 1 + monsterLevel
             : 0;
     }
 
@@ -370,6 +370,30 @@ namespace
         totalReward.addReward(calculateDefeatedEnemiesRewardWithRandom(wave, random));
         totalReward.addReward(CombatRewardSystem::calculateEscapedEnemiesReward(wave));
         return totalReward;
+    }
+
+    CombatReward keepWaveGoldUnderEconomyBudget(const CombatReward& reward, int defeatedCount, DifficultyMode difficulty)
+    {
+        const int safeDefeatedCount = std::max(1, defeatedCount);
+        int goldCap = 40 + safeDefeatedCount * 32;
+
+        switch (difficulty)
+        {
+            case DifficultyMode::Easy: goldCap = goldCap * 112 / 100; break;
+            case DifficultyMode::Hard: goldCap = goldCap * 95 / 100; break;
+            case DifficultyMode::Nightmare: goldCap = goldCap * 90 / 100; break;
+            case DifficultyMode::Lethal: goldCap = goldCap * 82 / 100; break;
+            case DifficultyMode::Normal:
+            default: break;
+        }
+
+        if (reward.getGold() <= goldCap)
+        {
+            return reward;
+        }
+
+        const int overflow = reward.getGold() - goldCap;
+        return CombatReward(reward.getExperience(), goldCap + overflow / 5);
     }
 }
 
@@ -478,8 +502,8 @@ CombatReward CombatRewardSystem::calculateWaveReward(
             initialPlayerHp,
             turnCount,
             difficulty,
-            5,
-            18
+            7,
+            25
         )
     );
 
@@ -506,12 +530,12 @@ CombatReward CombatRewardSystem::calculateWaveReward(
             initialPlayerHp,
             turnCount,
             difficulty,
-            5,
-            18
+            7,
+            25
         )
     );
 
-    return totalReward;
+    return keepWaveGoldUnderEconomyBudget(totalReward, wave.getDefeatedEnemyCount(), difficulty);
 }
 
 // EN: calculatePlayerEscapeReward declares or implements a focused behavior used by this module.

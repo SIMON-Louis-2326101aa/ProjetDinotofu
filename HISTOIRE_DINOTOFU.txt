@@ -1,0 +1,113 @@
+DINOTOFU — STRUCTURE HISTOIRE
+
+Objectif général
+----------------
+Le jeu garde deux logiques séparées :
+
+1) Bac à sable / mode libre
+- Les systèmes restent accessibles pour tester, jouer, équilibrer et continuer le développement.
+- Boss, quêtes, boutiques, exploration, titres, cheats et combats peuvent exister librement.
+
+2) Mode histoire
+- Le joueur commence avec presque rien.
+- Peu de boutiques, peu de quêtes, peu de lieux, peu de PNJ fiables.
+- Les accès se débloquent par progression narrative : sauver un PNJ, battre un boss dans l’ordre, tuer assez de monstres, rapporter des matériaux, aider au développement de la ville.
+
+Menu d'entrée du mode histoire
+------------------------------
+1) Nouvelle histoire
+- Lance le vrai départ commun.
+- Confirmation obligatoire si le personnage vient du bac à sable ou a déjà une progression.
+- Reset au départ histoire : niveau 1, inventaire vidé avant prologue, progression neuve.
+- Lance ensuite le prologue de la fumée blanche dans l'ordre.
+
+2) Continuer
+- Disponible seulement si une histoire est déjà commencée.
+- Lance automatiquement la prochaine étape disponible.
+- Le joueur ne choisit pas librement le chapitre à chaque fois : la route principale avance dans l'ordre.
+
+3) Sélectionner le chapitre
+- Disponible seulement si une histoire est déjà commencée.
+- Seuls les chapitres déjà débloqués sont sélectionnables.
+- Les chapitres non débloqués restent verrouillés / affichés comme inconnus.
+- Sert à relire, revoir ou reprendre un chapitre autorisé, pas à sauter la progression.
+
+Prologue jouable — Mission ordinaire puis fumée blanche
+-------------------------------------------------------
+Le mode histoire commence avant la ville et même avant la fumée : le personnage faisait partie d'un petit groupe parti pour une mission habituelle d'extermination et de récolte.
+La mission devait être simple : nettoyer quelques nuisibles, récolter des matériaux, confirmer que le sentier restait praticable, puis rentrer avant la fermeture des portes.
+Les choses dérapent : traces incohérentes, balises gelées, silence brutal des oiseaux, fumée blanche qui avance contre le vent.
+La fumée sépare le groupe et mange les souvenirs : d'abord les noms des compagnons, puis la raison de la mission, puis l'origine, l'âge, les routes connues et les gestes de combat.
+Le personnage ne garde clairement que son prénom, celui donné par le joueur, et quelques fragments confus : un bras saisi, une voix qui crie, une promesse de rentrer ensemble.
+Départ réel après la rupture : aucun équipement fiable, aucun stock, aucune carte.
+Si une menace surgit, le joueur ne peut pas vraiment combattre : les seules réponses cohérentes sont parer pour survivre ou fuir pour trouver la sortie.
+À la sortie, le joueur trouve un cadavre et un paquet abîmé. C'est à ce moment qu'il récupère son kit de départ.
+Cette intro installe : perte de repères, dette envers les compagnons oubliés, survie, forêt étrange, respect possible du mort, arrivée dans une ville fragile.
+
+Chapitre 1 — La ville qui tient à peine
+---------------------------------------
+But : faire survivre la ville.
+Le joueur doit sécuriser les environs proches, tuer des nuisibles, rapporter des matériaux, aider les premiers commerçants et prouver à la guilde que les routes peuvent encore être utilisées.
+
+Déroulé principal :
+- Arriver aux portes.
+- Rencontrer le garde puis Mira.
+- Faire connaissance avec Mira, qui présente la ville, les problèmes et les référents.
+- Faire le tour de la ville : Orren, Lysa, Bram et Soryn.
+- Notifier Mira que tout le monde a été rencontré.
+- Recevoir les demandes principales non refusables.
+- Aider Mira, Orren, Lysa, Bram et Soryn.
+- Notifier Mira quand les demandes sont terminées.
+- Débloquer le chapitre 2 quand la ville possède assez de stabilité, preuves et actions utiles.
+
+Référents de ville :
+- Mira — intendante de quartier / référente histoire.
+- Orren — vieux garde / référent de route.
+- Lysa — soigneuse de fortune.
+- Bram — forgeron fatigué.
+- Soryn — archiviste.
+
+Chapitre 2 — Le relais silencieux
+---------------------------------
+But : retrouver un référent de route et comprendre pourquoi le relais ne répond plus.
+Le joueur enquête sur une route devenue trop longue, des bornes retournées, des caravanes disparues et un relais silencieux.
+
+État actuel de la trame jouable :
+- Briefing avec Mira et Orren.
+- Reconnaissance de la Route commerciale.
+- Preuve de borne retournée pour Soryn.
+- Première menace du relais : les guetteurs sans feu.
+- Réactivation du relais.
+- Sauvetage de Nell la messagère.
+- Exploitation de la sacoche de routes.
+- Réaction des comptoirs.
+- Enquête sur l'encre froide.
+- Preuve que la route se réécrit.
+- Création du contre-registre des routes courtes avec Eda.
+- Repérage du nœud noir.
+- Temps de réparations / occupations utiles pour pousser le joueur à progresser naturellement.
+- Piste d'une menace gardant la borne, sans révéler son vrai nom trop tôt.
+- Verrou de la borne, cicatrices du verrou et route courte sous garde.
+
+PNJ importants de l'arc :
+- Nell — messagère de relais / première survivante de route.
+- Eda — comptable des routes courtes / stocks réels.
+
+Principes de progression histoire
+---------------------------------
+- Les quêtes principales sont non refusables.
+- Avant de demander un service à un PNJ, le joueur doit comprendre qui il est et à quoi il sert dans la ville.
+- Certains moments demandent d'attendre une réparation, une mise en place ou une préparation : le joueur doit alors s'occuper utilement, faire des quêtes secondaires, patrouiller ou aider la ville.
+- Certaines quêtes peuvent pointer vers une menace de type boss sans révéler son vrai nom, tant que le boss n'est connu que par rumeur, preuves ou légende.
+- Si une quête principale demande de vaincre une menace précise, c'est que cette menace est au moins un peu connue du monde.
+
+Transitions histoire / bac à sable
+----------------------------------
+- Fin du mode histoire : le personnage bascule automatiquement en mode bac à sable pour continuer à vivre dans le monde avec les accès débloqués.
+- Personnage déjà joué en bac à sable -> histoire : le jeu demande confirmation, car la route histoire reset le personnage au départ commun.
+- Personnage histoire -> bac à sable avant la fin : un clone éphémère de session peut exister pour tester librement sans casser la sauvegarde histoire.
+- Au démarrage, le jeu nettoie les éventuelles traces de clones éphémères histoire si un fichier marqué existe encore.
+
+Direction générale
+------------------
+Les prochains chapitres doivent être écrits avant d'être codés : trame, quêtes principales, quêtes d'attente, boss obligatoires, PNJ sauvés, conséquences en ville et transitions vers le bac à sable.

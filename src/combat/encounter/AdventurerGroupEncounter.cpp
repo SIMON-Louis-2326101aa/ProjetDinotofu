@@ -505,7 +505,7 @@ void AdventurerGroupEncounter::announceRelationshipBonus(
     else if (containsName(groupNames, "Louis") && containsName(groupNames, "Fire Flight") && containsName(groupNames, "Trexof"))
     {
         lines.push_back("Relation active : pluie de projectiles.");
-        lines.push_back("Louis veut aider, Fire Flight commande, Trexof teste les limites.");
+        lines.push_back("Louis veut aider, Fire Flight commande, Trexof cherche les failles.");
     }
     else if (containsName(groupNames, "Hazak") && containsName(groupNames, "Henrique"))
     {

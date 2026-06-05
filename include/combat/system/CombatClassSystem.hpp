@@ -26,6 +26,9 @@ public:
     static bool hasWeaponAffinity(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
     static int getWeaponAffinityDamageBonus(const Entity& entity, WeaponType weaponType, const std::string& weaponName, int currentDamage);
     static std::string getWeaponAffinityLabel(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
+    static int getWeaponHandlingAccuracyAdjustment(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
+    static int getWeaponHandlingDamagePercent(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
+    static std::string getWeaponHandlingLabel(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
 
 private:
 };

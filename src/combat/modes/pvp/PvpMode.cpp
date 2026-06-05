@@ -15,6 +15,7 @@
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "progression/DifficultyRules.hpp"
+#include "progression/DeathRuleRules.hpp"
 #include "save/SaveManager.hpp"
 #include "save/menu/AccountMenu.hpp"
 #include "save/menu/CharacterMenu.hpp"
@@ -36,6 +37,7 @@ namespace
         Player player;
         std::string accountName;
         DifficultyMode difficulty;
+        DeathRuleMode deathRule = DeathRuleMode::NonDefinitive;
         bool persistent = false;
         bool ephemeral = true;
     };
@@ -128,7 +130,7 @@ namespace
         const Player& winner,
         const Player& loser,
         bool deadlyDuel,
-        bool lethalDeadlyDuel
+        bool definitiveDeadlyDuel
     )
     {
         MenuScreen screen("BILAN PVP LOCAL", "pvp.local.result.conclusion");
@@ -136,7 +138,7 @@ namespace
         screen.addLine("Résultat : victoire de " + winner.getName());
         screen.addLine("Vaincu : " + loser.getName());
         screen.addLine("Mode : " + std::string(deadlyDuel ? "duel sérieux" : "duel amical"));
-        screen.addLine("Léthal : " + std::string(lethalDeadlyDuel ? "oui" : "non"));
+        screen.addLine("Mort définitive : " + std::string(definitiveDeadlyDuel ? "oui" : "non"));
         screen.addLine("PV vainqueur : " + std::to_string(winner.getHp()) + "/" + std::to_string(winner.getMaxHp()));
         screen.addLine("PV vaincu : " + std::to_string(loser.getHp()) + "/" + std::to_string(loser.getMaxHp()));
         screen.addLine("Statistiques : victoire/défaite JcJ mises à jour");
@@ -363,6 +365,38 @@ namespace
         return DifficultyMode::Normal;
     }
 
+
+    DeathRuleMode askDeathRuleForSecondPlayer(DifficultyMode difficulty)
+    {
+        DeathRuleMode forcedRule = DeathRuleRules::defaultForDifficulty(difficulty);
+
+        if (DeathRuleRules::isChoiceForced(difficulty))
+        {
+            MessageScreen::show(
+                "RÈGLE DE MORT J2",
+                "pvp.local.j2.death_rule.forced",
+                {
+                    "Règle appliquée : " + DeathRuleRules::displayName(forcedRule) + ".",
+                    DeathRuleRules::shortSummary(difficulty, forcedRule)
+                },
+                false
+            );
+            return forcedRule;
+        }
+
+        MenuScreen screen("RÈGLE DE MORT J2", "pvp.local.j2.death_rule");
+        screen.addLine("Choisis la règle de mort du personnage J2.");
+        screen.addLine("Elle est séparée de la difficulté, sauf Facile et Léthal.");
+        screen.addOption(1, "Mort non définitive", "Pénalités possibles, mais pas de registre mort jouable.", true, "pvp.local.j2.death_rule.non_definitive");
+        screen.addOption(2, "Mort définitive", "Challenge supplémentaire : une vraie chute peut tuer le personnage.", true, "pvp.local.j2.death_rule.definitive");
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Veuillez choisir 1 ou 2.");
+        return DeathRuleRules::normalizeForDifficulty(
+            difficulty,
+            choice == 2 ? DeathRuleMode::Definitive : DeathRuleMode::NonDefinitive
+        );
+    }
+
     // EN: createManualPlayer declares or implements a focused behavior used by this module.
     // FR: createManualPlayer déclare ou implémente un comportement précis utilisé par ce module.
     Player createManualPlayer(const std::string& playerLabel, DifficultyMode difficulty)
@@ -417,6 +451,7 @@ namespace
             {
                 PvpPlayerSlot slot;
                 slot.difficulty = DifficultyMode::Normal;
+                slot.deathRule = DeathRuleRules::defaultForDifficulty(slot.difficulty);
                 slot.player = createManualPlayer("Joueur 2 éphémère", slot.difficulty);
                 slot.persistent = false;
                 slot.ephemeral = true;
@@ -431,6 +466,7 @@ namespace
             if (result.characterLoaded)
             {
                 slot.difficulty = result.difficulty;
+                slot.deathRule = result.deathRule;
                 slot.persistent = true;
                 slot.ephemeral = false;
                 return slot;
@@ -438,12 +474,14 @@ namespace
 
             slot.difficulty = askDifficultyForSecondPlayer();
             Console::clear();
+            slot.deathRule = askDeathRuleForSecondPlayer(slot.difficulty);
+            Console::clear();
             slot.player = createManualPlayer("Joueur 2", slot.difficulty);
             slot.persistent = true;
             slot.ephemeral = false;
 
             SaveManager::saveAccountSnapshot(slot.accountName);
-            SaveManager::savePlayerSnapshot(slot.player, slot.accountName, slot.difficulty);
+            SaveManager::savePlayerSnapshot(slot.player, slot.accountName, slot.difficulty, slot.deathRule);
             return slot;
         }
     }
@@ -470,18 +508,20 @@ namespace
         return normalizePvpName(first.getName()) == normalizePvpName(second.getName());
     }
 
-    // EN: isLethal declares or implements a focused behavior used by this module.
-    // FR: isLethal déclare ou implémente un comportement précis utilisé par ce module.
-    bool isLethal(DifficultyMode difficulty)
+    bool usesDefinitiveDeath(DifficultyMode difficulty, DeathRuleMode deathRule)
     {
-        return difficulty == DifficultyMode::Lethal;
+        return DifficultyRules::isPermanentDeath(difficulty, deathRule);
     }
 
-    // EN: canStartDeadlyDuel declares or implements a focused behavior used by this module.
-    // FR: canStartDeadlyDuel déclare ou implémente un comportement précis utilisé par ce module.
-    bool canStartDeadlyDuel(DifficultyMode first, DifficultyMode second)
+    bool canStartDeadlyDuel(
+        DifficultyMode firstDifficulty,
+        DeathRuleMode firstDeathRule,
+        DifficultyMode secondDifficulty,
+        DeathRuleMode secondDeathRule
+    )
     {
-        return isLethal(first) == isLethal(second);
+        return usesDefinitiveDeath(firstDifficulty, firstDeathRule)
+            == usesDefinitiveDeath(secondDifficulty, secondDeathRule);
     }
 
 
@@ -521,6 +561,7 @@ namespace
     void displayPvpSecuritySummary(
         const Player& player1,
         DifficultyMode difficulty1,
+        DeathRuleMode deathRule1,
         const std::string& account1,
         const PvpPlayerSlot& player2Slot
     )
@@ -528,12 +569,14 @@ namespace
         std::vector<std::string> lines;
 
         std::string p1Line = player1.getName() + " | compte local : " + account1
-            + " | difficulté : " + pvpDifficultyName(difficulty1);
+            + " | difficulté : " + pvpDifficultyName(difficulty1)
+            + " | " + DeathRuleRules::displayName(deathRule1);
         if (player1.isClone()) p1Line += " | CLONE";
         lines.push_back(p1Line);
 
         std::string p2Line = player2Slot.player.getName() + " | " + pvpAccountStatus(player2Slot)
-            + " | difficulté : " + pvpDifficultyName(player2Slot.difficulty);
+            + " | difficulté : " + pvpDifficultyName(player2Slot.difficulty)
+            + " | " + DeathRuleRules::displayName(player2Slot.deathRule);
         if (player2Slot.player.isClone()) p2Line += " | CLONE";
         lines.push_back(p2Line);
         lines.push_back("");
@@ -548,19 +591,19 @@ namespace
             lines.push_back("Verdict : combat amical uniquement.");
             lines.push_back("Le duel mortel exige deux comptes locaux différents et persistants.");
         }
-        else if (!canStartDeadlyDuel(difficulty1, player2Slot.difficulty))
+        else if (!canStartDeadlyDuel(difficulty1, deathRule1, player2Slot.difficulty, player2Slot.deathRule))
         {
             lines.push_back("Verdict : combat mortel visible, mais verrouillé.");
-            lines.push_back("Une existence Léthal ne peut pas être mélangée avec une simulation non Léthal.");
+            lines.push_back("Une existence avec mort définitive ne peut pas être mélangée avec une simulation non définitive.");
         }
-        else if (isLethal(difficulty1))
+        else if (usesDefinitiveDeath(difficulty1, deathRule1))
         {
-            lines.push_back("Verdict : duel mortel Léthal autorisé.");
+            lines.push_back("Verdict : duel mortel définitif autorisé.");
             lines.push_back("Le perdant quittera le registre des vivants.");
         }
         else
         {
-            lines.push_back("Verdict : duel mortel non Léthal autorisé.");
+            lines.push_back("Verdict : duel mortel non définitif autorisé.");
             lines.push_back("Le butin restera limité par la valeur du gagnant pour éviter les abus.");
         }
 
@@ -1009,13 +1052,13 @@ namespace
 
         if (lethalDuel)
         {
-            lootLines.push_back("Duel Léthal : le perdant est considéré comme mort définitivement.");
+            lootLines.push_back("Duel à mort définitive : le perdant est considéré comme mort définitivement.");
             lootLines.push_back("Les objets liés à l'âme ou au corps restent protégés.");
             lootLines.push_back("Les reliques et objets rares ont une forte chance d'être récupérés, mais pas une garantie absolue.");
         }
 
         MessageScreen::show(
-            lethalDuel ? "BUTIN DU DUEL LÉTHAL" : "BUTIN DU DUEL MORTEL",
+            lethalDuel ? "BUTIN DU DUEL DÉFINITIF" : "BUTIN DU DUEL MORTEL",
             lethalDuel ? "pvp.deadly_duel.loot.lethal" : "pvp.deadly_duel.loot.limited",
             lootLines,
             false
@@ -1026,7 +1069,8 @@ namespace
         const Player& player1,
         const std::string& account1,
         const PvpPlayerSlot& player2Slot,
-        DifficultyMode difficulty1
+        DifficultyMode difficulty1,
+        DeathRuleMode deathRule1
     )
     {
         if (player1.isClone() || player2Slot.player.isClone())
@@ -1057,7 +1101,7 @@ namespace
 
         MenuScreen screen("TYPE DE DUEL", "pvp.local.duel_type");
         screen.addOption(1, "Combat amical", "Gain symbolique, consommables et usure remboursés par l'arène.", true, "pvp.local.duel_type.friendly");
-        screen.addOption(2, "Combat à mort", "Butin réel. Risque définitif en Léthal.", true, "pvp.local.duel_type.deadly");
+        screen.addOption(2, "Combat à mort", "Butin réel. Risque définitif si les deux personnages utilisent la mort définitive.", true, "pvp.local.duel_type.deadly");
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Veuillez choisir 1 ou 2.");
         Console::clear();
@@ -1072,28 +1116,28 @@ namespace
             return false;
         }
 
-        if (!canStartDeadlyDuel(difficulty1, player2Slot.difficulty))
+        if (!canStartDeadlyDuel(difficulty1, deathRule1, player2Slot.difficulty, player2Slot.deathRule))
         {
             MessageScreen::show(
                 "COMBAT À MORT REFUSÉ",
                 "pvp.local.duel_type.deadly_refused",
                 {
-                    "Un personnage Léthal ne peut pas engager un duel mortel contre une simulation non Léthal.",
-                    "Il faut deux personnages Léthal, ou deux personnages non Léthal."
+                    "Un personnage avec mort définitive ne peut pas engager un duel mortel contre une simulation non définitive.",
+                    "Il faut deux personnages avec la mort définitive, ou deux personnages sans mort définitive."
                 }
             );
             return false;
         }
 
         std::vector<std::string> lines;
-        if (isLethal(difficulty1))
+        if (usesDefinitiveDeath(difficulty1, deathRule1))
         {
-            lines.push_back("Deux existences Léthal s'affrontent : le perdant sera inscrit comme mort.");
+            lines.push_back("Deux existences à mort définitive s'affrontent : le perdant sera inscrit comme mort.");
             lines.push_back("Ce n'est pas une grosse pénalité : c'est une mort définitive, sauf bénédiction capable de briser le verdict.");
         }
         else
         {
-            lines.push_back("Deux personnages non Léthal s'affrontent : butin limité, pas d'effacement définitif.");
+            lines.push_back("Deux personnages non définitif s'affrontent : butin limité, pas d'effacement définitif.");
         }
 
         MessageScreen::show("COMBAT À MORT CONFIRMÉ", "pvp.local.duel_type.deadly_confirmed", lines);
@@ -1114,7 +1158,7 @@ namespace
 
 // EN: run declares or implements a focused behavior used by this module.
 // FR: run déclare ou implémente un comportement précis utilisé par ce module.
-void PvpMode::run(Player& player1, Random& random, const std::string& account1, DifficultyMode difficulty1)
+void PvpMode::run(Player& player1, Random& random, const std::string& account1, DifficultyMode difficulty1, DeathRuleMode deathRule1)
 {
     MessageScreen::show(
         "JOUEUR 2",
@@ -1168,12 +1212,14 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
         return;
     }
 
-    displayPvpSecuritySummary(player1, difficulty1, account1, player2Slot);
+    displayPvpSecuritySummary(player1, difficulty1, deathRule1, account1, player2Slot);
     Console::waitForEnter();
     Console::clear();
 
-    bool deadlyDuel = askDeadlyDuelIfAllowed(player1, account1, player2Slot, difficulty1);
-    bool lethalDeadlyDuel = deadlyDuel && isLethal(difficulty1) && isLethal(player2Slot.difficulty);
+    bool deadlyDuel = askDeadlyDuelIfAllowed(player1, account1, player2Slot, difficulty1, deathRule1);
+    bool lethalDeadlyDuel = deadlyDuel
+        && usesDefinitiveDeath(difficulty1, deathRule1)
+        && usesDefinitiveDeath(player2Slot.difficulty, player2Slot.deathRule);
     FriendlyArenaSnapshot player1FriendlySnapshot = createFriendlyArenaSnapshot(player1);
     FriendlyArenaSnapshot player2FriendlySnapshot = createFriendlyArenaSnapshot(player2);
     int player1PreFightValue = estimateInventoryAndEquipmentValue(player1);
@@ -1289,7 +1335,7 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
 
     if (player2Slot.persistent)
     {
-        SaveManager::savePlayerSnapshot(player2, player2Slot.accountName, player2Slot.difficulty);
+        SaveManager::savePlayerSnapshot(player2, player2Slot.accountName, player2Slot.difficulty, player2Slot.deathRule);
 
         if (lethalDeadlyDuel && player2.isDead())
         {
@@ -1299,7 +1345,7 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
                     player2,
                     player2Slot.accountName,
                     "registre des morts",
-                    "J2 est mort en duel Léthal : le personnage rejoint le registre des morts."
+                    "J2 est mort en duel à mort définitive : le personnage rejoint le registre des morts."
                 );
             }
             else

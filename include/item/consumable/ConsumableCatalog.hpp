@@ -24,6 +24,8 @@ public:
     static Consumable createReinforcedHealingPotion();
     static Consumable createGreaterHealingPotion();
     static Consumable createMajorHealingPotion();
+    static Consumable createVitalityHealingPotion();
+    static Consumable createRoyalVitalityHealingPotion();
     // EN: createReinforcedDamagePotion declares or implements a focused behavior used by this module.
     // FR: createReinforcedDamagePotion déclare ou implémente un comportement précis utilisé par ce module.
     static Consumable createMinorDamagePotion();
@@ -47,6 +49,16 @@ public:
     static Consumable createWanderingEmberScroll();
     static Consumable createMinorPurificationScroll();
     static Consumable createCrawlingVenomScroll();
+    static Consumable createStabilizingTea();
+    static Consumable createMinerBracingTonic();
+    static Consumable createCartographerFocusInk();
+    static Consumable createMoonSaltPurifier();
+    static Consumable createGlassStepScroll();
+    static Consumable createVineSnareScroll();
+    static Consumable createArchivistFocusInk();
+    static Consumable createCliffBasilTea();
+    static Consumable createCarnivalDiversionTicket();
+    static Consumable createFireflyGuardVial();
 };
 
 #endif

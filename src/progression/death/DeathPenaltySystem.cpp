@@ -279,7 +279,7 @@ void DeathPenaltySystem::displayNonLethalDeathPenalty(
 // FR: displayLethalDeathCorruption déclare ou implémente un comportement précis utilisé par ce module.
 void DeathPenaltySystem::displayLethalDeathCorruption()
 {
-    MenuScreen screen("MORT LÉTHALE", "death.lethal.corruption");
+    MenuScreen screen("MORT DÉFINITIVE", "death.lethal.corruption");
     screen.addLine("Morts du personnage : [STATISTIQUE CORROMPUE]");
     screen.addLine("Vous ne deviez pas mourir.");
     screen.addLine("Statut : personnage supprimé du registre des vivants.");

@@ -55,7 +55,8 @@ bool CombatPotion::executeHealingPotion(
         }
 
         int hpBefore = player->getHp();
-        player->heal(potion.getPower());
+        const int announcedHeal = potion.getHealingAmountForMaxHp(player->getMaxHp());
+        player->heal(announcedHeal);
         ThreatSystem::markSelfHealingAction(*player);
 
         MessageScreen::show(
@@ -63,7 +64,8 @@ bool CombatPotion::executeHealingPotion(
             "combat.potion.healing.result.player",
             {
                 player->getName() + " utilise : " + potion.getName() + ".",
-                "Soin : +" + std::to_string(player->getHp() - hpBefore) + " PV.",
+                "Soin annoncé : " + potion.getPowerDisplayText() + ".",
+                "Soin réel : +" + std::to_string(player->getHp() - hpBefore) + " PV.",
                 "PV : " + std::to_string(hpBefore) + " -> " + std::to_string(player->getHp()) + "/" + std::to_string(player->getMaxHp()) + "."
             }
         );

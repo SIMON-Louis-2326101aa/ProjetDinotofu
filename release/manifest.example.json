@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "2.04.08",
-  "releaseTag": "v2.04.08",
+  "version": "3.07.02",
+  "releaseTag": "v3.07.02",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "V2.04.08 : affichage des potions en piles dans l’inventaire, les menus de potions et les soins de soutien, avec sélection conservée sur une potion utilisable."
+  "notes": "V3.07.02 : patch documentation publication. Les historiques de versions sont regroupés dans PATCHNOTE_DINOTOFU.md, les README gardent l'installation GitHub et la note spéciale du développeur."
 }

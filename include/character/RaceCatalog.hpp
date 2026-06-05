@@ -47,6 +47,13 @@ public:
     // EN: getGameplayIdentity declares or implements a focused behavior used by this module.
     // FR: getGameplayIdentity déclare ou implémente un comportement précis utilisé par ce module.
     static std::string getGameplayIdentity(CharacterRace race);
+    static bool hasInnateNightVision(CharacterRace race);
+    static int getEnvironmentalTemperatureScore(CharacterRace race, const std::string& hazard);
+    static bool hasFireWeakness(CharacterRace race);
+    static std::string getElementalAffinityLine(CharacterRace race);
+    static std::string getInnatePassiveLine(CharacterRace race);
+    static bool isSemiHumanFamily(CharacterRace race);
+    static std::string getRaceFamilyLine(CharacterRace race);
 
     // EN: getMerchantPurchasePricePercentage declares or implements a focused behavior used by this module.
     // FR: getMerchantPurchasePricePercentage déclare ou implémente un comportement précis utilisé par ce module.

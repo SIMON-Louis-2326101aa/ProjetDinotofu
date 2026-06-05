@@ -220,8 +220,22 @@ namespace
         }
 
         int successChance = magicCatalystSuccessChance(*player);
+        const int manaCursePressure = player->getCursePressureForCategory("mana");
         std::vector<std::string> lines;
         lines.push_back("Sort : " + spellName);
+        if (manaCursePressure > 0 && random.between(1, 100) <= 10 + manaCursePressure * 4)
+        {
+            const int penalty = std::min(18, 4 + manaCursePressure * 2);
+            successChance = std::max(25, successChance - penalty);
+            if (player->getKnownCursePressureForCategory("mana") > 0)
+            {
+                lines.push_back("La catégorie mana/magie déjà soupçonnée rend la canalisation plus capricieuse.");
+            }
+            else
+            {
+                lines.push_back("Quelque chose tire dans le flux magique sans se nommer clairement.");
+            }
+        }
         lines.push_back("Stabilité du catalyseur : " + std::to_string(successChance) + "%.");
 
         if (player->hasEquippedWeapon())

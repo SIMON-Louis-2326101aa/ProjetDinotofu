@@ -1,7 +1,7 @@
 # Dinotofu - interface graphique expérimentale   
 
-Version jeu : **V2.01.04**   
-Version minimale conseillée des personnages : **V2.01.03**   
+Version jeu : **V2.10.00**   
+Version minimale conseillée des personnages : **V3.00.00**   
 
 ## Lancement rapide Linux / WSL   
 

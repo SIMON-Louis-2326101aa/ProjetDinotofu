@@ -78,7 +78,7 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getEntranceLines(
 
     if (hasMattzelda && hasLouis && hasTrexof)
     {
-        return {"Mattzelda rit avant même que le combat commence.", "Louis : On peut rester amis après, hein ?", "Trexof : D'abord on teste. Après on négocie."};
+        return {"Mattzelda rit avant même que le combat commence.", "Louis : On peut rester amis après, hein ?", "Trexof : D'abord on trouve l'ouverture. Après on négocie."};
     }
 
     if (hasAoi && hasKanade && hasSanctus)
@@ -168,7 +168,7 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getVictoryLines(c
 
     if (containsName(names, "Louis") && containsName(names, "Fire Flight") && containsName(names, "Trexof"))
     {
-        return {"Fire Flight : Test terminé.", "Louis : Et on a encore des amis ?", "Trexof : Selon les résultats, ça dépend de la définition d'ami."};
+        return {"Fire Flight : Passe terminée.", "Louis : Et on a encore des amis ?", "Trexof : Selon l'état de chacun, ça dépend de la définition d'ami."};
     }
 
     if (containsName(names, "Skuro"))
@@ -216,7 +216,7 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getDefeatLines(co
 
     if (containsName(names, "Mattzelda") && containsName(names, "Louis") && containsName(names, "Trexof"))
     {
-        return {"Mattzelda : Bon, celle-là compte comme échauffement collectif raté.", "Louis : On peut oublier cette partie ?", "Trexof : Non. C'est justement le genre de test qu'on garde."};
+        return {"Mattzelda : Bon, celle-là compte comme échauffement collectif raté.", "Louis : On peut oublier cette partie ?", "Trexof : Non. C'est justement le genre d'erreur qu'on garde en mémoire."};
     }
 
     if (containsName(names, "Aoi") && containsName(names, "Kanadé") && containsName(names, "Sanctus"))
@@ -231,7 +231,7 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getDefeatLines(co
 
     if (containsName(names, "Louis") && containsName(names, "Fire Flight") && containsName(names, "Trexof"))
     {
-        return {"Louis : On a perdu, mais c'était presque stylé.", "Fire Flight : Presque n'est pas une condition de victoire.", "Trexof : Mais c'est une donnée utile."};
+        return {"Louis : On a perdu, mais c'était presque stylé.", "Fire Flight : Presque n'est pas une condition de victoire.", "Trexof : Mais ça reste une leçon utile."};
     }
 
     if (containsName(names, "Skuro"))

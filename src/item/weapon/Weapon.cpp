@@ -7,8 +7,97 @@
 
 #include "interface/menu/common/MessageScreen.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <vector>
 #include <string>
+#include <sstream>
+
+namespace
+{
+    std::string lowerEquipmentText(std::string value)
+    {
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return value;
+    }
+
+    bool looksExceptionalAndNotAlreadyDowngraded(const std::string& name, const std::string& description)
+    {
+        const std::string probe = lowerEquipmentText(name + " " + description);
+        if (probe.find("haute qualité") != std::string::npos || probe.find("haute qualite") != std::string::npos)
+        {
+            return false;
+        }
+
+        return probe.find("exceptionnel") != std::string::npos
+            || probe.find("exceptionnelle") != std::string::npos
+            || probe.find("particularité") != std::string::npos
+            || probe.find("particularite") != std::string::npos;
+    }
+    std::vector<std::string> splitEnchantmentSaveText(const std::string& saveText)
+    {
+        std::vector<std::string> result;
+        std::stringstream stream(saveText);
+        std::string token;
+
+        while (std::getline(stream, token, '|'))
+        {
+            if (!token.empty())
+            {
+                result.push_back(token);
+            }
+        }
+
+        return result;
+    }
+
+    std::string joinEnchantmentSaveText(const std::vector<std::string>& values)
+    {
+        std::string result;
+        for (std::size_t i = 0; i < values.size(); ++i)
+        {
+            if (i > 0)
+            {
+                result += "|";
+            }
+            result += values[i];
+        }
+        return result;
+    }
+
+    std::string joinEnchantmentDisplayText(const std::vector<std::string>& values)
+    {
+        if (values.empty())
+        {
+            return "aucun";
+        }
+
+        std::string result;
+        for (std::size_t i = 0; i < values.size(); ++i)
+        {
+            if (i > 0)
+            {
+                result += ", ";
+            }
+            result += values[i];
+        }
+        return result;
+    }
+}
+
+void Weapon::downgradeExceptionalQualityAfterBreak()
+{
+    if (!looksExceptionalAndNotAlreadyDowngraded(name, description))
+    {
+        return;
+    }
+
+    name += " - haute qualité abîmée";
+    description += " Qualité dégradée : l'arme était exceptionnelle, mais sa durabilité est tombée à 0 avant réparation. Elle reste haute qualité après réparation, sans récupérer son grade exceptionnel.";
+    value = std::max(1, value * 85 / 100);
+}
 
 // EN: Weapon declares or implements a focused behavior used by this module.
 // FR: Weapon déclare ou implémente un comportement précis utilisé par ce module.
@@ -22,6 +111,7 @@ Weapon::Weapon() : Item()
 
     maxDurability = -1;
     durability = -1;
+    enchantments.clear();
 }
 
 Weapon::Weapon(
@@ -45,6 +135,7 @@ Weapon::Weapon(
 
     this->maxDurability = maxDurability;
     this->durability = maxDurability;
+    this->enchantments.clear();
 }
 
 // EN: getType declares or implements a focused behavior used by this module.
@@ -117,11 +208,17 @@ void Weapon::loseDurability(int amount)
         return;
     }
 
+    const bool wasAboveZero = durability > 0;
     durability -= amount;
 
     if (durability < 0)
     {
         durability = 0;
+    }
+
+    if (wasAboveZero && durability == 0)
+    {
+        downgradeExceptionalQualityAfterBreak();
     }
 }
 
@@ -152,6 +249,54 @@ void Weapon::fullyRepair()
     }
 
     durability = maxDurability;
+}
+
+int Weapon::getEnchantmentCount() const
+{
+    return static_cast<int>(enchantments.size());
+}
+
+std::vector<std::string> Weapon::getEnchantments() const
+{
+    return enchantments;
+}
+
+std::string Weapon::getEnchantmentSummaryText() const
+{
+    return joinEnchantmentDisplayText(enchantments);
+}
+
+std::string Weapon::getEnchantmentsSaveText() const
+{
+    return joinEnchantmentSaveText(enchantments);
+}
+
+void Weapon::addEnchantment(const std::string& enchantmentLabel)
+{
+    if (enchantmentLabel.empty())
+    {
+        return;
+    }
+
+    enchantments.push_back(enchantmentLabel);
+    value = std::max(1, value + 18 + static_cast<int>(enchantments.size()) * 8);
+}
+
+bool Weapon::removeLastEnchantment()
+{
+    if (enchantments.empty())
+    {
+        return false;
+    }
+
+    enchantments.pop_back();
+    value = std::max(1, value - 20);
+    return true;
+}
+
+void Weapon::loadEnchantmentsFromSaveText(const std::string& saveText)
+{
+    enchantments = splitEnchantmentSaveText(saveText);
 }
 
 namespace
@@ -194,6 +339,16 @@ std::vector<std::string> Weapon::toDisplayLines() const
         "Bonus dégâts max : " + std::to_string(maxDamageBonus),
         "Bonus critique : " + std::to_string(criticalBonus)
     };
+
+    if (!enchantments.empty())
+    {
+        lines.push_back("Enchantements : " + getEnchantmentSummaryText());
+        lines.push_back("Instabilité runique : " + std::to_string(getEnchantmentCount()) + " enchantement(s). Les prochains essais seront plus risqués.");
+    }
+    else
+    {
+        lines.push_back("Enchantements : aucun");
+    }
 
     if (isIndestructible())
     {

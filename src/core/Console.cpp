@@ -32,6 +32,33 @@
 
 namespace
 {
+    enum class ConsoleTheme
+    {
+        Normal,
+        Combat
+    };
+
+    ConsoleTheme activeConsoleTheme = ConsoleTheme::Normal;
+
+    void applyConsoleTheme()
+    {
+        // FR: l'IG récupère la sortie texte ; on évite donc les codes ANSI dans ce mode.
+        // EN: the GUI consumes text output, so ANSI escape codes are skipped there.
+        if (std::getenv("DINOTOFU_GUI_INPUT_MODE") != nullptr)
+        {
+            return;
+        }
+
+        if (activeConsoleTheme == ConsoleTheme::Combat)
+        {
+            std::cout << "\033[48;2;28;0;0m\033[97m";
+        }
+        else
+        {
+            std::cout << "\033[40m\033[97m";
+        }
+    }
+
 
 #if defined(_WIN32)
     bool isWindowsConsoleHandle(HANDLE handle)
@@ -605,7 +632,20 @@ void Console::configureTerminalEncoding()
 // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
 void Console::printLine(const std::string& text)
 {
+    applyConsoleTheme();
     std::cout << text << std::endl;
+}
+
+void Console::useNormalTheme()
+{
+    activeConsoleTheme = ConsoleTheme::Normal;
+    applyConsoleTheme();
+}
+
+void Console::useCombatTheme()
+{
+    activeConsoleTheme = ConsoleTheme::Combat;
+    applyConsoleTheme();
 }
 
 std::vector<std::string> Console::captureLines(const std::function<void()>& action)
@@ -664,11 +704,13 @@ void Console::clear()
     if (term != nullptr && std::string(term).empty() == false && std::string(term) != "dumb")
     {
         system("clear");
+        applyConsoleTheme();
         return;
     }
 
     std::cout << std::string(60, '\n');
 #endif
+    applyConsoleTheme();
 }
 
 // EN: pauseSeconds declares or implements a focused behavior used by this module.

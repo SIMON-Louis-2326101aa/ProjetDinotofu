@@ -6,6 +6,9 @@
 #ifndef INCLUDE_COMBAT_DAMAGEREPORT_HPP
 #define INCLUDE_COMBAT_DAMAGEREPORT_HPP
 
+#include <string>
+#include <vector>
+
 struct DamageReport
 {
     int rawDamage;
@@ -15,6 +18,8 @@ struct DamageReport
     bool armorUsed;
     bool armorBrokenDuringImpact;
     bool armorBlockedByBossSeal;
+    bool armorExtraDurabilityLost;
+    std::vector<std::string> equipmentEffectLines;
 
     DamageReport()
         : rawDamage(0),
@@ -23,7 +28,9 @@ struct DamageReport
           receivedDamage(0),
           armorUsed(false),
           armorBrokenDuringImpact(false),
-          armorBlockedByBossSeal(false)
+          armorBlockedByBossSeal(false),
+          armorExtraDurabilityLost(false),
+          equipmentEffectLines()
     {
     }
 };

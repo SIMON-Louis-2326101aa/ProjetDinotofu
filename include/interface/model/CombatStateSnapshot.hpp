@@ -23,6 +23,7 @@ struct GuiCombatUnitSnapshot
     std::string type;
     std::string side;
     std::string kind;
+    int level = 0;
     int hp = 0;
     int maxHp = 0;
     int minDamage = 0;

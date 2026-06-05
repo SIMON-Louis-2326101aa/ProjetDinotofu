@@ -13,6 +13,7 @@
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "combat/system/CombatClassSystem.hpp"
+#include "item/durability/DurabilityRules.hpp"
 
 #include <iostream>
 #include <string>
@@ -39,6 +40,17 @@ namespace
         }
 
         return std::to_string(armor.getDurability()) + "/" + std::to_string(armor.getMaxDurability());
+    }
+
+    void appendEquipmentWarnings(std::vector<std::string>& lines, const std::vector<std::string>& warnings)
+    {
+        for (const std::string& warning : warnings)
+        {
+            if (!warning.empty())
+            {
+                lines.push_back(warning);
+            }
+        }
     }
 
     void showSimpleEquipmentScreen(const Player& player)
@@ -68,6 +80,8 @@ namespace
             {
                 lines.push_back("Affinité arme/classe : bloquée par le sceau de boss.");
             }
+            appendEquipmentWarnings(lines, DurabilityRules::describeWeaponUseWarnings(weapon, player.getRace()));
+            appendEquipmentWarnings(lines, DurabilityRules::describeWeaponMaintenanceAdvice(weapon, player.getRace()));
         }
         else
         {
@@ -82,6 +96,8 @@ namespace
                 + " | État : " + (armor.isBroken() ? "Cassée" : "Utilisable")
                 + " | PV max : +" + std::to_string(armor.getMaxHpBonus())
                 + " | Réduction : " + std::to_string(armor.getDamageReduction()));
+            appendEquipmentWarnings(lines, DurabilityRules::describeArmorFitWarnings(armor, player.getRace()));
+            appendEquipmentWarnings(lines, DurabilityRules::describeArmorMaintenanceAdvice(armor, player.getRace()));
         }
         else
         {
@@ -124,6 +140,8 @@ namespace
                     ? "Affinité arme/classe : aucune maîtrise particulière avec cette arme."
                     : "Affinité arme/classe : active, " + affinityLabel + ".");
             }
+            appendEquipmentWarnings(lines, DurabilityRules::describeWeaponUseWarnings(weapon, player.getRace()));
+            appendEquipmentWarnings(lines, DurabilityRules::describeWeaponMaintenanceAdvice(weapon, player.getRace()));
         }
         else
         {
@@ -141,6 +159,8 @@ namespace
             lines.push_back("Bonus PV max : +" + std::to_string(armor.getMaxHpBonus()));
             lines.push_back("Réduction dégâts : " + std::to_string(armor.getDamageReduction()));
             lines.push_back(armor.isBroken() ? "État : cassée, ses bonus ne s'appliquent plus." : "État : Utilisable");
+            appendEquipmentWarnings(lines, DurabilityRules::describeArmorFitWarnings(armor, player.getRace()));
+            appendEquipmentWarnings(lines, DurabilityRules::describeArmorMaintenanceAdvice(armor, player.getRace()));
         }
         else
         {
@@ -152,38 +172,36 @@ namespace
         MessageScreen::show("ÉQUIPEMENT DÉTAILLÉ", "equipment.details.summary", lines);
     }
 
-    void showEquipmentWeaponInspection(const Weapon& weapon)
+    void showEquipmentWeaponInspection(const Player& player, const Weapon& weapon)
     {
-        MessageScreen::show(
-            "INSPECTION - ARME",
-            "equipment.weapon.inspect.details",
-            {
-                "Nom : " + weapon.getName(),
-                "Description : " + weapon.getDescription(),
-                "Bonus dégâts : +" + std::to_string(weapon.getMinDamageBonus()) + " à +" + std::to_string(weapon.getMaxDamageBonus()),
-                "Bonus critique : +" + std::to_string(weapon.getCriticalBonus()),
-                "Durabilité : " + equipmentWeaponDurabilityText(weapon),
-                weapon.isBroken() ? "État : Cassée" : "État : Utilisable",
-                "Valeur : " + std::to_string(weapon.getValue()) + " pièces"
-            }
-        );
+        std::vector<std::string> lines = {
+            "Nom : " + weapon.getName(),
+            "Description : " + weapon.getDescription(),
+            "Bonus dégâts : +" + std::to_string(weapon.getMinDamageBonus()) + " à +" + std::to_string(weapon.getMaxDamageBonus()),
+            "Bonus critique : +" + std::to_string(weapon.getCriticalBonus()),
+            "Durabilité : " + equipmentWeaponDurabilityText(weapon),
+            weapon.isBroken() ? "État : Cassée" : "État : Utilisable",
+            "Valeur : " + std::to_string(weapon.getValue()) + " pièces"
+        };
+        appendEquipmentWarnings(lines, DurabilityRules::describeWeaponUseWarnings(weapon, player.getRace()));
+        appendEquipmentWarnings(lines, DurabilityRules::describeWeaponMaintenanceAdvice(weapon, player.getRace()));
+        MessageScreen::show("INSPECTION - ARME", "equipment.weapon.inspect.details", lines);
     }
 
-    void showEquipmentArmorInspection(const Armor& armor)
+    void showEquipmentArmorInspection(const Player& player, const Armor& armor)
     {
-        MessageScreen::show(
-            "INSPECTION - ARMURE",
-            "equipment.armor.inspect.details",
-            {
-                "Nom : " + armor.getName(),
-                "Description : " + armor.getDescription(),
-                "Bonus PV max : +" + std::to_string(armor.getMaxHpBonus()),
-                "Réduction dégâts : " + std::to_string(armor.getDamageReduction()),
-                "Durabilité : " + equipmentArmorDurabilityText(armor),
-                armor.isBroken() ? "État : Cassée" : "État : Utilisable",
-                "Valeur : " + std::to_string(armor.getValue()) + " pièces"
-            }
-        );
+        std::vector<std::string> lines = {
+            "Nom : " + armor.getName(),
+            "Description : " + armor.getDescription(),
+            "Bonus PV max : +" + std::to_string(armor.getMaxHpBonus()),
+            "Réduction dégâts : " + std::to_string(armor.getDamageReduction()),
+            "Durabilité : " + equipmentArmorDurabilityText(armor),
+            armor.isBroken() ? "État : Cassée" : "État : Utilisable",
+            "Valeur : " + std::to_string(armor.getValue()) + " pièces"
+        };
+        appendEquipmentWarnings(lines, DurabilityRules::describeArmorFitWarnings(armor, player.getRace()));
+        appendEquipmentWarnings(lines, DurabilityRules::describeArmorMaintenanceAdvice(armor, player.getRace()));
+        MessageScreen::show("INSPECTION - ARMURE", "equipment.armor.inspect.details", lines);
     }
 
     void showEquipmentWeaponEquipResult(const Player& player, const Weapon& weapon)
@@ -194,7 +212,8 @@ namespace
             {
                 player.getName() + " équipe : " + weapon.getName() + ".",
                 "Durabilité : " + equipmentWeaponDurabilityText(weapon),
-                weapon.isBroken() ? "Attention : cette arme est cassée, elle ne donnera aucun bonus." : "La prise en main est bonne. Cette arme est prête au combat."
+                weapon.isBroken() ? "Attention : cette arme est cassée, elle ne donnera aucun bonus." : "La prise en main est bonne. Cette arme est prête au combat.",
+                DurabilityRules::weaponWearStateText(weapon)
             }
         );
     }
@@ -208,6 +227,7 @@ namespace
                 player.getName() + " équipe : " + armor.getName() + ".",
                 "Durabilité : " + equipmentArmorDurabilityText(armor),
                 armor.isBroken() ? "Attention : cette armure est cassée, elle ne donnera aucun bonus." : "Ses protections sont maintenant actives.",
+                DurabilityRules::armorWearStateText(armor),
                 player.getName() + " possède maintenant " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + " PV."
             }
         );
@@ -346,7 +366,7 @@ bool EquipmentMenu::equipWeaponFromInventory(Player& player)
 
         if (action == 1)
         {
-            showEquipmentWeaponInspection(newWeapon);
+            showEquipmentWeaponInspection(player, newWeapon);
             continue;
         }
 
@@ -449,7 +469,7 @@ bool EquipmentMenu::equipArmorFromInventory(Player& player)
 
         if (action == 1)
         {
-            showEquipmentArmorInspection(newArmor);
+            showEquipmentArmorInspection(player, newArmor);
             continue;
         }
 

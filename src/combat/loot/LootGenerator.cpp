@@ -10,6 +10,9 @@
 #include "entity/Race.hpp"
 #include "item/material/MaterialCatalog.hpp"
 #include "item/weapon/WeaponType.hpp"
+#include "item/weapon/Weapon.hpp"
+#include "item/armor/Armor.hpp"
+#include "item/armor/ArmorType.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 
@@ -676,6 +679,211 @@ namespace
         player.getInventory().addMaterial(material);
         addLootLine(lines, reason, material);
     }
+
+    bool defeatedEnemyCanCarryEquipment(const Monster& monster)
+    {
+        if (monster.isInvocation())
+        {
+            return false;
+        }
+
+        if (isIntelligentRace(monster.getRace()))
+        {
+            return true;
+        }
+
+        return containsText(monster.getType(), "bandit")
+            || containsText(monster.getType(), "voleur")
+            || containsText(monster.getType(), "mercenaire")
+            || containsText(monster.getType(), "garde")
+            || containsText(monster.getType(), "aventurier")
+            || containsText(monster.getName(), "soldat");
+    }
+
+    bool playerRaceMatchesMonsterEquipmentSize(const Player& player, const Monster& monster)
+    {
+        const CharacterRace playerRace = player.getRace();
+        const Race monsterRace = monster.getRace();
+
+        if (monsterRace == Race::Humain && playerRace == CharacterRace::Human) return true;
+        if (monsterRace == Race::SemiHumain
+            && (playerRace == CharacterRace::SemiHuman
+                || playerRace == CharacterRace::SemiWolf
+                || playerRace == CharacterRace::SemiFox
+                || playerRace == CharacterRace::SemiDog
+                || playerRace == CharacterRace::SemiCat
+                || playerRace == CharacterRace::SemiLizard
+                || playerRace == CharacterRace::SemiBird)) return true;
+        if (monsterRace == Race::Elfe && playerRace == CharacterRace::Elf) return true;
+        if (monsterRace == Race::ElfeNoir && playerRace == CharacterRace::DarkElf) return true;
+        if (monsterRace == Race::Nain && playerRace == CharacterRace::Dwarf) return true;
+        if (monsterRace == Race::Gnome && playerRace == CharacterRace::Gnome) return true;
+        if (monsterRace == Race::Halfelin && playerRace == CharacterRace::Halfling) return true;
+        if (monsterRace == Race::Tieffelin && playerRace == CharacterRace::Tiefling) return true;
+        if (monsterRace == Race::Aasimar && playerRace == CharacterRace::Aasimar) return true;
+        if (monsterRace == Race::Kitsune && playerRace == CharacterRace::Kitsune) return true;
+        if (monsterRace == Race::Fee && playerRace == CharacterRace::Fairy) return true;
+        if ((monsterRace == Race::SemiDragon || monsterRace == Race::Draconide) && playerRace == CharacterRace::HalfDragon) return true;
+        if (monsterRace == Race::Orc && playerRace == CharacterRace::Orc) return true;
+        if (monsterRace == Race::Demon && playerRace == CharacterRace::Demon) return true;
+
+        return false;
+    }
+
+    int recoveredEquipmentDurability(Random& random, int maxDurability)
+    {
+        if (maxDurability <= 0)
+        {
+            return 0;
+        }
+
+        return std::max(1, maxDurability * random.between(1, 75) / 100);
+    }
+
+    void setWeaponDurabilityToRecoveredPercent(Weapon& weapon, Random& random)
+    {
+        if (weapon.isIndestructible())
+        {
+            return;
+        }
+
+        const int target = recoveredEquipmentDurability(random, weapon.getMaxDurability());
+        weapon.loseDurability(std::max(0, weapon.getMaxDurability() - target));
+    }
+
+    void setArmorDurabilityToRecoveredPercent(Armor& armor, Random& random)
+    {
+        if (armor.isIndestructible())
+        {
+            return;
+        }
+
+        const int target = recoveredEquipmentDurability(random, armor.getMaxDurability());
+        armor.loseDurability(std::max(0, armor.getMaxDurability() - target));
+    }
+
+    Weapon createRecoveredWeaponFromMonster(const Monster& monster, Random& random)
+    {
+        const int level = std::max(1, monster.getLevel());
+        const std::string baseName = containsText(monster.getType(), "archer") || containsText(monster.getType(), "rôdeur") || containsText(monster.getType(), "rodeur")
+            ? "Arc récupéré"
+            : containsText(monster.getType(), "mage") || containsText(monster.getType(), "shaman") || containsText(monster.getType(), "chamane")
+                ? "Bâton récupéré"
+                : containsText(monster.getType(), "garde") || containsText(monster.getType(), "lancier")
+                    ? "Lance récupérée"
+                    : containsText(monster.getType(), "brute") || containsText(monster.getType(), "orc")
+                        ? "Hache récupérée"
+                        : "Arme récupérée";
+
+        WeaponType type = WeaponType::Sword;
+        if (baseName.find("Arc") != std::string::npos) type = WeaponType::Bow;
+        else if (baseName.find("Bâton") != std::string::npos) type = WeaponType::Staff;
+        else if (baseName.find("Lance") != std::string::npos) type = WeaponType::Spear;
+        else if (baseName.find("Hache") != std::string::npos) type = WeaponType::Axe;
+
+        Weapon weapon(
+            baseName + " de " + monster.getName(),
+            "Arme récupérée après combat. Elle porte des marques d'usage et sa durabilité dépend de l'état dans lequel elle a été ramassée.",
+            24 + level * 7,
+            type,
+            std::max(1, level / 2),
+            std::max(2, level + 3),
+            std::max(1, level / 3),
+            45 + level * 4
+        );
+
+        setWeaponDurabilityToRecoveredPercent(weapon, random);
+        return weapon;
+    }
+
+    Armor createRecoveredArmorFromMonster(const Player& player, const Monster& monster, Random& random)
+    {
+        const int level = std::max(1, monster.getLevel());
+        const bool sameSize = playerRaceMatchesMonsterEquipmentSize(player, monster);
+        const bool heavy = containsText(monster.getType(), "garde")
+            || containsText(monster.getType(), "soldat")
+            || containsText(monster.getType(), "armure")
+            || monster.isElite();
+
+        Armor armor(
+            sameSize ? "Armure récupérée adaptée" : "Armure récupérée non ajustée",
+            sameSize
+                ? "Armure récupérée sur une race compatible. Elle peut être équipée après réparation si son état le permet."
+                : "Armure récupérée sur une morphologie différente. Mauvaise taille : non ajustée, elle sert surtout à la revente, au démontage ou à une future retouche.",
+            28 + level * 8,
+            heavy ? ArmorType::Chainmail : ArmorType::Leather,
+            std::max(1, level),
+            std::max(0, level / 3 + (heavy ? 1 : 0)),
+            50 + level * 5
+        );
+
+        setArmorDurabilityToRecoveredPercent(armor, random);
+        return armor;
+    }
+
+    void tryGiveRecoveredEquipmentLoot(Player& player, const Monster& monster, Random& random, DifficultyMode difficulty, std::vector<std::string>& lines)
+    {
+        if (!defeatedEnemyCanCarryEquipment(monster))
+        {
+            return;
+        }
+
+        int weaponChance = 5;
+        int armorChance = 4;
+
+        if (monster.isElite())
+        {
+            weaponChance += 4;
+            armorChance += 3;
+        }
+        if (monster.isEvolved())
+        {
+            weaponChance += 2;
+            armorChance += 2;
+        }
+        if (containsText(monster.getType(), "garde") || containsText(monster.getType(), "soldat") || containsText(monster.getType(), "mercenaire"))
+        {
+            weaponChance += 3;
+            armorChance += 3;
+        }
+
+        switch (difficulty)
+        {
+            case DifficultyMode::Easy: weaponChance += 1; armorChance += 1; break;
+            case DifficultyMode::Hard: weaponChance -= 1; break;
+            case DifficultyMode::Nightmare: weaponChance -= 2; armorChance -= 1; break;
+            case DifficultyMode::Lethal: weaponChance -= 3; armorChance -= 2; break;
+            case DifficultyMode::Normal:
+            default: break;
+        }
+
+        weaponChance = std::clamp(weaponChance, 2, 14);
+        armorChance = std::clamp(armorChance, 1, 11);
+
+        if (random.between(1, 100) <= weaponChance)
+        {
+            Weapon weapon = createRecoveredWeaponFromMonster(monster, random);
+            const std::string dur = weapon.isIndestructible()
+                ? "indestructible"
+                : std::to_string(weapon.getDurability()) + "/" + std::to_string(weapon.getMaxDurability());
+            player.getInventory().addWeapon(weapon);
+            lines.push_back("Équipement récupéré : " + weapon.getName() + " | Durabilité : " + dur + ".");
+        }
+
+        if (random.between(1, 100) <= armorChance)
+        {
+            Armor armor = createRecoveredArmorFromMonster(player, monster, random);
+            const std::string dur = armor.isIndestructible()
+                ? "indestructible"
+                : std::to_string(armor.getDurability()) + "/" + std::to_string(armor.getMaxDurability());
+            player.getInventory().addArmor(armor);
+            lines.push_back("Équipement récupéré : " + armor.getName() + " | Durabilité : " + dur + ".");
+            if (armor.getDescription().find("non ajustée") != std::string::npos)
+            {
+                lines.push_back("Note : cette armure n'est pas à ta taille. Elle ne peut pas être équipée sans future retouche, mais garde une valeur de revente/démontage.");
+            }
+        }
+    }
 }
 
 void LootGenerator::giveDefeatedWaveLoot(
@@ -698,6 +906,13 @@ void LootGenerator::giveDefeatedWaveLoot(
     {
         const Monster& monster = wave.getDefeatedEnemy(i);
         if (tryGiveMonsterLoot(player, monster, random, difficulty, lootChance, lines))
+        {
+            atLeastOneLoot = true;
+        }
+
+        const std::size_t beforeEquipmentLines = lines.size();
+        tryGiveRecoveredEquipmentLoot(player, monster, random, difficulty, lines);
+        if (lines.size() > beforeEquipmentLines)
         {
             atLeastOneLoot = true;
         }
@@ -817,6 +1032,12 @@ void LootGenerator::giveDefeatedBossLoot(
         bossFragment = MaterialCatalog::createAnomalyGlitchFragment(fragmentQuantity);
         player.getInventory().addMaterial(MaterialCatalog::createVariationResidue(2));
         lines.push_back("Le fragment glitch laisse aussi deux résidus de variation.");
+    }
+    else if (boss.getBossId() == 36)
+    {
+        bossFragment = MaterialCatalog::createAnomalyGlitchFragment(fragmentQuantity + 1);
+        player.getInventory().addMaterial(MaterialCatalog::createVariationResidue(3));
+        lines.push_back("La Source ne laisse pas un cadavre : seulement des textures mortes et trois résidus de variation.");
     }
     else if (boss.getBossId() == 12)
     {
@@ -1061,7 +1282,14 @@ bool LootGenerator::tryGiveMonsterLoot(
             break;
 
         case Race::Bete:
-            loot = MaterialCatalog::createWolfFang(quantity);
+            if (containsText(monster.getType(), "cuir") || containsText(monster.getType(), "massive") || containsText(monster.getType(), "colossale") || random.between(1, 100) <= 40)
+            {
+                loot = MaterialCatalog::createBeastHide(quantity);
+            }
+            else
+            {
+                loot = MaterialCatalog::createWolfFang(quantity);
+            }
             break;
 
         case Race::Humain:
@@ -1074,18 +1302,30 @@ bool LootGenerator::tryGiveMonsterLoot(
         case Race::Tieffelin:
         case Race::Hobgobelin:
         case Race::Orc:
-            if (random.between(1, 100) <= 35)
+        {
+            const int humanoidLootRoll = random.between(1, 100);
+            if (humanoidLootRoll <= 18)
             {
                 loot = MaterialCatalog::createBattleTornBadge(quantity);
             }
-            else
+            else if (humanoidLootRoll <= 55)
             {
                 loot = MaterialCatalog::createRustedMetalFragment(quantity);
             }
+            else if (humanoidLootRoll <= 78)
+            {
+                loot = MaterialCatalog::createWeakRepairKit(1);
+            }
+            else
+            {
+                loot = MaterialCatalog::createArcaneDust(quantity);
+            }
             break;
+        }
 
         case Race::MortVivant:
-            loot = MaterialCatalog::createCrackedBone(quantity);
+        case Race::Esprit:
+            loot = random.between(1, 100) <= 72 ? MaterialCatalog::createCrackedBone(quantity) : MaterialCatalog::createShadowThread(quantity);
             break;
 
         case Race::Plante:
@@ -1099,13 +1339,50 @@ bool LootGenerator::tryGiveMonsterLoot(
         case Race::Demon:
         case Race::Aasimar:
         case Race::Fee:
-        case Race::SemiDragon:
             loot = MaterialCatalog::createArcaneDust(quantity);
             break;
 
-        default:
-            loot = MaterialCatalog::createWornLeatherPiece(quantity);
+        case Race::SemiDragon:
+        case Race::Dragon:
+        case Race::Draconide:
+            loot = random.between(1, 100) <= 65 ? MaterialCatalog::createDraconicScaleFragment(quantity) : MaterialCatalog::createArcaneDust(quantity);
             break;
+
+        case Race::Elementaire:
+        case Race::AnomalieArcanique:
+        case Race::Aberration:
+            loot = random.between(1, 100) <= 55 ? MaterialCatalog::createUnstableCore(quantity) : MaterialCatalog::createArcaneDust(quantity);
+            break;
+
+        case Race::Insectoide:
+            loot = random.between(1, 100) <= 55 ? MaterialCatalog::createWornLeatherPiece(quantity) : MaterialCatalog::createSlimeResidue(quantity);
+            break;
+
+        case Race::Construction:
+            loot = random.between(1, 100) <= 70 ? MaterialCatalog::createRustedMetalFragment(quantity) : MaterialCatalog::createRunicIronShard(quantity);
+            break;
+
+        default:
+        {
+            const int genericLootRoll = random.between(1, 100);
+            if (genericLootRoll <= 28)
+            {
+                loot = MaterialCatalog::createWornLeatherPiece(quantity);
+            }
+            else if (genericLootRoll <= 58)
+            {
+                loot = MaterialCatalog::createBitterHealingLeaf(quantity);
+            }
+            else if (genericLootRoll <= 82)
+            {
+                loot = MaterialCatalog::createSlimeResidue(quantity);
+            }
+            else
+            {
+                loot = MaterialCatalog::createArcaneDust(quantity);
+            }
+            break;
+        }
     }
 
     if (monster.isElite() && random.between(1, 100) <= 20)
@@ -1153,10 +1430,20 @@ bool LootGenerator::tryGiveMonsterLoot(
         giveExtraLoot(player, applyLootQuality(MaterialCatalog::createDraconicScaleFragment(1), monster, player, random, true, lines), "Fragment solide arraché au choc", lines);
     }
 
-    if ((monster.getRace() == Race::Fee || containsText(monster.getName(), "Fail") || containsText(monster.getType(), "mage"))
+    if ((monster.getRace() == Race::Fee || containsText(monster.getName(), "Fail") || containsText(monster.getType(), "mage") || containsText(monster.getType(), "mancien") || containsText(monster.getType(), "anomalie"))
         && random.between(1, 100) <= 22)
     {
         giveExtraLoot(player, applyLootQuality(MaterialCatalog::createUnstableCore(1), monster, player, random, true, lines), "Résidu magique condensé", lines);
+    }
+
+    if ((monster.getRace() == Race::Construction || containsText(monster.getType(), "rune")) && random.between(1, 100) <= 26)
+    {
+        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createRunicIronShard(1), monster, player, random, true, lines), "Éclat runique récupéré dans la carcasse", lines);
+    }
+
+    if ((monster.getRace() == Race::AnomalieArcanique || containsText(monster.getType(), "variation") || containsText(monster.getType(), "anomalie")) && random.between(1, 100) <= 24)
+    {
+        giveExtraLoot(player, applyLootQuality(MaterialCatalog::createVariationResidue(1), monster, player, random, true, lines), "Résidu de variation stabilisé", lines);
     }
 
     giveCoinsIfLogical(player, monster, random, lines);

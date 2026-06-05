@@ -147,7 +147,8 @@ bool CombatPotionUse::useHealingPotion(
     const int hpBefore = player.getHp();
     std::vector<std::string> notes;
     bool curedStatus = applyCurativeStatusEffect(player, potion, notes);
-    player.heal(potion.getPower());
+    const int announcedHeal = potion.getHealingAmountForMaxHp(player.getMaxHp());
+    player.heal(announcedHeal);
     ThreatSystem::markSelfHealingAction(player);
 
     if (!player.hasInfiniteConsumables())
@@ -157,7 +158,8 @@ bool CombatPotionUse::useHealingPotion(
 
     std::vector<std::string> lines;
     lines.push_back(player.getName() + " boit " + potion.getName() + ".");
-    lines.push_back("Soin annoncé : +" + std::to_string(potion.getPower()) + " PV.");
+    lines.push_back("Soin annoncé : " + potion.getPowerDisplayText() + ".");
+    lines.push_back("Soin réel : +" + std::to_string(player.getHp() - hpBefore) + " PV.");
     lines.push_back("PV : " + std::to_string(hpBefore) + " -> " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".");
     for (const std::string& note : notes)
     {

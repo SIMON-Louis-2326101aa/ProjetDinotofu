@@ -24,6 +24,8 @@ public:
     // EN: clear declares or implements a focused behavior used by this module.
     // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
     static void clear();
+    static void useNormalTheme();
+    static void useCombatTheme();
     // EN: pauseSeconds declares or implements a focused behavior used by this module.
     // FR: pauseSeconds déclare ou implémente un comportement précis utilisé par ce module.
     static void pauseSeconds(int seconds);

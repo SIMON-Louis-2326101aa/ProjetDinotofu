@@ -20,6 +20,11 @@ std::vector<ShopType> ShopCatalog::getAvailableShopTypes()
         ShopType::Library,
         ShopType::Blacksmith,
         ShopType::Alchemist,
+        ShopType::Enchanter,
+        ShopType::CityService,
+        ShopType::Lodging,
+        ShopType::Transport,
+        ShopType::Church,
         ShopType::BlackMarket
     };
 }
@@ -65,6 +70,31 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
         case ShopType::Material:
             shop.addItem(ShopItem("rusted_metal_fragment", "Fragment de métal rouillé", "Reste d'équipement brisé, encore utile pour des réparations basiques.", ShopItemCategory::Material, 10, 3, 5 + rotation % 5));
             shop.addItem(ShopItem("worn_leather_piece", "Morceau de cuir abîmé", "Matière simple pour armures légères.", ShopItemCategory::Material, 14, 5, 4 + rotation % 4));
+            if (rotation % 3 == 1)
+            {
+                shop.addItem(ShopItem("runic_iron_shard", "Éclat de fer runique", "Métal de palier intermédiaire pour runes simples et armes stables.", ShopItemCategory::Material, 62, 24, 2 + rotation % 2));
+            }
+            if (rotation % 4 == 2)
+            {
+                shop.addItem(ShopItem("polished_scale_plate", "Plaque d'écailles polies", "Matériau de monstre préparé pour harnais et protections semi-lourdes.", ShopItemCategory::Material, 74, 30, 2));
+            }
+            if (rotation % 5 == 3)
+            {
+                shop.addItem(ShopItem("amber_tempering_oil", "Huile de trempe ambrée", "Huile d'atelier pour stabiliser des effets latents sans passer en relique.", ShopItemCategory::Material, 82, 34, 1));
+            }
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("sun_dried_clay", "Argile rouge séchée", "Matériau sec pour plaques, sceaux et réparations propres.", ShopItemCategory::Material, 42, 16, 2 + rotation % 2));
+                shop.addItem(ShopItem("cold_iron_nail", "Clou de fer froid", "Pièce de mine lourde utile aux mécanismes, armures et pièges.", ShopItemCategory::Material, 78, 31, 1 + rotation % 2));
+            }
+            if (rotation % 3 == 2)
+            {
+                shop.addItem(ShopItem("tiny_gear_spring", "Petit ressort d'engrenage", "Pièce mécanique pour arbalètes, pièges et objets bricolés.", ShopItemCategory::Material, 70, 27, 2));
+            }
+            if (rotation % 4 == 1)
+            {
+                shop.addItem(ShopItem("forgotten_camp_tag", "Plaque de camp oubliée", "Renseignement matériel récupéré sur de vieux relais de guilde.", ShopItemCategory::Material, 32, 12, 2));
+            }
             if (rotation % 2 == 1)
             {
                 shop.addItem(ShopItem("weak_repair_kit", "Kit de réparation faible", "Outil fragile : +25% max, durabilité faible.", ShopItemCategory::Material, 50, 18, 1));
@@ -89,6 +119,16 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("precision_harvest_tools", "Outils de récupération précise", "Outils coûteux qui améliorent légèrement la qualité des ressources récupérées.", ShopItemCategory::Material, 210, 95, 1));
             }
+            if (rotation % 5 == 1)
+            {
+                shop.addItem(ShopItem("cracked_bell_clapper", "Battant de cloche fissuré", "Bronze sacré récupéré dans un vieux temple visitable.", ShopItemCategory::Material, 92, 37, 1));
+                shop.addItem(ShopItem("white_bone_chalk", "Craie d'os blanc", "Minéral rituel utile aux cercles, archives et contrats de mages.", ShopItemCategory::Material, 64, 24, 2));
+            }
+            if (rotation % 5 == 3)
+            {
+                shop.addItem(ShopItem("weeping_stone_tear", "Larme de pierre pleureuse", "Minéral étrange pour statues, autels et réparations décoratives.", ShopItemCategory::Material, 84, 33, 1));
+                shop.addItem(ShopItem("smuggler_token", "Jeton de contrebandier", "Jeton discret récupéré sous les ponts, utile aux quêtes de marché douteux.", ShopItemCategory::Material, 78, 30, 1));
+            }
             break;
 
         case ShopType::Plant:
@@ -100,6 +140,34 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 3 == 0)
             {
                 shop.addItem(ShopItem("clean_harvest_manual", "Technique passive : récolte propre", "Petit manuel qui aide à récupérer plantes et matériaux sans les abîmer.", ShopItemCategory::Information, 120, 0, 1, true));
+            }
+            if (rotation % 2 == 1)
+            {
+                shop.addItem(ShopItem("mycelium_lantern", "Lanterne de mycélium", "Champignon-lampe pour potions nocturnes et encres vivantes.", ShopItemCategory::Plant, 45, 18, 2));
+            }
+            if (rotation % 3 == 2)
+            {
+                shop.addItem(ShopItem("living_vine_fiber", "Fibre de vigne vivante", "Fibre réactive pour robes, liens et réparations végétales.", ShopItemCategory::Plant, 66, 28, 1));
+            }
+            if (rotation % 4 == 3)
+            {
+                shop.addItem(ShopItem("echoing_resin", "Résine d'écho", "Résine sonore utile aux arcs, bâtons et pièges.", ShopItemCategory::Plant, 64, 26, 1));
+            }
+            if (rotation % 5 == 0)
+            {
+                shop.addItem(ShopItem("cliff_basil_leaf", "Feuille de basilic des falaises", "Plante salée pour tisanes, vertige et potions d'exploration.", ShopItemCategory::Plant, 58, 24, 2));
+            }
+            if (rotation % 6 == 4)
+            {
+                shop.addItem(ShopItem("luminous_moth_wing", "Aile de mite lumineuse", "Composant fragile pour encres, lanternes et fioles de garde-lucioles.", ShopItemCategory::Plant, 66, 26, 1));
+            }
+            if (rotation % 5 == 2)
+            {
+                shop.addItem(ShopItem("blue_mist_reed", "Roseau de brume bleue", "Plante aquatique pour potions de souffle, discrétion et exploration humide.", ShopItemCategory::Plant, 72, 27, 2));
+            }
+            if (rotation % 7 == 4)
+            {
+                shop.addItem(ShopItem("petrified_rose_petals", "Pétales de rose pétrifiée", "Relique florale étrange, utile aux hommages et aux sorts de pierre douce.", ShopItemCategory::Plant, 122, 49, 1));
             }
             break;
 
@@ -116,6 +184,80 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 4 == 2)
             {
                 shop.addItem(ShopItem("weak_repair_kit", "Kit de réparation d'armurier", "Petit kit gardé pour les clients qui cassent tout trop vite.", ShopItemCategory::Material, 58, 18, 1));
+            }
+            if (rotation % 2 == 1)
+            {
+                shop.addItem(ShopItem("reinforced_leather_armor", "Armure en cuir renforcée", "Premier vrai cran de protection mobile après le cuir usé.", ShopItemCategory::Armor, 155, 48, 1));
+            }
+            if (rotation % 3 == 0)
+            {
+                shop.addItem(ShopItem("guard_chainmail", "Cotte de maille de garde", "Protection de milice robuste, plus chère mais beaucoup plus rassurante.", ShopItemCategory::Armor, 225, 72, 1));
+            }
+            if (rotation % 4 == 1)
+            {
+                shop.addItem(ShopItem("runed_apprentice_robe", "Robe runique d'apprenti", "Tenue magique renforcée, utile aux mages qui prennent quand même des baffes.", ShopItemCategory::Armor, 190, 60, 1));
+            }
+            if (rotation % 5 == 2)
+            {
+                shop.addItem(ShopItem("crude_plate_armor", "Armure de plaques grossière", "Armure lourde bas-moyenne : efficace, bruyante et pas encore noble.", ShopItemCategory::Armor, 285, 92, 1));
+            }
+            if (rotation % 4 == 3)
+            {
+                shop.addItem(ShopItem("traveler_scale_vest", "Veste d'écailles de voyage", "Protection mobile intermédiaire, entre cuir renforcé et maille lourde.", ShopItemCategory::Armor, 235, 74, 1));
+            }
+            if (rotation % 5 == 4)
+            {
+                shop.addItem(ShopItem("threaded_rune_robe", "Robe à fils runiques", "Robe magique stable pour mages qui commencent à sortir des vrais sentiers.", ShopItemCategory::Armor, 245, 78, 1));
+            }
+            if (rotation % 6 == 5)
+            {
+                shop.addItem(ShopItem("militia_half_plate", "Demi-plaques de milice", "Protection lourde intermédiaire, moins noble qu'une plaque complète.", ShopItemCategory::Armor, 335, 108, 1));
+            }
+            if (rotation % 5 == 2)
+            {
+                shop.addItem(ShopItem("runic_chainmail", "Cotte runique de garde", "Maille renforcée avec une rune simple contre les chocs faibles.", ShopItemCategory::Armor, 430, 188, 1));
+            }
+            if (rotation % 7 == 3)
+            {
+                shop.addItem(ShopItem("shadow_thread_coat", "Manteau cousu d'ombre", "Tenue légère rare : discrétion, esquive et résistance magique correcte.", ShopItemCategory::Armor, 390, 160, 1));
+            }
+            if (rotation % 8 == 4)
+            {
+                shop.addItem(ShopItem("polished_scale_harness", "Harnais d'écailles polies", "Armure semi-lourde de monstre, solide mais plus exigeante à entretenir.", ShopItemCategory::Armor, 500, 210, 1));
+            }
+            if (rotation % 4 == 0)
+            {
+                shop.addItem(ShopItem("damaged_cartographer_coat", "Manteau de cartographe abîmé", "Tenue mobile pour exploration, discrétion et routes incertaines.", ShopItemCategory::Armor, 270, 84, 1));
+                shop.addItem(ShopItem("cold_survival_parka", "Parka de survie glaciale", "Tenue équipée à la place d'une armure classique pour biomes froids.", ShopItemCategory::Armor, 320, 120, 1));
+                shop.addItem(ShopItem("heat_survival_suit", "Tenue ignifugée de terrain", "Tenue équipée à la place d'une armure classique pour chaleur et feu faible.", ShopItemCategory::Armor, 350, 130, 1));
+                if (rotation % 2 == 0)
+                {
+                    shop.addItem(ShopItem("insulated_explorer_coat", "Manteau isolant d'explorateur", "Tenue polyvalente contre températures pénibles, moins spécialisée mais très pratique.", ShopItemCategory::Armor, 405, 150, 1));
+                }
+            }
+            if (rotation % 5 == 1)
+            {
+                shop.addItem(ShopItem("sun_dried_clay_breastplate", "Plastron d'argile séchée", "Protection semi-rigide, utile en terrain sec et routes poussiéreuses.", ShopItemCategory::Armor, 350, 112, 1));
+            }
+            if (rotation % 6 == 2)
+            {
+                shop.addItem(ShopItem("living_fiber_robe", "Robe aux fibres vivantes", "Robe magique souple qui supporte mieux les petites erreurs de canalisation.", ShopItemCategory::Armor, 385, 124, 1));
+            }
+            if (rotation % 7 == 5)
+            {
+                shop.addItem(ShopItem("whistling_miner_harness", "Harnais de mineur sifflant", "Protection lourde de mine : bruyante, solide et très utilitaire.", ShopItemCategory::Armor, 430, 145, 1));
+            }
+            if (rotation % 6 == 0)
+            {
+                shop.addItem(ShopItem("drowned_archivist_vest", "Gilet d'archiviste noyé", "Armure légère utile aux quêtes de paperasse, archives et sorties humides.", ShopItemCategory::Armor, 390, 130, 1));
+            }
+            if (rotation % 8 == 2)
+            {
+                shop.addItem(ShopItem("grey_drake_harness", "Harnais de drake gris", "Protection semi-lourde issue des falaises et des drakes gris.", ShopItemCategory::Armor, 540, 220, 1));
+            }
+            if (rotation % 7 == 1)
+            {
+                shop.addItem(ShopItem("patchwork_carnival_cape", "Cape de foire décousue", "Cape mobile à perles miroir, plus étrange que noble.", ShopItemCategory::Armor, 350, 112, 1));
             }
             break;
 
@@ -148,6 +290,109 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("heavy_training_axe", "Hache lourde émoussée", "Arme lourde de débutant, lente mais cohérente pour les briseurs.", ShopItemCategory::Weapon, 115, 32, 1));
             }
+
+            if (rotation % 2 == 1)
+            {
+                shop.addItem(ShopItem("iron_sword", "Épée de fer simple", "Arme de palier bas-moyen : plus fiable que l'équipement de départ.", ShopItemCategory::Weapon, 185, 58, 1));
+                shop.addItem(ShopItem("reinforced_dagger", "Dague renforcée", "Dague plus nette pour assassins, duellistes et profils mobiles.", ShopItemCategory::Weapon, 165, 52, 1));
+            }
+            if (rotation % 3 == 1)
+            {
+                shop.addItem(ShopItem("guard_spear", "Lance de garde", "Lance de milice robuste, premier vrai cran au-dessus de l'entraînement.", ShopItemCategory::Weapon, 195, 60, 1));
+                shop.addItem(ShopItem("hunting_bow", "Arc de chasse", "Arc plus stable, intéressant si les munitions sont gérées.", ShopItemCategory::Weapon, 205, 65, 1));
+            }
+            if (rotation % 4 == 1)
+            {
+                shop.addItem(ShopItem("apprentice_staff", "Bâton canalisateur", "Bâton renforcé pour mage ou voyageur prudent.", ShopItemCategory::Weapon, 175, 55, 1));
+            }
+            if (rotation % 5 == 2)
+            {
+                shop.addItem(ShopItem("heavy_iron_axe", "Hache lourde de fer", "Arme lourde plus sérieuse, rare en boutique normale.", ShopItemCategory::Weapon, 235, 72, 1));
+            }
+            if (rotation % 4 == 0)
+            {
+                shop.addItem(ShopItem("workshop_hammer", "Marteau d'atelier renforcé", "Premier marteau sérieux pour briseurs, artisans trop énervés et tanks offensifs.", ShopItemCategory::Weapon, 215, 66, 1));
+            }
+            if (rotation % 5 == 1)
+            {
+                shop.addItem(ShopItem("patrol_crossbow", "Arbalète de patrouille", "Arbalète plus fiable pour les routes dangereuses.", ShopItemCategory::Weapon, 225, 70, 1));
+            }
+            if (rotation % 6 == 3)
+            {
+                shop.addItem(ShopItem("balanced_rapier", "Rapière équilibrée", "Lame fine pour duelistes précis, rare chez les forgerons simples.", ShopItemCategory::Weapon, 205, 64, 1));
+            }
+            if (rotation % 4 == 3)
+            {
+                shop.addItem(ShopItem("mercenary_sabre", "Sabre de mercenaire", "Lame de route plus sérieuse, mais encore raisonnable pour l'économie bas-moyenne.", ShopItemCategory::Weapon, 265, 84, 1));
+            }
+            if (rotation % 5 == 4)
+            {
+                shop.addItem(ShopItem("curved_ambush_dagger", "Dague courbe d'embuscade", "Dague rapide pour profils mobiles qui veulent un vrai cran au-dessus.", ShopItemCategory::Weapon, 235, 76, 1));
+            }
+            if (rotation % 6 == 2)
+            {
+                shop.addItem(ShopItem("militia_longbow", "Arc long de milice", "Arc fiable pour tenir une ligne avec des munitions correctes.", ShopItemCategory::Weapon, 275, 88, 1));
+            }
+            if (rotation % 5 == 0)
+            {
+                shop.addItem(ShopItem("bound_oak_staff", "Bâton de chêne lié", "Catalyseur bas-moyen pour mages, plus durable qu'un bâton d'apprenti.", ShopItemCategory::Weapon, 255, 82, 1));
+            }
+            if (rotation % 5 == 1)
+            {
+                shop.addItem(ShopItem("runic_iron_blade", "Lame de fer runique", "Palier intermédiaire : dégâts réguliers et effet latent de brise-garde léger.", ShopItemCategory::Weapon, 420, 178, 1));
+            }
+            if (rotation % 6 == 4)
+            {
+                shop.addItem(ShopItem("amber_edge_dagger", "Dague d'ambre vive", "Dague rapide avec effet latent de saignement faible sur cible fragilisée.", ShopItemCategory::Weapon, 370, 152, 1));
+            }
+            if (rotation % 7 == 5)
+            {
+                shop.addItem(ShopItem("ashen_longbow", "Arc long cendré", "Arc stable pour munitions avancées et amorces élémentaires légères.", ShopItemCategory::Weapon, 395, 165, 1));
+            }
+            if (rotation % 8 == 6)
+            {
+                shop.addItem(ShopItem("channeling_scepter", "Sceptre canalisateur", "Catalyseur bas-moyen pour limiter l'instabilité des petits sorts.", ShopItemCategory::Weapon, 460, 190, 1));
+            }
+            if (rotation % 4 == 2)
+            {
+                shop.addItem(ShopItem("relay_falchion", "Fauchon de relais", "Lame de route solide, pensée pour protéger les relais et couloirs étroits.", ShopItemCategory::Weapon, 335, 112, 1));
+            }
+            if (rotation % 5 == 3)
+            {
+                shop.addItem(ShopItem("red_clay_sabre", "Sabre d'argile rouge", "Sabre fiable en terrain sec, renforcé par une couche d'argile cuite.", ShopItemCategory::Weapon, 390, 138, 1));
+            }
+            if (rotation % 6 == 1)
+            {
+                shop.addItem(ShopItem("broken_map_dagger", "Dague de carte brisée", "Dague d'éclaireur gravée à partir d'un fragment cartographique.", ShopItemCategory::Weapon, 370, 130, 1));
+            }
+            if (rotation % 7 == 4)
+            {
+                shop.addItem(ShopItem("singing_resin_staff", "Bâton de résine chantante", "Catalyseur végétal pour sorts simples et gestes de soutien.", ShopItemCategory::Weapon, 470, 172, 1));
+            }
+            if (rotation % 8 == 5)
+            {
+                shop.addItem(ShopItem("cold_lantern_bow", "Arc des lanternes froides", "Arc nocturne renforcé à la résine d'écho.", ShopItemCategory::Weapon, 440, 158, 1));
+            }
+            if (rotation % 9 == 7)
+            {
+                shop.addItem(ShopItem("whistling_mine_hammer", "Marteau de mine sifflante", "Marteau vibrant, brutal contre constructions et armures mal préparées.", ShopItemCategory::Weapon, 520, 190, 1));
+            }
+            if (rotation % 6 == 0)
+            {
+                shop.addItem(ShopItem("firefly_iron_rapier", "Rapière des lucioles de fer", "Lame fine et lumineuse pour duellistes prudents.", ShopItemCategory::Weapon, 535, 210, 1));
+            }
+            if (rotation % 7 == 2)
+            {
+                shop.addItem(ShopItem("drowned_ledger_mace", "Masse du registre noyé", "Arme lourde qui transforme la paperasse en percussion administrative.", ShopItemCategory::Weapon, 590, 235, 1));
+            }
+            if (rotation % 8 == 3)
+            {
+                shop.addItem(ShopItem("grey_cliff_spear", "Lance des falaises grises", "Lance stable renforcée par des écailles de drake gris.", ShopItemCategory::Weapon, 555, 218, 1));
+            }
+            if (rotation % 9 == 4)
+            {
+                shop.addItem(ShopItem("broken_carnival_whip", "Fouet de foire cassée", "Arme souple de diversion, dangereuse surtout quand la cible panique.", ShopItemCategory::Weapon, 505, 198, 1));
+            }
             if (rotation % 2 == 0)
             {
                 shop.addItem(ShopItem("training_arrows", "Flèches d'entraînement", "Munitions basiques pour arcs.", ShopItemCategory::Material, 12, 2, 12));
@@ -171,6 +416,15 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             break;
 
         case ShopType::Consumable:
+            shop.addItem(ShopItem("survival_ration", "Ration de survie", "Ration simple : abordable, mais pas donnée, pour continuer une sortie longue sans rentrer.", ShopItemCategory::Material, 16, 7, 3));
+            if (rotation % 3 == 0)
+            {
+                shop.addItem(ShopItem("thermal_survival_blanket", "Couverture de survie thermique", "Protection consommable contre les sorties froides ou glacées.", ShopItemCategory::Material, 42, 15, 1));
+            }
+            if (rotation % 3 == 1)
+            {
+                shop.addItem(ShopItem("cooling_survival_wrap", "Voile anti-chaleur", "Protection consommable contre chaleur et braises.", ShopItemCategory::Material, 46, 16, 1));
+            }
             shop.addItem(ShopItem("minor_healing_potion", "Petite potion de soin", "Restaure peu de PV, mais coûte peu.", ShopItemCategory::Consumable, 12, 4, 4 + rotation % 3));
             shop.addItem(ShopItem("basic_healing_potion", "Potion de soin", "Restaure une quantité simple de PV.", ShopItemCategory::Consumable, 25, 8, 3 + rotation % 3));
             shop.addItem(ShopItem("basic_damage_potion", "Potion de rage", "Renforce une attaque offensive.", ShopItemCategory::Consumable, 30, 10, 2 + rotation % 2));
@@ -239,6 +493,42 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("preservation_vials", "Fioles de conservation", "Outil de terrain pour mieux préserver liquides, braises et résidus.", ShopItemCategory::Material, 240, 110, 1));
             }
+            if (rotation % 3 == 1)
+            {
+                shop.addItem(ShopItem("stabilizing_tea", "Thé stabilisant", "Infusion calme pour petites blessures et longues sorties.", ShopItemCategory::Consumable, 58, 16, 2));
+            }
+            if (rotation % 4 == 2)
+            {
+                shop.addItem(ShopItem("miner_bracing_tonic", "Tonique de mineur", "Buff robuste pour encaisser un mauvais choc.", ShopItemCategory::Consumable, 98, 28, 1));
+            }
+            if (rotation % 5 == 4)
+            {
+                shop.addItem(ShopItem("moon_salt_purifier", "Purificateur au sel lunaire", "Soin et nettoyage faible d'altérations, stock limité.", ShopItemCategory::Consumable, 145, 40, 1));
+            }
+            if (rotation % 4 == 0 || rotation % 4 == 3)
+            {
+                shop.addItem(ShopItem("vitality_healing_potion", "Potion de vitalité proportionnelle", "Potion de soin en pourcentage : récupère 35% des PV max, très utile sur les profils robustes.", ShopItemCategory::Consumable, 165, 42, 1));
+            }
+            if (rotation % 7 == 5)
+            {
+                shop.addItem(ShopItem("royal_vitality_healing_potion", "Potion de vitalité royale", "Potion rare en pourcentage : récupère 60% des PV max. Chère, mais monstrueuse sur un tank.", ShopItemCategory::Consumable, 360, 95, 1));
+            }
+            if (rotation % 5 == 2)
+            {
+                shop.addItem(ShopItem("witch_bottle", "Bouteille de sorcière vide", "Outil alchimique pour mélanges de terrain et futures recettes.", ShopItemCategory::Material, 92, 38, 1));
+            }
+            if (rotation % 6 == 0)
+            {
+                shop.addItem(ShopItem("cliff_basil_tea", "Tisane de basilic des falaises", "Soin léger et stabilisation pour longues sorties.", ShopItemCategory::Consumable, 104, 34, 1));
+            }
+            if (rotation % 6 == 2)
+            {
+                shop.addItem(ShopItem("firefly_guard_vial", "Fiole de garde-lucioles", "Buff lumineux court pour défense et exploration nocturne.", ShopItemCategory::Consumable, 148, 48, 1));
+            }
+            if (rotation % 7 == 3)
+            {
+                shop.addItem(ShopItem("carnival_diversion_ticket", "Ticket de diversion de foire", "Objet spécial pour détourner l'attention ou préparer une fuite.", ShopItemCategory::Consumable, 168, 50, 1));
+            }
             break;
 
         case ShopType::Library:
@@ -262,6 +552,9 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
                 shop.addItem(ShopItem("wandering_ember_scroll", "Parchemin de braise errante", "Parchemin sans grimoire stable équivalent : puissant pour son prix, mais plus capricieux.", ShopItemCategory::Spell, 140, 0, 1));
                 shop.addItem(ShopItem("minor_purification_scroll", "Parchemin de purification mineure", "Magie jetable : utile aux mages comme aux non-mages quand une altération devient trop lourde.", ShopItemCategory::Spell, 125, 0, 1));
                 shop.addItem(ShopItem("crawling_venom_scroll", "Parchemin de venin rampant", "Sort jetable sans grimoire stable courant : empoisonne et fatigue la cible avant de brûler avec le papier.", ShopItemCategory::Spell, 150, 0, 1));
+                shop.addItem(ShopItem("glass_step_scroll", "Parchemin de pas de verre", "Sort jetable d'évitement bref, utile quand l'engagement devient mauvais.", ShopItemCategory::Spell, 180, 0, 1));
+                shop.addItem(ShopItem("vine_snare_scroll", "Parchemin de ronce-lien", "Sort jetable végétal qui gêne une cible mobile.", ShopItemCategory::Spell, 170, 0, 1));
+                shop.addItem(ShopItem("archivist_focus_ink", "Encre de concentration d'archiviste", "Fiole de buff pour lecture, précision, rapport et petits calculs.", ShopItemCategory::Consumable, 118, 32, 1));
             }
             if (rotation % 3 == 0)
             {
@@ -348,12 +641,25 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("legend_storyteller_routes", "Carnet des conteurs itinérants", "Ajoute des rumeurs de bibliothèque et de taverne pour le futur lore PNJ.", ShopItemCategory::Information, 105, 0, 1, true));
             }
+            if (rotation % 9 == 2)
+            {
+                shop.addItem(ShopItem("sanctuary_wax_seal", "Sceau de cire sanctuaire", "Document sacré utile aux futures légendes de temple et aux quêtes administratives nobles.", ShopItemCategory::Information, 116, 0, 1, true));
+            }
+            if (rotation % 9 == 5)
+            {
+                shop.addItem(ShopItem("sealed_debt_slip", "Billet de dette scellé", "Document marchand à classer proprement avant de savoir qui doit quoi.", ShopItemCategory::Information, 132, 0, 1, true));
+            }
             break;
 
 
         case ShopType::Blacksmith:
             shop.addItem(ShopItem("rusted_metal_fragment", "Fragment de métal rouillé", "Le forgeron revend des restes de métal pour les réparations d'urgence.", ShopItemCategory::Material, 14, 4, 6 + rotation % 4));
             shop.addItem(ShopItem("worn_leather_piece", "Morceau de cuir abîmé", "Utile pour rafistoler les armures légères.", ShopItemCategory::Material, 18, 5, 4 + rotation % 3));
+            shop.addItem(ShopItem("runic_iron_shard", "Éclat de fer runique", "Composant d'atelier pour renforcer lame, maille ou catalyseur avant les vrais objets héroïques.", ShopItemCategory::Material, 70, 24, 2 + rotation % 2));
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("amber_tempering_oil", "Huile de trempe ambrée", "Huile rare pour stabiliser les effets latents d'une arme ou d'un catalyseur.", ShopItemCategory::Material, 88, 34, 1));
+            }
             shop.addItem(ShopItem("weak_repair_kit", "Kit de réparation faible", "Outil fragile : +25% max, durabilité faible.", ShopItemCategory::Material, 65, 18, 2));
             if (rotation % 2 == 0)
             {
@@ -370,6 +676,22 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 5 == 1)
             {
                 shop.addItem(ShopItem("precision_harvest_tools", "Outils de récupération précise", "Outils chers mais utiles pour abîmer moins de composants.", ShopItemCategory::Material, 225, 95, 1));
+            }
+            if (rotation % 4 == 0)
+            {
+                shop.addItem(ShopItem("firefly_iron_shell", "Carapace de luciole de fer", "Métal léger lumineux pour petites pièces, gardes et lanternes.", ShopItemCategory::Material, 78, 29, 2));
+            }
+            if (rotation % 6 == 2)
+            {
+                shop.addItem(ShopItem("grey_drake_scale", "Écaille de drake gris", "Matériau draconique de falaise, recherché pour harnais et lances.", ShopItemCategory::Material, 130, 44, 1));
+            }
+            if (rotation % 5 == 3)
+            {
+                shop.addItem(ShopItem("rusted_gear_core", "Noyau d'engrenage rouillé", "Pièce mécanique pour pièges, marteaux, arbalètes et automates.", ShopItemCategory::Material, 86, 35, 1));
+            }
+            if (rotation % 6 == 4)
+            {
+                shop.addItem(ShopItem("buried_giant_chip", "Éclat de géant enfoui", "Fragment osseux ou minéral lourd, prisé pour masses, plaques et rituels de poids.", ShopItemCategory::Material, 150, 58, 1));
             }
             break;
 
@@ -432,6 +754,149 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 4 == 2)
             {
                 shop.addItem(ShopItem("preservation_vials", "Fioles de conservation", "Outil cher pour limiter les pertes sur les composants fragiles.", ShopItemCategory::Material, 260, 110, 1));
+            }
+            if (rotation % 5 == 0)
+            {
+                shop.addItem(ShopItem("tideworn_ink", "Encre rongée par la marée", "Encre magique humide pour parchemins, archives et mauvais contrats.", ShopItemCategory::Material, 82, 31, 1));
+            }
+            if (rotation % 6 == 1)
+            {
+                shop.addItem(ShopItem("mirror_glass_bead", "Perle de verre miroir", "Composant d'illusion, de diversion et de capes douteuses.", ShopItemCategory::Material, 92, 33, 1));
+            }
+            if (rotation % 5 == 0)
+            {
+                shop.addItem(ShopItem("mistglass_pearl", "Perle de verre-brume", "Composant rare des canaux, parfait pour fioles d'illusion et brouillards courts.", ShopItemCategory::Material, 136, 52, 1));
+            }
+            if (rotation % 6 == 2)
+            {
+                shop.addItem(ShopItem("weeping_stone_tear", "Larme de pierre pleureuse", "Minéral froid utilisé pour stabiliser quelques baumes trop chauds.", ShopItemCategory::Material, 90, 33, 1));
+            }
+            break;
+
+
+        case ShopType::Enchanter:
+            shop.addItem(ShopItem("arcane_dust", "Poussière arcanique", "Catalyseur de base pour runes mineures et réparations magiques instables.", ShopItemCategory::Material, 46, 14, 2 + rotation % 2));
+            shop.addItem(ShopItem("runic_stabilizer", "Stabilisateur runique", "Composant de sécurité : réduit les risques quand une pièce approche des 5 enchantements.", ShopItemCategory::Material, 82, 34, 1));
+            shop.addItem(ShopItem("runic_safety_seal", "Sceau anti-casse runique", "Protection d'atelier à usage unique : sauve un objet si une tentative d'enchantement tourne à la casse.", ShopItemCategory::Information, 124, 52, 1));
+            shop.addItem(ShopItem("runic_extraction_note", "Note d'extraction runique", "Compte-rendu utile après un désenchantement ou avant de retenter une pièce instable.", ShopItemCategory::Information, 36, 12, 1));
+            shop.addItem(ShopItem("runic_transfer_note", "Note de transfert runique", "Suivi d'atelier pour une rune déplacée. Utile, mais pas une garantie de sécurité.", ShopItemCategory::Information, 74, 28, 1));
+            shop.addItem(ShopItem("runic_overload_limit_note", "Note de limite de surcharge", "Lecture prudente : rappelle quand une pièce approche une surcharge où l'empilement devient trop risqué.", ShopItemCategory::Information, 48, 18, 1));
+            shop.addItem(ShopItem("minor_fire_rune_note", "Formule de rune anti-feu", "Notice vendue par l'enchanteur : utile pour comprendre les protections feu/chaleur, pas consommée comme une vraie rune.", ShopItemCategory::Information, 85, 20, 1, true));
+            shop.addItem(ShopItem("minor_cold_rune_note", "Formule de rune anti-froid", "Notice vendue par l'enchanteur : utile pour comprendre les protections froid/givre.", ShopItemCategory::Information, 80, 20, 1, true));
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("mountain_blue_flower", "Fleur bleue de montagne", "Plante froide utilisée par les runes anti-givre mineures.", ShopItemCategory::Plant, 45, 12, 2));
+            }
+            if (rotation % 3 == 1)
+            {
+                shop.addItem(ShopItem("draconic_scale_fragment", "Fragment d'écaille draconique", "Composant rare pour enchantements chauds et équipements plus stables.", ShopItemCategory::Material, 185, 48, 1));
+                shop.addItem(ShopItem("rare_fire_rune_core", "Cœur de rune ignifuge", "Noyau de rune plus cher pour protections feu/chaleur sérieuses.", ShopItemCategory::Material, 165, 58, 1));
+            }
+            if (rotation % 3 == 2)
+            {
+                shop.addItem(ShopItem("runic_iron_shard", "Éclat de fer runique", "Métal stable pour futurs enchantements appliqués aux armes.", ShopItemCategory::Material, 74, 26, 1 + rotation % 2));
+                shop.addItem(ShopItem("rare_cold_rune_core", "Cœur de rune antigel", "Noyau de rune plus cher pour protections froid/givre sérieuses.", ShopItemCategory::Material, 158, 56, 1));
+            }
+            break;
+
+        case ShopType::CityService:
+            shop.addItem(ShopItem("city_service_stamp", "Tampon de service municipal", "Preuve de guichet : utile pour dossiers, plaintes, petites autorisations et services PNJ.", ShopItemCategory::Information, 16, 6, 4 + rotation % 3));
+            shop.addItem(ShopItem("municipal_proof_letter", "Attestation municipale", "Lettre officielle plus propre qu'une simple parole. Les PNJ administratifs l'aiment beaucoup trop.", ShopItemCategory::Information, 42, 14, 1 + rotation % 2));
+            shop.addItem(ShopItem("local_service_letter", "Lettre de service local", "Petit justificatif social : pas une prime, mais parfois une porte qui s'ouvre plus facilement.", ShopItemCategory::Information, 24, 8, 2));
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("local_reputation_note", "Note de réputation locale", "Mot court signé par un habitant ou un bureau. C'est léger, mais ça reste dans le dossier.", ShopItemCategory::Information, 15, 5, 2 + rotation % 2));
+            }
+            if (rotation % 3 == 1)
+            {
+                shop.addItem(ShopItem("client_recommendation", "Recommandation de client", "Recommandation simple pour un futur service. Trop faible pour une promotion, utile pour convaincre.", ShopItemCategory::Information, 34, 10, 1));
+            }
+            break;
+
+        case ShopType::Lodging:
+            shop.addItem(ShopItem("survival_ration", "Ration de survie", "Ration compacte pour rester dehors plus d'une journée complète sans rentrer.", ShopItemCategory::Material, 15, 7, 5 + rotation % 3));
+            shop.addItem(ShopItem("fire_lantern", "Lanterne à feu", "Éclairage simple pour réduire les risques de sortie nocturne.", ShopItemCategory::Material, 42, 18, 2));
+            shop.addItem(ShopItem("thermal_survival_blanket", "Couverture de survie thermique", "Couverture de secours pour ne pas transformer une nuit froide en tombeau narratif.", ShopItemCategory::Material, 42, 15, 1 + rotation % 2));
+            if (rotation % 2 == 1)
+            {
+                shop.addItem(ShopItem("temperature_survival_kit", "Kit de survie thermique", "Kit général contre froid, chaleur et mauvaises décisions météo.", ShopItemCategory::Material, 72, 28, 1));
+            }
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("night_survival_kit", "Kit de survie nocturne", "Matériel utile pour limiter les mauvaises surprises quand la route finit dans le noir.", ShopItemCategory::Material, 85, 34, 1));
+            }
+            shop.addItem(ShopItem("warm_meal_voucher", "Bon de repas chaud", "Repas simple, pratique pour remplacer les micro-primes ridicules et les excuses de comptoir.", ShopItemCategory::Information, 12, 6, 4 + rotation % 3));
+            shop.addItem(ShopItem("lodging_bed_token", "Bon de lit d'auberge", "Une nuit simple à l'auberge. Pas luxueuse, mais mieux qu'un fossé narratif.", ShopItemCategory::Information, 24, 8, 2 + rotation % 2));
+            shop.addItem(ShopItem("stable_stall_ticket", "Ticket d'écurie", "Réservation de place d'écurie ou de stockage court. Utile avec les relais et caravanes.", ShopItemCategory::Information, 28, 10, 1 + rotation % 2));
+            shop.addItem(ShopItem("prepared_saddlebags", "Sacoches préparées", "Sacoches vérifiées pour éviter de perdre du temps sur une sortie éloignée.", ShopItemCategory::Information, 32, 12, 1));
+            shop.addItem(ShopItem("stable_box_reservation", "Réservation de box sécurisé", "Box réservé : utile pour garder monture, sacs ou charge avant une sortie ou une quête de relais.", ShopItemCategory::Information, 46, 22, 1));
+            shop.addItem(ShopItem("mount_rest_care", "Soin et repos de monture", "Retire la fatigue d'une monture personnelle avant que l'écurie ne refuse le départ.", ShopItemCategory::Information, 62, 28, 1));
+            shop.addItem(ShopItem("stable_saddle_upgrade", "Selle renforcée de route", "Préparation durable pour longs trajets, utile avec une monture personnelle.", ShopItemCategory::Information, 118, 46, 1));
+            shop.addItem(ShopItem("mount_comfort_bridle", "Bridon confortable", "Équipement durable : rend la monture personnelle plus agréable à guider sur les longues routes.", ShopItemCategory::Information, 86, 38, 1));
+            shop.addItem(ShopItem("mount_weather_blanket", "Couverture météo de monture", "Protection durable pour monture personnelle : pluie, froid léger, nuits dehors et routes longues mieux tenues.", ShopItemCategory::Material, 74, 32, 1));
+            shop.addItem(ShopItem("mount_pack_harness", "Harnais de bât ajusté", "Répartit mieux les charges d'une monture personnelle, utile sur les explorations longues sans rendre l'animal infatigable.", ShopItemCategory::Information, 92, 40, 1));
+            shop.addItem(ShopItem("mount_road_shoes", "Ferrage de route simple", "Fers et sabots vérifiés : aide une monture personnelle à mieux tenir les routes répétées.", ShopItemCategory::Information, 88, 44, 1));
+            shop.addItem(ShopItem("mount_grooming_kit", "Kit de pansage de monture", "Brosses et onguent simple pour travailler le lien sans remplacer un vrai repos.", ShopItemCategory::Material, 42, 18, 1 + rotation % 2));
+            if (rotation % 2 == 1)
+            {
+                shop.addItem(ShopItem("loaded_pack_saddle", "Selle de bât chargée", "Selle préparée et charge équilibrée : excellente pour départs longs.", ShopItemCategory::Information, 52, 24, 1));
+            }
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("temporary_stable_storage", "Dépôt temporaire d'écurie", "Reçu de stockage court : pratique quand un service parle de cargaison, box ou relais.", ShopItemCategory::Information, 18, 9, 1));
+            }
+            if (rotation % 3 == 0)
+            {
+                shop.addItem(ShopItem("local_reputation_note", "Note de réputation locale", "Tavia note les clients qui paient, rangent et ne mettent pas le feu à la nappe.", ShopItemCategory::Information, 14, 5, 2));
+            }
+            break;
+
+        case ShopType::Transport:
+            shop.addItem(ShopItem("survival_ration", "Ration de survie", "Ration simple vendue par les relais pour les sorties qui s'étirent loin de la ville.", ShopItemCategory::Material, 17, 7, 4 + rotation % 2));
+            shop.addItem(ShopItem("travel_distance_mark", "Marque de distance de trajet", "Petite note de relais : utile quand une exploration demande un déplacement réel, pas juste trois pas derrière la boutique.", ShopItemCategory::Information, 16, 7, 3));
+            shop.addItem(ShopItem("route_scout_note", "Note d'éclaireur de route", "Itinéraire relu : raccourci, relais à éviter ou pont encore utilisable. Très utile avant un biome éloigné.", ShopItemCategory::Information, 38, 16, 1));
+            shop.addItem(ShopItem("rental_mount_voucher", "Bon de monture de location", "Monture louée pour réduire le temps de route sur les biomes lointains ou les longues sorties.", ShopItemCategory::Information, 70, 26, 1));
+            if (rotation % 4 == 0)
+            {
+                shop.addItem(ShopItem("owned_mount_registration", "Acte de monture personnelle", "Contrat cher mais durable : une monture peut ensuite aider plusieurs trajets avant de fatiguer.", ShopItemCategory::Information, 240, 95, 1));
+            }
+            shop.addItem(ShopItem("relay_route_badge", "Badge de route du relais", "Badge officiel du relais : passage préparé, contrôles plus simples, route plus lisible.", ShopItemCategory::Information, 44, 18, 1 + rotation % 2));
+            shop.addItem(ShopItem("fire_lantern", "Lanterne à feu", "Matériel simple pour éviter de traverser la nuit totalement à l'aveugle.", ShopItemCategory::Material, 45, 18, 2));
+            shop.addItem(ShopItem("cooling_survival_wrap", "Voile anti-chaleur", "Voile traité pour routes brûlantes, déserts et abords volcaniques.", ShopItemCategory::Material, 48, 16, 1 + rotation % 2));
+            if (rotation % 3 == 2)
+            {
+                shop.addItem(ShopItem("temperature_survival_kit", "Kit de survie thermique", "Kit complet pour route froide, chaude ou juste très stupide.", ShopItemCategory::Material, 76, 28, 1));
+            }
+            if (rotation % 2 == 1)
+            {
+                shop.addItem(ShopItem("night_survival_kit", "Kit de survie nocturne", "Kit plus complet pour les trajets longs et les explorations qui débordent après le soir.", ShopItemCategory::Material, 92, 34, 1));
+            }
+            shop.addItem(ShopItem("travel_pass_note", "Note de pass de voyage", "Indication officielle pour préparer un trajet, un pont, une porte ou un contrôle de route.", ShopItemCategory::Information, 22, 10, 2 + rotation % 2));
+            shop.addItem(ShopItem("route_toll_receipt", "Reçu de péage de route", "Petit reçu utile pour justifier un passage et éviter de repayer le même garde de mauvaise humeur.", ShopItemCategory::Information, 28, 9, 2));
+            shop.addItem(ShopItem("caravan_seat_ticket", "Place de caravane", "Ticket de transport simple. Lent, bruyant, mais beaucoup moins seul qu'une route au hasard.", ShopItemCategory::Information, 58, 18, 1 + rotation % 2));
+            if (rotation % 2 == 1)
+            {
+                shop.addItem(ShopItem("guarded_transport_pass", "Pass de transport gardé", "Convoi escorté : cher, mais plus logique quand les routes sont remplies d'ennuis à dents.", ShopItemCategory::Information, 102, 32, 1));
+            }
+            break;
+
+        case ShopType::Church:
+            shop.addItem(ShopItem("holy_water_vial", "Fiole d'eau bénite", "Petite fiole préparée pour rites, diagnostics de malédiction et demandes d'église.", ShopItemCategory::Material, 72, 22, 2 + rotation % 3));
+            shop.addItem(ShopItem("sanctuary_candle", "Cierge de veille", "Cierge consacré : utile pour veillées, prières courtes et rituels de protection.", ShopItemCategory::Material, 34, 11, 3 + rotation % 4));
+            shop.addItem(ShopItem("exorcism_incense", "Encens d'exorcisme", "Encens utilisé par Sœur Maëlys quand un diagnostic doit aller plus loin qu'une simple intuition.", ShopItemCategory::Material, 64, 20, 1 + rotation % 3));
+            shop.addItem(ShopItem("blessing_note", "Note de bénédiction", "Billet signé par Père Orwan ou Frère Calixte après une bénédiction de route.", ShopItemCategory::Information, 52, 14, 1 + rotation % 2, true));
+            shop.addItem(ShopItem("exorcist_note", "Note d'exorciste", "Renseignement simple : toutes les malédictions ne se retirent pas par la prière.", ShopItemCategory::Information, 95, 18, 1, true));
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("moonlit_salt", "Sel lunaire", "Sel rituel déjà utilisé par certains sanctuaires contre les traces occultes.", ShopItemCategory::Material, 68, 24, 2));
+            }
+            if (rotation % 3 == 1)
+            {
+                shop.addItem(ShopItem("white_bone_chalk", "Craie d'os blanc", "Craie rituelle pour dessiner un cercle d'exorcisme stable.", ShopItemCategory::Material, 86, 30, 1));
+            }
+            if (rotation % 4 == 2)
+            {
+                shop.addItem(ShopItem("cracked_bell_clapper", "Battant de cloche fissuré", "Objet d'église abîmé, parfois utilisé pour briser une résonance maudite faible.", ShopItemCategory::Material, 115, 45, 1));
             }
             break;
 
@@ -551,6 +1016,16 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 8 == 5)
             {
                 shop.addItem(ShopItem("resistance_rift_grimoire", "Grimoire de faille de résistance", "Ouvrage volé et dangereux. Un non-mage n'en tirera qu'un mal de crâne.", ShopItemCategory::Book, 620, 35, 1));
+            }
+            if (rotation % 5 == 0)
+            {
+                shop.addItem(ShopItem("sealed_debt_slip", "Billet de dette scellé sans témoin", "Document de dette vendu sous le manteau. Le vendeur refuse de dire qui doit rembourser.", ShopItemCategory::Material, 260, 46, 1));
+                shop.addItem(ShopItem("black_market_barter_seal", "Sceau de troc douteux", "Marque discrète acceptée par certains vendeurs louches à la place d'une partie de l'or.", ShopItemCategory::Information, 72, 24, 1));
+                shop.addItem(ShopItem("smuggler_token", "Jeton de pont noir", "Jeton de contrebandier lié aux marchés sous les ponts.", ShopItemCategory::Material, 220, 30, 2));
+            }
+            if (rotation % 7 == 4)
+            {
+                shop.addItem(ShopItem("mistglass_pearl", "Perle de verre-brume interdite", "Composant d'illusion vendu sans question, sans facture et sans morale.", ShopItemCategory::Material, 310, 52, 1));
             }
             break;
 

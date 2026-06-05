@@ -11,6 +11,7 @@
 #include "character/CharacterRace.hpp"
 #include "entity/Player.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 
 #include <string>
 
@@ -20,6 +21,7 @@ struct CharacterMenuResult
     bool specialIdentityValidated;
     std::string playerName;
     DifficultyMode difficulty;
+    DeathRuleMode deathRule;
     CharacterRace forcedRace;
 };
 

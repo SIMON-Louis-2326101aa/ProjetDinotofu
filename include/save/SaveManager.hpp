@@ -9,6 +9,7 @@
 
 #include "entity/Player.hpp"
 #include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 
 #include <string>
 #include <vector>
@@ -28,6 +29,7 @@ struct CharacterSaveSummary
     std::string raceName;
     std::string className;
     DifficultyMode difficulty;
+    DeathRuleMode deathRule;
     int level;
     bool clone;
     std::string gameVersion;
@@ -43,6 +45,7 @@ public:
     // EN: ensureSaveDirectories declares or implements a focused behavior used by this module.
     // FR: ensureSaveDirectories déclare ou implémente un comportement précis utilisé par ce module.
     static bool ensureSaveDirectories();
+    static int deleteEphemeralStoryCloneSaves();
 
     // EN: accountExists declares or implements a focused behavior used by this module.
     // FR: accountExists déclare ou implémente un comportement précis utilisé par ce module.
@@ -58,6 +61,13 @@ public:
         DifficultyMode difficulty
     );
 
+    static bool savePlayerSnapshot(
+        const Player& player,
+        const std::string& accountName,
+        DifficultyMode difficulty,
+        DeathRuleMode deathRule
+    );
+
     // EN: listAccounts declares or implements a focused behavior used by this module.
     // FR: listAccounts déclare ou implémente un comportement précis utilisé par ce module.
     static std::vector<AccountSaveSummary> listAccounts();
@@ -69,6 +79,13 @@ public:
         const CharacterSaveSummary& summary,
         Player& player,
         DifficultyMode& difficulty
+    );
+
+    static bool loadPlayerSnapshot(
+        const CharacterSaveSummary& summary,
+        Player& player,
+        DifficultyMode& difficulty,
+        DeathRuleMode& deathRule
     );
 
     static bool movePlayableCharacterToDead(

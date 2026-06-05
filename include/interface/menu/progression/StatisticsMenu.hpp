@@ -17,11 +17,11 @@ public:
     static MenuScreen buildHubScreen();
     // EN: open displays the statistics hub and returns to the caller without consuming combat turns.
     // FR: open affiche le menu central des statistiques et revient à l'appelant sans consommer de tour.
-    static void open(const Player& player, DifficultyMode difficulty);
+    static void open(Player& player, DifficultyMode difficulty);
 
     // EN: open displays statistics when the caller does not know the current difficulty context.
     // FR: open affiche les statistiques quand l'appelant ne connaît pas le contexte de difficulté actuel.
-    static void open(const Player& player);
+    static void open(Player& player);
 
 private:
     // EN: displaySummary prints a compact character overview.
@@ -39,6 +39,11 @@ private:
     // EN: displaySkillStats prints unlocked skills and skill progress.
     // FR: displaySkillStats affiche les compétences débloquées et leur progression.
     static void displaySkillStats(const Player& player);
+
+    // EN: displayTitleCatalog prints owned and unlockable character titles.
+    // FR: displayTitleCatalog affiche les titres possédés et les titres déblocables.
+    static void displayTitleCatalog(Player& player);
+    static void displayTitleEquipMenu(Player& player);
 
     // EN: displaySpecialStates prints altered, clone and boss consequence states.
     // FR: displaySpecialStates affiche les états altéré, clone et conséquences de boss.

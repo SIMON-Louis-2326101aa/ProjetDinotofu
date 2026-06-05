@@ -1,64 +1,48 @@
 # Dinotofu — GitHub Releases, installers et launchers   
 
-Version actuelle : **V2.01.27**   
-Dernière version de personnage encore acceptable : **V2.01.03**   
+Ce guide explique comment distribuer Dinotofu sans demander au joueur de compiler le projet.   
 
-## Objectif   
 
-Les releases GitHub doivent fournir des ZIP propres pour Windows/Linux, ainsi que des installateurs capables d'installer ou mettre à jour Dinotofu sans demander au joueur de compiler le projet.   
+## Installer depuis une release GitHub   
+
+Pour installer Dinotofu sans compiler le projet manuellement :   
+
+1. aller sur la page du dépôt GitHub ;   
+2. ouvrir la dernière Release affichée à droite du dépôt ;   
+3. télécharger le launcher correspondant à ton système d'exploitation : Windows ou Linux ;   
+4. lancer ce launcher, qui s'occupe ensuite d'ouvrir la bonne version du jeu.   
+
+Sur les versions desktop Windows/Linux, l'installateur ou le launcher doit créer deux entrées claires :   
+
+- **ProjetDinotofu Launcher** : lancement normal / Auto, via le launcher adapté à l'OS ;   
+- **ProjetDinotofu Launcher Terminal version** : lancement forcé en terminal, via le launcher Windows/Linux correspondant.   
 
 ## Fichiers générés attendus   
 
-- `Dinotofu-Windows-vX.Y.Z.zip`   
-- `Dinotofu-Linux-vX.Y.Z.zip`   
-- `DinotofuInstaller-Windows-vX.Y.Z.zip`   
-- `DinotofuInstaller-Linux-vX.Y.Z.zip`   
+Les releases GitHub doivent fournir des archives propres pour Windows et Linux, ainsi que les launchers/installateurs correspondants.   
 
-## Raccourcis/lanceurs visibles Windows/Linux   
+Les raccourcis visibles doivent rester clairs :   
 
-Côté joueur, éviter les doublons. Sur Windows comme sur Linux, il faut seulement deux entrées claires :   
+- **ProjetDinotofu Launcher** : lancement normal / Auto ;   
+- **ProjetDinotofu Launcher Terminal version** : lancement forcé en terminal.   
 
-- **ProjetDinotofu Launcher** : lancement normal / Auto via le launcher de l'OS ;   
-- **ProjetDinotofu Launcher Terminal version** : terminal forcé via le launcher de l'OS.   
+## Logique de version   
 
-Les `.cmd` et scripts internes peuvent exister dans le dossier du jeu, mais ils ne doivent pas créer 36 entrées visibles pour le joueur.   
+La logique reste simple :   
 
-## Versioning   
+- correction simple : patch ;   
+- ajout de contenu ou système compatible : version intermédiaire ;   
+- gros jalon qui change fortement la base du jeu : version majeure ou nouvelle base importante.   
 
-La source de vérité est :   
-
-```text   
-src/core/VersionInfo.cpp   
-```   
-
-Le manifeste d'exemple doit suivre la même version :   
-
-```text   
-release/manifest.example.json   
-```   
+La base actuelle de recréation conseillée reste **V3.00.00**.   
 
 ## Contrôle avant partage   
 
-Avant de publier ou envoyer une archive :   
-
 ```bash   
-make clean   
-make release-check   
+make -j4   
+./output/Dinotofu --version   
+./scripts/validate_release_tree.sh   
+./scripts/package_source_clean.sh   
 ```   
 
-Le ZIP source local de développement ne doit pas contenir :   
-
-- `build/`   
-- `output/`   
-- `.exe`   
-- `.o`, `.d`, `.out`   
-- `gui_debug/`   
-- sauvegardes/comptes/personnages privés   
-- `__pycache__/` ou `.pyc`   
-- fichiers locaux de reprise de chat ou d'audit temporaire   
-
-## Jalons majeurs   
-
-- V2.01.03 : persistance plus fine des légendes déjà lues et dialogues PNJ/guilde.   
-- V3.00.00 : premier chapitre d'histoire codé.   
-- Multijoueur en ligne : future grosse version, beaucoup plus tard.   
+Le ZIP source ne doit pas contenir `build/`, `output/`, d'exécutable, de cache local, de fichier de reprise ou de données privées de sauvegarde.   

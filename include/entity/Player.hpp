@@ -17,6 +17,44 @@
 #include <string>
 #include <vector>
 
+struct PlayerLocalSubscription
+{
+    std::string id;
+    std::string name;
+    int expiresAtDay = -1;
+    bool cancellationRequested = false;
+    int renewalPrice = 0;
+};
+
+struct PlayerCurse
+{
+    std::string id;
+    std::string name;
+    std::string severity;
+    std::string origin;
+    std::string description;
+    std::string removalHint;
+    std::string symptomCategories;
+    std::string discoveredSymptomCategories;
+    std::string excludedSymptomCategories;
+    int diagnosisLevel = 0;
+    int appliedAtDay = 0;
+    int expiresAtDay = -1;
+    int exorcismProgress = 0;
+    int exorcismRequiredVisits = 0;
+    int curseLevel = 1;
+    int maxCurseLevel = 1;
+    bool evolvesOverTime = false;
+    int escalationIntervalDays = 0;
+    int nextEscalationDay = -1;
+    int churchRemovalMaxLevel = 99;
+    bool becomesSpecialRemovalWhenTooHigh = false;
+    std::string highLevelRemovalHint;
+    bool removableByChurch = false;
+    int bossIdRequiredToBreak = 0;
+    bool lifeLong = false;
+};
+
 class Player : public Entity
 {
 public:
@@ -46,6 +84,12 @@ private:
     int spearKillProgress;
 
     int combatsStarted;
+    int worldDaysElapsed;
+    int worldDayProgressUnits;
+    std::vector<PlayerLocalSubscription> localSubscriptions;
+    std::vector<PlayerCurse> activeCurses;
+    int localSubscriptionRenewalPaidThisWeek;
+    std::vector<std::string> pendingWorldTimeReportLines;
     int victories;
     int defeats;
     int escapes;
@@ -57,6 +101,8 @@ private:
     std::vector<std::string> pvpLethalEliminations;
     std::vector<int> unlockedBossIds;
     std::vector<int> recentBossIds;
+    std::vector<int> defeatedBossIds;
+    int recentBossCooldownExpiresAtDay;
     std::vector<std::string> recentCombatEquipmentUsage;
     bool bossEquipmentSealActive;
     std::string bossEquipmentSealReason;
@@ -109,6 +155,14 @@ private:
     std::string creatorAccountName;
     std::string currentOwnerAccountName;
     std::vector<std::string> starterKitLog;
+    std::vector<std::string> titles;
+    std::string activeTitle;
+    std::vector<std::string> activeTitles;
+    std::string interfaceHintFrequency;
+    int storyChapter;
+    int storyStep;
+    int storyCityDevelopmentLevel;
+    bool storyModeStarted;
     // EN: reduceWorldGazeDurationAfterCombat declares or implements a focused behavior used by this module.
     // FR: reduceWorldGazeDurationAfterCombat déclare ou implémente un comportement précis utilisé par ce module.
     void reduceWorldGazeDurationAfterCombat();
@@ -119,6 +173,9 @@ private:
     // EN: applyRaceStartingBonus declares or implements a focused behavior used by this module.
     // FR: applyRaceStartingBonus déclare ou implémente un comportement précis utilisé par ce module.
     void applyRaceStartingBonus(CharacterRace selectedRace);
+    void processEndOfWorldDay();
+    void maybeAppendCurseMalaiseLine(int salt);
+    void appendWeeklyRenewalSummaryIfNeeded();
 
 public:
     // EN: Player declares or implements a focused behavior used by this module.
@@ -151,6 +208,33 @@ public:
     const std::string& getCreatedForVersion() const;
     const std::string& getLastAdaptedVersion() const;
     void setVersionMetadata(const std::string& createdAt, const std::string& createdFor, const std::string& lastAdapted);
+
+    const std::vector<std::string>& getTitles() const;
+    const std::string& getActiveTitle() const;
+    const std::vector<std::string>& getActiveTitles() const;
+    std::string getActiveTitleSummary() const;
+    std::vector<std::string> describeActiveTitleEffects() const;
+    const std::string& getInterfaceHintFrequency() const;
+    std::string getInterfaceHintFrequencyLabel() const;
+    void setInterfaceHintFrequency(const std::string& frequency);
+    bool areInterfaceHintsDisabled() const;
+    bool areInterfaceHintsFrequent() const;
+    int getStoryChapter() const;
+    int getStoryStep() const;
+    int getStoryCityDevelopmentLevel() const;
+    bool hasStoryModeStarted() const;
+    std::string getStoryProgressLabel() const;
+    void setLoadedStoryProgress(int chapter, int step, int cityDevelopment, bool started);
+    bool startStoryMode();
+    bool setStoryProgress(int chapter, int step, int cityDevelopment);
+    bool hasTitle(const std::string& title) const;
+    bool grantTitle(const std::string& title);
+    bool setActiveTitle(const std::string& title);
+    bool setActiveTitleSlot(int slotIndex, const std::string& title);
+    bool unequipActiveTitleSlot(int slotIndex);
+    bool equipTitle(const std::string& title);
+    void setLoadedTitles(const std::vector<std::string>& loadedTitles, const std::string& loadedActiveTitle);
+    void setLoadedTitles(const std::vector<std::string>& loadedTitles, const std::string& loadedActiveTitle, const std::vector<std::string>& loadedActiveTitles);
     void markAdaptedToCurrentVersion();
     const std::string& getCreatorAccountName() const;
     const std::string& getCurrentOwnerAccountName() const;
@@ -247,6 +331,55 @@ public:
     // EN: getCombatsStarted declares or implements a focused behavior used by this module.
     // FR: getCombatsStarted déclare ou implémente un comportement précis utilisé par ce module.
     int getCombatsStarted() const;
+    int getWorldDaysElapsed() const;
+    int getWorldDayProgressUnits() const;
+    int getWorldDayUnitsPerDay() const;
+    int getCurrentWorldDayNumber() const;
+    std::string getCurrentWeekdayName() const;
+    std::string getCurrentDayPartName() const;
+    std::string formatWorldDateLine() const;
+    std::string formatWorldDayPartLine() const;
+    std::string formatWorldDateTimeLine() const;
+    std::string formatWorldTimeChange(int beforeDay, int beforeProgress) const;
+    void advanceWorldDays(int days);
+    void advanceWorldDayUnits(int units);
+
+    const std::vector<PlayerLocalSubscription>& getLocalSubscriptions() const;
+    bool hasActiveLocalSubscription(const std::string& subscriptionId) const;
+    bool isLocalSubscriptionCancellationRequested(const std::string& subscriptionId) const;
+    int getLocalSubscriptionExpiresAtDay(const std::string& subscriptionId) const;
+    void activateLocalSubscription(const std::string& subscriptionId, const std::string& name, int durationDays = 7, int renewalPrice = 0);
+    bool requestLocalSubscriptionCancellation(const std::string& subscriptionId);
+    void removeExpiredLocalSubscriptions();
+    void setLoadedLocalSubscriptions(const std::vector<PlayerLocalSubscription>& subscriptions);
+
+    const std::vector<PlayerCurse>& getActiveCurses() const;
+    int getActiveCurseCount() const;
+    bool hasActiveCurse(const std::string& curseId) const;
+    bool addOrRefreshCurse(const PlayerCurse& curse);
+    bool removeCurse(const std::string& curseId);
+    int removeExpiredCurses();
+    void setLoadedCurses(const std::vector<PlayerCurse>& curses);
+    bool advanceChurchExorcism(const std::string& curseId);
+    bool revealCurseSymptomCategory(const std::string& curseId, const std::string& category);
+    bool excludeCurseSymptomCategory(const std::string& curseId, const std::string& category);
+    int autoExcludeWrongCurseSymptomCategories(const std::string& curseId, int percentToExclude);
+    bool setCurseDiagnosisLevel(const std::string& curseId, int level);
+    int processCurseEscalations();
+    int removeCursesLockedByBoss(int bossId);
+    bool hasCurseEligibleForSpecialSolution(const std::string& solutionId) const;
+    int resolveSpecialCurseSolution(const std::string& solutionId);
+    int getCursePressureForCategory(const std::string& category) const;
+    int getKnownCursePressureForCategory(const std::string& category) const;
+    bool hasHighRunicBacklashNeedingEnchanter() const;
+    bool stabilizeHighRunicBacklashForEnchanter();
+    std::vector<std::string> describeActiveCurses() const;
+    void recordLyknirDefeatCurse();
+
+    int getLocalSubscriptionRenewalPaidThisWeek() const;
+    void setLocalSubscriptionRenewalPaidThisWeek(int amount);
+    const std::vector<std::string>& getPendingWorldTimeReportLines() const;
+    std::vector<std::string> consumeWorldTimeReportLines();
     // EN: getVictories declares or implements a focused behavior used by this module.
     // FR: getVictories déclare ou implémente un comportement précis utilisé par ce module.
     int getVictories() const;
@@ -280,6 +413,7 @@ public:
     // EN: getRecentBossIds declares or implements a focused behavior used by this module.
     // FR: getRecentBossIds déclare ou implémente un comportement précis utilisé par ce module.
     const std::vector<int>& getRecentBossIds() const;
+    int getRecentBossCooldownExpiresAtDay() const;
     // EN: getRecentCombatEquipmentUsage declares or implements a focused behavior used by this module.
     // FR: getRecentCombatEquipmentUsage déclare ou implémente un comportement précis utilisé par ce module.
     const std::vector<std::string>& getRecentCombatEquipmentUsage() const;
@@ -306,6 +440,8 @@ public:
     // EN: isBossRecentlyDefeated declares or implements a focused behavior used by this module.
     // FR: isBossRecentlyDefeated déclare ou implémente un comportement précis utilisé par ce module.
     bool isBossRecentlyDefeated(int bossId) const;
+    bool isBossDefeated(int bossId) const;
+    const std::vector<int>& getDefeatedBossIds() const;
     // EN: unlockNextBossVariation declares or implements a focused behavior used by this module.
     // FR: unlockNextBossVariation déclare ou implémente un comportement précis utilisé par ce module.
     bool unlockNextBossVariation();
@@ -314,7 +450,7 @@ public:
     bool recordBossVictoryInRegistry(int bossId);
     // EN: setLoadedBossRegistry declares or implements a focused behavior used by this module.
     // FR: setLoadedBossRegistry déclare ou implémente un comportement précis utilisé par ce module.
-    void setLoadedBossRegistry(const std::vector<int>& unlockedIds, const std::vector<int>& recentIds);
+    void setLoadedBossRegistry(const std::vector<int>& unlockedIds, const std::vector<int>& recentIds, const std::vector<int>& defeatedIds = {}, int recentCooldownExpiresAtDay = -1);
 
     // EN: hasZelefCorrosionPresent declares or implements a focused behavior used by this module.
     // FR: hasZelefCorrosionPresent déclare ou implémente un comportement précis utilisé par ce module.
@@ -378,6 +514,8 @@ public:
 
     void setLoadedStatistics(
         int loadedCombatsStarted,
+        int loadedWorldDaysElapsed,
+        int loadedWorldDayProgressUnits,
         int loadedVictories,
         int loadedDefeats,
         int loadedEscapes,
@@ -571,6 +709,9 @@ public:
     // EN: enableStorySkip declares or implements a focused behavior used by this module.
     // FR: enableStorySkip déclare ou implémente un comportement précis utilisé par ce module.
     void enableStorySkip();
+    bool hasActiveCheatPower() const;
+    int clearActiveCheatPowersForFireFlight();
+    bool disableGodModeForFireFlight();
 
     // EN: markCreatorMessageSeen declares or implements a focused behavior used by this module.
     // FR: markCreatorMessageSeen déclare ou implémente un comportement précis utilisé par ce module.

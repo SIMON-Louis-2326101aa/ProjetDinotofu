@@ -6,6 +6,8 @@
 #include "interface/TerminalInterface.hpp"
 
 #include "core/Console.hpp"
+
+#include "core/Console.hpp"
 #include "interface/menu/common/MenuFrame.hpp"
 #include "interface/GuiDebugExporter.hpp"
 

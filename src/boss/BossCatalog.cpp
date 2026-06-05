@@ -8,9 +8,60 @@
 #include "interface/menu/common/MessageScreen.hpp"
 
 #include <vector>
+#include <string>
 
 namespace
 {
+
+    int getRecommendedLevelInternal(int id)
+    {
+        switch (id)
+        {
+            case 1: return 15;
+            case 2: return 18;
+            case 3: return 22;
+            case 4: return 26;
+            case 5: return 30;
+            case 6: return 34;
+            case 7: return 38;
+            case 8: return 42;
+            case 9: return 46;
+            case 10: return 50;
+            case 11: return 55;
+            case 12: return 60;
+            case 13: return 65;
+            case 14: return 70;
+            case 15: return 75;
+            case 16: return 80;
+            case 17: return 85;
+            case 18: return 90;
+            case 19: return 95;
+            case 20: return 100;
+            case 21: return 108;
+            case 22: return 116;
+            case 23: return 124;
+            case 24: return 132;
+            case 25: return 140;
+            case 26: return 150;
+            case 27: return 255;
+            case 28: return 158;
+            case 29: return 166;
+            case 30: return 176;
+            case 31: return 184;
+            case 32: return 192;
+            case 33: return 200;
+            case 34: return 208;
+            case 35: return 220;
+            case 36: return 248;
+            default: return 15;
+        }
+    }
+
+    std::string getRecommendedLevelTextInternal(int id)
+    {
+        return "[niv. conseillé " + std::to_string(getRecommendedLevelInternal(id)) + "]";
+    }
+
     std::string getRegistryDisplayNameInternal(int id)
     {
         if (id == 1) return "Fitoria";
@@ -29,8 +80,9 @@ namespace
 
     void appendBossLine(std::vector<std::string>& lines, int id)
     {
-        lines.push_back(std::to_string(id) + " : " + getRegistryDisplayNameInternal(id));
+        lines.push_back(std::to_string(id) + " : " + getRegistryDisplayNameInternal(id) + " " + getRecommendedLevelTextInternal(id));
         lines.push_back("    " + getRegistryHintInternal(id));
+        lines.push_back("    Niveau recommandé non bloquant : " + std::to_string(getRecommendedLevelInternal(id)) + ". Tu peux tenter avant, mais à tes risques et périls.");
         lines.push_back("");
     }
 }
@@ -74,11 +126,21 @@ std::string BossCatalog::getRegistryHint(int bossId)
     return getRegistryHintInternal(bossId);
 }
 
+int BossCatalog::getRecommendedLevel(int bossId)
+{
+    return getRecommendedLevelInternal(bossId);
+}
+
+std::string BossCatalog::getRecommendedLevelText(int bossId)
+{
+    return getRecommendedLevelTextInternal(bossId);
+}
+
 // EN: getMaximumBossId declares or implements a focused behavior used by this module.
 // FR: getMaximumBossId déclare ou implémente un comportement précis utilisé par ce module.
 int BossCatalog::getMaximumBossId()
 {
-    return 35;
+    return 36;
 }
 
 // EN: createBoss declares or implements a focused behavior used by this module.
@@ -137,7 +199,7 @@ Boss BossCatalog::createBoss(int choice)
 
     if (choice == 11)
     {
-        return Boss(11, "L'Anomalie", "Création glitch liée à l'Orgueil", 1020, 10, 26, 40, 2, 3, 3, 6);
+        return Boss(11, "Émanation de l'Anomalie", "Fragment glitch lié à la Source", 1020, 10, 26, 40, 2, 3, 3, 6);
     }
 
     if (choice == 12)
@@ -258,6 +320,11 @@ Boss BossCatalog::createBoss(int choice)
     if (choice == 35)
     {
         return Boss(35, "Les Jumelles du Miroir Fendu", "Vérité et mensonge liés à Velyssia", 1820, 13, 43, 64, 2, 4, 3, 8);
+    }
+
+    if (choice == 36)
+    {
+        return Boss(36, "Source stable de l'Anomalie", "Source d'interface presque stabilisée", 2050, 15, 46, 70, 2, 4, 3, 8);
     }
 
     return Boss(3, "Atlas", "Protecteur universel déchu", 1200, 2, 5, 8, 2, 5, 3, 12);

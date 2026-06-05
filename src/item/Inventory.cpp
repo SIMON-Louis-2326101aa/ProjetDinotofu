@@ -7,6 +7,7 @@
 
 #include "progression/material/MaterialKnowledgeProgress.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "economy/Money.hpp"
 
 #include <algorithm>
 #include <string>
@@ -887,7 +888,8 @@ void Inventory::displaySummary() const
         "INVENTAIRE",
         "inventory.summary",
         {
-            "Or : " + std::to_string(or_) + " pièces",
+            "Argent : " + Money::formatGoldWithRaw(or_),
+            "Échelle : " + Money::coinScaleText(),
             "Armes : " + std::to_string(getWeaponCount()),
             "Armures : " + std::to_string(getArmorCount()),
             "Consommables : " + std::to_string(getConsumableCount()),
@@ -932,7 +934,7 @@ void Inventory::inspectWeapon(int index) const
     }
 
     lines.push_back(std::string("État : ") + (weapon.isBroken() ? "Cassée" : "Utilisable"));
-    lines.push_back("Valeur : " + std::to_string(weapon.getValue()) + " pièces");
+    lines.push_back("Valeur : " + Money::formatGoldWithRaw(weapon.getValue()));
     showInventoryScreen("ARME", "inventory.weapon.inspect", lines, false);
 }
 
@@ -964,7 +966,7 @@ void Inventory::inspectArmor(int index) const
     }
 
     lines.push_back(std::string("État : ") + (armor.isBroken() ? "Cassée" : "Utilisable"));
-    lines.push_back("Valeur : " + std::to_string(armor.getValue()) + " pièces");
+    lines.push_back("Valeur : " + Money::formatGoldWithRaw(armor.getValue()));
     showInventoryScreen("ARMURE", "inventory.armor.inspect", lines, false);
 }
 

@@ -172,7 +172,7 @@ namespace
         Player* concretePlayer = dynamic_cast<Player*>(&player);
         if (concretePlayer == nullptr || !concretePlayer->isAlteredByCheats()) return;
 
-        if ((boss.getBossId() == 11 || boss.getBossId() == 16 || boss.getBossId() == 26 || boss.getBossId() == 27) && random.between(1, 100) <= 25)
+        if ((boss.getBossId() == 11 || boss.getBossId() == 16 || boss.getBossId() == 26 || boss.getBossId() == 27 || boss.getBossId() == 36) && random.between(1, 100) <= 25)
         {
             int punishment = 8 + concretePlayer->getLevel() / 2;
             if (concretePlayer->isGodModeEnabled()) punishment += 10;
@@ -183,6 +183,7 @@ namespace
 
             std::string hunterName = "Lexior";
             if (boss.getBossId() == 11) hunterName = "L'Anomalie";
+            else if (boss.getBossId() == 36) hunterName = "La Source de l'Anomalie";
             else if (boss.getBossId() == 26) hunterName = "Obérion";
             else if (boss.getBossId() == 27) hunterName = "FireFlight";
 
@@ -1009,6 +1010,26 @@ namespace
                 boss.heal(5 + mirror);
             }
             narration << "Vérité fendue : " << mirror << std::endl;
+            narration << std::endl;
+        }
+
+        if (boss.getBossId() == 36 && random.between(1, 100) <= 34)
+        {
+            int sync = boss.getSpecialEffect() + 2;
+            boss.setSpecialEffect(sync);
+            narration << "La Source de l'Anomalie ne crie pas. Elle corrige l'écran comme si tu étais une faute de frappe." << std::endl;
+            narration << "[PV=?] [CIBLE=toi/eux/texture] [CHOIX=ne pas répondre]" << std::endl;
+            if (!player.isInDefensePosture())
+            {
+                int cut = 8 + sync;
+                player.takeDamage(cut);
+                narration << "Trouble de la vision : " << cut << " dégâts pendant que l'arène charge la mauvaise image." << std::endl;
+            }
+            else
+            {
+                narration << "Ta posture fixe un point stable. La Source perd une ligne de texte." << std::endl;
+            }
+            narration << "Synchronisation corrompue : " << sync << std::endl;
             narration << std::endl;
         }
 

@@ -16,6 +16,7 @@
 #include "item/material/MaterialCatalog.hpp"
 #include "item/weapon/WeaponCatalog.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
+#include "progression/DeathRuleRules.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -495,9 +496,21 @@ namespace
         if (normalized == normalizeText("Bâton d'apprenti")) return WeaponCatalog::createTrainingStaff();
         if (normalized == normalizeText("Hache lourde émoussée")) return WeaponCatalog::createHeavyTrainingAxe();
         if (normalized == normalizeText("Lame d'arène")) return WeaponCatalog::createArenaBlade();
+        if (normalized == normalizeText("Fauchon de relais")) return WeaponCatalog::createRelayFalchion();
+        if (normalized == normalizeText("Marteau de mine sifflante")) return WeaponCatalog::createWhistlingMineHammer();
+        if (normalized == normalizeText("Bâton de résine chantante")) return WeaponCatalog::createSingingResinStaff();
+        if (normalized == normalizeText("Arc des lanternes froides")) return WeaponCatalog::createColdLanternBow();
+        if (normalized == normalizeText("Sabre d'argile rouge")) return WeaponCatalog::createRedClaySabre();
+        if (normalized == normalizeText("Dague de carte brisée")) return WeaponCatalog::createBrokenMapDagger();
+        if (normalized == normalizeText("Rapière des lucioles de fer")) return WeaponCatalog::createFireflyIronRapier();
+        if (normalized == normalizeText("Masse du registre noyé")) return WeaponCatalog::createDrownedLedgerMace();
+        if (normalized == normalizeText("Lance des falaises grises")) return WeaponCatalog::createGreyCliffSpear();
+        if (normalized == normalizeText("Fouet de foire cassée")) return WeaponCatalog::createBrokenCarnivalWhip();
         if (normalized.find(normalizeText("Lame de récupération")) != std::string::npos)
         {
             bool special = normalized.find(normalizeText("particularité")) != std::string::npos;
+            bool downgraded = normalized.find(normalizeText("haute qualité")) != std::string::npos
+                || normalized.find(normalizeText("haute qualite")) != std::string::npos;
             Weapon base(
                 "Lame de récupération",
                 "Une lame assemblée avec des matériaux récupérés. Pas noble, mais plus fiable qu'une rouille abandonnée.",
@@ -508,6 +521,20 @@ namespace
                 5,
                 115
             );
+
+            if (downgraded)
+            {
+                return Weapon(
+                    base.getName() + " - haute qualité abîmée",
+                    base.getDescription() + " Qualité dégradée : l'arme était exceptionnelle, mais sa durabilité est tombée à 0 avant réparation. Elle reste haute qualité après réparation, sans récupérer son grade exceptionnel.",
+                    std::max(1, (base.getValue() + 35) * 85 / 100),
+                    base.getType(),
+                    base.getMinDamageBonus() + 1,
+                    base.getMaxDamageBonus() + 2,
+                    base.getCriticalBonus() + 1,
+                    base.getMaxDurability() + 8
+                );
+            }
 
             if (!special) return base;
 
@@ -538,9 +565,21 @@ namespace
         if (normalized == normalizeText("Veste matelassée de départ")) return ArmorCatalog::createPaddedVest();
         if (normalized == normalizeText("Armure lourde rafistolée")) return ArmorCatalog::createHeavyPaddedArmor();
         if (normalized == normalizeText("Cotte de maille d'arène")) return ArmorCatalog::createArenaChainmail();
+        if (normalized == normalizeText("Manteau de cartographe abîmé")) return ArmorCatalog::createDamagedCartographerCoat();
+        if (normalized == normalizeText("Plastron d'argile séchée")) return ArmorCatalog::createSunDriedClayBreastplate();
+        if (normalized == normalizeText("Robe aux fibres vivantes")) return ArmorCatalog::createLivingFiberRobe();
+        if (normalized == normalizeText("Harnais de mineur sifflant")) return ArmorCatalog::createWhistlingMinerHarness();
+        if (normalized == normalizeText("Gilet d'archiviste noyé")) return ArmorCatalog::createDrownedArchivistVest();
+        if (normalized == normalizeText("Harnais de drake gris")) return ArmorCatalog::createGreyDrakeHarness();
+        if (normalized == normalizeText("Cape de foire décousue")) return ArmorCatalog::createPatchworkCarnivalCape();
+        if (normalized == normalizeText("Parka de survie glaciale")) return ArmorCatalog::createColdSurvivalParka();
+        if (normalized == normalizeText("Tenue ignifugée de terrain")) return ArmorCatalog::createHeatSurvivalSuit();
+        if (normalized == normalizeText("Manteau isolant d'explorateur")) return ArmorCatalog::createInsulatedExplorerCoat();
         if (normalized.find(normalizeText("Armure de chasseur rafistolée")) != std::string::npos)
         {
             bool special = normalized.find(normalizeText("particularité")) != std::string::npos;
+            bool downgraded = normalized.find(normalizeText("haute qualité")) != std::string::npos
+                || normalized.find(normalizeText("haute qualite")) != std::string::npos;
             Armor base(
                 "Armure de chasseur rafistolée",
                 "Une armure souple faite pour survivre aux mauvaises rencontres plutôt que briller dans une forge royale.",
@@ -550,6 +589,19 @@ namespace
                 4,
                 125
             );
+
+            if (downgraded)
+            {
+                return Armor(
+                    base.getName() + " - haute qualité abîmée",
+                    base.getDescription() + " Qualité dégradée : l'armure était exceptionnelle, mais sa durabilité est tombée à 0 avant réparation. Elle reste haute qualité après réparation, sans récupérer son grade exceptionnel.",
+                    std::max(1, (base.getValue() + 40) * 85 / 100),
+                    base.getType(),
+                    base.getMaxHpBonus() + 6,
+                    base.getDamageReduction() + 1,
+                    base.getMaxDurability() + 10
+                );
+            }
 
             if (!special) return base;
 
@@ -578,6 +630,8 @@ namespace
         if (normalized == normalizeText("Potion de soin renforcée")) return ConsumableCatalog::createReinforcedHealingPotion();
         if (normalized == normalizeText("Potion de soin supérieure")) return ConsumableCatalog::createGreaterHealingPotion();
         if (normalized == normalizeText("Potion de soin majeure")) return ConsumableCatalog::createMajorHealingPotion();
+        if (normalized == normalizeText("Potion de vitalité proportionnelle")) return ConsumableCatalog::createVitalityHealingPotion();
+        if (normalized == normalizeText("Potion de vitalité royale")) return ConsumableCatalog::createRoyalVitalityHealingPotion();
         if (normalized == normalizeText("Petite potion de rage")) return ConsumableCatalog::createMinorDamagePotion();
         if (normalized == normalizeText("Potion de rage")) return ConsumableCatalog::createBasicDamagePotion();
         if (normalized == normalizeText("Potion de rage supérieure")) return ConsumableCatalog::createReinforcedDamagePotion();
@@ -593,6 +647,16 @@ namespace
         if (normalized == normalizeText("Potion tiède anti-givre")) return ConsumableCatalog::createFrostResistancePotion();
         if (normalized == normalizeText("Potion isolante")) return ConsumableCatalog::createShockResistancePotion();
         if (normalized == normalizeText("Potion de voile élémentaire")) return ConsumableCatalog::createElementalWardPotion();
+        if (normalized == normalizeText("Thé stabilisant")) return ConsumableCatalog::createStabilizingTea();
+        if (normalized == normalizeText("Tonique de mineur")) return ConsumableCatalog::createMinerBracingTonic();
+        if (normalized == normalizeText("Encre de concentration")) return ConsumableCatalog::createCartographerFocusInk();
+        if (normalized == normalizeText("Purificateur au sel lunaire")) return ConsumableCatalog::createMoonSaltPurifier();
+        if (normalized == normalizeText("Parchemin de pas de verre")) return ConsumableCatalog::createGlassStepScroll();
+        if (normalized == normalizeText("Parchemin de ronce-lien")) return ConsumableCatalog::createVineSnareScroll();
+        if (normalized == normalizeText("Encre de concentration d'archiviste")) return ConsumableCatalog::createArchivistFocusInk();
+        if (normalized == normalizeText("Tisane de basilic des falaises")) return ConsumableCatalog::createCliffBasilTea();
+        if (normalized == normalizeText("Ticket de diversion de foire")) return ConsumableCatalog::createCarnivalDiversionTicket();
+        if (normalized == normalizeText("Fiole de garde-lucioles")) return ConsumableCatalog::createFireflyGuardVial();
         if (normalized == normalizeText("Fiole de fumée de secours")) return ConsumableCatalog::createSmokeEscapeVial();
         if (normalized == normalizeText("Parchemin d'étincelle arcanique")) return ConsumableCatalog::createArcaneSparkScroll();
         if (normalized == normalizeText("Parchemin de voile élémentaire")) return ConsumableCatalog::createElementalWardScroll();
@@ -756,6 +820,12 @@ namespace
             CharacterRace::Vampire,
             CharacterRace::Demon,
             CharacterRace::SemiHuman,
+            CharacterRace::SemiWolf,
+            CharacterRace::SemiFox,
+            CharacterRace::SemiDog,
+            CharacterRace::SemiCat,
+            CharacterRace::SemiLizard,
+            CharacterRace::SemiBird,
             CharacterRace::Other
         };
 
@@ -787,6 +857,10 @@ namespace
         summary.raceName = extractStringValue(content, "race", "Humain");
         summary.className = extractStringValue(content, "class", "Chevalier");
         summary.difficulty = difficultyFromText(extractStringValue(content, "difficulty", "Normal"));
+        summary.deathRule = DeathRuleRules::fromSaveText(
+            extractStringValue(content, "deathRule", DeathRuleRules::toSaveText(DeathRuleRules::defaultForDifficulty(summary.difficulty))),
+            summary.difficulty
+        );
         summary.level = extractIntValue(content, "level", 1);
         summary.clone = extractBoolValue(content, "clone", false);
         summary.gameVersion = extractStringValue(content, "gameVersion", "inconnue");
@@ -800,6 +874,46 @@ namespace
 
 // EN: ensureSaveDirectories declares or implements a focused behavior used by this module.
 // FR: ensureSaveDirectories déclare ou implémente un comportement précis utilisé par ce module.
+
+int SaveManager::deleteEphemeralStoryCloneSaves()
+{
+    if (!ensureSaveDirectories())
+    {
+        return 0;
+    }
+
+    int deleted = 0;
+    const std::string characterFolder = SAVE_ROOT + "/characters/playable";
+
+    try
+    {
+        for (const auto& entry : std::filesystem::directory_iterator(characterFolder))
+        {
+            if (!entry.is_regular_file() || entry.path().extension() != ".json")
+            {
+                continue;
+            }
+
+            const std::string content = readFileContent(entry.path().string());
+            const bool explicitEphemeral = content.find("\"storyEphemeralSandboxClone\": true") != std::string::npos;
+            const bool legacyEphemeralName = content.find("__story_ephemeral_clone") != std::string::npos
+                || content.find("[clone éphémère histoire]") != std::string::npos;
+
+            if (explicitEphemeral || legacyEphemeralName)
+            {
+                std::filesystem::remove(entry.path());
+                ++deleted;
+            }
+        }
+    }
+    catch (...)
+    {
+        return deleted;
+    }
+
+    return deleted;
+}
+
 bool SaveManager::ensureSaveDirectories()
 {
     try
@@ -846,7 +960,7 @@ bool SaveManager::saveAccountSnapshot(
     }
 
     file << "{\n";
-    file << "  \"saveVersion\": 15,\n";
+    file << "  \"saveVersion\": 16,\n";
     file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
     file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
@@ -875,6 +989,17 @@ bool SaveManager::savePlayerSnapshot(
     DifficultyMode difficulty
 )
 {
+    return savePlayerSnapshot(player, accountName, difficulty, DeathRuleRules::defaultForDifficulty(difficulty));
+}
+
+bool SaveManager::savePlayerSnapshot(
+    const Player& player,
+    const std::string& accountName,
+    DifficultyMode difficulty,
+    DeathRuleMode deathRule
+)
+{
+    deathRule = DeathRuleRules::normalizeForDifficulty(difficulty, deathRule);
     if (!ensureSaveDirectories())
     {
         return false;
@@ -897,7 +1022,7 @@ bool SaveManager::savePlayerSnapshot(
         : player.getCreatorAccountName();
 
     file << "{\n";
-    file << "  \"saveVersion\": 15,\n";
+    file << "  \"saveVersion\": 16,\n";
     file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
     file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
@@ -905,6 +1030,7 @@ bool SaveManager::savePlayerSnapshot(
     file << "  \"creatorAccount\": \"" << escapeJson(creatorAccount) << "\",\n";
     file << "  \"currentOwnerAccount\": \"" << escapeJson(accountName) << "\",\n";
     file << "  \"difficulty\": \"" << escapeJson(difficultyToText(difficulty)) << "\",\n";
+    file << "  \"deathRule\": \"" << escapeJson(DeathRuleRules::toSaveText(deathRule)) << "\",\n";
     file << "  \"character\": {\n";
     file << "    \"createdAt\": \"" << escapeJson(player.getCreatedAtText()) << "\",\n";
     file << "    \"creatorAccount\": \"" << escapeJson(creatorAccount) << "\",\n";
@@ -935,11 +1061,48 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"equippedWeaponIndex\": " << player.getEquippedWeaponIndex() << ",\n";
     file << "    \"equippedWeaponName\": \"" << escapeJson(weapon.getName()) << "\",\n";
     file << "    \"equippedArmorIndex\": " << player.getEquippedArmorIndex() << ",\n";
-    file << "    \"equippedArmorName\": \"" << escapeJson(armor.getName()) << "\"\n";
+    file << "    \"equippedArmorName\": \"" << escapeJson(armor.getName()) << "\",\n";
+    file << "    \"interfaceHintFrequency\": \"" << escapeJson(player.getInterfaceHintFrequency()) << "\",\n";
+    file << "    \"storyModeStarted\": " << (player.hasStoryModeStarted() ? "true" : "false") << ",\n";
+    file << "    \"storyChapter\": " << player.getStoryChapter() << ",\n";
+    file << "    \"storyStep\": " << player.getStoryStep() << ",\n";
+    file << "    \"storyCityDevelopmentLevel\": " << player.getStoryCityDevelopmentLevel() << "\n";
+    file << "  },\n";
+
+    file << "  \"titleSnapshot\": {\n";
+    file << "    \"activeTitle\": \"" << escapeJson(player.getActiveTitle()) << "\",\n";
+    file << "    \"activeTitles\": [\n";
+    const std::vector<std::string>& playerActiveTitles = player.getActiveTitles();
+    for (std::size_t i = 0; i < playerActiveTitles.size(); ++i)
+    {
+        file << "      {\"name\": \"" << escapeJson(playerActiveTitles[i]) << "\"}";
+        if (i + 1 < playerActiveTitles.size())
+        {
+            file << ",";
+        }
+        file << "\n";
+    }
+    file << "    ],\n";
+    file << "    \"titles\": [\n";
+    const std::vector<std::string>& playerTitles = player.getTitles();
+    for (std::size_t i = 0; i < playerTitles.size(); ++i)
+    {
+        file << "      {\"name\": \"" << escapeJson(playerTitles[i]) << "\"}";
+        if (i + 1 < playerTitles.size())
+        {
+            file << ",";
+        }
+        file << "\n";
+    }
+    file << "    ]\n";
     file << "  },\n";
 
     file << "  \"characterStatistics\": {\n";
     file << "    \"combatsStarted\": " << player.getCombatsStarted() << ",\n";
+    file << "    \"worldDaysElapsed\": " << player.getWorldDaysElapsed() << ",\n";
+    file << "    \"worldDayProgressUnits\": " << player.getWorldDayProgressUnits() << ",\n";
+    file << "    \"worldDayUnitsPerDay\": " << player.getWorldDayUnitsPerDay() << ",\n";
+    file << "    \"localSubscriptionRenewalPaidThisWeek\": " << player.getLocalSubscriptionRenewalPaidThisWeek() << ",\n";
     file << "    \"victories\": " << player.getVictories() << ",\n";
     file << "    \"defeats\": " << player.getDefeats() << ",\n";
     file << "    \"escapes\": " << player.getEscapes() << ",\n";
@@ -949,6 +1112,61 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"pvpVictories\": " << player.getPvpVictories() << ",\n";
     file << "    \"pvpDefeats\": " << player.getPvpDefeats() << "\n";
     file << "  },\n";
+
+    file << "  \"localSubscriptions\": [\n";
+    const std::vector<PlayerLocalSubscription>& localSubscriptions = player.getLocalSubscriptions();
+    for (std::size_t i = 0; i < localSubscriptions.size(); ++i)
+    {
+        file << "    {\"id\": \"" << escapeJson(localSubscriptions[i].id)
+             << "\", \"name\": \"" << escapeJson(localSubscriptions[i].name)
+             << "\", \"expiresAtDay\": " << localSubscriptions[i].expiresAtDay
+             << ", \"cancellationRequested\": " << (localSubscriptions[i].cancellationRequested ? "true" : "false")
+             << ", \"renewalPrice\": " << localSubscriptions[i].renewalPrice << "}";
+        if (i + 1 < localSubscriptions.size())
+        {
+            file << ",";
+        }
+        file << "\n";
+    }
+    file << "  ],\n";
+
+    file << "  \"activeCurses\": [\n";
+    const std::vector<PlayerCurse>& activeCurses = player.getActiveCurses();
+    for (std::size_t i = 0; i < activeCurses.size(); ++i)
+    {
+        const PlayerCurse& curse = activeCurses[i];
+        file << "    {\"id\": \"" << escapeJson(curse.id)
+             << "\", \"name\": \"" << escapeJson(curse.name)
+             << "\", \"severity\": \"" << escapeJson(curse.severity)
+             << "\", \"origin\": \"" << escapeJson(curse.origin)
+             << "\", \"description\": \"" << escapeJson(curse.description)
+             << "\", \"removalHint\": \"" << escapeJson(curse.removalHint)
+             << "\", \"symptomCategories\": \"" << escapeJson(curse.symptomCategories)
+             << "\", \"discoveredSymptomCategories\": \"" << escapeJson(curse.discoveredSymptomCategories)
+             << "\", \"excludedSymptomCategories\": \"" << escapeJson(curse.excludedSymptomCategories)
+             << "\", \"diagnosisLevel\": " << curse.diagnosisLevel
+             << ", \"appliedAtDay\": " << curse.appliedAtDay
+             << ", \"expiresAtDay\": " << curse.expiresAtDay
+             << ", \"exorcismProgress\": " << curse.exorcismProgress
+             << ", \"exorcismRequiredVisits\": " << curse.exorcismRequiredVisits
+             << ", \"curseLevel\": " << curse.curseLevel
+             << ", \"maxCurseLevel\": " << curse.maxCurseLevel
+             << ", \"evolvesOverTime\": " << (curse.evolvesOverTime ? "true" : "false")
+             << ", \"escalationIntervalDays\": " << curse.escalationIntervalDays
+             << ", \"nextEscalationDay\": " << curse.nextEscalationDay
+             << ", \"churchRemovalMaxLevel\": " << curse.churchRemovalMaxLevel
+             << ", \"becomesSpecialRemovalWhenTooHigh\": " << (curse.becomesSpecialRemovalWhenTooHigh ? "true" : "false")
+             << ", \"highLevelRemovalHint\": \"" << escapeJson(curse.highLevelRemovalHint)
+             << "\", \"removableByChurch\": " << (curse.removableByChurch ? "true" : "false")
+             << ", \"bossIdRequiredToBreak\": " << curse.bossIdRequiredToBreak
+             << ", \"lifeLong\": " << (curse.lifeLong ? "true" : "false") << "}";
+        if (i + 1 < activeCurses.size())
+        {
+            file << ",";
+        }
+        file << "\n";
+    }
+    file << "  ],\n";
 
     file << "  \"pvpLethalEliminations\": [\n";
     const std::vector<std::string>& lethalEliminations = player.getPvpLethalEliminations();
@@ -1040,12 +1258,24 @@ bool SaveManager::savePlayerSnapshot(
         }
     }
     file << "],\n";
+    file << "    \"recentBossCooldownExpiresAtDay\": " << player.getRecentBossCooldownExpiresAtDay() << ",\n";
     file << "    \"recentBossIds\": [";
     const std::vector<int>& recentBossIds = player.getRecentBossIds();
     for (std::size_t i = 0; i < recentBossIds.size(); ++i)
     {
         file << "{\"id\":" << recentBossIds[i] << "}";
         if (i + 1 < recentBossIds.size())
+        {
+            file << ", ";
+        }
+    }
+    file << "],\n";
+    file << "    \"defeatedBossIds\": [";
+    const std::vector<int>& defeatedBossIds = player.getDefeatedBossIds();
+    for (std::size_t i = 0; i < defeatedBossIds.size(); ++i)
+    {
+        file << "{\"id\":" << defeatedBossIds[i] << "}";
+        if (i + 1 < defeatedBossIds.size())
         {
             file << ", ";
         }
@@ -1097,7 +1327,8 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"maxDamageBonus\": " << stolenWeapon.getMaxDamageBonus()
              << ", \"criticalBonus\": " << stolenWeapon.getCriticalBonus()
              << ", \"durability\": " << stolenWeapon.getDurability()
-             << ", \"maxDurability\": " << stolenWeapon.getMaxDurability() << "}";
+             << ", \"maxDurability\": " << stolenWeapon.getMaxDurability()
+             << ", \"enchantments\": \"" << escapeJson(stolenWeapon.getEnchantmentsSaveText()) << "\"}";
     }
     file << "],\n";
     file << "    \"grinkaStolenArmors\": [";
@@ -1111,7 +1342,8 @@ bool SaveManager::savePlayerSnapshot(
              << "\", \"maxHpBonus\": " << stolenArmor.getMaxHpBonus()
              << ", \"damageReduction\": " << stolenArmor.getDamageReduction()
              << ", \"durability\": " << stolenArmor.getDurability()
-             << ", \"maxDurability\": " << stolenArmor.getMaxDurability() << "}";
+             << ", \"maxDurability\": " << stolenArmor.getMaxDurability()
+             << ", \"enchantments\": \"" << escapeJson(stolenArmor.getEnchantmentsSaveText()) << "\"}";
     }
     file << "]\n";
     file << "  },\n";
@@ -1132,7 +1364,8 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"maxDamageBonus\": " << weapons[i].getMaxDamageBonus()
              << ", \"criticalBonus\": " << weapons[i].getCriticalBonus()
              << ", \"durability\": " << weapons[i].getDurability()
-             << ", \"maxDurability\": " << weapons[i].getMaxDurability() << "}";
+             << ", \"maxDurability\": " << weapons[i].getMaxDurability()
+             << ", \"enchantments\": \"" << escapeJson(weapons[i].getEnchantmentsSaveText()) << "\"}";
 
         if (i + 1 < weapons.size())
         {
@@ -1156,7 +1389,8 @@ bool SaveManager::savePlayerSnapshot(
              << "\", \"maxHpBonus\": " << armors[i].getMaxHpBonus()
              << ", \"damageReduction\": " << armors[i].getDamageReduction()
              << ", \"durability\": " << armors[i].getDurability()
-             << ", \"maxDurability\": " << armors[i].getMaxDurability() << "}";
+             << ", \"maxDurability\": " << armors[i].getMaxDurability()
+             << ", \"enchantments\": \"" << escapeJson(armors[i].getEnchantmentsSaveText()) << "\"}";
 
         if (i + 1 < armors.size())
         {
@@ -1263,10 +1497,14 @@ bool SaveManager::savePlayerSnapshot(
              << "\", \"requiredMaterialQuantity\": " << quest.requiredMaterialQuantity
              << ", \"progress\": " << quest.progress
              << ", \"target\": " << quest.target
+             << ", \"availableFromDay\": " << quest.availableFromDay
+             << ", \"expiresAtDay\": " << quest.expiresAtDay
              << ", \"guildQuest\": " << (quest.guildQuest ? "true" : "false")
              << ", \"accepted\": " << (quest.accepted ? "true" : "false")
              << ", \"completed\": " << (quest.completed ? "true" : "false")
              << ", \"turnedIn\": " << (quest.turnedIn ? "true" : "false")
+             << ", \"failed\": " << (quest.failed ? "true" : "false")
+             << ", \"failureReason\": \"" << escapeJson(quest.failureReason) << "\""
              << "}";
     };
 
@@ -1407,6 +1645,17 @@ bool SaveManager::loadPlayerSnapshot(
     DifficultyMode& difficulty
 )
 {
+    DeathRuleMode ignoredDeathRule = DeathRuleRules::defaultForDifficulty(summary.difficulty);
+    return loadPlayerSnapshot(summary, player, difficulty, ignoredDeathRule);
+}
+
+bool SaveManager::loadPlayerSnapshot(
+    const CharacterSaveSummary& summary,
+    Player& player,
+    DifficultyMode& difficulty,
+    DeathRuleMode& deathRule
+)
+{
     std::string content = readFileContent(summary.path);
 
     if (content.empty())
@@ -1441,7 +1690,15 @@ bool SaveManager::loadPlayerSnapshot(
     int charisma = extractIntValue(content, "charisma", 10);
     int equippedWeaponIndex = extractIntValue(content, "equippedWeaponIndex", -1);
     int equippedArmorIndex = extractIntValue(content, "equippedArmorIndex", -1);
+    std::string interfaceHintFrequency = extractStringValue(content, "interfaceHintFrequency", "faible");
+    bool storyModeStarted = extractBoolValue(content, "storyModeStarted", false);
+    int storyChapter = extractIntValue(content, "storyChapter", 0);
+    int storyStep = extractIntValue(content, "storyStep", 0);
+    int storyCityDevelopmentLevel = extractIntValue(content, "storyCityDevelopmentLevel", 0);
     int combatsStarted = extractIntValue(content, "combatsStarted", 0);
+    int worldDaysElapsed = extractIntValue(content, "worldDaysElapsed", combatsStarted);
+    int worldDayProgressUnits = extractIntValue(content, "worldDayProgressUnits", 0);
+    int localSubscriptionRenewalPaidThisWeek = extractIntValue(content, "localSubscriptionRenewalPaidThisWeek", 0);
     int victories = extractIntValue(content, "victories", 0);
     int defeats = extractIntValue(content, "defeats", 0);
     int escapes = extractIntValue(content, "escapes", 0);
@@ -1452,6 +1709,10 @@ bool SaveManager::loadPlayerSnapshot(
     int pvpDefeats = extractIntValue(content, "pvpDefeats", 0);
 
     difficulty = difficultyFromText(extractStringValue(content, "difficulty", "Normal"));
+    deathRule = DeathRuleRules::fromSaveText(
+        extractStringValue(content, "deathRule", DeathRuleRules::toSaveText(DeathRuleRules::defaultForDifficulty(difficulty))),
+        difficulty
+    );
 
     PlayerClass loadedClass = ClassCatalog::createClassByName(className);
     player = Player(characterName, loadedClass);
@@ -1460,6 +1721,8 @@ bool SaveManager::loadPlayerSnapshot(
     player.setRace(raceFromText(raceName));
     player.initializeStarterInventory(difficulty);
     player.setClone(extractBoolValue(content, "clone", false));
+    player.setInterfaceHintFrequency(interfaceHintFrequency);
+    player.setLoadedStoryProgress(storyChapter, storyStep, storyCityDevelopmentLevel, storyModeStarted);
 
     std::vector<std::string> weaponObjects = extractObjectsFromArray(content, "weapons");
     std::vector<std::string> armorObjects = extractObjectsFromArray(content, "armors");
@@ -1469,12 +1732,18 @@ bool SaveManager::loadPlayerSnapshot(
     std::vector<std::string> questObjects = extractObjectsFromArray(content, "questLogSnapshot");
     std::vector<std::string> guildBoardObjects = extractObjectsFromArray(content, "guildBoardSnapshot");
     std::vector<std::string> lethalEliminationObjects = extractObjectsFromArray(content, "pvpLethalEliminations");
+    std::vector<std::string> localSubscriptionObjects = extractObjectsFromArray(content, "localSubscriptions");
+    std::vector<std::string> activeCurseObjects = extractObjectsFromArray(content, "activeCurses");
     std::vector<std::string> starterKitObjects = extractObjectsFromArray(content, "starterKitSnapshot");
+    std::vector<std::string> titleObjects = extractObjectsFromArray(content, "titles");
+    std::vector<std::string> activeTitleObjects = extractObjectsFromArray(content, "activeTitles");
     std::vector<std::string> recentEquipmentUsageObjects = extractObjectsFromArray(content, "recentCombatEquipmentUsage");
     std::vector<std::string> passiveSkillObjects = extractObjectsFromArray(content, "unlockedPassiveSkills");
     std::vector<std::string> activeSkillObjects = extractObjectsFromArray(content, "unlockedActiveSkills");
     std::vector<std::string> unlockedBossObjects = extractObjectsFromArray(content, "unlockedBossIds");
+    int recentBossCooldownExpiresAtDay = extractIntValue(content, "recentBossCooldownExpiresAtDay", -1);
     std::vector<std::string> recentBossObjects = extractObjectsFromArray(content, "recentBossIds");
+    std::vector<std::string> defeatedBossObjects = extractObjectsFromArray(content, "defeatedBossIds");
     std::vector<std::string> grinkaStolenWeaponObjects = extractObjectsFromArray(content, "grinkaStolenWeapons");
     std::vector<std::string> grinkaStolenArmorObjects = extractObjectsFromArray(content, "grinkaStolenArmors");
 
@@ -1501,6 +1770,7 @@ bool SaveManager::loadPlayerSnapshot(
             );
 
             applySavedWeaponDurability(weapon, extractIntValue(object, "durability", weapon.getDurability()));
+            weapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
             player.getInventory().addWeapon(weapon);
         }
 
@@ -1520,6 +1790,7 @@ bool SaveManager::loadPlayerSnapshot(
             );
 
             applySavedArmorDurability(armor, extractIntValue(object, "durability", armor.getDurability()));
+            armor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
             player.getInventory().addArmor(armor);
         }
 
@@ -1546,6 +1817,27 @@ bool SaveManager::loadPlayerSnapshot(
     }
     player.setLoadedStarterKitLog(loadedStarterKitLog);
 
+    std::vector<std::string> loadedTitles;
+    for (const std::string& object : titleObjects)
+    {
+        std::string titleName = extractStringValue(object, "name", "");
+        if (!titleName.empty())
+        {
+            loadedTitles.push_back(titleName);
+        }
+    }
+
+    std::vector<std::string> loadedActiveTitles;
+    for (const std::string& object : activeTitleObjects)
+    {
+        std::string titleName = extractStringValue(object, "name", "");
+        if (!titleName.empty())
+        {
+            loadedActiveTitles.push_back(titleName);
+        }
+    }
+    player.setLoadedTitles(loadedTitles, extractStringValue(content, "activeTitle", ""), loadedActiveTitles);
+
     player.getInventory().setGold(gold);
     player.setLoadedProgress(level, experience, hp);
 
@@ -1554,6 +1846,8 @@ bool SaveManager::loadPlayerSnapshot(
     player.setLoadedAttributes(loadedAttributes, unspentAttributePoints);
     player.setLoadedStatistics(
         combatsStarted,
+        worldDaysElapsed,
+        worldDayProgressUnits,
         victories,
         defeats,
         escapes,
@@ -1563,6 +1857,7 @@ bool SaveManager::loadPlayerSnapshot(
         pvpVictories,
         pvpDefeats
     );
+    player.setLocalSubscriptionRenewalPaidThisWeek(localSubscriptionRenewalPaidThisWeek);
 
     std::vector<std::string> loadedLethalEliminations;
     for (const std::string& object : lethalEliminationObjects)
@@ -1574,6 +1869,58 @@ bool SaveManager::loadPlayerSnapshot(
         }
     }
     player.setLoadedPvpLethalEliminations(loadedLethalEliminations);
+
+    std::vector<PlayerLocalSubscription> loadedLocalSubscriptions;
+    for (const std::string& object : localSubscriptionObjects)
+    {
+        PlayerLocalSubscription subscription;
+        subscription.id = extractStringValue(object, "id", "");
+        subscription.name = extractStringValue(object, "name", subscription.id);
+        subscription.expiresAtDay = extractIntValue(object, "expiresAtDay", -1);
+        subscription.cancellationRequested = extractBoolValue(object, "cancellationRequested", false);
+        subscription.renewalPrice = extractIntValue(object, "renewalPrice", 0);
+        if (!subscription.id.empty())
+        {
+            loadedLocalSubscriptions.push_back(subscription);
+        }
+    }
+    player.setLoadedLocalSubscriptions(loadedLocalSubscriptions);
+
+    std::vector<PlayerCurse> loadedCurses;
+    for (const std::string& object : activeCurseObjects)
+    {
+        PlayerCurse curse;
+        curse.id = extractStringValue(object, "id", "");
+        curse.name = extractStringValue(object, "name", curse.id);
+        curse.severity = extractStringValue(object, "severity", "");
+        curse.origin = extractStringValue(object, "origin", "");
+        curse.description = extractStringValue(object, "description", "");
+        curse.removalHint = extractStringValue(object, "removalHint", "");
+        curse.symptomCategories = extractStringValue(object, "symptomCategories", "");
+        curse.discoveredSymptomCategories = extractStringValue(object, "discoveredSymptomCategories", "");
+        curse.excludedSymptomCategories = extractStringValue(object, "excludedSymptomCategories", "");
+        curse.diagnosisLevel = extractIntValue(object, "diagnosisLevel", 0);
+        curse.appliedAtDay = extractIntValue(object, "appliedAtDay", 0);
+        curse.expiresAtDay = extractIntValue(object, "expiresAtDay", -1);
+        curse.exorcismProgress = extractIntValue(object, "exorcismProgress", 0);
+        curse.exorcismRequiredVisits = extractIntValue(object, "exorcismRequiredVisits", 0);
+        curse.curseLevel = extractIntValue(object, "curseLevel", 1);
+        curse.maxCurseLevel = extractIntValue(object, "maxCurseLevel", curse.curseLevel);
+        curse.evolvesOverTime = extractBoolValue(object, "evolvesOverTime", false);
+        curse.escalationIntervalDays = extractIntValue(object, "escalationIntervalDays", 0);
+        curse.nextEscalationDay = extractIntValue(object, "nextEscalationDay", -1);
+        curse.churchRemovalMaxLevel = extractIntValue(object, "churchRemovalMaxLevel", 99);
+        curse.becomesSpecialRemovalWhenTooHigh = extractBoolValue(object, "becomesSpecialRemovalWhenTooHigh", false);
+        curse.highLevelRemovalHint = extractStringValue(object, "highLevelRemovalHint", "");
+        curse.removableByChurch = extractBoolValue(object, "removableByChurch", false);
+        curse.bossIdRequiredToBreak = extractIntValue(object, "bossIdRequiredToBreak", 0);
+        curse.lifeLong = extractBoolValue(object, "lifeLong", false);
+        if (!curse.id.empty())
+        {
+            loadedCurses.push_back(curse);
+        }
+    }
+    player.setLoadedCurses(loadedCurses);
 
     std::vector<std::string> loadedRecentEquipmentUsage;
     for (const std::string& object : recentEquipmentUsageObjects)
@@ -1639,7 +1986,17 @@ bool SaveManager::loadPlayerSnapshot(
         }
     }
 
-    player.setLoadedBossRegistry(loadedUnlockedBossIds, loadedRecentBossIds);
+    std::vector<int> loadedDefeatedBossIds;
+    for (const std::string& object : defeatedBossObjects)
+    {
+        int id = extractIntValue(object, "id", 0);
+        if (id > 0)
+        {
+            loadedDefeatedBossIds.push_back(id);
+        }
+    }
+
+    player.setLoadedBossRegistry(loadedUnlockedBossIds, loadedRecentBossIds, loadedDefeatedBossIds, recentBossCooldownExpiresAtDay);
 
     Weapon loadedGrinkaWeapon = WeaponCatalog::createRustySword();
     bool hasLoadedGrinkaWeapon = false;
@@ -1659,6 +2016,7 @@ bool SaveManager::loadPlayerSnapshot(
             extractIntValue(object, "maxDurability", fallback.getMaxDurability())
         );
         applySavedWeaponDurability(loadedGrinkaWeapon, extractIntValue(object, "durability", loadedGrinkaWeapon.getDurability()));
+        loadedGrinkaWeapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
         hasLoadedGrinkaWeapon = true;
     }
 
@@ -1679,6 +2037,7 @@ bool SaveManager::loadPlayerSnapshot(
             extractIntValue(object, "maxDurability", fallback.getMaxDurability())
         );
         applySavedArmorDurability(loadedGrinkaArmor, extractIntValue(object, "durability", loadedGrinkaArmor.getDurability()));
+        loadedGrinkaArmor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
         hasLoadedGrinkaArmor = true;
     }
 
@@ -1834,10 +2193,18 @@ bool SaveManager::loadPlayerSnapshot(
         quest.targetFamily = extractStringValue(object, "targetFamily", "Général");
         quest.progress = extractIntValue(object, "progress", 0);
         quest.target = extractIntValue(object, "target", 1);
+        quest.availableFromDay = extractIntValue(object, "availableFromDay", 0);
+        quest.expiresAtDay = extractIntValue(object, "expiresAtDay", -1);
         quest.guildQuest = extractBoolValue(object, "guildQuest", false);
         quest.accepted = extractBoolValue(object, "accepted", true);
         quest.completed = extractBoolValue(object, "completed", false);
         quest.turnedIn = extractBoolValue(object, "turnedIn", false);
+        quest.failed = extractBoolValue(object, "failed", false);
+        quest.failureReason = extractStringValue(object, "failureReason", "");
+        if (quest.failed && quest.failureReason.empty())
+        {
+            quest.failureReason = "Délai dépassé ou demande archivée sans validation.";
+        }
         return quest;
     };
 

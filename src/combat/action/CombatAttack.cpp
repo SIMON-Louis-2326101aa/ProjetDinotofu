@@ -301,6 +301,38 @@ void CombatAttack::executeBoostedAttack(
         damageBonus
     );
 
+    Player* attackingPlayerBeforeDodge = dynamic_cast<Player*>(&attacker);
+    if (dodged
+        && attackingPlayerBeforeDodge != nullptr
+        && attackingPlayerBeforeDodge->hasEquippedWeapon())
+    {
+        const Weapon equippedWeapon = attackingPlayerBeforeDodge->getEquippedWeapon();
+        if (!equippedWeapon.isBroken() && !attackingPlayerBeforeDodge->hasBossEquipmentSeal())
+        {
+            const int accuracyAdjustment = CombatClassSystem::getWeaponHandlingAccuracyAdjustment(
+                attacker,
+                equippedWeapon.getType(),
+                equippedWeapon.getName()
+            );
+
+            if (accuracyAdjustment > 0 && random.between(1, 100) <= accuracyAdjustment)
+            {
+                dodged = false;
+                critical = false;
+                rawDamage = random.between(attacker.getMinDamage(), attacker.getMaxDamage()) + damageBonus;
+                MessageScreen::show(
+                    "MAÎTRISE D'ARME",
+                    "combat.attack.weapon_accuracy_recovered",
+                    {
+                        "Bonus arme/classe : le geste rate presque, mais la maîtrise de " + equippedWeapon.getName() + " corrige la trajectoire.",
+                        CombatClassSystem::getWeaponHandlingLabel(attacker, equippedWeapon.getType(), equippedWeapon.getName()) + "."
+                    },
+                    false
+                );
+            }
+        }
+    }
+
     if (dodged)
     {
         MessageScreen::show(
@@ -312,6 +344,28 @@ void CombatAttack::executeBoostedAttack(
         );
         DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
         return;
+    }
+
+    if (attackingPlayerBeforeDodge != nullptr)
+    {
+        const int precisionPressure = attackingPlayerBeforeDodge->getCursePressureForCategory("precision");
+        if (precisionPressure > 0 && random.between(1, 100) <= std::min(34, 4 + precisionPressure * 4))
+        {
+            std::vector<std::string> lines;
+            if (attackingPlayerBeforeDodge->getKnownCursePressureForCategory("precision") > 0)
+            {
+                lines.push_back("Malédiction diagnostiquée : la catégorie précision brouille le geste au pire moment.");
+                lines.push_back("L'effet exact reste volontairement flou tant que la lecture n'est pas totale.");
+            }
+            else
+            {
+                lines.push_back(attacker.getName() + " prépare son attaque, puis son geste se désaxe sans raison claire.");
+                lines.push_back("Quelque chose cloche, mais le statut ne donne encore qu'une trace inconnue.");
+            }
+            MessageScreen::show("GESTE TROUBLÉ", "combat.attack.curse_precision_miss", lines, false);
+            DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
+            return;
+        }
     }
 
     if (SpecialCombatEffects::specialCharacterMissesBeforeDamage(
@@ -329,10 +383,40 @@ void CombatAttack::executeBoostedAttack(
         critical
     );
 
-    std::ostringstream preparationBuffer;
-
     Player* attackingPlayerIdentity = dynamic_cast<Player*>(&attacker);
     Monster* attackingMonster = dynamic_cast<Monster*>(&attacker);
+
+    if (attackingPlayerIdentity != nullptr
+        && attackingPlayerIdentity->hasEquippedWeapon())
+    {
+        const Weapon equippedWeapon = attackingPlayerIdentity->getEquippedWeapon();
+        if (!equippedWeapon.isBroken() && !attackingPlayerIdentity->hasBossEquipmentSeal())
+        {
+            const int accuracyAdjustment = CombatClassSystem::getWeaponHandlingAccuracyAdjustment(
+                attacker,
+                equippedWeapon.getType(),
+                equippedWeapon.getName()
+            );
+
+            if (accuracyAdjustment < 0 && random.between(1, 100) <= -accuracyAdjustment)
+            {
+                MessageScreen::show(
+                    "MALUS ARME/CLASSE",
+                    "combat.attack.weapon_accuracy_penalty",
+                    {
+                        "Malus arme/classe : " + equippedWeapon.getName() + " ne répond pas bien au style de " + attacker.getType() + ".",
+                        "Le geste se désaxe et l'attaque manque sa vraie fenêtre.",
+                        CombatClassSystem::getWeaponHandlingLabel(attacker, equippedWeapon.getType(), equippedWeapon.getName()) + "."
+                    },
+                    false
+                );
+                DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
+                return;
+            }
+        }
+    }
+
+    std::ostringstream preparationBuffer;
 
     if (attackingPlayerIdentity != nullptr)
     {
@@ -353,6 +437,29 @@ void CombatAttack::executeBoostedAttack(
 
             if (!equippedWeapon.isBroken() && !attackingPlayerIdentity->hasBossEquipmentSeal())
             {
+                const int weaponHandlingDamagePercent = CombatClassSystem::getWeaponHandlingDamagePercent(
+                    attacker,
+                    equippedWeapon.getType(),
+                    equippedWeapon.getName()
+                );
+
+                if (weaponHandlingDamagePercent != 100)
+                {
+                    const int beforeWeaponHandlingDamage = rawDamage;
+                    rawDamage = std::max(1, rawDamage * weaponHandlingDamagePercent / 100);
+                    const int diff = rawDamage - beforeWeaponHandlingDamage;
+                    if (diff > 0)
+                    {
+                        preparationBuffer << "Bonus arme/classe : +" << diff
+                                          << " dégât(s), l'arme transmet mieux la force du style." << std::endl;
+                    }
+                    else if (diff < 0)
+                    {
+                        preparationBuffer << "Malus arme/classe : " << diff
+                                          << " dégât(s), l'arme est moins adaptée au style." << std::endl;
+                    }
+                }
+
                 int affinityBonus = CombatClassSystem::getWeaponAffinityDamageBonus(
                     attacker,
                     equippedWeapon.getType(),
@@ -370,6 +477,83 @@ void CombatAttack::executeBoostedAttack(
                     );
                     preparationBuffer << "Affinité arme/classe : +" << affinityBonus
                               << " dégât(s), " << affinityLabel << "." << std::endl;
+                }
+
+                const std::string weaponName = equippedWeapon.getName();
+
+                if (textContainsAny(weaponName, {"lame de fer runique", "fer runique"}))
+                {
+                    if (defender.isInDefensePosture() && random.between(1, 100) <= 35)
+                    {
+                        int guardBreakDamage = std::max(1, 2 + attackingPlayerIdentity->getLevel() / 35);
+                        rawDamage += guardBreakDamage;
+                        defender.clearDefensePosture();
+                        preparationBuffer << "Effet latent : la rainure runique brise la garde et ajoute "
+                                          << guardBreakDamage << " dégât(s)." << std::endl;
+                    }
+                    else if (random.between(1, 100) <= 14)
+                    {
+                        rawDamage += 1;
+                        preparationBuffer << "Effet latent : la rune stabilise légèrement l'impact." << std::endl;
+                    }
+                }
+                else if (textContainsAny(weaponName, {"dague d'ambre vive", "ambre vive"}))
+                {
+                    bool targetFragilized = defender.hasBleeding()
+                        || defender.hasPoison()
+                        || defender.getHp() * 100 <= defender.getMaxHp() * 55;
+
+                    if (targetFragilized && random.between(1, 100) <= 38)
+                    {
+                        ElementalAffinitySystem::applyBleeding(defender, 2, 2 + attackingPlayerIdentity->getLevel() / 40);
+                        rawDamage += 1;
+                        preparationBuffer << "Effet latent : l'ambre accroche une blessure déjà fragile." << std::endl;
+                    }
+                    else if (random.between(1, 100) <= 12)
+                    {
+                        ElementalAffinitySystem::applyBleeding(defender, 1, 1);
+                        preparationBuffer << "Effet latent : l'ambre laisse une coupure fine." << std::endl;
+                    }
+                }
+                else if (textContainsAny(weaponName, {"arc long cendré", "cendré", "cendre"}))
+                {
+                    std::string ammoId = attackingPlayerIdentity->getLastConsumedAmmunition();
+                    if (ammoId == "ash_arrows" || ammoId == "fire_bolts" || ammoId == "burning_arrows")
+                    {
+                        ElementalAffinitySystem::applyBurning(defender, 2, 2 + attackingPlayerIdentity->getLevel() / 35);
+                        rawDamage += 1;
+                        preparationBuffer << "Effet latent : l'arc cendré canalise mieux la munition brûlante." << std::endl;
+                    }
+                    else if (random.between(1, 100) <= 16)
+                    {
+                        ElementalAffinitySystem::applyBurning(defender, 1, 1);
+                        preparationBuffer << "Effet latent : une poussière chaude reste sur la plaie." << std::endl;
+                    }
+                }
+                else if (textContainsAny(weaponName, {"sceptre canalisateur", "canalisateur"}))
+                {
+                    std::string classFocusPreview = CombatClassSystem::normalizeClassText(attacker.getType());
+                    bool magicalUser = classFocusPreview.find("mage") != std::string::npos
+                        || classFocusPreview.find("arcan") != std::string::npos
+                        || classFocusPreview.find("sorc") != std::string::npos
+                        || classFocusPreview.find("pyrom") != std::string::npos
+                        || classFocusPreview.find("invoc") != std::string::npos
+                        || classFocusPreview.find("clerc") != std::string::npos
+                        || classFocusPreview.find("prêtre") != std::string::npos
+                        || classFocusPreview.find("pretre") != std::string::npos;
+
+                    if (magicalUser && random.between(1, 100) <= 24)
+                    {
+                        int focusDamage = std::max(1, 2 + attackingPlayerIdentity->getLevel() / 45);
+                        rawDamage += focusDamage;
+                        preparationBuffer << "Effet latent : le catalyseur stabilise le geste magique et ajoute "
+                                          << focusDamage << " dégât(s)." << std::endl;
+                    }
+                    else if (!magicalUser && random.between(1, 100) <= 8)
+                    {
+                        rawDamage += 1;
+                        preparationBuffer << "Effet latent : le sceptre répond faiblement malgré une prise maladroite." << std::endl;
+                    }
                 }
             }
         }
@@ -401,7 +585,10 @@ void CombatAttack::executeBoostedAttack(
         if (classLevel >= 10
             && (classFocus.find("gardien") != std::string::npos
                 || classFocus.find("colosse") != std::string::npos
-                || classFocus.find("paladin") != std::string::npos)
+                || classFocus.find("paladin") != std::string::npos
+                || classFocus.find("chevalier bouclier") != std::string::npos
+                || classFocus.find("porte-bannière") != std::string::npos
+                || classFocus.find("porte-banniere") != std::string::npos)
             && random.between(1, 100) <= 18)
         {
             attacker.startDefensePosture(10, 2, "Posture apprise de rempart");
@@ -411,7 +598,13 @@ void CombatAttack::executeBoostedAttack(
         if (classLevel >= 12
             && (classFocus.find("mage") != std::string::npos
                 || classFocus.find("arcaniste") != std::string::npos
-                || classFocus.find("sorcier") != std::string::npos)
+                || classFocus.find("sorcier") != std::string::npos
+                || classFocus.find("mancien") != std::string::npos
+                || classFocus.find("démoniste") != std::string::npos
+                || classFocus.find("demoniste") != std::string::npos
+                || classFocus.find("runiste") != std::string::npos
+                || classFocus.find("enchanteur") != std::string::npos
+                || classFocus.find("chaman de guerre") != std::string::npos)
             && random.between(1, 100) <= 15)
         {
             int roll = random.between(1, 4);
@@ -426,7 +619,11 @@ void CombatAttack::executeBoostedAttack(
             && (classFocus.find("rôdeur") != std::string::npos
                 || classFocus.find("rodeur") != std::string::npos
                 || classFocus.find("archer") != std::string::npos
-                || classFocus.find("tireur") != std::string::npos)
+                || classFocus.find("tireur") != std::string::npos
+                || classFocus.find("javelinier") != std::string::npos
+                || classFocus.find("trappeur") != std::string::npos
+                || classFocus.find("guetteur") != std::string::npos
+                || classFocus.find("messager arm") != std::string::npos)
             && attackingPlayerIdentity->hasEquippedWeapon()
             && (attackingPlayerIdentity->getEquippedWeapon().getType() == WeaponType::Bow
                 || textContainsAny(attackingPlayerIdentity->getEquippedWeapon().getName(), {"arbal", "lancer", "bandoulière", "bandouliere"}))
@@ -438,7 +635,10 @@ void CombatAttack::executeBoostedAttack(
 
         if ((classFocus.find("assassin") != std::string::npos
             || classFocus.find("ombrelame") != std::string::npos
-            || classFocus.find("lanceur de dagues") != std::string::npos)
+            || classFocus.find("lanceur de dagues") != std::string::npos
+            || classFocus.find("sabreur") != std::string::npos
+            || classFocus.find("danseur lunaire") != std::string::npos
+            || classFocus.find("messager arm") != std::string::npos)
             && random.between(1, 100) <= (critical ? 45 : 18))
         {
             ElementalAffinitySystem::applyBleeding(defender, 2, 2 + attackingPlayerIdentity->getLevel() / 35);
@@ -448,7 +648,9 @@ void CombatAttack::executeBoostedAttack(
         if ((classFocus.find("paladin") != std::string::npos
             || classFocus.find("clerc") != std::string::npos
             || classFocus.find("prêtre") != std::string::npos
-            || classFocus.find("pretre") != std::string::npos)
+            || classFocus.find("pretre") != std::string::npos
+            || classFocus.find("juge novice") != std::string::npos
+            || classFocus.find("infirmier") != std::string::npos)
             && attacker.getHp() * 2 <= attacker.getMaxHp()
             && random.between(1, 100) <= 30)
         {
@@ -459,6 +661,9 @@ void CombatAttack::executeBoostedAttack(
 
         if ((classFocus.find("gardien") != std::string::npos
             || classFocus.find("colosse") != std::string::npos
+            || classFocus.find("chevalier bouclier") != std::string::npos
+            || classFocus.find("porte-bannière") != std::string::npos
+            || classFocus.find("porte-banniere") != std::string::npos
             || classFocus.find("tank") != std::string::npos)
             && random.between(1, 100) <= 24)
         {
@@ -469,7 +674,17 @@ void CombatAttack::executeBoostedAttack(
         if ((classFocus.find("mage") != std::string::npos
             || classFocus.find("arcaniste") != std::string::npos
             || classFocus.find("sorcier") != std::string::npos
-            || classFocus.find("pyromancien") != std::string::npos)
+            || classFocus.find("pyromancien") != std::string::npos
+            || classFocus.find("hydromancien") != std::string::npos
+            || classFocus.find("géomancien") != std::string::npos
+            || classFocus.find("geomancien") != std::string::npos
+            || classFocus.find("chronomancien") != std::string::npos
+            || classFocus.find("démoniste") != std::string::npos
+            || classFocus.find("demoniste") != std::string::npos
+            || classFocus.find("aéromancien") != std::string::npos
+            || classFocus.find("aeromancien") != std::string::npos
+            || classFocus.find("runiste") != std::string::npos
+            || classFocus.find("enchanteur") != std::string::npos)
             && random.between(1, 100) <= 20)
         {
             int effectRoll = random.between(1, 3);
@@ -493,7 +708,10 @@ void CombatAttack::executeBoostedAttack(
         if ((classFocus.find("rôdeur") != std::string::npos
             || classFocus.find("rodeur") != std::string::npos
             || classFocus.find("archer") != std::string::npos
-            || classFocus.find("tireur") != std::string::npos)
+            || classFocus.find("tireur") != std::string::npos
+            || classFocus.find("trappeur") != std::string::npos
+            || classFocus.find("guetteur") != std::string::npos
+            || classFocus.find("messager arm") != std::string::npos)
             && attackingPlayerIdentity->hasEquippedWeapon()
             && attackingPlayerIdentity->getEquippedWeapon().getType() == WeaponType::Bow
             && random.between(1, 100) <= 26)
@@ -503,6 +721,7 @@ void CombatAttack::executeBoostedAttack(
         }
 
         if ((classFocus.find("lancier") != std::string::npos
+            || classFocus.find("javelinier") != std::string::npos
             || classFocus.find("spear") != std::string::npos
             || classFocus.find("garde") != std::string::npos)
             && attackingPlayerIdentity->hasEquippedWeapon()
@@ -515,7 +734,9 @@ void CombatAttack::executeBoostedAttack(
 
         if ((classFocus.find("barbare") != std::string::npos
             || classFocus.find("berserker") != std::string::npos
-            || classFocus.find("briseur") != std::string::npos)
+            || classFocus.find("briseur") != std::string::npos
+            || classFocus.find("faucheur") != std::string::npos
+            || classFocus.find("lame tellurique") != std::string::npos)
             && attacker.getHp() * 100 <= attacker.getMaxHp() * 55
             && random.between(1, 100) <= 28)
         {
@@ -525,6 +746,9 @@ void CombatAttack::executeBoostedAttack(
 
         if ((classFocus.find("alchimiste") != std::string::npos
             || classFocus.find("artificier") != std::string::npos
+            || classFocus.find("runiste") != std::string::npos
+            || classFocus.find("enchanteur") != std::string::npos
+            || classFocus.find("intendant") != std::string::npos
             || classFocus.find("bricoleur") != std::string::npos)
             && random.between(1, 100) <= 18)
         {
@@ -548,11 +772,34 @@ void CombatAttack::executeBoostedAttack(
 
         if ((classFocus.find("invoc") != std::string::npos
             || classFocus.find("nécro") != std::string::npos
-            || classFocus.find("necro") != std::string::npos)
+            || classFocus.find("necro") != std::string::npos
+            || classFocus.find("dresseur spectral") != std::string::npos
+            || classFocus.find("gardien de familiers") != std::string::npos
+            || classFocus.find("conjurateur") != std::string::npos
+            || classFocus.find("corbeaumancien") != std::string::npos)
             && random.between(1, 100) <= 18)
         {
             ElementalAffinitySystem::applyFrost(defender, 1);
             preparationBuffer << "Spécialité d'invocateur : l'attaque laisse une pression froide, comme une présence derrière la cible." << std::endl;
+        }
+
+        const int attackPressure = attackingPlayerIdentity->getCursePressureForCategory("attack");
+        if (attackPressure > 0)
+        {
+            const int beforeCurseDamage = rawDamage;
+            const int percent = std::max(72, 100 - attackPressure * 4);
+            rawDamage = std::max(1, rawDamage * percent / 100);
+            if (rawDamage < beforeCurseDamage)
+            {
+                if (attackingPlayerIdentity->getKnownCursePressureForCategory("attack") > 0)
+                {
+                    preparationBuffer << "Malédiction diagnostiquée : la catégorie attaque alourdit l'impact sans révéler sa valeur exacte." << std::endl;
+                }
+                else
+                {
+                    preparationBuffer << "Quelque chose retient l'impact, comme si la force arrivait avec un temps de retard." << std::endl;
+                }
+            }
         }
 
         if (rawDamage != beforeSpecialityDamage)
@@ -807,6 +1054,40 @@ void CombatAttack::executeBoostedAttack(
         defender,
         rapport.receivedDamage
     );
+
+    Player* defendingPlayerCurseCheck = dynamic_cast<Player*>(&defender);
+    if (defendingPlayerCurseCheck != nullptr && rapport.receivedDamage > 0)
+    {
+        const int defensePressure = defendingPlayerCurseCheck->getCursePressureForCategory("defense")
+            + defendingPlayerCurseCheck->getCursePressureForCategory("health") / 2;
+        if (defensePressure > 0)
+        {
+            const int beforeCurseDamage = rapport.receivedDamage;
+            rapport.receivedDamage = std::max(1, rapport.receivedDamage * std::min(145, 100 + defensePressure * 3) / 100);
+            if (rapport.receivedDamage > beforeCurseDamage)
+            {
+                if (defendingPlayerCurseCheck->getKnownCursePressureForCategory("defense") > 0
+                    || defendingPlayerCurseCheck->getKnownCursePressureForCategory("health") > 0)
+                {
+                    MessageScreen::show(
+                        "PRESSION MAUDITE",
+                        "combat.attack.curse_defense_known",
+                        {"Malédiction diagnostiquée : la protection du corps répond moins bien à l'impact."},
+                        false
+                    );
+                }
+                else
+                {
+                    MessageScreen::show(
+                        "PRESSION INCONNUE",
+                        "combat.attack.curse_defense_unknown",
+                        {"Le corps encaisse étrangement mal, sans que la raison soit encore claire."},
+                        false
+                    );
+                }
+            }
+        }
+    }
 
     defender.takeDamage(rapport.receivedDamage);
 

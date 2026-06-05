@@ -130,6 +130,16 @@ std::vector<ShopItem> LibraryInformationCatalog::createCommonInformationOffers()
             0,
             1,
             true
+        ),
+        ShopItem(
+            "curse_counter_rites_notes",
+            "Notes sur les rites anti-malédiction",
+            "Ouvre des archives sur les objets sources, serments, contre-légendes et patients maudits sans révéler d'effets exacts.",
+            ShopItemCategory::Information,
+            135,
+            0,
+            1,
+            true
         )
     };
 }

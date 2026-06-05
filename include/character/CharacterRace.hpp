@@ -25,6 +25,12 @@ enum class CharacterRace
     Vampire,
     Demon,
     SemiHuman,
+    SemiWolf,
+    SemiFox,
+    SemiDog,
+    SemiCat,
+    SemiLizard,
+    SemiBird,
     Other
 };
 
@@ -62,6 +68,18 @@ inline std::string characterRaceToText(CharacterRace race)
             return "Démon";
         case CharacterRace::SemiHuman:
             return "Semi-humain";
+        case CharacterRace::SemiWolf:
+            return "Semi-humain loup";
+        case CharacterRace::SemiFox:
+            return "Semi-humain renard";
+        case CharacterRace::SemiDog:
+            return "Semi-humain chien";
+        case CharacterRace::SemiCat:
+            return "Semi-humain chat";
+        case CharacterRace::SemiLizard:
+            return "Semi-humain lézard";
+        case CharacterRace::SemiBird:
+            return "Semi-humain piaf";
         default:
             return "Autre";
     }

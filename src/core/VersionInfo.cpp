@@ -9,17 +9,17 @@
 
 std::string VersionInfo::currentVersion()
 {
-    return "2.04.08";
+    return "3.07.02";
 }
 
 std::string VersionInfo::recreateRecommendedBeforeVersion()
 {
-    return "2.01.03";
+    return "3.00.00";
 }
 
 std::string VersionInfo::importantSaveUpdateVersion()
 {
-    return "2.01.03";
+    return "3.00.00";
 }
 
 std::string VersionInfo::currentDateText()
@@ -136,10 +136,10 @@ VersionCompatibilityImpact VersionInfo::evaluateCompatibility(const std::string&
         return VersionCompatibilityImpact::RecreateRecommended;
     }
 
-    // EN: V2.01.03 is the accepted save baseline after the lore/legend bestiary restructuring.
-    // Older saves now receive the stronger recreation recommendation before this mid-update warning.
-    // FR: La V2.01.03 devient le socle accepté après la restructuration du bestiaire lore/légendes.
-    // Les sauvegardes plus anciennes reçoivent maintenant la recommandation forte avant cette alerte intermédiaire.
+    // EN: V3.00.00 is the accepted save baseline for the first playable story milestone.
+    // Older saves receive the stronger recreation recommendation before this mid-update warning.
+    // FR: La V3.00.00 devient le socle accepté pour le premier jalon histoire jouable.
+    // Les sauvegardes plus anciennes reçoivent la recommandation forte avant cette alerte intermédiaire.
     if (compare(lastAdaptedVersion, importantSaveUpdateVersion()) < 0
         && compare(currentVersion(), importantSaveUpdateVersion()) >= 0)
     {
@@ -175,7 +175,7 @@ std::string VersionInfo::compatibilityMessage(VersionCompatibilityImpact impact)
         case VersionCompatibilityImpact::PatchUpdate:
             return "Petit patch détecté : quelques corrections ou ajouts mineurs ont été appliqués depuis la dernière adaptation de ce personnage.";
         case VersionCompatibilityImpact::MidUpdate:
-            return "Mise à jour importante détectée : le bestiaire, les légendes ou certaines règles de registre ont changé depuis la dernière adaptation de ce personnage.";
+            return "Mise à jour importante détectée : les règles de mort, l’économie, l’IG ou certaines données de registre ont changé depuis la dernière adaptation de ce personnage.";
         case VersionCompatibilityImpact::None:
         default:
             return "";
