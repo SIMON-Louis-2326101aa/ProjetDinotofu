@@ -71,6 +71,48 @@ namespace
         return toLower(value).find(toLower(searched)) != std::string::npos;
     }
 
+    bool monsterTextContains(const Monster& monster, const std::string& searched)
+    {
+        return containsText(monster.getName(), searched) || containsText(monster.getType(), searched);
+    }
+
+    bool isWolfLikeBeast(const Monster& monster)
+    {
+        return monsterTextContains(monster, "loup")
+            || monsterTextContains(monster, "wolf")
+            || monsterTextContains(monster, "meute")
+            || monsterTextContains(monster, "lupin");
+    }
+
+    bool isBoarLikeBeast(const Monster& monster)
+    {
+        return monsterTextContains(monster, "sanglier")
+            || monsterTextContains(monster, "verrat")
+            || monsterTextContains(monster, "defense")
+            || monsterTextContains(monster, "défense");
+    }
+
+    bool isRodentLikeBeast(const Monster& monster)
+    {
+        return monsterTextContains(monster, "rat")
+            || monsterTextContains(monster, "rongeur")
+            || monsterTextContains(monster, "souris");
+    }
+
+    bool isFangedPredatorBeast(const Monster& monster)
+    {
+        return monsterTextContains(monster, "chien")
+            || monsterTextContains(monster, "renard")
+            || monsterTextContains(monster, "chacal")
+            || monsterTextContains(monster, "ours")
+            || monsterTextContains(monster, "croc")
+            || monsterTextContains(monster, "crocs")
+            || monsterTextContains(monster, "prédateur")
+            || monsterTextContains(monster, "predateur")
+            || monsterTextContains(monster, "carnassier")
+            || monsterTextContains(monster, "lunaire");
+    }
+
     // EN: isIntelligentRace declares or implements a focused behavior used by this module.
     // FR: isIntelligentRace déclare ou implémente un comportement précis utilisé par ce module.
     bool isIntelligentRace(Race race)
@@ -1282,15 +1324,29 @@ bool LootGenerator::tryGiveMonsterLoot(
             break;
 
         case Race::Bete:
-            if (containsText(monster.getType(), "cuir") || containsText(monster.getType(), "massive") || containsText(monster.getType(), "colossale") || random.between(1, 100) <= 40)
-            {
-                loot = MaterialCatalog::createBeastHide(quantity);
-            }
-            else
+        {
+            if (isWolfLikeBeast(monster) && random.between(1, 100) <= 70)
             {
                 loot = MaterialCatalog::createWolfFang(quantity);
             }
+            else if (isBoarLikeBeast(monster) && random.between(1, 100) <= 65)
+            {
+                loot = MaterialCatalog::createBoarTusk(quantity);
+            }
+            else if (isRodentLikeBeast(monster) && random.between(1, 100) <= 60)
+            {
+                loot = MaterialCatalog::createRodentTooth(quantity);
+            }
+            else if (isFangedPredatorBeast(monster) && random.between(1, 100) <= 55)
+            {
+                loot = MaterialCatalog::createPredatorFang(quantity);
+            }
+            else
+            {
+                loot = MaterialCatalog::createBeastHide(quantity);
+            }
             break;
+        }
 
         case Race::Humain:
         case Race::SemiHumain:

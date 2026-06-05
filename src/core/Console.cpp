@@ -632,7 +632,6 @@ void Console::configureTerminalEncoding()
 // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
 void Console::printLine(const std::string& text)
 {
-    applyConsoleTheme();
     std::cout << text << std::endl;
 }
 

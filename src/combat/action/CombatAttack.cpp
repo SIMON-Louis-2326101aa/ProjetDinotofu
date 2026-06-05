@@ -75,7 +75,7 @@ namespace
         std::vector<std::string> lines = splitCapturedCombatLines(capturedText);
         if (!lines.empty())
         {
-            MessageScreen::show(title, screenId, lines, false);
+            MessageScreen::show(title, screenId, lines, true);
         }
     }
 
@@ -1152,6 +1152,6 @@ void CombatAttack::executeBoostedAttack(
             defender.getName() + " reçoit " + std::to_string(rapport.receivedDamage) + " dégât(s).",
             defender.getName() + " possède maintenant " + std::to_string(defender.getHp()) + "/" + std::to_string(defender.getMaxHp()) + " PV."
         },
-        false
+        true
     );
 }

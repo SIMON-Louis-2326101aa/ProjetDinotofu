@@ -17,10 +17,11 @@ namespace
     // FR: evolvedMonsterChanceForPlayerLevel déclare ou implémente un comportement précis utilisé par ce module.
     int evolvedMonsterChanceForPlayerLevel(int playerLevel)
     {
-        if (playerLevel <= 2) return 6;
-        if (playerLevel <= 4) return 12;
-        if (playerLevel <= 7) return 18;
-        return 24;
+        if (playerLevel <= 2) return 2;
+        if (playerLevel <= 4) return 5;
+        if (playerLevel <= 7) return 9;
+        if (playerLevel <= 12) return 14;
+        return 20;
     }
 
     bool shouldCreateEvolvedMonster(
@@ -43,7 +44,7 @@ namespace
             chance += 3;
         }
 
-        chance = std::max(0, std::min(chance, 45));
+        chance = std::max(0, std::min(chance, 30));
 
         return random.between(1, 100) <= chance;
     }
@@ -107,7 +108,19 @@ EnemyCombatQueue WaveGenerator::createWaveForPlayer(
 
     for (int i = 0; i < waveSize; ++i)
     {
-        int allowedVariation = player.getLevel() >= 20 ? 15 : 10;
+        int allowedVariation = 2;
+        if (player.getLevel() >= 5)
+        {
+            allowedVariation = 4;
+        }
+        if (player.getLevel() >= 10)
+        {
+            allowedVariation = 7;
+        }
+        if (player.getLevel() >= 20)
+        {
+            allowedVariation = 12;
+        }
         int levelVariation = random.between(-allowedVariation, allowedVariation);
 
         int monsterLevel = WaveRules::getMonsterLevelForPlayerLevel(

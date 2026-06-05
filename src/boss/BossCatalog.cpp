@@ -149,17 +149,17 @@ Boss BossCatalog::createBoss(int choice)
 {
     if (choice == 1)
     {
-        return Boss(1, "Fitoria", "Ange", 800, 3, 10, 15, 3, 5, 3, 14);
+        return Boss(1, "Fitoria", "Ange", 980, 18, 32, 48, 3, 5, 3, 14);
     }
 
     if (choice == 2)
     {
-        return Boss(2, "Zelef", "Démon", 600, 5, 15, 22, 5, 4, 4, 10);
+        return Boss(2, "Zelef", "Démon", 920, 22, 40, 60, 5, 4, 4, 10);
     }
 
     if (choice == 3)
     {
-        return Boss(3, "Atlas", "Protecteur universel déchu", 1200, 2, 5, 8, 2, 5, 3, 12);
+        return Boss(3, "Atlas", "Protecteur universel déchu", 1450, 16, 30, 44, 2, 5, 3, 12);
     }
 
     if (choice == 4)
@@ -327,5 +327,5 @@ Boss BossCatalog::createBoss(int choice)
         return Boss(36, "Source stable de l'Anomalie", "Source d'interface presque stabilisée", 2050, 15, 46, 70, 2, 4, 3, 8);
     }
 
-    return Boss(3, "Atlas", "Protecteur universel déchu", 1200, 2, 5, 8, 2, 5, 3, 12);
+    return Boss(3, "Atlas", "Protecteur universel déchu", 1450, 16, 30, 44, 2, 5, 3, 12);
 }

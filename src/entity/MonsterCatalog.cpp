@@ -1581,9 +1581,9 @@ Monster MonsterCatalog::createRandomMonsterForBiome(const std::string& biomeName
 // FR: createEvolvedVariant déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createEvolvedVariant(const Monster& baseMonster, Random& random)
 {
-    int levelBonus = random.between(1, 2);
-    int hpPercent = baseMonster.isElite() ? random.between(130, 150) : random.between(120, 140);
-    int damagePercent = baseMonster.isElite() ? random.between(120, 135) : random.between(112, 128);
+    int levelBonus = random.between(1, 3);
+    int hpPercent = baseMonster.isElite() ? random.between(185, 225) : random.between(160, 195);
+    int damagePercent = baseMonster.isElite() ? random.between(150, 178) : random.between(135, 160);
 
     bool hiddenStats = !baseMonster.areStatsVisible() || random.between(1, 100) <= 18;
     bool elite = true;
@@ -1608,8 +1608,8 @@ Monster MonsterCatalog::createEvolvedVariant(const Monster& baseMonster, Random&
 
 Monster MonsterCatalog::createEliteVariant(const Monster& baseMonster, Random& random)
 {
-    int hpPercent = random.between(132, 152);
-    int damagePercent = random.between(116, 132);
+    int hpPercent = random.between(175, 215);
+    int damagePercent = random.between(140, 168);
     bool hiddenStats = !baseMonster.areStatsVisible() || random.between(1, 100) <= 12;
 
     return createMonster(

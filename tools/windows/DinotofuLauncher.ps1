@@ -602,6 +602,7 @@ function Launch-Game {
 
     Write-Host "Aucun executable Dinotofu trouve dans $InstallDir" -ForegroundColor Yellow
     Write-Host "La release Windows doit contenir Dinotofu.exe pour la version terminale, et plus tard DinotofuGUI.exe pour l'IG."
+    Write-Host "Si une verification GitHub vient d'echouer, verifie ta connexion Internet/DNS, puis relance l'installateur ou le launcher."
     Write-Host "WSL n'est pas utilise par le launcher Windows."
     Read-Host "Appuie sur Entree pour fermer"
 }
@@ -641,7 +642,15 @@ if (-not $NoUpdateCheck -and (Is-RepoConfigured)) {
     }
     catch {
         Write-Warning "Verification impossible : $($_.Exception.Message)"
-        Write-Warning "Le jeu va etre lance sans mise a jour."
+        Write-Warning "Verifie ta connexion Internet, ton DNS, ton proxy ou ton pare-feu, puis relance le launcher."
+        Write-Warning "Teste aussi l'ouverture de https://github.com dans ton navigateur."
+        if (-not (Test-InstalledRunnable)) {
+            Write-Warning "Aucun executable local n'a ete trouve. La reparation ne pourra pas se faire tant que GitHub est inaccessible."
+            Write-Warning "Relance l'installateur ou le launcher apres avoir recupere la connexion."
+        }
+        else {
+            Write-Warning "Le jeu va etre lance sans mise a jour."
+        }
     }
 }
 elseif (-not (Is-RepoConfigured)) {

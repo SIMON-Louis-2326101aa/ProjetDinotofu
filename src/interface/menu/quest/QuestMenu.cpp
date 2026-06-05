@@ -8768,24 +8768,24 @@ void QuestMenu::openQuestHub(Player& player)
         mainQuestData.status = player.hasStoryModeStarted() ? "Histoire active" : "Aucune histoire active";
         mainQuestData.important = player.hasStoryModeStarted();
 
-        MenuOptionItemData journalData = makeQuestNavigationItemData(
-            "quest",
-            "Hub",
-            "inspect",
-            "Journal de quêtes",
-            "Consulter les contrats officiels et les demandes informelles."
-        );
-        journalData.status = "Consultation";
-
         MenuOptionItemData readyData = makeQuestNavigationItemData(
             "quest",
             "Hub",
             "turn_in",
-            "Demandes prêtes à rendre",
-            readyCount > 0 ? "Choisir le bon contact pour valider une quête terminée." : "Aucune quête prête à rendre."
+            "Quêtes à rendre / terminées",
+            readyCount > 0 ? "Priorité : choisir le bon contact pour valider une quête terminée." : "Aucune quête prête, mais le journal permet de relire les archives."
         );
-        readyData.status = readyCount > 0 ? std::to_string(readyCount) + " prête(s)" : "Indisponible";
+        readyData.status = readyCount > 0 ? std::to_string(readyCount) + " prête(s)" : "Aucune prête";
         readyData.important = readyCount > 0;
+
+        MenuOptionItemData journalData = makeQuestNavigationItemData(
+            "quest",
+            "Hub",
+            "inspect",
+            "Journal complet",
+            "Consulter les contrats officiels, demandes informelles, filtres et archives."
+        );
+        journalData.status = "Consultation";
 
         MenuOptionItemData guildData = makeQuestNavigationItemData(
             "npc",
@@ -8798,13 +8798,13 @@ void QuestMenu::openQuestHub(Player& player)
         guildData.status = "Contrats officiels";
 
         screen.addOption(1, "Quête principale", "Voir ce que l'histoire demande réellement, sans acceptation/refus.", true, "quest.hub.main_story", mainQuestData);
-        screen.addOption(2, "Consulter le journal de quêtes", "Voir les quêtes et estimations connues.", true, "quest.hub.journal", journalData);
-        screen.addOption(3, "Rendre une quête prête" + (readyCount > 0 ? " [" + std::to_string(readyCount) + "]" : ""),
-            readyCount > 0 ? "Choisir un contact et valider une quête terminée." : "Aucune quête prête à rendre.",
-            readyCount > 0,
-            "quest.hub.ready_turn_in",
+        screen.addOption(2, "Quêtes à rendre / terminées" + (readyCount > 0 ? " [" + std::to_string(readyCount) + "]" : ""),
+            readyCount > 0 ? "Priorité aux quêtes validables maintenant." : "Aucune quête prête : ouvre le journal pour relire les terminées.",
+            true,
+            "quest.hub.ready_or_done",
             readyData
         );
+        screen.addOption(3, "Journal complet", "Voir les quêtes, filtres, estimations et archives.", true, "quest.hub.journal", journalData);
         screen.addOption(4, "Aller à la guilde", "Consulter le panneau officiel ou rendre un contrat de guilde.", true, "quest.hub.guild", guildData);
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
@@ -8821,11 +8821,23 @@ void QuestMenu::openQuestHub(Player& player)
         }
         else if (choice == 2)
         {
-            displayQuestJournal(player);
+            if (readyCount > 0)
+            {
+                openReadyQuestTurnInMenu(player);
+            }
+            else
+            {
+                MessageScreen::show(
+                    "QUÊTES À RENDRE / TERMINÉES",
+                    "quest.hub.ready_or_done.empty",
+                    {"Aucune quête n'est prête à rendre pour l'instant.", "Le journal complet permet de consulter les quêtes actives, prêtes, rendues et archivées."}
+                );
+                displayQuestJournal(player);
+            }
         }
         else if (choice == 3)
         {
-            openReadyQuestTurnInMenu(player);
+            displayQuestJournal(player);
         }
         else if (choice == 4)
         {

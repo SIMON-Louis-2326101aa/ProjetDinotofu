@@ -64,48 +64,78 @@ CharacterRace RaceCatalog::getPlayableRaceByChoice(int choice)
 std::vector<std::string> RaceCatalog::getPlayableRaceDisplayLines()
 {
     std::vector<std::string> lines;
-    std::vector<CharacterRace> races = getPlayableRaces();
 
-    for (std::size_t i = 0; i < races.size(); ++i)
+    auto appendGroup = [&](const std::string& title, const std::vector<CharacterRace>& races)
     {
-        CharacterRace race = races[i];
-        RaceStartingBonus bonus = getStartingBonus(race);
-
-        if (race == CharacterRace::Human)
+        lines.push_back("--- " + title + " ---");
+        for (CharacterRace race : races)
         {
-            lines.push_back("--- Races classiques ---");
+            RaceStartingBonus bonus = getStartingBonus(race);
+            std::string line = characterRaceToText(race)
+                + " — " + getGameplayIdentity(race)
+                + " | PV " + std::to_string(bonus.maxHpBonus)
+                + " | Dégâts " + std::to_string(bonus.minDamageBonus) + "/" + std::to_string(bonus.maxDamageBonus)
+                + " | Critique " + std::to_string(bonus.criticalDamageBonus);
+            if (hasInnateNightVision(race))
+            {
+                line += " | Vision nocturne";
+            }
+            if (race == CharacterRace::Demon)
+            {
+                line += " | Commerce tendu";
+            }
+            lines.push_back(line);
         }
-        else if (race == CharacterRace::SemiHuman)
-        {
-            lines.push_back("--- Semi-humains ---");
-        }
-        else if (race == CharacterRace::SemiWolf)
-        {
-            lines.push_back("--- Sous-types semi-humains ---");
-            lines.push_back("    Note : ces choix évitent de tout mettre dans un seul semi-humain générique. Chaque sous-type a ses propres réactions futures.");
-        }
-
-        lines.push_back(std::to_string(i + 1) + " : " + characterRaceToText(race));
-        lines.push_back("    Identité : " + getGameplayIdentity(race));
-        lines.push_back("    Description : " + getShortDescription(race));
-        lines.push_back(
-            "    Bonus départ : PV " + std::to_string(bonus.maxHpBonus)
-            + " | Dégâts min " + std::to_string(bonus.minDamageBonus)
-            + " | Dégâts max " + std::to_string(bonus.maxDamageBonus)
-            + " | Critique " + std::to_string(bonus.criticalDamageBonus)
-        );
-
-        lines.push_back("    " + getRaceFamilyLine(race));
-        lines.push_back("    " + getInnatePassiveLine(race));
-        lines.push_back("    " + getElementalAffinityLine(race));
-
-        if (race == CharacterRace::Demon)
-        {
-            lines.push_back("    Commerce : certains vendeurs hésitent déjà devant ta nature démoniaque.");
-        }
-
         lines.push_back("");
-    }
+    };
+
+    appendGroup(
+        "Races classiques",
+        {
+            CharacterRace::Human,
+            CharacterRace::Elf,
+            CharacterRace::DarkElf,
+            CharacterRace::Dwarf,
+            CharacterRace::Gnome,
+            CharacterRace::Halfling,
+            CharacterRace::Orc
+        }
+    );
+
+    appendGroup(
+        "Races mystiques",
+        {
+            CharacterRace::Tiefling,
+            CharacterRace::Aasimar,
+            CharacterRace::Kitsune,
+            CharacterRace::Fairy,
+            CharacterRace::Vampire,
+            CharacterRace::Demon
+        }
+    );
+
+    appendGroup(
+        "Semi-humains",
+        {
+            CharacterRace::SemiHuman,
+            CharacterRace::SemiWolf,
+            CharacterRace::SemiFox,
+            CharacterRace::SemiDog,
+            CharacterRace::SemiCat,
+            CharacterRace::SemiLizard,
+            CharacterRace::SemiBird
+        }
+    );
+
+    appendGroup(
+        "Hybrides rares",
+        {
+            CharacterRace::HalfDragon
+        }
+    );
+
+    lines.push_back("Note : pendant la création, les races sont sélectionnées par catégorie pour éviter les pages trop longues.");
+    lines.push_back("Les descriptions longues, passifs et affinités détaillées apparaissent après la sélection ou dans les menus de détail.");
 
     return lines;
 }

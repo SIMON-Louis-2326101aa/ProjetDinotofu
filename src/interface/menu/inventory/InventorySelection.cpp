@@ -3379,7 +3379,41 @@ bool InventorySelection::openMaterials(Player& player)
         {
             Material material = player.getInventory().getMaterial(static_cast<int>(i));
             std::ostringstream label;
-            label << material.getName() << " x" << material.getQuantity();
+            label << material.getName();
+
+            const bool readableMaterial = material.getCategory() == "Livre" || material.getCategory() == "Renseignement";
+            bool materialAlreadyRead = false;
+            if (readableMaterial)
+            {
+                const std::string id = material.getId();
+                if (id == "common_goblin_notes") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Gobelin peureux");
+                else if (id == "common_wolf_notes") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Loup affamé");
+                else if (id == "basic_plant_manual") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Feuille amère de soin");
+                else if (id == "class_identity_manual") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Différences de classes");
+                else if (id == "biome_field_notes") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Évolution des zones");
+                else if (id == "magic_learning_notes") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Supports magiques");
+                else if (id == "elemental_weakness_notes") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Résistances et faiblesses");
+                else if (id == "special_adventurer_notes") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Groupes spéciaux");
+                else if (id == "special_identity_rumors") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Matt (PRO)");
+                else if (id == "summoning_notes") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Invocations");
+                else if (id == "boss_identity_scrap") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Identité des boss");
+                else if (id == "potion_recipe_page") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Recettes de potions simples");
+                else if (id == "repair_recipe_page") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Réparation de fortune");
+                else if (id == "advanced_monster_notes") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Loots de monstres avancés");
+                else if (id == "slime_color_codex") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Codex des slimes colorés");
+                else if (id == "monster_family_evolution_notes") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Familles de monstres");
+                else if (id == "weapon_training_notes") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Techniques débloquables");
+                else if (id == "necromancy_warning") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Nécromancie instable");
+                else if (id == "clean_harvest_manual") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Technique passive : récolte propre");
+                else if (id == "monster_dissection_guide") materialAlreadyRead = BestiaryRuntimeProgress::hasBoughtInformation("Technique passive : dissection de monstre");
+            }
+
+            if (materialAlreadyRead)
+            {
+                label << " [lu]";
+            }
+
+            label << " x" << material.getQuantity();
 
             if (material.hasSpecialQuality())
             {
@@ -3396,7 +3430,7 @@ bool InventorySelection::openMaterials(Player& player)
             itemData.name = material.getName();
             itemData.quantity = std::to_string(material.getQuantity());
             itemData.detail = material.getCategory();
-            itemData.status = material.hasSpecialQuality() ? material.getQualityLabel() : "Qualité normale";
+            itemData.status = materialAlreadyRead ? "Lu" : (material.hasSpecialQuality() ? material.getQualityLabel() : "Qualité normale");
             itemData.price = std::to_string(material.getValue()) + " or/unité";
             itemData.important = material.hasSpecialQuality();
 

@@ -701,6 +701,26 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
         return;
     }
 
+    if (informationId == "clean_harvest_manual")
+    {
+        unlockEntry(
+            "Technique passive : récolte propre",
+            "Matériaux et plantes",
+            "Manuel lu : la récolte propre aide à récupérer plantes et composants sans les abîmer inutilement."
+        );
+        return;
+    }
+
+    if (informationId == "monster_dissection_guide")
+    {
+        unlockEntry(
+            "Technique passive : dissection de monstre",
+            "Entités hostiles / ennemis",
+            "Guide lu : la dissection de monstre aide à récupérer des composants cohérents selon la race et le corps de la créature."
+        );
+        return;
+    }
+
     if (informationId == "potion_recipe_page")
     {
         unlockEntry(

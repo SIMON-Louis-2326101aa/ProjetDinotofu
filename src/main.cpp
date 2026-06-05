@@ -42,6 +42,8 @@ int main(int argc, char* argv[])
         }
     }
 
+    Console::useNormalTheme();
+
     Game jeu;
     jeu.run();
 

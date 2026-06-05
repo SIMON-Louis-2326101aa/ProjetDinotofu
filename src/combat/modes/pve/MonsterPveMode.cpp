@@ -578,7 +578,8 @@ namespace
         const std::vector<Summon>& summons,
         const std::string& title,
         const std::string& phase,
-        int turnNumber
+        int turnNumber,
+        bool waitAndClear = false
     )
     {
         GuiCombatStateSnapshot snapshot = CombatDisplay::buildWaveSnapshot(
@@ -595,7 +596,16 @@ namespace
             snapshot.currentActorName = player.getName();
         }
 
-        CombatDisplay::displayCombatState(snapshot, false);
+        CombatDisplay::displayCombatState(snapshot, waitAndClear);
+    }
+
+    void showCombatPhaseGate(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& lines
+    )
+    {
+        MessageScreen::show(title, screenId, lines, true);
     }
 
 
@@ -742,9 +752,18 @@ void MonsterPveMode::run(
                     "ACTION NON CONSOMMÉE",
                     "combat.pve.turn.not_consumed",
                     {"Ton tour n'est pas encore consommé."},
-                    false
+                    true
                 );
             }
+        }
+
+        if (playerTurnFinished && !escapeSucceeded && !player.isDead())
+        {
+            showCombatPhaseGate(
+                "FIN DU TOUR JOUEUR",
+                "combat.pve.phase.player_resolved",
+                {"Action du joueur résolue.", "Valide pour passer à la phase suivante."}
+            );
         }
 
         if (!player.isDead()
@@ -756,6 +775,11 @@ void MonsterPveMode::run(
             // FR: hasActiveSummons déclare ou implémente un comportement précis utilisé par ce module.
             && SummonCombatSystem::hasActiveSummons(playerSummons))
         {
+            showCombatPhaseGate(
+                "TOUR DES INVOCATIONS ALLIÉES",
+                "combat.pve.phase.player_summons",
+                {"Les invocations alliées encore liées agissent séparément du joueur."}
+            );
             SummonCombatSystem::playPlayerSummonTurnsAgainstWave(
                 playerSummons,
                 wave,
@@ -766,6 +790,11 @@ void MonsterPveMode::run(
 
         if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
         {
+            showCombatPhaseGate(
+                "TOUR DES ENNEMIS VIVANTS",
+                "combat.pve.phase.enemies",
+                {"Les ennemis actifs agissent maintenant, un groupe après l'autre."}
+            );
             MonsterWaveCombatTurn::playMonsterTurns(
                 player,
                 wave,
@@ -779,7 +808,8 @@ void MonsterPveMode::run(
                 playerSummons,
                 "ÉTAT DU COMBAT",
                 "Après la riposte ennemie",
-                combatTurnCount
+                combatTurnCount,
+                true
             );
         }
     }
@@ -1023,9 +1053,18 @@ bool MonsterPveMode::runExplorationWave(
                     "ACTION NON CONSOMMÉE",
                     "exploration.wave.turn.not_consumed",
                     {"Ton tour n'est pas encore consommé."},
-                    false
+                    true
                 );
             }
+        }
+
+        if (playerTurnFinished && !escapeSucceeded && !player.isDead())
+        {
+            showCombatPhaseGate(
+                "FIN DU TOUR JOUEUR",
+                "exploration.wave.phase.player_resolved",
+                {"Action du joueur résolue.", "Valide pour passer à la phase suivante."}
+            );
         }
 
         if (!player.isDead()
@@ -1033,6 +1072,11 @@ bool MonsterPveMode::runExplorationWave(
             && !escapeSucceeded
             && SummonCombatSystem::hasActiveSummons(playerSummons))
         {
+            showCombatPhaseGate(
+                "TOUR DES INVOCATIONS ALLIÉES",
+                "exploration.wave.phase.player_summons",
+                {"Les invocations alliées encore liées agissent avant les ennemis de l'événement."}
+            );
             SummonCombatSystem::playPlayerSummonTurnsAgainstWave(
                 playerSummons,
                 wave,
@@ -1043,6 +1087,11 @@ bool MonsterPveMode::runExplorationWave(
 
         if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
         {
+            showCombatPhaseGate(
+                "TOUR DES ENNEMIS VIVANTS",
+                "exploration.wave.phase.enemies",
+                {"Les ennemis actifs de l'événement agissent maintenant."}
+            );
             MonsterWaveCombatTurn::playMonsterTurns(
                 player,
                 wave,
@@ -1056,7 +1105,8 @@ bool MonsterPveMode::runExplorationWave(
                 playerSummons,
                 "ÉTAT DE L'ÉVÉNEMENT",
                 "Après la riposte ennemie",
-                combatTurnCount
+                combatTurnCount,
+                true
             );
         }
     }

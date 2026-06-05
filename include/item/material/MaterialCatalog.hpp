@@ -18,6 +18,9 @@ public:
     static Material createById(const std::string& id, int quantity = 1, const std::string& quality = "normal");
     static Material createGoblinEar(int quantity = 1);
     static Material createWolfFang(int quantity = 1);
+    static Material createPredatorFang(int quantity = 1);
+    static Material createBoarTusk(int quantity = 1);
+    static Material createRodentTooth(int quantity = 1);
     static Material createRustedMetalFragment(int quantity = 1);
     static Material createRunicIronShard(int quantity = 1);
     static Material createPolishedScalePlate(int quantity = 1);

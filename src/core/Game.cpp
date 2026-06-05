@@ -419,11 +419,6 @@ namespace
         return likely ? " [Objectif de quête probable]" : "";
     }
 
-    std::string questActivityProgress(const std::string& fallback, bool likely)
-    {
-        return likely ? fallback + " / objectif actif possible" : fallback;
-    }
-
     MenuOptionItemData makeActivityItemData(
         const std::string& section,
         const std::string& actionType,
@@ -1626,64 +1621,160 @@ void Game::chooseDeathRule()
 // FR: choosePlayerRace déclare ou implémente un comportement précis utilisé par ce module.
 void Game::choosePlayerRace()
 {
-    MenuScreen screen("RACE", "character.creation.race");
-    screen.addSubtitle("Chaque race apporte une petite identité de départ.");
-    screen.addLine("Elle marque ton origine, tes affinités et le regard que le monde pose sur toi.");
-
-    const std::vector<CharacterRace> races = RaceCatalog::getPlayableRaces();
-
-    for (std::size_t i = 0; i < races.size(); ++i)
+    struct RaceCreationGroup
     {
-        CharacterRace race = races[i];
-        RaceStartingBonus bonus = RaceCatalog::getStartingBonus(race);
+        std::string title;
+        std::string hint;
+        std::vector<CharacterRace> races;
+    };
 
-        std::ostringstream hint;
-        hint << RaceCatalog::getGameplayIdentity(race)
-             << " | PV " << bonus.maxHpBonus
-             << " | Dégâts " << bonus.minDamageBonus << "/" << bonus.maxDamageBonus
-             << " | Critique " << bonus.criticalDamageBonus;
-
-        if (RaceCatalog::hasInnateNightVision(race))
+    const std::vector<RaceCreationGroup> groups = {
         {
-            hint << " | Vision nocturne";
+            "Races classiques",
+            "Humain, elfes, nain, gnome, halfelin et orc.",
+            {
+                CharacterRace::Human,
+                CharacterRace::Elf,
+                CharacterRace::DarkElf,
+                CharacterRace::Dwarf,
+                CharacterRace::Gnome,
+                CharacterRace::Halfling,
+                CharacterRace::Orc
+            }
+        },
+        {
+            "Races mystiques",
+            "Origines marquées par la magie, la lumière, l'ombre ou les pactes.",
+            {
+                CharacterRace::Tiefling,
+                CharacterRace::Aasimar,
+                CharacterRace::Kitsune,
+                CharacterRace::Fairy,
+                CharacterRace::Vampire,
+                CharacterRace::Demon
+            }
+        },
+        {
+            "Semi-humains",
+            "Catégorie dédiée aux peuples semi-humains et à leurs sous-types animaux.",
+            {
+                CharacterRace::SemiHuman,
+                CharacterRace::SemiWolf,
+                CharacterRace::SemiFox,
+                CharacterRace::SemiDog,
+                CharacterRace::SemiCat,
+                CharacterRace::SemiLizard,
+                CharacterRace::SemiBird
+            }
+        },
+        {
+            "Hybrides rares",
+            "Lignées moins communes, proches des semi-humains mais traitées à part.",
+            {
+                CharacterRace::HalfDragon
+            }
+        }
+    };
+
+    while (true)
+    {
+        MenuScreen categoryScreen("RACE", "character.creation.race.category");
+        categoryScreen.addSubtitle("Choisis d'abord une catégorie");
+        categoryScreen.addLine("La liste est séparée pour éviter les pages trop longues.");
+        categoryScreen.addLine("Les semi-humains et leurs sous-types sont rangés ensemble.");
+
+        for (std::size_t i = 0; i < groups.size(); ++i)
+        {
+            categoryScreen.addOption(
+                static_cast<int>(i + 1),
+                groups[i].title,
+                groups[i].hint,
+                true,
+                "character.race.category",
+                makeCreationItemData(
+                    "race_category",
+                    "Création - catégorie de race",
+                    "select",
+                    groups[i].title,
+                    groups[i].hint,
+                    "Catégorie",
+                    std::to_string(groups[i].races.size()) + " choix",
+                    "Page courte"
+                )
+            );
         }
 
-        if (race == CharacterRace::Demon)
-        {
-            hint << " | Commerce tendu";
-        }
-
-        screen.addOption(
-            static_cast<int>(i + 1),
-            characterRaceToText(race),
-            hint.str(),
-            true,
-            "character.race.select",
-            makeCreationItemData(
-                "race",
-                "Création - race",
-                "select",
-                characterRaceToText(race),
-                RaceCatalog::getShortDescription(race),
-                RaceCatalog::getGameplayIdentity(race),
-                "PV " + std::to_string(bonus.maxHpBonus)
-                    + " | Dégâts " + std::to_string(bonus.minDamageBonus)
-                    + "/" + std::to_string(bonus.maxDamageBonus)
-                    + " | Critique " + std::to_string(bonus.criticalDamageBonus),
-                race == CharacterRace::Demon ? "Commerce plus tendu" : "Origine validée",
-                race == CharacterRace::Demon
-            )
+        const int categoryChoice = TerminalInterface::askMenuChoiceFromOptions(
+            categoryScreen,
+            "Veuillez entrer un chiffre correspondant à une catégorie affichée."
         );
+        Console::clear();
+
+        const RaceCreationGroup& group = groups[static_cast<std::size_t>(categoryChoice - 1)];
+
+        MenuScreen raceScreen("RACE — " + group.title, "character.creation.race");
+        raceScreen.addSubtitle(group.hint);
+        raceScreen.addLine("Retour permet de changer de catégorie avant de valider la race.");
+        raceScreen.addBackOption("Changer de catégorie", "character.race.category.back");
+
+        for (std::size_t i = 0; i < group.races.size(); ++i)
+        {
+            CharacterRace race = group.races[i];
+            RaceStartingBonus bonus = RaceCatalog::getStartingBonus(race);
+
+            std::ostringstream hint;
+            hint << RaceCatalog::getGameplayIdentity(race)
+                 << " | PV " << bonus.maxHpBonus
+                 << " | Dégâts " << bonus.minDamageBonus << "/" << bonus.maxDamageBonus
+                 << " | Critique " << bonus.criticalDamageBonus;
+
+            if (RaceCatalog::hasInnateNightVision(race))
+            {
+                hint << " | Vision nocturne";
+            }
+
+            if (race == CharacterRace::Demon)
+            {
+                hint << " | Commerce tendu";
+            }
+
+            raceScreen.addOption(
+                static_cast<int>(i + 1),
+                characterRaceToText(race),
+                hint.str(),
+                true,
+                "character.race.select",
+                makeCreationItemData(
+                    "race",
+                    "Création - race",
+                    "select",
+                    characterRaceToText(race),
+                    RaceCatalog::getShortDescription(race),
+                    RaceCatalog::getGameplayIdentity(race),
+                    "PV " + std::to_string(bonus.maxHpBonus)
+                        + " | Dégâts " + std::to_string(bonus.minDamageBonus)
+                        + "/" + std::to_string(bonus.maxDamageBonus)
+                        + " | Critique " + std::to_string(bonus.criticalDamageBonus),
+                    race == CharacterRace::Demon ? "Commerce plus tendu" : group.title,
+                    race == CharacterRace::Demon
+                )
+            );
+        }
+
+        const int raceChoice = TerminalInterface::askMenuChoiceFromOptions(
+            raceScreen,
+            "Veuillez entrer un chiffre correspondant à une race affichée."
+        );
+        Console::clear();
+
+        if (raceChoice == 0)
+        {
+            continue;
+        }
+
+        selectedRace = group.races[static_cast<std::size_t>(raceChoice - 1)];
+        break;
     }
-
-    int choice = TerminalInterface::askMenuChoiceFromOptions(
-        screen,
-        "Veuillez entrer un chiffre correspondant à une race affichée."
-    );
-
-    selectedRace = RaceCatalog::getPlayableRaceByChoice(choice);
-
-    Console::clear();
 
     MenuScreen confirmation("RACE VALIDÉE", "character.creation.race.confirmation");
     confirmation.setContinueInput("Valide pour continuer vers le choix de classe.");
@@ -2343,92 +2434,60 @@ void Game::chooseGameMode()
 {
     while (true)
     {
-        MenuScreen screen("ACTIVITÉS", "activity.main");
-        screen.addSubtitle("Choisis la prochaine route de " + mainPlayer.getName() + ".");
-        screen.addLine("Date actuelle : " + mainPlayer.formatWorldDateLine());
-        screen.addLine("Moment actuel : " + mainPlayer.formatWorldDayPartLine());
-
         const bool combatQuestLikely = hasLikelyCombatQuest(mainPlayer);
         const bool explorationQuestLikely = hasLikelyExplorationQuest(mainPlayer);
         const bool questHubLikely = hasLikelyQuestHubObjective(mainPlayer);
         const bool locationNpcQuestLikely = hasLikelyLocationOrNpcQuest(mainPlayer);
+
+        MenuScreen screen("ACTIVITÉS", "activity.main");
+        screen.addSubtitle("Choisis une catégorie, puis une action précise.");
+        screen.addLine("Date : " + mainPlayer.formatWorldDateLine() + " | Moment : " + mainPlayer.formatWorldDayPartLine());
+        screen.addLine("Astuce : les quêtes d'exploration passent par Exploration. Les lieux visitables servent surtout à la ville, aux boutiques et aux PNJ.");
         screen.addOption(
             1,
             "Histoire",
-            "Route principale guidée : départ limité, ville à développer, chapitres 1 et 2 en première base.",
+            "Route principale guidée : prologue, ville, quêtes principales et chapitres.",
             true,
             "activity.story",
-            makeActivityItemData("Routes principales", "story", "Histoire", "Mode guidé séparé du bac à sable : peu de boutiques/quêtes au départ, puis déblocages par chapitres.", mainPlayer.getStoryProgressLabel(), "Chapitre 1/2", true)
+            makeActivityItemData("Route principale", "story", "Histoire", "Mode guidé séparé du bac à sable : peu de boutiques/quêtes au départ, puis déblocages par chapitres.", mainPlayer.getStoryProgressLabel(), "Chapitre 1/2", true)
         );
         screen.addOption(
             2,
-            "Combats" + questActivityTag(combatQuestLikely),
-            "PvE monstres, boss, groupes d'adversaires et JcJ." + questActivityTag(combatQuestLikely),
+            "Terrain : Combats / Exploration" + questActivityTag(combatQuestLikely || explorationQuestLikely),
+            "Combats PvE/PvP, boss, biomes, plantes, matériaux, coffres et rencontres." + questActivityTag(combatQuestLikely || explorationQuestLikely),
             true,
-            "activity.combat",
-            makeActivityItemData("Routes principales", "combat", "Combats", "Accès aux duels IA, JcJ local, PvE monstres et boss sans passer par l'histoire.", combatQuestLikely ? "Quête probable" : "Disponible", questActivityProgress("Chemin jouable", combatQuestLikely), true)
+            "activity.terrain",
+            makeActivityItemData("Terrain", "travel", "Combats / Exploration", "Catégorie terrain : combats volontaires et sorties d'exploration hors ville.", (combatQuestLikely || explorationQuestLikely) ? "Quête probable" : "Disponible", "Combat ou exploration", true)
         );
         screen.addOption(
             3,
-            "Exploration" + questActivityTag(explorationQuestLikely),
-            "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues." + questActivityTag(explorationQuestLikely),
+            "Ville : Quêtes / PNJ / Lieux" + questActivityTag(questHubLikely || locationNpcQuestLikely),
+            "Journal, guilde, PNJ notables, forge, herboristerie, bibliothèque et boutiques." + questActivityTag(questHubLikely || locationNpcQuestLikely),
             true,
-            "activity.exploration",
-            makeActivityItemData("Terrain", "travel", "Exploration", "Sorties par biome avec risques, ressources, coffres, pièges, mimics et rencontres imprévues.", explorationQuestLikely ? "Quête probable" : "Disponible", questActivityProgress("Chemin jouable", explorationQuestLikely), true)
+            "activity.city",
+            makeActivityItemData("Ville", "quest", "Quêtes / PNJ / Lieux", "Catégorie ville : journal, demandes, personnages, boutiques et services.", (questHubLikely || locationNpcQuestLikely) ? "Quête probable" : "Disponible", "Ville / progression", questHubLikely || locationNpcQuestLikely)
         );
         screen.addOption(
             4,
-            "Quêtes" + questActivityTag(questHubLikely),
-            "Guilde, journal, demandes de PNJ et progression de quêtes." + questActivityTag(questHubLikely),
+            "Gestion",
+            "Récap après-combat, statistiques, inventaire via accès rapide, sauvegarde et paramètres.",
             true,
-            "activity.quests",
-            makeActivityItemData("Ville", "quest", "Quêtes", "Accès au journal, à la guilde, aux demandes de PNJ et aux validations d'objectifs.", questHubLikely ? "Quête probable" : "Disponible", questActivityProgress("Ville / progression", questHubLikely), questHubLikely)
+            "activity.management",
+            makeActivityItemData("Gestion", "inspect", "Gestion", "Actions de confort : récap, inventaire, sauvegarde, paramètres et état du personnage.", "Disponible", "Hub de gestion", true)
         );
         screen.addOption(
             5,
-            "Boutiques / lieux visitables" + questActivityTag(locationNpcQuestLikely),
-            "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux." + questActivityTag(locationNpcQuestLikely),
-            true,
-            "activity.locations",
-            makeActivityItemData("Ville", "travel", "Boutiques / lieux visitables", "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux centralisés hors combat.", locationNpcQuestLikely ? "Quête probable" : "Disponible", questActivityProgress("Ville / économie", locationNpcQuestLikely), locationNpcQuestLikely)
-        );
-        screen.addOption(
-            6,
-            "PNJ notables" + questActivityTag(locationNpcQuestLikely),
-            "Parler aux clients et personnages disponibles sans passer par une boutique." + questActivityTag(locationNpcQuestLikely),
-            true,
-            "activity.npcs",
-            makeActivityItemData("Ville", "talk", "PNJ notables", "Discussion directe avec les clients ou personnages disponibles, sans forcer une boutique.", locationNpcQuestLikely ? "Quête probable" : "Disponible", questActivityProgress("Ville / dialogues", locationNpcQuestLikely), locationNpcQuestLikely)
-        );
-        screen.addOption(
-            7,
-            "Échange / don",
-            "Transférer des ressources entre personnages compatibles.",
-            true,
-            "activity.exchange",
-            makeActivityItemData("Gestion", "barter", "Échange / don", "Transfert protégé d'objets, matériaux ou or entre personnages compatibles.", "Disponible", "Gestion de compte")
-        );
-        screen.addOption(
-            8,
-            "Gestion après-combat",
-            "Ouvre le récap, les statistiques, les lieux, les quêtes et les actions entre deux combats.",
-            true,
-            "activity.post_combat",
-            makeActivityItemData("Gestion", "inspect", "Gestion après-combat", "Récap, statistiques, inventaire, équipement, lieux, quêtes et actions entre deux combats.", "Disponible", "Hub de gestion", true)
-        );
-        screen.addOption(
-            9,
-            "Information sur toutes les options",
-            "Ouvre un guide clair sur les routes possibles.",
+            "Infos utiles / aide",
+            "Journées, argent, quêtes, exploration et catégories sans noyer la page principale.",
             true,
             "activity.info",
-            makeActivityItemData("Aide", "inspect", "Information sur toutes les options", "Guide court des routes jouables, utile quand l'IG doit expliquer sans noyer le joueur.", "Aide", "Lecture")
+            makeActivityItemData("Aide", "inspect", "Infos utiles", "Guide court des routes jouables, temps, argent, quêtes et lieux.", "Aide", "Lecture")
         );
         addOutOfCombatUtilityOptions(screen, true, true);
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(
             screen,
-            "Veuillez choisir une activité affichée."
+            "Veuillez choisir une catégorie affichée."
         );
 
         Console::clear();
@@ -2438,121 +2497,261 @@ void Game::chooseGameMode()
             continue;
         }
 
-        if (choice == 8)
-        {
-            const bool keepPlaying = openPostCombatMenu();
-            if (!keepPlaying)
-            {
-                std::exit(0);
-            }
-            continue;
-        }
-
-        if (choice == 9)
-        {
-            displayActivityInformation();
-            continue;
-        }
-
-        if (choice == 2)
-        {
-            const bool monsterQuestLikely = hasLikelyCombatQuest(mainPlayer);
-            const bool bossQuestLikely = hasLikelyBossQuest(mainPlayer);
-            MenuScreen combatScreen("COMBATS", "activity.combat.menu");
-            combatScreen.addLine("Date actuelle : " + mainPlayer.formatWorldDateLine());
-            combatScreen.addLine("Moment actuel : " + mainPlayer.formatWorldDayPartLine());
-            combatScreen.addBackOption();
-            combatScreen.addOption(
-                1,
-                "PvP IA",
-                "Duel contre une IA, avec personnages spéciaux possibles selon le mode.",
-                true,
-                "combat.ai_pvp",
-                makeActivityItemData("Combats", "combat", "PvP IA", "Duel contre une IA, avec personnages spéciaux possibles selon le mode.", "Disponible", "Combat volontaire")
-            );
-            combatScreen.addOption(
-                2,
-                "PvP 2 joueurs / JcJ",
-                "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.",
-                true,
-                "combat.local_pvp",
-                makeActivityItemData("Combats", "combat", "PvP 2 joueurs / JcJ", "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.", "Disponible", "Combat volontaire")
-            );
-            combatScreen.addOption(
-                3,
-                "PvE monstres" + questActivityTag(monsterQuestLikely),
-                "Vagues de monstres, loots, matériaux, qualité de récupération et progression." + questActivityTag(monsterQuestLikely),
-                true,
-                "combat.monster_pve",
-                makeActivityItemData("Combats", "combat", "PvE monstres", "Vagues de monstres, loots, matériaux, qualité de récupération et progression.", monsterQuestLikely ? "Quête probable" : "Disponible", questActivityProgress("Farm / progression", monsterQuestLikely), true)
-            );
-            combatScreen.addOption(
-                4,
-                "PvE Boss" + questActivityTag(bossQuestLikely),
-                "Combat contre un boss avec identité, décryptage et fragments spéciaux." + questActivityTag(bossQuestLikely),
-                true,
-                "combat.boss_pve",
-                makeActivityItemData("Combats", "combat", "PvE Boss", "Combat contre un boss avec identité, décryptage et fragments spéciaux. La fuite de boss reste impossible.", bossQuestLikely ? "Quête probable" : "Dangereux", questActivityProgress("Boss / fragments", bossQuestLikely), true)
-            );
-
-            int combatChoice = TerminalInterface::askMenuChoiceFromOptions(
-                combatScreen,
-                "Veuillez choisir un combat affiché."
-            );
-            Console::clear();
-
-            if (combatChoice == 0)
-            {
-                continue;
-            }
-
-            switch (combatChoice)
-            {
-                case 1:
-                    selectedMode = GameMode::AIPvp;
-                    return;
-                case 2:
-                    selectedMode = GameMode::TwoPlayerPvp;
-                    return;
-                case 3:
-                    selectedMode = GameMode::MonsterPve;
-                    return;
-                case 4:
-                    selectedMode = GameMode::BossPve;
-                    return;
-                default:
-                    break;
-            }
-        }
-        else if (choice == 1)
+        if (choice == 1)
         {
             selectedMode = GameMode::Story;
             return;
         }
-        else if (choice == 3)
+
+        if (choice == 2)
         {
-            selectedMode = GameMode::Exploration;
-            return;
+            bool terrainOpen = true;
+            while (terrainOpen)
+            {
+                const bool monsterQuestLikely = hasLikelyCombatQuest(mainPlayer);
+                const bool bossQuestLikely = hasLikelyBossQuest(mainPlayer);
+                MenuScreen terrainScreen("TERRAIN", "activity.terrain.menu");
+                terrainScreen.addSubtitle("Combattre ou sortir explorer");
+                terrainScreen.addLine("Les quêtes d'exploration utilisent cette catégorie, même quand elles ont été données par un PNJ.");
+                terrainScreen.addBackOption();
+                terrainScreen.addOption(
+                    1,
+                    "Combats" + questActivityTag(monsterQuestLikely || bossQuestLikely),
+                    "PvP IA, JcJ local, PvE monstres et boss." + questActivityTag(monsterQuestLikely || bossQuestLikely),
+                    true,
+                    "activity.terrain.combat",
+                    makeActivityItemData("Terrain", "combat", "Combats", "Duel IA, JcJ local, monstres, groupes et boss.", (monsterQuestLikely || bossQuestLikely) ? "Quête probable" : "Disponible", "Combat volontaire", true)
+                );
+                terrainScreen.addOption(
+                    2,
+                    "Exploration" + questActivityTag(explorationQuestLikely),
+                    "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues." + questActivityTag(explorationQuestLikely),
+                    true,
+                    "activity.terrain.exploration",
+                    makeActivityItemData("Terrain", "travel", "Exploration", "Sorties par biome avec risques, ressources, coffres, pièges, mimics et rencontres imprévues.", explorationQuestLikely ? "Quête probable" : "Disponible", "Sortie terrain", true)
+                );
+
+                const int terrainChoice = TerminalInterface::askMenuChoiceFromOptions(
+                    terrainScreen,
+                    "Veuillez choisir une action de terrain affichée."
+                );
+                Console::clear();
+
+                if (terrainChoice == 0)
+                {
+                    terrainOpen = false;
+                    continue;
+                }
+
+                if (terrainChoice == 2)
+                {
+                    selectedMode = GameMode::Exploration;
+                    return;
+                }
+
+                if (terrainChoice == 1)
+                {
+                    bool combatOpen = true;
+                    while (combatOpen)
+                    {
+                        const bool currentMonsterQuestLikely = hasLikelyCombatQuest(mainPlayer);
+                        const bool currentBossQuestLikely = hasLikelyBossQuest(mainPlayer);
+                        MenuScreen combatScreen("COMBATS", "activity.combat.menu");
+                        combatScreen.addSubtitle("Choisis le type de combat");
+                        combatScreen.addBackOption();
+                        combatScreen.addOption(
+                            1,
+                            "PvP IA",
+                            "Duel contre une IA, avec personnages spéciaux possibles selon le mode.",
+                            true,
+                            "combat.ai_pvp",
+                            makeActivityItemData("Combats", "combat", "PvP IA", "Duel contre une IA, avec personnages spéciaux possibles selon le mode.", "Disponible", "Combat volontaire")
+                        );
+                        combatScreen.addOption(
+                            2,
+                            "PvP 2 joueurs / JcJ",
+                            "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.",
+                            true,
+                            "combat.local_pvp",
+                            makeActivityItemData("Combats", "combat", "PvP 2 joueurs / JcJ", "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.", "Disponible", "Combat volontaire")
+                        );
+                        combatScreen.addOption(
+                            3,
+                            "PvE monstres" + questActivityTag(currentMonsterQuestLikely),
+                            "Vagues de monstres, loots, matériaux, qualité de récupération et progression." + questActivityTag(currentMonsterQuestLikely),
+                            true,
+                            "combat.monster_pve",
+                            makeActivityItemData("Combats", "combat", "PvE monstres", "Vagues de monstres, loots, matériaux, qualité de récupération et progression.", currentMonsterQuestLikely ? "Quête probable" : "Disponible", "Farm / progression", true)
+                        );
+                        combatScreen.addOption(
+                            4,
+                            "PvE Boss" + questActivityTag(currentBossQuestLikely),
+                            "Combat contre un boss avec identité, décryptage et fragments spéciaux." + questActivityTag(currentBossQuestLikely),
+                            true,
+                            "combat.boss_pve",
+                            makeActivityItemData("Combats", "combat", "PvE Boss", "Combat contre un boss avec identité, décryptage et fragments spéciaux. La fuite de boss reste impossible.", currentBossQuestLikely ? "Quête probable" : "Dangereux", "Boss / fragments", true)
+                        );
+
+                        const int combatChoice = TerminalInterface::askMenuChoiceFromOptions(
+                            combatScreen,
+                            "Veuillez choisir un combat affiché."
+                        );
+                        Console::clear();
+
+                        if (combatChoice == 0)
+                        {
+                            combatOpen = false;
+                            continue;
+                        }
+
+                        switch (combatChoice)
+                        {
+                            case 1:
+                                selectedMode = GameMode::AIPvp;
+                                return;
+                            case 2:
+                                selectedMode = GameMode::TwoPlayerPvp;
+                                return;
+                            case 3:
+                                selectedMode = GameMode::MonsterPve;
+                                return;
+                            case 4:
+                                selectedMode = GameMode::BossPve;
+                                return;
+                            default:
+                                break;
+                        }
+                    }
+                }
+            }
+            continue;
         }
-        else if (choice == 4)
+
+        if (choice == 3)
         {
-            selectedMode = GameMode::Challenges;
-            return;
+            MenuScreen cityScreen("VILLE", "activity.city.menu");
+            cityScreen.addSubtitle("Quêtes, PNJ et services de ville");
+            cityScreen.addLine("Les lieux visitables ne remplacent pas Exploration : ils servent surtout aux services, boutiques et dialogues.");
+            cityScreen.addBackOption();
+            cityScreen.addOption(
+                1,
+                "Quêtes" + questActivityTag(questHubLikely),
+                "Quête principale, journal, guilde, demandes de PNJ et validations." + questActivityTag(questHubLikely),
+                true,
+                "activity.city.quests",
+                makeActivityItemData("Ville", "quest", "Quêtes", "Accès au journal, à la guilde, aux demandes de PNJ et aux validations d'objectifs.", questHubLikely ? "Quête probable" : "Disponible", "Ville / progression", questHubLikely)
+            );
+            cityScreen.addOption(
+                2,
+                "PNJ notables" + questActivityTag(locationNpcQuestLikely),
+                "Parler aux clients et personnages disponibles sans passer par une boutique." + questActivityTag(locationNpcQuestLikely),
+                true,
+                "activity.city.npcs",
+                makeActivityItemData("Ville", "talk", "PNJ notables", "Discussion directe avec les clients ou personnages disponibles, sans forcer une boutique.", locationNpcQuestLikely ? "Quête probable" : "Disponible", "Ville / dialogues", locationNpcQuestLikely)
+            );
+            cityScreen.addOption(
+                3,
+                "Boutiques / lieux visitables" + questActivityTag(locationNpcQuestLikely),
+                "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux." + questActivityTag(locationNpcQuestLikely),
+                true,
+                "activity.city.locations",
+                makeActivityItemData("Ville", "travel", "Boutiques / lieux visitables", "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux centralisés hors combat.", locationNpcQuestLikely ? "Quête probable" : "Disponible", "Ville / économie", locationNpcQuestLikely)
+            );
+            cityScreen.addOption(
+                4,
+                "Échange / don",
+                "Transférer des ressources entre personnages compatibles.",
+                true,
+                "activity.city.exchange",
+                makeActivityItemData("Ville", "barter", "Échange / don", "Transfert protégé d'objets, matériaux ou or entre personnages compatibles.", "Disponible", "Gestion de compte")
+            );
+
+            const int cityChoice = TerminalInterface::askMenuChoiceFromOptions(
+                cityScreen,
+                "Veuillez choisir une action de ville affichée."
+            );
+            Console::clear();
+
+            if (cityChoice == 0)
+            {
+                continue;
+            }
+            if (cityChoice == 1)
+            {
+                selectedMode = GameMode::Challenges;
+                return;
+            }
+            if (cityChoice == 2)
+            {
+                selectedMode = GameMode::NotableNpcs;
+                return;
+            }
+            if (cityChoice == 3)
+            {
+                selectedMode = GameMode::Locations;
+                return;
+            }
+            if (cityChoice == 4)
+            {
+                selectedMode = GameMode::Exchange;
+                return;
+            }
+            continue;
         }
-        else if (choice == 5)
+
+        if (choice == 4)
         {
-            selectedMode = GameMode::Locations;
-            return;
+            MenuScreen managementScreen("GESTION", "activity.management.menu");
+            managementScreen.addSubtitle("Actions entre deux sorties");
+            managementScreen.addBackOption();
+            managementScreen.addOption(
+                1,
+                "Gestion après-combat",
+                "Récap, statistiques, équipement, potions, progression et actions entre deux combats.",
+                true,
+                "activity.management.post_combat",
+                makeActivityItemData("Gestion", "inspect", "Gestion après-combat", "Récap, statistiques, inventaire, équipement, lieux, quêtes et actions entre deux combats.", "Disponible", "Hub de gestion", true)
+            );
+            managementScreen.addOption(
+                2,
+                "Échange / don",
+                "Transférer des ressources entre personnages compatibles.",
+                true,
+                "activity.management.exchange",
+                makeActivityItemData("Gestion", "barter", "Échange / don", "Transfert protégé d'objets, matériaux ou or entre personnages compatibles.", "Disponible", "Gestion de compte")
+            );
+
+            const int managementChoice = TerminalInterface::askMenuChoiceFromOptions(
+                managementScreen,
+                "Veuillez choisir une action de gestion affichée."
+            );
+            Console::clear();
+
+            if (managementChoice == 0)
+            {
+                continue;
+            }
+            if (managementChoice == 1)
+            {
+                const bool keepPlaying = openPostCombatMenu();
+                if (!keepPlaying)
+                {
+                    std::exit(0);
+                }
+                continue;
+            }
+            if (managementChoice == 2)
+            {
+                selectedMode = GameMode::Exchange;
+                return;
+            }
+            continue;
         }
-        else if (choice == 6)
+
+        if (choice == 5)
         {
-            selectedMode = GameMode::NotableNpcs;
-            return;
-        }
-        else if (choice == 7)
-        {
-            selectedMode = GameMode::Exchange;
-            return;
+            displayActivityInformation();
+            continue;
         }
     }
 }
@@ -2689,21 +2888,120 @@ void Game::displayLastCombatRecap() const
 // FR: displayActivityInformation déclare ou implémente un comportement précis utilisé par ce module.
 void Game::displayActivityInformation() const
 {
-    MenuScreen screen("INFORMATION SUR LES ACTIVITÉS", "activity.info");
-    screen.addLine("Histoire : route principale guidée, limitée au début, avec déblocages par PNJ, monstres, matériaux, boss et chapitres.");
-    screen.addLine("Bac à sable : les autres menus restent libres pour tester/jouer les systèmes sans attendre la progression narrative.");
-    screen.addLine("Combats : affrontements volontaires contre IA, joueurs, monstres ou boss.");
-    screen.addLine("Exploration : sortie de terrain par biome avec plantes, matériaux, trésors, pièges, mimics et combats inattendus.");
-    screen.addLine("Quêtes : journal, guilde, demandes de PNJ, quêtes terminées et validation des objectifs.");
-    screen.addLine("Boutiques / lieux visitables : forge, herboristerie, bibliothèque, vendeurs et lieux sociaux.");
-    screen.addLine("PNJ notables : accès direct aux clients ou personnages disponibles.");
-    screen.addLine("Échange / don : transfert protégé d'objets ou d'or entre personnages compatibles.");
-    screen.addLine("Menu après-combat / gestion : relire le dernier état, gérer équipement, potions, progression et statistiques sans lancer de combat.");
-    screen.addFooterLine("Certaines portes restent fermées. Le monde te laisse progresser par ses guildes, ses routes et ses combats.");
+    while (true)
+    {
+        MenuScreen screen("INFOS UTILES", "activity.info");
+        screen.addSubtitle("Choisis un sujet court au lieu de tout lire d'un coup.");
+        screen.addLine("Date : " + mainPlayer.formatWorldDateLine() + " | Moment : " + mainPlayer.formatWorldDayPartLine());
+        screen.addLine("Or actuel : " + std::to_string(mainPlayer.getInventory().getGold()) + " pièce(s).");
+        screen.addBackOption("Retour", "activity.info.back");
+        screen.addOption(1, "Où aller ?", "Rappel des grandes catégories du menu principal.", true, "activity.info.where");
+        screen.addOption(2, "Journées / temps", "Comprendre les jours, moments et conséquences des activités.", true, "activity.info.time");
+        screen.addOption(3, "Argent / économie", "Or, boutiques, stocks, prix, revente et récompenses.", true, "activity.info.money");
+        screen.addOption(4, "Combat / exploration", "Différence entre combat volontaire, boss et sortie de terrain.", true, "activity.info.terrain");
+        screen.addOption(5, "Quêtes / rendre objectifs", "Où voir les quêtes prêtes, principales, secondaires et rendues.", true, "activity.info.quests");
+        screen.addOption(6, "Ville / PNJ / lieux", "PNJ notables, lieux visitables, boutiques et services.", true, "activity.info.city");
 
-    TerminalInterface::renderMenuScreen(screen, false);
-    Console::waitForEnter();
-    Console::clear();
+        int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide. Choisis un sujet affiché.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+
+        if (choice == 1)
+        {
+            MessageScreen::show(
+                "OÙ ALLER ?",
+                "activity.info.where.detail",
+                {
+                    "Histoire : route principale guidée et quêtes non refusables.",
+                    "Terrain : combats volontaires et exploration par biome.",
+                    "Ville : quêtes, PNJ notables, lieux visitables, boutiques et services.",
+                    "Gestion : état du personnage, inventaire, sauvegarde, récap et options de confort.",
+                    "Astuce : si une quête parle de terrain, de traces, de plantes ou de route, essaie Exploration plutôt que Lieux visitables."
+                }
+            );
+            continue;
+        }
+
+        if (choice == 2)
+        {
+            MessageScreen::show(
+                "JOURNÉES / TEMPS",
+                "activity.info.time.detail",
+                {
+                    "Le monde suit des jours écoulés et des moments de journée.",
+                    "Les combats, boss, explorations et certaines activités peuvent faire avancer le temps.",
+                    "Certaines quêtes peuvent avoir une date limite ou demander d'attendre pendant des travaux.",
+                    "Les rapports de fin de journée apparaissent quand une activité fait vraiment passer le temps."
+                }
+            );
+            continue;
+        }
+
+        if (choice == 3)
+        {
+            MessageScreen::show(
+                "ARGENT / ÉCONOMIE",
+                "activity.info.money.detail",
+                {
+                    "Or actuel : " + std::to_string(mainPlayer.getInventory().getGold()) + " pièce(s).",
+                    "L'or vient surtout des combats, quêtes, explorations, reventes et événements.",
+                    "Les boutiques peuvent changer leurs stocks après les combats ou selon l'état de la ville.",
+                    "Certains marchés accepteront plus tard du troc ou des objets précis, pas seulement de l'or.",
+                    "L'économie est volontairement surveillée pour éviter que les événements chanceux détruisent les prix."
+                }
+            );
+            continue;
+        }
+
+        if (choice == 4)
+        {
+            MessageScreen::show(
+                "COMBAT / EXPLORATION",
+                "activity.info.terrain.detail",
+                {
+                    "Combat : affrontement volontaire contre monstres, IA, joueurs ou boss selon le mode choisi.",
+                    "Exploration : sortie de terrain par biome avec plantes, coffres, pièges, traces, ressources et combats inattendus.",
+                    "Une quête d'exploration ne se fait pas forcément dans Lieux visitables : elle passe souvent par Terrain > Exploration.",
+                    "Les boss représentent une vraie expédition : la fuite y est impossible."
+                }
+            );
+            continue;
+        }
+
+        if (choice == 5)
+        {
+            MessageScreen::show(
+                "QUÊTES / OBJECTIFS",
+                "activity.info.quests.detail",
+                {
+                    "Quête principale : objectifs d'histoire non refusables.",
+                    "Quêtes à rendre / terminées : section prioritaire pour valider ce qui est prêt.",
+                    "Journal complet : filtres actifs, prêtes, guilde, demandes PNJ, combat, exploration, livraison et rendues.",
+                    "Une quête peut demander de s'occuper pendant des réparations : combats, services, exploration ou contrats secondaires peuvent alors servir à progresser."
+                }
+            );
+            continue;
+        }
+
+        if (choice == 6)
+        {
+            MessageScreen::show(
+                "VILLE / PNJ / LIEUX",
+                "activity.info.city.detail",
+                {
+                    "PNJ notables : parler aux personnages importants, clients, référents et survivants.",
+                    "Lieux visitables : forge, herboristerie, bibliothèque, boutiques et services de ville.",
+                    "Les PNJ peuvent donner ou faire avancer des quêtes, mais les sorties de terrain restent dans Exploration.",
+                    "La ville peut débloquer de meilleurs services selon les personnes sauvées, les preuves ramenées et les travaux terminés."
+                }
+            );
+            continue;
+        }
+    }
 }
 
 // EN: launchSelectedMode declares or implements a focused behavior used by this module.
@@ -2882,26 +3180,25 @@ void Game::launchStoryModePlaceholder()
         const int maxUnlockedChapter = StoryCampaign::maxUnlockedChapter(mainPlayer);
 
         MenuScreen screen("MODE HISTOIRE", "story.entry.menu");
-        screen.addSubtitle("Route principale : lancement ordonné, chapitres verrouillés par progression");
+        screen.addSubtitle("Route principale — page courte");
         screen.addLine("Progression : " + mainPlayer.getStoryProgressLabel());
-        screen.addLine("Le mode histoire ne donne pas tout dès le départ. Les chapitres, boutiques, routes, quêtes et boss s’ouvrent dans l’ordre.");
         screen.addLine("Chapitre maximum débloqué : " + std::to_string(maxUnlockedChapter) + ".");
         screen.addBackOption();
         screen.addOption(
             1,
+            "Continuer",
+            storyStarted
+                ? "Lancer automatiquement la prochaine étape disponible de l'histoire."
+                : "[◘ aucune histoire commencée pour ce personnage]",
+            storyStarted,
+            "story.continue"
+        );
+        screen.addOption(
+            2,
             "Nouvelle histoire",
             "Repartir au vrai début : fumée blanche, niveau 1, aucun confort de bac à sable.",
             true,
             "story.new"
-        );
-        screen.addOption(
-            2,
-            "Continuer",
-            storyStarted
-                ? "Lancer automatiquement la prochaine étape disponible de l’histoire."
-                : "[◘ aucune histoire commencée pour ce personnage]",
-            storyStarted,
-            "story.continue"
         );
         screen.addOption(
             3,
@@ -2912,14 +3209,9 @@ void Game::launchStoryModePlaceholder()
             storyStarted,
             "story.chapter_select"
         );
-        screen.addOption(4, "Lire la longue introduction", "Lire le ton de départ sans lancer une étape jouable.", true, "story.long_intro");
-        screen.addOption(5, "Développement de la ville", "Voir ce qui est ouvert, limité ou fermé dans la route histoire.", true, "story.city_development");
-        screen.addOption(6, "Bac à sable vs histoire", "Règles de reset, clone éphémère et bascule libre après fin d’histoire.", true, "story.sandbox_rules");
-        screen.addOption(7, "Clients amis / référents", "Voir les PNJ qui peuvent aider ou orienter la quête principale.", true, "story.referents");
-        screen.addOption(8, "Intrigues suivies", "Voir les grands fils narratifs prévus sans révéler la fin.", true, "story.intrigues");
-        screen.addOption(9, "Prochains objectifs", "Voir missions principales et secondaires utiles au développement.", true, "story.next_objectives");
-        screen.addOption(10, "Bac à sable éphémère", "Créer un clone non sauvegardé pour se régaler sans perturber l’histoire.", storyStarted, "story.ephemeral_sandbox");
-        screen.addOption(11, "Fin d’histoire → bac à sable", "Lire la règle : après la conclusion, le personnage continue automatiquement en mode libre.", true, "story.completion_sandbox");
+        screen.addOption(4, "Infos : ville / PNJ / objectifs", "Lire les informations de contexte regroupées.", true, "story.info_group");
+        screen.addOption(5, "Règles : histoire / bac à sable", "Reset, clone éphémère et bascule libre après fin d'histoire.", true, "story.rules_group");
+        screen.addOption(6, "Bac à sable éphémère", "Créer un clone non sauvegardé pour jouer librement sans perturber l'histoire.", storyStarted, "story.ephemeral_sandbox");
         addOutOfCombatUtilityOptions(screen, true, true);
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une entrée du mode histoire.");
@@ -2936,12 +3228,12 @@ void Game::launchStoryModePlaceholder()
         }
         if (choice == 1)
         {
-            startNewStoryFromMenu();
+            continueStoryRoute();
             continue;
         }
         if (choice == 2)
         {
-            continueStoryRoute();
+            startNewStoryFromMenu();
             continue;
         }
         if (choice == 3)
@@ -2951,42 +3243,105 @@ void Game::launchStoryModePlaceholder()
         }
         if (choice == 4)
         {
-            MessageScreen::show("INTRODUCTION", "story.long_intro", StoryCampaign::buildLongIntroductionLines(mainPlayer));
+            bool infoOpen = true;
+            while (infoOpen)
+            {
+                MenuScreen infoScreen("INFOS HISTOIRE", "story.info_group.menu");
+                infoScreen.addSubtitle("Contexte regroupé");
+                infoScreen.addBackOption();
+                infoScreen.addOption(1, "Lire la longue introduction", "Ton de départ et contexte général.", true, "story.long_intro");
+                infoScreen.addOption(2, "Développement de la ville", "Voir ce qui est ouvert, limité ou fermé dans la route histoire.", true, "story.city_development");
+                infoScreen.addOption(3, "Clients amis / référents", "Voir les PNJ qui peuvent aider ou orienter la quête principale.", true, "story.referents");
+                infoScreen.addOption(4, "Intrigues suivies", "Voir les grands fils narratifs prévus sans révéler la fin.", true, "story.intrigues");
+                infoScreen.addOption(5, "Prochains objectifs", "Voir missions principales et secondaires utiles au développement.", true, "story.next_objectives");
+
+                const int infoChoice = TerminalInterface::askMenuChoiceFromOptions(infoScreen, "Choisis une information histoire.");
+                Console::clear();
+
+                if (infoChoice == 0)
+                {
+                    infoOpen = false;
+                    continue;
+                }
+                if (infoChoice == 1)
+                {
+                    MessageScreen::show("INTRODUCTION", "story.long_intro", StoryCampaign::buildLongIntroductionLines(mainPlayer));
+                    continue;
+                }
+                if (infoChoice == 2)
+                {
+                    MessageScreen::show("DÉVELOPPEMENT DE LA VILLE", "story.city_development", StoryCampaign::buildDevelopmentLines(mainPlayer));
+                    continue;
+                }
+                if (infoChoice == 3)
+                {
+                    MessageScreen::show("CLIENTS AMIS / RÉFÉRENTS", "story.referents", StoryCampaign::buildReferentNpcLines(mainPlayer));
+                    continue;
+                }
+                if (infoChoice == 4)
+                {
+                    MessageScreen::show("INTRIGUES", "story.intrigues", StoryCampaign::buildIntrigueLines(mainPlayer));
+                    continue;
+                }
+                if (infoChoice == 5)
+                {
+                    MessageScreen::show("OBJECTIFS HISTOIRE", "story.next_objectives", StoryCampaign::buildNextObjectiveLines(mainPlayer));
+                    continue;
+                }
+            }
             continue;
         }
         if (choice == 5)
         {
-            MessageScreen::show("DÉVELOPPEMENT DE LA VILLE", "story.city_development", StoryCampaign::buildDevelopmentLines(mainPlayer));
+            bool rulesOpen = true;
+            while (rulesOpen)
+            {
+                MenuScreen rulesScreen("RÈGLES HISTOIRE", "story.rules_group.menu");
+                rulesScreen.addSubtitle("Règles regroupées");
+                rulesScreen.addBackOption();
+                rulesScreen.addOption(1, "Bac à sable / histoire", "Règles de reset, clone éphémère et progression séparée.", true, "story.sandbox_rules");
+                rulesScreen.addOption(2, "Fin d'histoire → bac à sable", "Après la conclusion, le personnage continue automatiquement en mode libre.", true, "story.completion_sandbox");
+                rulesScreen.addOption(3, "Ordre des chapitres", "Rappelle le rôle de Continuer et de la sélection de chapitre.", true, "story.chapter_order_rules");
+
+                const int rulesChoice = TerminalInterface::askMenuChoiceFromOptions(rulesScreen, "Choisis une règle histoire.");
+                Console::clear();
+
+                if (rulesChoice == 0)
+                {
+                    rulesOpen = false;
+                    continue;
+                }
+                if (rulesChoice == 1)
+                {
+                    MessageScreen::show("BAC À SABLE / HISTOIRE", "story.sandbox_rules", StoryCampaign::buildSandboxRulesLines(mainPlayer));
+                    continue;
+                }
+                if (rulesChoice == 2)
+                {
+                    showStoryCompletionSandboxRule();
+                    continue;
+                }
+                if (rulesChoice == 3)
+                {
+                    MessageScreen::show(
+                        "ORDRE DES CHAPITRES",
+                        "story.chapter_order_rules",
+                        {
+                            "Nouvelle histoire lance le vrai début : fumée blanche, forêt, aucun équipement.",
+                            "Continuer est volontairement l'option principale : il lance automatiquement la prochaine étape disponible.",
+                            "Sélectionner le chapitre sert seulement à revoir/continuer un chapitre déjà débloqué.",
+                            "Les chapitres non débloqués restent affichés comme ???? et ne sont pas sélectionnables."
+                        },
+                        false
+                    );
+                    continue;
+                }
+            }
             continue;
         }
         if (choice == 6)
         {
-            MessageScreen::show("BAC À SABLE / HISTOIRE", "story.sandbox_rules", StoryCampaign::buildSandboxRulesLines(mainPlayer));
-            continue;
-        }
-        if (choice == 7)
-        {
-            MessageScreen::show("CLIENTS AMIS / RÉFÉRENTS", "story.referents", StoryCampaign::buildReferentNpcLines(mainPlayer));
-            continue;
-        }
-        if (choice == 8)
-        {
-            MessageScreen::show("INTRIGUES", "story.intrigues", StoryCampaign::buildIntrigueLines(mainPlayer));
-            continue;
-        }
-        if (choice == 9)
-        {
-            MessageScreen::show("OBJECTIFS HISTOIRE", "story.next_objectives", StoryCampaign::buildNextObjectiveLines(mainPlayer));
-            continue;
-        }
-        if (choice == 10)
-        {
             launchEphemeralSandboxCloneFromStory();
-            continue;
-        }
-        if (choice == 11)
-        {
-            showStoryCompletionSandboxRule();
             continue;
         }
     }

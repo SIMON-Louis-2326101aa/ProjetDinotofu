@@ -130,6 +130,9 @@ Material MaterialCatalog::createById(const std::string& id, int quantity, const 
 
     if (normalized == "goblin_ear") return withQuality(createGoblinEar(quantity), quality);
     if (normalized == "wolf_fang") return withQuality(createWolfFang(quantity), quality);
+    if (normalized == "predator_fang") return withQuality(createPredatorFang(quantity), quality);
+    if (normalized == "boar_tusk") return withQuality(createBoarTusk(quantity), quality);
+    if (normalized == "rodent_tooth") return withQuality(createRodentTooth(quantity), quality);
     if (normalized == "rusted_metal_fragment") return withQuality(createRustedMetalFragment(quantity), quality);
     if (normalized == "runic_iron_shard") return withQuality(createRunicIronShard(quantity), quality);
     if (normalized == "polished_scale_plate") return withQuality(createPolishedScalePlate(quantity), quality);
@@ -361,7 +364,22 @@ Material MaterialCatalog::createGoblinEar(int quantity)
 // FR: createWolfFang déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createWolfFang(int quantity)
 {
-    return Material("wolf_fang", "Croc de loup", "Matériau utile pour de petites améliorations d'armes.", "Matériau de monstre", 6, quantity);
+    return Material("wolf_fang", "Croc de loup", "Croc prélevé sur un loup, une meute ou une créature explicitement lupine.", "Matériau de monstre", 6, quantity);
+}
+
+Material MaterialCatalog::createPredatorFang(int quantity)
+{
+    return Material("predator_fang", "Croc de prédateur", "Croc récupéré sur une bête carnassière non lupine : chien sauvage, renard, chacal ou ours jeune.", "Matériau de monstre", 7, quantity);
+}
+
+Material MaterialCatalog::createBoarTusk(int quantity)
+{
+    return Material("boar_tusk", "Défense de sanglier", "Défense dure issue d'une bête à charge. Utile pour comparer les morsures, charges et traces de défense.", "Matériau de monstre", 7, quantity);
+}
+
+Material MaterialCatalog::createRodentTooth(int quantity)
+{
+    return Material("rodent_tooth", "Dent de rongeur", "Petite dent de rat ou de rongeur géant. Moins noble qu'un croc, mais utile pour les artisans précis.", "Matériau de monstre", 3, quantity);
 }
 
 // EN: createRustedMetalFragment declares or implements a focused behavior used by this module.

@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "3.07.04",
-  "releaseTag": "v3.07.04",
+  "version": "3.07.08",
+  "releaseTag": "v3.07.08",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "Patch publication Git : le workflow répare les releases incomplètes et régénère les ZIP Windows/Linux si les assets jouables manquent."
+  "notes": "Patch ergonomie/stabilité : combat terminal par phases, infos utiles, quêtes à rendre plus visibles, loots cohérents et équilibrage élites/boss."
 }

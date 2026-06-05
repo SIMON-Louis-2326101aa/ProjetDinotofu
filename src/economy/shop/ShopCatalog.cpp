@@ -41,6 +41,18 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
         case ShopType::MonsterMaterial:
             shop.addItem(ShopItem("goblin_ear", "Oreille de gobelin", "Matériau commun récupéré sur certains gobelins.", ShopItemCategory::MonsterMaterial, 12, 4, 3 + rotation % 4));
             shop.addItem(ShopItem("wolf_fang", "Croc de loup", "Matériau utile pour de petites améliorations d'armes.", ShopItemCategory::MonsterMaterial, 18, 6, 2 + rotation % 3));
+            if (rotation % 2 == 0)
+            {
+                shop.addItem(ShopItem("predator_fang", "Croc de prédateur", "Croc de bête carnassière non lupine.", ShopItemCategory::MonsterMaterial, 20, 7, 1 + rotation % 2));
+            }
+            if (rotation % 4 == 1)
+            {
+                shop.addItem(ShopItem("boar_tusk", "Défense de sanglier", "Défense dure issue d'une bête à charge.", ShopItemCategory::MonsterMaterial, 20, 7, 1));
+            }
+            if (rotation % 3 == 0)
+            {
+                shop.addItem(ShopItem("rodent_tooth", "Dent de rongeur", "Petite dent utile aux artisans précis.", ShopItemCategory::MonsterMaterial, 9, 3, 2 + rotation % 2));
+            }
             if (rotation % 3 == 1)
             {
                 shop.addItem(ShopItem("cracked_bone", "Os fissuré", "Matériau sombre lié aux morts-vivants et aux rites nécromantiques.", ShopItemCategory::MonsterMaterial, 22, 7, 2));

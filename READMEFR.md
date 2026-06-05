@@ -4,7 +4,7 @@ Dinotofu est un RPG / jeu d'arène en C++17. La version terminal reste le socle 
 
 ## Version actuelle   
 
-- Version actuelle : **V3.07.04**   
+- Version actuelle : **V3.07.08**   
 - Base de recréation fortement conseillée : **V3.00.00**   
 - Les personnages créés avant **V3.00.00** peuvent fonctionner, mais une recréation est conseillée pour profiter proprement du socle histoire.   
 
