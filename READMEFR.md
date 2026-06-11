@@ -4,7 +4,7 @@ Dinotofu est un RPG / jeu d'arène en C++17. La version terminal reste le socle 
 
 ## Version actuelle   
 
-- Version actuelle : **V3.42.00**   
+- Version actuelle : **V3.43.00**   
 - Base de recréation fortement conseillée : **V3.00.00**   
 - Les personnages créés avant **V3.00.00** peuvent fonctionner, mais une recréation est conseillée pour profiter proprement du socle histoire.   
 
@@ -37,7 +37,7 @@ La progression des boss est ordonnée sans révéler la liste complète au joueu
 
 ## Interface graphique   
 
-L’interface graphique reste expérimentale mais jouable et reflète le moteur C++ sans inventer de logique cachée. La V3.42.00 avance le pont vers l’IG/pixel-art et stabilise plusieurs services de ville : Top 3 principal filtré, registre avancé pour l’illégal et les incidents, médiateur de guilde, conseil de guilde, pardon progressif, probation, réputation souterraine, contrats encadrés bas rang, rumeurs de groupes, auberge locale, résolution de micro-quêtes de route, transport entre coffres municipaux et panneaux IG de préparation pixel-art. Les dossiers de groupes, relations, résultats partiels et systèmes délégués précédents restent disponibles. Les ramasse-miettes très rares, rencontres de route, choix de route, fermeture nocturne, carte schématique, trois registres permanents, coffres municipaux indépendants, consultation distante en lecture seule, profils automatiques, précets, mode concentration, silhouettes textuelles, jeux d’équipement, comparaisons, marqueurs, wishlist limitée aux objets déjà possédés, Top 3 et niveaux de fiabilité restent disponibles. Le terminal reste le secours le plus fiable : les images y sont désactivées, non activables, et ne remplacent jamais les informations écrites.   
+L’interface graphique reste expérimentale mais jouable et reflète le moteur C++ sans inventer de logique cachée. La V3.43.00 avance le pont vers l’IG/pixel-art et stabilise plusieurs services de ville : Top 3 principal filtré, registre avancé pour l’illégal et les incidents, médiateur de guilde, conseil de guilde, pardon progressif, probation, réputation souterraine, contrats encadrés bas rang, rumeurs de groupes, auberge locale, résolution de micro-quêtes de route, transport entre coffres municipaux et panneaux IG de préparation pixel-art. Les dossiers de groupes, relations, résultats partiels et systèmes délégués précédents restent disponibles. Les ramasse-miettes très rares, rencontres de route, choix de route, fermeture nocturne, carte schématique, trois registres permanents, coffres municipaux indépendants, consultation distante en lecture seule, profils automatiques, précets, mode concentration, silhouettes textuelles, jeux d’équipement, comparaisons, marqueurs, wishlist limitée aux objets déjà possédés, Top 3 et niveaux de fiabilité restent disponibles. Le terminal reste le secours le plus fiable : les images y sont désactivées, non activables, et ne remplacent jamais les informations écrites.   
 
 ## Installer depuis une release GitHub   
 

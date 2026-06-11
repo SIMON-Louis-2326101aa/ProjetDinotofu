@@ -6756,10 +6756,20 @@ void Player::levelUp()
         return;
     }
 
+    const int previousHp = std::max(0, hp);
+    const int previousMaxHp = std::max(1, maxHp);
+
     level++;
 
     maxHp += 20;
-    hp = maxHp;
+    if (previousHp <= 0)
+    {
+        hp = 0;
+    }
+    else
+    {
+        hp = std::max(1, std::min(maxHp, (previousHp * maxHp + previousMaxHp - 1) / previousMaxHp));
+    }
 
     minDamage += 1;
     maxDamage += 2;
@@ -6770,7 +6780,8 @@ void Player::levelUp()
         "player.level.up",
         {
             name + " monte au niveau " + std::to_string(level) + " !",
-            "Ses blessures se referment, et sa puissance augmente.",
+            "Ses PV maximum augmentent, mais ses blessures ne disparaissent pas gratuitement.",
+            "PV conservés au même pourcentage : " + std::to_string(hp) + "/" + std::to_string(maxHp) + ".",
             "Les attributs avancés dorment encore dans les registres du personnage."
         },
         false

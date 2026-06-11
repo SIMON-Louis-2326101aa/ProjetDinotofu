@@ -140,7 +140,7 @@ La V3.41.00 ajoute un pont visuel expérimental dans l'interface graphique pour 
 Règle importante : tant qu'un asset n'existe pas, l'IG doit afficher un wireframe propre ou une description, pas une image inventée.
 
 
-## Ajout V3.42.00 — politique images et accessibilité
+## Ajout V3.43.00 — politique images et accessibilité
 
 - Terminal : images toujours désactivées et non activables.
 - IG : les images doivent pouvoir être désactivées depuis les paramètres.

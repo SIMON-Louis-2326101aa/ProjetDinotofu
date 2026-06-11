@@ -2747,6 +2747,22 @@ void Game::chooseGameMode()
                 "activity.management.exchange",
                 makeActivityItemData("Gestion", "barter", "Échange / don", "Transfert protégé d'objets, matériaux ou argent entre personnages compatibles.", "Disponible", "Gestion de compte")
             );
+            managementScreen.addOption(
+                3,
+                "Statistiques",
+                "Ouvrir directement le résumé, les Top 3, l'équipement et la progression.",
+                true,
+                "activity.management.statistics",
+                makeActivityItemData("Gestion", "inspect", "Statistiques", "Résumé, Top 3, progression et historique du personnage.", "Disponible", "Progression")
+            );
+            managementScreen.addOption(
+                4,
+                "Titres",
+                "Voir les titres obtenus, disponibles et les titres équipés.",
+                true,
+                "activity.management.titles",
+                makeActivityItemData("Gestion", "inspect", "Titres", "Titres obtenus, titres disponibles et équipement de titres.", "Disponible", "Identité")
+            );
 
             const int managementChoice = TerminalInterface::askMenuChoiceFromOptions(
                 managementScreen,
@@ -2771,6 +2787,18 @@ void Game::chooseGameMode()
             {
                 selectedMode = GameMode::Exchange;
                 return;
+            }
+            if (managementChoice == 3)
+            {
+                StatisticsMenu::open(mainPlayer, selectedDifficulty);
+                saveCurrentProgress("Consultation des statistiques");
+                continue;
+            }
+            if (managementChoice == 4)
+            {
+                StatisticsMenu::displayTitleCatalog(mainPlayer);
+                saveCurrentProgress("Consultation des titres");
+                continue;
             }
             continue;
         }
@@ -6306,6 +6334,11 @@ bool Game::openPostCombatMenu()
         else if (choice == 10)
         {
             displayLastCombatRecap();
+        }
+        else if (choice == 11)
+        {
+            StatisticsMenu::displayTitleCatalog(mainPlayer);
+            saveCurrentProgress("Consultation des titres");
         }
     }
 

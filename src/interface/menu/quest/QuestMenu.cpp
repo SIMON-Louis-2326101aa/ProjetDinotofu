@@ -17,6 +17,7 @@
 #include "economy/shop/ShopTransactionSystem.hpp"
 #include "economy/Money.hpp"
 #include "interface/menu/InventoryMenu.hpp"
+#include "interface/menu/shop/ShopMenu.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/TerminalInterface.hpp"
@@ -3054,16 +3055,51 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             {
                 std::vector<std::string> lines = CityTravelRules::buildLocalCityDifferentiationLines(player);
                 lines.insert(lines.begin(), "Commerce local : " + building.name + ".");
-                lines.push_back("Future économie : stocks locaux, taxe, arrivages, réservation et négociation utiliseront cette identité régionale.");
+                lines.push_back("Ce bâtiment ouvre maintenant un vrai comptoir : achat, vente, discussion et services restent accessibles.");
+                lines.push_back("Les images futures seront seulement décoratives : les stocks, prix et conditions restent écrits.");
                 MessageScreen::show("COMMERCE LOCAL", "quest.city_hub.market", lines, false);
+                if (building.id == "harbor")
+                {
+                    ShopMenu::openShopOfType(player, ShopType::Transport);
+                }
+                else if (building.id == "underbridge")
+                {
+                    ShopMenu::openShopOfType(player, ShopType::BlackMarket);
+                }
+                else
+                {
+                    ShopMenu::open(player);
+                }
             }
             else if (building.id == "archives")
             {
                 MessageScreen::show("ARCHIVES LOCALES", "quest.city_hub.archives", {
                     "Archives de " + city->getName() + ".",
                     "Rôle actuel : rappeler les rumeurs, biomes et connaissances régionales sans tout révéler gratuitement.",
+                    "Comptoir réel : livres, cartes, renseignements et ventes restent accessibles par le service de bibliothèque.",
                     "Future IG : cartes murales, livres, légendes, informations achetables et petites illustrations de lore."
                 }, false);
+                ShopMenu::openShopOfType(player, ShopType::Library);
+            }
+            else if (building.id == "forge_heavy" || building.id == "bram_forge")
+            {
+                MessageScreen::show("FORGE LOCALE", "quest.city_hub.forge", {
+                    building.name + " — " + building.category + ".",
+                    "Contact : " + building.contact + ".",
+                    building.detail,
+                    "Comptoir réel : achats, ventes, réparations et discussion du forgeron restent accessibles."
+                }, false);
+                ShopMenu::openShopOfType(player, ShopType::Blacksmith);
+            }
+            else if (building.id == "sanctuary")
+            {
+                MessageScreen::show("SANCTUAIRE LOCAL", "quest.city_hub.sanctuary", {
+                    building.name + " — " + building.category + ".",
+                    "Contact : " + building.contact + ".",
+                    building.detail,
+                    "Comptoir réel : soins, bénédictions encadrées et services religieux restent accessibles."
+                }, false);
+                ShopMenu::openShopOfType(player, ShopType::Church);
             }
             else
             {
@@ -3090,9 +3126,10 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             screen.addLine("Argent : " + player.getInventory().getWalletLine() + ".");
             screen.addLine("Fatigue de route estimée : " + std::to_string(std::max(0, player.getCanonicalJournalCategoryTotal("distance_route") / 60 - player.getCanonicalJournalCategoryTotal("repos_auberge") * 2 - player.getCanonicalJournalCategoryTotal("repas_auberge"))) + " cran(s) narratif(s).");
             screen.addBackOption("Retour", "quest.city_hub.inn.back");
-            screen.addOption(1, "Lit commun", "Peu cher, avance jusqu'au lendemain et soigne correctement. Coût : " + Money::formatCopper(commonBedCost) + ".", true, "quest.city_hub.inn.common_bed");
-            screen.addOption(2, "Chambre sûre", "Plus chère, meilleure sécurité, soin complet et registre propre. Coût : " + Money::formatCopper(roomCost) + ".", true, "quest.city_hub.inn.room");
-            screen.addOption(3, "Repas chaud", "Petit soin et baisse narrative de fatigue sans dormir. Coût : " + Money::formatCopper(mealCost) + ".", true, "quest.city_hub.inn.meal");
+            screen.addOption(1, "Lit commun — " + Money::formatCopper(commonBedCost), "Avance jusqu'au lendemain et soigne correctement. Jamais gratuit : le prix est affiché avant validation.", true, "quest.city_hub.inn.common_bed");
+            screen.addOption(2, "Chambre sûre — " + Money::formatCopper(roomCost), "Meilleure sécurité, soin complet et registre propre. Jamais gratuit : le prix est affiché avant validation.", true, "quest.city_hub.inn.room");
+            screen.addOption(3, "Repas chaud — " + Money::formatCopper(mealCost), "Petit soin et baisse narrative de fatigue sans dormir. Jamais gratuit : le prix est affiché avant validation.", true, "quest.city_hub.inn.meal");
+            screen.addOption(4, "Comptoir de l'auberge", "Acheter, vendre, discuter avec l'aubergiste et utiliser les services détaillés de l'auberge.", true, "quest.city_hub.inn.shop");
             const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
             Console::clear();
             if (choice == 0) return;
@@ -3112,7 +3149,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                     player.recordCanonicalEvent("evenements_nocturnes_auberge", player.getCurrentCityId(), "Bruit, voisin bizarre ou rumeur pendant la nuit d'auberge");
                 }
                 recordRecentAction(player, "inn_common_bed", "Repos en lit commun à " + currentCityName(player));
-                MessageScreen::show("REPOS À L'AUBERGE", "quest.city_hub.inn.common_bed.done", {"Tu dors dans un lit commun. Ce n'est pas luxueux, mais c'est légal et plus sûr qu'une route de nuit.", "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".", player.formatWorldDateTimeLine()}, false);
+                MessageScreen::show("REPOS À L'AUBERGE", "quest.city_hub.inn.common_bed.done", {"Tu dors dans un lit commun. Ce n'est pas luxueux, mais c'est légal et plus sûr qu'une route de nuit.", "Prix payé : " + Money::formatCopper(commonBedCost) + ".", "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".", player.formatWorldDateTimeLine()}, false);
                 return;
             }
             if (choice == 2)
@@ -3128,7 +3165,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 player.recordCanonicalEvent("nuits_securisees", player.getCurrentCityId(), "Chambre sûre à " + currentCityName(player));
                 player.recordCanonicalEvent("fatigue_route_reduite", player.getCurrentCityId(), "Chambre sûre : fatigue de route calmée");
                 recordRecentAction(player, "inn_safe_room", "Chambre sûre à " + currentCityName(player));
-                MessageScreen::show("CHAMBRE SÛRE", "quest.city_hub.inn.room.done", {"Tu prends une vraie chambre. Les portes ferment, le lit tient debout, et personne ne fouille ton sac dans le couloir.", "PV entièrement restaurés.", player.formatWorldDateTimeLine()}, false);
+                MessageScreen::show("CHAMBRE SÛRE", "quest.city_hub.inn.room.done", {"Tu prends une vraie chambre. Les portes ferment, le lit tient debout, et personne ne fouille ton sac dans le couloir.", "Prix payé : " + Money::formatCopper(roomCost) + ".", "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".", player.formatWorldDateTimeLine()}, false);
                 return;
             }
             if (choice == 3)
@@ -3143,7 +3180,12 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 player.recordCanonicalEvent("repas_auberge", player.getCurrentCityId(), "Repas chaud à " + currentCityName(player));
                 player.recordCanonicalEvent("fatigue_route_reduite", player.getCurrentCityId(), "Repas chaud : petite récupération sans dormir");
                 recordRecentAction(player, "inn_meal", "Repas chaud à " + currentCityName(player));
-                MessageScreen::show("REPAS CHAUD", "quest.city_hub.inn.meal.done", {"Tu prends un repas chaud. Ce n'est pas un sommeil complet, mais ça évite de traiter la fatigue comme une ligne invisible.", "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".", player.formatWorldDateTimeLine()}, false);
+                MessageScreen::show("REPAS CHAUD", "quest.city_hub.inn.meal.done", {"Tu prends un repas chaud. Ce n'est pas un sommeil complet, mais ça évite de traiter la fatigue comme une ligne invisible.", "Prix payé : " + Money::formatCopper(mealCost) + ".", "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".", player.formatWorldDateTimeLine()}, false);
+                continue;
+            }
+            if (choice == 4)
+            {
+                ShopMenu::openShopOfType(player, ShopType::Lodging);
                 continue;
             }
         }

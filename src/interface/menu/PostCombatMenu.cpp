@@ -61,6 +61,7 @@ MenuScreen PostCombatMenu::buildScreen(const Player& player, bool hasLastCombatR
     screen.addOption(8, "Voir mes compétences", "Consulter la progression et les techniques connues.", true, "post_combat.skills", makePostCombatItemData(player, "open", "Compétences", "Consulter la progression et les techniques connues."));
     screen.addOption(9, "Voir rapidement mon équipement", "Affichage court de l'équipement actuel.", true, "post_combat.quick_equipment", makePostCombatItemData(player, "inspect", "Équipement rapide", "Affichage court de l'équipement actuel."));
     screen.addOption(10, "Dernier récap de combat", hasLastCombatRecap ? "Relire le dernier bilan avant/après combat." : "Aucun combat récent enregistré dans cette session.", hasLastCombatRecap, "post_combat.last_recap", makePostCombatItemData(player, "inspect", "Dernier récap", "Relire le dernier bilan avant/après combat.", hasLastCombatRecap ? "Disponible" : "Indisponible"));
+    screen.addOption(11, "Titres", "Voir les titres obtenus, disponibles et les titres équipés.", true, "post_combat.titles", makePostCombatItemData(player, "inspect", "Titres", "Voir les titres obtenus, disponibles et les titres équipés."));
 
     return screen;
 }

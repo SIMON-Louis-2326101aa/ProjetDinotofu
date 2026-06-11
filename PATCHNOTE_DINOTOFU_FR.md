@@ -1,4 +1,4 @@
-# V3.42.00 — Paramètres d’images, verrou terminal et point de sauvegarde
+# V3.43.00 — Paramètres d’images, verrou terminal et point de sauvegarde
 
 - Ajout d’un réglage sauvegardé pour les images IG sur le profil joueur.
 - Le terminal force maintenant les images sur désactivées et ne peut pas les activer.

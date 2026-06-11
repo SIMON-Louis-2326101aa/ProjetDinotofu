@@ -5981,17 +5981,17 @@ namespace
                 screen.addLine("Monture personnelle : aucune. Une monture durable coûte cher, mais évite de relouer à chaque long trajet.");
             }
             screen.addOption(0, "Retour", "Revenir au comptoir de l'auberge.", true, "shop.lodging.back");
-            screen.addOption(1, "Manger un repas chaud", "Soin léger, consomme 1 segment de journée.", true, "shop.lodging.meal");
-            screen.addOption(2, "Dormir dans une chambre simple", "Récupération complète des PV, consomme 2 segments de journée.", true, "shop.lodging.sleep");
+            screen.addOption(1, "Manger un repas chaud — 12 cuivre", "Soin léger, consomme 1 segment de journée. Prix affiché avant validation.", true, "shop.lodging.meal");
+            screen.addOption(2, "Dormir dans une chambre simple — 24 cuivre", "Récupération complète des PV, consomme 2 segments de journée. Prix affiché avant validation.", true, "shop.lodging.sleep");
             screen.addOption(3, "Écouter les rumeurs de comptoir", "Indice de ville sans récompense directe, consomme 1 segment.", true, "shop.lodging.rumors");
-            screen.addOption(4, "Préparer une place d'écurie", "Stabilise monture, sacoches ou stockage court pour les quêtes de relais.", true, "shop.lodging.stable");
-            screen.addOption(5, "Préparer sacoches et charge", "Préparation utile pour réduire un déplacement de biome plus tard.", true, "shop.lodging.saddlebags");
-            screen.addOption(6, "Déposer une charge à l'écurie", "Dépôt temporaire utile pour certains services de ville/relais.", true, "shop.lodging.storage");
-            screen.addOption(7, "Louer une monture de route", "Préparation plus forte pour les distances longues, consomme 1 segment.", true, "shop.lodging.mount");
-            screen.addOption(8, "Réserver un box sécurisé", "Stockage/box plus sérieux, utile pour quêtes d'écurie et relais.", true, "shop.lodging.box");
+            screen.addOption(4, "Préparer une place d'écurie — 30 cuivre", "Stabilise monture, sacoches ou stockage court pour les quêtes de relais.", true, "shop.lodging.stable");
+            screen.addOption(5, "Préparer sacoches et charge — 32 cuivre", "Préparation utile pour réduire un déplacement de biome plus tard.", true, "shop.lodging.saddlebags");
+            screen.addOption(6, "Déposer une charge à l'écurie — 18 cuivre", "Dépôt temporaire utile pour certains services de ville/relais.", true, "shop.lodging.storage");
+            screen.addOption(7, "Louer une monture de route — 65 cuivre", "Préparation plus forte pour les distances longues, consomme 1 segment.", true, "shop.lodging.mount");
+            screen.addOption(8, "Réserver un box sécurisé — 44 cuivre", "Stockage/box plus sérieux, utile pour quêtes d'écurie et relais.", true, "shop.lodging.box");
             screen.addOption(9, "Abonnements de l'auberge", "Forfaits de 7 jours : repas, lit simple, écurie ou cotisation de guilde.", true, "shop.lodging.subscriptions");
-            screen.addOption(10, "Enregistrer une monture personnelle", "Achat/acte durable : utile sur plusieurs trajets, mais la monture peut fatiguer.", true, "shop.lodging.owned_mount");
-            screen.addOption(11, "Soin et repos de monture", "Retire la fatigue accumulée par une monture personnelle.", true, "shop.lodging.mount_rest");
+            screen.addOption(10, "Enregistrer une monture personnelle — 420 cuivre", "Achat/acte durable : utile sur plusieurs trajets, mais la monture peut fatiguer.", true, "shop.lodging.owned_mount");
+            screen.addOption(11, "Soin et repos de monture — 62 cuivre", "Retire la fatigue accumulée par une monture personnelle.", true, "shop.lodging.mount_rest");
             screen.addOption(12, "Examiner la monture personnelle", "Affiche son état, sa limite de fatigue et les conseils d'écurie sans consommer de temps.", player.getInventory().countMaterialById("owned_mount_registration") > 0, "shop.lodging.mount_check");
             if (player.getInventory().countMaterialById("owned_mount_registration") > 0)
             {
@@ -8211,6 +8211,31 @@ namespace
             }
         }
     }
+}
+
+
+// EN: openShopOfType declares or implements a focused behavior used by this module.
+// FR: openShopOfType déclare ou implémente un comportement précis utilisé par ce module.
+void ShopMenu::openShopOfType(Player& player, ShopType type)
+{
+    ShopInventory shop = ShopCatalog::createPreviewShop(type);
+    std::vector<ShopInventory> shops;
+    shops.push_back(shop);
+    applyChapterThreeShopConsequences(player, shops);
+    if (shops.empty())
+    {
+        MessageScreen::show(
+            "BOUTIQUE INDISPONIBLE",
+            "shop.direct.unavailable",
+            {
+                "Ce comptoir n'a pas pu être préparé pour le moment.",
+                "Retourne par la liste des boutiques si tu veux vérifier les autres services."
+            }
+        );
+        return;
+    }
+
+    openSingleShop(player, shops.front());
 }
 
 // EN: displayPreview declares or implements a focused behavior used by this module.

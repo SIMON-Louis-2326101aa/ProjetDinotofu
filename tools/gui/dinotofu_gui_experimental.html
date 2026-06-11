@@ -5107,7 +5107,7 @@
               ${entry.lines.map(line => `<span class="${trackedItemInText(line) ? 'tracked-inline' : ''}">${renderRichLine(line, 'combat')}</span>`).join('')}
             </article>`).join('')}
         </div>
-        ${state.autoAdvanceKey ? `<div class="combat-auto-advance"><span>La suite s'affiche automatiquement après lecture.</span><div class="combat-auto-track"><div class="combat-auto-fill" style="--auto-delay: ${Math.max(1, state.autoAdvanceDelayMs)}ms"></div></div></div>` : ''}
+        ${state.autoAdvanceKey ? `<div class="combat-auto-advance"><span>La suite arrive après un court temps de lecture.</span><div class="combat-auto-track"><div class="combat-auto-fill" style="--auto-delay: ${Math.max(1, state.autoAdvanceDelayMs)}ms"></div></div></div>` : ''}
       </section>`;
     }
 

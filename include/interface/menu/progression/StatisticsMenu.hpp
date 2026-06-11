@@ -23,6 +23,10 @@ public:
     // FR: open affiche les statistiques quand l'appelant ne connaît pas le contexte de difficulté actuel.
     static void open(Player& player);
 
+    // EN: displayTitleCatalog prints owned and unlockable character titles.
+    // FR: displayTitleCatalog affiche les titres possédés et les titres déblocables.
+    static void displayTitleCatalog(Player& player);
+
 private:
     // EN: displaySummary prints a compact character overview.
     // FR: displaySummary affiche un résumé compact du personnage.
@@ -39,10 +43,6 @@ private:
     // EN: displaySkillStats prints unlocked skills and skill progress.
     // FR: displaySkillStats affiche les compétences débloquées et leur progression.
     static void displaySkillStats(const Player& player);
-
-    // EN: displayTitleCatalog prints owned and unlockable character titles.
-    // FR: displayTitleCatalog affiche les titres possédés et les titres déblocables.
-    static void displayTitleCatalog(Player& player);
 
     // EN: displayTopThreeStats prints persistent Top 3 counters from the canonical engine journal.
     // FR: displayTopThreeStats affiche les Top 3 persistants issus du journal moteur canonique.

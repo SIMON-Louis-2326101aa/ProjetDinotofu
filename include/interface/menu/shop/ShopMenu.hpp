@@ -9,6 +9,7 @@
 #define INCLUDE_INTERFACE_MENU_SHOP_SHOPMENU_HPP
 
 #include "entity/Player.hpp"
+#include "economy/shop/ShopInventory.hpp"
 
 class ShopMenu
 {
@@ -19,6 +20,9 @@ public:
     // EN: open declares or implements a focused behavior used by this module.
     // FR: open déclare ou implémente un comportement précis utilisé par ce module.
     static void open(Player& player);
+    // EN: Opens one concrete shop type directly from a town building.
+    // FR: Ouvre directement un type de boutique concret depuis un bâtiment de ville.
+    static void openShopOfType(Player& player, ShopType type);
 };
 
 #endif

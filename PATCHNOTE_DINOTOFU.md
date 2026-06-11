@@ -1,4 +1,4 @@
-# V3.42.00 — Image settings policy, terminal lock and backup point
+# V3.43.00 — Image settings policy, terminal lock and backup point
 
 - Added a saved graphical image preference on the player profile.
 - Terminal mode now forcibly keeps images disabled and cannot enable them.

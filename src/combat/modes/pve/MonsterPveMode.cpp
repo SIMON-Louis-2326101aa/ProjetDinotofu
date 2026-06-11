@@ -1055,7 +1055,7 @@ void MonsterPveMode::run(
             showCombatPhaseGate(
                 "FIN DU TOUR JOUEUR",
                 "combat.pve.phase.player_resolved",
-                {"Action du joueur résolue.", "La phase suivante démarre automatiquement."}
+                {"Action du joueur résolue.", "Le souffle du combat reprend, sans casser le rythme."}
             );
         }
 
@@ -1387,7 +1387,7 @@ bool MonsterPveMode::runExplorationWave(
             showCombatPhaseGate(
                 "FIN DU TOUR JOUEUR",
                 "exploration.wave.phase.player_resolved",
-                {"Action du joueur résolue.", "La phase suivante démarre automatiquement."}
+                {"Action du joueur résolue.", "Le souffle du combat reprend, sans casser le rythme."}
             );
         }
 
