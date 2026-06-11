@@ -8,6 +8,7 @@
 #include "combat/threat/ThreatSystem.hpp"
 
 #include "core/Console.hpp"
+#include "economy/Money.hpp"
 
 #include "interface/menu/inventory/InventoryDisplay.hpp"
 #include "interface/menu/inventory/InventoryUtils.hpp"
@@ -19,6 +20,7 @@
 #include "interface/menu/progression/BestiaryMenu.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "progression/material/MaterialExperimentLog.hpp"
+#include "progression/material/MaterialKnowledgeProgress.hpp"
 
 #include "item/Inventory.hpp"
 #include "item/weapon/Weapon.hpp"
@@ -136,7 +138,7 @@ namespace
         lines.push_back("Bonus critique : +" + std::to_string(weapon.getCriticalBonus()));
         lines.push_back("Durabilité : " + InventoryUtils::weaponDurabilityText(weapon));
         lines.push_back("État : " + yesNoText(weapon.isBroken(), "Cassée, ses bonus ne s'appliquent plus.", "Utilisable"));
-        lines.push_back("Valeur : " + std::to_string(weapon.getValue()) + " pièces");
+        lines.push_back("Valeur estimée : " + Money::formatGoldWithRaw(weapon.getValue()));
         MessageScreen::show("INSPECTION - ARME", "inventory.weapon.inspect.details", lines);
     }
 
@@ -149,7 +151,7 @@ namespace
         lines.push_back("Réduction dégâts : " + std::to_string(armor.getDamageReduction()));
         lines.push_back("Durabilité : " + InventoryUtils::armorDurabilityText(armor));
         lines.push_back("État : " + yesNoText(armor.isBroken(), "Cassée, ses bonus ne s'appliquent plus.", "Utilisable"));
-        lines.push_back("Valeur : " + std::to_string(armor.getValue()) + " pièces");
+        lines.push_back("Valeur estimée : " + Money::formatGoldWithRaw(armor.getValue()));
         MessageScreen::show("INSPECTION - ARMURE", "inventory.armor.inspect.details", lines);
     }
 
@@ -166,7 +168,7 @@ namespace
                 "Description : " + consumable.getDescription(),
                 "Type : " + InventoryUtils::consumableTypeToText(consumable.getType()),
                 "Puissance : " + std::to_string(consumable.getPower()),
-                "Valeur : " + std::to_string(consumable.getValue()) + " pièces"
+                "Valeur estimée : " + Money::formatGoldWithRaw(consumable.getValue())
             }
         );
     }
@@ -179,7 +181,7 @@ namespace
         lines.push_back("Catégorie : " + material.getCategory());
         lines.push_back("Quantité : " + std::to_string(material.getQuantity()));
         lines.push_back("Qualité : " + material.getQualityLabel());
-        lines.push_back("Valeur : " + std::to_string(material.getValue()) + " pièces/unité");
+        lines.push_back("Valeur estimée par unité : " + Money::formatGoldWithRaw(material.getValue()));
 
         if (material.hasSpecialQuality())
         {
@@ -2529,10 +2531,48 @@ namespace
         return MaterialCatalog::createById(id, 1).getName();
     }
 
+    bool playerKnowsMaterialId(const Player& player, const std::string& id)
+    {
+        if (id.empty())
+        {
+            return false;
+        }
+
+        if (player.getInventory().countMaterialById(id) > 0)
+        {
+            return true;
+        }
+
+        return MaterialKnowledgeProgress::knowsMaterialId(id);
+    }
+
+    bool recipeIsKnown(const Player& player, const CraftRecipe& recipe)
+    {
+        if (recipe.ingredients.empty())
+        {
+            return false;
+        }
+
+        for (const RecipeIngredient& ingredient : recipe.ingredients)
+        {
+            if (!playerKnowsMaterialId(player, ingredient.id))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     // EN: maxCraftsForRecipe declares or implements a focused behavior used by this module.
     // FR: maxCraftsForRecipe déclare ou implémente un comportement précis utilisé par ce module.
     int maxCraftsForRecipe(Player& player, const CraftRecipe& recipe)
     {
+        if (!recipeIsKnown(player, recipe))
+        {
+            return 0;
+        }
+
         if (recipe.alchemistOnly && !isAlchemist(player))
         {
             return 0;
@@ -2569,6 +2609,12 @@ namespace
     std::vector<std::string> buildRecipeIngredientLines(Player& player, const CraftRecipe& recipe)
     {
         std::vector<std::string> lines;
+
+        if (!recipeIsKnown(player, recipe))
+        {
+            lines.push_back("- ????? : tous les composants de cette recette n'ont pas encore été découverts.");
+            return lines;
+        }
 
         for (const RecipeIngredient& ingredient : recipe.ingredients)
         {
@@ -2898,7 +2944,6 @@ bool InventorySelection::openWeapons(Player& player)
         MenuScreen screen("ARMES", "inventory.weapons.page");
         screen.addSubtitle(PagedMenu::pageInfoText(pageIndex, totalPages, totalItems));
         screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
-
         for (std::size_t i = first; i < last; ++i)
         {
             Weapon weapon = player.getInventory().getWeapon(static_cast<int>(i));
@@ -3530,14 +3575,31 @@ bool InventorySelection::openCraft(Player& player)
 
     while (true)
     {
-        std::vector<CraftRecipe> recipes = buildCraftRecipes();
+        const std::vector<CraftRecipe> allRecipes = buildCraftRecipes();
+        std::vector<CraftRecipe> recipes;
+        int lockedRecipeCount = 0;
+
+        for (const CraftRecipe& recipe : allRecipes)
+        {
+            if (recipeIsKnown(player, recipe))
+            {
+                recipes.push_back(recipe);
+            }
+            else
+            {
+                lockedRecipeCount++;
+            }
+        }
+
         const std::size_t totalItems = recipes.size();
         const std::size_t totalPages = PagedMenu::pageCount(totalItems, recipesPerPage);
 
         if (recipes.empty())
         {
             MenuScreen emptyScreen("CRAFT / SCHÉMAS", "inventory.craft.empty");
-            emptyScreen.addLine("Aucun schéma de craft n'est disponible.");
+            emptyScreen.addLine("Aucun schéma n'est encore déverrouillé.");
+            emptyScreen.addLine("Une recette apparaît seulement après la découverte de chacun de ses composants.");
+            emptyScreen.addLine("Schémas encore masqués : " + std::to_string(lockedRecipeCount));
             TerminalInterface::renderMenuScreen(emptyScreen, false);
             Console::waitForEnter();
             Console::clear();
@@ -3555,6 +3617,7 @@ bool InventorySelection::openCraft(Player& player)
         MenuScreen screen("CRAFT / SCHÉMAS", "inventory.craft.page");
         screen.addSubtitle(PagedMenu::pageInfoText(pageIndex, totalPages, totalItems));
         screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
+        screen.addLine("Schémas masqués faute de composants tous connus : " + std::to_string(lockedRecipeCount));
 
         for (std::size_t i = first; i < last; ++i)
         {
@@ -3601,6 +3664,7 @@ bool InventorySelection::openCraft(Player& player)
         }
 
         PagedMenu::addNavigationOptions(screen, pageIndex, totalPages);
+        screen.addFooterLine("Une recette ne révèle ni son nom ni ses composants tant que tous les objets nécessaires ne sont pas connus.");
         screen.addFooterLine("Les max utilisent l'équivalence de qualité : faible/impur compte moins, pur/haute qualité/exceptionnel compte plus.");
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(

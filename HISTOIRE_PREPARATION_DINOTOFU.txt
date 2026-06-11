@@ -1,60 +1,322 @@
-DINOTOFU — PRÉPARATION HISTOIRE CHAPITRES 1 À 5
+DINOTOFU — TRAME CONSOLIDÉE DU MODE HISTOIRE, CHAPITRES 1 À 5
 
-Méthode choisie
----------------
-Avant de continuer à coder l'histoire au fil de l'eau, il faut écrire la trame jusqu'au chapitre 5 :
-- résumé de chaque chapitre ;
-- PNJ importants ;
-- quêtes principales non refusables ;
-- moments d'attente/réparation où le joueur doit s'occuper ;
-- boss ou menaces obligatoires ;
-- conséquences sur la ville, les routes, les boutiques et le bac à sable.
+Principe général
+----------------
+Le mode histoire reste un bac à sable : le joueur peut explorer, combattre, aider la ville, acheter, fabriquer, parler et accepter des quêtes secondaires.
+La différence vient du monde lui-même : seuls les PNJ arrivés, les bâtiments debout, les boutiques ouvertes, les routes reconnues et les fonctions réellement débloquées existent dans les menus.
+Aucun menu parallèle « guidé » ne doit être créé. Les menus normaux filtrent simplement le contenu selon l'état du monde.
 
-Chapitre 1 — La ville qui tient à peine
----------------------------------------
-Rôle : tutorial narratif et stabilisation de base.
-Objectifs : présenter Mira, faire le tour des référents, débloquer les premières demandes principales, stabiliser les murs et ouvrir la route du relais.
-Boss obligatoire : aucun vrai boss majeur, seulement des menaces proches et des combats de mise en danger.
+Chaque quête à étapes suit les règles suivantes :
+- une seule nouvelle étape est dévoilée à la fois ;
+- les étapes terminées restent visibles avec [fait] ;
+- les futures étapes restent masquées ;
+- une étape de synthèse relit toujours l'état réel des quêtes liées ;
+- terminer une quête plus tôt ne doit jamais faire perdre sa progression ;
+- une option existante mais temporairement inaccessible explique sa cause avec une phrase cohérente de lore ;
+- un PNJ, lieu ou commerce qui n'existe pas encore est caché, pas affiché comme un bouton arbitrairement verrouillé.
 
-Chapitre 2 — Le relais silencieux
----------------------------------
-Rôle : premier arc de route.
-Objectifs : comprendre le relais, sauver Nell, prouver que la route se réécrit, créer un contre-registre, repérer le nœud noir et garder une route courte ouverte.
-Menace obligatoire : une présence liée à la borne noire, connue d'abord par traces et rumeurs, puis nommée seulement quand le lore le justifie.
+Structure des quêtes principales
+--------------------------------
+Une quête principale est une vraie entrée indépendante du journal, non refusable.
+Les grands objectifs de chapitre peuvent agréger plusieurs quêtes principales, mais ils doivent observer leurs états réels : connue, en cours, terminée, rendue.
+Une quête principale terminée quitte les quêtes actives et rejoint « Principales finies ».
+Les quêtes secondaires, contrats de guilde et demandes temporaires gardent leurs propres archives.
 
-Chapitre 3 — Les routes qui répondent mal
------------------------------------------
-Rôle : montrer que le problème dépasse la ville.
-Pistes possibles : routes qui ramènent au mauvais endroit, convoi revenu sans équipage, PNJ qui se souvient d'un village jamais visité, bornes qui changent selon l'heure.
-Objectifs possibles : escorter un petit convoi, choisir quelle route sécuriser, découvrir une première zone volontairement réécrite.
-Boss obligatoire possible : un gardien de route qui ne protège plus les vivants, seulement la version corrigée de la carte.
+CHAPITRE 1 — LA VILLE QUI TIENT À PEINE
+========================================
 
-Chapitre 4 — Le village qui n'a pas la même date
-------------------------------------------------
-Rôle : basculer vers le mystère profond.
-Pistes possibles : village sauvé dans une ancienne version de l'histoire, habitants qui reconnaissent le joueur sans l'avoir rencontré, registres contradictoires.
-Objectifs possibles : sauver un PNJ important, choisir quelles preuves garder, comprendre qu'une force corrige le monde au lieu de seulement l'attaquer.
-Boss obligatoire possible : une autorité locale altérée, pas forcément mauvaise, mais devenue impossible à raisonner.
+Rôle
+----
+Tutoriel narratif, installation de la ville et premier contact avec le bac à sable bridé.
+Le joueur apprend les systèmes en aidant des personnes concrètes plutôt qu'en lisant une longue liste de fonctions.
 
-Chapitre 5 — La première vérité de la fissure
----------------------------------------------
-Rôle : révélation de milieu d'histoire.
-Pistes possibles : les monstres ne sont pas tous naturels, certaines routes ne sont pas cassées mais réécrites, certains boss protègent une vérité au lieu d'un trésor.
-Objectifs possibles : ouvrir une bibliothèque/zone de légendes, classer les preuves avec Soryn, choisir une route dangereuse, affronter le premier vrai gardien de vérité.
-Boss obligatoire possible : menace nommée par légende, avec préparation obligatoire et effets sur la ville après victoire.
+État initial du monde
+---------------------
+- Mira est le seul contact d'histoire immédiatement fiable.
+- Plusieurs bâtiments sont abîmés, condamnés ou encore sans responsable.
+- La guilde existe, mais ses horaires et services réels s'appliquent.
+- Les sorties proches restent accessibles selon les informations déjà obtenues.
+- Les boutiques qui n'ont pas encore rouvert ne sont pas affichées.
 
-Règles de quêtes principales
-----------------------------
-- Une quête principale n'est pas refusable.
-- Elle peut demander de parler à quelqu'un, attendre des réparations, faire des quêtes secondaires, rapporter des preuves, escorter, enquêter ou battre une menace.
-- Quand l'histoire demande de level up, le texte doit rester naturel : aider la ville, patrouiller, laisser le temps aux réparations, renforcer les stocks, pas “va farmer”.
-- Une quête qui vise un boss doit éviter le spoil complet si le boss n'est pas encore connu. Utiliser une trace, un surnom, une rumeur, une marque ou un titre approximatif.
+Déroulé principal
+-----------------
+1. [Mira seule] Comprendre l'état du quartier et recevoir les quatre noms utiles.
+2. Rencontrer Orren, Lysa, Bram et Soryn dans n'importe quel ordre.
+   - Chaque conversation crée immédiatement une quête principale indépendante.
+   - Les quatre PNJ sont disponibles en parallèle.
+3. Retourner prévenir Mira après avoir parlé aux quatre.
+4. Mira ouvre « Faire respirer les murs » : terminer puis rendre les quatre quêtes.
+   - Le compteur relit l'état réel des quatre quêtes.
+   - Une quête rendue avant l'étape 3 compte déjà.
+5. Retourner parler à Mira après les quatre validations.
+6. Mira clôt le chapitre et ouvre la priorité du relais silencieux.
 
-Boss obligatoires à décider ensemble
-------------------------------------
-À définir proprement avant codage :
-- boss de borne noire / route courte ;
-- boss de route corrigée ;
-- boss du village à date impossible ;
-- premier gardien de vérité ;
-- liens éventuels avec les boss déjà existants et les boss particuliers.
+Quêtes principales indépendantes
+--------------------------------
+- Orren — Les bornes qui mentent : reconnaître la Route commerciale et ses repères retournés.
+- Lysa — Les blessés de la nuit : obtenir des plantes utiles et vérifier les blessures des portes.
+- Bram — Les plaques qui tiennent encore : trier, réparer et tester ce qui peut renforcer les accès.
+- Soryn — Les traces qui refusent de sécher : distinguer une preuve réelle d'une rumeur répétée.
+- Mira — Faire respirer les murs : objectif de synthèse des quatre demandes, créé après le bilan des rencontres.
+
+Bac à sable pendant le chapitre
+-------------------------------
+- petites quêtes de guilde ;
+- demandes temporaires de villageois ;
+- collecte proche ;
+- premiers achats auprès des services réellement ouverts ;
+- patrouilles et combats faibles ;
+- découverte progressive des lieux notables.
+
+Conséquences de fin
+-------------------
+- stabilité minimale de la ville ;
+- quatre référents enregistrés comme PNJ d'histoire permanents ;
+- premières boutiques réparées ou responsables identifiés ;
+- Route commerciale reconnue ;
+- chapitre 2 et relais silencieux disponibles.
+
+Boss obligatoire
+----------------
+Aucun boss majeur. Les menaces doivent enseigner les combats, la fuite, les matériaux et les conséquences sans voler la place de la ville.
+
+CHAPITRE 2 — LE RELAIS SILENCIEUX
+=================================
+
+Rôle
+----
+Premier grand arc de route. Le joueur découvre que le monde ne se contente pas d'être dangereux : certaines routes changent les preuves et les distances.
+
+Déroulé déjà préparé
+--------------------
+1. Briefing avec Mira et Orren.
+2. Reconnaissance de la Route commerciale.
+3. Preuve d'une borne retournée pour Soryn.
+4. Les guetteurs sans feu.
+5. Faire répondre le relais.
+6. Sauver Nell la messagère.
+7. Examiner la sacoche des routes.
+8. Faire réagir les comptoirs.
+9. Suivre l'encre froide.
+10. Prouver que la route se réécrit.
+11. Construire le contre-registre avec Eda.
+12. Repérer le nœud noir.
+13. Tenir la ville pendant les réparations.
+14. Identifier la présence qui garde la borne sans révéler son vrai nom.
+15. Briser le premier verrou de la borne noire.
+16. Lire les cicatrices laissées par le verrou.
+17. Organiser les premiers retours gardés.
+
+Règle d'affichage
+-----------------
+Le joueur voit les étapes [fait], l'étape actuelle et le nombre d'étapes encore masquées. Il ne voit jamais les titres des futures étapes avant leur déblocage.
+
+PNJ ajoutés au monde
+--------------------
+- Nell, messagère survivante ;
+- Eda, comptable des routes courtes ;
+- responsables de comptoirs et services rouverts selon la réparation réelle du relais.
+
+Temps d'attente utile
+---------------------
+Pendant les réparations, le joueur peut :
+- aider aux stocks ;
+- prendre des contrats ;
+- améliorer son équipement ;
+- patrouiller ;
+- obtenir des preuves secondaires ;
+- renforcer sa connaissance du bestiaire.
+Le texte ne demande jamais de « farmer ».
+
+Menace obligatoire
+-------------------
+Le verrou de la borne noire est une manifestation d'étape, pas encore la véritable identité de ce qui réécrit les routes.
+
+Conséquences de fin
+-------------------
+- une route courte sous garde ;
+- relais partiellement fonctionnel ;
+- contre-registre disponible ;
+- nouveaux transports et commerces cohérents ;
+- ouverture du chapitre 3.
+
+CHAPITRE 3 — LES ROUTES QUI RÉPONDENT MAL
+=========================================
+
+Rôle
+----
+Montrer que le relais n'était pas un incident isolé. Les routes commencent à choisir leur destination selon l'heure, la cargaison, les témoins ou les souvenirs transportés.
+
+Situation de départ
+-------------------
+Un petit convoi revient au relais sans son équipage, mais avec des marchandises supplémentaires et un registre signé par des personnes qui ne devraient pas exister.
+Nell reconnaît certains sceaux. Eda prouve que les poids ne correspondent pas. Orren refuse d'envoyer un grand groupe avant d'avoir une route de retour fiable.
+
+Quêtes principales prévues
+--------------------------
+1. Le convoi qui revient seul — inspecter le convoi sans le déplacer.
+2. Trois routes pour une même borne — comparer les distances à trois moments de la journée.
+3. Les signatures sans voyageurs — faire identifier les sceaux par Soryn et les commerçants concernés.
+4. Une escorte qui sait renoncer — protéger un petit convoi et accepter de faire demi-tour si la route change.
+5. Le village écrit dans la marge — découvrir la première preuve d'un village absent des cartes actuelles.
+6. La route corrigée — choisir quelle version d'un trajet conserver dans le contre-registre.
+7. Le gardien de la carte juste — affronter une entité qui protège la cohérence de la carte plutôt que les vivants.
+8. Ce que le convoi a rapporté — retourner auprès de Mira et décider ce qui peut entrer en ville.
+
+Choix et conséquences
+---------------------
+- sécuriser une route commerciale favorise les boutiques et les matériaux ;
+- sécuriser une route de secours favorise les soins et évacuations ;
+- conserver une preuve dangereuse accélère les recherches de Soryn, mais attire des événements ;
+- détruire une preuve protège la ville à court terme, mais masque une partie du futur lore.
+Aucun choix ne doit bloquer définitivement le jeu ; il change les coûts, dialogues, événements et itinéraires.
+
+Bac à sable du chapitre
+-----------------------
+- escortes courtes ;
+- contrats de récupération ;
+- routes variables selon le moment de la journée ;
+- événements de convoi ;
+- nouveaux matériaux de balises ;
+- premières quêtes secondaires liées aux voyageurs revenus « au mauvais endroit ».
+
+Menace obligatoire et boss secondaire
+--------------------------------------
+Mini-boss obligatoire : Le Gardien de la Carte Juste.
+Il s'agit d'une entité unique, plus forte qu'un élite mais inférieure à un vrai boss. Il protège la route considérée comme correcte plutôt que la route la plus sûre.
+Boss secondaire volontaire : Reflet d'Inakari [46], choisi dans le roster existant pour ses illusions, ses faux repères et ses reflets trompeurs.
+La piste du Reflet n'apparaît qu'après le mini-boss et ne bloque jamais la fin du chapitre 3.
+
+Conséquences de fin
+-------------------
+- accès préparé au village absent des cartes ;
+- transports variables mais prévisibles grâce au contre-registre ;
+- premier choix durable de route enregistré dans la quête et la sauvegarde ;
+- route du commerce : davantage de stocks et de matériaux lors des futurs retours ;
+- route des secours : davantage d'options de soin, d'évacuation et d'escorte ;
+- route de recherche : davantage de preuves, d'archives et d'événements de découverte ;
+- la décision finale sur le convoi module les dialogues et le rythme des bénéfices sans bloquer la suite ;
+- ouverture du chapitre 4.
+
+CHAPITRE 4 — LE VILLAGE QUI N'A PAS LA MÊME DATE
+=================================================
+
+Rôle
+----
+Basculer du mystère géographique vers une contradiction temporelle et humaine.
+Le village existe, mais ses habitants vivent dans une version différente de l'histoire.
+
+Situation de départ
+-------------------
+Les habitants reconnaissent le joueur ou ses compagnons sans les avoir rencontrés dans la sauvegarde actuelle.
+Les registres portent une date impossible. Certains bâtiments sont réparés ici alors qu'ils sont encore détruits dans la ville du joueur.
+Un enfant parle d'une attaque qui n'a pas encore eu lieu.
+
+Quêtes principales prévues
+--------------------------
+1. La porte qui connaît ton nom — entrer sans confirmer les souvenirs des habitants.
+2. Deux registres, une seule encre — comparer les archives du village et celles de Soryn.
+3. Les survivants d'un événement futur — protéger des habitants sans annoncer ce qui pourrait arriver.
+4. Le bâtiment déjà reconstruit — comprendre pourquoi une boutique existe ici avant sa réparation ailleurs.
+5. La personne sauvée deux fois — retrouver un PNJ important dont deux versions revendiquent le même passé.
+6. Les preuves qu'on peut rapporter — choisir quelles traces ramener sans contaminer les registres de la ville.
+7. L'heure qui refuse de passer — comprendre quelle force maintient le village dans cette version et préparer la confrontation temporelle.
+8. Une date à laisser vivre — décider comment relier le village au monde sans l'effacer.
+
+PNJ importants prévus
+---------------------
+- un responsable local altéré, persuadé de protéger les habitants ;
+- un enfant ou jeune messager capable de remarquer les incohérences simples ;
+- une version contradictoire d'un PNJ déjà connu ;
+- un artisan dont la boutique montre une technologie ou réparation future.
+
+Bac à sable du chapitre
+-----------------------
+- quêtes dont les objectifs changent selon la date locale ;
+- échanges limités entre les deux villes ;
+- objets portant deux descriptions possibles ;
+- événements de mémoire ;
+- choix de preuves à montrer à Soryn, Mira, Nell ou Eda.
+
+Boss majeur prévu
+------------------
+Boss existant retenu : L'Horloge des Chuchotements [60].
+Elle correspond au palier attendu et au thème du chapitre : temps, souvenirs, blessures retardées et réécriture.
+Son statut final (obligatoire ou secondaire) dépendra de la structure détaillée du chapitre 4 ; il ne faut pas l'imposer uniquement pour cocher une case « boss ».
+
+Conséquences de fin
+-------------------
+- village relié de manière imparfaite à une fenêtre de date contrôlée ;
+- premier PNJ « double » ou souvenir contradictoire enregistré sans remplacer la version du monde principal ;
+- bibliothèque et archives enrichies d'une catégorie de preuves temporelles ;
+- certaines boutiques peuvent proposer une version future d'un objet, mais avec disponibilité limitée ;
+- les quêtes locales conservent la date à laquelle elles ont été acceptées afin d'éviter les validations incohérentes ;
+- preuve que le monde est corrigé, pas seulement attaqué ;
+- ouverture du chapitre 5.
+
+CHAPITRE 5 — LA PREMIÈRE VÉRITÉ DE LA FISSURE
+==============================================
+
+Rôle
+----
+Révélation de milieu d'histoire. Le joueur obtient une première explication solide, mais pas la vérité finale.
+
+Situation de départ
+-------------------
+Les preuves des routes et du village forment un même motif : certaines créatures, bornes et autorités ne défendent pas un territoire. Elles défendent une version du monde.
+Soryn exige une méthode de classement avant d'ouvrir les légendes dangereuses.
+Mira veut savoir ce que cette vérité coûtera à la ville.
+
+Quêtes principales prévues
+--------------------------
+1. Classer ce qui ne devrait pas coexister — trier les preuves des chapitres précédents.
+2. Les légendes pour enfants — chercher les récits qui ont conservé des vérités sous une forme inoffensive.
+3. Une bibliothèque qui refuse certains noms — ouvrir une section d'archives protégée.
+4. Les monstres nés d'une correction — capturer ou observer une preuve vivante sans forcément la tuer.
+5. La route vers la fissure — préparer une expédition avec plusieurs solutions de retour.
+6. Ce que le registre protège — découvrir qu'une force défend une information, pas un trésor.
+7. Le jugement des preuves — décider si les preuves doivent être soumises à une autorité majeure, protégées ou cachées.
+8. Dire la vérité à la ville — décider quelle partie révéler aux habitants, aux commerces et à la guilde.
+
+Système « Légendes »
+---------------------
+Le chapitre ouvre une bibliothèque de légendes :
+- récits de PNJ déclenchés ponctuellement ;
+- histoires pour enfants ;
+- fragments de boss ;
+- noms masqués tant qu'ils n'ont pas été prononcés dans le monde ;
+- rapprochements possibles avec les avatars, échos et fragments du panthéon sans présenter une vraie divinité à pleine puissance.
+
+Boss majeur et mini-boss possibles
+----------------------------------
+Aucun nouveau boss majeur n'est créé pour remplir artificiellement le chapitre.
+Boss existant le plus cohérent actuellement : Avatar de Lexior [80], lié à la justice, au jugement des actions passées, aux sceaux et aux réactions aux choix du joueur.
+Cette confrontation peut être secondaire et déclenchée seulement si le joueur demande un jugement complet des preuves.
+La route principale peut utiliser un mini-boss unique d'archive ou une épreuve sans identité de boss majeur si cela sert mieux le récit.
+
+Conséquences de fin
+-------------------
+- première explication confirmée sur les corrections du monde ;
+- ouverture officielle de la section Légendes dans la bibliothèque ;
+- nouveaux événements dépendant des preuves conservées, détruites ou mises en quarantaine ;
+- dialogues de Mira, Soryn, la guilde et les commerçants modifiés selon la part de vérité révélée ;
+- noms de gardiens ajoutés au bestiaire uniquement lorsqu'ils ont été prononcés dans le monde ;
+- ville modifiée par la version de la vérité révélée ;
+- préparation des chapitres 6 et suivants sans transformer le chapitre 5 en fin artificielle.
+
+Règles permanentes pour les chapitres futurs
+--------------------------------------------
+- ne jamais dévoiler toutes les étapes d'une quête dès son acceptation ;
+- garder [fait] sur chaque étape terminée ;
+- relire l'état réel des objectifs liés ;
+- ne pas créer de menu histoire parallèle ;
+- faire exister les PNJ d'histoire dans le bac à sable dès qu'ils existent dans le monde ;
+- masquer les lieux et boutiques inexistants ;
+- expliquer les fermetures temporaires ;
+- faire évoluer les dialogues, stocks, routes, événements et lieux notables après chaque chapitre ;
+- ne pas afficher le vrai nom d'un boss avant qu'il soit réellement connu ;
+- choisir les vrais boss dans BOSS_DINOTOFU.txt selon le palier de niveau, puis selon la cohérence du lore ;
+- réserver les nouvelles créations aux mini-boss uniques, situés entre les élites et les vrais boss ;
+- distinguer clairement les boss obligatoires des boss secondaires déclenchés par la volonté du joueur ;
+- prévoir des activités utiles pendant les attentes ;
+- conserver une suite jouable en bac à sable après la fin de l'histoire disponible.

@@ -14,15 +14,19 @@
 #include "progression/DifficultyRules.hpp"
 #include "progression/death/DeathPenaltyResult.hpp"
 #include "progression/death/DeathPenaltySystem.hpp"
+#include "progression/blessing/BlessingSystem.hpp"
 #include "combat/loot/LootGenerator.hpp"
 #include "combat/reward/CombatRewardSystem.hpp"
 #include "interface/menu/potions/CombatPotionUtils.hpp"
 #include "combat/group/CombatGroupBuilder.hpp"
+#include "combat/group/InitiativeSystem.hpp"
+#include "combat/group/TurnOrder.hpp"
 #include "combat/system/CombatClassSystem.hpp"
 #include "combat/summon/SummonCombatSystem.hpp"
 #include "combat/summon/SummonControlMode.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/common/PagedMenu.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "lore/LegendTriggerSystem.hpp"
 #include "item/material/MaterialCatalog.hpp"
@@ -1693,17 +1697,14 @@ namespace
 
         while (true)
         {
-            const std::size_t totalPages = std::max<std::size_t>(
-                1,
-                (targets.size() + BOSS_COOP_SUPPORT_PAGE_SIZE - 1) / BOSS_COOP_SUPPORT_PAGE_SIZE
-            );
+            const std::size_t totalPages = PagedMenu::pageCount(targets.size(), BOSS_COOP_SUPPORT_PAGE_SIZE);
             const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
-            const std::size_t start = safePageIndex * BOSS_COOP_SUPPORT_PAGE_SIZE;
-            const std::size_t end = std::min(targets.size(), start + BOSS_COOP_SUPPORT_PAGE_SIZE);
+            const std::size_t start = PagedMenu::firstIndex(safePageIndex, BOSS_COOP_SUPPORT_PAGE_SIZE);
+            const std::size_t end = PagedMenu::lastIndexExclusive(targets.size(), safePageIndex, BOSS_COOP_SUPPORT_PAGE_SIZE);
 
             MenuScreen targetScreen("CIBLE DU SOIN", "boss.coop.support.target");
             targetScreen.setPagination(safePageIndex, totalPages);
-            targetScreen.addSubtitle("Page " + std::to_string(safePageIndex + 1) + "/" + std::to_string(totalPages));
+            targetScreen.addSubtitle(PagedMenu::pageInfoText(safePageIndex, totalPages, targets.size()));
             targetScreen.addLine("Choisis l'allié à soigner ou réveiller.");
             targetScreen.addOption(0, "Annuler", "Revenir au tour normal.", true, "boss.coop.support.target.cancel");
 
@@ -1779,17 +1780,14 @@ namespace
                 return -1;
             }
 
-            const std::size_t totalPages = std::max<std::size_t>(
-                1,
-                (potionStacks.size() + BOSS_COOP_SUPPORT_PAGE_SIZE - 1) / BOSS_COOP_SUPPORT_PAGE_SIZE
-            );
+            const std::size_t totalPages = PagedMenu::pageCount(potionStacks.size(), BOSS_COOP_SUPPORT_PAGE_SIZE);
             const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
-            const std::size_t start = safePageIndex * BOSS_COOP_SUPPORT_PAGE_SIZE;
-            const std::size_t end = std::min(potionStacks.size(), start + BOSS_COOP_SUPPORT_PAGE_SIZE);
+            const std::size_t start = PagedMenu::firstIndex(safePageIndex, BOSS_COOP_SUPPORT_PAGE_SIZE);
+            const std::size_t end = PagedMenu::lastIndexExclusive(potionStacks.size(), safePageIndex, BOSS_COOP_SUPPORT_PAGE_SIZE);
 
             MenuScreen potionScreen("POTION DE SOUTIEN", "boss.coop.support.potion");
             potionScreen.setPagination(safePageIndex, totalPages);
-            potionScreen.addSubtitle("Page " + std::to_string(safePageIndex + 1) + "/" + std::to_string(totalPages));
+            potionScreen.addSubtitle(PagedMenu::pageInfoText(safePageIndex, totalPages, potionStacks.size()));
             potionScreen.addLine("Choisis la potion à utiliser.");
             potionScreen.addOption(0, "Annuler", "Garder la potion pour plus tard.", true, "boss.coop.support.potion.cancel");
 
@@ -2055,6 +2053,7 @@ namespace
         target->heal(announcedHeal);
         healingDone += std::max(0, target->getHp() - beforeHealHp);
         healer.markHealingThreat();
+        healer.recordChallengeCombatAction("ally_consumable");
 
         if (!healer.hasInfiniteConsumables())
         {
@@ -2131,8 +2130,17 @@ namespace
             return;
         }
 
+        if (BlessingSystem::tryTriggerLethalSurvival(player))
+        {
+            lines.push_back(player.getName() + " reçoit trois pastilles rouges, mais toutes ses bénédictions se consument avant l'effacement.");
+            lines.push_back("Retour à 1 PV, inventaire et équipement détruits, marque irréversible appliquée.");
+            showSave();
+            DeathPenaltySystem::displayLethalSurvivalAnomaly();
+            return;
+        }
+
         player.recordDeath();
-        lines.push_back(player.getName() + " reçoit trois pastilles rouges : mort définitive prévue, sauf exception divine/divination.");
+        lines.push_back(player.getName() + " reçoit trois pastilles rouges : mort définitive. Aucune bénédiction capable de briser le verdict n'a répondu.");
         showSave();
     }
 
@@ -2334,6 +2342,14 @@ namespace
         return screen;
     }
 
+    int askBossChoiceType(const std::string& playerName, bool coop)
+    {
+        return TerminalInterface::askMenuChoiceFromOptions(
+            buildBossChoiceTypeScreen(playerName, coop),
+            "Veuillez entrer 1 ou 2."
+        );
+    }
+
     constexpr std::size_t BOSS_SELECTION_PAGE_SIZE = 8;
 
     bool idInList(const std::vector<int>& ids, int bossId)
@@ -2359,23 +2375,34 @@ namespace
         bool enabled,
         bool coop,
         const std::string& hint,
-        const std::vector<int>& defeatedBossIds
+        const std::vector<int>& defeatedBossIds,
+        const std::string& discoveryLocation
     )
     {
         MenuOptionItemData itemData;
         itemData.structured = true;
         itemData.kind = "boss";
-        itemData.section = coop ? "Boss coop" : "Boss";
+        const bool identityKnown = idInList(defeatedBossIds, bossId)
+            || BossCatalog::getRegistryDisplayName(bossId) != "???";
+        itemData.section = idInList(defeatedBossIds, bossId)
+            ? "Boss vaincus"
+            : (identityKnown ? "Boss identifiés" : "Entités détectées");
         itemData.actionType = "select";
         itemData.name = bossSelectionDisplayName(bossId, defeatedBossIds);
         itemData.detail = hint;
         itemData.status = idInList(defeatedBossIds, bossId)
             ? "Déjà battu"
             : (enabled
-                ? (coop ? "Accessible au groupe" : "Accessible")
-                : (coop ? "Bloqué par le groupe" : "Verrouillé"));
-        itemData.progress = "Identifiant : " + std::to_string(bossId)
-            + " | Niveau conseillé : " + std::to_string(BossCatalog::getRecommendedLevel(bossId));
+                ? (identityKnown
+                    ? (coop ? "Boss identifié — accessible au groupe" : "Boss identifié — accessible")
+                    : (coop ? "Emplacement détecté — identité inconnue" : "Emplacement détecté — identité inconnue"))
+                : (coop ? "Bloqué par le groupe" : "Trace encore instable"));
+        itemData.progress = "Danger estimé : niveau conseillé "
+            + std::to_string(BossCatalog::getRecommendedLevel(bossId));
+        if (!discoveryLocation.empty())
+        {
+            itemData.progress += " | Emplacement approximatif : " + discoveryLocation;
+        }
         itemData.owner = coop ? "Registre commun" : "Registre personnel";
         itemData.important = enabled;
         return itemData;
@@ -2385,6 +2412,7 @@ namespace
         const std::vector<int>& visibleBossIds,
         const std::vector<int>& enabledBossIds,
         const std::vector<int>& defeatedBossIds,
+        const Player& registryOwner,
         bool coop,
         std::size_t pageIndex
     )
@@ -2393,27 +2421,30 @@ namespace
         screen.addLine(coop
             ? "Sélectionne l'entité que le groupe veut affronter."
             : "Sélectionne l'entité que tu veux exterminer.");
-        screen.addLine("Les niveaux affichés sont recommandés, pas bloquants : avant ce palier, c'est à tes risques et périls.");
-        screen.addLine("Le premier vrai palier de boss commence à 15 ; FireFlight reste noté [255].");
+        screen.addLine("Les niveaux affichés sont recommandés, pas bloquants : tenter avant ce niveau reste à tes risques et périls.");
+        screen.addLine("Le registre n'affiche que les entités déjà détectées pour ce personnage.");
+        screen.addLine("Le niveau conseillé est une estimation de danger, pas une connaissance complète de l'entité.");
 
-        const std::size_t totalPages = std::max<std::size_t>(
-            1,
-            (visibleBossIds.size() + BOSS_SELECTION_PAGE_SIZE - 1) / BOSS_SELECTION_PAGE_SIZE
-        );
+        const std::size_t totalPages = PagedMenu::pageCount(visibleBossIds.size(), BOSS_SELECTION_PAGE_SIZE);
         const std::size_t safePageIndex = std::min(pageIndex, totalPages - 1);
-        const std::size_t start = safePageIndex * BOSS_SELECTION_PAGE_SIZE;
-        const std::size_t end = std::min(visibleBossIds.size(), start + BOSS_SELECTION_PAGE_SIZE);
+        const std::size_t start = PagedMenu::firstIndex(safePageIndex, BOSS_SELECTION_PAGE_SIZE);
+        const std::size_t end = PagedMenu::lastIndexExclusive(visibleBossIds.size(), safePageIndex, BOSS_SELECTION_PAGE_SIZE);
 
         screen.setPagination(safePageIndex, totalPages);
-        screen.addSubtitle("Page " + std::to_string(safePageIndex + 1) + "/" + std::to_string(totalPages));
+        screen.addSubtitle(PagedMenu::pageInfoText(safePageIndex, totalPages, visibleBossIds.size()));
 
         for (std::size_t index = start; index < end; ++index)
         {
             const int id = visibleBossIds[index];
             const bool enabled = std::find(enabledBossIds.begin(), enabledBossIds.end(), id) != enabledBossIds.end();
+            const std::string discoveryLocation = registryOwner.getBossDiscoveryLocation(id);
             std::string hint = BossCatalog::getRegistryHint(id)
-                + " Niveau conseillé : " + std::to_string(BossCatalog::getRecommendedLevel(id))
+                + " Danger estimé : niveau conseillé " + std::to_string(BossCatalog::getRecommendedLevel(id))
                 + " (non bloquant).";
+            if (!discoveryLocation.empty())
+            {
+                hint += " Emplacement approximatif mémorisé : " + discoveryLocation + ".";
+            }
             if (!enabled)
             {
                 hint += coop
@@ -2427,7 +2458,7 @@ namespace
                 hint,
                 enabled,
                 coop ? "boss.coop.select." + std::to_string(id) : "boss.select." + std::to_string(id),
-                makeBossSelectionItemData(id, enabled, coop, hint, defeatedBossIds)
+                makeBossSelectionItemData(id, enabled, coop, hint, defeatedBossIds, discoveryLocation)
             );
         }
 
@@ -2452,6 +2483,7 @@ namespace
         const std::vector<int>& visibleBossIds,
         const std::vector<int>& enabledBossIds,
         const std::vector<int>& defeatedBossIds,
+        const Player& registryOwner,
         bool coop
     )
     {
@@ -2460,7 +2492,7 @@ namespace
         while (true)
         {
             Console::clear();
-            MenuScreen screen = buildBossSelectionScreen(visibleBossIds, enabledBossIds, defeatedBossIds, coop, pageIndex);
+            MenuScreen screen = buildBossSelectionScreen(visibleBossIds, enabledBossIds, defeatedBossIds, registryOwner, coop, pageIndex);
             const int choice = TerminalInterface::askMenuChoiceFromOptions(
                 screen,
                 "Veuillez entrer un identifiant de boss affiché."
@@ -2472,10 +2504,7 @@ namespace
                 continue;
             }
 
-            const std::size_t totalPages = std::max<std::size_t>(
-                1,
-                (visibleBossIds.size() + BOSS_SELECTION_PAGE_SIZE - 1) / BOSS_SELECTION_PAGE_SIZE
-            );
+            const std::size_t totalPages = PagedMenu::pageCount(visibleBossIds.size(), BOSS_SELECTION_PAGE_SIZE);
             if (choice == 99 && pageIndex + 1 < totalPages)
             {
                 ++pageIndex;
@@ -2508,10 +2537,7 @@ void BossPveMode::run(
 
     Console::pauseSeconds(2);
 
-    int bossChoiceType = TerminalInterface::askMenuChoiceFromOptions(
-        buildBossChoiceTypeScreen(player1.getName(), false),
-        "Veuillez entrer un chiffre valide : 1 ou 2."
-    );
+    int bossChoiceType = askBossChoiceType(player1.getName(), false);
 
     std::vector<int> visibleBossIds = player1.getUnlockedBossIds();
     std::vector<int> availableBossIds = player1.getAvailableBossIds();
@@ -2553,6 +2579,7 @@ void BossPveMode::run(
             visibleBossIds,
             availableBossIds,
             player1.getDefeatedBossIds(),
+            player1,
             false
         );
 
@@ -2714,6 +2741,7 @@ void BossPveMode::run(
     int bossCombatTurnCount = 0;
     bool hitogamiAlreadyRevived = false;
     bool fireFlightCheatPurgeAt75Done = false;
+    player1.beginChallengeCombatTracking();
 
     while (!player1.isDead() && !boss.isDead())
     {
@@ -2766,8 +2794,8 @@ void BossPveMode::run(
 
     if (player1.isDead())
     {
+        player1.finishChallengeCombatTracking(false, true, true, 0);
         player1.recordDefeat();
-        player1.recordDeath();
 
         applyBossVictoryConsequenceAfterDefeat(
             player1,
@@ -2779,10 +2807,17 @@ void BossPveMode::run(
 
         if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
         {
+            if (BlessingSystem::tryTriggerLethalSurvival(player1))
+            {
+                DeathPenaltySystem::displayLethalSurvivalAnomaly();
+                return;
+            }
+            player1.recordDeath();
             DeathPenaltySystem::displayLethalDeathCorruption();
             return;
         }
 
+        player1.recordDeath();
         DeathPenaltyResult deathPenalty = DeathPenaltySystem::applyNonLethalDeathPenalty(
             player1,
             difficulty,
@@ -2812,15 +2847,22 @@ void BossPveMode::run(
     {
         if (boss.getBossId() == 27 && !runFireFlightFinalTest(player1, random))
         {
+            player1.finishChallengeCombatTracking(false, true, true, 0);
             player1.recordDefeat();
-            player1.recordDeath();
 
             if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
             {
+                if (BlessingSystem::tryTriggerLethalSurvival(player1))
+                {
+                    DeathPenaltySystem::displayLethalSurvivalAnomaly();
+                    return;
+                }
+                player1.recordDeath();
                 DeathPenaltySystem::displayLethalDeathCorruption();
                 return;
             }
 
+            player1.recordDeath();
             DeathPenaltyResult deathPenalty = DeathPenaltySystem::applyNonLethalDeathPenalty(
                 player1,
                 difficulty,
@@ -2834,8 +2876,10 @@ void BossPveMode::run(
             return;
         }
 
+        player1.finishChallengeCombatTracking(true, true, true, 1);
         player1.recordVictory();
         player1.recordBossKill();
+        player1.recordBossKillByName(boss.getName());
 
         grantBossVictoryTitles(player1, boss, false);
 
@@ -2862,10 +2906,10 @@ void BossPveMode::run(
                 "REGISTRE BOSS",
                 "boss.registry.new_entity",
                 {
-                    "Une nouvelle entité a été détectée dans le registre des variations d'énergie anormale.",
+                    "Cette première victoire fournit une preuve assez forte pour stabiliser une nouvelle signature.",
                     "Nom : ???",
-                    "Statut : brouillé.",
-                    "Le registre a ajouté une entrée, mais refuse encore d'en révéler l'identité."
+                    "Statut : prochaine présence inconnue détectée.",
+                    "Une seule entrée a été ajoutée. Son identité, son emplacement précis et ses mécaniques restent inconnus."
                 },
                 false
             );
@@ -2976,10 +3020,7 @@ void BossPveMode::runTeam(
         }
     );
 
-    int bossChoiceType = TerminalInterface::askMenuChoiceFromOptions(
-        buildBossChoiceTypeScreen(leader.getName(), true),
-        "Veuillez entrer 1 ou 2."
-    );
+    int bossChoiceType = askBossChoiceType(leader.getName(), true);
 
     std::vector<int> leaderVisibleBossIds = leader.getUnlockedBossIds();
     std::vector<int> leaderAvailableBossIds = leader.getAvailableBossIds();
@@ -3031,6 +3072,7 @@ void BossPveMode::runTeam(
             leaderVisibleBossIds,
             coopAvailableBossIds,
             leader.getDefeatedBossIds(),
+            leader,
             true
         );
 
@@ -3135,6 +3177,11 @@ void BossPveMode::runTeam(
 
     Console::clear();
 
+    for (Player* player : party)
+    {
+        if (player != nullptr) player->beginChallengeCombatTracking();
+    }
+
     if (boss.getBossId() == 27)
     {
         boss.revealIdentity();
@@ -3177,114 +3224,172 @@ void BossPveMode::runTeam(
             "boss.coop.round." + std::to_string(round),
             {
                 "Tour " + std::to_string(round) + ".",
-                boss.getName() + " : " + std::to_string(boss.getHp()) + "/" + std::to_string(boss.getMaxHp()) + " PV."
+                boss.getName() + " : " + std::to_string(boss.getHp()) + "/" + std::to_string(boss.getMaxHp()) + " PV.",
+                "Joueurs, invocations et boss agissent maintenant selon une initiative commune."
             },
             false
         );
         displayBossCoopPartyStatus(party, extractBossDownedFlags(contributions));
 
-        for (std::size_t i = 0; i < party.size(); ++i)
+        InitiativeQueue initiative = InitiativeSystem::buildBossQueue(party, boss, partySummons, random);
+        showBossPveLines(
+            "ORDRE D'INITIATIVE",
+            "boss.coop.initiative." + std::to_string(round),
+            InitiativeSystem::buildDisplayLines(initiative)
+        );
+
+        for (const InitiativeRoll& entry : initiative.getEntries())
         {
-            Player* player = party[i];
-            if (player == nullptr || player->isDead() || boss.isDead())
-            {
-                continue;
-            }
+            if (boss.isDead() || countAliveBossParty(party) <= 0) break;
 
-            MessageScreen::show(
-                "TOUR JOUEUR",
-                "boss.coop.player_turn",
-                {"Tour de " + player->getName() + " [J" + std::to_string(i + 1) + "]."},
-                false
-            );
-
-            int healingDoneThisTurn = 0;
-            int bossHpBeforeTurn = boss.getHp();
-            bool finished = tryUseBossHealingPotionOnAlly(*player, party, healingDoneThisTurn);
-            while (!finished && !player->isDead() && !boss.isDead())
+            if (TurnOrder::isPlayer(entry.id))
             {
-                finished = TurnManager::playHumanTurn(
-                    *player,
-                    boss,
-                    random,
-                    BOSS_POTION_HEAL_AMOUNT,
-                    BOSS_POTION_DAMAGE_BONUS
+                const std::size_t i = static_cast<std::size_t>(std::max(0, entry.slotIndex));
+                if (i >= party.size()) continue;
+                Player* player = party[i];
+                if (player == nullptr || player->isDead()) continue;
+
+                MessageScreen::show(
+                    "TOUR JOUEUR",
+                    "boss.coop.player_turn",
+                    {"Tour de " + player->getName() + " [J" + std::to_string(i + 1) + "] — initiative " + std::to_string(entry.totalScore) + "."},
+                    false
                 );
-            }
 
-            if (finished)
-            {
-                if (!boss.isDead() && SummonCombatSystem::hasActiveSummons(partySummons[i]))
+                int healingDoneThisTurn = 0;
+                const int bossHpBeforeTurn = boss.getHp();
+                bool finished = tryUseBossHealingPotionOnAlly(*player, party, healingDoneThisTurn);
+                while (!finished && !player->isDead() && !boss.isDead())
                 {
-                    int bossHpBeforeSummons = boss.getHp();
-                    SummonCombatSystem::playPlayerSummonTurnsAgainstEntity(
-                        partySummons[i],
+                    finished = TurnManager::playHumanTurn(
+                        *player,
                         boss,
                         random,
-                        summonControlModes[i]
+                        BOSS_POTION_HEAL_AMOUNT,
+                        BOSS_POTION_DAMAGE_BONUS
                     );
-                    if (bossHpBeforeSummons > boss.getHp())
-                    {
-                        contributions[i].supportActions++;
-                    }
                 }
 
-                contributions[i].turnsTaken++;
-                contributions[i].damageDealt += std::max(0, bossHpBeforeTurn - boss.getHp());
-                contributions[i].healingDone += healingDoneThisTurn;
-                if (healingDoneThisTurn > 0) contributions[i].supportActions++;
-                ++bossCombatTurnCount;
+                if (finished)
+                {
+                    contributions[i].turnsTaken++;
+                    contributions[i].damageDealt += std::max(0, bossHpBeforeTurn - boss.getHp());
+                    contributions[i].healingDone += healingDoneThisTurn;
+                    if (healingDoneThisTurn > 0) contributions[i].supportActions++;
+                    ++bossCombatTurnCount;
+                    maybeTriggerFireFlightCheatPurgeForParty(boss, party, fireFlightCheatPurgeAt75Done);
+                    maybeReviveHitogamiOnce(boss, hitogamiAlreadyRevived, difficulty);
+                    TurnManager::checkBossDecryption(boss);
+                }
+            }
+            else if (TurnOrder::isSummonGroup(entry.id))
+            {
+                const std::size_t i = static_cast<std::size_t>(std::max(0, entry.slotIndex));
+                if (i >= party.size() || i >= partySummons.size()) continue;
+                Player* owner = party[i];
+                if (owner == nullptr || owner->isDead() || !SummonCombatSystem::hasActiveSummons(partySummons[i])) continue;
+
+                showBossPveLines(
+                    "TOUR DES INVOCATIONS",
+                    "boss.coop.summon_turn." + std::to_string(i + 1),
+                    {entry.label + " agissent à leur propre initiative : " + std::to_string(entry.totalScore) + "."}
+                );
+                const int before = boss.getHp();
+                SummonCombatSystem::playPlayerSummonTurnsAgainstEntity(
+                    partySummons[i],
+                    boss,
+                    random,
+                    summonControlModes[i]
+                );
+                const int summonDamage = std::max(0, before - boss.getHp());
+                owner->recordChallengeSummonAction(summonDamage);
+                if (summonDamage > 0)
+                {
+                    contributions[i].supportActions++;
+                    contributions[i].damageDealt += summonDamage;
+                }
                 maybeTriggerFireFlightCheatPurgeForParty(boss, party, fireFlightCheatPurgeAt75Done);
                 maybeReviveHitogamiOnce(boss, hitogamiAlreadyRevived, difficulty);
                 TurnManager::checkBossDecryption(boss);
             }
-        }
-
-        if (boss.isDead() || countAliveBossParty(party) == 0)
-        {
-            break;
-        }
-
-        if (tryBossAttackPartySummon(boss, partySummons, contributions, random))
-        {
-            boss.reduceUltimateCooldown();
-            ++round;
-            continue;
-        }
-
-        Player* target = chooseAliveBossTarget(party, random, &contributions);
-        if (target == nullptr)
-        {
-            break;
-        }
-
-        MessageScreen::show(
-            "TOUR DU BOSS",
-            "boss.coop.boss_turn",
-            {"Tour de " + boss.getName() + " : cible " + target->getName() + "."},
-            false
-        );
-        int targetHpBeforeBossTurn = target->getHp();
-        bool bossTurnFinished = false;
-        while (!bossTurnFinished && !target->isDead())
-        {
-            bossTurnFinished = TurnManager::playBossTurn(boss, *target, random);
-        }
-
-        for (std::size_t i = 0; i < party.size(); ++i)
-        {
-            if (party[i] == target)
+            else if (TurnOrder::isBoss(entry.id))
             {
-                contributions[i].damageTaken += std::max(0, targetHpBeforeBossTurn - target->getHp());
-            }
-            if (party[i] != nullptr && party[i]->isDead())
-            {
-                contributions[i].wasDowned = true;
+                if (tryBossAttackPartySummon(boss, partySummons, contributions, random))
+                {
+                    boss.reduceUltimateCooldown();
+                    continue;
+                }
+
+                Player* target = chooseAliveBossTarget(party, random, &contributions);
+                if (target == nullptr) break;
+
+                MessageScreen::show(
+                    "TOUR DU BOSS",
+                    "boss.coop.boss_turn",
+                    {"Tour de " + boss.getName() + " : cible " + target->getName() + " — initiative " + std::to_string(entry.totalScore) + "."},
+                    false
+                );
+                const int targetHpBeforeBossTurn = target->getHp();
+                bool bossTurnFinished = false;
+                while (!bossTurnFinished && !target->isDead())
+                {
+                    bossTurnFinished = TurnManager::playBossTurn(boss, *target, random);
+                }
+
+                for (std::size_t i = 0; i < party.size(); ++i)
+                {
+                    if (party[i] == target)
+                    {
+                        contributions[i].damageTaken += std::max(0, targetHpBeforeBossTurn - target->getHp());
+                    }
+                    if (party[i] != nullptr && party[i]->isDead())
+                    {
+                        contributions[i].wasDowned = true;
+                    }
+                }
+                boss.reduceUltimateCooldown();
             }
         }
-
-        boss.reduceUltimateCooldown();
         ++round;
+    }
+
+    const int aliveAtCombatEnd = countAliveBossParty(party);
+    int groupConsumables = 0;
+    int groupSkills = 0;
+    int groupNonBasic = 0;
+    int groupBasic = 0;
+    int groupDamageTaken = 0;
+    int groupSummonActions = 0;
+    int realPartySize = 0;
+    for (Player* member : party)
+    {
+        if (member == nullptr) continue;
+        ++realPartySize;
+        groupConsumables += member->getChallengeCombatConsumablesUsed();
+        groupSkills += member->getChallengeCombatSkillsUsed();
+        groupNonBasic += member->getChallengeCombatNonBasicAttacksUsed();
+        groupBasic += member->getChallengeCombatBasicAttacksUsed();
+        groupDamageTaken += member->getChallengeCombatDamageTaken();
+        groupSummonActions += member->getChallengeCombatSummonActions();
+    }
+
+    const bool groupVictory = boss.isDead() && aliveAtCombatEnd > 0;
+    for (std::size_t i = 0; i < party.size(); ++i)
+    {
+        Player* member = party[i];
+        if (member == nullptr || !member->isChallengeCombatTrackingActive()) continue;
+        member->applyChallengeCombatGroupSummary(
+            realPartySize,
+            aliveAtCombatEnd,
+            groupConsumables,
+            groupSkills,
+            groupNonBasic,
+            groupBasic,
+            groupDamageTaken,
+            groupSummonActions
+        );
+        const bool participated = i < contributions.size() && contributions[i].turnsTaken > 0;
+        member->finishChallengeCombatTracking(groupVictory && participated, true, true, 1);
     }
 
     if (boss.isDead() && !boss.isIdentityRevealed())
@@ -3447,6 +3552,7 @@ void BossPveMode::runTeam(
         {
             player->recordVictory();
             player->recordBossKill();
+            player->recordBossKillByName(boss.getName());
             grantBossVictoryTitles(*player, boss, true);
             if (!player->isDead() && atLeastOnePartyMemberDownAtReward && player->grantTitle("Dernier debout du groupe"))
             {
@@ -3474,7 +3580,10 @@ void BossPveMode::runTeam(
                 showBossPveLines(
                     "REGISTRE BOSS",
                     "boss.coop.reward.new_entity",
-                    {"Registre de " + player->getName() + " : une nouvelle entité est devenue détectable."}
+                    {
+                        "Registre de " + player->getName() + " : cette première victoire stabilise la prochaine présence inconnue.",
+                        "Une seule nouvelle entrée est ajoutée, sous l'identité ???."
+                    }
                 );
             }
 

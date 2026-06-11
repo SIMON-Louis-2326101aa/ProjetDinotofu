@@ -304,20 +304,18 @@ void DeathPenaltySystem::displayLethalCurrentDeathStatistic()
 void DeathPenaltySystem::displayLethalSurvivalAnomaly()
 {
     MenuScreen screen("ANOMALIE DE SURVIE", "death.lethal.survival_anomaly");
-    screen.addLine("La mort t'a trouvé.");
-    screen.addLine("Puis elle a reculé.");
+    screen.addLine("La mort t'a trouvé. Puis elle a reculé.");
     screen.addLine("");
-    screen.addLine("Quelqu'un, quelque part, a payé le prix à ta place.");
+    screen.addLine("Toutes tes bénédictions ont été consumées pour t'arracher au registre des morts.");
+    screen.addLine("Tu ouvres les yeux avec exactement 1 PV.");
+    screen.addLine("Ton équipement, ton inventaire et ton argent ont été détruits.");
     screen.addLine("");
-    screen.addLine("Tu ouvres les yeux avec 1 PV.");
-    screen.addLine("Ton équipement a disparu.");
-    screen.addLine("Ton inventaire n'est plus qu'un souvenir.");
+    screen.addLine("Malédiction irréversible : Marque de survie interdite.");
+    screen.addLine("Effet permanent : aucune nouvelle bénédiction ne peut être reçue.");
+    screen.addLine("Effet permanent : tous les soins reçus sont réduits de 5 %.");
+    screen.addLine("Cette marque ne peut être retirée ni par une église, ni par un boss, ni par un objet connu.");
     screen.addLine("");
-    screen.addLine("Statut : anomalie de survie.");
-    screen.addLine("");
-    screen.addLine("Tes bénédictions se sont consumées.");
-    screen.addLine("Mais ton nom existe encore.");
-    screen.addLine("Mais le registre continue de te regarder.");
-    screen.setDisplayOnlyInput("Anomalie de survie affichée sans choix joueur.");
+    screen.addLine("Statut : anomalie de survie. Ton nom existe encore, mais le registre continue de te regarder.");
+    screen.setDisplayOnlyInput("Cette survie est automatique : aucune validation joueur n'est demandée après la mort.");
     TerminalInterface::renderMenuScreen(screen, false);
 }

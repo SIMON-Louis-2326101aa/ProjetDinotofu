@@ -52,7 +52,14 @@ Entity::Entity()
     elementalWardResistancePercent = 0;
     regenerationTurns = 0;
     regenerationPerTurn = 0;
+    powerBoostTurns = 0;
+    powerBoostPercent = 0;
+    precisionBoostTurns = 0;
+    precisionRollBonus = 0;
+    guardBoostTurns = 0;
+    guardReductionPercent = 0;
     classSkillCooldownTurns = 0;
+    healingReceivedPercent = 100;
 }
 
 Entity::Entity(
@@ -102,7 +109,14 @@ Entity::Entity(
     elementalWardResistancePercent = 0;
     regenerationTurns = 0;
     regenerationPerTurn = 0;
+    powerBoostTurns = 0;
+    powerBoostPercent = 0;
+    precisionBoostTurns = 0;
+    precisionRollBonus = 0;
+    guardBoostTurns = 0;
+    guardReductionPercent = 0;
     classSkillCooldownTurns = 0;
+    healingReceivedPercent = 100;
 }
 
 std::string Entity::getName() const
@@ -361,6 +375,30 @@ void Entity::applyRegeneration(int turns, int healPerTurn)
     regenerationPerTurn = std::max(regenerationPerTurn, healPerTurn);
 }
 
+void Entity::applyPowerBoost(int turns, int damagePercent)
+{
+    if (turns <= 0 || damagePercent <= 0) return;
+    if (damagePercent > 60) damagePercent = 60;
+    powerBoostTurns = std::max(powerBoostTurns, turns);
+    powerBoostPercent = std::max(powerBoostPercent, damagePercent);
+}
+
+void Entity::applyPrecisionBoost(int turns, int rollBonus)
+{
+    if (turns <= 0 || rollBonus <= 0) return;
+    if (rollBonus > 5) rollBonus = 5;
+    precisionBoostTurns = std::max(precisionBoostTurns, turns);
+    precisionRollBonus = std::max(precisionRollBonus, rollBonus);
+}
+
+void Entity::applyGuardBoost(int turns, int reductionPercent)
+{
+    if (turns <= 0 || reductionPercent <= 0) return;
+    if (reductionPercent > 45) reductionPercent = 45;
+    guardBoostTurns = std::max(guardBoostTurns, turns);
+    guardReductionPercent = std::max(guardReductionPercent, reductionPercent);
+}
+
 bool Entity::cureBurning()
 {
     if (burningTurns <= 0) return false;
@@ -424,11 +462,26 @@ bool Entity::hasWeakening() const { return weakeningTurns > 0; }
 bool Entity::hasVulnerability() const { return vulnerabilityTurns > 0; }
 bool Entity::hasElementalWard() const { return elementalWardTurns > 0; }
 bool Entity::hasRegeneration() const { return regenerationTurns > 0; }
+bool Entity::hasPowerBoost() const { return powerBoostTurns > 0; }
+bool Entity::hasPrecisionBoost() const { return precisionBoostTurns > 0; }
+bool Entity::hasGuardBoost() const { return guardBoostTurns > 0; }
 int Entity::getElementalWardResistancePercent() const { return elementalWardResistancePercent; }
+int Entity::getPowerBoostPercent() const { return powerBoostPercent; }
+int Entity::getPrecisionRollBonus() const { return precisionRollBonus; }
+int Entity::getGuardReductionPercent() const { return guardReductionPercent; }
+
+int Entity::applyPowerBoostToDamage(int damage) const
+{
+    if (damage <= 0 || powerBoostTurns <= 0 || powerBoostPercent <= 0)
+    {
+        return damage;
+    }
+    return std::max(1, damage * (100 + powerBoostPercent) / 100);
+}
 
 bool Entity::hasActiveCombatStatus() const
 {
-    return burningTurns > 0 || poisonTurns > 0 || frostTurns > 0 || shockTurns > 0 || bleedingTurns > 0 || weakeningTurns > 0 || vulnerabilityTurns > 0 || elementalWardTurns > 0 || regenerationTurns > 0;
+    return burningTurns > 0 || poisonTurns > 0 || frostTurns > 0 || shockTurns > 0 || bleedingTurns > 0 || weakeningTurns > 0 || vulnerabilityTurns > 0 || elementalWardTurns > 0 || regenerationTurns > 0 || powerBoostTurns > 0 || precisionBoostTurns > 0 || guardBoostTurns > 0;
 }
 
 void Entity::processStatusTickAtTurnStart()
@@ -546,6 +599,48 @@ void Entity::processStatusTickAtTurnStart()
         }
     }
 
+    if (powerBoostTurns > 0)
+    {
+        powerBoostTurns--;
+        if (powerBoostTurns > 0)
+        {
+            lines.push_back(name + " conserve un élan chanceux : dégâts infligés +" + std::to_string(powerBoostPercent) + "%.");
+        }
+        else
+        {
+            powerBoostPercent = 0;
+            lines.push_back("L'élan chanceux de " + name + " s'épuise.");
+        }
+    }
+
+    if (precisionBoostTurns > 0)
+    {
+        precisionBoostTurns--;
+        if (precisionBoostTurns > 0)
+        {
+            lines.push_back(name + " garde une précision anormalement favorable (+" + std::to_string(precisionRollBonus) + " au jet d'attaque).");
+        }
+        else
+        {
+            precisionRollBonus = 0;
+            lines.push_back("La précision chanceuse de " + name + " redevient normale.");
+        }
+    }
+
+    if (guardBoostTurns > 0)
+    {
+        guardBoostTurns--;
+        if (guardBoostTurns > 0)
+        {
+            lines.push_back("Une chance protectrice réduit encore les dégâts reçus par " + name + " de " + std::to_string(guardReductionPercent) + "%.");
+        }
+        else
+        {
+            guardReductionPercent = 0;
+            lines.push_back("La chance protectrice autour de " + name + " se dissipe.");
+        }
+    }
+
     if (!lines.empty())
     {
         MessageScreen::show("EFFETS DE STATUT", "combat.status.tick", lines, false);
@@ -625,6 +720,12 @@ void Entity::takeDamage(int damage)
         damage = std::max(1, damage * (100 + vulnerabilityDamageTakenPercent) / 100);
     }
 
+
+    if (guardBoostTurns > 0 && guardReductionPercent > 0 && damage > 0)
+    {
+        damage = std::max(1, damage * (100 - guardReductionPercent) / 100);
+    }
+
     hp -= damage;
 
     if (hp < 0)
@@ -642,12 +743,25 @@ void Entity::heal(int healAmount)
         return;
     }
 
-    hp += healAmount;
+    const int adjustedHeal = healingReceivedPercent <= 0
+        ? 0
+        : std::max(1, healAmount * healingReceivedPercent / 100);
+    hp += adjustedHeal;
 
     if (hp > maxHp)
     {
         hp = maxHp;
     }
+}
+
+int Entity::getHealingReceivedPercent() const
+{
+    return healingReceivedPercent;
+}
+
+void Entity::setHealingReceivedPercent(int percentage)
+{
+    healingReceivedPercent = std::max(0, std::min(200, percentage));
 }
 
 // EN: reduceMaxHp declares or implements a focused behavior used by this module.
@@ -698,6 +812,11 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
 {
     int resultat = random.rollD20();
 
+    if (precisionBoostTurns > 0 && precisionRollBonus > 0)
+    {
+        resultat = std::min(20, resultat + precisionRollBonus);
+    }
+
     dodged = false;
     critical = false;
 
@@ -747,7 +866,7 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         {
             dealtDamage = std::max(1, dealtDamage * (100 - weakeningDamagePenaltyPercent) / 100);
         }
-        return dealtDamage;
+        return applyPowerBoostToDamage(dealtDamage);
     }
 
     critical = true;
@@ -760,7 +879,7 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     {
         criticalResult = std::max(1, criticalResult * (100 - weakeningDamagePenaltyPercent) / 100);
     }
-    return criticalResult;
+    return applyPowerBoostToDamage(criticalResult);
 }
 
 // EN: useHealingPotion declares or implements a focused behavior used by this module.

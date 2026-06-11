@@ -1,18 +1,32 @@
-// EN: Blessing.hpp briefly defines this Dinotofu module and its responsibilities.
-// FR: Blessing.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future blessing data used for divine protection, anomalies and temporary powers.
-// TODO: Implement this future system when its feature block becomes active.
+// English: Persistent blessing data used by divine protections and lethal survival anomalies.
+// Français : Donnée persistante de bénédiction utilisée par les protections divines et anomalies de survie léthale.
+#ifndef INCLUDE_PROGRESSION_BLESSING_BLESSING_HPP
+#define INCLUDE_PROGRESSION_BLESSING_BLESSING_HPP
 
-#ifndef INCLUDE_INCLUDE_PROGRESSION_BLESSING_BLESSING_HPP
-#define INCLUDE_INCLUDE_PROGRESSION_BLESSING_BLESSING_HPP
+#include <string>
 
 class Blessing
 {
+private:
+    std::string id;
+    std::string name;
+    std::string description;
+    bool survivalProtection;
+
 public:
-    // TODO: Add fields and methods when this system is connected to gameplay.
-    // TODO : Ajouter les attributs et méthodes quand ce système sera branché au gameplay.
+    Blessing();
+    Blessing(
+        const std::string& id,
+        const std::string& name,
+        const std::string& description,
+        bool survivalProtection = false
+    );
+
+    const std::string& getId() const;
+    const std::string& getName() const;
+    const std::string& getDescription() const;
+    bool grantsLethalSurvival() const;
+    bool isValid() const;
 };
 
 #endif

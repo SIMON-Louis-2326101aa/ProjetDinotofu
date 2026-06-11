@@ -1,18 +1,27 @@
-// EN: BlessingInventory.hpp briefly defines this Dinotofu module and its responsibilities.
-// FR: BlessingInventory.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future container storing active blessings on a character.
-// TODO: Implement this future system when its feature block becomes active.
+// English: Persistent container for active character blessings.
+// Français : Conteneur persistant des bénédictions actives d'un personnage.
+#ifndef INCLUDE_PROGRESSION_BLESSING_BLESSINGINVENTORY_HPP
+#define INCLUDE_PROGRESSION_BLESSING_BLESSINGINVENTORY_HPP
 
-#ifndef INCLUDE_INCLUDE_PROGRESSION_BLESSING_BLESSINGINVENTORY_HPP
-#define INCLUDE_INCLUDE_PROGRESSION_BLESSING_BLESSINGINVENTORY_HPP
+#include "progression/blessing/Blessing.hpp"
+
+#include <string>
+#include <vector>
 
 class BlessingInventory
 {
+private:
+    std::vector<Blessing> blessings;
+
 public:
-    // TODO: Add fields and methods when this system is connected to gameplay.
-    // TODO : Ajouter les attributs et méthodes quand ce système sera branché au gameplay.
+    const std::vector<Blessing>& getAll() const;
+    int count() const;
+    bool empty() const;
+    bool contains(const std::string& blessingId) const;
+    bool hasLethalSurvivalProtection() const;
+    bool add(const Blessing& blessing);
+    void clear();
+    void setLoaded(const std::vector<Blessing>& loadedBlessings);
 };
 
 #endif

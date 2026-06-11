@@ -72,3 +72,27 @@ Effets spéciaux en combat :
 FICHIER SÉPARÉ :
 - Les cheats sont maintenant documentés dans CHEATS_DINOTOFU.txt.
 - Ce fichier reste réservé aux personnages spéciaux, groupes, dates, relations et règles de rencontre.
+
+============================================================
+PNJ MARCHANDS LÉGENDAIRES — V3.23.00
+============================================================
+
+HERO VILLAGER
+- Statut : PNJ légendaire, donneur de défis et vendeur temporaire ; jamais personnage jouable.
+- Apparition : événement extrêmement rare pendant certaines sections de journée, avec cooldown long et sauvegardé.
+- Première description obligatoire : homme très musclé, t-shirt bleu-vert, pantalon violet et armure de diamant bleu.
+- Parole : commence et termine ses phrases par un tic sonore comme « Hmmm », « Hannn » ou « Huuuh ».
+- Fonction : propose des défis difficiles, vend du matériel inhabituel et peut valider lui-même ses défis en apparaissant sans prévenir.
+- Disparition : fragments carrés bleus, silhouette de mirage, puis absence immédiate.
+- Intervention spéciale : en cas de véritable défaite pendant l’épreuve amicale des caisses, il élimine les ennemis restants puis disparaît ; aucune mort réelle ou pénalité n’est appliquée. Une fuite ne l’appelle pas.
+- Lore : rumeurs contradictoires, témoignages de villages sauvés et légende du marchand bleu qui juge les routes.
+
+BOB ET MAURICE
+- Statut : duo unique de PNJ marchands temporaires ; jamais séparés par les apparitions, quêtes, calendriers ou sauvegardes.
+- Dialogue : l’un parle seulement avec des sons (« Hannnn », « Hummm », « Huuuh », « Hammmm »), l’autre traduit par « Mon collègue Bob a dit… » ou « Maurice demande… ». Ils inversent régulièrement les rôles.
+- Boutique : comptoir commun avec marchandises imprévisibles, protections de secours, lots et caisses.
+- Épreuve des caisses : sous-inventaire temporaire, équipement imposé depuis le contenu obtenu, mini-boss amical et aucune mort réelle.
+- Quête de protection : les deux rejoignent le combat comme alliés IA, infligent exactement 1 dégât chacun et appliquent parfois un effet utile, inutile ou défavorable.
+- Enchaînements : leurs rendus peuvent immédiatement provoquer une mise à jour de quête ou une nouvelle demande absurde.
+- Lore : les rumeurs se moquent de leurs plans, de leurs traductions et de leur incapacité totale à voyager séparément.
+

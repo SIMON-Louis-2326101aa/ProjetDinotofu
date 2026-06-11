@@ -1,18 +1,14 @@
-// EN: BlessingSystem.hpp briefly defines this Dinotofu module and its responsibilities.
-// FR: BlessingSystem.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future system consuming blessings, especially for lethal survival anomaly events.
-// TODO: Implement this future system when its feature block becomes active.
+// English: Consumes blessings to resolve exceptional lethal-survival effects.
+// Français : Consume les bénédictions pour résoudre les survies exceptionnelles en mode léthal.
+#ifndef INCLUDE_PROGRESSION_BLESSING_BLESSINGSYSTEM_HPP
+#define INCLUDE_PROGRESSION_BLESSING_BLESSINGSYSTEM_HPP
 
-#ifndef INCLUDE_INCLUDE_PROGRESSION_BLESSING_BLESSINGSYSTEM_HPP
-#define INCLUDE_INCLUDE_PROGRESSION_BLESSING_BLESSINGSYSTEM_HPP
+class Player;
 
 class BlessingSystem
 {
 public:
-    // TODO: Add fields and methods when this system is connected to gameplay.
-    // TODO : Ajouter les attributs et méthodes quand ce système sera branché au gameplay.
+    static bool tryTriggerLethalSurvival(Player& player);
 };
 
 #endif

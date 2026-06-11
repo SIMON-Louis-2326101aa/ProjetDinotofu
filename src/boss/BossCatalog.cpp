@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <string>
+#include <array>
 
 namespace
 {
@@ -60,6 +61,32 @@ namespace
     std::string getRecommendedLevelTextInternal(int id)
     {
         return "[niv. conseillé " + std::to_string(getRecommendedLevelInternal(id)) + "]";
+    }
+
+    BossHierarchyInfo getHierarchyInfoInternal(int id)
+    {
+        const int level = getRecommendedLevelInternal(id);
+        if (level <= 30)
+        {
+            return {1, "Palier I — Menaces fondatrices", "Boss locaux et premières entités majeures", 15, 30};
+        }
+        if (level <= 60)
+        {
+            return {2, "Palier II — Menaces régionales", "Rois locaux, esprits, reflets et anomalies stabilisées", 31, 60};
+        }
+        if (level <= 100)
+        {
+            return {3, "Palier III — Avatars et fragments", "Manifestations divines limitées et forces conceptuelles", 61, 100};
+        }
+        if (level <= 150)
+        {
+            return {4, "Palier IV — Gardiens majeurs", "Verrous de progression, souverains oubliés et entités primordiales affaiblies", 101, 150};
+        }
+        if (level <= 220)
+        {
+            return {5, "Palier V — Souverains et horreurs", "Rois, reines, manifestations du destin et créatures presque légendaires", 151, 220};
+        }
+        return {6, "Palier VI — Sources terminales", "Sources presque finales et avatar ultime actuellement connu", 221, 255};
     }
 
     std::string getRegistryDisplayNameInternal(int id)
@@ -135,6 +162,18 @@ std::string BossCatalog::getRecommendedLevelText(int bossId)
 {
     return getRecommendedLevelTextInternal(bossId);
 }
+
+BossHierarchyInfo BossCatalog::getHierarchyInfo(int bossId)
+{
+    return getHierarchyInfoInternal(bossId);
+}
+
+std::string BossCatalog::getHierarchyLabel(int bossId)
+{
+    const BossHierarchyInfo info = getHierarchyInfoInternal(bossId);
+    return info.title;
+}
+
 
 // EN: getMaximumBossId declares or implements a focused behavior used by this module.
 // FR: getMaximumBossId déclare ou implémente un comportement précis utilisé par ce module.

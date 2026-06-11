@@ -1,16 +1,38 @@
-// EN: InitiativeSystem.hpp briefly defines this Dinotofu module and its responsibilities.
-// FR: InitiativeSystem.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This placeholder prepares a future Dinotofu system. Code identifiers stay in English; player-facing text can stay in French.
-// Français : Ce fichier prépare un futur système de Dinotofu. Les identifiants restent en anglais ; les textes affichés au joueur peuvent rester en français.
+// EN: InitiativeSystem.hpp exposes initiative helpers for group fights.
+// FR: InitiativeSystem.hpp expose les aides d'initiative pour les combats de groupe.
 
 #ifndef INCLUDE_COMBAT_GROUP_INITIATIVESYSTEM_HPP
 #define INCLUDE_COMBAT_GROUP_INITIATIVESYSTEM_HPP
 
+#include "combat/initiative/InitiativeQueue.hpp"
+
+#include <string>
+#include <vector>
+
+class Boss;
+class EnemyCombatQueue;
+class Player;
+class Random;
+class Summon;
+
 class InitiativeSystem
 {
 public:
-    // Future Dexterity-based initiative system.
-    // Futur système d'initiative basé sur la Dextérité.
+    static InitiativeQueue buildWaveQueue(
+        const std::vector<Player*>& party,
+        const EnemyCombatQueue& wave,
+        const std::vector<std::vector<Summon>>& partySummons,
+        Random& random
+    );
+
+    static InitiativeQueue buildBossQueue(
+        const std::vector<Player*>& party,
+        const Boss& boss,
+        const std::vector<std::vector<Summon>>& partySummons,
+        Random& random
+    );
+
+    static std::vector<std::string> buildDisplayLines(const InitiativeQueue& queue);
 };
 
 #endif

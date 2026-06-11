@@ -120,3 +120,44 @@ std::vector<MaterialKnowledgeRecord> MaterialKnowledgeProgress::getRecords()
 
     return copy;
 }
+
+
+bool MaterialKnowledgeProgress::knowsMaterialId(const std::string& id)
+{
+    if (id.empty())
+    {
+        return false;
+    }
+
+    for (const MaterialKnowledgeRecord& record : records())
+    {
+        if (record.id == id && record.discoveredQuantity > 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void MaterialKnowledgeProgress::restoreRecord(const MaterialKnowledgeRecord& record)
+{
+    if (record.id.empty() || record.discoveredQuantity <= 0)
+    {
+        return;
+    }
+
+    for (MaterialKnowledgeRecord& existing : records())
+    {
+        if (existing.id == record.id && existing.quality == record.quality)
+        {
+            existing.discoveredQuantity = std::max(existing.discoveredQuantity, record.discoveredQuantity);
+            existing.bestQualityWeight = std::max(existing.bestQualityWeight, record.bestQualityWeight);
+            if (existing.name.empty()) existing.name = record.name;
+            if (existing.category.empty()) existing.category = record.category;
+            return;
+        }
+    }
+
+    records().push_back(record);
+}

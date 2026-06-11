@@ -6,6 +6,7 @@
 #include "item/weapon/Weapon.hpp"
 
 #include "interface/menu/common/MessageScreen.hpp"
+#include "item/equipment/EquipmentWeightRules.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -335,6 +336,8 @@ std::vector<std::string> Weapon::toDisplayLines() const
         "Description : " + description,
         "Valeur : " + std::to_string(value) + " pièces",
         "Type : " + weaponTypeLabel(type),
+        "Catégorie de poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getWeaponWeightClass(*this)),
+        "Contrepartie : " + EquipmentWeightRules::getWeaponTradeoffText(*this),
         "Bonus dégâts min : " + std::to_string(minDamageBonus),
         "Bonus dégâts max : " + std::to_string(maxDamageBonus),
         "Bonus critique : " + std::to_string(criticalBonus)

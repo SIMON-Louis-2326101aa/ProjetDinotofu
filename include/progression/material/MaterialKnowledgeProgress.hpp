@@ -34,6 +34,8 @@ public:
     // EN: getRecords declares or implements a focused behavior used by this module.
     // FR: getRecords déclare ou implémente un comportement précis utilisé par ce module.
     static std::vector<MaterialKnowledgeRecord> getRecords();
+    static bool knowsMaterialId(const std::string& id);
+    static void restoreRecord(const MaterialKnowledgeRecord& record);
 };
 
 #endif

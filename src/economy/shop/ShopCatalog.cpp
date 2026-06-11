@@ -913,6 +913,15 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             break;
 
         case ShopType::BlackMarket:
+            shop.addItem(ShopItem(
+                "black_market_barter_seal",
+                "Sceau de troc douteux",
+                "Marque discrète toujours acceptée par certains vendeurs louches à la place d'une petite partie de l'or.",
+                ShopItemCategory::Information,
+                72,
+                24,
+                1
+            ));
             if (rotation % 2 == 0)
             {
                 shop.addItem(ShopItem("experimental_damage_potion", "Potion de rage expérimentale", "Potion illégale, puissante et instable. Évidemment hors de prix.", ShopItemCategory::Consumable, 520, 90, 1));
@@ -1032,7 +1041,6 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 5 == 0)
             {
                 shop.addItem(ShopItem("sealed_debt_slip", "Billet de dette scellé sans témoin", "Document de dette vendu sous le manteau. Le vendeur refuse de dire qui doit rembourser.", ShopItemCategory::Material, 260, 46, 1));
-                shop.addItem(ShopItem("black_market_barter_seal", "Sceau de troc douteux", "Marque discrète acceptée par certains vendeurs louches à la place d'une partie de l'or.", ShopItemCategory::Information, 72, 24, 1));
                 shop.addItem(ShopItem("smuggler_token", "Jeton de pont noir", "Jeton de contrebandier lié aux marchés sous les ponts.", ShopItemCategory::Material, 220, 30, 2));
             }
             if (rotation % 7 == 4)

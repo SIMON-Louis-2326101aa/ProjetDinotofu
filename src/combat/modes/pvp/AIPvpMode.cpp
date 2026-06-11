@@ -117,7 +117,7 @@ namespace
             classScreen.setPagination(pageIndex, totalPages);
             classScreen.addLine("Famille sélectionnée : " + ClassCatalog::getClassCategoryNameByChoice(categoryChoice) + ".");
             classScreen.addLine("Choisis une classe précise pour fixer le rythme du duel.");
-            classScreen.addLine("Page : " + std::to_string(pageIndex + 1) + "/" + std::to_string(totalPages));
+            classScreen.addLine(PagedMenu::pageInfoText(pageIndex, totalPages, classOptions.size()));
             classScreen.addLine("Classes affichées : " + PagedMenu::rangeText(firstIndex, lastIndex, classOptions.size()));
 
             for (std::size_t index = firstIndex; index < lastIndex; ++index)
@@ -360,7 +360,7 @@ namespace
             screen.setPagination(pageIndex, totalPages);
             screen.addLine("Le code a ouvert une porte que l'arène garde normalement rare.");
             screen.addLine("Tu peux provoquer un personnage spécial précis, y compris Matt (PRO).");
-            screen.addLine("Page : " + std::to_string(pageIndex + 1) + "/" + std::to_string(totalPages));
+            screen.addLine(PagedMenu::pageInfoText(pageIndex, totalPages, characters.size()));
             screen.addLine("Entrées affichées : " + PagedMenu::rangeText(firstIndex, lastIndex, characters.size()));
 
             for (std::size_t index = firstIndex; index < lastIndex; ++index)

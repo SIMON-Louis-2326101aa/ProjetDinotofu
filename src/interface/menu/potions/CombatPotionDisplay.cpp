@@ -6,6 +6,7 @@
 #include "interface/menu/potions/CombatPotionDisplay.hpp"
 
 #include "core/Console.hpp"
+#include "economy/Money.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/TerminalInterface.hpp"
@@ -341,7 +342,7 @@ void CombatPotionDisplay::showPotionDetails(const Consumable& potion)
             "Description : " + potion.getDescription(),
             "Type : " + CombatPotionUtils::typeToText(potion.getType()),
             "Puissance : " + potion.getPowerDisplayText(),
-            "Valeur : " + std::to_string(potion.getValue()) + " or"
+            "Valeur estimée : " + Money::formatGoldWithRaw(potion.getValue())
         }
     );
 }

@@ -6,7 +6,7 @@ Ce document décrit comment publier Dinotofu depuis le dépôt source sans trans
 
 La version du jeu est lue depuis `src/core/VersionInfo.cpp`. Le manifeste de release doit rester aligné avec cette version dans `release/manifest.example.json`.   
 
-Les notes détaillées vont dans `PATCHNOTE_DINOTOFU.md`. Les README restent centrés sur l'installation, la présentation du jeu et la note du développeur. Si GitHub Actions est activé sur le dépôt, un simple `git push` sur `main` ou `master` suffit : le workflow crée le tag de version et publie les ZIP Windows/Linux nécessaires.   
+Les notes détaillées vont dans `PATCHNOTE_DINOTOFU.md` en anglais et `PATCHNOTE_DINOTOFU_FR.md` en français. Les README restent centrés sur l'installation, la présentation du jeu et la note du développeur. Si GitHub Actions est activé sur le dépôt, un simple `git push` sur `main` ou `master` suffit : le workflow crée le tag de version et publie les ZIP Windows/Linux nécessaires.   
 
 ## Avant publication   
 
@@ -44,6 +44,6 @@ Si une release existe mais ne contient pas les bons ZIP, elle est traitée comme
 ## Règles importantes   
 
 - Ne pas mettre d'historique de versions dans les README, guides ou fichiers de conception.   
-- Utiliser `PATCHNOTE_DINOTOFU.md` pour les notes de patch.   
+- Utiliser `PATCHNOTE_DINOTOFU.md` pour les notes anglaises et `PATCHNOTE_DINOTOFU_FR.md` pour les notes françaises.   
 - Ne jamais inclure `build/`, `output/`, `gui_debug/`, un exécutable ou un fichier de reprise local dans le ZIP source.   
 - Garder la version actuelle visible dans les README, car les scripts de validation en ont besoin.   

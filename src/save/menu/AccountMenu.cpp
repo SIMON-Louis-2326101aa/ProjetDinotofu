@@ -12,6 +12,7 @@
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "save/SaveManager.hpp"
+#include "core/VersionInfo.hpp"
 
 #include <string>
 #include <vector>
@@ -44,15 +45,24 @@ namespace
 
     MenuOptionItemData makeAccountSummaryItem(const AccountSaveSummary& account)
     {
-        const std::size_t characterCount = SaveManager::listPlayableCharacters(account.accountName).size();
+        const std::string version = account.savedForVersion.empty() ? "inconnue" : account.savedForVersion;
+        const std::string activity = account.lastActivityText.empty() ? "Inconnue" : account.lastActivityText;
+        const VersionCompatibilityImpact impact = account.savedForVersion.empty()
+            ? VersionCompatibilityImpact::None
+            : VersionInfo::evaluateCompatibility(account.savedForVersion);
+        std::string compatibility = "Compatible";
+        if (impact == VersionCompatibilityImpact::PatchUpdate) compatibility = "Patch à appliquer";
+        else if (impact == VersionCompatibilityImpact::MidUpdate) compatibility = "Adaptation recommandée";
+        else if (impact == VersionCompatibilityImpact::RecreateRecommended) compatibility = "Ancienne structure";
+
         return makeAccountMenuItem(
             "select",
             account.accountName,
-            "Compte local disponible.",
-            "Disponible",
-            "Personnages jouables : " + std::to_string(characterCount),
-            "Dossier : " + account.path,
-            false
+            "Version de sauvegarde : V" + version + " | Dernière activité : " + activity,
+            compatibility,
+            "Personnages jouables : " + std::to_string(account.playableCharacterCount),
+            "Jeu actuel : V" + VersionInfo::currentVersion(),
+            impact != VersionCompatibilityImpact::None
         );
     }
 }
@@ -66,6 +76,7 @@ std::string AccountMenu::open()
         MenuScreen accountListScreen("COMPTES LOCAUX", "save.accounts.list");
         accountListScreen.addSubtitle("Sauvegardes locales");
         accountListScreen.addLine("Comptes trouvés : " + std::to_string(accounts.size()) + ".");
+        accountListScreen.addLine("Chaque carte indique ses personnages, sa version de sauvegarde et sa dernière activité connue.");
         accountListScreen.addLine("Choisis un compte existant, crée un compte, ou importe un dossier portable.");
         accountListScreen.addOption(
             0,
@@ -181,7 +192,9 @@ std::string AccountMenu::open()
         accountActionScreen.addSubtitle("Compte local sélectionné");
         accountActionScreen.addLine("Compte : " + selectedAccount.accountName);
         accountActionScreen.addLine("Dossier : " + selectedAccount.path);
-        accountActionScreen.addLine("Personnages jouables liés : " + std::to_string(SaveManager::listPlayableCharacters(selectedAccount.accountName).size()) + ".");
+        accountActionScreen.addLine("Personnages jouables liés : " + std::to_string(selectedAccount.playableCharacterCount) + ".");
+        accountActionScreen.addLine("Version de sauvegarde : V" + (selectedAccount.savedForVersion.empty() ? std::string("inconnue") : selectedAccount.savedForVersion));
+        accountActionScreen.addLine("Dernière activité connue : " + (selectedAccount.lastActivityText.empty() ? std::string("Inconnue") : selectedAccount.lastActivityText));
         accountActionScreen.addOption(0, "Retour", "", true, "save.accounts.actions.back");
         accountActionScreen.addOption(
             1,

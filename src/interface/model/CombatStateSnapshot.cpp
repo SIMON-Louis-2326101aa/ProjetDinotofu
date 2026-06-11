@@ -365,6 +365,9 @@ std::vector<std::string> CombatStateSnapshot::statusLabelsForEntity(const Entity
     if (entity.hasVulnerability()) labels.push_back("Faille ouverte");
     if (entity.hasElementalWard()) labels.push_back("Voile élémentaire");
     if (entity.hasRegeneration()) labels.push_back("Suture de mana");
+    if (entity.hasPowerBoost()) labels.push_back("Puissance chanceuse");
+    if (entity.hasPrecisionBoost()) labels.push_back("Précision chanceuse");
+    if (entity.hasGuardBoost()) labels.push_back("Protection chanceuse");
 
     if (!entity.isClassSkillReady())
     {

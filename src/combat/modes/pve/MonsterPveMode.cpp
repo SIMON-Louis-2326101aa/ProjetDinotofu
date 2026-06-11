@@ -15,6 +15,8 @@
 #include "combat/loot/LootGenerator.hpp"
 #include "combat/group/CombatGroupBuilder.hpp"
 #include "combat/group/CombatUnitKind.hpp"
+#include "combat/group/InitiativeSystem.hpp"
+#include "combat/group/TurnOrder.hpp"
 #include "combat/role/CombatRoleActionSystem.hpp"
 #include "combat/TurnManager.hpp"
 #include "interface/menu/potions/CombatPotionUtils.hpp"
@@ -23,6 +25,7 @@
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/model/MenuScreen.hpp"
+#include "economy/Money.hpp"
 
 #include "combat/turn/wave/PlayerWaveCombatTurn.hpp"
 #include "combat/turn/wave/MonsterWaveCombatTurn.hpp"
@@ -30,6 +33,7 @@
 #include "progression/DifficultyRules.hpp"
 #include "progression/death/DeathPenaltyResult.hpp"
 #include "progression/death/DeathPenaltySystem.hpp"
+#include "progression/blessing/BlessingSystem.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "core/Console.hpp"
 #include "character/SpecialCharacterDialogueCatalog.hpp"
@@ -469,6 +473,19 @@ namespace
     }
 
 
+    void recordWaveEncountersInJournal(Player& player, const EnemyCombatQueue& wave)
+    {
+        for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+        {
+            player.recordEnemyEncounter(wave.getActiveEnemy(i).getName());
+        }
+        for (int i = 0; i < wave.getWaitingEnemyCount(); ++i)
+        {
+            player.recordEnemyEncounter(wave.getWaitingEnemy(i).getName());
+        }
+    }
+
+
     void collectSpecialNamesFromWavePart(
         const EnemyCombatQueue& wave,
         std::vector<std::string>& names,
@@ -557,6 +574,116 @@ namespace
         return total;
     }
 
+    bool bobMauriceProtectionQuestActive(const Player& player)
+    {
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (quest.id.rfind("bob_maurice_protection_", 0) == 0
+                && quest.accepted
+                && !quest.completed
+                && !quest.turnedIn
+                && !quest.failed)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void playBobMauriceAlliedTurn(Player& player, EnemyCombatQueue& wave, Random& random)
+    {
+        if (!bobMauriceProtectionQuestActive(player) || !wave.hasActiveEnemies())
+        {
+            return;
+        }
+
+        std::vector<std::string> lines;
+
+        Monster& bobTarget = wave.getActiveEnemy(0);
+        const std::string bobTargetName = bobTarget.getName();
+        bobTarget.takeDamage(1);
+        lines.push_back("Bob : Hannnn... hummm... hammmm.");
+        lines.push_back("Maurice : « Mon collègue Bob a dit qu'il vient d'infliger exactement 1 dégât à " + bobTargetName + ". Il insiste sur le mot exactement. »");
+        wave.removeDeadAndReplace();
+
+        if (wave.hasActiveEnemies())
+        {
+            Monster& mauriceTarget = wave.getActiveEnemy(0);
+            const std::string mauriceTargetName = mauriceTarget.getName();
+            mauriceTarget.takeDamage(1);
+            lines.push_back("Maurice : Huuuhhhhh... hannn... hummm.");
+            lines.push_back("Bob : « Maurice demande que son dégât contre " + mauriceTargetName + " soit inscrit séparément. Il en a fait 1 aussi. »");
+            wave.removeDeadAndReplace();
+        }
+        else
+        {
+            lines.push_back("Maurice : Huuuhhhhh...");
+            lines.push_back("Bob : « Maurice demande s'il peut garder son dégât pour plus tard. La réponse est probablement non. »");
+        }
+
+        const int effectRoll = random.between(1, 8);
+        if (effectRoll == 1)
+        {
+            const int healed = std::max(2, player.getMaxHp() / 20);
+            player.heal(healed);
+            lines.push_back("Bob lance une petite fiole correctement étiquetée : tu récupères " + std::to_string(healed) + " PV.");
+        }
+        else if (effectRoll == 2)
+        {
+            player.applyElementalWard(2, 15);
+            lines.push_back("Maurice renverse une poudre protectrice au bon endroit : protection élémentaire légère pendant 2 tours.");
+        }
+        else if (effectRoll == 3 && wave.hasActiveEnemies())
+        {
+            wave.getActiveEnemy(0).applyPoison(2, 1);
+            lines.push_back("Une bouteille mal fermée roule sous un ennemi : poison léger pendant 2 tours.");
+        }
+        else if (effectRoll == 4)
+        {
+            player.takeDamage(1);
+            lines.push_back("Bob te lance une potion. Maurice oublie de préciser qu'elle est encore dans sa bouteille : tu subis 1 dégât.");
+        }
+        else if (effectRoll == 5 && wave.hasActiveEnemies())
+        {
+            const int healed = std::max(2, wave.getActiveEnemy(0).getMaxHp() / 25);
+            wave.getActiveEnemy(0).heal(healed);
+            lines.push_back("Maurice soigne accidentellement l'ennemi actif de " + std::to_string(healed) + " PV. Bob prétend que c'était un test de loyauté.");
+        }
+        else if (effectRoll == 6)
+        {
+            player.applyWeakening(1, 10);
+            lines.push_back("Une fumée commerciale te pique les yeux : affaiblissement léger pendant 1 tour.");
+        }
+        else if (effectRoll == 7)
+        {
+            player.applyRegeneration(2, 2);
+            lines.push_back("Le tonique de Maurice fonctionne contre toute attente : régénération légère pendant 2 tours.");
+        }
+        else
+        {
+            lines.push_back("Les deux agitent une caisse vide avec conviction. Aucun effet mesurable, mais ils semblent satisfaits.");
+        }
+
+        MessageScreen::show(
+            "TOUR DE BOB ET MAURICE",
+            "combat.pve.bob_maurice.allied_turn",
+            lines,
+            false
+        );
+    }
+
+    bool defeatedWaveContainedElite(const EnemyCombatQueue& wave)
+    {
+        for (int i = 0; i < wave.getDefeatedEnemyCount(); ++i)
+        {
+            if (wave.getDefeatedEnemy(i).isElite() || wave.getDefeatedEnemy(i).isEvolved())
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // EN: recordWaveKillsInBestiary declares or implements a focused behavior used by this module.
     // FR: recordWaveKillsInBestiary déclare ou implémente un comportement précis utilisé par ce module.
     void recordWaveKillsInBestiary(const EnemyCombatQueue& wave)
@@ -571,6 +698,16 @@ namespace
             );
         }
     }
+
+    void recordWaveKillsInJournal(Player& player, const EnemyCombatQueue& wave)
+    {
+        for (int i = 0; i < wave.getDefeatedEnemyCount(); ++i)
+        {
+            const Monster& monster = wave.getDefeatedEnemy(i);
+            player.recordEnemyKillByName(monster.getName());
+        }
+    }
+
 
     void displayWaveCombatSnapshot(
         const Player& player,
@@ -605,7 +742,8 @@ namespace
         const std::vector<std::string>& lines
     )
     {
-        MessageScreen::show(title, screenId, lines, true);
+        MessageScreen::show(title, screenId, lines, false);
+        Console::pauseSeconds(1);
     }
 
 
@@ -625,6 +763,158 @@ namespace
 
         screen.setDisplayOnlyInput("Résumé affiché sans saisie directe.");
         TerminalInterface::renderMenuScreen(screen, false);
+    }
+
+
+    struct TemporaryAdventurerSupport
+    {
+        bool active = false;
+        std::string groupName;
+        int remainingTurns = 0;
+        int initiativeSlot = 0;
+    };
+
+    std::string rareCombatAidGroupName(Random& random)
+    {
+        const std::vector<std::string> groups = {
+            "Les Lanternes de Prunigil",
+            "Les Chasseurs du Croc Tordu",
+            "Deux Lames et un Chariot",
+            "L'Ordo de Pierre",
+            "Les Éclats d'Azur"
+        };
+        return groups[static_cast<std::size_t>(random.between(0, static_cast<int>(groups.size()) - 1))];
+    }
+
+    TemporaryAdventurerSupport maybeTriggerRareAdventurerCombatAid(Player& player, EnemyCombatQueue& wave, Random& random)
+    {
+        TemporaryAdventurerSupport support;
+        if (!wave.hasActiveEnemies())
+        {
+            return support;
+        }
+
+        const int roll = random.between(1, 1000);
+        if (roll > 18)
+        {
+            return support;
+        }
+
+        support.active = true;
+        support.groupName = rareCombatAidGroupName(random);
+        support.remainingTurns = random.between(1, 2);
+        support.initiativeSlot = 2;
+
+        const int targetIndex = random.between(0, wave.getActiveEnemyCount() - 1);
+        Monster& target = wave.getActiveEnemy(targetIndex);
+        const int aidDamage = std::max(4, player.getLevel() * 2 + random.between(2, 6));
+        target.takeDamage(aidDamage);
+        wave.removeDeadAndReplace();
+
+        const bool healHelp = player.getHp() < player.getMaxHp();
+        const int healAmount = healHelp ? std::max(3, player.getMaxHp() / 14) : 0;
+        if (healAmount > 0)
+        {
+            player.heal(healAmount);
+        }
+
+        player.recordCanonicalEvent("aides_rares_groupes_combat", support.groupName, support.groupName + " intervient pendant un combat PvE");
+        player.recordCanonicalEvent("alliés_temporaires_combat", support.groupName, support.groupName + " agit brièvement avec initiative limitée");
+        MessageScreen::show(
+            "AIDE RARE D'AVENTURIERS",
+            "combat.pve.rare_adventurer_aid",
+            {
+                "Événement très rare : " + support.groupName + " passent près du combat.",
+                "Ils rejoignent temporairement la file alliée : initiative limitée après le joueur et les invocations, avant les ennemis.",
+                "Impact d'arrivée : " + std::to_string(aidDamage) + " dégâts infligés à une cible active." + (healAmount > 0 ? " Soin de secours : +" + std::to_string(healAmount) + " PV." : ""),
+                "Durée : " + std::to_string(support.remainingTurns) + " tour(s) allié(s). C'est volontairement rare pour ne pas voler le combat au joueur."
+            },
+            false
+        );
+        return support;
+    }
+
+    void playTemporaryAdventurerSupportTurn(Player& player, EnemyCombatQueue& wave, Random& random, TemporaryAdventurerSupport& support)
+    {
+        if (!support.active || support.remainingTurns <= 0 || !wave.hasActiveEnemies())
+        {
+            return;
+        }
+
+        const int targetIndex = random.between(0, wave.getActiveEnemyCount() - 1);
+        Monster& target = wave.getActiveEnemy(targetIndex);
+        const int damage = std::max(3, player.getLevel() * 2 + random.between(1, 7));
+        target.takeDamage(damage);
+        wave.removeDeadAndReplace();
+
+        int healAmount = 0;
+        if (player.getHp() * 3 < player.getMaxHp() * 2 && random.between(1, 100) <= 35)
+        {
+            healAmount = std::max(2, player.getMaxHp() / 18);
+            player.heal(healAmount);
+        }
+
+        --support.remainingTurns;
+        player.recordCanonicalEvent("tours_allies_temporaires", support.groupName, support.groupName + " prend un tour allié temporaire");
+        MessageScreen::show(
+            "TOUR ALLIÉ TEMPORAIRE",
+            "combat.pve.temporary_adventurer_turn",
+            {
+                support.groupName + " agit dans une fenêtre d'initiative alliée limitée.",
+                "Dégâts infligés : " + std::to_string(damage) + "." + (healAmount > 0 ? " Soin rapide : +" + std::to_string(healAmount) + " PV." : ""),
+                support.remainingTurns > 0 ? "Ils restent encore un instant dans la mêlée." : "Ils quittent le combat avant de devenir ton équipe permanente."
+            },
+            false
+        );
+
+        if (support.remainingTurns <= 0)
+        {
+            support.active = false;
+        }
+    }
+
+    void maybeTriggerRareScavengerAfterCombat(Player& player, Random& random, const std::string& contextId)
+    {
+        const int roll = random.between(1, 1000);
+        if (roll > 10)
+        {
+            return;
+        }
+
+        const std::vector<std::string> scavengers = {
+            "deux novices trop confiants",
+            "un ramasse-miette solitaire",
+            "une petite bande opportuniste",
+            "un faux secouriste beaucoup trop intéressé"
+        };
+        const std::string group = scavengers[static_cast<std::size_t>(random.between(0, static_cast<int>(scavengers.size()) - 1))];
+        const bool vulnerable = player.getHp() * 4 < player.getMaxHp();
+        int stolenCopper = 0;
+        if (vulnerable)
+        {
+            stolenCopper = std::max(4, std::min(45, player.getLevel() * 5 + random.between(0, 12)));
+            if (!player.getInventory().spendCopper(stolenCopper))
+            {
+                stolenCopper = 0;
+            }
+        }
+
+        player.recordCanonicalEvent("tentatives_ramasse_miettes", contextId, group + " tente de profiter de la fin d'un combat");
+        MessageScreen::show(
+            "RAMASSE-MIETTES APRÈS COMBAT",
+            "combat.pve.rare_scavenger",
+            {
+                "Événement très rare : " + group + " attend la fin du combat pour tenter de profiter de l'état du joueur.",
+                vulnerable
+                    ? "Tu es assez amoché pour qu'ils osent approcher."
+                    : "Tu tiens encore assez debout : ils comprennent vite que ce n'est pas le bon cadavre à dépouiller.",
+                stolenCopper > 0
+                    ? "Perte légère : " + Money::formatCopper(stolenCopper) + " arrachés dans la confusion."
+                    : "Perte : aucune. Ils reculent avant que ça devienne une vraie mauvaise idée.",
+                "Note : l'événement reste volontairement rarissime pour rendre le monde vivant sans spammer le joueur."
+            },
+            false
+        );
     }
 
 }
@@ -675,7 +965,9 @@ void MonsterPveMode::run(
 
     WaveCombatSystem::displayFrontLineArrival(wave);
     recordWaveEncountersInBestiary(wave);
+    recordWaveEncountersInJournal(player, wave);
     displayEncounterDialogue(player, wave, random, "pve.encounter");
+    TemporaryAdventurerSupport temporaryAdventurerSupport = maybeTriggerRareAdventurerCombatAid(player, wave, random);
 
     CombatGroup enemyFrontPreview = CombatGroupBuilder::buildSideFromWave(
         wave,
@@ -710,6 +1002,7 @@ void MonsterPveMode::run(
     bool escapeSucceeded = false;
     int initialPlayerHp = player.getHp();
     int combatTurnCount = 0;
+    player.beginChallengeCombatTracking();
 
     while (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
     {
@@ -762,7 +1055,7 @@ void MonsterPveMode::run(
             showCombatPhaseGate(
                 "FIN DU TOUR JOUEUR",
                 "combat.pve.phase.player_resolved",
-                {"Action du joueur résolue.", "Valide pour passer à la phase suivante."}
+                {"Action du joueur résolue.", "La phase suivante démarre automatiquement."}
             );
         }
 
@@ -786,6 +1079,16 @@ void MonsterPveMode::run(
                 random,
                 playerSummonControlMode
             );
+        }
+
+        if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
+        {
+            playBobMauriceAlliedTurn(player, wave, random);
+        }
+
+        if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
+        {
+            playTemporaryAdventurerSupportTurn(player, wave, random, temporaryAdventurerSupport);
         }
 
         if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
@@ -816,6 +1119,7 @@ void MonsterPveMode::run(
 
     if (escapeSucceeded)
     {
+        player.finishChallengeCombatTracking(false, false, false, wave.getDefeatedEnemyCount());
         showPostCombatRouteScreen(
             "FUITE RÉUSSIE",
             "combat.pve.escape.success",
@@ -843,12 +1147,14 @@ void MonsterPveMode::run(
         player.recordEscape();
         player.recordEnemyKills(wave.getDefeatedEnemyCount());
         recordWaveKillsInBestiary(wave);
+        recordWaveKillsInJournal(player, wave);
 
         return;
     }
 
     if (player.isDead())
     {
+        player.finishChallengeCombatTracking(false, false, false, wave.getDefeatedEnemyCount());
         showPostCombatRouteScreen(
             "DÉFAITE",
             "combat.pve.defeat",
@@ -864,14 +1170,20 @@ void MonsterPveMode::run(
         );
 
         player.recordDefeat();
-        player.recordDeath();
 
         if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
         {
+            if (BlessingSystem::tryTriggerLethalSurvival(player))
+            {
+                DeathPenaltySystem::displayLethalSurvivalAnomaly();
+                return;
+            }
+            player.recordDeath();
             DeathPenaltySystem::displayLethalDeathCorruption();
             return;
         }
 
+        player.recordDeath();
         DeathPenaltyResult deathPenalty = DeathPenaltySystem::applyNonLethalDeathPenalty(
             player,
             difficulty,
@@ -902,6 +1214,13 @@ void MonsterPveMode::run(
         return;
     }
 
+    player.finishChallengeCombatTracking(
+        true,
+        false,
+        defeatedWaveContainedElite(wave),
+        wave.getDefeatedEnemyCount()
+    );
+
     displaySpecialDefeatDialogues(wave);
 
     showPostCombatRouteScreen(
@@ -931,7 +1250,9 @@ void MonsterPveMode::run(
     player.recordVictory();
     player.recordEnemyKills(wave.getDefeatedEnemyCount());
     recordWaveKillsInBestiary(wave);
+    recordWaveKillsInJournal(player, wave);
     LootGenerator::giveDefeatedWaveLoot(player, wave, random, difficulty);
+    maybeTriggerRareScavengerAfterCombat(player, random, "pve_standard");
 
     int evolvedKilled = countDefeatedEvolvedMonsters(wave);
     if (evolvedKilled > 0)
@@ -956,7 +1277,8 @@ bool MonsterPveMode::runExplorationWave(
     DifficultyMode difficulty,
     DeathRuleMode deathRule,
     const std::vector<Monster>& monsters,
-    const std::string& title
+    const std::string& title,
+    bool friendlyTrial
 )
 {
     Console::clear();
@@ -980,6 +1302,7 @@ bool MonsterPveMode::runExplorationWave(
 
     WaveCombatSystem::displayFrontLineArrival(wave);
     recordWaveEncountersInBestiary(wave);
+    recordWaveEncountersInJournal(player, wave);
     displayEncounterDialogue(player, wave, random, "exploration.wave");
 
     CombatGroup enemyFrontPreview = CombatGroupBuilder::buildSideFromWave(
@@ -1015,6 +1338,7 @@ bool MonsterPveMode::runExplorationWave(
     bool escapeSucceeded = false;
     int initialPlayerHp = player.getHp();
     int combatTurnCount = 0;
+    player.beginChallengeCombatTracking();
 
     while (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
     {
@@ -1063,7 +1387,7 @@ bool MonsterPveMode::runExplorationWave(
             showCombatPhaseGate(
                 "FIN DU TOUR JOUEUR",
                 "exploration.wave.phase.player_resolved",
-                {"Action du joueur résolue.", "Valide pour passer à la phase suivante."}
+                {"Action du joueur résolue.", "La phase suivante démarre automatiquement."}
             );
         }
 
@@ -1083,6 +1407,11 @@ bool MonsterPveMode::runExplorationWave(
                 random,
                 playerSummonControlMode
             );
+        }
+
+        if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
+        {
+            playBobMauriceAlliedTurn(player, wave, random);
         }
 
         if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
@@ -1113,6 +1442,20 @@ bool MonsterPveMode::runExplorationWave(
 
     if (escapeSucceeded)
     {
+        player.finishChallengeCombatTracking(false, false, false, wave.getDefeatedEnemyCount());
+        if (friendlyTrial)
+        {
+            showPostCombatRouteScreen(
+                "ÉPREUVE ABANDONNÉE",
+                "exploration.wave.friendly_trial.escape",
+                {
+                    "Résultat : défi amical abandonné",
+                    "Aucune mort, pénalité ou statistique réelle n'est enregistrée.",
+                    "Les objets des caisses restent dans le sous-inventaire temporaire et disparaissent avec l'épreuve."
+                }
+            );
+            return false;
+        }
         showPostCombatRouteScreen(
             "FUITE D'EXPLORATION",
             "exploration.wave.escape.success",
@@ -1140,11 +1483,26 @@ bool MonsterPveMode::runExplorationWave(
         player.recordEscape();
         player.recordEnemyKills(wave.getDefeatedEnemyCount());
         recordWaveKillsInBestiary(wave);
+        recordWaveKillsInJournal(player, wave);
         return false;
     }
 
     if (player.isDead())
     {
+        player.finishChallengeCombatTracking(false, false, false, wave.getDefeatedEnemyCount());
+        if (friendlyTrial)
+        {
+            showPostCombatRouteScreen(
+                "DÉFAITE AMICALE",
+                "exploration.wave.friendly_trial.defeat",
+                {
+                    "Résultat : personnage mis hors combat pendant l'épreuve",
+                    "Cette chute n'est pas une mort et ne modifie ni les statistiques, ni l'équipement réel, ni les règles létales.",
+                    "Le combat s'arrête avant toute pénalité."
+                }
+            );
+            return false;
+        }
         showPostCombatRouteScreen(
             "DÉFAITE D'EXPLORATION",
             "exploration.wave.defeat",
@@ -1160,14 +1518,20 @@ bool MonsterPveMode::runExplorationWave(
         );
 
         player.recordDefeat();
-        player.recordDeath();
 
         if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
         {
+            if (BlessingSystem::tryTriggerLethalSurvival(player))
+            {
+                DeathPenaltySystem::displayLethalSurvivalAnomaly();
+                return false;
+            }
+            player.recordDeath();
             DeathPenaltySystem::displayLethalDeathCorruption();
             return false;
         }
 
+        player.recordDeath();
         DeathPenaltyResult deathPenalty = DeathPenaltySystem::applyNonLethalDeathPenalty(
             player,
             difficulty,
@@ -1195,6 +1559,29 @@ bool MonsterPveMode::runExplorationWave(
         );
         return false;
     }
+
+    if (friendlyTrial)
+    {
+        player.finishChallengeCombatTracking(false, false, false, wave.getDefeatedEnemyCount());
+        displaySpecialDefeatDialogues(wave);
+        showPostCombatRouteScreen(
+            "ÉPREUVE AMICALE RÉUSSIE",
+            "exploration.wave.friendly_trial.victory",
+            {
+                "Résultat : mini-boss vaincu avec le contenu des caisses",
+                "Aucun butin standard n'est généré dans le sous-inventaire temporaire.",
+                "Bob et Maurice calculent maintenant leur récompense à leur manière."
+            }
+        );
+        return true;
+    }
+
+    player.finishChallengeCombatTracking(
+        true,
+        false,
+        defeatedWaveContainedElite(wave),
+        wave.getDefeatedEnemyCount()
+    );
 
     displaySpecialDefeatDialogues(wave);
 
@@ -1225,7 +1612,9 @@ bool MonsterPveMode::runExplorationWave(
     player.recordVictory();
     player.recordEnemyKills(wave.getDefeatedEnemyCount());
     recordWaveKillsInBestiary(wave);
+    recordWaveKillsInJournal(player, wave);
     LootGenerator::giveDefeatedWaveLoot(player, wave, random, difficulty);
+    maybeTriggerRareScavengerAfterCombat(player, random, "exploration_wave");
 
     int evolvedKilled = countDefeatedEvolvedMonsters(wave);
     if (evolvedKilled > 0)
@@ -1878,6 +2267,7 @@ namespace
         target->heal(announcedHeal);
         healingDone += std::max(0, target->getHp() - beforeHealHp);
         healer.markHealingThreat();
+        healer.recordChallengeCombatAction("ally_consumable");
 
         if (!healer.hasInfiniteConsumables())
         {
@@ -1952,8 +2342,17 @@ namespace
             }
         }
 
+        if (BlessingSystem::tryTriggerLethalSurvival(player))
+        {
+            lines.push_back(player.getName() + " reçoit trois pastilles rouges, mais toutes ses bénédictions se consument avant l'effacement.");
+            lines.push_back("Le personnage revient à 1 PV, sans inventaire ni équipement, avec une marque irréversible.");
+            MessageScreen::show("INTERVENTION DIVINE", "pve.coop.lethal_death_save.blessing", lines, false);
+            DeathPenaltySystem::displayLethalSurvivalAnomaly();
+            return;
+        }
+
         player.recordDeath();
-        lines.push_back(player.getName() + " reçoit trois pastilles rouges : mort définitive en approche, sauf exception divine ou divination.");
+        lines.push_back(player.getName() + " reçoit trois pastilles rouges : mort définitive. Aucune bénédiction capable de briser le verdict n'a répondu.");
         MessageScreen::show("SURVIE EN MORT DÉFINITIVE COOP", "pve.coop.lethal_death_save.failure", lines, false);
     }
 }
@@ -1989,6 +2388,7 @@ void MonsterPveMode::runTeam(
 
     WaveCombatSystem::displayFrontLineArrival(wave);
     recordWaveEncountersInBestiary(wave);
+    recordWaveEncountersInJournal(leader, wave);
     displayEncounterDialogue(leader, wave, random, "pve.coop");
 
     std::vector<int> initialHp;
@@ -2003,6 +2403,7 @@ void MonsterPveMode::runTeam(
 
         if (player != nullptr)
         {
+            player->beginChallengeCombatTracking();
             partySummons[i] = SummonCombatSystem::createInitialSummonsFor(*player);
             SummonCombatSystem::displaySummonArrival(*player, partySummons[i]);
             summonControlModes[i] = SummonCombatSystem::askPlayerSummonControlMode(*player, partySummons[i]);
@@ -2017,7 +2418,7 @@ void MonsterPveMode::runTeam(
         MessageScreen::show(
             "TOUR DE GROUPE " + std::to_string(round),
             "pve.coop.round." + std::to_string(round),
-            {"Le groupe se replace avant la prochaine séquence d'actions."},
+            {"L'initiative mélange joueurs, invocations et ennemis selon la Dextérité, la vitesse et un d20."},
             false
         );
         displayCoopPartyStatus(party, extractDownedFlags(contributions));
@@ -2029,139 +2430,201 @@ void MonsterPveMode::runTeam(
             round
         );
 
-        for (std::size_t i = 0; i < party.size(); ++i)
+        InitiativeQueue initiative = InitiativeSystem::buildWaveQueue(party, wave, partySummons, random);
+        MessageScreen::show(
+            "ORDRE D'INITIATIVE",
+            "pve.coop.initiative." + std::to_string(round),
+            InitiativeSystem::buildDisplayLines(initiative),
+            false
+        );
+
+        for (const InitiativeRoll& entry : initiative.getEntries())
         {
-            Player* player = party[i];
-            if (player == nullptr || player->isDead() || !wave.hasEnemiesLeft() || escapeSucceeded)
-            {
-                continue;
-            }
-
-            MessageScreen::show(
-                "TOUR ALLIÉ",
-                "pve.coop.player_turn." + std::to_string(i + 1),
-                {"Tour de " + player->getName() + " [joueur " + std::to_string(i + 1) + "]."},
-                false
-            );
-
-            displayPartyWaveCombatSnapshot(
-                party,
-                wave,
-                partySummons,
-                "Action d'un joueur allié",
-                round,
-                player->getName()
-            );
-
-            int healingDoneThisTurn = 0;
-            int enemyHpBeforeTurn = sumActiveEnemyHp(wave);
-            bool finished = tryUseHealingPotionOnAlly(*player, party, healingDoneThisTurn);
-            while (!finished && !player->isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
-            {
-                finished = PlayerWaveCombatTurn::play(
-                    *player,
-                    wave,
-                    random,
-                    escapeSucceeded,
-                    difficulty
-                );
-            }
-
-            if (finished)
-            {
-                if (wave.hasEnemiesLeft() && SummonCombatSystem::hasActiveSummons(partySummons[i]))
-                {
-                    int enemyHpBeforeSummons = sumActiveEnemyHp(wave);
-                    SummonCombatSystem::playPlayerSummonTurnsAgainstWave(
-                        partySummons[i],
-                        wave,
-                        random,
-                        summonControlModes[i]
-                    );
-                    int summonDamage = std::max(0, enemyHpBeforeSummons - sumActiveEnemyHp(wave));
-                    if (summonDamage > 0)
-                    {
-                        contributions[i].supportActions++;
-                    }
-                }
-
-                int enemyHpAfterTurn = sumActiveEnemyHp(wave);
-                contributions[i].turnsTaken++;
-                contributions[i].damageDealt += std::max(0, enemyHpBeforeTurn - enemyHpAfterTurn);
-                contributions[i].healingDone += healingDoneThisTurn;
-                if (healingDoneThisTurn > 0) contributions[i].supportActions++;
-            }
-        }
-
-        if (!wave.hasEnemiesLeft() || escapeSucceeded)
-        {
-            break;
-        }
-
-        int enemyIndex = 0;
-        while (enemyIndex < wave.getActiveEnemyCount() && countAlivePlayers(party) > 0)
-        {
-            if (!wave.isActiveIndexValid(enemyIndex))
-            {
-                ++enemyIndex;
-                continue;
-            }
-
-            Monster& monster = wave.getActiveEnemy(enemyIndex);
-            if (monster.isDead())
-            {
-                ++enemyIndex;
-                continue;
-            }
-
-            Player* target = chooseAlivePlayerTarget(party, random, &contributions);
-            if (target == nullptr)
+            if (!wave.hasEnemiesLeft() || escapeSucceeded || countAlivePlayers(party) <= 0)
             {
                 break;
             }
 
-            MessageScreen::show(
-                "TOUR ENNEMI",
-                "pve.coop.enemy_turn." + std::to_string(enemyIndex),
-                {"Tour de " + monster.getName() + " : cible " + target->getName() + "."},
-                false
-            );
-            if (!tryMonsterUseRareHealing(monster, wave, enemyIndex, random))
+            if (TurnOrder::isPlayer(entry.id))
             {
-                int targetHpBefore = target->getHp();
-                TurnManager::executeAttack(monster, *target, random);
-                for (std::size_t partyIndex = 0; partyIndex < party.size(); ++partyIndex)
+                const std::size_t i = static_cast<std::size_t>(std::max(0, entry.slotIndex));
+                if (i >= party.size()) continue;
+                Player* player = party[i];
+                if (player == nullptr || player->isDead()) continue;
+
+                MessageScreen::show(
+                    "TOUR ALLIÉ",
+                    "pve.coop.player_turn." + std::to_string(i + 1),
+                    {"Tour de " + player->getName() + " [joueur " + std::to_string(i + 1) + "] — initiative " + std::to_string(entry.totalScore) + "."},
+                    false
+                );
+
+                displayPartyWaveCombatSnapshot(
+                    party,
+                    wave,
+                    partySummons,
+                    "Action d'un joueur allié",
+                    round,
+                    player->getName()
+                );
+
+                int healingDoneThisTurn = 0;
+                int enemyHpBeforeTurn = sumActiveEnemyHp(wave);
+                bool finished = tryUseHealingPotionOnAlly(*player, party, healingDoneThisTurn);
+                while (!finished && !player->isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
                 {
-                    if (party[partyIndex] == target)
+                    finished = PlayerWaveCombatTurn::play(
+                        *player,
+                        wave,
+                        random,
+                        escapeSucceeded,
+                        difficulty
+                    );
+                }
+
+                if (finished)
+                {
+                    const int enemyHpAfterTurn = sumActiveEnemyHp(wave);
+                    contributions[i].turnsTaken++;
+                    contributions[i].damageDealt += std::max(0, enemyHpBeforeTurn - enemyHpAfterTurn);
+                    contributions[i].healingDone += healingDoneThisTurn;
+                    if (healingDoneThisTurn > 0) contributions[i].supportActions++;
+                }
+            }
+            else if (TurnOrder::isSummonGroup(entry.id))
+            {
+                const std::size_t i = static_cast<std::size_t>(std::max(0, entry.slotIndex));
+                if (i >= party.size() || i >= partySummons.size()) continue;
+                Player* owner = party[i];
+                if (owner == nullptr || owner->isDead() || !SummonCombatSystem::hasActiveSummons(partySummons[i])) continue;
+
+                MessageScreen::show(
+                    "TOUR DES INVOCATIONS",
+                    "pve.coop.summon_turn." + std::to_string(i + 1),
+                    {entry.label + " agissent à leur propre initiative : " + std::to_string(entry.totalScore) + "."},
+                    false
+                );
+                const int before = sumActiveEnemyHp(wave);
+                SummonCombatSystem::playPlayerSummonTurnsAgainstWave(
+                    partySummons[i],
+                    wave,
+                    random,
+                    summonControlModes[i]
+                );
+                const int summonDamage = std::max(0, before - sumActiveEnemyHp(wave));
+                owner->recordChallengeSummonAction(summonDamage);
+                if (summonDamage > 0)
+                {
+                    contributions[i].supportActions++;
+                    contributions[i].damageDealt += summonDamage;
+                }
+            }
+            else if (TurnOrder::isEnemy(entry.id))
+            {
+                const int enemyIndex = entry.slotIndex;
+                if (!wave.isActiveIndexValid(enemyIndex)) continue;
+                Monster& monster = wave.getActiveEnemy(enemyIndex);
+                if (monster.isDead()) continue;
+
+                Player* target = chooseAlivePlayerTarget(party, random, &contributions);
+                if (target == nullptr) break;
+
+                MessageScreen::show(
+                    "TOUR ENNEMI",
+                    "pve.coop.enemy_turn." + std::to_string(enemyIndex),
+                    {"Tour de " + monster.getName() + " : cible " + target->getName() + " — initiative " + std::to_string(entry.totalScore) + "."},
+                    false
+                );
+                if (!tryMonsterUseRareHealing(monster, wave, enemyIndex, random))
+                {
+                    const int targetHpBefore = target->getHp();
+                    TurnManager::executeAttack(monster, *target, random);
+                    for (std::size_t partyIndex = 0; partyIndex < party.size(); ++partyIndex)
                     {
-                        contributions[partyIndex].damageTaken += std::max(0, targetHpBefore - target->getHp());
-                        break;
+                        if (party[partyIndex] == target)
+                        {
+                            contributions[partyIndex].damageTaken += std::max(0, targetHpBefore - target->getHp());
+                            break;
+                        }
                     }
                 }
-            }
 
-            for (std::size_t i = 0; i < party.size(); ++i)
-            {
-                if (party[i] != nullptr && party[i]->isDead())
+                for (std::size_t i = 0; i < party.size(); ++i)
                 {
-                    contributions[i].wasDowned = true;
+                    if (party[i] != nullptr && party[i]->isDead())
+                    {
+                        contributions[i].wasDowned = true;
+                    }
                 }
+                Console::pauseSeconds(1);
             }
-
-            Console::pauseSeconds(1);
-            ++enemyIndex;
         }
 
         displayPartyWaveCombatSnapshot(
             party,
             wave,
             partySummons,
-            "Après la riposte ennemie",
+            "Après le tour d'initiative",
             round
         );
 
         wave.removeDeadAndReplace();
         ++round;
+    }
+
+    const int aliveAtCombatEnd = countAlivePlayers(party);
+    int groupConsumables = 0;
+    int groupSkills = 0;
+    int groupNonBasic = 0;
+    int groupBasic = 0;
+    int groupDamageTaken = 0;
+    int groupSummonActions = 0;
+    int realPartySize = 0;
+    for (Player* member : party)
+    {
+        if (member == nullptr) continue;
+        ++realPartySize;
+        groupConsumables += member->getChallengeCombatConsumablesUsed();
+        groupSkills += member->getChallengeCombatSkillsUsed();
+        groupNonBasic += member->getChallengeCombatNonBasicAttacksUsed();
+        groupBasic += member->getChallengeCombatBasicAttacksUsed();
+        groupDamageTaken += member->getChallengeCombatDamageTaken();
+        groupSummonActions += member->getChallengeCombatSummonActions();
+    }
+
+    bool eliteDefeated = false;
+    for (int defeatedIndex = 0; defeatedIndex < wave.getDefeatedEnemyCount(); ++defeatedIndex)
+    {
+        const Monster& defeated = wave.getDefeatedEnemy(defeatedIndex);
+        if (defeated.isElite() || defeated.isEvolved())
+        {
+            eliteDefeated = true;
+            break;
+        }
+    }
+
+    const bool groupVictory = !escapeSucceeded && !wave.hasEnemiesLeft() && aliveAtCombatEnd > 0;
+    for (std::size_t i = 0; i < party.size(); ++i)
+    {
+        Player* member = party[i];
+        if (member == nullptr || !member->isChallengeCombatTrackingActive()) continue;
+        member->applyChallengeCombatGroupSummary(
+            realPartySize,
+            aliveAtCombatEnd,
+            groupConsumables,
+            groupSkills,
+            groupNonBasic,
+            groupBasic,
+            groupDamageTaken,
+            groupSummonActions
+        );
+        const bool participated = i < contributions.size() && contributions[i].turnsTaken > 0;
+        member->finishChallengeCombatTracking(
+            groupVictory && participated,
+            false,
+            eliteDefeated,
+            wave.getDefeatedEnemyCount()
+        );
     }
 
     if (escapeSucceeded)
@@ -2269,6 +2732,7 @@ void MonsterPveMode::runTeam(
         CombatRewardSystem::giveRewardToPlayer(*player, individualReward);
         player->recordVictory();
         player->recordEnemyKills(wave.getDefeatedEnemyCount());
+        recordWaveKillsInJournal(*player, wave);
         MessageScreen::show(
             "PARTICIPATION",
             "pve.coop.reward.participation." + std::to_string(i + 1),

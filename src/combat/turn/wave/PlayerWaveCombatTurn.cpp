@@ -56,26 +56,41 @@ bool PlayerWaveCombatTurn::play(
 
     if (choice == 1)
     {
-        return CombatTargetMenu::openForAttack(
+        const bool used = CombatTargetMenu::openForAttack(
             player,
             wave,
             random
         );
+        if (used)
+        {
+            player.recordChallengeCombatAction("basic_attack");
+        }
+        return used;
     }
 
     if (choice == 2)
     {
-        return CombatPotionMenu::openQuickHealing(player);
+        const bool used = CombatPotionMenu::openQuickHealing(player);
+        if (used)
+        {
+            player.recordChallengeCombatAction("consumable");
+        }
+        return used;
     }
 
     if (choice == 3)
     {
-        return CombatPotionMenu::openAgainstWave(
+        const bool used = CombatPotionMenu::openAgainstWave(
             player,
             wave,
             random,
             PVE_POTION_DAMAGE_BONUS
         );
+        if (used)
+        {
+            player.recordChallengeCombatAction("consumable");
+        }
+        return used;
     }
 
     if (choice == 4)
@@ -92,6 +107,7 @@ bool PlayerWaveCombatTurn::play(
     if (choice == 6)
     {
         DefensePostureSystem::enterDefensePosture(player);
+        player.recordChallengeCombatAction("defense");
         return true;
     }
 
@@ -107,6 +123,7 @@ bool PlayerWaveCombatTurn::play(
             false
         );
 
+        player.recordChallengeCombatAction("wait");
         return true;
     }
 
@@ -118,6 +135,7 @@ bool PlayerWaveCombatTurn::play(
             difficulty,
             wave.getTotalRemainingEnemyCount()
         );
+        player.recordChallengeCombatAction("escape");
         return true;
     }
 

@@ -170,56 +170,91 @@ namespace
 // FR: Inventory déclare ou implémente un comportement précis utilisé par ce module.
 Inventory::Inventory()
 {
-    or_ = 0;
+    totalCopper_ = 0;
 }
 
 // EN: getGold declares or implements a focused behavior used by this module.
 // FR: getGold déclare ou implémente un comportement précis utilisé par ce module.
 int Inventory::getGold() const
 {
-    return or_;
+    const long long gold = totalCopper_ / Money::COPPER_PER_GOLD;
+    if (gold > 2147483647LL)
+    {
+        return 2147483647;
+    }
+    return static_cast<int>(gold);
+}
+
+long long Inventory::getTotalCopper() const
+{
+    return totalCopper_ < 0 ? 0 : totalCopper_;
 }
 
 // EN: setGold declares or implements a focused behavior used by this module.
 // FR: setGold déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::setGold(int amount)
 {
+    setTotalCopper(Money::copperFromGold(amount));
+}
+
+void Inventory::setTotalCopper(long long amount)
+{
     if (amount < 0)
     {
         amount = 0;
     }
 
-    or_ = amount;
+    totalCopper_ = amount;
 }
 
 // EN: earnGold declares or implements a focused behavior used by this module.
 // FR: earnGold déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::earnGold(int amount)
 {
+    earnCopper(Money::copperFromGold(amount));
+}
+
+void Inventory::earnCopper(long long amount)
+{
     if (amount <= 0)
     {
         return;
     }
 
-    or_ += amount;
+    totalCopper_ += amount;
 }
 
 // EN: spendGold declares or implements a focused behavior used by this module.
 // FR: spendGold déclare ou implémente un comportement précis utilisé par ce module.
 bool Inventory::spendGold(int amount)
 {
+    return spendCopper(Money::copperFromGold(amount));
+}
+
+bool Inventory::spendCopper(long long amount)
+{
     if (amount <= 0)
     {
         return true;
     }
 
-    if (or_ < amount)
+    if (totalCopper_ < amount)
     {
         return false;
     }
 
-    or_ -= amount;
+    totalCopper_ -= amount;
     return true;
+}
+
+std::string Inventory::getWalletLine() const
+{
+    return Money::formatWalletFromCopper(getTotalCopper());
+}
+
+std::string Inventory::getWalletTotalLine() const
+{
+    return Money::formatWalletTotalFromCopper(getTotalCopper());
 }
 
 // EN: getWeaponCount declares or implements a focused behavior used by this module.
@@ -710,7 +745,7 @@ void Inventory::clearAll()
     armors.clear();
     consumables.clear();
     materials.clear();
-    or_ = 0;
+    totalCopper_ = 0;
 }
 
 // EN: displayWeaponList declares or implements a focused behavior used by this module.
@@ -888,7 +923,8 @@ void Inventory::displaySummary() const
         "INVENTAIRE",
         "inventory.summary",
         {
-            "Argent : " + Money::formatGoldWithRaw(or_),
+            "Argent séparé : " + getWalletLine(),
+            "Argent total : " + getWalletTotalLine(),
             "Échelle : " + Money::coinScaleText(),
             "Armes : " + std::to_string(getWeaponCount()),
             "Armures : " + std::to_string(getArmorCount()),

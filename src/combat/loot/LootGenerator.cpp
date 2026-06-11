@@ -714,11 +714,18 @@ namespace
         return material;
     }
 
+
+    void addMaterialLootToPlayer(Player& player, const Material& material)
+    {
+        player.getInventory().addMaterial(material);
+        player.recordMaterialCollected(material.getId(), material.getName(), material.getQuantity());
+    }
+
     // EN: giveExtraLoot declares or implements a focused behavior used by this module.
     // FR: giveExtraLoot déclare ou implémente un comportement précis utilisé par ce module.
     void giveExtraLoot(Player& player, Material material, const std::string& reason, std::vector<std::string>& lines)
     {
-        player.getInventory().addMaterial(material);
+        addMaterialLootToPlayer(player, material);
         addLootLine(lines, reason, material);
     }
 
@@ -1241,7 +1248,7 @@ void LootGenerator::giveDefeatedBossLoot(
         lines.push_back("Récupération parfaite : le fragment de boss est exceptionnel.");
     }
 
-    player.getInventory().addMaterial(bossFragment);
+    addMaterialLootToPlayer(player, bossFragment);
 
     lines.push_back(
         boss.getName()
@@ -1505,7 +1512,7 @@ bool LootGenerator::tryGiveMonsterLoot(
     giveCoinsIfLogical(player, monster, random, lines);
 
     loot = applyLootQuality(loot, monster, player, random, foundGoodLoot, lines);
-    player.getInventory().addMaterial(loot);
+    addMaterialLootToPlayer(player, loot);
 
     if (!foundGoodLoot)
     {

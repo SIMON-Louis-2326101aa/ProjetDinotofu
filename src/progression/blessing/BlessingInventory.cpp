@@ -1,8 +1,66 @@
-// EN: BlessingInventory.cpp briefly defines this Dinotofu module and its responsibilities.
-// FR: BlessingInventory.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future container storing active blessings on a character.
-// TODO: Implement this future system when its feature block becomes active.
-
+// English: Persistent container for active character blessings.
+// Français : Conteneur persistant des bénédictions actives d'un personnage.
 #include "progression/blessing/BlessingInventory.hpp"
+
+const std::vector<Blessing>& BlessingInventory::getAll() const
+{
+    return blessings;
+}
+
+int BlessingInventory::count() const
+{
+    return static_cast<int>(blessings.size());
+}
+
+bool BlessingInventory::empty() const
+{
+    return blessings.empty();
+}
+
+bool BlessingInventory::contains(const std::string& blessingId) const
+{
+    for (const Blessing& blessing : blessings)
+    {
+        if (blessing.getId() == blessingId)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool BlessingInventory::hasLethalSurvivalProtection() const
+{
+    for (const Blessing& blessing : blessings)
+    {
+        if (blessing.grantsLethalSurvival())
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool BlessingInventory::add(const Blessing& blessing)
+{
+    if (!blessing.isValid() || contains(blessing.getId()))
+    {
+        return false;
+    }
+    blessings.push_back(blessing);
+    return true;
+}
+
+void BlessingInventory::clear()
+{
+    blessings.clear();
+}
+
+void BlessingInventory::setLoaded(const std::vector<Blessing>& loadedBlessings)
+{
+    blessings.clear();
+    for (const Blessing& blessing : loadedBlessings)
+    {
+        add(blessing);
+    }
+}

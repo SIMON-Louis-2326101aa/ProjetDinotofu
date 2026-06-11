@@ -64,6 +64,17 @@ public:
     static std::vector<std::string> buildChapterTwoBlackKnotScarsLines(const Player& player);
     static std::vector<std::string> buildChapterTwoGuardedRouteLines(const Player& player);
     static std::vector<std::string> buildChapterTwoSpecialThreatLines(const Player& player);
+    static std::vector<std::string> buildChapterThreeLines(const Player& player);
+    static std::vector<std::string> buildChapterThreeMissionLines(const Player& player);
+    static std::vector<std::string> buildChapterThreeProgressLines(const Player& player);
+    static std::vector<std::string> buildChapterThreeActionLines(const Player& player);
+    static std::string getChapterThreeRouteChoice(const Player& player);
+    static std::string getChapterThreeConvoyDecision(const Player& player);
+    static std::vector<std::string> buildChapterThreeConsequenceLines(const Player& player);
+    static std::vector<std::string> buildChapterFourLines(const Player& player);
+    static std::vector<std::string> buildChapterFourMissionLines(const Player& player);
+    static std::vector<std::string> buildChapterFourProgressLines(const Player& player);
+    static std::vector<std::string> buildChapterFourActionLines(const Player& player);
     static std::vector<std::string> buildSandboxRulesLines(const Player& player);
     static std::vector<std::string> buildDevelopmentLines(const Player& player);
     static std::vector<std::string> buildReferentNpcLines(const Player& player);
@@ -72,6 +83,8 @@ public:
     static int suggestedChapterFromProgress(const Player& player);
     static int suggestedCityDevelopmentFromProgress(const Player& player);
     static bool canUnlockChapterTwo(const Player& player);
+    static bool canUnlockChapterThree(const Player& player);
+    static bool canUnlockChapterFour(const Player& player);
     static int maxUnlockedChapter(const Player& player);
     static bool isChapterUnlocked(const Player& player, int chapter);
 };

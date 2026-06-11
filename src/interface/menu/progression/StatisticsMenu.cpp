@@ -340,6 +340,7 @@ MenuScreen StatisticsMenu::buildHubScreen()
     screen.addOption(5, "États spéciaux et conséquences", "Altérations, clones, dettes et marques de boss.", true, "statistics.states", makeStatisticsItemData("inspect", "États spéciaux", "Altérations, clones, dettes et marques de boss."));
     screen.addOption(6, "Titres disponibles et obtenus", "Lister les titres connus : guilde, chasse, anomalies et rangs.", true, "statistics.titles", makeStatisticsItemData("inspect", "Titres", "Lister les titres connus : guilde, chasse, anomalies et rangs."));
     screen.addOption(7, "Affichage complet historique", "Afficher les statistiques longues du personnage.", true, "statistics.full_history", makeStatisticsItemData("inspect", "Historique complet", "Afficher les statistiques longues du personnage."));
+    screen.addOption(8, "Top 3 du personnage", "Ennemis, boss, matériaux, consommables, armes, lieux, PNJ et quêtes avec total complet de chaque catégorie.", true, "statistics.top3", makeStatisticsItemData("inspect", "Top 3", "Compteurs persistants du journal moteur."));
     screen.addBackOption("Retour", "statistics.back");
     return screen;
 }
@@ -398,6 +399,10 @@ void StatisticsMenu::open(Player& player, DifficultyMode difficulty)
             player.displayCareerStatistics(difficulty);
             Console::waitForEnter();
             Console::clear();
+        }
+        else if (choice == 8)
+        {
+            displayTopThreeStats(player);
         }
     }
 }
@@ -460,7 +465,57 @@ void StatisticsMenu::open(Player& player)
             Console::waitForEnter();
             Console::clear();
         }
+        else if (choice == 8)
+        {
+            displayTopThreeStats(player);
+        }
     }
+}
+
+
+void StatisticsMenu::displayTopThreeStats(const Player& player)
+{
+    struct CategoryView
+    {
+        std::string id;
+        std::string title;
+        std::string emptyHint;
+    };
+
+    const std::vector<CategoryView> categories = {
+        {"ennemis_tues", "Ennemis les plus tués", "Aucun ennemi précis tué n'a encore été enregistré."},
+        {"ennemis_croises", "Ennemis les plus croisés", "Aucune rencontre précise n'a encore été enregistrée."},
+        {"boss_tues", "Boss les plus tués", "Aucun boss précis n'a encore été enregistré."},
+        {"materiaux_ramasses", "Matériaux les plus ramassés", "Aucun ramassage de matériau précis n'a encore été enregistré."},
+        {"consommables_utilises", "Consommables les plus utilisés", "Aucun consommable utilisé n'a encore été enregistré."},
+        {"categories_armes_utilisees", "Catégories d'armes les plus utilisées", "Aucune catégorie d'arme n'a encore été enregistrée."},
+        {"lieux_visites", "Lieux les plus visités", "Aucun lieu visité n'a encore été enregistré."},
+        {"pnj_servis", "PNJ les plus servis", "Aucun service de PNJ n'a encore été enregistré."},
+        {"types_quetes_completees", "Types de quêtes les plus complétés", "Aucun type de quête complété n'a encore été enregistré."},
+        {"taxes_ville", "Taxes de changement de ville", "Aucune taxe de trajet n'a encore été payée."}
+    };
+
+    std::vector<std::string> lines;
+    lines.push_back("Ces Top 3 viennent du journal moteur canonique : ils utilisent des compteurs persistants, pas du texte deviné par l'interface.");
+    lines.push_back("Important : le total affiché est le total complet de la catégorie entière, même hors Top 3.");
+
+    for (const CategoryView& category : categories)
+    {
+        lines.push_back("");
+        lines.push_back(category.title + " — total catégorie : " + std::to_string(player.getCanonicalJournalCategoryTotal(category.id)));
+        const std::vector<PlayerJournalRecord> top = player.getTopCanonicalJournalRecords(category.id, 3);
+        if (top.empty())
+        {
+            lines.push_back("- " + category.emptyHint);
+            continue;
+        }
+        for (std::size_t i = 0; i < top.size(); ++i)
+        {
+            lines.push_back(std::to_string(i + 1) + ". " + top[i].label + " — " + std::to_string(top[i].count) + " | dernier jour " + std::to_string(top[i].lastDay) + ".");
+        }
+    }
+
+    showStatisticsScreen("TOP 3 DU PERSONNAGE", "statistics.top3.detail", lines);
 }
 
 void StatisticsMenu::displaySummary(const Player& player)

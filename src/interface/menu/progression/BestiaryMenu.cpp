@@ -393,7 +393,7 @@ namespace
             {"Divinités / lore", "FireFlight", "Créateur du monde et trace du créateur.", "FireFlight peut être personnage, créateur, test final et regard derrière le jeu. Ses dialogues changent avec les personnages spéciaux et les altérations.", "Lore sensible", 0, 0},
             {"Divinités / lore", "Moiran", "Trace de destin.", "La trace existe dans le lore du destin, sans être rangée avec les figures particulières finales comme L'Anomalie, Obérion ou FireFlight.", "Trace divine", 0, 0},
             {"Divinités / lore", "Obérion", "Dieu universel et père des primordiaux.", "Obérion complet dépasse le combat actuel. Seuls des fragments approuvés sont affrontables sans briser l'échelle du monde.", "Trace divine", 0, 0},
-            {"Objets rares", "Invitations scellées", "Lettres nécessaires pour FireFlight.", "Chaque grande épreuve peut laisser une invitation. Quand toutes les lettres existent, l'entrée du test final accepte enfin de s'ouvrir.", "Système final secret", 0, 0},
+            {"Objets rares", "Invitations scellées", "Preuves nécessaires pour FireFlight.", "La première victoire contre chaque boss requis laisse une preuve unique. Refaire le même combat ne crée pas une nouvelle invitation. Quand toutes les preuves nécessaires existent, l'entrée du test final accepte enfin de s'ouvrir.", "Système final secret", 0, 0},
             {"Objets rares", "Fragments de boss avancés", "Matériaux uniques de boss.", "Fragments de nom perdu, miroir fendu, noyau de version instable, sceaux et traces divines nourrissent les crafts ou reliques majeures.", "Fiche archivée", 0, 0},
             {"Objets rares", "Particularités de craft", "Effets faibles nés de matériaux exceptionnels.", "Un objet crafté peut recevoir une petite particularité si plus de 50% de sa valeur de craft vient de matériaux exceptionnels. Les classes d'artisanat augmentent maintenant légèrement cette chance.", "Étude active", 0, 0},
             {"Habitats / zones", "Traces de territoire", "Les zones racontent parfois le monstre avant le combat.", "Griffures sur un arbre, os déplacés, gel anormal, suie récente ou silence soudain peuvent ajouter une entrée sans tuer la créature. Une trace ne donne pas tout : elle confirme surtout l'existence et le terrain probable.", "Méthode d'observation", 0, 0},
@@ -622,6 +622,23 @@ namespace
         return entry.name;
     }
 
+    bool isObtentionEntryCategory(const std::string& category)
+    {
+        return category == "Matériaux et plantes"
+            || category == "Objets rares"
+            || category == "Effets et altérations";
+    }
+
+    std::string informationReliabilityLabel(const BestiaryPreviewEntry& entry)
+    {
+        const int level = calculateKnowledgeLevel(entry);
+        if (level <= 0) return "Inconnue";
+        if (level == 1) return "Rumeur : piste entendue, non vérifiée personnellement";
+        if (level == 2 && entry.encounters <= 1 && entry.kills <= 0) return "Observé : obtenu ou constaté une fois";
+        if (level == 2) return "Confirmé : plusieurs traces concordantes";
+        return "Expert : information achetée, étudiée ou suffisamment vérifiée";
+    }
+
     MenuScreen buildEntryDetailScreen(const BestiaryPreviewEntry& entry)
     {
         int knowledgeLevel = calculateKnowledgeLevel(entry);
@@ -645,7 +662,28 @@ namespace
         else
         {
             screen.addLine("Résumé : " + std::string(knowledgeLevel == 1 ? entry.simpleDescription : entry.detailedDescription));
+            screen.addLine("Fiabilité : " + informationReliabilityLabel(entry));
             screen.addLine("Habitat / origine : " + hints.habitat);
+
+            if (isObtentionEntryCategory(entry.category))
+            {
+                if (knowledgeLevel == 1)
+                {
+                    screen.addLine("Piste d'obtention : " + hints.habitat);
+                    screen.addLine("Meilleure source actuelle : rumeur seulement, aucune chance chiffrée fiable.");
+                }
+                else if (knowledgeLevel == 2)
+                {
+                    screen.addLine("Sources les plus probables : " + hints.habitat);
+                    screen.addLine("Souvent lié à : " + hints.drops);
+                }
+                else
+                {
+                    screen.addLine("Source privilégiée connue : " + hints.habitat);
+                    screen.addLine("Méthode / provenance la plus crédible : " + hints.drops);
+                    screen.addLine("Les pourcentages exacts restent cachés tant que le moteur ne fournit pas de statistiques structurées suffisantes.");
+                }
+            }
 
             if (knowledgeLevel >= 2)
             {
@@ -701,7 +739,7 @@ namespace
             const std::size_t last = PagedMenu::lastIndexExclusive(entries.size(), pageIndex, itemsPerPage);
 
             MenuScreen screen(title, "bestiary.entry.list");
-            screen.addLine("Page " + std::to_string(pageIndex + 1) + " / " + std::to_string(totalPages));
+            screen.addLine(PagedMenu::pageInfoText(pageIndex, totalPages, entries.size()));
             screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, entries.size()));
 
             for (std::size_t i = first; i < last; ++i)
@@ -898,7 +936,7 @@ namespace
             screen.addLine("Ce suivi évite de révéler tous les personnages spéciaux gratuitement.");
             screen.addLine("Un nom verrouillé devient lisible après rencontre, défi d'arène, victoire ou renseignement crédible.");
             screen.addLine("Découverts : " + std::to_string(knownCount) + " / " + std::to_string(entries.size()) + " | Verrouillés : " + std::to_string(static_cast<int>(entries.size()) - knownCount));
-            screen.addLine("Page " + std::to_string(pageIndex + 1) + " / " + std::to_string(totalPages));
+            screen.addLine(PagedMenu::pageInfoText(pageIndex, totalPages, entries.size()));
             screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, entries.size()));
 
             for (std::size_t index = first; index < last; ++index)
@@ -1416,7 +1454,7 @@ namespace
             }
             else
             {
-                screen.addLine("Page " + std::to_string(pageIndex + 1) + " / " + std::to_string(totalPages));
+                screen.addLine(PagedMenu::pageInfoText(pageIndex, totalPages, entries.size()));
                 screen.addLine("Récits affichés : " + PagedMenu::rangeText(first, last, entries.size()));
             }
 
@@ -1692,74 +1730,193 @@ namespace
         );
     }
 
+    std::vector<BestiaryPreviewEntry> collectEntriesForCategories(const std::vector<std::string>& categories)
+    {
+        std::vector<BestiaryPreviewEntry> combined;
+
+        for (const std::string& category : categories)
+        {
+            for (const BestiaryPreviewEntry& entry : filterEntries(category))
+            {
+                bool alreadyListed = false;
+
+                for (const BestiaryPreviewEntry& existing : combined)
+                {
+                    if (existing.category == entry.category && existing.name == entry.name)
+                    {
+                        alreadyListed = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyListed)
+                {
+                    combined.push_back(entry);
+                }
+            }
+        }
+
+        return combined;
+    }
+
+    void displayCreatureRegister()
+    {
+        displayEntrySelectionList(
+            "Créatures et personnages",
+            collectEntriesForCategories({
+                "Entités hostiles / ennemis",
+                "Entités passives / alliées",
+                "Invocations",
+                "Boss",
+                "Personnages spéciaux",
+                "Secret"
+            })
+        );
+    }
+
+    void displayEncyclopediaRegister()
+    {
+        displayEntrySelectionList(
+            "Encyclopédie",
+            collectEntriesForCategories({
+                "Races",
+                "Matériaux et plantes",
+                "Objets rares",
+                "Effets et altérations",
+                "Habitats / zones",
+                "Classes jouables",
+                "Quêtes / guilde"
+            })
+        );
+    }
+
+    void displayDiscoveryNotebookRegister()
+    {
+        displayEntrySelectionList(
+            "Carnet de découvertes",
+            collectEntriesForCategories({
+                "Divinités / lore",
+                "Légendes / contes",
+                "Secret"
+            })
+        );
+    }
+
 }
 
 // EN: open declares or implements a focused behavior used by this module.
 // FR: open déclare ou implémente un comportement précis utilisé par ce module.
 void BestiaryMenu::open()
 {
+    openBestiary();
+}
+
+void BestiaryMenu::openBestiary()
+{
     while (true)
     {
         MenuScreen screen("BESTIAIRE", "bestiary.hub");
         screen.addLine("Objet spécial de base : Bestiaire");
-        screen.addLine("État du registre : catégories propres, entrées ???, niveaux de connaissance et traces sauvegardables.");
+        screen.addLine("Ce registre est réservé aux créatures, ennemis, alliés, invocations, boss et personnages rencontrés.");
+        screen.addLine("Les matériaux, races et objets sont rangés dans l'Encyclopédie ; le lore et les légendes dans le Carnet de découvertes.");
         screen.addOption(0, "Retour", "", true, "bestiary.back");
-        screen.addOption(1, "Tout voir", "", true, "bestiary.all");
-        screen.addOption(2, "Races", "", true, "bestiary.races");
-        screen.addOption(3, "Entités hostiles / ennemis", "", true, "bestiary.hostiles");
-        screen.addOption(4, "Entités passives / alliées", "", true, "bestiary.passives");
-        screen.addOption(5, "Invocations", "", true, "bestiary.summons");
-        screen.addOption(6, "Boss", "", true, "bestiary.bosses");
-        screen.addOption(7, "Personnages spéciaux", "", true, "bestiary.special_characters");
-        screen.addOption(8, "Matériaux et plantes", "", true, "bestiary.materials");
-        screen.addOption(9, "Registre des légendes", "Section séparée : contes, rumeurs rares, salles de boss et histoires pour enfant.", true, "bestiary.legends");
-        screen.addOption(10, "Divinités / lore", "", true, "bestiary.lore");
-        screen.addOption(11, "Objets rares", "", true, "bestiary.rare_items");
-        screen.addOption(12, "Effets et altérations", "", true, "bestiary.effects");
-        screen.addOption(13, "Habitats / zones", "", true, "bestiary.habitats");
-        screen.addOption(14, "Journal des matériaux", "", true, "bestiary.material_journal");
-        screen.addOption(15, "Journal des invocations", "", true, "bestiary.summon_journal");
-        screen.addOption(16, "Acheter des informations communes", "", true, "bestiary.info_shop");
-        screen.addOption(17, "Journal du craft", "", true, "bestiary.craft_journal");
-        screen.addOption(18, "Index tactique", "", true, "bestiary.tactical_index");
-        screen.addOption(19, "Synthèse du bestiaire", "", true, "bestiary.summary");
-        screen.addOption(20, "Registre par niveau de connaissance", "", true, "bestiary.knowledge_levels");
-        screen.addOption(21, "Carnet de traque", "", true, "bestiary.hunting_notebook");
-        screen.addOption(22, "Classes jouables", "Fiches courtes des familles/classes ajoutées sans surcharger la création.", true, "bestiary.playable_classes");
+        screen.addOption(1, "Toutes les créatures connues", "", true, "bestiary.all_creatures");
+        screen.addOption(2, "Entités hostiles / ennemis", "", true, "bestiary.hostiles");
+        screen.addOption(3, "Entités passives / alliées", "", true, "bestiary.passives");
+        screen.addOption(4, "Invocations", "", true, "bestiary.summons");
+        screen.addOption(5, "Boss", "", true, "bestiary.bosses");
+        screen.addOption(6, "Personnages spéciaux", "", true, "bestiary.special_characters");
+        screen.addOption(7, "Journal des invocations", "", true, "bestiary.summon_journal");
+        screen.addOption(8, "Index tactique", "", true, "bestiary.tactical_index");
+        screen.addOption(9, "Synthèse du bestiaire", "", true, "bestiary.summary");
+        screen.addOption(10, "Registre par niveau de connaissance", "", true, "bestiary.knowledge_levels");
+        screen.addOption(11, "Carnet de traque", "", true, "bestiary.hunting_notebook");
+
         int choice = TerminalInterface::askMenuChoiceFromOptions(
             screen,
             "Choix invalide. Choisis une option affichée."
         );
-
         Console::clear();
 
-        if (choice == 0)
-        {
-            return;
-        }
+        if (choice == 0) return;
+        if (choice == 1) displayCreatureRegister();
+        else if (choice == 2) displayEntryList("Entités hostiles / ennemis");
+        else if (choice == 3) displayEntryList("Entités passives / alliées");
+        else if (choice == 4) displayEntryList("Invocations");
+        else if (choice == 5) displayEntryList("Boss");
+        else if (choice == 6) displaySpecialCharactersHub();
+        else if (choice == 7) displaySummonJournal();
+        else if (choice == 8) displayTacticalIndex();
+        else if (choice == 9) displayKnowledgeSummary();
+        else if (choice == 10) displayKnowledgeLevelBrowser();
+        else if (choice == 11) displayHuntingNotebook();
+    }
+}
 
-        if (choice == 1) displayEntryList("Tout");
+void BestiaryMenu::openEncyclopedia()
+{
+    while (true)
+    {
+        MenuScreen screen("ENCYCLOPÉDIE", "encyclopedia.hub");
+        screen.addLine("Objet spécial de base : Encyclopédie");
+        screen.addLine("Impossible à perdre : elle classe les connaissances utiles au jeu, hors créatures et hors lore pur.");
+        screen.addOption(0, "Retour", "", true, "encyclopedia.back");
+        screen.addOption(1, "Toutes les entrées d'encyclopédie", "", true, "encyclopedia.all");
+        screen.addOption(2, "Races", "", true, "encyclopedia.races");
+        screen.addOption(3, "Matériaux et plantes", "", true, "encyclopedia.materials");
+        screen.addOption(4, "Objets rares", "", true, "encyclopedia.rare_items");
+        screen.addOption(5, "Effets et altérations", "", true, "encyclopedia.effects");
+        screen.addOption(6, "Habitats / zones", "", true, "encyclopedia.habitats");
+        screen.addOption(7, "Journal des matériaux", "", true, "encyclopedia.material_journal");
+        screen.addOption(8, "Acheter des informations communes", "", true, "encyclopedia.info_shop");
+        screen.addOption(9, "Journal du craft", "", true, "encyclopedia.craft_journal");
+        screen.addOption(10, "Classes jouables", "", true, "encyclopedia.playable_classes");
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Choix invalide. Choisis une option affichée."
+        );
+        Console::clear();
+
+        if (choice == 0) return;
+        if (choice == 1) displayEncyclopediaRegister();
         else if (choice == 2) displayEntryList("Races");
-        else if (choice == 3) displayEntryList("Entités hostiles / ennemis");
-        else if (choice == 4) displayEntryList("Entités passives / alliées");
-        else if (choice == 5) displayEntryList("Invocations");
-        else if (choice == 6) displayEntryList("Boss");
-        else if (choice == 7) displaySpecialCharactersHub();
-        else if (choice == 8) displayEntryList("Matériaux et plantes");
-        else if (choice == 9) displayLegendsArchive();
-        else if (choice == 10) displayEntryList("Divinités / lore");
-        else if (choice == 11) displayEntryList("Objets rares");
-        else if (choice == 12) displayEntryList("Effets et altérations");
-        else if (choice == 13) displayEntryList("Habitats / zones");
-        else if (choice == 14) displayMaterialJournal();
-        else if (choice == 15) displaySummonJournal();
-        else if (choice == 16) displayInformationShopPreview();
-        else if (choice == 17) displayCraftJournal();
-        else if (choice == 18) displayTacticalIndex();
-        else if (choice == 19) displayKnowledgeSummary();
-        else if (choice == 20) displayKnowledgeLevelBrowser();
-        else if (choice == 21) displayHuntingNotebook();
-        else if (choice == 22) displayEntryList("Classes jouables");
+        else if (choice == 3) displayEntryList("Matériaux et plantes");
+        else if (choice == 4) displayEntryList("Objets rares");
+        else if (choice == 5) displayEntryList("Effets et altérations");
+        else if (choice == 6) displayEntryList("Habitats / zones");
+        else if (choice == 7) displayMaterialJournal();
+        else if (choice == 8) displayInformationShopPreview();
+        else if (choice == 9) displayCraftJournal();
+        else if (choice == 10) displayEntryList("Classes jouables");
+    }
+}
+
+void BestiaryMenu::openDiscoveryNotebook()
+{
+    while (true)
+    {
+        MenuScreen screen("CARNET DE DÉCOUVERTES", "discovery_notebook.hub");
+        screen.addLine("Objet spécial de base : Carnet de découvertes");
+        screen.addLine("Impossible à perdre : il garde le lore, les légendes, les rumeurs vérifiées et les traces de découverte non mécaniques.");
+        screen.addLine("Il évite que l'Encyclopédie devienne un fourre-tout tout en gardant les histoires accessibles.");
+        screen.addOption(0, "Retour", "", true, "discovery_notebook.back");
+        screen.addOption(1, "Toutes les découvertes narratives", "", true, "discovery_notebook.all");
+        screen.addOption(2, "Registre des légendes", "Contes, rumeurs rares, salles de boss et histoires pour enfant.", true, "discovery_notebook.legends");
+        screen.addOption(3, "Divinités / lore", "", true, "discovery_notebook.lore");
+        screen.addOption(4, "Découvertes étranges", "Entrées secrètes ou difficiles à classer.", true, "discovery_notebook.secret");
+
+        int choice = TerminalInterface::askMenuChoiceFromOptions(
+            screen,
+            "Choix invalide. Choisis une option affichée."
+        );
+        Console::clear();
+
+        if (choice == 0) return;
+        if (choice == 1) displayDiscoveryNotebookRegister();
+        else if (choice == 2) displayLegendsArchive();
+        else if (choice == 3) displayEntryList("Divinités / lore");
+        else if (choice == 4) displayEntryList("Secret");
     }
 }
 

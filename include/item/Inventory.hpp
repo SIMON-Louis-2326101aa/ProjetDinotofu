@@ -23,7 +23,7 @@ private:
     std::vector<Consumable> consumables;
     std::vector<Material> materials;
 
-    int or_;
+    long long totalCopper_;
 
 public:
     // EN: Inventory declares or implements a focused behavior used by this module.
@@ -33,15 +33,21 @@ public:
     // EN: getGold declares or implements a focused behavior used by this module.
     // FR: getGold déclare ou implémente un comportement précis utilisé par ce module.
     int getGold() const;
+    long long getTotalCopper() const;
     // EN: setGold declares or implements a focused behavior used by this module.
     // FR: setGold déclare ou implémente un comportement précis utilisé par ce module.
     void setGold(int amount);
+    void setTotalCopper(long long amount);
     // EN: earnGold declares or implements a focused behavior used by this module.
     // FR: earnGold déclare ou implémente un comportement précis utilisé par ce module.
     void earnGold(int amount);
+    void earnCopper(long long amount);
     // EN: spendGold declares or implements a focused behavior used by this module.
     // FR: spendGold déclare ou implémente un comportement précis utilisé par ce module.
     bool spendGold(int amount);
+    bool spendCopper(long long amount);
+    std::string getWalletLine() const;
+    std::string getWalletTotalLine() const;
 
     // EN: getWeaponCount declares or implements a focused behavior used by this module.
     // FR: getWeaponCount déclare ou implémente un comportement précis utilisé par ce module.

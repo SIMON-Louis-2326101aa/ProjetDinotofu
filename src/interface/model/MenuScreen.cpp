@@ -314,6 +314,7 @@ namespace
         const std::size_t maxCards =
             snapshot.specializedView == "equipment" ||
             snapshot.specializedView == "inventory" ||
+            snapshot.specializedView == "story" ||
             snapshot.specializedView == "progression" ||
             snapshot.specializedView == "legends" ||
             snapshot.specializedView == "dialogue" ||
@@ -522,6 +523,7 @@ namespace
         if (containsAny(text, {"quick_heal", "potion", "potions", "curative", "defensive", "défensive", "offensive", "buff", "debuff"})) return "potions";
         if (containsAny(text, {"shop", "boutique", "achat", "vente", "marchand", "stock", "troquer", "troc"})) return "boutique";
         if (containsAny(text, {"exploration", "biome", "biomes", "intensité", "intensite", "sortie prudente", "sortie normale", "sortie audacieuse"})) return "exploration";
+        if (containsAny(text, {"story", "histoire", "chapitre", "quête principale", "quete principale", "relais silencieux", "ville qui tient"})) return "histoire";
         if (containsAny(text, {"quest", "quete", "quête", "guilde", "demande", "mission", "lieux visitables"})) return "quete";
         if (containsAny(text, {"bestiary.legends", "registre des légendes", "registre des legendes", "légendes découvertes", "legendes decouvertes", "contes pour enfant", "salles de boss découvertes", "salles de boss decouvertes", "déclencheurs et rumeurs", "declencheurs et rumeurs", "règles du registre", "regles du registre"})) return "legendes";
         if (containsAny(text, {"bestiary", "bestiaire", "knowledge", "connaissance", "statistique", "statistics", "stats", "materiau", "matériau", "material", "player.", "joueur", "monstre", "monster", "entité", "entite", "attribut", "attributs", "compétence", "competence", "compétences", "competences", "skill", "career", "parcours"})) return "progression";
@@ -531,7 +533,7 @@ namespace
         if (containsAny(text, {"save", "sauvegarde", "account", "compte", "character", "personnage"})) return "sauvegarde";
         if (containsAny(text, {"cheat", "triche", "alter", "altéré", "altere", "altération", "alteration", "données altérées", "donnees alterees", "statistique corrompue"})) return "donnees_alterees";
         if (containsAny(text, {"combat", "battle", "boss", "target", "cible", "pvp", "duel", "arène", "arene"})) return "combat";
-        if (containsAny(text, {"story", "histoire", "archives", "chapitre"})) return "progression";
+        if (containsAny(text, {"story", "histoire", "archives", "chapitre"})) return "histoire";
 
         return "menu";
     }
@@ -544,6 +546,7 @@ namespace
         if (screenCategory == "boutique") return "shop";
         if (screenCategory == "exploration") return "exploration";
         if (screenCategory == "quete") return "quest";
+        if (screenCategory == "histoire") return "story";
         if (screenCategory == "progression") return "progression";
         if (screenCategory == "legendes") return "legends";
         if (screenCategory == "dialogue") return "dialogue";
@@ -567,6 +570,7 @@ namespace
         if (specializedView == "shop") return "Boutique";
         if (specializedView == "exploration") return "Exploration";
         if (specializedView == "quest") return "Quêtes";
+        if (specializedView == "story") return "Histoire guidée";
         if (specializedView == "progression") return "Progression";
         if (specializedView == "legends") return "Légendes";
         if (specializedView == "dialogue") return "Dialogue";
@@ -590,6 +594,7 @@ namespace
         if (specializedView == "shop") return "Prépare les blocs achat, vente, stock, inspection et troc.";
         if (specializedView == "exploration") return "Sépare biomes, risques, intensités, ressources et objectifs de terrain.";
         if (specializedView == "quest") return "Prépare les blocs journal, guilde, clients et lieux liés aux quêtes.";
+        if (specializedView == "story") return "Met en avant l'étape actuelle, les étapes [fait] et les raccourcis PNJ/quêtes/exploration.";
         if (specializedView == "progression") return "Prépare les blocs bestiaire, matériaux, statistiques et connaissances.";
         if (specializedView == "legends") return "Sépare les récits, contes, rumeurs et salles de boss des fiches tactiques.";
         if (specializedView == "dialogue") return "Présente les paroles de PNJ, ennemis ou groupes spéciaux sans les confondre avec des actions de combat.";

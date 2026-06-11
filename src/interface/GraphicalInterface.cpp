@@ -119,6 +119,8 @@ std::string GraphicalInterface::menuSnapshotToJson(const GuiMenuSnapshot& snapsh
     json << indent(1) << "\"recommendedChoiceLabel\": \"" << escapeJson(snapshot.recommendedChoiceLabel) << "\",\n";
     json << indent(1) << "\"recommendationMode\": \"" << escapeJson(snapshot.recommendationMode) << "\",\n";
     json << indent(1) << "\"recommendationSafety\": \"" << escapeJson(snapshot.recommendationSafety) << "\",\n";
+    json << indent(1) << "\"visualAssetPolicy\": \"supplementary_only_no_hidden_information\",\n";
+    json << indent(1) << "\"terminalVisualAssets\": \"disabled_and_not_toggleable\",\n";
     json << indent(1) << "\"recommendationReason\": \"" << escapeJson(snapshot.recommendationReason) << "\",\n";
     json << indent(1) << "\"specializedView\": \"" << escapeJson(snapshot.specializedView) << "\",\n";
     json << indent(1) << "\"specializedTitle\": \"" << escapeJson(snapshot.specializedTitle) << "\",\n";

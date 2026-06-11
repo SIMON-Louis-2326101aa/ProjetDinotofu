@@ -10,6 +10,7 @@
 #include <cctype>
 #include <vector>
 #include <random>
+#include <sstream>
 
 namespace
 {
@@ -22,6 +23,28 @@ namespace
         return value;
     }
 
+
+    std::vector<std::string> splitLinkedQuestIds(const std::string& value)
+    {
+        std::vector<std::string> ids;
+        std::stringstream stream(value);
+        std::string id;
+        while (std::getline(stream, id, '|'))
+        {
+            id.erase(id.begin(), std::find_if(id.begin(), id.end(), [](unsigned char c) { return !std::isspace(c); }));
+            id.erase(std::find_if(id.rbegin(), id.rend(), [](unsigned char c) { return !std::isspace(c); }).base(), id.end());
+            if (!id.empty()) ids.push_back(id);
+        }
+        return ids;
+    }
+
+    bool linkedQuestMatchesRequiredState(const Quest& quest, const std::string& requiredState)
+    {
+        if (quest.failed) return false;
+        if (requiredState == "known") return true;
+        if (requiredState == "completed") return quest.completed || quest.turnedIn;
+        return quest.turnedIn;
+    }
 
     bool questLogTextContainsAny(const std::string& value, const std::vector<std::string>& needles)
     {
@@ -219,7 +242,8 @@ QuestLog::QuestLog()
     : guildBoardCreatedAtCombat(-1),
       guildBoardTargetSize(0),
       guildBoardPendingReplacements(0),
-      guildBoardReplacementDueAtCombat(-1)
+      guildBoardReplacementDueAtCombat(-1),
+      guildChallengeBoardCreatedAtDay(-1)
 {
 }
 
@@ -258,12 +282,25 @@ int QuestLog::getActiveGuildQuestCount() const
 
     for (const Quest& quest : quests)
     {
-        if (quest.guildQuest && quest.accepted && !quest.turnedIn && !quest.failed)
+        if (quest.guildQuest && !quest.guildChallenge && quest.accepted && !quest.turnedIn && !quest.failed)
         {
             count++;
         }
     }
 
+    return count;
+}
+
+int QuestLog::getActiveGuildChallengeCount() const
+{
+    int count = 0;
+    for (const Quest& quest : quests)
+    {
+        if (quest.guildChallenge && quest.accepted && !quest.turnedIn && !quest.failed)
+        {
+            ++count;
+        }
+    }
     return count;
 }
 
@@ -319,17 +356,26 @@ bool QuestLog::addQuestWithGuildLimit(const Quest& quest, int activeLimit)
         return false;
     }
 
-    if (quest.guildQuest && !canAcceptGuildQuest(activeLimit))
+    if (quest.guildChallenge && getActiveGuildChallengeCount() >= 3)
     {
         return false;
     }
 
-    if (!quest.guildQuest && !canAcceptPersonalQuestForClient(quest.client))
+    if (quest.guildQuest && !quest.guildChallenge && !canAcceptGuildQuest(activeLimit))
+    {
+        return false;
+    }
+
+    const bool nonRefusableStoryQuest = quest.origin == "Quête principale"
+        || quest.id.rfind("story_ch", 0) == 0;
+
+    if (!quest.guildQuest && !nonRefusableStoryQuest && !canAcceptPersonalQuestForClient(quest.client))
     {
         return false;
     }
 
     quests.push_back(quest);
+    refreshLinkedQuestProgress();
     return true;
 }
 
@@ -349,6 +395,7 @@ bool QuestLog::progressQuest(const std::string& questId, int amount)
                 quest.completed = true;
             }
 
+            refreshLinkedQuestProgress();
             return true;
         }
     }
@@ -366,6 +413,7 @@ bool QuestLog::completeQuest(const std::string& questId)
         {
             quest.progress = quest.target;
             quest.completed = true;
+            refreshLinkedQuestProgress();
             return true;
         }
     }
@@ -382,6 +430,7 @@ bool QuestLog::turnInQuest(const std::string& questId)
         if (quest.id == questId && quest.completed && !quest.turnedIn && !quest.failed)
         {
             quest.turnedIn = true;
+            refreshLinkedQuestProgress();
             return true;
         }
     }
@@ -411,8 +460,11 @@ int QuestLog::expireOverdueQuests(int currentDay)
         }
 
         quest.failed = true;
-        quest.failureReason = "Délai dépassé : cette demande devait être terminée avant la fin du jour "
-            + std::to_string(quest.expiresAtDay) + ".";
+        quest.failureReason = quest.guildChallenge
+            ? "Défi expiré : l'exploit devait être accompli avant la fin du jour " + std::to_string(quest.expiresAtDay)
+                + ". Il pourra réapparaître aléatoirement sur un futur panneau."
+            : "Délai dépassé : cette demande devait être terminée avant la fin du jour "
+                + std::to_string(quest.expiresAtDay) + ".";
         ++expired;
     }
 
@@ -471,6 +523,7 @@ int QuestLog::progressCombatQuestsByFamily(int defeatedEnemyCount, const std::st
         updated++;
     }
 
+    refreshLinkedQuestProgress();
     return updated;
 }
 
@@ -559,6 +612,59 @@ int QuestLog::refreshMaterialDeliveryQuests(const Inventory& inventory)
         }
     }
 
+    refreshLinkedQuestProgress();
+    return updated;
+}
+
+
+int QuestLog::refreshLinkedQuestProgress()
+{
+    int updated = 0;
+
+    // Resolve dependency chains until they become stable. The hard upper bound keeps
+    // malformed circular data deterministic while allowing aggregate quests to depend
+    // on other aggregate quests without forcing a creation order.
+    const int maximumPasses = std::max(1, static_cast<int>(quests.size()));
+    for (int pass = 0; pass < maximumPasses; ++pass)
+    {
+        bool changedDuringPass = false;
+        for (Quest& aggregate : quests)
+        {
+            if (!aggregate.retroactiveProgress || aggregate.linkedQuestIds.empty()
+                || aggregate.turnedIn || aggregate.failed)
+            {
+                continue;
+            }
+
+            const std::vector<std::string> ids = splitLinkedQuestIds(aggregate.linkedQuestIds);
+            if (ids.empty()) continue;
+
+            int matched = 0;
+            for (const std::string& id : ids)
+            {
+                const auto found = std::find_if(quests.begin(), quests.end(), [&](const Quest& candidate) {
+                    return candidate.id == id;
+                });
+                if (found != quests.end() && linkedQuestMatchesRequiredState(*found, aggregate.linkedQuestRequiredState))
+                {
+                    ++matched;
+                }
+            }
+
+            const int target = aggregate.target > 0 ? aggregate.target : static_cast<int>(ids.size());
+            const int nextProgress = std::min(target, matched);
+            const bool nextCompleted = nextProgress >= target;
+            if (aggregate.progress != nextProgress || aggregate.completed != nextCompleted)
+            {
+                aggregate.progress = nextProgress;
+                aggregate.completed = nextCompleted;
+                ++updated;
+                changedDuringPass = true;
+            }
+        }
+        if (!changedDuringPass) break;
+    }
+
     return updated;
 }
 
@@ -584,6 +690,84 @@ bool QuestLog::hasTurnInReadyQuestForClient(const std::string& client) const
 const std::vector<Quest>& QuestLog::getGuildBoardOffers() const
 {
     return guildBoardOffers;
+}
+
+const std::vector<Quest>& QuestLog::getGuildChallengeBoardOffers() const
+{
+    return guildChallengeBoardOffers;
+}
+
+std::vector<Quest>& QuestLog::getGuildChallengeBoardOffers()
+{
+    return guildChallengeBoardOffers;
+}
+
+void QuestLog::ensureGuildChallengeBoardReady(int playerLevel, int currentDay)
+{
+    if (currentDay < 0) currentDay = 0;
+    if (guildChallengeBoardCreatedAtDay == currentDay)
+    {
+        return;
+    }
+
+    std::vector<std::string> activeConditions;
+    for (const Quest& quest : quests)
+    {
+        if (quest.guildChallenge
+            && quest.accepted
+            && !quest.turnedIn
+            && !quest.failed
+            && !quest.challengeCondition.empty())
+        {
+            activeConditions.push_back(quest.challengeCondition);
+        }
+    }
+
+    guildChallengeBoardOffers = QuestCatalog::createGuildChallengeBoard(playerLevel, currentDay, activeConditions);
+    guildChallengeBoardCreatedAtDay = currentDay;
+}
+
+void QuestLog::forceRefreshGuildChallengeBoard(int playerLevel, int currentDay)
+{
+    if (currentDay < 0) currentDay = 0;
+
+    std::vector<std::string> excludedConditions;
+    for (const Quest& quest : quests)
+    {
+        if (quest.guildChallenge
+            && quest.accepted
+            && !quest.turnedIn
+            && !quest.failed
+            && !quest.challengeCondition.empty())
+        {
+            excludedConditions.push_back(quest.challengeCondition);
+        }
+    }
+    for (const Quest& offer : guildChallengeBoardOffers)
+    {
+        if (!offer.challengeCondition.empty())
+        {
+            excludedConditions.push_back(offer.challengeCondition);
+        }
+    }
+
+    guildChallengeBoardOffers = QuestCatalog::createGuildChallengeBoard(playerLevel, currentDay, excludedConditions);
+    guildChallengeBoardCreatedAtDay = currentDay;
+}
+
+bool QuestLog::removeGuildChallengeBoardOfferAt(int offerIndex)
+{
+    if (offerIndex < 0 || offerIndex >= static_cast<int>(guildChallengeBoardOffers.size()))
+    {
+        return false;
+    }
+    guildChallengeBoardOffers.erase(guildChallengeBoardOffers.begin() + offerIndex);
+    return true;
+}
+
+int QuestLog::getGuildChallengeBoardCreatedAtDay() const
+{
+    return guildChallengeBoardCreatedAtDay;
 }
 
 std::vector<Quest>& QuestLog::getGuildBoardOffers()
@@ -822,12 +1006,23 @@ void QuestLog::setLoadedGuildBoardState(
     if (guildBoardPendingReplacements < 0) guildBoardPendingReplacements = 0;
 }
 
+void QuestLog::setLoadedGuildChallengeBoardState(
+    const std::vector<Quest>& offers,
+    int createdAtDay
+)
+{
+    guildChallengeBoardOffers = offers;
+    guildChallengeBoardCreatedAtDay = createdAtDay;
+}
+
 void QuestLog::clear()
 {
     quests.clear();
     guildBoardOffers.clear();
+    guildChallengeBoardOffers.clear();
     guildBoardCreatedAtCombat = -1;
     guildBoardTargetSize = 0;
     guildBoardPendingReplacements = 0;
     guildBoardReplacementDueAtCombat = -1;
+    guildChallengeBoardCreatedAtDay = -1;
 }

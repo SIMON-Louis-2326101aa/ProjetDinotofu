@@ -8,11 +8,28 @@
 #include "interface/model/MenuScreen.hpp"
 
 #include <algorithm>
+#include <cstdlib>
+#include <cctype>
 #include <iostream>
 #include <sstream>
 
 namespace
 {
+    bool guiScrollableMenuEnabled()
+    {
+        const char* value = std::getenv("DINOTOFU_GUI_INPUT_MODE");
+        if (value == nullptr)
+        {
+            return false;
+        }
+
+        std::string text(value);
+        std::transform(text.begin(), text.end(), text.begin(), [](unsigned char character) {
+            return static_cast<char>(std::tolower(character));
+        });
+        return text == "1" || text == "true" || text == "yes" || text == "on" || text == "gui";
+    }
+
     MenuOptionItemData makeNavigationItemData(const std::string& actionType, const std::string& name, const std::string& detail)
     {
         MenuOptionItemData itemData;
@@ -29,6 +46,11 @@ namespace
 
 std::size_t PagedMenu::pageCount(std::size_t totalItems, std::size_t itemsPerPage)
 {
+    if (guiScrollableMenuEnabled())
+    {
+        return 1;
+    }
+
     if (itemsPerPage == 0 || totalItems == 0)
     {
         return 1;
@@ -39,11 +61,21 @@ std::size_t PagedMenu::pageCount(std::size_t totalItems, std::size_t itemsPerPag
 
 std::size_t PagedMenu::firstIndex(std::size_t pageIndex, std::size_t itemsPerPage)
 {
+    if (guiScrollableMenuEnabled())
+    {
+        return 0;
+    }
+
     return pageIndex * itemsPerPage;
 }
 
 std::size_t PagedMenu::lastIndexExclusive(std::size_t totalItems, std::size_t pageIndex, std::size_t itemsPerPage)
 {
+    if (guiScrollableMenuEnabled())
+    {
+        return totalItems;
+    }
+
     if (itemsPerPage == 0)
     {
         return totalItems;
@@ -67,8 +99,15 @@ std::string PagedMenu::rangeText(std::size_t firstInclusive, std::size_t lastExc
 std::string PagedMenu::pageInfoText(std::size_t pageIndex, std::size_t totalPages, std::size_t totalItems)
 {
     std::ostringstream output;
-    output << "Page " << (pageIndex + 1) << " / " << totalPages
-           << " | Entrées : " << totalItems;
+    if (guiScrollableMenuEnabled())
+    {
+        output << "Liste déroulante complète | Entrées : " << totalItems;
+    }
+    else
+    {
+        output << "Page " << (pageIndex + 1) << " / " << totalPages
+               << " | Entrées : " << totalItems;
+    }
     return output.str();
 }
 

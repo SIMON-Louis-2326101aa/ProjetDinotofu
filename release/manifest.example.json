@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "3.07.08",
-  "releaseTag": "v3.07.08",
+  "version": "3.41.00",
+  "releaseTag": "v3.41.00",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "Patch ergonomie/stabilité : combat terminal par phases, infos utiles, quêtes à rendre plus visibles, loots cohérents et équilibrage élites/boss."
+  "notes": "Adds V3.41 city hub routing, route micro-quest resolution, inn fatigue hints, city-vault material transfers, guild council/pardon, IG pixel-art bridge panels, and economy-cost centralization for new services."
 }

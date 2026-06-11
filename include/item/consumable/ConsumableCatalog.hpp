@@ -59,6 +59,8 @@ public:
     static Consumable createCliffBasilTea();
     static Consumable createCarnivalDiversionTicket();
     static Consumable createFireflyGuardVial();
+    static Consumable createLuckyPotion();
+    static Consumable createUnluckyPotion();
 };
 
 #endif

@@ -11,6 +11,15 @@
 #include <string>
 #include <vector>
 
+struct BossHierarchyInfo
+{
+    int tier = 0;
+    std::string title;
+    std::string threatClass;
+    int minimumRecommendedLevel = 0;
+    int maximumRecommendedLevel = 0;
+};
+
 class BossCatalog
 {
 public:
@@ -24,6 +33,8 @@ public:
     static std::string getRegistryHint(int bossId);
     static int getRecommendedLevel(int bossId);
     static std::string getRecommendedLevelText(int bossId);
+    static BossHierarchyInfo getHierarchyInfo(int bossId);
+    static std::string getHierarchyLabel(int bossId);
     // EN: getMaximumBossId declares or implements a focused behavior used by this module.
     // FR: getMaximumBossId déclare ou implémente un comportement précis utilisé par ce module.
     static int getMaximumBossId();

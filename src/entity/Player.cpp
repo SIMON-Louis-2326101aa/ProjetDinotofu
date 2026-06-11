@@ -4,6 +4,7 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "entity/Player.hpp"
+#include "economy/EconomyBalance.hpp"
 #include "core/VersionInfo.hpp"
 #include "economy/Money.hpp"
 
@@ -17,6 +18,7 @@
 #include "character/RaceCatalog.hpp"
 #include "combat/system/CombatClassSystem.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "item/equipment/EquipmentWeightRules.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -28,6 +30,23 @@
 
 namespace
 {
+
+
+    std::string playerWeaponCategoryLabel(WeaponType type)
+    {
+        switch (type)
+        {
+            case WeaponType::Dagger: return "Dague / arme légère";
+            case WeaponType::Bow: return "Arc / arme à distance";
+            case WeaponType::Staff: return "Bâton / catalyseur";
+            case WeaponType::Sword: return "Épée";
+            case WeaponType::Axe: return "Hache";
+            case WeaponType::Hammer: return "Marteau / arme lourde";
+            case WeaponType::Spear: return "Lance";
+            case WeaponType::BareHands: return "Mains nues";
+            default: return "Arme inconnue";
+        }
+    }
 
     std::string normalizeLegacyTitleName(const std::string& title)
     {
@@ -401,6 +420,10 @@ Player::Player() : Entity()
     experience = 0;
     equippedWeaponIndex = -1;
     equippedArmorIndex = -1;
+    cityVaultPurchased = false;
+    cityVaultLevel = 0;
+    currentCityId = "valebrume";
+    registeredGuildCityIds.clear();
     race = CharacterRace::Human;
     unspentAttributePoints = 0;
     daggerKillProgress = 0;
@@ -416,6 +439,7 @@ Player::Player() : Entity()
     worldDaysElapsed = 0;
     worldDayProgressUnits = 0;
     activeCurses.clear();
+    blessingInventory.clear();
     localSubscriptionRenewalPaidThisWeek = 0;
     pendingWorldTimeReportLines.clear();
     victories = 0;
@@ -431,9 +455,26 @@ Player::Player() : Entity()
     recentBossIds.clear();
     defeatedBossIds.clear();
     recentBossCooldownExpiresAtDay = -1;
+    rareBossDiscoveryCooldownExpiresAtDay = -1;
+    bossDiscoveryLocations.assign(37, "");
+    recentExplorationEventKeys.clear();
+    recentExplorationChallengeKeys.clear();
+    explorationSceneCooldowns.clear();
+    shopPromotionPurchaseCounters.clear();
     recentCombatEquipmentUsage.clear();
     bossEquipmentSealActive = false;
     bossEquipmentSealReason = "";
+    challengeCombatTrackingActive = false;
+    challengeCombatConsumablesUsed = 0;
+    challengeCombatSkillsUsed = 0;
+    challengeCombatNonBasicAttacksUsed = 0;
+    challengeCombatBasicAttacksUsed = 0;
+    challengeCombatDefenseTurns = 0;
+    challengeCombatTurnsTaken = 0;
+    challengeCombatDamageTaken = 0;
+    challengeCombatSummonActions = 0;
+    challengeCombatPartySize = 1;
+    challengeCombatAlivePartyCount = 1;
     zelefCorrosionPresent = false;
     zelefMaxHpStolen = 0;
     grinkaBossTheftPresent = false;
@@ -478,6 +519,7 @@ Player::Player() : Entity()
     activeTitle = "";
     activeTitles.clear();
     interfaceHintFrequency = "faible";
+    graphicalImagesEnabled = false;
     storyChapter = 0;
     storyStep = 0;
     storyCityDevelopmentLevel = 0;
@@ -506,6 +548,10 @@ Player::Player(
     experience = 0;
     equippedWeaponIndex = -1;
     equippedArmorIndex = -1;
+    cityVaultPurchased = false;
+    cityVaultLevel = 0;
+    currentCityId = "valebrume";
+    registeredGuildCityIds.clear();
     race = CharacterRace::Human;
     unspentAttributePoints = 0;
     daggerKillProgress = 0;
@@ -521,6 +567,7 @@ Player::Player(
     worldDaysElapsed = 0;
     worldDayProgressUnits = 0;
     activeCurses.clear();
+    blessingInventory.clear();
     localSubscriptionRenewalPaidThisWeek = 0;
     pendingWorldTimeReportLines.clear();
     victories = 0;
@@ -536,9 +583,26 @@ Player::Player(
     recentBossIds.clear();
     defeatedBossIds.clear();
     recentBossCooldownExpiresAtDay = -1;
+    rareBossDiscoveryCooldownExpiresAtDay = -1;
+    bossDiscoveryLocations.assign(37, "");
+    recentExplorationEventKeys.clear();
+    recentExplorationChallengeKeys.clear();
+    explorationSceneCooldowns.clear();
+    shopPromotionPurchaseCounters.clear();
     recentCombatEquipmentUsage.clear();
     bossEquipmentSealActive = false;
     bossEquipmentSealReason = "";
+    challengeCombatTrackingActive = false;
+    challengeCombatConsumablesUsed = 0;
+    challengeCombatSkillsUsed = 0;
+    challengeCombatNonBasicAttacksUsed = 0;
+    challengeCombatBasicAttacksUsed = 0;
+    challengeCombatDefenseTurns = 0;
+    challengeCombatTurnsTaken = 0;
+    challengeCombatDamageTaken = 0;
+    challengeCombatSummonActions = 0;
+    challengeCombatPartySize = 1;
+    challengeCombatAlivePartyCount = 1;
     zelefCorrosionPresent = false;
     zelefMaxHpStolen = 0;
     grinkaBossTheftPresent = false;
@@ -583,6 +647,7 @@ Player::Player(
     activeTitle = "";
     activeTitles.clear();
     interfaceHintFrequency = "faible";
+    graphicalImagesEnabled = false;
     storyChapter = 0;
     storyStep = 0;
     storyCityDevelopmentLevel = 0;
@@ -736,6 +801,27 @@ bool Player::areInterfaceHintsDisabled() const
 bool Player::areInterfaceHintsFrequent() const
 {
     return interfaceHintFrequency == "forte";
+}
+
+
+bool Player::areGraphicalImagesEnabled() const
+{
+    return graphicalImagesEnabled;
+}
+
+std::string Player::getGraphicalImagesSettingLabel() const
+{
+    return graphicalImagesEnabled ? "activées en IG" : "désactivées";
+}
+
+void Player::setGraphicalImagesEnabled(bool enabled)
+{
+    graphicalImagesEnabled = enabled;
+}
+
+void Player::forceTerminalImagePolicy()
+{
+    graphicalImagesEnabled = false;
 }
 
 int Player::getStoryChapter() const
@@ -1168,11 +1254,49 @@ std::string Player::getRaceText() const
     return characterRaceToText(race);
 }
 
+int Player::getCharacterAge() const
+{
+    return characterAge;
+}
+
+const std::string& Player::getVisualPresentation() const
+{
+    return visualPresentation;
+}
+
+const std::string& Player::getVisualVariant() const
+{
+    return visualVariant;
+}
+
+std::string Player::getAgeBandText() const
+{
+    return RaceCatalog::getAgeBand(race, characterAge);
+}
+
+std::string Player::getAppearanceDescription() const
+{
+    std::ostringstream description;
+    description << getRaceText() << " · " << characterAge << " ans (" << getAgeBandText() << ")";
+    if (!visualPresentation.empty()) description << " · " << visualPresentation;
+    if (!visualVariant.empty()) description << " · " << visualVariant;
+    description << " · silhouette adaptée à la classe " << type;
+    return description.str();
+}
+
+void Player::setAppearanceProfile(int age, const std::string& presentation, const std::string& variant)
+{
+    characterAge = std::max(15, std::min(age, RaceCatalog::getMaximumAge(race)));
+    visualPresentation = presentation.empty() ? "Non précisé" : presentation;
+    visualVariant = variant.empty() ? "Variante A" : variant;
+}
+
 // EN: setRace declares or implements a focused behavior used by this module.
 // FR: setRace déclare ou implémente un comportement précis utilisé par ce module.
 void Player::setRace(CharacterRace selectedRace)
 {
     race = selectedRace;
+    characterAge = std::max(15, std::min(characterAge, RaceCatalog::getMaximumAge(selectedRace)));
     applyRaceStartingBonus(selectedRace);
     refreshLevelAndIdentitySkills();
 }
@@ -1911,6 +2035,215 @@ int Player::getWorldDaysElapsed() const
     return worldDaysElapsed;
 }
 
+int Player::getShopPromotionPurchaseCount(const std::string& key) const
+{
+    if (key.empty())
+    {
+        return 0;
+    }
+
+    for (const PlayerPersistentCounter& counter : shopPromotionPurchaseCounters)
+    {
+        if (counter.key == key)
+        {
+            return std::max(0, counter.value);
+        }
+    }
+    return 0;
+}
+
+void Player::recordShopPromotionPurchase(const std::string& key, int amount)
+{
+    if (key.empty() || amount <= 0)
+    {
+        return;
+    }
+
+    for (PlayerPersistentCounter& counter : shopPromotionPurchaseCounters)
+    {
+        if (counter.key == key)
+        {
+            counter.value = std::max(0, counter.value + amount);
+            return;
+        }
+    }
+
+    shopPromotionPurchaseCounters.push_back({key, amount});
+    if (shopPromotionPurchaseCounters.size() > 48)
+    {
+        shopPromotionPurchaseCounters.erase(shopPromotionPurchaseCounters.begin(), shopPromotionPurchaseCounters.begin() + 16);
+    }
+}
+
+const std::vector<PlayerPersistentCounter>& Player::getShopPromotionPurchaseCounters() const
+{
+    return shopPromotionPurchaseCounters;
+}
+
+void Player::setLoadedShopPromotionPurchaseCounters(const std::vector<PlayerPersistentCounter>& counters)
+{
+    shopPromotionPurchaseCounters.clear();
+    for (const PlayerPersistentCounter& counter : counters)
+    {
+        if (!counter.key.empty() && counter.value > 0)
+        {
+            shopPromotionPurchaseCounters.push_back(counter);
+        }
+    }
+    if (shopPromotionPurchaseCounters.size() > 48)
+    {
+        shopPromotionPurchaseCounters.erase(shopPromotionPurchaseCounters.begin(), shopPromotionPurchaseCounters.end() - 48);
+    }
+}
+
+void Player::recordCanonicalEvent(const std::string& category, const std::string& key, const std::string& label, int amount)
+{
+    if (category.empty() || key.empty() || amount <= 0)
+    {
+        return;
+    }
+
+    const std::string cleanLabel = label.empty() ? key : label;
+    for (PlayerJournalRecord& record : canonicalJournalRecords)
+    {
+        if (record.category == category && record.key == key)
+        {
+            record.count = std::max(0, record.count + amount);
+            record.label = cleanLabel;
+            record.locationId = currentCityId;
+            record.lastDay = worldDaysElapsed;
+            return;
+        }
+    }
+
+    PlayerJournalRecord record;
+    record.category = category;
+    record.key = key;
+    record.label = cleanLabel;
+    record.locationId = currentCityId;
+    record.count = amount;
+    record.lastDay = worldDaysElapsed;
+    canonicalJournalRecords.push_back(record);
+
+    if (canonicalJournalRecords.size() > 260)
+    {
+        std::sort(canonicalJournalRecords.begin(), canonicalJournalRecords.end(), [](const PlayerJournalRecord& a, const PlayerJournalRecord& b) {
+            if (a.count != b.count) return a.count > b.count;
+            return a.lastDay > b.lastDay;
+        });
+        canonicalJournalRecords.resize(220);
+    }
+}
+
+const std::vector<PlayerJournalRecord>& Player::getCanonicalJournalRecords() const
+{
+    return canonicalJournalRecords;
+}
+
+std::vector<PlayerJournalRecord> Player::getTopCanonicalJournalRecords(const std::string& category, int limit) const
+{
+    std::vector<PlayerJournalRecord> records;
+    if (limit <= 0)
+    {
+        return records;
+    }
+
+    for (const PlayerJournalRecord& record : canonicalJournalRecords)
+    {
+        if (record.category == category && record.count > 0)
+        {
+            records.push_back(record);
+        }
+    }
+
+    std::sort(records.begin(), records.end(), [](const PlayerJournalRecord& a, const PlayerJournalRecord& b) {
+        if (a.count != b.count) return a.count > b.count;
+        if (a.lastDay != b.lastDay) return a.lastDay > b.lastDay;
+        return a.label < b.label;
+    });
+
+    if (records.size() > static_cast<std::size_t>(limit))
+    {
+        records.resize(static_cast<std::size_t>(limit));
+    }
+    return records;
+}
+
+
+int Player::getCanonicalJournalCategoryTotal(const std::string& category) const
+{
+    int total = 0;
+    for (const PlayerJournalRecord& record : canonicalJournalRecords)
+    {
+        if (record.category == category && record.count > 0)
+        {
+            total += record.count;
+        }
+    }
+    return total;
+}
+
+void Player::recordEnemyEncounter(const std::string& enemyName, int amount)
+{
+    recordCanonicalEvent("ennemis_croises", enemyName, enemyName, amount);
+}
+
+void Player::recordEnemyKillByName(const std::string& enemyName, int amount)
+{
+    recordCanonicalEvent("ennemis_tues", enemyName, enemyName, amount);
+}
+
+void Player::recordBossKillByName(const std::string& bossName, int amount)
+{
+    recordCanonicalEvent("boss_tues", bossName, bossName, amount);
+}
+
+void Player::recordMaterialCollected(const std::string& materialId, const std::string& materialName, int quantity)
+{
+    recordCanonicalEvent("materiaux_ramasses", materialId.empty() ? materialName : materialId, materialName.empty() ? materialId : materialName, quantity);
+}
+
+void Player::recordConsumableUsed(const std::string& consumableName, int amount)
+{
+    recordCanonicalEvent("consommables_utilises", consumableName, consumableName, amount);
+}
+
+void Player::recordWeaponCategoryUsed(const std::string& categoryName, int amount)
+{
+    recordCanonicalEvent("categories_armes_utilisees", categoryName, categoryName, amount);
+}
+
+void Player::recordPnjServed(const std::string& pnjName, int amount)
+{
+    recordCanonicalEvent("pnj_servis", pnjName, pnjName, amount);
+}
+
+void Player::recordQuestTypeCompleted(const std::string& questTypeName, int amount)
+{
+    recordCanonicalEvent("types_quetes_completees", questTypeName, questTypeName, amount);
+}
+
+void Player::setLoadedCanonicalJournalRecords(const std::vector<PlayerJournalRecord>& records)
+{
+    canonicalJournalRecords.clear();
+    for (const PlayerJournalRecord& record : records)
+    {
+        if (record.category.empty() || record.key.empty() || record.count <= 0)
+        {
+            continue;
+        }
+        PlayerJournalRecord clean = record;
+        clean.label = clean.label.empty() ? clean.key : clean.label;
+        clean.count = std::max(1, clean.count);
+        clean.lastDay = std::max(0, clean.lastDay);
+        canonicalJournalRecords.push_back(clean);
+    }
+    if (canonicalJournalRecords.size() > 260)
+    {
+        canonicalJournalRecords.resize(260);
+    }
+}
+
 int Player::getWorldDayProgressUnits() const
 {
     return worldDayProgressUnits;
@@ -2431,16 +2764,37 @@ bool Player::addOrRefreshCurse(const PlayerCurse& curse)
             active.excludedSymptomCategories = preservedExcluded;
             active.exorcismProgress = std::min(preservedProgress, std::max(0, active.exorcismRequiredVisits));
             refreshCursePresentationFromLevel(active);
+            if (active.id == "lethal_survival_scar")
+            {
+                setHealingReceivedPercent(95);
+            }
+            if (activeCurses.size() >= 3)
+            {
+                grantTitle("Triplement maudit");
+            }
             return false;
         }
     }
 
     activeCurses.push_back(prepared);
+    if (prepared.id == "lethal_survival_scar")
+    {
+        setHealingReceivedPercent(95);
+    }
+    if (activeCurses.size() >= 3)
+    {
+        grantTitle("Triplement maudit");
+    }
     return true;
 }
 
 bool Player::removeCurse(const std::string& curseId)
 {
+    if (curseId == "lethal_survival_scar")
+    {
+        return false;
+    }
+
     const std::size_t before = activeCurses.size();
     activeCurses.erase(
         std::remove_if(activeCurses.begin(), activeCurses.end(), [&curseId](const PlayerCurse& curse) {
@@ -2468,6 +2822,7 @@ int Player::removeExpiredCurses()
 void Player::setLoadedCurses(const std::vector<PlayerCurse>& curses)
 {
     activeCurses.clear();
+    setHealingReceivedPercent(100);
     for (PlayerCurse curse : curses)
     {
         if (curse.id.empty())
@@ -2496,7 +2851,64 @@ void Player::setLoadedCurses(const std::vector<PlayerCurse>& curses)
             curse.exorcismProgress = std::min(curse.exorcismProgress, curse.exorcismRequiredVisits);
         }
         activeCurses.push_back(curse);
+        if (curse.id == "lethal_survival_scar")
+        {
+            setHealingReceivedPercent(95);
+        }
     }
+    if (activeCurses.size() >= 3)
+    {
+        grantTitle("Triplement maudit");
+    }
+}
+
+const std::vector<Blessing>& Player::getActiveBlessings() const
+{
+    return blessingInventory.getAll();
+}
+
+int Player::getActiveBlessingCount() const
+{
+    return blessingInventory.count();
+}
+
+bool Player::hasBlessing(const std::string& blessingId) const
+{
+    return blessingInventory.contains(blessingId);
+}
+
+bool Player::hasLethalSurvivalBlessing() const
+{
+    return blessingInventory.hasLethalSurvivalProtection();
+}
+
+bool Player::canReceiveBlessings() const
+{
+    return !hasActiveCurse("lethal_survival_scar");
+}
+
+bool Player::addBlessing(const Blessing& blessing)
+{
+    if (!canReceiveBlessings())
+    {
+        return false;
+    }
+    return blessingInventory.add(blessing);
+}
+
+void Player::consumeAllBlessings()
+{
+    blessingInventory.clear();
+}
+
+void Player::setLoadedBlessings(const std::vector<Blessing>& blessings)
+{
+    if (!canReceiveBlessings())
+    {
+        blessingInventory.clear();
+        return;
+    }
+    blessingInventory.setLoaded(blessings);
 }
 
 bool Player::revealCurseSymptomCategory(const std::string& curseId, const std::string& category)
@@ -3321,6 +3733,17 @@ int Player::getRecentBossCooldownExpiresAtDay() const
     return recentBossCooldownExpiresAtDay;
 }
 
+int Player::getRareBossDiscoveryCooldownExpiresAtDay() const
+{
+    return rareBossDiscoveryCooldownExpiresAtDay;
+}
+
+bool Player::canUseRareBossDiscovery() const
+{
+    return rareBossDiscoveryCooldownExpiresAtDay < 0
+        || worldDaysElapsed >= rareBossDiscoveryCooldownExpiresAtDay;
+}
+
 // EN: getRecentCombatEquipmentUsage declares or implements a focused behavior used by this module.
 // FR: getRecentCombatEquipmentUsage déclare ou implémente un comportement précis utilisé par ce module.
 const std::vector<std::string>& Player::getRecentCombatEquipmentUsage() const
@@ -3420,6 +3843,18 @@ bool Player::isBossUnlocked(int bossId) const
     return false;
 }
 
+bool Player::unlockBoss(int bossId)
+{
+    if (bossId <= 0 || bossId > 36 || isBossUnlocked(bossId))
+    {
+        return false;
+    }
+
+    unlockedBossIds.push_back(bossId);
+    std::sort(unlockedBossIds.begin(), unlockedBossIds.end());
+    return true;
+}
+
 // EN: isBossRecentlyDefeated declares or implements a focused behavior used by this module.
 // FR: isBossRecentlyDefeated déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::isBossRecentlyDefeated(int bossId) const
@@ -3494,6 +3929,18 @@ std::vector<int> Player::getAvailableBossIds() const
 // FR: unlockNextBossVariation déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::unlockNextBossVariation()
 {
+    // FireFlight is not a normal ordered reveal. The final entry opens only when every
+    // other required boss is genuinely defeated.
+    if (!isBossUnlocked(27) && hasDefeatedEveryBossExceptFinalInternal(defeatedBossIds, 27))
+    {
+        unlockedBossIds.push_back(27);
+        std::sort(unlockedBossIds.begin(), unlockedBossIds.end());
+        return true;
+    }
+
+    // Internal progression order. It is never exposed as a complete list to the player.
+    // One unique victory normally advances one position. If that position was already
+    // defeated through story/coop, the registry may look only three entries farther.
     const std::vector<int> progressionOrder = {
         4, 5, 6,
         7, 8, 9,
@@ -3512,21 +3959,234 @@ bool Player::unlockNextBossVariation()
         27
     };
 
-    for (int nextId : progressionOrder)
+    const int uniqueVictoryCount = static_cast<int>(defeatedBossIds.size());
+    if (uniqueVictoryCount <= 0)
     {
-        if (!isBossUnlocked(nextId))
-        {
-            if (nextId == 27 && !hasDefeatedEveryBossExceptFinalInternal(defeatedBossIds, 27))
-            {
-                return false;
-            }
+        return false;
+    }
 
-            unlockedBossIds.push_back(nextId);
-            return true;
+    const std::size_t expectedIndex = static_cast<std::size_t>(uniqueVictoryCount - 1);
+    if (expectedIndex >= progressionOrder.size())
+    {
+        return false;
+    }
+
+    constexpr std::size_t maximumForwardSkip = 3;
+    const std::size_t lastIndex = std::min(progressionOrder.size() - 1, expectedIndex + maximumForwardSkip);
+
+    for (std::size_t index = expectedIndex; index <= lastIndex; ++index)
+    {
+        const int nextId = progressionOrder[index];
+
+        // Only an entry already defeated can be skipped. An already known but undefeated
+        // entry is still the current target, so no farther information is revealed.
+        if (isBossDefeated(nextId))
+        {
+            continue;
+        }
+        if (isBossUnlocked(nextId))
+        {
+            return false;
+        }
+
+        // FireFlight remains outside normal progression. Its entry only stabilizes after
+        // every other required boss has genuinely been defeated.
+        if (nextId == 27 && !hasDefeatedEveryBossExceptFinalInternal(defeatedBossIds, 27))
+        {
+            return false;
+        }
+
+        unlockedBossIds.push_back(nextId);
+        std::sort(unlockedBossIds.begin(), unlockedBossIds.end());
+        return true;
+    }
+
+    // More than three already-defeated entries separate the player from the next unknown
+    // presence: this victory gives no additional location or registry information.
+    return false;
+}
+
+bool Player::unlockNextBossVariationFromRareDiscovery(const std::string& location, int cooldownDays)
+{
+    if (!canUseRareBossDiscovery())
+    {
+        return false;
+    }
+
+    // The final FireFlight condition can never be consumed by an exploration clue.
+    if (hasDefeatedEveryBossExceptFinalInternal(defeatedBossIds, 27))
+    {
+        return false;
+    }
+
+    const std::vector<int> previouslyUnlocked = unlockedBossIds;
+    if (!unlockNextBossVariation())
+    {
+        return false;
+    }
+
+    int newlyUnlockedBossId = 0;
+    for (int id : unlockedBossIds)
+    {
+        if (std::find(previouslyUnlocked.begin(), previouslyUnlocked.end(), id) == previouslyUnlocked.end())
+        {
+            newlyUnlockedBossId = id;
+            break;
         }
     }
 
+    if (newlyUnlockedBossId > 0)
+    {
+        if (bossDiscoveryLocations.size() <= static_cast<std::size_t>(newlyUnlockedBossId))
+        {
+            bossDiscoveryLocations.resize(static_cast<std::size_t>(newlyUnlockedBossId) + 1);
+        }
+        bossDiscoveryLocations[static_cast<std::size_t>(newlyUnlockedBossId)] = location.empty()
+            ? "Zone non précisée"
+            : location;
+    }
+
+    rareBossDiscoveryCooldownExpiresAtDay = worldDaysElapsed + std::max(1, cooldownDays);
+    return true;
+}
+
+std::string Player::getBossDiscoveryLocation(int bossId) const
+{
+    if (bossId <= 0 || static_cast<std::size_t>(bossId) >= bossDiscoveryLocations.size())
+    {
+        return "";
+    }
+    return bossDiscoveryLocations[static_cast<std::size_t>(bossId)];
+}
+
+const std::vector<std::string>& Player::getBossDiscoveryLocations() const
+{
+    return bossDiscoveryLocations;
+}
+
+void Player::setLoadedBossDiscoveryLocations(const std::vector<std::string>& locations)
+{
+    bossDiscoveryLocations.assign(37, "");
+    const std::size_t limit = std::min<std::size_t>(bossDiscoveryLocations.size(), locations.size());
+    for (std::size_t index = 1; index < limit; ++index)
+    {
+        bossDiscoveryLocations[index] = locations[index];
+    }
+}
+
+bool Player::wasExplorationEventRecentlySeen(const std::string& key) const
+{
+    return !key.empty() && std::find(recentExplorationEventKeys.begin(), recentExplorationEventKeys.end(), key) != recentExplorationEventKeys.end();
+}
+
+bool Player::wasExplorationChallengeRecentlySeen(const std::string& key) const
+{
+    return !key.empty() && std::find(recentExplorationChallengeKeys.begin(), recentExplorationChallengeKeys.end(), key) != recentExplorationChallengeKeys.end();
+}
+
+void Player::recordExplorationEventKey(const std::string& key)
+{
+    if (key.empty()) return;
+    recentExplorationEventKeys.erase(
+        std::remove(recentExplorationEventKeys.begin(), recentExplorationEventKeys.end(), key),
+        recentExplorationEventKeys.end()
+    );
+    recentExplorationEventKeys.push_back(key);
+    while (recentExplorationEventKeys.size() > 6)
+    {
+        recentExplorationEventKeys.erase(recentExplorationEventKeys.begin());
+    }
+}
+
+void Player::recordExplorationChallengeKey(const std::string& key)
+{
+    if (key.empty()) return;
+    recentExplorationChallengeKeys.erase(
+        std::remove(recentExplorationChallengeKeys.begin(), recentExplorationChallengeKeys.end(), key),
+        recentExplorationChallengeKeys.end()
+    );
+    recentExplorationChallengeKeys.push_back(key);
+    while (recentExplorationChallengeKeys.size() > 4)
+    {
+        recentExplorationChallengeKeys.erase(recentExplorationChallengeKeys.begin());
+    }
+}
+
+const std::vector<std::string>& Player::getRecentExplorationEventKeys() const
+{
+    return recentExplorationEventKeys;
+}
+
+const std::vector<std::string>& Player::getRecentExplorationChallengeKeys() const
+{
+    return recentExplorationChallengeKeys;
+}
+
+void Player::setLoadedExplorationVarietyHistory(
+    const std::vector<std::string>& eventKeys,
+    const std::vector<std::string>& challengeKeys
+)
+{
+    recentExplorationEventKeys.clear();
+    recentExplorationChallengeKeys.clear();
+    for (const std::string& key : eventKeys) recordExplorationEventKey(key);
+    for (const std::string& key : challengeKeys) recordExplorationChallengeKey(key);
+}
+
+bool Player::isExplorationSceneOnCooldown(const std::string& key) const
+{
+    if (key.empty()) return false;
+    for (const PlayerExplorationCooldown& cooldown : explorationSceneCooldowns)
+    {
+        if (cooldown.key == key && cooldown.expiresAtDay > worldDaysElapsed)
+        {
+            return true;
+        }
+    }
     return false;
+}
+
+int Player::getExplorationSceneCooldownRemainingDays(const std::string& key) const
+{
+    if (key.empty()) return 0;
+    for (const PlayerExplorationCooldown& cooldown : explorationSceneCooldowns)
+    {
+        if (cooldown.key == key)
+        {
+            return std::max(0, cooldown.expiresAtDay - worldDaysElapsed);
+        }
+    }
+    return 0;
+}
+
+void Player::startExplorationSceneCooldown(const std::string& key, int durationDays)
+{
+    if (key.empty() || durationDays <= 0) return;
+    const int expiresAtDay = worldDaysElapsed + durationDays;
+    for (PlayerExplorationCooldown& cooldown : explorationSceneCooldowns)
+    {
+        if (cooldown.key == key)
+        {
+            cooldown.expiresAtDay = std::max(cooldown.expiresAtDay, expiresAtDay);
+            return;
+        }
+    }
+    explorationSceneCooldowns.push_back({key, expiresAtDay});
+}
+
+const std::vector<PlayerExplorationCooldown>& Player::getExplorationSceneCooldowns() const
+{
+    return explorationSceneCooldowns;
+}
+
+void Player::setLoadedExplorationSceneCooldowns(const std::vector<PlayerExplorationCooldown>& cooldowns)
+{
+    explorationSceneCooldowns.clear();
+    for (const PlayerExplorationCooldown& cooldown : cooldowns)
+    {
+        if (cooldown.key.empty() || cooldown.expiresAtDay <= worldDaysElapsed) continue;
+        startExplorationSceneCooldown(cooldown.key, cooldown.expiresAtDay - worldDaysElapsed);
+    }
 }
 
 // EN: recordBossVictoryInRegistry declares or implements a focused behavior used by this module.
@@ -3538,9 +4198,14 @@ bool Player::recordBossVictoryInRegistry(int bossId)
         return false;
     }
 
-    if (!isBossDefeated(bossId))
+    const bool firstVictory = !isBossDefeated(bossId);
+    if (firstVictory)
     {
+        // A boss reached through story, coop or an exceptional route must remain visible
+        // in the registry after the victory, even if its entry was not unlocked normally.
+        unlockBoss(bossId);
         defeatedBossIds.push_back(bossId);
+        std::sort(defeatedBossIds.begin(), defeatedBossIds.end());
     }
 
     recentBossIds.push_back(bossId);
@@ -3552,12 +4217,19 @@ bool Player::recordBossVictoryInRegistry(int bossId)
 
     recentBossCooldownExpiresAtDay = worldDaysElapsed + 3;
 
+    // Repeating an already defeated boss can still give rewards and clear its curse,
+    // but it must never reveal another registry entry.
+    if (!firstVictory)
+    {
+        return false;
+    }
+
     return unlockNextBossVariation();
 }
 
 // EN: setLoadedBossRegistry declares or implements a focused behavior used by this module.
 // FR: setLoadedBossRegistry déclare ou implémente un comportement précis utilisé par ce module.
-void Player::setLoadedBossRegistry(const std::vector<int>& unlockedIds, const std::vector<int>& recentIds, const std::vector<int>& defeatedIds, int recentCooldownExpiresAtDay)
+void Player::setLoadedBossRegistry(const std::vector<int>& unlockedIds, const std::vector<int>& recentIds, const std::vector<int>& defeatedIds, int recentCooldownExpiresAtDay, int rareDiscoveryCooldownExpiresAtDay)
 {
     unlockedBossIds.clear();
 
@@ -3605,10 +4277,17 @@ void Player::setLoadedBossRegistry(const std::vector<int>& unlockedIds, const st
         if (id > 0 && !isBossDefeated(id))
         {
             defeatedBossIds.push_back(id);
+            if (!isBossUnlocked(id))
+            {
+                unlockedBossIds.push_back(id);
+            }
         }
     }
+    std::sort(unlockedBossIds.begin(), unlockedBossIds.end());
+    std::sort(defeatedBossIds.begin(), defeatedBossIds.end());
 
     this->recentBossCooldownExpiresAtDay = recentCooldownExpiresAtDay;
+    this->rareBossDiscoveryCooldownExpiresAtDay = rareDiscoveryCooldownExpiresAtDay;
 }
 
 
@@ -3949,6 +4628,7 @@ void Player::recordCombatStarted()
 void Player::recordVictory()
 {
     victories++;
+    recordWeaponCategoryUsed(playerWeaponCategoryLabel(getEquippedWeapon().getType()));
     reduceWorldGazeDurationAfterCombat();
     refreshCareerSkillProgress();
 }
@@ -4604,7 +5284,328 @@ void Player::takeDamage(int damage)
         return;
     }
 
+    const int hpBefore = hp;
     Entity::takeDamage(damage);
+    if (challengeCombatTrackingActive && hpBefore > hp)
+    {
+        challengeCombatDamageTaken += hpBefore - hp;
+    }
+}
+
+void Player::beginChallengeCombatTracking()
+{
+    challengeCombatTrackingActive = true;
+    challengeCombatConsumablesUsed = 0;
+    challengeCombatSkillsUsed = 0;
+    challengeCombatNonBasicAttacksUsed = 0;
+    challengeCombatBasicAttacksUsed = 0;
+    challengeCombatDefenseTurns = 0;
+    challengeCombatTurnsTaken = 0;
+    challengeCombatDamageTaken = 0;
+    challengeCombatSummonActions = 0;
+    challengeCombatPartySize = 1;
+    challengeCombatAlivePartyCount = 1;
+}
+
+void Player::recordChallengeCombatAction(const std::string& actionKind)
+{
+    if (!challengeCombatTrackingActive) return;
+
+    if (actionKind != "summon_attack" && actionKind != "summon_skill")
+    {
+        ++challengeCombatTurnsTaken;
+    }
+
+    if (actionKind == "consumable" || actionKind == "ally_consumable")
+    {
+        ++challengeCombatConsumablesUsed;
+    }
+    else if (actionKind == "skill")
+    {
+        ++challengeCombatSkillsUsed;
+        ++challengeCombatNonBasicAttacksUsed;
+    }
+    else if (actionKind == "special_attack" || actionKind == "summon_attack" || actionKind == "summon_skill")
+    {
+        ++challengeCombatNonBasicAttacksUsed;
+        if (actionKind == "summon_skill") ++challengeCombatSkillsUsed;
+    }
+    else if (actionKind == "basic_attack")
+    {
+        ++challengeCombatBasicAttacksUsed;
+    }
+    else if (actionKind == "defense")
+    {
+        ++challengeCombatDefenseTurns;
+    }
+}
+
+void Player::recordChallengeSummonAction(int damageDone)
+{
+    if (!challengeCombatTrackingActive || damageDone <= 0) return;
+    ++challengeCombatSummonActions;
+    recordChallengeCombatAction("summon_attack");
+}
+
+void Player::applyChallengeCombatGroupSummary(
+    int partySize,
+    int alivePartyCount,
+    int groupConsumablesUsed,
+    int groupSkillsUsed,
+    int groupNonBasicAttacksUsed,
+    int groupBasicAttacksUsed,
+    int groupDamageTaken,
+    int groupSummonActions
+)
+{
+    if (!challengeCombatTrackingActive) return;
+    challengeCombatPartySize = std::max(1, partySize);
+    challengeCombatAlivePartyCount = std::max(0, alivePartyCount);
+    challengeCombatConsumablesUsed = std::max(0, groupConsumablesUsed);
+    challengeCombatSkillsUsed = std::max(0, groupSkillsUsed);
+    challengeCombatNonBasicAttacksUsed = std::max(0, groupNonBasicAttacksUsed);
+    challengeCombatBasicAttacksUsed = std::max(0, groupBasicAttacksUsed);
+    challengeCombatDamageTaken = std::max(0, groupDamageTaken);
+    challengeCombatSummonActions = std::max(0, groupSummonActions);
+}
+
+int Player::getChallengeCombatConsumablesUsed() const { return challengeCombatConsumablesUsed; }
+int Player::getChallengeCombatSkillsUsed() const { return challengeCombatSkillsUsed; }
+int Player::getChallengeCombatNonBasicAttacksUsed() const { return challengeCombatNonBasicAttacksUsed; }
+int Player::getChallengeCombatBasicAttacksUsed() const { return challengeCombatBasicAttacksUsed; }
+int Player::getChallengeCombatDamageTaken() const { return challengeCombatDamageTaken; }
+int Player::getChallengeCombatSummonActions() const { return challengeCombatSummonActions; }
+
+bool Player::isChallengeCombatTrackingActive() const
+{
+    return challengeCombatTrackingActive;
+}
+
+void Player::finishChallengeCombatTracking(bool victory, bool bossFight, bool eliteFight, int defeatedEnemyCount)
+{
+    if (!challengeCombatTrackingActive)
+    {
+        return;
+    }
+
+    challengeCombatTrackingActive = false;
+    if (!victory)
+    {
+        return;
+    }
+
+    std::vector<std::string> completedChallenges;
+    std::vector<std::string> completedTitles;
+    std::vector<std::string> heroCompletedQuests;
+    std::vector<std::string> heroCompletedTitles;
+    int heroExperienceReward = 0;
+    int heroGoldReward = 0;
+    int heroMarkReward = 0;
+
+    for (Quest& quest : questLog.getQuests())
+    {
+        const bool heroChallenge = quest.origin == "Défi du Hero Villager";
+        if ((!quest.guildChallenge && !heroChallenge)
+            || !quest.accepted
+            || quest.completed
+            || quest.turnedIn
+            || quest.failed)
+        {
+            continue;
+        }
+
+        bool success = false;
+        int progressAmount = 0;
+        if (quest.challengeCondition == "three_clean_victories" && challengeCombatConsumablesUsed == 0)
+        {
+            progressAmount = 1;
+        }
+        else if (quest.challengeCondition == "defend_then_win" && challengeCombatDefenseTurns >= 3)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "low_hp_victory" && getMaxHp() > 0 && getHp() * 100 <= getMaxHp() * 25)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "cursed_victory" && getActiveCurseCount() >= 1)
+        {
+            progressAmount = 1;
+        }
+        else if (quest.challengeCondition == "no_damage_victory" && challengeCombatDamageTaken == 0)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "basic_only_victory"
+            && challengeCombatBasicAttacksUsed > 0
+            && challengeCombatNonBasicAttacksUsed == 0
+            && challengeCombatConsumablesUsed == 0)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "elite_no_consumable" && eliteFight && challengeCombatConsumablesUsed == 0)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "long_fight_victory" && challengeCombatTurnsTaken >= 6)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "boss_no_consumable" && bossFight && challengeCombatConsumablesUsed == 0)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "boss_no_consumable_skill"
+            && bossFight
+            && challengeCombatConsumablesUsed == 0
+            && challengeCombatSkillsUsed == 0
+            && challengeCombatNonBasicAttacksUsed == 0)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "triple_curse_victory" && getActiveCurseCount() >= 3)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "six_creatures")
+        {
+            progressAmount = std::max(1, defeatedEnemyCount);
+        }
+        else if (quest.challengeCondition == "group_all_survive"
+            && challengeCombatPartySize >= 2
+            && challengeCombatAlivePartyCount >= challengeCombatPartySize)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "group_basic_only"
+            && challengeCombatPartySize >= 2
+            && challengeCombatBasicAttacksUsed > 0
+            && challengeCombatNonBasicAttacksUsed == 0
+            && challengeCombatConsumablesUsed == 0)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "summon_support_victory"
+            && challengeCombatSummonActions >= 1)
+        {
+            success = true;
+        }
+        else if (quest.challengeCondition == "group_no_consumable"
+            && challengeCombatPartySize >= 2
+            && challengeCombatConsumablesUsed == 0)
+        {
+            success = true;
+        }
+
+        if (success)
+        {
+            quest.progress = quest.target;
+            quest.completed = true;
+        }
+        else if (progressAmount > 0)
+        {
+            quest.progress = std::min(quest.target, quest.progress + progressAmount);
+            quest.completed = quest.progress >= quest.target;
+        }
+
+        if (!quest.completed)
+        {
+            continue;
+        }
+
+        std::string titleName;
+        if (quest.challengeCondition == "boss_no_consumable_skill") titleName = "Seulement toi et le boss";
+        else if (quest.challengeCondition == "boss_no_consumable") titleName = "Boss sans réserve";
+        else if (quest.challengeCondition == "basic_only_victory") titleName = "À l'ancienne";
+        else if (quest.challengeCondition == "no_damage_victory") titleName = "Pas une égratignure";
+        else if (quest.challengeCondition == "triple_curse_victory") titleName = "Le quatrième problème";
+        else if (quest.challengeCondition == "low_hp_victory") titleName = "Encore debout, malheureusement";
+        else if (quest.challengeCondition == "three_clean_victories") titleName = "Trois victoires, zéro gorgée";
+        else if (quest.challengeCondition == "defend_then_win") titleName = "Le mur qui répond";
+        else if (quest.challengeCondition == "cursed_victory") titleName = "Victoire sous mauvaise influence";
+        else if (quest.challengeCondition == "elite_no_consumable") titleName = "Élite sans fiole";
+        else if (quest.challengeCondition == "long_fight_victory") titleName = "Ça devait être rapide";
+        else if (quest.challengeCondition == "six_creatures") titleName = "Six problèmes de moins";
+        else if (quest.challengeCondition == "group_all_survive") titleName = "Personne ne reste derrière";
+        else if (quest.challengeCondition == "group_basic_only") titleName = "Escouade à l'ancienne";
+        else if (quest.challengeCondition == "summon_support_victory") titleName = "Le groupe compte aussi les invoqués";
+        else if (quest.challengeCondition == "group_no_consumable") titleName = "Groupe sans réserve";
+
+        if (heroChallenge)
+        {
+            quest.turnedIn = true;
+            heroExperienceReward += std::max(0, quest.rewardExperience);
+            heroGoldReward += std::max(0, quest.rewardGold);
+            heroMarkReward += std::max(0, quest.rewardMaterialQuantity);
+            if (quest.challengeMarkReward > 0)
+            {
+                heroMarkReward = std::max(heroMarkReward, quest.challengeMarkReward);
+            }
+            heroCompletedQuests.push_back(quest.title);
+            if (!titleName.empty() && grantTitle(titleName))
+            {
+                heroCompletedTitles.push_back(titleName);
+            }
+            continue;
+        }
+
+        completedChallenges.push_back(quest.title);
+
+        if (!titleName.empty() && grantTitle(titleName))
+        {
+            completedTitles.push_back(titleName);
+        }
+    }
+
+    if (!completedChallenges.empty())
+    {
+        std::vector<std::string> lines = {"Un ou plusieurs défis de guilde viennent d'être accomplis pendant ce combat."};
+        for (const std::string& challengeName : completedChallenges)
+        {
+            lines.push_back("Défi accompli : " + challengeName + ".");
+        }
+        for (const std::string& titleName : completedTitles)
+        {
+            lines.push_back("Titre obtenu : " + titleName + ".");
+        }
+        lines.push_back("Les marques et les autres récompenses restent à récupérer auprès de la guilde.");
+        showPlayerScreen("DÉFI RÉUSSI", "challenge.combat.completed", lines, false);
+    }
+
+    if (!heroCompletedQuests.empty())
+    {
+        if (heroExperienceReward > 0)
+        {
+            gainExperience(heroExperienceReward);
+        }
+        if (heroGoldReward > 0)
+        {
+            inventory.earnGold(heroGoldReward);
+        }
+        if (heroMarkReward > 0)
+        {
+            inventory.addMaterial(MaterialCatalog::createById("guild_challenge_mark", heroMarkReward));
+        }
+
+        std::vector<std::string> lines = {
+            "L'air se plie brièvement derrière toi, comme si une silhouette avait attendu juste hors du regard.",
+            "Le Hero Villager apparaît sans bruit, son armure de diamant bleu traversée par un éclat presque irréel."
+        };
+        for (const std::string& questName : heroCompletedQuests)
+        {
+            lines.push_back("Défi validé sur place : " + questName + ".");
+        }
+        lines.push_back("Hmmm... J'ai vu. Tu as réussi. La guilde n'a pas besoin de tamponner ce qui est déjà évident... Huuuh.");
+        if (heroExperienceReward > 0) lines.push_back("Expérience reçue : " + std::to_string(heroExperienceReward) + ".");
+        if (heroGoldReward > 0) lines.push_back("Récompense reçue : " + Money::formatGoldWithRaw(heroGoldReward) + ".");
+        if (heroMarkReward > 0) lines.push_back("Marques de défi reçues : " + std::to_string(heroMarkReward) + ".");
+        for (const std::string& titleName : heroCompletedTitles)
+        {
+            lines.push_back("Titre obtenu : " + titleName + ".");
+        }
+        lines.push_back("Avant même que tu répondes, sa silhouette se fragmente en carrés bleutés puis disparaît comme un mirage mal fixé.");
+        showPlayerScreen("VALIDATION IMPOSSIBLE À EXPLIQUER", "challenge.hero.auto_turn_in", lines, false);
+    }
 }
 
 void Player::applyFlatStatBonus(
@@ -4659,6 +5660,630 @@ Inventory& Player::getInventory()
 const Inventory& Player::getInventory() const
 {
     return inventory;
+}
+
+Inventory& Player::getCityVault()
+{
+    return cityVault;
+}
+
+const Inventory& Player::getCityVault() const
+{
+    return cityVault;
+}
+
+int Player::calculateVaultCapacity(bool purchased, int level)
+{
+    if (!purchased || level <= 0)
+    {
+        return 0;
+    }
+
+    return EconomyBalance::cityVaultCapacityForLevel(level);
+}
+
+int Player::calculateVaultUsedSlots(const Inventory& vault)
+{
+    // EN: Materials consume one slot per stored stack/quality, not one slot per unit.
+    // FR: Les matériaux consomment une place par pile/qualité stockée, pas une place par unité.
+    return vault.getWeaponCount() * 3
+        + vault.getArmorCount() * 3
+        + vault.getConsumableCount()
+        + static_cast<int>(vault.getMaterials().size());
+}
+
+PlayerCityVault* Player::findCityVaultRecord(const std::string& cityId)
+{
+    for (PlayerCityVault& record : cityVaults)
+    {
+        if (record.cityId == cityId)
+        {
+            return &record;
+        }
+    }
+
+    return nullptr;
+}
+
+const PlayerCityVault* Player::findCityVaultRecord(const std::string& cityId) const
+{
+    for (const PlayerCityVault& record : cityVaults)
+    {
+        if (record.cityId == cityId)
+        {
+            return &record;
+        }
+    }
+
+    return nullptr;
+}
+
+void Player::syncCurrentCityVaultRecord()
+{
+    if (currentCityId.empty())
+    {
+        currentCityId = "valebrume";
+    }
+
+    PlayerCityVault* record = findCityVaultRecord(currentCityId);
+    const bool hasStoredContent = cityVault.getWeaponCount() > 0
+        || cityVault.getArmorCount() > 0
+        || cityVault.getConsumableCount() > 0
+        || !cityVault.getMaterials().empty();
+
+    if (record == nullptr)
+    {
+        if (!cityVaultPurchased && cityVaultLevel <= 0 && !hasStoredContent)
+        {
+            return;
+        }
+
+        PlayerCityVault created;
+        created.cityId = currentCityId;
+        created.inventory = cityVault;
+        created.inventory.setTotalCopper(0);
+        created.purchased = cityVaultPurchased;
+        created.level = cityVaultPurchased ? std::max(1, std::min(5, cityVaultLevel)) : 0;
+        cityVaults.push_back(created);
+        return;
+    }
+
+    record->inventory = cityVault;
+    record->inventory.setTotalCopper(0);
+    record->purchased = cityVaultPurchased;
+    record->level = cityVaultPurchased ? std::max(1, std::min(5, cityVaultLevel)) : 0;
+}
+
+void Player::loadCurrentCityVaultRecord()
+{
+    if (currentCityId.empty())
+    {
+        currentCityId = "valebrume";
+    }
+
+    const PlayerCityVault* record = findCityVaultRecord(currentCityId);
+    if (record == nullptr)
+    {
+        cityVault = Inventory();
+        cityVault.setTotalCopper(0);
+        cityVaultPurchased = false;
+        cityVaultLevel = 0;
+        return;
+    }
+
+    cityVault = record->inventory;
+    cityVault.setTotalCopper(0);
+    cityVaultPurchased = record->purchased;
+    cityVaultLevel = cityVaultPurchased ? std::max(1, std::min(5, record->level)) : 0;
+}
+
+const std::vector<PlayerCityVault>& Player::getCityVaultRecords() const
+{
+    return cityVaults;
+}
+
+const Inventory& Player::getCityVaultForCity(const std::string& cityId) const
+{
+    if (cityId == currentCityId)
+    {
+        return cityVault;
+    }
+
+    const PlayerCityVault* record = findCityVaultRecord(cityId);
+    if (record != nullptr)
+    {
+        return record->inventory;
+    }
+
+    static const Inventory emptyVault;
+    return emptyVault;
+}
+
+bool Player::hasCityVaultInCity(const std::string& cityId) const
+{
+    if (cityId == currentCityId)
+    {
+        return hasCityVault();
+    }
+
+    const PlayerCityVault* record = findCityVaultRecord(cityId);
+    return record != nullptr && record->purchased && record->level > 0;
+}
+
+int Player::getCityVaultLevelForCity(const std::string& cityId) const
+{
+    if (cityId == currentCityId)
+    {
+        return getCityVaultLevel();
+    }
+
+    const PlayerCityVault* record = findCityVaultRecord(cityId);
+    if (record == nullptr || !record->purchased)
+    {
+        return 0;
+    }
+
+    return std::max(1, std::min(5, record->level));
+}
+
+int Player::getCityVaultCapacityForCity(const std::string& cityId) const
+{
+    return calculateVaultCapacity(hasCityVaultInCity(cityId), getCityVaultLevelForCity(cityId));
+}
+
+int Player::getCityVaultUsedSlotsForCity(const std::string& cityId) const
+{
+    if (!hasCityVaultInCity(cityId))
+    {
+        return 0;
+    }
+
+    return calculateVaultUsedSlots(getCityVaultForCity(cityId));
+}
+
+bool Player::hasCityVault() const
+{
+    return cityVaultPurchased && cityVaultLevel > 0;
+}
+
+int Player::getCityVaultLevel() const
+{
+    return cityVaultLevel;
+}
+
+int Player::getCityVaultCapacity() const
+{
+    return calculateVaultCapacity(hasCityVault(), cityVaultLevel);
+}
+
+int Player::getCityVaultUsedSlots() const
+{
+    return calculateVaultUsedSlots(cityVault);
+}
+
+int Player::getCityVaultPurchaseCost() const
+{
+    return EconomyBalance::cityVaultPurchaseCost(currentCityId);
+}
+
+int Player::getCityVaultUpgradeCost() const
+{
+    if (!hasCityVault() || !canUpgradeCityVault())
+    {
+        return 0;
+    }
+
+    return EconomyBalance::cityVaultUpgradeCost(currentCityId, cityVaultLevel);
+}
+
+bool Player::canUpgradeCityVault() const
+{
+    return hasCityVault() && cityVaultLevel < 5;
+}
+
+bool Player::purchaseCityVault()
+{
+    loadCurrentCityVaultRecord();
+    if (hasCityVault())
+    {
+        return false;
+    }
+    if (!inventory.spendGold(getCityVaultPurchaseCost()))
+    {
+        return false;
+    }
+    cityVaultPurchased = true;
+    cityVaultLevel = 1;
+    recordCanonicalEvent("coffres_achetes", currentCityId, "Coffre municipal de " + currentCityId);
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+bool Player::upgradeCityVault()
+{
+    loadCurrentCityVaultRecord();
+    if (!canUpgradeCityVault())
+    {
+        return false;
+    }
+    const int cost = getCityVaultUpgradeCost();
+    if (cost <= 0 || !inventory.spendGold(cost))
+    {
+        return false;
+    }
+    ++cityVaultLevel;
+    recordCanonicalEvent("coffres_ameliores", currentCityId, "Coffre municipal de " + currentCityId);
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+bool Player::depositWeaponInCityVault(int index)
+{
+    loadCurrentCityVaultRecord();
+    if (!hasCityVault() || !inventory.hasWeapon(index) || index == equippedWeaponIndex
+        || getCityVaultUsedSlots() + 3 > getCityVaultCapacity())
+    {
+        return false;
+    }
+    const Weapon weapon = inventory.getWeapon(index);
+    if (!inventory.removeWeapon(index))
+    {
+        return false;
+    }
+    if (equippedWeaponIndex > index)
+    {
+        --equippedWeaponIndex;
+    }
+    cityVault.addWeapon(weapon);
+    recordCanonicalEvent("objets_deposes", "weapon:" + weapon.getName(), weapon.getName());
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+bool Player::depositArmorInCityVault(int index)
+{
+    loadCurrentCityVaultRecord();
+    if (!hasCityVault() || !inventory.hasArmor(index) || index == equippedArmorIndex
+        || getCityVaultUsedSlots() + 3 > getCityVaultCapacity())
+    {
+        return false;
+    }
+    const Armor armor = inventory.getArmor(index);
+    if (armor.getName() == "Tenue simple" || !inventory.removeArmor(index))
+    {
+        return false;
+    }
+    if (equippedArmorIndex > index)
+    {
+        --equippedArmorIndex;
+    }
+    cityVault.addArmor(armor);
+    recordCanonicalEvent("objets_deposes", "armor:" + armor.getName(), armor.getName());
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+bool Player::depositConsumableInCityVault(int index)
+{
+    loadCurrentCityVaultRecord();
+    if (!hasCityVault() || !inventory.hasConsumable(index)
+        || getCityVaultUsedSlots() + 1 > getCityVaultCapacity())
+    {
+        return false;
+    }
+    const Consumable consumable = inventory.getConsumable(index);
+    if (!inventory.removeConsumable(index))
+    {
+        return false;
+    }
+    cityVault.addConsumable(consumable);
+    recordCanonicalEvent("objets_deposes", "consumable:" + consumable.getName(), consumable.getName());
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+bool Player::depositMaterialInCityVault(int index, int quantity)
+{
+    loadCurrentCityVaultRecord();
+    if (!hasCityVault() || !inventory.hasMaterial(index))
+    {
+        return false;
+    }
+    Material material = inventory.getMaterial(index);
+    if (quantity <= 0)
+    {
+        quantity = material.getQuantity();
+    }
+    quantity = std::min(quantity, material.getQuantity());
+    if (quantity <= 0)
+    {
+        return false;
+    }
+
+    bool sameStackExists = false;
+    for (const Material& stored : cityVault.getMaterials())
+    {
+        if (stored.getId() == material.getId() && stored.getQuality() == material.getQuality())
+        {
+            sameStackExists = true;
+            break;
+        }
+    }
+    const int additionalSlots = sameStackExists ? 0 : 1;
+    if (getCityVaultUsedSlots() + additionalSlots > getCityVaultCapacity())
+    {
+        return false;
+    }
+
+    material.setQuantity(quantity);
+    if (!inventory.removeMaterialQuantity(index, quantity))
+    {
+        return false;
+    }
+    cityVault.addMaterial(material);
+    recordCanonicalEvent("materiaux_deposes", material.getId(), material.getName(), quantity);
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+bool Player::withdrawWeaponFromCityVault(int index)
+{
+    loadCurrentCityVaultRecord();
+    if (!hasCityVault() || !cityVault.hasWeapon(index))
+    {
+        return false;
+    }
+    const Weapon weapon = cityVault.getWeapon(index);
+    if (!cityVault.removeWeapon(index))
+    {
+        return false;
+    }
+    inventory.addWeapon(weapon);
+    recordCanonicalEvent("objets_retires", "weapon:" + weapon.getName(), weapon.getName());
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+bool Player::withdrawArmorFromCityVault(int index)
+{
+    loadCurrentCityVaultRecord();
+    if (!hasCityVault() || !cityVault.hasArmor(index))
+    {
+        return false;
+    }
+    const Armor armor = cityVault.getArmor(index);
+    if (!cityVault.removeArmor(index))
+    {
+        return false;
+    }
+    inventory.addArmor(armor);
+    recordCanonicalEvent("objets_retires", "armor:" + armor.getName(), armor.getName());
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+bool Player::withdrawConsumableFromCityVault(int index)
+{
+    loadCurrentCityVaultRecord();
+    if (!hasCityVault() || !cityVault.hasConsumable(index))
+    {
+        return false;
+    }
+    const Consumable consumable = cityVault.getConsumable(index);
+    if (!cityVault.removeConsumable(index))
+    {
+        return false;
+    }
+    inventory.addConsumable(consumable);
+    recordCanonicalEvent("objets_retires", "consumable:" + consumable.getName(), consumable.getName());
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+bool Player::withdrawMaterialFromCityVault(int index, int quantity)
+{
+    loadCurrentCityVaultRecord();
+    if (!hasCityVault() || !cityVault.hasMaterial(index))
+    {
+        return false;
+    }
+    Material material = cityVault.getMaterial(index);
+    if (quantity <= 0)
+    {
+        quantity = material.getQuantity();
+    }
+    quantity = std::min(quantity, material.getQuantity());
+    if (quantity <= 0)
+    {
+        return false;
+    }
+    material.setQuantity(quantity);
+    if (!cityVault.removeMaterialQuantity(index, quantity))
+    {
+        return false;
+    }
+    inventory.addMaterial(material);
+    recordCanonicalEvent("materiaux_retires", material.getId(), material.getName(), quantity);
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+bool Player::transferMaterialBetweenCityVaults(const std::string& destinationCityId, int materialIndex, int quantity, int costCopper)
+{
+    if (destinationCityId.empty() || destinationCityId == currentCityId || costCopper < 0)
+    {
+        return false;
+    }
+
+    loadCurrentCityVaultRecord();
+    if (!hasCityVault() || !cityVault.hasMaterial(materialIndex) || !hasCityVaultInCity(destinationCityId))
+    {
+        return false;
+    }
+
+    PlayerCityVault* destinationRecord = findCityVaultRecord(destinationCityId);
+    if (destinationRecord == nullptr || !destinationRecord->purchased || destinationRecord->level <= 0)
+    {
+        return false;
+    }
+
+    Material material = cityVault.getMaterial(materialIndex);
+    if (quantity <= 0)
+    {
+        quantity = material.getQuantity();
+    }
+    quantity = std::min(quantity, material.getQuantity());
+    if (quantity <= 0)
+    {
+        return false;
+    }
+
+    bool sameStackExists = false;
+    for (const Material& stored : destinationRecord->inventory.getMaterials())
+    {
+        if (stored.getId() == material.getId() && stored.getQuality() == material.getQuality())
+        {
+            sameStackExists = true;
+            break;
+        }
+    }
+
+    const int additionalSlots = sameStackExists ? 0 : 1;
+    const int destinationCapacity = calculateVaultCapacity(destinationRecord->purchased, destinationRecord->level);
+    const int destinationUsed = calculateVaultUsedSlots(destinationRecord->inventory);
+    if (destinationUsed + additionalSlots > destinationCapacity)
+    {
+        return false;
+    }
+
+    if (!inventory.spendCopper(costCopper))
+    {
+        return false;
+    }
+
+    material.setQuantity(quantity);
+    if (!cityVault.removeMaterialQuantity(materialIndex, quantity))
+    {
+        inventory.earnCopper(costCopper);
+        return false;
+    }
+
+    destinationRecord->inventory.addMaterial(material);
+    destinationRecord->inventory.setTotalCopper(0);
+    recordCanonicalEvent("transports_coffres_municipaux", currentCityId + "->" + destinationCityId, "Transport de coffre municipal", 1);
+    recordCanonicalEvent("materiaux_transportes_coffres", material.getId(), material.getName(), quantity);
+    recordCanonicalEvent("couts_transport_coffres", destinationCityId, "Transport vers coffre municipal", costCopper);
+    syncCurrentCityVaultRecord();
+    return true;
+}
+
+const std::string& Player::getCurrentCityId() const
+{
+    return currentCityId;
+}
+
+void Player::setCurrentCityId(const std::string& cityId)
+{
+    if (!cityId.empty() && cityId != currentCityId)
+    {
+        syncCurrentCityVaultRecord();
+        currentCityId = cityId;
+        loadCurrentCityVaultRecord();
+    }
+}
+
+const std::vector<std::string>& Player::getRegisteredGuildCityIds() const
+{
+    return registeredGuildCityIds;
+}
+
+bool Player::isRegisteredAtCityGuild(const std::string& cityId) const
+{
+    return std::find(registeredGuildCityIds.begin(), registeredGuildCityIds.end(), cityId) != registeredGuildCityIds.end();
+}
+
+bool Player::isRegisteredAtCurrentCityGuild() const
+{
+    return isRegisteredAtCityGuild(currentCityId);
+}
+
+bool Player::registerAtCurrentCityGuild()
+{
+    if (currentCityId.empty() || isRegisteredAtCurrentCityGuild())
+    {
+        return false;
+    }
+    registeredGuildCityIds.push_back(currentCityId);
+    return true;
+}
+
+void Player::setLoadedCityState(
+    bool vaultPurchased,
+    int vaultLevel,
+    const std::string& loadedCurrentCityId,
+    const Inventory& loadedVault,
+    const std::vector<std::string>& loadedRegisteredGuildCityIds,
+    const std::vector<PlayerCityVault>& loadedCityVaults
+)
+{
+    currentCityId = loadedCurrentCityId.empty() ? "valebrume" : loadedCurrentCityId;
+    cityVaults.clear();
+
+    for (const PlayerCityVault& record : loadedCityVaults)
+    {
+        if (record.cityId.empty())
+        {
+            continue;
+        }
+
+        PlayerCityVault cleanRecord;
+        cleanRecord.cityId = record.cityId;
+        cleanRecord.inventory = record.inventory;
+        cleanRecord.inventory.setTotalCopper(0);
+        cleanRecord.purchased = record.purchased;
+        cleanRecord.level = record.purchased ? std::max(1, std::min(5, record.level)) : 0;
+
+        PlayerCityVault* existing = findCityVaultRecord(cleanRecord.cityId);
+        if (existing == nullptr)
+        {
+            cityVaults.push_back(cleanRecord);
+        }
+        else
+        {
+            *existing = cleanRecord;
+        }
+    }
+
+    if (cityVaults.empty() && (vaultPurchased || vaultLevel > 0
+        || loadedVault.getWeaponCount() > 0
+        || loadedVault.getArmorCount() > 0
+        || loadedVault.getConsumableCount() > 0
+        || !loadedVault.getMaterials().empty()))
+    {
+        PlayerCityVault legacyRecord;
+        legacyRecord.cityId = currentCityId;
+        legacyRecord.inventory = loadedVault;
+        legacyRecord.inventory.setTotalCopper(0);
+        legacyRecord.purchased = vaultPurchased;
+        legacyRecord.level = vaultPurchased ? std::max(1, std::min(5, vaultLevel)) : 0;
+        cityVaults.push_back(legacyRecord);
+    }
+
+    registeredGuildCityIds.clear();
+    for (const std::string& cityId : loadedRegisteredGuildCityIds)
+    {
+        if (!cityId.empty() && !isRegisteredAtCityGuild(cityId))
+        {
+            registeredGuildCityIds.push_back(cityId);
+        }
+    }
+    if (hasTitle("Aventurier") && registeredGuildCityIds.empty())
+    {
+        registeredGuildCityIds.push_back("valebrume");
+    }
+
+    loadCurrentCityVaultRecord();
+    syncCurrentCityVaultRecord();
 }
 
 // EN: getQuestLog declares or implements a focused behavior used by this module.
@@ -5160,6 +6785,11 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
 {
     int resultat = random.rollD20();
 
+    if (precisionBoostTurns > 0 && precisionRollBonus > 0)
+    {
+        resultat = std::min(20, resultat + precisionRollBonus);
+    }
+
     dodged = false;
     critical = false;
 
@@ -5187,6 +6817,7 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     int bonusMin = 0;
     int bonusMax = 0;
     int criticalBonus = 0;
+    int weaponWeightDamagePercent = 100;
 
     if (hasPassiveSkill("battle_instinct"))
     {
@@ -5226,6 +6857,9 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         bonusMin = equippedWeapon->getMinDamageBonus();
         bonusMax = equippedWeapon->getMaxDamageBonus();
         criticalBonus = equippedWeapon->getCriticalBonus();
+        dodgeThreshold = std::max(1, dodgeThreshold + EquipmentWeightRules::getWeaponDodgeThresholdAdjustment(*equippedWeapon));
+        normalHitThreshold = std::max(dodgeThreshold + 8, std::min(18, normalHitThreshold + EquipmentWeightRules::getWeaponNormalHitThresholdAdjustment(*equippedWeapon)));
+        weaponWeightDamagePercent = EquipmentWeightRules::getWeaponDamagePercent(*equippedWeapon);
 
         if (equippedWeapon->getType() == WeaponType::Bow)
         {
@@ -5387,7 +7021,12 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
             dealtDamage = std::max(1, dealtDamage * frostDamagePercent / 100);
         }
 
-        return dealtDamage;
+        if (weaponWeightDamagePercent != 100)
+        {
+            dealtDamage = std::max(1, dealtDamage * weaponWeightDamagePercent / 100);
+        }
+
+        return applyPowerBoostToDamage(dealtDamage);
     }
 
     critical = true;
@@ -5403,7 +7042,12 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         criticalResult = std::max(1, criticalResult * frostDamagePercent / 100);
     }
 
-    return criticalResult;
+    if (weaponWeightDamagePercent != 100)
+    {
+        criticalResult = std::max(1, criticalResult * weaponWeightDamagePercent / 100);
+    }
+
+    return applyPowerBoostToDamage(criticalResult);
 }
 
 // EN: displayStats declares or implements a focused behavior used by this module.
@@ -5413,6 +7057,9 @@ void Player::displayStats() const
     std::vector<std::string> lines;
     lines.push_back("Nom : " + name);
     lines.push_back("Race : " + getRaceText());
+    lines.push_back("Âge : " + std::to_string(characterAge) + " ans (" + getAgeBandText() + ")");
+    lines.push_back("Présentation visuelle : " + visualPresentation + " | " + visualVariant);
+    lines.push_back("Description visuelle : " + getAppearanceDescription());
     lines.push_back("Classe : " + type);
     lines.push_back("Titres équipés : " + getActiveTitleSummary());
     lines.push_back("Titres possédés : " + std::to_string(titles.size()));
@@ -5498,7 +7145,8 @@ void Player::displayStats() const
     lines.push_back("");
     lines.push_back("Potions de soin : " + std::to_string(inventory.countConsumables(ConsumableType::Healing)));
     lines.push_back("Potions de rage : " + std::to_string(inventory.countConsumables(ConsumableType::Damage)));
-    lines.push_back("Argent : " + Money::formatGoldWithRaw(inventory.getGold()));
+    lines.push_back("Argent séparé : " + inventory.getWalletLine());
+    lines.push_back("Argent total : " + inventory.getWalletTotalLine());
     lines.push_back("Créé le : " + createdAtText + " | V" + createdForVersion);
     lines.push_back("Dernière adaptation faite pour la V" + lastAdaptedVersion);
 
@@ -5590,7 +7238,8 @@ void Player::displaySimpleEquipment() const
         lines.push_back("Armure équipée : Aucune");
     }
 
-    lines.push_back("Argent : " + Money::formatGoldWithRaw(inventory.getGold()));
+    lines.push_back("Argent séparé : " + inventory.getWalletLine());
+    lines.push_back("Argent total : " + inventory.getWalletTotalLine());
     showPlayerScreen("ÉQUIPEMENT", "player.equipment.simple", lines, false);
 }
 
@@ -5694,7 +7343,8 @@ void Player::displayDetailedEquipment() const
     }
 
     lines.push_back("");
-    lines.push_back("Argent : " + Money::formatGoldWithRaw(inventory.getGold()));
+    lines.push_back("Argent séparé : " + inventory.getWalletLine());
+    lines.push_back("Argent total : " + inventory.getWalletTotalLine());
     showPlayerScreen("ÉQUIPEMENT DÉTAILLÉ", "player.equipment.detailed", lines, false);
 }
 

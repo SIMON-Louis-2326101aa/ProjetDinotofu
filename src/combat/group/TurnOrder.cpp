@@ -1,6 +1,9 @@
-// EN: TurnOrder.cpp briefly defines this Dinotofu module and its responsibilities.
-// FR: TurnOrder.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This placeholder prepares a future Dinotofu system. Code identifiers stay in English; player-facing text can stay in French.
-// Français : Ce fichier prépare un futur système de Dinotofu. Les identifiants restent en anglais ; les textes affichés au joueur peuvent rester en français.
+// EN: TurnOrder.cpp provides small helpers around initiative identifiers.
+// FR: TurnOrder.cpp fournit des aides autour des identifiants d'initiative.
 
 #include "combat/group/TurnOrder.hpp"
+
+bool TurnOrder::isPlayer(const std::string& id) { return id.rfind("player:", 0) == 0; }
+bool TurnOrder::isSummonGroup(const std::string& id) { return id.rfind("summons:", 0) == 0; }
+bool TurnOrder::isEnemy(const std::string& id) { return id.rfind("enemy:", 0) == 0; }
+bool TurnOrder::isBoss(const std::string& id) { return id == "boss"; }

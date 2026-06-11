@@ -117,13 +117,29 @@ MenuScreen InventoryDisplay::buildMainScreen()
     screen.addOption(
         1,
         "Bestiaire (objet spécial)",
-        "Consulter les créatures, boss, matériaux et informations connues.",
+        "Consulter les créatures, ennemis, alliés, invocations, boss et personnages connus.",
         true,
         "inventory.bestiary",
-        makeInventoryRouteItemData("bestiary", "inspect", "Bestiaire", "Créatures, boss, matériaux, légendes et connaissances progressives.", "Objet spécial", true)
+        makeInventoryRouteItemData("bestiary", "inspect", "Bestiaire", "Registre progressif réservé aux êtres et créatures rencontrés.", "Objet spécial impossible à perdre", true)
     );
     screen.addOption(
         2,
+        "Encyclopédie (objet spécial)",
+        "Consulter les races, matériaux, objets, effets, zones, classes et craft.",
+        true,
+        "inventory.encyclopedia",
+        makeInventoryRouteItemData("encyclopedia", "inspect", "Encyclopédie", "Registre progressif des connaissances utiles au jeu hors créatures et hors lore pur.", "Objet spécial impossible à perdre", true)
+    );
+    screen.addOption(
+        3,
+        "Carnet de découvertes (objet spécial)",
+        "Consulter les légendes, divinités, rumeurs, histoires et découvertes narratives.",
+        true,
+        "inventory.discovery_notebook",
+        makeInventoryRouteItemData("discovery_notebook", "inspect", "Carnet de découvertes", "Registre narratif séparé pour éviter que l'Encyclopédie devienne un fourre-tout.", "Objet spécial impossible à perdre", true)
+    );
+    screen.addOption(
+        4,
         "Voir tout (affichage simple)",
         "Résumé court de l'or, des objets et des ressources.",
         true,
@@ -131,7 +147,7 @@ MenuScreen InventoryDisplay::buildMainScreen()
         makeInventoryRouteItemData("inventory_summary", "inspect", "Voir tout", "Résumé court : or, armes, armures, consommables et matériaux sans descriptions longues.", "Affichage simple")
     );
     screen.addOption(
-        3,
+        5,
         "Armes",
         "Voir, inspecter, équiper ou réparer les armes.",
         true,
@@ -139,7 +155,7 @@ MenuScreen InventoryDisplay::buildMainScreen()
         makeInventoryRouteItemData("weapon", "open", "Armes", "Liste des armes avec inspection, équipement, réparation et lien bestiaire.", "Équipement offensif")
     );
     screen.addOption(
-        4,
+        6,
         "Armures",
         "Voir, inspecter, équiper ou réparer les protections.",
         true,
@@ -147,7 +163,7 @@ MenuScreen InventoryDisplay::buildMainScreen()
         makeInventoryRouteItemData("armor", "open", "Armures", "Liste des protections avec inspection, équipement, réparation et lien bestiaire.", "Équipement défensif")
     );
     screen.addOption(
-        5,
+        7,
         "Consommables",
         "Potions et objets utilisables.",
         true,
@@ -155,7 +171,7 @@ MenuScreen InventoryDisplay::buildMainScreen()
         makeInventoryRouteItemData("consumable", "use", "Consommables", "Potions et objets utilisables, avec actions qui peuvent parfois consommer le tour.", "Utilisable")
     );
     screen.addOption(
-        6,
+        8,
         "Matériaux / plantes / infos",
         "Ressources, notes, fragments et composants.",
         true,
@@ -163,15 +179,15 @@ MenuScreen InventoryDisplay::buildMainScreen()
         makeInventoryRouteItemData("material", "inspect", "Matériaux / plantes / infos", "Ressources, composants, notes, fragments et connaissances liées aux objets.", "Ressources")
     );
     screen.addOption(
-        7,
+        9,
         "Craft / schémas de fabrication",
-        "Fabriquer ou améliorer avec les recettes connues.",
+        "Fabriquer ou améliorer uniquement avec les recettes dont tous les composants sont connus.",
         true,
         "inventory.craft",
-        makeInventoryRouteItemData("craft", "create", "Craft / schémas", "Fabriquer, améliorer ou expérimenter avec les recettes connues.", "Fabrication")
+        makeInventoryRouteItemData("craft", "create", "Craft / schémas", "Les recettes restent masquées tant que tous leurs composants n'ont pas été découverts.", "Fabrication")
     );
     screen.addOption(
-        8,
+        10,
         "Consulter mes quêtes",
         "Ouvrir le journal de quêtes.",
         true,
@@ -196,8 +212,9 @@ MenuScreen InventoryDisplay::buildSimpleFullInventoryScreen(const Player& player
     MenuScreen screen("INVENTAIRE - RÉSUMÉ SIMPLE", "inventory.full_simple.summary");
     screen.setContinueInput("Valide pour revenir à l'inventaire.");
     screen.addSubtitle("Affichage volontairement court : noms, quantités et états importants.");
-    screen.addLine("Or : " + std::to_string(inventory.getGold()) + " pièces");
-    screen.addLine("Objet spécial : Bestiaire");
+    screen.addLine("Argent séparé : " + inventory.getWalletLine());
+    screen.addLine("Argent total : " + inventory.getWalletTotalLine());
+    screen.addLine("Objets spéciaux : Bestiaire + Encyclopédie + Carnet de découvertes (impossibles à perdre)");
     screen.addLine("Armes : " + std::to_string(inventory.getWeaponCount()));
 
     for (int i = 0; i < inventory.getWeaponCount(); ++i)

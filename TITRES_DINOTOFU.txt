@@ -4,9 +4,9 @@ But du document : référence développeur/source pour les titres, leurs conditi
 Côté joueur, les titres secrets restent cachés en ???? tant qu'ils ne sont pas obtenus.
 Un personnage peut équiper jusqu'à 3 titres ; les bonus doivent rester très faibles et surtout lore/dialogues/réputation.
 
-Total : 150 titres
-Visibles avant obtention : 23
-Cachés avant obtention : 127
+Total : 170 titres
+Visibles avant obtention : 25
+Cachés avant obtention : 145
 
 
 ============================================================
@@ -433,6 +433,26 @@ DRÔLE / SURVIE
   Obtention : Démêler une facture, une monnaie ou un registre qui ne tombe pas juste.
   Effet : effet générique de catégorie, surtout narratif/contextuel.
   Requis pour le titre ultime : oui
+- Aide de comptoir
+  Affichage avant obtention : visible
+  Obtention : Rendre un premier service propre à Prunigil.
+  Effet : Confiance marchande légère ; Prunigil et certains vendeurs reconnaissent une aide déjà formée.
+  Requis pour le titre ultime : oui
+- Apprenti de Prunigil
+  Affichage avant obtention : visible
+  Obtention : Accumuler plusieurs services réussis au comptoir de Prunigil.
+  Effet : Peut ouvrir les premières recommandations et quelques vendeurs temporaires.
+  Requis pour le titre ultime : oui
+- Vérificateur de registre
+  Affichage avant obtention : secret / ????
+  Obtention : Traiter assez de contrats, comptes et documents sensibles pour être reconnu comme vérificateur.
+  Effet : Davantage de vendeurs temporaires et de suites de dossiers peuvent apparaître.
+  Requis pour le titre ultime : oui
+- Mandataire du comptoir
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre le plus haut palier actuel de confiance de Prunigil.
+  Effet : Les vendeurs itinérants les plus prudents acceptent les recommandations de Prunigil.
+  Requis pour le titre ultime : oui
 
 ============================================================
 SEMI-HUMAINS / SOUS-RACES
@@ -844,3 +864,119 @@ DRÔLE
   Obtention : Accumuler assez de routes, fuites ou explorations pour apprendre à revenir proprement.
   Effet : Influence faible : améliore surtout les dialogues de route et d'exploration.
   Compte pour le titre ultime : oui
+
+============================================================
+DÉFIS, MALÉDICTIONS ET MARCHANDS LÉGENDAIRES
+============================================================
+- Triplement maudit
+  Affichage avant obtention : secret / ????
+  Obtention : Porter au moins trois malédictions actives en même temps.
+  Effet : Les exorcistes, la guilde et certains vendeurs remarquent que trois problèmes surnaturels cohabitent déjà sur le personnage.
+  Requis pour le titre ultime : oui
+- Le quatrième problème
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat en portant au moins trois malédictions actives.
+  Effet : Titre de défi maudit, surtout narratif.
+  Requis pour le titre ultime : oui
+- Pas une égratignure
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat sans subir le moindre dégât.
+  Effet : Marque d’exploit sans bonus de combat direct.
+  Requis pour le titre ultime : oui
+- À l'ancienne
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat uniquement avec des attaques simples, sans compétence, technique d’arme ni consommable.
+  Effet : Réactions de guilde liées aux méthodes simples.
+  Requis pour le titre ultime : oui
+- Boss sans réserve
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre un boss sans utiliser de consommable.
+  Effet : Réputation de défi face aux boss.
+  Requis pour le titre ultime : oui
+- Seulement toi et le boss
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre un boss sans consommable, compétence de classe ni technique d’arme.
+  Effet : Réputation de duel extrêmement contraint.
+  Requis pour le titre ultime : oui
+- Encore debout, malheureusement
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat avec au plus un quart de ses PV maximum.
+  Effet : Titre drôle de survie critique.
+  Requis pour le titre ultime : oui
+- Trois victoires, zéro gorgée
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter trois combats de défi sans utiliser de consommable.
+  Effet : Réputation de régularité auprès de la guilde.
+  Requis pour le titre ultime : oui
+- Le mur qui répond
+  Affichage avant obtention : secret / ????
+  Obtention : Défendre plusieurs fois puis remporter le combat.
+  Effet : Réputation de combattant patient et résistant.
+  Requis pour le titre ultime : oui
+- Victoire sous mauvaise influence
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter plusieurs combats en portant au moins une malédiction.
+  Effet : Réactions liées aux malédictions et à la guilde.
+  Requis pour le titre ultime : oui
+- Élite sans fiole
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre une créature élite ou un mini-boss sans consommable.
+  Effet : Réputation de chasse sous contrainte.
+  Requis pour le titre ultime : oui
+- Ça devait être rapide
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat ayant duré au moins six tours d’action.
+  Effet : Titre drôle de combat beaucoup trop long.
+  Requis pour le titre ultime : oui
+- Six problèmes de moins
+  Affichage avant obtention : secret / ????
+  Obtention : Éliminer six créatures dans le cadre d’un même défi.
+  Effet : Réputation de nettoyage de groupe.
+  Requis pour le titre ultime : oui
+- Survivant des caisses
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter l’épreuve amicale de Bob et Maurice avec uniquement le contenu des caisses.
+  Effet : Réactions particulières du duo et de certains marchands.
+  Requis pour le titre ultime : oui
+- Témoin du marchand bleu
+  Affichage avant obtention : secret / ????
+  Obtention : Rencontrer le marchand héroïque dont les rumeurs paraissaient trop absurdes.
+  Effet : Débloque des rumeurs, scènes et passages de boutique liés au Hero Villager.
+  Requis pour le titre ultime : oui
+- Les deux du même comptoir
+  Affichage avant obtention : secret / ????
+  Obtention : Rencontrer Bob et Maurice et constater qu’ils refusent de voyager séparément.
+  Effet : Débloque leurs rumeurs, quêtes et apparitions temporaires.
+  Requis pour le titre ultime : oui
+
+
+- Personne ne reste derrière
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat collectif avec tous les aventuriers encore debout.
+  Effet : Réactions de guilde liées à la protection du groupe.
+  Requis pour le titre ultime : oui
+- Escouade à l'ancienne
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat collectif sans compétence, technique d’arme ni consommable.
+  Effet : Titre de défi collectif sans bonus de combat.
+  Requis pour le titre ultime : oui
+- Le groupe compte aussi les invoqués
+  Affichage avant obtention : secret / ????
+  Obtention : Gagner un combat où une invocation alliée a réellement infligé des dégâts.
+  Effet : Reconnaissance des invocations comme membres actifs du groupe.
+  Requis pour le titre ultime : oui
+- Groupe sans réserve
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat collectif sans consommable utilisé par l’équipe.
+  Effet : Réputation de coordination collective.
+  Requis pour le titre ultime : oui
+- Porte-marque de la guilde
+  Affichage avant obtention : secret / ????
+  Obtention : Échanger six Marques de défi au comptoir de la guilde.
+  Effet : Réactions sociales uniquement, sans remise ni bonus statistique.
+  Requis pour le titre ultime : oui
+- Le troisième avis n'était pas demandé
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer la première longue chaîne de Bob et Maurice.
+  Effet : Réactions particulières du duo et de certains vendeurs.
+  Requis pour le titre ultime : oui

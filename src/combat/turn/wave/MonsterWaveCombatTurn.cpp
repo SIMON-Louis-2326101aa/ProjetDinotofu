@@ -43,7 +43,7 @@ namespace
         const std::vector<std::string>& lines
     )
     {
-        MessageScreen::show(title, screenId, lines, true);
+        MessageScreen::show(title, screenId, lines, false);
     }
 
     int findMostInjuredAllyIndex(EnemyCombatQueue& wave, int healerIndex)

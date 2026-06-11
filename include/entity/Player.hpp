@@ -13,6 +13,7 @@
 #include "character/CharacterRace.hpp"
 #include "progression/DndAttributes.hpp"
 #include "quest/QuestLog.hpp"
+#include "progression/blessing/BlessingInventory.hpp"
 
 #include <string>
 #include <vector>
@@ -24,6 +25,36 @@ struct PlayerLocalSubscription
     int expiresAtDay = -1;
     bool cancellationRequested = false;
     int renewalPrice = 0;
+};
+
+struct PlayerExplorationCooldown
+{
+    std::string key;
+    int expiresAtDay = -1;
+};
+
+struct PlayerPersistentCounter
+{
+    std::string key;
+    int value = 0;
+};
+
+struct PlayerJournalRecord
+{
+    std::string category;
+    std::string key;
+    std::string label;
+    std::string locationId;
+    int count = 0;
+    int lastDay = 0;
+};
+
+struct PlayerCityVault
+{
+    std::string cityId;
+    Inventory inventory;
+    bool purchased = false;
+    int level = 0;
 };
 
 struct PlayerCurse
@@ -65,9 +96,18 @@ private:
     int experience;
 
     Inventory inventory;
+    Inventory cityVault;
+    bool cityVaultPurchased;
+    int cityVaultLevel;
+    std::vector<PlayerCityVault> cityVaults;
+    std::string currentCityId;
+    std::vector<std::string> registeredGuildCityIds;
     int equippedWeaponIndex;
     int equippedArmorIndex;
     CharacterRace race;
+    int characterAge = 18;
+    std::string visualPresentation = "Non précisé";
+    std::string visualVariant = "Variante A";
     DndAttributes attributes;
     QuestLog questLog;
     int unspentAttributePoints;
@@ -88,6 +128,7 @@ private:
     int worldDayProgressUnits;
     std::vector<PlayerLocalSubscription> localSubscriptions;
     std::vector<PlayerCurse> activeCurses;
+    BlessingInventory blessingInventory;
     int localSubscriptionRenewalPaidThisWeek;
     std::vector<std::string> pendingWorldTimeReportLines;
     int victories;
@@ -103,9 +144,27 @@ private:
     std::vector<int> recentBossIds;
     std::vector<int> defeatedBossIds;
     int recentBossCooldownExpiresAtDay;
+    int rareBossDiscoveryCooldownExpiresAtDay;
+    std::vector<std::string> bossDiscoveryLocations;
+    std::vector<std::string> recentExplorationEventKeys;
+    std::vector<std::string> recentExplorationChallengeKeys;
+    std::vector<PlayerExplorationCooldown> explorationSceneCooldowns;
+    std::vector<PlayerPersistentCounter> shopPromotionPurchaseCounters;
+    std::vector<PlayerJournalRecord> canonicalJournalRecords;
     std::vector<std::string> recentCombatEquipmentUsage;
     bool bossEquipmentSealActive;
     std::string bossEquipmentSealReason;
+    bool challengeCombatTrackingActive;
+    int challengeCombatConsumablesUsed;
+    int challengeCombatSkillsUsed;
+    int challengeCombatNonBasicAttacksUsed;
+    int challengeCombatBasicAttacksUsed;
+    int challengeCombatDefenseTurns;
+    int challengeCombatTurnsTaken;
+    int challengeCombatDamageTaken;
+    int challengeCombatSummonActions;
+    int challengeCombatPartySize;
+    int challengeCombatAlivePartyCount;
 
     bool zelefCorrosionPresent;
     int zelefMaxHpStolen;
@@ -159,12 +218,21 @@ private:
     std::string activeTitle;
     std::vector<std::string> activeTitles;
     std::string interfaceHintFrequency;
+    bool graphicalImagesEnabled;
     int storyChapter;
     int storyStep;
     int storyCityDevelopmentLevel;
     bool storyModeStarted;
     // EN: reduceWorldGazeDurationAfterCombat declares or implements a focused behavior used by this module.
     // FR: reduceWorldGazeDurationAfterCombat déclare ou implémente un comportement précis utilisé par ce module.
+
+    void syncCurrentCityVaultRecord();
+    void loadCurrentCityVaultRecord();
+    const PlayerCityVault* findCityVaultRecord(const std::string& cityId) const;
+    PlayerCityVault* findCityVaultRecord(const std::string& cityId);
+    static int calculateVaultCapacity(bool purchased, int level);
+    static int calculateVaultUsedSlots(const Inventory& vault);
+
     void reduceWorldGazeDurationAfterCombat();
 
     // EN: getEquippedArmorMaxHpBonus declares or implements a focused behavior used by this module.
@@ -204,6 +272,12 @@ public:
     // FR: getRace déclare ou implémente un comportement précis utilisé par ce module.
     CharacterRace getRace() const;
     std::string getRaceText() const;
+    int getCharacterAge() const;
+    const std::string& getVisualPresentation() const;
+    const std::string& getVisualVariant() const;
+    std::string getAgeBandText() const;
+    std::string getAppearanceDescription() const;
+    void setAppearanceProfile(int age, const std::string& presentation, const std::string& variant);
     const std::string& getCreatedAtText() const;
     const std::string& getCreatedForVersion() const;
     const std::string& getLastAdaptedVersion() const;
@@ -219,6 +293,10 @@ public:
     void setInterfaceHintFrequency(const std::string& frequency);
     bool areInterfaceHintsDisabled() const;
     bool areInterfaceHintsFrequent() const;
+    bool areGraphicalImagesEnabled() const;
+    std::string getGraphicalImagesSettingLabel() const;
+    void setGraphicalImagesEnabled(bool enabled);
+    void forceTerminalImagePolicy();
     int getStoryChapter() const;
     int getStoryStep() const;
     int getStoryCityDevelopmentLevel() const;
@@ -344,6 +422,25 @@ public:
     void advanceWorldDays(int days);
     void advanceWorldDayUnits(int units);
 
+    int getShopPromotionPurchaseCount(const std::string& key) const;
+    void recordShopPromotionPurchase(const std::string& key, int amount = 1);
+    const std::vector<PlayerPersistentCounter>& getShopPromotionPurchaseCounters() const;
+    void setLoadedShopPromotionPurchaseCounters(const std::vector<PlayerPersistentCounter>& counters);
+
+    void recordCanonicalEvent(const std::string& category, const std::string& key, const std::string& label, int amount = 1);
+    const std::vector<PlayerJournalRecord>& getCanonicalJournalRecords() const;
+    std::vector<PlayerJournalRecord> getTopCanonicalJournalRecords(const std::string& category, int limit = 3) const;
+    int getCanonicalJournalCategoryTotal(const std::string& category) const;
+    void recordEnemyEncounter(const std::string& enemyName, int amount = 1);
+    void recordEnemyKillByName(const std::string& enemyName, int amount = 1);
+    void recordBossKillByName(const std::string& bossName, int amount = 1);
+    void recordMaterialCollected(const std::string& materialId, const std::string& materialName, int quantity = 1);
+    void recordConsumableUsed(const std::string& consumableName, int amount = 1);
+    void recordWeaponCategoryUsed(const std::string& categoryName, int amount = 1);
+    void recordPnjServed(const std::string& pnjName, int amount = 1);
+    void recordQuestTypeCompleted(const std::string& questTypeName, int amount = 1);
+    void setLoadedCanonicalJournalRecords(const std::vector<PlayerJournalRecord>& records);
+
     const std::vector<PlayerLocalSubscription>& getLocalSubscriptions() const;
     bool hasActiveLocalSubscription(const std::string& subscriptionId) const;
     bool isLocalSubscriptionCancellationRequested(const std::string& subscriptionId) const;
@@ -360,6 +457,15 @@ public:
     bool removeCurse(const std::string& curseId);
     int removeExpiredCurses();
     void setLoadedCurses(const std::vector<PlayerCurse>& curses);
+
+    const std::vector<Blessing>& getActiveBlessings() const;
+    int getActiveBlessingCount() const;
+    bool hasBlessing(const std::string& blessingId) const;
+    bool hasLethalSurvivalBlessing() const;
+    bool canReceiveBlessings() const;
+    bool addBlessing(const Blessing& blessing);
+    void consumeAllBlessings();
+    void setLoadedBlessings(const std::vector<Blessing>& blessings);
     bool advanceChurchExorcism(const std::string& curseId);
     bool revealCurseSymptomCategory(const std::string& curseId, const std::string& category);
     bool excludeCurseSymptomCategory(const std::string& curseId, const std::string& category);
@@ -414,6 +520,24 @@ public:
     // FR: getRecentBossIds déclare ou implémente un comportement précis utilisé par ce module.
     const std::vector<int>& getRecentBossIds() const;
     int getRecentBossCooldownExpiresAtDay() const;
+    int getRareBossDiscoveryCooldownExpiresAtDay() const;
+    bool canUseRareBossDiscovery() const;
+    bool unlockNextBossVariationFromRareDiscovery(const std::string& location, int cooldownDays = 30);
+    std::string getBossDiscoveryLocation(int bossId) const;
+    const std::vector<std::string>& getBossDiscoveryLocations() const;
+    void setLoadedBossDiscoveryLocations(const std::vector<std::string>& locations);
+    bool wasExplorationEventRecentlySeen(const std::string& key) const;
+    bool wasExplorationChallengeRecentlySeen(const std::string& key) const;
+    void recordExplorationEventKey(const std::string& key);
+    void recordExplorationChallengeKey(const std::string& key);
+    const std::vector<std::string>& getRecentExplorationEventKeys() const;
+    const std::vector<std::string>& getRecentExplorationChallengeKeys() const;
+    void setLoadedExplorationVarietyHistory(const std::vector<std::string>& eventKeys, const std::vector<std::string>& challengeKeys);
+    bool isExplorationSceneOnCooldown(const std::string& key) const;
+    int getExplorationSceneCooldownRemainingDays(const std::string& key) const;
+    void startExplorationSceneCooldown(const std::string& key, int durationDays);
+    const std::vector<PlayerExplorationCooldown>& getExplorationSceneCooldowns() const;
+    void setLoadedExplorationSceneCooldowns(const std::vector<PlayerExplorationCooldown>& cooldowns);
     // EN: getRecentCombatEquipmentUsage declares or implements a focused behavior used by this module.
     // FR: getRecentCombatEquipmentUsage déclare ou implémente un comportement précis utilisé par ce module.
     const std::vector<std::string>& getRecentCombatEquipmentUsage() const;
@@ -437,6 +561,7 @@ public:
     // EN: isBossUnlocked declares or implements a focused behavior used by this module.
     // FR: isBossUnlocked déclare ou implémente un comportement précis utilisé par ce module.
     bool isBossUnlocked(int bossId) const;
+    bool unlockBoss(int bossId);
     // EN: isBossRecentlyDefeated declares or implements a focused behavior used by this module.
     // FR: isBossRecentlyDefeated déclare ou implémente un comportement précis utilisé par ce module.
     bool isBossRecentlyDefeated(int bossId) const;
@@ -450,7 +575,7 @@ public:
     bool recordBossVictoryInRegistry(int bossId);
     // EN: setLoadedBossRegistry declares or implements a focused behavior used by this module.
     // FR: setLoadedBossRegistry déclare ou implémente un comportement précis utilisé par ce module.
-    void setLoadedBossRegistry(const std::vector<int>& unlockedIds, const std::vector<int>& recentIds, const std::vector<int>& defeatedIds = {}, int recentCooldownExpiresAtDay = -1);
+    void setLoadedBossRegistry(const std::vector<int>& unlockedIds, const std::vector<int>& recentIds, const std::vector<int>& defeatedIds = {}, int recentCooldownExpiresAtDay = -1, int rareDiscoveryCooldownExpiresAtDay = -1);
 
     // EN: hasZelefCorrosionPresent declares or implements a focused behavior used by this module.
     // FR: hasZelefCorrosionPresent déclare ou implémente un comportement précis utilisé par ce module.
@@ -747,11 +872,74 @@ public:
     // EN: takeDamage declares or implements a focused behavior used by this module.
     // FR: takeDamage déclare ou implémente un comportement précis utilisé par ce module.
     void takeDamage(int damage) override;
+    void beginChallengeCombatTracking();
+    void recordChallengeCombatAction(const std::string& actionKind);
+    void recordChallengeSummonAction(int damageDone);
+    void applyChallengeCombatGroupSummary(
+        int partySize,
+        int alivePartyCount,
+        int groupConsumablesUsed,
+        int groupSkillsUsed,
+        int groupNonBasicAttacksUsed,
+        int groupBasicAttacksUsed,
+        int groupDamageTaken,
+        int groupSummonActions
+    );
+    int getChallengeCombatConsumablesUsed() const;
+    int getChallengeCombatSkillsUsed() const;
+    int getChallengeCombatNonBasicAttacksUsed() const;
+    int getChallengeCombatBasicAttacksUsed() const;
+    int getChallengeCombatDamageTaken() const;
+    int getChallengeCombatSummonActions() const;
+    void finishChallengeCombatTracking(bool victory, bool bossFight, bool eliteFight, int defeatedEnemyCount = 1);
+    bool isChallengeCombatTrackingActive() const;
 
     // EN: getInventory declares or implements a focused behavior used by this module.
     // FR: getInventory déclare ou implémente un comportement précis utilisé par ce module.
     Inventory& getInventory();
     const Inventory& getInventory() const;
+
+    Inventory& getCityVault();
+    const Inventory& getCityVault() const;
+
+    const std::vector<PlayerCityVault>& getCityVaultRecords() const;
+    const Inventory& getCityVaultForCity(const std::string& cityId) const;
+    bool hasCityVaultInCity(const std::string& cityId) const;
+    int getCityVaultLevelForCity(const std::string& cityId) const;
+    int getCityVaultCapacityForCity(const std::string& cityId) const;
+    int getCityVaultUsedSlotsForCity(const std::string& cityId) const;
+    bool hasCityVault() const;
+    int getCityVaultLevel() const;
+    int getCityVaultCapacity() const;
+    int getCityVaultUsedSlots() const;
+    int getCityVaultPurchaseCost() const;
+    int getCityVaultUpgradeCost() const;
+    bool canUpgradeCityVault() const;
+    bool purchaseCityVault();
+    bool upgradeCityVault();
+    bool depositWeaponInCityVault(int index);
+    bool depositArmorInCityVault(int index);
+    bool depositConsumableInCityVault(int index);
+    bool depositMaterialInCityVault(int index, int quantity = 0);
+    bool withdrawWeaponFromCityVault(int index);
+    bool withdrawArmorFromCityVault(int index);
+    bool withdrawConsumableFromCityVault(int index);
+    bool withdrawMaterialFromCityVault(int index, int quantity = 0);
+    bool transferMaterialBetweenCityVaults(const std::string& destinationCityId, int materialIndex, int quantity, int costCopper);
+    const std::string& getCurrentCityId() const;
+    void setCurrentCityId(const std::string& cityId);
+    const std::vector<std::string>& getRegisteredGuildCityIds() const;
+    bool isRegisteredAtCityGuild(const std::string& cityId) const;
+    bool isRegisteredAtCurrentCityGuild() const;
+    bool registerAtCurrentCityGuild();
+    void setLoadedCityState(
+        bool vaultPurchased,
+        int vaultLevel,
+        const std::string& loadedCurrentCityId,
+        const Inventory& loadedVault,
+        const std::vector<std::string>& loadedRegisteredGuildCityIds,
+        const std::vector<PlayerCityVault>& loadedCityVaults = std::vector<PlayerCityVault>()
+    );
 
     // EN: getQuestLog declares or implements a focused behavior used by this module.
     // FR: getQuestLog déclare ou implémente un comportement précis utilisé par ce module.

@@ -21,10 +21,14 @@ private:
     // EN: openGuild declares or implements a focused behavior used by this module.
     // FR: openGuild déclare ou implémente un comportement précis utilisé par ce module.
     static void openGuild(Player& player);
+    static void openGuildChallenges(Player& player);
     static void openGuildRegistration(Player& player);
     // EN: openMainQuestSection displays non-refusable story objectives separately from optional requests.
     // FR: openMainQuestSection affiche les objectifs d'histoire non refusables séparément des demandes optionnelles.
     static void openMainQuestSection(Player& player);
+    // EN: openCompletedMainQuestSection displays completed story objectives in a dedicated archive.
+    // FR: openCompletedMainQuestSection affiche les objectifs principaux terminés dans une archive dédiée.
+    static void openCompletedMainQuestSection(const Player& player);
     // EN: acceptGuildQuest declares or implements a focused behavior used by this module.
     // FR: acceptGuildQuest déclare ou implémente un comportement précis utilisé par ce module.
     static void acceptGuildQuest(Player& player);

@@ -9,6 +9,7 @@
 #include "entity/Player.hpp"
 #include "entity/Monster.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "item/equipment/EquipmentWeightRules.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -53,6 +54,14 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
         {
             int armorAbsorption = armor->getDamageReduction();
             const std::string armorName = armor->getName();
+            const int weightAdjustment = EquipmentWeightRules::getArmorDamageReductionAdjustment(*armor, rawDamage);
+            if (weightAdjustment != 0)
+            {
+                armorAbsorption = std::max(0, armorAbsorption + weightAdjustment);
+                rapport.equipmentEffectLines.push_back(
+                    "Poids d'armure : " + EquipmentWeightRules::getArmorTradeoffText(*armor)
+                );
+            }
 
             if (equipmentNameContains(armorName, "cotte runique") || equipmentNameContains(armorName, "runique de garde"))
             {

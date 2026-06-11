@@ -6,6 +6,7 @@
 #include "interface/menu/EquipmentMenu.hpp"
 
 #include "core/Console.hpp"
+#include "economy/Money.hpp"
 
 #include "interface/menu/equipment/EquipmentDisplay.hpp"
 #include "interface/menu/equipment/EquipmentComparison.hpp"
@@ -14,6 +15,7 @@
 #include "interface/TerminalInterface.hpp"
 #include "combat/system/CombatClassSystem.hpp"
 #include "item/durability/DurabilityRules.hpp"
+#include "item/equipment/EquipmentWeightRules.hpp"
 
 #include <iostream>
 #include <string>
@@ -64,6 +66,8 @@ namespace
                 + " | Durabilité : " + equipmentWeaponDurabilityText(weapon)
                 + " | État : " + (weapon.isBroken() ? "Cassée" : "Utilisable")
                 + " | Dégâts : +" + std::to_string(weapon.getMinDamageBonus()) + " à +" + std::to_string(weapon.getMaxDamageBonus()));
+            lines.push_back("Poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getWeaponWeightClass(weapon))
+                + " — " + EquipmentWeightRules::getWeaponTradeoffText(weapon));
 
             if (!weapon.isBroken() && !player.hasBossEquipmentSeal())
             {
@@ -96,6 +100,8 @@ namespace
                 + " | État : " + (armor.isBroken() ? "Cassée" : "Utilisable")
                 + " | PV max : +" + std::to_string(armor.getMaxHpBonus())
                 + " | Réduction : " + std::to_string(armor.getDamageReduction()));
+            lines.push_back("Poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getArmorWeightClass(armor))
+                + " — " + EquipmentWeightRules::getArmorTradeoffText(armor));
             appendEquipmentWarnings(lines, DurabilityRules::describeArmorFitWarnings(armor, player.getRace()));
             appendEquipmentWarnings(lines, DurabilityRules::describeArmorMaintenanceAdvice(armor, player.getRace()));
         }
@@ -104,7 +110,8 @@ namespace
             lines.push_back("- Armure équipée : Aucune");
         }
 
-        lines.push_back("Or : " + std::to_string(player.getInventory().getGold()) + " pièces");
+        lines.push_back("Argent séparé : " + player.getInventory().getWalletLine());
+        lines.push_back("Argent total : " + player.getInventory().getWalletTotalLine());
         MessageScreen::show("ÉQUIPEMENT SIMPLE", "equipment.simple.summary", lines);
     }
 
@@ -121,6 +128,8 @@ namespace
             lines.push_back("Description : " + weapon.getDescription());
             lines.push_back("Bonus dégâts : +" + std::to_string(weapon.getMinDamageBonus()) + " à +" + std::to_string(weapon.getMaxDamageBonus()));
             lines.push_back("Bonus critique : +" + std::to_string(weapon.getCriticalBonus()));
+            lines.push_back("Poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getWeaponWeightClass(weapon)));
+            lines.push_back("Contrepartie : " + EquipmentWeightRules::getWeaponTradeoffText(weapon));
 
             if (weapon.isBroken())
             {
@@ -158,6 +167,8 @@ namespace
             lines.push_back("Description : " + armor.getDescription());
             lines.push_back("Bonus PV max : +" + std::to_string(armor.getMaxHpBonus()));
             lines.push_back("Réduction dégâts : " + std::to_string(armor.getDamageReduction()));
+            lines.push_back("Poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getArmorWeightClass(armor)));
+            lines.push_back("Contrepartie : " + EquipmentWeightRules::getArmorTradeoffText(armor));
             lines.push_back(armor.isBroken() ? "État : cassée, ses bonus ne s'appliquent plus." : "État : Utilisable");
             appendEquipmentWarnings(lines, DurabilityRules::describeArmorFitWarnings(armor, player.getRace()));
             appendEquipmentWarnings(lines, DurabilityRules::describeArmorMaintenanceAdvice(armor, player.getRace()));
@@ -168,7 +179,8 @@ namespace
         }
 
         lines.push_back("");
-        lines.push_back("Or : " + std::to_string(player.getInventory().getGold()) + " pièces");
+        lines.push_back("Argent séparé : " + player.getInventory().getWalletLine());
+        lines.push_back("Argent total : " + player.getInventory().getWalletTotalLine());
         MessageScreen::show("ÉQUIPEMENT DÉTAILLÉ", "equipment.details.summary", lines);
     }
 
@@ -179,9 +191,11 @@ namespace
             "Description : " + weapon.getDescription(),
             "Bonus dégâts : +" + std::to_string(weapon.getMinDamageBonus()) + " à +" + std::to_string(weapon.getMaxDamageBonus()),
             "Bonus critique : +" + std::to_string(weapon.getCriticalBonus()),
+            "Poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getWeaponWeightClass(weapon)),
+            "Contrepartie : " + EquipmentWeightRules::getWeaponTradeoffText(weapon),
             "Durabilité : " + equipmentWeaponDurabilityText(weapon),
             weapon.isBroken() ? "État : Cassée" : "État : Utilisable",
-            "Valeur : " + std::to_string(weapon.getValue()) + " pièces"
+            "Valeur estimée : " + Money::formatGoldWithRaw(weapon.getValue())
         };
         appendEquipmentWarnings(lines, DurabilityRules::describeWeaponUseWarnings(weapon, player.getRace()));
         appendEquipmentWarnings(lines, DurabilityRules::describeWeaponMaintenanceAdvice(weapon, player.getRace()));
@@ -195,9 +209,11 @@ namespace
             "Description : " + armor.getDescription(),
             "Bonus PV max : +" + std::to_string(armor.getMaxHpBonus()),
             "Réduction dégâts : " + std::to_string(armor.getDamageReduction()),
+            "Poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getArmorWeightClass(armor)),
+            "Contrepartie : " + EquipmentWeightRules::getArmorTradeoffText(armor),
             "Durabilité : " + equipmentArmorDurabilityText(armor),
             armor.isBroken() ? "État : Cassée" : "État : Utilisable",
-            "Valeur : " + std::to_string(armor.getValue()) + " pièces"
+            "Valeur estimée : " + Money::formatGoldWithRaw(armor.getValue())
         };
         appendEquipmentWarnings(lines, DurabilityRules::describeArmorFitWarnings(armor, player.getRace()));
         appendEquipmentWarnings(lines, DurabilityRules::describeArmorMaintenanceAdvice(armor, player.getRace()));
@@ -212,6 +228,7 @@ namespace
             {
                 player.getName() + " équipe : " + weapon.getName() + ".",
                 "Durabilité : " + equipmentWeaponDurabilityText(weapon),
+                "Poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getWeaponWeightClass(weapon)) + " — " + EquipmentWeightRules::getWeaponTradeoffText(weapon),
                 weapon.isBroken() ? "Attention : cette arme est cassée, elle ne donnera aucun bonus." : "La prise en main est bonne. Cette arme est prête au combat.",
                 DurabilityRules::weaponWearStateText(weapon)
             }
@@ -226,6 +243,7 @@ namespace
             {
                 player.getName() + " équipe : " + armor.getName() + ".",
                 "Durabilité : " + equipmentArmorDurabilityText(armor),
+                "Poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getArmorWeightClass(armor)) + " — " + EquipmentWeightRules::getArmorTradeoffText(armor),
                 armor.isBroken() ? "Attention : cette armure est cassée, elle ne donnera aucun bonus." : "Ses protections sont maintenant actives.",
                 DurabilityRules::armorWearStateText(armor),
                 player.getName() + " possède maintenant " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + " PV."

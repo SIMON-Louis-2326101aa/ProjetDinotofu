@@ -1,18 +1,25 @@
-// EN: InitiativeQueue.hpp briefly defines this Dinotofu module and its responsibilities.
-// FR: InitiativeQueue.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future turn queue based on Dexterity, randomness and group priority.
-// TODO: Implement this future system when its feature block becomes active.
+// EN: InitiativeQueue.hpp builds and sorts initiative entries.
+// FR: InitiativeQueue.hpp construit et trie les entrées d'initiative.
 
 #ifndef INCLUDE_COMBAT_INITIATIVE_INITIATIVEQUEUE_HPP
 #define INCLUDE_COMBAT_INITIATIVE_INITIATIVEQUEUE_HPP
 
+#include "combat/initiative/InitiativeRoll.hpp"
+
+#include <vector>
+
+class Random;
+
 class InitiativeQueue
 {
+private:
+    std::vector<InitiativeRoll> entries;
+
 public:
-    // TODO: Add fields and methods when this system is connected to gameplay.
-    // TODO : Ajouter les attributs et méthodes quand ce système sera branché au gameplay.
+    void clear();
+    void add(const InitiativeRoll& entry);
+    void rollAndSort(Random& random);
+    const std::vector<InitiativeRoll>& getEntries() const;
 };
 
 #endif

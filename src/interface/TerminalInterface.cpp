@@ -180,7 +180,32 @@ int TerminalInterface::askMenuChoiceFromOptions(
 
         if (std::find(allowedChoices.begin(), allowedChoices.end(), choice) == allowedChoices.end())
         {
-            std::cout << invalidMessage << std::endl;
+            const auto declaredOption = std::find_if(
+                screen.getOptions().begin(),
+                screen.getOptions().end(),
+                [choice](const MenuOption& option)
+                {
+                    return option.getNumber() == choice;
+                }
+            );
+
+            if (declaredOption != screen.getOptions().end() && !declaredOption->isEnabled() && !allowDisabledOptions)
+            {
+                std::cout << "Option indisponible — " << declaredOption->getLabel() << "." << std::endl;
+                if (!declaredOption->getHint().empty())
+                {
+                    std::cout << declaredOption->getHint() << std::endl;
+                }
+                else
+                {
+                    std::cout << "Cette action demande une condition qui n'est pas encore remplie." << std::endl;
+                }
+            }
+            else
+            {
+                std::cout << invalidMessage << std::endl;
+            }
+
             MenuFrame::prompt();
             continue;
         }

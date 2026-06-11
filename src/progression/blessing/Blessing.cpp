@@ -1,8 +1,46 @@
-// EN: Blessing.cpp briefly defines this Dinotofu module and its responsibilities.
-// FR: Blessing.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future blessing data used for divine protection, anomalies and temporary powers.
-// TODO: Implement this future system when its feature block becomes active.
-
+// English: Persistent blessing data used by divine protections and lethal survival anomalies.
+// Français : Donnée persistante de bénédiction utilisée par les protections divines et anomalies de survie léthale.
 #include "progression/blessing/Blessing.hpp"
+
+Blessing::Blessing()
+    : id(""), name(""), description(""), survivalProtection(false)
+{
+}
+
+Blessing::Blessing(
+    const std::string& id,
+    const std::string& name,
+    const std::string& description,
+    bool survivalProtection
+)
+    : id(id),
+      name(name.empty() ? id : name),
+      description(description),
+      survivalProtection(survivalProtection)
+{
+}
+
+const std::string& Blessing::getId() const
+{
+    return id;
+}
+
+const std::string& Blessing::getName() const
+{
+    return name;
+}
+
+const std::string& Blessing::getDescription() const
+{
+    return description;
+}
+
+bool Blessing::grantsLethalSurvival() const
+{
+    return survivalProtection;
+}
+
+bool Blessing::isValid() const
+{
+    return !id.empty();
+}

@@ -9,6 +9,8 @@
 #include "entity/Entity.hpp"
 #include "entity/Race.hpp"
 
+#include <cstddef>
+#include <string>
 #include <vector>
 
 class Monster : public Entity
@@ -21,6 +23,14 @@ private:
     bool elite;
     bool hiddenStats;
     bool evolved;
+
+    bool splitsOnDeath;
+    int splitMinCount;
+    int splitMaxCount;
+    std::string splitChildName;
+    std::vector<std::string> splitStageNames;
+    std::size_t splitStageIndex;
+    bool finalSplitChildrenAreInvocations;
 
 public:
     // EN: Monster declares or implements a focused behavior used by this module.
@@ -61,6 +71,21 @@ public:
     // EN: isEvolved declares or implements a focused behavior used by this module.
     // FR: isEvolved déclare ou implémente un comportement précis utilisé par ce module.
     bool isEvolved() const;
+
+    bool doesSplitOnDeath() const;
+    int getSplitMinCount() const;
+    int getSplitMaxCount() const;
+    std::string getSplitChildName() const;
+    void configureSplitOnDeath(int minCount, int maxCount, const std::string& childName);
+    void configureSplitTree(
+        int childrenPerStage,
+        const std::vector<std::string>& stageNames,
+        bool finalChildrenAreInvocations = true
+    );
+    void copySplitBehaviorFrom(const Monster& source);
+    int getSplitStagesRemaining() const;
+    bool splitChildrenWillBeInvocations() const;
+    Monster createSplitChild(int childIndex) const;
 
     // EN: areStatsVisible declares or implements a focused behavior used by this module.
     // FR: areStatsVisible déclare ou implémente un comportement précis utilisé par ce module.

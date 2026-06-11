@@ -53,11 +53,12 @@ Déroulé principal :
 - Arriver aux portes.
 - Rencontrer le garde puis Mira.
 - Faire connaissance avec Mira, qui présente la ville, les problèmes et les référents.
-- Faire le tour de la ville : Orren, Lysa, Bram et Soryn.
-- Notifier Mira que tout le monde a été rencontré.
-- Recevoir les demandes principales non refusables.
-- Aider Mira, Orren, Lysa, Bram et Soryn.
-- Notifier Mira quand les demandes sont terminées.
+- Mira donne les quatre noms utiles.
+- Parler à Orren, Lysa, Bram et Soryn dans n'importe quel ordre.
+- Chaque référent donne immédiatement sa propre quête principale non refusable.
+- Notifier Mira quand les quatre ont été rencontrés.
+- Mira ouvre une quête de synthèse qui compte automatiquement les quatre quêtes réellement rendues, même si certaines ont été terminées plus tôt.
+- Terminer les demandes restantes, puis retourner parler à Mira.
 - Débloquer le chapitre 2 quand la ville possède assez de stabilité, preuves et actions utiles.
 
 Référents de ville :
@@ -93,12 +94,41 @@ PNJ importants de l'arc :
 - Nell — messagère de relais / première survivante de route.
 - Eda — comptable des routes courtes / stocks réels.
 
+Chapitre 3 — Les routes qui répondent mal
+---------------------------------------------
+But : comprendre pourquoi un convoi revient seul avec une cargaison et des signatures impossibles.
+Le chapitre est désormais jouable étape par étape : inspection, mesures selon le moment de la journée, vérification des signatures, escorte capable de faire demi-tour, découverte du village absent des cartes, choix de route, affrontement du Gardien de la Carte Juste et décision finale sur le convoi.
+Le Gardien de la Carte Juste est un mini-boss unique : plus fort qu'un élite, mais inférieur à un vrai boss du registre.
+Sa défaite peut ouvrir une piste facultative vers un boss existant du palier II, cohérent avec les routes trompeuses et les reflets. Ce boss secondaire n'est pas requis pour terminer le chapitre.
+La suite reste masquée tant que l'étape actuelle n'est pas rendue. Les choix durables sont enregistrés dans la quête concernée et influencent réellement certains stocks et services.
+
+Chapitre 4 — Le village qui n'a pas la même date
+--------------------------------------------------
+But : explorer un village dont les habitants et bâtiments appartiennent à une version différente de l'histoire.
+Boss majeur prévu : L'Horloge des Chuchotements [60], choisie dans le roster existant pour son lien direct avec le temps, les souvenirs et la réécriture.
+Son affrontement doit être préparé par les preuves du village ; il peut devenir obligatoire seulement si la route principale l'exige réellement.
+Conséquence prévue : relier le village à une fenêtre temporelle contrôlée sans effacer les deux versions des personnes et des preuves.
+
+Chapitre 5 — La première vérité de la fissure
+----------------------------------------------
+But : réunir les preuves des routes et du village pour obtenir une première explication solide sur les corrections du monde.
+Aucun nouveau vrai boss n'est créé automatiquement pour ce chapitre.
+Piste majeure envisagée : Avatar de Lexior [80], boss existant lié à la justice, au jugement des actions passées et aux preuves. Cette piste peut rester secondaire selon les choix du joueur.
+Le cœur obligatoire du chapitre peut utiliser une épreuve, un mini-boss unique d'archive ou une confrontation narrative sans gonfler inutilement le roster.
+Conséquence prévue : ouvrir officiellement les Légendes, modifier les dialogues et événements selon la vérité révélée, puis préparer les chapitres suivants.
+
 Principes de progression histoire
 ---------------------------------
 - Les quêtes principales sont non refusables.
 - Avant de demander un service à un PNJ, le joueur doit comprendre qui il est et à quoi il sert dans la ville.
 - Certains moments demandent d'attendre une réparation, une mise en place ou une préparation : le joueur doit alors s'occuper utilement, faire des quêtes secondaires, patrouiller ou aider la ville.
+- Les quêtes à étapes relisent l'état réel du journal et des objectifs liés : un sous-objectif déjà accompli est reconnu dès que la quête de synthèse existe.
+- Les étapes terminées affichent `[fait]`, l'étape actuelle reste visible et les étapes futures restent masquées.
+- Les actions qui doivent réellement commencer après un dialogue (escorte déclenchée, choix narratif, combat imposé) restent volontairement non rétroactives.
 - Certaines quêtes peuvent pointer vers une menace de type boss sans révéler son vrai nom, tant que le boss n'est connu que par rumeur, preuves ou légende.
+- Les vrais boss sont choisis dans le roster existant selon le palier puis la cohérence du lore.
+- Les mini-boss uniques peuvent être inventés pour les besoins d'une quête, mais ils ne remplacent pas les boss majeurs du registre.
+- Un boss secondaire dépend de la volonté du joueur et ne bloque pas artificiellement l'histoire principale.
 - Si une quête principale demande de vaincre une menace précise, c'est que cette menace est au moins un peu connue du monde.
 
 Transitions histoire / bac à sable

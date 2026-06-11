@@ -49,6 +49,9 @@ private:
     DifficultyMode selectedDifficulty;
     DeathRuleMode selectedDeathRule;
     CharacterRace selectedRace;
+    int selectedAge;
+    std::string selectedVisualPresentation;
+    std::string selectedVisualVariant;
     bool characterLoaded;
     bool specialIdentityValidated;
     bool ephemeralSandboxSession;
@@ -74,6 +77,7 @@ private:
     // EN: choosePlayerRace declares or implements a focused behavior used by this module.
     // FR: choosePlayerRace déclare ou implémente un comportement précis utilisé par ce module.
     void choosePlayerRace();
+    void choosePlayerAppearance();
     // EN: choosePlayerClass declares or implements a focused behavior used by this module.
     // FR: choosePlayerClass déclare ou implémente un comportement précis utilisé par ce module.
     void choosePlayerClass();
@@ -106,6 +110,8 @@ private:
     void playStoryWhiteFogPrologue();
     void playStoryChapterOne();
     void playStoryChapterTwo();
+    void playStoryChapterThree();
+    void playStoryChapterFour();
     void startNewStoryFromMenu();
     void continueStoryRoute();
     void openStoryChapterSelectionMenu();

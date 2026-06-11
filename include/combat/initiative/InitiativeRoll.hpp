@@ -1,18 +1,26 @@
-// EN: InitiativeRoll.hpp briefly defines this Dinotofu module and its responsibilities.
-// FR: InitiativeRoll.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future initiative roll result for one combat unit.
-// TODO: Implement this future system when its feature block becomes active.
+// EN: InitiativeRoll.hpp stores one reusable initiative result.
+// FR: InitiativeRoll.hpp mémorise un résultat d'initiative réutilisable.
 
 #ifndef INCLUDE_COMBAT_INITIATIVE_INITIATIVEROLL_HPP
 #define INCLUDE_COMBAT_INITIATIVE_INITIATIVEROLL_HPP
 
-class InitiativeRoll
+#include <string>
+
+enum class InitiativeSide
 {
-public:
-    // TODO: Add fields and methods when this system is connected to gameplay.
-    // TODO : Ajouter les attributs et méthodes quand ce système sera branché au gameplay.
+    Players,
+    Enemies
+};
+
+struct InitiativeRoll
+{
+    std::string id;
+    std::string label;
+    InitiativeSide side = InitiativeSide::Players;
+    int slotIndex = -1;
+    int baseScore = 0;
+    int dieRoll = 0;
+    int totalScore = 0;
 };
 
 #endif

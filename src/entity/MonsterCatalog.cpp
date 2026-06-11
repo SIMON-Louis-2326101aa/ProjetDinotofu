@@ -47,6 +47,42 @@ namespace
         );
     }
 
+    Monster createSplittingSlime(
+        const std::string& name,
+        const std::string& type,
+        int level,
+        int maxHp,
+        int minDamage,
+        int maxDamage,
+        int criticalDamage,
+        int splitMinCount,
+        int splitMaxCount,
+        const std::string& childName,
+        bool elite = false,
+        bool hiddenStats = false,
+        bool evolved = false
+    )
+    {
+        Monster slime = createMonster(
+            name,
+            type,
+            Race::Slime,
+            level,
+            maxHp,
+            minDamage,
+            maxDamage,
+            criticalDamage,
+            0,
+            0,
+            false,
+            elite,
+            hiddenStats,
+            evolved
+        );
+        slime.configureSplitOnDeath(splitMinCount, splitMaxCount, childName);
+        return slime;
+    }
+
     std::vector<Monster> createTierOneMonsters()
     {
         return {
@@ -77,6 +113,7 @@ namespace
             createMonster("Méphaïte de braise", "Petit élémentaire", Race::Elementaire, 2, 72, 9, 21, 26),
             createMonster("Renard cendré", "Bête vive attirée par les feux de camp", Race::Bete, 2, 60, 8, 19, 25),
             createMonster("Slime rose nerveux", "Gelée bondissante imprévisible", Race::Slime, 2, 66, 7, 16, 22),
+            createSplittingSlime("Gros slime fusionné", "Plusieurs petites gelées soudées ensemble", 2, 118, 5, 15, 21, 3, 4, "Petit slime de fusion"),
             createMonster("Archer gobelin trop fier", "Gobelin archer", Race::Gobelin, 2, 92, 7, 17, 26),
             createMonster("Loup à crocs ternes", "Bête de meute", Race::Bete, 2, 105, 8, 18, 28),
             createMonster("Pilleur au bouclier fendu", "Humanoïde pillard", Race::Humain, 2, 115, 7, 19, 30, 1, 0),
@@ -251,7 +288,8 @@ namespace
                 createMonster("Slime gris de vase", "Gelée lourde chargée de poussière", Race::Slime, 6, 148, 9, 27, 36),
                 createMonster("Slime rose nerveux", "Gelée vive qui bondit sans comprendre ce qu'elle fait", Race::Slime, 5, 112, 10, 25, 34),
                 createMonster("Slime translucide", "Gelée presque invisible dans l'eau stagnante", Race::Slime, 6, 130, 8, 28, 38, 0, 0, false, false, true),
-                createMonster("Mini-ruche gélatineuse", "Petit amas de slimes faibles qui se déplacent ensemble", Race::Slime, 6, 150, 7, 24, 34, 0, 0, false, true)
+                createMonster("Mini-ruche gélatineuse", "Petit amas de slimes faibles qui se déplacent ensemble", Race::Slime, 6, 150, 7, 24, 34, 0, 0, false, true),
+                createSplittingSlime("Slime fusionné instable", "Masse gélatineuse gonflée par plusieurs noyaux", 6, 188, 8, 27, 38, 3, 5, "Petit slime instable", true)
             };
         }
 
@@ -655,7 +693,8 @@ namespace
                 createMonster("Slime opalin", "Gelée claire qui réfléchit mal la lumière", Race::Slime, 11, 225, 15, 45, 60, 0, 1, false, true, true),
                 createMonster("Slime de savon gris", "Gelée glissante issue d'un vieux lavoir", Race::Slime, 9, 180, 12, 34, 46, 0, 0, false, true),
                 createMonster("Slime carmin coagulé", "Gelée rouge épaisse qui colle aux blessures", Race::Slime, 11, 230, 18, 47, 66, 0, 1, false, true, true),
-                createMonster("Bulle-mère gélatineuse", "Petite ruche de bulles vivantes", Race::Slime, 12, 260, 14, 43, 62, 0, 1, false, true, true)
+                createMonster("Bulle-mère gélatineuse", "Petite ruche de bulles vivantes", Race::Slime, 12, 260, 14, 43, 62, 0, 1, false, true, true),
+                createSplittingSlime("Masse gélatineuse fusionnée", "Gros slime lourd dont les noyaux se disputent le même corps", 12, 340, 15, 46, 66, 4, 5, "Petit slime fusionné", true, false, true)
             };
         }
 
@@ -1077,7 +1116,8 @@ namespace
                 createMonster("Noyau de ruche gélatineuse", "Masse centrale entourée de petits slimes", Race::Slime, 18, 470, 22, 64, 90, 0, 1, false, true, true),
                 createMonster("Slime miroir ancien", "Gelée ancienne qui semble copier la pression autour d'elle", Race::Slime, 19, 455, 28, 72, 102, 0, 2, false, true, true),
                 createMonster("Slime d'argent silencieux", "Gelée rare qui absorbe les vibrations", Race::Slime, 18, 430, 25, 76, 110, 0, 2, false, true, true),
-                createMonster("Couronne de bulles", "Noyau rare entouré de bulles agressives", Race::Slime, 20, 500, 24, 80, 115, 0, 2, false, true, true)
+                createMonster("Couronne de bulles", "Noyau rare entouré de bulles agressives", Race::Slime, 20, 500, 24, 80, 115, 0, 2, false, true, true),
+                createSplittingSlime("Colosse de gelée fusionnée", "Accumulation rare de noyaux gélatineux incapables de rester séparés", 20, 620, 26, 84, 122, 4, 5, "Éclat de colosse gélatineux", true, true, true)
             };
         }
 
@@ -1454,7 +1494,7 @@ namespace
         if (hpPercent < 55) hpPercent = 55;
         if (damagePercent < 60) damagePercent = 60;
 
-        return createMonster(
+        Monster scaled = createMonster(
             baseMonster.getName(),
             baseMonster.getType(),
             baseMonster.getRace(),
@@ -1470,6 +1510,13 @@ namespace
             !baseMonster.areStatsVisible() || targetLevel >= baseMonster.getLevel() + 8,
             baseMonster.isEvolved()
         );
+
+        if (baseMonster.doesSplitOnDeath())
+        {
+            scaled.copySplitBehaviorFrom(baseMonster);
+        }
+
+        return scaled;
     }
 
 }
@@ -1530,6 +1577,35 @@ Monster MonsterCatalog::createLostBandit()
     return createMonster("Bandit perdu", "Humain opportuniste", Race::Humain, 4, 100, 14, 24, 30, 1, 0);
 }
 
+
+Monster MonsterCatalog::createGiantSlimeMiniBoss(int level)
+{
+    level = std::max(4, level);
+
+    Monster giant = createMonster(
+        "Géant slime des quatre divisions",
+        "Mini-boss gélatineux aux noyaux emboîtés",
+        Race::Slime,
+        level,
+        240 + level * 34,
+        4 + level,
+        9 + level * 2,
+        14 + level * 3,
+        0,
+        0,
+        false,
+        true,
+        false,
+        true
+    );
+    giant.configureSplitTree(
+        2,
+        {"Gros slime", "Slime", "Petit slime", "Âme du slime"},
+        true
+    );
+    return giant;
+}
+
 // EN: createRandomMonsterForLevel declares or implements a focused behavior used by this module.
 // FR: createRandomMonsterForLevel déclare ou implémente un comportement précis utilisé par ce module.
 Monster MonsterCatalog::createRandomMonsterForLevel(int level, Random& random)
@@ -1588,7 +1664,7 @@ Monster MonsterCatalog::createEvolvedVariant(const Monster& baseMonster, Random&
     bool hiddenStats = !baseMonster.areStatsVisible() || random.between(1, 100) <= 18;
     bool elite = true;
 
-    return createMonster(
+    Monster evolved = createMonster(
         evolvedNameFor(baseMonster, random),
         baseMonster.getType() + " / créature évoluée",
         baseMonster.getRace(),
@@ -1604,6 +1680,13 @@ Monster MonsterCatalog::createEvolvedVariant(const Monster& baseMonster, Random&
         hiddenStats,
         true
     );
+
+    if (baseMonster.doesSplitOnDeath())
+    {
+        evolved.copySplitBehaviorFrom(baseMonster);
+    }
+
+    return evolved;
 }
 
 Monster MonsterCatalog::createEliteVariant(const Monster& baseMonster, Random& random)
@@ -1612,7 +1695,7 @@ Monster MonsterCatalog::createEliteVariant(const Monster& baseMonster, Random& r
     int damagePercent = random.between(140, 168);
     bool hiddenStats = !baseMonster.areStatsVisible() || random.between(1, 100) <= 12;
 
-    return createMonster(
+    Monster eliteVariant = createMonster(
         baseMonster.getName() + " élite",
         baseMonster.getType() + " / élite locale",
         baseMonster.getRace(),
@@ -1628,6 +1711,13 @@ Monster MonsterCatalog::createEliteVariant(const Monster& baseMonster, Random& r
         hiddenStats,
         baseMonster.isEvolved()
     );
+
+    if (baseMonster.doesSplitOnDeath())
+    {
+        eliteVariant.copySplitBehaviorFrom(baseMonster);
+    }
+
+    return eliteVariant;
 }
 
 std::vector<Monster> MonsterCatalog::createAllPreviewMonsters()
@@ -1649,6 +1739,8 @@ std::vector<Monster> MonsterCatalog::createAllPreviewMonsters()
             allMonsters.push_back(monster);
         }
     }
+
+    allMonsters.push_back(createGiantSlimeMiniBoss(10));
 
     std::vector<std::string> biomes = {
         "Plaine sauvage",

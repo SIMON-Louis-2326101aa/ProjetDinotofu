@@ -154,6 +154,23 @@ namespace
         return action();
     }
 
+    bool executeTrackedHumanAction(
+        Entity& attacker,
+        const std::string& actionKind,
+        const std::function<bool()>& action
+    )
+    {
+        const bool consumedTurn = action();
+        if (consumedTurn)
+        {
+            if (Player* player = dynamic_cast<Player*>(&attacker))
+            {
+                player->recordChallengeCombatAction(actionKind);
+            }
+        }
+        return consumedTurn;
+    }
+
     int getKnownOrHiddenCursePressure(const Player& player, const std::string& category)
     {
         return player.getCursePressureForCategory(category) + player.getKnownCursePressureForCategory(category);
@@ -290,47 +307,57 @@ bool HumanCombatTurn::play(
 
         if (attackChoice == 1)
         {
-            return executeCapturedHumanAction(
-                "ATTAQUE SIMPLE",
-                "combat.human.attack.simple",
-                [&]() { CombatActions::executeAttack(attacker, defender, random); return true; }
-            );
+            return executeTrackedHumanAction(attacker, "basic_attack", [&]() {
+                return executeCapturedHumanAction(
+                    "ATTAQUE SIMPLE",
+                    "combat.human.attack.simple",
+                    [&]() { CombatActions::executeAttack(attacker, defender, random); return true; }
+                );
+            });
         }
 
         if (attackChoice == 2)
         {
-            return executeCapturedHumanAction(
-                "TECHNIQUE D'ARME",
-                "combat.human.attack.weapon_technique",
-                [&]() { CombatActions::executeWeaponTechnique(attacker, defender, random); return true; }
-            );
+            return executeTrackedHumanAction(attacker, "skill", [&]() {
+                return executeCapturedHumanAction(
+                    "TECHNIQUE D'ARME",
+                    "combat.human.attack.weapon_technique",
+                    [&]() { CombatActions::executeWeaponTechnique(attacker, defender, random); return true; }
+                );
+            });
         }
 
         if (attackChoice == 3)
         {
-            return executeCapturedHumanAction(
-                "ATTAQUE LOURDE",
-                "combat.human.attack.heavy",
-                [&]() { CombatActions::executeHeavyAttack(attacker, defender, random); return true; }
-            );
+            return executeTrackedHumanAction(attacker, "special_attack", [&]() {
+                return executeCapturedHumanAction(
+                    "ATTAQUE LOURDE",
+                    "combat.human.attack.heavy",
+                    [&]() { CombatActions::executeHeavyAttack(attacker, defender, random); return true; }
+                );
+            });
         }
 
         if (attackChoice == 4)
         {
-            return executeCapturedHumanAction(
-                "ATTAQUE RAPIDE",
-                "combat.human.attack.quick",
-                [&]() { CombatActions::executeQuickAttack(attacker, defender, random); return true; }
-            );
+            return executeTrackedHumanAction(attacker, "special_attack", [&]() {
+                return executeCapturedHumanAction(
+                    "ATTAQUE RAPIDE",
+                    "combat.human.attack.quick",
+                    [&]() { CombatActions::executeQuickAttack(attacker, defender, random); return true; }
+                );
+            });
         }
 
         if (attackChoice == 5)
         {
-            return executeCapturedHumanAction(
-                "COMPÉTENCE DE CLASSE",
-                "combat.human.attack.class_skill",
-                [&]() { return CombatActions::executeClassSkill(attacker, defender, random); }
-            );
+            return executeTrackedHumanAction(attacker, "skill", [&]() {
+                return executeCapturedHumanAction(
+                    "COMPÉTENCE DE CLASSE",
+                    "combat.human.attack.class_skill",
+                    [&]() { return CombatActions::executeClassSkill(attacker, defender, random); }
+                );
+            });
         }
     }
 
@@ -344,7 +371,9 @@ bool HumanCombatTurn::play(
             return false;
         }
 
-        return CombatPotionMenu::openQuickHealing(*player);
+        return executeTrackedHumanAction(attacker, "consumable", [&]() {
+            return CombatPotionMenu::openQuickHealing(*player);
+        });
     }
 
     if (option == 3)
@@ -357,12 +386,14 @@ bool HumanCombatTurn::play(
             return false;
         }
 
-        return CombatPotionMenu::openAgainstSingleTarget(
-            *player,
-            defender,
-            random,
-            potionDamageBonus
-        );
+        return executeTrackedHumanAction(attacker, "consumable", [&]() {
+            return CombatPotionMenu::openAgainstSingleTarget(
+                *player,
+                defender,
+                random,
+                potionDamageBonus
+            );
+        });
     }
 
     if (option == 4)
@@ -394,8 +425,10 @@ bool HumanCombatTurn::play(
 
     if (option == 6)
     {
-        DefensePostureSystem::enterDefensePosture(attacker);
-        return true;
+        return executeTrackedHumanAction(attacker, "defense", [&]() {
+            DefensePostureSystem::enterDefensePosture(attacker);
+            return true;
+        });
     }
 
     if (option == 7)
@@ -410,12 +443,18 @@ bool HumanCombatTurn::play(
             false
         );
 
+        if (Player* player = dynamic_cast<Player*>(&attacker))
+        {
+            player->recordChallengeCombatAction("wait");
+        }
         return true;
     }
 
     if (option == 8)
     {
-        return handleEscape(attacker, defender, random);
+        return executeTrackedHumanAction(attacker, "escape", [&]() {
+            return handleEscape(attacker, defender, random);
+        });
     }
 
     return false;
@@ -482,7 +521,9 @@ bool HumanCombatTurn::playWithEnemySummons(
             return false;
         }
 
-        return CombatPotionMenu::openQuickHealing(*player);
+        return executeTrackedHumanAction(attacker, "consumable", [&]() {
+            return CombatPotionMenu::openQuickHealing(*player);
+        });
     }
 
     if (option == 3)
@@ -505,12 +546,14 @@ bool HumanCombatTurn::playWithEnemySummons(
             false
         );
 
-        return CombatPotionMenu::openAgainstSingleTarget(
-            *player,
-            defender,
-            random,
-            potionDamageBonus
-        );
+        return executeTrackedHumanAction(attacker, "consumable", [&]() {
+            return CombatPotionMenu::openAgainstSingleTarget(
+                *player,
+                defender,
+                random,
+                potionDamageBonus
+            );
+        });
     }
 
     if (option == 4)
@@ -542,8 +585,10 @@ bool HumanCombatTurn::playWithEnemySummons(
 
     if (option == 6)
     {
-        DefensePostureSystem::enterDefensePosture(attacker);
-        return true;
+        return executeTrackedHumanAction(attacker, "defense", [&]() {
+            DefensePostureSystem::enterDefensePosture(attacker);
+            return true;
+        });
     }
 
     if (option == 7)
@@ -558,12 +603,18 @@ bool HumanCombatTurn::playWithEnemySummons(
             false
         );
 
+        if (Player* player = dynamic_cast<Player*>(&attacker))
+        {
+            player->recordChallengeCombatAction("wait");
+        }
         return true;
     }
 
     if (option == 8)
     {
-        return handleEscape(attacker, defender, random);
+        return executeTrackedHumanAction(attacker, "escape", [&]() {
+            return handleEscape(attacker, defender, random);
+        });
     }
 
     return false;
@@ -702,12 +753,14 @@ bool HumanCombatTurn::chooseAndExecuteAttack(
     Random& random
 )
 {
-    return CombatGroupTargetMenu::openSingleEnemyAttack(
-        attacker,
-        defender,
-        enemySummons,
-        random
-    );
+    return executeTrackedHumanAction(attacker, "basic_attack", [&]() {
+        return CombatGroupTargetMenu::openSingleEnemyAttack(
+            attacker,
+            defender,
+            enemySummons,
+            random
+        );
+    });
 }
 
 bool HumanCombatTurn::inspectCombatTarget(

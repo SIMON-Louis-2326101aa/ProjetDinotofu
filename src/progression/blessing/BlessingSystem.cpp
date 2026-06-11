@@ -1,8 +1,17 @@
-// EN: BlessingSystem.cpp briefly defines this Dinotofu module and its responsibilities.
-// FR: BlessingSystem.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future system consuming blessings, especially for lethal survival anomaly events.
-// TODO: Implement this future system when its feature block becomes active.
-
+// English: Consumes blessings to resolve exceptional lethal-survival effects.
+// Français : Consume les bénédictions pour résoudre les survies exceptionnelles en mode léthal.
 #include "progression/blessing/BlessingSystem.hpp"
+
+#include "progression/blessing/SurvivalAnomaly.hpp"
+#include "entity/Player.hpp"
+
+bool BlessingSystem::tryTriggerLethalSurvival(Player& player)
+{
+    if (!SurvivalAnomaly::canApply(player))
+    {
+        return false;
+    }
+
+    SurvivalAnomaly::apply(player);
+    return !player.isDead();
+}

@@ -1,18 +1,18 @@
-// EN: SurvivalAnomaly.hpp briefly defines this Dinotofu module and its responsibilities.
-// FR: SurvivalAnomaly.hpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future lethal-mode miracle event where the character survives at 1 HP at a terrible cost.
-// TODO: Implement this future system when its feature block becomes active.
+// English: Applies the irreversible cost of surviving a lethal death through blessings.
+// Français : Applique le coût irréversible d'une survie à une mort léthale grâce aux bénédictions.
+#ifndef INCLUDE_PROGRESSION_BLESSING_SURVIVALANOMALY_HPP
+#define INCLUDE_PROGRESSION_BLESSING_SURVIVALANOMALY_HPP
 
-#ifndef INCLUDE_INCLUDE_PROGRESSION_BLESSING_SURVIVALANOMALY_HPP
-#define INCLUDE_INCLUDE_PROGRESSION_BLESSING_SURVIVALANOMALY_HPP
+#include <string>
+
+class Player;
 
 class SurvivalAnomaly
 {
 public:
-    // TODO: Add fields and methods when this system is connected to gameplay.
-    // TODO : Ajouter les attributs et méthodes quand ce système sera branché au gameplay.
+    static const std::string& permanentCurseId();
+    static bool canApply(const Player& player);
+    static void apply(Player& player);
 };
 
 #endif

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstdint>
 #include <random>
 #include <string>
 #include <vector>
@@ -1413,6 +1414,113 @@ std::vector<Quest> QuestCatalog::createGuildBoard(int playerLevel)
     const int desiredActionMinimum = playerLevel >= 7 ? 3 : 2;
     enforceActionQuestPresence(board, playerLevel, fillerTemplates, std::min(desiredActionMinimum, desiredBoardSize));
 
+    return board;
+}
+
+std::vector<Quest> QuestCatalog::createGuildChallengeBoard(
+    int playerLevel,
+    int currentDay,
+    const std::vector<std::string>& excludedConditions
+)
+{
+    struct ChallengeTemplate
+    {
+        std::string id;
+        std::string title;
+        std::string objective;
+        std::string condition;
+        int target;
+        int minLevel;
+        int marks;
+        int experience;
+        int gold;
+        std::string rank;
+    };
+
+    const std::vector<ChallengeTemplate> all = {
+        {"three_clean_victories", "Trois victoires, zéro fiole", "Remporter trois combats sans utiliser le moindre consommable.", "three_clean_victories", 3, 1, 1, 18, 1, "E"},
+        {"defend_then_win", "Le mur finit par avancer", "Utiliser la posture de défense au moins trois fois dans un même combat, puis gagner.", "defend_then_win", 1, 2, 1, 22, 1, "D"},
+        {"low_hp_victory", "Il restait vraiment ça ?", "Remporter un combat avec au plus 25 % de tes PV maximum.", "low_hp_victory", 1, 2, 1, 24, 1, "D"},
+        {"cursed_victory", "Mauvaise influence, bon résultat", "Remporter deux combats en portant au moins une malédiction active.", "cursed_victory", 2, 3, 1, 26, 1, "D"},
+        {"no_damage_victory", "Pas une égratignure", "Remporter un combat sans subir le moindre dégât.", "no_damage_victory", 1, 3, 1, 30, 2, "C"},
+        {"basic_only_victory", "À l'ancienne", "Remporter un combat en attaquant uniquement avec des attaques simples. Défendre ou attendre reste autorisé.", "basic_only_victory", 1, 3, 1, 30, 2, "C"},
+        {"elite_no_consumable", "L'élite à sec", "Vaincre une créature élite ou un mini-boss sans utiliser de consommable.", "elite_no_consumable", 1, 4, 1, 34, 2, "C"},
+        {"long_fight_victory", "On avait le temps", "Remporter un combat après avoir joué au moins six tours.", "long_fight_victory", 1, 3, 1, 28, 1, "D"},
+        {"boss_no_consumable", "Le boss sans réserve", "Vaincre un boss sans utiliser de consommable.", "boss_no_consumable", 1, 5, 2, 48, 3, "B"},
+        {"boss_no_consumable_skill", "Seulement toi et le boss", "Vaincre un boss sans consommable et sans compétence de classe ou technique d'arme.", "boss_no_consumable_skill", 1, 7, 3, 65, 4, "A"},
+        {"triple_curse_victory", "Le quatrième problème", "Remporter un combat en portant au moins trois malédictions actives.", "triple_curse_victory", 1, 7, 2, 52, 3, "B"},
+        {"six_creatures", "Six problèmes en moins", "Vaincre six créatures pendant la durée du défi.", "six_creatures", 6, 1, 1, 20, 1, "E"},
+        {"group_all_survive", "Personne ne reste derrière", "Remporter un combat de groupe avec tous les aventuriers encore debout.", "group_all_survive", 1, 3, 1, 32, 2, "C"},
+        {"group_basic_only", "Escouade à l'ancienne", "Remporter un combat de groupe sans compétence, technique d'arme ni consommable. Les attaques simples et la défense restent permises.", "group_basic_only", 1, 5, 2, 44, 3, "B"},
+        {"summon_support_victory", "Le groupe compte aussi les invoqués", "Remporter un combat où au moins une invocation alliée agit et inflige des dégâts.", "summon_support_victory", 1, 4, 1, 36, 2, "C"},
+        {"group_no_consumable", "Groupe sans réserve", "Remporter un combat de groupe sans qu'aucun aventurier n'utilise de consommable.", "group_no_consumable", 1, 4, 1, 38, 2, "C"}
+    };
+
+    const auto isExcluded = [&](const std::string& condition) {
+        return std::find(excludedConditions.begin(), excludedConditions.end(), condition) != excludedConditions.end();
+    };
+
+    std::vector<ChallengeTemplate> eligible;
+    for (const ChallengeTemplate& challenge : all)
+    {
+        if (playerLevel >= challenge.minLevel && !isExcluded(challenge.condition))
+        {
+            eligible.push_back(challenge);
+        }
+    }
+    if (eligible.size() < 3)
+    {
+        for (const ChallengeTemplate& challenge : all)
+        {
+            if (isExcluded(challenge.condition)) continue;
+            const bool alreadyIncluded = std::any_of(eligible.begin(), eligible.end(), [&](const ChallengeTemplate& current) {
+                return current.condition == challenge.condition;
+            });
+            if (!alreadyIncluded)
+            {
+                eligible.push_back(challenge);
+            }
+            if (eligible.size() >= 3) break;
+        }
+    }
+
+    std::mt19937 generator(static_cast<std::uint32_t>(0xD1A110u + currentDay * 7919 + playerLevel * 101));
+    std::shuffle(eligible.begin(), eligible.end(), generator);
+
+    std::vector<Quest> board;
+    for (std::size_t i = 0; i < eligible.size() && board.size() < 3; ++i)
+    {
+        const ChallengeTemplate& source = eligible[i];
+        Quest challenge = buildQuest(
+            "guild_challenge_" + source.id + "_day_" + std::to_string(std::max(0, currentDay)),
+            source.rank,
+            source.title,
+            "Défi de guilde",
+            "Maître de guilde",
+            "Guilde / terrain",
+            source.objective,
+            "challenge",
+            source.condition == "six_creatures" ? "Générale" : "Défi spécial",
+            source.experience,
+            source.gold,
+            source.target,
+            true,
+            "",
+            "",
+            0,
+            "guild_challenge_mark",
+            "Marque de défi",
+            source.marks,
+            "Défi quotidien : récompense mesurée, marque spéciale et possibilité de titre."
+        );
+        challenge.guildChallenge = true;
+        challenge.challengeCondition = source.condition;
+        challenge.challengeMarkReward = source.marks;
+        challenge.availableFromDay = std::max(0, currentDay);
+        challenge.expiresAtDay = std::max(0, currentDay) + 1;
+        challenge.accepted = false;
+        board.push_back(challenge);
+    }
     return board;
 }
 

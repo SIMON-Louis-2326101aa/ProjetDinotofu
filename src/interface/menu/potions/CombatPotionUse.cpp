@@ -17,6 +17,8 @@
 
 #include "item/Inventory.hpp"
 
+#include "entity/Monster.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <string>
@@ -48,6 +50,15 @@ namespace
         MessageScreen::show(title, screenId, lines);
     }
 
+
+
+    void removeConsumedPotion(Player& player, int consumableIndex, const Consumable& potion)
+    {
+        if (player.getInventory().removeConsumable(consumableIndex))
+        {
+            player.recordConsumableUsed(potion.getName());
+        }
+    }
 
     bool playerLooksLikeNaturalCaster(const Player& player)
     {
@@ -126,6 +137,75 @@ namespace
 
         return cured;
     }
+
+    std::vector<int> chooseDistinctEffectIndexes(Random& random, int availableCount, int wantedCount)
+    {
+        std::vector<int> available;
+        for (int i = 0; i < availableCount; ++i) available.push_back(i);
+
+        std::vector<int> selected;
+        wantedCount = std::max(0, std::min(wantedCount, availableCount));
+        while (static_cast<int>(selected.size()) < wantedCount && !available.empty())
+        {
+            const int position = random.between(0, static_cast<int>(available.size()) - 1);
+            selected.push_back(available[static_cast<std::size_t>(position)]);
+            available.erase(available.begin() + position);
+        }
+        return selected;
+    }
+
+    Monster createWeakUnluckyEnemy(const Player& player, Random& random, int index)
+    {
+        const int level = std::max(1, player.getLevel() - 4);
+        const int hp = 24 + level * 5;
+        const int minDamage = std::max(1, 1 + level / 3);
+        const int maxDamage = std::max(minDamage + 1, 4 + level);
+        const int criticalDamage = std::max(maxDamage + 2, 7 + level * 2);
+
+        const int variant = random.between(0, 2);
+        if (variant == 0)
+        {
+            return Monster(
+                "Petit slime malchanceux " + std::to_string(index),
+                "Gelée faible attirée par la fiole",
+                Race::Slime,
+                level,
+                hp,
+                minDamage,
+                maxDamage,
+                criticalDamage,
+                0,
+                0
+            );
+        }
+        if (variant == 1)
+        {
+            return Monster(
+                "Gobelin tombé du mauvais sac " + std::to_string(index),
+                "Renfort faible et très confus",
+                Race::Gobelin,
+                level,
+                hp,
+                minDamage,
+                maxDamage,
+                criticalDamage,
+                0,
+                0
+            );
+        }
+        return Monster(
+            "Rat attiré par la malchance " + std::to_string(index),
+            "Petite bête opportuniste",
+            Race::Bete,
+            level,
+            hp,
+            minDamage,
+            maxDamage,
+            criticalDamage,
+            0,
+            0
+        );
+    }
 }
 
 bool CombatPotionUse::useHealingPotion(
@@ -153,7 +233,7 @@ bool CombatPotionUse::useHealingPotion(
 
     if (!player.hasInfiniteConsumables())
     {
-        player.getInventory().removeConsumable(consumableIndex);
+        removeConsumedPotion(player, consumableIndex, potion);
     }
 
     std::vector<std::string> lines;
@@ -221,7 +301,7 @@ bool CombatPotionUse::useSelectedPotion(
 
             if (attackLaunched && !player.hasInfiniteConsumables())
             {
-                player.getInventory().removeConsumable(consumableIndex);
+                removeConsumedPotion(player, consumableIndex, potion);
             }
 
             return attackLaunched;
@@ -231,7 +311,7 @@ bool CombatPotionUse::useSelectedPotion(
         {
             if (!player.hasInfiniteConsumables())
             {
-                player.getInventory().removeConsumable(consumableIndex);
+                removeConsumedPotion(player, consumableIndex, potion);
             }
 
             showPotionNotice(
@@ -264,9 +344,81 @@ bool CombatPotionUse::useSelectedPotion(
 
     if (type == ConsumableType::Buff)
     {
+        if (potionNameContains(potion, "lucky potion"))
+        {
+            if (!player.hasInfiniteConsumables())
+            {
+                removeConsumedPotion(player, consumableIndex, potion);
+            }
+
+            const int effectCount = random.between(3, 5);
+            const std::vector<int> effects = chooseDistinctEffectIndexes(random, 6, effectCount);
+            std::vector<std::string> lines = {
+                player.getName() + " boit la Lucky Potion.",
+                "La fiole choisit " + std::to_string(effectCount) + " bonus sans demander l'avis de personne.",
+                "Durée annoncée : trois tours."
+            };
+
+            for (int effect : effects)
+            {
+                if (effect == 0)
+                {
+                    const int power = random.between(18, 30);
+                    player.applyPowerBoost(4, power);
+                    lines.push_back("- Élan chanceux : dégâts infligés +" + std::to_string(power) + "%.");
+                }
+                else if (effect == 1)
+                {
+                    const int rollBonus = random.between(1, 3);
+                    player.applyPrecisionBoost(4, rollBonus);
+                    lines.push_back("- Précision chanceuse : +" + std::to_string(rollBonus) + " aux jets d'attaque.");
+                }
+                else if (effect == 2)
+                {
+                    const int guard = random.between(12, 22);
+                    player.applyGuardBoost(4, guard);
+                    lines.push_back("- Protection chanceuse : dégâts reçus -" + std::to_string(guard) + "%.");
+                }
+                else if (effect == 3)
+                {
+                    const int ward = random.between(18, 30);
+                    player.applyElementalWard(4, ward);
+                    lines.push_back("- Voile favorable : résistance élémentaire +" + std::to_string(ward) + "%.");
+                }
+                else if (effect == 4)
+                {
+                    const int regeneration = std::max(2, player.getMaxHp() * random.between(4, 7) / 100);
+                    player.applyRegeneration(3, regeneration);
+                    lines.push_back("- Régénération chanceuse : +" + std::to_string(regeneration) + " PV au début des prochains tours.");
+                }
+                else
+                {
+                    int cured = 0;
+                    if (player.cureBurning()) cured++;
+                    if (player.curePoison()) cured++;
+                    if (player.cureBleeding()) cured++;
+                    if (player.cureFrost()) cured++;
+                    if (player.cureShock()) cured++;
+                    if (cured > 0)
+                    {
+                        lines.push_back("- Coup de chance purificateur : " + std::to_string(cured) + " altération(s) retirée(s).");
+                    }
+                    else
+                    {
+                        const int before = player.getHp();
+                        player.heal(std::max(1, player.getMaxHp() / 10));
+                        lines.push_back("- Aucun mal à retirer : la chance rend plutôt " + std::to_string(player.getHp() - before) + " PV.");
+                    }
+                }
+            }
+
+            showPotionNotice("LUCKY POTION", "combat.potion.lucky.result", lines);
+            return true;
+        }
+
         if (!player.hasInfiniteConsumables())
         {
-            player.getInventory().removeConsumable(consumableIndex);
+            removeConsumedPotion(player, consumableIndex, potion);
         }
 
         const int hpBefore = player.getHp();
@@ -328,9 +480,90 @@ bool CombatPotionUse::useSelectedPotion(
             return false;
         }
 
+
+        if (potionNameContains(potion, "unlucky potion"))
+        {
+            if (!player.hasInfiniteConsumables())
+            {
+                removeConsumedPotion(player, consumableIndex, potion);
+            }
+
+            if (wave != nullptr && random.between(1, 100) <= 10)
+            {
+                for (int i = 1; i <= 3; ++i)
+                {
+                    wave->addWaitingEnemy(createWeakUnluckyEnemy(player, random, i));
+                }
+                wave->initializeFrontLine();
+
+                showPotionNotice(
+                    "UNLUCKY POTION",
+                    "combat.potion.unlucky.spawn",
+                    {
+                        player.getName() + " lance l'Unlucky Potion sur " + debuffTarget->getName() + ".",
+                        "La fiole éclate dans le mauvais sens.",
+                        "Au lieu de maudire uniquement la cible, elle attire exactement trois ennemis faibles.",
+                        "Ils rejoignent la première ligne ou attendent qu'une place se libère."
+                    }
+                );
+                return true;
+            }
+
+            const int effectCount = random.between(3, 5);
+            const std::vector<int> effects = chooseDistinctEffectIndexes(random, 7, effectCount);
+            std::vector<std::string> lines = {
+                player.getName() + " lance l'Unlucky Potion sur " + debuffTarget->getName() + ".",
+                "La cible reçoit " + std::to_string(effectCount) + " effets négatifs aléatoires.",
+                "Durée annoncée : trois tours."
+            };
+
+            const int statusDamage = std::max(2, potion.getPower() / 10);
+            for (int effect : effects)
+            {
+                if (effect == 0)
+                {
+                    ElementalAffinitySystem::applyBurning(*debuffTarget, 3, statusDamage);
+                    lines.push_back("- Brûlure persistante.");
+                }
+                else if (effect == 1)
+                {
+                    ElementalAffinitySystem::applyPoison(*debuffTarget, 3, statusDamage);
+                    lines.push_back("- Poison persistant.");
+                }
+                else if (effect == 2)
+                {
+                    ElementalAffinitySystem::applyBleeding(*debuffTarget, 3, std::max(1, statusDamage - 1));
+                    lines.push_back("- Saignement persistant.");
+                }
+                else if (effect == 3)
+                {
+                    ElementalAffinitySystem::applyFrost(*debuffTarget, 4);
+                    lines.push_back("- Givre et gestes ralentis.");
+                }
+                else if (effect == 4)
+                {
+                    ElementalAffinitySystem::applyShock(*debuffTarget, 4);
+                    lines.push_back("- Choc électrique perturbant.");
+                }
+                else if (effect == 5)
+                {
+                    debuffTarget->applyWeakening(4, random.between(16, 26));
+                    lines.push_back("- Affaiblissement des dégâts infligés.");
+                }
+                else
+                {
+                    debuffTarget->applyVulnerability(4, random.between(14, 22));
+                    lines.push_back("- Faille augmentant les dégâts reçus.");
+                }
+            }
+
+            showPotionNotice("UNLUCKY POTION", "combat.potion.unlucky.result", lines);
+            return true;
+        }
+
         if (!player.hasInfiniteConsumables())
         {
-            player.getInventory().removeConsumable(consumableIndex);
+            removeConsumedPotion(player, consumableIndex, potion);
         }
 
         int hpBefore = debuffTarget->getHp();
@@ -393,7 +626,7 @@ bool CombatPotionUse::useSelectedPotion(
 
             if (!player.hasInfiniteConsumables())
             {
-                player.getInventory().removeConsumable(consumableIndex);
+                removeConsumedPotion(player, consumableIndex, potion);
             }
 
             std::vector<std::string> scrollLines;
@@ -514,7 +747,7 @@ bool CombatPotionUse::useSelectedPotion(
         {
             if (!player.hasInfiniteConsumables())
             {
-                player.getInventory().removeConsumable(consumableIndex);
+                removeConsumedPotion(player, consumableIndex, potion);
             }
 
             DefensePostureSystem::enterDefensePosture(player);

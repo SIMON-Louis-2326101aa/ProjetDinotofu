@@ -54,6 +54,9 @@ namespace
             if (target.hasVulnerability()) lines.push_back("- Vulnérabilité : " + yesNo(true));
             if (target.hasElementalWard()) lines.push_back("- Égide élémentaire : résistance " + std::to_string(target.getElementalWardResistancePercent()) + "%");
             if (target.hasRegeneration()) lines.push_back("- Régénération : " + yesNo(true));
+            if (target.hasPowerBoost()) lines.push_back("- Puissance chanceuse : +" + std::to_string(target.getPowerBoostPercent()) + "% dégâts");
+            if (target.hasPrecisionBoost()) lines.push_back("- Précision chanceuse : +" + std::to_string(target.getPrecisionRollBonus()) + " au jet");
+            if (target.hasGuardBoost()) lines.push_back("- Protection chanceuse : -" + std::to_string(target.getGuardReductionPercent()) + "% dégâts reçus");
         }
         else
         {

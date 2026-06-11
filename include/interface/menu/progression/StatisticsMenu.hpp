@@ -43,6 +43,10 @@ private:
     // EN: displayTitleCatalog prints owned and unlockable character titles.
     // FR: displayTitleCatalog affiche les titres possédés et les titres déblocables.
     static void displayTitleCatalog(Player& player);
+
+    // EN: displayTopThreeStats prints persistent Top 3 counters from the canonical engine journal.
+    // FR: displayTopThreeStats affiche les Top 3 persistants issus du journal moteur canonique.
+    static void displayTopThreeStats(const Player& player);
     static void displayTitleEquipMenu(Player& player);
 
     // EN: displaySpecialStates prints altered, clone and boss consequence states.

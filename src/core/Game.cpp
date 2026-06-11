@@ -9,6 +9,9 @@
 #include "core/VersionInfo.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "combat/Combat.hpp"
+#include "combat/modes/pve/MonsterPveMode.hpp"
+#include "boss/BossCatalog.hpp"
+#include "entity/Monster.hpp"
 #include "character/RaceCatalog.hpp"
 #include "character/SpecialCharacterNativeBonus.hpp"
 #include "save/SaveManager.hpp"
@@ -374,27 +377,44 @@ namespace
         return questInState(player, questId, "completed");
     }
 
+    bool completeStoryQuestSilently(Player& player, const std::string& questId)
+    {
+        for (Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (quest.id == questId && !quest.turnedIn && !quest.failed)
+            {
+                quest.accepted = true;
+                quest.progress = std::max(quest.target, 1);
+                quest.completed = true;
+                quest.turnedIn = true;
+                quest.expiresAtDay = -1;
+                player.getQuestLog().refreshLinkedQuestProgress();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    int countTurnedInChapterOneReferentQuests(const Player& player)
+    {
+        const std::vector<std::string> ids = {
+            "story_ch1_orren_main",
+            "story_ch1_lysa_main",
+            "story_ch1_bram_main",
+            "story_ch1_soryn_main"
+        };
+        return static_cast<int>(std::count_if(ids.begin(), ids.end(), [&](const std::string& id) {
+            return storyQuestTurnedIn(player, id);
+        }));
+    }
+
     bool progressStoryQuestById(Player& player, const std::string& questId, int amount)
     {
         if (amount <= 0)
         {
             return false;
         }
-
-        for (Quest& quest : player.getQuestLog().getQuests())
-        {
-            if (quest.id == questId && quest.accepted && !quest.completed && !quest.turnedIn && !quest.failed)
-            {
-                quest.progress += amount;
-                if (quest.progress >= quest.target)
-                {
-                    quest.progress = quest.target;
-                    quest.completed = true;
-                }
-                return true;
-            }
-        }
-        return false;
+        return player.getQuestLog().progressQuest(questId, amount);
     }
 
     std::string storyQuestProgressText(const Player& player, const std::string& questId)
@@ -412,6 +432,30 @@ namespace
             return "connue";
         }
         return "à débloquer";
+    }
+
+    Quest* findMutableStoryQuest(Player& player, const std::string& questId)
+    {
+        for (Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (quest.id == questId)
+            {
+                return &quest;
+            }
+        }
+        return nullptr;
+    }
+
+    int storyQuestProgressValue(const Player& player, const std::string& questId)
+    {
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (quest.id == questId)
+            {
+                return std::max(0, quest.progress);
+            }
+        }
+        return 0;
     }
 
     std::string questActivityTag(bool likely)
@@ -1332,6 +1376,9 @@ Game::Game()
     selectedDifficulty = DifficultyMode::Normal;
     selectedDeathRule = DeathRuleRules::defaultForDifficulty(selectedDifficulty);
     selectedRace = CharacterRace::Human;
+    selectedAge = 18;
+    selectedVisualPresentation = "Non précisé";
+    selectedVisualVariant = "Variante A";
     characterLoaded = false;
     specialIdentityValidated = false;
     ephemeralSandboxSession = false;
@@ -1370,6 +1417,7 @@ void Game::run()
         if (!specialIdentityValidated)
         {
             choosePlayerRace();
+            choosePlayerAppearance();
         }
 
         choosePlayerClass();
@@ -1450,6 +1498,7 @@ void Game::askPlayerName()
         selectedDifficulty = result.difficulty;
         selectedDeathRule = result.deathRule;
         selectedRace = mainPlayer.getRace();
+        mainPlayer.forceTerminalImagePolicy();
     }
 }
 
@@ -1793,6 +1842,56 @@ void Game::choosePlayerRace()
     Console::clear();
 }
 
+void Game::choosePlayerAppearance()
+{
+    const int maximumAge = RaceCatalog::getMaximumAge(selectedRace);
+    selectedAge = MessageScreen::askQuantity(
+        "ÂGE DU PERSONNAGE",
+        "character.creation.appearance.age",
+        {
+            "Race sélectionnée : " + characterRaceToText(selectedRace) + ".",
+            "Âge minimum jouable : 15 ans.",
+            "Âge maximum retenu pour cette race : " + std::to_string(maximumAge) + " ans.",
+            "L'âge exact sert au registre et aux futurs filtres d'images ; il ne modifie pas encore les statistiques."
+        },
+        15,
+        maximumAge,
+        "Entre un âge valide pour cette race."
+    );
+    Console::clear();
+
+    MenuScreen presentationScreen("PRÉSENTATION VISUELLE", "character.creation.appearance.presentation");
+    presentationScreen.addSubtitle("Ce choix sert à la description et aux futurs sprites. Il n'accorde aucun bonus.");
+    presentationScreen.addOption(1, "Femme", "Filtre visuel féminin.", true, "character.appearance.presentation.female");
+    presentationScreen.addOption(2, "Homme", "Filtre visuel masculin.", true, "character.appearance.presentation.male");
+    presentationScreen.addOption(3, "Non-binaire / autre", "Filtre visuel non-binaire ou personnalisé.", true, "character.appearance.presentation.other");
+    presentationScreen.addOption(4, "Ne pas préciser", "Conserve une présentation neutre dans le registre.", true, "character.appearance.presentation.unspecified");
+    const int presentationChoice = TerminalInterface::askMenuChoiceFromOptions(presentationScreen, "Choisis une présentation visuelle.");
+    selectedVisualPresentation = presentationChoice == 1 ? "Femme" : presentationChoice == 2 ? "Homme" : presentationChoice == 3 ? "Non-binaire / autre" : "Non précisé";
+    Console::clear();
+
+    MenuScreen variantScreen("VARIANTE VISUELLE", "character.creation.appearance.variant");
+    variantScreen.addSubtitle("Deux propositions finales seront utilisées quand le catalogue pixel-art existera.");
+    variantScreen.addLine("Le terminal n'affiche pas d'image : il conserve uniquement une description courte et fiable.");
+    variantScreen.addOption(1, "Variante A — dynamique", "Silhouette plus légère, posture mobile, équipement présenté de façon vive.", true, "character.appearance.variant.a");
+    variantScreen.addOption(2, "Variante B — imposante", "Silhouette plus posée, posture robuste, équipement présenté de façon lourde.", true, "character.appearance.variant.b");
+    const int variantChoice = TerminalInterface::askMenuChoiceFromOptions(variantScreen, "Choisis la variante finale.");
+    selectedVisualVariant = variantChoice == 2 ? "Variante B — imposante" : "Variante A — dynamique";
+    Console::clear();
+
+    MessageScreen::show(
+        "APPARENCE VALIDÉE",
+        "character.creation.appearance.confirmation",
+        {
+            "Race : " + characterRaceToText(selectedRace) + ".",
+            "Âge : " + std::to_string(selectedAge) + " ans — tranche " + RaceCatalog::getAgeBand(selectedRace, selectedAge) + ".",
+            "Présentation : " + selectedVisualPresentation + ".",
+            "Choix final : " + selectedVisualVariant + ".",
+            "L'IG utilisera plus tard ces filtres pour proposer seulement les images compatibles."
+        }
+    );
+}
+
 // EN: choosePlayerClass declares or implements a focused behavior used by this module.
 // FR: choosePlayerClass déclare ou implémente un comportement précis utilisé par ce module.
 void Game::choosePlayerClass()
@@ -1963,7 +2062,9 @@ void Game::choosePlayerClass()
                 );
 
                 mainPlayer = Player(playerName, chosenClass);
+                mainPlayer.forceTerminalImagePolicy();
                 mainPlayer.setRace(selectedRace);
+                mainPlayer.setAppearanceProfile(selectedAge, selectedVisualPresentation, selectedVisualVariant);
 
                 bool nativeBonusApplied = SpecialCharacterNativeBonus::applyIfNativeMatch(mainPlayer);
 
@@ -1975,6 +2076,7 @@ void Game::choosePlayerClass()
                 confirmation.setContinueInput("Valide pour entrer dans le jeu avec ce personnage.");
                 confirmation.addLine(playerName + ", tu as choisi : " + characterRaceToText(selectedRace) + " / " + chosenClass.getName() + ".");
                 confirmation.addLine("Famille : " + ClassCatalog::getClassCategoryNameByChoice(categoryChoice) + ".");
+                confirmation.addLine("Apparence : " + mainPlayer.getAppearanceDescription() + ".");
                 confirmation.addLine(RaceCatalog::getInnatePassiveLine(selectedRace));
                 confirmation.addLine("Difficulté : " + getDifficultyName() + ".");
                 confirmation.addLine("Règle de mort : " + getDeathRuleName() + ".");
@@ -2363,7 +2465,8 @@ void Game::configurePartyMode()
         confirmation.addLine("Difficulté : " + getDifficultyName());
         confirmation.addLine("Règle de mort : " + getDeathRuleName());
         confirmation.addLine("PV : " + std::to_string(mainPlayer.getHp()) + "/" + std::to_string(mainPlayer.getMaxHp()));
-        confirmation.addLine("Or : " + std::to_string(mainPlayer.getInventory().getGold()) + " pièces");
+        confirmation.addLine("Argent séparé : " + mainPlayer.getInventory().getWalletLine());
+        confirmation.addLine("Argent total : " + mainPlayer.getInventory().getWalletTotalLine());
         confirmation.addLine("Prochaine étape : activités disponibles.");
         TerminalInterface::renderMenuScreen(confirmation, false);
         Console::waitForEnter();
@@ -2440,56 +2543,79 @@ void Game::chooseGameMode()
         const bool locationNpcQuestLikely = hasLikelyLocationOrNpcQuest(mainPlayer);
 
         MenuScreen screen("ACTIVITÉS", "activity.main");
-        screen.addSubtitle("Choisis une catégorie, puis une action précise.");
+        screen.addSubtitle("Choisis directement ce que tu veux faire.");
         screen.addLine("Date : " + mainPlayer.formatWorldDateLine() + " | Moment : " + mainPlayer.formatWorldDayPartLine());
-        screen.addLine("Astuce : les quêtes d'exploration passent par Exploration. Les lieux visitables servent surtout à la ville, aux boutiques et aux PNJ.");
+        screen.addLine("Exploration sert aux sorties par biome. Lieux notables sert aux endroits précis, aux boutiques et aux contacts du monde.");
         screen.addOption(
             1,
             "Histoire",
-            "Route principale guidée : prologue, ville, quêtes principales et chapitres.",
+            "Route principale : prologue, progression du village, quêtes principales et chapitres.",
             true,
             "activity.story",
-            makeActivityItemData("Route principale", "story", "Histoire", "Mode guidé séparé du bac à sable : peu de boutiques/quêtes au départ, puis déblocages par chapitres.", mainPlayer.getStoryProgressLabel(), "Chapitre 1/2", true)
+            makeActivityItemData("Activités", "story", "Histoire", "Bac à sable guidé par chapitres, avec contenus visibles selon l'état réel du monde.", mainPlayer.getStoryProgressLabel(), "Progression narrative", true)
         );
         screen.addOption(
             2,
-            "Terrain : Combats / Exploration" + questActivityTag(combatQuestLikely || explorationQuestLikely),
-            "Combats PvE/PvP, boss, biomes, plantes, matériaux, coffres et rencontres." + questActivityTag(combatQuestLikely || explorationQuestLikely),
+            "Combats" + questActivityTag(combatQuestLikely),
+            "PvP IA, JcJ local, monstres et boss." + questActivityTag(combatQuestLikely),
             true,
-            "activity.terrain",
-            makeActivityItemData("Terrain", "travel", "Combats / Exploration", "Catégorie terrain : combats volontaires et sorties d'exploration hors ville.", (combatQuestLikely || explorationQuestLikely) ? "Quête probable" : "Disponible", "Combat ou exploration", true)
+            "activity.combat",
+            makeActivityItemData("Activités", "combat", "Combats", "Affrontements volontaires contre IA, joueurs, monstres ou boss.", combatQuestLikely ? "Quête probable" : "Disponible", "Combat volontaire", combatQuestLikely)
         );
         screen.addOption(
             3,
-            "Ville : Quêtes / PNJ / Lieux" + questActivityTag(questHubLikely || locationNpcQuestLikely),
-            "Journal, guilde, PNJ notables, forge, herboristerie, bibliothèque et boutiques." + questActivityTag(questHubLikely || locationNpcQuestLikely),
+            "Exploration" + questActivityTag(explorationQuestLikely),
+            "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues." + questActivityTag(explorationQuestLikely),
             true,
-            "activity.city",
-            makeActivityItemData("Ville", "quest", "Quêtes / PNJ / Lieux", "Catégorie ville : journal, demandes, personnages, boutiques et services.", (questHubLikely || locationNpcQuestLikely) ? "Quête probable" : "Disponible", "Ville / progression", questHubLikely || locationNpcQuestLikely)
+            "activity.exploration",
+            makeActivityItemData("Activités", "travel", "Exploration", "Sorties par biome avec risques, ressources, traces et événements.", explorationQuestLikely ? "Quête probable" : "Disponible", "Sortie d'exploration", explorationQuestLikely)
         );
         screen.addOption(
             4,
-            "Gestion",
-            "Récap après-combat, statistiques, inventaire via accès rapide, sauvegarde et paramètres.",
+            "Quêtes" + questActivityTag(questHubLikely),
+            "Quête principale, journal, guilde, demandes de PNJ et validations." + questActivityTag(questHubLikely),
             true,
-            "activity.management",
-            makeActivityItemData("Gestion", "inspect", "Gestion", "Actions de confort : récap, inventaire, sauvegarde, paramètres et état du personnage.", "Disponible", "Hub de gestion", true)
+            "activity.quests",
+            makeActivityItemData("Activités", "quest", "Quêtes", "Journal, guilde, quêtes principales, demandes et objectifs à rendre.", questHubLikely ? "Quête probable" : "Disponible", "Progression", questHubLikely)
         );
         screen.addOption(
             5,
+            "PNJ notables" + questActivityTag(locationNpcQuestLikely),
+            "Parler aux personnages importants, commerçants, habitants et contacts de quêtes." + questActivityTag(locationNpcQuestLikely),
+            true,
+            "activity.notable_npcs",
+            makeActivityItemData("Activités", "talk", "PNJ notables", "Contacts du monde classés par rôle, sans forcer le passage par une boutique.", locationNpcQuestLikely ? "Quête probable" : "Disponible", "Dialogues", locationNpcQuestLikely)
+        );
+        screen.addOption(
+            6,
+            "Lieux notables" + questActivityTag(locationNpcQuestLikely),
+            "Ville, extérieur, boutiques et services accessibles dans le monde." + questActivityTag(locationNpcQuestLikely),
+            true,
+            "activity.locations",
+            makeActivityItemData("Activités", "travel", "Lieux notables", "Endroits précis classés en Ville, Extérieur et Boutiques.", locationNpcQuestLikely ? "Quête probable" : "Disponible", "Monde / services", locationNpcQuestLikely)
+        );
+        screen.addOption(
+            7,
+            "Gestion",
+            "Récap après-combat, statistiques, échange et gestion du personnage.",
+            true,
+            "activity.management",
+            makeActivityItemData("Activités", "inspect", "Gestion", "Récap, progression, échange et actions entre deux sorties.", "Disponible", "Gestion")
+        );
+        screen.addOption(
+            8,
             "Infos utiles / aide",
-            "Journées, argent, quêtes, exploration et catégories sans noyer la page principale.",
+            "Journées, argent, quêtes, exploration, PNJ et lieux notables.",
             true,
             "activity.info",
-            makeActivityItemData("Aide", "inspect", "Infos utiles", "Guide court des routes jouables, temps, argent, quêtes et lieux.", "Aide", "Lecture")
+            makeActivityItemData("Activités", "inspect", "Infos utiles", "Guide court des routes jouables, du temps, de l'économie et des quêtes.", "Aide", "Lecture")
         );
         addOutOfCombatUtilityOptions(screen, true, true);
 
-        int choice = TerminalInterface::askMenuChoiceFromOptions(
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(
             screen,
-            "Veuillez choisir une catégorie affichée."
+            "Veuillez choisir une activité affichée."
         );
-
         Console::clear();
 
         if (handleOutOfCombatUtilityChoice(choice, true))
@@ -2505,123 +2631,75 @@ void Game::chooseGameMode()
 
         if (choice == 2)
         {
-            bool terrainOpen = true;
-            while (terrainOpen)
+            bool combatOpen = true;
+            while (combatOpen)
             {
-                const bool monsterQuestLikely = hasLikelyCombatQuest(mainPlayer);
-                const bool bossQuestLikely = hasLikelyBossQuest(mainPlayer);
-                MenuScreen terrainScreen("TERRAIN", "activity.terrain.menu");
-                terrainScreen.addSubtitle("Combattre ou sortir explorer");
-                terrainScreen.addLine("Les quêtes d'exploration utilisent cette catégorie, même quand elles ont été données par un PNJ.");
-                terrainScreen.addBackOption();
-                terrainScreen.addOption(
+                const bool currentMonsterQuestLikely = hasLikelyCombatQuest(mainPlayer);
+                const bool currentBossQuestLikely = hasLikelyBossQuest(mainPlayer);
+                MenuScreen combatScreen("COMBATS", "activity.combat.menu");
+                combatScreen.addSubtitle("Choisis le type de combat");
+                combatScreen.addBackOption();
+                combatScreen.addOption(
                     1,
-                    "Combats" + questActivityTag(monsterQuestLikely || bossQuestLikely),
-                    "PvP IA, JcJ local, PvE monstres et boss." + questActivityTag(monsterQuestLikely || bossQuestLikely),
+                    "PvP IA",
+                    "Duel contre une IA, avec personnages spéciaux possibles selon le mode.",
                     true,
-                    "activity.terrain.combat",
-                    makeActivityItemData("Terrain", "combat", "Combats", "Duel IA, JcJ local, monstres, groupes et boss.", (monsterQuestLikely || bossQuestLikely) ? "Quête probable" : "Disponible", "Combat volontaire", true)
+                    "combat.ai_pvp",
+                    makeActivityItemData("Combats", "combat", "PvP IA", "Duel contre une IA, avec personnages spéciaux possibles selon le mode.", "Disponible", "Combat volontaire")
                 );
-                terrainScreen.addOption(
+                combatScreen.addOption(
                     2,
-                    "Exploration" + questActivityTag(explorationQuestLikely),
-                    "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues." + questActivityTag(explorationQuestLikely),
+                    "PvP 2 joueurs / JcJ",
+                    "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.",
                     true,
-                    "activity.terrain.exploration",
-                    makeActivityItemData("Terrain", "travel", "Exploration", "Sorties par biome avec risques, ressources, coffres, pièges, mimics et rencontres imprévues.", explorationQuestLikely ? "Quête probable" : "Disponible", "Sortie terrain", true)
+                    "combat.local_pvp",
+                    makeActivityItemData("Combats", "combat", "PvP 2 joueurs / JcJ", "Duel local entre personnages compatibles.", "Disponible", "Combat volontaire")
+                );
+                combatScreen.addOption(
+                    3,
+                    "PvE monstres" + questActivityTag(currentMonsterQuestLikely),
+                    "Affrontement contre monstres, groupes, vagues et rencontres spéciales." + questActivityTag(currentMonsterQuestLikely),
+                    true,
+                    "combat.monster_pve",
+                    makeActivityItemData("Combats", "combat", "PvE monstres", "Monstres, groupes, vagues et rencontres spéciales.", currentMonsterQuestLikely ? "Quête probable" : "Disponible", "Combat volontaire", currentMonsterQuestLikely)
+                );
+                combatScreen.addOption(
+                    4,
+                    "PvE boss" + questActivityTag(currentBossQuestLikely),
+                    "Boss, sous-boss et combats particuliers. La fuite y est impossible." + questActivityTag(currentBossQuestLikely),
+                    true,
+                    "combat.boss_pve",
+                    makeActivityItemData("Combats", "combat", "PvE boss", "Boss, sous-boss et combats particuliers sans fuite.", currentBossQuestLikely ? "Quête probable" : "Disponible", "Expédition de boss", currentBossQuestLikely)
                 );
 
-                const int terrainChoice = TerminalInterface::askMenuChoiceFromOptions(
-                    terrainScreen,
-                    "Veuillez choisir une action de terrain affichée."
+                const int combatChoice = TerminalInterface::askMenuChoiceFromOptions(
+                    combatScreen,
+                    "Veuillez choisir un type de combat affiché."
                 );
                 Console::clear();
 
-                if (terrainChoice == 0)
+                if (combatChoice == 0)
                 {
-                    terrainOpen = false;
+                    combatOpen = false;
                     continue;
                 }
 
-                if (terrainChoice == 2)
+                switch (combatChoice)
                 {
-                    selectedMode = GameMode::Exploration;
-                    return;
-                }
-
-                if (terrainChoice == 1)
-                {
-                    bool combatOpen = true;
-                    while (combatOpen)
-                    {
-                        const bool currentMonsterQuestLikely = hasLikelyCombatQuest(mainPlayer);
-                        const bool currentBossQuestLikely = hasLikelyBossQuest(mainPlayer);
-                        MenuScreen combatScreen("COMBATS", "activity.combat.menu");
-                        combatScreen.addSubtitle("Choisis le type de combat");
-                        combatScreen.addBackOption();
-                        combatScreen.addOption(
-                            1,
-                            "PvP IA",
-                            "Duel contre une IA, avec personnages spéciaux possibles selon le mode.",
-                            true,
-                            "combat.ai_pvp",
-                            makeActivityItemData("Combats", "combat", "PvP IA", "Duel contre une IA, avec personnages spéciaux possibles selon le mode.", "Disponible", "Combat volontaire")
-                        );
-                        combatScreen.addOption(
-                            2,
-                            "PvP 2 joueurs / JcJ",
-                            "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.",
-                            true,
-                            "combat.local_pvp",
-                            makeActivityItemData("Combats", "combat", "PvP 2 joueurs / JcJ", "Duel local amical ou mortel selon les comptes, clones, altérations et difficultés.", "Disponible", "Combat volontaire")
-                        );
-                        combatScreen.addOption(
-                            3,
-                            "PvE monstres" + questActivityTag(currentMonsterQuestLikely),
-                            "Vagues de monstres, loots, matériaux, qualité de récupération et progression." + questActivityTag(currentMonsterQuestLikely),
-                            true,
-                            "combat.monster_pve",
-                            makeActivityItemData("Combats", "combat", "PvE monstres", "Vagues de monstres, loots, matériaux, qualité de récupération et progression.", currentMonsterQuestLikely ? "Quête probable" : "Disponible", "Farm / progression", true)
-                        );
-                        combatScreen.addOption(
-                            4,
-                            "PvE Boss" + questActivityTag(currentBossQuestLikely),
-                            "Combat contre un boss avec identité, décryptage et fragments spéciaux." + questActivityTag(currentBossQuestLikely),
-                            true,
-                            "combat.boss_pve",
-                            makeActivityItemData("Combats", "combat", "PvE Boss", "Combat contre un boss avec identité, décryptage et fragments spéciaux. La fuite de boss reste impossible.", currentBossQuestLikely ? "Quête probable" : "Dangereux", "Boss / fragments", true)
-                        );
-
-                        const int combatChoice = TerminalInterface::askMenuChoiceFromOptions(
-                            combatScreen,
-                            "Veuillez choisir un combat affiché."
-                        );
-                        Console::clear();
-
-                        if (combatChoice == 0)
-                        {
-                            combatOpen = false;
-                            continue;
-                        }
-
-                        switch (combatChoice)
-                        {
-                            case 1:
-                                selectedMode = GameMode::AIPvp;
-                                return;
-                            case 2:
-                                selectedMode = GameMode::TwoPlayerPvp;
-                                return;
-                            case 3:
-                                selectedMode = GameMode::MonsterPve;
-                                return;
-                            case 4:
-                                selectedMode = GameMode::BossPve;
-                                return;
-                            default:
-                                break;
-                        }
-                    }
+                    case 1:
+                        selectedMode = GameMode::AIPvp;
+                        return;
+                    case 2:
+                        selectedMode = GameMode::TwoPlayerPvp;
+                        return;
+                    case 3:
+                        selectedMode = GameMode::MonsterPve;
+                        return;
+                    case 4:
+                        selectedMode = GameMode::BossPve;
+                        return;
+                    default:
+                        break;
                 }
             }
             continue;
@@ -2629,77 +2707,26 @@ void Game::chooseGameMode()
 
         if (choice == 3)
         {
-            MenuScreen cityScreen("VILLE", "activity.city.menu");
-            cityScreen.addSubtitle("Quêtes, PNJ et services de ville");
-            cityScreen.addLine("Les lieux visitables ne remplacent pas Exploration : ils servent surtout aux services, boutiques et dialogues.");
-            cityScreen.addBackOption();
-            cityScreen.addOption(
-                1,
-                "Quêtes" + questActivityTag(questHubLikely),
-                "Quête principale, journal, guilde, demandes de PNJ et validations." + questActivityTag(questHubLikely),
-                true,
-                "activity.city.quests",
-                makeActivityItemData("Ville", "quest", "Quêtes", "Accès au journal, à la guilde, aux demandes de PNJ et aux validations d'objectifs.", questHubLikely ? "Quête probable" : "Disponible", "Ville / progression", questHubLikely)
-            );
-            cityScreen.addOption(
-                2,
-                "PNJ notables" + questActivityTag(locationNpcQuestLikely),
-                "Parler aux clients et personnages disponibles sans passer par une boutique." + questActivityTag(locationNpcQuestLikely),
-                true,
-                "activity.city.npcs",
-                makeActivityItemData("Ville", "talk", "PNJ notables", "Discussion directe avec les clients ou personnages disponibles, sans forcer une boutique.", locationNpcQuestLikely ? "Quête probable" : "Disponible", "Ville / dialogues", locationNpcQuestLikely)
-            );
-            cityScreen.addOption(
-                3,
-                "Boutiques / lieux visitables" + questActivityTag(locationNpcQuestLikely),
-                "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux." + questActivityTag(locationNpcQuestLikely),
-                true,
-                "activity.city.locations",
-                makeActivityItemData("Ville", "travel", "Boutiques / lieux visitables", "Forge, herboristerie, bibliothèque, vendeurs et lieux sociaux centralisés hors combat.", locationNpcQuestLikely ? "Quête probable" : "Disponible", "Ville / économie", locationNpcQuestLikely)
-            );
-            cityScreen.addOption(
-                4,
-                "Échange / don",
-                "Transférer des ressources entre personnages compatibles.",
-                true,
-                "activity.city.exchange",
-                makeActivityItemData("Ville", "barter", "Échange / don", "Transfert protégé d'objets, matériaux ou or entre personnages compatibles.", "Disponible", "Gestion de compte")
-            );
-
-            const int cityChoice = TerminalInterface::askMenuChoiceFromOptions(
-                cityScreen,
-                "Veuillez choisir une action de ville affichée."
-            );
-            Console::clear();
-
-            if (cityChoice == 0)
-            {
-                continue;
-            }
-            if (cityChoice == 1)
-            {
-                selectedMode = GameMode::Challenges;
-                return;
-            }
-            if (cityChoice == 2)
-            {
-                selectedMode = GameMode::NotableNpcs;
-                return;
-            }
-            if (cityChoice == 3)
-            {
-                selectedMode = GameMode::Locations;
-                return;
-            }
-            if (cityChoice == 4)
-            {
-                selectedMode = GameMode::Exchange;
-                return;
-            }
-            continue;
+            selectedMode = GameMode::Exploration;
+            return;
+        }
+        if (choice == 4)
+        {
+            selectedMode = GameMode::Challenges;
+            return;
+        }
+        if (choice == 5)
+        {
+            selectedMode = GameMode::NotableNpcs;
+            return;
+        }
+        if (choice == 6)
+        {
+            selectedMode = GameMode::Locations;
+            return;
         }
 
-        if (choice == 4)
+        if (choice == 7)
         {
             MenuScreen managementScreen("GESTION", "activity.management.menu");
             managementScreen.addSubtitle("Actions entre deux sorties");
@@ -2710,7 +2737,7 @@ void Game::chooseGameMode()
                 "Récap, statistiques, équipement, potions, progression et actions entre deux combats.",
                 true,
                 "activity.management.post_combat",
-                makeActivityItemData("Gestion", "inspect", "Gestion après-combat", "Récap, statistiques, inventaire, équipement, lieux, quêtes et actions entre deux combats.", "Disponible", "Hub de gestion", true)
+                makeActivityItemData("Gestion", "inspect", "Gestion après-combat", "Récap, statistiques, inventaire, équipement, quêtes et actions entre deux combats.", "Disponible", "Hub de gestion", true)
             );
             managementScreen.addOption(
                 2,
@@ -2718,7 +2745,7 @@ void Game::chooseGameMode()
                 "Transférer des ressources entre personnages compatibles.",
                 true,
                 "activity.management.exchange",
-                makeActivityItemData("Gestion", "barter", "Échange / don", "Transfert protégé d'objets, matériaux ou or entre personnages compatibles.", "Disponible", "Gestion de compte")
+                makeActivityItemData("Gestion", "barter", "Échange / don", "Transfert protégé d'objets, matériaux ou argent entre personnages compatibles.", "Disponible", "Gestion de compte")
             );
 
             const int managementChoice = TerminalInterface::askMenuChoiceFromOptions(
@@ -2748,7 +2775,7 @@ void Game::chooseGameMode()
             continue;
         }
 
-        if (choice == 5)
+        if (choice == 8)
         {
             displayActivityInformation();
             continue;
@@ -2800,7 +2827,7 @@ std::string Game::getSelectedModeName() const
         case GameMode::Exploration:
             return "Exploration";
         case GameMode::Locations:
-            return "Boutiques / lieux visitables";
+            return "Lieux notables";
         case GameMode::NotableNpcs:
             return "PNJ notables";
         case GameMode::Exchange:
@@ -2893,14 +2920,15 @@ void Game::displayActivityInformation() const
         MenuScreen screen("INFOS UTILES", "activity.info");
         screen.addSubtitle("Choisis un sujet court au lieu de tout lire d'un coup.");
         screen.addLine("Date : " + mainPlayer.formatWorldDateLine() + " | Moment : " + mainPlayer.formatWorldDayPartLine());
-        screen.addLine("Or actuel : " + std::to_string(mainPlayer.getInventory().getGold()) + " pièce(s).");
+        screen.addLine("Argent séparé : " + mainPlayer.getInventory().getWalletLine());
+        screen.addLine("Argent total : " + mainPlayer.getInventory().getWalletTotalLine());
         screen.addBackOption("Retour", "activity.info.back");
         screen.addOption(1, "Où aller ?", "Rappel des grandes catégories du menu principal.", true, "activity.info.where");
         screen.addOption(2, "Journées / temps", "Comprendre les jours, moments et conséquences des activités.", true, "activity.info.time");
         screen.addOption(3, "Argent / économie", "Or, boutiques, stocks, prix, revente et récompenses.", true, "activity.info.money");
-        screen.addOption(4, "Combat / exploration", "Différence entre combat volontaire, boss et sortie de terrain.", true, "activity.info.terrain");
+        screen.addOption(4, "Combat / exploration", "Différence entre combat volontaire, boss et sortie par biome.", true, "activity.info.terrain");
         screen.addOption(5, "Quêtes / rendre objectifs", "Où voir les quêtes prêtes, principales, secondaires et rendues.", true, "activity.info.quests");
-        screen.addOption(6, "Ville / PNJ / lieux", "PNJ notables, lieux visitables, boutiques et services.", true, "activity.info.city");
+        screen.addOption(6, "PNJ / lieux notables", "Contacts, endroits précis, boutiques et services du monde.", true, "activity.info.locations");
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide. Choisis un sujet affiché.");
         Console::clear();
@@ -2917,10 +2945,12 @@ void Game::displayActivityInformation() const
                 "activity.info.where.detail",
                 {
                     "Histoire : route principale guidée et quêtes non refusables.",
-                    "Terrain : combats volontaires et exploration par biome.",
-                    "Ville : quêtes, PNJ notables, lieux visitables, boutiques et services.",
-                    "Gestion : état du personnage, inventaire, sauvegarde, récap et options de confort.",
-                    "Astuce : si une quête parle de terrain, de traces, de plantes ou de route, essaie Exploration plutôt que Lieux visitables."
+                    "Combats : affrontements volontaires contre IA, joueurs, monstres ou boss.",
+                    "Exploration : sorties par biome, ressources, traces, coffres et rencontres.",
+                    "Quêtes : histoire principale, journal, guilde, demandes et objectifs à rendre.",
+                    "PNJ notables : contacts du monde classés par rôle.",
+                    "Lieux notables : endroits précis classés en Ville, Extérieur et Boutiques.",
+                    "Gestion : état du personnage, inventaire, sauvegarde, récap et options de confort."
                 }
             );
             continue;
@@ -2947,7 +2977,8 @@ void Game::displayActivityInformation() const
                 "ARGENT / ÉCONOMIE",
                 "activity.info.money.detail",
                 {
-                    "Or actuel : " + std::to_string(mainPlayer.getInventory().getGold()) + " pièce(s).",
+                    "Argent séparé : " + mainPlayer.getInventory().getWalletLine(),
+                    "Argent total : " + mainPlayer.getInventory().getWalletTotalLine(),
                     "L'or vient surtout des combats, quêtes, explorations, reventes et événements.",
                     "Les boutiques peuvent changer leurs stocks après les combats ou selon l'état de la ville.",
                     "Certains marchés accepteront plus tard du troc ou des objets précis, pas seulement de l'or.",
@@ -2965,7 +2996,7 @@ void Game::displayActivityInformation() const
                 {
                     "Combat : affrontement volontaire contre monstres, IA, joueurs ou boss selon le mode choisi.",
                     "Exploration : sortie de terrain par biome avec plantes, coffres, pièges, traces, ressources et combats inattendus.",
-                    "Une quête d'exploration ne se fait pas forcément dans Lieux visitables : elle passe souvent par Terrain > Exploration.",
+                    "Une quête de terrain, de traces, de plantes ou de route passe généralement par Exploration.",
                     "Les boss représentent une vraie expédition : la fuite y est impossible."
                 }
             );
@@ -2990,13 +3021,13 @@ void Game::displayActivityInformation() const
         if (choice == 6)
         {
             MessageScreen::show(
-                "VILLE / PNJ / LIEUX",
-                "activity.info.city.detail",
+                "PNJ / LIEUX NOTABLES",
+                "activity.info.locations.detail",
                 {
                     "PNJ notables : parler aux personnages importants, clients, référents et survivants.",
-                    "Lieux visitables : forge, herboristerie, bibliothèque, boutiques et services de ville.",
+                    "Lieux notables : endroits précis du monde, classés en Ville, Extérieur et Boutiques.",
                     "Les PNJ peuvent donner ou faire avancer des quêtes, mais les sorties de terrain restent dans Exploration.",
-                    "La ville peut débloquer de meilleurs services selon les personnes sauvées, les preuves ramenées et les travaux terminés."
+                    "Certains lieux et services apparaissent seulement après une rencontre, une reconstruction ou une progression réelle du monde."
                 }
             );
             continue;
@@ -3028,7 +3059,7 @@ void Game::launchSelectedMode()
     else if (selectedMode == GameMode::Locations)
     {
         QuestMenu::openLocations(mainPlayer);
-        saveCurrentProgress("Lieux visitables");
+        saveCurrentProgress("Lieux notables");
     }
     else if (selectedMode == GameMode::NotableNpcs)
     {
@@ -3415,6 +3446,51 @@ void Game::continueStoryRoute()
         );
     }
 
+    if (StoryCampaign::canUnlockChapterThree(mainPlayer) && mainPlayer.getStoryChapter() < 3)
+    {
+        mainPlayer.setStoryProgress(3, 1, std::max(9, mainPlayer.getStoryCityDevelopmentLevel()));
+        QuestMenu::syncMainStoryQuests(mainPlayer);
+        saveCurrentProgress("Chapitre 3 débloqué par la route gardée");
+        MessageScreen::show(
+            "CHAPITRE 3 DÉBLOQUÉ",
+            "story.chapter_3.unlocked",
+            {
+                "Le premier convoi gardé est revenu. Il est revenu seul, avec davantage de marchandises qu'au départ.",
+                "Mira refuse qu'on décharge quoi que ce soit avant d'avoir compris quelle route l'a réellement ramené.",
+                "Chapitre 3 débloqué : Les routes qui répondent mal."
+            },
+            false
+        );
+    }
+
+    if (StoryCampaign::canUnlockChapterFour(mainPlayer) && mainPlayer.getStoryChapter() < 4)
+    {
+        mainPlayer.setStoryProgress(4, 1, std::max(10, mainPlayer.getStoryCityDevelopmentLevel()));
+        saveCurrentProgress("Chapitre 4 débloqué après le classement du convoi");
+        MessageScreen::show(
+            "CHAPITRE 4 DÉBLOQUÉ",
+            "story.chapter_4.unlocked",
+            {
+                "La route corrigée mène enfin quelque part au lieu de simplement répondre aux mesures.",
+                "Au bout du trajet se trouve un village présent dans les marges, mais daté d'une année incompatible avec les registres de la ville.",
+                "Chapitre 4 débloqué : Le village à la mauvaise date. Aucun boss majeur n'est encore désigné."
+            },
+            false
+        );
+    }
+
+    if (mainPlayer.getStoryChapter() >= 4)
+    {
+        playStoryChapterFour();
+        return;
+    }
+
+    if (mainPlayer.getStoryChapter() >= 3)
+    {
+        playStoryChapterThree();
+        return;
+    }
+
     if (mainPlayer.getStoryChapter() >= 2)
     {
         playStoryChapterTwo();
@@ -3445,6 +3521,8 @@ void Game::openStoryChapterSelectionMenu()
     {
         const int maxUnlocked = StoryCampaign::maxUnlockedChapter(mainPlayer);
         const bool chapterTwoUnlocked = StoryCampaign::isChapterUnlocked(mainPlayer, 2);
+        const bool chapterThreeUnlocked = StoryCampaign::isChapterUnlocked(mainPlayer, 3);
+        const bool chapterFourUnlocked = StoryCampaign::isChapterUnlocked(mainPlayer, 4);
 
         MenuScreen screen("SÉLECTIONNER LE CHAPITRE", "story.chapter_select.menu");
         screen.addSubtitle("Seuls les chapitres débloqués sont sélectionnables");
@@ -3460,7 +3538,21 @@ void Game::openStoryChapterSelectionMenu()
             chapterTwoUnlocked,
             "story.chapter_select.chapter_2"
         );
-        screen.addOption(4, "Règle d’ordre", "Rappelle que Continuer lance automatiquement la prochaine étape.", true, "story.chapter_select.rules");
+        screen.addOption(
+            4,
+            chapterThreeUnlocked ? "Chapitre 3 : Les routes qui répondent mal" : "????",
+            chapterThreeUnlocked ? "Chapitre débloqué : enquêter sur le convoi revenu seul." : "[◘ chapitre verrouillé : stabilise d'abord la route gardée du chapitre 2]",
+            chapterThreeUnlocked,
+            "story.chapter_select.chapter_3"
+        );
+        screen.addOption(
+            5,
+            chapterFourUnlocked ? "Chapitre 4 : Le village à la mauvaise date" : "????",
+            chapterFourUnlocked ? "Première phase débloquée : enquêter avant de choisir le boss majeur." : "[◘ chapitre verrouillé : classe d'abord le convoi et sa route corrigée]",
+            chapterFourUnlocked,
+            "story.chapter_select.chapter_4"
+        );
+        screen.addOption(6, "Règle d’ordre", "Rappelle que Continuer lance automatiquement la prochaine étape.", true, "story.chapter_select.rules");
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis un chapitre débloqué.");
         Console::clear();
@@ -3495,6 +3587,37 @@ void Game::openStoryChapterSelectionMenu()
             continue;
         }
         if (choice == 4)
+        {
+            if (!chapterThreeUnlocked)
+            {
+                MessageScreen::show("CHAPITRE VERROUILLÉ", "story.chapter_select.chapter_3.locked", {"Le chapitre 3 demande d'abord une route gardée réellement stabilisée."}, false);
+                continue;
+            }
+            if (mainPlayer.getStoryChapter() < 3)
+            {
+                mainPlayer.setStoryProgress(3, 1, std::max(9, mainPlayer.getStoryCityDevelopmentLevel()));
+                QuestMenu::syncMainStoryQuests(mainPlayer);
+                saveCurrentProgress("Chapitre 3 sélectionné après déblocage");
+            }
+            playStoryChapterThree();
+            continue;
+        }
+        if (choice == 5)
+        {
+            if (!chapterFourUnlocked)
+            {
+                MessageScreen::show("CHAPITRE VERROUILLÉ", "story.chapter_select.chapter_4.locked", {"Le chapitre 4 demande que le convoi du chapitre 3 soit entièrement classé et rendu."}, false);
+                continue;
+            }
+            if (mainPlayer.getStoryChapter() < 4)
+            {
+                mainPlayer.setStoryProgress(4, 1, std::max(10, mainPlayer.getStoryCityDevelopmentLevel()));
+                saveCurrentProgress("Chapitre 4 sélectionné après déblocage");
+            }
+            playStoryChapterFour();
+            continue;
+        }
+        if (choice == 6)
         {
             MessageScreen::show(
                 "ORDRE DES CHAPITRES",
@@ -3690,7 +3813,7 @@ void Game::playStoryChapterOne()
         {
             std::vector<std::string> missionLines = StoryCampaign::buildChapterOneMissionLines(mainPlayer);
             missionLines.push_back("");
-            missionLines.push_back("Menus histoire débloqués maintenant : PNJ notables, Quêtes > Quête principale, petits contrats F/E proches, forge pauvre, herboristerie pauvre, objectifs de ville.");
+            missionLines.push_back("Dans les menus normaux, seuls les PNJ, quêtes, lieux et boutiques déjà présents ou rouverts sont affichés.");
             missionLines.push_back("Le chapitre 2 restera verrouillé tant que les quêtes principales de Mira et des quatre référents ne seront pas terminées puis notifiées.");
             MessageScreen::show("CHAPITRE 1 — MISSION PRINCIPALE", "story.chapter_1.main_mission", missionLines, false);
             continue;
@@ -3702,73 +3825,64 @@ void Game::playStoryChapterOne()
         }
         if (chapterChoice == 3)
         {
-            if (mainPlayer.getStoryStep() < 4)
+            QuestMenu::syncMainStoryQuests(mainPlayer);
+            const bool fourMet = storyQuestCompleted(mainPlayer, "story_ch1_meet_referents")
+                || storyQuestTurnedIn(mainPlayer, "story_ch1_meet_referents");
+            const bool fourReported = storyQuestTurnedIn(mainPlayer, "story_ch1_meet_referents");
+
+            if (!fourMet)
             {
-                MessageScreen::show(
-                    "MIRA — CE QU'IL RESTE À FAIRE",
-                    "story.chapter_1.mira_next.first_tour",
-                    StoryCampaign::buildChapterOneReferentIntroLines(mainPlayer),
-                    false
-                );
-
-                MenuScreen referentTour("PREMIÈRE QUÊTE PRINCIPALE", "story.chapter_1.referent_tour_confirm");
-                referentTour.addSubtitle("La ville commence par des visages, pas par une liste de courses");
-                referentTour.addLine("Mira te donne la première quête principale : faire le tour de la ville et rencontrer les référents cités.");
-                referentTour.addOption(1, "Faire le tour de la ville", "Étape histoire obligatoire : Mira, Orren, Lysa, Bram et Soryn.", true, "story.chapter_1.referent_tour.start");
-                const int tourChoice = TerminalInterface::askMenuChoiceFromOptions(referentTour, "Choisis 1 pour faire le tour de la ville.");
-                Console::clear();
-
-                if (tourChoice == 1)
-                {
-                    MessageScreen::show(
-                        "TOUR DE LA VILLE",
-                        "story.chapter_1.referent_tour.done",
-                        StoryCampaign::buildChapterOneReferentTourLines(mainPlayer),
-                        false
-                    );
-                    mainPlayer.setStoryProgress(1, 4, std::max(1, mainPlayer.getStoryCityDevelopmentLevel()));
-                    QuestMenu::syncMainStoryQuests(mainPlayer);
-                    saveCurrentProgress("Chapitre 1 : tour de ville effectué");
-                }
+                std::vector<std::string> lines = {
+                    "Mira garde quatre lignes ouvertes dans son registre.",
+                    "Parle séparément à Orren, Lysa, Bram et Soryn depuis PNJ notables > PNJ d'histoire.",
+                    "Chacun te donnera immédiatement une quête principale indépendante. Tu peux commencer, terminer ou même rendre l'une d'elles avant d'avoir rencontré les trois autres.",
+                    "Quand les quatre noms auront une vraie demande associée, reviens prévenir Mira."
+                };
+                const std::vector<std::string> progress = StoryCampaign::buildChapterOneProgressLines(mainPlayer);
+                lines.insert(lines.end(), progress.begin(), progress.end());
+                MessageScreen::show("MIRA — LES QUATRE RÉFÉRENTS", "story.chapter_1.mira_next.referents", lines, false);
                 continue;
             }
 
-            if (mainPlayer.getStoryStep() < 5)
+            if (!fourReported)
             {
-                MenuScreen notifyMira("NOTIFIER MIRA", "story.chapter_1.notify_mira_after_tour");
-                notifyMira.addSubtitle("Le tour est fait. Mira doit maintenant transformer les présentations en vraies priorités.");
-                notifyMira.addLine("Tu as rencontré les premiers référents. Ils existent aussi dans PNJ notables, mais les demandes principales passent par Mira.");
-                notifyMira.addOption(1, "Dire à Mira que tout le monde a été rencontré", "Débloquer les demandes principales non refusables.", true, "story.chapter_1.notify_mira_after_tour.confirm");
-                const int notifyChoice = TerminalInterface::askMenuChoiceFromOptions(notifyMira, "Choisis 1 pour notifier Mira.");
+                MenuScreen notifyMira("NOTIFIER MIRA", "story.chapter_1.notify_mira_after_four");
+                notifyMira.addSubtitle("Les quatre référents ont été rencontrés");
+                notifyMira.addLine("Leurs quatre quêtes principales existent déjà. Certaines peuvent même être terminées ou rendues.");
+                notifyMira.addOption(1, "Présenter le bilan à Mira", "Ouvrir la quête principale qui suit l'état réel des quatre demandes.", true, "story.chapter_1.notify_mira_after_four.confirm");
+                notifyMira.addBackOption("Pas maintenant", "story.chapter_1.notify_mira_after_four.back");
+                const int notifyChoice = TerminalInterface::askMenuChoiceFromOptions(notifyMira, "Choisis une réponse.");
                 Console::clear();
 
                 if (notifyChoice == 1)
                 {
-                    mainPlayer.setStoryProgress(1, 5, std::max(1, mainPlayer.getStoryCityDevelopmentLevel()));
+                    completeStoryQuestSilently(mainPlayer, "story_ch1_meet_referents");
+                    mainPlayer.setStoryProgress(1, 4, std::max(1, mainPlayer.getStoryCityDevelopmentLevel()));
                     QuestMenu::syncMainStoryQuests(mainPlayer);
+                    const int alreadyDone = countTurnedInChapterOneReferentQuests(mainPlayer);
                     MessageScreen::show(
-                        "MIRA — NOUVELLES PRIORITÉS",
-                        "story.chapter_1.mira_main_requests",
+                        "MIRA — FAIRE RESPIRER LES MURS",
+                        "story.chapter_1.mira_bundle_opened",
                         {
-                            "Mira coche chaque nom quand tu confirmes le tour de la ville.",
-                            "Mira : « Bien. Maintenant ils ne sont plus des inconnus dans un registre. Ils sont la ville. »",
-                            "Elle ajoute sa propre demande principale : faire respirer les murs.",
-                            "Puis elle ajoute quatre consignes : retourner parler à Orren, Lysa, Bram et Soryn pour leur demander comment les aider, en venant de sa part.",
-                            "Ces quêtes principales ne sont pas refusables. Elles sont visibles dans Quêtes > Quête principale et se passent via PNJ notables."
+                            "Mira coche les quatre noms, puis ouvre une nouvelle page du registre.",
+                            "Mira : « Maintenant, termine ce qu'ils t'ont confié. Pas pour remplir une colonne. Pour que les murs aient réellement quelque chose derrière eux. »",
+                            "Nouvelle quête principale : terminer puis rendre les quatre quêtes d'Orren, Lysa, Bram et Soryn.",
+                            "Progression déjà reconnue : " + std::to_string(alreadyDone) + "/4.",
+                            "Les quêtes validées avant ce retour sont comptées automatiquement."
                         },
                         false
                     );
-                    saveCurrentProgress("Chapitre 1 : demandes principales de Mira ajoutées");
+                    saveCurrentProgress("Chapitre 1 : bilan des quatre référents ouvert");
                 }
                 continue;
             }
 
             std::vector<std::string> lines = {
-                "Mira relit le registre principal.",
+                "Mira relit le bilan des quatre référents.",
                 chapterReady
-                    ? "Mira : « Tout ce que je pouvais demander pour cette étape est là. Reviens me notifier proprement, et j'ouvrirai la suite. »"
-                    : "Mira : « Il reste des demandes principales à terminer ou à rendre. Elles sont dans la section Quête principale. »",
-                "Pour parler aux personnes concernées, passe par PNJ notables : Orren, Lysa, Bram et Soryn font partie du même monde que le bac à sable."
+                    ? "Mira : « Les quatre voix sont là. Il ne reste plus qu'à fermer proprement cette page. »"
+                    : "Mira : « Le registre se met à jour tout seul quand une demande est réellement rendue. Il en manque encore. »",
+                "Quêtes de référents rendues : " + std::to_string(countTurnedInChapterOneReferentQuests(mainPlayer)) + "/4."
             };
             const std::vector<std::string> progress = StoryCampaign::buildChapterOneProgressLines(mainPlayer);
             lines.insert(lines.end(), progress.begin(), progress.end());
@@ -3782,7 +3896,7 @@ void Game::playStoryChapterOne()
                 std::vector<std::string> lines = {
                     "Mira lit le registre, puis secoue la tête.",
                     "Mira : « Pas encore. Ce n'est pas que je ne te crois pas, " + mainPlayer.getName() + ". C'est que les portes ne s'ouvrent pas avec de bonnes intentions. »",
-                    "Mira : « Commence par connaître les visages qui tiennent la ville. Ensuite, suis les demandes principales dans l'ordre, puis reviens me notifier quand tout sera rendu. »",
+                    "Mira : « Commence par parler aux quatre référents. Chacun te confiera sa propre demande. Reviens ensuite me prévenir, puis termine ce qu'ils t'ont donné. Le registre comptera aussi ce que tu as déjà rendu. »",
                     ""
                 };
                 const std::vector<std::string> progress = StoryCampaign::buildChapterOneProgressLines(mainPlayer);
@@ -4000,7 +4114,7 @@ void Game::playStoryChapterTwo()
         }
         chapterMenu.addOption(4, chapterTwoActionLabel, chapterTwoActionDetail, true, "story.chapter_2.action");
         chapterMenu.addOption(5, "Ouvrir le menu Quêtes", "Accéder à Quête principale et au journal.", true, "story.chapter_2.main_quests");
-        chapterMenu.addOption(6, "PNJ notables", "Parler à Mira, Orren, Soryn ou aux autres référents.", true, "story.chapter_2.npcs");
+        chapterMenu.addOption(6, "PNJ notables", "Parler à Mira, Orren, Soryn ou aux autres référents actuellement présents.", true, "story.chapter_2.npcs");
 
         const int chapterChoice = TerminalInterface::askMenuChoiceFromOptions(chapterMenu, "Choisis une action du chapitre 2.");
         Console::clear();
@@ -4994,8 +5108,581 @@ void Game::playStoryChapterTwo()
         if (chapterChoice == 6)
         {
             QuestMenu::openNotableNpcMenu(mainPlayer);
+            QuestMenu::syncMainStoryQuests(mainPlayer);
+            saveCurrentProgress("Chapitre 2 : discussion avec les PNJ notables");
             continue;
         }
+    }
+}
+
+
+void Game::playStoryChapterThree()
+{
+    if (!mainPlayer.hasStoryModeStarted() || mainPlayer.getStoryChapter() < 3)
+    {
+        MessageScreen::show(
+            "CHAPITRE 3 IMPOSSIBLE",
+            "story.chapter_3.not_unlocked",
+            {
+                "Les routes qui répondent mal appartiennent à la suite de l'histoire.",
+                "Stabilise d'abord la route gardée du chapitre 2."
+            },
+            false
+        );
+        return;
+    }
+
+    const std::array<std::string, 8> questIds = {
+        "story_ch3_lonely_convoy",
+        "story_ch3_three_routes",
+        "story_ch3_signatures",
+        "story_ch3_escort_withdrawal",
+        "story_ch3_margin_village",
+        "story_ch3_corrected_route",
+        "story_ch3_map_guardian",
+        "story_ch3_convoy_return"
+    };
+
+    const std::array<std::string, 8> questTitles = {
+        "Le convoi qui revient seul",
+        "Trois routes pour une même borne",
+        "Les signatures sans voyageurs",
+        "Une escorte qui sait renoncer",
+        "Le village écrit dans la marge",
+        "La route corrigée",
+        "Le Gardien de la Carte Juste [mini-boss]",
+        "Ce que le convoi a rapporté"
+    };
+
+    bool chapterMenuOpen = true;
+    while (chapterMenuOpen)
+    {
+        QuestMenu::syncMainStoryQuests(mainPlayer);
+        const int step = mainPlayer.getStoryChapter() > 3 ? 9 : std::clamp(mainPlayer.getStoryStep(), 1, 9);
+
+        MenuScreen chapterMenu("CHAPITRE 3 — LES ROUTES QUI RÉPONDENT MAL", "story.chapter_3.action_menu");
+        chapterMenu.addSubtitle("Enquête : un convoi est revenu seul avec une cargaison impossible");
+        chapterMenu.addLine("Progression : " + mainPlayer.getStoryProgressLabel());
+        for (const std::string& consequence : StoryCampaign::buildChapterThreeConsequenceLines(mainPlayer))
+        {
+            chapterMenu.addLine(consequence);
+        }
+        if (step <= 8)
+        {
+            chapterMenu.addLine("Objectif actuel : " + questTitles[static_cast<std::size_t>(step - 1)] + ".");
+            chapterMenu.addLine("État : " + storyQuestProgressText(mainPlayer, questIds[static_cast<std::size_t>(step - 1)]) + ".");
+        }
+        else
+        {
+            chapterMenu.addLine("[fait] Le convoi est classé et la route du village absent des cartes est connue.");
+        }
+        chapterMenu.addBackOption();
+        chapterMenu.addOption(1, "Voir la mission principale", "Afficher uniquement les étapes terminées et l'étape actuelle.", true, "story.chapter_3.view_mission");
+        chapterMenu.addOption(2, "Voir l'état de validation", "Consulter les quêtes principales rendues et les étapes masquées.", true, "story.chapter_3.progress");
+        chapterMenu.addOption(3, "Demander ce qu'il reste à faire", "Relire la consigne actuelle sans révéler la suite.", true, "story.chapter_3.ask_next");
+        chapterMenu.addOption(4, step >= 9 ? "Lire le bilan du chapitre" : "Effectuer l'étape actuelle", step >= 9 ? "Relire les conséquences déjà validées." : "Faire progresser uniquement l'objectif actuellement disponible.", true, "story.chapter_3.current_action");
+        chapterMenu.addOption(5, "Ouvrir les quêtes", "Inspecter ou rendre les quêtes principales prêtes.", true, "story.chapter_3.quests");
+        chapterMenu.addOption(6, "Parler aux PNJ notables", "Retrouver les personnes déjà présentes dans le monde.", true, "story.chapter_3.npcs");
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(chapterMenu, "Choisis une action du chapitre 3.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+        if (choice == 1)
+        {
+            MessageScreen::show("MISSION PRINCIPALE", "story.chapter_3.mission", StoryCampaign::buildChapterThreeMissionLines(mainPlayer), false);
+            continue;
+        }
+        if (choice == 2)
+        {
+            MessageScreen::show("VALIDATION DU CHAPITRE 3", "story.chapter_3.progress", StoryCampaign::buildChapterThreeProgressLines(mainPlayer), false);
+            continue;
+        }
+        if (choice == 3)
+        {
+            MessageScreen::show("CE QU'IL RESTE À FAIRE", "story.chapter_3.next", StoryCampaign::buildChapterThreeActionLines(mainPlayer), false);
+            continue;
+        }
+        if (choice == 5)
+        {
+            QuestMenu::openQuestHub(mainPlayer);
+            QuestMenu::syncMainStoryQuests(mainPlayer);
+            saveCurrentProgress("Chapitre 3 : journal de quêtes consulté");
+            continue;
+        }
+        if (choice == 6)
+        {
+            QuestMenu::openNotableNpcMenu(mainPlayer);
+            QuestMenu::syncMainStoryQuests(mainPlayer);
+            saveCurrentProgress("Chapitre 3 : PNJ notables consultés");
+            continue;
+        }
+        if (choice != 4)
+        {
+            continue;
+        }
+
+        if (step >= 9)
+        {
+            MessageScreen::show(
+                "CHAPITRE 3 TERMINÉ",
+                "story.chapter_3.completed",
+                {
+                    "[fait] Le convoi revenu seul a été inspecté, classé et partiellement accepté en ville.",
+                    "[fait] Le Gardien de la Carte Juste, mini-boss unique, a été repoussé.",
+                    "Le contre-registre conserve désormais une route choisie, sans effacer les preuves des autres.",
+                    "Une piste de boss secondaire peut rester ouverte dans le registre, mais elle n'est pas obligatoire pour poursuivre l'histoire.",
+                    "La prochaine piste mène vers un village absent des cartes et présent à la mauvaise date."
+                },
+                false
+            );
+            continue;
+        }
+
+        const std::string currentQuestId = questIds[static_cast<std::size_t>(step - 1)];
+        if (storyQuestCompleted(mainPlayer, currentQuestId))
+        {
+            MessageScreen::show(
+                "OBJECTIF À NOTIFIER",
+                "story.chapter_3.ready_to_turn_in",
+                {
+                    "[fait - à notifier] " + questTitles[static_cast<std::size_t>(step - 1)] + ".",
+                    "L'action est déjà accomplie. Rends maintenant la quête depuis Quêtes ou auprès du PNJ concerné.",
+                    "La prochaine étape restera masquée jusqu'à ce rendu."
+                },
+                false
+            );
+            continue;
+        }
+
+        if (step == 1)
+        {
+            MessageScreen::show(
+                "LE CONVOI QUI REVIENT SEUL",
+                "story.chapter_3.lonely_convoy",
+                {
+                    "Mira interdit de déplacer les caisses. Les roues portent deux boues différentes et le registre pèse plus lourd qu'au départ.",
+                    "Aucun corps, aucune trace de fuite, mais quatre signatures de personnes qui n'ont jamais quitté la ville.",
+                    "Tu relèves les essieux, les scellés et la quantité exacte avant le premier déchargement."
+                },
+                false
+            );
+            progressStoryQuestById(mainPlayer, currentQuestId, 1);
+        }
+        else if (step == 2)
+        {
+            const int progress = storyQuestProgressValue(mainPlayer, currentQuestId);
+            const std::array<std::string, 3> measurements = {
+                "À l'aube, la borne annonce une route plus courte que la veille.",
+                "Au milieu du jour, la même borne ajoute presque une heure de marche.",
+                "La nuit, la distance revient à sa première valeur, mais la direction change."
+            };
+            MessageScreen::show("MESURE DE ROUTE", "story.chapter_3.three_routes.measure", {measurements[static_cast<std::size_t>(std::clamp(progress, 0, 2))]}, false);
+            progressStoryQuestById(mainPlayer, currentQuestId, 1);
+        }
+        else if (step == 3)
+        {
+            const int progress = storyQuestProgressValue(mainPlayer, currentQuestId);
+            const std::array<std::string, 3> witnesses = {
+                "Soryn confirme que deux signatures utilisent une encre d'archive qui n'a jamais quitté sa salle.",
+                "Eda démontre que le poids déclaré ne correspond à aucun chargement parti de la ville.",
+                "Nell reconnaît un sceau de convoi utilisé par un village qui n'existe sur aucune carte actuelle."
+            };
+            MessageScreen::show("SIGNATURE IMPOSSIBLE", "story.chapter_3.signatures.check", {witnesses[static_cast<std::size_t>(std::clamp(progress, 0, 2))]}, false);
+            progressStoryQuestById(mainPlayer, currentQuestId, 1);
+        }
+        else if (step == 4)
+        {
+            const int progress = storyQuestProgressValue(mainPlayer, currentQuestId);
+            if (progress <= 0)
+            {
+                MessageScreen::show("ESCORTE COURTE", "story.chapter_3.escort.start", {"Le petit convoi part avec peu de marchandises et une règle claire : personne ne meurt pour sauver une caisse."}, false);
+            }
+            else
+            {
+                MessageScreen::show("DEMI-TOUR SÉCURISÉ", "story.chapter_3.escort.withdraw", {"La route change sous les roues. Tu fais demi-tour avant l'embuscade. Orren classe ce renoncement comme une réussite, pas comme une fuite."}, false);
+            }
+            progressStoryQuestById(mainPlayer, currentQuestId, 1);
+        }
+        else if (step == 5)
+        {
+            MessageScreen::show(
+                "LE VILLAGE ÉCRIT DANS LA MARGE",
+                "story.chapter_3.margin_village",
+                {
+                    "Nell déplie une doublure cachée dans la sacoche du convoi.",
+                    "Un village est écrit dans la marge, avec des horaires de passage mais aucune position fixe.",
+                    "La preuve est assez nette pour préparer une route, pas assez pour y envoyer des habitants."
+                },
+                false
+            );
+            progressStoryQuestById(mainPlayer, currentQuestId, 1);
+        }
+        else if (step == 6)
+        {
+            MenuScreen routeChoice("LA ROUTE CORRIGÉE", "story.chapter_3.corrected_route.choice");
+            routeChoice.addSubtitle("Choisis ce que le contre-registre protégera en priorité");
+            routeChoice.addLine("Ce choix modifie le récit et les futurs stocks, sans supprimer les preuves des autres routes.");
+            routeChoice.addBackOption();
+            routeChoice.addOption(1, "Route du commerce", "Prioriser les marchandises et la reconstruction.", true, "story.chapter_3.corrected_route.commerce");
+            routeChoice.addOption(2, "Route des secours", "Prioriser les blessés, messagers et retours vivants.", true, "story.chapter_3.corrected_route.rescue");
+            routeChoice.addOption(3, "Route de recherche", "Prioriser les preuves, cartes et relevés.", true, "story.chapter_3.corrected_route.research");
+            const int route = TerminalInterface::askMenuChoiceFromOptions(routeChoice, "Choisis une version de route.");
+            Console::clear();
+            if (route == 0) continue;
+            Quest* quest = findMutableStoryQuest(mainPlayer, currentQuestId);
+            if (quest != nullptr)
+            {
+                quest->rewardNote = route == 1 ? "Choix durable : route du commerce." : route == 2 ? "Choix durable : route des secours." : "Choix durable : route de recherche.";
+            }
+            progressStoryQuestById(mainPlayer, currentQuestId, 1);
+            MessageScreen::show("CONTRE-REGISTRE CORRIGÉ", "story.chapter_3.corrected_route.done", {quest != nullptr ? quest->rewardNote : "La route choisie a été enregistrée."}, false);
+        }
+        else if (step == 7)
+        {
+            MessageScreen::show(
+                "LE GARDIEN DE LA CARTE JUSTE",
+                "story.chapter_3.map_guardian.intro",
+                {
+                    "La présence prononce son propre titre avant d'avancer : « Je garde la carte juste. Pas vos vies. »",
+                    "Classification : mini-boss unique — plus dangereux qu'un élite ou une créature évoluée, mais inférieur à un vrai boss du registre.",
+                    "La route qu'il protège est cohérente, mais elle condamne le convoi au trajet le plus dangereux."
+                },
+                false
+            );
+
+            const int miniBossLevel = std::max(6, mainPlayer.getLevel() + 1);
+            Monster mapGuardian(
+                "Le Gardien de la Carte Juste",
+                "Mini-boss unique / sentinelle cartographique",
+                Race::AnomalieArcanique,
+                miniBossLevel,
+                260 + miniBossLevel * 48,
+                14 + miniBossLevel * 3,
+                28 + miniBossLevel * 5,
+                42 + miniBossLevel * 7,
+                1,
+                2,
+                false,
+                true,
+                false,
+                true
+            );
+
+            mainPlayer.recordCombatStarted();
+            ShopTransactionSystem::clearBuybackAfterCombat();
+            Console::useCombatTheme();
+            Random miniBossRandom;
+            const bool miniBossDefeated = MonsterPveMode::runExplorationWave(
+                mainPlayer,
+                miniBossRandom,
+                selectedDifficulty,
+                selectedDeathRule,
+                {mapGuardian},
+                "Mini-boss unique : le Gardien de la Carte Juste verrouille la route corrigée."
+            );
+            Console::useNormalTheme();
+            ShopRotationSystem::markShopsDirtyAfterCombat();
+
+            if (miniBossDefeated && !mainPlayer.isDead())
+            {
+                progressStoryQuestById(mainPlayer, currentQuestId, 1);
+                const bool optionalBossUnlocked = mainPlayer.unlockBoss(9);
+                saveCurrentProgress("Chapitre 3 : mini-boss Gardien de la Carte Juste vaincu");
+
+                if (optionalBossUnlocked)
+                {
+                    MessageScreen::show(
+                        "PISTE DE BOSS SECONDAIRE",
+                        "story.chapter_3.optional_boss.unlocked",
+                        {
+                            "Le mini-boss laisse une réflexion qui ne correspond à aucune route réelle.",
+                            "Une nouvelle variation de boss est stabilisée dans le registre : identité encore inconnue.",
+                            "Danger estimé par le registre : niveau conseillé " + std::to_string(BossCatalog::getRecommendedLevel(9)) + ".",
+                            "Cette confrontation est secondaire et volontaire : elle n'est pas requise pour terminer le chapitre."
+                        },
+                        false
+                    );
+                }
+            }
+            else
+            {
+                saveCurrentProgress("Chapitre 3 : échec face au mini-boss Gardien de la Carte Juste");
+                continue;
+            }
+        }
+        else if (step == 8)
+        {
+            MenuScreen conclusion("CE QUE LE CONVOI A RAPPORTÉ", "story.chapter_3.convoy_return.choice");
+            conclusion.addSubtitle("Mira demande ce qui peut franchir les portes");
+            conclusion.addBackOption();
+            conclusion.addOption(1, "Faire entrer les marchandises contrôlées", "Aider rapidement les stocks, sous surveillance.", true, "story.chapter_3.convoy_return.goods");
+            conclusion.addOption(2, "Faire entrer seulement les preuves", "Refuser les marchandises jusqu'à comprendre leur provenance.", true, "story.chapter_3.convoy_return.proofs");
+            conclusion.addOption(3, "Mettre tout le convoi en quarantaine", "Choisir la sécurité maximale et retarder les bénéfices.", true, "story.chapter_3.convoy_return.quarantine");
+            const int conclusionChoice = TerminalInterface::askMenuChoiceFromOptions(conclusion, "Décide ce qui entre en ville.");
+            Console::clear();
+            if (conclusionChoice == 0) continue;
+            Quest* quest = findMutableStoryQuest(mainPlayer, currentQuestId);
+            if (quest != nullptr)
+            {
+                quest->rewardNote = conclusionChoice == 1 ? "Décision : marchandises contrôlées admises." : conclusionChoice == 2 ? "Décision : seules les preuves sont admises." : "Décision : convoi placé en quarantaine.";
+            }
+            progressStoryQuestById(mainPlayer, currentQuestId, 1);
+            MessageScreen::show("DÉCISION ENREGISTRÉE", "story.chapter_3.convoy_return.done", {quest != nullptr ? quest->rewardNote : "La décision de Mira est enregistrée."}, false);
+        }
+
+        QuestMenu::syncMainStoryQuests(mainPlayer);
+        saveCurrentProgress("Chapitre 3 : progression de l'étape actuelle");
+        MessageScreen::show(
+            "QUÊTE MISE À JOUR",
+            "story.chapter_3.quest_updated",
+            {
+                questTitles[static_cast<std::size_t>(step - 1)] + " — " + storyQuestProgressText(mainPlayer, currentQuestId) + ".",
+                storyQuestCompleted(mainPlayer, currentQuestId)
+                    ? "[fait - à notifier] Rends la quête pour dévoiler l'étape suivante."
+                    : "La prochaine sous-étape est maintenant disponible."
+            },
+            false
+        );
+    }
+}
+
+void Game::playStoryChapterFour()
+{
+    if (!mainPlayer.hasStoryModeStarted() || mainPlayer.getStoryChapter() < 4)
+    {
+        MessageScreen::show(
+            "CHAPITRE 4 IMPOSSIBLE",
+            "story.chapter_4.not_unlocked",
+            {
+                "Le village à la mauvaise date ne peut pas être atteint tant que le convoi du chapitre 3 n'est pas classé.",
+                "Termine et rends la dernière étape du chapitre précédent."
+            },
+            false
+        );
+        return;
+    }
+
+    bool chapterMenuOpen = true;
+    while (chapterMenuOpen)
+    {
+        const int step = std::clamp(mainPlayer.getStoryStep(), 1, 9);
+        MenuScreen chapterMenu("CHAPITRE 4 — LE VILLAGE À LA MAUVAISE DATE", "story.chapter_4.action_menu");
+        chapterMenu.addSubtitle(step <= 5 ? "Première phase : comprendre le village" : "Deuxième phase : conserver les preuves et identifier la menace");
+        chapterMenu.addLine("Progression : " + mainPlayer.getStoryProgressLabel());
+        chapterMenu.addLine(step >= 9
+            ? "[fait] La deuxième phase est terminée. La menace majeure est identifiée, mais le combat reste à préparer."
+            : "Objectif actuel : " + StoryCampaign::buildChapterFourActionLines(mainPlayer)[1]);
+        chapterMenu.addBackOption();
+        chapterMenu.addOption(1, "Voir la mission principale", "Afficher les étapes connues du chapitre.", true, "story.chapter_4.view_mission");
+        chapterMenu.addOption(2, "Voir l'état de l'enquête", "Vérifier ce qui est établi et ce qui reste volontairement non nommé.", true, "story.chapter_4.progress");
+        chapterMenu.addOption(3, "Demander ce qu'il reste à faire", "Relire uniquement l'action actuelle.", true, "story.chapter_4.ask_next");
+        chapterMenu.addOption(4, step >= 9 ? "Relire le bilan de la deuxième phase" : "Effectuer l'étape actuelle", step >= 9 ? "Revoir les preuves et la menace identifiée." : "Faire avancer l'enquête d'une scène.", true, "story.chapter_4.current_action");
+        chapterMenu.addOption(5, "Ouvrir les quêtes", "Consulter les quêtes et conséquences déjà actives.", true, "story.chapter_4.quests");
+        chapterMenu.addOption(6, "Parler aux PNJ notables", "Observer les réactions durables du chapitre 3 avant de repartir.", true, "story.chapter_4.npcs");
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(chapterMenu, "Choisis une action du chapitre 4.");
+        Console::clear();
+        if (choice == 0) return;
+        if (choice == 1)
+        {
+            MessageScreen::show("MISSION PRINCIPALE", "story.chapter_4.mission", StoryCampaign::buildChapterFourMissionLines(mainPlayer), false);
+            continue;
+        }
+        if (choice == 2)
+        {
+            MessageScreen::show("ÉTAT DE L'ENQUÊTE", "story.chapter_4.progress", StoryCampaign::buildChapterFourProgressLines(mainPlayer), false);
+            continue;
+        }
+        if (choice == 3)
+        {
+            MessageScreen::show("PROCHAINE ACTION", "story.chapter_4.next", StoryCampaign::buildChapterFourActionLines(mainPlayer), false);
+            continue;
+        }
+        if (choice == 5)
+        {
+            QuestMenu::openQuestHub(mainPlayer);
+            saveCurrentProgress("Chapitre 4 : journal de quêtes consulté");
+            continue;
+        }
+        if (choice == 6)
+        {
+            QuestMenu::openNotableNpcMenu(mainPlayer);
+            saveCurrentProgress("Chapitre 4 : PNJ notables consultés");
+            continue;
+        }
+        if (choice != 4) continue;
+
+        if (step >= 9)
+        {
+            MessageScreen::show(
+                "DEUXIÈME PHASE TERMINÉE",
+                "story.chapter_4.phase_two_complete",
+                {
+                    "[fait] Le contre-registre résiste désormais à une sonnerie complète.",
+                    "[fait] Le Sonneur sans heure est identifié comme gardien du cycle, pas comme son maître.",
+                    "[fait] Le témoin effacé a confirmé l'existence du registre intérieur.",
+                    "[fait] L'Intendant de la Date Vide est maintenant identifié par une preuve directe comme menace majeure.",
+                    "La phase suivante préparera la salle des dates, ses règles et le véritable affrontement."
+                },
+                false
+            );
+            continue;
+        }
+
+        if (step == 1)
+        {
+            std::vector<std::string> lines = {
+                "Les trois mesures de la borne s'accordent pendant moins d'une heure. La route cesse enfin de bouger sous les pas.",
+                "Le village apparaît derrière une rangée d'arbres trop jeunes pour les maisons qu'ils protègent.",
+                "À l'entrée, une pancarte porte le même nom que la marge du convoi, mais aucune distance pour repartir."
+            };
+            const std::vector<std::string> consequences = StoryCampaign::buildChapterThreeConsequenceLines(mainPlayer);
+            if (!consequences.empty()) lines.push_back("Ta préparation suit le choix précédent : " + consequences.front());
+            MessageScreen::show("LE VILLAGE AU BOUT DE LA BONNE HEURE", "story.chapter_4.arrival", lines, false);
+        }
+        else if (step == 2)
+        {
+            MessageScreen::show(
+                "TROIS DATES POUR UN MÊME LIEU",
+                "story.chapter_4.dates",
+                {
+                    "Le registre de la mairie date la semaine de demain.",
+                    "Les tombes les plus récentes portent une année terminée depuis longtemps.",
+                    "La cloche, elle, a été réparée ce matin selon le forgeron — mais la soudure est couverte de plusieurs hivers de rouille.",
+                    "Tu copies chaque date séparément au lieu d'en choisir une qui arrangerait l'enquête."
+                },
+                false
+            );
+        }
+        else if (step == 3)
+        {
+            MessageScreen::show(
+                "CEUX QUI CONNAISSENT DÉJÀ LE CONVOI",
+                "story.chapter_4.witnesses",
+                {
+                    "Une aubergiste décrit les quatre conducteurs disparus avec leurs vrais noms.",
+                    "Un enfant affirme que les caisses sont reparties hier, alors qu'elles sont encore sous surveillance dans ta ville.",
+                    "Le doyen demande pourquoi le convoi a mis autant de temps à revenir, comme si l'aller avait eu lieu depuis des mois.",
+                    "Personne ne semble mentir de la même manière. C'est précisément ce qui rend leurs réponses crédibles."
+                },
+                false
+            );
+        }
+        else if (step == 4)
+        {
+            MenuScreen nightChoice("LA PREMIÈRE NUIT SOUS LA CLOCHE", "story.chapter_4.first_night.choice");
+            nightChoice.addSubtitle("La cloche sonne avant que le soleil disparaisse");
+            nightChoice.addLine("Les habitants ferment les volets, mais la rue reste pleine de pas sans silhouettes.");
+            nightChoice.addBackOption();
+            nightChoice.addOption(1, "Rester près de la cloche", "Observer la source du phénomène au risque de perdre la sortie.", true, "story.chapter_4.first_night.bell");
+            nightChoice.addOption(2, "Garder la route visible", "Préserver le retour et observer le village depuis sa limite.", true, "story.chapter_4.first_night.road");
+            nightChoice.addOption(3, "Suivre les pas sans silhouettes", "Chercher ce que la cloche retire au lieu de regarder ce qu'elle laisse.", true, "story.chapter_4.first_night.steps");
+            const int night = TerminalInterface::askMenuChoiceFromOptions(nightChoice, "Choisis ton poste d'observation.");
+            Console::clear();
+            if (night == 0) continue;
+
+            std::vector<std::string> lines;
+            if (night == 1)
+            {
+                lines = {
+                    "La cloche vibre sans être frappée. À chaque son, un nom disparaît d'une plaque puis revient sur une autre.",
+                    "Tu comprends que le village ne se déplace pas seulement dans l'espace : il redistribue les preuves de son existence."
+                };
+            }
+            else if (night == 2)
+            {
+                lines = {
+                    "La route pâlit à chaque son, mais les repères du contre-registre tiennent assez longtemps pour ne pas être effacés.",
+                    "Le village perd plusieurs maisons dans la brume, tandis que leurs habitants continuent de parler derrière des murs absents."
+                };
+            }
+            else
+            {
+                lines = {
+                    "Les pas te conduisent vers une place qui n'existait pas au coucher du soleil.",
+                    "Au centre, des silhouettes rejouent le déchargement du convoi sans caisses, comme le souvenir d'un événement qui n'a pas encore choisi sa date."
+                };
+            }
+            lines.push_back("Tu refuses d'affronter une identité encore inconnue. Cette nuit sert à établir la menace, pas à inventer son nom.");
+            MessageScreen::show("PREMIÈRE NUIT OBSERVÉE", "story.chapter_4.first_night.result", lines, false);
+        }
+
+        else if (step == 5)
+        {
+            MessageScreen::show(
+                "LE CONTRE-REGISTRE",
+                "story.chapter_4.counter_register",
+                {
+                    "Soryn, Nell et Eda ont préparé trois copies qui ne séjournent jamais ensemble dans le village.",
+                    "Une page reste sur la route, une autre sous la cloche et la dernière dans une boîte scellée hors des bornes.",
+                    "Lorsque la cloche sonne, deux versions changent. La troisième conserve un nom rayé : le Sonneur sans heure.",
+                    "Pour la première fois, le phénomène laisse une contradiction qu'il ne parvient pas à répartir ailleurs."
+                },
+                false
+            );
+        }
+        else if (step == 6)
+        {
+            MenuScreen sonneurChoice("LE SONNEUR SANS HEURE", "story.chapter_4.bell_keeper.choice");
+            sonneurChoice.addSubtitle("Premier gardien actif du cycle");
+            sonneurChoice.addLine("Une silhouette tire sur une corde qui ne rejoint aucune cloche visible.");
+            sonneurChoice.addBackOption();
+            sonneurChoice.addOption(1, "Couper son rythme", "Interrompre les intervalles entre les sonneries sans détruire la corde.", true, "story.chapter_4.bell_keeper.rhythm");
+            sonneurChoice.addOption(2, "Protéger le contre-registre", "Laisser le gardien se dévoiler en tentant d'effacer la seule page stable.", true, "story.chapter_4.bell_keeper.register");
+            sonneurChoice.addOption(3, "Suivre la corde", "Remonter jusqu'à l'endroit où elle traverse une date absente.", true, "story.chapter_4.bell_keeper.rope");
+            const int sonneur = TerminalInterface::askMenuChoiceFromOptions(sonneurChoice, "Choisis comment repousser le gardien.");
+            Console::clear();
+            if (sonneur == 0) continue;
+
+            std::vector<std::string> lines;
+            if (sonneur == 1) lines = {"Tu imposes un rythme irrégulier. Le Sonneur manque une mesure et son corps se dédouble entre deux âges.", "Il recule lorsque la cloche répond avant lui, comme si une autorité supérieure venait de corriger son geste."};
+            else if (sonneur == 2) lines = {"Le gardien frappe directement la page stable. Le contre-registre absorbe trois dates et révèle le sceau d'un supérieur.", "Le Sonneur fuit dès que son propre nom apparaît dans une colonne réservée aux serviteurs."};
+            else lines = {"La corde traverse une porte condamnée puis ressort du puits communal plusieurs décennies plus tôt.", "En la suivant, tu forces le Sonneur à abandonner sa position pour protéger l'accès au registre intérieur."};
+            lines.push_back("Le gardien est repoussé, pas détruit. Son rôle est maintenant clair : il entretient le cycle au nom de quelqu'un d'autre.");
+            MessageScreen::show("GARDIEN REPOUSSÉ", "story.chapter_4.bell_keeper.result", lines, false);
+        }
+        else if (step == 7)
+        {
+            MessageScreen::show(
+                "LE TÉMOIN EFFACÉ",
+                "story.chapter_4.erased_witness",
+                {
+                    "Le même prénom apparaît dans le registre de l'auberge, sur une tombe vide et au dos d'une facture du convoi.",
+                    "En réunissant les trois écritures, une personne réapparaît quelques minutes dans une maison sans porte.",
+                    "Elle affirme avoir travaillé pour un intendant qui classe les événements refusés par les calendriers ordinaires.",
+                    "Avant de disparaître, elle indique que le registre intérieur ne s'ouvre qu'avec une date qui n'a jamais eu lieu."
+                },
+                false
+            );
+        }
+        else if (step == 8)
+        {
+            MessageScreen::show(
+                "L'INTENDANT DE LA DATE VIDE",
+                "story.chapter_4.major_threat_revealed",
+                {
+                    "Le contre-registre, le témoignage effacé et le sceau du Sonneur décrivent enfin la même autorité.",
+                    "Nom de fonction : l'Intendant de la Date Vide.",
+                    "Il ne crée pas les paradoxes : il récupère les événements sans date reconnue et les range dans le village jusqu'à ce qu'ils puissent remplacer une réalité existante.",
+                    "Le village protège son registre intérieur. Le Sonneur maintient le cycle. L'Intendant décide ce qui sera réécrit.",
+                    "Cette identité devient le boss majeur cohérent du chapitre 4, mais son combat exige encore la construction de la salle des dates et de ses règles."
+                },
+                false
+            );
+        }
+
+        mainPlayer.setStoryProgress(4, std::min(9, step + 1), std::max(10, mainPlayer.getStoryCityDevelopmentLevel()));
+        saveCurrentProgress("Chapitre 4 : enquête avancée");
+        MessageScreen::show(
+            "ENQUÊTE MISE À JOUR",
+            "story.chapter_4.updated",
+            StoryCampaign::buildChapterFourActionLines(mainPlayer),
+            false
+        );
     }
 }
 
@@ -5387,7 +6074,10 @@ void Game::openInterfaceSettingsMenu()
     {
         MenuScreen screen("PARAMÈTRES", "utility.settings.menu");
         screen.addSubtitle("Réglages modifiables à tout moment");
+        mainPlayer.forceTerminalImagePolicy();
         screen.addLine("Fréquence actuelle des indications : " + mainPlayer.getInterfaceHintFrequencyLabel());
+        screen.addLine("Images : désactivées en terminal, non activables depuis le terminal.");
+        screen.addLine("Règle images : elles seront toujours un supplément visuel. Aucune info ne doit disparaître si elles sont activées en IG.");
         screen.addLine("null : aucune indication volontaire hors inspection ou avertissement vital.");
         screen.addLine("faible : valeur par défaut, seulement les alertes importantes ou contextes très liés.");
         screen.addLine("normal : un peu plus d'indices sur quêtes, routes et équipement.");
@@ -5397,6 +6087,7 @@ void Game::openInterfaceSettingsMenu()
         screen.addOption(2, "Fréquence : faible", "Réglage par défaut : rare, surtout utile et non intrusif.", true, "settings.hints.low");
         screen.addOption(3, "Fréquence : normal", "Affiche davantage d'indices contextuels.", true, "settings.hints.normal");
         screen.addOption(4, "Fréquence : forte", "Affiche beaucoup plus d'indications et rappels.", true, "settings.hints.high");
+        screen.addOption(5, "Images IG : désactivées", "Verrouillé en terminal : les images ne servent qu'à l'IG et ne remplacent jamais les informations textuelles.", false, "settings.images.terminal_locked");
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une fréquence d'indications.");
         Console::clear();
@@ -5412,14 +6103,30 @@ void Game::openInterfaceSettingsMenu()
         else if (choice == 3) value = "normal";
         else if (choice == 4) value = "forte";
 
+        if (choice == 5)
+        {
+            mainPlayer.forceTerminalImagePolicy();
+            MessageScreen::show(
+                "IMAGES VERROUILLÉES",
+                "utility.settings.images.terminal_locked",
+                {
+                    "Le terminal n'affiche pas d'images et ne peut pas les activer.",
+                    "L'IG pourra utiliser des images plus tard, mais seulement comme couche décorative/supplémentaire.",
+                    "Toutes les informations importantes restent toujours écrites dans les textes, menus, cartes et descriptions."
+                }
+            );
+            continue;
+        }
+
         if (!value.empty())
         {
             mainPlayer.setInterfaceHintFrequency(value);
+            mainPlayer.forceTerminalImagePolicy();
             saveCurrentProgress("Paramètres d'indications");
             MessageScreen::show(
                 "PARAMÈTRES",
                 "utility.settings.hints.changed",
-                {"Fréquence des indications réglée sur : " + mainPlayer.getInterfaceHintFrequencyLabel() + "."}
+                {"Fréquence des indications réglée sur : " + mainPlayer.getInterfaceHintFrequencyLabel() + ". Images terminal : désactivées."}
             );
         }
     }
@@ -5572,7 +6279,7 @@ bool Game::openPostCombatMenu()
         else if (choice == 5)
         {
             QuestMenu::openLocations(mainPlayer);
-            saveCurrentProgress("Lieux visitables");
+            saveCurrentProgress("Lieux notables");
         }
         else if (choice == 6)
         {

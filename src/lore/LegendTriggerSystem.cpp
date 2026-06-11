@@ -205,6 +205,42 @@ namespace
     }
 
 
+    LegendArchiveEntry makeHeroVillagerRoadLegend()
+    {
+        return LegendArchiveEntry{
+            "legend_hero_villager_blue_armor",
+            "Le marchand bleu qui juge les routes",
+            "Marchands et légendes",
+            "Rumeurs de village / rapports de voyageurs",
+            "Plusieurs récits parlent d'un vendeur musclé en armure de diamant bleu, aperçu là où une route allait devenir beaucoup trop dangereuse.",
+            {
+                "Les versions ne s'accordent pas sur son vrai nom, seulement sur sa tenue : un t-shirt bleu-vert, un pantalon violet et une armure de diamant bleu.",
+                "Certains jurent qu'il vend des objets. D'autres disent qu'il ne vend que la possibilité de prouver qu'on mérite de les porter.",
+                "Il commencerait et finirait chaque phrase par un grondement bref, comme si les mots ordinaires ne suffisaient pas à valider un défi.",
+                "Une vieille caravanière affirme l'avoir vu disparaître en fragments bleutés après avoir terrassé une créature que personne n'avait réussi à ralentir.",
+                "Les tavernes exagèrent sûrement. Le problème, c'est que les mêmes détails reviennent dans des villages qui ne se connaissent pas."
+            }
+        };
+    }
+
+    LegendArchiveEntry makeBobMauriceCounterLegend()
+    {
+        return LegendArchiveEntry{
+            "legend_bob_maurice_same_counter",
+            "Le comptoir qui ne sait pas se séparer",
+            "Marchands et légendes",
+            "Plaisanteries de guilde / plaintes de clients",
+            "Une collection de témoignages se moque de deux vendeurs qui voyagent ensemble, traduisent mutuellement leurs grognements et transforment chaque caisse en problème commercial.",
+            {
+                "Dans toutes les histoires, Bob et Maurice arrivent ensemble. Dans toutes les histoires, chacun affirme que l'autre a compris le plan.",
+                "Quand Bob grogne, Maurice traduit. Quand Maurice grogne, Bob traduit. Personne n'a jamais confirmé que les traductions étaient honnêtes.",
+                "Leurs ennemis les craignent peu : chacun infligerait exactement un dégât. Leurs fioles, en revanche, peuvent soigner un allié, empoisonner un monstre ou aider la mauvaise personne.",
+                "La guilde recommande de vérifier les avertissements avant d'ouvrir une caisse. Bob recommande de les lire après, pour ne pas gâcher la surprise.",
+                "La seule certitude du registre est simple : séparer Bob et Maurice semble plus difficile que terminer leurs quêtes."
+            }
+        };
+    }
+
     LegendArchiveEntry makeCurseCounterRites()
     {
         return LegendArchiveEntry{
@@ -491,6 +527,8 @@ std::vector<LegendArchiveEntry> LegendTriggerSystem::getArchiveEntries()
         makeFriendlyTrioRumor(),
         makeProtectedHestiaRumor(),
         makeFireFlightCommandRumor(),
+        makeHeroVillagerRoadLegend(),
+        makeBobMauriceCounterLegend(),
         makeCurseCounterRites(),
         makeCurseCursedPatients(),
         makeLivingLibraryKeeper(),

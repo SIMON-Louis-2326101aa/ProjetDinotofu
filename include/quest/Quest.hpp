@@ -31,6 +31,9 @@ struct Quest
     int progress = 0;
     int target = 0;
     bool guildQuest = false;
+    bool guildChallenge = false;
+    std::string challengeCondition;
+    int challengeMarkReward = 0;
     int availableFromDay = 0;
     int expiresAtDay = -1;
     bool accepted = false;
@@ -38,6 +41,19 @@ struct Quest
     bool turnedIn = false;
     bool failed = false;
     std::string failureReason;
+
+    // EN: Optional dependency metadata for multi-step or aggregate quests.
+    // A pipe-separated list keeps save files simple and backward compatible.
+    // FR: Métadonnées optionnelles pour les quêtes à étapes ou de synthèse.
+    // Une liste séparée par | garde les sauvegardes simples et rétrocompatibles.
+    std::string linkedQuestIds;
+    std::string stageLabels;
+    // EN: Pipe-separated ids of already completed service micro-challenges.
+    // FR: Identifiants séparés par | des micro-épreuves de service déjà proposées.
+    std::string serviceChallengeHistory;
+    std::string linkedQuestRequiredState = "turned_in";
+    bool retroactiveProgress = false;
+    bool hideFutureSteps = false;
 };
 
 #endif

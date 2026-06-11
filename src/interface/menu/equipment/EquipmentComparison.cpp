@@ -8,6 +8,7 @@
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/menu/equipment/EquipmentDisplay.hpp"
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,28 @@ namespace
     {
         return armor.isBroken() ? "Cassée" : "Utilisable";
     }
+
+    int durabilityPercent(int durability, int maximum)
+    {
+        if (maximum <= 0) return 0;
+        return std::clamp((durability * 100) / maximum, 0, 100);
+    }
+
+    std::string comparisonRow(const std::string& stat, int current, int inspected, const std::string& suffix = "")
+    {
+        return "Comparaison | " + stat + " | " + std::to_string(current) + suffix
+            + " | " + std::to_string(inspected) + suffix
+            + " | " + signedNumber(inspected - current) + suffix;
+    }
+
+    std::string comparisonVerdict(int improvements, int regressions, bool broken)
+    {
+        if (broken) return "Verdict : inutilisable avant réparation.";
+        if (improvements > 0 && regressions == 0) return "Verdict : amélioration directe.";
+        if (improvements == 0 && regressions > 0) return "Verdict : moins performante sur les statistiques comparées.";
+        if (improvements > 0 && regressions > 0) return "Verdict : compromis — certains bonus montent, d'autres baissent.";
+        return "Verdict : statistiques principales équivalentes.";
+    }
 }
 
 void EquipmentComparison::displayWeaponComparison(
@@ -38,34 +61,50 @@ void EquipmentComparison::displayWeaponComparison(
 
     if (player.hasEquippedWeapon())
     {
-        Weapon currentWeapon = player.getEquippedWeapon();
+        const Weapon currentWeapon = player.getEquippedWeapon();
+        const int currentDurability = durabilityPercent(currentWeapon.getDurability(), currentWeapon.getMaxDurability());
+        const int inspectedDurability = durabilityPercent(newWeapon.getDurability(), newWeapon.getMaxDurability());
+        const std::vector<int> differences = {
+            newWeapon.getMinDamageBonus() - currentWeapon.getMinDamageBonus(),
+            newWeapon.getMaxDamageBonus() - currentWeapon.getMaxDamageBonus(),
+            newWeapon.getCriticalBonus() - currentWeapon.getCriticalBonus(),
+            newWeapon.getEnchantmentCount() - currentWeapon.getEnchantmentCount(),
+            inspectedDurability - currentDurability
+        };
+        const int improvements = static_cast<int>(std::count_if(differences.begin(), differences.end(), [](int value) { return value > 0; }));
+        const int regressions = static_cast<int>(std::count_if(differences.begin(), differences.end(), [](int value) { return value < 0; }));
 
-        lines.push_back("Arme actuelle : " + currentWeapon.getName());
-        lines.push_back("- Dégâts : +" + std::to_string(currentWeapon.getMinDamageBonus()) + " à +" + std::to_string(currentWeapon.getMaxDamageBonus()));
-        lines.push_back("- Critique : +" + std::to_string(currentWeapon.getCriticalBonus()));
-        lines.push_back("- Durabilité : " + EquipmentDisplay::weaponDurabilityText(currentWeapon));
-        lines.push_back("- État : " + weaponStateText(currentWeapon));
+        lines.push_back("Actuel : " + currentWeapon.getName() + " — " + weaponStateText(currentWeapon));
+        lines.push_back("Inspecté : " + newWeapon.getName() + " — " + weaponStateText(newWeapon));
         lines.push_back("");
-        lines.push_back("Nouvelle arme : " + newWeapon.getName());
-        lines.push_back("- Dégâts : +" + std::to_string(newWeapon.getMinDamageBonus()) + " à +" + std::to_string(newWeapon.getMaxDamageBonus()));
-        lines.push_back("- Critique : +" + std::to_string(newWeapon.getCriticalBonus()));
-        lines.push_back("- Durabilité : " + EquipmentDisplay::weaponDurabilityText(newWeapon));
-        lines.push_back("- État : " + weaponStateText(newWeapon));
+        lines.push_back("Comparaison | Statistique | Actuel | Inspecté | Écart");
+        lines.push_back(comparisonRow("Dégâts minimum", currentWeapon.getMinDamageBonus(), newWeapon.getMinDamageBonus()));
+        lines.push_back(comparisonRow("Dégâts maximum", currentWeapon.getMaxDamageBonus(), newWeapon.getMaxDamageBonus()));
+        lines.push_back(comparisonRow("Critique", currentWeapon.getCriticalBonus(), newWeapon.getCriticalBonus()));
+        lines.push_back(comparisonRow("Enchantements", currentWeapon.getEnchantmentCount(), newWeapon.getEnchantmentCount()));
+        lines.push_back(comparisonRow("Durabilité", currentDurability, inspectedDurability, "%"));
         lines.push_back("");
-        lines.push_back("Différences si équipée :");
-        lines.push_back("- Dégâts min : " + signedNumber(newWeapon.getMinDamageBonus() - currentWeapon.getMinDamageBonus()));
-        lines.push_back("- Dégâts max : " + signedNumber(newWeapon.getMaxDamageBonus() - currentWeapon.getMaxDamageBonus()));
-        lines.push_back("- Critique : " + signedNumber(newWeapon.getCriticalBonus() - currentWeapon.getCriticalBonus()));
+        lines.push_back("Effets actuels : " + currentWeapon.getEnchantmentSummaryText() + ".");
+        lines.push_back("Effets inspectés : " + newWeapon.getEnchantmentSummaryText() + ".");
+        lines.push_back("Les résistances ne sont comparées que lorsqu'elles existent réellement dans les données de l'objet.");
+        lines.push_back("");
+        lines.push_back(comparisonVerdict(improvements, regressions, newWeapon.isBroken()));
     }
     else
     {
-        lines.push_back("Arme actuelle : aucune");
-        lines.push_back("Nouvelle arme : " + newWeapon.getName());
-        lines.push_back("- Dégâts : +" + std::to_string(newWeapon.getMinDamageBonus()) + " à +" + std::to_string(newWeapon.getMaxDamageBonus()));
-        lines.push_back("- Critique : +" + std::to_string(newWeapon.getCriticalBonus()));
-        lines.push_back("- Durabilité : " + EquipmentDisplay::weaponDurabilityText(newWeapon));
-        lines.push_back("- État : " + weaponStateText(newWeapon));
-        lines.push_back("Équiper cette arme ajouterait ses bonus si elle n'est pas cassée.");
+        lines.push_back("Actuel : aucune arme équipée.");
+        lines.push_back("Inspecté : " + newWeapon.getName() + " — " + weaponStateText(newWeapon));
+        lines.push_back("");
+        lines.push_back("Comparaison | Statistique | Actuel | Inspecté | Écart");
+        lines.push_back(comparisonRow("Dégâts minimum", 0, newWeapon.getMinDamageBonus()));
+        lines.push_back(comparisonRow("Dégâts maximum", 0, newWeapon.getMaxDamageBonus()));
+        lines.push_back(comparisonRow("Critique", 0, newWeapon.getCriticalBonus()));
+        lines.push_back(comparisonRow("Enchantements", 0, newWeapon.getEnchantmentCount()));
+        lines.push_back(comparisonRow("Durabilité", 0, durabilityPercent(newWeapon.getDurability(), newWeapon.getMaxDurability()), "%"));
+        lines.push_back("");
+        lines.push_back("Effets inspectés : " + newWeapon.getEnchantmentSummaryText() + ".");
+        lines.push_back("");
+        lines.push_back(newWeapon.isBroken() ? "Verdict : inutilisable avant réparation." : "Verdict : ajoute tous les bonus affichés.");
     }
 
     if (newWeapon.isBroken())
@@ -85,33 +124,47 @@ void EquipmentComparison::displayArmorComparison(
 
     if (player.hasEquippedArmor())
     {
-        Armor currentArmor = player.getEquippedArmor();
+        const Armor currentArmor = player.getEquippedArmor();
+        const int currentDurability = durabilityPercent(currentArmor.getDurability(), currentArmor.getMaxDurability());
+        const int inspectedDurability = durabilityPercent(newArmor.getDurability(), newArmor.getMaxDurability());
+        const std::vector<int> differences = {
+            newArmor.getMaxHpBonus() - currentArmor.getMaxHpBonus(),
+            newArmor.getDamageReduction() - currentArmor.getDamageReduction(),
+            newArmor.getEnchantmentCount() - currentArmor.getEnchantmentCount(),
+            inspectedDurability - currentDurability
+        };
+        const int improvements = static_cast<int>(std::count_if(differences.begin(), differences.end(), [](int value) { return value > 0; }));
+        const int regressions = static_cast<int>(std::count_if(differences.begin(), differences.end(), [](int value) { return value < 0; }));
 
-        lines.push_back("Armure actuelle : " + currentArmor.getName());
-        lines.push_back("- PV max : +" + std::to_string(currentArmor.getMaxHpBonus()));
-        lines.push_back("- Réduction : " + std::to_string(currentArmor.getDamageReduction()));
-        lines.push_back("- Durabilité : " + EquipmentDisplay::armorDurabilityText(currentArmor));
-        lines.push_back("- État : " + armorStateText(currentArmor));
+        lines.push_back("Actuel : " + currentArmor.getName() + " — " + armorStateText(currentArmor));
+        lines.push_back("Inspecté : " + newArmor.getName() + " — " + armorStateText(newArmor));
         lines.push_back("");
-        lines.push_back("Nouvelle armure : " + newArmor.getName());
-        lines.push_back("- PV max : +" + std::to_string(newArmor.getMaxHpBonus()));
-        lines.push_back("- Réduction : " + std::to_string(newArmor.getDamageReduction()));
-        lines.push_back("- Durabilité : " + EquipmentDisplay::armorDurabilityText(newArmor));
-        lines.push_back("- État : " + armorStateText(newArmor));
+        lines.push_back("Comparaison | Statistique | Actuel | Inspecté | Écart");
+        lines.push_back(comparisonRow("PV maximum", currentArmor.getMaxHpBonus(), newArmor.getMaxHpBonus()));
+        lines.push_back(comparisonRow("Réduction", currentArmor.getDamageReduction(), newArmor.getDamageReduction()));
+        lines.push_back(comparisonRow("Enchantements", currentArmor.getEnchantmentCount(), newArmor.getEnchantmentCount()));
+        lines.push_back(comparisonRow("Durabilité", currentDurability, inspectedDurability, "%"));
         lines.push_back("");
-        lines.push_back("Différences si équipée :");
-        lines.push_back("- PV max : " + signedNumber(newArmor.getMaxHpBonus() - currentArmor.getMaxHpBonus()));
-        lines.push_back("- Réduction : " + signedNumber(newArmor.getDamageReduction() - currentArmor.getDamageReduction()));
+        lines.push_back("Effets actuels : " + currentArmor.getEnchantmentSummaryText() + ".");
+        lines.push_back("Effets inspectés : " + newArmor.getEnchantmentSummaryText() + ".");
+        lines.push_back("Les résistances ne sont comparées que lorsqu'elles existent réellement dans les données de l'objet.");
+        lines.push_back("");
+        lines.push_back(comparisonVerdict(improvements, regressions, newArmor.isBroken()));
     }
     else
     {
-        lines.push_back("Armure actuelle : aucune");
-        lines.push_back("Nouvelle armure : " + newArmor.getName());
-        lines.push_back("- PV max : +" + std::to_string(newArmor.getMaxHpBonus()));
-        lines.push_back("- Réduction : " + std::to_string(newArmor.getDamageReduction()));
-        lines.push_back("- Durabilité : " + EquipmentDisplay::armorDurabilityText(newArmor));
-        lines.push_back("- État : " + armorStateText(newArmor));
-        lines.push_back("Équiper cette armure modifierait les PV maximum et la réduction si elle n'est pas cassée.");
+        lines.push_back("Actuel : aucune armure équipée.");
+        lines.push_back("Inspecté : " + newArmor.getName() + " — " + armorStateText(newArmor));
+        lines.push_back("");
+        lines.push_back("Comparaison | Statistique | Actuel | Inspecté | Écart");
+        lines.push_back(comparisonRow("PV maximum", 0, newArmor.getMaxHpBonus()));
+        lines.push_back(comparisonRow("Réduction", 0, newArmor.getDamageReduction()));
+        lines.push_back(comparisonRow("Enchantements", 0, newArmor.getEnchantmentCount()));
+        lines.push_back(comparisonRow("Durabilité", 0, durabilityPercent(newArmor.getDurability(), newArmor.getMaxDurability()), "%"));
+        lines.push_back("");
+        lines.push_back("Effets inspectés : " + newArmor.getEnchantmentSummaryText() + ".");
+        lines.push_back("");
+        lines.push_back(newArmor.isBroken() ? "Verdict : inutilisable avant réparation." : "Verdict : ajoute toutes les protections affichées.");
     }
 
     if (newArmor.isBroken())
@@ -121,3 +174,4 @@ void EquipmentComparison::displayArmorComparison(
 
     MessageScreen::show("COMPARAISON D'ARMURE", "equipment.armor.compare.result", lines);
 }
+

@@ -10,6 +10,7 @@
 
 #include <vector>
 #include <string>
+#include <algorithm>
 
 std::vector<CharacterRace> RaceCatalog::getPlayableRaces()
 {
@@ -561,6 +562,52 @@ std::string RaceCatalog::getInnatePassiveLine(CharacterRace race)
     }
 
     return "Passif racial prévu : identité surtout sociale/statistique pour l'instant, avec évolutions possibles plus tard.";
+}
+
+int RaceCatalog::getMaximumAge(CharacterRace race)
+{
+    switch (race)
+    {
+        case CharacterRace::Human: return 110;
+        case CharacterRace::DarkElf: return 850;
+        case CharacterRace::Elf: return 900;
+        case CharacterRace::Dwarf: return 420;
+        case CharacterRace::Gnome: return 500;
+        case CharacterRace::Halfling: return 180;
+        case CharacterRace::Tiefling: return 170;
+        case CharacterRace::Aasimar: return 320;
+        case CharacterRace::Kitsune: return 1000;
+        case CharacterRace::Fairy: return 1200;
+        case CharacterRace::HalfDragon: return 600;
+        case CharacterRace::Orc: return 125;
+        case CharacterRace::Vampire: return 2000;
+        case CharacterRace::Demon: return 3000;
+        case CharacterRace::SemiHuman:
+        case CharacterRace::SemiWolf:
+        case CharacterRace::SemiFox:
+        case CharacterRace::SemiDog:
+        case CharacterRace::SemiCat:
+        case CharacterRace::SemiLizard:
+        case CharacterRace::SemiBird:
+            return 150;
+        case CharacterRace::Other:
+        default:
+            return 120;
+    }
+}
+
+std::string RaceCatalog::getAgeBand(CharacterRace race, int age)
+{
+    const int maximumAge = getMaximumAge(race);
+    const int clampedAge = std::max(15, std::min(age, maximumAge));
+    const int youngLimit = std::max(24, 15 + (maximumAge - 15) * 8 / 100);
+    const int adultLimit = 15 + (maximumAge - 15) * 55 / 100;
+    const int matureLimit = 15 + (maximumAge - 15) * 80 / 100;
+
+    if (clampedAge <= youngLimit) return "Jeune";
+    if (clampedAge <= adultLimit) return "Adulte";
+    if (clampedAge <= matureLimit) return "Mature";
+    return "Ancien";
 }
 
 // EN: getMerchantPurchasePricePercentage declares or implements a focused behavior used by this module.

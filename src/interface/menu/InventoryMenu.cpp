@@ -27,60 +27,64 @@ bool InventoryMenu::open(Player& player)
 
         Console::clear();
 
-        if (menuChoice == 0)
-        {
-            return false;
-        }
+        if (menuChoice == 0) return false;
 
         if (menuChoice == 1)
         {
-            BestiaryMenu::open();
+            BestiaryMenu::openBestiary();
             continue;
         }
 
         if (menuChoice == 2)
         {
-            InventoryDisplay::displaySimpleFullInventory(player);
+            BestiaryMenu::openEncyclopedia();
             continue;
         }
 
         if (menuChoice == 3)
         {
-            InventorySelection::openWeapons(player);
+            BestiaryMenu::openDiscoveryNotebook();
             continue;
         }
 
         if (menuChoice == 4)
         {
-            InventorySelection::openArmors(player);
+            InventoryDisplay::displaySimpleFullInventory(player);
             continue;
         }
 
         if (menuChoice == 5)
         {
-            bool turnConsumed = InventorySelection::openConsumables(player);
-
-            if (turnConsumed)
-            {
-                return true;
-            }
-
+            InventorySelection::openWeapons(player);
             continue;
         }
 
         if (menuChoice == 6)
         {
-            InventorySelection::openMaterials(player);
+            InventorySelection::openArmors(player);
             continue;
         }
 
         if (menuChoice == 7)
         {
-            InventorySelection::openCraft(player);
+            bool turnConsumed = InventorySelection::openConsumables(player);
+            if (turnConsumed) return true;
             continue;
         }
 
         if (menuChoice == 8)
+        {
+            InventorySelection::openMaterials(player);
+            continue;
+        }
+
+        if (menuChoice == 9)
+        {
+            InventorySelection::openCraft(player);
+            continue;
+        }
+
+        if (menuChoice == 10)
         {
             QuestMenu::consultOnly(player);
             continue;

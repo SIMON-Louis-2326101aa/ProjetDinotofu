@@ -6,6 +6,7 @@
 #include "story/StoryCampaign.hpp"
 
 #include "character/SpecialCharacterCatalog.hpp"
+#include "boss/BossCatalog.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -382,6 +383,56 @@ namespace
         return false;
     }
 
+    bool hasStoryQuest(const Player& player, const std::string& questId)
+    {
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (quest.id == questId && !quest.failed)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    int countKnownChapterOneReferentQuests(const Player& player)
+    {
+        int count = 0;
+        const std::vector<std::string> ids = {
+            "story_ch1_orren_main",
+            "story_ch1_lysa_main",
+            "story_ch1_bram_main",
+            "story_ch1_soryn_main"
+        };
+        for (const std::string& id : ids)
+        {
+            if (hasStoryQuest(player, id))
+            {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    int countTurnedInChapterOneReferentQuests(const Player& player)
+    {
+        int count = 0;
+        const std::vector<std::string> ids = {
+            "story_ch1_orren_main",
+            "story_ch1_lysa_main",
+            "story_ch1_bram_main",
+            "story_ch1_soryn_main"
+        };
+        for (const std::string& id : ids)
+        {
+            if (hasTurnedInStoryQuest(player, id))
+            {
+                ++count;
+            }
+        }
+        return count;
+    }
+
     int countTurnedInChapterOneMainRequests(const Player& player)
     {
         int count = 0;
@@ -453,9 +504,156 @@ namespace
         return "à débloquer";
     }
 
-    std::string okMissing(bool value)
+    std::string storyQuestRewardNote(const Player& player, const std::string& questId)
     {
-        return value ? "OK" : "manquant";
+        for (const Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (quest.id == questId) return quest.rewardNote;
+        }
+        return "";
+    }
+
+    struct ProgressiveStoryStep
+    {
+        int number;
+        std::string id;
+        std::string title;
+        std::string guidance;
+    };
+
+    const std::vector<ProgressiveStoryStep>& chapterTwoProgressiveSteps()
+    {
+        static const std::vector<ProgressiveStoryStep> steps = {
+            {1, "story_ch2_relay_briefing", "Le nom du relais silencieux", "Écouter le briefing de Mira et Orren."},
+            {2, "story_ch2_north_road_scout", "La route qui s'allonge", "Explorer la Route commerciale, puis rendre le rapport à Orren."},
+            {3, "story_ch2_turned_marker", "La borne retournée", "Rapporter une preuve nette à Soryn."},
+            {4, "story_ch2_relay_threat", "Les guetteurs sans feu", "Affronter la menace imposée du relais, puis rendre le rapport."},
+            {5, "story_ch2_relay_signal", "Le relais doit répondre", "Réactiver un signal simple, puis notifier Mira."},
+            {6, "story_ch2_first_rescue", "La voix derrière les caisses", "Sauver Nell et sécuriser son retour."},
+            {7, "story_ch2_route_sack", "La sacoche qui parle", "Analyser les informations de la sacoche de Nell."},
+            {8, "story_ch2_city_recovery", "Les comptoirs rouvrent un œil", "Distribuer les informations utiles dans la ville."},
+            {9, "story_ch2_cold_ink_trail", "L'encre froide de la route", "Suivre les traces sur la Route commerciale."},
+            {10, "story_ch2_route_rewrite", "La carte qui se réécrit", "Identifier le procédé qui altère les routes."},
+            {11, "story_ch2_short_route_counter", "Le contre-registre des routes courtes", "Installer une vérification fiable pour les stocks et les retours."},
+            {12, "story_ch2_black_knot_warning", "Le nœud noir au bout du relais", "Reconnaître la menace sans envoyer un convoi entier."},
+            {13, "story_ch2_repair_downtime", "Tenir pendant les travaux", "Aider la ville pendant les réparations."},
+            {14, "story_ch2_hidden_guardian_hint", "La chose qui garde la borne", "Identifier la présence sans révéler trop tôt son vrai nom."},
+            {15, "story_ch2_black_knot_seal", "Le verrou de la borne", "Briser le premier verrou de la borne noire."},
+            {16, "story_ch2_black_knot_scars", "Les cicatrices du verrou", "Lire et classer les preuves laissées après le combat."},
+            {17, "story_ch2_guarded_route", "Une route à garder ouverte", "Organiser les premiers retours gardés."}
+        };
+        return steps;
+    }
+
+    int countTurnedInChapterThreeMainRequests(const Player& player)
+    {
+        int count = 0;
+        const std::vector<std::string> ids = {
+            "story_ch3_lonely_convoy", "story_ch3_three_routes", "story_ch3_signatures",
+            "story_ch3_escort_withdrawal", "story_ch3_margin_village", "story_ch3_corrected_route",
+            "story_ch3_map_guardian", "story_ch3_convoy_return"
+        };
+        for (const std::string& id : ids)
+        {
+            if (hasTurnedInStoryQuest(player, id)) ++count;
+        }
+        return count;
+    }
+
+    const std::vector<ProgressiveStoryStep>& chapterThreeProgressiveSteps()
+    {
+        static const std::vector<ProgressiveStoryStep> steps = {
+            {1, "story_ch3_lonely_convoy", "Le convoi qui revient seul", "Inspecter le convoi avec Mira sans le déplacer."},
+            {2, "story_ch3_three_routes", "Trois routes pour une même borne", "Mesurer la borne à trois moments de la journée, puis rendre le relevé à Orren."},
+            {3, "story_ch3_signatures", "Les signatures sans voyageurs", "Faire identifier les sceaux par Soryn, Eda et Nell."},
+            {4, "story_ch3_escort_withdrawal", "Une escorte qui sait renoncer", "Escorter un petit convoi et réussir un demi-tour propre."},
+            {5, "story_ch3_margin_village", "Le village écrit dans la marge", "Isoler la preuve du village absent des cartes."},
+            {6, "story_ch3_corrected_route", "La route corrigée", "Choisir la version de trajet conservée dans le contre-registre."},
+            {7, "story_ch3_map_guardian", "Le Gardien de la Carte Juste", "Affronter le mini-boss unique qui protège la carte plutôt que les vivants."},
+            {8, "story_ch3_convoy_return", "Ce que le convoi a rapporté", "Décider avec Mira ce qui peut entrer en ville."}
+        };
+        return steps;
+    }
+
+    std::vector<std::string> buildProgressiveChapterThreeObjectiveLines(const Player& player)
+    {
+        std::vector<std::string> lines;
+        bool currentShown = false;
+        int hiddenSteps = 0;
+        const int expectedCurrent = player.getStoryChapter() > 3 ? 8 : std::clamp(player.getStoryStep(), 1, 8);
+        for (const ProgressiveStoryStep& step : chapterThreeProgressiveSteps())
+        {
+            const std::string state = storyQuestShortState(player, step.id);
+            if (state == "validée")
+            {
+                lines.push_back("[fait] Étape " + std::to_string(step.number) + " — " + step.title + ".");
+                continue;
+            }
+            const bool knownOrExpected = state != "à débloquer" || step.number == expectedCurrent;
+            if (!currentShown && knownOrExpected)
+            {
+                std::string marker = "[étape actuelle]";
+                if (state == "à rendre") marker = "[fait - à notifier]";
+                else if (state == "bloquée") marker = "[à reprendre]";
+                lines.push_back(marker + " Étape " + std::to_string(step.number) + " — " + step.title + " — " + state + ". " + step.guidance);
+                currentShown = true;
+            }
+            else
+            {
+                ++hiddenSteps;
+            }
+        }
+        if (hiddenSteps > 0)
+        {
+            lines.push_back("Étapes suivantes : " + std::to_string(hiddenSteps) + " étape(s) masquée(s) jusqu'à validation de l'étape actuelle.");
+        }
+        return lines;
+    }
+
+    std::vector<std::string> buildProgressiveChapterTwoObjectiveLines(const Player& player)
+    {
+        std::vector<std::string> lines;
+        bool currentShown = false;
+        int hiddenSteps = 0;
+        const int expectedCurrent = std::clamp(player.getStoryStep(), 1, 17);
+
+        for (const ProgressiveStoryStep& step : chapterTwoProgressiveSteps())
+        {
+            const std::string state = storyQuestShortState(player, step.id);
+            if (state == "validée")
+            {
+                lines.push_back("[fait] Étape " + std::to_string(step.number) + " — " + step.title + ".");
+                continue;
+            }
+
+            const bool knownOrExpected = state != "à débloquer" || step.number == expectedCurrent;
+            if (!currentShown && knownOrExpected)
+            {
+                std::string marker = "[étape actuelle]";
+                if (state == "à rendre") marker = "[fait - à notifier]";
+                else if (state == "bloquée") marker = "[à reprendre]";
+
+                lines.push_back(
+                    marker + " Étape " + std::to_string(step.number) + " — " + step.title
+                    + " — " + state + ". " + step.guidance
+                );
+                currentShown = true;
+                continue;
+            }
+
+            ++hiddenSteps;
+        }
+
+        if (hiddenSteps > 0)
+        {
+            lines.push_back("Suite masquée : " + std::to_string(hiddenSteps) + " étape(s) seront révélées après validation de l'étape actuelle.");
+        }
+        else if (!currentShown)
+        {
+            lines.push_back("[fait] Toutes les étapes actuellement publiées du chapitre 2 sont validées.");
+        }
+
+        return lines;
     }
 
     std::string yesNo(bool value)
@@ -505,6 +703,26 @@ bool StoryCampaign::canUnlockChapterTwo(const Player& player)
     return StoryCampaign::canCompleteChapterOne(player);
 }
 
+bool StoryCampaign::canUnlockChapterThree(const Player& player)
+{
+    if (player.hasStorySkip() || player.getStoryChapter() >= 3)
+    {
+        return true;
+    }
+    return player.getStoryChapter() >= 2
+        && (player.getStoryStep() >= 18 || hasTurnedInStoryQuest(player, "story_ch2_guarded_route"));
+}
+
+bool StoryCampaign::canUnlockChapterFour(const Player& player)
+{
+    if (player.hasStorySkip() || player.getStoryChapter() >= 4)
+    {
+        return true;
+    }
+    return player.getStoryChapter() >= 3
+        && (player.getStoryStep() >= 9 || hasTurnedInStoryQuest(player, "story_ch3_convoy_return"));
+}
+
 int StoryCampaign::maxUnlockedChapter(const Player& player)
 {
     if (player.hasStorySkip())
@@ -521,6 +739,14 @@ int StoryCampaign::maxUnlockedChapter(const Player& player)
     if (canUnlockChapterTwo(player) || player.getStoryChapter() >= 2)
     {
         unlocked = std::max(unlocked, 2);
+    }
+    if (canUnlockChapterThree(player) || player.getStoryChapter() >= 3)
+    {
+        unlocked = std::max(unlocked, 3);
+    }
+    if (canUnlockChapterFour(player) || player.getStoryChapter() >= 4)
+    {
+        unlocked = std::max(unlocked, 4);
     }
 
     return std::max(unlocked, player.getStoryChapter());
@@ -588,7 +814,7 @@ StoryAccessSnapshot StoryCampaign::buildAccessSnapshot(const Player& player)
             "Préparer la recherche d'un PNJ référent disparu au relais."
         };
     }
-    else
+    else if (snapshot.chapter == 2)
     {
         snapshot.unlockedSystems = {
             "Chapitre 2 : route du relais silencieux, première vraie enquête, menace imposée, relais stabilisé, premier sauvetage et sacoche de routes.",
@@ -624,6 +850,58 @@ StoryAccessSnapshot StoryCampaign::buildAccessSnapshot(const Player& player)
             "Lire les cicatrices du verrou pour transformer le combat gagné en preuves utiles.",
             "Organiser une route gardée afin que les comptoirs respirent sans croire que le danger a disparu.",
             "Utiliser les demandes des PNJ pour reconstruire : nourriture, forge, routes, soins, confiance."
+        };
+    }
+
+    else if (snapshot.chapter == 3)
+    {
+        snapshot.unlockedSystems = {
+            "Chapitre 3 : convoi revenu seul, routes variables selon l'heure et premiers trajets réellement contradictoires.",
+            "Contre-registre : une version de route peut être conservée sans effacer les autres preuves.",
+            "Escortes courtes : le demi-tour devient une réussite possible plutôt qu'un échec automatique.",
+            "Village absent des cartes : première preuve exploitable, sans encore ouvrir tout le chapitre 4."
+        };
+        snapshot.limitedSystems = {
+            "Transports : variables mais progressivement prévisibles grâce aux mesures et au contre-registre.",
+            "Boutiques : leurs stocks dépendent de la route choisie et des cargaisons réellement revenues.",
+            "Exploration : certaines routes changent selon le moment de la journée."
+        };
+        snapshot.lockedSystems = {
+            "Village à la mauvaise date : seulement annoncé, pas encore ouvert comme zone complète.",
+            "Légendes profondes et vérité de la fissure : réservées aux chapitres suivants.",
+            "Noms de gardiens non prononcés : ils restent masqués dans le bestiaire."
+        };
+        snapshot.mainObjectives = {
+            "Comprendre pourquoi un convoi revient sans équipage mais avec trop de marchandises.",
+            "Mesurer les routes au lieu de croire une seule carte.",
+            "Sécuriser une escorte capable de renoncer proprement.",
+            "Identifier le village écrit dans la marge.",
+            "Affronter le Gardien de la Carte Juste et décider ce qui peut entrer en ville."
+        };
+    }
+    else
+    {
+        snapshot.unlockedSystems = {
+            "Chapitre 4 : première entrée dans le village à la mauvaise date et quatre scènes d'enquête jouables.",
+            "Mémoire des choix : la route et la décision du convoi du chapitre 3 continuent d'influencer les PNJ, les quêtes et l'exploration.",
+            "Registre contradictoire : dates de mairie, tombes, cloche et témoignages peuvent être conservés sans en effacer une version."
+        };
+        snapshot.limitedSystems = {
+            "Village : seule la première fenêtre d'accès et la première nuit sont actuellement stabilisées.",
+            "Enquête : les preuves indiquent une anomalie temporelle, mais pas encore l'identité certaine de ses gardiens.",
+            "Exploration : les événements proches restent soumis aux conséquences et aux routes choisies au chapitre 3."
+        };
+        snapshot.lockedSystems = {
+            "Seconde phase du village : à détailler à partir des preuves réunies.",
+            "Mini-boss et boss majeur du chapitre 4 : volontairement non sélectionnés tant que leur rôle narratif n'est pas établi.",
+            "Légendes profondes et vérité de la fissure : réservées aux chapitres suivants."
+        };
+        snapshot.mainObjectives = {
+            "Atteindre le village pendant sa seule fenêtre de route stable.",
+            "Comparer trois dates incompatibles sans choisir arbitrairement la plus pratique.",
+            "Interroger les habitants qui connaissent le convoi avant son départ.",
+            "Observer ce que la cloche retire réellement du village pendant la première nuit.",
+            "Transformer les preuves en structure de chapitre avant de nommer les ennemis majeurs."
         };
     }
 
@@ -919,19 +1197,18 @@ std::vector<std::string> StoryCampaign::buildChapterOneMiraLines(const Player& p
 
 std::vector<std::string> StoryCampaign::buildChapterOneMissionLines(const Player& player)
 {
-    return {
+    std::vector<std::string> lines = {
         "Mission principale — Faire respirer les murs",
-        "Objectif 1 : faire connaissance avec Mira, qui présente la ville, les noms et les professions utiles.",
-        "Objectif 2 : accomplir la première quête principale non refusable : rencontrer Orren, Lysa, Bram et Soryn pendant le tour de ville.",
-        "Objectif 3 : notifier Mira que tout le monde a été rencontré, pour qu'elle ajoute sa propre demande et les quatre demandes des référents.",
-        "Objectif 4 : retourner parler à Orren, Lysa, Bram et Soryn via PNJ notables, de la part de Mira, afin que chacun ajoute sa quête principale.",
-        "Objectif 5 : terminer et rendre les cinq demandes principales, puis notifier Mira une dernière fois.",
-        "Objectif narratif : comprendre que les monstres ne viennent pas seulement pour attaquer. Certains fuient quelque chose, d'autres semblent avoir été poussés vers les murs.",
-        "Progression actuelle de " + player.getName() + " : " + player.getStoryProgressLabel(),
-        "Déblocage futur : quand Mira aura reçu le bilan final des cinq demandes principales, le chapitre 2 ouvrira la route du relais silencieux."
+        "Les étapes futures restent masquées. Une étape terminée reste visible avec [fait].",
+        "Mira est la seule première rencontre obligatoire. Orren, Lysa, Bram et Soryn peuvent ensuite être rencontrés et aidés dans n'importe quel ordre.",
+        "Chaque référent donne sa propre quête principale dès la première vraie discussion. Une quête déjà terminée avant le retour auprès de Mira reste comptée dans le bilan."
     };
-}
 
+    const std::vector<std::string> progress = buildChapterOneProgressLines(player);
+    lines.insert(lines.end(), progress.begin(), progress.end());
+    lines.push_back("Objectif narratif actuel : donner assez de preuves, de soins, de matériaux et de stabilité à la ville pour qu'elle puisse rouvrir une route sans sacrifier ses habitants.");
+    return lines;
+}
 
 bool StoryCampaign::canCompleteChapterOne(const Player& player)
 {
@@ -940,9 +1217,10 @@ bool StoryCampaign::canCompleteChapterOne(const Player& player)
         return true;
     }
 
-    const bool miraHasGivenMainRequests = player.getStoryStep() >= 5;
-    const bool allMainRequestsTurnedIn = countTurnedInChapterOneMainRequests(player) >= 5;
-    return miraHasGivenMainRequests && allMainRequestsTurnedIn;
+    const bool fourReferentsMetAndReported = hasTurnedInStoryQuest(player, "story_ch1_meet_referents");
+    const bool allReferentQuestsTurnedIn = countTurnedInChapterOneReferentQuests(player) >= 4;
+    const bool miraBundleTurnedIn = hasTurnedInStoryQuest(player, "story_ch1_mira_main");
+    return fourReferentsMetAndReported && allReferentQuestsTurnedIn && miraBundleTurnedIn;
 }
 
 std::vector<std::string> StoryCampaign::buildChapterOneProgressLines(const Player& player)
@@ -950,37 +1228,71 @@ std::vector<std::string> StoryCampaign::buildChapterOneProgressLines(const Playe
     const int supportQuests = countTurnedInStorySupportQuests(player);
     const int totalTurnedIn = countTurnedInQuests(player);
     const bool miraMet = player.getStoryStep() >= 3 || player.getStoryChapter() >= 2;
-    const bool firstReferentTourDone = player.getStoryStep() >= 4 || player.getStoryChapter() >= 2;
-    const bool miraNotifiedAfterTour = player.getStoryStep() >= 5 || player.getStoryChapter() >= 2;
+    const int referentsMet = countKnownChapterOneReferentQuests(player);
+    const bool referentsReported = hasTurnedInStoryQuest(player, "story_ch1_meet_referents") || player.getStoryChapter() >= 2;
+    const int referentQuestsDone = countTurnedInChapterOneReferentQuests(player);
+    const bool miraBundleDone = hasTurnedInStoryQuest(player, "story_ch1_mira_main") || player.getStoryChapter() >= 2;
     const int mainRequestsDone = countTurnedInChapterOneMainRequests(player);
 
-    return {
-        "Validation du chapitre 1 — Mira ne cherche plus des statistiques générales : elle suit une chaîne de quêtes principales.",
-        "Mira rencontrée : " + okMissing(miraMet) + " — elle présente la ville, les noms et les professions importantes.",
-        "Tour de ville : " + okMissing(firstReferentTourDone) + " — Orren, Lysa, Bram et Soryn doivent être rencontrés avant leurs demandes.",
-        "Mira notifiée après le tour : " + okMissing(miraNotifiedAfterTour) + " — c'est elle qui transforme les besoins en quêtes principales non refusables.",
-        "Demandes principales rendues : " + okMissing(mainRequestsDone >= 5) + " — " + std::to_string(mainRequestsDone) + "/5 validées auprès de Mira, Orren, Lysa, Bram et Soryn.",
-        "Aide libre déjà faite : " + std::to_string(supportQuests) + " demande(s) de soutien utile(s) | Quêtes rendues au total : " + std::to_string(totalTurnedIn) + ".",
-        StoryCampaign::canCompleteChapterOne(player)
-            ? "Conclusion : Mira peut ouvrir la suite. Le relais silencieux devient une vraie priorité."
-            : "Conclusion : demande à Mira ce qu'il reste à faire, puis suis Quêtes > Quête principale et PNJ notables."
+    const auto referentLine = [&](const std::string& clientName, const std::string& questId) {
+        if (!hasStoryQuest(player, questId))
+        {
+            return "[à rencontrer] " + clientName + " — parle-lui pour recevoir sa quête principale.";
+        }
+        if (hasTurnedInStoryQuest(player, questId))
+        {
+            return "[fait] " + clientName + " — demande principale validée et déjà comptée par le bilan de Mira.";
+        }
+        return "[en cours] " + clientName + " — " + storyQuestShortState(player, questId) + ".";
     };
+
+    std::vector<std::string> lines = {
+        "Validation du chapitre 1 — une rencontre obligatoire avec Mira, quatre branches parallèles, puis un bilan final.",
+        std::string(miraMet ? "[fait] " : "[en cours] ") + "Mira rencontrée — elle présente les quatre personnes qui tiennent encore la ville.",
+        std::string(referentsMet >= 4 ? "[fait] " : (miraMet ? "[en cours] " : "[verrouillé] "))
+            + "Référents rencontrés — " + std::to_string(referentsMet) + "/4. Chaque rencontre donne une quête principale indépendante."
+    };
+
+    lines.push_back(referentLine("Orren", "story_ch1_orren_main"));
+    lines.push_back(referentLine("Lysa", "story_ch1_lysa_main"));
+    lines.push_back(referentLine("Bram", "story_ch1_bram_main"));
+    lines.push_back(referentLine("Soryn", "story_ch1_soryn_main"));
+
+    lines.push_back(std::string(referentsReported ? "[fait] " : (referentsMet >= 4 ? "[étape actuelle] " : "[verrouillé] "))
+        + "Mira prévenue après les quatre rencontres — le bilan des quatre quêtes principales est ouvert.");
+
+    if (referentsReported || player.getStoryChapter() >= 2)
+    {
+        lines.push_back(std::string(miraBundleDone ? "[fait] " : (referentQuestsDone >= 4 ? "[fait - à notifier] " : "[en cours] "))
+            + "Faire respirer les murs — " + std::to_string(referentQuestsDone) + "/4 quête(s) de référent rendue(s). Les validations antérieures sont reprises automatiquement.");
+    }
+    else
+    {
+        lines.push_back("[verrouillé] Faire respirer les murs — retourne d'abord prévenir Mira après avoir parlé aux quatre référents.");
+    }
+
+    lines.push_back("Demandes principales validées : " + std::to_string(mainRequestsDone) + "/5 (quatre référents + bilan de Mira).");
+    lines.push_back("Aide libre déjà faite : " + std::to_string(supportQuests) + " demande(s) de soutien utile(s) | Quêtes rendues au total : " + std::to_string(totalTurnedIn) + ".");
+    lines.push_back(StoryCampaign::canCompleteChapterOne(player)
+        ? "[fait] Conclusion — Mira peut ouvrir la suite. Le relais silencieux devient une vraie priorité."
+        : "Conclusion : parle aux référents manquants, rends leurs quêtes auprès d'eux, puis retourne voir Mira.");
+    return lines;
 }
 
 std::vector<std::string> StoryCampaign::buildChapterOneReferentIntroLines(const Player& player)
 {
     return {
-        "Première quête principale — Faire le tour de la ville",
-        "Mira ne te lance pas vers des demandes sorties de nulle part.",
-        "Elle commence par parler de la ville, citer les noms importants et expliquer pourquoi chaque profession compte encore.",
-        "Avant de savoir qui a besoin de cuir, d'herbes, de preuves ou de routes, tu dois rencontrer les visages qui tiennent encore la ville debout.",
-        "Cette étape n'est pas une faveur optionnelle : la ville ne confiera pas la suite à quelqu'un qui ne connaît même pas les personnes à aider.",
-        "Référents à rencontrer :",
-        "- Mira (intendante de quartier) : priorités, murs, validation de la suite.",
-        "- Orren (vieux garde / référent de route) : chemins, ponts, disparitions.",
-        "- Lysa (soigneuse de fortune) : blessés, potions, symptômes étranges.",
-        "- Bram (forgeron fatigué) : réparations, outils, matériaux.",
-        "- Soryn (archiviste) : traces, légendes, indices à ne pas lire trop tôt.",
+        "Première étape principale — Les quatre voix de la ville",
+        "Mira reste le premier contact obligatoire. Elle te donne quatre noms, mais ne fait pas les présentations à ta place.",
+        "Orren, Lysa, Bram et Soryn sont ensuite disponibles en même temps. Il n'existe aucun ordre imposé entre eux.",
+        "Chaque référent te confie immédiatement une quête principale complète et indépendante.",
+        "Tu peux avancer ou même rendre l'une de ces quêtes avant d'avoir parlé aux trois autres : rien ne sera perdu.",
+        "Une fois les quatre rencontrés, retourne prévenir Mira. Elle ouvrira alors un objectif de synthèse fondé sur l'état réel des quatre quêtes.",
+        "Référents :",
+        "- Orren : routes, bornes retournées et passages suspects.",
+        "- Lysa : blessés, plantes médicinales et symptômes anormaux.",
+        "- Bram : plaques, outils et réparations qui tiennent vraiment.",
+        "- Soryn : archives, preuves et rumeurs à vérifier.",
         "Progression actuelle de " + player.getName() + " : " + player.getStoryProgressLabel()
     };
 }
@@ -990,15 +1302,12 @@ std::vector<std::string> StoryCampaign::buildChapterOneReferentTourLines(const P
     (void)player;
 
     return {
-        "Mira t'accompagne au moins jusqu'au seuil des bons bâtiments. Elle ne laisse pas la ville te transformer en coursier anonyme.",
-        "Mira (intendante de quartier) pose le cadre : rien ne sort des murs sans raison, rien ne rentre sans être compté.",
-        "Orren (vieux garde / référent de route) montre une carte trop raturée : certaines routes ne sont pas fermées, elles mentent.",
-        "Lysa (soigneuse de fortune) garde des compresses propres dans une boîte trop petite. Elle demande surtout des plantes simples et des signes fiables.",
-        "Bram (forgeron fatigué) ne promet pas des miracles. Il promet seulement que le métal cassera moins vite si on lui rapporte de quoi travailler.",
-        "Soryn (archiviste) referme un registre dès que tu approches. Il parlera des légendes quand les preuves éviteront de transformer chaque rumeur en vérité.",
-        "Le premier tour est fait. Les référents existent maintenant comme personnes, pas comme noms dans une liste.",
-        "Mira : « Voilà. Maintenant quand quelqu'un te demande quelque chose, tu sauras au moins pourquoi il n'a pas dormi. »",
-        "Prochaine étape : retourne notifier Mira. C'est elle qui ajoutera sa propre demande principale et t'enverra vers les quatre autres de sa part."
+        "Mira ne te téléporte pas d'un comptoir à l'autre : elle te donne quatre noms et te laisse choisir ta route.",
+        "Orren, Lysa, Bram et Soryn existent réellement dans la ville et restent accessibles depuis les PNJ notables.",
+        "Chaque discussion ouvre une quête principale distincte. Les quatre quêtes peuvent progresser en parallèle.",
+        "Une quête déjà terminée ou rendue avant le bilan de Mira sera reconnue automatiquement.",
+        "Quand les quatre personnes auront été rencontrées, retourne voir Mira pour enregistrer le bilan.",
+        "Après ce bilan, l'objectif sera simple : finir les quatre demandes, puis revenir parler à Mira."
     };
 }
 
@@ -1061,28 +1370,16 @@ std::vector<std::string> StoryCampaign::buildChapterTwoLines(const Player& playe
 
 std::vector<std::string> StoryCampaign::buildChapterTwoMissionLines(const Player& player)
 {
-    return {
+    std::vector<std::string> lines = {
         "Mission principale — Le relais silencieux",
-        "Objectif 1 : écouter le briefing de Mira et Orren autour du registre du relais.",
-        "Objectif 2 : reconnaître la Route commerciale depuis la sortie nord, car la route semble plus longue que sur les cartes.",
-        "Objectif 3 : rapporter une preuve précise à Soryn : borne retournée, trace contradictoire ou signe de monstre poussé vers les murs.",
-        "Objectif 4 : affronter les guetteurs sans feu, première vraie menace imposée du relais. Ce n'est pas un contrat libre à esquiver.",
-        "Objectif 5 : réactiver un signal simple du relais avec Mira, Orren, Bram et Soryn, pour que la route réponde avant d'être considérée comme vraiment tenue.",
-        "Objectif 6 : suivre le premier appel rendu possible par ce signal et sauver Nell la messagère d'un convoi brisé.",
-        "Objectif 7 : exploiter la sacoche de routes de Nell pour transformer le sauvetage en vraie piste.",
-        "Objectif 8 : distribuer les informations aux comptoirs pour que la ville gagne des conséquences visibles : stocks, rumeurs, contrats et confiance.",
-        "Objectif 9 : suivre l'encre froide de la route sur deux scènes de Route commerciale plus scénarisées.",
-        "Objectif 10 : identifier ce qui réécrit la route, sans encore révéler tout l'antagoniste derrière le phénomène.",
-        "Objectif 11 : installer un contre-registre de routes courtes pour que les comptoirs n'obéissent pas aux cartes corrompues.",
-        "Objectif 12 : repérer le nœud noir, première annonce de la prochaine vraie crise du chapitre 2.",
-        "Objectif 13 : tenir pendant les travaux, car la ville doit réparer, préparer les soins et stabiliser ses comptoirs avant la sortie dangereuse.",
-        "Objectif 14 : confirmer qu'une présence garde la borne noire, sans donner son vrai nom trop tôt.",
-        "Objectif 15 : briser le premier verrou de la borne noire, une menace d'étape encore désignée par preuves plutôt que par identité complète.",
-        "Objectif 16 : lire les cicatrices du verrou avec Soryn, Nell et Orren pour comprendre ce qui a cédé sans écrire trop vite un faux nom dans le registre.",
-        "Objectif 17 : organiser une route gardée : petits départs, marques de retour, stocks surveillés et relais secondaires, afin que la ville ne confonde pas une victoire avec une route sauvée.",
-        "Progression actuelle de " + player.getName() + " : " + player.getStoryProgressLabel(),
-        "Quêtes principales visibles : Quêtes > Quête principale. Les actions utiles passent par Exploration, PNJ notables et rendu auprès du bon contact."
+        "Les étapes futures ne sont pas révélées à l'avance. Le registre montre uniquement ce qui est terminé et l'étape actuelle.",
+        "Progression actuelle de " + player.getName() + " : " + player.getStoryProgressLabel()
     };
+
+    const std::vector<std::string> objectives = buildProgressiveChapterTwoObjectiveLines(player);
+    lines.insert(lines.end(), objectives.begin(), objectives.end());
+    lines.push_back("Les actions utiles passent par Exploration, PNJ notables et le rendu auprès du contact indiqué par l'étape actuelle.");
+    return lines;
 }
 
 std::vector<std::string> StoryCampaign::buildChapterTwoProgressLines(const Player& player)
@@ -1154,28 +1451,15 @@ std::vector<std::string> StoryCampaign::buildChapterTwoProgressLines(const Playe
         conclusion = "Conclusion actuelle : continuer le relais silencieux demande exploration, preuve et rendu auprès des référents.";
     }
 
-    return {
+    std::vector<std::string> lines = {
         "Validation du chapitre 2 — première enquête de route.",
-        "Briefing Mira/Orren : " + storyQuestShortState(player, "story_ch2_relay_briefing") + ".",
-        "Reconnaissance de la Route commerciale : " + storyQuestShortState(player, "story_ch2_north_road_scout") + ".",
-        "Preuve de borne retournée : " + storyQuestShortState(player, "story_ch2_turned_marker") + ".",
-        "Menace imposée — Les guetteurs sans feu : " + storyQuestShortState(player, "story_ch2_relay_threat") + ".",
-        "Signal du relais — Le relais doit répondre : " + storyQuestShortState(player, "story_ch2_relay_signal") + ".",
-        "Premier sauvetage — La voix derrière les caisses : " + storyQuestShortState(player, "story_ch2_first_rescue") + ".",
-        "Sacoche de routes — La sacoche qui parle : " + storyQuestShortState(player, "story_ch2_route_sack") + ".",
-        "Conséquences de ville — Les comptoirs rouvrent un œil : " + storyQuestShortState(player, "story_ch2_city_recovery") + ".",
-        "Route scénarisée — L'encre froide de la route : " + storyQuestShortState(player, "story_ch2_cold_ink_trail") + ".",
-        "Enquête — La carte qui se réécrit : " + storyQuestShortState(player, "story_ch2_route_rewrite") + ".",
-        "Ville/économie — Le contre-registre des routes courtes : " + storyQuestShortState(player, "story_ch2_short_route_counter") + ".",
-        "Alerte — Le nœud noir au bout du relais : " + storyQuestShortState(player, "story_ch2_black_knot_warning") + ".",
-        "Réparations — Tenir pendant les travaux : " + storyQuestShortState(player, "story_ch2_repair_downtime") + ".",
-        "Piste de menace — La chose qui garde la borne : " + storyQuestShortState(player, "story_ch2_hidden_guardian_hint") + ".",
-        "Boss d'étape — Le verrou de la borne : " + storyQuestShortState(player, "story_ch2_black_knot_seal") + ".",
-        "Après-crise — Les cicatrices du verrou : " + storyQuestShortState(player, "story_ch2_black_knot_scars") + ".",
-        "Ville/route — Une route à garder ouverte : " + storyQuestShortState(player, "story_ch2_guarded_route") + ".",
-        "Étapes principales rendues : " + std::to_string(done) + "/17.",
-        conclusion
+        "Étapes principales rendues : " + std::to_string(done) + "/17."
     };
+    const std::vector<std::string> objectives = buildProgressiveChapterTwoObjectiveLines(player);
+    lines.insert(lines.end(), objectives.begin(), objectives.end());
+    lines.push_back(conclusion);
+    return lines;
+
 }
 
 std::vector<std::string> StoryCampaign::buildChapterTwoBriefingLines(const Player& player)
@@ -1483,6 +1767,207 @@ std::vector<std::string> StoryCampaign::buildChapterTwoSpecialThreatLines(const 
     return specialChapterTwoLinesByKey(player, linesByKey);
 }
 
+std::vector<std::string> StoryCampaign::buildChapterThreeLines(const Player& player)
+{
+    return {
+        "Chapitre 3 — Les routes qui répondent mal",
+        "Un convoi revient seul au relais avec plus de marchandises qu'au départ et des signatures impossibles.",
+        "La route ne se contente plus de mentir : elle choisit sa destination selon l'heure, la cargaison et les témoins.",
+        "Progression actuelle : " + player.getStoryProgressLabel() + ".",
+        "Mini-boss obligatoire : Le Gardien de la Carte Juste, entité unique située au-dessus d'un élite mais sous un vrai boss du registre.",
+        "Boss secondaire : une variation de reflet du palier II peut être découverte après le mini-boss ; son affrontement dépend de la volonté du joueur.",
+        "Conséquence : accès préparé au village absent des cartes et premier choix durable de route."
+    };
+}
+
+std::vector<std::string> StoryCampaign::buildChapterThreeMissionLines(const Player& player)
+{
+    std::vector<std::string> lines = {
+        "Mission principale — Les routes qui répondent mal",
+        "Les étapes futures restent masquées. Les actions déjà accomplies et les quêtes rendues sont relues depuis le journal.",
+        "Progression actuelle de " + player.getName() + " : " + player.getStoryProgressLabel()
+    };
+    const std::vector<std::string> objectives = buildProgressiveChapterThreeObjectiveLines(player);
+    lines.insert(lines.end(), objectives.begin(), objectives.end());
+    return lines;
+}
+
+std::vector<std::string> StoryCampaign::buildChapterThreeProgressLines(const Player& player)
+{
+    std::vector<std::string> lines = {
+        "Validation du chapitre 3 — routes variables et convoi revenu seul.",
+        "Quêtes principales rendues : " + std::to_string(countTurnedInChapterThreeMainRequests(player)) + "/8."
+    };
+    const std::vector<std::string> objectives = buildProgressiveChapterThreeObjectiveLines(player);
+    lines.insert(lines.end(), objectives.begin(), objectives.end());
+    const bool chapterComplete = player.getStoryChapter() > 3 || player.getStoryStep() >= 9;
+    lines.push_back(chapterComplete
+        ? "[fait] Le convoi est classé. La route vers le village absent des cartes est maintenant connue."
+        : "L'étape suivante n'est dévoilée qu'après le rendu de l'étape actuelle.");
+
+    if (player.isBossUnlocked(9))
+    {
+        lines.push_back(player.isBossDefeated(9)
+            ? "[fait] Boss secondaire volontaire : le Reflet d'Inakari a déjà été vaincu."
+            : "Boss secondaire volontaire : une variation de reflet est stabilisée dans le registre. Son identité reste inconnue ; danger estimé au niveau conseillé " + std::to_string(BossCatalog::getRecommendedLevel(9)) + ".");
+        lines.push_back("Ce boss n'est pas nécessaire pour terminer le chapitre 3.");
+    }
+    return lines;
+}
+
+std::vector<std::string> StoryCampaign::buildChapterThreeActionLines(const Player& player)
+{
+    const int step = player.getStoryChapter() > 3 ? 9 : std::clamp(player.getStoryStep(), 1, 9);
+    const std::vector<std::string> guidance = {
+        "Inspecte le convoi revenu seul avec Mira.",
+        "Mesure la même borne à l'aube, au milieu du jour et la nuit.",
+        "Fais identifier les signatures par Soryn, Eda et Nell.",
+        "Conduis une escorte courte et accepte un demi-tour si la route change.",
+        "Isole la preuve du village écrit dans la marge.",
+        "Choisis la version de route conservée dans le contre-registre.",
+        "Affronte le Gardien de la Carte Juste, mini-boss unique de la route corrigée.",
+        "Décide avec Mira ce que le convoi peut faire entrer dans la ville.",
+        "Le chapitre 3 est terminé ; le village absent des cartes prépare le chapitre 4."
+    };
+    return {
+        "Étape actuelle : " + std::to_string(step) + ".",
+        guidance[static_cast<std::size_t>(step - 1)],
+        "Les objectifs déjà accomplis restent reconnus par le journal, même si leur dialogue d'ouverture est arrivé plus tard."
+    };
+}
+
+std::string StoryCampaign::getChapterThreeRouteChoice(const Player& player)
+{
+    const std::string note = storyQuestRewardNote(player, "story_ch3_corrected_route");
+    if (note.find("commerce") != std::string::npos) return "commerce";
+    if (note.find("secours") != std::string::npos) return "secours";
+    if (note.find("recherche") != std::string::npos) return "recherche";
+    return "";
+}
+
+std::string StoryCampaign::getChapterThreeConvoyDecision(const Player& player)
+{
+    const std::string note = storyQuestRewardNote(player, "story_ch3_convoy_return");
+    if (note.find("marchandises") != std::string::npos) return "marchandises";
+    if (note.find("preuves") != std::string::npos) return "preuves";
+    if (note.find("quarantaine") != std::string::npos) return "quarantaine";
+    return "";
+}
+
+std::vector<std::string> StoryCampaign::buildChapterThreeConsequenceLines(const Player& player)
+{
+    std::vector<std::string> lines;
+    const std::string route = getChapterThreeRouteChoice(player);
+    const std::string convoy = getChapterThreeConvoyDecision(player);
+
+    if (route == "commerce") lines.push_back("Route conservée : commerce — davantage de matériaux, armes, protections et marchandises peuvent revenir.");
+    else if (route == "secours") lines.push_back("Route conservée : secours — soins, plantes, auberge et retours de blessés sont prioritaires.");
+    else if (route == "recherche") lines.push_back("Route conservée : recherche — livres, composants alchimiques et preuves de terrain sont prioritaires.");
+
+    if (convoy == "marchandises") lines.push_back("Convoi : marchandises contrôlées admises — les stocks reviennent plus vite, avec surveillance.");
+    else if (convoy == "preuves") lines.push_back("Convoi : preuves uniquement — la bibliothèque et les enquêteurs progressent avant les commerces.");
+    else if (convoy == "quarantaine") lines.push_back("Convoi : quarantaine — aucun bonus de cargaison immédiat, mais le risque d'événement contaminé diminue.");
+
+    if (player.isBossUnlocked(9) && !player.isBossDefeated(9))
+    {
+        lines.push_back("Piste secondaire : une variation de reflet du palier II peut être affrontée volontairement depuis le registre des boss.");
+    }
+    return lines;
+}
+
+std::vector<std::string> StoryCampaign::buildChapterFourLines(const Player& player)
+{
+    std::vector<std::string> lines = {
+        "Chapitre 4 — Le village à la mauvaise date",
+        "La route corrigée ne conduit pas vers un lieu absent. Elle conduit vers un lieu qui existe au mauvais moment.",
+        "Le village apparaît dans les marges du convoi, dans les souvenirs de Nell et maintenant au bout d'un trajet réellement praticable.",
+        "Aucun boss majeur n'est encore désigné : le chapitre commence par déterminer ce que le village protège, ce qu'il répète et ce qui le force à disparaître.",
+        "Première phase jouable : arrivée, datation des lieux, témoignages impossibles et première nuit sous la cloche."
+    };
+    const std::vector<std::string> consequences = buildChapterThreeConsequenceLines(player);
+    if (!consequences.empty())
+    {
+        lines.push_back("Héritage du chapitre 3 : " + consequences.front());
+    }
+    return lines;
+}
+
+std::vector<std::string> StoryCampaign::buildChapterFourMissionLines(const Player& player)
+{
+    const int step = std::clamp(player.getStoryStep(), 1, 9);
+    const std::vector<std::string> objectives = {
+        "Atteindre le village pendant la seule fenêtre où la route correspond aux bornes.",
+        "Comparer la date du registre, celle du cimetière et celle gravée sur la cloche.",
+        "Interroger les habitants qui affirment connaître le convoi avant son départ.",
+        "Rester jusqu'à la première nuit et observer ce que la cloche retire du village.",
+        "Construire un contre-registre capable de conserver les preuves après les sonneries.",
+        "Identifier et repousser le Sonneur sans heure, premier gardien actif du cycle.",
+        "Retrouver le témoin effacé dont le nom revient sur trois dates incompatibles.",
+        "Lire le registre intérieur et identifier l'Intendant de la Date Vide comme menace majeure cohérente.",
+        "Deuxième phase terminée : préparer l'accès à la salle des dates sans encore lancer le combat majeur."
+    };
+
+    std::vector<std::string> lines = buildChapterFourLines(player);
+    lines.push_back("Progression actuelle : étape " + std::to_string(step) + "/9.");
+    for (int index = 0; index < static_cast<int>(objectives.size()); ++index)
+    {
+        if (index + 1 < step) lines.push_back("[fait] " + objectives[static_cast<std::size_t>(index)]);
+        else if (index + 1 == step) lines.push_back("[actuel] " + objectives[static_cast<std::size_t>(index)]);
+        else lines.push_back("[masqué] La suite sera révélée après l'étape actuelle.");
+    }
+    return lines;
+}
+
+std::vector<std::string> StoryCampaign::buildChapterFourProgressLines(const Player& player)
+{
+    const int step = std::clamp(player.getStoryStep(), 1, 9);
+    std::vector<std::string> lines = {
+        step <= 5 ? "Chapitre 4 : première phase d'enquête." : "Chapitre 4 : deuxième phase — conserver les preuves et nommer la menace.",
+        "Étapes franchies : " + std::to_string(std::max(0, step - 1)) + "/8.",
+        "Les conséquences du chapitre 3 restent actives dans les dialogues, les quêtes secondaires, les stocks et l'exploration."
+    };
+    if (step >= 5)
+    {
+        lines.push_back("[fait] La première nuit du village a été observée.");
+        lines.push_back("[preuve] La cloche redistribue les noms, les lieux et les dates au lieu de simplement cacher le village.");
+    }
+    if (step >= 7)
+    {
+        lines.push_back("[mini-boss identifié] Le Sonneur sans heure entretient le cycle, mais ne semble pas en être l'autorité principale.");
+    }
+    if (step >= 9)
+    {
+        lines.push_back("[menace majeure identifiée] L'Intendant de la Date Vide classe les événements refusés par les autres calendriers.");
+        lines.push_back("[préparation] Son affrontement devra être développé dans la phase suivante avec la salle des dates et ses règles propres.");
+    }
+    else
+    {
+        lines.push_back("Le boss majeur n'est nommé que lorsque le registre intérieur fournit une preuve directe.");
+    }
+    return lines;
+}
+
+std::vector<std::string> StoryCampaign::buildChapterFourActionLines(const Player& player)
+{
+    const int step = std::clamp(player.getStoryStep(), 1, 9);
+    const std::vector<std::string> actions = {
+        "Prends la route au moment exact où les bornes s'accordent et n'emporte qu'un groupe léger.",
+        "Inspecte trois sources de date indépendantes avant d'accepter le calendrier des habitants.",
+        "Compare les témoignages du convoi sans révéler immédiatement ce que la ville sait déjà.",
+        "Reste après le coucher du soleil, garde une issue ouverte et note chaque son de cloche.",
+        "Assemble le contre-registre avec les copies conservées hors du village et vérifie qu'une page survit à une sonnerie.",
+        "Suis la corde de la cloche jusqu'au Sonneur sans heure et brise son rythme sans détruire les preuves.",
+        "Cherche le nom effacé dans le cimetière, l'auberge et le registre de mairie avant la prochaine nuit.",
+        "Ouvre le registre intérieur et compare son sceau avec les trois dates incompatibles.",
+        "La deuxième phase est terminée. Prépare l'accès à la salle des dates et les règles du futur combat majeur."
+    };
+    return {
+        "Étape actuelle : " + std::to_string(step) + ".",
+        actions[static_cast<std::size_t>(step - 1)],
+        step < 9 ? "La prochaine scène reste masquée jusqu'à l'accomplissement de cette action." : "La menace majeure est identifiée, mais son combat reste volontairement réservé à la phase suivante."
+    };
+}
+
 std::vector<std::string> StoryCampaign::buildSandboxRulesLines(const Player& player)
 {
     (void)player;
@@ -1550,6 +2035,8 @@ std::vector<std::string> StoryCampaign::buildNextObjectiveLines(const Player& pl
     lines.push_back("Progression histoire sauvegardée : chapitre " + std::to_string(player.getStoryChapter()) + ", étape " + std::to_string(player.getStoryStep()) + ".");
     lines.push_back("Chapitre suggéré par le personnage : " + std::to_string(suggestedChapterFromProgress(player)) + ".");
     lines.push_back("Chapitre 2 prêt selon progression : " + yesNo(canUnlockChapterTwo(player)) + ".");
+    lines.push_back("Chapitre 3 prêt selon progression : " + yesNo(canUnlockChapterThree(player)) + ".");
+    lines.push_back("Chapitre 4 prêt selon progression : " + yesNo(canUnlockChapterFour(player)) + ".");
     lines.push_back("Chapitre maximum sélectionnable : " + std::to_string(maxUnlockedChapter(player)) + ".");
     lines.push_back("");
     lines.push_back("Objectifs principaux :");

@@ -45,7 +45,8 @@ namespace
         const std::vector<std::string>& lines
     )
     {
-        showSummonNotice(title, screenId, lines, true);
+        showSummonNotice(title, screenId, lines, false);
+        Console::pauseSeconds(1);
     }
 
     std::string hpLine(const Entity& entity, int hpBefore)

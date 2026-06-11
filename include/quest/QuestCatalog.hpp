@@ -17,6 +17,11 @@ public:
     // EN: createGuildBoard declares or implements a focused behavior used by this module.
     // FR: createGuildBoard déclare ou implémente un comportement précis utilisé par ce module.
     static std::vector<Quest> createGuildBoard(int playerLevel);
+    static std::vector<Quest> createGuildChallengeBoard(
+        int playerLevel,
+        int currentDay,
+        const std::vector<std::string>& excludedConditions = {}
+    );
     // EN: createForgemasterMaterialRequest declares or implements a focused behavior used by this module.
     // FR: createForgemasterMaterialRequest déclare ou implémente un comportement précis utilisé par ce module.
     static Quest createForgemasterMaterialRequest(int playerLevel);

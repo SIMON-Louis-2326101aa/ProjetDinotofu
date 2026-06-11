@@ -14,6 +14,9 @@ public:
     // EN: open declares or implements a focused behavior used by this module.
     // FR: open déclare ou implémente un comportement précis utilisé par ce module.
     static void open();
+    static void openBestiary();
+    static void openEncyclopedia();
+    static void openDiscoveryNotebook();
     // EN: displayObjectEntry declares or implements a focused behavior used by this module.
     // FR: displayObjectEntry déclare ou implémente un comportement précis utilisé par ce module.
     static void displayObjectEntry(const std::string& entryName);

@@ -18,6 +18,9 @@ struct AccountSaveSummary
 {
     std::string accountName;
     std::string path;
+    int playableCharacterCount = 0;
+    std::string lastActivityText;
+    std::string savedForVersion;
 };
 
 struct CharacterSaveSummary
@@ -27,6 +30,9 @@ struct CharacterSaveSummary
     std::string currentOwnerAccountName;
     std::string characterName;
     std::string raceName;
+    int characterAge = 18;
+    std::string visualPresentation = "Non précisé";
+    std::string visualVariant = "Variante A";
     std::string className;
     DifficultyMode difficulty;
     DeathRuleMode deathRule;
@@ -36,6 +42,10 @@ struct CharacterSaveSummary
     std::string createdAt;
     std::string createdForVersion;
     std::string lastAdaptedVersion;
+    bool storyModeStarted = false;
+    int storyChapter = 0;
+    int storyStep = 0;
+    std::string lastActivityText;
     std::string path;
 };
 

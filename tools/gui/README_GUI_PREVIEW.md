@@ -1,6 +1,6 @@
 # Dinotofu - interface graphique expérimentale   
 
-Version jeu : **V2.10.00**   
+Version jeu : **V3.18.00**   
 Version minimale conseillée des personnages : **V3.00.00**   
 
 ## Lancement rapide Linux / WSL   
@@ -26,7 +26,7 @@ http://127.0.0.1:8787/tools/gui/dinotofu_gui_experimental.html
 
 ## Rôle actuel   
 
-L'IG lit les snapshots produits par le jeu, affiche les menus/combat/cartes, puis envoie les choix dans une file de commandes consommée par le terminal. Elle sert à jouer plus confortablement tout en gardant le terminal comme secours.   
+L'IG lit les snapshots produits par le jeu, affiche les menus, combats et cartes, puis envoie les choix dans une file de commandes consommée par le moteur. En combat, les choix du joueur disparaissent dès leur validation, le déroulement du tour reste regroupé dans un même écran et les petites transitions peuvent avancer automatiquement après un délai de lecture. L'écran ajoute aussi un bandeau permanent avec PV, jour, moment de journée et portefeuille complet, plus une couche de cartes de lecture graphique pour rendre les informations terminal plus rapides à comprendre. Le terminal reste disponible comme secours.   
 
 ## Entrées supportées   
 
@@ -35,7 +35,8 @@ L'IG lit les snapshots produits par le jeu, affiche les menus/combat/cartes, pui
 - confirmations exactes ;   
 - textes libres ;   
 - codes cachés ;   
-- clics sur actions, cartes métier, focus cards et unités ciblables.   
+- clics sur actions, cartes métier, focus cards et unités ciblables ;   
+- listes de quêtes condensées, inspection des contrats acceptés et demandes d'informations avant acceptation.   
 
 ## Règles importantes   
 

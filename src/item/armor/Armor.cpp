@@ -6,6 +6,7 @@
 #include "item/armor/Armor.hpp"
 
 #include "interface/menu/common/MessageScreen.hpp"
+#include "item/equipment/EquipmentWeightRules.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -319,6 +320,8 @@ std::vector<std::string> Armor::toDisplayLines() const
         "Description : " + description,
         "Valeur : " + std::to_string(value) + " pièces",
         "Type : " + armorTypeLabel(type),
+        "Catégorie de poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getArmorWeightClass(*this)),
+        "Contrepartie : " + EquipmentWeightRules::getArmorTradeoffText(*this),
         "Bonus PV max : " + std::to_string(maxHpBonus),
         "Réduction dégâts : " + std::to_string(damageReduction)
     };

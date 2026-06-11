@@ -18,10 +18,12 @@ class QuestLog
 private:
     std::vector<Quest> quests;
     std::vector<Quest> guildBoardOffers;
+    std::vector<Quest> guildChallengeBoardOffers;
     int guildBoardCreatedAtCombat;
     int guildBoardTargetSize;
     int guildBoardPendingReplacements;
     int guildBoardReplacementDueAtCombat;
+    int guildChallengeBoardCreatedAtDay;
 
 public:
     QuestLog();
@@ -36,6 +38,7 @@ public:
     // EN: getActiveGuildQuestCount declares or implements a focused behavior used by this module.
     // FR: getActiveGuildQuestCount déclare ou implémente un comportement précis utilisé par ce module.
     int getActiveGuildQuestCount() const;
+    int getActiveGuildChallengeCount() const;
     // EN: getActivePersonalQuestCountForClient declares or implements a focused behavior used by this module.
     // FR: getActivePersonalQuestCountForClient déclare ou implémente un comportement précis utilisé par ce module.
     int getActivePersonalQuestCountForClient(const std::string& client) const;
@@ -66,6 +69,9 @@ public:
     // EN: refreshMaterialDeliveryQuests declares or implements a focused behavior used by this module.
     // FR: refreshMaterialDeliveryQuests déclare ou implémente un comportement précis utilisé par ce module.
     int refreshMaterialDeliveryQuests(const class Inventory& inventory);
+    // Recomputes aggregate quest progress from linked quest states.
+    // This is deliberately generic so story, side and sandbox quest chains can share it.
+    int refreshLinkedQuestProgress();
     // EN: turnInQuest declares or implements a focused behavior used by this module.
     // FR: turnInQuest déclare ou implémente un comportement précis utilisé par ce module.
     bool turnInQuest(const std::string& questId);
@@ -84,6 +90,12 @@ public:
     int getGuildBoardTargetSize() const;
     int getGuildBoardCreatedAtCombat() const;
     int getGuildBoardReplacementDueAtCombat() const;
+    const std::vector<Quest>& getGuildChallengeBoardOffers() const;
+    std::vector<Quest>& getGuildChallengeBoardOffers();
+    void ensureGuildChallengeBoardReady(int playerLevel, int currentDay);
+    void forceRefreshGuildChallengeBoard(int playerLevel, int currentDay);
+    bool removeGuildChallengeBoardOfferAt(int offerIndex);
+    int getGuildChallengeBoardCreatedAtDay() const;
     int getClientQuestCount(const std::string& client) const;
     bool hasRecommendedClientCapacity(const std::string& client) const;
     void setLoadedGuildBoardState(
@@ -92,6 +104,10 @@ public:
         int targetSize,
         int pendingReplacements,
         int replacementDueAtCombat
+    );
+    void setLoadedGuildChallengeBoardState(
+        const std::vector<Quest>& offers,
+        int createdAtDay
     );
     void clear();
 };

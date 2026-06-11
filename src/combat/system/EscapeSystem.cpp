@@ -9,6 +9,7 @@
 
 #include "core/Console.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "item/equipment/EquipmentWeightRules.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -50,6 +51,25 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, Difficul
     int escapeChance = CombatClassSystem::getBaseEscapeChance(player)
         + DifficultyRules::getPlayerEscapeChanceModifier(difficulty);
 
+    int equipmentEscapeModifier = 0;
+    if (player.hasEquippedWeapon())
+    {
+        const Weapon weapon = player.getEquippedWeapon();
+        if (!weapon.isBroken())
+        {
+            equipmentEscapeModifier += EquipmentWeightRules::getWeaponEscapeModifier(weapon);
+        }
+    }
+    if (player.hasEquippedArmor())
+    {
+        const Armor armor = player.getEquippedArmor();
+        if (!armor.isBroken())
+        {
+            equipmentEscapeModifier += EquipmentWeightRules::getArmorEscapeModifier(armor);
+        }
+    }
+    escapeChance += equipmentEscapeModifier;
+
     escapeChance = std::max(10, std::min(escapeChance, 90));
 
     if (enemyCount < 1)
@@ -65,6 +85,10 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, Difficul
     lines.push_back("Adversaires encore capables de bloquer la fuite : " + std::to_string(enemyCount));
     lines.push_back("Réussites nécessaires : " + std::to_string(requiredSuccesses));
     lines.push_back("Chance estimée par ouverture : " + std::to_string(escapeChance) + "%");
+    if (equipmentEscapeModifier != 0)
+    {
+        lines.push_back("Influence équipement : " + std::string(equipmentEscapeModifier > 0 ? "+" : "") + std::to_string(equipmentEscapeModifier) + "% selon le poids porté.");
+    }
 
     for (int attempt = 1; attempt <= requiredSuccesses; ++attempt)
     {
@@ -211,6 +235,23 @@ int EscapeSystem::calculateDuelEscapeChance(
 )
 {
     int chance = CombatClassSystem::getBaseEscapeChance(runner);
+
+    if (runner.hasEquippedWeapon())
+    {
+        const Weapon weapon = runner.getEquippedWeapon();
+        if (!weapon.isBroken())
+        {
+            chance += EquipmentWeightRules::getWeaponEscapeModifier(weapon);
+        }
+    }
+    if (runner.hasEquippedArmor())
+    {
+        const Armor armor = runner.getEquippedArmor();
+        if (!armor.isBroken())
+        {
+            chance += EquipmentWeightRules::getArmorEscapeModifier(armor);
+        }
+    }
 
     const Player* opposingPlayer = dynamic_cast<const Player*>(&opponent);
 

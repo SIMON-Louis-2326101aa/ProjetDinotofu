@@ -16,6 +16,8 @@
 #include "interface/model/MenuScreen.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "progression/DeathRuleRules.hpp"
+#include "progression/blessing/BlessingSystem.hpp"
+#include "progression/death/DeathPenaltySystem.hpp"
 #include "save/SaveManager.hpp"
 #include "save/menu/AccountMenu.hpp"
 #include "save/menu/CharacterMenu.hpp"
@@ -244,7 +246,7 @@ namespace
         screen.setPagination(pageIndex, totalPages);
         screen.addLine("Famille sélectionnée : " + categoryName + ".");
         screen.addLine("Choisis la classe qui portera le duel.");
-        screen.addLine("Page : " + std::to_string(pageIndex + 1) + "/" + std::to_string(totalPages));
+        screen.addLine(PagedMenu::pageInfoText(pageIndex, totalPages, classes.size()));
         screen.addLine("Classes affichées : " + PagedMenu::rangeText(firstIndex, lastIndex, classes.size()));
 
         for (std::size_t index = firstIndex; index < lastIndex; ++index)
@@ -1295,8 +1297,15 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
 
     Player* winner = player1.isDead() ? &player2 : &player1;
     Player* loser = player1.isDead() ? &player1 : &player2;
+    bool lethalSurvivalTriggered = false;
 
     showLocalPvpResultScreen(*winner, *loser, deadlyDuel, lethalDeadlyDuel);
+
+    if (lethalDeadlyDuel && BlessingSystem::tryTriggerLethalSurvival(*loser))
+    {
+        lethalSurvivalTriggered = true;
+        DeathPenaltySystem::displayLethalSurvivalAnomaly();
+    }
 
     winner->recordPvpVictory();
     loser->recordPvpDefeat();
@@ -1306,14 +1315,32 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
         winner->recordVictory();
         loser->recordDefeat();
 
-        if (lethalDeadlyDuel)
+        if (lethalDeadlyDuel && !lethalSurvivalTriggered)
         {
             std::string loserAccount = (loser == &player1) ? account1 : player2Slot.accountName;
             winner->recordPvpLethalElimination(loser->getName(), loserAccount);
         }
 
         int winnerPreFightValue = (winner == &player1) ? player1PreFightValue : player2PreFightValue;
-        applyDeadlyDuelReward(*winner, *loser, random, lethalDeadlyDuel, winnerPreFightValue);
+        if (lethalSurvivalTriggered)
+        {
+            winner->gainExperience(160);
+            MessageScreen::show(
+                "BUTIN DÉTRUIT PAR L'ANOMALIE",
+                "pvp.deadly_duel.loot.survival_anomaly",
+                {
+                    "La victoire de " + winner->getName() + " reste enregistrée.",
+                    "Les bénédictions du perdant ont détruit son inventaire et son équipement avant tout pillage.",
+                    "Expérience gagnée : 160.",
+                    "Le perdant survit à 1 PV, mais ne pourra plus jamais recevoir de bénédiction."
+                },
+                false
+            );
+        }
+        else
+        {
+            applyDeadlyDuelReward(*winner, *loser, random, lethalDeadlyDuel, winnerPreFightValue);
+        }
     }
     else
     {

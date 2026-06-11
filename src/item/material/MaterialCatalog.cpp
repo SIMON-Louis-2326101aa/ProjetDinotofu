@@ -176,6 +176,7 @@ Material MaterialCatalog::createById(const std::string& id, int quantity, const 
     if (normalized == "advanced_monster_notes") return withQuality(createAdvancedMonsterNotes(quantity), quality);
     if (normalized == "client_recommendation") return withQuality(createClientRecommendation(quantity), quality);
     if (normalized == "guild_favor_token") return withQuality(createGuildFavorToken(quantity), quality);
+    if (normalized == "guild_challenge_mark") return withQuality(createGuildChallengeMark(quantity), quality);
     if (normalized == "local_service_letter") return withQuality(createLocalServiceLetter(quantity), quality);
     if (normalized == "guild_card") return withQuality(createGuildCard(quantity), quality);
     if (startsWith(normalized, "guild_rank_") && endsWith(normalized, "_notice")) return withQuality(createGuildRankNoticeMaterial(normalized, quantity), quality);
@@ -629,6 +630,18 @@ Material MaterialCatalog::createClientRecommendation(int quantity)
 Material MaterialCatalog::createGuildFavorToken(int quantity)
 {
     return Material("guild_favor_token", "Jeton de faveur de guilde", "Petit jeton marqué au sceau de la guilde. Il prouve qu'un service a été rendu proprement, même quand la prime en pièces reste maigre.", "Renseignement", 22, quantity);
+}
+
+Material MaterialCatalog::createGuildChallengeMark(int quantity)
+{
+    return Material(
+        "guild_challenge_mark",
+        "Marque de défi",
+        "Petite plaque sombre rayée d'un trait argenté. Elle prouve qu'un défi de guilde a été accompli dans son délai, sans donner une puissance brute disproportionnée.",
+        "Défi de guilde",
+        18,
+        quantity
+    );
 }
 
 // EN: createLocalServiceLetter declares or implements a focused behavior used by this module.

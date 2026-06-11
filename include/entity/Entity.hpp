@@ -53,7 +53,15 @@ protected:
     int regenerationTurns;
     int regenerationPerTurn;
 
+    int powerBoostTurns;
+    int powerBoostPercent;
+    int precisionBoostTurns;
+    int precisionRollBonus;
+    int guardBoostTurns;
+    int guardReductionPercent;
+
     int classSkillCooldownTurns;
+    int healingReceivedPercent;
 
 public:
     // EN: Entity declares or implements a focused behavior used by this module.
@@ -155,6 +163,9 @@ public:
     void applyVulnerability(int turns, int damageTakenPercent);
     void applyElementalWard(int turns, int resistancePercent);
     void applyRegeneration(int turns, int healPerTurn);
+    void applyPowerBoost(int turns, int damagePercent);
+    void applyPrecisionBoost(int turns, int rollBonus);
+    void applyGuardBoost(int turns, int reductionPercent);
     bool cureBurning();
     bool curePoison();
     bool cureFrost();
@@ -171,7 +182,14 @@ public:
     bool hasVulnerability() const;
     bool hasElementalWard() const;
     bool hasRegeneration() const;
+    bool hasPowerBoost() const;
+    bool hasPrecisionBoost() const;
+    bool hasGuardBoost() const;
     int getElementalWardResistancePercent() const;
+    int getPowerBoostPercent() const;
+    int getPrecisionRollBonus() const;
+    int getGuardReductionPercent() const;
+    int applyPowerBoostToDamage(int damage) const;
     bool hasActiveCombatStatus() const;
     void processStatusTickAtTurnStart();
 
@@ -191,6 +209,8 @@ public:
     // EN: heal declares or implements a focused behavior used by this module.
     // FR: heal déclare ou implémente un comportement précis utilisé par ce module.
     void heal(int healAmount);
+    int getHealingReceivedPercent() const;
+    void setHealingReceivedPercent(int percentage);
     // EN: reduceMaxHp declares or implements a focused behavior used by this module.
     // FR: reduceMaxHp déclare ou implémente un comportement précis utilisé par ce module.
     void reduceMaxHp(int value);

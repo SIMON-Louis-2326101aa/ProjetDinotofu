@@ -9,6 +9,37 @@ Règles globales :
 - Les malédictions de boss restent sur le personnage hors combat jusqu’à ce que le boss-source soit rebattu.
 - L’église peut diagnostiquer certaines traces, mais ne retire pas les malédictions de boss à la place de la revanche.
 - FireFlight reste le boss final actuel avec le palier [255].
+- La progression normale du registre est ordonnée : la première victoire contre un boss révèle au maximum la prochaine entrée encore cachée et non vaincue de la liste interne.
+- Recombattre un boss déjà vaincu ne révèle jamais une nouvelle entrée.
+- Une découverte d'exploration peut exceptionnellement révéler l'emplacement approximatif de la prochaine présence inconnue sans victoire préalable, mais cette occurrence est rarissime, ne révèle pas l'identité, mémorise seulement la zone approximative et impose un long délai avant une autre découverte de ce type.
+- Une entrée déjà vaincue par une route d'histoire, de coop ou un événement spécial est sautée proprement par la progression.
+- FireFlight ne peut jamais être révélé par cette progression rare : son accès reste conditionné à la défaite de tous les boss requis.
+
+CLASSIFICATION DES MENACES :
+- Monstre standard : menace commune du biome ou de la route.
+- Élite : version plus forte d'une créature existante, sans identité majeure propre.
+- Mini-boss unique : monstre ou entité unique, plus fort qu'un élite mais inférieur à un vrai boss. Il peut être inventé pour une quête, une zone ou un chapitre sans agrandir le roster des boss majeurs.
+- Boss : entité du roster ci-dessous, avec palier, identité progressive, récompenses et mécaniques majeures.
+- Boss final : sommet actuel du roster et verrou narratif de très long terme.
+
+RÈGLES D'UTILISATION DANS L'HISTOIRE :
+- Les vrais boss principaux doivent être choisis en priorité dans ce roster déjà validé.
+- Le choix se fait d'abord selon le palier/niveau cohérent avec la progression, puis selon le thème et le lore du chapitre.
+- Un chapitre n'a pas besoin d'imposer un vrai boss. Un mini-boss unique peut suffire à conclure une étape.
+- Certains vrais boss sont obligatoires parce qu'ils portent le cœur du chapitre ; d'autres sont secondaires et n'apparaissent que si le joueur décide de suivre une piste, conserver une preuve ou entrer dans une zone dangereuse.
+- Un boss secondaire ne bloque jamais artificiellement la quête principale, sauf si le joueur a lui-même choisi une route qui en fait un objectif.
+- Les noms de boss restent masqués tant qu'ils ne sont pas prononcés, reconnus ou suffisamment documentés dans le monde.
+
+HIÉRARCHIE INTERNE DES BOSS :
+- Outil de conception uniquement : ne jamais afficher automatiquement les six paliers au joueur.
+- Le registre joueur ne montre que les entités et informations réellement détectées ou découvertes.
+
+- Palier I — Menaces fondatrices [15 à 30] : premiers boss locaux et premières entités majeures.
+- Palier II — Menaces régionales [31 à 60] : rois locaux, esprits, reflets et anomalies stabilisées.
+- Palier III — Avatars et fragments [61 à 100] : manifestations divines limitées et forces conceptuelles.
+- Palier IV — Gardiens majeurs [101 à 150] : verrous de progression, souverains oubliés et entités primordiales affaiblies.
+- Palier V — Souverains et horreurs [151 à 220] : rois, reines, manifestations du destin et créatures presque légendaires.
+- Palier VI — Sources terminales [221 à 255] : Source stable de l'Anomalie et avatar final actuel.
 
 NOTE HIÉRARCHIE / LORE :
 - L’Émanation de l’Anomalie arrive assez tôt pour introduire les problèmes d’interface.
@@ -140,3 +171,35 @@ MALÉDICTIONS DE BOSS CONFIGURÉES :
 FICHIERS REMPLACÉS / REGROUPÉS :
 - Ce fichier remplace BOSS_VALIDES_DINOTOFU.txt et BOSS_NIVEAUX_RECOMMANDES_DINOTOFU.txt.
 - Les notes futures sur boss/niveaux/malédictions/lore boss doivent aller ici.
+
+
+RÈGLE DE RÉVÉLATION ORDONNÉE — V3.20.00
+- Une première victoire vise la prochaine position attendue de la liste interne.
+- Si cette position est déjà vaincue, le registre peut regarder au maximum trois positions plus loin.
+- Si les quatre positions examinées sont déjà vaincues, aucune information supplémentaire n’est donnée.
+- Une entrée déjà connue mais non vaincue reste la cible actuelle : le système ne révèle pas encore la suivante.
+- FireFlight reste hors de cette règle et conserve sa condition finale spéciale.
+
+
+CHAPITRE 4 — DÉCISION DE CONCEPTION V3.21.00
+- La première phase du village à la mauvaise date est jouable sans sélectionner immédiatement un boss majeur.
+- Les dates contradictoires, les habitants qui connaissent le convoi trop tôt et les effets de la cloche constituent les preuves de départ.
+- Les mini-boss et le boss majeur du chapitre 4 devront être choisis seulement après définition de leur rôle dans cette anomalie.
+- Aucun boss existant ne doit être inséré uniquement parce qu’il est disponible dans le registre ou possède le bon niveau conseillé.
+
+
+MINI-BOSS UNIQUE — GÉANT SLIME DES QUATRE DIVISIONS — V3.25.00
+- Classification : mini-boss unique, hors roster ordonné des vrais boss.
+- Niveau minimum de génération : 4 ; il peut évoluer avec le niveau de la rencontre.
+- Concept : ses dégâts restent modérés. La difficulté vient de l’endurance, de l’occupation des emplacements ennemis et de la file d’attente.
+- Arbre fixe de division binaire :
+  1. Géant slime des quatre divisions : 1 entité.
+  2. Gros slimes : 2 entités.
+  3. Slimes : 4 entités.
+  4. Petits slimes : 8 entités.
+  5. Âmes de slime : 16 entités finales.
+- Total maximal de formes à vaincre sur un combat complet : 31.
+- Chaque forme non finale se divise en exactement deux sous-formes lorsqu’elle est vaincue.
+- Les Âmes de slime sont des invocations ennemies de race Esprit, faibles, sans nouvelle division et sans récursion possible.
+- Les descendants utilisent la ligne active puis la file d’attente normale ; aucun ennemi fantôme ne doit être créé hors du moteur de combat.
+- Le mini-boss peut apparaître rarement dans les événements de mini-boss d’exploration à partir du niveau 4.

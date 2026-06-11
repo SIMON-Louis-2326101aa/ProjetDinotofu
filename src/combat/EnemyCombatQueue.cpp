@@ -7,6 +7,8 @@
 
 #include "interface/menu/common/MessageScreen.hpp"
 
+#include "core/Random.hpp"
+
 #include <sstream>
 
 // EN: EnemyCombatQueue declares or implements a focused behavior used by this module.
@@ -178,14 +180,51 @@ void EnemyCombatQueue::removeActiveEnemy(int index)
         return;
     }
 
-    if (activeEnemies[index].isDead())
+    Monster removedEnemy = activeEnemies[index];
+    const bool defeated = removedEnemy.isDead();
+
+    if (defeated)
     {
-        defeatedEnemies.push_back(activeEnemies[index]);
+        defeatedEnemies.push_back(removedEnemy);
     }
 
     activeEnemies.erase(activeEnemies.begin() + index);
 
-    if (canAddActiveEnemy() && !waitingEnemies.empty())
+    if (defeated && removedEnemy.doesSplitOnDeath())
+    {
+        Random random;
+        const int childCount = random.between(
+            removedEnemy.getSplitMinCount(),
+            removedEnemy.getSplitMaxCount()
+        );
+
+        std::vector<Monster> children;
+        children.reserve(static_cast<std::size_t>(childCount));
+        for (int childIndex = 1; childIndex <= childCount; ++childIndex)
+        {
+            children.push_back(removedEnemy.createSplitChild(childIndex));
+        }
+
+        waitingEnemies.insert(waitingEnemies.begin(), children.begin(), children.end());
+
+        const bool invocationStage = removedEnemy.splitChildrenWillBeInvocations();
+        MessageScreen::show(
+            invocationStage ? "ÂMES GÉLATINEUSES" : "DIVISION GÉLATINEUSE",
+            invocationStage ? "combat.wave.slime_soul_split" : "combat.wave.slime_split",
+            {
+                removedEnemy.getName() + " s'écrase au sol sans réellement disparaître.",
+                invocationStage
+                    ? "Son dernier noyau libère " + std::to_string(childCount) + " Âmes de slime comptées comme des invocations."
+                    : "Sa masse se déchire et libère " + std::to_string(childCount) + " sous-formes gélatineuses.",
+                invocationStage
+                    ? "Ces présences sont faibles, mais elles prolongent encore le combat."
+                    : "Chaque sous-forme peut encore cacher un étage de division."
+            },
+            false
+        );
+    }
+
+    while (canAddActiveEnemy() && !waitingEnemies.empty())
     {
         bringNextEnemyIn();
     }
@@ -224,7 +263,11 @@ void EnemyCombatQueue::removeDeadAndReplace()
             MessageScreen::show(
                 "LIGNE ENNEMIE",
                 "combat.wave.enemy_removed",
-                { enemyName + " disparaît de la première ligne." },
+                {
+                    activeEnemies[i].doesSplitOnDeath()
+                        ? enemyName + " s'affaisse et sa masse commence à se diviser."
+                        : enemyName + " disparaît de la première ligne."
+                },
                 false
             );
 
@@ -263,7 +306,11 @@ std::vector<std::string> EnemyCombatQueue::getActiveEnemyDisplayLines() const
              << monster.getMaxHp()
              << " PV";
 
-        if (monster.isEvolved())
+        if (monster.isInvocation())
+        {
+            line << " | invocation ennemie";
+        }
+        else if (monster.isEvolved())
         {
             line << " | variation évoluée";
         }

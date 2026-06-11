@@ -40,7 +40,8 @@ MenuScreen PostCombatMenu::buildScreen(const Player& player, bool hasLastCombatR
 
     screen.addSubtitle(player.getName() + " | Niveau " + std::to_string(player.getLevel()));
     screen.addLine("PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()));
-    screen.addLine("Or : " + std::to_string(player.getInventory().getGold()) + " pièces");
+    screen.addLine("Argent séparé : " + player.getInventory().getWalletLine());
+    screen.addLine("Argent total : " + player.getInventory().getWalletTotalLine());
     screen.addLine("Version de création : " + player.getCreatedForVersion());
     screen.addLine("Dernière adaptation : " + player.getLastAdaptedVersion());
 
@@ -54,7 +55,7 @@ MenuScreen PostCombatMenu::buildScreen(const Player& player, bool hasLastCombatR
     screen.addOption(2, "Voir mes statistiques", "Résumé du personnage et de la session.", true, "post_combat.statistics", makePostCombatItemData(player, "open", "Statistiques", "Résumé du personnage et de la session."));
     screen.addOption(3, "Améliorer mes attributs", "Cette voie reste scellée pour l'instant.", true, "post_combat.attributes", makePostCombatItemData(player, "open", "Attributs", "Cette voie reste scellée pour l'instant.", "Scellé"));
     screen.addOption(4, "Consulter mes quêtes", "Voir les quêtes actives et terminées.", true, "post_combat.quests", makePostCombatItemData(player, "quest", "Quêtes", "Voir les quêtes actives et terminées."));
-    screen.addOption(5, "Lieux visitables", "Accéder aux lieux disponibles entre deux combats.", true, "post_combat.locations", makePostCombatItemData(player, "travel", "Lieux visitables", "Accéder aux lieux disponibles entre deux combats."));
+    screen.addOption(5, "Lieux notables", "Accéder aux lieux précis disponibles entre deux combats.", true, "post_combat.locations", makePostCombatItemData(player, "travel", "Lieux notables", "Accéder aux lieux précis disponibles entre deux combats."));
     screen.addOption(6, "PNJ notables", "Parler aux personnages accessibles.", true, "post_combat.npcs", makePostCombatItemData(player, "talk", "PNJ notables", "Parler aux personnages accessibles."));
     screen.addOption(7, "Échange / don entre personnages", "Transférer des ressources autorisées entre comptes.", true, "post_combat.exchange", makePostCombatItemData(player, "open", "Échange / don", "Transférer des ressources autorisées entre comptes."));
     screen.addOption(8, "Voir mes compétences", "Consulter la progression et les techniques connues.", true, "post_combat.skills", makePostCombatItemData(player, "open", "Compétences", "Consulter la progression et les techniques connues."));

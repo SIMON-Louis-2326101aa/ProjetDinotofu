@@ -1,8 +1,39 @@
-// EN: InitiativeQueue.cpp briefly defines this Dinotofu module and its responsibilities.
-// FR: InitiativeQueue.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future turn queue based on Dexterity, randomness and group priority.
-// TODO: Implement this future system when its feature block becomes active.
+// EN: InitiativeQueue.cpp builds and sorts initiative entries.
+// FR: InitiativeQueue.cpp construit et trie les entrées d'initiative.
 
 #include "combat/initiative/InitiativeQueue.hpp"
+
+#include "core/Random.hpp"
+
+#include <algorithm>
+
+void InitiativeQueue::clear()
+{
+    entries.clear();
+}
+
+void InitiativeQueue::add(const InitiativeRoll& entry)
+{
+    entries.push_back(entry);
+}
+
+void InitiativeQueue::rollAndSort(Random& random)
+{
+    for (InitiativeRoll& entry : entries)
+    {
+        entry.dieRoll = random.rollD20();
+        entry.totalScore = entry.baseScore + entry.dieRoll;
+    }
+
+    std::stable_sort(entries.begin(), entries.end(), [](const InitiativeRoll& left, const InitiativeRoll& right) {
+        if (left.totalScore != right.totalScore) return left.totalScore > right.totalScore;
+        if (left.baseScore != right.baseScore) return left.baseScore > right.baseScore;
+        if (left.side != right.side) return left.side == InitiativeSide::Players;
+        return left.slotIndex < right.slotIndex;
+    });
+}
+
+const std::vector<InitiativeRoll>& InitiativeQueue::getEntries() const
+{
+    return entries;
+}

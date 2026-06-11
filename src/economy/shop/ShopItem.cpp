@@ -122,3 +122,12 @@ bool ShopItem::consumeOneStock()
 
     return true;
 }
+
+void ShopItem::addStock(int amount)
+{
+    if (amount <= 0 || stock < 0)
+    {
+        return;
+    }
+    stock += amount;
+}

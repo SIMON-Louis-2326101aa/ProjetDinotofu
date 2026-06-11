@@ -59,6 +59,7 @@ public:
     static Material createAdvancedMonsterNotes(int quantity = 1);
     static Material createClientRecommendation(int quantity = 1);
     static Material createGuildFavorToken(int quantity = 1);
+    static Material createGuildChallengeMark(int quantity = 1);
     static Material createLocalServiceLetter(int quantity = 1);
     static Material createGuildCard(int quantity = 1);
     static Material createGuildRankFNotice(int quantity = 1);

@@ -16,6 +16,7 @@
 #include "item/material/MaterialCatalog.hpp"
 #include "item/weapon/WeaponCatalog.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
+#include "progression/material/MaterialKnowledgeProgress.hpp"
 #include "progression/DeathRuleRules.hpp"
 
 #include <algorithm>
@@ -23,6 +24,9 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 
 namespace
 {
@@ -65,6 +69,42 @@ namespace
         std::ostringstream content;
         content << file.rdbuf();
         return content.str();
+    }
+
+    std::string formatLastActivityText(const std::filesystem::file_time_type& fileTime)
+    {
+        try
+        {
+            const auto systemTime = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+                fileTime - std::filesystem::file_time_type::clock::now() + std::chrono::system_clock::now()
+            );
+            const std::time_t time = std::chrono::system_clock::to_time_t(systemTime);
+            std::tm local{};
+#if defined(_WIN32)
+            localtime_s(&local, &time);
+#else
+            localtime_r(&time, &local);
+#endif
+            std::ostringstream out;
+            out << std::put_time(&local, "%d/%m/%Y %H:%M");
+            return out.str();
+        }
+        catch (...)
+        {
+            return "Inconnue";
+        }
+    }
+
+    std::string formatLastActivityText(const std::string& path)
+    {
+        try
+        {
+            return formatLastActivityText(std::filesystem::last_write_time(path));
+        }
+        catch (...)
+        {
+            return "Inconnue";
+        }
     }
 
     // EN: writeFileContent declares or implements a focused behavior used by this module.
@@ -311,6 +351,62 @@ namespace
         try
         {
             return std::stoi(content.substr(start, end - start));
+        }
+        catch (...)
+        {
+            return fallback;
+        }
+    }
+
+
+    long long extractLongLongValue(
+        const std::string& content,
+        const std::string& key,
+        long long fallback
+    )
+    {
+        std::string pattern = "\"" + key + "\"";
+        std::size_t keyPosition = content.find(pattern);
+
+        if (keyPosition == std::string::npos)
+        {
+            return fallback;
+        }
+
+        std::size_t colonPosition = content.find(':', keyPosition);
+
+        if (colonPosition == std::string::npos)
+        {
+            return fallback;
+        }
+
+        std::size_t start = colonPosition + 1;
+
+        while (start < content.size() && std::isspace(static_cast<unsigned char>(content[start])))
+        {
+            start++;
+        }
+
+        std::size_t end = start;
+
+        if (end < content.size() && content[end] == '-')
+        {
+            end++;
+        }
+
+        while (end < content.size() && std::isdigit(static_cast<unsigned char>(content[end])))
+        {
+            end++;
+        }
+
+        if (end == start)
+        {
+            return fallback;
+        }
+
+        try
+        {
+            return std::stoll(content.substr(start, end - start));
         }
         catch (...)
         {
@@ -657,6 +753,8 @@ namespace
         if (normalized == normalizeText("Tisane de basilic des falaises")) return ConsumableCatalog::createCliffBasilTea();
         if (normalized == normalizeText("Ticket de diversion de foire")) return ConsumableCatalog::createCarnivalDiversionTicket();
         if (normalized == normalizeText("Fiole de garde-lucioles")) return ConsumableCatalog::createFireflyGuardVial();
+        if (normalized == normalizeText("Lucky Potion")) return ConsumableCatalog::createLuckyPotion();
+        if (normalized == normalizeText("Unlucky Potion")) return ConsumableCatalog::createUnluckyPotion();
         if (normalized == normalizeText("Fiole de fumée de secours")) return ConsumableCatalog::createSmokeEscapeVial();
         if (normalized == normalizeText("Parchemin d'étincelle arcanique")) return ConsumableCatalog::createArcaneSparkScroll();
         if (normalized == normalizeText("Parchemin de voile élémentaire")) return ConsumableCatalog::createElementalWardScroll();
@@ -855,6 +953,9 @@ namespace
         summary.currentOwnerAccountName = extractStringValue(content, "currentOwnerAccount", summary.accountName);
         summary.characterName = extractStringValue(content, "name", "Inconnu");
         summary.raceName = extractStringValue(content, "race", "Humain");
+        summary.characterAge = extractIntValue(content, "characterAge", 18);
+        summary.visualPresentation = extractStringValue(content, "visualPresentation", "Non précisé");
+        summary.visualVariant = extractStringValue(content, "visualVariant", "Variante A");
         summary.className = extractStringValue(content, "class", "Chevalier");
         summary.difficulty = difficultyFromText(extractStringValue(content, "difficulty", "Normal"));
         summary.deathRule = DeathRuleRules::fromSaveText(
@@ -867,6 +968,10 @@ namespace
         summary.createdAt = extractStringValue(content, "createdAt", "Inconnue");
         summary.createdForVersion = extractStringValue(content, "createdForVersion", "inconnue");
         summary.lastAdaptedVersion = extractStringValue(content, "lastAdaptedVersion", summary.createdForVersion);
+        summary.storyModeStarted = extractBoolValue(content, "storyModeStarted", false);
+        summary.storyChapter = extractIntValue(content, "storyChapter", 0);
+        summary.storyStep = extractIntValue(content, "storyStep", 0);
+        summary.lastActivityText = formatLastActivityText(path);
 
         return summary;
     }
@@ -960,7 +1065,7 @@ bool SaveManager::saveAccountSnapshot(
     }
 
     file << "{\n";
-    file << "  \"saveVersion\": 16,\n";
+    file << "  \"saveVersion\": 20,\n";
     file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
     file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
@@ -1022,7 +1127,7 @@ bool SaveManager::savePlayerSnapshot(
         : player.getCreatorAccountName();
 
     file << "{\n";
-    file << "  \"saveVersion\": 16,\n";
+    file << "  \"saveVersion\": 20,\n";
     file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
     file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
@@ -1039,6 +1144,9 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"lastAdaptedVersion\": \"" << escapeJson(player.getLastAdaptedVersion()) << "\",\n";
     file << "    \"name\": \"" << escapeJson(player.getName()) << "\",\n";
     file << "    \"race\": \"" << escapeJson(player.getRaceText()) << "\",\n";
+    file << "    \"characterAge\": " << player.getCharacterAge() << ",\n";
+    file << "    \"visualPresentation\": \"" << escapeJson(player.getVisualPresentation()) << "\",\n";
+    file << "    \"visualVariant\": \"" << escapeJson(player.getVisualVariant()) << "\",\n";
     file << "    \"class\": \"" << escapeJson(player.getType()) << "\",\n";
     file << "    \"clone\": " << (player.isClone() ? "true" : "false") << ",\n";
     file << "    \"level\": " << player.getLevel() << ",\n";
@@ -1049,6 +1157,7 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"maxDamage\": " << player.getMaxDamage() << ",\n";
     file << "    \"criticalDamage\": " << player.getCriticalDamage() << ",\n";
     file << "    \"gold\": " << player.getInventory().getGold() << ",\n";
+    file << "    \"totalCopperCurrency\": " << player.getInventory().getTotalCopper() << ",\n";
     file << "    \"unspentAttributePoints\": " << player.getUnspentAttributePoints() << ",\n";
     file << "    \"attributes\": {\n";
     file << "      \"strength\": " << player.getAttributes().getStrength() << ",\n";
@@ -1063,6 +1172,8 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"equippedArmorIndex\": " << player.getEquippedArmorIndex() << ",\n";
     file << "    \"equippedArmorName\": \"" << escapeJson(armor.getName()) << "\",\n";
     file << "    \"interfaceHintFrequency\": \"" << escapeJson(player.getInterfaceHintFrequency()) << "\",\n";
+    file << "    \"graphicalImagesEnabled\": " << (player.areGraphicalImagesEnabled() ? "true" : "false") << ",\n";
+    file << "    \"imagePolicy\": \"images_supplementary_no_hidden_information_terminal_disabled\",\n";
     file << "    \"storyModeStarted\": " << (player.hasStoryModeStarted() ? "true" : "false") << ",\n";
     file << "    \"storyChapter\": " << player.getStoryChapter() << ",\n";
     file << "    \"storyStep\": " << player.getStoryStep() << ",\n";
@@ -1123,6 +1234,23 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"cancellationRequested\": " << (localSubscriptions[i].cancellationRequested ? "true" : "false")
              << ", \"renewalPrice\": " << localSubscriptions[i].renewalPrice << "}";
         if (i + 1 < localSubscriptions.size())
+        {
+            file << ",";
+        }
+        file << "\n";
+    }
+    file << "  ],\n";
+
+    file << "  \"activeBlessings\": [\n";
+    const std::vector<Blessing>& activeBlessings = player.getActiveBlessings();
+    for (std::size_t i = 0; i < activeBlessings.size(); ++i)
+    {
+        const Blessing& blessing = activeBlessings[i];
+        file << "    {\"id\": \"" << escapeJson(blessing.getId())
+             << "\", \"name\": \"" << escapeJson(blessing.getName())
+             << "\", \"description\": \"" << escapeJson(blessing.getDescription())
+             << "\", \"survivalProtection\": " << (blessing.grantsLethalSurvival() ? "true" : "false") << "}";
+        if (i + 1 < activeBlessings.size())
         {
             file << ",";
         }
@@ -1259,6 +1387,7 @@ bool SaveManager::savePlayerSnapshot(
     }
     file << "],\n";
     file << "    \"recentBossCooldownExpiresAtDay\": " << player.getRecentBossCooldownExpiresAtDay() << ",\n";
+    file << "    \"rareBossDiscoveryCooldownExpiresAtDay\": " << player.getRareBossDiscoveryCooldownExpiresAtDay() << ",\n";
     file << "    \"recentBossIds\": [";
     const std::vector<int>& recentBossIds = player.getRecentBossIds();
     for (std::size_t i = 0; i < recentBossIds.size(); ++i)
@@ -1279,6 +1408,83 @@ bool SaveManager::savePlayerSnapshot(
         {
             file << ", ";
         }
+    }
+    file << "],\n";
+    file << "    \"bossDiscoveryLocations\": [";
+    const std::vector<std::string>& bossDiscoveryLocations = player.getBossDiscoveryLocations();
+    bool wroteBossDiscoveryLocation = false;
+    for (std::size_t id = 1; id < bossDiscoveryLocations.size(); ++id)
+    {
+        if (bossDiscoveryLocations[id].empty())
+        {
+            continue;
+        }
+        if (wroteBossDiscoveryLocation)
+        {
+            file << ", ";
+        }
+        file << "{\"id\":" << id << ",\"location\":\""
+             << escapeJson(bossDiscoveryLocations[id]) << "\"}";
+        wroteBossDiscoveryLocation = true;
+    }
+    file << "]\n";
+    file << "  },\n";
+
+    file << "  \"explorationVariety\": {\n";
+    file << "    \"recentEventKeys\": [";
+    const std::vector<std::string>& recentEventKeys = player.getRecentExplorationEventKeys();
+    for (std::size_t i = 0; i < recentEventKeys.size(); ++i)
+    {
+        file << "{\"id\":\"" << escapeJson(recentEventKeys[i]) << "\"}";
+        if (i + 1 < recentEventKeys.size()) file << ", ";
+    }
+    file << "],\n";
+    file << "    \"recentChallengeKeys\": [";
+    const std::vector<std::string>& recentChallengeKeys = player.getRecentExplorationChallengeKeys();
+    for (std::size_t i = 0; i < recentChallengeKeys.size(); ++i)
+    {
+        file << "{\"id\":\"" << escapeJson(recentChallengeKeys[i]) << "\"}";
+        if (i + 1 < recentChallengeKeys.size()) file << ", ";
+    }
+    file << "],\n";
+    file << "    \"sceneCooldowns\": [";
+    const std::vector<PlayerExplorationCooldown>& explorationCooldowns = player.getExplorationSceneCooldowns();
+    bool wroteExplorationCooldown = false;
+    for (const PlayerExplorationCooldown& cooldown : explorationCooldowns)
+    {
+        if (cooldown.key.empty() || cooldown.expiresAtDay <= player.getWorldDaysElapsed()) continue;
+        if (wroteExplorationCooldown) file << ", ";
+        file << "{\"key\":\"" << escapeJson(cooldown.key)
+             << "\",\"expiresAtDay\":" << cooldown.expiresAtDay << "}";
+        wroteExplorationCooldown = true;
+    }
+    file << "]\n";
+    file << "  },\n";
+
+    file << "  \"shopOfferState\": {\n";
+    file << "    \"promotionPurchases\": [";
+    const std::vector<PlayerPersistentCounter>& promotionCounters = player.getShopPromotionPurchaseCounters();
+    for (std::size_t i = 0; i < promotionCounters.size(); ++i)
+    {
+        file << "{\"key\":\"" << escapeJson(promotionCounters[i].key)
+             << "\",\"value\":" << promotionCounters[i].value << "}";
+        if (i + 1 < promotionCounters.size()) file << ", ";
+    }
+    file << "]\n";
+    file << "  },\n";
+
+    file << "  \"canonicalJournal\": {\n";
+    file << "    \"canonicalJournalSnapshot\": [";
+    const std::vector<PlayerJournalRecord>& journalRecords = player.getCanonicalJournalRecords();
+    for (std::size_t i = 0; i < journalRecords.size(); ++i)
+    {
+        file << "{\"category\":\"" << escapeJson(journalRecords[i].category)
+             << "\",\"key\":\"" << escapeJson(journalRecords[i].key)
+             << "\",\"label\":\"" << escapeJson(journalRecords[i].label)
+             << "\",\"locationId\":\"" << escapeJson(journalRecords[i].locationId)
+             << "\",\"count\":" << journalRecords[i].count
+             << ",\"lastDay\":" << journalRecords[i].lastDay << "}";
+        if (i + 1 < journalRecords.size()) file << ", ";
     }
     file << "]\n";
     file << "  },\n";
@@ -1442,6 +1648,213 @@ bool SaveManager::savePlayerSnapshot(
     file << "    ]\n";
     file << "  },\n";
 
+    file << "  \"cityState\": {\n";
+    file << "    \"currentCityId\": \"" << escapeJson(player.getCurrentCityId()) << "\",\n";
+    file << "    \"registeredGuildCityIds\": [";
+    const std::vector<std::string>& registeredGuildCityIds = player.getRegisteredGuildCityIds();
+    for (std::size_t i = 0; i < registeredGuildCityIds.size(); ++i)
+    {
+        file << "{\"id\":\"" << escapeJson(registeredGuildCityIds[i]) << "\"}";
+        if (i + 1 < registeredGuildCityIds.size()) file << ", ";
+    }
+    file << "],\n";
+    file << "    \"vaultPurchased\": " << (player.hasCityVault() ? "true" : "false") << ",\n";
+    file << "    \"vaultLevel\": " << player.getCityVaultLevel() << ",\n";
+    file << "    \"vaultCapacity\": " << player.getCityVaultCapacity() << ",\n";
+    file << "    \"vaultUsedSlots\": " << player.getCityVaultUsedSlots() << ",\n";
+    file << "    \"vaultWeapons\": [\n";
+    const std::vector<Weapon>& vaultWeapons = player.getCityVault().getWeapons();
+    for (std::size_t i = 0; i < vaultWeapons.size(); ++i)
+    {
+        file << "      {\"name\": \"" << escapeJson(vaultWeapons[i].getName())
+             << "\", \"description\": \"" << escapeJson(vaultWeapons[i].getDescription())
+             << "\", \"value\": " << vaultWeapons[i].getValue()
+             << ", \"type\": \"" << weaponTypeToSaveText(vaultWeapons[i].getType())
+             << "\", \"minDamageBonus\": " << vaultWeapons[i].getMinDamageBonus()
+             << ", \"maxDamageBonus\": " << vaultWeapons[i].getMaxDamageBonus()
+             << ", \"criticalBonus\": " << vaultWeapons[i].getCriticalBonus()
+             << ", \"durability\": " << vaultWeapons[i].getDurability()
+             << ", \"maxDurability\": " << vaultWeapons[i].getMaxDurability()
+             << ", \"enchantments\": \"" << escapeJson(vaultWeapons[i].getEnchantmentsSaveText()) << "\"}";
+        if (i + 1 < vaultWeapons.size()) file << ",";
+        file << "\n";
+    }
+    file << "    ],\n";
+    file << "    \"vaultArmors\": [\n";
+    const std::vector<Armor>& vaultArmors = player.getCityVault().getArmors();
+    for (std::size_t i = 0; i < vaultArmors.size(); ++i)
+    {
+        file << "      {\"name\": \"" << escapeJson(vaultArmors[i].getName())
+             << "\", \"description\": \"" << escapeJson(vaultArmors[i].getDescription())
+             << "\", \"value\": " << vaultArmors[i].getValue()
+             << ", \"type\": \"" << armorTypeToSaveText(vaultArmors[i].getType())
+             << "\", \"maxHpBonus\": " << vaultArmors[i].getMaxHpBonus()
+             << ", \"damageReduction\": " << vaultArmors[i].getDamageReduction()
+             << ", \"durability\": " << vaultArmors[i].getDurability()
+             << ", \"maxDurability\": " << vaultArmors[i].getMaxDurability()
+             << ", \"enchantments\": \"" << escapeJson(vaultArmors[i].getEnchantmentsSaveText()) << "\"}";
+        if (i + 1 < vaultArmors.size()) file << ",";
+        file << "\n";
+    }
+    file << "    ],\n";
+    file << "    \"vaultConsumables\": [\n";
+    const std::vector<Consumable>& vaultConsumables = player.getCityVault().getConsumables();
+    for (std::size_t i = 0; i < vaultConsumables.size(); ++i)
+    {
+        file << "      {\"name\": \"" << escapeJson(vaultConsumables[i].getName())
+             << "\", \"power\": " << vaultConsumables[i].getPower() << "}";
+        if (i + 1 < vaultConsumables.size()) file << ",";
+        file << "\n";
+    }
+    file << "    ],\n";
+    file << "    \"vaultMaterials\": [\n";
+    const std::vector<Material>& vaultMaterials = player.getCityVault().getMaterials();
+    for (std::size_t i = 0; i < vaultMaterials.size(); ++i)
+    {
+        file << "      {\"id\": \"" << escapeJson(vaultMaterials[i].getId())
+             << "\", \"name\": \"" << escapeJson(vaultMaterials[i].getName())
+             << "\", \"category\": \"" << escapeJson(vaultMaterials[i].getCategory())
+             << "\", \"quality\": \"" << escapeJson(vaultMaterials[i].getQuality())
+             << "\", \"quantity\": " << vaultMaterials[i].getQuantity() << "}";
+        if (i + 1 < vaultMaterials.size()) file << ",";
+        file << "\n";
+    }
+    file << "    ],\n";
+
+    std::vector<PlayerCityVault> allVaultRecords = player.getCityVaultRecords();
+    bool currentVaultAlreadyListed = false;
+    for (const PlayerCityVault& record : allVaultRecords)
+    {
+        if (record.cityId == player.getCurrentCityId())
+        {
+            currentVaultAlreadyListed = true;
+            break;
+        }
+    }
+    if (!currentVaultAlreadyListed && player.hasCityVault())
+    {
+        PlayerCityVault currentRecord;
+        currentRecord.cityId = player.getCurrentCityId();
+        currentRecord.inventory = player.getCityVault();
+        currentRecord.purchased = player.hasCityVault();
+        currentRecord.level = player.getCityVaultLevel();
+        allVaultRecords.push_back(currentRecord);
+    }
+
+    file << "    \"cityVaults\": [";
+    for (std::size_t i = 0; i < allVaultRecords.size(); ++i)
+    {
+        const PlayerCityVault& record = allVaultRecords[i];
+        file << "{\"cityId\":\"" << escapeJson(record.cityId)
+             << "\",\"purchased\":" << (record.purchased ? "true" : "false")
+             << ",\"level\":" << record.level
+             << ",\"capacity\":" << player.getCityVaultCapacityForCity(record.cityId)
+             << ",\"usedSlots\":" << player.getCityVaultUsedSlotsForCity(record.cityId)
+             << ",\"remoteWithdrawalAllowed\":false"
+             << ",\"remoteViewOnly\":true}";
+        if (i + 1 < allVaultRecords.size()) file << ", ";
+    }
+    file << "],\n";
+
+    file << "    \"cityVaultWeapons\": [";
+    bool wroteCityVaultWeapon = false;
+    for (const PlayerCityVault& record : allVaultRecords)
+    {
+        const std::vector<Weapon>& recordWeapons = record.inventory.getWeapons();
+        for (const Weapon& weaponEntry : recordWeapons)
+        {
+            if (wroteCityVaultWeapon) file << ", ";
+            file << "{\"cityId\":\"" << escapeJson(record.cityId)
+                 << "\",\"name\":\"" << escapeJson(weaponEntry.getName())
+                 << "\",\"description\":\"" << escapeJson(weaponEntry.getDescription())
+                 << "\",\"value\":" << weaponEntry.getValue()
+                 << ",\"type\":\"" << weaponTypeToSaveText(weaponEntry.getType())
+                 << "\",\"minDamageBonus\":" << weaponEntry.getMinDamageBonus()
+                 << ",\"maxDamageBonus\":" << weaponEntry.getMaxDamageBonus()
+                 << ",\"criticalBonus\":" << weaponEntry.getCriticalBonus()
+                 << ",\"durability\":" << weaponEntry.getDurability()
+                 << ",\"maxDurability\":" << weaponEntry.getMaxDurability()
+                 << ",\"enchantments\":\"" << escapeJson(weaponEntry.getEnchantmentsSaveText()) << "\"}";
+            wroteCityVaultWeapon = true;
+        }
+    }
+    file << "],\n";
+
+    file << "    \"cityVaultArmors\": [";
+    bool wroteCityVaultArmor = false;
+    for (const PlayerCityVault& record : allVaultRecords)
+    {
+        const std::vector<Armor>& recordArmors = record.inventory.getArmors();
+        for (const Armor& armorEntry : recordArmors)
+        {
+            if (wroteCityVaultArmor) file << ", ";
+            file << "{\"cityId\":\"" << escapeJson(record.cityId)
+                 << "\",\"name\":\"" << escapeJson(armorEntry.getName())
+                 << "\",\"description\":\"" << escapeJson(armorEntry.getDescription())
+                 << "\",\"value\":" << armorEntry.getValue()
+                 << ",\"type\":\"" << armorTypeToSaveText(armorEntry.getType())
+                 << "\",\"maxHpBonus\":" << armorEntry.getMaxHpBonus()
+                 << ",\"damageReduction\":" << armorEntry.getDamageReduction()
+                 << ",\"durability\":" << armorEntry.getDurability()
+                 << ",\"maxDurability\":" << armorEntry.getMaxDurability()
+                 << ",\"enchantments\":\"" << escapeJson(armorEntry.getEnchantmentsSaveText()) << "\"}";
+            wroteCityVaultArmor = true;
+        }
+    }
+    file << "],\n";
+
+    file << "    \"cityVaultConsumables\": [";
+    bool wroteCityVaultConsumable = false;
+    for (const PlayerCityVault& record : allVaultRecords)
+    {
+        const std::vector<Consumable>& recordConsumables = record.inventory.getConsumables();
+        for (const Consumable& consumableEntry : recordConsumables)
+        {
+            if (wroteCityVaultConsumable) file << ", ";
+            file << "{\"cityId\":\"" << escapeJson(record.cityId)
+                 << "\",\"name\":\"" << escapeJson(consumableEntry.getName())
+                 << "\",\"power\":" << consumableEntry.getPower() << "}";
+            wroteCityVaultConsumable = true;
+        }
+    }
+    file << "],\n";
+
+    file << "    \"cityVaultMaterials\": [";
+    bool wroteCityVaultMaterial = false;
+    for (const PlayerCityVault& record : allVaultRecords)
+    {
+        const std::vector<Material>& recordMaterials = record.inventory.getMaterials();
+        for (const Material& materialEntry : recordMaterials)
+        {
+            if (wroteCityVaultMaterial) file << ", ";
+            file << "{\"cityId\":\"" << escapeJson(record.cityId)
+                 << "\",\"id\":\"" << escapeJson(materialEntry.getId())
+                 << "\",\"name\":\"" << escapeJson(materialEntry.getName())
+                 << "\",\"category\":\"" << escapeJson(materialEntry.getCategory())
+                 << "\",\"quality\":\"" << escapeJson(materialEntry.getQuality())
+                 << "\",\"quantity\":" << materialEntry.getQuantity() << "}";
+            wroteCityVaultMaterial = true;
+        }
+    }
+    file << "]\n";
+    file << "  },\n";
+
+    file << "  \"materialKnowledgeSnapshot\": [\n";
+    const std::vector<MaterialKnowledgeRecord> materialKnowledgeRecords = MaterialKnowledgeProgress::getRecords();
+    for (std::size_t i = 0; i < materialKnowledgeRecords.size(); ++i)
+    {
+        const MaterialKnowledgeRecord& record = materialKnowledgeRecords[i];
+        file << "    {\"id\": \"" << escapeJson(record.id)
+             << "\", \"name\": \"" << escapeJson(record.name)
+             << "\", \"category\": \"" << escapeJson(record.category)
+             << "\", \"quality\": \"" << escapeJson(record.quality)
+             << "\", \"discoveredQuantity\": " << record.discoveredQuantity
+             << ", \"bestQualityWeight\": " << record.bestQualityWeight << "}";
+        if (i + 1 < materialKnowledgeRecords.size()) file << ",";
+        file << "\n";
+    }
+    file << "  ],\n";
+
     file << "  \"bestiaryRuntimeSnapshot\": [\n";
 
     std::vector<BestiaryRuntimeRecord> bestiaryRecords = BestiaryRuntimeProgress::getRecords();
@@ -1500,11 +1913,20 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"availableFromDay\": " << quest.availableFromDay
              << ", \"expiresAtDay\": " << quest.expiresAtDay
              << ", \"guildQuest\": " << (quest.guildQuest ? "true" : "false")
+             << ", \"guildChallenge\": " << (quest.guildChallenge ? "true" : "false")
+             << ", \"challengeCondition\": \"" << escapeJson(quest.challengeCondition) << "\""
+             << ", \"challengeMarkReward\": " << quest.challengeMarkReward
              << ", \"accepted\": " << (quest.accepted ? "true" : "false")
              << ", \"completed\": " << (quest.completed ? "true" : "false")
              << ", \"turnedIn\": " << (quest.turnedIn ? "true" : "false")
              << ", \"failed\": " << (quest.failed ? "true" : "false")
              << ", \"failureReason\": \"" << escapeJson(quest.failureReason) << "\""
+             << ", \"linkedQuestIds\": \"" << escapeJson(quest.linkedQuestIds) << "\""
+             << ", \"stageLabels\": \"" << escapeJson(quest.stageLabels) << "\""
+             << ", \"serviceChallengeHistory\": \"" << escapeJson(quest.serviceChallengeHistory) << "\""
+             << ", \"linkedQuestRequiredState\": \"" << escapeJson(quest.linkedQuestRequiredState) << "\""
+             << ", \"retroactiveProgress\": " << (quest.retroactiveProgress ? "true" : "false")
+             << ", \"hideFutureSteps\": " << (quest.hideFutureSteps ? "true" : "false")
              << "}";
     };
 
@@ -1524,6 +1946,20 @@ bool SaveManager::savePlayerSnapshot(
         {
             file << ",";
         }
+        file << "\n";
+    }
+    file << "  ],\n";
+
+    file << "  \"guildChallengeBoardState\": {\n";
+    file << "    \"guildChallengeCreatedAtDay\": " << player.getQuestLog().getGuildChallengeBoardCreatedAtDay() << "\n";
+    file << "  },\n";
+
+    file << "  \"guildChallengeBoardSnapshot\": [\n";
+    const std::vector<Quest>& guildChallengeBoardOffers = player.getQuestLog().getGuildChallengeBoardOffers();
+    for (std::size_t i = 0; i < guildChallengeBoardOffers.size(); ++i)
+    {
+        writeQuestSnapshotEntry(guildChallengeBoardOffers[i], "    ");
+        if (i + 1 < guildChallengeBoardOffers.size()) file << ",";
         file << "\n";
     }
     file << "  ],\n";
@@ -1584,6 +2020,32 @@ std::vector<AccountSaveSummary> SaveManager::listAccounts()
             AccountSaveSummary summary;
             summary.path = path;
             summary.accountName = extractStringValue(content, "accountName", entry.path().stem().string());
+            summary.savedForVersion = extractStringValue(content, "gameVersion", "inconnue");
+            std::filesystem::file_time_type latestActivity = entry.last_write_time();
+            summary.lastActivityText = formatLastActivityText(latestActivity);
+            summary.playableCharacterCount = 0;
+
+            const std::string safePrefix = buildSafeFileName(summary.accountName) + "__";
+            const std::string characterFolder = SAVE_ROOT + "/characters/playable";
+            try
+            {
+                for (const std::filesystem::directory_entry& characterEntry : std::filesystem::directory_iterator(characterFolder))
+                {
+                    if (!characterEntry.is_regular_file() || characterEntry.path().extension() != ".json") continue;
+                    if (characterEntry.path().filename().string().rfind(safePrefix, 0) != 0) continue;
+                    ++summary.playableCharacterCount;
+                    const auto characterActivity = characterEntry.last_write_time();
+                    if (characterActivity > latestActivity)
+                    {
+                        latestActivity = characterActivity;
+                        summary.lastActivityText = formatLastActivityText(latestActivity);
+                    }
+                }
+            }
+            catch (...)
+            {
+                // The account still remains selectable if character metadata cannot be enumerated.
+            }
 
             accounts.push_back(summary);
         }
@@ -1666,6 +2128,9 @@ bool SaveManager::loadPlayerSnapshot(
     std::string characterName = extractStringValue(content, "name", summary.characterName);
     std::string className = extractStringValue(content, "class", summary.className);
     std::string raceName = extractStringValue(content, "race", summary.raceName);
+    int characterAge = extractIntValue(content, "characterAge", summary.characterAge);
+    std::string visualPresentation = extractStringValue(content, "visualPresentation", summary.visualPresentation);
+    std::string visualVariant = extractStringValue(content, "visualVariant", summary.visualVariant);
     std::string createdAt = extractStringValue(content, "createdAt", "Inconnue");
     std::string createdForVersion = extractStringValue(content, "createdForVersion", "inconnue");
     std::string lastAdaptedVersion = extractStringValue(content, "lastAdaptedVersion", createdForVersion);
@@ -1681,6 +2146,7 @@ bool SaveManager::loadPlayerSnapshot(
     int loadedMaxDamage = extractIntValue(content, "maxDamage", 5);
     int loadedCriticalDamage = extractIntValue(content, "criticalDamage", 10);
     int gold = extractIntValue(content, "gold", 0);
+    long long totalCopperCurrency = extractLongLongValue(content, "totalCopperCurrency", -1);
     int unspentAttributePoints = extractIntValue(content, "unspentAttributePoints", 0);
     int strength = extractIntValue(content, "strength", 10);
     int dexterity = extractIntValue(content, "dexterity", 10);
@@ -1691,6 +2157,7 @@ bool SaveManager::loadPlayerSnapshot(
     int equippedWeaponIndex = extractIntValue(content, "equippedWeaponIndex", -1);
     int equippedArmorIndex = extractIntValue(content, "equippedArmorIndex", -1);
     std::string interfaceHintFrequency = extractStringValue(content, "interfaceHintFrequency", "faible");
+    bool graphicalImagesEnabled = extractBoolValue(content, "graphicalImagesEnabled", false);
     bool storyModeStarted = extractBoolValue(content, "storyModeStarted", false);
     int storyChapter = extractIntValue(content, "storyChapter", 0);
     int storyStep = extractIntValue(content, "storyStep", 0);
@@ -1719,20 +2186,35 @@ bool SaveManager::loadPlayerSnapshot(
     player.setVersionMetadata(createdAt, createdForVersion, lastAdaptedVersion);
     player.setOwnershipMetadata(creatorAccountName, currentOwnerAccountName);
     player.setRace(raceFromText(raceName));
+    player.setAppearanceProfile(characterAge, visualPresentation, visualVariant);
     player.initializeStarterInventory(difficulty);
     player.setClone(extractBoolValue(content, "clone", false));
     player.setInterfaceHintFrequency(interfaceHintFrequency);
+    player.setGraphicalImagesEnabled(graphicalImagesEnabled);
     player.setLoadedStoryProgress(storyChapter, storyStep, storyCityDevelopmentLevel, storyModeStarted);
 
     std::vector<std::string> weaponObjects = extractObjectsFromArray(content, "weapons");
     std::vector<std::string> armorObjects = extractObjectsFromArray(content, "armors");
     std::vector<std::string> consumableObjects = extractObjectsFromArray(content, "consumables");
     std::vector<std::string> materialObjects = extractObjectsFromArray(content, "materials");
+    std::vector<std::string> materialKnowledgeObjects = extractObjectsFromArray(content, "materialKnowledgeSnapshot");
+    std::vector<std::string> vaultWeaponObjects = extractObjectsFromArray(content, "vaultWeapons");
+    std::vector<std::string> vaultArmorObjects = extractObjectsFromArray(content, "vaultArmors");
+    std::vector<std::string> vaultConsumableObjects = extractObjectsFromArray(content, "vaultConsumables");
+    std::vector<std::string> vaultMaterialObjects = extractObjectsFromArray(content, "vaultMaterials");
+    std::vector<std::string> cityVaultObjects = extractObjectsFromArray(content, "cityVaults");
+    std::vector<std::string> cityVaultWeaponObjects = extractObjectsFromArray(content, "cityVaultWeapons");
+    std::vector<std::string> cityVaultArmorObjects = extractObjectsFromArray(content, "cityVaultArmors");
+    std::vector<std::string> cityVaultConsumableObjects = extractObjectsFromArray(content, "cityVaultConsumables");
+    std::vector<std::string> cityVaultMaterialObjects = extractObjectsFromArray(content, "cityVaultMaterials");
+    std::vector<std::string> registeredGuildCityObjects = extractObjectsFromArray(content, "registeredGuildCityIds");
     std::vector<std::string> bestiaryObjects = extractObjectsFromArray(content, "bestiaryRuntimeSnapshot");
     std::vector<std::string> questObjects = extractObjectsFromArray(content, "questLogSnapshot");
     std::vector<std::string> guildBoardObjects = extractObjectsFromArray(content, "guildBoardSnapshot");
+    std::vector<std::string> guildChallengeBoardObjects = extractObjectsFromArray(content, "guildChallengeBoardSnapshot");
     std::vector<std::string> lethalEliminationObjects = extractObjectsFromArray(content, "pvpLethalEliminations");
     std::vector<std::string> localSubscriptionObjects = extractObjectsFromArray(content, "localSubscriptions");
+    std::vector<std::string> activeBlessingObjects = extractObjectsFromArray(content, "activeBlessings");
     std::vector<std::string> activeCurseObjects = extractObjectsFromArray(content, "activeCurses");
     std::vector<std::string> starterKitObjects = extractObjectsFromArray(content, "starterKitSnapshot");
     std::vector<std::string> titleObjects = extractObjectsFromArray(content, "titles");
@@ -1742,10 +2224,30 @@ bool SaveManager::loadPlayerSnapshot(
     std::vector<std::string> activeSkillObjects = extractObjectsFromArray(content, "unlockedActiveSkills");
     std::vector<std::string> unlockedBossObjects = extractObjectsFromArray(content, "unlockedBossIds");
     int recentBossCooldownExpiresAtDay = extractIntValue(content, "recentBossCooldownExpiresAtDay", -1);
+    int rareBossDiscoveryCooldownExpiresAtDay = extractIntValue(content, "rareBossDiscoveryCooldownExpiresAtDay", -1);
     std::vector<std::string> recentBossObjects = extractObjectsFromArray(content, "recentBossIds");
     std::vector<std::string> defeatedBossObjects = extractObjectsFromArray(content, "defeatedBossIds");
+    std::vector<std::string> bossDiscoveryLocationObjects = extractObjectsFromArray(content, "bossDiscoveryLocations");
+    std::vector<std::string> recentExplorationEventObjects = extractObjectsFromArray(content, "recentEventKeys");
+    std::vector<std::string> recentExplorationChallengeObjects = extractObjectsFromArray(content, "recentChallengeKeys");
+    std::vector<std::string> explorationSceneCooldownObjects = extractObjectsFromArray(content, "sceneCooldowns");
+    std::vector<std::string> shopPromotionPurchaseObjects = extractObjectsFromArray(content, "promotionPurchases");
+    std::vector<std::string> canonicalJournalObjects = extractObjectsFromArray(content, "canonicalJournalSnapshot");
     std::vector<std::string> grinkaStolenWeaponObjects = extractObjectsFromArray(content, "grinkaStolenWeapons");
     std::vector<std::string> grinkaStolenArmorObjects = extractObjectsFromArray(content, "grinkaStolenArmors");
+
+    MaterialKnowledgeProgress::clear();
+    for (const std::string& object : materialKnowledgeObjects)
+    {
+        MaterialKnowledgeRecord record;
+        record.id = extractStringValue(object, "id", "");
+        record.name = extractStringValue(object, "name", "");
+        record.category = extractStringValue(object, "category", "");
+        record.quality = extractStringValue(object, "quality", "normal");
+        record.discoveredQuantity = extractIntValue(object, "discoveredQuantity", 0);
+        record.bestQualityWeight = extractIntValue(object, "bestQualityWeight", 0);
+        MaterialKnowledgeProgress::restoreRecord(record);
+    }
 
     if (!weaponObjects.empty() || !armorObjects.empty() || !consumableObjects.empty() || !materialObjects.empty())
     {
@@ -1838,7 +2340,181 @@ bool SaveManager::loadPlayerSnapshot(
     }
     player.setLoadedTitles(loadedTitles, extractStringValue(content, "activeTitle", ""), loadedActiveTitles);
 
-    player.getInventory().setGold(gold);
+    Inventory loadedCityVault;
+    for (const std::string& object : vaultWeaponObjects)
+    {
+        const std::string weaponName = extractStringValue(object, "name", "Épée rouillée");
+        Weapon fallback = weaponFromName(weaponName);
+        Weapon weapon(
+            weaponName,
+            extractStringValue(object, "description", fallback.getDescription()),
+            extractIntValue(object, "value", fallback.getValue()),
+            weaponTypeFromSaveText(extractStringValue(object, "type", weaponTypeToSaveText(fallback.getType()))),
+            extractIntValue(object, "minDamageBonus", fallback.getMinDamageBonus()),
+            extractIntValue(object, "maxDamageBonus", fallback.getMaxDamageBonus()),
+            extractIntValue(object, "criticalBonus", fallback.getCriticalBonus()),
+            extractIntValue(object, "maxDurability", fallback.getMaxDurability())
+        );
+        applySavedWeaponDurability(weapon, extractIntValue(object, "durability", weapon.getDurability()));
+        weapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        loadedCityVault.addWeapon(weapon);
+    }
+    for (const std::string& object : vaultArmorObjects)
+    {
+        const std::string armorName = extractStringValue(object, "name", "Tenue simple");
+        Armor fallback = armorFromName(armorName);
+        Armor armor(
+            armorName,
+            extractStringValue(object, "description", fallback.getDescription()),
+            extractIntValue(object, "value", fallback.getValue()),
+            armorTypeFromSaveText(extractStringValue(object, "type", armorTypeToSaveText(fallback.getType()))),
+            extractIntValue(object, "maxHpBonus", fallback.getMaxHpBonus()),
+            extractIntValue(object, "damageReduction", fallback.getDamageReduction()),
+            extractIntValue(object, "maxDurability", fallback.getMaxDurability())
+        );
+        applySavedArmorDurability(armor, extractIntValue(object, "durability", armor.getDurability()));
+        armor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        loadedCityVault.addArmor(armor);
+    }
+    for (const std::string& object : vaultConsumableObjects)
+    {
+        loadedCityVault.addConsumable(consumableFromName(extractStringValue(object, "name", "Potion de soin")));
+    }
+    for (const std::string& object : vaultMaterialObjects)
+    {
+        loadedCityVault.addMaterial(MaterialCatalog::createById(
+            extractStringValue(object, "id", "unknown_material"),
+            extractIntValue(object, "quantity", 1),
+            extractStringValue(object, "quality", "normal")
+        ));
+    }
+    std::vector<PlayerCityVault> loadedCityVaults;
+    auto findOrCreateLoadedCityVault = [&](const std::string& rawCityId) -> PlayerCityVault&
+    {
+        const std::string cityId = rawCityId.empty() ? extractStringValue(content, "currentCityId", "valebrume") : rawCityId;
+        for (PlayerCityVault& record : loadedCityVaults)
+        {
+            if (record.cityId == cityId)
+            {
+                return record;
+            }
+        }
+
+        PlayerCityVault record;
+        record.cityId = cityId;
+        record.inventory.setTotalCopper(0);
+        record.purchased = false;
+        record.level = 0;
+        loadedCityVaults.push_back(record);
+        return loadedCityVaults.back();
+    };
+
+    for (const std::string& object : cityVaultObjects)
+    {
+        const std::string cityId = extractStringValue(object, "cityId", "");
+        if (cityId.empty())
+        {
+            continue;
+        }
+        PlayerCityVault& record = findOrCreateLoadedCityVault(cityId);
+        record.purchased = extractBoolValue(object, "purchased", false);
+        record.level = record.purchased ? std::max(1, std::min(5, extractIntValue(object, "level", 1))) : 0;
+    }
+
+    for (const std::string& object : cityVaultWeaponObjects)
+    {
+        const std::string cityId = extractStringValue(object, "cityId", "");
+        if (cityId.empty()) continue;
+        PlayerCityVault& record = findOrCreateLoadedCityVault(cityId);
+        record.purchased = true;
+        if (record.level <= 0) record.level = 1;
+        const std::string weaponName = extractStringValue(object, "name", "Épée rouillée");
+        Weapon fallback = weaponFromName(weaponName);
+        Weapon weapon(
+            weaponName,
+            extractStringValue(object, "description", fallback.getDescription()),
+            extractIntValue(object, "value", fallback.getValue()),
+            weaponTypeFromSaveText(extractStringValue(object, "type", weaponTypeToSaveText(fallback.getType()))),
+            extractIntValue(object, "minDamageBonus", fallback.getMinDamageBonus()),
+            extractIntValue(object, "maxDamageBonus", fallback.getMaxDamageBonus()),
+            extractIntValue(object, "criticalBonus", fallback.getCriticalBonus()),
+            extractIntValue(object, "maxDurability", fallback.getMaxDurability())
+        );
+        applySavedWeaponDurability(weapon, extractIntValue(object, "durability", weapon.getDurability()));
+        weapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        record.inventory.addWeapon(weapon);
+    }
+
+    for (const std::string& object : cityVaultArmorObjects)
+    {
+        const std::string cityId = extractStringValue(object, "cityId", "");
+        if (cityId.empty()) continue;
+        PlayerCityVault& record = findOrCreateLoadedCityVault(cityId);
+        record.purchased = true;
+        if (record.level <= 0) record.level = 1;
+        const std::string armorName = extractStringValue(object, "name", "Tenue simple");
+        Armor fallback = armorFromName(armorName);
+        Armor armor(
+            armorName,
+            extractStringValue(object, "description", fallback.getDescription()),
+            extractIntValue(object, "value", fallback.getValue()),
+            armorTypeFromSaveText(extractStringValue(object, "type", armorTypeToSaveText(fallback.getType()))),
+            extractIntValue(object, "maxHpBonus", fallback.getMaxHpBonus()),
+            extractIntValue(object, "damageReduction", fallback.getDamageReduction()),
+            extractIntValue(object, "maxDurability", fallback.getMaxDurability())
+        );
+        applySavedArmorDurability(armor, extractIntValue(object, "durability", armor.getDurability()));
+        armor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        record.inventory.addArmor(armor);
+    }
+
+    for (const std::string& object : cityVaultConsumableObjects)
+    {
+        const std::string cityId = extractStringValue(object, "cityId", "");
+        if (cityId.empty()) continue;
+        PlayerCityVault& record = findOrCreateLoadedCityVault(cityId);
+        record.purchased = true;
+        if (record.level <= 0) record.level = 1;
+        record.inventory.addConsumable(consumableFromName(extractStringValue(object, "name", "Potion de soin")));
+    }
+
+    for (const std::string& object : cityVaultMaterialObjects)
+    {
+        const std::string cityId = extractStringValue(object, "cityId", "");
+        if (cityId.empty()) continue;
+        PlayerCityVault& record = findOrCreateLoadedCityVault(cityId);
+        record.purchased = true;
+        if (record.level <= 0) record.level = 1;
+        record.inventory.addMaterial(MaterialCatalog::createById(
+            extractStringValue(object, "id", "unknown_material"),
+            extractIntValue(object, "quantity", 1),
+            extractStringValue(object, "quality", "normal")
+        ));
+    }
+
+    std::vector<std::string> loadedRegisteredGuildCityIds;
+    for (const std::string& object : registeredGuildCityObjects)
+    {
+        const std::string cityId = extractStringValue(object, "id", "");
+        if (!cityId.empty()) loadedRegisteredGuildCityIds.push_back(cityId);
+    }
+    player.setLoadedCityState(
+        extractBoolValue(content, "vaultPurchased", false),
+        extractIntValue(content, "vaultLevel", 0),
+        extractStringValue(content, "currentCityId", "valebrume"),
+        loadedCityVault,
+        loadedRegisteredGuildCityIds,
+        loadedCityVaults
+    );
+
+    if (totalCopperCurrency >= 0)
+    {
+        player.getInventory().setTotalCopper(totalCopperCurrency);
+    }
+    else
+    {
+        player.getInventory().setGold(gold);
+    }
     player.setLoadedProgress(level, experience, hp);
 
     DndAttributes loadedAttributes;
@@ -1922,6 +2598,22 @@ bool SaveManager::loadPlayerSnapshot(
     }
     player.setLoadedCurses(loadedCurses);
 
+    std::vector<Blessing> loadedBlessings;
+    for (const std::string& object : activeBlessingObjects)
+    {
+        Blessing blessing(
+            extractStringValue(object, "id", ""),
+            extractStringValue(object, "name", ""),
+            extractStringValue(object, "description", ""),
+            extractBoolValue(object, "survivalProtection", false)
+        );
+        if (blessing.isValid())
+        {
+            loadedBlessings.push_back(blessing);
+        }
+    }
+    player.setLoadedBlessings(loadedBlessings);
+
     std::vector<std::string> loadedRecentEquipmentUsage;
     for (const std::string& object : recentEquipmentUsageObjects)
     {
@@ -1996,7 +2688,75 @@ bool SaveManager::loadPlayerSnapshot(
         }
     }
 
-    player.setLoadedBossRegistry(loadedUnlockedBossIds, loadedRecentBossIds, loadedDefeatedBossIds, recentBossCooldownExpiresAtDay);
+    player.setLoadedBossRegistry(loadedUnlockedBossIds, loadedRecentBossIds, loadedDefeatedBossIds, recentBossCooldownExpiresAtDay, rareBossDiscoveryCooldownExpiresAtDay);
+
+    std::vector<std::string> loadedBossDiscoveryLocations(37, "");
+    for (const std::string& object : bossDiscoveryLocationObjects)
+    {
+        const int id = extractIntValue(object, "id", 0);
+        if (id > 0 && id < static_cast<int>(loadedBossDiscoveryLocations.size()))
+        {
+            loadedBossDiscoveryLocations[static_cast<std::size_t>(id)] = extractStringValue(object, "location", "");
+        }
+    }
+    player.setLoadedBossDiscoveryLocations(loadedBossDiscoveryLocations);
+
+    std::vector<std::string> loadedRecentExplorationEvents;
+    for (const std::string& object : recentExplorationEventObjects)
+    {
+        const std::string id = extractStringValue(object, "id", "");
+        if (!id.empty()) loadedRecentExplorationEvents.push_back(id);
+    }
+    std::vector<std::string> loadedRecentExplorationChallenges;
+    for (const std::string& object : recentExplorationChallengeObjects)
+    {
+        const std::string id = extractStringValue(object, "id", "");
+        if (!id.empty()) loadedRecentExplorationChallenges.push_back(id);
+    }
+    player.setLoadedExplorationVarietyHistory(loadedRecentExplorationEvents, loadedRecentExplorationChallenges);
+
+    std::vector<PlayerExplorationCooldown> loadedExplorationSceneCooldowns;
+    for (const std::string& object : explorationSceneCooldownObjects)
+    {
+        PlayerExplorationCooldown cooldown;
+        cooldown.key = extractStringValue(object, "key", "");
+        cooldown.expiresAtDay = extractIntValue(object, "expiresAtDay", -1);
+        if (!cooldown.key.empty() && cooldown.expiresAtDay > player.getWorldDaysElapsed())
+        {
+            loadedExplorationSceneCooldowns.push_back(cooldown);
+        }
+    }
+    player.setLoadedExplorationSceneCooldowns(loadedExplorationSceneCooldowns);
+
+    std::vector<PlayerPersistentCounter> loadedShopPromotionPurchaseCounters;
+    for (const std::string& object : shopPromotionPurchaseObjects)
+    {
+        PlayerPersistentCounter counter;
+        counter.key = extractStringValue(object, "key", "");
+        counter.value = extractIntValue(object, "value", 0);
+        if (!counter.key.empty() && counter.value > 0)
+        {
+            loadedShopPromotionPurchaseCounters.push_back(counter);
+        }
+    }
+    player.setLoadedShopPromotionPurchaseCounters(loadedShopPromotionPurchaseCounters);
+
+    std::vector<PlayerJournalRecord> loadedCanonicalJournalRecords;
+    for (const std::string& object : canonicalJournalObjects)
+    {
+        PlayerJournalRecord record;
+        record.category = extractStringValue(object, "category", "");
+        record.key = extractStringValue(object, "key", "");
+        record.label = extractStringValue(object, "label", record.key);
+        record.locationId = extractStringValue(object, "locationId", "");
+        record.count = extractIntValue(object, "count", 0);
+        record.lastDay = extractIntValue(object, "lastDay", 0);
+        if (!record.category.empty() && !record.key.empty() && record.count > 0)
+        {
+            loadedCanonicalJournalRecords.push_back(record);
+        }
+    }
+    player.setLoadedCanonicalJournalRecords(loadedCanonicalJournalRecords);
 
     Weapon loadedGrinkaWeapon = WeaponCatalog::createRustySword();
     bool hasLoadedGrinkaWeapon = false;
@@ -2196,11 +2956,20 @@ bool SaveManager::loadPlayerSnapshot(
         quest.availableFromDay = extractIntValue(object, "availableFromDay", 0);
         quest.expiresAtDay = extractIntValue(object, "expiresAtDay", -1);
         quest.guildQuest = extractBoolValue(object, "guildQuest", false);
+        quest.guildChallenge = extractBoolValue(object, "guildChallenge", false);
+        quest.challengeCondition = extractStringValue(object, "challengeCondition", "");
+        quest.challengeMarkReward = extractIntValue(object, "challengeMarkReward", 0);
         quest.accepted = extractBoolValue(object, "accepted", true);
         quest.completed = extractBoolValue(object, "completed", false);
         quest.turnedIn = extractBoolValue(object, "turnedIn", false);
         quest.failed = extractBoolValue(object, "failed", false);
         quest.failureReason = extractStringValue(object, "failureReason", "");
+        quest.linkedQuestIds = extractStringValue(object, "linkedQuestIds", "");
+        quest.stageLabels = extractStringValue(object, "stageLabels", "");
+        quest.serviceChallengeHistory = extractStringValue(object, "serviceChallengeHistory", "");
+        quest.linkedQuestRequiredState = extractStringValue(object, "linkedQuestRequiredState", "turned_in");
+        quest.retroactiveProgress = extractBoolValue(object, "retroactiveProgress", false);
+        quest.hideFutureSteps = extractBoolValue(object, "hideFutureSteps", false);
         if (quest.failed && quest.failureReason.empty())
         {
             quest.failureReason = "Délai dépassé ou demande archivée sans validation.";
@@ -2212,6 +2981,7 @@ bool SaveManager::loadPlayerSnapshot(
     {
         player.getQuestLog().getQuests().push_back(loadQuestSnapshotEntry(object));
     }
+    player.getQuestLog().refreshLinkedQuestProgress();
 
     std::vector<Quest> loadedGuildBoardOffers;
     for (const std::string& object : guildBoardObjects)
@@ -2225,6 +2995,16 @@ bool SaveManager::loadPlayerSnapshot(
         extractIntValue(content, "targetSize", static_cast<int>(loadedGuildBoardOffers.size())),
         extractIntValue(content, "pendingReplacements", 0),
         extractIntValue(content, "replacementDueAtCombat", -1)
+    );
+
+    std::vector<Quest> loadedGuildChallengeBoardOffers;
+    for (const std::string& object : guildChallengeBoardObjects)
+    {
+        loadedGuildChallengeBoardOffers.push_back(loadQuestSnapshotEntry(object));
+    }
+    player.getQuestLog().setLoadedGuildChallengeBoardState(
+        loadedGuildChallengeBoardOffers,
+        extractIntValue(content, "guildChallengeCreatedAtDay", -1)
     );
 
     return true;

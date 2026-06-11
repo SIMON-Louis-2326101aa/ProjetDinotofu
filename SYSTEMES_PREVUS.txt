@@ -2,77 +2,73 @@ DINOTOFU — SYSTÈMES PRÉVUS ET TÂCHES RESTANTES
 
 Règle de ce fichier
 -------------------
-Ce fichier n'est pas un historique de versions. Il sert seulement à garder une liste claire des systèmes à développer, améliorer ou équilibrer.
+Ce fichier n'est pas un historique de versions. Il conserve seulement les travaux réels encore nécessaires. Les détails terminés appartiennent aux patchnotes.
 
 Priorité actuelle
 -----------------
-1. Garder la version publiée jouable et stable.
-2. Écrire l'histoire jusqu'au chapitre 5 avant de coder la suite lourde.
-3. Continuer l'interface graphique seulement quand le socle terminal reste sûr.
-4. Ne pas ajouter de gros contenu non préparé si l'histoire ou les systèmes de base ne sont pas prêts.
+1. Garder V3.29.00 stable et jouable en terminal comme en interface graphique.
+2. Construire la troisième phase du chapitre 4 et le combat de l’Intendant de la Date Vide.
+3. Remplacer progressivement les dernières déductions textuelles de l’IG par des champs structurés du moteur.
+4. Préparer les contenus visuels avant de générer ou d’intégrer des sprites.
 
-Histoire
---------
-- Écrire les chapitres 1 à 5 en détail : trame, PNJ, quêtes, étapes d'attente, boss obligatoires, conséquences.
-- Préparer les moments où le joueur doit s'occuper pendant des réparations ou mises en place.
-- Préparer les quêtes qui indiquent une menace/boss sans révéler son vrai nom trop tôt.
-- Définir les boss obligatoires de chapitre et leurs conditions d'accès.
-- Prévoir la bascule finale histoire -> bac à sable.
-
-Ville, économie et boutiques
-----------------------------
-- Approfondir les vrais stocks conditionnés par la progression histoire.
-- Équilibrer prix, récompenses, or gagné, XP, loot et difficulté.
-- Surveiller l'inflation d'or, surtout via exploration et événements chanceux.
-- Ajouter plus tard des achats par troc/échange d'objets au marché noir.
-- Rendre forge, herboristerie, armurerie et guilde plus réactives aux PNJ sauvés et aux routes sécurisées.
-
-Quêtes
-------
-- Ajouter plus de variétés de quêtes secondaires utiles : patrouilles, services, livraisons, collecte, escorte, preuves, bestiaire, défense, enquête.
-- Garder les quêtes principales non refusables.
-- Éviter les textes méta du type “système ajouté”, “prévu plus tard” ou “ce n'est pas automatique”.
-- Afficher les objectifs de façon lore et compréhensible.
-
-Inventaire, équipement et durabilité
-------------------------------------
-- Continuer l'amélioration de l'inventaire simple/détaillé.
-- Finaliser les pénalités de durabilité en cas de mort non définitive.
-- Équilibrer armes, armures, matériaux solides et risques de casse.
-- Rendre l'affichage de l'équipement clair dans terminal et interface graphique.
-
-Combat, boss et bestiaire
--------------------------
-- Continuer les boss particuliers et leurs mécaniques propres.
-- Garder la fuite impossible en combat de boss.
-- Ajouter les noms de boss dans le bestiaire seulement quand le boss les dit ou quand le lore les confirme clairement.
-- Réutiliser le système de décryptage/statistiques cachées pour les boss et ennemis beaucoup plus puissants.
-- Garder les recommandations en combat très limitées pour ne pas jouer à la place du joueur.
-
-Personnages spéciaux
---------------------
-- Continuer les réactions personnalisées sans casser l'immersion.
-- Éviter le vocabulaire trop méta pour Trexof ou les autres personnages.
-- Débloquer progressivement les PNJ spéciaux dans le bestiaire, sauf le groupe connu des Bras cassés.
-- Préparer les groupes PvE spéciaux et leurs conditions d'apparition.
-
-Multijoueur / coop
+Histoire et villes
 ------------------
-- Garder le mode coop disponible partout à terme.
-- Le joueur principal détermine les données de voyage, boss, niveau de session, monstres et événements.
-- Les récompenses doivent rester individuelles selon participation, chance et niveau.
-- En boss coop, tous les joueurs doivent avoir débloqué l'accès.
-- En difficulté avec mort définitive, appliquer les règles de survie de groupe prévues.
+- Terminer la préparation puis le codage des chapitres 4 et 5, avec PNJ, quêtes, attentes, conséquences et boss obligatoires.
+- Rendre Rocheveille, Port-Lanterne et Lys-de-Givre réellement accessibles seulement quand leurs routes, PNJ, ressources, stocks, quêtes et guildes locales sont prêts.
+- Une nouvelle guilde locale demande seulement une mise à niveau courte ; l’inscription principale n’est jamais recommencée.
+- Ajouter plus tard un transfert municipal limité, coûteux et différé entre coffres ; la consultation distante en lecture seule existe déjà.
+
+Économie, inventaire et commerce
+--------------------------------
+- Recalculer prix, récompenses, XP, or, loot, réparations et crafts depuis une économie centrale commune.
+- Finaliser les pénalités de durabilité et les risques de casse lors d’une mort non définitive.
+- Ajouter au moteur les règles optionnelles de ramassage : elles doivent contrôler seulement l’automatisation. Les butins ignorés restent visibles dans le récapitulatif pour pouvoir être pris manuellement, vendus ou laissés.
+- Fournir au moteur un historique canonique des achats, ventes, destructions, équipements et provenances importantes.
+
+Combat et données structurées
+-----------------------------
+- Exposer directement à l’IG les chances, dégâts estimés, coûts, portées, cibles valides, réactions, contraintes de défi et alertes de casse.
+- Ajouter uniquement des effets autorisés de modification d’initiative alliée : jamais les ennemis, jamais avant l’initiative minimale ni avant le délai minimal.
+- Continuer les boss particuliers, la coopération et les règles de mort de groupe sans modifier l’impossibilité de fuir un boss.
+- Définir une vraie route narrative d’obtention pour la bénédiction de survie léthale ; son moteur existe déjà.
+
+Quêtes, registres et statistiques
+---------------------------------
+- Structurer les étapes de quête, décisions, types de mission, difficulté estimée et risques connus sans révéler les informations inconnues.
+- Ajouter l’historique personnel par créature, les variantes, les silhouettes progressives et les notes persistantes côté sauvegarde.
+- Ajouter cartes à couches, épingles personnelles et journal de voyage canonique lorsque plusieurs régions jouables existent.
+- Déplacer les Top 3 et l’historique récent depuis les seules observations locales de l’IG vers les sauvegardes du moteur.
+- Ajouter plus tard comparaison de sauvegardes, détails complets des statistiques, titres et galerie de souvenirs.
+
+Personnalisation et pixel-art
+-----------------------------
+- Prévoir plus tard une vraie image de ville avec bâtiments cliquables : guilde, boutiques, coffre, bibliothèque, arène urbaine pour les combats uniques et grande porte des remparts pour partir en exploration.
+- Prévoir une grande carte d’exploration avec biomes et lieux cliquables ; les lieux inconnus restent grisés, enfumés ou masqués.
+- Prévoir de petites animations d’exploration dont la durée dépend de la longueur choisie, ainsi que des illustrations pour certaines quêtes et certains événements.
+- Écrire la bible visuelle pixel-art et le catalogue exhaustif des objets, monstres, PNJ, boss et variantes génériques.
+- Concevoir l’arbre final de sélection par race, classe, âge exact, tranche d’âge, présentation et variante.
+- Générer puis intégrer les assets seulement après validation de cette bible.
+- Le terminal garde une description courte ; l’IG affichera ensuite l’image correspondante et la même description.
 
 Interface graphique
 -------------------
-- Priorité à la jouabilité complète avant le gros polish visuel.
-- Garder les numéros de choix visibles à côté des actions.
-- Ne pas masquer/lancer/quitter l'interface avant les vérifications de mise à jour.
-- Garder le terminal comme secours.
+- Conserver les numéros de choix visibles et le terminal comme secours.
+- Ne pas lancer, masquer ou quitter l’IG avant la vérification et l’installation des mises à jour.
+- Garder les panneaux avancés optionnels pour éviter de surcharger l’écran.
+- Étendre les champs structurés plutôt que multiplier les heuristiques de lecture de texte.
 
 Documentation propre
 --------------------
-- Les README doivent rester lisibles et courts.
-- Les historiques de version vont uniquement dans `PATCHNOTE_DINOTOFU.md`.
-- Les fichiers de préparation doivent contenir la direction actuelle, pas une trace de toutes les passes déjà faites.
+- README.md et READMEFR.md restent courts et décrivent seulement l’état actuel.
+- Les historiques de version restent uniquement dans PATCHNOTE_DINOTOFU.md et PATCHNOTE_DINOTOFU_FR.md.
+- Aucun nouveau README de version ne doit être créé.
+
+[V3.30.00 - socle validé / futur IG pixel-art]
+- Les villes doivent être placées sur une carte avec des distances entre elles et des distances distinctes vers les biomes proches.
+- Certaines villes peuvent refuser l'entrée selon le niveau, la réputation, une quête, une recommandation ou un boss vaincu. Cette condition doit être affichée clairement sans spoiler les exigences inconnues.
+- L'exploration future doit utiliser une grande carte à biomes avec lieux cliquables. Les lieux inconnus restent grisés, enfumés ou masqués.
+- L'animation d'exploration se découpe en deux temps : trajet entre le lieu de départ et la destination, puis animation locale dans le lieu choisi.
+- Chaque animation doit utiliser un fond cohérent avec le chemin, le biome ou le lieu, et non un arrière-plan générique répété partout.
+- Les villes pixel-art futures doivent afficher une vraie image de ville cliquable : bâtiments interactifs, grande porte des remparts pour partir explorer, arène urbaine pour les combats uniques.
+- Certaines quêtes, événements, boss, découvertes ou dialogues importants pourront afficher une illustration ponctuelle sans bloquer inutilement le joueur.
+- Les armes et armures utilisent des catégories légère, moyenne et lourde avec avantages et contreparties modérés : léger = plus précis/mobile, moins puissant/résistant ; lourd = plus puissant/résistant, moins précis/mobile.

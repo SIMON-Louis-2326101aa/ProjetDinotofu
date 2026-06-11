@@ -18,6 +18,7 @@
 #include "interface/model/MenuScreen.hpp"
 #include "save/SaveManager.hpp"
 
+#include <algorithm>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -73,6 +74,13 @@ namespace
         }
     }
 
+    std::string characterStoryLabel(const CharacterSaveSummary& character)
+    {
+        if (!character.storyModeStarted) return "Bac à sable";
+        return "Histoire C" + std::to_string(std::max(1, character.storyChapter))
+            + " · étape " + std::to_string(std::max(0, character.storyStep));
+    }
+
     MenuOptionItemData makeCharacterMenuItem(
         const std::string& actionType,
         const std::string& name,
@@ -124,10 +132,12 @@ namespace
         return makeCharacterMenuItem(
             "select",
             character.characterName,
-            "Race / classe : " + character.raceName + " / " + character.className,
+            "Race / classe : " + character.raceName + " / " + character.className
+                + " | Créé V" + character.createdForVersion
+                + " | Adapté V" + character.lastAdaptedVersion,
             status,
-            "Niveau " + std::to_string(character.level),
-            "Maître : " + character.currentOwnerAccountName,
+            "Niveau " + std::to_string(character.level) + " | " + characterStoryLabel(character),
+            "Dernière activité : " + (character.lastActivityText.empty() ? std::string("Inconnue") : character.lastActivityText),
             impact != VersionCompatibilityImpact::None || character.clone
         );
     }
@@ -314,6 +324,8 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
         std::vector<CharacterSaveSummary> characters = SaveManager::listPlayableCharacters(accountName);
 
         MenuScreen characterListScreen("PERSONNAGES", "save.characters.list");
+        characterListScreen.addSubtitle("Fiches locales et compatibilité");
+        characterListScreen.addLine("Les cartes indiquent la version de création, la compatibilité, la progression histoire et la dernière activité connue.");
         characterListScreen.addOption(
             0,
             "Créer un nouveau personnage",
@@ -408,12 +420,15 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
         selectedCharacterScreen.addSubtitle("Résumé du personnage");
         selectedCharacterScreen.addLine("Personnage : " + selectedCharacter.characterName);
         selectedCharacterScreen.addLine("Race / classe : " + selectedCharacter.raceName + " / " + selectedCharacter.className);
+        selectedCharacterScreen.addLine("Apparence : " + std::to_string(selectedCharacter.characterAge) + " ans | " + selectedCharacter.visualPresentation + " | " + selectedCharacter.visualVariant);
         selectedCharacterScreen.addLine("Niveau : " + std::to_string(selectedCharacter.level));
         selectedCharacterScreen.addLine("Règle de mort : " + DeathRuleRules::displayName(selectedCharacter.deathRule));
         selectedCharacterScreen.addLine("Créateur : " + selectedCharacter.creatorAccountName);
         selectedCharacterScreen.addLine("Joueur / maître actuel : " + selectedCharacter.currentOwnerAccountName);
         selectedCharacterScreen.addLine("Créé le : " + selectedCharacter.createdAt + " | V" + selectedCharacter.createdForVersion);
         selectedCharacterScreen.addLine("Dernière adaptation faite pour la V" + selectedCharacter.lastAdaptedVersion);
+        selectedCharacterScreen.addLine("Mode : " + characterStoryLabel(selectedCharacter));
+        selectedCharacterScreen.addLine("Dernière activité connue : " + (selectedCharacter.lastActivityText.empty() ? std::string("Inconnue") : selectedCharacter.lastActivityText));
         if (selectedCharacter.clone)
         {
             selectedCharacterScreen.addLine("Statut : CLONE — JcJ amical uniquement.");
@@ -444,6 +459,7 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
         characterActionScreen.addSubtitle("Actions disponibles");
         characterActionScreen.addLine("Personnage : " + selectedCharacter.characterName);
         characterActionScreen.addLine("Race / classe : " + selectedCharacter.raceName + " / " + selectedCharacter.className + " | Niveau " + std::to_string(selectedCharacter.level));
+        characterActionScreen.addLine("Apparence : " + std::to_string(selectedCharacter.characterAge) + " ans | " + selectedCharacter.visualPresentation + " | " + selectedCharacter.visualVariant);
         characterActionScreen.addLine("Action irréversible disponible : le maître actuel peut changer vraiment.");
         characterActionScreen.addOption(0, "Retour", "", true, "save.characters.actions.back");
         characterActionScreen.addOption(
@@ -574,7 +590,8 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
                     "Classe : " + player.getType(),
                     "Règle de mort : " + DeathRuleRules::displayName(result.deathRule),
                     "PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()),
-                    "Or : " + std::to_string(player.getInventory().getGold()) + " pièces"
+                    "Argent séparé : " + player.getInventory().getWalletLine(),
+                    "Argent total : " + player.getInventory().getWalletTotalLine()
                 };
 
                 if (!adaptationChanges.empty())

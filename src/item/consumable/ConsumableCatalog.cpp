@@ -385,3 +385,25 @@ Consumable ConsumableCatalog::createFireflyGuardVial()
 {
     return Consumable("Fiole de garde-lucioles", "Fiole lumineuse qui brouille les attaques faibles et donne un court appui défensif aux explorateurs prudents.", 132, ConsumableType::Buff, 33);
 }
+
+Consumable ConsumableCatalog::createLuckyPotion()
+{
+    return Consumable(
+        "Lucky Potion",
+        "Potion rarissime issue de caisses douteuses. Elle accorde plusieurs bonus aléatoires pendant trois tours.",
+        285,
+        ConsumableType::Buff,
+        30
+    );
+}
+
+Consumable ConsumableCatalog::createUnluckyPotion()
+{
+    return Consumable(
+        "Unlucky Potion",
+        "Fiole à lancer sur un ennemi. Elle impose plusieurs effets négatifs aléatoires pendant trois tours, mais peut parfois attirer trois ennemis faibles.",
+        305,
+        ConsumableType::Debuff,
+        28
+    );
+}

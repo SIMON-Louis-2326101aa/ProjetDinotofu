@@ -37,7 +37,8 @@ public:
         DifficultyMode difficulty,
         DeathRuleMode deathRule,
         const std::vector<Monster>& monsters,
-        const std::string& title
+        const std::string& title,
+        bool friendlyTrial = false
     );
 };
 

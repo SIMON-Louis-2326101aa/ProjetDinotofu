@@ -569,6 +569,8 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "cliff_basil_tea"
         || id == "carnival_diversion_ticket"
         || id == "firefly_guard_vial"
+        || id == "lucky_potion"
+        || id == "unlucky_potion"
         || id == "rusty_sword"
         || id == "training_dagger"
         || id == "training_spear"
@@ -757,8 +759,9 @@ bool ShopTransactionSystem::buyItem(
 
     if (!player.getInventory().spendGold(finalPrice))
     {
-        addTransactionNote("Or insuffisant pour acheter " + item.getName() + ".");
-        addTransactionNote("Or disponible : " + std::to_string(player.getInventory().getGold()) + " pièces.");
+        addTransactionNote("Argent insuffisant pour acheter " + item.getName() + ".");
+        addTransactionNote("Portefeuille : " + player.getInventory().getWalletLine());
+        addTransactionNote("Total : " + player.getInventory().getWalletTotalLine());
         return false;
     }
 
@@ -917,6 +920,14 @@ bool ShopTransactionSystem::buyItem(
     else if (item.getId() == "firefly_guard_vial")
     {
         player.getInventory().addConsumable(ConsumableCatalog::createFireflyGuardVial());
+    }
+    else if (item.getId() == "lucky_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createLuckyPotion());
+    }
+    else if (item.getId() == "unlucky_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createUnluckyPotion());
     }
     else if (item.getId() == "rusty_sword")
     {
@@ -1521,8 +1532,9 @@ bool ShopTransactionSystem::buyBackEntry(
 
     if (!player.getInventory().spendGold(entry.price))
     {
-        addTransactionNote("Or insuffisant pour racheter " + entry.label + ".");
-        addTransactionNote("Or disponible : " + std::to_string(player.getInventory().getGold()) + " pièces.");
+        addTransactionNote("Argent insuffisant pour racheter " + entry.label + ".");
+        addTransactionNote("Portefeuille : " + player.getInventory().getWalletLine());
+        addTransactionNote("Total : " + player.getInventory().getWalletTotalLine());
         return false;
     }
 

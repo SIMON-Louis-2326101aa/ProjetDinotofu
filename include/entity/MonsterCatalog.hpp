@@ -39,6 +39,7 @@ public:
     // EN: createLostBandit declares or implements a focused behavior used by this module.
     // FR: createLostBandit déclare ou implémente un comportement précis utilisé par ce module.
     static Monster createLostBandit();
+    static Monster createGiantSlimeMiniBoss(int level);
 
     // EN: createRandomMonsterForLevel declares or implements a focused behavior used by this module.
     // FR: createRandomMonsterForLevel déclare ou implémente un comportement précis utilisé par ce module.

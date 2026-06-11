@@ -54,6 +54,8 @@ public:
     static std::string getInnatePassiveLine(CharacterRace race);
     static bool isSemiHumanFamily(CharacterRace race);
     static std::string getRaceFamilyLine(CharacterRace race);
+    static int getMaximumAge(CharacterRace race);
+    static std::string getAgeBand(CharacterRace race, int age);
 
     // EN: getMerchantPurchasePricePercentage declares or implements a focused behavior used by this module.
     // FR: getMerchantPurchasePricePercentage déclare ou implémente un comportement précis utilisé par ce module.

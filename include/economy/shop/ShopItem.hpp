@@ -68,6 +68,7 @@ public:
     // EN: consumeOneStock declares or implements a focused behavior used by this module.
     // FR: consumeOneStock déclare ou implémente un comportement précis utilisé par ce module.
     bool consumeOneStock();
+    void addStock(int amount);
 };
 
 #endif

@@ -35,6 +35,8 @@ zip -r "${PACKAGE_PATH}" . \
     -x "*.log" \
     -x "*.tmp" \
     -x "AUDIT_IG_RESTANTS_*.md" \
+    -x "AUDIT_DINOTOFU_*.md" \
+    -x "SUGGESTIONS_DINOTOFU_APRES_*.md" \
     -x "reprise_chat_dinotofu_*.txt" \
     -x "*/__pycache__/*" \
     -x "*.pyc"
