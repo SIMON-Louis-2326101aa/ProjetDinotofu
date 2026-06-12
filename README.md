@@ -4,7 +4,7 @@ Dinotofu is a C++17 RPG / arena game. The terminal version remains the stable fo
 
 ## Current version   
 
-- Current version: **V3.48.00**   
+- Current version: **V3.49.00**   
 - Strongly recommended character recreation baseline: **V3.00.00**   
 - Characters created before **V3.00.00** may still work, but recreating them is recommended to use the story foundation cleanly.   
 
@@ -36,7 +36,7 @@ Boss discovery follows an internal ordered progression without exposing the full
 
 ## Graphical interface   
 
-The graphical interface remains experimental but playable and mirrors the C++ engine without inventing hidden game logic. V3.48.00 keeps the GUI in safe mode and locks the official visual identity: Dinotofu logo, banner, intro/menu cover, and dedicated normal + terminal launcher/shortcut icons, with Windows/Linux installer paths checked. Parasite panels remain hidden, terminal text and numbered buttons remain the clear navigation source, and images never replace written information. Terminal mode remains the most reliable fallback: gameplay images are disabled and not toggleable there, while launchers/installers may use their dedicated icons.   
+The graphical interface remains experimental but playable and mirrors the C++ engine without inventing hidden game logic. V3.49.00 keeps the GUI in safe mode and locks the official visual identity: Dinotofu logo, banner, intro/menu cover, and dedicated normal + terminal launcher/shortcut icons, with Windows/Linux installer paths checked. Parasite panels remain hidden, terminal text and numbered buttons remain the clear navigation source, and images never replace written information. Terminal mode remains the most reliable fallback: gameplay images are disabled and not toggleable there, while launchers/installers may use their dedicated icons.   
 
 ## Installing from a GitHub release   
 

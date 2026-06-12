@@ -1,7 +1,7 @@
 {
   "name": "Dinotofu",
-  "version": "3.48.00",
-  "releaseTag": "v3.48.00",
+  "version": "3.49.00",
+  "releaseTag": "v3.49.00",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
   "notes": "Polishes official branding integration: confirms logo/banner/cover/launcher assets, validates Windows and Linux shortcut icon references, and keeps images active only as GUI/branding supplements."

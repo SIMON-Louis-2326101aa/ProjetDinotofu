@@ -1,6 +1,6 @@
 # Branding Dinotofu   
 
-Assets officiels confirmés en V3.48.00.   
+Assets officiels confirmés en V3.49.00.   
 
 ## Rôle des fichiers   
 

@@ -72,6 +72,43 @@
       margin: 0.25rem 0 0;
     }
 
+
+    .launch-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+      display: none;
+      place-items: center;
+      padding: clamp(1rem, 4vw, 2.5rem);
+      background:
+        linear-gradient(180deg, rgba(4, 5, 8, 0.22), rgba(4, 5, 8, 0.86)),
+        url("../../assets/branding/dinotofu_intro_cover_web.png") center center / cover no-repeat,
+        url("../../assets/branding/dinotofu_banner_web.png") center center / cover no-repeat,
+        #06080d;
+    }
+    body.welcome-active { overflow: hidden; }
+    body.welcome-active .launch-splash { display: grid; }
+    .launch-card {
+      width: min(760px, 100%);
+      border: 1px solid rgba(255, 179, 71, 0.28);
+      border-radius: 28px;
+      padding: clamp(1rem, 3vw, 1.6rem);
+      background: linear-gradient(180deg, rgba(10, 12, 18, 0.70), rgba(10, 12, 18, 0.88));
+      box-shadow: 0 32px 90px rgba(0,0,0,0.52);
+      backdrop-filter: blur(7px);
+      text-align: center;
+    }
+    .launch-card img {
+      width: min(260px, 58vw);
+      max-height: 210px;
+      object-fit: contain;
+      filter: drop-shadow(0 18px 34px rgba(0,0,0,0.35));
+      margin-bottom: 0.7rem;
+    }
+    .launch-card h1 { margin-bottom: 0.35rem; }
+    .launch-card p { color: var(--muted); line-height: 1.45; }
+    .launch-card button { min-width: min(260px, 100%); font-size: 1.05rem; padding: 0.78rem 1.2rem; margin-top: 0.45rem; }
+
     h1, h2, h3, p { margin-top: 0; }
     h1 { margin-bottom: 0.25rem; font-size: clamp(1.5rem, 2.8vw, 2.4rem); }
     h2 { margin-bottom: 0.45rem; }
@@ -1265,8 +1302,8 @@
     .tracked-line { border-color: rgba(111,181,255,.32) !important; background: rgba(111,181,255,.065) !important; box-shadow: inset 3px 0 0 rgba(111,181,255,.52); }
     .tracked-inline { color: #c8e4ff; font-weight: 900; text-decoration: underline; text-decoration-color: rgba(111,181,255,.5); text-underline-offset: 2px; }
     .breadcrumb { display: flex; flex-wrap: wrap; align-items: center; gap: .24rem; margin: .3rem 0 .65rem; }
-    .breadcrumb-button { padding: .24rem .46rem; background: transparent; }
-    .breadcrumb-button.current { color: var(--text); cursor: default; border-color: rgba(255,179,71,.28); }
+    .breadcrumb-button { padding: .24rem .46rem; background: rgba(255,255,255,0.035); color: var(--text) !important; }
+    .breadcrumb-button.current { color: #fff !important; cursor: default; border-color: rgba(255,179,71,.28); }
     .breadcrumb-separator { color: rgba(255,255,255,.24); }
     .price-history { margin-top: .68rem; padding-top: .6rem; border-top: 1px solid rgba(255,255,255,.07); color: var(--muted); font-size: .72rem; line-height: 1.45; }
     .price-history strong { color: var(--text); }
@@ -1450,7 +1487,16 @@
 
   </style>
 </head>
-<body>
+<body class="welcome-active">
+  <div id="launchSplash" class="launch-splash" aria-label="Accueil Dinotofu">
+    <section class="launch-card">
+      <img src="../../assets/branding/dinotofu_logo.png" alt="Logo Dinotofu" loading="eager" />
+      <h1>Bienvenue dans Dinotofu</h1>
+      <p>Prends le temps de voir la bannière. Quand tu es prêt, lance l’interface et continue l’aventure.</p>
+      <button id="playButton" type="button">Jouer</button>
+    </section>
+  </div>
+
   <header class="game-header">
     <div class="brand-lockup">
       <img class="brand-logo" src="../../assets/branding/dinotofu_site_logo_512.png" alt="Logo Dinotofu" loading="eager" />
@@ -1596,6 +1642,8 @@
   </div>
 
   <script>
+    const launchSplash = document.getElementById('launchSplash');
+    const playButton = document.getElementById('playButton');
     const statusBox = document.getElementById('status');
     const versionBadge = document.getElementById('versionBadge');
     const serverStatusBox = document.getElementById('serverStatus');
@@ -1656,6 +1704,7 @@
 
     const state = {
       live: true,
+      welcomeVisible: true,
       view: 'menu',
       quantityScreenKey: '',
       lastMenu: null,
@@ -2385,20 +2434,25 @@
 
     function renderUtilityActions() {
       if (!utilityActions) return;
+      const utilityMenu = findUtilityAction('utility.out_of_combat_menu');
       const guardian = findUtilityAction('utility.guardian');
       const inventory = findUtilityAction('utility.inventory');
       const save = findUtilityAction('utility.quick_save');
+      const saveReturn = findUtilityAction('utility.save_return_menu');
       const saveQuit = findUtilityAction('utility.save_quit');
       const altered = findUtilityAction('utility.altered_data');
-      const disabledReason = isCombatContextActive() ? 'Menu rapide indisponible pendant le combat.' : '';
-      const buttons = [
-        actionToSubmenuButton('guardian', 'Parler au gardien', guardian),
-        actionToSubmenuButton('inventory', 'Inventaire', inventory),
-        actionToSubmenuButton('save', 'Sauvegarder', save),
-        actionToSubmenuButton('save_quit', 'Sauvegarder et quitter', saveQuit)
-      ];
+      const combatActive = isCombatContextActive();
+      const disabledReason = combatActive ? 'Menu rapide indisponible pendant le combat.' : '';
+      const buttons = [];
+      if (utilityMenu) buttons.push(actionToSubmenuButton('menu', 'Menu hors combat', utilityMenu));
+      if (guardian) buttons.push(actionToSubmenuButton('guardian', 'Parler au gardien', guardian));
+      if (inventory) buttons.push(actionToSubmenuButton('inventory', 'Inventaire', inventory));
+      if (save) buttons.push(actionToSubmenuButton('save', 'Sauvegarder', save));
+      if (saveReturn) buttons.push(actionToSubmenuButton('save_return_menu', 'Sauvegarder et retourner au menu', saveReturn));
+      if (saveQuit) buttons.push(actionToSubmenuButton('save_quit', 'Sauvegarder et quitter', saveQuit));
       if (altered) buttons.push(actionToSubmenuButton('altered', 'Données altérées', altered));
-      utilityActions.innerHTML = buttons.join('') + (disabledReason ? `<div class="input-note">${escapeHtml(disabledReason)}</div>` : '');
+      const empty = !buttons.length && !combatActive ? '<div class="input-note">Cet écran ne déclare pas encore le menu hors combat. Utilise 0 Retour si besoin.</div>' : '';
+      utilityActions.innerHTML = buttons.join('') + empty + (disabledReason ? `<div class="input-note">${escapeHtml(disabledReason)}</div>` : '');
     }
 
     function isKnownValidChoice(number) {
@@ -2967,21 +3021,37 @@
 
     function updateMenuHistory(snapshot) {
       if (!snapshot || snapshot.type !== 'menu' || !isActiveMenuSnapshot(snapshot)) return;
+      const pregame = isPregameBreadcrumbScreen(snapshot);
+      if (pregame) {
+        state.menuHistory = [];
+        return;
+      }
       const key = `${snapshot.screenId || ''}|${snapshot.title || ''}`;
       const current = state.menuHistory[state.menuHistory.length - 1];
       if (current?.key === key) return;
+      const hadPregameRoot = state.menuHistory.some(entry => isPregameBreadcrumbScreen(entry));
+      if (hadPregameRoot) state.menuHistory = [];
       const existingIndex = state.menuHistory.findIndex(entry => entry.key === key);
       if (existingIndex >= 0) state.menuHistory = state.menuHistory.slice(0, existingIndex + 1);
       else state.menuHistory.push({ key, screenId: snapshot.screenId || '', title: snapshot.title || 'Écran', sequence: getCurrentGuiSequence() });
       state.menuHistory = state.menuHistory.slice(-8);
     }
 
+    function isPregameBreadcrumbScreen(snapshot) {
+      const id = normalizeSearchText(`${snapshot?.screenId || ''} ${snapshot?.title || ''}`);
+      return id.includes('game introduction') || id.includes('account') || id.includes('compte') || id.includes('character') || id.includes('creation') || id.includes('difficulte') || id.includes('difficulty') || id.includes('race') || id.includes('classe');
+    }
+
     function renderBreadcrumb(snapshot) {
-      if (!snapshot || state.menuHistory.length < 2) return '';
-      return `<nav class="breadcrumb" aria-label="Fil d’Ariane">${state.menuHistory.map((entry, index) => {
-        const current = index === state.menuHistory.length - 1;
-        return `${index ? '<span class="breadcrumb-separator">›</span>' : ''}<button type="button" class="breadcrumb-button ${current ? 'current' : ''}" data-breadcrumb-index="${index}" ${current ? 'disabled' : ''}>${escapeHtml(entry.title || 'Écran')}</button>`;
-      }).join('')}</nav>`;
+      if (!snapshot || state.menuHistory.length < 1 || isPregameBreadcrumbScreen(snapshot)) return '';
+      const entries = state.menuHistory.slice(-7);
+      const activityRoot = '<button type="button" class="breadcrumb-button current" disabled>Activité</button>';
+      const trail = entries.map((entry, index) => {
+        const originalIndex = state.menuHistory.length - entries.length + index;
+        const current = originalIndex === state.menuHistory.length - 1;
+        return `<span class="breadcrumb-separator">›</span><button type="button" class="breadcrumb-button ${current ? 'current' : ''}" data-breadcrumb-index="${originalIndex}" ${current ? 'disabled' : ''}>${escapeHtml(entry.title || 'Écran')}</button>`;
+      }).join('');
+      return `<nav class="breadcrumb" aria-label="Fil d’Ariane">${activityRoot}${trail}</nav>`;
     }
 
     initializeDesktopPreferences();
@@ -4114,9 +4184,6 @@
         return shell('Progression de quête', 'Les objectifs terminés, actuels et masqués sont distingués sans dévoiler les futures étapes.', id.includes('story') || id.includes('histoire') ? 'Histoire' : 'Quêtes', `<div class="experience-chips"><span class="experience-chip done"><strong>${done}</strong> fait(s)</span><span class="experience-chip current"><strong>${Math.max(current, ready)}</strong> actuel/prêt</span><span class="experience-chip locked"><strong>${locked}</strong> masqué(s)</span></div>${nextActionHtml}`);
       }
 
-      if (cards.length >= 3 || actions.length >= 6) {
-        return shell('Vue d’ensemble', 'Les raccourcis et cartes reprennent uniquement les informations déjà disponibles dans cet écran.', 'IG', `<div class="experience-chips"><span class="experience-chip"><strong>${cards.length}</strong> carte(s)</span><span class="experience-chip current"><strong>${enabledActions}</strong> action(s)</span></div>`);
-      }
       return '';
     }
 
@@ -6227,6 +6294,15 @@
         }
       }
     });
+
+
+    if (playButton) {
+      playButton.addEventListener('click', () => {
+        state.welcomeVisible = false;
+        document.body.classList.remove('welcome-active');
+        launchSplash?.setAttribute('aria-hidden', 'true');
+      });
+    }
 
     refreshServerStatus();
     setLive(true);

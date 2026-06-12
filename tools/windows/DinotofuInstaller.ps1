@@ -397,6 +397,108 @@ function Create-DesktopShortcut {
     $shortcut.Save()
 }
 
+
+function Get-DinotofuShortcutCandidates {
+    param(
+        [string]$DisplayName,
+        [string]$ExpectedTargetFile,
+        [switch]$TerminalShortcut
+    )
+
+    $desktopPath = [Environment]::GetFolderPath("Desktop")
+    if ([string]::IsNullOrWhiteSpace($desktopPath) -or -not (Test-Path $desktopPath)) { return @() }
+
+    $matches = @()
+    try {
+        $allLinks = Get-ChildItem -Path $desktopPath -Filter "*.lnk" -File -Recurse -ErrorAction SilentlyContinue
+        $wsh = New-Object -ComObject WScript.Shell
+        foreach ($link in $allLinks) {
+            $name = $link.BaseName
+            $nameMatches = $false
+            if ($TerminalShortcut) {
+                $nameMatches = ($name -ieq $DisplayName) -or ($name -like "*Dinotofu*Terminal*")
+            }
+            else {
+                $nameMatches = ($name -ieq $DisplayName) -or (($name -like "*Dinotofu*Launcher*") -and ($name -notlike "*Terminal*"))
+            }
+
+            $targetMatches = $false
+            try {
+                $shortcut = $wsh.CreateShortcut($link.FullName)
+                $targetLeaf = Split-Path -Path $shortcut.TargetPath -Leaf
+                $targetMatches = ($targetLeaf -ieq $ExpectedTargetFile)
+            }
+            catch { }
+
+            if ($nameMatches -or $targetMatches) {
+                $matches += $link.FullName
+            }
+        }
+    }
+    catch { }
+
+    return @($matches | Select-Object -Unique)
+}
+
+function Repair-DinotofuShortcutSet {
+    param(
+        [string]$DisplayName,
+        [string]$TargetPath,
+        [string]$IconPath,
+        [string]$ExpectedTargetFile,
+        [switch]$TerminalShortcut
+    )
+
+    $desktopPath = [Environment]::GetFolderPath("Desktop")
+    if ([string]::IsNullOrWhiteSpace($desktopPath) -or -not (Test-Path $desktopPath)) { return @() }
+
+    $targets = @(Get-DinotofuShortcutCandidates -DisplayName $DisplayName -ExpectedTargetFile $ExpectedTargetFile -TerminalShortcut:$TerminalShortcut)
+    if (-not $targets -or $targets.Count -eq 0) {
+        $targets = @(Join-Path $desktopPath ($DisplayName + ".lnk"))
+    }
+
+    foreach ($shortcutPath in $targets) {
+        try {
+            New-Item -ItemType Directory -Path (Split-Path $shortcutPath) -Force | Out-Null
+            Create-DesktopShortcut -TargetPath $TargetPath -ShortcutPath $shortcutPath -IconPath $IconPath
+            Write-Host "Raccourci repare : $shortcutPath"
+        }
+        catch {
+            Write-Warning "Impossible de reparer le raccourci $shortcutPath : $($_.Exception.Message)"
+        }
+    }
+
+    return $targets
+}
+
+function Repair-DinotofuDesktopShortcuts {
+    param([string]$RootDir)
+
+    $launcherPath = Join-Path $RootDir "DinotofuLauncher.ps1"
+    if (-not (Test-Path $launcherPath)) { return }
+
+    $normalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu.vbs"
+    $normalLauncherCmd = Join-Path $RootDir "Lancer-Dinotofu.cmd"
+    $terminalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu-Terminal.cmd"
+
+    if (-not (Test-Path $normalLauncherEntry)) { Ensure-LauncherVbs -TargetPath $normalLauncherEntry }
+    if (-not (Test-Path $normalLauncherCmd)) { Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto" }
+    if (-not (Test-Path $terminalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal" }
+
+    $fallbackIconPath = Join-Path $RootDir "Dinotofu.exe"
+    $guiIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_graphical.ico"
+    $terminalIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_terminal.ico"
+    if (-not (Test-Path $guiIconPath)) { $guiIconPath = $fallbackIconPath }
+    if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
+
+    Write-Step "Reparation des raccourcis bureau Dinotofu"
+    $guiTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher" -TargetPath $normalLauncherEntry -IconPath $guiIconPath -ExpectedTargetFile "Lancer-Dinotofu.vbs"
+    $terminalTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher Terminal version" -TargetPath $terminalLauncherEntry -IconPath $terminalIconPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" -TerminalShortcut
+
+    foreach ($shortcutPath in $guiTargets) { Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu.vbs" | Out-Null }
+    foreach ($shortcutPath in $terminalTargets) { Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" | Out-Null }
+}
+
 $config = Load-Config
 $installDirFromArgument = $PSBoundParameters.ContainsKey("InstallDir") -and -not [string]::IsNullOrWhiteSpace($InstallDir)
 
@@ -510,27 +612,7 @@ if (Test-Path $launcherPath) {
     if (-not (Test-Path $normalLauncherCmd)) { Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto" }
     if (-not (Test-Path $terminalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal" }
 
-    Write-Step "Creation des deux raccourcis bureau"
-    $desktopPath = [Environment]::GetFolderPath("Desktop")
-    $shortcutGuiPath = Join-Path $desktopPath "ProjetDinotofu Launcher.lnk"
-    $shortcutTerminalPath = Join-Path $desktopPath "ProjetDinotofu Launcher Terminal version.lnk"
-    $fallbackIconPath = Join-Path $InstallDir "Dinotofu.exe"
-    $guiIconPath = Join-Path $InstallDir "assets\branding\dinotofu_launcher_graphical.ico"
-    $terminalIconPath = Join-Path $InstallDir "assets\branding\dinotofu_launcher_terminal.ico"
-    if (-not (Test-Path $guiIconPath)) { $guiIconPath = $fallbackIconPath }
-    if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
-
-    Create-DesktopShortcut -TargetPath $normalLauncherEntry -ShortcutPath $shortcutGuiPath -IconPath $guiIconPath
-    Create-DesktopShortcut -TargetPath $terminalLauncherEntry -ShortcutPath $shortcutTerminalPath -IconPath $terminalIconPath
-
-    $guiShortcutOk = Test-ShortcutCreated -ShortcutPath $shortcutGuiPath -ExpectedTargetFile "Lancer-Dinotofu.vbs"
-    $terminalShortcutOk = Test-ShortcutCreated -ShortcutPath $shortcutTerminalPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd"
-
-    if ($guiShortcutOk) { Write-Host "Raccourci verifie : $shortcutGuiPath -> Lancer-Dinotofu.vbs" }
-    if ($terminalShortcutOk) { Write-Host "Raccourci verifie : $shortcutTerminalPath -> Lancer-Dinotofu-Terminal.cmd" }
-    if (-not $guiShortcutOk -or -not $terminalShortcutOk) {
-        Write-Warning "Installation terminee, mais au moins un raccourci bureau doit etre verifie manuellement."
-    }
+    Repair-DinotofuDesktopShortcuts -RootDir $InstallDir
 }
 else {
     Write-Warning "Launcher introuvable. Installation faite, mais aucun raccourci n'a ete cree."

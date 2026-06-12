@@ -51,14 +51,16 @@ grep -q "Les textes restent la source complète" tools/gui/dinotofu_gui_experime
 # Windows shortcuts must point to distinct launcher icons and distinct launch targets.
 grep -q "dinotofu_launcher_graphical.ico" tools/windows/DinotofuInstaller.ps1 || fail "L'installateur Windows ne référence pas l'icône graphique."
 grep -q "dinotofu_launcher_terminal.ico" tools/windows/DinotofuInstaller.ps1 || fail "L'installateur Windows ne référence pas l'icône terminale."
-grep -q "ProjetDinotofu Launcher.lnk" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows graphique n'est pas déclaré."
-grep -q "ProjetDinotofu Launcher Terminal version.lnk" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows terminal n'est pas déclaré."
+grep -q "ProjetDinotofu Launcher" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows graphique n'est pas déclaré."
+grep -q "ProjetDinotofu Launcher Terminal version" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows terminal n'est pas déclaré."
+grep -q "Repair-DinotofuDesktopShortcuts" tools/windows/DinotofuLauncher.ps1 || fail "Le launcher Windows ne répare pas les raccourcis après mise à jour."
 
 # Linux .desktop entries must point to distinct 512 PNG icons and distinct launch targets.
 grep -q "dinotofu_launcher_graphical_512.png" tools/linux/DinotofuInstaller.sh || fail "L'installateur Linux ne référence pas l'icône graphique 512."
 grep -q "dinotofu_launcher_terminal_512.png" tools/linux/DinotofuInstaller.sh || fail "L'installateur Linux ne référence pas l'icône terminale 512."
-grep -q "ProjetDinotofu Launcher.desktop" tools/linux/DinotofuInstaller.sh || fail "Le raccourci Linux graphique n'est pas copié sur le bureau."
-grep -q "ProjetDinotofu Launcher Terminal version.desktop" tools/linux/DinotofuInstaller.sh || fail "Le raccourci Linux terminal n'est pas copié sur le bureau."
+grep -q "ProjetDinotofu Launcher" tools/linux/DinotofuInstaller.sh || fail "Le raccourci Linux graphique n'est pas géré par l'installateur."
+grep -q "ProjetDinotofu Launcher Terminal version" tools/linux/DinotofuInstaller.sh || fail "Le raccourci Linux terminal n'est pas géré par l'installateur."
+grep -q "repair_linux_desktop_shortcuts" tools/linux/DinotofuLauncher.sh || fail "Le launcher Linux ne répare pas les raccourcis après mise à jour."
 
 if [[ ${failures} -gt 0 ]]; then
     echo "" >&2

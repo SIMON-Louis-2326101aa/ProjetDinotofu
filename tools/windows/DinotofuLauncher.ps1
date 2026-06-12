@@ -258,6 +258,202 @@ function Restart-LauncherAfterUpdate {
     exit 0
 }
 
+
+
+function Ensure-LauncherVbs {
+    param([string]$TargetPath)
+
+    $content = @(
+        'Option Explicit',
+        'Dim shell, fso, scriptDir, ps1, command',
+        'Set shell = CreateObject("WScript.Shell")',
+        'Set fso = CreateObject("Scripting.FileSystemObject")',
+        'scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)',
+        'ps1 = fso.BuildPath(scriptDir, "DinotofuLauncher.ps1")',
+        'command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & ps1 & """ -Mode Auto"',
+        'shell.CurrentDirectory = scriptDir',
+        'shell.Run command, 0, False'
+    ) -join "`r`n"
+
+    $content | Set-Content -Path $TargetPath -Encoding ASCII
+}
+
+function Ensure-LauncherCmd {
+    param(
+        [string]$TargetPath,
+        [string]$Mode
+    )
+
+    if ($Mode -eq "Auto") {
+        $content = @(
+            "@echo off",
+            "setlocal",
+            "set PYTHONUTF8=1",
+            "set PYTHONIOENCODING=utf-8",
+            "set LANG=C.UTF-8",
+            "set LC_ALL=C.UTF-8",
+            "if exist `"%~dp0Lancer-Dinotofu.vbs`" (",
+            "    wscript.exe `"%~dp0Lancer-Dinotofu.vbs`"",
+            ") else (",
+            "    start `"`" /b powershell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode Auto",
+            ")",
+            "exit /b"
+        ) -join "`r`n"
+    }
+    else {
+        $content = @(
+            "@echo off",
+            "chcp 65001 >nul",
+            "setlocal",
+            "set PYTHONUTF8=1",
+            "set PYTHONIOENCODING=utf-8",
+            "set LANG=C.UTF-8",
+            "set LC_ALL=C.UTF-8",
+            "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode $Mode"
+        ) -join "`r`n"
+    }
+
+    $content | Set-Content -Path $TargetPath -Encoding ASCII
+}
+
+function Create-DesktopShortcut {
+    param(
+        [string]$TargetPath,
+        [string]$ShortcutPath,
+        [string]$IconPath = ""
+    )
+
+    $wsh = New-Object -ComObject WScript.Shell
+    $shortcut = $wsh.CreateShortcut($ShortcutPath)
+    $shortcut.TargetPath = $TargetPath
+    $shortcut.Arguments = ""
+    $shortcut.WorkingDirectory = Split-Path $TargetPath
+    if (-not [string]::IsNullOrWhiteSpace($IconPath) -and (Test-Path $IconPath)) {
+        $shortcut.IconLocation = "$IconPath,0"
+    }
+    else {
+        $shortcut.IconLocation = "cmd.exe,0"
+    }
+    $shortcut.Save()
+}
+
+function Test-ShortcutCreated {
+    param(
+        [string]$ShortcutPath,
+        [string]$ExpectedTargetFile
+    )
+
+    if (-not (Test-Path $ShortcutPath)) { return $false }
+    try {
+        $wsh = New-Object -ComObject WScript.Shell
+        $shortcut = $wsh.CreateShortcut($ShortcutPath)
+        return ((Split-Path -Path $shortcut.TargetPath -Leaf) -ieq $ExpectedTargetFile)
+    }
+    catch { return $false }
+}
+
+
+function Get-DinotofuShortcutCandidates {
+    param(
+        [string]$DisplayName,
+        [string]$ExpectedTargetFile,
+        [switch]$TerminalShortcut
+    )
+
+    $desktopPath = [Environment]::GetFolderPath("Desktop")
+    if ([string]::IsNullOrWhiteSpace($desktopPath) -or -not (Test-Path $desktopPath)) { return @() }
+
+    $matches = @()
+    try {
+        $allLinks = Get-ChildItem -Path $desktopPath -Filter "*.lnk" -File -Recurse -ErrorAction SilentlyContinue
+        $wsh = New-Object -ComObject WScript.Shell
+        foreach ($link in $allLinks) {
+            $name = $link.BaseName
+            $nameMatches = $false
+            if ($TerminalShortcut) {
+                $nameMatches = ($name -ieq $DisplayName) -or ($name -like "*Dinotofu*Terminal*")
+            }
+            else {
+                $nameMatches = ($name -ieq $DisplayName) -or (($name -like "*Dinotofu*Launcher*") -and ($name -notlike "*Terminal*"))
+            }
+
+            $targetMatches = $false
+            try {
+                $shortcut = $wsh.CreateShortcut($link.FullName)
+                $targetLeaf = Split-Path -Path $shortcut.TargetPath -Leaf
+                $targetMatches = ($targetLeaf -ieq $ExpectedTargetFile)
+            }
+            catch { }
+
+            if ($nameMatches -or $targetMatches) {
+                $matches += $link.FullName
+            }
+        }
+    }
+    catch { }
+
+    return @($matches | Select-Object -Unique)
+}
+
+function Repair-DinotofuShortcutSet {
+    param(
+        [string]$DisplayName,
+        [string]$TargetPath,
+        [string]$IconPath,
+        [string]$ExpectedTargetFile,
+        [switch]$TerminalShortcut
+    )
+
+    $desktopPath = [Environment]::GetFolderPath("Desktop")
+    if ([string]::IsNullOrWhiteSpace($desktopPath) -or -not (Test-Path $desktopPath)) { return @() }
+
+    $targets = @(Get-DinotofuShortcutCandidates -DisplayName $DisplayName -ExpectedTargetFile $ExpectedTargetFile -TerminalShortcut:$TerminalShortcut)
+    if (-not $targets -or $targets.Count -eq 0) {
+        $targets = @(Join-Path $desktopPath ($DisplayName + ".lnk"))
+    }
+
+    foreach ($shortcutPath in $targets) {
+        try {
+            New-Item -ItemType Directory -Path (Split-Path $shortcutPath) -Force | Out-Null
+            Create-DesktopShortcut -TargetPath $TargetPath -ShortcutPath $shortcutPath -IconPath $IconPath
+            Write-Host "Raccourci repare : $shortcutPath"
+        }
+        catch {
+            Write-Warning "Impossible de reparer le raccourci $shortcutPath : $($_.Exception.Message)"
+        }
+    }
+
+    return $targets
+}
+
+function Repair-DinotofuDesktopShortcuts {
+    param([string]$RootDir)
+
+    $launcherPath = Join-Path $RootDir "DinotofuLauncher.ps1"
+    if (-not (Test-Path $launcherPath)) { return }
+
+    $normalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu.vbs"
+    $normalLauncherCmd = Join-Path $RootDir "Lancer-Dinotofu.cmd"
+    $terminalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu-Terminal.cmd"
+
+    if (-not (Test-Path $normalLauncherEntry)) { Ensure-LauncherVbs -TargetPath $normalLauncherEntry }
+    if (-not (Test-Path $normalLauncherCmd)) { Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto" }
+    if (-not (Test-Path $terminalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal" }
+
+    $fallbackIconPath = Join-Path $RootDir "Dinotofu.exe"
+    $guiIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_graphical.ico"
+    $terminalIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_terminal.ico"
+    if (-not (Test-Path $guiIconPath)) { $guiIconPath = $fallbackIconPath }
+    if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
+
+    Write-Step "Reparation des raccourcis bureau Dinotofu"
+    $guiTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher" -TargetPath $normalLauncherEntry -IconPath $guiIconPath -ExpectedTargetFile "Lancer-Dinotofu.vbs"
+    $terminalTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher Terminal version" -TargetPath $terminalLauncherEntry -IconPath $terminalIconPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" -TerminalShortcut
+
+    foreach ($shortcutPath in $guiTargets) { Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu.vbs" | Out-Null }
+    foreach ($shortcutPath in $terminalTargets) { Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" | Out-Null }
+}
+
 function Find-FreeGuiPort {
     param([int]$PreferredPort = 8787)
 
@@ -656,6 +852,8 @@ if (-not $NoUpdateCheck -and (Is-RepoConfigured)) {
 elseif (-not (Is-RepoConfigured)) {
     Write-Warning "Repo GitHub non configure dans le launcher. Lancement sans auto-update."
 }
+
+Repair-DinotofuDesktopShortcuts -RootDir $InstallDir
 
 if ($updateApplied) {
     Restart-LauncherAfterUpdate

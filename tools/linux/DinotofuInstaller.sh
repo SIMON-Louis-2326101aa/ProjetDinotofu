@@ -236,13 +236,45 @@ Categories=Game;
 DESKTOP
 chmod +x "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" || true
 chmod +x "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" || true
-for desktop_dir in "${HOME}/Desktop" "${HOME}/Bureau"; do
-    if [[ -d "$desktop_dir" ]]; then
-        cp "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" "$desktop_dir/ProjetDinotofu Launcher.desktop" || true
-        cp "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" "$desktop_dir/ProjetDinotofu Launcher Terminal version.desktop" || true
-        chmod +x "$desktop_dir/ProjetDinotofu Launcher.desktop" "$desktop_dir/ProjetDinotofu Launcher Terminal version.desktop" 2>/dev/null || true
-    fi
-done
+repair_desktop_shortcut_set() {
+    local source_file="$1"
+    local display_name="$2"
+    local terminal_flag="${3:-false}"
+    local desktop_dir found target base candidate
+
+    for desktop_dir in "${HOME}/Desktop" "${HOME}/Bureau"; do
+        [[ -d "$desktop_dir" ]] || continue
+        found=""
+        while IFS= read -r target; do
+            [[ -n "$target" ]] || continue
+            found="true"
+            cp "$source_file" "$target" || true
+            chmod +x "$target" 2>/dev/null || true
+            echo "Raccourci repare : $target"
+        done < <(find "$desktop_dir" -type f -name "*.desktop" 2>/dev/null | while read -r candidate; do
+            base="$(basename "$candidate")"
+            if [[ "$terminal_flag" == "true" ]]; then
+                if [[ "$base" == "$display_name.desktop" || "$base" == *Dinotofu*Terminal*.desktop ]] || grep -qi "Lancer-Dinotofu-Terminal.sh" "$candidate" 2>/dev/null; then
+                    printf '%s\n' "$candidate"
+                fi
+            else
+                if [[ "$base" == "$display_name.desktop" || ( "$base" == *Dinotofu*Launcher*.desktop && "$base" != *Terminal* ) ]] || grep -qi "Lancer-Dinotofu.sh" "$candidate" 2>/dev/null; then
+                    printf '%s\n' "$candidate"
+                fi
+            fi
+        done)
+
+        if [[ -z "$found" ]]; then
+            target="$desktop_dir/${display_name}.desktop"
+            cp "$source_file" "$target" || true
+            chmod +x "$target" 2>/dev/null || true
+            echo "Raccourci cree : $target"
+        fi
+    done
+}
+
+repair_desktop_shortcut_set "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" "ProjetDinotofu Launcher" "false"
+repair_desktop_shortcut_set "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" "ProjetDinotofu Launcher Terminal version" "true"
 
 echo "Dinotofu est installe."
 if [[ "$SKIP_LAUNCH" != "true" ]]; then

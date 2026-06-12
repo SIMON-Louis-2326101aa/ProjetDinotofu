@@ -96,6 +96,61 @@ run_installer_repair() {
     return 1
 }
 
+
+repair_linux_desktop_shortcuts() {
+    mkdir -p "${HOME}/.local/share/applications"
+    local gui_icon="${INSTALL_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"
+    local terminal_icon="${INSTALL_DIR}/assets/branding/dinotofu_launcher_terminal_512.png"
+    [[ -f "$gui_icon" ]] || gui_icon="${INSTALL_DIR}/assets/branding/dinotofu_site_logo_512.png"
+    [[ -f "$terminal_icon" ]] || terminal_icon="$gui_icon"
+
+    local gui_app="${HOME}/.local/share/applications/projetdinotofu-launcher.desktop"
+    local terminal_app="${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop"
+
+    cat > "$gui_app" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=ProjetDinotofu Launcher
+Comment=Lancer Dinotofu avec le launcher principal
+Exec=${INSTALL_DIR}/Lancer-Dinotofu.sh
+Icon=${gui_icon}
+Terminal=false
+Categories=Game;
+DESKTOP
+    cat > "$terminal_app" <<DESKTOP
+[Desktop Entry]
+Type=Application
+Name=ProjetDinotofu Launcher Terminal version
+Comment=Lancer la version terminale de secours de Dinotofu
+Exec=${INSTALL_DIR}/Lancer-Dinotofu-Terminal.sh
+Icon=${terminal_icon}
+Terminal=true
+Categories=Game;
+DESKTOP
+    chmod +x "$gui_app" "$terminal_app" 2>/dev/null || true
+
+    for desktop_dir in "${HOME}/Desktop" "${HOME}/Bureau"; do
+        [[ -d "$desktop_dir" ]] || continue
+        local found_gui="false"
+        local found_terminal="false"
+        while IFS= read -r candidate; do
+            base="$(basename "$candidate")"
+            if [[ "$base" == "ProjetDinotofu Launcher Terminal version.desktop" || "$base" == *Dinotofu*Terminal*.desktop ]] || grep -qi "Lancer-Dinotofu-Terminal.sh" "$candidate" 2>/dev/null; then
+                cp "$terminal_app" "$candidate" || true
+                chmod +x "$candidate" 2>/dev/null || true
+                found_terminal="true"
+            elif [[ "$base" == "ProjetDinotofu Launcher.desktop" || ( "$base" == *Dinotofu*Launcher*.desktop && "$base" != *Terminal* ) ]] || grep -qi "Lancer-Dinotofu.sh" "$candidate" 2>/dev/null; then
+                cp "$gui_app" "$candidate" || true
+                chmod +x "$candidate" 2>/dev/null || true
+                found_gui="true"
+            fi
+        done < <(find "$desktop_dir" -type f -name "*.desktop" 2>/dev/null)
+
+        if [[ "$found_gui" != "true" ]]; then cp "$gui_app" "$desktop_dir/ProjetDinotofu Launcher.desktop" || true; chmod +x "$desktop_dir/ProjetDinotofu Launcher.desktop" 2>/dev/null || true; fi
+        if [[ "$found_terminal" != "true" ]]; then cp "$terminal_app" "$desktop_dir/ProjetDinotofu Launcher Terminal version.desktop" || true; chmod +x "$desktop_dir/ProjetDinotofu Launcher Terminal version.desktop" 2>/dev/null || true; fi
+    done
+}
+
 UPDATE_APPLIED="false"
 if [[ "$NO_UPDATE" != "true" && -n "$REPO" && "$REPO" != "TON_COMPTE/TON_REPO" && "$REPO" == */* ]] && command -v curl >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
     tmp_json="$(mktemp)"
@@ -121,6 +176,8 @@ PY
     fi
     rm -f "$tmp_json"
 fi
+
+repair_linux_desktop_shortcuts
 
 if [[ "$UPDATE_APPLIED" == "true" && -x "${INSTALL_DIR}/DinotofuLauncher.sh" ]]; then
     echo "Redemarrage du launcher apres mise a jour."

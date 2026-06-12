@@ -46,6 +46,7 @@
 #include <vector>
 #include <sstream>
 #include <cstdlib>
+#include <exception>
 #include <set>
 #include <array>
 
@@ -59,6 +60,12 @@ namespace
     constexpr int UtilityChoiceSaveQuit = 93;
     constexpr int UtilityChoiceAlteredData = 94;
     constexpr int UtilityChoiceSettings = 95;
+    constexpr int UtilityChoiceSaveReturnMenu = 96;
+
+    struct ReturnToActivityMenuRequest final : public std::exception
+    {
+        const char* what() const noexcept override { return "return_to_activity_menu"; }
+    };
 
 
     std::string classCategoryBriefExample(ClassCategory category)
@@ -1450,9 +1457,32 @@ void Game::run()
     }
 
     configurePartyMode();
-    chooseGameMode();
-    displaySelectedMode();
-    launchSelectedMode();
+
+    bool sessionOpen = true;
+    while (sessionOpen)
+    {
+        try
+        {
+            chooseGameMode();
+            displaySelectedMode();
+            launchSelectedMode();
+            sessionOpen = false;
+        }
+        catch (const ReturnToActivityMenuRequest&)
+        {
+            Console::clear();
+            MessageScreen::show(
+                "BIENVENUE DANS DINOTOFU",
+                "game.return.activity_menu",
+                {
+                    "Progression sauvegardée.",
+                    "Retour au choix d'activité.",
+                    "Le personnage reste chargé : cet écran ne recrée pas le personnage."
+                },
+                false
+            );
+        }
+    }
 }
 
 // EN: displayIntroduction declares or implements a focused behavior used by this module.
@@ -6182,11 +6212,19 @@ void Game::openOutOfCombatUtilityMenu(bool inventoryAvailable)
             "utility.save_quit",
             makeUtilityItemData(mainPlayer, "save", "Sauvegarder et quitter", "Fermeture propre après sauvegarde.", "Disponible")
         );
+        screen.addOption(
+            6,
+            "Sauvegarder et retourner au menu",
+            "Sauvegarder puis revenir au choix d'activité, sans recréer le personnage.",
+            true,
+            "utility.save_return_menu",
+            makeUtilityItemData(mainPlayer, "save", "Sauvegarder et retourner au menu", "Retour au menu d'activité sans recréation.", "Disponible")
+        );
 
         if (mainPlayer.isAlteredByCheats())
         {
             screen.addOption(
-                6,
+                7,
                 "Données altérées",
                 "Voir les altérations connues de ce personnage.",
                 true,
@@ -6242,7 +6280,12 @@ void Game::openOutOfCombatUtilityMenu(bool inventoryAvailable)
             );
             std::exit(0);
         }
-        if (choice == 6 && mainPlayer.isAlteredByCheats())
+        if (choice == 6)
+        {
+            savePartyProgress("Sauvegarder et retourner au menu");
+            throw ReturnToActivityMenuRequest();
+        }
+        if (choice == 7 && mainPlayer.isAlteredByCheats())
         {
             CheatManager::openAlteredDataMenu(mainPlayer, selectedDifficulty, selectedDeathRule);
             saveCurrentProgress("Données altérées");
@@ -6372,6 +6415,12 @@ bool Game::handleOutOfCombatUtilityChoice(int choice, bool inventoryAvailable)
             false
         );
         std::exit(0);
+    }
+
+    if (choice == UtilityChoiceSaveReturnMenu)
+    {
+        savePartyProgress("Sauvegarder et retourner au menu");
+        throw ReturnToActivityMenuRequest();
     }
 
     if (choice == UtilityChoiceAlteredData && mainPlayer.isAlteredByCheats())
