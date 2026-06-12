@@ -20,6 +20,7 @@ zip -r "${PACKAGE_PATH}" . \
     -x "output/*" \
     -x "release_packages/*" \
     -x "gui_debug/*" \
+    -x "tools/gui/run_gui_debug.sh" \
     -x "assets/saves/*" \
     -x "saves/*" \
     -x "accounts/*" \

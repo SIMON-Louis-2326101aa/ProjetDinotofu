@@ -210,12 +210,17 @@ fi
 
 echo "==> Creation des raccourcis Linux"
 mkdir -p "${HOME}/.local/share/applications"
+GUI_ICON="${INSTALL_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"
+TERMINAL_ICON="${INSTALL_DIR}/assets/branding/dinotofu_launcher_terminal_512.png"
+if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${INSTALL_DIR}/assets/branding/dinotofu_site_logo_512.png"; fi
+if [[ ! -f "$TERMINAL_ICON" ]]; then TERMINAL_ICON="$GUI_ICON"; fi
 cat > "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" <<DESKTOP
 [Desktop Entry]
 Type=Application
 Name=ProjetDinotofu Launcher
 Comment=Lancer Dinotofu avec le launcher principal
 Exec=${INSTALL_DIR}/Lancer-Dinotofu.sh
+Icon=${GUI_ICON}
 Terminal=false
 Categories=Game;
 DESKTOP
@@ -225,6 +230,7 @@ Type=Application
 Name=ProjetDinotofu Launcher Terminal version
 Comment=Lancer la version terminale de secours de Dinotofu
 Exec=${INSTALL_DIR}/Lancer-Dinotofu-Terminal.sh
+Icon=${TERMINAL_ICON}
 Terminal=true
 Categories=Game;
 DESKTOP

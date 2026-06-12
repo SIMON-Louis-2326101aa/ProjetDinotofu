@@ -177,10 +177,14 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
 
     if (className.find("assassin") != std::string::npos
         || className.find("ombrelame") != std::string::npos
-        || className.find("duelliste") != std::string::npos
         || className.find("lanceur de dagues") != std::string::npos)
     {
-        return 112;
+        return 116;
+    }
+
+    if (className.find("duelliste") != std::string::npos)
+    {
+        return 108;
     }
 
     if (className.find("berserker") != std::string::npos
@@ -275,6 +279,13 @@ int CombatClassSystem::getOutgoingFlatBonus(const Entity& entity)
     if (className.find("arbal") != std::string::npos || className.find("tireur") != std::string::npos)
     {
         return 4;
+    }
+
+    if (className.find("assassin") != std::string::npos
+        || className.find("ombrelame") != std::string::npos
+        || className.find("lanceur de dagues") != std::string::npos)
+    {
+        return 3;
     }
 
     if (className.find("moine") != std::string::npos
@@ -460,6 +471,10 @@ int CombatClassSystem::getWeaponHandlingAccuracyAdjustment(
 
     if (hasWeaponAffinity(entity, weaponType, weaponName))
     {
+        if (classContainsAny(className, {"assassin", "ombrelame", "lanceur de dagues"}))
+        {
+            return 18;
+        }
         if (classContainsAny(className, {"maître d'armes", "maitre d'armes", "duelliste", "tireur", "sabreur", "archer", "lancier"}))
         {
             return 16;
@@ -490,6 +505,10 @@ int CombatClassSystem::getWeaponHandlingDamagePercent(
 
     if (hasWeaponAffinity(entity, weaponType, weaponName))
     {
+        if (classContainsAny(className, {"assassin", "ombrelame", "lanceur de dagues"}))
+        {
+            return 110;
+        }
         if (classContainsAny(className, {"maître d'armes", "maitre d'armes", "briseur", "berserker", "faucheur", "tireur", "pyromancien", "mage-lame", "chevalier runique"}))
         {
             return 108;

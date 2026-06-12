@@ -1506,7 +1506,7 @@ namespace
             baseMonster.getHealingPotionCount(),
             baseMonster.getDamagePotionCount(),
             baseMonster.isInvocation(),
-            baseMonster.isElite() || targetLevel >= baseMonster.getLevel() + 5,
+            baseMonster.isElite(),
             !baseMonster.areStatsVisible() || targetLevel >= baseMonster.getLevel() + 8,
             baseMonster.isEvolved()
         );

@@ -4,7 +4,7 @@ Dinotofu is a C++17 RPG / arena game. The terminal version remains the stable fo
 
 ## Current version   
 
-- Current version: **V3.43.00**   
+- Current version: **V3.48.00**   
 - Strongly recommended character recreation baseline: **V3.00.00**   
 - Characters created before **V3.00.00** may still work, but recreating them is recommended to use the story foundation cleanly.   
 
@@ -36,7 +36,7 @@ Boss discovery follows an internal ordered progression without exposing the full
 
 ## Graphical interface   
 
-The graphical interface remains experimental but playable and mirrors the C++ engine without inventing hidden game logic. V3.43.00 cleans the Top 3 registry and expands guild/group systems: filtered main Top 3, advanced incident register for illegal requests and sanctions, guild mediator, probation, underground reputation, legal guided low-rank contracts, group rumors, local inn services and very rare temporary adventurer allies in PvE combat. Known group dossiers, relationship effects, partial mission results and previous delegated systems remain available. Very rare post-combat scavengers, route encounters, route choice, night road closure, schematic map, three permanent registers, independent municipal vaults, read-only remote vault consultation, automatic profiles, presets, focus mode, text silhouettes, loadouts, comparisons, markers, the previously-owned-only wishlist, Top 3 views, and information reliability remain available. Terminal mode remains the most reliable fallback: images are disabled, not toggleable, and never replace written information.   
+The graphical interface remains experimental but playable and mirrors the C++ engine without inventing hidden game logic. V3.48.00 keeps the GUI in safe mode and locks the official visual identity: Dinotofu logo, banner, intro/menu cover, and dedicated normal + terminal launcher/shortcut icons, with Windows/Linux installer paths checked. Parasite panels remain hidden, terminal text and numbered buttons remain the clear navigation source, and images never replace written information. Terminal mode remains the most reliable fallback: gameplay images are disabled and not toggleable there, while launchers/installers may use their dedicated icons.   
 
 ## Installing from a GitHub release   
 
@@ -57,6 +57,7 @@ On desktop Windows/Linux builds, the installer or launcher should create two cle
 - `src/`: C++ game source code;   
 - `include/`: C++ headers;   
 - `assets/config/`: reference JSON data;   
+- `assets/branding/`: official logo, banner, intro/menu cover and launcher/shortcut icons;   
 - `tools/gui/`: experimental graphical interface and local server;   
 - `tools/windows/` and `tools/linux/`: launchers/installers;   
 - `scripts/`: packaging, versioning, release, and validation scripts;   
@@ -88,17 +89,17 @@ Challenge number three: find a strategy that breaks the game, show it to me, and
 
 Play seriously, but not too seriously. Complain when needed, suggest ideas, insult bosses politely, and above all tell me what makes you want to launch another run. When you find an overpowered combination, I will probably deny panicking at the numbers, then claim it was an advanced balance test and everything was planned. That is false, but it sounds more professional.   
 
-When you become a legend in Dinotofu, congratulations. When you die to the first enemies, congratulations too, but differently. When you lose to a chest, a trap, or your own confidence, remember that the game does not judge you. I do a little, but affectionately.
+When you become a legend in Dinotofu, congratulations. When you die to the first enemies, congratulations too, but differently. When you lose to a chest, a trap, or your own confidence, remember that the game does not judge you. I do a little, but affectionately.   
 
-## V3.30.00 note — routes and equipment weight
+## V3.30.00 note — routes and equipment weight   
 
-- Cities now have distances between each other, distances toward biomes, and access requirements based on level or defeated bosses.
-- Vaults remain independent per city: travel changes the active town but does not merge contents.
-- The textual exploration map prepares future pixel-art backgrounds per biome, with unknown places shown as grey or foggy.
-- Weapons and armor now have light, medium, or heavy weight classes. Bonuses and tradeoffs are applied to combat, damage, and escape, with intentionally moderate penalties.
+- Cities now have distances between each other, distances toward biomes, and access requirements based on level or defeated bosses.   
+- Vaults remain independent per city: travel changes the active town but does not merge contents.   
+- The textual exploration map prepares future pixel-art backgrounds per biome, with unknown places shown as grey or foggy.   
+- Weapons and armor now have light, medium, or heavy weight classes. Bonuses and tradeoffs are applied to combat, damage, and escape, with intentionally moderate penalties.   
 
 
 
-## V3.31.00 note — city hubs and canonical journal
+## V3.31.00 note — city hubs and canonical journal   
 
-V3.31.00 turns the current city into a more structured hub: local buildings, contacts, lock states and future pixel-art hints now come from world rules instead of one fixed text list. City destinations expose structured GUI metadata for access, distance, travel time and future route costs. A saved canonical journal now records key world events such as places visited, routes taken and vault movements so later Top 3 screens can rely on engine data rather than parsed interface text.
+V3.31.00 turns the current city into a more structured hub: local buildings, contacts, lock states and future pixel-art hints now come from world rules instead of one fixed text list. City destinations expose structured GUI metadata for access, distance, travel time and future route costs. A saved canonical journal now records key world events such as places visited, routes taken and vault movements so later Top 3 screens can rely on engine data rather than parsed interface text.   

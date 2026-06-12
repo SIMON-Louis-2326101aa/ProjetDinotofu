@@ -1,0 +1,21 @@
+{
+  "version": "3.48.00",
+  "policy": "branding_active_gui_and_launchers_terminal_no_gameplay_images",
+  "notes": [
+    "Le logo Dinotofu avec la mascotte dino-tofu est l'identité officielle du jeu.",
+    "La bannière officielle représente le monde et ses aventuriers, sans remplacer les informations écrites.",
+    "Les icônes launcher_graphical et launcher_terminal servent aux raccourcis Windows/Linux.",
+    "Le terminal ne doit pas afficher d'images de gameplay ; les images restent un supplément visuel côté IG."
+  ],
+  "assets": {
+    "baseLogo": "assets/branding/dinotofu_logo.png",
+    "siteLogo": "assets/branding/dinotofu_site_logo.png",
+    "banner": "assets/branding/dinotofu_banner.png",
+    "introCover": "assets/branding/dinotofu_intro_cover.png",
+    "graphicalLauncherIconPng": "assets/branding/dinotofu_launcher_graphical.png",
+    "terminalLauncherIconPng": "assets/branding/dinotofu_launcher_terminal.png",
+    "graphicalLauncherIconIco": "assets/branding/dinotofu_launcher_graphical.ico",
+    "terminalLauncherIconIco": "assets/branding/dinotofu_launcher_terminal.ico",
+    "faviconIco": "assets/branding/dinotofu.ico"
+  }
+}

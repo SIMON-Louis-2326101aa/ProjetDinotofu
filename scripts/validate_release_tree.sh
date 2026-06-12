@@ -167,6 +167,9 @@ fi
 warn "Configs installateurs/release OK."
 warn "Launchers/installateurs OK."
 
+./scripts/validate_branding_assets.sh || fail "Contrôle branding invalide."
+warn "Branding officiel OK : assets et raccourcis vérifiés."
+
 # Private save/account folders.
 for private_path in saves accounts characters exported_accounts import_accounts; do
     [[ ! -e "${private_path}" ]] || fail "Dossier privé détecté : ${private_path}/"

@@ -115,6 +115,7 @@ private:
     void startNewStoryFromMenu();
     void continueStoryRoute();
     void openStoryChapterSelectionMenu();
+    void openStoryAccessMenu();
     void launchEphemeralSandboxCloneFromStory();
     void showStoryCompletionSandboxRule() const;
     // EN: launchChallengeBoard declares or implements a focused behavior used by this module.

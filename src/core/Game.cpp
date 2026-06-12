@@ -3247,7 +3247,7 @@ void Game::launchStoryModePlaceholder()
             1,
             "Continuer",
             storyStarted
-                ? "Lancer automatiquement la prochaine étape disponible de l'histoire."
+                ? "Lancer la prochaine étape disponible de l'histoire."
                 : "[◘ aucune histoire commencée pour ce personnage]",
             storyStarted,
             "story.continue"
@@ -3271,6 +3271,7 @@ void Game::launchStoryModePlaceholder()
         screen.addOption(4, "Infos : ville / PNJ / objectifs", "Lire les informations de contexte regroupées.", true, "story.info_group");
         screen.addOption(5, "Règles : histoire / bac à sable", "Reset, clone éphémère et bascule libre après fin d'histoire.", true, "story.rules_group");
         screen.addOption(6, "Bac à sable éphémère", "Créer un clone non sauvegardé pour jouer librement sans perturber l'histoire.", storyStarted, "story.ephemeral_sandbox");
+        screen.addOption(7, "Accès rapides histoire", "Ouvrir quêtes, PNJ, lieux, inventaire et état de progression depuis une seule page.", true, "story.access");
         addOutOfCombatUtilityOptions(screen, true, true);
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une entrée du mode histoire.");
@@ -3387,7 +3388,7 @@ void Game::launchStoryModePlaceholder()
                         "story.chapter_order_rules",
                         {
                             "Nouvelle histoire lance le vrai début : fumée blanche, forêt, aucun équipement.",
-                            "Continuer est volontairement l'option principale : il lance automatiquement la prochaine étape disponible.",
+                            "Continuer est volontairement l'option principale : il reprend la prochaine étape disponible.",
                             "Sélectionner le chapitre sert seulement à revoir/continuer un chapitre déjà débloqué.",
                             "Les chapitres non débloqués restent affichés comme ???? et ne sont pas sélectionnables."
                         },
@@ -3401,6 +3402,11 @@ void Game::launchStoryModePlaceholder()
         if (choice == 6)
         {
             launchEphemeralSandboxCloneFromStory();
+            continue;
+        }
+        if (choice == 7)
+        {
+            openStoryAccessMenu();
             continue;
         }
     }
@@ -3580,7 +3586,7 @@ void Game::openStoryChapterSelectionMenu()
             chapterFourUnlocked,
             "story.chapter_select.chapter_4"
         );
-        screen.addOption(6, "Règle d’ordre", "Rappelle que Continuer lance automatiquement la prochaine étape.", true, "story.chapter_select.rules");
+        screen.addOption(6, "Règle d’ordre", "Rappelle que Continuer reprend la prochaine étape.", true, "story.chapter_select.rules");
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis un chapitre débloqué.");
         Console::clear();
@@ -3652,9 +3658,121 @@ void Game::openStoryChapterSelectionMenu()
                 "story.chapter_select.rules",
                 {
                     "Nouvelle histoire lance le vrai début : fumée blanche, forêt, aucun équipement.",
-                    "Continuer ne demande pas de choisir un chapitre : il lance automatiquement la prochaine étape disponible.",
+                    "Continuer ne demande pas de choisir un chapitre : il reprend la prochaine étape disponible.",
                     "Sélectionner le chapitre sert seulement à revoir/continuer un chapitre déjà débloqué.",
                     "Les chapitres non débloqués restent affichés comme ???? et ne sont pas sélectionnables."
+                },
+                false
+            );
+            continue;
+        }
+    }
+}
+
+
+
+void Game::openStoryAccessMenu()
+{
+    bool menuOpen = true;
+    while (menuOpen)
+    {
+        QuestMenu::syncMainStoryQuests(mainPlayer);
+
+        MenuScreen screen("ACCÈS HISTOIRE", "story.access.menu");
+        screen.addSubtitle("Raccourcis utiles sans casser la route principale");
+        screen.addLine("Progression : " + mainPlayer.getStoryProgressLabel());
+        screen.addLine("Toutes les informations importantes restent écrites : les menus suivants ouvrent les vrais systèmes du jeu.");
+        screen.addBackOption();
+        screen.addOption(1, "Quête principale / journal", "Voir objectifs, quêtes prêtes à rendre et demandes liées à l'histoire.", true, "story.access.quests");
+        screen.addOption(2, "PNJ notables", "Parler à Mira, Orren, Lysa, Bram, Soryn et autres contacts connus.", true, "story.access.npcs");
+        screen.addOption(3, "Lieux, boutiques et services", "Ouvrir les endroits précis disponibles : ville, boutiques, forge, auberge, routes et services.", true, "story.access.locations");
+        screen.addOption(4, "Inventaire", "Vérifier équipement, consommables et objets liés à la route histoire.", true, "story.access.inventory");
+        screen.addOption(5, "État de progression", "Lire ce qui manque sans forcer de validation gratuite.", true, "story.access.progress");
+        screen.addOption(6, "Resynchroniser le journal", "Réaffiche les quêtes principales connues si un menu n'avait pas encore été ouvert.", true, "story.access.resync");
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis un accès histoire.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+        if (choice == 1)
+        {
+            QuestMenu::consultOnly(mainPlayer);
+            saveCurrentProgress("Histoire : quêtes consultées");
+            continue;
+        }
+        if (choice == 2)
+        {
+            QuestMenu::openNotableNpcMenu(mainPlayer);
+            saveCurrentProgress("Histoire : PNJ notables consultés");
+            continue;
+        }
+        if (choice == 3)
+        {
+            QuestMenu::openLocations(mainPlayer);
+            saveCurrentProgress("Histoire : lieux et services consultés");
+            continue;
+        }
+        if (choice == 4)
+        {
+            InventoryMenu::open(mainPlayer);
+            saveCurrentProgress("Histoire : inventaire consulté");
+            Console::clear();
+            continue;
+        }
+        if (choice == 5)
+        {
+            std::vector<std::string> lines;
+            lines.push_back("Progression actuelle : " + mainPlayer.getStoryProgressLabel());
+            lines.push_back("Chapitre maximum débloqué : " + std::to_string(StoryCampaign::maxUnlockedChapter(mainPlayer)) + ".");
+            lines.push_back("");
+            if (!mainPlayer.hasStoryModeStarted())
+            {
+                lines.push_back("Aucune histoire commencée : utilise Nouvelle histoire.");
+            }
+            else if (mainPlayer.getStoryStep() < 2 || mainPlayer.getInventory().getWeaponCount() <= 0)
+            {
+                lines.push_back("Prologue incomplet : récupère le kit de départ dans la fumée blanche.");
+            }
+            else if (mainPlayer.getStoryChapter() <= 1)
+            {
+                const std::vector<std::string> chapterLines = StoryCampaign::buildChapterOneProgressLines(mainPlayer);
+                lines.insert(lines.end(), chapterLines.begin(), chapterLines.end());
+                lines.push_back("");
+                lines.push_back("Raccourci conseillé : Accès histoire > PNJ notables pour parler aux référents, puis Quête principale / journal pour suivre les rendus.");
+            }
+            else if (mainPlayer.getStoryChapter() == 2)
+            {
+                const std::vector<std::string> chapterLines = StoryCampaign::buildChapterTwoProgressLines(mainPlayer);
+                lines.insert(lines.end(), chapterLines.begin(), chapterLines.end());
+                lines.push_back("");
+                lines.push_back("Raccourci conseillé : Accès histoire > Lieux, boutiques et services si une étape demande une route ou un service déjà débloqué.");
+            }
+            else if (mainPlayer.getStoryChapter() == 3)
+            {
+                lines.push_back("Chapitre 3 actif : utilise Continuer pour l'étape suivante, ou PNJ notables si une quête est prête à rendre.");
+            }
+            else
+            {
+                lines.push_back("Chapitre 4 actif : utilise Continuer pour l'enquête, ou PNJ notables / Quête principale si un rendu est demandé.");
+            }
+
+            MessageScreen::show("ÉTAT HISTOIRE", "story.access.progress.detail", lines, false);
+            continue;
+        }
+        if (choice == 6)
+        {
+            QuestMenu::syncMainStoryQuests(mainPlayer);
+            saveCurrentProgress("Histoire : journal resynchronisé");
+            MessageScreen::show(
+                "JOURNAL RESYNCHRONISÉ",
+                "story.access.resync.done",
+                {
+                    "Le journal histoire a été relu avec l'état réel du personnage.",
+                    "Aucune étape n'a été validée gratuitement.",
+                    "Les quêtes déjà terminées ou prêtes à rendre devraient maintenant apparaître dans les vrais menus concernés."
                 },
                 false
             );
@@ -3829,6 +3947,9 @@ void Game::playStoryChapterOne()
         );
         chapterMenu.addOption(4, "Retourner voir Mira", chapterReady ? "Notifier Mira que toutes les demandes principales sont terminées." : "Demander ce qui manque encore avant la suite.", true, "story.chapter_1.validate_mira");
         chapterMenu.addOption(5, "État de la ville", "Voir les boutiques, routes et systèmes encore limités par l'histoire.", true, "story.chapter_1.city_state");
+        chapterMenu.addOption(6, "Quête principale / journal", "Accéder directement au vrai menu des quêtes liées à l'histoire.", true, "story.chapter_1.quests");
+        chapterMenu.addOption(7, "PNJ notables", "Parler directement aux référents d'histoire sans repasser par le menu d'activité général.", true, "story.chapter_1.npcs");
+        chapterMenu.addOption(8, "Accès rapides histoire", "Regrouper quêtes, PNJ, lieux, inventaire et diagnostic histoire.", true, "story.chapter_1.access");
 
         const int chapterChoice = TerminalInterface::askMenuChoiceFromOptions(chapterMenu, "Choisis une action du chapitre 1.");
         Console::clear();
@@ -3952,6 +4073,23 @@ void Game::playStoryChapterOne()
         if (chapterChoice == 5)
         {
             MessageScreen::show("ÉTAT DE LA VILLE", "story.chapter_1.city_state", StoryCampaign::buildDevelopmentLines(mainPlayer), false);
+            continue;
+        }
+        if (chapterChoice == 6)
+        {
+            QuestMenu::consultOnly(mainPlayer);
+            saveCurrentProgress("Chapitre 1 : quêtes consultées");
+            continue;
+        }
+        if (chapterChoice == 7)
+        {
+            QuestMenu::openNotableNpcMenu(mainPlayer);
+            saveCurrentProgress("Chapitre 1 : PNJ notables consultés");
+            continue;
+        }
+        if (chapterChoice == 8)
+        {
+            openStoryAccessMenu();
             continue;
         }
     }
@@ -4143,6 +4281,7 @@ void Game::playStoryChapterTwo()
         chapterMenu.addOption(4, chapterTwoActionLabel, chapterTwoActionDetail, true, "story.chapter_2.action");
         chapterMenu.addOption(5, "Ouvrir le menu Quêtes", "Accéder à Quête principale et au journal.", true, "story.chapter_2.main_quests");
         chapterMenu.addOption(6, "PNJ notables", "Parler à Mira, Orren, Soryn ou aux autres référents actuellement présents.", true, "story.chapter_2.npcs");
+        chapterMenu.addOption(7, "Accès rapides histoire", "Regrouper quêtes, PNJ, lieux, inventaire et diagnostic histoire.", true, "story.chapter_2.access");
 
         const int chapterChoice = TerminalInterface::askMenuChoiceFromOptions(chapterMenu, "Choisis une action du chapitre 2.");
         Console::clear();
@@ -5140,6 +5279,11 @@ void Game::playStoryChapterTwo()
             saveCurrentProgress("Chapitre 2 : discussion avec les PNJ notables");
             continue;
         }
+        if (chapterChoice == 7)
+        {
+            openStoryAccessMenu();
+            continue;
+        }
     }
 }
 
@@ -5211,6 +5355,7 @@ void Game::playStoryChapterThree()
         chapterMenu.addOption(4, step >= 9 ? "Lire le bilan du chapitre" : "Effectuer l'étape actuelle", step >= 9 ? "Relire les conséquences déjà validées." : "Faire progresser uniquement l'objectif actuellement disponible.", true, "story.chapter_3.current_action");
         chapterMenu.addOption(5, "Ouvrir les quêtes", "Inspecter ou rendre les quêtes principales prêtes.", true, "story.chapter_3.quests");
         chapterMenu.addOption(6, "Parler aux PNJ notables", "Retrouver les personnes déjà présentes dans le monde.", true, "story.chapter_3.npcs");
+        chapterMenu.addOption(7, "Accès rapides histoire", "Regrouper quêtes, PNJ, lieux, inventaire et diagnostic histoire.", true, "story.chapter_3.access");
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(chapterMenu, "Choisis une action du chapitre 3.");
         Console::clear();
@@ -5246,6 +5391,11 @@ void Game::playStoryChapterThree()
             QuestMenu::openNotableNpcMenu(mainPlayer);
             QuestMenu::syncMainStoryQuests(mainPlayer);
             saveCurrentProgress("Chapitre 3 : PNJ notables consultés");
+            continue;
+        }
+        if (choice == 7)
+        {
+            openStoryAccessMenu();
             continue;
         }
         if (choice != 4)
@@ -5511,6 +5661,7 @@ void Game::playStoryChapterFour()
         chapterMenu.addOption(4, step >= 9 ? "Relire le bilan de la deuxième phase" : "Effectuer l'étape actuelle", step >= 9 ? "Revoir les preuves et la menace identifiée." : "Faire avancer l'enquête d'une scène.", true, "story.chapter_4.current_action");
         chapterMenu.addOption(5, "Ouvrir les quêtes", "Consulter les quêtes et conséquences déjà actives.", true, "story.chapter_4.quests");
         chapterMenu.addOption(6, "Parler aux PNJ notables", "Observer les réactions durables du chapitre 3 avant de repartir.", true, "story.chapter_4.npcs");
+        chapterMenu.addOption(7, "Accès rapides histoire", "Regrouper quêtes, PNJ, lieux, inventaire et diagnostic histoire.", true, "story.chapter_4.access");
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(chapterMenu, "Choisis une action du chapitre 4.");
         Console::clear();
@@ -5540,6 +5691,11 @@ void Game::playStoryChapterFour()
         {
             QuestMenu::openNotableNpcMenu(mainPlayer);
             saveCurrentProgress("Chapitre 4 : PNJ notables consultés");
+            continue;
+        }
+        if (choice == 7)
+        {
+            openStoryAccessMenu();
             continue;
         }
         if (choice != 4) continue;

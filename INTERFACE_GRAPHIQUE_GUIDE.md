@@ -306,17 +306,25 @@ La version terminal reste un moyen de secours. Toute fonctionnalité jouable dan
 - Les explorations pourront avoir de petites animations dont la durée dépend de la longueur choisie, et certaines quêtes ou événements pourront afficher une illustration dédiée.   
 - Rien de tout cela ne doit être simulé en terminal : sans asset validé, le terminal affiche seulement une description courte et utile.   
 
-## V3.30.00 — préparation carte, villes et poids d'équipement
+## V3.30.00 — préparation carte, villes et poids d'équipement   
 
-- L'IG devra plus tard représenter chaque ville par une image cliquable : bâtiments, guilde, boutiques, coffre, porte de sortie et arène urbaine.
-- La porte des remparts déclenchera la carte d'exploration ; l'arène déclenchera les combats uniques ou défis de ville.
-- La carte d'exploration devra afficher plusieurs biomes et lieux cliquables. Les lieux inconnus seront grisés, enfumés ou partiellement masqués.
-- Les animations d'exploration doivent être séparées : d'abord le trajet depuis la ville ou le lieu de départ, puis l'animation dans le lieu choisi.
-- Chaque trajet et chaque lieu doivent utiliser un fond cohérent avec leur biome afin d'améliorer l'immersion.
-- Les armes et armures affichent désormais leur poids : léger, moyen ou lourd. L'IG doit présenter les contreparties avec des termes simples, sans noyer le joueur dans les calculs.
+- L'IG devra plus tard représenter chaque ville par une image cliquable : bâtiments, guilde, boutiques, coffre, porte de sortie et arène urbaine.   
+- La porte des remparts déclenchera la carte d'exploration ; l'arène déclenchera les combats uniques ou défis de ville.   
+- La carte d'exploration devra afficher plusieurs biomes et lieux cliquables. Les lieux inconnus seront grisés, enfumés ou partiellement masqués.   
+- Les animations d'exploration doivent être séparées : d'abord le trajet depuis la ville ou le lieu de départ, puis l'animation dans le lieu choisi.   
+- Chaque trajet et chaque lieu doivent utiliser un fond cohérent avec leur biome afin d'améliorer l'immersion.   
+- Les armes et armures affichent désormais leur poids : léger, moyen ou lourd. L'IG doit présenter les contreparties avec des termes simples, sans noyer le joueur dans les calculs.   
 
-## V3.41.00 — pont vers les pixel-arts
+## V3.41.00 — pont vers les pixel-arts   
 
-L'IG affiche maintenant un panneau de préparation visuelle sur les écrans de ville, carte, coffre et micro-quêtes. Ce panneau ne remplace pas les futurs assets : il sert à réserver les emplacements de l'interface, à montrer le flux Ville → Porte → Trajet → Biome → Lieu, et à éviter d'ajouter de fausses images avant la bible pixel-art.
+L'IG affiche maintenant un panneau de préparation visuelle sur les écrans de ville, carte, coffre et micro-quêtes. Ce panneau ne remplace pas les futurs assets : il sert à réserver les emplacements de l'interface, à montrer le flux Ville → Porte → Trajet → Biome → Lieu, et à éviter d'ajouter de fausses images avant la bible pixel-art.   
 
-Les blocs peuvent ensuite devenir : bâtiments cliquables, zones enfumées, fonds de trajet, fonds de lieu, événements illustrés, micro-quêtes et panneaux de ville.
+Les blocs peuvent ensuite devenir : bâtiments cliquables, zones enfumées, fonds de trajet, fonds de lieu, événements illustrés, micro-quêtes et panneaux de ville.   
+
+## V3.47.00 — Branding actif validé   
+
+- L’IG conserve le mode sûr V3.46 : pas de panneaux parasites, pas de workbench d’objets permanent, pas de placeholders pixel-art imposés partout.   
+- Le logo officiel Dinotofu est affiché dans l’en-tête IG.   
+- La bannière validée est utilisée comme fond visuel de l’interface, avec une couche sombre pour garder le texte lisible.   
+- Les images de branding sont actives, mais elles ne remplacent aucun choix, prix, danger, condition, texte de quête ou information de combat.   
+- Les icônes de lancement normal et terminal sont rangées dans `assets/branding/` pour les raccourcis Windows/Linux.   

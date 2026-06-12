@@ -34,7 +34,7 @@ namespace
     {
         static const std::vector<ClassTemplate> classes = {
             {"Chevalier", 200, 5, 20, 30, 4, 3, "équilibré, simple et fiable", ClassCategory::Melee},
-            {"Assassin", 150, 11, 31, 48, 6, 2, "rapide, fragile, gros critique", ClassCategory::Melee},
+            {"Assassin", 150, 13, 34, 58, 6, 3, "rapide, fragile, critique vraiment dangereux", ClassCategory::Melee},
             {"Colosse", 400, 4, 10, 18, 2, 1, "très tanky, lent, lourd", ClassCategory::Melee},
             {"Barbare", 260, 12, 28, 38, 3, 3, "brutal, violent, peu subtil", ClassCategory::Melee},
             {"Guerrier", 230, 9, 24, 34, 4, 3, "maîtrise des armes", ClassCategory::Melee},
@@ -61,7 +61,7 @@ namespace
             {"Rôdeur", 180, 9, 27, 40, 5, 3, "distance, pistage et survie", ClassCategory::Distance},
             {"Arbalétrier", 175, 12, 32, 46, 3, 3, "tir lourd, plus lent mais puissant", ClassCategory::Distance},
             {"Chasseur", 190, 9, 24, 37, 4, 3, "traque, pièges et survie", ClassCategory::Distance},
-            {"Lanceur de dagues", 150, 11, 26, 44, 5, 2, "distance courte, multi-projectiles", ClassCategory::Distance},
+            {"Lanceur de dagues", 150, 12, 28, 50, 5, 3, "distance courte, multi-projectiles et critiques nets", ClassCategory::Distance},
             {"Tireur", 165, 11, 31, 45, 3, 3, "visée, armes de trait et précision", ClassCategory::Distance},
             {"Pisteur", 175, 10, 28, 41, 5, 3, "lecture de traces, chasse et survie", ClassCategory::Distance},
             {"Frondeur tactique", 155, 9, 25, 39, 5, 2, "harcèlement, contrôle léger et économie de munitions", ClassCategory::Distance},
@@ -139,7 +139,7 @@ namespace
 
             {"Druide", 190, 7, 20, 30, 5, 3, "nature, survie et magie sauvage", ClassCategory::Hybrid},
             {"Chevalier runique", 240, 8, 26, 39, 4, 4, "arme lourde et magie gravée", ClassCategory::Hybrid},
-            {"Ombrelame", 160, 12, 31, 50, 4, 3, "assassin magique, très agressif", ClassCategory::Hybrid},
+            {"Ombrelame", 160, 13, 33, 56, 4, 3, "assassin magique, critique sombre et agressif", ClassCategory::Hybrid},
             {"Mage-lame", 180, 9, 28, 43, 4, 4, "mélange arme réelle et magie", ClassCategory::Hybrid},
             {"Shaman", 180, 7, 24, 36, 5, 4, "esprits, rituels et soutien", ClassCategory::Hybrid},
             {"Chevalier draconique", 250, 10, 29, 43, 4, 3, "écailles, arme lourde et souffle mineur", ClassCategory::Hybrid},
@@ -448,7 +448,7 @@ PlayerClass ClassCatalog::createEvolvedClassFromClass(const std::string& current
         || normalizedName == normalizeClassName("Classe Légère")
         || normalizedName == normalizeClassName("Roublard"))
     {
-        return PlayerClass("Assassin éveillé", 210, 13, 34, 55, 6, 2);
+        return PlayerClass("Assassin éveillé", 210, 15, 38, 66, 6, 3);
     }
 
     if (normalizedName == normalizeClassName("Colosse")

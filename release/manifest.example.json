@@ -1,8 +1,8 @@
 {
   "name": "Dinotofu",
-  "version": "3.41.00",
-  "releaseTag": "v3.41.00",
+  "version": "3.48.00",
+  "releaseTag": "v3.48.00",
   "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
   "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "Adds V3.41 city hub routing, route micro-quest resolution, inn fatigue hints, city-vault material transfers, guild council/pardon, IG pixel-art bridge panels, and economy-cost centralization for new services."
+  "notes": "Polishes official branding integration: confirms logo/banner/cover/launcher assets, validates Windows and Linux shortcut icon references, and keeps images active only as GUI/branding supplements."
 }

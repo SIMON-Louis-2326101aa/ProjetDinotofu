@@ -17,11 +17,25 @@ namespace
     // FR: evolvedMonsterChanceForPlayerLevel déclare ou implémente un comportement précis utilisé par ce module.
     int evolvedMonsterChanceForPlayerLevel(int playerLevel)
     {
-        if (playerLevel <= 2) return 2;
-        if (playerLevel <= 4) return 5;
-        if (playerLevel <= 7) return 9;
-        if (playerLevel <= 12) return 14;
-        return 20;
+        if (playerLevel <= 2) return 1;
+        if (playerLevel <= 4) return 3;
+        if (playerLevel <= 7) return 5;
+        if (playerLevel <= 12) return 8;
+        if (playerLevel <= 20) return 10;
+        return 12;
+    }
+
+    int evolvedMonsterChanceCapForDifficulty(DifficultyMode difficulty)
+    {
+        switch (difficulty)
+        {
+            case DifficultyMode::Easy: return 6;
+            case DifficultyMode::Hard: return 15;
+            case DifficultyMode::Nightmare: return 18;
+            case DifficultyMode::Lethal: return 22;
+            case DifficultyMode::Normal:
+            default: return 12;
+        }
     }
 
     bool shouldCreateEvolvedMonster(
@@ -36,15 +50,15 @@ namespace
 
         if (monsterLevel > player.getLevel())
         {
-            chance += 2;
+            chance += 1;
         }
 
         if (player.getLevel() >= 10)
         {
-            chance += 3;
+            chance += 1;
         }
 
-        chance = std::max(0, std::min(chance, 30));
+        chance = std::max(0, std::min(chance, evolvedMonsterChanceCapForDifficulty(difficulty)));
 
         return random.between(1, 100) <= chance;
     }

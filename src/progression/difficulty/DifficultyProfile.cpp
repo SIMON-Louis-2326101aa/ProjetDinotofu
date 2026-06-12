@@ -24,7 +24,7 @@ DifficultyProfile DifficultyProfile::forMode(DifficultyMode difficulty)
 
         case DifficultyMode::Hard:
             return {
-                -8, 112, 115, 6,
+                -8, 112, 115, 3,
                 35, 20, 115, 90,
                 55, 15,
                 20, 20, 15, 30,

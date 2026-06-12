@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ProjetDinotofu Launcher - Interface graphique experimentale</title>
+  <title>Dinotofu - Interface graphique</title>
+  <link rel="icon" type="image/x-icon" href="../../assets/branding/dinotofu.ico" />
+  <link rel="apple-touch-icon" href="../../assets/branding/dinotofu_site_logo_512.png" />
   <style>
     :root {
       --bg: #090b10;
@@ -27,8 +29,10 @@
       min-height: 100vh;
       color: var(--text);
       background:
+        linear-gradient(rgba(9, 11, 16, 0.72), rgba(9, 11, 16, 0.88)),
         radial-gradient(circle at 10% 5%, rgba(255, 179, 71, 0.16), transparent 28%),
         radial-gradient(circle at 90% 10%, rgba(123, 183, 255, 0.16), transparent 26%),
+        url("../../assets/branding/dinotofu_banner_web.png") center top / cover fixed no-repeat,
         linear-gradient(135deg, #101522, var(--bg) 56%, #050609);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
@@ -37,10 +41,35 @@
       position: sticky;
       top: 0;
       z-index: 10;
-      padding: 1rem clamp(1rem, 3vw, 2rem);
-      border-bottom: 1px solid var(--line);
-      background: rgba(9, 11, 16, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.85rem clamp(1rem, 3vw, 2rem);
+      border-bottom: 1px solid rgba(255,255,255,0.10);
+      background:
+        linear-gradient(90deg, rgba(9, 11, 16, 0.96), rgba(9, 11, 16, 0.82)),
+        url("../../assets/branding/dinotofu_banner_web.png") center 42% / cover no-repeat;
       backdrop-filter: blur(16px);
+    }
+
+    .brand-lockup { display: flex; align-items: center; gap: 0.85rem; min-width: 0; }
+    .brand-logo {
+      width: clamp(54px, 7vw, 78px);
+      height: clamp(54px, 7vw, 78px);
+      border-radius: 18px;
+      object-fit: cover;
+      border: 1px solid rgba(255, 179, 71, 0.36);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.32);
+      background: rgba(0,0,0,0.32);
+      flex: 0 0 auto;
+    }
+    .brand-text { min-width: 0; }
+    .brand-text h1 { overflow-wrap: anywhere; }
+    .brand-assets-note {
+      color: rgba(245,247,255,0.72);
+      font-size: 0.78rem;
+      margin: 0.25rem 0 0;
     }
 
     h1, h2, h3, p { margin-top: 0; }
@@ -1423,9 +1452,13 @@
 </head>
 <body>
   <header class="game-header">
-    <div>
-      <h1>Dinotofu — interface graphique</h1>
-      <p class="subtitle">Toute l’aventure du terminal, présentée dans une interface lisible et interactive.</p>
+    <div class="brand-lockup">
+      <img class="brand-logo" src="../../assets/branding/dinotofu_site_logo_512.png" alt="Logo Dinotofu" loading="eager" />
+      <div class="brand-text">
+        <h1>Dinotofu — interface graphique</h1>
+        <p class="subtitle">Toute l’aventure du terminal, présentée dans une interface lisible et interactive.</p>
+        <p class="brand-assets-note">Identité visuelle officielle active : logo, bannière et icônes de raccourcis. Les textes restent la source complète des informations.</p>
+      </div>
     </div>
     <span id="versionBadge" class="badge">Dinotofu V?</span>
   </header>
@@ -2089,6 +2122,21 @@
       return parsed;
     }
 
+    function deduplicateMenuActions(actions) {
+      const clean = Array.isArray(actions) ? actions.filter(Boolean) : [];
+      const kept = [];
+      const seen = new Set();
+      for (const action of clean) {
+        const number = String(action.number ?? '').trim();
+        const normalizedLabel = normalizeSearchText(action.actionDisplayLabel || action.label || action.actionId || '');
+        const key = number !== '' ? `number:${number}` : `label:${normalizedLabel}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        kept.push(action);
+      }
+      return kept;
+    }
+
     function getMenuActionsWithFallback(menu = state.lastMenu) {
       if (!menu) return [];
       const baseActions = Array.isArray(menu.actions) ? menu.actions.filter(Boolean) : [];
@@ -2128,7 +2176,7 @@
       const afterValidNumbers = new Set([...existingNumbers, ...fallbackFromValidChoices.map(action => String(action.number ?? ''))]);
       const fallbackFromText = baseChoices.length > 0 ? [] : parseChoiceActionsFromText(menu, afterValidNumbers);
 
-      return [...baseActions, ...fallbackFromValidChoices, ...fallbackFromText];
+      return deduplicateMenuActions([...baseActions, ...fallbackFromValidChoices, ...fallbackFromText]);
     }
 
     function findMenuActionByNumber(number) {
@@ -3890,27 +3938,13 @@
     }
 
     function renderItemCards(snapshot) {
-      const allCards = Array.isArray(snapshot?.itemCards) ? snapshot.itemCards : [];
-      if (!allCards.length) return '';
-      const cards = filterCardsForDesktop(allCards);
-      const selected = currentSelectedCard(snapshot, cards.length ? cards : allCards);
-      if (selected && !state.selectedItemKey) state.selectedItemKey = itemCardStorageIdentity(selected);
-      const groups = [];
-      for (const card of cards) {
-        const section = card.section || 'Général';
-        let group = groups.find(item => item.section === section);
-        if (!group) { group = { section, cards: [] }; groups.push(group); }
-        group.cards.push(card);
-      }
-      for (const group of groups) {
-        group.cards = sortDesktopCards(group.cards);
-      }
-      return `${renderDesktopToolbar(snapshot, allCards, cards)}
-        ${renderMenuFilterNotice(allCards.length, cards.length, 'article')}
-        <div class="desktop-workbench">
-          <div class="desktop-item-list">${groups.length ? groups.map(group => `<section class="item-section"><div class="item-section-title">${escapeHtml(group.section)} · ${escapeHtml(group.cards.length)} article(s)</div><div class="item-grid" ${choiceGridStyle(Math.min(group.cards.length, 2))}>${group.cards.map(renderItemCard).join('')}</div></section>`).join('') : '<div class="empty">Aucun article ne correspond à ces filtres.</div>'}</div>
-          <aside class="desktop-detail-panel" data-item-detail-panel>${renderItemDetailPanel(snapshot, selected)}</aside>
-        </div>`;
+      // Vue sûre V3.46 : les itemCards étaient des doublons visuels des choix
+      // et affichaient trop souvent une barre de recherche/filtres hors contexte
+      // (création, difficulté, notes, écrans non-inventaire). On les masque tant
+      // que la refonte IG complète n'est pas vérifiée écran par écran. Les infos
+      // restent dans les lignes terminal et les vrais choix restent cliquables.
+      void snapshot;
+      return '';
     }
 
     function renderDeathRuleCoach(snapshot) {
@@ -4021,9 +4055,8 @@
           ${body}
         </section>`;
 
-      const isAccount = id.includes('save account') || id.includes('compte') || id.includes('account');
       const isCreation = id.includes('character creation') || id.includes('creation personnage') || id.includes('creation race') || id.includes('creation class') || id.includes('creation difficulty') || id.includes('creation identity');
-      if (isAccount || isCreation) {
+      if (isCreation) {
         const steps = [
           ['Compte', ['account', 'compte', 'save account']],
           ['Identité', ['identity', 'identite', 'name', 'nom']],
@@ -4035,7 +4068,7 @@
         steps.forEach(([, tokens], index) => { if (tokens.some(token => id.includes(token))) current = Math.max(current, index); });
         if (isCreation && current === 0) current = 1;
         const body = `<div class="experience-stepper">${steps.map(([label], index) => `<div class="experience-step ${index < current ? 'done' : (index === current ? 'current' : 'locked')}">${index < current ? '✓ ' : ''}${escapeHtml(label)}</div>`).join('')}</div>`;
-        return shell('Création lisible étape par étape', 'L’IG montre où tu en es sans retirer les descriptions, restrictions ou confirmations du terminal.', isAccount && !isCreation ? 'Profils' : 'Personnage', body);
+        return shell('Création lisible étape par étape', 'L’IG montre où tu en es sans retirer les descriptions, restrictions ou confirmations du terminal.', 'Personnage', body);
       }
 
       if (id.includes('inventory') || id.includes('inventaire') || id.includes('equipment') || id.includes('equipement') || id.includes('potion')) {
@@ -4422,85 +4455,20 @@
 
 
     function renderPixelArtPreparationBridge(snapshot) {
-      if (!snapshot || snapshot.type !== 'menu') return '';
-      const id = normalizeSearchText(`${snapshot.screenId || ''} ${snapshot.title || ''}`);
-      const text = normalizeSearchText(collectSnapshotText(snapshot));
-      const isCity = /city_hub|city_travel|ville|relais des routes|auberge|coffre municipal|bureau des mandats/.test(id + ' ' + text);
-      const isMap = /exploration_map|schematic_map|carte|biome|route/.test(id + ' ' + text);
-      const isVault = /city_vault|transport de coffre|coffre municipal/.test(id + ' ' + text);
-      const isMicroQuest = /micro_quetes|micro-quete|micro-quête|quete de route|quête de route/.test(id + ' ' + text);
-      if (!isCity && !isMap && !isVault && !isMicroQuest) return '';
-
-      const cards = [];
-      if (isCity) {
-        cards.push(['Guilde', 'Accueil, sanctions, contrats, médiateur.']);
-        cards.push(['Auberge', 'Repos, repas, sécurité, fatigue.']);
-        cards.push(['Coffre', 'Stockage local et transport encadré.']);
-        cards.push(['Marché', 'Stocks locaux, taxe, négociation future.']);
-        cards.push(['Porte', 'Départ vers routes et biomes.']);
-        cards.push(['Arène', 'Combat unique / entraînement.']);
-        cards.push(['Archives', 'Lore, cartes, rumeurs, connaissances.']);
-      }
-      if (isMap) {
-        cards.push(['Biome connu', 'Fond visuel selon la zone, dangers lisibles.']);
-        cards.push(['Lieu cliquable', 'Point d’entrée vers exploration ou quête.']);
-        cards.push(['Zone inconnue', 'Affichage grisé / enfumé avant découverte.', true]);
-        cards.push(['Route', 'Animation trajet puis animation du lieu.']);
-      }
-      if (isVault) cards.push(['Transport coffre', 'Envoi de piles seulement, retrait distant interdit.']);
-      if (isMicroQuest) cards.push(['Micro-quête', 'Petit événement rare, résolution légère, pas de spam.']);
-
-      const unique = [];
-      const seen = new Set();
-      for (const card of cards) {
-        const key = card[0].toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        unique.push(card);
-      }
-
-      const routeStrip = isMap || isCity ? `
-        <div class="pixel-route-strip" aria-label="Prévisualisation non définitive du flux visuel">
-          <span class="pixel-route-node">Ville</span><span class="pixel-route-line"></span><span class="pixel-route-node">Porte</span><span class="pixel-route-line"></span><span class="pixel-route-node">Trajet</span><span class="pixel-route-line"></span><span class="pixel-route-node">Biome</span><span class="pixel-route-line"></span><span class="pixel-route-node">Lieu</span>
-        </div>` : '';
-
-      return `<section class="pixel-bridge-panel">
-        <div class="pixel-bridge-head"><div><strong>Pont IG → futurs pixel-arts</strong><span>Wireframe joueur : aucun faux asset n’est inventé, on réserve seulement les emplacements qui deviendront cliquables.</span></div><span class="pixel-bridge-badge">préparation V3.41</span></div>
-        ${routeStrip}
-        <div class="pixel-wire-grid">${unique.map(([title, detail, locked]) => `<div class="pixel-wire-card ${locked ? 'locked' : ''}"><strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span></div>`).join('')}</div>
-        <div class="pixel-asset-note"><span>À produire plus tard : background ville, bâtiments séparés, porte/remparts, arène, carte de biomes, fonds de trajet, fonds de lieu et petites illustrations d’événements.</span><span>Règle anti-surcharge : ces blocs pourront être masqués via les profils d’affichage quand les vrais assets arriveront.</span></div>
-      </section>`;
+      // Vue sûre V3.46 : les emplacements pixel-art ne doivent pas polluer la
+      // navigation. Les images sont un supplément optionnel ; elles reviendront
+      // seulement quand chaque écran aura été contrôlé.
+      void snapshot;
+      return '';
     }
 
     function renderVisualLayer(snapshot) {
-      if (!snapshot || snapshot.type !== 'menu') return '';
-      const parts = [
-        renderLootRecap(snapshot),
-        renderInventoryLoadoutVisual(snapshot),
-        renderRegistryProgressVisual(snapshot),
-        renderEquipmentComparisonVisual(snapshot),
-        renderExplorationTimeline(snapshot),
-        renderKnowledgeReliability(snapshot),
-        renderTopThreeStatistics(snapshot),
-        renderActivityHistory(snapshot),
-        renderActionPreview(snapshot),
-        renderDeathRuleCoach(snapshot),
-        renderInfoCards(snapshot),
-        renderItemCards(snapshot),
-        renderFocusCards(snapshot),
-        renderNoticeCards(snapshot)
-      ].filter(Boolean);
-      if (!parts.length) return '';
-      return `
-        <section class="specialized-panel smart-surface">
-          <div class="specialized-head">
-            <div>
-              <div class="specialized-title">Lecture graphique</div>
-              <div class="specialized-hint">Les cartes ci-dessous reprennent les infos du terminal en version plus rapide à lire et souvent cliquable.</div>
-            </div>
-          </div>
-          <div class="specialized-content">${parts.join('')}</div>
-        </section>`;
+      // Vue sûre V3.46 : la lecture graphique est désactivée. Elle générait des
+      // panneaux incomplets, des doublons et des cartes parasites. L'IG doit
+      // d'abord afficher fidèlement le texte + tous les choix, sans interpréter
+      // ni remplacer les informations du terminal.
+      void snapshot;
+      return '';
     }
 
     function shouldHideSpecializedPanel(snapshot) {
@@ -4730,7 +4698,7 @@
 
     function renderActionsByGroup(actions) {
       if (!Array.isArray(actions) || actions.length === 0) return '<div class="empty">Aucun choix disponible.</div>';
-      const availableActions = actions.filter(action => action && action.enabled !== false && !isUtilityAction(action) && action.role !== 'pagination');
+      const availableActions = deduplicateMenuActions(actions).filter(action => action && action.enabled !== false && !isUtilityAction(action) && action.role !== 'pagination');
       if (!availableActions.length) return '<div class="empty">Aucun choix disponible pour cet écran.</div>';
 
       const sortedActions = availableActions
@@ -4785,7 +4753,7 @@
 
     function renderMainViewActions(snapshot) {
       if (!snapshot || snapshot.type !== 'menu') return '';
-      const actions = getMenuActionsWithFallback(snapshot).filter(action => !isUtilityAction(action));
+      const actions = deduplicateMenuActions(getMenuActionsWithFallback(snapshot)).filter(action => !isUtilityAction(action));
       if (snapshot.inputMode === 'continue' || (snapshot.acceptsEmptyInput === true && actions.length === 0)) return renderContinueControl(snapshot);
       if (['text', 'quantity', 'confirmation'].includes(snapshot.inputMode || '')) {
         const navigation = renderNavigationOnlyActions(actions);
@@ -4812,7 +4780,7 @@
     }
 
     function renderNavigationOnlyActions(actions) {
-      const navigation = Array.isArray(actions) ? actions.filter(action => action.role !== 'pagination' && ((action.role || '') === 'back' || (action.group || '') === 'navigation')) : [];
+      const navigation = Array.isArray(actions) ? deduplicateMenuActions(actions).filter(action => action.role !== 'pagination' && ((action.role || '') === 'back' || (action.group || '') === 'navigation')) : [];
       if (!navigation.length) return '';
       const backActions = navigation.filter(isBackAction);
       const otherNavigation = navigation.filter(action => !isBackAction(action));

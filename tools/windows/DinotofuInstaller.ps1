@@ -514,10 +514,14 @@ if (Test-Path $launcherPath) {
     $desktopPath = [Environment]::GetFolderPath("Desktop")
     $shortcutGuiPath = Join-Path $desktopPath "ProjetDinotofu Launcher.lnk"
     $shortcutTerminalPath = Join-Path $desktopPath "ProjetDinotofu Launcher Terminal version.lnk"
-    $iconPath = Join-Path $InstallDir "Dinotofu.exe"
+    $fallbackIconPath = Join-Path $InstallDir "Dinotofu.exe"
+    $guiIconPath = Join-Path $InstallDir "assets\branding\dinotofu_launcher_graphical.ico"
+    $terminalIconPath = Join-Path $InstallDir "assets\branding\dinotofu_launcher_terminal.ico"
+    if (-not (Test-Path $guiIconPath)) { $guiIconPath = $fallbackIconPath }
+    if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
 
-    Create-DesktopShortcut -TargetPath $normalLauncherEntry -ShortcutPath $shortcutGuiPath -IconPath $iconPath
-    Create-DesktopShortcut -TargetPath $terminalLauncherEntry -ShortcutPath $shortcutTerminalPath -IconPath $iconPath
+    Create-DesktopShortcut -TargetPath $normalLauncherEntry -ShortcutPath $shortcutGuiPath -IconPath $guiIconPath
+    Create-DesktopShortcut -TargetPath $terminalLauncherEntry -ShortcutPath $shortcutTerminalPath -IconPath $terminalIconPath
 
     $guiShortcutOk = Test-ShortcutCreated -ShortcutPath $shortcutGuiPath -ExpectedTargetFile "Lancer-Dinotofu.vbs"
     $terminalShortcutOk = Test-ShortcutCreated -ShortcutPath $shortcutTerminalPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd"

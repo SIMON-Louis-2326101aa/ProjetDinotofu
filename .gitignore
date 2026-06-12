@@ -1,0 +1,93 @@
+# =========================
+# Build / compilation
+# =========================
+build/
+output/
+*.o
+*.d
+*.out
+*.exe
+Dinotofu
+dinotofu
+Dinotofu.exe
+dinotofu.exe
+
+# =========================
+# CMake éventuel plus tard
+# =========================
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile.cmake
+
+# =========================
+# Saves / comptes / personnages privés
+# =========================
+assets/saves/**
+!assets/saves/
+!assets/saves/**/
+!assets/saves/**/.gitkeep
+
+saves/**
+accounts/**
+characters/**
+exported_accounts/**
+import_accounts/**
+
+*.save
+*.sav
+*.autosave
+*.dinotofu_account
+*_dinotofu_account/
+
+# =========================
+# Logs / debug
+# =========================
+*.log
+*.tmp
+gui_debug/
+
+# =========================
+# Linux
+# =========================
+*~
+.core
+*.swp
+*.swo
+
+# =========================
+# VS Code
+# =========================
+.vscode/
+
+# =========================
+# Code::Blocks / autres IDE C++
+# =========================
+*.cbp
+*.depend
+*.layout
+
+# =========================
+# CLion / JetBrains
+# =========================
+.idea/
+
+# =========================
+# MacOS
+# =========================
+.DS_Store
+
+# =========================
+# Windows
+# =========================
+Thumbs.db
+desktop.ini
+
+# =========================
+# Release packaging local
+# =========================
+release_packages/
+
+# Python temporary files
+__pycache__/
+*.pyc

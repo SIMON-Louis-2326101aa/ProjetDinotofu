@@ -11371,13 +11371,26 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
     int explorationEventCooldownDays(const std::string& key)
     {
         if (key == "main_fake_coins") return 6;
-        if (key.find("main_miniboss_") == 0) return 4;
+        if (key.find("main_miniboss_") == 0) return 8;
         if (key.find("main_npc_quest_") == 0) return 2;
         if (key.find("main_dangerous_site_") == 0) return 7;
         if (key == "main_rare_discovery") return 12;
         if (key == "main_chest_obvious") return 2;
         return 0;
     }
+    bool isMainMiniBossExplorationKey(const std::string& key)
+    {
+        return key.find("main_miniboss_") == 0;
+    }
+
+    bool isAnyMainMiniBossExplorationRecentlySeen(const Player& player)
+    {
+        return player.wasExplorationEventRecentlySeen("main_miniboss_wanderer")
+            || player.wasExplorationEventRecentlySeen("main_miniboss_guardian")
+            || player.isExplorationSceneOnCooldown("main_miniboss_wanderer")
+            || player.isExplorationSceneOnCooldown("main_miniboss_guardian");
+    }
+
 
     std::string activeExplorationEventKeyFromRoll(int roll)
     {
@@ -11417,6 +11430,12 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         for (int attempt = 0; attempt < 18; ++attempt)
         {
             const std::string key = explorationEventKeyFromRoll(candidate);
+            if (isMainMiniBossExplorationKey(key) && isAnyMainMiniBossExplorationRecentlySeen(player))
+            {
+                candidate = adjustExplorationEventRoll(random.between(1, 100), intensity);
+                candidate = std::clamp(candidate + extraShift, 1, 100);
+                continue;
+            }
             if (!player.wasExplorationEventRecentlySeen(key)
                 && currentRunKeys.find(key) == currentRunKeys.end()
                 && !player.isExplorationSceneOnCooldown(key))
@@ -11432,6 +11451,10 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         for (int roll = 1; roll <= 100; ++roll)
         {
             const std::string key = explorationEventKeyFromRoll(roll);
+            if (isMainMiniBossExplorationKey(key) && isAnyMainMiniBossExplorationRecentlySeen(player))
+            {
+                continue;
+            }
             if (currentRunKeys.find(key) == currentRunKeys.end()
                 && !player.isExplorationSceneOnCooldown(key)
                 && !player.wasExplorationEventRecentlySeen(key))
@@ -11442,6 +11465,10 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         for (int roll = 1; roll <= 100; ++roll)
         {
             const std::string key = explorationEventKeyFromRoll(roll);
+            if (isMainMiniBossExplorationKey(key) && isAnyMainMiniBossExplorationRecentlySeen(player))
+            {
+                continue;
+            }
             if (currentRunKeys.find(key) == currentRunKeys.end()
                 && !player.isExplorationSceneOnCooldown(key))
             {
@@ -14737,7 +14764,7 @@ void QuestMenu::openGuildChallenges(Player& player)
                 "Condition : " + selected.objective,
                 "Délai : aujourd'hui et le jour suivant.",
                 "Récompense : " + questRewardText(selected),
-                "La réussite sera enregistrée automatiquement par le combat ou l'action concernée."
+                "Le registre validera cette réussite quand le combat ou l'action concernée aura vraiment eu lieu."
             },
             false
         );
@@ -17913,6 +17940,11 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             currentRunEventKeys.insert(eventKey);
             player.recordExplorationEventKey(eventKey);
             player.startExplorationSceneCooldown(eventKey, explorationEventCooldownDays(eventKey));
+            if (isMainMiniBossExplorationKey(eventKey))
+            {
+                player.startExplorationSceneCooldown("main_miniboss_wanderer", explorationEventCooldownDays(eventKey));
+                player.startExplorationSceneCooldown("main_miniboss_guardian", explorationEventCooldownDays(eventKey));
+            }
             eventLabels.push_back("Événement " + std::to_string(eventIndex) + " : " + eventLabel);
 
             if (eventIndex > 1)

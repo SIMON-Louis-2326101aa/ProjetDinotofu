@@ -4,7 +4,7 @@ Dinotofu est un RPG / jeu d'arène en C++17. La version terminal reste le socle 
 
 ## Version actuelle   
 
-- Version actuelle : **V3.43.00**   
+- Version actuelle : **V3.48.00**   
 - Base de recréation fortement conseillée : **V3.00.00**   
 - Les personnages créés avant **V3.00.00** peuvent fonctionner, mais une recréation est conseillée pour profiter proprement du socle histoire.   
 
@@ -37,7 +37,7 @@ La progression des boss est ordonnée sans révéler la liste complète au joueu
 
 ## Interface graphique   
 
-L’interface graphique reste expérimentale mais jouable et reflète le moteur C++ sans inventer de logique cachée. La V3.43.00 avance le pont vers l’IG/pixel-art et stabilise plusieurs services de ville : Top 3 principal filtré, registre avancé pour l’illégal et les incidents, médiateur de guilde, conseil de guilde, pardon progressif, probation, réputation souterraine, contrats encadrés bas rang, rumeurs de groupes, auberge locale, résolution de micro-quêtes de route, transport entre coffres municipaux et panneaux IG de préparation pixel-art. Les dossiers de groupes, relations, résultats partiels et systèmes délégués précédents restent disponibles. Les ramasse-miettes très rares, rencontres de route, choix de route, fermeture nocturne, carte schématique, trois registres permanents, coffres municipaux indépendants, consultation distante en lecture seule, profils automatiques, précets, mode concentration, silhouettes textuelles, jeux d’équipement, comparaisons, marqueurs, wishlist limitée aux objets déjà possédés, Top 3 et niveaux de fiabilité restent disponibles. Le terminal reste le secours le plus fiable : les images y sont désactivées, non activables, et ne remplacent jamais les informations écrites.   
+L’interface graphique reste expérimentale mais jouable et reflète le moteur C++ sans inventer de logique cachée. La V3.48.00 conserve l’IG en mode sûr et verrouille l’identité visuelle officielle : logo Dinotofu, bannière, couverture/menu et icônes de launchers/raccourcis normal + terminal, avec chemins vérifiés côté installateurs Windows/Linux. Les panneaux parasites restent masqués, le texte terminal et les boutons numérotés restent la source claire de navigation, et les images ne remplacent jamais les informations écrites. Le terminal reste le secours le plus fiable : les images de gameplay y sont désactivées, non activables, mais les raccourcis/installateurs peuvent utiliser leur icône dédiée.   
 
 ## Installer depuis une release GitHub   
 
@@ -59,6 +59,7 @@ Sur les versions desktop Windows/Linux, l'installateur ou le launcher doit crée
 - `src/` : code C++ du jeu ;   
 - `include/` : headers C++ ;   
 - `assets/config/` : données JSON de référence ;   
+- `assets/branding/` : logo, bannière, couverture/menu et icônes officielles des launchers/raccourcis ;   
 - `tools/gui/` : interface graphique expérimentale et serveur local ;   
 - `tools/windows/` et `tools/linux/` : launchers/installateurs ;   
 - `scripts/` : packaging, version, release et contrôles ;   
@@ -86,17 +87,17 @@ Défi numéro trois : trouver une stratégie qui casse le jeu, me la montrer, et
 
 Jouez sérieusement, mais pas trop sérieusement. Plaignez-vous si besoin, proposez des idées, insultez poliment les boss, et surtout dites-moi ce qui vous donne envie de relancer une partie. Si vous trouvez un combo trop fort, je nierai sûrement avoir paniqué en voyant les chiffres, puis je dirai que c'était un test d'équilibrage avancé et que tout était prévu d'avance. C'est faux, mais c'est plus professionnel.   
 
-Si vous arrivez à devenir une légende dans Dinotofu, félicitations. Si vous mourez contre les premiers ennemis, félicitations aussi, mais différemment. Si vous perdez contre un coffre, un piège ou votre propre confiance en vous, sachez que le jeu ne vous juge pas. Moi un peu, mais avec affection.
+Si vous arrivez à devenir une légende dans Dinotofu, félicitations. Si vous mourez contre les premiers ennemis, félicitations aussi, mais différemment. Si vous perdez contre un coffre, un piège ou votre propre confiance en vous, sachez que le jeu ne vous juge pas. Moi un peu, mais avec affection.   
 
-## Note V3.30.00 — routes et poids d’équipement
+## Note V3.30.00 — routes et poids d’équipement   
 
-- Les villes disposent désormais de distances entre elles, de distances vers les biomes et de conditions d’accès par niveau ou boss vaincu.
-- Les coffres restent indépendants par ville : le voyage change la ville active, mais ne mélange pas les contenus.
-- La carte d’exploration textuelle prépare les futurs fonds pixel-art par biome, avec lieux inconnus grisés ou enfumés.
-- Les armes et armures ont maintenant un poids léger, moyen ou lourd. Les bonus et contreparties sont appliqués au combat, aux dégâts et à la fuite, avec des malus volontairement modérés.
+- Les villes disposent désormais de distances entre elles, de distances vers les biomes et de conditions d’accès par niveau ou boss vaincu.   
+- Les coffres restent indépendants par ville : le voyage change la ville active, mais ne mélange pas les contenus.   
+- La carte d’exploration textuelle prépare les futurs fonds pixel-art par biome, avec lieux inconnus grisés ou enfumés.   
+- Les armes et armures ont maintenant un poids léger, moyen ou lourd. Les bonus et contreparties sont appliqués au combat, aux dégâts et à la fuite, avec des malus volontairement modérés.   
 
 
 
-## Note V3.31.00 — hubs de ville et journal canonique
+## Note V3.31.00 — hubs de ville et journal canonique   
 
-La V3.31.00 rend la ville actuelle plus structurée : bâtiments locaux, contacts, verrous et indices pixel-art viennent maintenant des règles du monde plutôt que d'une liste fixe. Les destinations de ville fournissent des métadonnées IG structurées pour l'accès, la distance, le temps de trajet et le coût futur. Un journal canonique sauvegardé enregistre les événements importants comme les lieux visités, routes prises et mouvements de coffre, afin que les futurs Top 3 utilisent des données moteur au lieu de texte deviné.
+La V3.31.00 rend la ville actuelle plus structurée : bâtiments locaux, contacts, verrous et indices pixel-art viennent maintenant des règles du monde plutôt que d'une liste fixe. Les destinations de ville fournissent des métadonnées IG structurées pour l'accès, la distance, le temps de trajet et le coût futur. Un journal canonique sauvegardé enregistre les événements importants comme les lieux visités, routes prises et mouvements de coffre, afin que les futurs Top 3 utilisent des données moteur au lieu de texte deviné.   
