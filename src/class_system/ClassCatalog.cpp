@@ -33,18 +33,18 @@ namespace
     const std::vector<ClassTemplate>& getClassTemplates()
     {
         static const std::vector<ClassTemplate> classes = {
-            {"Chevalier", 200, 5, 20, 30, 4, 3, "équilibré, simple et fiable", ClassCategory::Melee},
-            {"Assassin", 150, 13, 34, 58, 6, 3, "rapide, fragile, critique vraiment dangereux", ClassCategory::Melee},
-            {"Colosse", 400, 4, 10, 18, 2, 1, "très tanky, lent, lourd", ClassCategory::Melee},
+            {"Chevalier", 210, 7, 22, 34, 4, 3, "équilibré, simple et fiable", ClassCategory::Melee},
+            {"Assassin", 145, 12, 31, 52, 6, 3, "rapide, fragile, critique vraiment dangereux", ClassCategory::Melee},
+            {"Colosse", 400, 6, 16, 28, 2, 1, "très tanky, lent, lourd", ClassCategory::Melee},
             {"Barbare", 260, 12, 28, 38, 3, 3, "brutal, violent, peu subtil", ClassCategory::Melee},
             {"Guerrier", 230, 9, 24, 34, 4, 3, "maîtrise des armes", ClassCategory::Melee},
             {"Moine", 175, 9, 25, 36, 5, 2, "esquive, discipline et poings", ClassCategory::Melee},
             {"Duelliste", 170, 12, 27, 43, 4, 2, "1v1, style et précision", ClassCategory::Melee},
             {"Berserker", 240, 14, 34, 46, 2, 4, "énormes dégâts, défense discutable", ClassCategory::Melee},
             {"Lancier", 210, 10, 27, 39, 4, 3, "portée, contrôle et contre-attaque", ClassCategory::Melee},
-            {"Briseur lourd", 300, 15, 38, 58, 2, 2, "précision instable, dégâts énormes", ClassCategory::Melee},
+            {"Briseur lourd", 295, 14, 35, 54, 2, 2, "précision instable, dégâts énormes", ClassCategory::Melee},
             {"Gladiateur", 220, 13, 30, 44, 3, 3, "arène, riposte et pression constante", ClassCategory::Melee},
-            {"Ravageur", 255, 16, 36, 52, 2, 4, "attaque frontale, casse-garde et risque", ClassCategory::Melee},
+            {"Ravageur", 250, 15, 34, 50, 2, 4, "attaque frontale, casse-garde et risque", ClassCategory::Melee},
             {"Maître d'armes", 235, 11, 29, 42, 4, 3, "polyvalence martiale et lecture d'équipement", ClassCategory::Melee},
             {"Pugiliste", 185, 10, 27, 42, 5, 2, "poings, garde courte et tempo nerveux", ClassCategory::Melee},
             {"Faucheur", 205, 13, 32, 49, 3, 4, "grande lame, pression et finition risquée", ClassCategory::Melee},
@@ -55,7 +55,7 @@ namespace
             {"Cogneur de taverne", 210, 13, 30, 41, 4, 2, "bagarre sale, pression courte et résistance bancale", ClassCategory::Melee},
             {"Gardien de porte", 275, 8, 23, 35, 5, 2, "tenir un passage, empêcher le contournement", ClassCategory::Melee},
             {"Lame brisée", 180, 14, 32, 50, 3, 4, "risque, revanche et coups décisifs", ClassCategory::Melee},
-            {"Martelier", 245, 15, 35, 54, 2, 3, "marteau, armure et brise-construction", ClassCategory::Melee},
+            {"Martelier", 250, 14, 33, 50, 2, 3, "marteau, armure et brise-construction", ClassCategory::Melee},
 
             {"Archer", 160, 10, 29, 44, 5, 3, "distance, précision et mobilité", ClassCategory::Distance},
             {"Rôdeur", 180, 9, 27, 40, 5, 3, "distance, pistage et survie", ClassCategory::Distance},
@@ -70,7 +70,7 @@ namespace
             {"Trappeur", 180, 8, 24, 38, 5, 3, "pièges, patience et contrôle de terrain", ClassCategory::Distance},
             {"Guetteur", 165, 9, 26, 41, 5, 2, "surveillance, alerte et tir opportuniste", ClassCategory::Distance},
             {"Messager armé", 170, 8, 25, 39, 6, 2, "mobilité, fuite propre et petites lames", ClassCategory::Distance},
-            {"Arquebusier expérimental", 150, 14, 36, 55, 2, 4, "tir très lourd, préparation et raté coûteux", ClassCategory::Distance},
+            {"Arquebusier expérimental", 145, 13, 34, 52, 2, 4, "tir très lourd, préparation et raté coûteux", ClassCategory::Distance},
             {"Fauconnier", 165, 9, 25, 39, 5, 3, "vision aérienne, harcèlement et repérage", ClassCategory::Distance},
             {"Sentinelle de rempart", 185, 10, 28, 42, 4, 3, "tir défensif, garde de mur et patience", ClassCategory::Distance},
             {"Chasseur de reliques", 170, 11, 30, 46, 4, 3, "pièges propres, fouille et tir opportuniste", ClassCategory::Distance},
@@ -85,7 +85,7 @@ namespace
             {"Arcaniste", 150, 7, 31, 49, 4, 5, "magie pure et instable", ClassCategory::Magic},
             {"Occultiste", 155, 9, 29, 45, 3, 5, "ombres, pactes et dégâts étranges", ClassCategory::Magic},
             {"Mage fou", 140, 1, 36, 55, 3, 6, "résultats absurdes, parfois géniaux", ClassCategory::Magic},
-            {"Mage flame", 150, 9, 34, 52, 3, 5, "flammes rapides et dégâts croissants", ClassCategory::Magic},
+            {"Mage flame", 150, 9, 32, 50, 3, 5, "flammes rapides et dégâts croissants", ClassCategory::Magic},
             {"Mage zodiacal", 155, 7, 33, 51, 4, 5, "sorts aléatoires liés aux signes", ClassCategory::Magic},
             {"Électromancien", 145, 8, 31, 50, 3, 5, "choc, équipement métallique et burst nerveux", ClassCategory::Magic},
             {"Gravemage", 155, 7, 28, 44, 4, 5, "runes lentes, défense magique et préparation", ClassCategory::Magic},
@@ -122,9 +122,9 @@ namespace
             {"Clerc", 220, 6, 17, 26, 6, 2, "soin, foi et protection", ClassCategory::Support},
             {"Prêtre", 205, 5, 18, 28, 7, 2, "soin, lumière et soutien", ClassCategory::Support},
             {"Paladin", 280, 8, 22, 34, 5, 3, "tank sacré, protection et lumière", ClassCategory::Support},
-            {"Gardien", 320, 4, 14, 22, 4, 1, "protection pure, très défensif", ClassCategory::Support},
+            {"Gardien", 320, 5, 16, 25, 4, 1, "protection pure, très défensif", ClassCategory::Support},
             {"Templier", 260, 7, 22, 33, 5, 3, "foi martiale et anti-magie", ClassCategory::Support},
-            {"Tank sacré", 340, 4, 15, 24, 4, 1, "mur vivant, entrave et lumière", ClassCategory::Support},
+            {"Tank sacré", 340, 5, 16, 26, 4, 1, "mur vivant, entrave et lumière", ClassCategory::Support},
             {"Oracle", 180, 5, 20, 33, 6, 3, "lecture du danger et soutien fragile", ClassCategory::Support},
             {"Protecteur", 300, 5, 17, 27, 5, 1, "garde d'allié, interception et stabilité", ClassCategory::Support},
             {"Médecin de terrain", 185, 5, 16, 25, 7, 2, "soins pratiques, pansements et survie", ClassCategory::Support},
@@ -137,9 +137,9 @@ namespace
             {"Porte-lanterne", 180, 6, 19, 31, 6, 3, "lumière, anti-ombre et escorte", ClassCategory::Support},
             {"Sénéchal de guilde", 220, 5, 18, 30, 7, 2, "ordre, gestion de groupe et défense calme", ClassCategory::Support},
 
-            {"Druide", 190, 7, 20, 30, 5, 3, "nature, survie et magie sauvage", ClassCategory::Hybrid},
+            {"Druide", 195, 8, 23, 34, 5, 3, "nature, survie et magie sauvage", ClassCategory::Hybrid},
             {"Chevalier runique", 240, 8, 26, 39, 4, 4, "arme lourde et magie gravée", ClassCategory::Hybrid},
-            {"Ombrelame", 160, 13, 33, 56, 4, 3, "assassin magique, critique sombre et agressif", ClassCategory::Hybrid},
+            {"Ombrelame", 155, 12, 31, 52, 4, 3, "assassin magique, critique sombre et agressif", ClassCategory::Hybrid},
             {"Mage-lame", 180, 9, 28, 43, 4, 4, "mélange arme réelle et magie", ClassCategory::Hybrid},
             {"Shaman", 180, 7, 24, 36, 5, 4, "esprits, rituels et soutien", ClassCategory::Hybrid},
             {"Chevalier draconique", 250, 10, 29, 43, 4, 3, "écailles, arme lourde et souffle mineur", ClassCategory::Hybrid},
@@ -174,6 +174,157 @@ namespace
         return classes;
     }
 
+
+
+    std::string normalizeCatalogClassName(const std::string& className)
+    {
+        std::string normalized = className;
+        std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](unsigned char character) {
+            return static_cast<char>(std::tolower(character));
+        });
+        return normalized;
+    }
+
+    int estimateClassAverageOutput(const ClassTemplate& currentClass)
+    {
+        const int normalAverage = (currentClass.minDamage + currentClass.maxDamage) / 2;
+        int critChancePercent = 20;
+        const std::string name = normalizeCatalogClassName(currentClass.name);
+        if (name.find("assassin") != std::string::npos || name.find("duelliste") != std::string::npos || name.find("sabreur") != std::string::npos || name.find("tireur") != std::string::npos || name.find("archer") != std::string::npos)
+        {
+            critChancePercent = 25;
+        }
+        else if (name.find("colosse") != std::string::npos || name.find("gardien") != std::string::npos || name.find("soigneur") != std::string::npos || name.find("infirmier") != std::string::npos || name.find("intendant") != std::string::npos)
+        {
+            critChancePercent = 15;
+        }
+
+        return (normalAverage * (100 - critChancePercent) + currentClass.criticalDamage * critChancePercent) / 100;
+    }
+
+    std::string classSurvivalBand(const ClassTemplate& currentClass)
+    {
+        const int durability = currentClass.maxHp + currentClass.healingPotionCount * 28;
+        if (durability >= 520)
+        {
+            return "survie très haute";
+        }
+        if (durability >= 400)
+        {
+            return "survie solide";
+        }
+        if (durability >= 300)
+        {
+            return "survie moyenne";
+        }
+        if (durability >= 230)
+        {
+            return "survie fragile mais jouable";
+        }
+        return "survie très fragile";
+    }
+
+    std::string classCritBand(const ClassTemplate& currentClass)
+    {
+        const std::string name = normalizeCatalogClassName(currentClass.name);
+        if (name.find("assassin") != std::string::npos || name.find("ombre") != std::string::npos || name.find("sabreur") != std::string::npos || name.find("duelliste") != std::string::npos || name.find("tireur") != std::string::npos || name.find("archer") != std::string::npos || name.find("fauche") != std::string::npos)
+        {
+            return "critique fréquent/important";
+        }
+        if (name.find("colosse") != std::string::npos || name.find("gardien") != std::string::npos || name.find("tank") != std::string::npos || name.find("intendant") != std::string::npos || name.find("infirmier") != std::string::npos)
+        {
+            return "critique rare, rôle de tenue";
+        }
+        if (currentClass.criticalDamage >= 50)
+        {
+            return "critique rare mais très violent";
+        }
+        return "critique standard";
+    }
+
+    std::string classEquipmentExpectationLine(const ClassTemplate& currentClass)
+    {
+        const std::string name = normalizeCatalogClassName(currentClass.name);
+        if (name.find("assassin") != std::string::npos || name.find("voleur") != std::string::npos || name.find("roublard") != std::string::npos || name.find("sabreur") != std::string::npos)
+        {
+            return "équipement attendu : arme courte/lame légère et armure mobile, sinon la classe perd son vrai rythme";
+        }
+        if (name.find("colosse") != std::string::npos || name.find("gardien") != std::string::npos || name.find("tank") != std::string::npos || name.find("bouclier") != std::string::npos)
+        {
+            return "équipement attendu : protection lourde ou tenue de front, avec arme capable de garder la ligne";
+        }
+        if (name.find("mage") != std::string::npos || name.find("mancien") != std::string::npos || name.find("sorcier") != std::string::npos || name.find("arcaniste") != std::string::npos)
+        {
+            return "équipement attendu : catalyseur/bâton et tenue légère ou magique, sinon la fenêtre de sort devient sale";
+        }
+        if (currentClass.category == ClassCategory::Distance)
+        {
+            return "équipement attendu : arme de tir ou d'allonge courte, armure qui ne casse pas la ligne de visée";
+        }
+        if (currentClass.category == ClassCategory::Support)
+        {
+            return "équipement attendu : survie, canalisation ou arme simple ; l'utilité doit compenser le DPS plus bas";
+        }
+        if (currentClass.category == ClassCategory::Craft)
+        {
+            return "équipement attendu : outils, arme simple ou technique et armure pratique pour exploiter les préparations";
+        }
+        return "équipement attendu : cohérence entre arme, armure, PV et fenêtre d'action";
+    }
+
+    std::string classBalanceBand(const ClassTemplate& currentClass)
+    {
+        const int output = estimateClassAverageOutput(currentClass);
+        const int durability = currentClass.maxHp + currentClass.healingPotionCount * 28;
+        if (output >= 35 && durability < 300)
+        {
+            return "burst risqué";
+        }
+        if (output >= 32 && durability >= 330)
+        {
+            return "pression solide";
+        }
+        if (durability >= 440 && output <= 26)
+        {
+            return "mur de terrain";
+        }
+        if (output <= 24 && currentClass.healingPotionCount >= 6)
+        {
+            return "soutien durable";
+        }
+        if (output <= 22)
+        {
+            return "utilité avant dégâts";
+        }
+        return "équilibre lisible";
+    }
+
+    std::string classBalanceWarning(const ClassTemplate& currentClass)
+    {
+        const std::string name = normalizeCatalogClassName(currentClass.name);
+        if (name.find("éveillé") != std::string::npos || name.find("eveille") != std::string::npos || name.find("maître") != std::string::npos || name.find("maitre") != std::string::npos)
+        {
+            return "palier évolué : doit se sentir, mais rester dépendant de l'arme et du bon tour";
+        }
+        if (name.find("assassin") != std::string::npos || name.find("ombre") != std::string::npos || name.find("lame brisée") != std::string::npos)
+        {
+            return "attention : gros critique, mauvaise survie si la lecture rate";
+        }
+        if (name.find("colosse") != std::string::npos || name.find("gardien") != std::string::npos || name.find("bouclier") != std::string::npos)
+        {
+            return "attention : tenir ne doit pas devenir one-shot gratuit";
+        }
+        if (name.find("mage fou") != std::string::npos || name.find("arquebusier") != std::string::npos || name.find("chronomancien") != std::string::npos)
+        {
+            return "attention : pics très forts, raté ou fenêtre doivent rester importants";
+        }
+        if (currentClass.category == ClassCategory::Support || currentClass.category == ClassCategory::Craft)
+        {
+            return "attention : puissance basse acceptable si l'utilité change vraiment la sortie";
+        }
+        return "attention : cohérence à vérifier avec arme, armure, coût et rang";
+    }
+
     void appendClassTemplateLines(std::vector<std::string>& lines, std::size_t displayedIndex, const ClassTemplate& currentClass)
     {
         lines.push_back(std::to_string(displayedIndex) + " : " + currentClass.name);
@@ -185,6 +336,12 @@ namespace
             + " - " + std::to_string(currentClass.maxDamage)
             + " | Critique : " + std::to_string(currentClass.criticalDamage)
         );
+        lines.push_back("    Audit rapide : " + classBalanceBand(currentClass)
+            + " | dégâts moyens attendus ~" + std::to_string(estimateClassAverageOutput(currentClass))
+            + " | " + classSurvivalBand(currentClass)
+            + " | " + classCritBand(currentClass)
+            + " | " + classBalanceWarning(currentClass));
+        lines.push_back("    Synergie attendue : " + classEquipmentExpectationLine(currentClass));
         lines.push_back("    Potions de soin : " + std::to_string(currentClass.healingPotionCount));
         lines.push_back("    Potions de dégâts : " + std::to_string(currentClass.damagePotionCount));
         lines.push_back("");
@@ -441,20 +598,20 @@ PlayerClass ClassCatalog::createEvolvedClassFromClass(const std::string& current
 
     if (normalizedName == normalizeClassName("Chevalier"))
     {
-        return PlayerClass("Chevalier éveillé", 300, 9, 28, 42, 5, 3);
+        return PlayerClass("Chevalier éveillé", 315, 10, 31, 47, 5, 3);
     }
 
     if (normalizedName == normalizeClassName("Assassin")
         || normalizedName == normalizeClassName("Classe Légère")
         || normalizedName == normalizeClassName("Roublard"))
     {
-        return PlayerClass("Assassin éveillé", 210, 15, 38, 66, 6, 3);
+        return PlayerClass("Assassin éveillé", 215, 16, 39, 70, 6, 3);
     }
 
     if (normalizedName == normalizeClassName("Colosse")
         || normalizedName == normalizeClassName("Classe Lourde"))
     {
-        return PlayerClass("Colosse éveillé", 500, 7, 18, 30, 2, 3);
+        return PlayerClass("Colosse éveillé", 520, 8, 23, 40, 2, 3);
     }
 
     if (normalizedName == normalizeClassName("Mage flame")
@@ -471,14 +628,14 @@ PlayerClass ClassCatalog::createEvolvedClassFromClass(const std::string& current
 
     if (normalizedName == normalizeClassName("Lancier"))
     {
-        return PlayerClass("Maître de la hampe", 290, 12, 32, 48, 4, 3);
+        return PlayerClass("Maître de la hampe", 295, 13, 35, 52, 4, 3);
     }
 
     if (normalizedName == normalizeClassName("Archer")
         || normalizedName == normalizeClassName("Rôdeur")
         || normalizedName == normalizeClassName("Chasseur"))
     {
-        return PlayerClass("Tireur éveillé", 230, 12, 34, 50, 4, 3);
+        return PlayerClass("Tireur éveillé", 230, 13, 36, 54, 4, 3);
     }
 
     if (normalizedName == normalizeClassName("Mage")
@@ -486,16 +643,16 @@ PlayerClass ClassCatalog::createEvolvedClassFromClass(const std::string& current
         || normalizedName == normalizeClassName("Ensorceleur")
         || normalizedName == normalizeClassName("Sorcier"))
     {
-        return PlayerClass("Mage éveillé", 210, 9, 36, 58, 4, 5);
+        return PlayerClass("Mage éveillé", 210, 10, 38, 62, 4, 5);
     }
 
     PlayerClass baseClass = createClassByName(currentClass);
     return PlayerClass(
         baseClass.getName() + " éveillé",
-        baseClass.getMaxHp() + 70,
-        baseClass.getMinDamage() + 2,
-        baseClass.getMaxDamage() + 6,
-        baseClass.getCriticalDamage() + 10,
+        baseClass.getMaxHp() + 80,
+        baseClass.getMinDamage() + 3,
+        baseClass.getMaxDamage() + 8,
+        baseClass.getCriticalDamage() + 12,
         baseClass.getHealingPotionCount(),
         baseClass.getDamagePotionCount()
     );

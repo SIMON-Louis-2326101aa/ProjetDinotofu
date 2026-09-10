@@ -12,6 +12,43 @@
 #include <utility>
 #include <vector>
 
+
+namespace
+{
+    std::string normalizeSpecialClassText(std::string value)
+    {
+        std::transform(
+            value.begin(),
+            value.end(),
+            value.begin(),
+            [](unsigned char c)
+            {
+                return static_cast<char>(std::tolower(c));
+            }
+        );
+        return value;
+    }
+
+    bool hasHistoricalClassChoiceBonus(const SpecialCharacter& character)
+    {
+        const std::string nativeClass = normalizeSpecialClassText(character.getNativeClass());
+        return nativeClass.find("universal") == std::string::npos
+            && nativeClass.find("any class") == std::string::npos
+            && nativeClass.find("aucune") == std::string::npos
+            && !nativeClass.empty();
+    }
+
+    std::string specialNativeClassLabel(const SpecialCharacter& character)
+    {
+        std::string label = character.getNativeClass();
+        if (hasHistoricalClassChoiceBonus(character))
+        {
+            label += " [bonus de choix historique]";
+        }
+        return label;
+    }
+}
+
 std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
 {
     return {
@@ -19,7 +56,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Matt (PRO)",
             CharacterRace::Human,
             "Guerrier",
-            "Référence Wii Sports, adversaire spécial intelligent avec bonus natifs.",
+            "Référence Wii Sports, adversaire spécial intelligent avec bonus de choix historique global.",
             "Matt (PRO) refuse presque toujours d'être incarné. Il sert de repère, de rival et de petite humiliation potentielle.",
             false,
             true,
@@ -233,7 +270,7 @@ std::vector<std::string> SpecialCharacterCatalog::getSpecialCharactersRoadmapLin
         lines.push_back(
             "- " + character.getName()
             + " | Race : " + character.getRaceText()
-            + " | Classe native : " + character.getNativeClass()
+            + " | Classe naturelle : " + specialNativeClassLabel(character)
         );
         lines.push_back("  Style : " + character.getCombatStyle());
 

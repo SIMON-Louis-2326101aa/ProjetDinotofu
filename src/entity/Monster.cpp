@@ -27,7 +27,13 @@ Monster::Monster()
       splitChildName(""),
       splitStageNames(),
       splitStageIndex(0),
-      finalSplitChildrenAreInvocations(false)
+      finalSplitChildrenAreInvocations(false),
+      reinforcementLowHpTurns(0),
+      reinforcementCallsUsed(0),
+      reinforcementEntryCooldownTurns(0),
+      reinforcementSpawnGroupSize(0),
+      spawnedByReinforcementCall(false),
+      weakenedReinforcementCaller(false)
 {
 }
 
@@ -71,7 +77,13 @@ Monster::Monster(
       splitChildName(""),
       splitStageNames(),
       splitStageIndex(0),
-      finalSplitChildrenAreInvocations(false)
+      finalSplitChildrenAreInvocations(false),
+      reinforcementLowHpTurns(0),
+      reinforcementCallsUsed(0),
+      reinforcementEntryCooldownTurns(0),
+      reinforcementSpawnGroupSize(0),
+      spawnedByReinforcementCall(false),
+      weakenedReinforcementCaller(false)
 {
 }
 
@@ -188,6 +200,80 @@ void Monster::copySplitBehaviorFrom(const Monster& source)
     splitStageNames = source.splitStageNames;
     splitStageIndex = source.splitStageIndex;
     finalSplitChildrenAreInvocations = source.finalSplitChildrenAreInvocations;
+}
+
+void Monster::increaseReinforcementLowHpTurns()
+{
+    ++reinforcementLowHpTurns;
+}
+
+void Monster::resetReinforcementLowHpTurns()
+{
+    reinforcementLowHpTurns = 0;
+}
+
+int Monster::getReinforcementLowHpTurns() const
+{
+    return reinforcementLowHpTurns;
+}
+
+bool Monster::hasCalledReinforcements() const
+{
+    return reinforcementCallsUsed > 0;
+}
+
+void Monster::markReinforcementCall()
+{
+    ++reinforcementCallsUsed;
+}
+
+void Monster::markSpawnedByReinforcementCall(bool canCallWithWeakenedSignal)
+{
+    spawnedByReinforcementCall = true;
+    weakenedReinforcementCaller = canCallWithWeakenedSignal;
+    reinforcementLowHpTurns = 0;
+    reinforcementCallsUsed = 0;
+}
+
+bool Monster::wasSpawnedByReinforcementCall() const
+{
+    return spawnedByReinforcementCall;
+}
+
+bool Monster::canUseWeakenedReinforcementSignal() const
+{
+    return weakenedReinforcementCaller;
+}
+
+void Monster::setReinforcementEntryCooldown(int turns)
+{
+    reinforcementEntryCooldownTurns = std::max(0, turns);
+}
+
+int Monster::getReinforcementEntryCooldown() const
+{
+    return reinforcementEntryCooldownTurns;
+}
+
+void Monster::reduceReinforcementEntryCooldown()
+{
+    if (reinforcementEntryCooldownTurns > 0)
+    {
+        --reinforcementEntryCooldownTurns;
+    }
+}
+
+void Monster::setReinforcementSpawnGroupSize(int size)
+{
+    if (reinforcementSpawnGroupSize <= 0)
+    {
+        reinforcementSpawnGroupSize = std::max(1, size);
+    }
+}
+
+int Monster::getReinforcementSpawnGroupSize() const
+{
+    return reinforcementSpawnGroupSize;
 }
 
 int Monster::getSplitStagesRemaining() const

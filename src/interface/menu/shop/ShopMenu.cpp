@@ -9,6 +9,7 @@
 
 #include "core/Console.hpp"
 #include "combat/modes/pve/MonsterPveMode.hpp"
+#include "combat/system/CombatClassSystem.hpp"
 #include "entity/Monster.hpp"
 #include "interface/menu/EquipmentMenu.hpp"
 #include "item/weapon/WeaponCatalog.hpp"
@@ -53,6 +54,105 @@ namespace
             hash *= 16777619u;
         }
         return hash;
+    }
+
+
+    bool tryCreateWeaponPreviewForShopItem(const ShopItem& item, Weapon& outWeapon)
+    {
+        const std::string& id = item.getId();
+        if (id == "rusty_sword") outWeapon = WeaponCatalog::createRustySword();
+        else if (id == "training_dagger") outWeapon = WeaponCatalog::createTrainingDagger();
+        else if (id == "training_spear") outWeapon = WeaponCatalog::createTrainingSpear();
+        else if (id == "training_bow") outWeapon = WeaponCatalog::createTrainingBow();
+        else if (id == "training_crossbow") outWeapon = WeaponCatalog::createTrainingCrossbow();
+        else if (id == "training_throwing_bandolier") outWeapon = WeaponCatalog::createTrainingThrowingBandolier();
+        else if (id == "training_staff") outWeapon = WeaponCatalog::createTrainingStaff();
+        else if (id == "heavy_training_axe") outWeapon = WeaponCatalog::createHeavyTrainingAxe();
+        else if (id == "iron_sword") outWeapon = WeaponCatalog::createIronSword();
+        else if (id == "reinforced_dagger") outWeapon = WeaponCatalog::createReinforcedDagger();
+        else if (id == "guard_spear") outWeapon = WeaponCatalog::createGuardSpear();
+        else if (id == "hunting_bow") outWeapon = WeaponCatalog::createHuntingBow();
+        else if (id == "apprentice_staff") outWeapon = WeaponCatalog::createApprenticeStaff();
+        else if (id == "heavy_iron_axe") outWeapon = WeaponCatalog::createHeavyIronAxe();
+        else if (id == "workshop_hammer") outWeapon = WeaponCatalog::createWorkshopHammer();
+        else if (id == "patrol_crossbow") outWeapon = WeaponCatalog::createPatrolCrossbow();
+        else if (id == "balanced_rapier") outWeapon = WeaponCatalog::createBalancedRapier();
+        else if (id == "mercenary_sabre") outWeapon = WeaponCatalog::createMercenarySabre();
+        else if (id == "curved_ambush_dagger") outWeapon = WeaponCatalog::createCurvedAmbushDagger();
+        else if (id == "militia_longbow") outWeapon = WeaponCatalog::createMilitiaLongbow();
+        else if (id == "bound_oak_staff") outWeapon = WeaponCatalog::createBoundOakStaff();
+        else if (id == "runic_iron_blade") outWeapon = WeaponCatalog::createRunicIronBlade();
+        else if (id == "amber_edge_dagger") outWeapon = WeaponCatalog::createAmberEdgeDagger();
+        else if (id == "ashen_longbow") outWeapon = WeaponCatalog::createAshenLongbow();
+        else if (id == "channeling_scepter") outWeapon = WeaponCatalog::createChannelingScepter();
+        else if (id == "relay_falchion") outWeapon = WeaponCatalog::createRelayFalchion();
+        else if (id == "whistling_mine_hammer") outWeapon = WeaponCatalog::createWhistlingMineHammer();
+        else if (id == "singing_resin_staff") outWeapon = WeaponCatalog::createSingingResinStaff();
+        else if (id == "cold_lantern_bow") outWeapon = WeaponCatalog::createColdLanternBow();
+        else if (id == "red_clay_sabre") outWeapon = WeaponCatalog::createRedClaySabre();
+        else if (id == "broken_map_dagger") outWeapon = WeaponCatalog::createBrokenMapDagger();
+        else if (id == "firefly_iron_rapier") outWeapon = WeaponCatalog::createFireflyIronRapier();
+        else if (id == "drowned_ledger_mace") outWeapon = WeaponCatalog::createDrownedLedgerMace();
+        else if (id == "grey_cliff_spear") outWeapon = WeaponCatalog::createGreyCliffSpear();
+        else if (id == "broken_carnival_whip") outWeapon = WeaponCatalog::createBrokenCarnivalWhip();
+        else return false;
+        return true;
+    }
+
+    std::string shopWeaponClassCompatibilityTag(const Player& player, const ShopItem& item)
+    {
+        if (item.getCategory() != ShopItemCategory::Weapon)
+        {
+            return "";
+        }
+        Weapon preview;
+        if (!tryCreateWeaponPreviewForShopItem(item, preview))
+        {
+            return "";
+        }
+        if (CombatClassSystem::hasWeaponAffinity(player, preview.getType(), preview.getName()))
+        {
+            return " [bonus de classe]";
+        }
+        if (CombatClassSystem::getWeaponHandlingAccuracyAdjustment(player, preview.getType(), preview.getName()) < 0
+            || CombatClassSystem::getWeaponHandlingDamagePercent(player, preview.getType(), preview.getName()) < 100)
+        {
+            return " [malus de classe]";
+        }
+        return "";
+    }
+
+    std::string shopWeaponClassCompatibilityLine(const Player& player, const ShopItem& item)
+    {
+        Weapon preview;
+        if (item.getCategory() != ShopItemCategory::Weapon || !tryCreateWeaponPreviewForShopItem(item, preview))
+        {
+            return "";
+        }
+        if (CombatClassSystem::hasWeaponAffinity(player, preview.getType(), preview.getName()))
+        {
+            return "Bonus de classe : " + CombatClassSystem::getWeaponAffinityLabel(player, preview.getType(), preview.getName()) + ".";
+        }
+        if (CombatClassSystem::getWeaponHandlingAccuracyAdjustment(player, preview.getType(), preview.getName()) < 0
+            || CombatClassSystem::getWeaponHandlingDamagePercent(player, preview.getType(), preview.getName()) < 100)
+        {
+            return "Malus de classe : " + CombatClassSystem::getWeaponHandlingLabel(player, preview.getType(), preview.getName()) + ".";
+        }
+        return "";
+    }
+
+    std::string ownedWeaponClassCompatibilityTag(const Player& player, const Weapon& weapon)
+    {
+        if (CombatClassSystem::hasWeaponAffinity(player, weapon.getType(), weapon.getName()))
+        {
+            return " [bonus de classe]";
+        }
+        if (CombatClassSystem::getWeaponHandlingAccuracyAdjustment(player, weapon.getType(), weapon.getName()) < 0
+            || CombatClassSystem::getWeaponHandlingDamagePercent(player, weapon.getType(), weapon.getName()) < 100)
+        {
+            return " [malus de classe]";
+        }
+        return "";
     }
 
     int prunigilMerchantTrustScore(const Player& player)
@@ -3670,6 +3770,7 @@ namespace
             screen.addOption(10, "Solutions spéciales", "Objet à détruire, serment à briser, contre-légende, source à sceller.", player.getActiveCurseCount() > 0, "shop.church.special_solution");
             screen.addOption(11, "Lire les légendes de malédiction", "Bibliothèque/archives : donne du contexte sans révéler de chiffres.", true, "shop.church.curse_legends");
             screen.addOption(12, "Parler des cas d'église", "Scènes courtes avec Mira/Lysa, Ronan, le dortoir, Elian ou le vieux seuil.", true, "shop.church.case_dialogues");
+            screen.addOption(13, "Prêter serment", "Fondation : serments acceptés sous conditions, futurs bonus forts avec contraintes et rupture à l'église.", true, "shop.church.oath");
 
             const std::vector<PlayerCurse>& curses = player.getActiveCurses();
             for (std::size_t i = 0; i < curses.size(); ++i)
@@ -3710,6 +3811,334 @@ namespace
             if (choice == 10) { runSpecialCurseSolution(player); continue; }
             if (choice == 11) { showCurseLegendArchive(); continue; }
             if (choice == 12) { openChurchCaseDialogueScenes(player); continue; }
+            if (choice == 13)
+            {
+                bool oathStay = true;
+                while (oathStay)
+                {
+                    const bool shieldKnown = player.isPassiveSkillUnlocked("church_oath_shield");
+                    const bool bloodKnown = player.isPassiveSkillUnlocked("church_oath_blood");
+                    const bool hunterKnown = player.isPassiveSkillUnlocked("church_oath_hunter");
+                    const bool kingKnown = player.isPassiveSkillUnlocked("church_oath_king");
+                    const bool flameKnown = player.isPassiveSkillUnlocked("church_oath_guarded_flame");
+                    const bool shadowKnown = player.isPassiveSkillUnlocked("church_oath_shadow");
+                    const bool pilgrimKnown = player.isPassiveSkillUnlocked("church_oath_pilgrim");
+                    const bool memoryKnown = player.isPassiveSkillUnlocked("church_oath_memory");
+                    const bool silenceKnown = player.isPassiveSkillUnlocked("church_oath_silence");
+                    const bool skyKnown = player.isPassiveSkillUnlocked("church_oath_open_sky");
+                    const bool rootsKnown = player.isPassiveSkillUnlocked("church_oath_roots");
+                    const bool mirrorKnown = player.isPassiveSkillUnlocked("church_oath_broken_mirror");
+                    const bool witnessKnown = player.isPassiveSkillUnlocked("church_oath_witness");
+                    const bool scarsKnown = player.isPassiveSkillUnlocked("church_oath_scars");
+                    const bool legacyKnown = player.isPassiveSkillUnlocked("church_oath_legacy");
+                    const bool forgeKnown = player.isPassiveSkillUnlocked("church_oath_bound_forge");
+                    const bool bondsKnown = player.isPassiveSkillUnlocked("church_oath_bonds");
+                    const bool rivalsKnown = player.isPassiveSkillUnlocked("church_oath_rivals");
+                    const bool fateKnown = player.isPassiveSkillUnlocked("church_oath_unstable_fate");
+                    const int enemyKills = player.getCanonicalJournalCategoryTotal("ennemis_tues");
+                    const int pnjServed = player.getCanonicalJournalCategoryTotal("pnj_servis");
+                    const int questsDone = player.getCanonicalJournalCategoryTotal("quetes_terminees");
+                    const int observedThreats = player.getCanonicalJournalCategoryTotal("observations_combat");
+                    const int oathCount = (shieldKnown ? 1 : 0) + (bloodKnown ? 1 : 0) + (hunterKnown ? 1 : 0) + (kingKnown ? 1 : 0)
+                        + (flameKnown ? 1 : 0) + (shadowKnown ? 1 : 0) + (pilgrimKnown ? 1 : 0) + (memoryKnown ? 1 : 0) + (silenceKnown ? 1 : 0)
+                        + (skyKnown ? 1 : 0) + (rootsKnown ? 1 : 0) + (mirrorKnown ? 1 : 0)
+                        + (witnessKnown ? 1 : 0) + (scarsKnown ? 1 : 0) + (legacyKnown ? 1 : 0)
+                        + (forgeKnown ? 1 : 0) + (bondsKnown ? 1 : 0) + (rivalsKnown ? 1 : 0) + (fateKnown ? 1 : 0);
+
+                    MenuScreen oathScreen("SERMENTS D'ÉGLISE", "shop.church.oath.menu");
+                    oathScreen.addLine("Père Orwan refuse les serments gratuits : une promesse doit être entendue, méritée, puis portée comme un vrai statut.");
+                    oathScreen.addLine("Les serments deviennent des passifs/statuts forts mais contraignants. La rupture reste prévue à l'église, avec prix et trace.");
+                    oathScreen.addLine("Attention : plusieurs serments pourront se contredire plus tard. L'église note déjà les promesses cumulées.");
+                    oathScreen.addBackOption();
+                    oathScreen.addOption(1, "Serment du Bouclier" + std::string(shieldKnown ? " [déjà prêté]" : ""), "Condition : niveau 3+ ou vraie habitude d'armure. Bonus futur : protection/alliés, prix moral si tu abandonnes la ligne.", player.getLevel() >= 3 || player.hasPassiveSkill("armor_habit") || player.hasPassiveSkill("steady_guard"), "shop.church.oath.shield");
+                    oathScreen.addOption(2, "Serment du Sang" + std::string(bloodKnown ? " [déjà prêté]" : ""), "Condition : niveau 5+ ou maîtrise/pacte sanguin déjà approché. Bonus futur : dégâts/élan, prix sur soins ou sécurité.", player.getLevel() >= 5 || player.hasPassiveSkill("blood_pact_mastery") || player.hasPassiveSkill("scar_tissue"), "shop.church.oath.blood");
+                    oathScreen.addOption(3, "Serment du Chasseur" + std::string(hunterKnown ? " [déjà prêté]" : ""), "Condition : au moins 5 ennemis tués ou vraie lecture des familles. Bonus futur : piste/familles ennemies, prix si tu frappes sans comprendre.", enemyKills >= 5 || player.hasPassiveSkill("bestiary_family_reader") || player.hasPassiveSkill("ranger_eye"), "shop.church.oath.hunter");
+                    oathScreen.addOption(4, "Serment du Roi" + std::string(kingKnown ? " [déjà prêté]" : ""), "Condition : avoir aidé des PNJ ou prouvé une présence de meneur. Bonus futur : alliés/ordres, prix si tu fuis tes responsabilités.", pnjServed >= 2 || player.hasPassiveSkill("battle_order_mastery") || player.hasPassiveSkill("war_cry_caller"), "shop.church.oath.king");
+                    oathScreen.addOption(5, "Serment de la Flamme gardée" + std::string(flameKnown ? " [déjà prêté]" : ""), "Condition : niveau 7+ ou vraie maîtrise du feu/élémentaire. Bonus futur : chaleur, courage, protection contre brûlure ; prix si tu consumes sans protéger.", player.getLevel() >= 7 || player.hasPassiveSkill("elemental_blade_mastery") || player.hasPassiveSkill("minor_fire_resistance") || player.hasPassiveSkill("infernal_fire_resistance"), "shop.church.oath.guarded_flame");
+                    oathScreen.addOption(6, "Serment des Ombres franches" + std::string(shadowKnown ? " [déjà prêté]" : ""), "Condition : niveau 8+ ou vraie habitude de ruse/déplacement. Bonus futur : discrétion, esquive, angle ; prix si tu trahis la parole donnée.", player.getLevel() >= 8 || player.hasPassiveSkill("shadow_stepper") || player.hasPassiveSkill("rogue_feinter") || player.hasPassiveSkill("trick_image_mastery"), "shop.church.oath.shadow");
+                    oathScreen.addOption(7, "Serment du Pèlerin" + std::string(pilgrimKnown ? " [déjà prêté]" : ""), "Condition : avoir voyagé, être inscrit localement ou niveau 4+. Bonus futur : route, fatigue, villages ; prix si tu refuses toute aide de passage.", player.getWorldDaysElapsed() >= 2 || player.isRegisteredAtCurrentCityGuild() || player.getLevel() >= 4, "shop.church.oath.pilgrim");
+                    oathScreen.addOption(8, "Serment de Mémoire" + std::string(memoryKnown ? " [déjà prêté]" : ""), "Condition : niveau 6+ ou quêtes/observations suffisantes. Bonus futur : traces, rumeurs, héritage moral ; prix si tu mens sur ce qui a été vu.", player.getLevel() >= 6 || questsDone >= 2 || observedThreats >= 3, "shop.church.oath.memory");
+                    oathScreen.addOption(9, "Serment du Silence" + std::string(silenceKnown ? " [déjà prêté]" : ""), "Condition : niveau 10+ ou maîtrise de lecture/ruse. Bonus futur : anti-panique, anti-illusion, concentration ; prix si tu brises le calme pour provoquer inutilement.", player.getLevel() >= 10 || player.hasPassiveSkill("threat_reader") || player.hasPassiveSkill("body_reader") || player.hasPassiveSkill("trick_image_mastery"), "shop.church.oath.silence");
+                    oathScreen.addOption(10, "Serment du Ciel ouvert" + std::string(skyKnown ? " [déjà prêté]" : ""), "Condition : niveau 6+, vraie habitude de tir/allonge ou sang des hauteurs. Bonus : mieux gérer Vol ; prix si tu ignores le sol et les alliés.", player.getLevel() >= 6 || player.hasPassiveSkill("ranger_eye") || player.hasPassiveSkill("semi_bird_open_sky") || player.getBowKillProgress() >= 4 || player.getSpearKillProgress() >= 4, "shop.church.oath.open_sky");
+                    oathScreen.addOption(11, "Serment des Racines" + std::string(rootsKnown ? " [déjà prêté]" : ""), "Condition : niveau 6+, lecture de terrain ou route prudente. Bonus : contre-entrave ; prix si tu piétines les lieux traversés.", player.getLevel() >= 6 || player.hasPassiveSkill("terrain_reader") || player.hasPassiveSkill("cautious_pathing") || player.hasPassiveSkill("threat_route_planner"), "shop.church.oath.roots");
+                    oathScreen.addOption(12, "Serment du Miroir brisé" + std::string(mirrorKnown ? " [déjà prêté]" : ""), "Condition : niveau 9+ ou vraie expérience des illusions. Bonus : lire les faux reflets ; prix si tu refuses la vérité vue.", player.getLevel() >= 9 || player.hasPassiveSkill("trick_image_mastery") || player.hasPassiveSkill("body_reader") || player.hasPassiveSkill("semi_fox_cunning"), "shop.church.oath.broken_mirror");
+                    oathScreen.addOption(13, "Serment du Témoin" + std::string(witnessKnown ? " [déjà prêté]" : ""), "Condition : quêtes, observations ou PNJ servis. Bonus : mémoire logique, rumeurs vues, contre-lecture ; prix si tu affirmes sans témoin.", questsDone >= 1 || observedThreats >= 2 || pnjServed >= 1 || player.hasPassiveSkill("church_oath_memory"), "shop.church.oath.witness");
+                    oathScreen.addOption(14, "Serment des Cicatrices" + std::string(scarsKnown ? " [déjà prêté]" : ""), "Condition : niveau 8+, vraie survie ou trace déjà portée. Bonus : douleur utile, tenue sous pression ; prix si tu cherches la blessure gratuitement.", player.getLevel() >= 8 || player.hasPassiveSkill("scar_tissue") || player.hasPassiveSkill("church_oath_blood") || player.hasPassiveSkill("church_oath_broken_trace"), "shop.church.oath.scars");
+                    oathScreen.addOption(15, "Serment de l'Héritage" + std::string(legacyKnown ? " [déjà prêté]" : ""), "Condition : niveau 12+, mémoire ou trace de rupture. Bonus futur : Mortel/Léthal, objets avec mémoire, tombes ; prix si tu profanes l'héritage.", player.getLevel() >= 12 || player.hasPassiveSkill("church_oath_memory") || player.hasPassiveSkill("church_oath_broken_trace"), "shop.church.oath.legacy");
+                    oathScreen.addOption(16, "Serment de la Forge liée" + std::string(forgeKnown ? " [déjà prêté]" : ""), "Condition : niveau 6+, arme entretenue ou build mémorisé. Bonus : objets avec mémoire, arme cohérente, forge ; prix si tu traites l'équipement comme jetable.", player.getLevel() >= 6 || player.hasPassiveSkill("weapon_care_habit") || player.hasPassiveSkill("loadout_memory") || player.hasPassiveSkill("field_maintenance"), "shop.church.oath.bound_forge");
+                    oathScreen.addOption(17, "Serment des Liens" + std::string(bondsKnown ? " [déjà prêté]" : ""), "Condition : niveau 7+, ordres/recrues ou présence de groupe. Bonus : techniques combinées alliées, loyauté, combat psychologique de groupe ; prix si tu brises les liens.", player.getLevel() >= 7 || player.hasPassiveSkill("battle_order_mastery") || player.hasPassiveSkill("war_cry_caller") || player.getCanonicalJournalCategoryTotal("participation_recrues") >= 3, "shop.church.oath.bonds");
+                    oathScreen.addOption(18, "Serment des Rivaux" + std::string(rivalsKnown ? " [déjà prêté]" : ""), "Condition : ennemi déjà fui/paniqué, niveau 9+ ou témoin/mémoire. Bonus : traces de rivaux et futurs mini-boss ; prix si tu humilies sans assumer.", player.getLevel() >= 9 || player.getCanonicalJournalCategoryTotal("rivaux_potentiels") >= 1 || player.hasPassiveSkill("church_oath_witness") || player.hasPassiveSkill("church_oath_memory"), "shop.church.oath.rivals");
+                    oathScreen.addOption(19, "Serment du Destin instable" + std::string(fateKnown ? " [déjà prêté]" : ""), "Condition : niveau 10+, trace de rupture, mémoire ou cicatrice. Bonus : destin réactif aux actes réels ; prix si tu cherches à forcer l'anomalie.", player.getLevel() >= 10 || player.hasPassiveSkill("church_oath_broken_trace") || player.hasPassiveSkill("church_oath_memory") || player.hasPassiveSkill("church_oath_scars"), "shop.church.oath.unstable_fate");
+                    oathScreen.addOption(20, "Rompre un contrat", "Rupture réelle : coûte un rite, désactive le serment choisi, ajoute une trace de registre et garde l'événement en mémoire.", oathCount > 0, "shop.church.oath.break");
+
+                    const int oathChoice = TerminalInterface::askMenuChoiceFromOptions(oathScreen, "Choisis un serment, ou 0 pour revenir.");
+                    if (oathChoice == 0)
+                    {
+                        oathStay = false;
+                        continue;
+                    }
+
+                    auto acceptOath = [&](const std::string& id, const std::string& name, const std::vector<std::string>& extraLines) {
+                        const bool hadBlood = player.hasPassiveSkill("church_oath_blood");
+                        const bool hadShield = player.hasPassiveSkill("church_oath_shield");
+                        const bool hadSilence = player.hasPassiveSkill("church_oath_silence");
+                        const bool hadShadow = player.hasPassiveSkill("church_oath_shadow");
+                        const bool hadMemory = player.hasPassiveSkill("church_oath_memory");
+                        const bool hadLegacy = player.hasPassiveSkill("church_oath_legacy");
+                        const bool hadSilenceForFate = player.hasPassiveSkill("church_oath_silence");
+                        const bool hadRivals = player.hasPassiveSkill("church_oath_rivals");
+                        const bool unlocked = player.unlockPassiveSkill(id, name);
+                        std::vector<std::string> lines;
+                        lines.push_back("Père Orwan ne grave pas une promesse parce qu'elle sonne bien : il cherche une preuve que quelqu'un, quelque part, peut croire à ce serment.");
+                        lines.push_back(unlocked ? ("Statut ajouté : " + name + ".") : ("Statut déjà présent : " + name + "."));
+                        if ((id == "church_oath_blood" && hadShield) || (id == "church_oath_shield" && hadBlood))
+                        {
+                            lines.push_back("Contradiction surveillée : Sang et Bouclier peuvent cohabiter, mais l'un réclame le prix du corps quand l'autre réclame la tenue de la ligne.");
+                        }
+                        if ((id == "church_oath_shadow" && hadSilence) || (id == "church_oath_silence" && hadShadow))
+                        {
+                            lines.push_back("Contradiction surveillée : Ombres franches et Silence se supportent seulement si la ruse ne devient pas provocation gratuite.");
+                        }
+                        if ((id == "church_oath_legacy" && !hadMemory) || (id == "church_oath_memory" && hadLegacy))
+                        {
+                            lines.push_back("Contrat lié : l'héritage sans mémoire est fragile. L'église notera plus tard si l'histoire est portée ou seulement utilisée.");
+                        }
+                        if ((id == "church_oath_rivals" && !hadMemory && !hadRivals) || (id == "church_oath_memory" && hadRivals))
+                        {
+                            lines.push_back("Contrat lié : un rival sans témoin devient seulement une vengeance privée. L'église demandera des traces, pas des noms inventés.");
+                        }
+                        if ((id == "church_oath_unstable_fate" && hadSilenceForFate) || (id == "church_oath_silence" && player.hasPassiveSkill("church_oath_unstable_fate")))
+                        {
+                            lines.push_back("Contradiction surveillée : Silence veut tenir le calme, Destin instable accepte les oscillations. Les deux pourront cohabiter, mais pas sans tension.");
+                        }
+                        lines.insert(lines.end(), extraLines.begin(), extraLines.end());
+                        lines.push_back("Rupture prévue : revenir à l'église pour rompre proprement le contrat, avec prix, témoin et trace, au lieu d'effacer ça comme une option gratuite.");
+                        player.recordCanonicalEvent("serments_eglise", id, name, 1);
+                        showShopResult("SERMENT ACCEPTÉ", "shop.church.oath.accepted", lines);
+                    };
+
+                    if (oathChoice == 1)
+                    {
+                        acceptOath("church_oath_shield", "Serment du Bouclier", {
+                            "Sens : protéger avant de briller. Les futurs effets devront valoriser garde, alliés et refus d'abandon.",
+                            "Prix prévu : la promesse supportera mal les alliés laissés sans couverture."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 2)
+                    {
+                        acceptOath("church_oath_blood", "Serment du Sang", {
+                            "Sens : payer quelque chose de réel pour obtenir un élan réel.",
+                            "Prix prévu : soins, sécurité ou stabilité devront compter ; ce ne sera pas juste un bonus de dégâts gratuit."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 3)
+                    {
+                        acceptOath("church_oath_hunter", "Serment du Chasseur", {
+                            "Sens : comprendre la proie, sa famille, ses traces et le terrain avant de réclamer l'avantage.",
+                            "Prix prévu : frapper sans lecture ou contre une mauvaise cible pourra rendre le serment instable."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 4)
+                    {
+                        acceptOath("church_oath_king", "Serment du Roi", {
+                            "Sens : tenir une responsabilité visible. Ce serment doit valoriser ordres, alliés, présence et réputation.",
+                            "Prix prévu : fuir trop facilement ou sacrifier les autres devra abîmer la promesse."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 5)
+                    {
+                        acceptOath("church_oath_guarded_flame", "Serment de la Flamme gardée", {
+                            "Sens : garder une chaleur qui protège avant de chercher à brûler plus fort.",
+                            "Prix prévu : les futurs abus de feu sans protection pourront fragiliser le serment."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 6)
+                    {
+                        acceptOath("church_oath_shadow", "Serment des Ombres franches", {
+                            "Sens : avancer dans l'ombre sans transformer la discrétion en trahison gratuite.",
+                            "Prix prévu : mensonge, vol ou abandon d'allié pourront salir la promesse."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 7)
+                    {
+                        acceptOath("church_oath_pilgrim", "Serment du Pèlerin", {
+                            "Sens : respecter les routes, les relais, les villages et les témoins qui rendent un voyage possible.",
+                            "Prix prévu : ignorer systématiquement les lieux traversés pourra rendre la promesse creuse."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 8)
+                    {
+                        acceptOath("church_oath_memory", "Serment de Mémoire", {
+                            "Sens : ne pas laisser les morts, les témoins, les objets et les erreurs disparaître du récit.",
+                            "Prix prévu : mentir sur une trace ou effacer une responsabilité devra laisser une marque."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 9)
+                    {
+                        acceptOath("church_oath_silence", "Serment du Silence", {
+                            "Sens : garder assez de calme pour lire peur, illusions, panique et provocations.",
+                            "Prix prévu : rompre le calme par orgueil pourra affaiblir la concentration promise."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 10)
+                    {
+                        acceptOath("church_oath_open_sky", "Serment du Ciel ouvert", {
+                            "Sens : ne pas paniquer quand l'ennemi quitte le sol. Le ciel s'affronte avec lecture, allonge, tir ou patience.",
+                            "Effet actuel : une arme courte peut parfois trouver un angle contre Vol, mais jamais gratuitement."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 11)
+                    {
+                        acceptOath("church_oath_roots", "Serment des Racines", {
+                            "Sens : sentir les appuis, les fils et les racines avant qu'ils ne volent tout le tour.",
+                            "Effet actuel : une entrave peut parfois être arrachée en début de tour au prix d'un effort visible."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 12)
+                    {
+                        acceptOath("church_oath_broken_mirror", "Serment du Miroir brisé", {
+                            "Sens : casser le faux reflet sans prétendre recevoir une vérité divine.",
+                            "Effet actuel : réduit le risque de frapper le mauvais reflet si des indices existent."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 13)
+                    {
+                        acceptOath("church_oath_witness", "Serment du Témoin", {
+                            "Sens : ne croire qu'une trace parce qu'elle a une source : témoin, rumeur, registre, bestiaire ou observation réelle.",
+                            "Effet actuel : aide légèrement les contre-lectures et les coups portés sur une faille réellement observée."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 14)
+                    {
+                        acceptOath("church_oath_scars", "Serment des Cicatrices", {
+                            "Sens : transformer une blessure vécue en tenue, pas chercher la douleur pour faire joli.",
+                            "Effet actuel : sous pression, la cicatrice peut soutenir un impact ou une garde courte."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 15)
+                    {
+                        acceptOath("church_oath_legacy", "Serment de l'Héritage", {
+                            "Sens : préparer les systèmes Mortel/Léthal, les tombes, les objets avec mémoire et ce qui reste après une vraie perte.",
+                            "Effet actuel : petite aide rare quand une action prolonge une trace déjà inscrite."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 16)
+                    {
+                        acceptOath("church_oath_bound_forge", "Serment de la Forge liée", {
+                            "Sens : lier l'objet à ce qu'il a vraiment vécu : coups portés, réparations, boss affrontés et mains qui l'ont porté.",
+                            "Effet actuel : une arme cohérente avec la classe peut laisser une trace de mémoire d'objet, sans devenir légendaire gratuitement."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 17)
+                    {
+                        acceptOath("church_oath_bonds", "Serment des Liens", {
+                            "Sens : valoriser le groupe, les recrues, les ordres et les techniques combinées sans transformer les alliés faibles en vétérans instantanés.",
+                            "Effet actuel : la présence de groupe peut soutenir une pression courte et laisser une trace pour les futurs combos alliés."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 18)
+                    {
+                        acceptOath("church_oath_rivals", "Serment des Rivaux", {
+                            "Sens : si un ennemi survit à une fuite, une humiliation ou une défaite interrompue, il peut porter une histoire au lieu de disparaître dans une statistique.",
+                            "Effet actuel : les fuites, paniques et compétences ennemies marquantes laissent plus facilement une trace de rival potentiel."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 19)
+                    {
+                        acceptOath("church_oath_unstable_fate", "Serment du Destin instable", {
+                            "Sens : accepter que certains chemins se déplacent selon les actes réels : serments rompus, cicatrices, rumeurs, objets marqués ou classes en mutation.",
+                            "Effet actuel : de rares oscillations peuvent soutenir ou durcir une action quand une trace existe, sans garantir le résultat."
+                        });
+                        continue;
+                    }
+                    if (oathChoice == 20)
+                    {
+                        struct OathBreakOption { int id; std::string skill; std::string name; };
+                        std::vector<OathBreakOption> breakOptions;
+                        auto addBreak = [&](const std::string& skill, const std::string& name) {
+                            if (player.isPassiveSkillUnlocked(skill))
+                            {
+                                breakOptions.push_back({static_cast<int>(breakOptions.size()) + 1, skill, name});
+                            }
+                        };
+                        addBreak("church_oath_shield", "Serment du Bouclier");
+                        addBreak("church_oath_blood", "Serment du Sang");
+                        addBreak("church_oath_hunter", "Serment du Chasseur");
+                        addBreak("church_oath_king", "Serment du Roi");
+                        addBreak("church_oath_guarded_flame", "Serment de la Flamme gardée");
+                        addBreak("church_oath_shadow", "Serment des Ombres franches");
+                        addBreak("church_oath_pilgrim", "Serment du Pèlerin");
+                        addBreak("church_oath_memory", "Serment de Mémoire");
+                        addBreak("church_oath_silence", "Serment du Silence");
+                        addBreak("church_oath_open_sky", "Serment du Ciel ouvert");
+                        addBreak("church_oath_roots", "Serment des Racines");
+                        addBreak("church_oath_broken_mirror", "Serment du Miroir brisé");
+                        addBreak("church_oath_witness", "Serment du Témoin");
+                        addBreak("church_oath_scars", "Serment des Cicatrices");
+                        addBreak("church_oath_legacy", "Serment de l'Héritage");
+                        addBreak("church_oath_bound_forge", "Serment de la Forge liée");
+                        addBreak("church_oath_bonds", "Serment des Liens");
+                        addBreak("church_oath_rivals", "Serment des Rivaux");
+                        addBreak("church_oath_unstable_fate", "Serment du Destin instable");
+
+                        MenuScreen breakScreen("ROMPRE UN CONTRAT", "shop.church.oath.break.menu");
+                        breakScreen.addLine("Frère Calixte sort un registre noir : rompre ne supprime pas l'histoire, ça la déplace dans les traces.");
+                        breakScreen.addLine("Effet actuel : le serment choisi est désactivé, une rupture est enregistrée et les futurs PNJ pourront s'en souvenir.");
+                        breakScreen.addBackOption();
+                        for (const OathBreakOption& option : breakOptions)
+                        {
+                            const bool active = player.hasPassiveSkill(option.skill);
+                            breakScreen.addOption(option.id, option.name + std::string(active ? " [actif]" : " [déjà inactif]"), "Rompre ce contrat au registre de l'église.", true, "shop.church.oath.break.option");
+                        }
+                        const int breakChoice = TerminalInterface::askMenuChoiceFromOptions(breakScreen, "Choisis le serment à rompre, ou 0 pour revenir.");
+                        if (breakChoice == 0)
+                        {
+                            continue;
+                        }
+                        if (breakChoice >= 1 && breakChoice <= static_cast<int>(breakOptions.size()))
+                        {
+                            const OathBreakOption selected = breakOptions[static_cast<std::size_t>(breakChoice - 1)];
+                            std::vector<std::string> breakLines;
+                            if (!payServiceWithVoucherOrGold(player, "sanctuary_wax_seal", "Sceau de cire sanctuaire", 42, breakLines))
+                            {
+                                breakLines.push_back("Frère Calixte referme le registre : une rupture propre demande au moins un rite, un témoin ou de quoi payer l'acte.");
+                                showShopResult("RUPTURE REFUSÉE", "shop.church.oath.break.refused", breakLines);
+                                continue;
+                            }
+                            const bool wasActive = player.disablePassiveSkill(selected.skill);
+                            player.unlockPassiveSkill("church_oath_broken_trace", "Trace de serment rompu");
+                            player.recordCanonicalEvent("serments_rompus", selected.skill, selected.name, 1);
+                            player.recordCanonicalEvent("eglise", "rupture_serment", "Le joueur a rompu un serment d'église", 1);
+                            breakLines.push_back("Contrat rompu : " + selected.name + ".");
+                            breakLines.push_back(wasActive ? "Effet : le serment était actif et vient d'être désactivé." : "Effet : le serment était déjà inactif, mais la rupture est quand même inscrite.");
+                            breakLines.push_back("Trace : le registre garde le nom du serment, la date, le prix payé et le fait qu'il n'a pas disparu gratuitement.");
+                            breakLines.push_back("Conséquence : la Trace de serment rompu pourra servir aux prêtres, villes, boss, compagnons ou héritages futurs.");
+                            showShopResult("SERMENT ROMPU", "shop.church.oath.break.done", breakLines);
+                        }
+                        continue;
+                    }
+                }
+                player.recordCanonicalEvent("eglise", "serment_consulte", "Le joueur a consulté les serments d'église", 1);
+                continue;
+            }
 
             if (choice == 7)
             {
@@ -5982,7 +6411,7 @@ namespace
             }
             screen.addOption(0, "Retour", "Revenir au comptoir de l'auberge.", true, "shop.lodging.back");
             screen.addOption(1, "Manger un repas chaud — 12 cuivre", "Soin léger, consomme 1 segment de journée. Prix affiché avant validation.", true, "shop.lodging.meal");
-            screen.addOption(2, "Dormir dans une chambre simple — 24 cuivre", "Récupération complète des PV, consomme 2 segments de journée. Prix affiché avant validation.", true, "shop.lodging.sleep");
+            screen.addOption(2, "Dormir dans une chambre simple — 24 cuivre", "Une nuit simple aide, mais ne dépasse pas 50% PV. Prix affiché avant validation.", true, "shop.lodging.sleep");
             screen.addOption(3, "Écouter les rumeurs de comptoir", "Indice de ville sans récompense directe, consomme 1 segment.", true, "shop.lodging.rumors");
             screen.addOption(4, "Préparer une place d'écurie — 30 cuivre", "Stabilise monture, sacoches ou stockage court pour les quêtes de relais.", true, "shop.lodging.stable");
             screen.addOption(5, "Préparer sacoches et charge — 32 cuivre", "Préparation utile pour réduire un déplacement de biome plus tard.", true, "shop.lodging.saddlebags");
@@ -6037,8 +6466,13 @@ namespace
                 }
 
                 const int beforeHp = player.getHp();
-                player.heal(player.getMaxHp());
+                const int targetHp = std::max(1, player.getMaxHp() * 50 / 100);
+                if (player.getHp() < targetHp)
+                {
+                    player.heal(targetHp - player.getHp());
+                }
                 lines.push_back("Repos : chambre simple, couverture honnête et porte qui ferme presque bien.");
+                lines.push_back("Plafond : une nuit simple ne soigne pas au-delà de 50% des PV.");
                 lines.push_back("PV récupérés : " + std::to_string(player.getHp() - beforeHp)
                     + " (" + std::to_string(beforeHp) + " -> " + std::to_string(player.getHp()) + ").");
                 lines.push_back("Rappel : dormir peut faire échouer les quêtes urgentes si la date limite passe pendant la nuit.");
@@ -6603,7 +7037,7 @@ namespace
             const int barterMax = barterOffer ? getMaxBarterQuantity(items[i], player) : 0;
             const std::string categoryLabel = shopItemCategoryToText(items[i].getCategory());
 
-            std::string label = items[i].getName()
+            std::string label = items[i].getName() + shopWeaponClassCompatibilityTag(player, items[i])
                 + " | Catégorie : " + categoryLabel
                 + " | Prix : " + Money::formatGoldWithRaw(finalPrice);
 
@@ -6657,8 +7091,13 @@ namespace
             itemData.kind = "shop";
             itemData.section = categoryLabel;
             itemData.actionType = barterOffer ? "buy" : "buy";
-            itemData.name = items[i].getName();
+            itemData.name = items[i].getName() + shopWeaponClassCompatibilityTag(player, items[i]);
             itemData.detail = items[i].getDescription();
+            const std::string classCompatibilityLine = shopWeaponClassCompatibilityLine(player, items[i]);
+            if (!classCompatibilityLine.empty())
+            {
+                itemData.reward = classCompatibilityLine;
+            }
             itemData.price = Money::formatGoldWithRaw(finalPrice);
             itemData.stock = items[i].getStock() >= 0 ? std::to_string(items[i].getStock()) : "non limité";
             if (soldOut)
@@ -6737,10 +7176,21 @@ namespace
         if (shopType == ShopType::Weapon && player.getInventory().hasWeapon(index))
         {
             const Weapon weapon = player.getInventory().getWeapon(index);
-            info.name = weapon.getName();
+            info.name = weapon.getName() + ownedWeaponClassCompatibilityTag(player, weapon);
             info.durability = formatEquipmentDurabilityText(weapon.getDurability(), weapon.getMaxDurability());
             info.enchantmentSummary = "Enchantements : " + weapon.getEnchantmentSummaryText();
             info.detail = "Arme possédée par le personnage. " + info.durability + ". " + info.enchantmentSummary + ". Prix ajusté par état, enchantements et acheteur spécialisé.";
+            if (CombatClassSystem::hasWeaponAffinity(player, weapon.getType(), weapon.getName()))
+            {
+                info.status = "Bonus de classe";
+                info.detail += " Synergie : " + CombatClassSystem::getWeaponAffinityLabel(player, weapon.getType(), weapon.getName()) + ".";
+            }
+            else if (CombatClassSystem::getWeaponHandlingAccuracyAdjustment(player, weapon.getType(), weapon.getName()) < 0
+                || CombatClassSystem::getWeaponHandlingDamagePercent(player, weapon.getType(), weapon.getName()) < 100)
+            {
+                info.status = "Malus de classe";
+                info.detail += " Avertissement : " + CombatClassSystem::getWeaponHandlingLabel(player, weapon.getType(), weapon.getName()) + ".";
+            }
         }
         else if (shopType == ShopType::Armor && player.getInventory().hasArmor(index))
         {
@@ -6844,6 +7294,11 @@ namespace
         screen.addLine("Nom : " + item.getName());
         screen.addLine("Catégorie : " + std::string(shopItemCategoryToText(item.getCategory())));
         screen.addLine("Description : " + item.getDescription());
+        const std::string classCompatibilityLine = shopWeaponClassCompatibilityLine(player, item);
+        if (!classCompatibilityLine.empty())
+        {
+            screen.addLine(classCompatibilityLine);
+        }
         screen.addLine("Prix d'achat : " + Money::formatGoldWithRaw(finalBuyPrice));
         const ShopPromotionOffer promotion = promotionForShop(shop, player);
         if (promotion.active && promotion.itemId == item.getId())
@@ -6964,7 +7419,7 @@ namespace
             buyData.kind = "shop";
             buyData.section = shopItemCategoryToText(item.getCategory());
             buyData.actionType = "buy";
-            buyData.name = item.getName();
+            buyData.name = item.getName() + shopWeaponClassCompatibilityTag(player, item);
             buyData.detail = item.getDescription();
             buyData.price = Money::formatGoldWithRaw(finalBuyPrice);
             buyData.stock = item.getStock() >= 0 ? std::to_string(item.getStock()) : "non limité";
@@ -6992,7 +7447,7 @@ namespace
                 barterData.kind = "shop";
                 barterData.section = "Marché noir";
                 barterData.actionType = "barter";
-                barterData.name = item.getName();
+                barterData.name = item.getName() + shopWeaponClassCompatibilityTag(player, item);
                 barterData.detail = item.getDescription();
                 barterData.reward = "Demande/unité : " + formatBarterRequirements(item);
                 barterData.stock = item.getStock() >= 0 ? std::to_string(item.getStock()) : "non limité";
@@ -8280,22 +8735,67 @@ void ShopMenu::open(Player& player)
         ShopRotationSystem::markShopsRefreshed();
     }
 
-    bool stayInMenu = true;
-
-    while (stayInMenu)
+    while (true)
     {
+        MenuScreen screen("BOUTIQUES ET COMPTOIRS", "shop.unified.menu");
+        screen.addLine("Accès unique : plus de doublon entre comptoirs regroupés et liste complète.");
+        screen.addLine("Choisis une catégorie rapide ou ouvre la liste complète si tu veux tout vérifier.");
+        screen.addLine("Tu n'as plus besoin de retrouver le PNJ exact pour accéder au bon type de service.");
+        screen.addBackOption("Retour", "shop.unified.back");
+        screen.addOption(1, "Liste complète", "Toutes les boutiques disponibles, avec horaires, stocks et services.", true, "shop.unified.full_list");
+        screen.addOption(2, "Potions / consommables", "Soins fixes, soins en %, rage, garde, antidotes, fioles et rations.", true, "shop.unified.consumable");
+        screen.addOption(3, "Armes", "Armes simples, armes de progression et comparaisons.", true, "shop.unified.weapon");
+        screen.addOption(4, "Armures", "Protections, survie et pièces défensives.", true, "shop.unified.armor");
+        screen.addOption(5, "Forge / réparations", "Réparations, kits, matériaux d'atelier et services de forgeron.", true, "shop.unified.blacksmith");
+        screen.addOption(6, "Matériaux / composants", "Matériaux de base, composants rares et ressources de terrain.", true, "shop.unified.materials");
+        screen.addOption(7, "Plantes / alchimie", "Plantes, recettes, potions avancées et variantes proportionnelles.", true, "shop.unified.alchemy");
+        screen.addOption(8, "Bibliothèque / infos", "Livres, renseignements, dossiers et savoirs achetables.", true, "shop.unified.library");
+        screen.addOption(9, "Transport / voyage", "Rations de route, trajets et services de déplacement.", true, "shop.unified.transport");
+        screen.addOption(10, "Auberge", "Repos, chambres, repas et services d'auberge.", true, "shop.unified.lodging");
+        screen.addOption(11, "Marché noir", "Comptoir risqué, troc et marchandises moins officielles.", true, "shop.unified.black_market");
+        screen.addOption(12, "Église / soins", "Soins, bénédictions, malédictions et services religieux.", true, "shop.unified.church");
+        screen.addOption(13, "Services de ville", "Papiers, services municipaux, petites démarches et demandes locales.", true, "shop.unified.city_service");
+        screen.addOption(14, "Enchantements", "Améliorations magiques, effets spéciaux et services d'enchanteur.", true, "shop.unified.enchanter");
+        screen.addOption(15, "Matériaux de monstres", "Pièces de monstres, revente spécialisée et composants de chasse.", true, "shop.unified.monster_materials");
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une catégorie de boutique.");
         Console::clear();
-        int choice = TerminalInterface::askMenuChoiceFromOptions(
-            buildShopListScreen(shops, &player),
-            "Veuillez choisir une boutique affichée, ou 0 pour revenir."
-        );
 
-        if (choice == 0)
+        if (choice == 0) return;
+
+        if (choice == 1)
         {
-            stayInMenu = false;
-            continue;
-        }
+            bool stayInList = true;
+            while (stayInList)
+            {
+                Console::clear();
+                const int listChoice = TerminalInterface::askMenuChoiceFromOptions(
+                    buildShopListScreen(shops, &player),
+                    "Veuillez choisir une boutique affichée, ou 0 pour revenir aux catégories."
+                );
 
-        openSingleShop(player, shops[choice - 1]);
+                if (listChoice == 0)
+                {
+                    stayInList = false;
+                    continue;
+                }
+
+                openSingleShop(player, shops[listChoice - 1]);
+            }
+        }
+        else if (choice == 2) ShopMenu::openShopOfType(player, ShopType::Consumable);
+        else if (choice == 3) ShopMenu::openShopOfType(player, ShopType::Weapon);
+        else if (choice == 4) ShopMenu::openShopOfType(player, ShopType::Armor);
+        else if (choice == 5) ShopMenu::openShopOfType(player, ShopType::Blacksmith);
+        else if (choice == 6) ShopMenu::openShopOfType(player, ShopType::Material);
+        else if (choice == 7) ShopMenu::openShopOfType(player, ShopType::Alchemist);
+        else if (choice == 8) ShopMenu::openShopOfType(player, ShopType::Library);
+        else if (choice == 9) ShopMenu::openShopOfType(player, ShopType::Transport);
+        else if (choice == 10) ShopMenu::openShopOfType(player, ShopType::Lodging);
+        else if (choice == 11) ShopMenu::openShopOfType(player, ShopType::BlackMarket);
+        else if (choice == 12) ShopMenu::openShopOfType(player, ShopType::Church);
+        else if (choice == 13) ShopMenu::openShopOfType(player, ShopType::CityService);
+        else if (choice == 14) ShopMenu::openShopOfType(player, ShopType::Enchanter);
+        else if (choice == 15) ShopMenu::openShopOfType(player, ShopType::MonsterMaterial);
     }
 }

@@ -1485,6 +1485,80 @@
       .ui-control-switches, .equipment-slot-grid { grid-template-columns:1fr; }
     }
 
+
+
+    /* V3.49.08 — accueil discret conservé, panneaux conteneurs transparents.
+       Le fond/la bannière restent visibles ; les cartes de choix gardent leur lisibilité. */
+    .launch-splash {
+      place-items: center end;
+      justify-items: end;
+      padding-right: clamp(1rem, 9vw, 8rem);
+      background:
+        linear-gradient(90deg, rgba(4,5,8,0.08), rgba(4,5,8,0.32) 58%, rgba(4,5,8,0.68)),
+        url("../../assets/branding/dinotofu_intro_cover_web.png") center center / cover no-repeat,
+        url("../../assets/branding/dinotofu_banner_web.png") center center / cover no-repeat,
+        #06080d;
+    }
+    .launch-card {
+      width: auto;
+      max-width: min(320px, 82vw);
+      border: 0 !important;
+      border-radius: 0;
+      padding: 0;
+      background: transparent !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      text-align: right;
+      transform: translateY(-1.5vh);
+    }
+    .launch-card img,
+    .launch-card h1,
+    .launch-card p {
+      display: none !important;
+    }
+    .launch-card button {
+      min-width: auto;
+      width: auto;
+      padding: 0.68rem 1.1rem;
+      margin: 0;
+      border-radius: 999px;
+      box-shadow: 0 12px 34px rgba(0,0,0,0.34);
+    }
+    .output-panel,
+    .player-panel,
+    .inner-panel,
+    .choices-section .action-section.main,
+    .action-section.main {
+      background: transparent !important;
+      border-color: transparent !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+    }
+    .output-panel,
+    .player-panel {
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .action-section.main,
+    .choices-section .action-section.main {
+      padding-left: 0;
+      padding-right: 0;
+    }
+    .player-main-box,
+    .guardian-box,
+    .advanced-box {
+      background: rgba(6, 8, 13, 0.18) !important;
+      border-color: transparent !important;
+      box-shadow: none !important;
+    }
+    @media (max-width: 760px) {
+      .launch-splash {
+        place-items: end center;
+        justify-items: center;
+        padding: 1rem 1rem 12vh;
+      }
+      .launch-card { text-align: center; transform: none; }
+    }
   </style>
 </head>
 <body class="welcome-active">

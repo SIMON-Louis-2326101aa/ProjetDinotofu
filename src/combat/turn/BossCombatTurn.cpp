@@ -824,7 +824,7 @@ namespace
             }
             if (player.isInDefensePosture())
             {
-                narration << "Trop de stabilité défensive détectée : patch de pression appliqué." << std::endl;
+                narration << "La défense reste trop stable : une pression hostile cherche la faille." << std::endl;
                 player.takeDamage(6 + authority);
             }
             else

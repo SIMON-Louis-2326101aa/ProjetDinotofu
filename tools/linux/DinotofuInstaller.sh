@@ -113,6 +113,27 @@ need_command curl
 need_command unzip
 need_command python3
 
+find_local_release_zip() {
+    local pattern="$1"
+    local search_dirs=("$SCRIPT_DIR")
+    local parent_dir
+    parent_dir="$(dirname "$SCRIPT_DIR")"
+    search_dirs+=("$parent_dir")
+    if [[ -d "${HOME}/Downloads" ]]; then search_dirs+=("${HOME}/Downloads"); fi
+    if [[ -d "${HOME}/Téléchargements" ]]; then search_dirs+=("${HOME}/Téléchargements"); fi
+
+    local dir candidate
+    for dir in "${search_dirs[@]}"; do
+        [[ -d "$dir" ]] || continue
+        candidate="$(find "$dir" -maxdepth 1 -type f -name "$pattern" ! -name '*Installer*' -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)"
+        if [[ -n "$candidate" && -f "$candidate" ]]; then
+            echo "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
 if [[ -z "$REPO" || "$REPO" == "TON_COMPTE/TON_REPO" || "$REPO" != */* ]]; then
     echo "Repo GitHub non configure. Utilise un pack installer genere par GitHub Actions, ou lance :" >&2
     echo "DINOTOFU_REPO='tonPseudo/tonDepot' ./Installer-Dinotofu.sh" >&2
@@ -128,9 +149,9 @@ BACKUP_DIR="${TMP_DIR}/save_backup"
 mkdir -p "$EXTRACT_DIR" "$BACKUP_DIR"
 
 echo "==> Recherche de la derniere release GitHub (${REPO})"
-curl -fsSL -H "User-Agent: DinotofuInstaller" "https://api.github.com/repos/${REPO}/releases/latest" -o "$RELEASE_JSON"
-
-mapfile -t ASSET_INFO < <(python3 - "$RELEASE_JSON" "$ASSET_PATTERN" <<'PY'
+LOCAL_ZIP=""
+if curl -fsSL -H "User-Agent: DinotofuInstaller" "https://api.github.com/repos/${REPO}/releases/latest" -o "$RELEASE_JSON"; then
+    mapfile -t ASSET_INFO < <(python3 - "$RELEASE_JSON" "$ASSET_PATTERN" <<'PY' 2>/dev/null || true
 import fnmatch, json, sys
 with open(sys.argv[1], encoding='utf-8') as f:
     data = json.load(f)
@@ -141,25 +162,40 @@ for asset in data.get('assets', []):
         print(asset.get('name', ''))
         print(asset.get('browser_download_url', ''))
         sys.exit(0)
-print('', file=sys.stderr)
 sys.exit(2)
 PY
 )
 
-TAG_NAME="${ASSET_INFO[0]:-}"
-ASSET_NAME="${ASSET_INFO[1]:-}"
-ASSET_URL="${ASSET_INFO[2]:-}"
-
-if [[ -z "$ASSET_URL" ]]; then
-    echo "Aucun asset ne correspond a ${ASSET_PATTERN}." >&2
-    exit 1
+    TAG_NAME="${ASSET_INFO[0]:-}"
+    ASSET_NAME="${ASSET_INFO[1]:-}"
+    ASSET_URL="${ASSET_INFO[2]:-}"
+else
+    TAG_NAME=""
+    ASSET_NAME=""
+    ASSET_URL=""
 fi
 
-echo "Release trouvee : ${TAG_NAME}"
+if [[ -z "$ASSET_URL" ]]; then
+    LOCAL_ZIP="$(find_local_release_zip "$ASSET_PATTERN" || true)"
+    if [[ -z "$LOCAL_ZIP" ]]; then
+        echo "Aucun asset ne correspond a ${ASSET_PATTERN}, et aucun ZIP local n'a été trouvé dans l'installer." >&2
+        exit 1
+    fi
+    TAG_NAME="$(basename "$LOCAL_ZIP" | sed -E 's/.*-v([0-9]+\.[0-9]{2}\.[0-9]{2}).*/v\1/')"
+    ASSET_NAME="$(basename "$LOCAL_ZIP")"
+    echo "GitHub non utilisé : ZIP Linux local trouvé dans le pack installer."
+else
+    echo "Release trouvee : ${TAG_NAME}"
+fi
+
 echo "Fichier : ${ASSET_NAME}"
 echo "Installation finale : ${INSTALL_DIR}"
-echo "==> Telechargement"
-curl -L --progress-bar -H "User-Agent: DinotofuInstaller" "$ASSET_URL" -o "$ZIP_PATH"
+echo "==> Telechargement / copie locale"
+if [[ -n "$LOCAL_ZIP" ]]; then
+    cp "$LOCAL_ZIP" "$ZIP_PATH"
+else
+    curl -L --progress-bar -H "User-Agent: DinotofuInstaller" "$ASSET_URL" -o "$ZIP_PATH"
+fi
 
 if [[ -d "$INSTALL_DIR" ]]; then
     echo "==> Sauvegarde des donnees joueur"

@@ -1,8 +1,7 @@
 {
   "name": "Dinotofu",
-  "version": "3.49.00",
-  "releaseTag": "v3.49.00",
-  "windowsAssetPattern": "Dinotofu-Windows-v*.zip",
-  "linuxAssetPattern": "Dinotofu-Linux-v*.zip",
-  "notes": "Polishes official branding integration: confirms logo/banner/cover/launcher assets, validates Windows and Linux shortcut icon references, and keeps images active only as GUI/branding supplements."
+  "version": "3.49.89",
+  "releaseTag": "v3.49.89",
+  "assetPattern": "dinotofu_backup_essentiel_3.49.89.zip",
+  "notes": "V3.49.89 ajoute les serments Rivaux et Destin instable, avec traces logiques pour mini-boss récurrents, conséquences longues et oscillations de destin contrôlées."
 }

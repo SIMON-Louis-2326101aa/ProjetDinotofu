@@ -15,7 +15,8 @@ ConsumableGroup::ConsumableGroup()
       type(ConsumableType::Unknown),
       // EN: power declares or implements a focused behavior used by this module.
       // FR: power déclare ou implémente un comportement précis utilisé par ce module.
-      power(0)
+      power(0),
+      percentageBasedEffect(false)
 {
 }
 
@@ -92,7 +93,8 @@ std::vector<ConsumableGroup> InventoryUtils::groupConsumables(const Player& play
         {
             if (group.name == consumable.getName()
                 && group.type == consumable.getType()
-                && group.power == consumable.getPower())
+                && group.power == consumable.getPower()
+                && group.percentageBasedEffect == consumable.isPercentageBasedEffect())
             {
                 group.amount++;
                 trouve = true;
@@ -108,6 +110,7 @@ std::vector<ConsumableGroup> InventoryUtils::groupConsumables(const Player& play
             group.name = consumable.getName();
             group.type = consumable.getType();
             group.power = consumable.getPower();
+            group.percentageBasedEffect = consumable.isPercentageBasedEffect();
 
             groups.push_back(group);
         }

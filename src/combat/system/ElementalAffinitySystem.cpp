@@ -47,6 +47,9 @@ namespace
         if (player.hasPassiveSkill("minor_fire_resistance") && elementId == "fire") resistance += 10;
         if (player.hasPassiveSkill("infernal_fire_resistance") && elementId == "fire") resistance += 22;
         if (player.hasPassiveSkill("minor_cold_resistance") && elementId == "frost") resistance += 12;
+        if (player.hasPassiveSkill("temperature_drill") && (elementId == "fire" || elementId == "frost")) resistance += 4;
+        if (player.hasPassiveSkill("terrain_drill") && (elementId == "shock" || elementId == "bleeding")) resistance += 3;
+        if (player.hasPassiveSkill("environmental_resilience") && (elementId == "fire" || elementId == "frost")) resistance += 6;
         if (player.hasPassiveSkill("fire_vulnerability") && elementId == "fire") weakness += 14;
 
         if (race == CharacterRace::Tiefling || race == CharacterRace::Demon)

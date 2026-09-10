@@ -111,11 +111,11 @@ bool SpecialCharacterNativeBonus::applyForSpecialCharacter(
 void SpecialCharacterNativeBonus::displayNativeBonusApplied(const SpecialCharacter& character)
 {
     MessageScreen::show(
-        "BONUS NATIF",
+        "BONUS DE CHOIX HISTORIQUE",
         "character.native_bonus.applied",
         {
-            "Bonus natif reconnu : " + character.getName() + ".",
-            "L'identité ne copie pas seulement une classe : elle réveille une façon de combattre."
+            "Bonus de choix historique reconnu : " + character.getName() + ".",
+            "La classe naturelle ne donne pas juste des chiffres : elle réveille des réflexes liés à l'histoire du personnage."
         },
         false
     );

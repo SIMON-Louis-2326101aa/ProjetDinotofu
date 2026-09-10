@@ -1,6 +1,6 @@
 # Branding Dinotofu   
 
-Assets officiels confirmés en V3.49.00.   
+Assets officiels confirmés en V3.49.02 avec les nouveaux fichiers fournis.   
 
 ## Rôle des fichiers   
 
@@ -16,3 +16,7 @@ Assets officiels confirmés en V3.49.00.
 ## Règle importante   
 
 Ces images sont actives pour l’identité visuelle, les launchers et l’IG. Elles restent décoratives : aucune information de gameplay ne doit disparaître parce qu’une image est affichée. Le terminal ne doit pas afficher d’images de gameplay.   
+
+## Ajout V3.49.02   
+
+Les images sources propres sont aussi rangées dans `assets/logo/`. Les décors fournis pour l’IG sont rangés dans `assets/visuals/biomes`, `assets/visuals/cities` et `assets/visuals/interiors`, avec un manifeste `assets/visuals/manifest.json`.   

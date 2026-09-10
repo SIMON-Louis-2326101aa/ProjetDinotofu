@@ -98,7 +98,9 @@ namespace
             createMonster("Petit gobelin taxeur", "Gobelin voleur", Race::Gobelin, 1, 42, 2, 7, 12),
             createMonster("Slime de flaque froide", "Slime froid", Race::Slime, 1, 48, 1, 6, 10),
             createMonster("Éclat de bougie arcanique", "Élémentaire mineur", Race::Elementaire, 1, 36, 3, 8, 14),
-            createMonster("Chien errant affamé", "Bête affamée", Race::Bete, 1, 55, 3, 9, 15)
+            createMonster("Chien errant affamé", "Bête affamée", Race::Bete, 1, 55, 3, 9, 15),
+            createMonster("Rat couineur de terrier", "Nuisible rameuteur fragile", Race::Bete, 1, 38, 2, 6, 10),
+            createMonster("Guetteur gobelin de haie", "Gobelin rameuteur nerveux", Race::Gobelin, 1, 46, 3, 8, 13)
         };
     }
 
@@ -118,7 +120,9 @@ namespace
             createMonster("Loup à crocs ternes", "Bête de meute", Race::Bete, 2, 105, 8, 18, 28),
             createMonster("Pilleur au bouclier fendu", "Humanoïde pillard", Race::Humain, 2, 115, 7, 19, 30, 1, 0),
             createMonster("Essaim d'insectes de cave", "Nuée fragile", Race::Insectoide, 2, 84, 5, 20, 31),
-            createMonster("Racine étrangleuse jeune", "Plante entravante", Race::Plante, 2, 125, 6, 17, 27)
+            createMonster("Racine étrangleuse jeune", "Plante entravante", Race::Plante, 2, 125, 6, 17, 27),
+            createMonster("Loup hurleur maigre", "Bête de meute rameuteuse", Race::Bete, 2, 82, 7, 17, 25),
+            createMonster("Corneur gobelin fêlé", "Gobelin rameuteur à corne", Race::Gobelin, 2, 88, 6, 16, 24)
         };
     }
 
@@ -137,7 +141,9 @@ namespace
             createMonster("Chevalier sans bannière", "Humanoïde armuré", Race::Humain, 3, 210, 11, 28, 43, 1, 0, false, true),
             createMonster("Fée des ronces piquantes", "Fée hostile", Race::Fee, 3, 150, 12, 31, 49, 0, 1),
             createMonster("Draconide à écailles grises", "Draconide jeune", Race::Draconide, 3, 230, 12, 30, 45, 0, 1, false, true),
-            createMonster("Araignée verrière", "Insectoïde rapide", Race::Insectoide, 3, 175, 10, 34, 51)
+            createMonster("Araignée verrière", "Insectoïde rapide", Race::Insectoide, 3, 175, 10, 34, 51),
+            createMonster("Kobold tambour de fuite", "Kobold rameuteur paniqué", Race::Draconide, 3, 112, 8, 24, 34),
+            createMonster("Hurleur de meute borgne", "Bête rameuteuse", Race::Bete, 3, 130, 10, 26, 38)
         };
     }
 
@@ -156,7 +162,9 @@ namespace
             createMonster("Golem de forge instable", "Construction brûlante", Race::Construction, 4, 340, 17, 42, 61, 0, 0, false, true, true),
             createMonster("Spectre de serment brisé", "Esprit vengeur", Race::Esprit, 4, 255, 18, 47, 73, 0, 1, false, true, true),
             createMonster("Serpent d'écailles noires", "Draconide toxique", Race::Draconide, 4, 290, 21, 46, 70, 0, 1, false, true, true),
-            createMonster("Ruche mutée des anciennes mines", "Insectoïde évolué", Race::Insectoide, 4, 275, 16, 50, 76, 0, 0, false, true, true)
+            createMonster("Ruche mutée des anciennes mines", "Insectoïde évolué", Race::Insectoide, 4, 275, 16, 50, 76, 0, 0, false, true, true),
+            createMonster("Tambour gobelin de route", "Gobelin rameuteur de bande", Race::Gobelin, 4, 170, 10, 30, 44, 1, 1, false, true),
+            createMonster("Pillard siffleur", "Humain rameuteur d'embuscade", Race::Humain, 4, 140, 12, 31, 46, 1, 0, false, true)
         };
     }
 
@@ -186,7 +194,9 @@ namespace
             createMonster("Scribe gobelin taxeur", "Gobelin qui soutient les voleurs par des dettes absurdes", Race::Gobelin, 6, 150, 12, 34, 50, 2, 1, false, true, true),
             createMonster("Éclat de sentinelle", "Petit reste de construction encore actif", Race::Construction, 6, 260, 17, 38, 52, 0, 0, false, true, true),
             createMonster("Démon de poche contrarié", "Petit démon invoqué trop vite", Race::Demon, 7, 230, 24, 50, 75, 0, 2, false, true, true),
-            createMonster("Larve de ruine", "Insectoïde nourri par poussière arcanique", Race::Insectoide, 6, 185, 21, 44, 60, 0, 1, false, true, true)
+            createMonster("Larve de ruine", "Insectoïde nourri par poussière arcanique", Race::Insectoide, 6, 185, 21, 44, 60, 0, 1, false, true, true),
+            createMonster("Alpha aux côtes blanches", "Chef de meute rameuteur", Race::Bete, 6, 245, 22, 50, 72, 0, 1, false, true, true),
+            createMonster("Capitaine gobelin au cor fendu", "Chef gobelin rameuteur", Race::Gobelin, 6, 230, 18, 47, 70, 1, 1, false, true, true)
         };
     }
 
@@ -238,6 +248,74 @@ namespace
     int scaledValue(int value, int percent)
     {
         return std::max(1, value * percent / 100);
+    }
+
+    bool monsterRaceCanUsePreparedItems(Race race)
+    {
+        return race == Race::Humain
+            || race == Race::SemiHumain
+            || race == Race::Elfe
+            || race == Race::ElfeNoir
+            || race == Race::Nain
+            || race == Race::Gnome
+            || race == Race::Halfelin
+            || race == Race::Tieffelin
+            || race == Race::Aasimar
+            || race == Race::Kitsune
+            || race == Race::Gobelin
+            || race == Race::Hobgobelin
+            || race == Race::Orc
+            || race == Race::Draconide;
+    }
+
+    std::string monsterLevelProfileType(const Monster& baseMonster, int targetLevel, int gap)
+    {
+        std::string type = baseMonster.getType();
+
+        if (gap >= 8 || targetLevel >= 16)
+        {
+            type += " / vétéran dangereux";
+        }
+        else if (gap >= 5 || targetLevel >= 10)
+        {
+            type += " / adaptation avancée";
+        }
+        else if (gap >= 3 || targetLevel >= 6)
+        {
+            type += " / progression locale";
+        }
+
+        switch (baseMonster.getRace())
+        {
+            case Race::Gobelin:
+            case Race::Hobgobelin:
+                if (targetLevel >= 5) type += " / coups opportunistes";
+                break;
+            case Race::Bete:
+            case Race::Dragon:
+            case Race::Draconide:
+                if (targetLevel >= 5) type += " / instincts renforcés";
+                break;
+            case Race::Slime:
+                if (targetLevel >= 5) type += " / noyau plus dense";
+                break;
+            case Race::Plante:
+                if (targetLevel >= 5) type += " / racines tenaces";
+                break;
+            case Race::Elementaire:
+            case Race::AnomalieArcanique:
+                if (targetLevel >= 5) type += " / énergie instable";
+                break;
+            case Race::Humain:
+            case Race::SemiHumain:
+            case Race::Orc:
+                if (targetLevel >= 5) type += " / technique apprise";
+                break;
+            default:
+                break;
+        }
+
+        return type;
     }
 
     // EN: chooseFromList declares or implements a focused behavior used by this module.
@@ -1494,17 +1572,26 @@ namespace
         if (hpPercent < 55) hpPercent = 55;
         if (damagePercent < 60) damagePercent = 60;
 
+        const int extraPreparedItems = monsterRaceCanUsePreparedItems(baseMonster.getRace())
+            ? std::max(0, targetLevel - 3) / 4
+            : 0;
+        const int extraDamageItems = (baseMonster.getRace() == Race::Elementaire
+            || baseMonster.getRace() == Race::AnomalieArcanique
+            || baseMonster.getRace() == Race::Demon)
+            ? std::max(0, targetLevel - 4) / 5
+            : 0;
+
         Monster scaled = createMonster(
             baseMonster.getName(),
-            baseMonster.getType(),
+            monsterLevelProfileType(baseMonster, targetLevel, gap),
             baseMonster.getRace(),
             targetLevel,
             scaledValue(baseMonster.getMaxHp(), hpPercent),
             scaledValue(baseMonster.getMinDamage(), damagePercent),
             scaledValue(baseMonster.getMaxDamage(), damagePercent),
             scaledValue(baseMonster.getCriticalDamage(), damagePercent + 3),
-            baseMonster.getHealingPotionCount(),
-            baseMonster.getDamagePotionCount(),
+            baseMonster.getHealingPotionCount() + extraPreparedItems,
+            baseMonster.getDamagePotionCount() + extraDamageItems + (extraPreparedItems > 1 ? 1 : 0),
             baseMonster.isInvocation(),
             baseMonster.isElite(),
             !baseMonster.areStatsVisible() || targetLevel >= baseMonster.getLevel() + 8,

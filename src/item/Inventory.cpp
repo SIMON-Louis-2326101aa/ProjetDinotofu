@@ -85,6 +85,7 @@ namespace
         std::string name;
         ConsumableType type;
         int power;
+        bool percentageBasedEffect;
     };
 
     std::string formatConsumableInventoryStackLabel(const std::string& name, int amount)
@@ -110,7 +111,8 @@ namespace
             {
                 if (group.name == consumable.getName()
                     && group.type == consumable.getType()
-                    && group.power == consumable.getPower())
+                    && group.power == consumable.getPower()
+                    && group.percentageBasedEffect == consumable.isPercentageBasedEffect())
                 {
                     group.amount++;
                     found = true;
@@ -126,6 +128,7 @@ namespace
                 group.name = consumable.getName();
                 group.type = consumable.getType();
                 group.power = consumable.getPower();
+                group.percentageBasedEffect = consumable.isPercentageBasedEffect();
                 groups.push_back(group);
             }
         }
@@ -1024,7 +1027,7 @@ void Inventory::inspectConsumable(int index) const
         {
             "Nom : " + consumable.getName(),
             "Description : " + consumable.getDescription(),
-            "Puissance : " + std::to_string(consumable.getPower()),
+            "Puissance : " + consumable.getPowerDisplayText(),
             "Valeur : " + std::to_string(consumable.getValue()) + " pièces"
         },
         false

@@ -55,6 +55,11 @@ bool Consumable::isPercentageBasedHealing() const
     return type == ConsumableType::Healing && percentageBasedHealing;
 }
 
+bool Consumable::isPercentageBasedEffect() const
+{
+    return percentageBasedHealing;
+}
+
 int Consumable::getHealingAmountForMaxHp(int maxHp) const
 {
     if (maxHp < 1)
@@ -70,11 +75,31 @@ int Consumable::getHealingAmountForMaxHp(int maxHp) const
     return power;
 }
 
+int Consumable::getEffectAmountForBase(int baseValue) const
+{
+    if (baseValue < 1)
+    {
+        baseValue = 1;
+    }
+
+    if (isPercentageBasedEffect())
+    {
+        return std::max(1, baseValue * power / 100);
+    }
+
+    return power;
+}
+
 std::string Consumable::getPowerDisplayText() const
 {
     if (isPercentageBasedHealing())
     {
         return std::to_string(power) + "% des PV max";
+    }
+
+    if (isPercentageBasedEffect())
+    {
+        return std::to_string(power) + "%";
     }
 
     return std::to_string(power);

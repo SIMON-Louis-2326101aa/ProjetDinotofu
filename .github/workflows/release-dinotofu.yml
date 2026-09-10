@@ -54,9 +54,7 @@ jobs:
           REASON=""
 
           REQUIRED_ASSETS=(
-            "Dinotofu-Windows-v${VERSION}.zip"
             "DinotofuInstaller-Windows-v${VERSION}.zip"
-            "Dinotofu-Linux-v${VERSION}.zip"
             "DinotofuInstaller-Linux-v${VERSION}.zip"
           )
 
@@ -108,10 +106,10 @@ jobs:
             REASON="le tag ${TAG} existe deja mais la release GitHub manque"
           elif [[ "${RELEASE_HAS_REQUIRED_ASSETS}" == "false" ]]; then
             SHOULD_PUBLISH="true"
-            REASON="la release ${TAG} existe mais il manque au moins un ZIP Windows/Linux jouable"
+            REASON="la release ${TAG} existe mais il manque au moins un ZIP installateur Windows/Linux"
           else
             SHOULD_PUBLISH="false"
-            REASON="le tag ${TAG} et les ZIP Windows/Linux attendus existent deja"
+            REASON="le tag ${TAG} et les ZIP installateurs Windows/Linux attendus existent deja"
           fi
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -156,11 +154,6 @@ jobs:
           ./scripts/package_linux_release.sh
           ./scripts/package_linux_installer.sh
 
-      - name: Upload Linux game artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}
-          path: release_packages/Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}.zip
 
       - name: Upload Linux installer artifact
         uses: actions/upload-artifact@v4
@@ -191,11 +184,6 @@ jobs:
           DINOTOFU_REPO: ${{ github.repository }}
         run: ./scripts/package_windows_release.sh
 
-      - name: Upload Windows game artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}
-          path: release_packages/Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}.zip
 
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@v4
@@ -240,10 +228,10 @@ jobs:
           Raison : ${RELEASE_REASON}
 
           Fichiers utiles :
-          - Dinotofu-Windows-v${RELEASE_VERSION}.zip : jeu Windows pret a lancer.
-          - DinotofuInstaller-Windows-v${RELEASE_VERSION}.zip : installer/launcher Windows.
-          - Dinotofu-Linux-v${RELEASE_VERSION}.zip : jeu Linux pret a lancer.
-          - DinotofuInstaller-Linux-v${RELEASE_VERSION}.zip : installer/launcher Linux.
+          - DinotofuInstaller-Windows-v${RELEASE_VERSION}.zip : installer Windows avec le ZIP du jeu inclus en secours local.
+          - DinotofuInstaller-Linux-v${RELEASE_VERSION}.zip : installer Linux avec le ZIP du jeu inclus en secours local.
+
+          Installation : telecharge l'installer de ton systeme, dezippe-le, puis lance Installer-Dinotofu.
           EOF
 
           if gh release view "${RELEASE_TAG}" --repo "${GH_REPO}" >/dev/null 2>&1; then

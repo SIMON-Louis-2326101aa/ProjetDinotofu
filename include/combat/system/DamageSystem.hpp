@@ -12,12 +12,19 @@
 #include <string>
 #include <vector>
 
+enum class DamageNature
+{
+    Physical,
+    Magical,
+    Neutral
+};
+
 class DamageSystem
 {
 public:
     // EN: calculateReceivedDamage declares or implements a focused behavior used by this module.
     // FR: calculateReceivedDamage déclare ou implémente un comportement précis utilisé par ce module.
-    static DamageReport calculateReceivedDamage(Entity& defender, int rawDamage);
+    static DamageReport calculateReceivedDamage(Entity& defender, int rawDamage, DamageNature nature = DamageNature::Physical);
     // EN: displayDamageReport declares or implements a focused behavior used by this module.
     // FR: displayDamageReport déclare ou implémente un comportement précis utilisé par ce module.
     static std::vector<std::string> buildDamageReportLines(const Entity& defender, const DamageReport& rapport);

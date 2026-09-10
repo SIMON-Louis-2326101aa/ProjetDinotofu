@@ -55,6 +55,9 @@ public:
     // EN: consultOnly declares or implements a focused behavior used by this module.
     // FR: consultOnly déclare ou implémente un comportement précis utilisé par ce module.
     static void consultOnly(const Player& player);
+    // EN: openTeamMenu declares or implements a focused behavior used by this module.
+    // FR: openTeamMenu déclare ou implémente un comportement précis utilisé par ce module.
+    static void openTeamMenu(Player& player);
     // EN: openExploration declares or implements a focused behavior used by this module.
     // FR: openExploration déclare ou implémente un comportement précis utilisé par ce module.
     static void openExploration(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule);

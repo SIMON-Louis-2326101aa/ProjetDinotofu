@@ -14,6 +14,9 @@ struct DamageReport
     int rawDamage;
     int armorAbsorbedDamage;
     int classReducedDamage;
+    int naturalAffinityDamageDelta;
+    std::string naturalAffinityLine;
+    std::vector<std::string> naturalAffinityLines;
     int receivedDamage;
     bool armorUsed;
     bool armorBrokenDuringImpact;
@@ -25,6 +28,9 @@ struct DamageReport
         : rawDamage(0),
           armorAbsorbedDamage(0),
           classReducedDamage(0),
+          naturalAffinityDamageDelta(0),
+          naturalAffinityLine(),
+          naturalAffinityLines(),
           receivedDamage(0),
           armorUsed(false),
           armorBrokenDuringImpact(false),

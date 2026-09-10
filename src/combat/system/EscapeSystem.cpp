@@ -66,6 +66,7 @@ bool EscapeSystem::playerAttemptsEscape(Player& player, Random& random, Difficul
         if (!armor.isBroken())
         {
             equipmentEscapeModifier += EquipmentWeightRules::getArmorEscapeModifier(armor);
+            equipmentEscapeModifier += CombatClassSystem::getArmorHandlingEscapeAdjustment(player, armor.getType(), armor.getName());
         }
     }
     escapeChance += equipmentEscapeModifier;
@@ -250,6 +251,7 @@ int EscapeSystem::calculateDuelEscapeChance(
         if (!armor.isBroken())
         {
             chance += EquipmentWeightRules::getArmorEscapeModifier(armor);
+            chance += CombatClassSystem::getArmorHandlingEscapeAdjustment(runner, armor.getType(), armor.getName());
         }
     }
 

@@ -415,7 +415,7 @@ namespace
             {"Entités hostiles / ennemis", "Reine moustique de fièvre", "Insectoïde rare de marais.", "Elle rend les soins et antidotes importants, mais doit rester rare pour ne pas transformer chaque marais en punition permanente.", "Rare", 0, 0},
             {"Quêtes / guilde", "Contrats de service", "Petites missions utiles mais peu rentables.", "Les services donnent parfois faveurs, recommandations ou lettres plutôt que beaucoup d'or. Ils remplissent le monde sans devenir meilleur farm.", "Règle économique", 0, 0},
             {"Quêtes / guilde", "Contrats de bestiaire", "Missions de connaissance.", "Elles ne demandent pas toujours de tuer : observer, confirmer une famille ou récupérer un indice suffit parfois à faire progresser le registre.", "Règle de progression", 0, 0},
-            {"Légendes / contes", "Objets qui racontent", "Un meuble, une porte ou un outil peut devenir une trace lore.", "La V2.08.00 ajoute davantage de petits récits pour que le contenu donne une impression de monde vivant sans forcer une lecture constante.", "Archive", 0, 0}
+            {"Légendes / contes", "Objets qui racontent", "Un meuble, une porte ou un outil peut devenir une trace lore.", "Les objets peuvent porter des récits courts : une trace, une rumeur, un souvenir ou une vieille peur sans forcer une lecture constante.", "Archive", 0, 0}
         };
 
         return entries;

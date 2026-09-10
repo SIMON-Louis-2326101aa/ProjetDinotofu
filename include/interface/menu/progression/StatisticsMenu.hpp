@@ -14,18 +14,22 @@ class Player;
 class StatisticsMenu
 {
 public:
-    static MenuScreen buildHubScreen();
+    static MenuScreen buildHubScreen(bool allowSkillLoadoutManagement = true);
     // EN: open displays the statistics hub and returns to the caller without consuming combat turns.
     // FR: open affiche le menu central des statistiques et revient à l'appelant sans consommer de tour.
-    static void open(Player& player, DifficultyMode difficulty);
+    static void open(Player& player, DifficultyMode difficulty, bool allowSkillLoadoutManagement = true);
 
     // EN: open displays statistics when the caller does not know the current difficulty context.
     // FR: open affiche les statistiques quand l'appelant ne connaît pas le contexte de difficulté actuel.
-    static void open(Player& player);
+    static void open(Player& player, bool allowSkillLoadoutManagement = true);
 
     // EN: displayTitleCatalog prints owned and unlockable character titles.
     // FR: displayTitleCatalog affiche les titres possédés et les titres déblocables.
     static void displayTitleCatalog(Player& player);
+
+    // EN: openSkillLoadoutMenu opens the active/passive equipment screen directly from character hubs.
+    // FR: openSkillLoadoutMenu ouvre directement l'écran d'équipement actifs/passifs depuis les hubs personnage.
+    static void openSkillLoadoutMenu(Player& player);
 
 private:
     // EN: displaySummary prints a compact character overview.
@@ -43,6 +47,7 @@ private:
     // EN: displaySkillStats prints unlocked skills and skill progress.
     // FR: displaySkillStats affiche les compétences débloquées et leur progression.
     static void displaySkillStats(const Player& player);
+    static void displaySkillLoadoutMenu(Player& player);
 
     // EN: displayTopThreeStats prints persistent Top 3 counters from the canonical engine journal.
     // FR: displayTopThreeStats affiche les Top 3 persistants issus du journal moteur canonique.

@@ -283,9 +283,11 @@ bool CombatPotionUse::useSelectedPotion(
 
     if (type == ConsumableType::Damage)
     {
-        int totalBonus = potion.getPower();
+        int totalBonus = potion.isPercentageBasedEffect()
+            ? potion.getEffectAmountForBase(std::max(1, player.getMaxDamage()))
+            : potion.getPower();
 
-        if (potionDamageBonus > 0)
+        if (potionDamageBonus > 0 && !potion.isPercentageBasedEffect())
         {
             totalBonus = potion.getPower();
         }
@@ -320,7 +322,9 @@ bool CombatPotionUse::useSelectedPotion(
                 {
                     player.getName() + " utilise " + potion.getName() + ".",
                     "Cible : " + target->getName(),
-                    "Bonus d'attaque : +" + std::to_string(totalBonus)
+                    potion.isPercentageBasedEffect()
+                        ? "Bonus d'attaque : +" + std::to_string(totalBonus) + " (" + potion.getPowerDisplayText() + " de tes dégâts max)."
+                        : "Bonus d'attaque : +" + std::to_string(totalBonus)
                 }
             );
 
@@ -422,7 +426,9 @@ bool CombatPotionUse::useSelectedPotion(
         }
 
         const int hpBefore = player.getHp();
-        int stabilisation = std::max(1, potion.getPower() / 3);
+        int stabilisation = potion.isPercentageBasedEffect()
+            ? potion.getEffectAmountForBase(player.getMaxHp())
+            : std::max(1, potion.getPower() / 3);
         std::vector<std::string> notes;
         bool curedStatus = applyCurativeStatusEffect(player, potion, notes);
         bool elementalWard = potionNameContains(potion, "voile")
@@ -438,15 +444,25 @@ bool CombatPotionUse::useSelectedPotion(
             int wardPower = potionNameContains(potion, "voile") ? potion.getPower() : std::max(8, potion.getPower() / 2);
             player.applyElementalWard(3, wardPower);
         }
+        if (potion.isPercentageBasedEffect())
+        {
+            player.applyGuardBoost(3, std::max(8, potion.getPower()));
+        }
 
         std::vector<std::string> lines;
         lines.push_back(player.getName() + " utilise " + potion.getName() + ".");
-        lines.push_back("Stabilisation : +" + std::to_string(stabilisation) + " PV.");
+        lines.push_back(potion.isPercentageBasedEffect()
+            ? "Stabilisation proportionnelle : +" + std::to_string(stabilisation) + " PV (" + potion.getPowerDisplayText() + " des PV max)."
+            : "Stabilisation : +" + std::to_string(stabilisation) + " PV.");
         lines.push_back("PV : " + std::to_string(hpBefore) + " -> " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".");
         lines.push_back("Posture défensive immédiate.");
         if (elementalWard)
         {
             lines.push_back("Un voile court rend les altérations élémentaires moins mordantes.");
+        }
+        if (potion.isPercentageBasedEffect())
+        {
+            lines.push_back("La garde gagne aussi une réduction courte en pourcentage.");
         }
         for (const std::string& note : notes)
         {
@@ -567,7 +583,9 @@ bool CombatPotionUse::useSelectedPotion(
         }
 
         int hpBefore = debuffTarget->getHp();
-        int rawDamage = potion.getPower();
+        int rawDamage = potion.isPercentageBasedEffect()
+            ? potion.getEffectAmountForBase(debuffTarget->getMaxHp())
+            : potion.getPower();
         DamageReport report = DamageSystem::calculateReceivedDamage(*debuffTarget, rawDamage);
         DamageSystem::displayDamageReport(*debuffTarget, report);
         debuffTarget->takeDamage(report.receivedDamage);
@@ -584,7 +602,9 @@ bool CombatPotionUse::useSelectedPotion(
         std::vector<std::string> lines;
         lines.push_back(player.getName() + " lance " + potion.getName() + " sur " + debuffTarget->getName() + ".");
         lines.push_back("PV cible : " + std::to_string(hpBefore) + " -> " + std::to_string(debuffTarget->getHp()) + "/" + std::to_string(debuffTarget->getMaxHp()) + ".");
-        lines.push_back("Dégâts reçus : " + std::to_string(report.receivedDamage) + ".");
+        lines.push_back(potion.isPercentageBasedEffect()
+            ? "Dégâts reçus : " + std::to_string(report.receivedDamage) + " (" + potion.getPowerDisplayText() + " des PV max de la cible avant armure)."
+            : "Dégâts reçus : " + std::to_string(report.receivedDamage) + ".");
         lines.push_back(fragilityPotion
             ? "La cible garde une faille ouverte pendant plusieurs tours."
             : "La cible est affaiblie pendant plusieurs tours.");
@@ -670,7 +690,7 @@ bool CombatPotionUse::useSelectedPotion(
             if (potionNameContains(potion, "braise"))
             {
                 int hpBefore = spellTarget->getHp();
-                DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, std::max(6, potion.getPower() - 4));
+                DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, std::max(6, potion.getPower() - 4), DamageNature::Magical);
                 DamageSystem::displayDamageReport(*spellTarget, report);
                 spellTarget->takeDamage(report.receivedDamage);
                 ElementalAffinitySystem::applyBurning(*spellTarget, 3, 2 + potion.getPower() / 26);
@@ -692,7 +712,7 @@ bool CombatPotionUse::useSelectedPotion(
             if (potionNameContains(potion, "venin"))
             {
                 int hpBefore = spellTarget->getHp();
-                DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, std::max(5, potion.getPower() / 3));
+                DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, std::max(5, potion.getPower() / 3), DamageNature::Magical);
                 DamageSystem::displayDamageReport(*spellTarget, report);
                 spellTarget->takeDamage(report.receivedDamage);
                 ElementalAffinitySystem::applyPoison(*spellTarget, 4, 2 + potion.getPower() / 24);
@@ -713,7 +733,7 @@ bool CombatPotionUse::useSelectedPotion(
             if (potionNameContains(potion, "faille"))
             {
                 int hpBefore = spellTarget->getHp();
-                DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, std::max(8, potion.getPower() / 2));
+                DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, std::max(8, potion.getPower() / 2), DamageNature::Magical);
                 DamageSystem::displayDamageReport(*spellTarget, report);
                 spellTarget->takeDamage(report.receivedDamage);
                 spellTarget->applyVulnerability(3, 14 + std::max(1, potion.getPower() / 10));
@@ -730,7 +750,7 @@ bool CombatPotionUse::useSelectedPotion(
             }
 
             int hpBefore = spellTarget->getHp();
-            DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, potion.getPower());
+            DamageReport report = DamageSystem::calculateReceivedDamage(*spellTarget, potion.getPower(), DamageNature::Magical);
             DamageSystem::displayDamageReport(*spellTarget, report);
             spellTarget->takeDamage(report.receivedDamage);
             if (random.between(1, 100) <= 45) ElementalAffinitySystem::applyShock(*spellTarget, 1);

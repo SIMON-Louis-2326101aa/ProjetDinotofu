@@ -10,6 +10,8 @@
 #include "combat/summon/SummonCombatSystem.hpp"
 #include "combat/system/WaveCombatSystem.hpp"
 #include "combat/system/CombatClassSystem.hpp"
+#include "combat/system/ElementalAffinitySystem.hpp"
+#include "combat/profile/MonsterBehaviorProfile.hpp"
 #include "combat/reward/CombatReward.hpp"
 #include "combat/reward/CombatRewardSystem.hpp"
 #include "combat/loot/LootGenerator.hpp"
@@ -46,6 +48,9 @@
 #include <cstddef>
 #include <numeric>
 #include <cctype>
+#include <map>
+#include <set>
+#include <sstream>
 
 namespace
 {
@@ -117,6 +122,8 @@ namespace
         {
             description += " Profil soigneur/support : peut parfois prioriser un allié blessé plutôt qu'attaquer.";
         }
+
+        description += MonsterBehaviorProfileCatalog::buildBestiarySentence(monster);
 
         if (!monster.areStatsVisible())
         {
@@ -786,6 +793,2128 @@ namespace
         return groups[static_cast<std::size_t>(random.between(0, static_cast<int>(groups.size()) - 1))];
     }
 
+    int localJournalCount(const Player& player, const std::string& category, const std::string& key)
+    {
+        for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+        {
+            if (record.category == category && record.key == key)
+            {
+                return record.count;
+            }
+        }
+        return 0;
+    }
+
+    std::string localJournalLabel(const Player& player, const std::string& category, const std::string& key, const std::string& fallback = "")
+    {
+        for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+        {
+            if (record.category == category && record.key == key)
+            {
+                return record.label.empty() ? fallback : record.label;
+            }
+        }
+        return fallback;
+    }
+
+    int extractLocalLabelIntField(const std::string& label, const std::string& fieldName, int fallback)
+    {
+        const std::string marker = fieldName + "=";
+        const std::size_t pos = label.find(marker);
+        if (pos == std::string::npos)
+        {
+            return fallback;
+        }
+        std::size_t start = pos + marker.size();
+        std::size_t end = start;
+        if (end < label.size() && label[end] == '-')
+        {
+            ++end;
+        }
+        while (end < label.size() && std::isdigit(static_cast<unsigned char>(label[end])))
+        {
+            ++end;
+        }
+        if (end <= start)
+        {
+            return fallback;
+        }
+        try
+        {
+            return std::stoi(label.substr(start, end - start));
+        }
+        catch (...)
+        {
+            return fallback;
+        }
+    }
+
+    bool recruitedAllyIsInInfirmary(const Player& player, const std::string& recruitName)
+    {
+        if (recruitName.empty())
+        {
+            return false;
+        }
+        return localJournalCount(player, "recrues_infirmerie_sejours", recruitName)
+            > localJournalCount(player, "recrues_infirmerie_recuperees", recruitName);
+    }
+
+    int recruitedAllyInfirmaryReadyDay(const Player& player, const std::string& recruitName)
+    {
+        const std::string label = localJournalLabel(player, "recrues_infirmerie_sejours", recruitName);
+        return extractLocalLabelIntField(label, "pret_jour", player.getWorldDaysElapsed());
+    }
+
+    std::string recruitedAllyInfirmarySeverity(const Player& player, const std::string& recruitName)
+    {
+        const std::string label = localJournalLabel(player, "recrues_infirmerie_sejours", recruitName, "gravite=surveillance");
+        const std::string marker = "gravite=";
+        const std::size_t pos = label.find(marker);
+        if (pos == std::string::npos)
+        {
+            return "surveillance";
+        }
+        const std::size_t start = pos + marker.size();
+        std::size_t end = label.find(" | ", start);
+        if (end == std::string::npos)
+        {
+            end = label.size();
+        }
+        return label.substr(start, end - start);
+    }
+
+    bool recruitedAllyIsAwaitingInfirmaryTransfer(const Player& player, const std::string& recruitName)
+    {
+        if (recruitName.empty())
+        {
+            return false;
+        }
+        return localJournalCount(player, "recrues_a_evacuer", recruitName)
+            > localJournalCount(player, "recrues_evacuees_infirmerie", recruitName);
+    }
+
+    std::string extractLabelStringField(const std::string& label, const std::string& fieldName, const std::string& fallback)
+    {
+        const std::string marker = fieldName + "=";
+        const std::size_t pos = label.find(marker);
+        if (pos == std::string::npos)
+        {
+            return fallback;
+        }
+        const std::size_t start = pos + marker.size();
+        std::size_t end = label.find(" | ", start);
+        if (end == std::string::npos)
+        {
+            end = label.size();
+        }
+        if (end <= start)
+        {
+            return fallback;
+        }
+        return label.substr(start, end - start);
+    }
+
+    int extractLabelIntField(const std::string& label, const std::string& fieldName, int fallback)
+    {
+        const std::string marker = fieldName + "=";
+        const std::size_t pos = label.find(marker);
+        if (pos == std::string::npos)
+        {
+            return fallback;
+        }
+        std::size_t start = pos + marker.size();
+        std::size_t end = start;
+        if (end < label.size() && label[end] == '-')
+        {
+            ++end;
+        }
+        while (end < label.size() && std::isdigit(static_cast<unsigned char>(label[end])))
+        {
+            ++end;
+        }
+        if (end <= start)
+        {
+            return fallback;
+        }
+        try
+        {
+            return std::stoi(label.substr(start, end - start));
+        }
+        catch (...)
+        {
+            return fallback;
+        }
+    }
+
+    unsigned int stableAllyHash(const std::string& seed)
+    {
+        unsigned int hash = 2166136261u;
+        for (unsigned char c : seed)
+        {
+            hash ^= c;
+            hash *= 16777619u;
+        }
+        return hash;
+    }
+
+    int recruitedAllyInitialHealthPercent(const std::string& recruitName)
+    {
+        return 70 + static_cast<int>(stableAllyHash(recruitName + ":initial_hp_percent") % 31u);
+    }
+
+    int recruitedAllyRespawnHealthPercent(DifficultyMode difficulty)
+    {
+        return std::clamp(DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty), 1, 100);
+    }
+
+    int recruitedAllyRankIndexFromLevel(int level)
+    {
+        if (level >= 70) return 6;
+        if (level >= 52) return 5;
+        if (level >= 38) return 4;
+        if (level >= 26) return 3;
+        if (level >= 15) return 2;
+        if (level >= 8) return 1;
+        return 0;
+    }
+
+    std::string recruitedAllyRankName(int index)
+    {
+        static const std::vector<std::string> ranks = {"F", "E", "D", "C", "B", "A", "S"};
+        index = std::clamp(index, 0, static_cast<int>(ranks.size()) - 1);
+        return ranks[static_cast<std::size_t>(index)];
+    }
+
+    bool recruitedAllyManualOrderEnabled(const Player& player)
+    {
+        const std::string mode = localJournalLabel(player, "ordre_manuel_recrues", "mode", "auto");
+        return mode.find("manuel") != std::string::npos || mode.find("manual") != std::string::npos;
+    }
+
+    int recruitedAllyManualOrderIndex(const Player& player, const std::string& name)
+    {
+        if (!recruitedAllyManualOrderEnabled(player))
+        {
+            return 10000;
+        }
+        for (int slot = 1; slot <= 12; ++slot)
+        {
+            if (localJournalLabel(player, "ordre_manuel_recrues", "slot_" + std::to_string(slot), "") == name)
+            {
+                return slot;
+            }
+        }
+        return 10000;
+    }
+
+    struct RecruitedAllyCombatSupport
+    {
+        std::string name;
+        std::string race;
+        std::string job;
+        std::string trait;
+        int recruitedLevel = 1;
+        int estimatedLevel = 1;
+        int originRankIndex = 0;
+        int currentRankIndex = 0;
+        int requestedShare = 10;
+        int normalizedShare = 0;
+        int damageDealt = 0;
+        int healingDone = 0;
+        int turnsTaken = 0;
+        int maxHp = 1;
+        int currentHp = 1;
+        int healingPotionCharges = 0;
+        int weaponQuality = 1;
+        int armorQuality = 1;
+        int supportKitQuality = 0;
+        int activeSkillCooldown = 0;
+        int supportActions = 0;
+        int finishBlows = 0;
+        bool protectedThisRound = false;
+    };
+
+    struct RecruitedAllyUniqueOrder
+    {
+        bool healOneTurn = false;
+        bool guardOneTurn = false;
+        bool forceTechniqueOneTurn = false;
+        bool hasPriorityTarget = false;
+        std::string priorityTargetName;
+        bool switchRequested = false;
+        std::string switchInName;
+    };
+
+    struct RecruitedAllyOrderState
+    {
+        bool groupHealOneTurn = false;
+        bool groupGuardOneTurn = false;
+        bool groupTechniqueOneTurn = false;
+        bool groupSpreadTargetsOneTurn = false;
+        bool groupPriorityTarget = false;
+        std::string groupPriorityTargetName;
+        std::map<std::string, RecruitedAllyUniqueOrder> uniqueOrders;
+    };
+
+    std::string lowerCopy(std::string text)
+    {
+        std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return text;
+    }
+
+    int recruitedAllyMaxShareCapForGroupSize(int groupSizeIncludingPlayer)
+    {
+        if (groupSizeIncludingPlayer >= 5) return 22;
+        if (groupSizeIncludingPlayer == 4) return 25;
+        if (groupSizeIncludingPlayer == 3) return 30;
+        if (groupSizeIncludingPlayer == 2) return 35;
+        return 0;
+    }
+
+    int recruitedAllyPlayerMinimumShareForGroupSize(int groupSizeIncludingPlayer)
+    {
+        if (groupSizeIncludingPlayer <= 1) return 100;
+        const int averageShare = 100 / std::max(1, groupSizeIncludingPlayer);
+        return std::clamp(averageShare + 10, 30, 65);
+    }
+
+    int normalizeRecruitedAllyShares(std::vector<RecruitedAllyCombatSupport>& allies)
+    {
+        if (allies.empty())
+        {
+            return 100;
+        }
+        const int groupSize = static_cast<int>(allies.size()) + 1;
+        int playerShare = recruitedAllyPlayerMinimumShareForGroupSize(groupSize);
+        const int perAllyCap = std::min(recruitedAllyMaxShareCapForGroupSize(groupSize), std::max(6, playerShare - 1));
+        const int available = std::max(0, 100 - playerShare);
+        int totalWeight = 0;
+        std::vector<int> weights;
+        for (const RecruitedAllyCombatSupport& ally : allies)
+        {
+            const int powerWeight = ally.currentRankIndex * 3 + ally.estimatedLevel / 8;
+            const int weight = std::clamp(ally.requestedShare + powerWeight, 5, perAllyCap * 2);
+            weights.push_back(weight);
+            totalWeight += weight;
+        }
+
+        int assigned = 0;
+        for (std::size_t i = 0; i < allies.size(); ++i)
+        {
+            int share = totalWeight <= 0
+                ? available / static_cast<int>(allies.size())
+                : (weights[i] * available) / totalWeight;
+            share = std::clamp(share, allies.size() <= 1 ? 0 : 5, perAllyCap);
+            allies[i].normalizedShare = share;
+            assigned += share;
+        }
+
+        int safety = 0;
+        while (assigned < available && safety < 200)
+        {
+            bool changed = false;
+            for (RecruitedAllyCombatSupport& ally : allies)
+            {
+                if (assigned >= available) break;
+                if (ally.normalizedShare < perAllyCap)
+                {
+                    ++ally.normalizedShare;
+                    ++assigned;
+                    changed = true;
+                }
+            }
+            if (!changed) break;
+            ++safety;
+        }
+
+        playerShare = 100 - assigned;
+        const auto biggest = std::max_element(allies.begin(), allies.end(), [](const RecruitedAllyCombatSupport& a, const RecruitedAllyCombatSupport& b) {
+            return a.normalizedShare < b.normalizedShare;
+        });
+        if (biggest != allies.end() && playerShare <= biggest->normalizedShare)
+        {
+            int needed = biggest->normalizedShare + 1 - playerShare;
+            for (RecruitedAllyCombatSupport& ally : allies)
+            {
+                if (needed <= 0) break;
+                if (ally.normalizedShare > 5)
+                {
+                    const int taken = std::min(needed, ally.normalizedShare - 5);
+                    ally.normalizedShare -= taken;
+                    playerShare += taken;
+                    needed -= taken;
+                }
+            }
+        }
+        return std::clamp(playerShare, 0, 100);
+    }
+
+    RecruitedAllyCombatSupport recruitedAllyFromRecord(const Player& player, const PlayerJournalRecord& record)
+    {
+        RecruitedAllyCombatSupport ally;
+        ally.name = record.key.empty() ? record.label : record.key;
+        ally.race = extractLabelStringField(record.label, "race", "Inconnue");
+        ally.job = extractLabelStringField(record.label, "profil", "profil libre");
+        ally.trait = extractLabelStringField(record.label, "trait", "trait non relu");
+        ally.recruitedLevel = std::max(1, extractLabelIntField(record.label, "niveau_recrutement", std::max(1, player.getLevel() - 2)));
+        const int gained = std::min(18, std::max(0, record.count - 1) * 2 + static_cast<int>(stableAllyHash(ally.name + ":combat_growth") % 5u));
+        ally.estimatedLevel = std::max(ally.recruitedLevel, std::min(100, ally.recruitedLevel + gained));
+        ally.originRankIndex = std::clamp(extractLabelIntField(record.label, "rang_origine_index", recruitedAllyRankIndexFromLevel(ally.recruitedLevel)), 0, 6);
+
+        int promotionCount = 0;
+        const std::string prefix = ally.name + ":";
+        for (const PlayerJournalRecord& promotion : player.getCanonicalJournalRecords())
+        {
+            if (promotion.category == "rangs_recrues_obtenus" && promotion.key.rfind(prefix, 0) == 0 && promotion.count > 0)
+            {
+                promotionCount += promotion.count;
+            }
+        }
+        ally.currentRankIndex = std::max(ally.originRankIndex, recruitedAllyRankIndexFromLevel(ally.estimatedLevel));
+        ally.currentRankIndex = std::clamp(ally.currentRankIndex + promotionCount, ally.originRankIndex, 6);
+        int baseShare = std::clamp(extractLabelIntField(record.label, "part_base", 12 + ally.currentRankIndex * 4), 6, 40);
+        const int earlyDiscount = std::max(0, ally.currentRankIndex - ally.originRankIndex) * 2;
+        const int storedDiscount = extractLabelIntField(record.label, "remise_fidelite", std::max(0, 7 - ally.originRankIndex));
+        ally.requestedShare = std::clamp(baseShare - std::clamp(storedDiscount + earlyDiscount, 0, 14), 6, 40);
+        ally.maxHp = std::max(18, 34 + ally.estimatedLevel * 3 + ally.currentRankIndex * 15);
+        const std::string profile = lowerCopy(ally.job + " " + ally.trait);
+        if (profile.find("gardien") != std::string::npos || profile.find("tank") != std::string::npos)
+        {
+            ally.maxHp = ally.maxHp * 120 / 100;
+        }
+        if (profile.find("soigneur") != std::string::npos || profile.find("mage d'appui") != std::string::npos)
+        {
+            ally.maxHp = ally.maxHp * 95 / 100;
+        }
+        const int defaultPotions = std::clamp(1 + ally.currentRankIndex / 2 + (profile.find("intendant") != std::string::npos ? 1 : 0), 1, 4);
+        const int initialHealthPercent = recruitedAllyInitialHealthPercent(ally.name);
+        const std::string vitalsLabel = localJournalLabel(player, "pv_recrues_persistants", ally.name, "");
+        const int savedHp = extractLabelIntField(vitalsLabel, "hp", std::max(1, ally.maxHp * initialHealthPercent / 100));
+        ally.currentHp = std::clamp(savedHp, 0, ally.maxHp);
+        ally.healingPotionCharges = std::clamp(extractLabelIntField(vitalsLabel, "potions", defaultPotions), 0, 5);
+        const std::string equipmentLabel = localJournalLabel(player, "equipement_recrues", ally.name, "");
+        const int naturalQuality = std::clamp(1 + ally.currentRankIndex + ally.estimatedLevel / 28, 1, 9);
+        ally.weaponQuality = std::clamp(extractLabelIntField(equipmentLabel, "arme", naturalQuality), 1, 10);
+        ally.armorQuality = std::clamp(extractLabelIntField(equipmentLabel, "armure", std::max(1, naturalQuality - 1)), 1, 10);
+        const std::string supportProfile = lowerCopy(ally.job + " " + ally.trait);
+        ally.supportKitQuality = std::clamp(extractLabelIntField(equipmentLabel, "kit", supportProfile.find("soigneur") != std::string::npos ? 2 : 1), 0, 10);
+        ally.activeSkillCooldown = 0;
+        return ally;
+    }
+
+    std::vector<RecruitedAllyCombatSupport> collectRecruitedAllyRoster(const Player& player, bool equippedOnly)
+    {
+        std::vector<RecruitedAllyCombatSupport> allies;
+        for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+        {
+            if (record.category != "pnj_recrutables_retenus" || record.count <= 0)
+            {
+                continue;
+            }
+            const std::string name = record.key.empty() ? record.label : record.key;
+            if (name.empty() || localJournalCount(player, "recrues_renvoyees", name) > 0)
+            {
+                continue;
+            }
+            if (recruitedAllyIsInInfirmary(player, name) || recruitedAllyIsAwaitingInfirmaryTransfer(player, name))
+            {
+                continue;
+            }
+            const bool equipped = (localJournalCount(player, "recrues_equipees_toggle", name) % 2) == 1;
+            if (equippedOnly != equipped)
+            {
+                continue;
+            }
+            allies.push_back(recruitedAllyFromRecord(player, record));
+        }
+
+        std::sort(allies.begin(), allies.end(), [&](const RecruitedAllyCombatSupport& a, const RecruitedAllyCombatSupport& b) {
+            const int manualA = recruitedAllyManualOrderIndex(player, a.name);
+            const int manualB = recruitedAllyManualOrderIndex(player, b.name);
+            if (manualA != manualB) return manualA < manualB;
+            if (a.currentRankIndex != b.currentRankIndex) return a.currentRankIndex > b.currentRankIndex;
+            if (a.estimatedLevel != b.estimatedLevel) return a.estimatedLevel > b.estimatedLevel;
+            return a.name < b.name;
+        });
+
+        if (equippedOnly && allies.size() > 2)
+        {
+            allies.resize(2);
+        }
+        if (equippedOnly)
+        {
+            normalizeRecruitedAllyShares(allies);
+        }
+        return allies;
+    }
+
+    std::vector<RecruitedAllyCombatSupport> collectActiveRecruitedAllies(const Player& player)
+    {
+        return collectRecruitedAllyRoster(player, true);
+    }
+
+    std::vector<RecruitedAllyCombatSupport> collectReserveRecruitedAllies(const Player& player)
+    {
+        return collectRecruitedAllyRoster(player, false);
+    }
+
+    bool recruitedAllyJobContains(const RecruitedAllyCombatSupport& ally, const std::string& token)
+    {
+        std::string text = ally.job + " " + ally.trait;
+        std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return text.find(token) != std::string::npos;
+    }
+
+
+    int recruitedAllyMaturityScore(const RecruitedAllyCombatSupport& ally)
+    {
+        return std::clamp(ally.currentRankIndex * 16 + ally.estimatedLevel / 4 + ally.weaponQuality + ally.armorQuality + ally.supportKitQuality, 0, 140);
+    }
+
+    int recruitedAllyMaturityTier(const RecruitedAllyCombatSupport& ally)
+    {
+        const int score = recruitedAllyMaturityScore(ally);
+        if (score >= 92) return 5;
+        if (score >= 72) return 4;
+        if (score >= 52) return 3;
+        if (score >= 34) return 2;
+        if (score >= 18) return 1;
+        return 0;
+    }
+
+    std::string recruitedAllyMaturityName(const RecruitedAllyCombatSupport& ally)
+    {
+        switch (recruitedAllyMaturityTier(ally))
+        {
+            case 0: return "débutant";
+            case 1: return "apprenti";
+            case 2: return "habitué";
+            case 3: return "aguerri";
+            case 4: return "vétéran";
+            default: return "maître de terrain";
+        }
+    }
+
+    bool recruitedAllyIsStillLearning(const RecruitedAllyCombatSupport& ally)
+    {
+        return ally.currentRankIndex <= 1 || recruitedAllyMaturityTier(ally) <= 1;
+    }
+
+    bool recruitedAllyHasAdvancedReading(const RecruitedAllyCombatSupport& ally)
+    {
+        return ally.currentRankIndex >= 2 && recruitedAllyMaturityTier(ally) >= 2;
+    }
+
+    int recruitedAllyOrderTechniqueChance(const RecruitedAllyCombatSupport& ally, bool forced)
+    {
+        const int base = forced ? 56 : 28;
+        const int rankBonus = ally.currentRankIndex * (forced ? 7 : 8);
+        const int levelBonus = ally.estimatedLevel / (forced ? 10 : 12);
+        return std::clamp(base + rankBonus + levelBonus, forced ? 58 : 25, forced ? 96 : 86);
+    }
+
+    int recruitedAllyNaturalTechniqueChance(const RecruitedAllyCombatSupport& ally, EnemyCombatQueue& wave)
+    {
+        int chance = 7 + ally.currentRankIndex * 4 + ally.estimatedLevel / 20 + recruitedAllyMaturityTier(ally) * 4;
+        if (recruitedAllyJobContains(ally, "roublard") || recruitedAllyJobContains(ally, "assassin") || recruitedAllyJobContains(ally, "brigand"))
+        {
+            chance += 11;
+        }
+        else if ((recruitedAllyJobContains(ally, "archer") || recruitedAllyJobContains(ally, "mage") || recruitedAllyJobContains(ally, "lancier")) && wave.getActiveEnemyCount() >= 2)
+        {
+            chance += 9;
+        }
+        else if (recruitedAllyJobContains(ally, "soigneur") || recruitedAllyJobContains(ally, "mage d'appui"))
+        {
+            chance += 6;
+        }
+        if (recruitedAllyIsStillLearning(ally))
+        {
+            chance = chance * 55 / 100;
+        }
+        if (recruitedAllyMaturityTier(ally) >= 4)
+        {
+            chance += 5;
+        }
+        return std::clamp(chance, 3, 56);
+    }
+
+    int recruitedAllyNaturalSupportChance(const RecruitedAllyCombatSupport& ally)
+    {
+        int chance = 12 + ally.currentRankIndex * 4 + ally.supportKitQuality * 2 + ally.estimatedLevel / 22 + recruitedAllyMaturityTier(ally) * 3;
+        if (recruitedAllyJobContains(ally, "soigneur") || recruitedAllyJobContains(ally, "mage d'appui"))
+        {
+            chance += 12;
+        }
+        if (recruitedAllyIsStillLearning(ally))
+        {
+            chance = chance * 65 / 100;
+        }
+        return std::clamp(chance, 5, 60);
+    }
+
+    std::string recruitedAllyHealthLine(const RecruitedAllyCombatSupport& ally)
+    {
+        return "PV " + std::to_string(std::max(0, ally.currentHp)) + "/" + std::to_string(std::max(1, ally.maxHp))
+            + " | potions " + std::to_string(std::max(0, ally.healingPotionCharges))
+            + " | arme " + std::to_string(std::max(1, ally.weaponQuality))
+            + " | armure " + std::to_string(std::max(1, ally.armorQuality))
+            + " | maturité " + recruitedAllyMaturityName(ally) + " (" + std::to_string(recruitedAllyMaturityScore(ally)) + "/140)"
+            + " | technique CD " + std::to_string(std::max(0, ally.activeSkillCooldown));
+    }
+
+    bool recruitedAllyShouldUseTechnique(const RecruitedAllyCombatSupport& ally, EnemyCombatQueue& wave, Random& random, bool hasDirectOrder, bool forceTechnique)
+    {
+        if (ally.activeSkillCooldown > 0 || !wave.hasActiveEnemies())
+        {
+            return false;
+        }
+        if (forceTechnique)
+        {
+            return random.between(1, 100) <= recruitedAllyOrderTechniqueChance(ally, true);
+        }
+        if (hasDirectOrder)
+        {
+            return random.between(1, 100) <= recruitedAllyOrderTechniqueChance(ally, false);
+        }
+        return random.between(1, 100) <= recruitedAllyNaturalTechniqueChance(ally, wave);
+    }
+
+    void recordRecruitedAllyHitContribution(RecruitedAllyCombatSupport& ally, int damage, bool killedTarget)
+    {
+        ally.damageDealt += std::max(0, damage);
+        if (killedTarget)
+        {
+            ++ally.finishBlows;
+        }
+    }
+
+    void recordRecruitedAllySupportContribution(RecruitedAllyCombatSupport& ally, int amount = 1)
+    {
+        ally.supportActions += std::max(1, amount);
+    }
+
+    std::string recruitedAllyTechniqueGesture(const RecruitedAllyCombatSupport& ally, const std::string& defaultGesture)
+    {
+        const std::string profile = lowerCopy(ally.name + " " + ally.race + " " + ally.job + " " + ally.trait);
+        if (profile.find("assassin") != std::string::npos || profile.find("roublard") != std::string::npos || profile.find("brigand") != std::string::npos)
+        {
+            if (profile.find("elfe") != std::string::npos)
+            {
+                return ally.name + " disparaît dans un pas trop silencieux pour être honnête";
+            }
+            return ally.name + " baisse l'épaule, montre une fausse ouverture et passe sous la garde";
+        }
+        if (profile.find("archer") != std::string::npos || profile.find("tireur") != std::string::npos)
+        {
+            return ally.name + " cale sa respiration, puis coupe la ligne ennemie avec un tir sec";
+        }
+        if (profile.find("lancier") != std::string::npos)
+        {
+            return ally.name + " avance d'un demi-pas et force les ennemis à respecter la pointe";
+        }
+        if (profile.find("gardien") != std::string::npos || profile.find("tank") != std::string::npos || profile.find("protecteur") != std::string::npos)
+        {
+            return ally.name + " plante sa garde devant la ligne et transforme l'avancée en mur";
+        }
+        if (profile.find("soigneur") != std::string::npos || profile.find("mage d'appui") != std::string::npos || profile.find("intendant") != std::string::npos)
+        {
+            return ally.name + " pose un repère calme au milieu du chaos et désigne la faille";
+        }
+        if (profile.find("mage") != std::string::npos || profile.find("sorcier") != std::string::npos)
+        {
+            return ally.name + " serre les doigts autour d'une formule courte et laisse l'air se tendre";
+        }
+        if (profile.find("kitsune") != std::string::npos)
+        {
+            return ally.name + " laisse une flamme courte suivre son mouvement";
+        }
+        if (profile.find("dragon") != std::string::npos || profile.find("dracon") != std::string::npos)
+        {
+            return ally.name + " fait vibrer sa force ancienne dans l'impact";
+        }
+        return defaultGesture;
+    }
+
+    std::string recruitedAllyReadinessLine(const RecruitedAllyCombatSupport& ally, const Player& player)
+    {
+        const std::string profile = lowerCopy(ally.name + " " + ally.race + " " + ally.job + " " + ally.trait);
+        const int allyHpPercent = ally.maxHp > 0 ? ally.currentHp * 100 / ally.maxHp : 0;
+        const int playerHpPercent = player.getMaxHp() > 0 ? player.getHp() * 100 / player.getMaxHp() : 100;
+        if (recruitedAllyMaturityTier(ally) <= 0)
+        {
+            return ally.name + " reste proche de la ligne et attend surtout de comprendre ce que tu vas ordonner";
+        }
+        if (recruitedAllyMaturityTier(ally) == 1 && playerHpPercent > 35)
+        {
+            return ally.name + " connaît son rôle, mais garde encore plus les yeux sur toi que sur tout le champ de bataille";
+        }
+        if (allyHpPercent <= 30)
+        {
+            return ally.name + " arrive en serrant les dents : elle peut encore agir, mais pas encaisser n'importe quoi";
+        }
+        if (playerHpPercent <= 35 && (profile.find("soigneur") != std::string::npos || profile.find("mage d'appui") != std::string::npos || profile.find("gardien") != std::string::npos))
+        {
+            return ally.name + " garde déjà un oeil sur ton état avant même que la ligne bouge";
+        }
+        if (profile.find("assassin") != std::string::npos || profile.find("roublard") != std::string::npos)
+        {
+            return ally.name + " prend une place légèrement décalée, assez loin pour chercher un angle mort";
+        }
+        if (profile.find("archer") != std::string::npos || profile.find("tireur") != std::string::npos)
+        {
+            return ally.name + " vérifie les distances comme si chaque pas ennemi comptait déjà";
+        }
+        if (profile.find("gardien") != std::string::npos || profile.find("tank") != std::string::npos || profile.find("protecteur") != std::string::npos)
+        {
+            return ally.name + " se place naturellement entre le danger et le reste du groupe";
+        }
+        if (profile.find("mage") != std::string::npos || profile.find("chaman") != std::string::npos || profile.find("sorcier") != std::string::npos)
+        {
+            return ally.name + " attend le premier désordre pour poser son rythme magique";
+        }
+        return ally.name + " rejoint la ligne sans grand discours, mais avec une intention claire";
+    }
+
+    std::string recruitedAllyPresenceLine(const RecruitedAllyCombatSupport& ally, const Player& player, EnemyCombatQueue& wave)
+    {
+        const std::string profile = lowerCopy(ally.name + " " + ally.race + " " + ally.job + " " + ally.trait);
+        const int allyHpPercent = ally.maxHp > 0 ? ally.currentHp * 100 / ally.maxHp : 0;
+        const int playerHpPercent = player.getMaxHp() > 0 ? player.getHp() * 100 / player.getMaxHp() : 100;
+
+        if (recruitedAllyMaturityTier(ally) <= 0)
+        {
+            return ally.name + " suit la cadence avec prudence, sans encore lire toute la scène";
+        }
+        if (recruitedAllyMaturityTier(ally) == 1 && ally.turnsTaken % 2 == 1)
+        {
+            return ally.name + " hésite une demi-seconde, puis se replace sur une consigne simple";
+        }
+        if (allyHpPercent <= 30)
+        {
+            return ally.name + " garde un bras près de ses côtes, mais reste dans la ligne tant que ses jambes tiennent";
+        }
+        if (playerHpPercent <= 35 && (profile.find("soigneur") != std::string::npos || profile.find("mage d'appui") != std::string::npos || profile.find("intendant") != std::string::npos))
+        {
+            return ally.name + " surveille ton souffle plus que la cible et prépare déjà une couverture";
+        }
+        if (playerHpPercent <= 35 && (profile.find("gardien") != std::string::npos || profile.find("tank") != std::string::npos || profile.find("protecteur") != std::string::npos))
+        {
+            return ally.name + " se décale d'un pas pour couper l'angle le plus dangereux vers toi";
+        }
+        if (wave.getActiveEnemyCount() >= 3 && (profile.find("chef") != std::string::npos || profile.find("capitaine") != std::string::npos || profile.find("stratège") != std::string::npos || profile.find("stratege") != std::string::npos))
+        {
+            return ally.name + " compte les lignes ennemies avant de choisir qui doit vraiment tomber";
+        }
+        if (profile.find("assassin") != std::string::npos || profile.find("roublard") != std::string::npos || profile.find("brigand") != std::string::npos)
+        {
+            return ally.name + " ne fixe pas la cible principale, seulement l'espace où elle va finir par se tromper";
+        }
+        if (profile.find("archer") != std::string::npos || profile.find("tireur") != std::string::npos || profile.find("éclaireur") != std::string::npos || profile.find("eclaireur") != std::string::npos)
+        {
+            return ally.name + " suit les épaules ennemies et attend une respiration trop longue";
+        }
+        if (profile.find("kitsune") != std::string::npos)
+        {
+            return ally.name + " laisse passer un sourire nerveux, comme si la prochaine feinte était déjà prête";
+        }
+        if (profile.find("orc") != std::string::npos || profile.find("barbare") != std::string::npos || profile.find("berserker") != std::string::npos)
+        {
+            return ally.name + " serre sa prise et cherche le moment où la ligne ennemie fera enfin du bruit";
+        }
+        if (profile.find("mage") != std::string::npos || profile.find("sorcier") != std::string::npos || profile.find("chaman") != std::string::npos)
+        {
+            return ally.name + " écoute le combat comme une formule qui n'a pas encore choisi sa fin";
+        }
+        return ally.name + " relit rapidement la distance avant de reprendre son rôle dans la ligne";
+    }
+
+    std::string recruitedAllyTacticalCommentLine(const RecruitedAllyCombatSupport& ally, const Player& player, EnemyCombatQueue& wave, bool hasActiveOrder)
+    {
+        if (!wave.hasActiveEnemies())
+        {
+            return "";
+        }
+
+        const std::string profile = lowerCopy(ally.name + " " + ally.race + " " + ally.job + " " + ally.trait);
+        const int playerHpPercent = player.getMaxHp() > 0 ? player.getHp() * 100 / player.getMaxHp() : 100;
+        const Monster& frontEnemy = wave.getActiveEnemy(0);
+        const MonsterBehaviorProfile enemyProfile = MonsterBehaviorProfileCatalog::build(frontEnemy);
+        const std::string enemyArchetype = lowerCopy(enemyProfile.archetype);
+        const int enemyHpPercent = frontEnemy.getMaxHp() > 0 ? frontEnemy.getHp() * 100 / frontEnemy.getMaxHp() : 100;
+
+        if (recruitedAllyMaturityTier(ally) <= 0 && !hasActiveOrder)
+        {
+            return ally.turnsTaken % 3 == 0 ? ally.name + " attend une indication claire avant de tenter quelque chose de trop technique" : "";
+        }
+        if (recruitedAllyMaturityTier(ally) == 1 && !hasActiveOrder && ally.turnsTaken % 2 == 1)
+        {
+            return "";
+        }
+        if (recruitedAllyMaturityTier(ally) <= 1 && hasActiveOrder)
+        {
+            return ally.name + " suit l'ordre donné, même si sa lecture du terrain reste encore limitée";
+        }
+        if (!recruitedAllyHasAdvancedReading(ally) && enemyArchetype.find("soigneur") == std::string::npos && enemyArchetype.find("rameuteur") == std::string::npos)
+        {
+            return "";
+        }
+
+        if (playerHpPercent <= 35 && (profile.find("soigneur") != std::string::npos || profile.find("mage d'appui") != std::string::npos || profile.find("intendant") != std::string::npos))
+        {
+            return ally.name + " garde sa main libre, comme si le prochain mauvais souffle du chef était déjà prévu";
+        }
+        if (playerHpPercent <= 35 && (profile.find("gardien") != std::string::npos || profile.find("protecteur") != std::string::npos || profile.find("tank") != std::string::npos))
+        {
+            return ally.name + " resserre la ligne vers toi au lieu de chercher un duel héroïque";
+        }
+        if (enemyArchetype.find("rameuteur") != std::string::npos)
+        {
+            if (profile.find("assassin") != std::string::npos || profile.find("roublard") != std::string::npos)
+            {
+                return ally.name + " fixe surtout la gorge du rameuteur : couper le signal vaut plus qu'un joli coup";
+            }
+            return ally.name + " garde le signal ennemi dans son champ de vision pour éviter une mauvaise surprise";
+        }
+        if (enemyArchetype.find("soigneur") != std::string::npos || enemyArchetype.find("transfuseur") != std::string::npos)
+        {
+            return ally.name + " cherche la main qui soigne, pas seulement le corps le plus proche";
+        }
+        if (enemyArchetype.find("porte-bouclier") != std::string::npos || enemyArchetype.find("garde runique") != std::string::npos)
+        {
+            if (profile.find("lancier") != std::string::npos || profile.find("archer") != std::string::npos || profile.find("mage") != std::string::npos)
+            {
+                return ally.name + " lit les bords de la garde et attend la jointure plutôt que le centre";
+            }
+            return ally.name + " évite de gaspiller son impact sur la partie la plus solide";
+        }
+        if (enemyArchetype.find("slime") != std::string::npos || enemyArchetype.find("fongique") != std::string::npos || enemyArchetype.find("champignon") != std::string::npos)
+        {
+            return ally.name + " surveille surtout le sol, parce que la cible attaque presque autant avec l'espace qu'avec son corps";
+        }
+        if (enemyArchetype.find("illusionniste") != std::string::npos || enemyArchetype.find("piégeur") != std::string::npos)
+        {
+            return ally.name + " ralentit volontairement son geste pour ne pas répondre à la première fausse ouverture";
+        }
+        if (wave.getActiveEnemyCount() >= 3 && (profile.find("chef") != std::string::npos || profile.find("capitaine") != std::string::npos || profile.find("stratège") != std::string::npos || profile.find("stratege") != std::string::npos))
+        {
+            return ally.name + " découpe la mêlée en petites priorités au lieu de regarder le groupe comme une masse";
+        }
+        if (enemyHpPercent <= 30 && (profile.find("orc") != std::string::npos || profile.find("barbare") != std::string::npos || profile.find("berserker") != std::string::npos))
+        {
+            return ally.name + " sent que la cible peut tomber et serre sa prise avec beaucoup trop d'envie";
+        }
+        if (profile.find("fée") != std::string::npos || profile.find("fee") != std::string::npos)
+        {
+            return ally.name + " laisse ses appuis légers, prêt à punir le moindre angle trop lourd";
+        }
+        if (profile.find("dragon") != std::string::npos || profile.find("dracon") != std::string::npos)
+        {
+            return ally.name + " respire plus lentement, comme si son sang refusait de paniquer devant la ligne";
+        }
+
+        return "";
+    }
+
+    std::string recruitedAllyTargetResultLine(const RecruitedAllyCombatSupport& ally, const Monster& target, bool killed)
+    {
+        const std::string profile = lowerCopy(ally.name + " " + ally.race + " " + ally.job + " " + ally.trait);
+        const MonsterBehaviorProfile targetProfile = MonsterBehaviorProfileCatalog::build(target);
+        if (recruitedAllyIsStillLearning(ally))
+        {
+            if (killed)
+            {
+                return "La cible tombe, mais la recrue semble surtout surprise d'avoir trouvé le bon angle.";
+            }
+            return "La recrue touche, sans encore comprendre tout ce que la cible vient de révéler.";
+        }
+        if (killed)
+        {
+            if (profile.find("assassin") != std::string::npos || profile.find("roublard") != std::string::npos)
+            {
+                return "La cible tombe sans avoir eu le temps de refermer son angle.";
+            }
+            if (profile.find("gardien") != std::string::npos || profile.find("tank") != std::string::npos)
+            {
+                return "La ligne alliée avance d'un cran derrière ce choc.";
+            }
+            return "La cible quitte la ligne ennemie et laisse un vide exploitable.";
+        }
+        if (target.getMaxHp() > 0 && target.getHp() * 100 <= target.getMaxHp() * 35)
+        {
+            return "La cible reste debout, mais " + targetProfile.archetype + " montre une vraie fissure.";
+        }
+        if (recruitedAllyMaturityTier(ally) >= 4 && !targetProfile.counterplayLine.empty())
+        {
+            return "Lecture vétérane : " + targetProfile.counterplayLine;
+        }
+        if (!targetProfile.durabilityLine.empty())
+        {
+            return "Lecture de cible : " + targetProfile.durabilityLine;
+        }
+        return "Le coup force surtout la cible à révéler un peu plus son rythme.";
+    }
+
+    int chooseRecruitedAllyTargetIndexWithOrders(
+        RecruitedAllyCombatSupport& ally,
+        EnemyCombatQueue& wave,
+        Random& random,
+        RecruitedAllyOrderState& orders
+    );
+
+
+    int recruitedAllyTechniqueImpactBonus(const RecruitedAllyCombatSupport& ally, bool hasDirectOrder, bool forceTechnique)
+    {
+        int bonus = recruitedAllyMaturityTier(ally) * 3 + ally.currentRankIndex + ally.weaponQuality / 3;
+        if (hasDirectOrder)
+        {
+            bonus += 3;
+        }
+        if (forceTechnique)
+        {
+            bonus += recruitedAllyMaturityTier(ally) <= 1 ? 2 : 4;
+        }
+        return std::clamp(bonus, 0, 24);
+    }
+
+    int recruitedAllyTechniqueCooldown(const RecruitedAllyCombatSupport& ally, int baseCooldown, bool hasDirectOrder, bool forceTechnique)
+    {
+        int reduction = 0;
+        if (recruitedAllyMaturityTier(ally) >= 3) ++reduction;
+        if (recruitedAllyMaturityTier(ally) >= 5) ++reduction;
+        if (hasDirectOrder && recruitedAllyMaturityTier(ally) >= 2) ++reduction;
+        if (forceTechnique && recruitedAllyMaturityTier(ally) <= 1) reduction = std::max(0, reduction - 1);
+        return std::max(1, baseCooldown - reduction);
+    }
+
+    std::string recruitedAllyTechniqueMaturityLine(const RecruitedAllyCombatSupport& ally, bool hasDirectOrder)
+    {
+        if (recruitedAllyMaturityTier(ally) >= 4)
+        {
+            return "  Lecture alliée : " + ally.name + " transforme son expérience en vrai tempo de combat, pas seulement en dégâts. Sa technique doit changer le tour.";
+        }
+        if (recruitedAllyMaturityTier(ally) >= 2)
+        {
+            return "  Lecture alliée : " + ally.name + " comprend assez la scène pour choisir un effet utile.";
+        }
+        if (hasDirectOrder)
+        {
+            return "  Ordre clair : la recrue reste limitée, mais l'ordre évite une partie de l'hésitation.";
+        }
+        return "  Lecture alliée : recrue encore basse maturité, technique volontairement simple.";
+    }
+
+    bool executeRecruitedAllyActiveTechnique(
+        RecruitedAllyCombatSupport& ally,
+        EnemyCombatQueue& wave,
+        Random& random,
+        RecruitedAllyOrderState& orders,
+        std::vector<std::string>& lines
+    )
+    {
+        RecruitedAllyUniqueOrder& techniqueOrder = orders.uniqueOrders[ally.name];
+        const bool forceTechnique = techniqueOrder.forceTechniqueOneTurn || orders.groupTechniqueOneTurn;
+        const bool hasDirectOrder = techniqueOrder.hasPriorityTarget || orders.groupPriorityTarget || forceTechnique;
+        if (!recruitedAllyShouldUseTechnique(ally, wave, random, hasDirectOrder, forceTechnique))
+        {
+            return false;
+        }
+
+        const int techniqueImpactBonus = recruitedAllyTechniqueImpactBonus(ally, hasDirectOrder, forceTechnique);
+        const int baseDamage = std::max(3, ally.estimatedLevel / 2 + ally.currentRankIndex * 4 + ally.weaponQuality * 2 + techniqueImpactBonus + random.between(2, 7));
+
+        if (recruitedAllyIsStillLearning(ally) && !hasDirectOrder && random.between(1, 100) <= 25)
+        {
+            lines.push_back("- " + ally.name + " commence une technique, voit trop d'informations d'un coup, puis revient à une attaque simple. Une consigne claire l'aurait probablement stabilisée.");
+            return false;
+        }
+
+        if (recruitedAllyIsStillLearning(ally))
+        {
+            const int targetIndex = chooseRecruitedAllyTargetIndexWithOrders(ally, wave, random, orders);
+            Monster& target = wave.getActiveEnemy(targetIndex);
+            const std::string targetName = target.getName();
+            const int damage = std::max(2, baseDamage * (forceTechnique ? 68 : (hasDirectOrder ? 58 : 50)) / 100 + random.between(0, 2));
+            target.takeDamage(damage);
+            const bool killed = target.isDead();
+            wave.removeDeadAndReplace();
+            recordRecruitedAllyHitContribution(ally, damage, killed);
+            ally.activeSkillCooldown = recruitedAllyTechniqueCooldown(ally, forceTechnique ? 3 : (hasDirectOrder ? 3 : 4), hasDirectOrder, forceTechnique);
+            lines.push_back("- " + ally.name + (forceTechnique ? " applique l'ordre avec une technique encore hésitante" : (hasDirectOrder ? " transforme la consigne en technique simple" : " tente une technique simple")) + " : " + targetName + " subit " + std::to_string(damage) + " dégâts. Maîtrise " + recruitedAllyMaturityName(ally) + ", CD " + std::to_string(ally.activeSkillCooldown) + " tours.");
+            lines.push_back(recruitedAllyTechniqueMaturityLine(ally, hasDirectOrder));
+            return true;
+        }
+
+        if (recruitedAllyJobContains(ally, "gardien") || recruitedAllyJobContains(ally, "tank"))
+        {
+            const int targetIndex = chooseRecruitedAllyTargetIndexWithOrders(ally, wave, random, orders);
+            Monster& target = wave.getActiveEnemy(targetIndex);
+            const std::string targetName = target.getName();
+            const int damage = std::max(2, baseDamage * 50 / 100 + ally.armorQuality);
+            target.takeDamage(damage);
+            target.applyWeakening(2, 10 + ally.currentRankIndex * 2);
+            const bool killed = target.isDead();
+            wave.removeDeadAndReplace();
+            recordRecruitedAllyHitContribution(ally, damage, killed);
+            recordRecruitedAllySupportContribution(ally, 2);
+            ally.protectedThisRound = true;
+            ally.activeSkillCooldown = recruitedAllyTechniqueCooldown(ally, 3, hasDirectOrder, forceTechnique);
+            lines.push_back("- " + recruitedAllyTechniqueGesture(ally, ally.name + " plante sa garde devant la ligne") + " : " + targetName + " subit " + std::to_string(damage) + " dégâts et perd de la force. Couverture alliée active. CD " + std::to_string(ally.activeSkillCooldown) + " tours.");
+            lines.push_back(recruitedAllyTechniqueMaturityLine(ally, hasDirectOrder));
+            return true;
+        }
+
+        if (recruitedAllyJobContains(ally, "roublard") || recruitedAllyJobContains(ally, "assassin") || recruitedAllyJobContains(ally, "brigand"))
+        {
+            const int targetIndex = chooseRecruitedAllyTargetIndexWithOrders(ally, wave, random, orders);
+            Monster& target = wave.getActiveEnemy(targetIndex);
+            const std::string targetName = target.getName();
+            int totalDamage = 0;
+            const int hitCount = 3 + (ally.currentRankIndex >= 4 ? 1 : 0);
+            for (int hit = 0; hit < hitCount && !target.isDead(); ++hit)
+            {
+                const int damage = std::max(2, baseDamage * (hit == 0 ? 60 : 42) / 100 + random.between(0, 3));
+                target.takeDamage(damage);
+                totalDamage += damage;
+            }
+            ElementalAffinitySystem::applyPoison(target, 2, std::max(1, 1 + ally.currentRankIndex / 2));
+            ElementalAffinitySystem::applyBleeding(target, 2, std::max(1, 1 + ally.weaponQuality / 4));
+            const bool killed = target.isDead();
+            wave.removeDeadAndReplace();
+            recordRecruitedAllyHitContribution(ally, totalDamage, killed);
+            ally.activeSkillCooldown = recruitedAllyTechniqueCooldown(ally, 4, hasDirectOrder, forceTechnique);
+            lines.push_back("- " + recruitedAllyTechniqueGesture(ally, ally.name + " glisse dans l'angle mort") + " : " + targetName + " subit " + std::to_string(hitCount) + " coups, " + std::to_string(totalDamage) + " dégâts, poison et saignement. CD " + std::to_string(ally.activeSkillCooldown) + " tours.");
+            lines.push_back(recruitedAllyTechniqueMaturityLine(ally, hasDirectOrder));
+            return true;
+        }
+
+        if ((recruitedAllyJobContains(ally, "archer") || recruitedAllyJobContains(ally, "mage") || recruitedAllyJobContains(ally, "lancier")) && wave.getActiveEnemyCount() >= 2)
+        {
+            const int maxHits = std::min(wave.getActiveEnemyCount(), 2 + (ally.currentRankIndex >= 3 ? 1 : 0));
+            int totalDamage = 0;
+            std::vector<std::string> touched;
+            for (int i = 0; i < maxHits && wave.hasActiveEnemies(); ++i)
+            {
+                const int targetIndex = std::min(i, wave.getActiveEnemyCount() - 1);
+                Monster& target = wave.getActiveEnemy(targetIndex);
+                const std::string targetName = target.getName();
+                const int damage = std::max(2, baseDamage * 70 / 100 + random.between(0, 3));
+                target.takeDamage(damage);
+                totalDamage += damage;
+                const bool killed = target.isDead();
+                if (killed) ++ally.finishBlows;
+                touched.push_back(targetName + " (" + std::to_string(damage) + ")");
+                wave.removeDeadAndReplace();
+            }
+            ally.damageDealt += totalDamage;
+            ally.activeSkillCooldown = recruitedAllyTechniqueCooldown(ally, 3, hasDirectOrder, forceTechnique);
+            lines.push_back("- " + recruitedAllyTechniqueGesture(ally, ally.name + " coupe plusieurs lignes ennemies") + " : " + std::to_string(totalDamage) + " dégâts répartis sur " + std::to_string(static_cast<int>(touched.size())) + " cible(s). CD " + std::to_string(ally.activeSkillCooldown) + " tours.");
+            lines.push_back(recruitedAllyTechniqueMaturityLine(ally, hasDirectOrder));
+            return true;
+        }
+
+        if (recruitedAllyJobContains(ally, "soigneur") || recruitedAllyJobContains(ally, "mage d'appui") || recruitedAllyJobContains(ally, "intendant"))
+        {
+            const int targetIndex = chooseRecruitedAllyTargetIndexWithOrders(ally, wave, random, orders);
+            Monster& target = wave.getActiveEnemy(targetIndex);
+            const std::string targetName = target.getName();
+            const int damage = std::max(2, baseDamage * 55 / 100);
+            target.takeDamage(damage);
+            target.applyVulnerability(2, 15 + std::min(8, ally.supportKitQuality));
+            const bool killed = target.isDead();
+            wave.removeDeadAndReplace();
+            recordRecruitedAllyHitContribution(ally, damage, killed);
+            const int supportValue = std::max(1, ally.currentRankIndex + 1 + ally.supportKitQuality / 2);
+            ally.healingDone += supportValue;
+            recordRecruitedAllySupportContribution(ally, 2);
+            ally.activeSkillCooldown = recruitedAllyTechniqueCooldown(ally, 4, hasDirectOrder, forceTechnique);
+            lines.push_back("- " + recruitedAllyTechniqueGesture(ally, ally.name + " désigne une faille") + " : " + targetName + " subit " + std::to_string(damage) + " dégâts et une vulnérabilité 2 tours. CD " + std::to_string(ally.activeSkillCooldown) + " tours.");
+            lines.push_back(recruitedAllyTechniqueMaturityLine(ally, hasDirectOrder));
+            return true;
+        }
+
+        const int targetIndex = chooseRecruitedAllyTargetIndexWithOrders(ally, wave, random, orders);
+        Monster& target = wave.getActiveEnemy(targetIndex);
+        const std::string targetName = target.getName();
+        int totalDamage = 0;
+        const int hitCount = 2;
+        for (int hit = 0; hit < hitCount && !target.isDead(); ++hit)
+        {
+            const int damage = std::max(2, baseDamage * (hit == 0 ? 75 : 55) / 100 + random.between(0, 3));
+            target.takeDamage(damage);
+            totalDamage += damage;
+        }
+        const bool killed = target.isDead();
+        wave.removeDeadAndReplace();
+        recordRecruitedAllyHitContribution(ally, totalDamage, killed);
+        ally.activeSkillCooldown = recruitedAllyTechniqueCooldown(ally, 3, hasDirectOrder, forceTechnique);
+        lines.push_back("- " + recruitedAllyTechniqueGesture(ally, ally.name + " cherche son propre rythme") + " : " + targetName + " subit " + std::to_string(hitCount) + " frappe(s), " + std::to_string(totalDamage) + " dégâts. CD " + std::to_string(ally.activeSkillCooldown) + " tours.");
+        lines.push_back(recruitedAllyTechniqueMaturityLine(ally, hasDirectOrder));
+        return true;
+    }
+
+    int chooseRecruitedAllyTargetIndex(const RecruitedAllyCombatSupport& ally, EnemyCombatQueue& wave, Random& random)
+    {
+        const int activeCount = wave.getActiveEnemyCount();
+        if (activeCount <= 1)
+        {
+            return 0;
+        }
+        if (recruitedAllyIsStillLearning(ally))
+        {
+            return 0;
+        }
+        if (recruitedAllyMaturityTier(ally) == 2 && random.between(1, 100) <= 45)
+        {
+            return random.between(0, activeCount - 1);
+        }
+        if (recruitedAllyJobContains(ally, "roublard") || recruitedAllyJobContains(ally, "archer"))
+        {
+            return random.between(0, activeCount - 1);
+        }
+        int bestIndex = 0;
+        int bestHp = wave.getActiveEnemy(0).getHp();
+        for (int i = 1; i < activeCount; ++i)
+        {
+            const int hp = wave.getActiveEnemy(i).getHp();
+            if (hp < bestHp)
+            {
+                bestHp = hp;
+                bestIndex = i;
+            }
+        }
+        return bestIndex;
+    }
+
+
+    int findActiveEnemyIndexByName(EnemyCombatQueue& wave, const std::string& targetName)
+    {
+        if (targetName.empty())
+        {
+            return -1;
+        }
+        for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+        {
+            if (wave.getActiveEnemy(i).getName() == targetName)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    std::string selectActiveEnemyNameForOrder(EnemyCombatQueue& wave, const std::string& title, const std::string& id)
+    {
+        if (!wave.hasActiveEnemies())
+        {
+            MessageScreen::show(title, id + ".empty", {"Aucun ennemi actif à prioriser pour le moment."}, false);
+            return "";
+        }
+
+        MenuScreen targetScreen(title, id);
+        targetScreen.addLine("La priorité reste active jusqu'à la mort/disparition de cette cible.");
+        targetScreen.addBackOption("Retour", id + ".back");
+        for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+        {
+            const Monster& enemy = wave.getActiveEnemy(i);
+            targetScreen.addOption(
+                i + 1,
+                enemy.getName(),
+                "PV " + std::to_string(enemy.getHp()) + "/" + std::to_string(enemy.getMaxHp()) + " | niv. " + std::to_string(enemy.getLevel()),
+                true,
+                id + ".target"
+            );
+        }
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(targetScreen, "Choisis une cible active.");
+        Console::clear();
+        if (choice <= 0 || choice > wave.getActiveEnemyCount())
+        {
+            return "";
+        }
+        return wave.getActiveEnemy(choice - 1).getName();
+    }
+
+    int chooseRecruitedAllyTargetIndexWithOrders(
+        RecruitedAllyCombatSupport& ally,
+        EnemyCombatQueue& wave,
+        Random& random,
+        RecruitedAllyOrderState& orders
+    )
+    {
+        RecruitedAllyUniqueOrder& unique = orders.uniqueOrders[ally.name];
+        if (unique.hasPriorityTarget)
+        {
+            const int index = findActiveEnemyIndexByName(wave, unique.priorityTargetName);
+            if (index >= 0)
+            {
+                return index;
+            }
+            unique.hasPriorityTarget = false;
+            unique.priorityTargetName.clear();
+        }
+
+        if (orders.groupPriorityTarget)
+        {
+            const int index = findActiveEnemyIndexByName(wave, orders.groupPriorityTargetName);
+            if (index >= 0)
+            {
+                return index;
+            }
+            orders.groupPriorityTarget = false;
+            orders.groupPriorityTargetName.clear();
+        }
+
+        if (orders.groupSpreadTargetsOneTurn && wave.getActiveEnemyCount() > 1)
+        {
+            return static_cast<int>(stableAllyHash(ally.name + ":spread:" + std::to_string(ally.turnsTaken)) % static_cast<unsigned>(wave.getActiveEnemyCount()));
+        }
+
+        return chooseRecruitedAllyTargetIndex(ally, wave, random);
+    }
+
+    bool executeRequestedAllySwitch(
+        Player& player,
+        RecruitedAllyCombatSupport& ally,
+        std::vector<RecruitedAllyCombatSupport>& reserveAllies,
+        RecruitedAllyUniqueOrder& unique,
+        std::vector<std::string>& lines
+    )
+    {
+        if (!unique.switchRequested || unique.switchInName.empty())
+        {
+            return false;
+        }
+
+        auto reserveIt = std::find_if(reserveAllies.begin(), reserveAllies.end(), [&](const RecruitedAllyCombatSupport& reserve) {
+            return reserve.name == unique.switchInName;
+        });
+        if (reserveIt == reserveAllies.end())
+        {
+            lines.push_back("- " + ally.name + " devait switch, mais la réserve demandée n'est plus disponible.");
+            unique.switchRequested = false;
+            unique.switchInName.clear();
+            return true;
+        }
+
+        const std::string outgoingName = ally.name;
+        const std::string incomingName = reserveIt->name;
+        RecruitedAllyCombatSupport incoming = *reserveIt;
+        reserveAllies.erase(reserveIt);
+        reserveAllies.push_back(ally);
+
+        player.recordCanonicalEvent("switch_recrues_combat", outgoingName + "->" + incomingName, "Switch tactique temporaire en combat", 1);
+
+        lines.push_back("- " + outgoingName + " applique le switch temporaire demandé avec " + incomingName + ". La place hors combat ne change pas.");
+        ally = incoming;
+        unique.switchRequested = false;
+        unique.switchInName.clear();
+        return true;
+    }
+
+    void clearOneTurnTeamOrders(RecruitedAllyOrderState& orders)
+    {
+        orders.groupHealOneTurn = false;
+        orders.groupGuardOneTurn = false;
+        orders.groupTechniqueOneTurn = false;
+        orders.groupSpreadTargetsOneTurn = false;
+        for (auto& entry : orders.uniqueOrders)
+        {
+            entry.second.healOneTurn = false;
+            entry.second.guardOneTurn = false;
+            entry.second.forceTechniqueOneTurn = false;
+        }
+    }
+
+    void openUniqueAllyOrderMenu(
+        Player& player,
+        EnemyCombatQueue& wave,
+        std::vector<RecruitedAllyCombatSupport>& activeAllies,
+        std::vector<RecruitedAllyCombatSupport>& reserveAllies,
+        RecruitedAllyOrderState& orders
+    )
+    {
+        if (activeAllies.empty())
+        {
+            MessageScreen::show("CONSIGNE CIBLÉE", "combat.team_orders.unique.empty", {"Aucune recrue active à commander."}, false);
+            return;
+        }
+
+        MenuScreen allyScreen("CONSIGNE CIBLÉE", "combat.team_orders.unique.select");
+        allyScreen.addLine("Choisis une recrue précise. Donner une consigne ne consomme pas le tour du joueur.");
+        allyScreen.addLine("Une recrue faible rang lit mal le combat seule, mais un ordre clair augmente ses chances d'agir correctement.");
+        allyScreen.addLine("Switch existe seulement ici, jamais dans les consignes de groupe, et se déclenche au tour de la recrue concernée.");
+        allyScreen.addBackOption("Retour", "combat.team_orders.unique.back");
+        for (std::size_t i = 0; i < activeAllies.size(); ++i)
+        {
+            const RecruitedAllyCombatSupport& ally = activeAllies[i];
+            allyScreen.addOption(
+                static_cast<int>(i + 1),
+                ally.name,
+                ally.job + " | rang " + recruitedAllyRankName(ally.currentRankIndex) + " | niv. " + std::to_string(ally.estimatedLevel),
+                true,
+                "combat.team_orders.unique.ally"
+            );
+        }
+        const int allyChoice = TerminalInterface::askMenuChoiceFromOptions(allyScreen, "Choisis une recrue.");
+        Console::clear();
+        if (allyChoice <= 0 || allyChoice > static_cast<int>(activeAllies.size()))
+        {
+            return;
+        }
+
+        RecruitedAllyCombatSupport& ally = activeAllies[static_cast<std::size_t>(allyChoice - 1)];
+        RecruitedAllyUniqueOrder& unique = orders.uniqueOrders[ally.name];
+        MenuScreen orderScreen("CONSIGNE CIBLÉE — " + ally.name, "combat.team_orders.unique.action");
+        orderScreen.addLine("Consignes de soin/protection : actives 1 tour, à redire chaque fois.");
+        orderScreen.addLine("Maturité : " + recruitedAllyMaturityName(ally) + " | les ordres aident surtout les recrues peu expérimentées.");
+        orderScreen.addLine("Priorité de cible : reste active jusqu'à la mort/disparition de la cible.");
+        orderScreen.addBackOption("Retour", "combat.team_orders.unique.action.back");
+        orderScreen.addOption(1, "Demander du soin", "La recrue tente de soigner/couvrir le chef à son prochain tour. Consigne 1 tour.", true, "combat.team_orders.unique.heal");
+        orderScreen.addOption(2, "Prioriser une cible", "La recrue visera cette cible jusqu'à sa mort/disparition.", wave.hasActiveEnemies(), "combat.team_orders.unique.focus");
+        orderScreen.addOption(3, "Switch", "Échange cette recrue avec une recrue en réserve. Déclenché au tour de la recrue.", !reserveAllies.empty(), "combat.team_orders.unique.switch");
+        orderScreen.addOption(4, "Protéger le chef", "Posture prudente pendant 1 tour : un peu moins de dégâts, un peu plus de couverture.", true, "combat.team_orders.unique.guard");
+        orderScreen.addOption(5, "Forcer une technique", "Si sa technique est prête, la recrue l'utilisera à son prochain tour. Consigne 1 tour.", ally.activeSkillCooldown <= 0, "combat.team_orders.unique.technique");
+        orderScreen.addOption(6, "Annuler la consigne ciblée", "Retire soin/protection/switch/priorité/technique pour cette recrue.", true, "combat.team_orders.unique.clear");
+        const int orderChoice = TerminalInterface::askMenuChoiceFromOptions(orderScreen, "Choisis la consigne ciblée.");
+        Console::clear();
+
+        if (orderChoice == 1)
+        {
+            unique.healOneTurn = true;
+            MessageScreen::show("CONSIGNE DONNÉE", "combat.team_orders.unique.heal.done", {ally.name + " tentera de soigner/couvrir au prochain tour.", "Cette consigne expire après le tour allié."}, false);
+        }
+        else if (orderChoice == 2)
+        {
+            const std::string targetName = selectActiveEnemyNameForOrder(wave, "PRIORITÉ UNIQUE", "combat.team_orders.unique.focus.target");
+            if (!targetName.empty())
+            {
+                unique.hasPriorityTarget = true;
+                unique.priorityTargetName = targetName;
+                MessageScreen::show("PRIORITÉ ENREGISTRÉE", "combat.team_orders.unique.focus.done", {ally.name + " priorisera " + targetName + " jusqu'à sa mort/disparition."}, false);
+            }
+        }
+        else if (orderChoice == 3)
+        {
+            MenuScreen reserveScreen("SWITCH — RÉSERVE", "combat.team_orders.unique.switch.reserve");
+            reserveScreen.addLine("Le switch consommera le tour de " + ally.name + ", pas le tour du joueur.");
+            reserveScreen.addBackOption("Retour", "combat.team_orders.unique.switch.back");
+            for (std::size_t i = 0; i < reserveAllies.size(); ++i)
+            {
+                const RecruitedAllyCombatSupport& reserve = reserveAllies[i];
+                reserveScreen.addOption(
+                    static_cast<int>(i + 1),
+                    reserve.name,
+                    reserve.job + " | rang " + recruitedAllyRankName(reserve.currentRankIndex) + " | niv. " + std::to_string(reserve.estimatedLevel),
+                    true,
+                    "combat.team_orders.unique.switch.target"
+                );
+            }
+            const int reserveChoice = TerminalInterface::askMenuChoiceFromOptions(reserveScreen, "Choisis la recrue en réserve.");
+            Console::clear();
+            if (reserveChoice > 0 && reserveChoice <= static_cast<int>(reserveAllies.size()))
+            {
+                unique.switchRequested = true;
+                unique.switchInName = reserveAllies[static_cast<std::size_t>(reserveChoice - 1)].name;
+                MessageScreen::show("SWITCH PLANIFIÉ", "combat.team_orders.unique.switch.done", {ally.name + " switchera avec " + unique.switchInName + " pendant son propre tour."}, false);
+            }
+        }
+        else if (orderChoice == 4)
+        {
+            unique.guardOneTurn = true;
+            MessageScreen::show("CONSIGNE DONNÉE", "combat.team_orders.unique.guard.done", {ally.name + " jouera plus prudemment pendant 1 tour."}, false);
+        }
+        else if (orderChoice == 5)
+        {
+            unique.forceTechniqueOneTurn = true;
+            MessageScreen::show("TECHNIQUE DEMANDÉE", "combat.team_orders.unique.technique.done", {ally.name + " utilisera sa technique active au prochain tour si la situation le permet.", "Maturité " + recruitedAllyMaturityName(ally) + " : l'ordre aide, mais ne transforme pas une recrue en vétéran.", "Cette consigne expire après le tour allié."}, false);
+        }
+        else if (orderChoice == 6)
+        {
+            orders.uniqueOrders.erase(ally.name);
+            MessageScreen::show("CONSIGNE ANNULÉE", "combat.team_orders.unique.clear.done", {"Les consignes ciblées de " + ally.name + " sont retirées."}, false);
+        }
+    }
+
+    void openGroupAllyOrderMenu(EnemyCombatQueue& wave, RecruitedAllyOrderState& orders)
+    {
+        MenuScreen screen("CONSIGNE DE GROUPE", "combat.team_orders.group");
+        screen.addLine("Consignes de soin/protection : actives 1 tour, à redire chaque fois.");
+        screen.addLine("Les recrues faibles réagissent mieux avec une consigne directe qu'avec une consigne de groupe trop vague.");
+        screen.addLine("Priorité de cible : reste active jusqu'à la mort/disparition de la cible.");
+        screen.addLine("Switch indisponible ici : le switch est uniquement une consigne ciblée.");
+        screen.addBackOption("Retour", "combat.team_orders.group.back");
+        screen.addOption(1, "Demander du soin au groupe", "Les soutiens/alliés disponibles tenteront de couvrir le chef ce tour. Consigne 1 tour.", true, "combat.team_orders.group.heal");
+        screen.addOption(2, "Prioriser une cible", "Toute l'équipe active visera cette cible jusqu'à sa mort/disparition.", wave.hasActiveEnemies(), "combat.team_orders.group.focus");
+        screen.addOption(3, "Tenir la ligne", "Consigne prudente 1 tour : moins d'agression, plus de couverture.", true, "combat.team_orders.group.guard");
+        screen.addOption(4, "Percée coordonnée", "Les recrues dont la technique est prête tenteront de l'utiliser ce tour. Consigne 1 tour.", true, "combat.team_orders.group.technique");
+        screen.addOption(5, "Répartir les cibles", "L'équipe évite de tous taper la même cible ce tour, utile contre plusieurs ennemis.", wave.getActiveEnemyCount() >= 2, "combat.team_orders.group.spread");
+        screen.addOption(6, "Annuler la priorité de groupe", "Retire la cible prioritaire globale.", orders.groupPriorityTarget, "combat.team_orders.group.clear_focus");
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis la consigne de groupe.");
+        Console::clear();
+        if (choice == 1)
+        {
+            orders.groupHealOneTurn = true;
+            MessageScreen::show("CONSIGNE DE GROUPE", "combat.team_orders.group.heal.done", {"Le groupe tentera de couvrir/soigner ce tour.", "Cette consigne expire après le tour allié."}, false);
+        }
+        else if (choice == 2)
+        {
+            const std::string targetName = selectActiveEnemyNameForOrder(wave, "PRIORITÉ DE GROUPE", "combat.team_orders.group.focus.target");
+            if (!targetName.empty())
+            {
+                orders.groupPriorityTarget = true;
+                orders.groupPriorityTargetName = targetName;
+                MessageScreen::show("PRIORITÉ DE GROUPE", "combat.team_orders.group.focus.done", {"Toute l'équipe priorisera " + targetName + " jusqu'à sa mort/disparition."}, false);
+            }
+        }
+        else if (choice == 3)
+        {
+            orders.groupGuardOneTurn = true;
+            MessageScreen::show("CONSIGNE DE GROUPE", "combat.team_orders.group.guard.done", {"L'équipe tiendra la ligne pendant 1 tour."}, false);
+        }
+        else if (choice == 4)
+        {
+            orders.groupTechniqueOneTurn = true;
+            MessageScreen::show("PERCÉE COORDONNÉE", "combat.team_orders.group.technique.done", {"Les recrues dont la technique est prête tenteront une action active ce tour.", "Cette consigne expire après le tour allié."}, false);
+        }
+        else if (choice == 5)
+        {
+            orders.groupSpreadTargetsOneTurn = true;
+            MessageScreen::show("CIBLES RÉPARTIES", "combat.team_orders.group.spread.done", {"L'équipe répartira ses cibles pendant 1 tour au lieu de tunnel automatiquement.", "Cette consigne est utile contre plusieurs ennemis, moins contre un boss seul."}, false);
+        }
+        else if (choice == 6)
+        {
+            orders.groupPriorityTarget = false;
+            orders.groupPriorityTargetName.clear();
+            MessageScreen::show("PRIORITÉ ANNULÉE", "combat.team_orders.group.clear_focus.done", {"La priorité de groupe est retirée."}, false);
+        }
+    }
+
+    bool openTeamOrdersMenu(
+        Player& player,
+        EnemyCombatQueue& wave,
+        std::vector<RecruitedAllyCombatSupport>& activeAllies,
+        std::vector<RecruitedAllyCombatSupport>& reserveAllies,
+        RecruitedAllyOrderState& orders
+    )
+    {
+        if (activeAllies.empty())
+        {
+            MessageScreen::show("CONSIGNES D'ÉQUIPE", "combat.team_orders.empty", {"Aucune recrue équipée ne peut recevoir de consigne."}, false);
+            return false;
+        }
+
+        MenuScreen screen("CONSIGNES D'ÉQUIPE", "combat.team_orders");
+        screen.addLine("Donner une consigne ne consomme pas le tour du joueur.");
+        screen.addLine("Une recrue faible rang lit moins bien le combat, utilise moins de techniques et suit mieux une consigne claire qu'un instinct flou.");
+        screen.addLine("Consigne ciblée : vise une recrue précise. Switch disponible uniquement ici.");
+        screen.addLine("Consigne de groupe : consigne globale. Soin/protection/technique/répartition = 1 tour ; priorité cible = jusqu'à mort/disparition.");
+        if (orders.groupPriorityTarget)
+        {
+            screen.addLine("Priorité de groupe actuelle : " + orders.groupPriorityTargetName + ".");
+        }
+        screen.addBackOption("Retour", "combat.team_orders.back");
+        screen.addOption(1, "Consigne ciblée", "Demander du soin, prioriser une cible, protéger le chef ou switch une recrue précise.", true, "combat.team_orders.unique");
+        screen.addOption(2, "Consigne de groupe", "Soin global, cible prioritaire, tenir la ligne, percée coordonnée ou cibles réparties. Pas de switch ici.", true, "combat.team_orders.group");
+        screen.addOption(3, "Voir l'état des consignes", "Récapitulatif des priorités et consignes 1 tour.", true, "combat.team_orders.status");
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis un type de consigne.");
+        Console::clear();
+        if (choice == 1)
+        {
+            openUniqueAllyOrderMenu(player, wave, activeAllies, reserveAllies, orders);
+        }
+        else if (choice == 2)
+        {
+            openGroupAllyOrderMenu(wave, orders);
+        }
+        else if (choice == 3)
+        {
+            std::vector<std::string> lines;
+            lines.push_back("Actifs : " + std::to_string(activeAllies.size()) + " | réserve : " + std::to_string(reserveAllies.size()) + ".");
+            lines.push_back("Soin groupe 1 tour : " + std::string(orders.groupHealOneTurn ? "oui" : "non") + ".");
+            lines.push_back("Tenir ligne 1 tour : " + std::string(orders.groupGuardOneTurn ? "oui" : "non") + ".");
+            lines.push_back("Percée coordonnée 1 tour : " + std::string(orders.groupTechniqueOneTurn ? "oui" : "non") + ".");
+            lines.push_back("Répartition cibles 1 tour : " + std::string(orders.groupSpreadTargetsOneTurn ? "oui" : "non") + ".");
+            lines.push_back("Priorité groupe : " + std::string(orders.groupPriorityTarget ? orders.groupPriorityTargetName : "aucune") + ".");
+            for (const auto& entry : orders.uniqueOrders)
+            {
+                const RecruitedAllyUniqueOrder& order = entry.second;
+                lines.push_back("- " + entry.first + " : soin=" + std::string(order.healOneTurn ? "oui" : "non")
+                    + " | protection=" + std::string(order.guardOneTurn ? "oui" : "non")
+                    + " | technique=" + std::string(order.forceTechniqueOneTurn ? "oui" : "non")
+                    + " | priorité=" + std::string(order.hasPriorityTarget ? order.priorityTargetName : "aucune")
+                    + " | switch=" + std::string(order.switchRequested ? order.switchInName : "non") + ".");
+            }
+            MessageScreen::show("ÉTAT DES CONSIGNES", "combat.team_orders.status", lines, false);
+        }
+        return false;
+    }
+
+    void displayRecruitedAllyCombatStart(const Player& player, const std::vector<RecruitedAllyCombatSupport>& allies)
+    {
+        if (allies.empty())
+        {
+            return;
+        }
+        std::vector<std::string> lines;
+        lines.push_back("Les recrues équipées entrent maintenant dans le vrai combat PvE, en soutien simple joueur + 2 alliés max.");
+        lines.push_back("Une recrue bas rang observe moins de choses, utilise moins de techniques et progresse surtout avec des ordres clairs.");
+        lines.push_back("Placement : chef " + player.getName() + ", puis chaîne manuelle si elle existe, sinon fallback rang/niveau.");
+        for (const RecruitedAllyCombatSupport& ally : allies)
+        {
+            lines.push_back("- " + ally.name + " | " + ally.job + " | rang " + recruitedAllyRankName(ally.currentRankIndex) + " | niv. " + std::to_string(ally.estimatedLevel) + " | " + recruitedAllyHealthLine(ally) + " | part combat " + std::to_string(ally.normalizedShare) + "%.");
+            lines.push_back("  Présence : " + recruitedAllyReadinessLine(ally, player) + ".");
+        }
+        MessageScreen::show("RECRUES ÉQUIPÉES", "combat.pve.recruited_allies.start", lines, false);
+    }
+
+    void playRecruitedAllyCombatTurns(
+        Player& player,
+        EnemyCombatQueue& wave,
+        Random& random,
+        std::vector<RecruitedAllyCombatSupport>& allies,
+        std::vector<RecruitedAllyCombatSupport>& reserveAllies,
+        RecruitedAllyOrderState& orders
+    )
+    {
+        if (allies.empty() || !wave.hasActiveEnemies())
+        {
+            clearOneTurnTeamOrders(orders);
+            return;
+        }
+
+        std::vector<std::string> lines;
+        lines.push_back("Les recrues équipées agissent après le joueur et les invocations, avant la riposte ennemie.");
+        lines.push_back("Les consignes de soin/protection/technique/répartition expirent après ce tour allié. Les priorités de cible restent jusqu'à mort/disparition.");
+        for (RecruitedAllyCombatSupport& ally : allies)
+        {
+            if (!wave.hasActiveEnemies())
+            {
+                break;
+            }
+            ++ally.turnsTaken;
+            if (ally.activeSkillCooldown > 0)
+            {
+                --ally.activeSkillCooldown;
+            }
+            ally.protectedThisRound = false;
+            RecruitedAllyUniqueOrder& unique = orders.uniqueOrders[ally.name];
+            const bool hasActiveOrder = unique.healOneTurn
+                || unique.guardOneTurn
+                || unique.forceTechniqueOneTurn
+                || unique.hasPriorityTarget
+                || unique.switchRequested
+                || orders.groupHealOneTurn
+                || orders.groupGuardOneTurn
+                || orders.groupTechniqueOneTurn
+                || orders.groupSpreadTargetsOneTurn
+                || orders.groupPriorityTarget;
+            lines.push_back("- Présence alliée : " + recruitedAllyPresenceLine(ally, player, wave) + ".");
+            const std::string tacticalComment = recruitedAllyTacticalCommentLine(ally, player, wave, hasActiveOrder);
+            if (!tacticalComment.empty())
+            {
+                lines.push_back("  Lecture alliée : " + tacticalComment + ".");
+            }
+
+            if (executeRequestedAllySwitch(player, ally, reserveAllies, unique, lines))
+            {
+                continue;
+            }
+
+            const bool orderedHeal = unique.healOneTurn || orders.groupHealOneTurn;
+            const bool orderedGuard = unique.guardOneTurn || orders.groupGuardOneTurn;
+            const bool naturalSupport = (recruitedAllyJobContains(ally, "soigneur") || recruitedAllyJobContains(ally, "mage d'appui"))
+                && player.getHp() * 10 < player.getMaxHp() * 7
+                && random.between(1, 100) <= recruitedAllyNaturalSupportChance(ally);
+
+            if (ally.currentHp * 3 < ally.maxHp && ally.healingPotionCharges > 0)
+            {
+                const int selfHeal = std::max(5, ally.maxHp / 3);
+                ally.currentHp = std::min(ally.maxHp, ally.currentHp + selfHeal);
+                --ally.healingPotionCharges;
+                ally.healingDone += selfHeal;
+                recordRecruitedAllySupportContribution(ally, 1);
+                lines.push_back("- " + ally.name + " boit une potion personnelle : +" + std::to_string(selfHeal) + " PV (" + recruitedAllyHealthLine(ally) + ").");
+                continue;
+            }
+
+            if ((orderedHeal || naturalSupport) && player.getHp() < player.getMaxHp())
+            {
+                const int healAmount = std::max(3, player.getMaxHp() / 18 + ally.currentRankIndex * 2 + ally.supportKitQuality + random.between(0, 4) + (orderedHeal ? 2 : 0));
+                player.heal(healAmount);
+                ally.healingDone += healAmount;
+                recordRecruitedAllySupportContribution(ally, 2);
+                lines.push_back("- " + ally.name + (orderedHeal ? " suit la consigne de soin : +" : " couvre le chef : +") + std::to_string(healAmount) + " PV.");
+                continue;
+            }
+
+            if (orderedHeal && player.getHp() >= player.getMaxHp())
+            {
+                lines.push_back("- " + ally.name + " garde la consigne de soin en tête, mais le chef est déjà au maximum. Passage en attaque prudente.");
+            }
+
+            if (executeRecruitedAllyActiveTechnique(ally, wave, random, orders, lines))
+            {
+                continue;
+            }
+
+            const int targetIndex = chooseRecruitedAllyTargetIndexWithOrders(ally, wave, random, orders);
+            Monster& target = wave.getActiveEnemy(targetIndex);
+            int damage = std::max(3, ally.estimatedLevel / 2 + ally.currentRankIndex * 5 + ally.weaponQuality * 2 + player.getLevel() / 5 + random.between(2, 10));
+            if (recruitedAllyJobContains(ally, "gardien"))
+            {
+                damage = std::max(2, damage - 2);
+            }
+            if (recruitedAllyIsStillLearning(ally))
+            {
+                damage = std::max(2, damage * 78 / 100);
+            }
+            else if (recruitedAllyMaturityTier(ally) == 2)
+            {
+                damage = std::max(2, damage * 92 / 100);
+            }
+            if (orderedGuard)
+            {
+                ally.protectedThisRound = true;
+                damage = std::max(2, damage - 3);
+                const int guardHeal = std::max(1, ally.currentRankIndex + 1 + ally.supportKitQuality / 3);
+                if (player.getHp() < player.getMaxHp())
+                {
+                    player.heal(guardHeal);
+                    ally.healingDone += guardHeal;
+                }
+                recordRecruitedAllySupportContribution(ally, 1);
+                lines.push_back("- " + ally.name + " tient la ligne : couverture légère du chef" + (player.getHp() < player.getMaxHp() ? "" : "") + ".");
+            }
+            if (recruitedAllyJobContains(ally, "roublard") && target.getHp() * 2 < target.getMaxHp())
+            {
+                damage += std::max(2, ally.currentRankIndex + 3);
+            }
+            const std::string targetName = target.getName();
+            target.takeDamage(damage);
+            const bool killed = target.isDead();
+            const std::string targetResultLine = recruitedAllyTargetResultLine(ally, target, killed);
+            wave.removeDeadAndReplace();
+            recordRecruitedAllyHitContribution(ally, damage, killed);
+
+            const bool hasUniqueFocus = orders.uniqueOrders[ally.name].hasPriorityTarget;
+            const bool hasGroupFocus = orders.groupPriorityTarget;
+            std::string orderHint;
+            if (hasUniqueFocus || hasGroupFocus)
+            {
+                orderHint = " (priorité suivie).";
+            }
+            else if (orders.groupSpreadTargetsOneTurn)
+            {
+                orderHint = " (cibles réparties).";
+            }
+            else if (recruitedAllyJobContains(ally, "archer") || recruitedAllyJobContains(ally, "roublard"))
+            {
+                orderHint = " (instinct/cible parfois aléatoire).";
+            }
+            else
+            {
+                orderHint = ".";
+            }
+            lines.push_back("- " + ally.name + " attaque " + targetName + " : " + std::to_string(damage) + " dégâts" + orderHint + " " + targetResultLine);
+        }
+        clearOneTurnTeamOrders(orders);
+        MessageScreen::show("TOUR DES RECRUES ÉQUIPÉES", "combat.pve.recruited_allies.turn", lines, false);
+    }
+
+    void persistRecruitedAllyVitals(Player& player, const RecruitedAllyCombatSupport& ally, const std::string& status)
+    {
+        if (ally.name.empty())
+        {
+            return;
+        }
+        std::ostringstream label;
+        label << ally.name
+              << " | hp=" << std::clamp(ally.currentHp, 0, std::max(1, ally.maxHp))
+              << " | max=" << std::max(1, ally.maxHp)
+              << " | potions=" << std::clamp(ally.healingPotionCharges, 0, 9)
+              << " | statut=" << (status.empty() ? "stable" : status)
+              << " | jour=" << player.getWorldDaysElapsed();
+        player.recordCanonicalEvent("pv_recrues_persistants", ally.name, label.str(), 1);
+    }
+
+    void persistRecruitedAllyVitals(Player& player, const std::vector<RecruitedAllyCombatSupport>& allies, const std::string& status)
+    {
+        for (const RecruitedAllyCombatSupport& ally : allies)
+        {
+            persistRecruitedAllyVitals(player, ally, status);
+        }
+    }
+
+    void sendRecruitedAllyNameToInfirmary(
+        Player& player,
+        const std::string& recruitName,
+        int recoveryDays,
+        const std::string& severity,
+        int exitHealthPercent,
+        const std::string& origin,
+        std::vector<std::string>& lines
+    )
+    {
+        if (recruitName.empty())
+        {
+            return;
+        }
+        const int readyDay = player.getWorldDaysElapsed() + std::max(1, recoveryDays);
+        std::ostringstream label;
+        label << recruitName
+              << " | pret_jour=" << readyDay
+              << " | gravite=" << severity
+              << " | ville=" << player.getCurrentCityId()
+              << " | sortie_pct=" << std::clamp(exitHealthPercent, 1, 100)
+              << " | origine=" << origin;
+        player.recordCanonicalEvent("recrues_infirmerie_sejours", recruitName, label.str(), 1);
+        player.recordCanonicalEvent("recrues_evacuees_infirmerie", recruitName, recruitName + " amené à l'infirmerie", 1);
+        lines.push_back("- " + recruitName + " est pris en charge par l'infirmerie. Retour possible jour " + std::to_string(readyDay) + ", au seuil de PV imposé par la difficulté.");
+    }
+
+    void markRecruitedAllyAwaitingInfirmaryTransfer(
+        Player& player,
+        const RecruitedAllyCombatSupport& ally,
+        int recoveryDaysHint,
+        const std::string& severity,
+        DifficultyMode difficulty,
+        std::vector<std::string>& lines
+    )
+    {
+        persistRecruitedAllyVitals(player, ally, "ko_a_evacuer");
+        std::ostringstream label;
+        label << ally.name
+              << " | gravite=" << severity
+              << " | ville=" << player.getCurrentCityId()
+              << " | jour_chute=" << player.getWorldDaysElapsed()
+              << " | repos_base=" << std::max(1, recoveryDaysHint)
+              << " | sortie_pct=" << recruitedAllyRespawnHealthPercent(difficulty);
+        player.recordCanonicalEvent("recrues_a_evacuer", ally.name, label.str(), 1);
+        player.recordCanonicalEvent("recrues_tombees_combat", ally.name, ally.name + " tombe au combat et attend une évacuation", 1);
+        lines.push_back("- " + ally.name + " tombe à 0 PV. Elle n'est pas téléportée : il faudra l'amener à l'infirmerie avant qu'elle redevienne opérationnelle.");
+    }
+
+    void transferPendingFallenRecruitsToInfirmary(
+        Player& player,
+        DifficultyMode difficulty,
+        Random& random,
+        const std::string& contextId,
+        std::vector<std::string>& lines
+    )
+    {
+        int moved = 0;
+        for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+        {
+            if (record.category != "recrues_a_evacuer" || record.count <= 0)
+            {
+                continue;
+            }
+            const std::string recruitName = record.key.empty() ? record.label : record.key;
+            if (recruitName.empty())
+            {
+                continue;
+            }
+            if (localJournalCount(player, "recrues_evacuees_infirmerie", recruitName) >= record.count)
+            {
+                continue;
+            }
+            const std::string severity = extractLabelStringField(record.label, "gravite", "surveillance");
+            int recoveryDays = extractLabelIntField(record.label, "repos_base", severity == "grave" ? random.between(2, 5) : random.between(1, 2));
+            if (contextId.find("joueur_ko") != std::string::npos || contextId.find("player") != std::string::npos)
+            {
+                recoveryDays = std::max(recoveryDays, severity == "grave" ? 3 : 1);
+            }
+            const int exitPercent = extractLabelIntField(record.label, "sortie_pct", recruitedAllyRespawnHealthPercent(difficulty));
+            sendRecruitedAllyNameToInfirmary(player, recruitName, recoveryDays, severity, exitPercent, contextId, lines);
+            ++moved;
+        }
+        if (moved > 0)
+        {
+            lines.push_back("Les recrues tombées suivent le transfert vers l'infirmerie : personne ne redevient disponible sans soin ni récupération.");
+        }
+    }
+
+    void resolveRecruitedAllyInjuriesAfterEnemyTurn(
+        Player& player,
+        EnemyCombatQueue& wave,
+        std::vector<RecruitedAllyCombatSupport>& allies,
+        RecruitedAllyOrderState& orders,
+        Random& random,
+        DifficultyMode difficulty,
+        int playerHpBeforeEnemyTurn
+    )
+    {
+        if (allies.empty())
+        {
+            return;
+        }
+
+        const int hpLost = std::max(0, playerHpBeforeEnemyTurn - player.getHp());
+        int baseRisk = 2 + std::min(12, hpLost / std::max(1, player.getMaxHp() / 12));
+        if (player.isDead())
+        {
+            baseRisk += 18;
+        }
+        if (baseRisk <= 2 && random.between(1, 100) > 5)
+        {
+            return;
+        }
+
+        std::vector<std::string> lines;
+        for (auto it = allies.begin(); it != allies.end();)
+        {
+            RecruitedAllyCombatSupport& ally = *it;
+            if (ally.turnsTaken <= 0)
+            {
+                ++it;
+                continue;
+            }
+
+            int risk = baseRisk + std::max(0, ally.turnsTaken - 1) * 2;
+            if (recruitedAllyJobContains(ally, "gardien") || recruitedAllyJobContains(ally, "tank"))
+            {
+                risk += 3;
+            }
+            if (recruitedAllyJobContains(ally, "soigneur") || recruitedAllyJobContains(ally, "mage d'appui"))
+            {
+                risk += 2;
+            }
+            risk = std::clamp(risk, 1, 35);
+            if (random.between(1, 100) > risk)
+            {
+                ++it;
+                continue;
+            }
+
+            const int enemyPressure = wave.hasActiveEnemies()
+                ? std::max(1, wave.getActiveEnemy(0).getLevel())
+                : std::max(1, player.getLevel());
+            int damage = std::max(3, enemyPressure / 2 + random.between(3, 10) + hpLost / std::max(4, player.getMaxHp() / 8));
+            if (orders.groupGuardOneTurn || orders.uniqueOrders[ally.name].guardOneTurn || ally.protectedThisRound)
+            {
+                damage = std::max(1, damage * 60 / 100);
+            }
+            damage = std::max(1, damage - std::max(0, ally.armorQuality / 2));
+            if (recruitedAllyJobContains(ally, "gardien") || recruitedAllyJobContains(ally, "tank"))
+            {
+                damage = std::max(1, damage * 85 / 100);
+            }
+            ally.currentHp -= damage;
+            lines.push_back("- " + ally.name + " encaisse " + std::to_string(damage) + " dégâts collatéraux (" + recruitedAllyHealthLine(ally) + ").");
+            if (ally.currentHp > 0)
+            {
+                ++it;
+                continue;
+            }
+
+            const bool severe = player.isDead() || hpLost > player.getMaxHp() / 3 || damage > ally.maxHp / 3 || random.between(1, 100) <= 25;
+            const int recoveryDays = severe ? random.between(2, 4) : 1;
+            const std::string severity = severe ? "grave" : "surveillance";
+            markRecruitedAllyAwaitingInfirmaryTransfer(player, ally, recoveryDays, severity, difficulty, lines);
+            orders.uniqueOrders.erase(ally.name);
+            it = allies.erase(it);
+        }
+
+        if (!lines.empty())
+        {
+            lines.push_back("Une recrue tombée reste hors de la ligne tant que l'infirmerie ne l'a pas remise sur pied.");
+            MessageScreen::show("INFIRMERIE DES RECRUES", "combat.pve.recruited_allies.infirmary", lines, false);
+        }
+    }
+
+
+    int estimatePlayerInfirmaryCostCopper(const Player& player, DifficultyMode difficulty, bool rescuedByTeam)
+    {
+        int base = 28 + player.getLevel() * 7;
+        switch (difficulty)
+        {
+            case DifficultyMode::Easy:
+                base = base * 70 / 100;
+                break;
+            case DifficultyMode::Normal:
+                break;
+            case DifficultyMode::Hard:
+                base = base * 125 / 100;
+                break;
+            case DifficultyMode::Nightmare:
+                base = base * 145 / 100;
+                break;
+            case DifficultyMode::Lethal:
+                base = base * 160 / 100;
+                break;
+        }
+        if (rescuedByTeam)
+        {
+            base = base * 75 / 100;
+        }
+        return std::max(15, base);
+    }
+
+    long long recruitedAllyWeeklyGoldPartsTotal(const Player& player)
+    {
+        const std::string currentWeekSuffix = ":semaine_" + std::to_string(std::max(0, player.getWorldDaysElapsed() / 7));
+        long long total = 0;
+        for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+        {
+            if (record.category != "parts_or_recrues")
+            {
+                continue;
+            }
+            if (record.key.find(currentWeekSuffix) != std::string::npos)
+            {
+                total += std::max(0, record.count);
+            }
+        }
+        return total;
+    }
+
+    void resolvePlayerInfirmaryTransferAfterNonLethalDeath(
+        Player& player,
+        DifficultyMode difficulty,
+        Random& random,
+        bool rescuedByTeam,
+        bool teamFinishedFight,
+        const std::vector<RecruitedAllyCombatSupport>& remainingAllies,
+        const std::string& contextId
+    )
+    {
+        const int costCopper = estimatePlayerInfirmaryCostCopper(player, difficulty, rescuedByTeam);
+        int recoveryDays = teamFinishedFight
+            ? random.between(1, 2)
+            : random.between(2, 4);
+        if (!rescuedByTeam)
+        {
+            recoveryDays += random.between(0, 1);
+        }
+        if (difficulty == DifficultyMode::Hard || difficulty == DifficultyMode::Nightmare)
+        {
+            recoveryDays += 1;
+        }
+        recoveryDays = std::clamp(recoveryDays, 1, 6);
+        const int startDay = player.getWorldDaysElapsed();
+        const int readyDay = startDay + std::max(1, recoveryDays);
+        std::vector<std::string> lines;
+
+        if (rescuedByTeam)
+        {
+            const long long teamCopper = recruitedAllyWeeklyGoldPartsTotal(player);
+            const bool coveredByTeam = teamCopper >= costCopper || !remainingAllies.empty();
+            player.recordCanonicalEvent(
+                "infirmerie_joueur_transferts",
+                contextId + ":equipe",
+                "Le groupe ramène le chef à l'infirmerie | pret_jour=" + std::to_string(readyDay),
+                1
+            );
+            player.recordCanonicalEvent(
+                coveredByTeam ? "frais_infirmerie_couverts_par_groupe" : "dettes_infirmerie_groupe",
+                contextId + ":jour_" + std::to_string(player.getWorldDaysElapsed()),
+                coveredByTeam
+                    ? "Le groupe couvre le transport et les soins du chef."
+                    : "Le groupe n'a pas assez de réserve : dette d'infirmerie notée.",
+                costCopper
+            );
+
+            lines.push_back("Ton équipe te récupère après ta chute et te ramène à l'infirmerie de " + player.getCurrentCityId() + ".");
+            lines.push_back(teamFinishedFight
+                ? "Les recrues ont réussi à finir le combat avant le transport."
+                : "Les recrues ont surtout sécurisé ton extraction avant de décrocher.");
+            lines.push_back(coveredByTeam
+                ? "Coût joueur : 0. Le groupe couvre les frais avec ses parts/réserves."
+                : "Coût joueur immédiat : 0, mais une dette de groupe est notée : " + Money::formatCopper(costCopper) + ".");
+        }
+        else
+        {
+            const bool paid = player.getInventory().spendCopper(costCopper);
+            player.recordCanonicalEvent(
+                "infirmerie_joueur_transferts",
+                contextId + ":secours_lambda",
+                "Un groupe lambda ramène le joueur à l'infirmerie | pret_jour=" + std::to_string(readyDay),
+                1
+            );
+            player.recordCanonicalEvent(
+                paid ? "frais_infirmerie_payes" : "dettes_infirmerie_joueur",
+                contextId + ":jour_" + std::to_string(player.getWorldDaysElapsed()),
+                paid ? "Facture d'infirmerie payée après sauvetage lambda." : "Facture d'infirmerie impayée après sauvetage lambda.",
+                costCopper
+            );
+
+            lines.push_back("Tu étais seul : un groupe lambda te retrouve et te transporte à l'infirmerie de " + player.getCurrentCityId() + ".");
+            lines.push_back(paid
+                ? "Facture payée : " + Money::formatCopper(costCopper) + "."
+                : "Tu n'avais pas assez d'argent : dette d'infirmerie notée pour " + Money::formatCopper(costCopper) + ".");
+        }
+
+        transferPendingFallenRecruitsToInfirmary(player, difficulty, random, contextId + ":joueur_ko", lines);
+        persistRecruitedAllyVitals(player, remainingAllies, "chef_infirmerie");
+
+        lines.push_back("Repos estimé : " + std::to_string(recoveryDays) + " jour(s). Retour opérationnel prévu jour " + std::to_string(readyDay) + ".");
+        lines.push_back("Le monde avance réellement de " + std::to_string(recoveryDays) + " jour(s) pendant les soins.");
+        lines.push_back("Note gameplay : en solo, le secours inconnu coûte cher ; en équipe, le groupe amortit le retour du chef, sauf manque de réserve.");
+        MessageScreen::show("INFIRMERIE DU JOUEUR", "combat.pve.player.infirmary." + contextId, lines, false);
+        player.advanceWorldDays(recoveryDays);
+    }
+
+    bool simulateRecruitedAlliesAfterPlayerDown(
+        Player& player,
+        EnemyCombatQueue& wave,
+        Random& random,
+        DifficultyMode difficulty,
+        std::vector<RecruitedAllyCombatSupport>& allies,
+        std::vector<RecruitedAllyCombatSupport>& reserveAllies,
+        RecruitedAllyOrderState& orders,
+        const std::string& contextId
+    )
+    {
+        if (allies.empty() || !wave.hasEnemiesLeft())
+        {
+            return false;
+        }
+
+        std::vector<std::string> intro;
+        intro.push_back("Tu tombes, mais le combat ne se coupe pas immédiatement : ton équipe prend le relais.");
+        intro.push_back("Résolution automatique : les recrues actives tentent de finir ou de sécuriser l'extraction.");
+        intro.push_back("Le switch reste temporaire au combat ; l'ordre permanent de l'équipe ne change pas.");
+        MessageScreen::show("CHEF À TERRE", "combat.pve.player.down.team_continues." + contextId, intro, false);
+
+        int rounds = 0;
+        const int maxRounds = std::clamp(3 + static_cast<int>(allies.size()) + static_cast<int>(reserveAllies.size()) / 2, 3, 7);
+        while (wave.hasEnemiesLeft() && !allies.empty() && rounds < maxRounds)
+        {
+            ++rounds;
+            std::vector<std::string> lines;
+            lines.push_back("Round automatique des recrues " + std::to_string(rounds) + "/" + std::to_string(maxRounds) + ".");
+
+            for (auto it = allies.begin(); it != allies.end() && wave.hasEnemiesLeft(); )
+            {
+                RecruitedAllyCombatSupport& ally = *it;
+                ++ally.turnsTaken;
+                if (ally.activeSkillCooldown > 0)
+                {
+                    --ally.activeSkillCooldown;
+                }
+                RecruitedAllyUniqueOrder& unique = orders.uniqueOrders[ally.name];
+                if (executeRequestedAllySwitch(player, ally, reserveAllies, unique, lines))
+                {
+                    ++it;
+                    continue;
+                }
+
+                if (ally.currentHp * 3 < ally.maxHp && ally.healingPotionCharges > 0)
+                {
+                    const int selfHeal = std::max(5, ally.maxHp / 3);
+                    ally.currentHp = std::min(ally.maxHp, ally.currentHp + selfHeal);
+                    --ally.healingPotionCharges;
+                    ally.healingDone += selfHeal;
+                    lines.push_back("- " + ally.name + " se stabilise avant de continuer : +" + std::to_string(selfHeal) + " PV.");
+                    ++it;
+                    continue;
+                }
+
+                if (executeRecruitedAllyActiveTechnique(ally, wave, random, orders, lines))
+                {
+                    ++it;
+                    continue;
+                }
+
+                const int targetIndex = chooseRecruitedAllyTargetIndexWithOrders(ally, wave, random, orders);
+                Monster& target = wave.getActiveEnemy(targetIndex);
+                int damage = std::max(4, ally.estimatedLevel / 2 + ally.currentRankIndex * 6 + random.between(3, 13));
+                if (recruitedAllyJobContains(ally, "roublard") || recruitedAllyJobContains(ally, "assassin"))
+                {
+                    damage += random.between(2, 7);
+                }
+                if (recruitedAllyJobContains(ally, "soigneur") || recruitedAllyJobContains(ally, "mage d'appui"))
+                {
+                    damage = std::max(2, damage - 3);
+                    ally.healingDone += std::max(2, ally.currentRankIndex + 2);
+                }
+                const std::string targetName = target.getName();
+                target.takeDamage(damage);
+                wave.removeDeadAndReplace();
+                ally.damageDealt += damage;
+                lines.push_back("- " + ally.name + " garde la ligne et frappe " + targetName + " : " + std::to_string(damage) + " dégâts.");
+                ++it;
+            }
+
+            if (wave.hasEnemiesLeft() && !allies.empty())
+            {
+                int injuryRisk = 14 + wave.getActiveEnemyCount() * 6 + std::max(0, rounds - 1) * 4;
+                if (random.between(1, 100) <= injuryRisk)
+                {
+                    const int victimIndex = random.between(0, static_cast<int>(allies.size()) - 1);
+                    RecruitedAllyCombatSupport victim = allies[static_cast<std::size_t>(victimIndex)];
+                    const bool severe = random.between(1, 100) <= 35 || rounds >= maxRounds - 1;
+                    markRecruitedAllyAwaitingInfirmaryTransfer(player, victim, severe ? random.between(2, 5) : 1, severe ? "grave" : "surveillance", difficulty, lines);
+                    orders.uniqueOrders.erase(victim.name);
+                    allies.erase(allies.begin() + victimIndex);
+                }
+            }
+
+            if (allies.empty() && !reserveAllies.empty())
+            {
+                RecruitedAllyCombatSupport incoming = reserveAllies.front();
+                reserveAllies.erase(reserveAllies.begin());
+                allies.push_back(incoming);
+                lines.push_back("- " + incoming.name + " quitte la réserve et couvre l'extraction du chef.");
+            }
+
+            MessageScreen::show("COMBAT AUTO DE L'ÉQUIPE", "combat.pve.player.down.team_round." + contextId, lines, false);
+        }
+
+        const bool teamFinishedFight = !wave.hasEnemiesLeft();
+        player.recordCanonicalEvent(
+            teamFinishedFight ? "combats_finies_par_recrues" : "extractions_par_recrues",
+            contextId + ":jour_" + std::to_string(player.getWorldDaysElapsed()),
+            teamFinishedFight ? "Les recrues finissent le combat après la chute du chef." : "Les recrues extraient le chef sans finir proprement le combat.",
+            1
+        );
+        return teamFinishedFight;
+    }
+
+    CombatReward splitCombatRewardWithRecruitedAllies(Player& player, const CombatReward& reward, std::vector<RecruitedAllyCombatSupport>& allies, const std::string& contextId)
+    {
+        if (allies.empty())
+        {
+            return reward;
+        }
+        if (reward.getGold() <= 0)
+        {
+            persistRecruitedAllyVitals(player, allies, "combat_sans_or");
+            return reward;
+        }
+
+        const int playerShare = normalizeRecruitedAllyShares(allies);
+        const int weekIndex = std::max(0, player.getWorldDaysElapsed() / 7);
+        std::vector<std::string> lines;
+        lines.push_back("Récompense de groupe : " + Money::formatCopper(reward.getGold()) + " et " + std::to_string(reward.getExperience()) + " XP.");
+        lines.push_back("Part du chef : " + std::to_string(playerShare) + "%. Le joueur garde la plus grosse part, même avec plusieurs alliés.");
+        for (const RecruitedAllyCombatSupport& ally : allies)
+        {
+            const int copper = std::max(0, (reward.getGold() * ally.normalizedShare) / 100);
+            const int activityScore = ally.damageDealt + ally.healingDone + ally.supportActions * 8 + ally.finishBlows * 15 + ally.turnsTaken * 3;
+            const int xp = std::max(0, (reward.getExperience() * std::max(5, activityScore)) / std::max(100, activityScore + player.getLevel() * 8));
+            if (copper > 0)
+            {
+                player.recordCanonicalEvent("recrues_equipees_semaines", ally.name + ":semaine_" + std::to_string(weekIndex), ally.name + " a été équipé cette semaine", 1);
+                player.recordCanonicalEvent("parts_or_recrues", ally.name + ":semaine_" + std::to_string(weekIndex), ally.name + " reçoit une part de combat réel", copper);
+            }
+            if (xp > 0)
+            {
+                player.recordCanonicalEvent("xp_recrues", ally.name, ally.name + " gagne de l'expérience de combat réel", xp);
+            }
+            player.recordCanonicalEvent("participation_recrues", ally.name, ally.name + " participe au combat réel", std::max(1, ally.turnsTaken));
+            persistRecruitedAllyVitals(player, ally, "combat_recompense");
+            lines.push_back("- " + ally.name + " : " + Money::formatCopper(copper) + " (" + std::to_string(ally.normalizedShare) + "%), " + std::to_string(xp) + " XP, dégâts " + std::to_string(ally.damageDealt) + ", soutien " + std::to_string(ally.healingDone) + ", actions utiles " + std::to_string(ally.supportActions) + ", finitions " + std::to_string(ally.finishBlows) + ".");
+        }
+        lines.push_back("Le salaire hebdo pourra baisser seulement si la recrue était équipée ET si ces parts couvrent son salaire.");
+        MessageScreen::show("PARTAGE AVEC RECRUES", "combat.pve.recruited_allies.reward." + contextId, lines, false);
+        return reward.getModified(100, playerShare);
+    }
+
     TemporaryAdventurerSupport maybeTriggerRareAdventurerCombatAid(Player& player, EnemyCombatQueue& wave, Random& random)
     {
         TemporaryAdventurerSupport support;
@@ -870,6 +2999,87 @@ namespace
         if (support.remainingTurns <= 0)
         {
             support.active = false;
+        }
+    }
+
+    bool monsterLooksLikeCoordinator(const Monster& monster)
+    {
+        const std::string text = lowerCopy(monster.getName() + " " + monster.getType() + " " + monster.getRaceText());
+        if (text.find("chef") != std::string::npos || text.find("capitaine") != std::string::npos ||
+            text.find("strat") != std::string::npos || text.find("shaman") != std::string::npos ||
+            text.find("chamane") != std::string::npos || text.find("oracle") != std::string::npos ||
+            text.find("gobelin") != std::string::npos || text.find("hobgobelin") != std::string::npos ||
+            text.find("humain") != std::string::npos || text.find("orc") != std::string::npos ||
+            text.find("elfe") != std::string::npos || text.find("démon") != std::string::npos)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    void maybeEnemyUsesTacticalSwitch(EnemyCombatQueue& wave, Random& random)
+    {
+        if (!wave.hasWaitingEnemies() || wave.getActiveEnemyCount() <= 0)
+        {
+            return;
+        }
+
+        bool hasCoordinator = false;
+        for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+        {
+            if (monsterLooksLikeCoordinator(wave.getActiveEnemy(i)))
+            {
+                hasCoordinator = true;
+                break;
+            }
+        }
+        if (!hasCoordinator)
+        {
+            return;
+        }
+
+        int candidateIndex = -1;
+        int lowestPercent = 101;
+        for (int i = 0; i < wave.getActiveEnemyCount(); ++i)
+        {
+            const Monster& monster = wave.getActiveEnemy(i);
+            if (monster.getMaxHp() <= 0 || monster.isDead())
+            {
+                continue;
+            }
+            const int percent = monster.getHp() * 100 / std::max(1, monster.getMaxHp());
+            if (percent < lowestPercent)
+            {
+                lowestPercent = percent;
+                candidateIndex = i;
+            }
+        }
+
+        if (candidateIndex < 0 || lowestPercent > 45)
+        {
+            return;
+        }
+
+        const int chance = lowestPercent <= 25 ? 35 : 18;
+        if (random.between(1, 100) > chance)
+        {
+            return;
+        }
+
+        const std::string outgoingName = wave.getActiveEnemy(candidateIndex).getName();
+        const std::string incomingName = wave.getWaitingEnemy(0).getName();
+        if (wave.switchActiveEnemyWithWaiting(candidateIndex, 0))
+        {
+            MessageScreen::show(
+                "SWITCH ENNEMI",
+                "combat.pve.enemy_tactical_switch",
+                {
+                    "Un ennemi assez malin pour diriger la ligne donne un ordre bref.",
+                    outgoingName + " recule de la première ligne et " + incomingName + " prend sa place.",
+                    "Même les ennemis pourront parfois utiliser le switch si leur groupe possède un chef ou une intelligence suffisante."
+                },
+                false
+            );
         }
     }
 
@@ -994,6 +3204,11 @@ void MonsterPveMode::run(
         "GROUPE DU JOUEUR"
     );
 
+    std::vector<RecruitedAllyCombatSupport> recruitedAllies = collectActiveRecruitedAllies(player);
+    std::vector<RecruitedAllyCombatSupport> reserveRecruitedAllies = collectReserveRecruitedAllies(player);
+    RecruitedAllyOrderState recruitedAllyOrders;
+    displayRecruitedAllyCombatStart(player, recruitedAllies);
+
     CombatRoleActionSystem::displayRoleIdentity(player);
 
     SummonControlMode playerSummonControlMode =
@@ -1026,17 +3241,24 @@ void MonsterPveMode::run(
                 combatTurnCount + 1
             );
 
+            auto openOrders = [&]() -> bool {
+                return openTeamOrdersMenu(player, wave, recruitedAllies, reserveRecruitedAllies, recruitedAllyOrders);
+            };
+
             playerTurnFinished = PlayerWaveCombatTurn::play(
                 player,
                 wave,
                 random,
                 escapeSucceeded,
-                difficulty
+                difficulty,
+                !recruitedAllies.empty(),
+                openOrders
             );
 
             if (playerTurnFinished)
             {
                 ++combatTurnCount;
+                player.reduceClassSkillCooldown();
             }
 
             if (!playerTurnFinished && !escapeSucceeded)
@@ -1093,17 +3315,25 @@ void MonsterPveMode::run(
 
         if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
         {
+            playRecruitedAllyCombatTurns(player, wave, random, recruitedAllies, reserveRecruitedAllies, recruitedAllyOrders);
+        }
+
+        if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
+        {
+            maybeEnemyUsesTacticalSwitch(wave, random);
             showCombatPhaseGate(
                 "TOUR DES ENNEMIS VIVANTS",
                 "combat.pve.phase.enemies",
                 {"Les ennemis actifs agissent maintenant, un groupe après l'autre."}
             );
+            const int playerHpBeforeEnemyTurn = player.getHp();
             MonsterWaveCombatTurn::playMonsterTurns(
                 player,
                 wave,
                 playerSummons,
                 random
             );
+            resolveRecruitedAllyInjuriesAfterEnemyTurn(player, wave, recruitedAllies, recruitedAllyOrders, random, difficulty, playerHpBeforeEnemyTurn);
 
             displayWaveCombatSnapshot(
                 player,
@@ -1137,6 +3367,8 @@ void MonsterPveMode::run(
             wave,
             difficulty
         );
+
+        reward = splitCombatRewardWithRecruitedAllies(player, reward, recruitedAllies, "escape");
 
         CombatRewardSystem::displayPartialReward(
             reward,
@@ -1183,6 +3415,22 @@ void MonsterPveMode::run(
             return;
         }
 
+        const bool rescuedByTeam = !recruitedAllies.empty() || !reserveRecruitedAllies.empty();
+        bool teamFinishedFight = false;
+        if (rescuedByTeam)
+        {
+            teamFinishedFight = simulateRecruitedAlliesAfterPlayerDown(
+                player,
+                wave,
+                random,
+                difficulty,
+                recruitedAllies,
+                reserveRecruitedAllies,
+                recruitedAllyOrders,
+                "pve_standard"
+            );
+        }
+
         player.recordDeath();
         DeathPenaltyResult deathPenalty = DeathPenaltySystem::applyNonLethalDeathPenalty(
             player,
@@ -1191,6 +3439,15 @@ void MonsterPveMode::run(
         );
 
         DeathPenaltySystem::displayNonLethalDeathPenalty(deathPenalty);
+        resolvePlayerInfirmaryTransferAfterNonLethalDeath(
+            player,
+            difficulty,
+            random,
+            rescuedByTeam,
+            teamFinishedFight,
+            recruitedAllies,
+            "pve_standard"
+        );
 
         displaySpecialVictoryDialogues(wave);
 
@@ -1245,6 +3502,7 @@ void MonsterPveMode::run(
         random
     );
 
+    reward = splitCombatRewardWithRecruitedAllies(player, reward, recruitedAllies, "victory");
     CombatRewardSystem::displayReward(reward);
     CombatRewardSystem::giveRewardToPlayer(player, reward);
     player.recordVictory();
@@ -1330,6 +3588,11 @@ bool MonsterPveMode::runExplorationWave(
         "GROUPE DU JOUEUR"
     );
 
+    std::vector<RecruitedAllyCombatSupport> recruitedAllies = collectActiveRecruitedAllies(player);
+    std::vector<RecruitedAllyCombatSupport> reserveRecruitedAllies = collectReserveRecruitedAllies(player);
+    RecruitedAllyOrderState recruitedAllyOrders;
+    displayRecruitedAllyCombatStart(player, recruitedAllies);
+
     CombatRoleActionSystem::displayRoleIdentity(player);
 
     SummonControlMode playerSummonControlMode =
@@ -1358,17 +3621,24 @@ bool MonsterPveMode::runExplorationWave(
                 combatTurnCount + 1
             );
 
+            auto openOrders = [&]() -> bool {
+                return openTeamOrdersMenu(player, wave, recruitedAllies, reserveRecruitedAllies, recruitedAllyOrders);
+            };
+
             playerTurnFinished = PlayerWaveCombatTurn::play(
                 player,
                 wave,
                 random,
                 escapeSucceeded,
-                difficulty
+                difficulty,
+                !recruitedAllies.empty(),
+                openOrders
             );
 
             if (playerTurnFinished)
             {
                 ++combatTurnCount;
+                player.reduceClassSkillCooldown();
             }
 
             if (!playerTurnFinished && !escapeSucceeded)
@@ -1416,17 +3686,25 @@ bool MonsterPveMode::runExplorationWave(
 
         if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
         {
+            playRecruitedAllyCombatTurns(player, wave, random, recruitedAllies, reserveRecruitedAllies, recruitedAllyOrders);
+        }
+
+        if (!player.isDead() && wave.hasEnemiesLeft() && !escapeSucceeded)
+        {
+            maybeEnemyUsesTacticalSwitch(wave, random);
             showCombatPhaseGate(
                 "TOUR DES ENNEMIS VIVANTS",
                 "exploration.wave.phase.enemies",
                 {"Les ennemis actifs de l'événement agissent maintenant."}
             );
+            const int playerHpBeforeEnemyTurn = player.getHp();
             MonsterWaveCombatTurn::playMonsterTurns(
                 player,
                 wave,
                 playerSummons,
                 random
             );
+            resolveRecruitedAllyInjuriesAfterEnemyTurn(player, wave, recruitedAllies, recruitedAllyOrders, random, difficulty, playerHpBeforeEnemyTurn);
 
             displayWaveCombatSnapshot(
                 player,
@@ -1473,6 +3751,8 @@ bool MonsterPveMode::runExplorationWave(
             wave,
             difficulty
         );
+
+        reward = splitCombatRewardWithRecruitedAllies(player, reward, recruitedAllies, "exploration_escape");
 
         CombatRewardSystem::displayPartialReward(
             reward,
@@ -1531,6 +3811,22 @@ bool MonsterPveMode::runExplorationWave(
             return false;
         }
 
+        const bool rescuedByTeam = !recruitedAllies.empty() || !reserveRecruitedAllies.empty();
+        bool teamFinishedFight = false;
+        if (rescuedByTeam)
+        {
+            teamFinishedFight = simulateRecruitedAlliesAfterPlayerDown(
+                player,
+                wave,
+                random,
+                difficulty,
+                recruitedAllies,
+                reserveRecruitedAllies,
+                recruitedAllyOrders,
+                "exploration_wave"
+            );
+        }
+
         player.recordDeath();
         DeathPenaltyResult deathPenalty = DeathPenaltySystem::applyNonLethalDeathPenalty(
             player,
@@ -1539,6 +3835,15 @@ bool MonsterPveMode::runExplorationWave(
         );
 
         DeathPenaltySystem::displayNonLethalDeathPenalty(deathPenalty);
+        resolvePlayerInfirmaryTransferAfterNonLethalDeath(
+            player,
+            difficulty,
+            random,
+            rescuedByTeam,
+            teamFinishedFight,
+            recruitedAllies,
+            "exploration_wave"
+        );
         displaySpecialVictoryDialogues(wave);
 
         player.reviveWithHealthPercentage(
@@ -1607,6 +3912,7 @@ bool MonsterPveMode::runExplorationWave(
         random
     );
 
+    reward = splitCombatRewardWithRecruitedAllies(player, reward, recruitedAllies, "exploration_victory");
     CombatRewardSystem::displayReward(reward);
     CombatRewardSystem::giveRewardToPlayer(player, reward);
     player.recordVictory();
@@ -2484,6 +4790,7 @@ void MonsterPveMode::runTeam(
 
                 if (finished)
                 {
+                    player->reduceClassSkillCooldown();
                     const int enemyHpAfterTurn = sumActiveEnemyHp(wave);
                     contributions[i].turnsTaken++;
                     contributions[i].damageDealt += std::max(0, enemyHpBeforeTurn - enemyHpAfterTurn);

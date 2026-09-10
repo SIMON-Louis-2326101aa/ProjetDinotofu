@@ -33,6 +33,12 @@ public:
         int damageBonus
     );
 
+    static bool openForClassSkill(
+        Player& player,
+        EnemyCombatQueue& wave,
+        Random& random
+    );
+
 private:
     // EN: chooseTarget declares or implements a focused behavior used by this module.
     // FR: chooseTarget déclare ou implémente un comportement précis utilisé par ce module.

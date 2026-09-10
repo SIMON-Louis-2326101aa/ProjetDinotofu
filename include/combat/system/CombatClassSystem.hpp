@@ -8,6 +8,7 @@
 
 #include "entity/Entity.hpp"
 #include "item/weapon/WeaponType.hpp"
+#include "item/armor/ArmorType.hpp"
 
 #include <string>
 
@@ -22,6 +23,8 @@ public:
     static int getBaseDamageReductionPercentage(const Entity& entity);
     static int getOutgoingDamagePercent(const Entity& entity);
     static int getOutgoingFlatBonus(const Entity& entity);
+    static int getClassCriticalRollThreshold(const Entity& entity);
+    static std::string getClassBalanceIdentityLine(const Entity& entity);
     static std::string normalizeClassText(const std::string& classText);
     static bool hasWeaponAffinity(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
     static int getWeaponAffinityDamageBonus(const Entity& entity, WeaponType weaponType, const std::string& weaponName, int currentDamage);
@@ -29,6 +32,10 @@ public:
     static int getWeaponHandlingAccuracyAdjustment(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
     static int getWeaponHandlingDamagePercent(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
     static std::string getWeaponHandlingLabel(const Entity& entity, WeaponType weaponType, const std::string& weaponName);
+    static bool hasArmorAffinity(const Entity& entity, ArmorType armorType, const std::string& armorName);
+    static int getArmorHandlingDamageReductionAdjustment(const Entity& entity, ArmorType armorType, const std::string& armorName, int rawDamage);
+    static int getArmorHandlingEscapeAdjustment(const Entity& entity, ArmorType armorType, const std::string& armorName);
+    static std::string getArmorHandlingLabel(const Entity& entity, ArmorType armorType, const std::string& armorName);
 
 private:
 };

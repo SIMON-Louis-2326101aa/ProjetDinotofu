@@ -537,6 +537,11 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
         || id == "reinforced_healing_potion"
         || id == "greater_healing_potion"
         || id == "major_healing_potion"
+        || id == "vitality_healing_potion"
+        || id == "royal_vitality_healing_potion"
+        || id == "percent_damage_potion"
+        || id == "proportional_guard_potion"
+        || id == "proportional_fragility_debuff_potion"
         || id == "minor_damage_potion"
         || id == "basic_damage_potion"
         || id == "reinforced_damage_potion"
@@ -792,6 +797,18 @@ bool ShopTransactionSystem::buyItem(
     else if (item.getId() == "royal_vitality_healing_potion")
     {
         player.getInventory().addConsumable(ConsumableCatalog::createRoyalVitalityHealingPotion());
+    }
+    else if (item.getId() == "percent_damage_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createMomentumDamagePotion());
+    }
+    else if (item.getId() == "proportional_guard_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createGuardianPercentPotion());
+    }
+    else if (item.getId() == "proportional_fragility_debuff_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createProportionalFragilityDebuffPotion());
     }
     else if (item.getId() == "minor_damage_potion")
     {
@@ -1177,7 +1194,7 @@ bool ShopTransactionSystem::buyItem(
     if (item.isCommonInformation())
     {
         BestiaryRuntimeProgress::unlockCommonInformation(item.getId());
-        addTransactionNote("Renseignement ajouté au bestiaire pour cette session.");
+        addTransactionNote("Renseignement recopié dans le bestiaire de cette session.");
     }
 
     applyMagicLearningEffect(player, item);

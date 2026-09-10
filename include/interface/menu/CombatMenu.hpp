@@ -12,7 +12,7 @@
 class CombatMenu
 {
 public:
-    static MenuScreen buildTurnScreen(const Entity& entity);
+    static MenuScreen buildTurnScreen(const Entity& entity, bool teamOrdersAvailable = false);
 
     // EN: displayTurnMenu renders the current terminal turn menu from the shared screen model.
     // FR: displayTurnMenu affiche le menu de tour terminal depuis le modèle partagé.

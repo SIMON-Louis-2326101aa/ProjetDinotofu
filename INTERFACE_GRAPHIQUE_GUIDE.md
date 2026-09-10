@@ -71,13 +71,14 @@ Le combat garde la même vue pendant les annonces et les résultats :
 Les listes de quêtes restent volontairement courtes. Une entrée affiche seulement :   
 
 - le titre principal ;   
+- le rang ;   
 - le lieu cible ;   
 - les récompenses potentielles ;   
 - l’avancement.   
 
 Une quête acceptée ouvre un menu court contenant **Inspecter**. Une offre non acceptée propose d’abord **Demander plus d’informations** ; le joueur peut refuser immédiatement une demande de PNJ ou laisser un contrat de guilde de côté. Les quêtes principales terminées restent consultables dans **Principales finies**, tandis que les PNJ notables sont rangés en PNJ d’histoire, boutiques/services, autres notables et PNJ de quêtes temporaires, avec une vue complète disponible en premier. Les écrans de mission et de validation d’histoire ne doivent jamais révéler toute une chaîne future : ils montrent les étapes `[fait]`, l’étape actuelle et un simple compteur pour la suite masquée. Les quêtes de synthèse peuvent déclarer des quêtes liées avec un état attendu (`connue`, `terminée` ou `rendue`) ; leur progression est recalculée depuis le journal, y compris lorsque le joueur a accompli une branche avant l'ouverture de la synthèse. Les escortes, choix et combats qui doivent commencer après un dialogue restent non rétroactifs.   
 
-Dans l’IG, seules les sections concernées reçoivent un accent de couleur : vert léger pour `[fait]`, jaune-orangé discret pour un lieu portant un **objectif de quête**. Le reste du texte conserve sa couleur normale.   
+Dans l’IG, une offre de guilde qui vise le même lieu jouable qu’une quête active doit afficher une formulation courte du type **Même lieu actif** / **Même sortie possible**, en indiquant que regrouper les sorties peut être bénéfique. Seules les sections concernées reçoivent un accent de couleur : vert léger pour `[fait]`, jaune-orangé discret pour un lieu portant un **objectif de quête**. Le reste du texte conserve sa couleur normale.   
 
 ## Apparence   
 

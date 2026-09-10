@@ -141,7 +141,57 @@ namespace
             {"armor_habit", "Habitude d'armure"},
             {"loadout_memory", "Mémoire d'équipement"},
             {"field_maintenance", "Entretien de terrain"},
-            {"curse_anchor_awareness", "Conscience d'ancrage"}
+            {"curse_anchor_awareness", "Conscience d'ancrage"},
+            {"rage_control_mastery", "Rage canalisée"},
+            {"mastered_rage", "Rage maîtrisée"},
+            {"battle_order_mastery", "Voix de bataille"},
+            {"battle_order", "Ordre de bataille"},
+            {"breath_totem_mastery", "Ancrage du souffle"},
+            {"breath_totem", "Totem de souffle"},
+            {"workshop_bomb_mastery", "Bricolage explosif"},
+            {"workshop_bomber", "Bricolage explosif"},
+            {"steel_prayer_mastery", "Foi d'acier"},
+            {"steel_prayer", "Prière d'acier"},
+            {"signal_cut_awareness", "Lecture coupe-signal"},
+            {"signal_cutter", "Lecture coupe-signal"},
+            {"shadow_step_mastery", "Maîtrise du pas de l'ombre"},
+            {"shadow_stepper", "Maîtrise du pas de l'ombre"},
+            {"arc_sweep_mastery", "Amplitude contrôlée"},
+            {"arc_sweeper", "Amplitude contrôlée"},
+            {"vigor_sign_mastery", "Souffle de vigueur"},
+            {"vigor_sign", "Signe de vigueur"},
+            {"rogue_feint_mastery", "Angle de feinte"},
+            {"rogue_feinter", "Angle de feinte"},
+            {"battle_suture_mastery", "Gestes de suture"},
+            {"battle_suture", "Suture de bataille"},
+            {"arcane_channel_mastery", "Canalisation stabilisée"},
+            {"arcane_channeler", "Canalisation stabilisée"},
+            {"rampart_oath_mastery", "Tenue du rempart"},
+            {"rampart_oath", "Serment du rempart"},
+            {"stopping_shot_mastery", "Œil d'arrêt"},
+            {"stopping_shot", "Tir d'arrêt"},
+            {"inner_mantra_mastery", "Souffle intérieur"},
+            {"inner_mantra", "Mantra intérieur"},
+            {"trick_image_mastery", "Angle trompeur"},
+            {"trick_image", "Image trompeuse"},
+            {"summoning_link_mastery", "Lien stabilisé"},
+            {"summoning_link", "Lien d'invocation"},
+            {"blood_pact_mastery", "Sang discipliné"},
+            {"blood_pact", "Pacte sanguin"},
+            {"field_remedy_mastery", "Gestes de terrain"},
+            {"field_remedy", "Remède de fortune"},
+            {"elemental_blade_mastery", "Maîtrise élémentaire"},
+            {"elemental_blade", "Lame élémentaire"},
+            {"protective_circle_mastery", "Garde circulaire"},
+            {"protective_circle", "Cercle protecteur"},
+            {"binding_shot_mastery", "Trait entravant"},
+            {"binding_shot", "Flèche entravante"},
+            {"inspiring_chant_mastery", "Voix revigorante"},
+            {"inspiring_chant", "Chant revigorant"},
+            {"beast_instinct_mastery", "Instinct canalisé"},
+            {"beast_instinct", "Instinct de bête"},
+            {"blade_dance_mastery", "Rythme de lame"},
+            {"blade_dance", "Danse de lame"}
         };
 
         auto found = names.find(id);
@@ -151,6 +201,111 @@ namespace
         }
 
         return id;
+    }
+
+    bool skillListContains(const std::vector<std::string>& skills, const std::string& skillId)
+    {
+        return std::find(skills.begin(), skills.end(), skillId) != skills.end();
+    }
+
+    std::string activeSkillActionKeyFromId(const std::string& skillId)
+    {
+        static const std::map<std::string, std::string> actionKeys = {
+            {"shadow_step", "pas_ombre"},
+            {"arc_sweep", "coup_arc"},
+            {"vigor_sign", "signe_vigueur"},
+            {"rogue_feint", "feinte_sournoise"},
+            {"battle_suture", "suture_bataille"},
+            {"arcane_channel", "canalisation_arcanique"},
+            {"rampart_oath", "serment_rempart"},
+            {"stopping_shot", "tir_arret"},
+            {"mastered_rage", "rage_maitrisee"},
+            {"battle_order", "ordre_bataille"},
+            {"breath_totem", "totem_souffle"},
+            {"workshop_bomb", "bombe_atelier"},
+            {"steel_prayer", "priere_acier"},
+            {"inner_mantra", "mantra_interieur"},
+            {"trick_image", "image_trompeuse"},
+            {"summoning_link", "lien_invocation"},
+            {"blood_pact", "pacte_sanguin"},
+            {"field_remedy", "remede_fortune"},
+            {"elemental_blade", "lame_elementaire"},
+            {"protective_circle", "cercle_protecteur"},
+            {"binding_shot", "fleche_entravante"},
+            {"inspiring_chant", "chant_revigorant"},
+            {"beast_instinct", "instinct_bete"},
+            {"blade_dance", "danse_lame"}
+        };
+
+        auto found = actionKeys.find(skillId);
+        return found == actionKeys.end() ? std::string() : found->second;
+    }
+
+    std::string activeSkillLoadoutDetail(const Player& player, const std::string& skillId)
+    {
+        const std::string actionKey = activeSkillActionKeyFromId(skillId);
+        if (actionKey.empty())
+        {
+            return "Action choisie quand elle est équipée.";
+        }
+
+        return "Action choisie | " + player.getActiveSkillMasteryLabel(actionKey);
+    }
+
+    void showSkillLoadoutResult(const std::string& title, const std::string& screenId, const std::string& message)
+    {
+        MessageScreen::show(title, screenId, {message}, false);
+    }
+
+    std::string chooseSkillFromList(
+        const std::string& title,
+        const std::string& screenId,
+        const std::vector<std::string>& skillIds,
+        const std::string& introLine,
+        const std::string& prompt,
+        const Player& player,
+        bool activeSkill
+    )
+    {
+        if (skillIds.empty())
+        {
+            return std::string();
+        }
+
+        while (true)
+        {
+            MenuScreen screen(title, screenId);
+            screen.addLine(introLine);
+            screen.addBackOption("Retour", screenId + ".back");
+
+            for (std::size_t index = 0; index < skillIds.size(); ++index)
+            {
+                const std::string& skillId = skillIds[index];
+                const std::string detail = activeSkill
+                    ? activeSkillLoadoutDetail(player, skillId)
+                    : "Passif connu : fonctionne seulement s'il est activé.";
+
+                screen.addOption(
+                    static_cast<int>(index + 1),
+                    skillNameFromId(skillId),
+                    detail,
+                    true,
+                    screenId + ".skill"
+                );
+            }
+
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, prompt);
+            Console::clear();
+
+            if (choice == 0)
+            {
+                return std::string();
+            }
+            if (choice >= 1 && choice <= static_cast<int>(skillIds.size()))
+            {
+                return skillIds[static_cast<std::size_t>(choice - 1)];
+            }
+        }
     }
 
     void appendSkillList(std::vector<std::string>& lines, const std::string& title, const std::vector<std::string>& skills)
@@ -330,7 +485,7 @@ namespace
 }
 
 
-MenuScreen StatisticsMenu::buildHubScreen()
+MenuScreen StatisticsMenu::buildHubScreen(bool allowSkillLoadoutManagement)
 {
     MenuScreen screen("STATISTIQUES", "statistics.hub");
     screen.addOption(1, "Résumé du personnage", "Identité, niveau, expérience et état général.", true, "statistics.summary", makeStatisticsItemData("inspect", "Résumé du personnage", "Identité, niveau, expérience et état général."));
@@ -341,17 +496,21 @@ MenuScreen StatisticsMenu::buildHubScreen()
     screen.addOption(6, "Titres disponibles et obtenus", "Lister les titres connus : guilde, chasse, anomalies et rangs.", true, "statistics.titles", makeStatisticsItemData("inspect", "Titres", "Lister les titres connus : guilde, chasse, anomalies et rangs."));
     screen.addOption(7, "Affichage complet historique", "Afficher les statistiques longues du personnage.", true, "statistics.full_history", makeStatisticsItemData("inspect", "Historique complet", "Afficher les statistiques longues du personnage."));
     screen.addOption(8, "Top 3 du personnage", "Ennemis, boss, matériaux, consommables, armes, lieux, PNJ et quêtes avec total complet de chaque catégorie.", true, "statistics.top3", makeStatisticsItemData("inspect", "Top 3", "Compteurs persistants du journal moteur."));
+    if (allowSkillLoadoutManagement)
+    {
+        screen.addOption(9, "Gérer actifs / passifs", "Équiper ou déséquiper des actifs, activer ou désactiver des passifs.", true, "statistics.skills.loadout", makeStatisticsItemData("equip", "Gérer actifs / passifs", "Limite : 10 actifs équipés et 10 passifs activés."));
+    }
     screen.addBackOption("Retour", "statistics.back");
     return screen;
 }
 
-void StatisticsMenu::open(Player& player, DifficultyMode difficulty)
+void StatisticsMenu::open(Player& player, DifficultyMode difficulty, bool allowSkillLoadoutManagement)
 {
     const bool difficultyKnown = true;
     while (true)
     {
         int choice = TerminalInterface::askMenuChoiceFromOptions(
-            buildHubScreen(),
+            buildHubScreen(allowSkillLoadoutManagement),
             "Choix invalide. Choisis une option affichée."
         );
         Console::clear();
@@ -404,10 +563,14 @@ void StatisticsMenu::open(Player& player, DifficultyMode difficulty)
         {
             displayTopThreeStats(player);
         }
+        else if (choice == 9 && allowSkillLoadoutManagement)
+        {
+            displaySkillLoadoutMenu(player);
+        }
     }
 }
 
-void StatisticsMenu::open(Player& player)
+void StatisticsMenu::open(Player& player, bool allowSkillLoadoutManagement)
 {
     const bool difficultyKnown = false;
     DifficultyMode difficulty = DifficultyMode::Normal;
@@ -415,7 +578,7 @@ void StatisticsMenu::open(Player& player)
     while (true)
     {
         int choice = TerminalInterface::askMenuChoiceFromOptions(
-            buildHubScreen(),
+            buildHubScreen(allowSkillLoadoutManagement),
             "Choix invalide. Choisis une option affichée."
         );
         Console::clear();
@@ -469,7 +632,16 @@ void StatisticsMenu::open(Player& player)
         {
             displayTopThreeStats(player);
         }
+        else if (choice == 9 && allowSkillLoadoutManagement)
+        {
+            displaySkillLoadoutMenu(player);
+        }
     }
+}
+
+void StatisticsMenu::openSkillLoadoutMenu(Player& player)
+{
+    displaySkillLoadoutMenu(player);
 }
 
 
@@ -650,9 +822,18 @@ void StatisticsMenu::displayEquipmentUsage(const Player& player)
 void StatisticsMenu::displaySkillStats(const Player& player)
 {
     std::vector<std::string> lines;
-    appendSkillList(lines, "Passives connues :", player.getUnlockedPassiveSkills());
+    lines.push_back("Charge de compétences :");
+    lines.push_back("- Passifs activés : " + std::to_string(player.getEnabledPassiveSkills().size()) + "/" + std::to_string(Player::MAX_ENABLED_PASSIVE_SKILLS));
+    lines.push_back("- Actifs équipés : " + std::to_string(player.getEquippedActiveSkills().size()) + "/" + std::to_string(Player::MAX_EQUIPPED_ACTIVE_SKILLS));
+    lines.push_back("- Les autres compétences connues restent apprises, mais ne surchargent pas automatiquement le personnage.");
     lines.push_back("");
-    appendSkillList(lines, "Actives connues :", player.getUnlockedActiveSkills());
+    appendSkillList(lines, "Passifs activés :", player.getEnabledPassiveSkills());
+    lines.push_back("");
+    appendSkillList(lines, "Actifs équipés :", player.getEquippedActiveSkills());
+    lines.push_back("");
+    appendSkillList(lines, "Passifs connus :", player.getUnlockedPassiveSkills());
+    lines.push_back("");
+    appendSkillList(lines, "Actifs connus :", player.getUnlockedActiveSkills());
     lines.push_back("");
     lines.push_back("Traces d'entraînement visibles :");
     lines.push_back(progressLine("Armes courtes / dagues", player.getDaggerKillProgress(), 5));
@@ -668,6 +849,153 @@ void StatisticsMenu::displaySkillStats(const Player& player)
     appendSkillRoadmap(lines, player);
 
     showStatisticsScreen("COMPÉTENCES", "statistics.skills.detail", lines);
+}
+
+void StatisticsMenu::displaySkillLoadoutMenu(Player& player)
+{
+    while (true)
+    {
+        const std::vector<std::string>& unlockedActives = player.getUnlockedActiveSkills();
+        const std::vector<std::string>& equippedActives = player.getEquippedActiveSkills();
+        const std::vector<std::string>& unlockedPassives = player.getUnlockedPassiveSkills();
+        const std::vector<std::string>& enabledPassives = player.getEnabledPassiveSkills();
+
+        std::vector<std::string> activesToEquip;
+        for (const std::string& skillId : unlockedActives)
+        {
+            if (!skillListContains(equippedActives, skillId))
+            {
+                activesToEquip.push_back(skillId);
+            }
+        }
+
+        std::vector<std::string> passivesToEnable;
+        for (const std::string& skillId : unlockedPassives)
+        {
+            if (!skillListContains(enabledPassives, skillId))
+            {
+                passivesToEnable.push_back(skillId);
+            }
+        }
+
+        const bool canEquipActive = !activesToEquip.empty()
+            && static_cast<int>(equippedActives.size()) < Player::MAX_EQUIPPED_ACTIVE_SKILLS;
+        const bool canEnablePassive = !passivesToEnable.empty()
+            && static_cast<int>(enabledPassives.size()) < Player::MAX_ENABLED_PASSIVE_SKILLS;
+
+        MenuScreen screen("GESTION DES COMPÉTENCES", "statistics.skills.loadout.hub");
+        screen.addLine("Actifs équipés : " + std::to_string(equippedActives.size()) + "/" + std::to_string(Player::MAX_EQUIPPED_ACTIVE_SKILLS));
+        screen.addLine("Passifs activés : " + std::to_string(enabledPassives.size()) + "/" + std::to_string(Player::MAX_ENABLED_PASSIVE_SKILLS));
+        screen.addLine("Une technique active reste choisie volontairement. Un passif peut agir seul uniquement s'il est activé.");
+        screen.addLine("Cette gestion est pensée pour éviter la surcharge : ce qui est connu n'est pas forcément équipé.");
+        screen.addOption(1, "Équiper une active", canEquipActive ? "Choisir une compétence active connue à ajouter au paquet équipé." : "Indisponible : aucun actif libre à équiper ou limite atteinte.", canEquipActive, "statistics.skills.loadout.active.equip");
+        screen.addOption(2, "Déséquiper une active", equippedActives.empty() ? "Aucune active équipée." : "Retirer une compétence active du paquet équipé.", !equippedActives.empty(), "statistics.skills.loadout.active.unequip");
+        screen.addOption(3, "Activer un passif", canEnablePassive ? "Choisir un passif connu à activer." : "Indisponible : aucun passif libre à activer ou limite atteinte.", canEnablePassive, "statistics.skills.loadout.passive.enable");
+        screen.addOption(4, "Désactiver un passif", enabledPassives.empty() ? "Aucun passif activé." : "Couper temporairement un passif pour libérer une place.", !enabledPassives.empty(), "statistics.skills.loadout.passive.disable");
+        screen.addOption(5, "Voir le détail", "Relire les actifs/passifs connus, équipés et désactivés.", true, "statistics.skills.loadout.detail");
+        screen.addBackOption("Retour", "statistics.skills.loadout.back");
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option de gestion affichée.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+
+        if (choice == 1 && canEquipActive)
+        {
+            const std::string selected = chooseSkillFromList(
+                "ÉQUIPER UNE ACTIVE",
+                "statistics.skills.loadout.active.equip.select",
+                activesToEquip,
+                "Choisis l'actif à rendre disponible dans tes actions.",
+                "Choix invalide.",
+                player,
+                true
+            );
+            if (selected.empty()) continue;
+
+            if (player.equipActiveSkill(selected))
+            {
+                showSkillLoadoutResult("ACTIVE ÉQUIPÉE", "statistics.skills.loadout.active.equip.done", skillNameFromId(selected) + " est maintenant équipée.");
+            }
+            else
+            {
+                showSkillLoadoutResult("ACTIVE NON ÉQUIPÉE", "statistics.skills.loadout.active.equip.failed", "Impossible d'équiper cette active maintenant. Libère une place si la limite est atteinte.");
+            }
+        }
+        else if (choice == 2 && !equippedActives.empty())
+        {
+            const std::string selected = chooseSkillFromList(
+                "DÉSÉQUIPER UNE ACTIVE",
+                "statistics.skills.loadout.active.unequip.select",
+                equippedActives,
+                "Choisis l'actif à retirer de tes actions disponibles.",
+                "Choix invalide.",
+                player,
+                true
+            );
+            if (selected.empty()) continue;
+
+            if (player.unequipActiveSkill(selected))
+            {
+                showSkillLoadoutResult("ACTIVE DÉSÉQUIPÉE", "statistics.skills.loadout.active.unequip.done", skillNameFromId(selected) + " reste apprise, mais n'est plus équipée.");
+            }
+            else
+            {
+                showSkillLoadoutResult("ACTIVE CONSERVÉE", "statistics.skills.loadout.active.unequip.failed", "Impossible de retirer cette active maintenant.");
+            }
+        }
+        else if (choice == 3 && canEnablePassive)
+        {
+            const std::string selected = chooseSkillFromList(
+                "ACTIVER UN PASSIF",
+                "statistics.skills.loadout.passive.enable.select",
+                passivesToEnable,
+                "Choisis le passif à laisser agir automatiquement.",
+                "Choix invalide.",
+                player,
+                false
+            );
+            if (selected.empty()) continue;
+
+            if (player.enablePassiveSkill(selected))
+            {
+                showSkillLoadoutResult("PASSIF ACTIVÉ", "statistics.skills.loadout.passive.enable.done", skillNameFromId(selected) + " est maintenant activé.");
+            }
+            else
+            {
+                showSkillLoadoutResult("PASSIF NON ACTIVÉ", "statistics.skills.loadout.passive.enable.failed", "Impossible d'activer ce passif maintenant. Libère une place si la limite est atteinte.");
+            }
+        }
+        else if (choice == 4 && !enabledPassives.empty())
+        {
+            const std::string selected = chooseSkillFromList(
+                "DÉSACTIVER UN PASSIF",
+                "statistics.skills.loadout.passive.disable.select",
+                enabledPassives,
+                "Choisis le passif à couper temporairement.",
+                "Choix invalide.",
+                player,
+                false
+            );
+            if (selected.empty()) continue;
+
+            if (player.disablePassiveSkill(selected))
+            {
+                showSkillLoadoutResult("PASSIF DÉSACTIVÉ", "statistics.skills.loadout.passive.disable.done", skillNameFromId(selected) + " reste connu, mais n'agit plus pour le moment.");
+            }
+            else
+            {
+                showSkillLoadoutResult("PASSIF CONSERVÉ", "statistics.skills.loadout.passive.disable.failed", "Impossible de désactiver ce passif maintenant.");
+            }
+        }
+        else if (choice == 5)
+        {
+            displaySkillStats(player);
+        }
+    }
 }
 
 void StatisticsMenu::displayTitleCatalog(Player& player)

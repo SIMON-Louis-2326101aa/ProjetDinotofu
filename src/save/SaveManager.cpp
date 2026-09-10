@@ -728,6 +728,9 @@ namespace
         if (normalized == normalizeText("Potion de soin majeure")) return ConsumableCatalog::createMajorHealingPotion();
         if (normalized == normalizeText("Potion de vitalité proportionnelle")) return ConsumableCatalog::createVitalityHealingPotion();
         if (normalized == normalizeText("Potion de vitalité royale")) return ConsumableCatalog::createRoyalVitalityHealingPotion();
+        if (normalized == normalizeText("Potion d'élan proportionnel")) return ConsumableCatalog::createMomentumDamagePotion();
+        if (normalized == normalizeText("Potion de garde proportionnelle")) return ConsumableCatalog::createGuardianPercentPotion();
+        if (normalized == normalizeText("Fiole de rupture proportionnelle")) return ConsumableCatalog::createProportionalFragilityDebuffPotion();
         if (normalized == normalizeText("Petite potion de rage")) return ConsumableCatalog::createMinorDamagePotion();
         if (normalized == normalizeText("Potion de rage")) return ConsumableCatalog::createBasicDamagePotion();
         if (normalized == normalizeText("Potion de rage supérieure")) return ConsumableCatalog::createReinforcedDamagePotion();
@@ -1362,6 +1365,22 @@ bool SaveManager::savePlayerSnapshot(
     {
         file << "{\"id\": \"" << escapeJson(activeSkills[i]) << "\"}";
         if (i + 1 < activeSkills.size()) file << ", ";
+    }
+    file << "],\n";
+    file << "    \"enabledPassiveSkills\": [";
+    const std::vector<std::string>& enabledPassives = player.getEnabledPassiveSkills();
+    for (std::size_t i = 0; i < enabledPassives.size(); ++i)
+    {
+        file << "{\"id\": \"" << escapeJson(enabledPassives[i]) << "\"}";
+        if (i + 1 < enabledPassives.size()) file << ", ";
+    }
+    file << "],\n";
+    file << "    \"equippedActiveSkills\": [";
+    const std::vector<std::string>& equippedActives = player.getEquippedActiveSkills();
+    for (std::size_t i = 0; i < equippedActives.size(); ++i)
+    {
+        file << "{\"id\": \"" << escapeJson(equippedActives[i]) << "\"}";
+        if (i + 1 < equippedActives.size()) file << ", ";
     }
     file << "],\n";
     file << "    \"daggerKillProgress\": " << player.getDaggerKillProgress() << ",\n";
@@ -2222,6 +2241,8 @@ bool SaveManager::loadPlayerSnapshot(
     std::vector<std::string> recentEquipmentUsageObjects = extractObjectsFromArray(content, "recentCombatEquipmentUsage");
     std::vector<std::string> passiveSkillObjects = extractObjectsFromArray(content, "unlockedPassiveSkills");
     std::vector<std::string> activeSkillObjects = extractObjectsFromArray(content, "unlockedActiveSkills");
+    std::vector<std::string> enabledPassiveSkillObjects = extractObjectsFromArray(content, "enabledPassiveSkills");
+    std::vector<std::string> equippedActiveSkillObjects = extractObjectsFromArray(content, "equippedActiveSkills");
     std::vector<std::string> unlockedBossObjects = extractObjectsFromArray(content, "unlockedBossIds");
     int recentBossCooldownExpiresAtDay = extractIntValue(content, "recentBossCooldownExpiresAtDay", -1);
     int rareBossDiscoveryCooldownExpiresAtDay = extractIntValue(content, "rareBossDiscoveryCooldownExpiresAtDay", -1);
@@ -2645,6 +2666,26 @@ bool SaveManager::loadPlayerSnapshot(
         }
     }
 
+    std::vector<std::string> loadedEnabledPassiveSkills;
+    for (const std::string& object : enabledPassiveSkillObjects)
+    {
+        std::string id = extractStringValue(object, "id", "");
+        if (!id.empty())
+        {
+            loadedEnabledPassiveSkills.push_back(id);
+        }
+    }
+
+    std::vector<std::string> loadedEquippedActiveSkills;
+    for (const std::string& object : equippedActiveSkillObjects)
+    {
+        std::string id = extractStringValue(object, "id", "");
+        if (!id.empty())
+        {
+            loadedEquippedActiveSkills.push_back(id);
+        }
+    }
+
     player.setLoadedSkillState(
         loadedPassiveSkills,
         loadedActiveSkills,
@@ -2657,6 +2698,7 @@ bool SaveManager::loadPlayerSnapshot(
         extractIntValue(content, "hammerKillProgress", 0),
         extractIntValue(content, "spearKillProgress", 0)
     );
+    player.setLoadedSkillLoadout(loadedEnabledPassiveSkills, loadedEquippedActiveSkills);
 
     std::vector<int> loadedUnlockedBossIds;
     for (const std::string& object : unlockedBossObjects)

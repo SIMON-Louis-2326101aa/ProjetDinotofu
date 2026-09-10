@@ -674,7 +674,7 @@ bool HumanCombatTurn::openObservationInterface(
             return false;
         }
 
-        StatisticsMenu::open(*player);
+        StatisticsMenu::open(*player, false);
         return false;
     }
 
@@ -832,7 +832,7 @@ bool HumanCombatTurn::inspectCombatTarget(
             return false;
         }
 
-        StatisticsMenu::open(*player);
+        StatisticsMenu::open(*player, false);
         return false;
     }
 

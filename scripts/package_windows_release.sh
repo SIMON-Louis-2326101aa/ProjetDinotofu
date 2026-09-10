@@ -85,11 +85,14 @@ cp tools/windows/Lancer-Dinotofu.cmd "${INSTALLER_DIR}/Lancer-Dinotofu.cmd"
 cp tools/windows/Lancer-Dinotofu.vbs "${INSTALLER_DIR}/Lancer-Dinotofu.vbs"
 cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${INSTALLER_DIR}/Lancer-Dinotofu-Terminal.cmd"
 write_installer_config_json "${INSTALLER_DIR}/dinotofu-installer.config.json"
+if [[ -f "${GAME_ZIP}" ]]; then
+    cp "${GAME_ZIP}" "${INSTALLER_DIR}/"
+fi
 cat > "${INSTALLER_DIR}/LISEZ-MOI.txt" <<TXT
 Dinotofu Installer Windows
 
 1. Double-clique sur Installer-Dinotofu.cmd.
-2. Le script telecharge la derniere release Windows depuis GitHub.
+2. Le script installe le ZIP Windows inclus dans ce pack si présent, sinon il télécharge la dernière release Windows depuis GitHub.
 3. Par defaut, il installe Dinotofu dans %%USERPROFILE%%\Downloads\ProjetDinotofu.
 4. Tu peux choisir un autre dossier parent, mais le dossier final s'appellera toujours ProjetDinotofu.
 5. Il cree exactement deux raccourcis sur le bureau :

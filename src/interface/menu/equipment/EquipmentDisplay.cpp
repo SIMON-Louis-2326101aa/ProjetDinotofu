@@ -6,6 +6,7 @@
 #include "interface/menu/equipment/EquipmentDisplay.hpp"
 
 #include "interface/TerminalInterface.hpp"
+#include "combat/system/CombatClassSystem.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 
@@ -16,6 +17,79 @@
 
 namespace
 {
+    std::string weaponClassCompatibilityTag(const Player& player, const Weapon& weapon)
+    {
+        if (CombatClassSystem::hasWeaponAffinity(player, weapon.getType(), weapon.getName()))
+        {
+            return " [bonus de classe]";
+        }
+
+        if (CombatClassSystem::getWeaponHandlingAccuracyAdjustment(player, weapon.getType(), weapon.getName()) < 0
+            || CombatClassSystem::getWeaponHandlingDamagePercent(player, weapon.getType(), weapon.getName()) < 100)
+        {
+            return " [malus de classe]";
+        }
+
+        return "";
+    }
+
+    bool hasWeaponClassPenalty(const Player& player, const Weapon& weapon)
+    {
+        return !CombatClassSystem::hasWeaponAffinity(player, weapon.getType(), weapon.getName())
+            && (CombatClassSystem::getWeaponHandlingAccuracyAdjustment(player, weapon.getType(), weapon.getName()) < 0
+                || CombatClassSystem::getWeaponHandlingDamagePercent(player, weapon.getType(), weapon.getName()) < 100);
+    }
+
+    std::string armorClassCompatibilityTag(const Player& player, const Armor& armor)
+    {
+        if (CombatClassSystem::hasArmorAffinity(player, armor.getType(), armor.getName()))
+        {
+            return " [bonus de classe]";
+        }
+
+        if (CombatClassSystem::getArmorHandlingDamageReductionAdjustment(player, armor.getType(), armor.getName(), 24) < 0
+            || CombatClassSystem::getArmorHandlingEscapeAdjustment(player, armor.getType(), armor.getName()) < 0)
+        {
+            return " [malus de classe]";
+        }
+
+        return "";
+    }
+
+    bool hasArmorClassPenalty(const Player& player, const Armor& armor)
+    {
+        return !CombatClassSystem::hasArmorAffinity(player, armor.getType(), armor.getName())
+            && (CombatClassSystem::getArmorHandlingDamageReductionAdjustment(player, armor.getType(), armor.getName(), 24) < 0
+                || CombatClassSystem::getArmorHandlingEscapeAdjustment(player, armor.getType(), armor.getName()) < 0);
+    }
+
+    MenuOptionItemData makeWeaponItemData(const Player& player, const Weapon& weapon, const std::string& actionType)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "weapon";
+        itemData.section = "Équipement - armes";
+        itemData.actionType = actionType;
+        itemData.name = weapon.getName() + weaponClassCompatibilityTag(player, weapon);
+        itemData.detail = "Dégâts : +" + std::to_string(weapon.getMinDamageBonus())
+            + " à +" + std::to_string(weapon.getMaxDamageBonus())
+            + " | Critique : +" + std::to_string(weapon.getCriticalBonus());
+        itemData.status = weapon.isBroken() ? "Cassée" : "Utilisable";
+        itemData.progress = "Durabilité : " + EquipmentDisplay::weaponDurabilityText(weapon);
+        if (CombatClassSystem::hasWeaponAffinity(player, weapon.getType(), weapon.getName()))
+        {
+            itemData.reward = "Synergie : " + CombatClassSystem::getWeaponAffinityLabel(player, weapon.getType(), weapon.getName());
+        }
+        else if (hasWeaponClassPenalty(player, weapon))
+        {
+            itemData.status = weapon.isBroken() ? "Cassée | Malus de classe" : "Malus de classe";
+            itemData.reward = "Avertissement : " + CombatClassSystem::getWeaponHandlingLabel(player, weapon.getType(), weapon.getName());
+        }
+        itemData.price = std::to_string(weapon.getValue()) + " or";
+        itemData.important = weapon.isBroken();
+        return itemData;
+    }
+
     MenuOptionItemData makeWeaponItemData(const Weapon& weapon, const std::string& actionType)
     {
         MenuOptionItemData itemData;
@@ -31,6 +105,32 @@ namespace
         itemData.progress = "Durabilité : " + EquipmentDisplay::weaponDurabilityText(weapon);
         itemData.price = std::to_string(weapon.getValue()) + " or";
         itemData.important = weapon.isBroken();
+        return itemData;
+    }
+
+    MenuOptionItemData makeArmorItemData(const Player& player, const Armor& armor, const std::string& actionType)
+    {
+        MenuOptionItemData itemData;
+        itemData.structured = true;
+        itemData.kind = "armor";
+        itemData.section = "Équipement - armures";
+        itemData.actionType = actionType;
+        itemData.name = armor.getName() + armorClassCompatibilityTag(player, armor);
+        itemData.detail = "PV max : +" + std::to_string(armor.getMaxHpBonus())
+            + " | Réduction : " + std::to_string(armor.getDamageReduction());
+        itemData.status = armor.isBroken() ? "Cassée" : "Utilisable";
+        itemData.progress = "Durabilité : " + EquipmentDisplay::armorDurabilityText(armor);
+        if (CombatClassSystem::hasArmorAffinity(player, armor.getType(), armor.getName()))
+        {
+            itemData.reward = "Synergie : " + CombatClassSystem::getArmorHandlingLabel(player, armor.getType(), armor.getName());
+        }
+        else if (hasArmorClassPenalty(player, armor))
+        {
+            itemData.status = armor.isBroken() ? "Cassée | Malus de classe" : "Malus de classe";
+            itemData.reward = "Avertissement : " + CombatClassSystem::getArmorHandlingLabel(player, armor.getType(), armor.getName());
+        }
+        itemData.price = std::to_string(armor.getValue()) + " or";
+        itemData.important = armor.isBroken();
         return itemData;
     }
 
@@ -92,11 +192,11 @@ MenuScreen EquipmentDisplay::buildWeaponListScreen(const Player& player, std::si
         Weapon weapon = player.getInventory().getWeapon(static_cast<int>(i));
         screen.addOption(
             static_cast<int>(i - first + 1),
-            weapon.getName(),
+            weapon.getName() + weaponClassCompatibilityTag(player, weapon),
             "Choisir cette arme puis inspecter, comparer ou équiper.",
             true,
             "equipment.weapon.select." + std::to_string(i),
-            makeWeaponItemData(weapon, "select")
+            makeWeaponItemData(player, weapon, "select")
         );
     }
 
@@ -134,11 +234,11 @@ MenuScreen EquipmentDisplay::buildArmorListScreen(const Player& player, std::siz
         Armor armor = player.getInventory().getArmor(static_cast<int>(i));
         screen.addOption(
             static_cast<int>(i - first + 1),
-            armor.getName(),
+            armor.getName() + armorClassCompatibilityTag(player, armor),
             "Choisir cette protection puis inspecter, comparer ou équiper.",
             true,
             "equipment.armor.select." + std::to_string(i),
-            makeArmorItemData(armor, "select")
+            makeArmorItemData(player, armor, "select")
         );
     }
 

@@ -4,11 +4,13 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "core/Game.hpp"
+#include "diagnostic/RuntimeLog.hpp"
 #include "core/Console.hpp"
 #include "core/Random.hpp"
 #include "core/VersionInfo.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "combat/Combat.hpp"
+#include "combat/system/CombatClassSystem.hpp"
 #include "combat/modes/pve/MonsterPveMode.hpp"
 #include "boss/BossCatalog.hpp"
 #include "entity/Monster.hpp"
@@ -25,6 +27,7 @@
 #include "interface/menu/quest/QuestMenu.hpp"
 #include "interface/menu/InventoryMenu.hpp"
 #include "interface/menu/PostCombatMenu.hpp"
+#include "interface/menu/training/TrainingGroundMenu.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
@@ -61,12 +64,221 @@ namespace
     constexpr int UtilityChoiceAlteredData = 94;
     constexpr int UtilityChoiceSettings = 95;
     constexpr int UtilityChoiceSaveReturnMenu = 96;
+    constexpr int UtilityChoiceTeam = 97;
 
     struct ReturnToActivityMenuRequest final : public std::exception
     {
         const char* what() const noexcept override { return "return_to_activity_menu"; }
     };
 
+    std::vector<std::string> buildCurrentLoadoutSynergyLines(const Player& player)
+    {
+        std::vector<std::string> lines;
+        int score = 0;
+        int warning = 0;
+
+        if (player.hasEquippedWeapon())
+        {
+            const Weapon weapon = player.getEquippedWeapon();
+            const bool weaponBonus = CombatClassSystem::hasWeaponAffinity(player, weapon.getType(), weapon.getName());
+            const bool weaponMalus = CombatClassSystem::getWeaponHandlingAccuracyAdjustment(player, weapon.getType(), weapon.getName()) < 0
+                || CombatClassSystem::getWeaponHandlingDamagePercent(player, weapon.getType(), weapon.getName()) < 100;
+            if (weaponBonus)
+            {
+                score += 2;
+                lines.push_back("Synergie arme : " + weapon.getName() + " [bonus de classe] — " + CombatClassSystem::getWeaponAffinityLabel(player, weapon.getType(), weapon.getName()) + ".");
+            }
+            else if (weaponMalus)
+            {
+                warning += 2;
+                lines.push_back("Synergie arme : " + weapon.getName() + " [malus de classe] — " + CombatClassSystem::getWeaponHandlingLabel(player, weapon.getType(), weapon.getName()) + ".");
+            }
+            else
+            {
+                lines.push_back("Synergie arme : " + weapon.getName() + " — neutre, utilisable sans vraie affinité ni gros contresens.");
+            }
+        }
+        else
+        {
+            warning += 1;
+            lines.push_back("Synergie arme : aucune arme équipée, donc les bonus/malus de classe ne peuvent pas vraiment s'exprimer.");
+        }
+
+        if (player.hasEquippedArmor())
+        {
+            const Armor armor = player.getEquippedArmor();
+            const bool armorBonus = CombatClassSystem::hasArmorAffinity(player, armor.getType(), armor.getName());
+            const bool armorMalus = CombatClassSystem::getArmorHandlingDamageReductionAdjustment(player, armor.getType(), armor.getName(), 24) < 0
+                || CombatClassSystem::getArmorHandlingEscapeAdjustment(player, armor.getType(), armor.getName()) < 0;
+            if (armorBonus)
+            {
+                score += 2;
+                lines.push_back("Synergie armure : " + armor.getName() + " [bonus de classe] — " + CombatClassSystem::getArmorHandlingLabel(player, armor.getType(), armor.getName()) + ".");
+            }
+            else if (armorMalus)
+            {
+                warning += 2;
+                lines.push_back("Synergie armure : " + armor.getName() + " [malus de classe] — " + CombatClassSystem::getArmorHandlingLabel(player, armor.getType(), armor.getName()) + ".");
+            }
+            else
+            {
+                lines.push_back("Synergie armure : " + armor.getName() + " — neutre, correcte sans raconter parfaitement le rôle.");
+            }
+        }
+        else
+        {
+            warning += 1;
+            lines.push_back("Synergie armure : aucune protection équipée, donc le rôle défensif repose surtout sur la classe et les actifs.");
+        }
+
+        if (score >= 4 && warning == 0)
+        {
+            lines.push_back("Lecture globale : build très cohérent, les effets de classe devraient se sentir sans avoir besoin de gonfler les nombres gratuitement.");
+        }
+        else if (score >= 2 && warning <= 1)
+        {
+            lines.push_back("Lecture globale : build plutôt cohérent, quelques choix restent perfectibles mais le rôle est lisible.");
+        }
+        else if (warning >= 3)
+        {
+            lines.push_back("Lecture globale : build contradictoire, les malus risquent de rendre certaines compétences moins propres malgré de bonnes statistiques brutes.");
+        }
+        else
+        {
+            lines.push_back("Lecture globale : build neutre, jouable, mais sans vraie identité mécanique forte pour l'instant.");
+        }
+        return lines;
+    }
+
+    std::vector<std::string> buildWorldVisitAmbienceLines(const Player& player, bool questHubLikely, bool locationNpcQuestLikely)
+    {
+        std::vector<std::string> lines;
+        const std::string dayPart = player.formatWorldDayPartLine();
+        const int hpPercent = player.getMaxHp() > 0 ? player.getHp() * 100 / player.getMaxHp() : 100;
+        const std::string cityId = player.getCurrentCityId().empty() ? "valebrume" : player.getCurrentCityId();
+
+        lines.push_back("Repère local : ville actuelle " + cityId + " | guilde locale " + (player.isRegisteredAtCurrentCityGuild() ? "connue" : "non enregistrée") + ".");
+        if (player.getWorldDaysElapsed() > 0)
+        {
+            lines.push_back("Temps de voyage : " + std::to_string(player.getWorldDaysElapsed()) + " jour(s) se sont déjà inscrits dans ton carnet.");
+        }
+
+        if (dayPart.find("Nuit") != std::string::npos || dayPart.find("nuit") != std::string::npos)
+        {
+            lines.push_back("Ambiance : les lanternes prennent plus de place que les voix, et les comptoirs parlent plus bas.");
+        }
+        else if (dayPart.find("Matin") != std::string::npos || dayPart.find("matin") != std::string::npos)
+        {
+            lines.push_back("Ambiance : les volets s'ouvrent, les commandes repartent, et la guilde trie déjà les demandes urgentes.");
+        }
+        else if (dayPart.find("Soir") != std::string::npos || dayPart.find("soir") != std::string::npos)
+        {
+            lines.push_back("Ambiance : la ville ralentit, mais les auberges, forges et rumeurs deviennent plus faciles à trouver.");
+        }
+        else
+        {
+            lines.push_back("Ambiance : la ville garde son bruit de fond, entre pas pressés, outils, marchands et affiches de guilde.");
+        }
+
+        if (hpPercent <= 35)
+        {
+            lines.push_back("Regard local : ton état attire plus vite l'infirmerie, les aubergistes et ceux qui savent lire une mauvaise sortie.");
+        }
+        if (!player.isRegisteredAtCurrentCityGuild())
+        {
+            lines.push_back("Comptoir local : sans inscription de guilde ici, certains panneaux restent plus froids et moins précis.");
+        }
+        if (questHubLikely)
+        {
+            lines.push_back("Rumeur utile : la guilde semble avoir quelque chose qui correspond à une quête ou une validation en cours.");
+        }
+        if (locationNpcQuestLikely)
+        {
+            lines.push_back("Rumeur utile : un lieu ou un PNJ connu semble lié à un objectif actuel.");
+        }
+
+        return lines;
+    }
+
+
+    std::vector<std::string> buildWorldPreparationLines(const Player& player, bool questHubLikely, bool locationNpcQuestLikely)
+    {
+        std::vector<std::string> lines;
+        const int hpPercent = player.getMaxHp() > 0 ? player.getHp() * 100 / player.getMaxHp() : 100;
+        lines.push_back("Tu prends quelques minutes pour préparer la prochaine sortie sans encore quitter la ville.");
+        if (hpPercent <= 35)
+        {
+            lines.push_back("Priorité corps : ton état rend l'auberge, l'infirmerie ou un soin plus pertinent qu'un départ immédiat.");
+        }
+        else if (hpPercent <= 65)
+        {
+            lines.push_back("Priorité prudente : ton corps peut repartir, mais une potion ou une réparation éviterait une mauvaise surprise.");
+        }
+        else
+        {
+            lines.push_back("Priorité terrain : ton état permet de penser aux outils, aux contrats et aux informations plutôt qu'à survivre à court terme.");
+        }
+        lines.push_back("Compétences : une maîtrise correcte doit changer le résultat, pas seulement ajouter une poussière de pourcentage. Les gros effets restent plutôt liés à l'expérience, au rang ou aux techniques obtenues tard.");
+        lines.push_back("Classe : les PV, dégâts, critique, fuite et résistance ne doivent pas raconter la même histoire pour tout le monde. Un assassin doit chercher l'ouverture, un colosse doit tenir, un support doit sécuriser et un mage doit gérer sa fenêtre.");
+        lines.push_back("Équipement : une arme cohérente affiche [bonus de classe] et transmet mieux dégâts/précision ; une arme vraiment contraire affiche [malus de classe] pour prévenir qu'elle peut gâcher une bonne action même avec de beaux chiffres bruts.");
+        lines.push_back("Armure : une tenue cohérente avec la classe protège mieux ou gêne moins la fuite ; une armure contraire peut réduire l'absorption réelle ou casser la mobilité, même si les chiffres bruts semblent beaux.");
+        for (const std::string& line : buildCurrentLoadoutSynergyLines(player))
+        {
+            lines.push_back(line);
+        }
+        lines.push_back("Ennemis : les créatures entraînées, chefs, mages, assassins, brutes ou toxiques peuvent avoir leurs propres compétences. Observer évite de les prendre comme de simples sacs à PV.");
+        lines.push_back("Artisanat combat : préparer une arme, un piège de terrain ou une bombe d'atelier demande surtout les bons matériaux, pas seulement de l'or.");
+        lines.push_back("Forge / services : réparer avant une sortie difficile peut compter autant qu'acheter une potion, surtout si ta classe dépend fortement de son arme ou de son armure.");
+        lines.push_back("Synergie de rôle : un colosse en plaque, un rôdeur en cuir, un mage en robe ou un paladin en maille ne racontent pas le même combat ; l'équipement doit soutenir le rôle, pas juste additionner des nombres.");
+        lines.push_back("Maîtrises actives : une technique bien maîtrisée profite davantage si l'arme ou l'armure soutient vraiment la classe ; à l'inverse, un [malus de classe] peut rendre le geste moins propre même avec un bon niveau de maîtrise.");
+        lines.push_back("Passifs : un passif de maîtrise aide le geste choisi, mais ne remplace pas le choix du joueur. Les effets hors combat doivent rester logiques : lecture, préparation, résistance, récupération, repérage.");
+        lines.push_back("Observation : une rumeur, un bestiaire ou une lecture de corps peut éviter de gaspiller une action contre une mauvaise matière ou une compétence ennemie mal lue.");
+        lines.push_back("Coffres / voleur : si la zone sent le piège, un profil discret, une lecture de serrure ou une vraie prudence vaut mieux qu'un clic héroïque.");
+        lines.push_back("Guilde mercenaire : les groupes utiles ne remplacent pas le joueur, mais peuvent traiter escorte, service local, route ou pression de crise.");
+        lines.push_back("Quêtes / lore : quand un client décrit un danger, la phrase peut être plus utile qu'elle en a l'air : elle annonce parfois type d'ennemi, piège, terrain ou service à préparer.");
+        lines.push_back("Vol / entraves / illusions : certaines créatures changent les règles du tour. Une cible en Vol refuse les armes courtes ; une entrave peut voler un tour ; une illusion peut transformer un duel en choix risqué.");
+        lines.push_back("Contre-jeu : Sens du retrait peut casser une entrave si le personnage sait vraiment reculer ; les passifs de lecture réduisent le risque de frapper un faux reflet sans donner une vérité gratuite.");
+        lines.push_back("Grosses compétences : certains monstres lourds peuvent annoncer une action. Le texte annonce alors un vrai boost temporaire à casser par défense, choc/givre, entrave, brise-garde, ordre allié ou pression immédiate.");
+        lines.push_back("Moral ennemi : certains humains, gobelins, bêtes ou voleurs blessés peuvent paniquer, fuir ou se désorganiser. Morts-vivants, anomalies, serments et golems ne réagissent pas pareil.");
+        lines.push_back("Information : observer ne donne pas une vérité divine. Une info claire doit venir d'une trace, d'un bestiaire, d'un témoin, d'une rumeur ou d'une vraie logique de terrain.");
+        lines.push_back("Quêtes : l'affichage reste efficace, mais Inspecter / demander plus d'informations peut donner le contexte RP, la peur du client et les indices utiles.");
+        lines.push_back("Église : les serments commencent à devenir des statuts/passifs avec conditions. Ils seront forts, mais devront garder un prix et une rupture à l'église.");
+        lines.push_back("Serments de contre-jeu : Ciel ouvert aide contre Vol, Racines aide contre entraves, Miroir brisé aide contre illusions. Ce sont des contrats, pas des immunités gratuites.");
+        if (player.hasPassiveSkill("church_oath_shield") || player.hasPassiveSkill("church_oath_blood") || player.hasPassiveSkill("church_oath_hunter") || player.hasPassiveSkill("church_oath_king")
+            || player.hasPassiveSkill("church_oath_guarded_flame") || player.hasPassiveSkill("church_oath_shadow") || player.hasPassiveSkill("church_oath_pilgrim") || player.hasPassiveSkill("church_oath_memory") || player.hasPassiveSkill("church_oath_silence")
+            || player.hasPassiveSkill("church_oath_open_sky") || player.hasPassiveSkill("church_oath_roots") || player.hasPassiveSkill("church_oath_broken_mirror")
+            || player.hasPassiveSkill("church_oath_witness") || player.hasPassiveSkill("church_oath_scars") || player.hasPassiveSkill("church_oath_legacy")
+            || player.hasPassiveSkill("church_oath_bound_forge") || player.hasPassiveSkill("church_oath_bonds")
+            || player.hasPassiveSkill("church_oath_rivals") || player.hasPassiveSkill("church_oath_unstable_fate"))
+        {
+            lines.push_back("Serment porté : l'église a déjà une promesse inscrite à ton nom. Les futurs effets devront être visibles, mais la rupture devra rester un vrai acte.");
+        }
+        else
+        {
+            lines.push_back("Serment possible : l'église peut maintenant proposer plusieurs promesses selon ton niveau, tes traces, ton rôle ou tes voyages.");
+        }
+        lines.push_back("Nouveaux serments : Flamme gardée, Ombres franches, Pèlerin, Mémoire, Silence, Ciel ouvert, Racines, Miroir brisé, Témoin, Cicatrices, Héritage, Forge liée, Liens, Rivaux et Destin instable ouvrent des directions pour feu, ruse, route, mémoire, anti-panique, blessures utiles, objets avec mémoire, combos alliés, mini-boss récurrents et conséquences longues.");
+        lines.push_back("Rupture : rompre un serment à l'église coûte maintenant un rite ou de l'or, désactive le contrat et laisse une trace de registre au lieu de l'effacer gratuitement.");
+        lines.push_back("Axe 8 - conséquences longues : les promesses, ruptures, témoins, rivaux et objets avec mémoire doivent laisser des traces seulement quand quelqu'un ou quelque chose peut logiquement les porter.");
+        lines.push_back("Forge liée / Liens : une arme ou un groupe ne gagne pas une légende parce qu'un menu l'affirme ; il faut des coups vécus, des réparations, des témoins, des recrues, des ordres ou des combats communs.");
+        lines.push_back("Systèmes majeurs validés : mémoire du monde avec témoins, cicatrices utiles, rivaux ennemis, serments d'église, héritage en Mortel, réputation locale, objets avec mémoire et classes qui évoluent selon la façon de jouer.");
+        lines.push_back("Rivaux / destin : un ennemi qui fuit, une compétence signature ou une trace d'objet ne devient importante que s'il existe une raison de la porter : témoin, mémoire, survivant, registre ou cicatrice.");
+        lines.push_back("Classes évolutives : les statistiques de jeu devront plus tard ouvrir des branches selon les actes réels, pas seulement selon un choix de menu au niveau X.");
+        lines.push_back("Réputation locale : les villages pourront influencer stocks, qualité, confiance et rumeurs selon ce qui a vraiment été vu ou rapporté.");
+        if (questHubLikely)
+        {
+            lines.push_back("Signal de quête : le comptoir de guilde semble avoir une validation, une offre ou un retour à traiter.");
+        }
+        if (locationNpcQuestLikely)
+        {
+            lines.push_back("Signal de PNJ : un lieu ou une personne connue semble plus important qu'une sortie aléatoire.");
+        }
+        if (!player.isRegisteredAtCurrentCityGuild())
+        {
+            lines.push_back("Inscription locale : tant que la guilde de cette ville ne te connaît pas, certaines infos et validations restent moins nettes.");
+        }
+        return lines;
+    }
 
     std::string classCategoryBriefExample(ClassCategory category)
     {
@@ -204,6 +416,129 @@ namespace
         return lines;
     }
 
+
+
+    std::string normalizeClassAuditText(std::string value)
+    {
+        std::string out;
+        for (unsigned char character : value)
+        {
+            if (std::isalnum(character))
+            {
+                out += static_cast<char>(std::tolower(character));
+            }
+        }
+        return out;
+    }
+
+    bool classAuditContainsAny(const std::string& value, const std::vector<std::string>& words)
+    {
+        const std::string normalized = normalizeClassAuditText(value);
+        for (const std::string& word : words)
+        {
+            if (normalized.find(normalizeClassAuditText(word)) != std::string::npos)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    int classCriticalThresholdFromInfo(const ClassOptionInfo& info)
+    {
+        const std::string name = info.name;
+        if (classAuditContainsAny(name, {"Assassin", "Ombrelame", "Duelliste", "Sabreur", "Lanceur de dagues", "Tireur", "Archer", "Éclaireur", "Eclaireur", "Danseur lunaire", "Corsaire", "Fauche-âme", "Fauche-ame"}))
+        {
+            return 15;
+        }
+        if (classAuditContainsAny(name, {"Colosse", "Gardien", "Tank", "Chevalier bouclier", "Protecteur", "Porte-bannière", "Porte-banniere", "Infirmier", "Médecin", "Medecin", "Intendant", "Aumônier", "Aumonier"}))
+        {
+            return 17;
+        }
+        return 16;
+    }
+
+    int estimateExpectedDamagePerAttack(const ClassOptionInfo& info)
+    {
+        const int threshold = classCriticalThresholdFromInfo(info);
+        const int normalRollCount = std::max(0, threshold - 3);
+        const int criticalRollCount = std::max(0, 20 - threshold);
+        const int averageNormalDamage = (info.minDamage + info.maxDamage + 1) / 2;
+        return (normalRollCount * averageNormalDamage + criticalRollCount * info.criticalDamage + 10) / 20;
+    }
+
+    std::string classOffenseBand(const ClassOptionInfo& info)
+    {
+        const int expectedDamage = estimateExpectedDamagePerAttack(info);
+        if (expectedDamage >= 25) return "très haute mais à risque";
+        if (expectedDamage >= 21) return "forte";
+        if (expectedDamage >= 17) return "correcte";
+        if (expectedDamage >= 13) return "basse mais compensée";
+        return "très basse, rôle surtout utilitaire/défensif";
+    }
+
+    std::string classSurvivalBand(const ClassOptionInfo& info)
+    {
+        const int survivalScore = info.maxHp + info.healingPotionCount * 22;
+        if (survivalScore >= 430) return "mur très solide";
+        if (survivalScore >= 330) return "très bonne tenue";
+        if (survivalScore >= 250) return "tenue correcte";
+        if (survivalScore >= 200) return "fragile mais jouable";
+        return "très fragile";
+    }
+
+    std::vector<std::string> classBalanceAuditLines(const ClassOptionInfo& info)
+    {
+        std::vector<std::string> lines;
+        const int threshold = classCriticalThresholdFromInfo(info);
+        const int critChance = std::max(0, 20 - threshold) * 5;
+        const int expectedDamage = estimateExpectedDamagePerAttack(info);
+        lines.push_back("Audit d'équilibre : offense " + classOffenseBand(info)
+            + " | survie " + classSurvivalBand(info)
+            + " | critique environ " + std::to_string(critChance) + "%.");
+        lines.push_back("Dégât moyen théorique par attaque simple : environ " + std::to_string(expectedDamage)
+            + " avant équipement, armure adverse, résistance, potions, maîtrise et effets de statut.");
+
+        if (threshold <= 15)
+        {
+            lines.push_back("Identité : critique plus fréquent. La classe doit être dangereuse quand elle trouve l'ouverture, mais reste punie par une mauvaise lecture ou une défense faible.");
+        }
+        else if (threshold >= 17)
+        {
+            lines.push_back("Identité : critique moins fréquent. La classe compense par PV, garde, protection, soin ou stabilité.");
+        }
+        else if (classAuditContainsAny(info.name, {"Mage", "mancien", "Sorcier", "Arcaniste", "Démoniste", "Demoniste"}))
+        {
+            lines.push_back("Identité : magie dangereuse et effets visibles, mais dépendance au catalyseur, aux ressources et aux fenêtres de canalisation.");
+        }
+        else if (classAuditContainsAny(info.name, {"Barbare", "Berserker", "Ravageur", "Briseur", "Martelier", "Faucheur"}))
+        {
+            lines.push_back("Identité : impact lourd qui doit se sentir, mais avec risques de tempo, précision ou exposition.");
+        }
+        else if (info.categoryName == "Soutien")
+        {
+            lines.push_back("Identité : dégâts directs moins hauts, compensation par soins, garde, moral, lecture et survie d'équipe.");
+        }
+        else
+        {
+            lines.push_back("Identité : profil standard ou hybride, équilibré par équipement, compétences futures et contexte de combat.");
+        }
+
+        if (expectedDamage >= 24 && info.maxHp <= 165)
+        {
+            lines.push_back("Point de vigilance : fort potentiel offensif, mais si l'entrée est ratée la classe peut tomber vite.");
+        }
+        else if (expectedDamage <= 13 && info.maxHp >= 300)
+        {
+            lines.push_back("Point de vigilance : dégâts directs faibles volontairement, sinon le rôle de mur deviendrait trop gratuit.");
+        }
+        else if (expectedDamage <= 14 && info.categoryName == "Soutien")
+        {
+            lines.push_back("Point de vigilance : cette classe doit gagner par sécurité, tempo ou soutien, pas par le meilleur DPS brut.");
+        }
+        return lines;
+    }
+
     std::vector<std::string> buildClassInspectionLines(const ClassOptionInfo& info)
     {
         std::vector<std::string> lines;
@@ -215,6 +550,13 @@ namespace
             + " | critique " + std::to_string(info.criticalDamage) + ".");
         lines.push_back("Ressources de départ : potions soin " + std::to_string(info.healingPotionCount)
             + " | potions dégâts " + std::to_string(info.damagePotionCount) + ".");
+        lines.push_back("");
+        lines.push_back("Lecture équilibre :");
+        const std::vector<std::string> balanceLines = classBalanceAuditLines(info);
+        for (const std::string& line : balanceLines)
+        {
+            lines.push_back("- " + line);
+        }
         lines.push_back("");
         lines.push_back("Affinités d'armes :");
         const std::vector<std::string> weaponLines = classWeaponGuidanceLines(info);
@@ -746,9 +1088,9 @@ namespace
     // FR: rarityEstimateMultiplier déclare ou implémente un comportement précis utilisé par ce module.
     int rarityEstimateMultiplier(const std::string& name)
     {
-        if (valueNameContainsAny(name, {"Relique", "Unique", "Divin", "God"})) return 5;
-        if (valueNameContainsAny(name, {"Héroïque", "Heroique", "Légendaire", "Legendaire"})) return 3;
-        if (valueNameContainsAny(name, {"Rare", "Mystique"})) return 2;
+        if (classAuditContainsAny(name, {"Relique", "Unique", "Divin", "God"})) return 5;
+        if (classAuditContainsAny(name, {"Héroïque", "Heroique", "Légendaire", "Legendaire"})) return 3;
+        if (classAuditContainsAny(name, {"Rare", "Mystique"})) return 2;
         return 1;
     }
 
@@ -1237,7 +1579,7 @@ namespace
                 screen.addOption(
                     static_cast<int>(i - first + 1),
                     consumable.getName(),
-                    "Puissance " + std::to_string(consumable.getPower()) + " | Valeur " + std::to_string(consumable.getValue()),
+                    "Puissance " + consumable.getPowerDisplayText() + " | Valeur " + std::to_string(consumable.getValue()),
                     true,
                     "exchange.consumable.select",
                     makeExchangeItemData(
@@ -1246,7 +1588,7 @@ namespace
                         "Consommables transférables",
                         "select_consumable",
                         consumable.getName(),
-                        "Puissance " + std::to_string(consumable.getPower()),
+                        "Puissance " + consumable.getPowerDisplayText(),
                         "Transférable",
                         "Valeur " + std::to_string(consumable.getValue()),
                         "",
@@ -1476,7 +1818,7 @@ void Game::run()
                 "game.return.activity_menu",
                 {
                     "Progression sauvegardée.",
-                    "Retour au choix d'activité.",
+                    "Retour au Menu de voyage.",
                     "Le personnage reste chargé : cet écran ne recrée pas le personnage."
                 },
                 false
@@ -2000,6 +2342,8 @@ void Game::choosePlayerClass()
                      << " | PV " << info.maxHp
                      << " | Dégâts " << info.minDamage << "-" << info.maxDamage
                      << " | Critique " << info.criticalDamage
+                     << " | Offense " << classOffenseBand(info)
+                     << " | Survie " << classSurvivalBand(info)
                      << " | Potions " << info.healingPotionCount << "/" << info.damagePotionCount;
 
                 classScreen.addOption(
@@ -2572,17 +2916,18 @@ void Game::chooseGameMode()
         const bool questHubLikely = hasLikelyQuestHubObjective(mainPlayer);
         const bool locationNpcQuestLikely = hasLikelyLocationOrNpcQuest(mainPlayer);
 
-        MenuScreen screen("ACTIVITÉS", "activity.main");
-        screen.addSubtitle("Choisis directement ce que tu veux faire.");
+        MenuScreen screen("MENU DE VOYAGE", "activity.main");
+        screen.addSubtitle("Activités principales : histoire, combats, exploration, personnage et lieux visitables.");
         screen.addLine("Date : " + mainPlayer.formatWorldDateLine() + " | Moment : " + mainPlayer.formatWorldDayPartLine());
-        screen.addLine("Exploration sert aux sorties par biome. Lieux notables sert aux endroits précis, aux boutiques et aux contacts du monde.");
+        screen.addLine("Exploration = sorties par biome. Monde / ville = lieux visitables, boutiques, forge, guilde, PNJ et services.");
+        screen.addLine("Menu rapide = seulement personnage, saisie libre, options de partie et sauvegarde.");
         screen.addOption(
             1,
             "Histoire",
             "Route principale : prologue, progression du village, quêtes principales et chapitres.",
             true,
             "activity.story",
-            makeActivityItemData("Activités", "story", "Histoire", "Bac à sable guidé par chapitres, avec contenus visibles selon l'état réel du monde.", mainPlayer.getStoryProgressLabel(), "Progression narrative", true)
+            makeActivityItemData("Menu de voyage", "story", "Histoire", "Bac à sable guidé par chapitres, avec contenus visibles selon l'état réel du monde.", mainPlayer.getStoryProgressLabel(), "Progression narrative", true)
         );
         screen.addOption(
             2,
@@ -2590,7 +2935,7 @@ void Game::chooseGameMode()
             "PvP IA, JcJ local, monstres et boss." + questActivityTag(combatQuestLikely),
             true,
             "activity.combat",
-            makeActivityItemData("Activités", "combat", "Combats", "Affrontements volontaires contre IA, joueurs, monstres ou boss.", combatQuestLikely ? "Quête probable" : "Disponible", "Combat volontaire", combatQuestLikely)
+            makeActivityItemData("Menu de voyage", "combat", "Combats", "Affrontements volontaires contre IA, joueurs, monstres ou boss.", combatQuestLikely ? "Quête probable" : "Disponible", "Combat volontaire", combatQuestLikely)
         );
         screen.addOption(
             3,
@@ -2598,47 +2943,39 @@ void Game::chooseGameMode()
             "Biomes, plantes, matériaux, coffres, pièges, mimics et rencontres imprévues." + questActivityTag(explorationQuestLikely),
             true,
             "activity.exploration",
-            makeActivityItemData("Activités", "travel", "Exploration", "Sorties par biome avec risques, ressources, traces et événements.", explorationQuestLikely ? "Quête probable" : "Disponible", "Sortie d'exploration", explorationQuestLikely)
+            makeActivityItemData("Menu de voyage", "travel", "Exploration", "Sorties par biome avec risques, ressources, traces et événements.", explorationQuestLikely ? "Quête probable" : "Disponible", "Sortie d'exploration", explorationQuestLikely)
         );
         screen.addOption(
             4,
-            "Quêtes" + questActivityTag(questHubLikely),
-            "Quête principale, journal, guilde, demandes de PNJ et validations." + questActivityTag(questHubLikely),
+            "Personnage",
+            "Inventaire, compétences, actifs/passifs, titres, quêtes acceptées, stats, équipe et échange.",
             true,
-            "activity.quests",
-            makeActivityItemData("Activités", "quest", "Quêtes", "Journal, guilde, quêtes principales, demandes et objectifs à rendre.", questHubLikely ? "Quête probable" : "Disponible", "Progression", questHubLikely)
+            "activity.character",
+            makeActivityItemData("Menu de voyage", "inspect", "Personnage", "Tout ce qui appartient directement au personnage.", "Disponible", "Personnage")
         );
         screen.addOption(
             5,
-            "PNJ notables" + questActivityTag(locationNpcQuestLikely),
-            "Parler aux personnages importants, commerçants, habitants et contacts de quêtes." + questActivityTag(locationNpcQuestLikely),
+            "Monde / ville" + questActivityTag(questHubLikely || locationNpcQuestLikely),
+            "Quêtes, guilde, PNJ, lieux, boutiques, forge, services et entraînement." + questActivityTag(questHubLikely || locationNpcQuestLikely),
             true,
-            "activity.notable_npcs",
-            makeActivityItemData("Activités", "talk", "PNJ notables", "Contacts du monde classés par rôle, sans forcer le passage par une boutique.", locationNpcQuestLikely ? "Quête probable" : "Disponible", "Dialogues", locationNpcQuestLikely)
+            "activity.world",
+            makeActivityItemData("Menu de voyage", "travel", "Monde / ville", "Services, contacts, comptoirs et lieux précis.", (questHubLikely || locationNpcQuestLikely) ? "Quête probable" : "Disponible", "Monde / services", questHubLikely || locationNpcQuestLikely)
         );
         screen.addOption(
             6,
-            "Lieux notables" + questActivityTag(locationNpcQuestLikely),
-            "Ville, extérieur, boutiques et services accessibles dans le monde." + questActivityTag(locationNpcQuestLikely),
-            true,
-            "activity.locations",
-            makeActivityItemData("Activités", "travel", "Lieux notables", "Endroits précis classés en Ville, Extérieur et Boutiques.", locationNpcQuestLikely ? "Quête probable" : "Disponible", "Monde / services", locationNpcQuestLikely)
-        );
-        screen.addOption(
-            7,
-            "Gestion",
-            "Récap après-combat, statistiques, échange et gestion du personnage.",
-            true,
-            "activity.management",
-            makeActivityItemData("Activités", "inspect", "Gestion", "Récap, progression, échange et actions entre deux sorties.", "Disponible", "Gestion")
-        );
-        screen.addOption(
-            8,
             "Infos utiles / aide",
             "Journées, argent, quêtes, exploration, PNJ et lieux notables.",
             true,
             "activity.info",
-            makeActivityItemData("Activités", "inspect", "Infos utiles", "Guide court des routes jouables, du temps, de l'économie et des quêtes.", "Aide", "Lecture")
+            makeActivityItemData("Menu de voyage", "inspect", "Infos utiles", "Guide court des routes jouables, du temps, de l'économie et des quêtes.", "Aide", "Lecture")
+        );
+        screen.addOption(
+            7,
+            "Compagnon Dinotofu",
+            "Petit guide du logo : conseils courts selon ton état, tes quêtes et ta session.",
+            true,
+            "activity.dinotofu_companion",
+            makeActivityItemData("Menu de voyage", "inspect", "Compagnon Dinotofu", "Assistant non obligatoire, pensé comme un petit repère façon Clipper, mais moins envahissant.", "Conseil", "Guide")
         );
         addOutOfCombatUtilityOptions(screen, true, true);
 
@@ -2742,100 +3079,24 @@ void Game::chooseGameMode()
         }
         if (choice == 4)
         {
-            selectedMode = GameMode::Challenges;
-            return;
+            openQuickCharacterMenu(true);
+            continue;
         }
         if (choice == 5)
         {
-            selectedMode = GameMode::NotableNpcs;
-            return;
+            openQuickWorldMenu();
+            continue;
         }
         if (choice == 6)
         {
-            selectedMode = GameMode::Locations;
-            return;
+            displayActivityInformation();
+            continue;
         }
 
         if (choice == 7)
         {
-            MenuScreen managementScreen("GESTION", "activity.management.menu");
-            managementScreen.addSubtitle("Actions entre deux sorties");
-            managementScreen.addBackOption();
-            managementScreen.addOption(
-                1,
-                "Gestion après-combat",
-                "Récap, statistiques, équipement, potions, progression et actions entre deux combats.",
-                true,
-                "activity.management.post_combat",
-                makeActivityItemData("Gestion", "inspect", "Gestion après-combat", "Récap, statistiques, inventaire, équipement, quêtes et actions entre deux combats.", "Disponible", "Hub de gestion", true)
-            );
-            managementScreen.addOption(
-                2,
-                "Échange / don",
-                "Transférer des ressources entre personnages compatibles.",
-                true,
-                "activity.management.exchange",
-                makeActivityItemData("Gestion", "barter", "Échange / don", "Transfert protégé d'objets, matériaux ou argent entre personnages compatibles.", "Disponible", "Gestion de compte")
-            );
-            managementScreen.addOption(
-                3,
-                "Statistiques",
-                "Ouvrir directement le résumé, les Top 3, l'équipement et la progression.",
-                true,
-                "activity.management.statistics",
-                makeActivityItemData("Gestion", "inspect", "Statistiques", "Résumé, Top 3, progression et historique du personnage.", "Disponible", "Progression")
-            );
-            managementScreen.addOption(
-                4,
-                "Titres",
-                "Voir les titres obtenus, disponibles et les titres équipés.",
-                true,
-                "activity.management.titles",
-                makeActivityItemData("Gestion", "inspect", "Titres", "Titres obtenus, titres disponibles et équipement de titres.", "Disponible", "Identité")
-            );
-
-            const int managementChoice = TerminalInterface::askMenuChoiceFromOptions(
-                managementScreen,
-                "Veuillez choisir une action de gestion affichée."
-            );
-            Console::clear();
-
-            if (managementChoice == 0)
-            {
-                continue;
-            }
-            if (managementChoice == 1)
-            {
-                const bool keepPlaying = openPostCombatMenu();
-                if (!keepPlaying)
-                {
-                    std::exit(0);
-                }
-                continue;
-            }
-            if (managementChoice == 2)
-            {
-                selectedMode = GameMode::Exchange;
-                return;
-            }
-            if (managementChoice == 3)
-            {
-                StatisticsMenu::open(mainPlayer, selectedDifficulty);
-                saveCurrentProgress("Consultation des statistiques");
-                continue;
-            }
-            if (managementChoice == 4)
-            {
-                StatisticsMenu::displayTitleCatalog(mainPlayer);
-                saveCurrentProgress("Consultation des titres");
-                continue;
-            }
-            continue;
-        }
-
-        if (choice == 8)
-        {
-            displayActivityInformation();
+            displayDinotofuCompanion();
+            saveCurrentProgress("Consultation du compagnon Dinotofu");
             continue;
         }
     }
@@ -3005,10 +3266,10 @@ void Game::displayActivityInformation() const
                     "Histoire : route principale guidée et quêtes non refusables.",
                     "Combats : affrontements volontaires contre IA, joueurs, monstres ou boss.",
                     "Exploration : sorties par biome, ressources, traces, coffres et rencontres.",
-                    "Quêtes : histoire principale, journal, guilde, demandes et objectifs à rendre.",
-                    "PNJ notables : contacts du monde classés par rôle.",
-                    "Lieux notables : endroits précis classés en Ville, Extérieur et Boutiques.",
-                    "Gestion : état du personnage, inventaire, sauvegarde, récap et options de confort."
+                    "Personnage : inventaire, titres, compétences actifs/passifs, quêtes acceptées, statistiques et équipe.",
+                    "Monde / ville : activité d'exploration sociale pour visiter la guilde, les lieux, PNJ, boutiques, forge, services et entraînement.",
+                    "Menu rapide : accès constant au personnage, à la saisie libre, aux options de partie et à la sauvegarde.",
+                    "Important : Monde / ville n'est pas dans le menu rapide, car ce sont des lieux à visiter dans le monde."
                 }
             );
             continue;
@@ -3082,15 +3343,117 @@ void Game::displayActivityInformation() const
                 "PNJ / LIEUX NOTABLES",
                 "activity.info.locations.detail",
                 {
-                    "PNJ notables : parler aux personnages importants, clients, référents et survivants.",
-                    "Lieux notables : endroits précis du monde, classés en Ville, Extérieur et Boutiques.",
-                    "Les PNJ peuvent donner ou faire avancer des quêtes, mais les sorties de terrain restent dans Exploration.",
-                    "Certains lieux et services apparaissent seulement après une rencontre, une reconstruction ou une progression réelle du monde."
+                    "Monde / ville est une activité de visite/exploration sociale, pas une option du menu rapide.",
+                    "Boutiques et comptoirs gardent achat, vente, discussion et quêtes du vendeur dans la même visite.",
+                    "Lieux, PNJ et services sert pour la guilde, la forge, l'infirmerie, l'auberge, les archives et les contacts de ville.",
+                    "Les sorties par biome restent dans Exploration, car ce n'est pas la même action que visiter un lieu précis."
                 }
             );
             continue;
         }
     }
+}
+
+void Game::displayDinotofuCompanion()
+{
+    const QuestLog& questLog = mainPlayer.getQuestLog();
+    int activeQuestCount = 0;
+    int readyQuestCount = 0;
+    int guildQuestCount = 0;
+
+    for (const Quest& quest : questLog.getQuests())
+    {
+        if (quest.turnedIn || quest.failed)
+        {
+            continue;
+        }
+
+        ++activeQuestCount;
+        if (quest.guildQuest)
+        {
+            ++guildQuestCount;
+        }
+        if (quest.completed || (quest.target > 0 && quest.progress >= quest.target))
+        {
+            ++readyQuestCount;
+        }
+    }
+
+    const int lanternCount = mainPlayer.getInventory().countMaterialById("fire_lantern")
+        + mainPlayer.getInventory().countMaterialById("mycelium_lantern");
+
+    std::vector<std::string> lines;
+    lines.push_back("Le petit Dinotofu du logo trottine près de ton sac et pointe une direction avec sa patte.");
+    lines.push_back("Rôle actuel : guide léger. Il conseille, mais il ne joue jamais à ta place.");
+    lines.push_back("Personnage : " + mainPlayer.getName() + " | Niveau " + std::to_string(mainPlayer.getLevel()) + " | PV " + std::to_string(mainPlayer.getHp()) + "/" + std::to_string(mainPlayer.getMaxHp()) + ".");
+    lines.push_back("Quêtes actives : " + std::to_string(activeQuestCount) + " dont " + std::to_string(guildQuestCount) + " de guilde. Prêtes à rendre : " + std::to_string(readyQuestCount) + ".");
+    lines.push_back("Journal beta : " + RuntimeLog::currentLogPath() + ".");
+
+    if (mainPlayer.getHp() * 3 <= std::max(1, mainPlayer.getMaxHp()))
+    {
+        lines.push_back("Conseil soin : tes PV sont bas. Passe par l'infirmerie, une auberge, une potion ou une activité moins risquée avant de forcer un boss.");
+    }
+    else if (mainPlayer.getHp() * 2 <= std::max(1, mainPlayer.getMaxHp()))
+    {
+        lines.push_back("Conseil prudence : tu peux encore agir, mais évite d'empiler exploration dangereuse + boss sans pause.");
+    }
+    else
+    {
+        lines.push_back("Conseil rythme : ton état est correct. Tu peux choisir entre combat, exploration ou validation de quêtes selon ton objectif.");
+    }
+
+    if (readyQuestCount > 0)
+    {
+        lines.push_back("Conseil quête : tu as au moins un objectif prêt. Va dans Quêtes pour rendre avant d'oublier la récompense.");
+    }
+    else if (activeQuestCount == 0)
+    {
+        lines.push_back("Conseil départ : aucune quête active. Va voir la guilde, les PNJ notables ou le comptoir mercenaire pour cadrer une sortie.");
+    }
+    else
+    {
+        lines.push_back("Conseil objectif : regarde le journal complet si tu ne sais plus si la suite demande combat, exploration, livraison ou dialogue.");
+    }
+
+    if (lanternCount <= 0)
+    {
+        lines.push_back("Conseil combat : aucune lanterne dans le sac. Les Actions tactiques restent utiles, mais les options lanterne seront verrouillées.");
+    }
+    else
+    {
+        lines.push_back("Conseil combat : tu as " + std::to_string(lanternCount) + " lanterne(s). En PvE, Actions tactiques peut les lancer sur une cible ou au sol.");
+    }
+
+    if (mainPlayer.isClassSkillReady())
+    {
+        lines.push_back("Conseil compétence : ta compétence active est disponible. Pense à l'utiliser pour éviter le spam attaque normale.");
+    }
+    else
+    {
+        lines.push_back("Conseil compétence : récupération active encore " + std::to_string(mainPlayer.getClassSkillCooldownTurns()) + " tour(s). Les actions tactiques peuvent combler ce temps.");
+    }
+
+    if (!mainPlayer.getUnlockedActiveSkills().empty() || !mainPlayer.getUnlockedPassiveSkills().empty())
+    {
+        lines.push_back("Conseil progression : ouvre Menu rapide > Personnage > Compétences - actifs / passifs pour gérer ton loadout.");
+    }
+    else
+    {
+        lines.push_back("Conseil progression : tes compétences vont surtout venir du niveau, des armes jouées, du stand et de certaines expériences de terrain.");
+    }
+
+    lines.push_back("Conseil retour beta : si un testeur veut expliquer un bug, demande-lui aussi le fichier de journal local indiqué plus haut.");
+
+    RuntimeLog::recordScreen("COMPAGNON DINOTOFU", "utility.dinotofu_companion", lines);
+    mainPlayer.recordCanonicalEvent("compagnon_dinotofu", "consultation", "Consultation du compagnon Dinotofu", 1);
+    mainPlayer.grantTitle("Ami du petit Dinotofu");
+
+    MessageScreen::show(
+        "COMPAGNON DINOTOFU",
+        "utility.dinotofu_companion",
+        lines,
+        false
+    );
 }
 
 // EN: launchSelectedMode declares or implements a focused behavior used by this module.
@@ -6147,93 +6510,111 @@ void Game::launchChallengeBoard()
 void Game::addOutOfCombatUtilityOptions(MenuScreen& screen, bool inventoryAvailable, bool saveAvailable) const
 {
     (void)saveAvailable;
-    std::string description = "Inventaire, sauvegarde, saisie libre, paramètres et données spéciales.";
+    std::string description = "Personnage, saisie libre, options de partie et sauvegarde.";
     if (!inventoryAvailable)
     {
-        description = "Sauvegarde, saisie libre, paramètres et données spéciales. Inventaire indisponible ici.";
+        description = "Personnage, saisie libre, options de partie et sauvegarde. Inventaire indisponible ici.";
     }
 
     screen.addOption(
         UtilityChoiceOutOfCombatMenu,
-        "Menu hors combat",
+        "Menu rapide",
         description,
         true,
-        "utility.out_of_combat_menu",
-        makeUtilityItemData(mainPlayer, "menu", "Menu hors combat", description)
+        "utility.quick_menu",
+        makeUtilityItemData(mainPlayer, "menu", "Menu rapide", description)
     );
 }
 
-void Game::openOutOfCombatUtilityMenu(bool inventoryAvailable)
+void Game::openQuickCharacterMenu(bool inventoryAvailable)
 {
-    bool menuOpen = true;
-    while (menuOpen)
+    while (true)
     {
-        MenuScreen screen("MENU HORS COMBAT", "utility.out_of_combat.menu");
-        screen.addSubtitle("Options regroupées pour éviter d'afficher les utilitaires partout");
-        screen.addLine("Fréquence des indications : " + mainPlayer.getInterfaceHintFrequencyLabel());
+        MenuScreen screen("PERSONNAGE", "utility.quick.character");
+        screen.addSubtitle("Tout ce qui appartient directement au personnage");
+        screen.addLine(mainPlayer.getName() + " | Niveau " + std::to_string(mainPlayer.getLevel()) + " | " + mainPlayer.getRaceText() + " / " + mainPlayer.getType());
+        screen.addLine("PV : " + std::to_string(mainPlayer.getHp()) + "/" + std::to_string(mainPlayer.getMaxHp()));
+        screen.addLine("Actifs équipés : " + std::to_string(mainPlayer.getEquippedActiveSkills().size()) + "/" + std::to_string(Player::MAX_EQUIPPED_ACTIVE_SKILLS)
+            + " | Passifs activés : " + std::to_string(mainPlayer.getEnabledPassiveSkills().size()) + "/" + std::to_string(Player::MAX_ENABLED_PASSIVE_SKILLS));
+        for (const std::string& line : buildCurrentLoadoutSynergyLines(mainPlayer))
+        {
+            screen.addLine(line);
+        }
         screen.addBackOption();
         screen.addOption(
             1,
-            "Parler au gardien / saisie libre",
-            "Écrire une phrase, un choix ou une commande.",
-            true,
-            "utility.guardian",
-            makeUtilityItemData(mainPlayer, "guardian", "Gardien du monde", "Saisie libre hors combat.")
-        );
-        screen.addOption(
-            2,
             "Inventaire",
             "Gérer objets, équipement et potions hors combat.",
             inventoryAvailable,
-            "utility.inventory",
+            "utility.character.inventory",
             makeUtilityItemData(mainPlayer, "open", "Inventaire", "Gestion hors combat.", inventoryAvailable ? "Disponible" : "Indisponible")
         );
         screen.addOption(
-            3,
-            "Paramètres",
-            "Changer les réglages du personnage, dont la fréquence des indications.",
+            2,
+            "Compétences - actifs / passifs",
+            "Équiper ou déséquiper les actifs, activer ou désactiver les passifs.",
             true,
-            "utility.settings",
-            makeUtilityItemData(mainPlayer, "settings", "Paramètres", "Réglages modifiables à tout moment.")
+            "utility.character.skills",
+            makeUtilityItemData(mainPlayer, "equip", "Compétences - actifs / passifs", "Limites actuelles : 10 actifs équipés et 10 passifs activés.")
+        );
+        screen.addOption(
+            3,
+            "Titres",
+            "Voir, comprendre et équiper les titres du personnage.",
+            true,
+            "utility.character.titles",
+            makeUtilityItemData(mainPlayer, "inspect", "Titres", "Identité, réputation et titres équipés.")
         );
         screen.addOption(
             4,
-            "Sauvegarder",
-            "Sauvegarder sans quitter la partie.",
+            "Quêtes acceptées / journal",
+            "Afficher les quêtes actives, prêtes, principales, de guilde et terminées.",
             true,
-            "utility.quick_save",
-            makeUtilityItemData(mainPlayer, "save", "Sauvegarder", "Sauvegarde rapide.", "Disponible")
+            "utility.character.quests",
+            makeUtilityItemData(mainPlayer, "quest", "Quêtes acceptées", "Journal du personnage.")
         );
         screen.addOption(
             5,
-            "Sauvegarder et quitter",
-            "Sauvegarder puis fermer Dinotofu.",
+            "Statistiques / progression",
+            "Résumé, Top 3, compétences connues, équipement et états spéciaux.",
             true,
-            "utility.save_quit",
-            makeUtilityItemData(mainPlayer, "save", "Sauvegarder et quitter", "Fermeture propre après sauvegarde.", "Disponible")
+            "utility.character.statistics",
+            makeUtilityItemData(mainPlayer, "inspect", "Statistiques / progression", "Résumé complet du personnage.")
         );
         screen.addOption(
             6,
-            "Sauvegarder et retourner au menu",
-            "Sauvegarder puis revenir au choix d'activité, sans recréer le personnage.",
+            "Équipement rapide",
+            "Afficher l'équipement actuel sans ouvrir tout l'inventaire.",
             true,
-            "utility.save_return_menu",
-            makeUtilityItemData(mainPlayer, "save", "Sauvegarder et retourner au menu", "Retour au menu d'activité sans recréation.", "Disponible")
+            "utility.character.quick_equipment",
+            makeUtilityItemData(mainPlayer, "inspect", "Équipement rapide", "Vue courte des armes et protections.")
+        );
+        screen.addOption(
+            7,
+            "Attributs",
+            "Section encore scellée, conservée dans le menu personnage.",
+            true,
+            "utility.character.attributes",
+            makeUtilityItemData(mainPlayer, "open", "Attributs", "Cette voie reste scellée pour l'instant.", "Scellé")
+        );
+        screen.addOption(
+            8,
+            "Équipe",
+            "Inspecter les recrues, parts, ordre de groupe, bilan hebdomadaire et note multi en ligne.",
+            true,
+            "utility.character.team",
+            makeUtilityItemData(mainPlayer, "team", "Équipe", "Gestion de groupe / clan.")
+        );
+        screen.addOption(
+            9,
+            "Échange / don",
+            "Transférer des ressources entre personnages compatibles.",
+            true,
+            "utility.character.exchange",
+            makeUtilityItemData(mainPlayer, "barter", "Échange / don", "Transfert protégé entre personnages.")
         );
 
-        if (mainPlayer.isAlteredByCheats())
-        {
-            screen.addOption(
-                7,
-                "Données altérées",
-                "Voir les altérations connues de ce personnage.",
-                true,
-                "utility.altered_data",
-                makeUtilityItemData(mainPlayer, "inspect", "Données altérées", "Informations déjà révélées pour ce personnage.", "Altéré")
-            );
-        }
-
-        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option du menu hors combat.");
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option personnage.");
         Console::clear();
 
         if (choice == 0)
@@ -6242,34 +6623,317 @@ void Game::openOutOfCombatUtilityMenu(bool inventoryAvailable)
         }
         if (choice == 1)
         {
-            openGuardianInputMenu();
+            if (!inventoryAvailable)
+            {
+                MessageScreen::show("INVENTAIRE", "utility.character.inventory.unavailable", {"L'inventaire n'est pas disponible sur cet écran."});
+                continue;
+            }
+            InventoryMenu::open(mainPlayer);
+            saveCurrentProgress("Inventaire depuis Personnage");
+            Console::clear();
             continue;
         }
         if (choice == 2)
         {
-            if (!inventoryAvailable)
-            {
-                MessageScreen::show("INVENTAIRE", "utility.inventory.unavailable", {"L'inventaire n'est pas disponible sur cet écran."});
-                continue;
-            }
-            InventoryMenu::open(mainPlayer);
-            saveCurrentProgress("Inventaire hors combat");
+            StatisticsMenu::openSkillLoadoutMenu(mainPlayer);
+            saveCurrentProgress("Gestion actifs et passifs");
             Console::clear();
             continue;
         }
         if (choice == 3)
         {
-            openInterfaceSettingsMenu();
+            StatisticsMenu::displayTitleCatalog(mainPlayer);
+            saveCurrentProgress("Consultation des titres");
             continue;
         }
         if (choice == 4)
+        {
+            QuestMenu::consultOnly(mainPlayer);
+            continue;
+        }
+        if (choice == 5)
+        {
+            StatisticsMenu::open(mainPlayer, selectedDifficulty, true);
+            saveCurrentProgress("Consultation des statistiques et compétences");
+            continue;
+        }
+        if (choice == 6)
+        {
+            mainPlayer.displaySimpleEquipment();
+            Console::waitForEnter();
+            Console::clear();
+            continue;
+        }
+        if (choice == 7)
+        {
+            AttributeMenu::displayLockedDevelopmentMessage();
+            Console::waitForEnter();
+            Console::clear();
+            continue;
+        }
+        if (choice == 8)
+        {
+            QuestMenu::openTeamMenu(mainPlayer);
+            saveCurrentProgress("Menu Équipe depuis Personnage");
+            Console::clear();
+            continue;
+        }
+        if (choice == 9)
+        {
+            openExchangeMenu();
+            saveCurrentProgress("Échange entre personnages");
+            continue;
+        }
+    }
+}
+
+void Game::openQuickWorldMenu()
+{
+    while (true)
+    {
+        const bool questHubLikely = hasLikelyQuestHubObjective(mainPlayer);
+        const bool locationNpcQuestLikely = hasLikelyLocationOrNpcQuest(mainPlayer);
+        MenuScreen screen("MONDE / VILLE", "activity.world.menu");
+        screen.addSubtitle("Activité de visite : guilde, lieux, PNJ, boutiques et services regroupés");
+        screen.addLine("Date : " + mainPlayer.formatWorldDateLine() + " | Moment : " + mainPlayer.formatWorldDayPartLine());
+        screen.addLine("Cette section représente des lieux visitables, pas un raccourci de poche du menu rapide.");
+        screen.addLine("Les boutiques gardent leurs achats, ventes, discussions et quêtes du vendeur dans le même comptoir.");
+        for (const std::string& line : buildWorldVisitAmbienceLines(mainPlayer, questHubLikely, locationNpcQuestLikely))
+        {
+            screen.addLine(line);
+        }
+        screen.addBackOption();
+        screen.addOption(
+            1,
+            "Quêtes / guilde" + questActivityTag(questHubLikely),
+            "Quête principale, journal, panneau de guilde, demandes et objectifs à rendre." + questActivityTag(questHubLikely),
+            true,
+            "utility.world.quests",
+            makeActivityItemData("Monde / ville", "quest", "Quêtes / guilde", "Journal, panneau, demandes et validations.", questHubLikely ? "Quête probable" : "Disponible", "Progression", questHubLikely)
+        );
+        screen.addOption(
+            2,
+            "Lieux, PNJ et services" + questActivityTag(locationNpcQuestLikely),
+            "Ville, extérieur, contacts, forge, guilde, auberge, infirmerie et services précis." + questActivityTag(locationNpcQuestLikely),
+            true,
+            "utility.world.locations",
+            makeActivityItemData("Monde / ville", "travel", "Lieux, PNJ et services", "Endroits précis et contacts associés.", locationNpcQuestLikely ? "Quête probable" : "Disponible", "Ville / services", locationNpcQuestLikely)
+        );
+        screen.addOption(
+            3,
+            "Boutiques et comptoirs",
+            "Acheter, vendre, discuter, voir les quêtes du vendeur ou utiliser un service spécial.",
+            true,
+            "utility.world.shops",
+            makeActivityItemData("Monde / ville", "shop", "Boutiques et comptoirs", "Achat, vente, discussion, quêtes et services spéciaux du même vendeur.", "Disponible", "Économie")
+        );
+        screen.addOption(
+            4,
+            "PNJ notables / personnages spéciaux" + questActivityTag(locationNpcQuestLikely),
+            "Parler aux personnages importants, contacts connus, habitants et figures spéciales." + questActivityTag(locationNpcQuestLikely),
+            true,
+            "utility.world.notable_npcs",
+            makeActivityItemData("Monde / ville", "talk", "PNJ notables / personnages spéciaux", "Contacts du monde classés par rôle.", locationNpcQuestLikely ? "Quête probable" : "Disponible", "Dialogues", locationNpcQuestLikely)
+        );
+        screen.addOption(
+            5,
+            "Stand d'entraînement",
+            "Apprendre une technique, observer, travailler appuis ou résistance environnementale.",
+            true,
+            "utility.world.training",
+            makeActivityItemData("Monde / ville", "train", "Stand d'entraînement", "Entraînement court hors combat.", "Disponible", "Progression")
+        );
+        screen.addOption(
+            6,
+            "Rumeurs et priorités locales",
+            "Relire les signaux de ville : moment, état du corps, quêtes probables et lieu à visiter ensuite.",
+            true,
+            "utility.world.local_priorities",
+            makeActivityItemData("Monde / ville", "inspect", "Rumeurs et priorités locales", "Lecture courte des signaux locaux sans quitter la ville.", "Lecture", "Ville / aide", questHubLikely || locationNpcQuestLikely)
+        );
+        screen.addOption(
+            7,
+            "Préparer la prochaine sortie",
+            "Relire les priorités avant départ : soin, outils, observation, coffres, artisanat et renforts mercenaires.",
+            true,
+            "utility.world.prepare_next_run",
+            makeActivityItemData("Monde / ville", "inspect", "Préparer la prochaine sortie", "Rappel court des préparatifs utiles avant de repartir.", "Préparation", "Ville / aide", true)
+        );
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option monde / ville.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+        if (choice == 1)
+        {
+            QuestMenu::openQuestHub(mainPlayer);
+            saveCurrentProgress("Quêtes depuis Monde / ville");
+            continue;
+        }
+        if (choice == 2)
+        {
+            QuestMenu::openLocations(mainPlayer);
+            saveCurrentProgress("Lieux et services depuis Monde / ville");
+            continue;
+        }
+        if (choice == 3)
+        {
+            ShopMenu::open(mainPlayer);
+            saveCurrentProgress("Boutiques depuis Monde / ville");
+            continue;
+        }
+        if (choice == 4)
+        {
+            QuestMenu::openNotableNpcMenu(mainPlayer);
+            saveCurrentProgress("PNJ notables depuis Monde / ville");
+            continue;
+        }
+        if (choice == 5)
+        {
+            if (TrainingGroundMenu::open(mainPlayer))
+            {
+                saveCurrentProgress("Stand d'entraînement depuis Monde / ville");
+            }
+            continue;
+        }
+        if (choice == 6)
+        {
+            std::vector<std::string> lines;
+            lines.push_back("Tu prends quelques secondes pour relire la ville au lieu de courir vers le prochain comptoir.");
+            const std::vector<std::string> ambience = buildWorldVisitAmbienceLines(mainPlayer, questHubLikely, locationNpcQuestLikely);
+            lines.insert(lines.end(), ambience.begin(), ambience.end());
+            if (questHubLikely)
+            {
+                lines.push_back("Priorité probable : la guilde ou le journal ont quelque chose à régler avant de repartir.");
+            }
+            if (locationNpcQuestLikely)
+            {
+                lines.push_back("Priorité probable : un lieu précis ou un PNJ semble lié à une quête active.");
+            }
+            if (!questHubLikely && !locationNpcQuestLikely)
+            {
+                lines.push_back("Aucune priorité urgente ne ressort. Boutique, forge, entraînement ou préparation restent de bons choix.");
+                lines.push_back("Lecture de ville : sans urgence, c'est le bon moment pour vérifier équipement, réparation, coffres suspects, mercenaires ou informations de bestiaire.");
+                lines.push_back("Lecture de build : si plusieurs actions importantes affichent un malus de classe, mieux vaut passer par boutique/forge avant une sortie difficile.");
+            }
+            if (mainPlayer.getMaxHp() > 0 && mainPlayer.getHp() * 100 <= mainPlayer.getMaxHp() * 35)
+            {
+                lines.push_back("Ton état attire les regards : l'auberge, l'infirmerie ou une vraie pause seraient plus sages qu'une nouvelle sortie.");
+            }
+            MessageScreen::show("RUMEURS ET PRIORITÉS", "activity.world.local_priorities", lines, false);
+            continue;
+        }
+        if (choice == 7)
+        {
+            std::vector<std::string> lines = buildWorldPreparationLines(mainPlayer, questHubLikely, locationNpcQuestLikely);
+            lines.push_back("Rappel : cette préparation ne consomme pas de sortie. Elle sert à mieux choisir entre guilde, boutique, forge, entraînement ou exploration.");
+            MessageScreen::show("PRÉPARER LA SORTIE", "activity.world.prepare_next_run", lines, false);
+            continue;
+        }
+    }
+}
+
+void Game::openQuickSessionOptionsMenu()
+{
+    while (true)
+    {
+        MenuScreen screen("OPTIONS DE PARTIE", "utility.quick.session_options");
+        screen.addSubtitle("Réglages, gardien, aide et données spéciales");
+        screen.addLine("Fréquence des indications : " + mainPlayer.getInterfaceHintFrequencyLabel());
+        screen.addBackOption();
+        screen.addOption(1, "Paramètres", "Changer la fréquence des indications et les réglages disponibles.", true, "utility.session.settings", makeUtilityItemData(mainPlayer, "settings", "Paramètres", "Réglages modifiables à tout moment."));
+        screen.addOption(2, "Parler au gardien / saisie libre", "Écrire une phrase, un choix ou une commande.", true, "utility.session.guardian", makeUtilityItemData(mainPlayer, "guardian", "Gardien du monde", "Saisie libre hors combat."));
+        screen.addOption(3, "Compagnon Dinotofu", "Conseils courts selon la situation actuelle.", true, "utility.session.companion", makeUtilityItemData(mainPlayer, "inspect", "Compagnon Dinotofu", "Assistant du logo, utile pour savoir quoi faire ensuite.", "Guide"));
+        screen.addOption(4, "Journal bêta", "Voir où trouver le journal de session à envoyer au dev.", true, "utility.session.beta_log", makeUtilityItemData(mainPlayer, "inspect", "Journal bêta", "Chemin du fichier de logs local à envoyer en cas de bug.", "Logs"));
+
+        if (mainPlayer.isAlteredByCheats())
+        {
+            screen.addOption(5, "Données altérées", "Voir les altérations connues de ce personnage.", true, "utility.session.altered_data", makeUtilityItemData(mainPlayer, "inspect", "Données altérées", "Informations déjà révélées pour ce personnage.", "Altéré"));
+        }
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option de partie.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+        if (choice == 1)
+        {
+            openInterfaceSettingsMenu();
+            continue;
+        }
+        if (choice == 2)
+        {
+            openGuardianInputMenu();
+            continue;
+        }
+        if (choice == 3)
+        {
+            displayDinotofuCompanion();
+            saveCurrentProgress("Consultation du compagnon Dinotofu");
+            continue;
+        }
+        if (choice == 4)
+        {
+            MessageScreen::show(
+                "JOURNAL BÊTA",
+                "utility.session.beta_log.detail",
+                {
+                    "Fichier local à envoyer au dev si un combat, une exploration ou un menu bug :",
+                    RuntimeLog::currentLogPath(),
+                    "Le fichier est recréé pendant la session et peut être supprimé sans danger."
+                },
+                false
+            );
+            continue;
+        }
+        if (choice == 5 && mainPlayer.isAlteredByCheats())
+        {
+            CheatManager::openAlteredDataMenu(mainPlayer, selectedDifficulty, selectedDeathRule);
+            saveCurrentProgress("Données altérées");
+            continue;
+        }
+    }
+}
+
+void Game::openQuickSaveOptionsMenu()
+{
+    while (true)
+    {
+        MenuScreen screen("OPTIONS DE SAUVEGARDE", "utility.quick.save_options");
+        screen.addSubtitle("Sauvegarde et sortie");
+        screen.addLine("Personnage : " + mainPlayer.getName());
+        screen.addLine("Version de création : " + mainPlayer.getCreatedForVersion());
+        screen.addLine("Dernière adaptation : " + mainPlayer.getLastAdaptedVersion());
+        screen.addBackOption();
+        screen.addOption(1, "Sauvegarder", "Sauvegarder sans quitter la partie.", true, "utility.save.quick", makeUtilityItemData(mainPlayer, "save", "Sauvegarder", "Sauvegarde rapide.", "Disponible"));
+        screen.addOption(2, "Sauvegarder et retourner au Menu de voyage", "Sauvegarder puis revenir au Menu de voyage.", true, "utility.save.return_menu", makeUtilityItemData(mainPlayer, "save", "Sauvegarder et retourner au Menu de voyage", "Retour au Menu de voyage sans recréation.", "Disponible"));
+        screen.addOption(3, "Sauvegarder et quitter", "Sauvegarder puis fermer Dinotofu.", true, "utility.save.quit", makeUtilityItemData(mainPlayer, "save", "Sauvegarder et quitter", "Fermeture propre après sauvegarde.", "Disponible"));
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option de sauvegarde.");
+        Console::clear();
+
+        if (choice == 0)
+        {
+            return;
+        }
+        if (choice == 1)
         {
             saveCurrentProgress("Sauvegarde rapide hors combat");
             Console::waitForEnter();
             Console::clear();
             continue;
         }
-        if (choice == 5)
+        if (choice == 2)
+        {
+            savePartyProgress("Sauvegarder et retourner au Menu de voyage");
+            throw ReturnToActivityMenuRequest();
+        }
+        if (choice == 3)
         {
             saveCurrentProgress("Sauvegarder et quitter");
             MessageScreen::show(
@@ -6280,15 +6944,55 @@ void Game::openOutOfCombatUtilityMenu(bool inventoryAvailable)
             );
             std::exit(0);
         }
-        if (choice == 6)
+    }
+}
+
+void Game::openOutOfCombatUtilityMenu(bool inventoryAvailable)
+{
+    while (true)
+    {
+        MenuScreen screen("MENU RAPIDE", "utility.quick.menu");
+        screen.addSubtitle("Hub constant, rangé par rôle");
+        screen.addLine("Date : " + mainPlayer.formatWorldDateLine() + " | Moment : " + mainPlayer.formatWorldDayPartLine());
+        screen.addLine("Fréquence des indications : " + mainPlayer.getInterfaceHintFrequencyLabel());
+        screen.addBackOption();
+        screen.addOption(1, "Personnage", "Inventaire, compétences, actifs/passifs, titres, quêtes, stats, équipe et échange.", true, "utility.quick.character", makeUtilityItemData(mainPlayer, "menu", "Personnage", "Ce qui appartient directement au personnage."));
+        screen.addOption(2, "Parler au gardien / saisie libre", "Écrire une phrase, un choix ou une commande.", true, "utility.quick.guardian", makeUtilityItemData(mainPlayer, "guardian", "Gardien du monde", "Saisie libre hors combat."));
+        screen.addOption(3, "Compagnon Dinotofu", "Conseils courts selon la situation actuelle.", true, "utility.quick.companion", makeUtilityItemData(mainPlayer, "inspect", "Compagnon Dinotofu", "Assistant du logo.", "Guide"));
+        screen.addOption(8, "Options de partie", "Paramètres, journal bêta, données altérées et options de confort.", true, "utility.quick.session_options", makeUtilityItemData(mainPlayer, "settings", "Options de partie", "Réglages et informations de session."));
+        screen.addOption(9, "Options de sauvegarde", "Sauvegarder, retourner au menu ou quitter proprement.", true, "utility.quick.save_options", makeUtilityItemData(mainPlayer, "save", "Options de sauvegarde", "Sauvegarde et sortie.", "Fin de menu"));
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option du menu hors combat.");
+        Console::clear();
+
+        if (choice == 0)
         {
-            savePartyProgress("Sauvegarder et retourner au menu");
-            throw ReturnToActivityMenuRequest();
+            return;
         }
-        if (choice == 7 && mainPlayer.isAlteredByCheats())
+        if (choice == 1)
         {
-            CheatManager::openAlteredDataMenu(mainPlayer, selectedDifficulty, selectedDeathRule);
-            saveCurrentProgress("Données altérées");
+            openQuickCharacterMenu(inventoryAvailable);
+            continue;
+        }
+        if (choice == 2)
+        {
+            openGuardianInputMenu();
+            continue;
+        }
+        if (choice == 3)
+        {
+            displayDinotofuCompanion();
+            saveCurrentProgress("Consultation du compagnon Dinotofu");
+            continue;
+        }
+        if (choice == 8)
+        {
+            openQuickSessionOptionsMenu();
+            continue;
+        }
+        if (choice == 9)
+        {
+            openQuickSaveOptionsMenu();
             continue;
         }
     }
@@ -6373,6 +7077,14 @@ bool Game::handleOutOfCombatUtilityChoice(int choice, bool inventoryAvailable)
         return true;
     }
 
+    if (choice == UtilityChoiceTeam)
+    {
+        QuestMenu::openTeamMenu(mainPlayer);
+        saveCurrentProgress("Menu Équipe hors combat");
+        Console::clear();
+        return true;
+    }
+
     if (choice == UtilityChoiceGuardian)
     {
         openGuardianInputMenu();
@@ -6419,7 +7131,7 @@ bool Game::handleOutOfCombatUtilityChoice(int choice, bool inventoryAvailable)
 
     if (choice == UtilityChoiceSaveReturnMenu)
     {
-        savePartyProgress("Sauvegarder et retourner au menu");
+        savePartyProgress("Sauvegarder et retourner au Menu de voyage");
         throw ReturnToActivityMenuRequest();
     }
 
@@ -6466,13 +7178,77 @@ void Game::openGuardianInputMenu()
 // FR: openPostCombatMenu déclare ou implémente un comportement précis utilisé par ce module.
 bool Game::openPostCombatMenu()
 {
-    bool menuOpen = true;
-
-    while (menuOpen)
+    while (true)
     {
         const bool hasLastCombatRecap = lastCombatRecap.available;
-        MenuScreen screen = PostCombatMenu::buildScreen(mainPlayer, hasLastCombatRecap);
-        addOutOfCombatUtilityOptions(screen, true, true);
+        MenuScreen screen("INTERMÈDE APRÈS SORTIE", "post_combat.intermission");
+        screen.addSubtitle(mainPlayer.getName() + " | Niveau " + std::to_string(mainPlayer.getLevel()));
+        screen.addLine("La poussière retombe quelques secondes avant de reprendre la route.");
+        screen.addLine("PV : " + std::to_string(mainPlayer.getHp()) + "/" + std::to_string(mainPlayer.getMaxHp()));
+        screen.addLine("Argent séparé : " + mainPlayer.getInventory().getWalletLine());
+        screen.addLine("Argent total : " + mainPlayer.getInventory().getWalletTotalLine());
+
+        if (hasLastCombatRecap)
+        {
+            const CombatRecapSnapshot& before = lastCombatRecap.before;
+            const CombatRecapSnapshot& after = lastCombatRecap.after;
+            const int xpDelta = after.experience - before.experience;
+            const int goldDelta = after.gold - before.gold;
+            const int hpDelta = after.hp - before.hp;
+            const int victoryDelta = after.victories - before.victories;
+            const int defeatDelta = after.defeats - before.defeats;
+            const int escapeDelta = after.escapes - before.escapes;
+            const int enemyDelta = after.enemiesKilled - before.enemiesKilled;
+            const int bossDelta = after.bossesKilled - before.bossesKilled;
+            const int hpPercent = after.maxHp > 0 ? (after.hp * 100 / after.maxHp) : 0;
+
+            screen.addLine("Résumé de la sortie : " + lastCombatRecap.modeName + " | " + lastCombatRecap.difficultyName + ".");
+            screen.addLine(
+                "Bilan : XP " + std::to_string(xpDelta)
+                + " | Or " + std::to_string(goldDelta)
+                + " | PV " + std::to_string(hpDelta)
+                + " | Ennemis " + std::to_string(enemyDelta)
+                + " | Boss " + std::to_string(bossDelta)
+                + "."
+            );
+
+            if (defeatDelta > 0)
+            {
+                screen.addLine("Phrase de retour : le registre garde une trace froide de cette chute, mais la route n'est pas encore terminée.");
+            }
+            else if (bossDelta > 0)
+            {
+                screen.addLine("Phrase de retour : quelque chose de plus ancien que les monstres ordinaires vient de perdre son souffle.");
+            }
+            else if (victoryDelta > 0 && hpPercent <= 30)
+            {
+                screen.addLine("Phrase de retour : tu reviens debout, mais ton souffle dit clairement que ce n'était pas une balade.");
+            }
+            else if (victoryDelta > 0)
+            {
+                screen.addLine("Phrase de retour : les traces derrière toi racontent assez bien qui a dominé l'affrontement.");
+            }
+            else if (escapeDelta > 0)
+            {
+                screen.addLine("Phrase de retour : parfois, survivre vaut mieux qu'une tombe héroïque au mauvais endroit.");
+            }
+            else
+            {
+                screen.addLine("Phrase de retour : le calme revient, assez longtemps pour vérifier ton sac et reprendre tes repères.");
+            }
+        }
+        else
+        {
+            screen.addLine("Résumé de la sortie : aucun bilan récent enregistré dans cette session.");
+            screen.addLine("Phrase de retour : le monde attend encore de savoir ce que tu vas lui arracher.");
+        }
+
+        screen.addLine("Continuer ramène au Menu de voyage. Monde / ville y reste l'activité des lieux visitables.");
+        screen.addOption(0, "Continuer", "Retourner au Menu de voyage.", true, "post_combat.continue", makeUtilityItemData(mainPlayer, "continue", "Continuer", "Retourner au Menu de voyage."));
+        screen.addOption(1, "Menu rapide", "Personnage, saisie libre, options de partie et sauvegarde.", true, "post_combat.quick_menu", makeUtilityItemData(mainPlayer, "menu", "Menu rapide", "Hub constant hors combat."));
+        screen.addOption(2, "Personnage", "Inventaire, compétences, titres, quêtes acceptées, statistiques, équipe et échange.", true, "post_combat.character", makeUtilityItemData(mainPlayer, "menu", "Personnage", "Accès direct au sous-menu personnage."));
+        screen.addOption(3, "Dernier récap détaillé", hasLastCombatRecap ? "Relire le bilan complet avant/après combat." : "Aucun combat récent enregistré dans cette session.", hasLastCombatRecap, "post_combat.last_recap", makeUtilityItemData(mainPlayer, "inspect", "Dernier récap", "Relire le bilan complet avant/après combat.", hasLastCombatRecap ? "Disponible" : "Indisponible"));
+        screen.addOption(4, "Journal bêta", "Voir où trouver le journal de session à envoyer au dev.", true, "post_combat.beta_log", makeUtilityItemData(mainPlayer, "inspect", "Journal bêta", "Chemin du fichier de logs local à envoyer en cas de bug.", "Logs"));
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(
             screen,
@@ -6481,73 +7257,41 @@ bool Game::openPostCombatMenu()
 
         Console::clear();
 
-        if (handleOutOfCombatUtilityChoice(choice, true))
-        {
-            continue;
-        }
-
         if (choice == 0)
         {
             return true;
         }
-        else if (choice == 1)
+        if (choice == 1)
         {
-            ShopMenu::open(mainPlayer);
-            saveCurrentProgress("Passage en boutique");
+            openOutOfCombatUtilityMenu(true);
+            continue;
         }
-        else if (choice == 2)
+        if (choice == 2)
         {
-            StatisticsMenu::open(mainPlayer, selectedDifficulty);
+            openQuickCharacterMenu(true);
+            continue;
         }
-        else if (choice == 3)
-        {
-            AttributeMenu::displayLockedDevelopmentMessage();
-            Console::waitForEnter();
-            Console::clear();
-        }
-        else if (choice == 4)
-        {
-            QuestMenu::consultOnly(mainPlayer);
-        }
-        else if (choice == 5)
-        {
-            QuestMenu::openLocations(mainPlayer);
-            saveCurrentProgress("Lieux notables");
-        }
-        else if (choice == 6)
-        {
-            QuestMenu::openNotableNpcMenu(mainPlayer);
-            saveCurrentProgress("PNJ notables");
-        }
-        else if (choice == 7)
-        {
-            openExchangeMenu();
-            saveCurrentProgress("Échange entre personnages");
-        }
-        else if (choice == 8)
-        {
-            mainPlayer.displaySkillProgress();
-            Console::waitForEnter();
-            Console::clear();
-        }
-        else if (choice == 9)
-        {
-            mainPlayer.displaySimpleEquipment();
-            Console::waitForEnter();
-            Console::clear();
-        }
-        else if (choice == 10)
+        if (choice == 3)
         {
             displayLastCombatRecap();
+            continue;
         }
-        else if (choice == 11)
+        if (choice == 4)
         {
-            StatisticsMenu::displayTitleCatalog(mainPlayer);
-            saveCurrentProgress("Consultation des titres");
+            MessageScreen::show(
+                "JOURNAL BÊTA",
+                "post_combat.beta_log.detail",
+                {
+                    "Fichier local à envoyer au dev si un combat, une exploration ou un menu bug :",
+                    RuntimeLog::currentLogPath(),
+                    "Le fichier est recréé pendant la session et peut être supprimé sans danger.",
+                    "Le dernier récap de combat reste disponible dans ce même menu pour compléter ce journal."
+                },
+                false
+            );
+            continue;
         }
     }
-
-    return false;
 }
 
 

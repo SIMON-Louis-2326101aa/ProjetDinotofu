@@ -306,7 +306,7 @@ namespace
             {
                 "Race liée à l'identité : " + protectedCharacter.getRaceText() + ".",
                 "Tu pourras quand même choisir ta classe.",
-                "Si tu choisis sa classe native, le bonus natif pourra s'activer."
+                "Si tu choisis sa classe naturelle, le [bonus de choix historique] pourra s'activer."
             }
         );
         Console::clear();

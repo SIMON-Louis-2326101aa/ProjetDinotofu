@@ -6,6 +6,7 @@
 #include "interface/menu/common/MessageScreen.hpp"
 
 #include "core/Console.hpp"
+#include "diagnostic/RuntimeLog.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
 
@@ -19,6 +20,8 @@ void MessageScreen::show(
     bool waitAndClear
 )
 {
+    RuntimeLog::recordScreen(title, screenId, lines);
+
     MenuScreen screen(title, screenId);
     if (waitAndClear)
     {

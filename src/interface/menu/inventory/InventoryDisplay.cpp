@@ -6,6 +6,7 @@
 #include "interface/menu/inventory/InventoryDisplay.hpp"
 
 #include "interface/menu/inventory/InventoryUtils.hpp"
+#include "combat/system/CombatClassSystem.hpp"
 #include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
 
@@ -18,6 +19,39 @@
 
 namespace
 {
+
+    std::string inventoryWeaponClassCompatibilityTag(const Player& player, const Weapon& weapon)
+    {
+        if (CombatClassSystem::hasWeaponAffinity(player, weapon.getType(), weapon.getName()))
+        {
+            return " [bonus de classe]";
+        }
+
+        if (CombatClassSystem::getWeaponHandlingAccuracyAdjustment(player, weapon.getType(), weapon.getName()) < 0
+            || CombatClassSystem::getWeaponHandlingDamagePercent(player, weapon.getType(), weapon.getName()) < 100)
+        {
+            return " [malus de classe]";
+        }
+
+        return "";
+    }
+
+    std::string inventoryArmorClassCompatibilityTag(const Player& player, const Armor& armor)
+    {
+        if (CombatClassSystem::hasArmorAffinity(player, armor.getType(), armor.getName()))
+        {
+            return " [bonus de classe]";
+        }
+
+        if (CombatClassSystem::getArmorHandlingDamageReductionAdjustment(player, armor.getType(), armor.getName(), 24) < 0
+            || CombatClassSystem::getArmorHandlingEscapeAdjustment(player, armor.getType(), armor.getName()) < 0)
+        {
+            return " [malus de classe]";
+        }
+
+        return "";
+    }
+
     MenuOptionItemData makeInventoryRouteItemData(
         const std::string& kind,
         const std::string& actionType,
@@ -220,7 +254,7 @@ MenuScreen InventoryDisplay::buildSimpleFullInventoryScreen(const Player& player
     for (int i = 0; i < inventory.getWeaponCount(); ++i)
     {
         Weapon weapon = inventory.getWeapon(i);
-        std::string line = "[" + std::to_string(i) + "] " + weapon.getName()
+        std::string line = "[" + std::to_string(i) + "] " + weapon.getName() + inventoryWeaponClassCompatibilityTag(player, weapon)
             + " | Durabilité : " + InventoryUtils::weaponDurabilityText(weapon);
 
         if (weapon.isBroken())
@@ -237,7 +271,7 @@ MenuScreen InventoryDisplay::buildSimpleFullInventoryScreen(const Player& player
     for (int i = 0; i < inventory.getArmorCount(); ++i)
     {
         Armor armor = inventory.getArmor(i);
-        std::string line = "[" + std::to_string(i) + "] " + armor.getName()
+        std::string line = "[" + std::to_string(i) + "] " + armor.getName() + inventoryArmorClassCompatibilityTag(player, armor)
             + " | Durabilité : " + InventoryUtils::armorDurabilityText(armor);
 
         if (armor.isBroken())

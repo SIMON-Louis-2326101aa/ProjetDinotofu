@@ -1,11 +1,8 @@
-# V3.49.00 — GUI welcome, quick menu and shortcut repair   
+# V3.49.89 - Rivals and unstable fate   
 
-- Added a GUI welcome screen with a **Play** button so the official banner can be seen before the interface.   
-- Removed the parasite **Overview** guide panel.   
-- Fixed breadcrumb readability and starts the in-game path from **Activity** after character creation/load.   
-- Restored the out-of-combat quick menu button whenever the current screen exposes it.   
-- Added **Save and return to menu** to the out-of-combat menu: returns to activity selection without recreating the character.   
-- Installer/launcher repair existing shortcuts, including shortcuts moved into folders on the desktop, and reapply the right icons.   
-- Default desktop shortcuts are recreated only when no matching shortcut exists.   
-
-The banner remains decorative: gameplay information stays written.   
+- Version updated to V3.49.89.   
+- Added the church oaths **Rival Oath** and **Unstable Fate Oath**.   
+- Escapes, panic reactions and signature skills can now leave clearer rival traces when the oath supports it.   
+- Unstable Fate can create a small controlled oscillation only when an actual trace already exists: memory, broken oath, rival or remembered item.   
+- World/city preparation now explains that long-term consequences are not omniscient: they need a witness, survivor, registry, item or scar.   
+- Rival, remembered-item and fate traces remain controlled foundations: they do not grant mini-bosses or free bonuses without a real event.   

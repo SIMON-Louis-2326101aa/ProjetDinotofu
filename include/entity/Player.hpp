@@ -90,6 +90,8 @@ class Player : public Entity
 {
 public:
     static const int MAX_LEVEL = 255;
+    static const int MAX_EQUIPPED_ACTIVE_SKILLS = 10;
+    static const int MAX_ENABLED_PASSIVE_SKILLS = 10;
 
 private:
     int level;
@@ -114,6 +116,8 @@ private:
 
     std::vector<std::string> unlockedPassiveSkills;
     std::vector<std::string> unlockedActiveSkills;
+    std::vector<std::string> enabledPassiveSkills;
+    std::vector<std::string> equippedActiveSkills;
     int daggerKillProgress;
     int bowKillProgress;
     int bareHandKillProgress;
@@ -234,6 +238,7 @@ private:
     static int calculateVaultUsedSlots(const Inventory& vault);
 
     void reduceWorldGazeDurationAfterCombat();
+    void normalizeSkillLoadout();
 
     // EN: getEquippedArmorMaxHpBonus declares or implements a focused behavior used by this module.
     // FR: getEquippedArmorMaxHpBonus déclare ou implémente un comportement précis utilisé par ce module.
@@ -353,6 +358,25 @@ public:
     // EN: getUnlockedActiveSkills declares or implements a focused behavior used by this module.
     // FR: getUnlockedActiveSkills déclare ou implémente un comportement précis utilisé par ce module.
     const std::vector<std::string>& getUnlockedActiveSkills() const;
+    const std::vector<std::string>& getEnabledPassiveSkills() const;
+    const std::vector<std::string>& getEquippedActiveSkills() const;
+    bool isPassiveSkillUnlocked(const std::string& skillId) const;
+    bool isActiveSkillUnlocked(const std::string& skillId) const;
+    bool isPassiveSkillEnabled(const std::string& skillId) const;
+    bool isActiveSkillEquipped(const std::string& skillId) const;
+    bool enablePassiveSkill(const std::string& skillId);
+    bool disablePassiveSkill(const std::string& skillId);
+    bool equipActiveSkill(const std::string& skillId);
+    bool unequipActiveSkill(const std::string& skillId);
+    int getSkillUseCount(const std::string& category, const std::string& key) const;
+    int getActiveSkillMasteryLevel(const std::string& actionKey) const;
+    std::string getActiveSkillMasteryLabel(const std::string& actionKey) const;
+    std::string getActiveSkillMasteryProgressHint(const std::string& actionKey) const;
+    std::string getActiveSkillMasteryEffectHint(const std::string& actionKey) const;
+    int getPassiveMasteryLevelFromAction(const std::string& actionKey) const;
+    std::string getPassiveMasteryLabelFromAction(const std::string& actionKey) const;
+    std::string getPassiveMasteryProgressHintFromAction(const std::string& actionKey) const;
+    std::string getPassiveMasteryEffectHintFromAction(const std::string& actionKey) const;
     // EN: getDaggerKillProgress declares or implements a focused behavior used by this module.
     // FR: getDaggerKillProgress déclare ou implémente un comportement précis utilisé par ce module.
     int getDaggerKillProgress() const;
@@ -401,6 +425,10 @@ public:
         int axeProgress,
         int hammerProgress,
         int spearProgress
+    );
+    void setLoadedSkillLoadout(
+        const std::vector<std::string>& enabledPassives,
+        const std::vector<std::string>& equippedActives
     );
     // EN: displaySkillProgress declares or implements a focused behavior used by this module.
     // FR: displaySkillProgress déclare ou implémente un comportement précis utilisé par ce module.

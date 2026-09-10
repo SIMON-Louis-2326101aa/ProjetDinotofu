@@ -37,7 +37,9 @@ public:
     // FR: getPower déclare ou implémente un comportement précis utilisé par ce module.
     int getPower() const;
     bool isPercentageBasedHealing() const;
+    bool isPercentageBasedEffect() const;
     int getHealingAmountForMaxHp(int maxHp) const;
+    int getEffectAmountForBase(int baseValue) const;
     std::string getPowerDisplayText() const;
 
     // EN: isHealing declares or implements a focused behavior used by this module.

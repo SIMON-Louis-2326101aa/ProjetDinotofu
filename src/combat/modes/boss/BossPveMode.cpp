@@ -263,6 +263,85 @@ namespace
         );
     }
 
+    bool maybeStartFireFlightMortalRuleWindow(
+        Boss& boss,
+        Random& random,
+        int& remainingBossTurns,
+        int& cooldownBossTurns,
+        int combatTurnCount,
+        bool coop,
+        const std::string& targetName
+    )
+    {
+        if (boss.getBossId() != 27 || boss.isDead() || boss.getMaxHp() <= 0)
+        {
+            return false;
+        }
+        if (remainingBossTurns > 0 || cooldownBossTurns > 0 || combatTurnCount < 2)
+        {
+            return false;
+        }
+        if (boss.getHp() * 100 > boss.getMaxHp() * 85)
+        {
+            return false;
+        }
+
+        int chance = 6;
+        if (boss.getHp() * 100 <= boss.getMaxHp() * 50) chance += 2;
+        if (boss.getHp() * 100 <= boss.getMaxHp() * 25) chance += 2;
+
+        if (random.between(1, 100) > chance)
+        {
+            return false;
+        }
+
+        remainingBossTurns = 2;
+        const std::string markedTarget = targetName.empty() ? "le joueur" : targetName;
+        const std::string markedGroup = coop ? "tous ceux qui lui font face" : markedTarget;
+        showBossPveLines(
+            "MARQUE MORTELLE DE FIREFLIGHT",
+            coop ? "boss.fireflight.coop.mortal_mark.start" : "boss.fireflight.mortal_mark.start",
+            {
+                coop
+                    ? "FireFlight ne frappe pas tout de suite. Il sourit, puis ouvre la main vers tout le groupe adverse."
+                    : "FireFlight ne frappe pas tout de suite. Il sourit, puis pointe " + markedTarget + " comme s'il choisissait une pièce sur un plateau.",
+                "Une marque froide s'accroche au registre de " + markedGroup + " : pendant 2 tours de boss, chaque chute suit les règles de mortel.",
+                "Ce n'est pas une difficulté sauvegardée. C'est une compétence ciblée sur le camp adverse, volontaire, faite pour provoquer la panique.",
+                "Si un adversaire marqué tombe pendant cette fenêtre, le réveil non définitif habituel ne s'applique pas : la mort est définitive.",
+                "FireFlight : \"Je ne change pas votre monde. Je change seulement la valeur de votre prochaine erreur. Deux tours. Ne tremblez pas.\""
+            },
+            false
+        );
+        return true;
+    }
+
+    void finishFireFlightMortalRuleBossTurn(int& remainingBossTurns, int& cooldownBossTurns, bool coop)
+    {
+        if (remainingBossTurns <= 0)
+        {
+            if (cooldownBossTurns > 0) --cooldownBossTurns;
+            return;
+        }
+
+        --remainingBossTurns;
+        if (remainingBossTurns <= 0)
+        {
+            cooldownBossTurns = 5;
+            showBossPveLines(
+                "MARQUE DISSIPÉE",
+                coop ? "boss.fireflight.coop.mortal_mark.end" : "boss.fireflight.mortal_mark.end",
+                {
+                    coop
+                        ? "Le registre cesse de grincer autour du groupe marqué."
+                        : "Le registre cesse de grincer autour de la cible marquée.",
+                    "La marque mortelle de FireFlight se dissipe, mais les mains restent crispées sur les armes.",
+                    "FireFlight : \"Bien. Vous savez encore jouer quand la sauvegarde ne peut plus vous rassurer.\""
+                },
+                false
+            );
+        }
+    }
+
     // EN: displayFireFlightSpecialCharacterDialogue declares or implements a focused behavior used by this module.
     // FR: displayFireFlightSpecialCharacterDialogue déclare ou implémente un comportement précis utilisé par ce module.
     void displayFireFlightSpecialCharacterDialogue(const Player& player)
@@ -2741,6 +2820,9 @@ void BossPveMode::run(
     int bossCombatTurnCount = 0;
     bool hitogamiAlreadyRevived = false;
     bool fireFlightCheatPurgeAt75Done = false;
+    int fireFlightMortalRuleBossTurnsRemaining = 0;
+    int fireFlightMortalRuleCooldown = 2;
+    bool fireFlightMortalRuleKilledPlayer = false;
     player1.beginChallengeCombatTracking();
 
     while (!player1.isDead() && !boss.isDead())
@@ -2769,15 +2851,48 @@ void BossPveMode::run(
         }
         else
         {
+            maybeStartFireFlightMortalRuleWindow(
+                boss,
+                random,
+                fireFlightMortalRuleBossTurnsRemaining,
+                fireFlightMortalRuleCooldown,
+                bossCombatTurnCount,
+                false,
+                player1.getName()
+            );
+            const bool fireFlightMortalRuleActiveForThisBossTurn = fireFlightMortalRuleBossTurnsRemaining > 0;
+            if (fireFlightMortalRuleActiveForThisBossTurn && boss.getBossId() == 27)
+            {
+                showBossPveLines(
+                    "MARQUE ACTIVE",
+                    "boss.fireflight.mortal_mark.pressure",
+                    {
+                        "La marque de FireFlight reste accrochée au registre : mourir maintenant veut dire disparaître pour de vrai.",
+                        "FireFlight : \"Tu peux attaquer. Tu peux te soigner. Tu peux paniquer. Je regarde seulement ce que tu choisis.\""
+                    },
+                    false
+                );
+            }
+
             turnFinished = TurnManager::playBossTurn(
                 boss,
                 player1,
                 random
             );
 
+            if (fireFlightMortalRuleActiveForThisBossTurn && player1.isDead())
+            {
+                fireFlightMortalRuleKilledPlayer = true;
+            }
+
             if (turnFinished)
             {
                 ++bossCombatTurnCount;
+                finishFireFlightMortalRuleBossTurn(
+                    fireFlightMortalRuleBossTurnsRemaining,
+                    fireFlightMortalRuleCooldown,
+                    false
+                );
                 turn = 1;
             }
         }
@@ -2805,7 +2920,21 @@ void BossPveMode::run(
             true
         );
 
-        if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
+        const bool fireFlightTemporaryMortalDeath = fireFlightMortalRuleKilledPlayer && boss.getBossId() == 27;
+        if (fireFlightTemporaryMortalDeath)
+        {
+            showBossPveLines(
+                "MORT SOUS RÈGLE MORTELLE",
+                "boss.fireflight.mortal_rules.death",
+                {
+                    "FireFlight referme les doigts, comme s'il avait seulement déplacé un pion.",
+                    "La difficulté sauvegardée n'a pas changé, mais cette marque a rendu la mort définitive pour cette chute.",
+                    "FireFlight : \"Je ne voulais pas te tuer. Je voulais voir si tu allais jouer pareil quand perdre voulait dire finir.\""
+                }
+            );
+        }
+
+        if (fireFlightTemporaryMortalDeath || DifficultyRules::isPermanentDeath(difficulty, deathRule))
         {
             if (BlessingSystem::tryTriggerLethalSurvival(player1))
             {
@@ -2850,7 +2979,20 @@ void BossPveMode::run(
             player1.finishChallengeCombatTracking(false, true, true, 0);
             player1.recordDefeat();
 
-            if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
+            const bool fireFlightTemporaryMortalDeath = fireFlightMortalRuleKilledPlayer && boss.getBossId() == 27;
+            if (fireFlightTemporaryMortalDeath)
+            {
+                showBossPveLines(
+                    "MORT SOUS RÈGLE MORTELLE",
+                    "boss.fireflight.final_test.mortal_rules.death",
+                    {
+                        "Le test final s'arrête sur la marque que FireFlight avait posée sur toi.",
+                        "La difficulté sauvegardée n'a pas changé, mais la marque a rendu cette chute définitive."
+                    }
+                );
+            }
+
+            if (fireFlightTemporaryMortalDeath || DifficultyRules::isPermanentDeath(difficulty, deathRule))
             {
                 if (BlessingSystem::tryTriggerLethalSurvival(player1))
                 {
@@ -3216,6 +3358,9 @@ void BossPveMode::runTeam(
     int bossCombatTurnCount = 0;
     bool hitogamiAlreadyRevived = false;
     bool fireFlightCheatPurgeAt75Done = false;
+    int fireFlightMortalRuleBossTurnsRemaining = 0;
+    int fireFlightMortalRuleCooldown = 2;
+    std::vector<bool> fireFlightMortalRuleDowned(party.size(), false);
 
     while (countAliveBossParty(party) > 0 && !boss.isDead())
     {
@@ -3323,6 +3468,37 @@ void BossPveMode::runTeam(
                 Player* target = chooseAliveBossTarget(party, random, &contributions);
                 if (target == nullptr) break;
 
+                maybeStartFireFlightMortalRuleWindow(
+                    boss,
+                    random,
+                    fireFlightMortalRuleBossTurnsRemaining,
+                    fireFlightMortalRuleCooldown,
+                    bossCombatTurnCount,
+                    true,
+                    "le groupe adverse"
+                );
+                const bool fireFlightMortalRuleActiveForThisBossTurn = fireFlightMortalRuleBossTurnsRemaining > 0;
+                if (fireFlightMortalRuleActiveForThisBossTurn && boss.getBossId() == 27)
+                {
+                    showBossPveLines(
+                        "MARQUE ACTIVE",
+                        "boss.fireflight.coop.mortal_mark.pressure",
+                        {
+                            "La marque de FireFlight couvre encore tout le camp adverse : chaque erreur peut devenir définitive.",
+                            "FireFlight : \"Je ne choisis plus une cible. Je veux voir comment un groupe respire quand tout le monde peut tomber pour de vrai.\""
+                        },
+                        false
+                    );
+                }
+                std::vector<bool> fireFlightMortalRuleDeadBeforeTurn(party.size(), false);
+                if (fireFlightMortalRuleActiveForThisBossTurn)
+                {
+                    for (std::size_t i = 0; i < party.size(); ++i)
+                    {
+                        fireFlightMortalRuleDeadBeforeTurn[i] = party[i] == nullptr || party[i]->isDead();
+                    }
+                }
+
                 MessageScreen::show(
                     "TOUR DU BOSS",
                     "boss.coop.boss_turn",
@@ -3342,10 +3518,28 @@ void BossPveMode::runTeam(
                     {
                         contributions[i].damageTaken += std::max(0, targetHpBeforeBossTurn - target->getHp());
                     }
+                    if (fireFlightMortalRuleActiveForThisBossTurn
+                        && i < fireFlightMortalRuleDowned.size()
+                        && i < fireFlightMortalRuleDeadBeforeTurn.size()
+                        && !fireFlightMortalRuleDeadBeforeTurn[i]
+                        && party[i] != nullptr
+                        && party[i]->isDead())
+                    {
+                        fireFlightMortalRuleDowned[i] = true;
+                    }
                     if (party[i] != nullptr && party[i]->isDead())
                     {
                         contributions[i].wasDowned = true;
                     }
+                }
+                if (bossTurnFinished)
+                {
+                    ++bossCombatTurnCount;
+                    finishFireFlightMortalRuleBossTurn(
+                        fireFlightMortalRuleBossTurnsRemaining,
+                        fireFlightMortalRuleCooldown,
+                        true
+                    );
                 }
                 boss.reduceUltimateCooldown();
             }
@@ -3445,7 +3639,20 @@ void BossPveMode::runTeam(
             );
             if (player->isDead())
             {
-                if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
+                const bool fireFlightTemporaryMortalDeath = partyIndex < fireFlightMortalRuleDowned.size() && fireFlightMortalRuleDowned[partyIndex];
+                if (fireFlightTemporaryMortalDeath)
+                {
+                    showBossPveLines(
+                        "MORT SOUS RÈGLE MORTELLE",
+                        "boss.fireflight.coop.mortal_rules.death",
+                        {
+                            player->getName() + " est tombé sous la marque mortelle que FireFlight avait étendue à tout le groupe.",
+                            "La difficulté sauvegardée ne change pas, mais cette chute est traitée comme une mort définitive.",
+                            "FireFlight : \"Je n'ai pas visé ton nom. J'ai visé votre peur. Toi, tu es celui qui a cédé le premier.\""
+                        }
+                    );
+                }
+                if (fireFlightTemporaryMortalDeath || DifficultyRules::isPermanentDeath(difficulty, deathRule))
                 {
                     resolveBossLethalGroupDeathSave(*player, random);
                 }
@@ -3499,7 +3706,20 @@ void BossPveMode::runTeam(
 
         if (player->isDead())
         {
-            if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
+            const bool fireFlightTemporaryMortalDeath = i < fireFlightMortalRuleDowned.size() && fireFlightMortalRuleDowned[i];
+            if (fireFlightTemporaryMortalDeath)
+            {
+                showBossPveLines(
+                    "MORT SOUS RÈGLE MORTELLE",
+                    "boss.fireflight.coop.reward.mortal_rules.death",
+                    {
+                        player->getName() + " reste inscrit dans la marque mortelle collective de FireFlight.",
+                        "Le réveil non définitif habituel est bloqué : cette chute suit la mort définitive.",
+                        "La marque ne cherchait pas un duel loyal : elle voulait faire paniquer tout le camp adverse en même temps."
+                    }
+                );
+            }
+            if (fireFlightTemporaryMortalDeath || DifficultyRules::isPermanentDeath(difficulty, deathRule))
             {
                 resolveBossLethalGroupDeathSave(*player, random);
                 if (player->isDead())

@@ -31,6 +31,12 @@ private:
     std::vector<std::string> splitStageNames;
     std::size_t splitStageIndex;
     bool finalSplitChildrenAreInvocations;
+    int reinforcementLowHpTurns;
+    int reinforcementCallsUsed;
+    int reinforcementEntryCooldownTurns;
+    int reinforcementSpawnGroupSize;
+    bool spawnedByReinforcementCall;
+    bool weakenedReinforcementCaller;
 
 public:
     // EN: Monster declares or implements a focused behavior used by this module.
@@ -86,6 +92,20 @@ public:
     int getSplitStagesRemaining() const;
     bool splitChildrenWillBeInvocations() const;
     Monster createSplitChild(int childIndex) const;
+
+    void increaseReinforcementLowHpTurns();
+    void resetReinforcementLowHpTurns();
+    int getReinforcementLowHpTurns() const;
+    bool hasCalledReinforcements() const;
+    void markReinforcementCall();
+    void markSpawnedByReinforcementCall(bool canCallWithWeakenedSignal = false);
+    bool wasSpawnedByReinforcementCall() const;
+    bool canUseWeakenedReinforcementSignal() const;
+    void setReinforcementEntryCooldown(int turns);
+    int getReinforcementEntryCooldown() const;
+    void reduceReinforcementEntryCooldown();
+    void setReinforcementSpawnGroupSize(int size);
+    int getReinforcementSpawnGroupSize() const;
 
     // EN: areStatsVisible declares or implements a focused behavior used by this module.
     // FR: areStatsVisible déclare ou implémente un comportement précis utilisé par ce module.

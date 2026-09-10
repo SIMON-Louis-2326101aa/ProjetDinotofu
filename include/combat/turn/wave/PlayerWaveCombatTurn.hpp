@@ -12,6 +12,8 @@
 #include "combat/EnemyCombatQueue.hpp"
 #include "progression/DifficultyMode.hpp"
 
+#include <functional>
+
 class PlayerWaveCombatTurn
 {
 public:
@@ -20,7 +22,9 @@ public:
         EnemyCombatQueue& wave,
         Random& random,
         bool& escapeSucceeded,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        bool teamOrdersAvailable = false,
+        const std::function<bool()>& openTeamOrders = nullptr
     );
 
 private:
@@ -29,7 +33,9 @@ private:
     static bool openWaveInterface(
         Player& player,
         EnemyCombatQueue& wave,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        bool teamOrdersAvailable = false,
+        const std::function<bool()>& openTeamOrders = nullptr
     );
 };
 

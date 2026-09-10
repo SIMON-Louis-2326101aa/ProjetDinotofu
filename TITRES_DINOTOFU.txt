@@ -980,3 +980,19 @@ DÉFIS, MALÉDICTIONS ET MARCHANDS LÉGENDAIRES
   Obtention : Terminer la première longue chaîne de Bob et Maurice.
   Effet : Réactions particulières du duo et de certains vendeurs.
   Requis pour le titre ultime : oui
+
+- Un bon entraînement
+  Affichage avant obtention : visible
+  Obtention : Battre Torvald dans un 1v1 amical de guilde à partir du rang D.
+  Effet : Reconnaissance d'entraînement, surtout utilisée par les dialogues de guilde et les bases d'équipe.
+  Requis pour le titre ultime : oui
+- On recrute !
+  Affichage avant obtention : visible
+  Obtention : Battre Torvald puis ouvrir légalement son équipe aux candidats.
+  Effet : Si équipé, augmente les occasions de croiser des PNJ recrutables jusqu'au groupe complet de 5 personnes joueur compris.
+  Requis pour le titre ultime : oui
+- Anti clan
+  Affichage avant obtention : visible
+  Obtention : Battre Torvald puis choisir une posture de groupe fermé.
+  Effet : Si équipé, bloque volontairement les rencontres de PNJ recrutables.
+  Requis pour le titre ultime : oui

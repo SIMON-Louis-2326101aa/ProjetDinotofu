@@ -11,6 +11,7 @@
 #include "combat/system/CombatClassSystem.hpp"
 #include "combat/system/DefensePostureSystem.hpp"
 #include "combat/action/SpecialCombatEffects.hpp"
+#include "combat/profile/MonsterBehaviorProfile.hpp"
 #include "entity/Player.hpp"
 #include "entity/Boss.hpp"
 #include "entity/Monster.hpp"
@@ -66,6 +67,29 @@ namespace
         return lines;
     }
 
+
+    bool playerUsesShortReachWeapon(const Player& player)
+    {
+        if (!player.hasEquippedWeapon())
+        {
+            return true;
+        }
+
+        const Weapon weapon = player.getEquippedWeapon();
+        const std::string weaponName = normalizeAttackText(weapon.getName());
+        if (weapon.getType() == WeaponType::Bow || weapon.getType() == WeaponType::Spear || weapon.getType() == WeaponType::Staff)
+        {
+            return false;
+        }
+        return weapon.getType() == WeaponType::Dagger
+            || weapon.getType() == WeaponType::BareHands
+            || weaponName.find("dague") != std::string::npos
+            || weaponName.find("couteau") != std::string::npos
+            || weaponName.find("courte") != std::string::npos
+            || weaponName.find("poing") != std::string::npos
+            || weaponName.find("griffe") != std::string::npos;
+    }
+
     void showCapturedCombatLines(
         const std::string& title,
         const std::string& screenId,
@@ -99,6 +123,99 @@ namespace
             }
         }
         return metalPieces;
+    }
+
+
+    int applyStatusComboReactionsIfNeeded(
+        Entity& attacker,
+        Entity& defender,
+        Random& random,
+        int currentDamage,
+        std::ostream& output
+    )
+    {
+        int bonusDamage = 0;
+        const std::string classFocus = normalizeAttackText(attacker.getType());
+        const int safeLevel = std::max(1, (attacker.getMaxDamage() + attacker.getCriticalDamage()) / 10);
+        const int hpPressure = defender.getMaxHp() > 0 ? defender.getHp() * 100 / defender.getMaxHp() : 100;
+
+        if (defender.hasBurning() && defender.hasPoison() && random.between(1, 100) <= 34)
+        {
+            const int reactionDamage = std::max(2, currentDamage / 8 + safeLevel / 6);
+            bonusDamage += reactionDamage;
+            defender.applyWeakening(2, 8 + safeLevel / 6);
+            output << "Réaction de statut : chaleur + poison. La toxine s'agite, ajoute "
+                   << reactionDamage << " dégât(s) et affaiblit la cible." << std::endl;
+        }
+
+        if (defender.hasFrost() && defender.hasShock() && random.between(1, 100) <= 38)
+        {
+            const int reactionDamage = std::max(2, currentDamage / 10 + safeLevel / 8);
+            bonusDamage += reactionDamage;
+            defender.applyVulnerability(2, 6 + safeLevel / 10);
+            output << "Réaction de statut : givre + choc. La cible conduit mal son propre mouvement, +"
+                   << reactionDamage << " dégât(s) et petite vulnérabilité." << std::endl;
+        }
+
+        if (defender.hasBleeding() && defender.hasVulnerability() && random.between(1, 100) <= 42)
+        {
+            const int reactionDamage = std::max(2, currentDamage / 9 + safeLevel / 7);
+            bonusDamage += reactionDamage;
+            output << "Réaction de statut : blessure + faille. L'attaque exploite une ouverture déjà créée, +"
+                   << reactionDamage << " dégât(s)." << std::endl;
+        }
+
+        if (defender.hasWeakening()
+            && (classFocus.find("gardien") != std::string::npos
+                || classFocus.find("tank") != std::string::npos
+                || classFocus.find("colosse") != std::string::npos
+                || classFocus.find("paladin") != std::string::npos)
+            && random.between(1, 100) <= 35)
+        {
+            attacker.startDefensePosture(12, 4, "Contre-rythme défensif");
+            output << "Combo de rôle : la cible est affaiblie, le profil défensif transforme l'échange en garde active." << std::endl;
+        }
+
+        if ((defender.hasPoison() || defender.hasBleeding())
+            && (classFocus.find("voleur") != std::string::npos
+                || classFocus.find("roublard") != std::string::npos
+                || classFocus.find("brigand") != std::string::npos
+                || classFocus.find("assassin") != std::string::npos
+                || classFocus.find("ombrelame") != std::string::npos)
+            && random.between(1, 100) <= 36)
+        {
+            const int reactionDamage = std::max(1, 2 + safeLevel / 9);
+            bonusDamage += reactionDamage;
+            defender.applyVulnerability(1, 7 + safeLevel / 12);
+            output << "Combo de rôle : profil furtif sur cible déjà blessée/empoisonnée, +"
+                   << reactionDamage << " dégât(s) et faille courte." << std::endl;
+        }
+
+        if ((defender.hasBurning() || defender.hasFrost() || defender.hasShock() || defender.hasPoison())
+            && (classFocus.find("mage") != std::string::npos
+                || classFocus.find("arcan") != std::string::npos
+                || classFocus.find("sorc") != std::string::npos
+                || classFocus.find("mancien") != std::string::npos
+                || classFocus.find("démoniste") != std::string::npos
+                || classFocus.find("demoniste") != std::string::npos
+                || classFocus.find("runiste") != std::string::npos)
+            && random.between(1, 100) <= 30)
+        {
+            const int reactionDamage = std::max(2, 2 + safeLevel / 8);
+            bonusDamage += reactionDamage;
+            output << "Combo de rôle : le profil magique lit l'altération active et la fait résonner, +"
+                   << reactionDamage << " dégât(s)." << std::endl;
+        }
+
+        if (hpPressure <= 35 && defender.hasVulnerability() && random.between(1, 100) <= 28)
+        {
+            const int finisherDamage = std::max(1, 2 + safeLevel / 10);
+            bonusDamage += finisherDamage;
+            output << "Pression de fin de combat : cible très blessée + vulnérable, l'impact gagne "
+                   << finisherDamage << " dégât(s)." << std::endl;
+        }
+
+        return bonusDamage;
     }
 
     void applyAmmunitionStatusIfNeeded(Player& attacker, Entity& defender, int receivedDamage, std::ostream& output)
@@ -291,6 +408,93 @@ void CombatAttack::executeBoostedAttack(
         return;
     }
 
+    Player* flyingCheckPlayer = dynamic_cast<Player*>(&attacker);
+    if (defender.hasFlight() && flyingCheckPlayer != nullptr && playerUsesShortReachWeapon(*flyingCheckPlayer))
+    {
+        const bool skyOath = flyingCheckPlayer->hasPassiveSkill("church_oath_open_sky");
+        const int skyChance = skyOath ? std::clamp(28 + flyingCheckPlayer->getLevel() / 5, 28, 48) : 0;
+        if (!skyOath || random.between(1, 100) > skyChance)
+        {
+            MessageScreen::show(
+                "CIBLE EN VOL",
+                "combat.attack.flying_short_reach_blocked",
+                {
+                    defender.getName() + " garde assez de hauteur pour rendre les armes courtes inutiles.",
+                    skyOath
+                        ? "Serment du Ciel ouvert : tu lis une ouverture, mais pas assez cette fois. Une arme courte ne devient pas soudainement une lance."
+                        : "Pendant le Vol, il faut une arme d'allonge, un tir, un sort, une entrave ou attendre que la cible redescende."
+                },
+                false
+            );
+            DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
+            return;
+        }
+
+        damageBonus += 1 + flyingCheckPlayer->getLevel() / 40;
+        MessageScreen::show(
+            "SERMENT DU CIEL",
+            "combat.attack.flying_short_reach_oath_gap",
+            {
+                flyingCheckPlayer->getName() + " attend que " + defender.getName() + " baisse d'une aile au lieu de frapper dans le vide.",
+                "L'arme courte touche seulement grâce à une vraie fenêtre de Vol : l'avantage reste rare, lisible et moins fiable qu'une allonge."
+            },
+            false
+        );
+    }
+
+    if (defender.hasIllusion() && flyingCheckPlayer != nullptr)
+    {
+        int illusionTrapChance = 66;
+        if (flyingCheckPlayer->hasPassiveSkill("threat_reader")) illusionTrapChance -= 10;
+        if (flyingCheckPlayer->hasPassiveSkill("body_reader")) illusionTrapChance -= 8;
+        if (flyingCheckPlayer->hasPassiveSkill("terrain_reader")) illusionTrapChance -= 8;
+        if (flyingCheckPlayer->hasPassiveSkill("trick_image_mastery") || flyingCheckPlayer->hasPassiveSkill("semi_fox_cunning")) illusionTrapChance -= 6;
+        if (flyingCheckPlayer->hasPassiveSkill("church_oath_silence")) illusionTrapChance -= 8;
+        if (flyingCheckPlayer->hasPassiveSkill("church_oath_memory")) illusionTrapChance -= 4;
+        if (flyingCheckPlayer->hasPassiveSkill("church_oath_broken_mirror")) illusionTrapChance -= 12;
+        if (flyingCheckPlayer->hasPrecisionBoost()) illusionTrapChance -= 6;
+        illusionTrapChance = std::clamp(illusionTrapChance, 28, 66);
+
+        if (random.between(1, 100) <= illusionTrapChance)
+        {
+            const int backlash = std::max(1, flyingCheckPlayer->getLevel() / 8 + random.between(1, 4));
+            attacker.takeDamage(backlash);
+            std::vector<std::string> lines;
+            lines.push_back(attacker.getName() + " frappe un reflet au lieu du vrai corps de " + defender.getName() + ".");
+            lines.push_back("Le contrecoup revient dans le geste : -" + std::to_string(backlash) + " PV.");
+            lines.push_back("Les illusions durent peu, mais punissent les coups précipités.");
+            if (illusionTrapChance < 66)
+            {
+                lines.push_back("Lecture partielle : tes passifs/bonus d'observation réduisent le piège, mais ne donnent pas une vérité divine gratuite.");
+                if (flyingCheckPlayer->hasPassiveSkill("church_oath_broken_mirror"))
+                {
+                    lines.push_back("Serment du Miroir brisé : même rompu par le mauvais choix, le reflet a été lu assez tard pour limiter l'erreur future.");
+                }
+            }
+            MessageScreen::show(
+                "ILLUSION FRAPPÉE",
+                "combat.attack.illusion_wrong_target",
+                lines,
+                false
+            );
+            DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
+            return;
+        }
+
+        if (illusionTrapChance < 66)
+        {
+            MessageScreen::show(
+                "REFLET LU",
+                "combat.attack.illusion_read",
+                {
+                    attacker.getName() + " prend le temps de lire les appuis au lieu de frapper le premier reflet.",
+                    "L'information vient de traces, d'expérience ou de passifs de lecture : l'illusion reste dangereuse, mais elle n'est pas devinée gratuitement."
+                },
+                false
+            );
+        }
+    }
+
     bool dodged = false;
     bool critical = false;
 
@@ -300,6 +504,11 @@ void CombatAttack::executeBoostedAttack(
         critical,
         damageBonus
     );
+
+    Monster* defendingMonsterBeforeAccuracy = dynamic_cast<Monster*>(&defender);
+    const int targetAccuracyModifier = defendingMonsterBeforeAccuracy != nullptr
+        ? MonsterBehaviorProfileCatalog::getIncomingAccuracyModifier(*defendingMonsterBeforeAccuracy)
+        : 0;
 
     Player* attackingPlayerBeforeDodge = dynamic_cast<Player*>(&attacker);
     if (dodged
@@ -324,13 +533,32 @@ void CombatAttack::executeBoostedAttack(
                     "MAÎTRISE D'ARME",
                     "combat.attack.weapon_accuracy_recovered",
                     {
-                        "Bonus arme/classe : le geste rate presque, mais la maîtrise de " + equippedWeapon.getName() + " corrige la trajectoire.",
+                        "Le geste rate presque, mais la maîtrise de " + equippedWeapon.getName() + " corrige la trajectoire.",
                         CombatClassSystem::getWeaponHandlingLabel(attacker, equippedWeapon.getType(), equippedWeapon.getName()) + "."
                     },
                     false
                 );
             }
         }
+    }
+
+    if (dodged
+        && defendingMonsterBeforeAccuracy != nullptr
+        && targetAccuracyModifier > 0
+        && random.between(1, 100) <= std::min(45, targetAccuracyModifier))
+    {
+        dodged = false;
+        critical = false;
+        rawDamage = random.between(attacker.getMinDamage(), attacker.getMaxDamage()) + damageBonus;
+        MessageScreen::show(
+            "CIBLE IMPOSANTE",
+            "combat.attack.large_target_recovered",
+            {
+                defender.getName() + " tente d'effacer sa ligne, mais son corps laisse encore une fenêtre.",
+                MonsterBehaviorProfileCatalog::getAccuracyLine(*defendingMonsterBeforeAccuracy)
+            },
+            false
+        );
     }
 
     if (dodged)
@@ -341,6 +569,35 @@ void CombatAttack::executeBoostedAttack(
             {
                 attacker.getName() + " attaque, mais " + defender.getName() + " esquive au dernier moment."
             }
+        );
+        DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
+        return;
+    }
+
+    if (defendingMonsterBeforeAccuracy != nullptr
+        && targetAccuracyModifier < 0
+        && random.between(1, 100) <= std::min(42, -targetAccuracyModifier))
+    {
+        std::ostringstream missReactionBuffer;
+        MonsterBehaviorProfileCatalog::applyEvasiveMissReaction(
+            *defendingMonsterBeforeAccuracy,
+            attacker,
+            random,
+            missReactionBuffer
+        );
+
+        std::vector<std::string> missLines = {
+            defender.getName() + " sort de la trajectoire avant que le coup ne ferme l'espace.",
+            MonsterBehaviorProfileCatalog::getAccuracyLine(*defendingMonsterBeforeAccuracy)
+        };
+        const std::vector<std::string> reactionLines = splitCapturedCombatLines(missReactionBuffer.str());
+        missLines.insert(missLines.end(), reactionLines.begin(), reactionLines.end());
+
+        MessageScreen::show(
+            "CIBLE DIFFICILE",
+            "combat.attack.small_target_slipped",
+            missLines,
+            false
         );
         DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
         return;
@@ -401,10 +658,10 @@ void CombatAttack::executeBoostedAttack(
             if (accuracyAdjustment < 0 && random.between(1, 100) <= -accuracyAdjustment)
             {
                 MessageScreen::show(
-                    "MALUS ARME/CLASSE",
+                    "ARME MAL ADAPTÉE",
                     "combat.attack.weapon_accuracy_penalty",
                     {
-                        "Malus arme/classe : " + equippedWeapon.getName() + " ne répond pas bien au style de " + attacker.getType() + ".",
+                        equippedWeapon.getName() + " répond mal au style de " + attacker.getType() + ".",
                         "Le geste se désaxe et l'attaque manque sa vraie fenêtre.",
                         CombatClassSystem::getWeaponHandlingLabel(attacker, equippedWeapon.getType(), equippedWeapon.getName()) + "."
                     },
@@ -450,12 +707,12 @@ void CombatAttack::executeBoostedAttack(
                     const int diff = rawDamage - beforeWeaponHandlingDamage;
                     if (diff > 0)
                     {
-                        preparationBuffer << "Bonus arme/classe : +" << diff
+                        preparationBuffer << "L'arme suit le style : +" << diff
                                           << " dégât(s), l'arme transmet mieux la force du style." << std::endl;
                     }
                     else if (diff < 0)
                     {
-                        preparationBuffer << "Malus arme/classe : " << diff
+                        preparationBuffer << "L'arme gêne le style : " << diff
                                           << " dégât(s), l'arme est moins adaptée au style." << std::endl;
                     }
                 }
@@ -569,7 +826,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 18)
         {
             rawDamage += 2 + classLevel / 30;
-            preparationBuffer << "Technique apprise : enchaînement simple, le geste s'enchaîne mieux grâce à l'expérience." << std::endl;
+            preparationBuffer << "L'enchaînement simple trouve naturellement sa suite." << std::endl;
         }
 
         if (classLevel >= 8
@@ -579,7 +836,7 @@ void CombatAttack::executeBoostedAttack(
         {
             ElementalAffinitySystem::applyBleeding(defender, 1, 1 + classLevel / 40);
             rawDamage += 1;
-            preparationBuffer << "Technique apprise : incision discrète, une blessure courte s'ajoute à la frappe." << std::endl;
+            preparationBuffer << "L'incision discrète laisse une blessure courte derrière la frappe." << std::endl;
         }
 
         if (classLevel >= 10
@@ -592,7 +849,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 18)
         {
             attacker.startDefensePosture(10, 2, "Posture apprise de rempart");
-            preparationBuffer << "Technique apprise : rempart court, le combattant finit son attaque en garde." << std::endl;
+            preparationBuffer << "Le combattant finit son attaque en rempart court." << std::endl;
         }
 
         if (classLevel >= 12
@@ -612,7 +869,7 @@ void CombatAttack::executeBoostedAttack(
             else if (roll == 2) ElementalAffinitySystem::applyPoison(defender, 1, 1 + classLevel / 32);
             else if (roll == 3) ElementalAffinitySystem::applyFrost(defender, 1);
             else ElementalAffinitySystem::applyShock(defender, 1);
-            preparationBuffer << "Technique apprise : trace élémentaire, la magie suit le geste physique." << std::endl;
+            preparationBuffer << "Une trace élémentaire suit le geste physique." << std::endl;
         }
 
         if (classLevel >= 15
@@ -630,7 +887,7 @@ void CombatAttack::executeBoostedAttack(
             && random.between(1, 100) <= 20)
         {
             rawDamage += 3 + classLevel / 28;
-            preparationBuffer << "Technique apprise : tir cadré, le bonus existe seulement car l'arme équipée le permet." << std::endl;
+            preparationBuffer << "Le tir cadré suit la ligne exacte de l'arme." << std::endl;
         }
 
         if ((classFocus.find("assassin") != std::string::npos
@@ -783,6 +1040,161 @@ void CombatAttack::executeBoostedAttack(
             preparationBuffer << "Spécialité d'invocateur : l'attaque laisse une pression froide, comme une présence derrière la cible." << std::endl;
         }
 
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_guarded_flame")
+            && random.between(1, 100) <= 16)
+        {
+            ElementalAffinitySystem::applyBurning(defender, 1, 1 + attackingPlayerIdentity->getLevel() / 45);
+            preparationBuffer << "Serment de la Flamme gardée : la chaleur reste assez tenue pour marquer sans consumer gratuitement." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_shadow")
+            && (critical || defender.hasBleeding() || random.between(1, 100) <= 14))
+        {
+            ElementalAffinitySystem::applyBleeding(defender, 1, 1 + attackingPlayerIdentity->getLevel() / 50);
+            preparationBuffer << "Serment des Ombres franches : l'angle trouvé devient une coupure discrète, pas une trahison automatique." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_hunter")
+            && attackingMonster == nullptr
+            && defendingMonsterBeforeAccuracy != nullptr
+            && random.between(1, 100) <= 18)
+        {
+            rawDamage += std::max(1, 1 + attackingPlayerIdentity->getLevel() / 45);
+            preparationBuffer << "Serment du Chasseur : la frappe suit une trace réelle de la cible au lieu de deviner sa faiblesse." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_blood")
+            && attacker.getHp() * 100 <= attacker.getMaxHp() * 55
+            && random.between(1, 100) <= 20)
+        {
+            rawDamage += std::max(1, 2 + attackingPlayerIdentity->getLevel() / 35);
+            preparationBuffer << "Serment du Sang : la douleur paie un impact plus net, sans annuler le danger." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_shield")
+            && attacker.getHp() * 100 <= attacker.getMaxHp() * 70
+            && random.between(1, 100) <= 16)
+        {
+            attacker.startDefensePosture(7, 2, "Serment du Bouclier");
+            preparationBuffer << "Serment du Bouclier : le coup finit en garde courte, pour rappeler que la promesse porte aussi la ligne." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_king")
+            && random.between(1, 100) <= 12)
+        {
+            rawDamage += 1;
+            preparationBuffer << "Serment du Roi : la présence rend l'attaque plus assumée, surtout quand des alliés apprendront à suivre." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_silence")
+            && (defender.hasIllusion() || random.between(1, 100) <= 10))
+        {
+            rawDamage += 1;
+            preparationBuffer << "Serment du Silence : le calme retire du bruit au geste et aide à ne pas répondre aux provocations." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_broken_mirror")
+            && defender.hasIllusion()
+            && random.between(1, 100) <= 18)
+        {
+            rawDamage += std::max(1, 1 + attackingPlayerIdentity->getLevel() / 50);
+            preparationBuffer << "Serment du Miroir brisé : le coup vise une incohérence de reflet, pas une vérité offerte gratuitement." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_open_sky")
+            && defender.hasFlight()
+            && random.between(1, 100) <= 16)
+        {
+            rawDamage += 1;
+            preparationBuffer << "Serment du Ciel ouvert : l'attaque attend une baisse d'aile au lieu de gaspiller l'élan." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_roots")
+            && defender.hasEntanglement()
+            && random.between(1, 100) <= 18)
+        {
+            rawDamage += std::max(1, 1 + attackingPlayerIdentity->getLevel() / 55);
+            preparationBuffer << "Serment des Racines : la frappe suit une tension de fil ou de racine déjà visible, sans inventer une faiblesse gratuite." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_witness")
+            && (defender.hasVulnerability() || defender.hasWeakening() || defender.hasIllusion())
+            && random.between(1, 100) <= 15)
+        {
+            rawDamage += 1;
+            preparationBuffer << "Serment du Témoin : le coup s'appuie sur un signe déjà vu - posture, rumeur, faille ou reflet - pas sur une vérité divine." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_scars")
+            && attacker.getMaxHp() > 0
+            && attacker.getHp() * 100 <= attacker.getMaxHp() * 45
+            && random.between(1, 100) <= 17)
+        {
+            rawDamage += std::max(1, 1 + attackingPlayerIdentity->getLevel() / 45);
+            attacker.startDefensePosture(4, 1, "Serment des Cicatrices");
+            preparationBuffer << "Serment des Cicatrices : la douleur vécue serre le geste et laisse une garde courte, pas une envie de se blesser pour rien." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_legacy")
+            && (attackingPlayerIdentity->hasPassiveSkill("church_oath_memory") || attackingPlayerIdentity->hasPassiveSkill("church_oath_broken_trace"))
+            && random.between(1, 100) <= 10)
+        {
+            rawDamage += 1;
+            preparationBuffer << "Serment de l'Héritage : une trace déjà inscrite donne du poids au coup, comme un objet ou un nom qui refuse de disparaître." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_bound_forge")
+            && attackingPlayerIdentity->hasEquippedWeapon())
+        {
+            const Weapon oathWeapon = attackingPlayerIdentity->getEquippedWeapon();
+            if (!oathWeapon.isBroken()
+                && CombatClassSystem::hasWeaponAffinity(attacker, oathWeapon.getType(), oathWeapon.getName())
+                && random.between(1, 100) <= 14)
+            {
+                const int forgeDamage = std::max(1, 1 + attackingPlayerIdentity->getLevel() / 55);
+                rawDamage += forgeDamage;
+                attackingPlayerIdentity->recordCanonicalEvent("objets_avec_memoire", "arme_liee:" + oathWeapon.getName(), oathWeapon.getName() + " a porté un coup cohérent avec son serment", 1);
+                preparationBuffer << "Serment de la Forge liée : " << oathWeapon.getName() << " répond à une classe qui sait vraiment la tenir. La trace compte pour les futurs objets avec mémoire." << std::endl;
+            }
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_bonds")
+            && (attackingPlayerIdentity->hasPassiveSkill("church_oath_king") || attackingPlayerIdentity->hasPassiveSkill("battle_order_mastery") || attackingPlayerIdentity->getCanonicalJournalCategoryTotal("participation_recrues") > 0)
+            && random.between(1, 100) <= 13)
+        {
+            rawDamage += 1;
+            attacker.startDefensePosture(3, 1, "Serment des Liens");
+            attackingPlayerIdentity->recordCanonicalEvent("techniques_combinees_alliees", "lien_en_combat", "Le Serment des Liens a soutenu une action de groupe", 1);
+            preparationBuffer << "Serment des Liens : l'attaque garde une place pour les alliés et les futurs combos de groupe, sans jouer leur tour à leur place." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_rivals")
+            && defendingMonsterBeforeAccuracy != nullptr
+            && (critical || defender.hasVulnerability() || defender.hasBleeding() || defender.hasWeakening())
+            && random.between(1, 100) <= 13)
+        {
+            rawDamage += std::max(1, 1 + attackingPlayerIdentity->getLevel() / 60);
+            attackingPlayerIdentity->recordCanonicalEvent("rivaux_potentiels", "marque_rivale:" + defendingMonsterBeforeAccuracy->getName(), defendingMonsterBeforeAccuracy->getName() + " a été marqué par le Serment des Rivaux", 1);
+            preparationBuffer << "Serment des Rivaux : le coup n'invente pas un ennemi juré, il marque une faille déjà vécue que l'adversaire pourrait porter plus tard." << std::endl;
+        }
+
+        if (attackingPlayerIdentity->hasPassiveSkill("church_oath_unstable_fate")
+            && (attackingPlayerIdentity->hasPassiveSkill("church_oath_memory") || attackingPlayerIdentity->hasPassiveSkill("church_oath_broken_trace") || attackingPlayerIdentity->getCanonicalJournalCategoryTotal("rivaux_potentiels") > 0 || attackingPlayerIdentity->getCanonicalJournalCategoryTotal("objets_avec_memoire") > 0)
+            && random.between(1, 100) <= (attacker.getHp() * 100 <= std::max(1, attacker.getMaxHp()) * 35 ? 15 : 8))
+        {
+            if (random.between(1, 100) <= 55)
+            {
+                rawDamage += 1;
+                preparationBuffer << "Serment du Destin instable : une trace ancienne déplace légèrement l'impact, sans garantir la victoire." << std::endl;
+            }
+            else
+            {
+                attacker.startDefensePosture(2, 1, "Destin instable");
+                preparationBuffer << "Serment du Destin instable : le fil ne donne pas plus de force, mais resserre une garde minuscule au bon moment." << std::endl;
+            }
+            attackingPlayerIdentity->recordCanonicalEvent("destin_instable", "oscillation_combat", "Le Serment du Destin instable a oscillé pendant une action", 1);
+        }
+
         const int attackPressure = attackingPlayerIdentity->getCursePressureForCategory("attack");
         if (attackPressure > 0)
         {
@@ -804,7 +1216,7 @@ void CombatAttack::executeBoostedAttack(
 
         if (rawDamage != beforeSpecialityDamage)
         {
-            preparationBuffer << "La spécialité de classe change l'impact de l'attaque."
+            preparationBuffer << "La manière de combattre change l'impact."
                       << std::endl;
         }
     }
@@ -815,6 +1227,18 @@ void CombatAttack::executeBoostedAttack(
         const std::string raceText = attackingMonster->getRaceText();
         const std::string typeText = attackingMonster->getType();
         const std::string monsterFocus = attackingMonster->getName() + " " + typeText + " " + raceText;
+
+        const int signatureBonusDamage = MonsterBehaviorProfileCatalog::applySignaturePreImpact(
+            *attackingMonster,
+            defender,
+            random,
+            rawDamage,
+            preparationBuffer
+        );
+        if (signatureBonusDamage > 0)
+        {
+            rawDamage += signatureBonusDamage;
+        }
 
         if (textContainsAny(monsterFocus, {"frondeur", "tireur", "archer"}) && random.between(1, 100) <= 22)
         {
@@ -984,6 +1408,18 @@ void CombatAttack::executeBoostedAttack(
         }
     }
 
+    const int comboBonusDamage = applyStatusComboReactionsIfNeeded(attacker, defender, random, rawDamage, preparationBuffer);
+    if (comboBonusDamage > 0)
+    {
+        rawDamage += comboBonusDamage;
+        preparationBuffer << "Les altérations se répondent et déforment le rythme de l'impact." << std::endl;
+    }
+
+    if (rawDamage < 1)
+    {
+        rawDamage = 1;
+    }
+
     showCapturedCombatLines(
         "PRÉPARATION DE L'ATTAQUE",
         "combat.attack.preparation",
@@ -1009,7 +1445,16 @@ void CombatAttack::executeBoostedAttack(
 
     std::ostringstream impactBuffer;
 
-    if (critical)
+    if (attackingMonster != nullptr)
+    {
+        impactBuffer << MonsterBehaviorProfileCatalog::buildAttackImpactLine(
+            *attackingMonster,
+            rawDamage,
+            critical,
+            damageBonus > 0
+        ) << std::endl;
+    }
+    else if (critical)
     {
         impactBuffer << attacker.getName()
                   << " frappe avec une violence monstrueuse et inflige "
@@ -1097,6 +1542,18 @@ void CombatAttack::executeBoostedAttack(
     if (attackingPlayer != nullptr)
     {
         applyAmmunitionStatusIfNeeded(*attackingPlayer, defender, rapport.receivedDamage, followUpBuffer);
+
+        Monster* defendingMonsterAfterImpact = dynamic_cast<Monster*>(&defender);
+        if (defendingMonsterAfterImpact != nullptr)
+        {
+            MonsterBehaviorProfileCatalog::applyIncomingHitReaction(
+                *defendingMonsterAfterImpact,
+                attacker,
+                random,
+                rapport.receivedDamage,
+                followUpBuffer
+            );
+        }
     }
 
     if (attackingMonster != nullptr)

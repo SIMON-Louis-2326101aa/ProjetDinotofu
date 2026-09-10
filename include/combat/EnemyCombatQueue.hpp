@@ -85,6 +85,10 @@ public:
     // EN: removeActiveEnemyAsEscaped declares or implements a focused behavior used by this module.
     // FR: removeActiveEnemyAsEscaped déclare ou implémente un comportement précis utilisé par ce module.
     void removeActiveEnemyAsEscaped(int index);
+    // EN: switchActiveEnemyWithWaiting rotates one active enemy with one waiting enemy without defeat/escape.
+    // FR: switchActiveEnemyWithWaiting échange un ennemi actif avec un ennemi en réserve sans défaite/fuite.
+    bool switchActiveEnemyWithWaiting(int activeIndex, int waitingIndex = 0);
+
     // EN: removeDeadAndReplace declares or implements a focused behavior used by this module.
     // FR: removeDeadAndReplace déclare ou implémente un comportement précis utilisé par ce module.
     void removeDeadAndReplace();
@@ -103,13 +107,14 @@ private:
     std::vector<Monster> waitingEnemies;
     std::vector<Monster> defeatedEnemies;
     std::vector<Monster> escapedEnemies;
+    bool frontLineInitialized;
 
     // EN: canAddActiveEnemy declares or implements a focused behavior used by this module.
     // FR: canAddActiveEnemy déclare ou implémente un comportement précis utilisé par ce module.
     bool canAddActiveEnemy() const;
     // EN: bringNextEnemyIn declares or implements a focused behavior used by this module.
     // FR: bringNextEnemyIn déclare ou implémente un comportement précis utilisé par ce module.
-    void bringNextEnemyIn();
+    void bringNextEnemyIn(bool delayedEntry = true);
 
     // EN: isDamagedAndAlive declares or implements a focused behavior used by this module.
     // FR: isDamagedAndAlive déclare ou implémente un comportement précis utilisé par ce module.

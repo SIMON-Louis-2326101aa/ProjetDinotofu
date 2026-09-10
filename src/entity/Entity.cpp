@@ -4,6 +4,7 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "entity/Entity.hpp"
+#include "combat/system/CombatClassSystem.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
@@ -11,6 +12,34 @@
 #include <iostream>
 #include <string>
 #include <vector>
+
+namespace
+{
+    int stableNormalDamageRoll(Random& random, int minimumDamage, int maximumDamage)
+    {
+        if (maximumDamage < minimumDamage)
+        {
+            maximumDamage = minimumDamage;
+        }
+
+        const int spread = maximumDamage - minimumDamage;
+        if (spread <= 8)
+        {
+            return random.between(minimumDamage, maximumDamage);
+        }
+
+        const int firstRoll = random.between(minimumDamage, maximumDamage);
+        const int secondRoll = random.between(minimumDamage, maximumDamage);
+        int stabilized = (firstRoll + secondRoll + 1) / 2;
+
+        if (spread >= 18 && random.between(1, 100) <= 10)
+        {
+            stabilized = random.between(minimumDamage, maximumDamage);
+        }
+
+        return std::clamp(stabilized, minimumDamage, maximumDamage);
+    }
+}
 
 // EN: Entity declares or implements a focused behavior used by this module.
 // FR: Entity déclare ou implémente un comportement précis utilisé par ce module.
@@ -48,6 +77,8 @@ Entity::Entity()
     weakeningDamagePenaltyPercent = 0;
     vulnerabilityTurns = 0;
     vulnerabilityDamageTakenPercent = 0;
+    nextHitVulnerabilityTurns = 0;
+    nextHitVulnerabilityDamageTakenPercent = 0;
     elementalWardTurns = 0;
     elementalWardResistancePercent = 0;
     regenerationTurns = 0;
@@ -60,6 +91,9 @@ Entity::Entity()
     guardReductionPercent = 0;
     classSkillCooldownTurns = 0;
     healingReceivedPercent = 100;
+    flightTurns = 0;
+    entanglementTurns = 0;
+    illusionTurns = 0;
 }
 
 Entity::Entity(
@@ -105,6 +139,8 @@ Entity::Entity(
     weakeningDamagePenaltyPercent = 0;
     vulnerabilityTurns = 0;
     vulnerabilityDamageTakenPercent = 0;
+    nextHitVulnerabilityTurns = 0;
+    nextHitVulnerabilityDamageTakenPercent = 0;
     elementalWardTurns = 0;
     elementalWardResistancePercent = 0;
     regenerationTurns = 0;
@@ -117,6 +153,9 @@ Entity::Entity(
     guardReductionPercent = 0;
     classSkillCooldownTurns = 0;
     healingReceivedPercent = 100;
+    flightTurns = 0;
+    entanglementTurns = 0;
+    illusionTurns = 0;
 }
 
 std::string Entity::getName() const
@@ -358,6 +397,14 @@ void Entity::applyVulnerability(int turns, int damageTakenPercent)
     vulnerabilityDamageTakenPercent = std::max(vulnerabilityDamageTakenPercent, damageTakenPercent);
 }
 
+void Entity::applyNextHitVulnerability(int turns, int damageTakenPercent)
+{
+    if (turns <= 0 || damageTakenPercent <= 0) return;
+    if (damageTakenPercent > 45) damageTakenPercent = 45;
+    nextHitVulnerabilityTurns = std::max(nextHitVulnerabilityTurns, turns);
+    nextHitVulnerabilityDamageTakenPercent = std::max(nextHitVulnerabilityDamageTakenPercent, damageTakenPercent);
+}
+
 void Entity::applyElementalWard(int turns, int resistancePercent)
 {
     if (turns <= 0 || resistancePercent <= 0) return;
@@ -397,6 +444,46 @@ void Entity::applyGuardBoost(int turns, int reductionPercent)
     if (reductionPercent > 45) reductionPercent = 45;
     guardBoostTurns = std::max(guardBoostTurns, turns);
     guardReductionPercent = std::max(guardReductionPercent, reductionPercent);
+}
+
+
+void Entity::applyFlight(int turns)
+{
+    if (turns <= 0) return;
+    flightTurns = std::max(flightTurns, turns);
+}
+
+void Entity::applyEntanglement(int turns)
+{
+    if (turns <= 0) return;
+    entanglementTurns = std::max(entanglementTurns, turns);
+}
+
+void Entity::applyIllusion(int turns)
+{
+    if (turns <= 0) return;
+    illusionTurns = std::max(illusionTurns, turns);
+}
+
+bool Entity::hasFlight() const { return flightTurns > 0; }
+bool Entity::hasEntanglement() const { return entanglementTurns > 0; }
+bool Entity::hasIllusion() const { return illusionTurns > 0; }
+int Entity::getFlightTurns() const { return flightTurns; }
+int Entity::getEntanglementTurns() const { return entanglementTurns; }
+int Entity::getIllusionTurns() const { return illusionTurns; }
+
+bool Entity::consumeEntanglementTurn()
+{
+    if (entanglementTurns <= 0) return false;
+    --entanglementTurns;
+    return true;
+}
+
+bool Entity::cureEntanglement()
+{
+    if (entanglementTurns <= 0) return false;
+    entanglementTurns = 0;
+    return true;
 }
 
 bool Entity::cureBurning()
@@ -447,9 +534,11 @@ bool Entity::cureWeakening()
 
 bool Entity::cureVulnerability()
 {
-    if (vulnerabilityTurns <= 0) return false;
+    if (vulnerabilityTurns <= 0 && nextHitVulnerabilityTurns <= 0) return false;
     vulnerabilityTurns = 0;
     vulnerabilityDamageTakenPercent = 0;
+    nextHitVulnerabilityTurns = 0;
+    nextHitVulnerabilityDamageTakenPercent = 0;
     return true;
 }
 
@@ -460,6 +549,7 @@ bool Entity::hasShock() const { return shockTurns > 0; }
 bool Entity::hasBleeding() const { return bleedingTurns > 0; }
 bool Entity::hasWeakening() const { return weakeningTurns > 0; }
 bool Entity::hasVulnerability() const { return vulnerabilityTurns > 0; }
+bool Entity::hasNextHitVulnerability() const { return nextHitVulnerabilityTurns > 0; }
 bool Entity::hasElementalWard() const { return elementalWardTurns > 0; }
 bool Entity::hasRegeneration() const { return regenerationTurns > 0; }
 bool Entity::hasPowerBoost() const { return powerBoostTurns > 0; }
@@ -481,7 +571,7 @@ int Entity::applyPowerBoostToDamage(int damage) const
 
 bool Entity::hasActiveCombatStatus() const
 {
-    return burningTurns > 0 || poisonTurns > 0 || frostTurns > 0 || shockTurns > 0 || bleedingTurns > 0 || weakeningTurns > 0 || vulnerabilityTurns > 0 || elementalWardTurns > 0 || regenerationTurns > 0 || powerBoostTurns > 0 || precisionBoostTurns > 0 || guardBoostTurns > 0;
+    return burningTurns > 0 || poisonTurns > 0 || frostTurns > 0 || shockTurns > 0 || bleedingTurns > 0 || weakeningTurns > 0 || vulnerabilityTurns > 0 || nextHitVulnerabilityTurns > 0 || elementalWardTurns > 0 || regenerationTurns > 0 || powerBoostTurns > 0 || precisionBoostTurns > 0 || guardBoostTurns > 0 || flightTurns > 0 || entanglementTurns > 0 || illusionTurns > 0;
 }
 
 void Entity::processStatusTickAtTurnStart()
@@ -569,6 +659,17 @@ void Entity::processStatusTickAtTurnStart()
         }
     }
 
+    if (nextHitVulnerabilityTurns > 0)
+    {
+        lines.push_back(name + " garde une faille de garde : le prochain coup reçu mordra " + std::to_string(nextHitVulnerabilityDamageTakenPercent) + "% plus fort.");
+        nextHitVulnerabilityTurns--;
+        if (nextHitVulnerabilityTurns <= 0)
+        {
+            nextHitVulnerabilityDamageTakenPercent = 0;
+            lines.push_back("La faille de garde autour de " + name + " se referme avant d'être punie.");
+        }
+    }
+
     if (elementalWardTurns > 0)
     {
         lines.push_back("Un voile élémentaire protège encore " + name + " : les altérations mordent " + std::to_string(elementalWardResistancePercent) + "% moins fort.");
@@ -580,9 +681,36 @@ void Entity::processStatusTickAtTurnStart()
         }
     }
 
+    if (flightTurns > 0)
+    {
+        lines.push_back(name + " garde l'avantage du vol : les armes courtes peinent à l'atteindre.");
+        flightTurns--;
+        if (flightTurns <= 0)
+        {
+            lines.push_back(name + " redescend assez bas pour être touché normalement.");
+        }
+    }
+
+    if (illusionTurns > 0)
+    {
+        lines.push_back("Les reflets autour de " + name + " brouillent encore la vraie position.");
+        illusionTurns--;
+        if (illusionTurns <= 0)
+        {
+            lines.push_back("Les illusions autour de " + name + " se déchirent enfin.");
+        }
+    }
+
     if (totalDamage > 0)
     {
+        const int storedNextHitVulnerabilityTurns = nextHitVulnerabilityTurns;
+        const int storedNextHitVulnerabilityDamageTakenPercent = nextHitVulnerabilityDamageTakenPercent;
         takeDamage(totalDamage);
+        if (storedNextHitVulnerabilityTurns > 0 && hp > 0)
+        {
+            nextHitVulnerabilityTurns = storedNextHitVulnerabilityTurns;
+            nextHitVulnerabilityDamageTakenPercent = storedNextHitVulnerabilityDamageTakenPercent;
+        }
         lines.push_back(name + " possède maintenant " + std::to_string(hp) + "/" + std::to_string(maxHp) + " PV après les statuts.");
     }
 
@@ -720,6 +848,12 @@ void Entity::takeDamage(int damage)
         damage = std::max(1, damage * (100 + vulnerabilityDamageTakenPercent) / 100);
     }
 
+    if (nextHitVulnerabilityTurns > 0 && nextHitVulnerabilityDamageTakenPercent > 0 && damage > 0)
+    {
+        damage = std::max(1, damage * (100 + nextHitVulnerabilityDamageTakenPercent) / 100);
+        nextHitVulnerabilityTurns = 0;
+        nextHitVulnerabilityDamageTakenPercent = 0;
+    }
 
     if (guardBoostTurns > 0 && guardReductionPercent > 0 && damage > 0)
     {
@@ -833,7 +967,7 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
     }
 
     int dodgeThreshold = 3;
-    int normalHitThreshold = 16;
+    int normalHitThreshold = CombatClassSystem::getClassCriticalRollThreshold(*this);
     int frostDamagePercent = 100;
 
     if (frostTurns > 0)
@@ -857,7 +991,7 @@ int Entity::attack(Random& random, bool& dodged, bool& critical, int damageBonus
 
     if (resultat <= normalHitThreshold)
     {
-        int dealtDamage = random.between(minDamage, maxDamage) + damageBonus;
+        int dealtDamage = stableNormalDamageRoll(random, minDamage, maxDamage) + damageBonus;
         if (frostDamagePercent < 100)
         {
             dealtDamage = std::max(1, dealtDamage * frostDamagePercent / 100);

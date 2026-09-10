@@ -26,6 +26,9 @@ public:
     static Consumable createMajorHealingPotion();
     static Consumable createVitalityHealingPotion();
     static Consumable createRoyalVitalityHealingPotion();
+    static Consumable createMomentumDamagePotion();
+    static Consumable createGuardianPercentPotion();
+    static Consumable createProportionalFragilityDebuffPotion();
     // EN: createReinforcedDamagePotion declares or implements a focused behavior used by this module.
     // FR: createReinforcedDamagePotion déclare ou implémente un comportement précis utilisé par ce module.
     static Consumable createMinorDamagePotion();

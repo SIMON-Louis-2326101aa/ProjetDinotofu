@@ -37,7 +37,7 @@ namespace
     }
 }
 
-MenuScreen CombatMenu::buildTurnScreen(const Entity& entity)
+MenuScreen CombatMenu::buildTurnScreen(const Entity& entity, bool teamOrdersAvailable)
 {
     MenuScreen screen("COMBAT", "combat.turn");
     screen.addSubtitle("Tour de " + entity.getName());
@@ -134,6 +134,37 @@ MenuScreen CombatMenu::buildTurnScreen(const Entity& entity)
         true,
         "combat.flee",
         buildCombatTurnActionData(entity, "flee", "Fuir", "Tente de quitter le combat quand le contexte le permet.", "Risque : tour consommé")
+    );
+    screen.addOption(
+        9,
+        "Consignes d'équipe",
+        teamOrdersAvailable
+            ? "Donner une directive aux recrues équipées sans consommer le tour du joueur."
+            : "Disponible seulement avec au moins une recrue ou IA alliée stable équipée.",
+        teamOrdersAvailable,
+        teamOrdersAvailable ? "combat.team_orders" : "combat.team_orders.unavailable",
+        buildCombatTurnActionData(
+            entity,
+            "directive",
+            "Consignes d'équipe",
+            "Consignes ciblées ou de groupe. Donner une consigne ne consomme pas le tour du chef.",
+            teamOrdersAvailable ? "Consigne gratuite" : "Aucun allié stable"
+        )
+    );
+    screen.addOption(
+        10,
+        "Actions tactiques",
+        "Lanterne, coup de pied, poussière, observation, ouvertures et pièges improvisés.",
+        true,
+        "combat.tactical_actions",
+        buildCombatTurnActionData(
+            entity,
+            "tactical",
+            "Actions tactiques",
+            "Consomme le tour pour utiliser un objet, le terrain, une ouverture ou un piège sans spammer l'attaque classique.",
+            "Choix de terrain",
+            true
+        )
     );
     screen.addOption(
         0,

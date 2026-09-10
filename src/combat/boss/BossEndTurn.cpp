@@ -296,7 +296,7 @@ bool BossEndTurn::handleBossEndTurn(
         }
         else if (boss.getBossId() == 27)
         {
-            endTurnNarration << "Le patch temporaire de FireFlight continue de modifier les marges du combat." << std::endl;
+            endTurnNarration << "Le voile tactique de FireFlight continue de déplacer les marges du combat." << std::endl;
             dealOngoingDamage(player, 8 + boss.getSpecialEffect() * 2, endTurnNarration);
         }
         else if (boss.getBossId() == 28)
@@ -464,7 +464,7 @@ bool BossEndTurn::handleBossEndTurn(
             }
             else if (boss.getBossId() == 27)
             {
-                endTurnNarration << "Le patch temporaire expire. FireFlight sourit comme si le vrai test commençait seulement." << std::endl;
+                endTurnNarration << "Le voile tactique expire. FireFlight sourit comme si le vrai test commençait seulement." << std::endl;
             }
             else if (boss.getBossId() == 28)
             {

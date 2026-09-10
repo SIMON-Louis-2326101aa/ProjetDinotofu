@@ -9,7 +9,7 @@
 
 std::string VersionInfo::currentVersion()
 {
-    return "3.49.00";
+    return "3.49.89";
 }
 
 std::string VersionInfo::recreateRecommendedBeforeVersion()
@@ -173,9 +173,9 @@ std::string VersionInfo::compatibilityMessage(VersionCompatibilityImpact impact)
         case VersionCompatibilityImpact::RecreateRecommended:
             return "Attention : il est conseillé de recréer un personnage pour cette version plus récente.";
         case VersionCompatibilityImpact::PatchUpdate:
-            return "Petit patch détecté : quelques corrections ou ajouts mineurs ont été appliqués depuis la dernière adaptation de ce personnage.";
+            return "Ce personnage vient d'une version légèrement différente : vérifie son équipement, ses quêtes et ses notes avant de repartir.";
         case VersionCompatibilityImpact::MidUpdate:
-            return "Mise à jour importante détectée : les règles de mort, l’économie, l’IG ou certaines données de registre ont changé depuis la dernière adaptation de ce personnage.";
+            return "Ce personnage porte les traces d'une ancienne règle du monde : vérifie ses registres avant de continuer.";
         case VersionCompatibilityImpact::None:
         default:
             return "";

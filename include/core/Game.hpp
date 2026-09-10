@@ -95,6 +95,7 @@ private:
     // EN: displayActivityInformation declares or implements a focused behavior used by this module.
     // FR: displayActivityInformation déclare ou implémente un comportement précis utilisé par ce module.
     void displayActivityInformation() const;
+    void displayDinotofuCompanion();
     std::string getSelectedModeName() const;
     CombatRecapSnapshot captureCombatRecapSnapshot() const;
     void updateLastCombatRecap(const CombatRecapSnapshot& beforeSnapshot);
@@ -127,6 +128,10 @@ private:
     void addOutOfCombatUtilityOptions(MenuScreen& screen, bool inventoryAvailable = true, bool saveAvailable = true) const;
     bool handleOutOfCombatUtilityChoice(int choice, bool inventoryAvailable = true);
     void openOutOfCombatUtilityMenu(bool inventoryAvailable = true);
+    void openQuickCharacterMenu(bool inventoryAvailable = true);
+    void openQuickWorldMenu();
+    void openQuickSessionOptionsMenu();
+    void openQuickSaveOptionsMenu();
     void openInterfaceSettingsMenu();
     void openGuardianInputMenu();
     // EN: openExchangeMenu declares or implements a focused behavior used by this module.

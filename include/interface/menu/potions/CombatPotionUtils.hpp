@@ -20,6 +20,7 @@ struct PotionStack
     ConsumableType type;
     int power;
     int value;
+    bool percentageBasedEffect;
 
     PotionStack();
 };

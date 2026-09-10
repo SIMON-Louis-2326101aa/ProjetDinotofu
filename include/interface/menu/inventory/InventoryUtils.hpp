@@ -22,6 +22,7 @@ struct ConsumableGroup
     std::string name;
     ConsumableType type;
     int power;
+    bool percentageBasedEffect;
 
     // EN: ConsumableGroup declares or implements a focused behavior used by this module.
     // FR: ConsumableGroup déclare ou implémente un comportement précis utilisé par ce module.

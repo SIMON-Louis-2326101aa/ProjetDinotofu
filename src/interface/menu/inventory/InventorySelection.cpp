@@ -6,6 +6,7 @@
 #include "interface/menu/inventory/InventorySelection.hpp"
 
 #include "combat/threat/ThreatSystem.hpp"
+#include "combat/system/CombatClassSystem.hpp"
 
 #include "core/Console.hpp"
 #include "economy/Money.hpp"
@@ -44,6 +45,30 @@
 
 namespace
 {
+
+    std::string weaponClassCompatibilityTagForInventory(const Player& player, const Weapon& weapon)
+    {
+        if (CombatClassSystem::hasWeaponAffinity(player, weapon.getType(), weapon.getName()))
+        {
+            return " [bonus de classe]";
+        }
+
+        if (CombatClassSystem::getWeaponHandlingAccuracyAdjustment(player, weapon.getType(), weapon.getName()) < 0
+            || CombatClassSystem::getWeaponHandlingDamagePercent(player, weapon.getType(), weapon.getName()) < 100)
+        {
+            return " [malus de classe]";
+        }
+
+        return "";
+    }
+
+    bool hasWeaponClassPenaltyForInventory(const Player& player, const Weapon& weapon)
+    {
+        return !CombatClassSystem::hasWeaponAffinity(player, weapon.getType(), weapon.getName())
+            && (CombatClassSystem::getWeaponHandlingAccuracyAdjustment(player, weapon.getType(), weapon.getName()) < 0
+                || CombatClassSystem::getWeaponHandlingDamagePercent(player, weapon.getType(), weapon.getName()) < 100);
+    }
+
 
     std::string yesNoText(bool value, const std::string& yesText, const std::string& noText)
     {
@@ -167,7 +192,7 @@ namespace
                 "Quantité dans la pile : " + std::to_string(amount),
                 "Description : " + consumable.getDescription(),
                 "Type : " + InventoryUtils::consumableTypeToText(consumable.getType()),
-                "Puissance : " + std::to_string(consumable.getPower()),
+                "Puissance : " + consumable.getPowerDisplayText(),
                 "Valeur estimée : " + Money::formatGoldWithRaw(consumable.getValue())
             }
         );
@@ -1174,7 +1199,7 @@ namespace
         {
             inventoryNotice << "Technique passive comprise : ses effets restent actifs tant que l'apprentissage est conservé dans l'inventaire." << std::endl;
         }
-        inventoryNotice << "Les informations compatibles sont ajoutées ou confirmées dans le bestiaire de session." << std::endl;
+        inventoryNotice << "Les informations compatibles rejoignent les notes déjà connues du bestiaire de session." << std::endl;
         inventoryNotice << std::endl;
         return false;
     }
@@ -2731,7 +2756,7 @@ namespace
             {
                 "Essai : " + recipeName,
                 success
-                    ? "Le résultat est ajouté à l'inventaire ou confirmé dans le registre correspondant."
+                    ? "Le résultat rejoint l'inventaire ou confirme une trace déjà connue dans le registre correspondant."
                     : "Les composants nécessaires ne sont pas réunis, ou la préparation demande une meilleure maîtrise.",
                 "Les détails de composants restent consultables dans le menu Craft / schémas."
             }
@@ -2757,7 +2782,7 @@ namespace
                 {
                     "Entrée : " + material.getName(),
                     read ? "Lecture utile confirmée." : "Le contenu est parcouru, puis archivé mentalement.",
-                    "Les informations compatibles sont ajoutées ou confirmées dans le bestiaire de session."
+                    "Les informations compatibles rejoignent les notes déjà connues du bestiaire de session."
                 }
             );
             return read;
@@ -2948,7 +2973,7 @@ bool InventorySelection::openWeapons(Player& player)
         {
             Weapon weapon = player.getInventory().getWeapon(static_cast<int>(i));
             std::ostringstream label;
-            label << weapon.getName()
+            label << weapon.getName() << weaponClassCompatibilityTagForInventory(player, weapon)
                   << " | Durabilité : " << InventoryUtils::weaponDurabilityText(weapon);
 
             if (weapon.isBroken())
@@ -2961,11 +2986,20 @@ bool InventorySelection::openWeapons(Player& player)
             itemData.kind = "weapon";
             itemData.section = "Armes";
             itemData.actionType = "select";
-            itemData.name = weapon.getName();
+            itemData.name = weapon.getName() + weaponClassCompatibilityTagForInventory(player, weapon);
             itemData.detail = "Dégâts : " + std::to_string(weapon.getMinDamageBonus()) + "-" + std::to_string(weapon.getMaxDamageBonus())
                 + " | Critique : +" + std::to_string(weapon.getCriticalBonus());
             itemData.status = weapon.isBroken() ? "Cassée" : "Utilisable";
             itemData.progress = "Durabilité : " + InventoryUtils::weaponDurabilityText(weapon);
+            if (CombatClassSystem::hasWeaponAffinity(player, weapon.getType(), weapon.getName()))
+            {
+                itemData.reward = "Synergie : " + CombatClassSystem::getWeaponAffinityLabel(player, weapon.getType(), weapon.getName());
+            }
+            else if (hasWeaponClassPenaltyForInventory(player, weapon))
+            {
+                itemData.status = weapon.isBroken() ? "Cassée | Malus de classe" : "Malus de classe";
+                itemData.reward = "Avertissement : " + CombatClassSystem::getWeaponHandlingLabel(player, weapon.getType(), weapon.getName());
+            }
             itemData.price = std::to_string(weapon.getValue()) + " or";
             itemData.important = weapon.isBroken();
 

@@ -125,6 +125,43 @@ Consumable ConsumableCatalog::createRoyalVitalityHealingPotion()
     );
 }
 
+
+Consumable ConsumableCatalog::createMomentumDamagePotion()
+{
+    return Consumable(
+        "Potion d'élan proportionnel",
+        "Boost offensif en pourcentage : meilleure sur une personne déjà bien armée que sur un débutant.",
+        125,
+        ConsumableType::Damage,
+        45,
+        true
+    );
+}
+
+Consumable ConsumableCatalog::createGuardianPercentPotion()
+{
+    return Consumable(
+        "Potion de garde proportionnelle",
+        "Buff défensif en pourcentage : stabilise selon les PV max et renforce brièvement la garde.",
+        135,
+        ConsumableType::Buff,
+        16,
+        true
+    );
+}
+
+Consumable ConsumableCatalog::createProportionalFragilityDebuffPotion()
+{
+    return Consumable(
+        "Fiole de rupture proportionnelle",
+        "Fiole offensive en pourcentage : blesse selon les PV max de la cible et ouvre une faille courte.",
+        165,
+        ConsumableType::Debuff,
+        8,
+        true
+    );
+}
+
 Consumable ConsumableCatalog::createGreaterDamagePotion()
 {
     return Consumable(

@@ -440,6 +440,14 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             shop.addItem(ShopItem("minor_healing_potion", "Petite potion de soin", "Restaure peu de PV, mais coûte peu.", ShopItemCategory::Consumable, 12, 4, 4 + rotation % 3));
             shop.addItem(ShopItem("basic_healing_potion", "Potion de soin", "Restaure une quantité simple de PV.", ShopItemCategory::Consumable, 25, 8, 3 + rotation % 3));
             shop.addItem(ShopItem("basic_damage_potion", "Potion de rage", "Renforce une attaque offensive.", ShopItemCategory::Consumable, 30, 10, 2 + rotation % 2));
+            if (rotation % 3 == 1)
+            {
+                shop.addItem(ShopItem("percent_damage_potion", "Potion d'élan proportionnel", "Boost offensif en pourcentage : meilleure sur une personne déjà bien équipée.", ShopItemCategory::Consumable, 125, 38, 1));
+            }
+            if (rotation % 4 == 2)
+            {
+                shop.addItem(ShopItem("proportional_guard_potion", "Potion de garde proportionnelle", "Buff en pourcentage : stabilise selon les PV max et renforce la garde.", ShopItemCategory::Consumable, 135, 42, 1));
+            }
             shop.addItem(ShopItem("antidote_potion", "Antidote simple", "Petit stock permanent : les slimes violets et marais ne préviennent pas.", ShopItemCategory::Consumable, 42, 12, 1 + rotation % 2));
             if (rotation % 2 == 1)
             {
@@ -744,6 +752,10 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             if (rotation % 4 == 1)
             {
                 shop.addItem(ShopItem("fragility_debuff_potion", "Fiole de fragilisation", "Fiole plus rare qui ouvre une faille dans la défense adverse.", ShopItemCategory::Consumable, 118, 32, 1));
+            }
+            if (rotation % 5 == 3)
+            {
+                shop.addItem(ShopItem("proportional_fragility_debuff_potion", "Fiole de rupture proportionnelle", "Fiole en pourcentage : blesse selon les PV max de la cible et ouvre une faille courte.", ShopItemCategory::Consumable, 165, 48, 1));
             }
             shop.addItem(ShopItem("bitter_healing_leaf", "Feuille amère de soin", "Base de potions simples.", ShopItemCategory::Plant, 17, 5, 5 + rotation % 3));
             shop.addItem(ShopItem("slime_residue", "Résidu de slime", "Liant instable pour potions et kits.", ShopItemCategory::MonsterMaterial, 15, 4, 3));

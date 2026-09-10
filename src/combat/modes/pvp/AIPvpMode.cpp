@@ -28,12 +28,48 @@
 #include "lore/LegendTriggerSystem.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <string>
 #include <vector>
 
 namespace
 {
+
+    std::string normalizeSpecialClassText(std::string value)
+    {
+        std::transform(
+            value.begin(),
+            value.end(),
+            value.begin(),
+            [](unsigned char c)
+            {
+                return static_cast<char>(std::tolower(c));
+            }
+        );
+        return value;
+    }
+
+    bool hasHistoricalClassChoiceBonus(const SpecialCharacter& character)
+    {
+        const std::string nativeClass = normalizeSpecialClassText(character.getNativeClass());
+        return nativeClass.find("universal") == std::string::npos
+            && nativeClass.find("any class") == std::string::npos
+            && nativeClass.find("aucune") == std::string::npos
+            && !nativeClass.empty();
+    }
+
+    std::string specialNativeClassLabel(const SpecialCharacter& character)
+    {
+        std::string label = character.getNativeClass();
+        if (hasHistoricalClassChoiceBonus(character))
+        {
+            label += " [bonus de choix historique]";
+        }
+        return label;
+    }
+
     bool isCatalogSpecialOpponentName(const std::string& name)
     {
         for (const SpecialCharacter& character : SpecialCharacterCatalog::getAllSpecialCharacters())
@@ -336,7 +372,7 @@ namespace
         itemData.detail = character.getCombatStyle();
         itemData.status = "Défi provoqué";
         itemData.owner = "Arène IA";
-        itemData.progress = "Classe native : " + character.getNativeClass();
+        itemData.progress = "Classe naturelle : " + specialNativeClassLabel(character);
         itemData.reward = "Race : " + character.getRaceText();
         itemData.important = character.getName() == "Matt (PRO)";
         return itemData;
@@ -371,7 +407,7 @@ namespace
                     localChoice,
                     character.getName(),
                     "Race : " + character.getRaceText()
-                        + " | Classe native : " + character.getNativeClass()
+                        + " | Classe naturelle : " + specialNativeClassLabel(character)
                         + " | " + character.getCombatStyle(),
                     true,
                     "pvp.ai.special." + std::to_string(index + 1),
@@ -436,7 +472,7 @@ namespace
                 {
                     "Personnage : " + selected.getName(),
                     "Race : " + selected.getRaceText(),
-                    "Classe native : " + selected.getNativeClass(),
+                    "Classe naturelle : " + specialNativeClassLabel(selected),
                     selected.getName() + " a été appelé directement par le registre altéré.",
                     "Ce n'est plus une rencontre rare : c'est un défi provoqué."
                 },

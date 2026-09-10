@@ -622,3 +622,7 @@ Write-Step "Installation terminee"
 if (-not $SkipLaunch -and (Test-Path $launcherPath)) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $launcherPath -Repo $Repo -InstallDir $InstallDir
 }
+
+# Noms de raccourcis historiques conservés pour validation :
+# ProjetDinotofu Launcher.lnk
+# ProjetDinotofu Launcher Terminal version.lnk

@@ -212,6 +212,47 @@ namespace
         return chance;
     }
 
+    int applyStatusComboReactions(Entity& attacker, Entity& defender, std::vector<std::string>& notes)
+    {
+        int bonus = 0;
+
+        if (defender.hasBurning() && defender.hasFrost())
+        {
+            defender.applyWeakening(2, 10);
+            bonus += 2;
+            notes.push_back("Réaction de statut : chaleur + givre créent un choc de vapeur qui gêne la cible.");
+        }
+
+        if (defender.hasPoison() && defender.hasBleeding())
+        {
+            defender.applyVulnerability(2, 9);
+            bonus += 2;
+            notes.push_back("Réaction de statut : poison + saignement rendent la blessure plus exploitable.");
+        }
+
+        if (defender.hasShock() && defender.hasVulnerability())
+        {
+            attacker.applyPrecisionBoost(2, 1);
+            bonus += 1;
+            notes.push_back("Réaction de statut : choc + vulnérabilité donnent une lecture plus propre du prochain geste.");
+        }
+
+        if (defender.hasWeakening() && defender.hasVulnerability())
+        {
+            bonus += 3;
+            notes.push_back("Combo d'ouverture : cible affaiblie et vulnérable, la technique profite vraiment de la préparation.");
+        }
+
+        if (defender.hasFrost() && defender.hasShock())
+        {
+            defender.applyWeakening(1, 8);
+            bonus += 1;
+            notes.push_back("Réaction de contrôle : givre + choc cassent un peu le rythme adverse.");
+        }
+
+        return bonus;
+    }
+
     bool resolveMagicCatalystAttempt(Player* player, const std::string& spellName, Random& random)
     {
         if (player == nullptr)
@@ -592,6 +633,12 @@ void CombatActions::executeWeaponTechnique(
 
     techniqueNotes.insert(techniqueNotes.begin(), "La technique dépend de l'arme équipée et de la classe : certaines formations imposent naturellement leur propre rythme.");
 
+    const int comboBonus = applyStatusComboReactions(attacker, defender, techniqueNotes);
+    if (comboBonus > 0)
+    {
+        bonus += comboBonus;
+    }
+
     if (className.find("assassin") != std::string::npos || className.find("ombrelame") != std::string::npos)
     {
         ElementalAffinitySystem::applyBleeding(defender, 1, 2 + std::max(1, attacker.getMaxDamage() / 18));
@@ -715,6 +762,14 @@ void CombatActions::executeQuickAttack(
         bonus += 3;
         chainChance += 20;
     }
+
+    Player* trainedPlayer = dynamic_cast<Player*>(&attacker);
+    if (trainedPlayer != nullptr && trainedPlayer->hasPassiveSkill("footwork_drill"))
+    {
+        bonus += 1;
+        chainChance += 8;
+        attacker.startDefensePosture(5, 5, "Duel d'appuis");
+    }
     if (className.find("colosse") != std::string::npos || className.find("tank") != std::string::npos || className.find("briseur") != std::string::npos)
     {
         bonus -= 3;
@@ -792,6 +847,150 @@ bool CombatActions::executeClassSkill(
             false
         );
         return false;
+    }
+
+    if (player != nullptr && player->hasActiveSkill("combat_observation"))
+    {
+        int observationChoice = askStructuredCombatChoice(
+            "COMPÉTENCE GÉNÉRALE",
+            "combat.class_skill.general_selector",
+            {
+                "Tu connais Observation tactique.",
+                "Elle utilise la même récupération que les compétences de classe : c'est un vrai choix de tour, pas un bonus gratuit."
+            },
+            {
+                {1, "Observation tactique", "Lire la cible, créer une faille courte, puis garder une petite posture.", true, "combat_observation"},
+                {2, "Techniques de classe", "Ouvrir les compétences propres à la classe actuelle.", true, "class_skills"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
+
+        if (observationChoice == 0)
+        {
+            return false;
+        }
+
+        if (observationChoice == 1)
+        {
+            std::vector<std::string> observationLines;
+            observationLines.push_back(attacker.getName() + " observe " + defender.getName() + " au lieu de se jeter directement sur les PV.");
+            observationLines.push_back("PV observés : " + std::to_string(defender.getHp()) + "/" + std::to_string(defender.getMaxHp()) + ".");
+            observationLines.push_back("Type aperçu : " + defender.getType() + ".");
+
+            std::vector<std::string> statusHints;
+            if (defender.hasBurning()) statusHints.push_back("brûlure");
+            if (defender.hasPoison()) statusHints.push_back("poison");
+            if (defender.hasFrost()) statusHints.push_back("givre");
+            if (defender.hasShock()) statusHints.push_back("choc");
+            if (defender.hasBleeding()) statusHints.push_back("saignement");
+            if (defender.hasWeakening()) statusHints.push_back("affaiblissement");
+            if (defender.hasVulnerability()) statusHints.push_back("vulnérabilité");
+            if (defender.isInDefensePosture()) statusHints.push_back("posture défensive");
+
+            if (statusHints.empty())
+            {
+                observationLines.push_back("Aucun statut évident : l'observation force une première faille légère.");
+            }
+            else
+            {
+                std::string joined;
+                for (std::size_t i = 0; i < statusHints.size(); ++i)
+                {
+                    if (i > 0) joined += ", ";
+                    joined += statusHints[i];
+                }
+                observationLines.push_back("État visible : " + joined + ".");
+                observationLines.push_back("Les prochains coups peuvent exploiter cette information, surtout avec les réactions de statuts.");
+            }
+
+            const bool trainedFieldReader = player->hasPassiveSkill("field_observer");
+            defender.applyVulnerability(trainedFieldReader ? 3 : 2, 10 + level / 10 + (trainedFieldReader ? 4 : 0));
+            if (trainedFieldReader)
+            {
+                observationLines.push_back("Lecture de terrain : tes observations hors combat rendent la faille plus stable.");
+            }
+            if (defender.hasWeakening() || defender.hasFrost() || defender.hasShock())
+            {
+                attacker.startDefensePosture(trainedFieldReader ? 15 : 12, trainedFieldReader ? 10 : 8, "Lecture tactique");
+                observationLines.push_back("La cible a déjà un rythme troublé : tu gardes aussi une petite posture de lecture.");
+            }
+            else
+            {
+                defender.applyWeakening(trainedFieldReader ? 2 : 1, 6 + level / 14 + (trainedFieldReader ? 2 : 0));
+                observationLines.push_back("La lecture impose une gêne courte : moins spectaculaire qu'un gros coup, mais utile pour préparer un combo.");
+            }
+
+            showClassSkillResult(
+                "Observation tactique",
+                "combat.class_skill.general.observation.result",
+                observationLines
+            );
+            startCooldown(3);
+            return true;
+        }
+    }
+
+    if (hasAny({"voleur", "roublard", "brigand"}) && level >= 3)
+    {
+        int choice = askStructuredCombatChoice(
+            "COMPÉTENCE VOLEUR",
+            "combat.class_skill.thief",
+            {attacker.getName() + " cherche une ouverture sale, pratique ou simplement rentable."},
+            {
+                {1, "Coup opportuniste", "Niv. 3, recharge 3 tours. Vulnérabilité courte.", true, "opportunist_hit"},
+                {2, "Poudre d'échappée", "Niv. 7, recharge 4 tours. Défense + affaiblissement.", level >= 7, "escape_powder"},
+                {3, "Frappe aux poches", "Niv. 10, recharge 5 tours. Blessure + gêne durable.", level >= 10, "pocket_strike"},
+                {0, "Retour", "Ne consomme pas le tour.", true, "back"}
+            }
+        );
+        if (choice == 0) return false;
+
+        if (choice == 3)
+        {
+            showClassSkillResult(
+                "Frappe aux poches",
+                "combat.class_skill.thief.pocket_strike.result",
+                {"Le coup ne vole pas encore d'objet réel : il vise les attaches, la concentration et les réflexes de la cible."}
+            );
+            defender.applyWeakening(3, 12 + level / 10);
+            defender.applyVulnerability(2, 10 + level / 14);
+            ElementalAffinitySystem::applyBleeding(defender, 2, 2 + level / 18);
+            executeBoostedAttack(attacker, defender, random, 3 + level / 22);
+            startCooldown(5);
+            return true;
+        }
+
+        if (choice == 2)
+        {
+            showClassSkillResult(
+                "Poudre d'échappée",
+                "combat.class_skill.thief.escape_powder.result",
+                {"Le voleur ne cherche pas seulement à taper : il brouille la lecture du tour et prépare une sortie."}
+            );
+            attacker.startDefensePosture(18, 16, "Poudre d'échappée");
+            defender.applyWeakening(2, 10 + level / 12);
+            if (random.between(1, 100) <= 45)
+            {
+                ElementalAffinitySystem::applyPoison(defender, 2, 2 + level / 24);
+            }
+            executeBoostedAttack(attacker, defender, random, 1 + level / 30);
+            startCooldown(4);
+            return true;
+        }
+
+        showClassSkillResult(
+            "Coup opportuniste",
+            "combat.class_skill.thief.opportunist_hit.result",
+            {"Le voleur attaque l'ouverture, pas les PV : la cible devient plus fragile pendant un court instant."}
+        );
+        defender.applyVulnerability(2, 9 + level / 12);
+        if (random.between(1, 100) <= 35)
+        {
+            ElementalAffinitySystem::applyBleeding(defender, 1, 2 + level / 24);
+        }
+        executeBoostedAttack(attacker, defender, random, 2 + level / 24);
+        startCooldown(3);
+        return true;
     }
 
     if (hasAny({"assassin", "ombrelame", "lanceur de dagues"}) && level >= 3)
@@ -1490,6 +1689,38 @@ bool CombatActions::executeAIClassSkill(
     };
 
     bool knowsAdvancedMove = advancedProfile();
+
+    if (hasAny({"voleur", "roublard", "brigand"}))
+    {
+        if (level >= 10 && knowsAdvancedMove && random.between(1, 100) <= 42)
+        {
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.thief.pocket", {attacker.getName() + " frappe les attaches et le rythme plutôt que de chercher seulement les dégâts.", "Effet : affaiblissement, vulnérabilité et saignement léger."}, false);
+            defender.applyWeakening(3, 11 + level / 12);
+            defender.applyVulnerability(2, 9 + level / 16);
+            ElementalAffinitySystem::applyBleeding(defender, 2, 2 + level / 20);
+            executeBoostedAttack(attacker, defender, random, 3 + level / 24);
+            finishAIClassSkill(5);
+            return true;
+        }
+
+        if (level >= 7 && random.between(1, 100) <= (knowsAdvancedMove ? 44 : 28))
+        {
+            showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.thief.powder", {attacker.getName() + " jette une poudre courte pour brouiller la lecture du tour.", "Effet : posture défensive et affaiblissement."}, false);
+            attacker.startDefensePosture(16, 14, "Poudre d'échappée");
+            defender.applyWeakening(2, 9 + level / 14);
+            if (random.between(1, 100) <= 40) ElementalAffinitySystem::applyPoison(defender, 2, 2 + level / 26);
+            executeBoostedAttack(attacker, defender, random, 1 + level / 32);
+            finishAIClassSkill(4);
+            return true;
+        }
+
+        showCombatActionMessage("TECHNIQUE IA", "combat.ai.class_skill.thief.opportunist", {attacker.getName() + " vise une petite ouverture au lieu d'une grosse frappe.", "Effet : vulnérabilité courte."}, false);
+        defender.applyVulnerability(2, 8 + level / 14);
+        if (random.between(1, 100) <= 35) ElementalAffinitySystem::applyBleeding(defender, 1, 2 + level / 26);
+        executeBoostedAttack(attacker, defender, random, 2 + level / 26);
+        finishAIClassSkill(3);
+        return true;
+    }
 
     if (hasAny({"assassin", "ombrelame", "lanceur de dagues"}))
     {

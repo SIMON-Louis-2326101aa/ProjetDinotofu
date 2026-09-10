@@ -16,7 +16,8 @@ PotionStack::PotionStack()
       name(""),
       type(ConsumableType::Unknown),
       power(0),
-      value(0)
+      value(0),
+      percentageBasedEffect(false)
 {
 }
 
@@ -63,7 +64,8 @@ std::vector<PotionStack> CombatPotionUtils::groupPotionIndices(
             if (stack.name == potion.getName()
                 && stack.type == potion.getType()
                 && stack.power == potion.getPower()
-                && stack.value == potion.getValue())
+                && stack.value == potion.getValue()
+                && stack.percentageBasedEffect == potion.isPercentageBasedEffect())
             {
                 stack.amount++;
                 found = true;
@@ -80,6 +82,7 @@ std::vector<PotionStack> CombatPotionUtils::groupPotionIndices(
             stack.type = potion.getType();
             stack.power = potion.getPower();
             stack.value = potion.getValue();
+            stack.percentageBasedEffect = potion.isPercentageBasedEffect();
             stacks.push_back(stack);
         }
     }

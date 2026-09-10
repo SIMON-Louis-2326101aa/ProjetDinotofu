@@ -4,6 +4,7 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "combat/system/DamageSystem.hpp"
+#include "combat/profile/MonsterBehaviorProfile.hpp"
 #include "combat/system/CombatClassSystem.hpp"
 
 #include "entity/Player.hpp"
@@ -31,11 +32,47 @@ namespace
     {
         return normalizeEquipmentEffectText(text).find(normalizeEquipmentEffectText(needle)) != std::string::npos;
     }
+
+    int applyNaturalDamageModifier(
+        DamageReport& rapport,
+        int currentDamage,
+        int modifierPercent,
+        const std::string& line
+    )
+    {
+        if (currentDamage <= 0 || modifierPercent == 0)
+        {
+            return currentDamage;
+        }
+
+        if (modifierPercent > 0)
+        {
+            const int extraDamage = std::max(1, (currentDamage * modifierPercent + 99) / 100);
+            rapport.naturalAffinityDamageDelta += extraDamage;
+            if (!line.empty())
+            {
+                rapport.naturalAffinityLines.push_back(line);
+            }
+            return currentDamage + extraDamage;
+        }
+
+        int resistedDamage = std::max(1, (currentDamage * (-modifierPercent) + 99) / 100);
+        if (resistedDamage > currentDamage)
+        {
+            resistedDamage = currentDamage;
+        }
+        rapport.naturalAffinityDamageDelta -= resistedDamage;
+        if (!line.empty())
+        {
+            rapport.naturalAffinityLines.push_back(line);
+        }
+        return currentDamage - resistedDamage;
+    }
 }
 
 // EN: calculateReceivedDamage declares or implements a focused behavior used by this module.
 // FR: calculateReceivedDamage déclare ou implémente un comportement précis utilisé par ce module.
-DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDamage)
+DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDamage, DamageNature nature)
 {
     DamageReport rapport;
     rapport.rawDamage = rawDamage;
@@ -91,6 +128,20 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
                     armorAbsorption += 2;
                     rapport.equipmentEffectLines.push_back("Écailles polies : les plaques répartissent mieux l'impact.");
                 }
+            }
+
+            const int classArmorAdjustment = CombatClassSystem::getArmorHandlingDamageReductionAdjustment(
+                *defendingPlayer,
+                armor->getType(),
+                armor->getName(),
+                rawDamage
+            );
+            if (classArmorAdjustment != 0)
+            {
+                armorAbsorption = std::max(0, armorAbsorption + classArmorAdjustment);
+                rapport.equipmentEffectLines.push_back(
+                    std::string("Classe / armure : ") + CombatClassSystem::getArmorHandlingLabel(*defendingPlayer, armor->getType(), armor->getName())
+                );
             }
 
             if (armorAbsorption > remainingDamage)
@@ -161,6 +212,41 @@ DamageReport DamageSystem::calculateReceivedDamage(Entity& defender, int rawDama
         {
             classReductionPercentage += 3;
         }
+
+        if (remainingDamage > 0)
+        {
+            const MonsterBehaviorProfile profile = MonsterBehaviorProfileCatalog::build(*defendingMonster);
+            if (nature == DamageNature::Magical)
+            {
+                const int modifier = profile.magicalDamageModifierPercent;
+                if (modifier != 0)
+                {
+                    const std::string line = modifier < 0
+                        ? "Affinité naturelle : " + defendingMonster->getName() + " laisse une partie de la magie glisser sur sa nature."
+                        : "Résonance naturelle : " + defendingMonster->getName() + " réagit mal à cette magie.";
+                    remainingDamage = applyNaturalDamageModifier(rapport, remainingDamage, modifier, line);
+                }
+            }
+            else if (nature == DamageNature::Physical)
+            {
+                const int modifier = profile.physicalDamageModifierPercent;
+                if (modifier != 0)
+                {
+                    std::string line;
+                    if (!profile.durabilityLine.empty())
+                    {
+                        line = "Corps : " + profile.durabilityLine;
+                    }
+                    else
+                    {
+                        line = modifier < 0
+                            ? "Corps : la matière de " + defendingMonster->getName() + " avale une partie du choc physique."
+                            : "Corps : le gabarit de " + defendingMonster->getName() + " encaisse mal un impact physique propre.";
+                    }
+                    remainingDamage = applyNaturalDamageModifier(rapport, remainingDamage, modifier, line);
+                }
+            }
+        }
     }
 
     if (classReductionPercentage > 0 && remainingDamage > 0)
@@ -223,6 +309,16 @@ std::vector<std::string> DamageSystem::buildDamageReportLines(const Entity& defe
     if (rapport.armorExtraDurabilityLost)
     {
         lines.push_back("Entretien : les écailles polies encaissent fort, mais l'impact use davantage les fixations.");
+    }
+
+    if (!rapport.naturalAffinityLine.empty())
+    {
+        lines.push_back(rapport.naturalAffinityLine);
+    }
+
+    for (const std::string& naturalLine : rapport.naturalAffinityLines)
+    {
+        lines.push_back(naturalLine);
     }
 
     if (rapport.armorBrokenDuringImpact)

@@ -6,7 +6,7 @@ Ce fichier n'est pas un historique de versions. Il conserve seulement les travau
 
 Priorité actuelle
 -----------------
-1. Garder V3.29.00 stable et jouable en terminal comme en interface graphique.
+1. Garder V3.49.08 stable et jouable en terminal comme en interface graphique.
 2. Construire la troisième phase du chapitre 4 et le combat de l’Intendant de la Date Vide.
 3. Remplacer progressivement les dernières déductions textuelles de l’IG par des champs structurés du moteur.
 4. Préparer les contenus visuels avant de générer ou d’intégrer des sprites.
@@ -25,12 +25,15 @@ Histoire et villes
 - Ajouter au moteur les règles optionnelles de ramassage : elles doivent contrôler seulement l’automatisation. Les butins ignorés restent visibles dans le récapitulatif pour pouvoir être pris manuellement, vendus ou laissés.
 - Fournir au moteur un historique canonique des achats, ventes, destructions, équipements et provenances importantes.
 
-Combat et données structurées
------------------------------
+Combat, équipe et données structurées
+-------------------------------------
 - Exposer directement à l’IG les chances, dégâts estimés, coûts, portées, cibles valides, réactions, contraintes de défi et alertes de casse.
 - Ajouter uniquement des effets autorisés de modification d’initiative alliée : jamais les ennemis, jamais avant l’initiative minimale ni avant le délai minimal.
 - Continuer les boss particuliers, la coopération et les règles de mort de groupe sans modifier l’impossibilité de fuir un boss.
 - Définir une vraie route narrative d’obtention pour la bénédiction de survie léthale ; son moteur existe déjà.
+- Brancher la suite du système de clan : menu rapide Équipe, ordre d'équipe, inspection rapide/détaillée, équiper/déséquiper, renvoi, test de groupe à la guilde, choix du nom de clan et quêtes de groupe.
+- Connecter les PNJ recrutés au combat actif joueur + 2 alliés, à l'XP selon participation, aux parts d'or/XP, au salaire hebdomadaire et aux achats autonomes de potions/armes.
+- Étudier plus tard le multi en ligne comme gros chantier séparé : commencer par un host/client coop limité aux combats et menus partagés, avant une couche persistante plus lourde.
 
 Quêtes, registres et statistiques
 ---------------------------------
@@ -72,3 +75,56 @@ Documentation propre
 - Les villes pixel-art futures doivent afficher une vraie image de ville cliquable : bâtiments interactifs, grande porte des remparts pour partir explorer, arène urbaine pour les combats uniques.
 - Certaines quêtes, événements, boss, découvertes ou dialogues importants pourront afficher une illustration ponctuelle sans bloquer inutilement le joueur.
 - Les armes et armures utilisent des catégories légère, moyenne et lourde avec avantages et contreparties modérés : léger = plus précis/mobile, moins puissant/résistant ; lourd = plus puissant/résistant, moins précis/mobile.
+
+=== VALIDÉ — FUTURS SYSTÈMES MAJEURS (V3.49.83) ===
+- Mémoire du monde : les actions ne doivent pas être connues magiquement. Un témoin, une rumeur, une trace, une guilde, un survivant ou un registre doit expliquer pourquoi le monde sait.
+- Cicatrices / traumatismes : peuvent donner de vrais effets légers ou forts selon gravité, pas seulement du texte.
+- Rivalités ennemies : un ennemi qui fuit ou survit peut revenir plus tard comme mini-boss avec cicatrice, rancune et contre-jeu appris.
+- Destin instable : fils de destin selon les actions, à gérer sans omniscience ni bonus gratuits.
+- Boss qui apprennent : seulement certains boss, et sur certains points précis. Les boss non adaptatifs restent cohérents avec leur identité.
+- Serments : à gérer via l’église, avec conditions d’acceptation, statut/contrat visible, et rupture possible à l’église.
+- Mort racontée : donner une vraie scène de souvenir, surtout en Mortel/Léthal.
+- Héritage : seulement dans les parties Mortel/Léthal, via trace, tombe, arme, lettre, rumeur ou souvenir.
+- Bestiaire trompeur : faux ajouts/trolls supplémentaires possibles, mais ne doivent pas remplacer définitivement les vraies infos.
+- Combat psychologique : peur, menus, loyauté, hésitation, précision et pression de groupe.
+- Classes évolutives selon la façon de jouer : très important, à développer comme système central.
+- Réputation locale par ville : influence stocks, qualité, prix, services, réactions et confiance.
+- Ennemis capables de peur : fuite, reddition, attaque désespérée, renfort ou négociation.
+- Techniques combinées alliées : demandées et validées, liées à maturité, loyauté, rang et expérience commune.
+- Objets avec mémoire : armes/armures pouvant garder exploits, boss vaincus, réparations, vols, cicatrices et noms.
+
+=== V3.49.85 - SERMENTS D'EGLISE A DEVELOPPER ===
+- Nouveaux serments posés dans l'église : Flamme gardée, Ombres franches, Pèlerin, Mémoire et Silence.
+- Ces serments doivent recevoir plus tard de vrais effets et contraintes : feu/protection, ruse morale, voyage/villages, mémoire du monde, anti-panique/anti-illusion.
+- La rupture doit rester à l'église avec prix, témoin, réparation, confession ou trace persistante selon le serment.
+- Les serments ne doivent pas devenir des bonus gratuits cumulables sans conséquence : certains pourront se contrarier selon les actions du joueur.
+
+=== V3.49.86 - SERMENTS ET CONTRE-JEUX A DEVELOPPER ===
+- Nouveaux serments posés : Ciel ouvert, Racines et Miroir brisé.
+- Ces serments servent de contre-jeu partiel à Vol, Entrave et Illusions, mais ne doivent jamais devenir des immunités gratuites.
+- La rupture est maintenant une vraie action d'église : elle désactive le serment choisi, inscrit une trace et pourra nourrir réputation, PNJ, boss ou héritage.
+- La suite devra donner à chaque serment un prix propre : don, confession, réparation, témoin, perte temporaire, quête ou conséquence sociale.
+- Les rivaux potentiels commencent par les ennemis qui fuient/paniquent : plus tard, un survivant devra pouvoir revenir comme mini-boss avec cicatrice, rumeur ou contre-stratégie.
+
+=== V3.49.87 - AXE 8 : TRACES LONGUES ET CONSEQUENCES ===
+- Nouveaux serments posés : Témoin, Cicatrices et Héritage.
+- Le Serment du Témoin doit toujours dépendre d'une source logique : témoin, trace, rumeur, registre, bestiaire ou observation réelle.
+- Le Serment des Cicatrices doit donner de vrais effets sous pression, mais ne doit jamais encourager à se blesser gratuitement.
+- Le Serment de l'Héritage prépare les systèmes Mortel/Léthal : tombe, arme transmise, lettre, rumeur, trace de boss, objet avec mémoire.
+- La rupture de serment coûte désormais un rite ou de l'or, et garde une trace utilisable par prêtres, villes, boss, compagnons et héritages futurs.
+- Les contradictions entre serments doivent rester surveillées : Sang/Bouclier, Ombres/Silence, Héritage/Mémoire, etc.
+
+
+=== V3.49.88 - FORGE LIEE, LIENS ET TRACES LOGIQUES ===
+
+- Serment de la Forge liée : relie une arme cohérente avec la classe aux futurs objets avec mémoire.
+- Serment des Liens : prépare les techniques combinées alliées via ordres, recrues, groupe et pression commune.
+- Les traces ne doivent apparaître que si elles ont un porteur logique : témoin, rumeur, registre, arme, armure, recrue, boss, ville ou tombe.
+- Les rivaux ennemis ne doivent pas naître d'une omniscience : il faut une fuite vue, une survie réelle ou une rumeur possible.
+- Les combos alliés futurs doivent dépendre de maturité, loyauté, rang, expérience et actions réellement partagées.
+
+
+=== V3.49.89 - Rivaux et destin instable ===
+- Serment des Rivaux : base plus claire pour transformer des survivants/fuyards en futurs mini-boss récurrents.
+- Serment du Destin instable : base légère pour conséquences longues, classes évolutives et oscillations liées aux traces réellement vécues.
+- Règle rappelée : pas d'omniscience, une conséquence doit venir d'un témoin, d'un survivant, d'un objet, d'un registre, d'une cicatrice ou d'une rumeur logique.

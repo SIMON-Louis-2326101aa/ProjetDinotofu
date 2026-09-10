@@ -14,6 +14,7 @@
 // EN: EnemyCombatQueue declares or implements a focused behavior used by this module.
 // FR: EnemyCombatQueue déclare ou implémente un comportement précis utilisé par ce module.
 EnemyCombatQueue::EnemyCombatQueue()
+    : frontLineInitialized(false)
 {
 }
 
@@ -21,7 +22,12 @@ EnemyCombatQueue::EnemyCombatQueue()
 // FR: addWaitingEnemy déclare ou implémente un comportement précis utilisé par ce module.
 void EnemyCombatQueue::addWaitingEnemy(const Monster& monster)
 {
-    waitingEnemies.push_back(monster);
+    Monster queued = monster;
+    if (queued.wasSpawnedByReinforcementCall())
+    {
+        queued.setReinforcementSpawnGroupSize(getActiveEnemyCount() + getWaitingEnemyCount() + 1);
+    }
+    waitingEnemies.push_back(queued);
 }
 
 // EN: initializeFrontLine declares or implements a focused behavior used by this module.
@@ -30,8 +36,9 @@ void EnemyCombatQueue::initializeFrontLine()
 {
     while (canAddActiveEnemy() && !waitingEnemies.empty())
     {
-        bringNextEnemyIn();
+        bringNextEnemyIn(false);
     }
+    frontLineInitialized = true;
 }
 
 // EN: hasEnemiesLeft declares or implements a focused behavior used by this module.
@@ -226,7 +233,7 @@ void EnemyCombatQueue::removeActiveEnemy(int index)
 
     while (canAddActiveEnemy() && !waitingEnemies.empty())
     {
-        bringNextEnemyIn();
+        bringNextEnemyIn(true);
     }
 }
 
@@ -244,8 +251,21 @@ void EnemyCombatQueue::removeActiveEnemyAsEscaped(int index)
 
     if (canAddActiveEnemy() && !waitingEnemies.empty())
     {
-        bringNextEnemyIn();
+        bringNextEnemyIn(true);
     }
+}
+
+// EN: switchActiveEnemyWithWaiting rotates one active enemy with one waiting enemy without defeat/escape.
+// FR: switchActiveEnemyWithWaiting échange un ennemi actif avec un ennemi en réserve sans défaite/fuite.
+bool EnemyCombatQueue::switchActiveEnemyWithWaiting(int activeIndex, int waitingIndex)
+{
+    if (!isActiveIndexValid(activeIndex) || waitingIndex < 0 || waitingIndex >= getWaitingEnemyCount())
+    {
+        return false;
+    }
+
+    std::swap(activeEnemies[static_cast<std::size_t>(activeIndex)], waitingEnemies[static_cast<std::size_t>(waitingIndex)]);
+    return true;
 }
 
 // EN: removeDeadAndReplace declares or implements a focused behavior used by this module.
@@ -329,6 +349,21 @@ std::vector<std::string> EnemyCombatQueue::getActiveEnemyDisplayLines() const
             line << " | soigneur marqué";
         }
 
+        if (monster.hasFlight())
+        {
+            line << " | Vol " << monster.getFlightTurns() << "t";
+        }
+
+        if (monster.hasIllusion())
+        {
+            line << " | illusions " << monster.getIllusionTurns() << "t";
+        }
+
+        if (monster.hasEntanglement())
+        {
+            line << " | entravé " << monster.getEntanglementTurns() << "t";
+        }
+
         lines.push_back(line.str());
     }
 
@@ -382,7 +417,7 @@ bool EnemyCombatQueue::canAddActiveEnemy() const
 
 // EN: bringNextEnemyIn declares or implements a focused behavior used by this module.
 // FR: bringNextEnemyIn déclare ou implémente un comportement précis utilisé par ce module.
-void EnemyCombatQueue::bringNextEnemyIn()
+void EnemyCombatQueue::bringNextEnemyIn(bool delayedEntry)
 {
     if (waitingEnemies.empty())
     {
@@ -391,6 +426,12 @@ void EnemyCombatQueue::bringNextEnemyIn()
 
     Monster next = waitingEnemies.front();
     waitingEnemies.erase(waitingEnemies.begin());
+
+    if (delayedEntry && frontLineInitialized)
+    {
+        next.setReinforcementEntryCooldown(waitingEnemies.empty() ? 2 : 3);
+        next.setReinforcementSpawnGroupSize(getActiveEnemyCount() + getWaitingEnemyCount() + 1);
+    }
 
     activeEnemies.push_back(next);
 

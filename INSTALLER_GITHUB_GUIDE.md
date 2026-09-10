@@ -9,8 +9,8 @@ Pour installer Dinotofu sans compiler le projet manuellement :
 
 1. aller sur la page du dépôt GitHub ;   
 2. ouvrir la dernière Release affichée à droite du dépôt ;   
-3. télécharger le launcher correspondant à ton système d'exploitation : Windows ou Linux ;   
-4. lancer ce launcher, qui s'occupe ensuite d'ouvrir la bonne version du jeu.   
+3. télécharger uniquement l’archive **DinotofuInstaller** correspondant à ton système d’exploitation : Windows ou Linux ;   
+4. dézipper l’archive, puis lancer **Installer-Dinotofu**. Le ZIP du jeu est inclus dans le pack installateur comme secours local.   
 
 Sur les versions desktop Windows/Linux, l'installateur ou le launcher doit créer deux entrées claires :   
 
@@ -19,7 +19,7 @@ Sur les versions desktop Windows/Linux, l'installateur ou le launcher doit crée
 
 ## Fichiers générés attendus   
 
-Les releases GitHub doivent fournir des archives propres pour Windows et Linux, ainsi que les launchers/installateurs correspondants.   
+Les releases GitHub doivent surtout exposer les deux archives installateurs : **DinotofuInstaller-Windows** et **DinotofuInstaller-Linux**. Les scripts peuvent encore construire les ZIP du jeu, mais ils sont intégrés dans les installateurs pour éviter de multiplier les liens publics.   
 
 Les raccourcis visibles doivent rester clairs :   
 

@@ -48,6 +48,8 @@ protected:
     int weakeningDamagePenaltyPercent;
     int vulnerabilityTurns;
     int vulnerabilityDamageTakenPercent;
+    int nextHitVulnerabilityTurns;
+    int nextHitVulnerabilityDamageTakenPercent;
     int elementalWardTurns;
     int elementalWardResistancePercent;
     int regenerationTurns;
@@ -62,6 +64,10 @@ protected:
 
     int classSkillCooldownTurns;
     int healingReceivedPercent;
+
+    int flightTurns;
+    int entanglementTurns;
+    int illusionTurns;
 
 public:
     // EN: Entity declares or implements a focused behavior used by this module.
@@ -161,11 +167,23 @@ public:
     void applyBleeding(int turns, int damage);
     void applyWeakening(int turns, int damagePenaltyPercent);
     void applyVulnerability(int turns, int damageTakenPercent);
+    void applyNextHitVulnerability(int turns, int damageTakenPercent);
     void applyElementalWard(int turns, int resistancePercent);
     void applyRegeneration(int turns, int healPerTurn);
     void applyPowerBoost(int turns, int damagePercent);
     void applyPrecisionBoost(int turns, int rollBonus);
     void applyGuardBoost(int turns, int reductionPercent);
+    void applyFlight(int turns);
+    void applyEntanglement(int turns);
+    void applyIllusion(int turns);
+    bool hasFlight() const;
+    bool hasEntanglement() const;
+    bool hasIllusion() const;
+    int getFlightTurns() const;
+    int getEntanglementTurns() const;
+    int getIllusionTurns() const;
+    bool consumeEntanglementTurn();
+    bool cureEntanglement();
     bool cureBurning();
     bool curePoison();
     bool cureFrost();
@@ -180,6 +198,7 @@ public:
     bool hasBleeding() const;
     bool hasWeakening() const;
     bool hasVulnerability() const;
+    bool hasNextHitVulnerability() const;
     bool hasElementalWard() const;
     bool hasRegeneration() const;
     bool hasPowerBoost() const;

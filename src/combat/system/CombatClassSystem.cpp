@@ -54,6 +54,9 @@ int CombatClassSystem::getBaseEscapeChance(const Entity& entity)
 
     if (className.find("assassin") != std::string::npos ||
         className.find("ombrelame") != std::string::npos ||
+        className.find("voleur") != std::string::npos ||
+        className.find("roublard") != std::string::npos ||
+        className.find("brigand") != std::string::npos ||
         className.find("moine") != std::string::npos ||
         className.find("duelliste") != std::string::npos ||
         className.find("pugiliste") != std::string::npos ||
@@ -179,7 +182,14 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
         || className.find("ombrelame") != std::string::npos
         || className.find("lanceur de dagues") != std::string::npos)
     {
-        return 116;
+        return 112;
+    }
+
+    if (className.find("voleur") != std::string::npos
+        || className.find("roublard") != std::string::npos
+        || className.find("brigand") != std::string::npos)
+    {
+        return 105;
     }
 
     if (className.find("duelliste") != std::string::npos)
@@ -193,7 +203,7 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
         || className.find("faucheur") != std::string::npos
         || className.find("ravageur") != std::string::npos)
     {
-        return 115;
+        return 112;
     }
 
     if (className.find("duelliste") != std::string::npos
@@ -216,7 +226,7 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
         || className.find("demoniste") != std::string::npos
         || className.find("chronomancien") != std::string::npos)
     {
-        return 113;
+        return 110;
     }
 
     if (className.find("mage") != std::string::npos
@@ -232,7 +242,7 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
         || className.find("runiste") != std::string::npos
         || className.find("enchanteur") != std::string::npos)
     {
-        return 108;
+        return 106;
     }
 
     if (className.find("clerc") != std::string::npos
@@ -249,6 +259,69 @@ int CombatClassSystem::getOutgoingDamagePercent(const Entity& entity)
     }
 
     return 100;
+}
+
+
+int CombatClassSystem::getClassCriticalRollThreshold(const Entity& entity)
+{
+    const std::string className = normalizeClassText(entity.getType());
+
+    if (containsAny(className, {
+            "assassin", "ombrelame", "duelliste", "sabreur", "lanceur de dagues",
+            "tireur", "archer", "éclaireur", "eclaireur", "danseur lunaire",
+            "corsaire arcanique", "fauche-âme", "fauche-ame"
+        }))
+    {
+        return 15;
+    }
+
+    if (containsAny(className, {
+            "colosse", "gardien", "tank sac", "chevalier bouclier", "protecteur",
+            "porte-bannière", "porte-banniere", "infirmier", "médecin", "medecin",
+            "intendant", "aumônier", "aumonier"
+        }))
+    {
+        return 17;
+    }
+
+    return 16;
+}
+
+std::string CombatClassSystem::getClassBalanceIdentityLine(const Entity& entity)
+{
+    const std::string className = normalizeClassText(entity.getType());
+
+    if (className.find("éveillé") != std::string::npos || className.find("eveille") != std::string::npos || className.find("maître") != std::string::npos || className.find("maitre") != std::string::npos)
+    {
+        return "Profil évolué : la classe doit sentir un vrai cap franchi, mais dépend encore de son équipement, de son rôle et de ses fenêtres d'action.";
+    }
+
+    if (getClassCriticalRollThreshold(entity) <= 15)
+    {
+        return "Profil de classe : critique plus fréquent, mais la classe paie souvent ce rythme par fragilité ou dépendance au bon geste.";
+    }
+
+    if (getClassCriticalRollThreshold(entity) >= 17)
+    {
+        return "Profil de classe : critiques moins fréquents, mais meilleure tenue ou rôle défensif plus fiable.";
+    }
+
+    if (containsAny(className, {"pyromancien", "mage flame", "mage fou", "arcaniste", "démoniste", "demoniste", "chronomancien"}))
+    {
+        return "Profil de classe : dégâts magiques dangereux, mais dépendance à la fenêtre, au catalyseur et aux risques de canalisation.";
+    }
+
+    if (containsAny(className, {"barbare", "berserker", "ravageur", "briseur", "martelier", "faucheur"}))
+    {
+        return "Profil de classe : impact lourd et visible, mais précision, défense ou tempo plus exigeants.";
+    }
+
+    if (containsAny(className, {"clerc", "prêtre", "pretre", "barde", "oracle", "chantre", "support", "soutien"}))
+    {
+        return "Profil de classe : puissance directe plus basse, compensée par soutien, soins, lecture et stabilité.";
+    }
+
+    return "Profil de classe : rythme standard, pensé pour rester lisible sans extrême gratuit.";
 }
 
 int CombatClassSystem::getOutgoingFlatBonus(const Entity& entity)
@@ -273,7 +346,7 @@ int CombatClassSystem::getOutgoingFlatBonus(const Entity& entity)
 
     if (className.find("forgeron") != std::string::npos)
     {
-        return 3;
+        return 2;
     }
 
     if (className.find("arbal") != std::string::npos || className.find("tireur") != std::string::npos)
@@ -344,9 +417,20 @@ int CombatClassSystem::getWeaponAffinityDamageBonus(
         return 0;
     }
 
-    // EN: Very small mastery bonus: enough to reward coherent equipment, not enough to force a meta.
-    // FR: Très léger bonus de maîtrise : il récompense l'équipement cohérent sans imposer une méta.
-    return std::max(1, currentDamage * 3 / 100);
+    // EN: The affinity bonus must be felt, but it stays smaller than a real skill or rarity bonus.
+    // FR: Le bonus d'affinité doit se ressentir, sans remplacer une vraie compétence ou rareté.
+    const std::string className = normalizeClassText(entity.getType());
+    int percent = 5;
+    if (containsAny(className, {"maître d'armes", "maitre d'armes", "assassin", "ombrelame", "lanceur de dagues", "tireur", "archer", "pyromancien", "mage-lame", "chevalier runique"}))
+    {
+        percent = 8;
+    }
+    else if (containsAny(className, {"guerrier", "chevalier", "lancier", "berserker", "briseur", "forgeron", "runiste", "enchanteur", "druide"}))
+    {
+        percent = 6;
+    }
+
+    return std::max(2, currentDamage * percent / 100);
 }
 
 std::string CombatClassSystem::getWeaponAffinityLabel(
@@ -383,7 +467,7 @@ namespace
 
     bool isSwiftWeaponClass(const std::string& className)
     {
-        return classContainsAny(className, {"assassin", "ombrelame", "duelliste", "sabreur", "danseur lunaire", "lanceur de dagues", "messager arm", "pugiliste", "moine"});
+        return classContainsAny(className, {"assassin", "ombrelame", "voleur", "roublard", "brigand", "duelliste", "sabreur", "danseur lunaire", "lanceur de dagues", "messager arm", "pugiliste", "moine"});
     }
 
     bool isRangedWeaponClass(const std::string& className)
@@ -473,11 +557,15 @@ int CombatClassSystem::getWeaponHandlingAccuracyAdjustment(
     {
         if (classContainsAny(className, {"assassin", "ombrelame", "lanceur de dagues"}))
         {
-            return 18;
+            return 16;
         }
         if (classContainsAny(className, {"maître d'armes", "maitre d'armes", "duelliste", "tireur", "sabreur", "archer", "lancier"}))
         {
-            return 16;
+            return 14;
+        }
+        if (classContainsAny(className, {"briseur", "berserker", "colosse", "gardien", "forgeron"}))
+        {
+            return 8;
         }
         return 10;
     }
@@ -507,13 +595,17 @@ int CombatClassSystem::getWeaponHandlingDamagePercent(
     {
         if (classContainsAny(className, {"assassin", "ombrelame", "lanceur de dagues"}))
         {
-            return 110;
+            return 109;
         }
         if (classContainsAny(className, {"maître d'armes", "maitre d'armes", "briseur", "berserker", "faucheur", "tireur", "pyromancien", "mage-lame", "chevalier runique"}))
         {
-            return 108;
+            return 110;
         }
-        return 104;
+        if (classContainsAny(className, {"gardien", "colosse", "support", "clerc", "prêtre", "pretre", "barde", "intendant"}))
+        {
+            return 103;
+        }
+        return 106;
     }
 
     if (isWeaponClearlyAwkward(className, weaponType, weapon))
@@ -539,14 +631,169 @@ std::string CombatClassSystem::getWeaponHandlingLabel(
 
     if (accuracy > 0 || damagePercent > 100)
     {
-        return "arme cohérente avec la classe : geste plus fiable et impact mieux transmis";
+        return "arme cohérente avec la classe : geste plus fiable, impact mieux transmis et bonus assez visible pour compter";
     }
 
     if (accuracy < 0 || damagePercent < 100)
     {
-        return "arme maladroite pour la classe : précision instable et dégâts moins bien transmis";
+        return "arme maladroite pour la classe : précision instable, dégâts moins bien transmis et risque de gaspiller une bonne action";
     }
 
     return "arme utilisable sans vraie affinité ni gros malus";
 }
 
+
+
+bool CombatClassSystem::hasArmorAffinity(
+    const Entity& entity,
+    ArmorType armorType,
+    const std::string& armorName
+)
+{
+    const std::string className = normalizeClassText(entity.getType());
+    const std::string armor = normalizeClassText(armorName);
+
+    switch (armorType)
+    {
+        case ArmorType::Cloth:
+            return classContainsAny(className, {"mage", "mancien", "sorcier", "arcaniste", "occultiste", "démoniste", "demoniste", "prêtre", "pretre", "clerc", "barde", "oracle", "bibliomancien", "moine", "pugiliste"})
+                || armor.find("robe") != std::string::npos;
+        case ArmorType::Leather:
+            return isSwiftWeaponClass(className) || isRangedWeaponClass(className) || isCraftWeaponClass(className)
+                || classContainsAny(className, {"chasseur", "rôdeur", "rodeur", "trappeur", "éclaireur", "eclaireur", "voleur", "assassin"});
+        case ArmorType::Chainmail:
+            return isMartialWeaponClass(className) || isSupportWeaponClass(className) || isHeavyWeaponClass(className)
+                || classContainsAny(className, {"sentinelle", "garde", "paladin", "templier"});
+        case ArmorType::Plate:
+            return isHeavyWeaponClass(className) || classContainsAny(className, {"chevalier", "paladin", "templier", "gardien", "colosse", "tank", "martelier"});
+        case ArmorType::Magical:
+            return isMagicalWeaponClass(className) || isSupportWeaponClass(className) || classContainsAny(className, {"mage-lame", "chevalier runique", "runiste", "enchanteur"});
+        case ArmorType::Unknown:
+        default:
+            return false;
+    }
+}
+
+namespace
+{
+    bool isArmorClearlyAwkwardForClass(const std::string& className, ArmorType armorType, const std::string& armorName)
+    {
+        const bool swift = isSwiftWeaponClass(className);
+        const bool ranged = isRangedWeaponClass(className);
+        const bool heavy = isHeavyWeaponClass(className);
+        const bool martial = isMartialWeaponClass(className);
+        const bool magical = isMagicalWeaponClass(className);
+        const bool support = isSupportWeaponClass(className);
+        const bool craft = isCraftWeaponClass(className);
+        const std::string armor = armorName;
+
+        if (armorType == ArmorType::Plate)
+        {
+            return swift || ranged || (magical && !martial) || classContainsAny(className, {"moine", "pugiliste", "barde", "danseur"});
+        }
+        if (armorType == ArmorType::Cloth)
+        {
+            return (heavy && !magical) || classContainsAny(className, {"colosse", "briseur", "martelier", "tank"});
+        }
+        if (armorType == ArmorType::Magical)
+        {
+            return heavy && !magical && !support && !craft && armor.find("harnais") == std::string::npos;
+        }
+        if (armorType == ArmorType::Leather)
+        {
+            return classContainsAny(className, {"colosse", "tank sacré", "tank sacre", "gardien de porte"});
+        }
+        return false;
+    }
+}
+
+int CombatClassSystem::getArmorHandlingDamageReductionAdjustment(
+    const Entity& entity,
+    ArmorType armorType,
+    const std::string& armorName,
+    int rawDamage
+)
+{
+    const std::string className = normalizeClassText(entity.getType());
+    const std::string armor = normalizeClassText(armorName);
+
+    if (hasArmorAffinity(entity, armorType, armorName))
+    {
+        int bonus = 1;
+        if (armorType == ArmorType::Plate || armorType == ArmorType::Chainmail)
+        {
+            bonus = classContainsAny(className, {"gardien", "colosse", "tank", "chevalier bouclier", "paladin", "templier"}) ? 3 : 2;
+        }
+        else if (armorType == ArmorType::Magical)
+        {
+            bonus = classContainsAny(className, {"mage", "mancien", "runiste", "oracle", "bibliomancien"}) ? 2 : 1;
+        }
+        else if (armorType == ArmorType::Leather && rawDamage <= 24)
+        {
+            bonus = 2;
+        }
+        return bonus;
+    }
+
+    if (isArmorClearlyAwkwardForClass(className, armorType, armor))
+    {
+        if (armorType == ArmorType::Plate)
+        {
+            return -2;
+        }
+        if (armorType == ArmorType::Cloth)
+        {
+            return -2;
+        }
+        return -1;
+    }
+
+    return 0;
+}
+
+int CombatClassSystem::getArmorHandlingEscapeAdjustment(
+    const Entity& entity,
+    ArmorType armorType,
+    const std::string& armorName
+)
+{
+    const std::string className = normalizeClassText(entity.getType());
+    const std::string armor = normalizeClassText(armorName);
+
+    if (hasArmorAffinity(entity, armorType, armorName))
+    {
+        if (armorType == ArmorType::Leather && (isSwiftWeaponClass(className) || isRangedWeaponClass(className))) return 4;
+        if (armorType == ArmorType::Cloth && (isMagicalWeaponClass(className) || classContainsAny(className, {"moine", "pugiliste"}))) return 3;
+        if (armorType == ArmorType::Plate && isHeavyWeaponClass(className)) return 1;
+        return 0;
+    }
+
+    if (isArmorClearlyAwkwardForClass(className, armorType, armor))
+    {
+        if (armorType == ArmorType::Plate) return -8;
+        if (armorType == ArmorType::Cloth && isHeavyWeaponClass(className)) return -2;
+        return -4;
+    }
+
+    return 0;
+}
+
+std::string CombatClassSystem::getArmorHandlingLabel(
+    const Entity& entity,
+    ArmorType armorType,
+    const std::string& armorName
+)
+{
+    const int reductionAdjustment = getArmorHandlingDamageReductionAdjustment(entity, armorType, armorName, 24);
+    const int escapeAdjustment = getArmorHandlingEscapeAdjustment(entity, armorType, armorName);
+
+    if (reductionAdjustment > 0 || escapeAdjustment > 0)
+    {
+        return "armure cohérente avec la classe : la protection se place mieux, la mobilité reste plus naturelle et le rôle défensif se ressent";
+    }
+    if (reductionAdjustment < 0 || escapeAdjustment < 0)
+    {
+        return "armure maladroite pour la classe : protection mal exploitée, mobilité gênée ou mauvais compromis pour le rôle";
+    }
+    return "armure utilisable sans vraie affinité ni gros malus de classe";
+}

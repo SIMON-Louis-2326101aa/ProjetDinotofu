@@ -9,6 +9,7 @@ REPO_NAME="${DINOTOFU_REPO:-TON_COMPTE/TON_REPO}"
 PACKAGE_DIR="release_packages"
 INSTALLER_DIR="${PACKAGE_DIR}/DinotofuInstaller-Linux-v${VERSION}"
 INSTALLER_ZIP="${PACKAGE_DIR}/DinotofuInstaller-Linux-v${VERSION}.zip"
+GAME_ZIP="${PACKAGE_DIR}/Dinotofu-Linux-v${VERSION}.zip"
 
 write_installer_config_json() {
     local target_file="$1"
@@ -41,13 +42,16 @@ cp tools/linux/Lancer-Dinotofu-Terminal.sh "${INSTALLER_DIR}/Lancer-Dinotofu-Ter
 chmod +x "${INSTALLER_DIR}"/*.sh
 
 write_installer_config_json "${INSTALLER_DIR}/dinotofu-installer.config.json"
+if [[ -f "${GAME_ZIP}" ]]; then
+    cp "${GAME_ZIP}" "${INSTALLER_DIR}/"
+fi
 
 cat > "${INSTALLER_DIR}/LISEZ-MOI.txt" <<TXT
 Dinotofu Installer Linux
 
 1. Ouvre un terminal dans ce dossier.
 2. Lance : ./Installer-Dinotofu.sh
-3. Le script telecharge la derniere release Linux depuis GitHub.
+3. Le script installe le ZIP Linux inclus dans ce pack si présent, sinon il télécharge la dernière release Linux depuis GitHub.
 4. Par defaut, il installe Dinotofu dans ~/Downloads/ProjetDinotofu.
 5. Tu peux choisir un autre dossier parent, mais le dossier final s'appellera toujours ProjetDinotofu.
 6. Il cree deux raccourcis Linux si possible : ProjetDinotofu Launcher et ProjetDinotofu Launcher Terminal version.
