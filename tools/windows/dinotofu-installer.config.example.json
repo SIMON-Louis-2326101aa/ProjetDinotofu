@@ -1,5 +1,5 @@
 {
   "repo": "TON_COMPTE/TON_REPO",
-  "assetPattern": "Dinotofu-Windows-v*.zip",
+  "assetPattern": "Dinotofu-Windows-v*.7z",
   "installDir": "%USERPROFILE%\\Downloads\\ProjetDinotofu"
 }

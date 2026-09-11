@@ -16,7 +16,6 @@
 #   make remove-desktop  Remove the Linux desktop launcher / Supprimer le lanceur Linux
 #   make package-source  Create clean source ZIP / Créer ZIP source propre
 #   make package-linux-release Build and package Linux release / Créer release Linux
-#   make package-linux-installer Build Linux installer pack / Créer pack installer Linux
 #   make package-windows-release Build and package Windows release / Créer release Windows
 #   make bump-patch      Increase patch version / Augmenter la version patch
 #   make release-push    Bump patch, commit and push / Publier un patch
@@ -37,9 +36,11 @@
 # CONFIGURATION
 # =========================================================
 
-CXX      := g++
-CXXFLAGS := -std=c++17 -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
-LDFLAGS  :=
+CXX         := g++
+TARGET_ARCH ?= native
+OPT_LEVEL   ?= -O3
+CXXFLAGS    := -std=c++17 $(OPT_LEVEL) -march=$(TARGET_ARCH) -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
+LDFLAGS     :=
 
 SRC_DIR  := src
 OBJ_DIR  := build
@@ -143,10 +144,6 @@ package-linux-release:
 	@chmod +x ./scripts/package_linux_release.sh
 	@./scripts/package_linux_release.sh
 
-package-linux-installer:
-	@chmod +x ./scripts/package_linux_installer.sh
-	@./scripts/package_linux_installer.sh
-
 package-windows-release:
 	@chmod +x ./scripts/package_windows_release.sh
 	@./scripts/package_windows_release.sh
@@ -172,4 +169,4 @@ gui-preview:
 	@chmod +x ./tools/gui/run_gui_debug.sh
 	@./tools/gui/run_gui_debug.sh
 
-.PHONY: all run launch clean rebuild install-desktop desktop remove-desktop package-source package-linux-release package-linux-installer package-windows-release bump-patch bump-minor bump-major release-push release-check gui-preview
+.PHONY: all run launch clean rebuild install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-check gui-preview

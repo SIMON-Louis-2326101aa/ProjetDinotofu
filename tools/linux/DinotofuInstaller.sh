@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/dinotofu-installer.config.json"
 REPO="${DINOTOFU_REPO:-}"
-ASSET_PATTERN="${DINOTOFU_ASSET_PATTERN:-Dinotofu-Linux-v*.zip}"
+ASSET_PATTERN="${DINOTOFU_ASSET_PATTERN:-Dinotofu-Linux-v*.7z}"
 INSTALL_DIR="${DINOTOFU_INSTALL_DIR:-}"
 SKIP_LAUNCH="false"
 NO_PROMPT="false"
@@ -87,7 +87,7 @@ ask_install_dir() {
 if [[ -z "$REPO" ]]; then
     REPO="$(read_config_value repo)"
 fi
-if [[ "$ASSET_PATTERN" == "Dinotofu-Linux-v*.zip" ]]; then
+if [[ "$ASSET_PATTERN" == "Dinotofu-Linux-v*.zip" || "$ASSET_PATTERN" == "Dinotofu-Linux-v*.7z" ]]; then
     configured_pattern="$(read_config_value assetPattern)"
     [[ -z "$configured_pattern" ]] || ASSET_PATTERN="$configured_pattern"
 fi
@@ -104,16 +104,44 @@ INSTALL_DIR="$(ask_install_dir "$INSTALL_DIR")"
 need_command() {
     if ! command -v "$1" >/dev/null 2>&1; then
         echo "Commande manquante : $1" >&2
-        echo "Installe-la puis relance l'installer. Exemple Debian/Ubuntu : sudo apt install curl unzip python3" >&2
+        echo "Installe-la puis relance l'installer. Exemple Debian/Ubuntu : sudo apt install curl p7zip-full python3" >&2
         exit 1
     fi
 }
 
 need_command curl
-need_command unzip
 need_command python3
 
-find_local_release_zip() {
+extract_archive() {
+    local archive="$1"
+    local dest="$2"
+    mkdir -p "$dest"
+    if [[ "$archive" == *.7z ]]; then
+        if command -v 7z >/dev/null 2>&1; then
+            7z x -y -o"$dest" "$archive" >/dev/null
+        elif command -v bsdtar >/dev/null 2>&1; then
+            bsdtar -xf "$archive" -C "$dest"
+        elif command -v tar >/dev/null 2>&1; then
+            tar -xf "$archive" -C "$dest"
+        else
+            echo "Erreur : outil introuvable pour extraire le fichier .7z (7z, bsdtar ou tar avec libarchive)." >&2
+            echo "Installe p7zip-full (ex: sudo apt install p7zip-full)" >&2
+            exit 1
+        fi
+    else
+        if command -v unzip >/dev/null 2>&1; then
+            unzip -q "$archive" -d "$dest"
+        elif command -v 7z >/dev/null 2>&1; then
+            7z x -y -o"$dest" "$archive" >/dev/null
+        elif command -v bsdtar >/dev/null 2>&1; then
+            bsdtar -xf "$archive" -C "$dest"
+        else
+            tar -xf "$archive" -C "$dest"
+        fi
+    fi
+}
+
+find_local_release_archive() {
     local pattern="$1"
     local search_dirs=("$SCRIPT_DIR")
     local parent_dir
@@ -125,7 +153,7 @@ find_local_release_zip() {
     local dir candidate
     for dir in "${search_dirs[@]}"; do
         [[ -d "$dir" ]] || continue
-        candidate="$(find "$dir" -maxdepth 1 -type f -name "$pattern" ! -name '*Installer*' -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)"
+        candidate="$(find "$dir" -maxdepth 1 -type f \( -name "$pattern" -o -name 'Dinotofu-Linux-v*.7z' -o -name 'Dinotofu-Linux-v*.zip' \) ! -name '*Installer*' -printf '%T@ %p\n' 2>/dev/null | sort -nr | head -n 1 | cut -d' ' -f2-)"
         if [[ -n "$candidate" && -f "$candidate" ]]; then
             echo "$candidate"
             return 0
@@ -134,91 +162,132 @@ find_local_release_zip() {
     return 1
 }
 
-if [[ -z "$REPO" || "$REPO" == "TON_COMPTE/TON_REPO" || "$REPO" != */* ]]; then
-    echo "Repo GitHub non configure. Utilise un pack installer genere par GitHub Actions, ou lance :" >&2
-    echo "DINOTOFU_REPO='tonPseudo/tonDepot' ./Installer-Dinotofu.sh" >&2
-    exit 1
-fi
-
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 RELEASE_JSON="${TMP_DIR}/latest.json"
-ZIP_PATH="${TMP_DIR}/dinotofu.zip"
+ARCHIVE_PATH="${TMP_DIR}/dinotofu_pkg"
 EXTRACT_DIR="${TMP_DIR}/extract"
 BACKUP_DIR="${TMP_DIR}/save_backup"
 mkdir -p "$EXTRACT_DIR" "$BACKUP_DIR"
 
-echo "==> Recherche de la derniere release GitHub (${REPO})"
-LOCAL_ZIP=""
-if curl -fsSL -H "User-Agent: DinotofuInstaller" "https://api.github.com/repos/${REPO}/releases/latest" -o "$RELEASE_JSON"; then
-    mapfile -t ASSET_INFO < <(python3 - "$RELEASE_JSON" "$ASSET_PATTERN" <<'PY' 2>/dev/null || true
+# Detection : si on lance l'installer depuis un dossier du jeu dezippe
+local_game_found="false"
+if [[ -f "${SCRIPT_DIR}/output/Dinotofu" || -f "${SCRIPT_DIR}/Dinotofu" ]] && [[ -d "${SCRIPT_DIR}/assets" ]]; then
+    local_game_found="true"
+fi
+
+if [[ "$local_game_found" == "true" && "$SCRIPT_DIR" == "$INSTALL_DIR" ]]; then
+    echo "Dinotofu est deja dans son dossier d'execution : ${INSTALL_DIR}"
+    echo "Configuration et creation des raccourcis..."
+elif [[ "$local_game_found" == "true" ]]; then
+    echo "==> Installation depuis le dossier local : ${SCRIPT_DIR} -> ${INSTALL_DIR}"
+    if [[ -d "$INSTALL_DIR" ]]; then
+        echo "==> Sauvegarde des donnees joueur"
+        for p in assets/saves saves accounts characters exported_accounts import_accounts; do
+            if [[ -e "${INSTALL_DIR}/${p}" ]]; then
+                mkdir -p "${BACKUP_DIR}/$(dirname "$p")"
+                cp -a "${INSTALL_DIR}/${p}" "${BACKUP_DIR}/${p}"
+            fi
+        done
+    fi
+    mkdir -p "$INSTALL_DIR"
+    cp -a "${SCRIPT_DIR}/." "$INSTALL_DIR/"
+    if [[ -d "$BACKUP_DIR" ]]; then
+        cp -a "${BACKUP_DIR}/." "$INSTALL_DIR/" 2>/dev/null || true
+    fi
+else
+    if [[ -z "$REPO" || "$REPO" == "TON_COMPTE/TON_REPO" || "$REPO" != */* ]]; then
+        LOCAL_ARCHIVE="$(find_local_release_archive "$ASSET_PATTERN" || true)"
+        if [[ -z "$LOCAL_ARCHIVE" ]]; then
+            echo "Repo GitHub non configure et aucune archive locale trouvee." >&2
+            echo "DINOTOFU_REPO='tonPseudo/tonDepot' ./Installer-Dinotofu.sh" >&2
+            exit 1
+        fi
+    fi
+
+    echo "==> Recherche de la derniere release GitHub (${REPO})"
+    LOCAL_ARCHIVE=""
+    if [[ -n "$REPO" && "$REPO" != "TON_COMPTE/TON_REPO" && "$REPO" == */* ]] && curl -fsSL -H "User-Agent: DinotofuInstaller" "https://api.github.com/repos/${REPO}/releases/latest" -o "$RELEASE_JSON"; then
+        mapfile -t ASSET_INFO < <(python3 - "$RELEASE_JSON" "$ASSET_PATTERN" <<'PY' 2>/dev/null || true
 import fnmatch, json, sys
 with open(sys.argv[1], encoding='utf-8') as f:
     data = json.load(f)
 pattern = sys.argv[2]
-for asset in data.get('assets', []):
-    if fnmatch.fnmatch(asset.get('name', ''), pattern):
-        print(data.get('tag_name', ''))
-        print(asset.get('name', ''))
-        print(asset.get('browser_download_url', ''))
-        sys.exit(0)
+patterns = [pattern]
+if pattern.endswith('.7z'):
+    patterns.append(pattern[:-3] + '.zip')
+elif pattern.endswith('.zip'):
+    patterns.append(pattern[:-4] + '.7z')
+
+for p in patterns:
+    for asset in data.get('assets', []):
+        if fnmatch.fnmatch(asset.get('name', ''), p):
+            print(data.get('tag_name', ''))
+            print(asset.get('name', ''))
+            print(asset.get('browser_download_url', ''))
+            sys.exit(0)
 sys.exit(2)
 PY
 )
 
-    TAG_NAME="${ASSET_INFO[0]:-}"
-    ASSET_NAME="${ASSET_INFO[1]:-}"
-    ASSET_URL="${ASSET_INFO[2]:-}"
-else
-    TAG_NAME=""
-    ASSET_NAME=""
-    ASSET_URL=""
-fi
-
-if [[ -z "$ASSET_URL" ]]; then
-    LOCAL_ZIP="$(find_local_release_zip "$ASSET_PATTERN" || true)"
-    if [[ -z "$LOCAL_ZIP" ]]; then
-        echo "Aucun asset ne correspond a ${ASSET_PATTERN}, et aucun ZIP local n'a été trouvé dans l'installer." >&2
-        exit 1
+        TAG_NAME="${ASSET_INFO[0]:-}"
+        ASSET_NAME="${ASSET_INFO[1]:-}"
+        ASSET_URL="${ASSET_INFO[2]:-}"
+    else
+        TAG_NAME=""
+        ASSET_NAME=""
+        ASSET_URL=""
     fi
-    TAG_NAME="$(basename "$LOCAL_ZIP" | sed -E 's/.*-v([0-9]+\.[0-9]{2}\.[0-9]{2}).*/v\1/')"
-    ASSET_NAME="$(basename "$LOCAL_ZIP")"
-    echo "GitHub non utilisé : ZIP Linux local trouvé dans le pack installer."
-else
-    echo "Release trouvee : ${TAG_NAME}"
-fi
 
-echo "Fichier : ${ASSET_NAME}"
-echo "Installation finale : ${INSTALL_DIR}"
-echo "==> Telechargement / copie locale"
-if [[ -n "$LOCAL_ZIP" ]]; then
-    cp "$LOCAL_ZIP" "$ZIP_PATH"
-else
-    curl -L --progress-bar -H "User-Agent: DinotofuInstaller" "$ASSET_URL" -o "$ZIP_PATH"
-fi
-
-if [[ -d "$INSTALL_DIR" ]]; then
-    echo "==> Sauvegarde des donnees joueur"
-    for p in assets/saves saves accounts characters exported_accounts import_accounts; do
-        if [[ -e "${INSTALL_DIR}/${p}" ]]; then
-            mkdir -p "${BACKUP_DIR}/$(dirname "$p")"
-            cp -a "${INSTALL_DIR}/${p}" "${BACKUP_DIR}/${p}"
+    if [[ -z "$ASSET_URL" ]]; then
+        LOCAL_ARCHIVE="$(find_local_release_archive "$ASSET_PATTERN" || true)"
+        if [[ -z "$LOCAL_ARCHIVE" ]]; then
+            echo "Aucun asset ne correspond a ${ASSET_PATTERN}, et aucune archive locale (.7z ou .zip) n'a ete trouvee." >&2
+            exit 1
         fi
-    done
-fi
+        TAG_NAME="$(basename "$LOCAL_ARCHIVE" | sed -E 's/.*-v([0-9]+\.[0-9]{2}\.[0-9]{2}).*/v\1/')"
+        ASSET_NAME="$(basename "$LOCAL_ARCHIVE")"
+        echo "GitHub non utilisé : archive locale trouvée dans le pack installer."
+    else
+        echo "Release trouvee : ${TAG_NAME}"
+    fi
 
-echo "==> Installation dans ${INSTALL_DIR}"
-mkdir -p "$INSTALL_DIR"
-unzip -q "$ZIP_PATH" -d "$EXTRACT_DIR"
-ROOT_DIR="$(find "$EXTRACT_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-if [[ -z "$ROOT_DIR" ]]; then
-    echo "Archive invalide : aucun dossier racine trouve." >&2
-    exit 1
-fi
-cp -a "${ROOT_DIR}/." "$INSTALL_DIR/"
+    echo "Fichier : ${ASSET_NAME}"
+    echo "Installation finale : ${INSTALL_DIR}"
+    echo "==> Telechargement / copie locale"
+    if [[ -n "$LOCAL_ARCHIVE" ]]; then
+        ARCHIVE_PATH="$LOCAL_ARCHIVE"
+    else
+        if [[ "$ASSET_NAME" == *.7z ]]; then
+            ARCHIVE_PATH="${TMP_DIR}/dinotofu.7z"
+        else
+            ARCHIVE_PATH="${TMP_DIR}/dinotofu.zip"
+        fi
+        curl -L --progress-bar -H "User-Agent: DinotofuInstaller" "$ASSET_URL" -o "$ARCHIVE_PATH"
+    fi
 
-if [[ -d "$BACKUP_DIR" ]]; then
-    cp -a "${BACKUP_DIR}/." "$INSTALL_DIR/" 2>/dev/null || true
+    if [[ -d "$INSTALL_DIR" ]]; then
+        echo "==> Sauvegarde des donnees joueur"
+        for p in assets/saves saves accounts characters exported_accounts import_accounts; do
+            if [[ -e "${INSTALL_DIR}/${p}" ]]; then
+                mkdir -p "${BACKUP_DIR}/$(dirname "$p")"
+                cp -a "${INSTALL_DIR}/${p}" "${BACKUP_DIR}/${p}"
+            fi
+        done
+    fi
+
+    echo "==> Installation dans ${INSTALL_DIR}"
+    mkdir -p "$INSTALL_DIR"
+    extract_archive "$ARCHIVE_PATH" "$EXTRACT_DIR"
+    ROOT_DIR="$(find "$EXTRACT_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+    if [[ -z "$ROOT_DIR" ]]; then
+        ROOT_DIR="$EXTRACT_DIR"
+    fi
+    cp -a "${ROOT_DIR}/." "$INSTALL_DIR/"
+
+    if [[ -d "$BACKUP_DIR" ]]; then
+        cp -a "${BACKUP_DIR}/." "$INSTALL_DIR/" 2>/dev/null || true
+    fi
 fi
 
 python3 - "${INSTALL_DIR}/dinotofu-installer.config.json" "${REPO}" "${ASSET_PATTERN}" "${INSTALL_DIR}" <<'PYCONFIG'
@@ -234,14 +303,16 @@ with open(path, "w", encoding="utf-8") as handle:
     handle.write("\n")
 PYCONFIG
 
-chmod +x "${INSTALL_DIR}/output/Dinotofu" 2>/dev/null || true
+chmod +x "${INSTALL_DIR}/output/Dinotofu" "${INSTALL_DIR}/Dinotofu" 2>/dev/null || true
 chmod +x "${INSTALL_DIR}/DinotofuLauncher.sh" 2>/dev/null || true
 chmod +x "${INSTALL_DIR}/Lancer-Dinotofu.sh" 2>/dev/null || true
 chmod +x "${INSTALL_DIR}/Lancer-Dinotofu-Terminal.sh" 2>/dev/null || true
-chmod +x "${INSTALL_DIR}/Installer-Dinotofu.sh" 2>/dev/null || true
+chmod +x "${INSTALL_DIR}/Installer-Dinotofu.sh" "${INSTALL_DIR}/DinotofuInstaller.sh" 2>/dev/null || true
 
 if [[ ! -f "${INSTALL_DIR}/version.txt" ]]; then
-    echo "${TAG_NAME#v}" > "${INSTALL_DIR}/version.txt"
+    ver="${TAG_NAME#v}"
+    [[ -n "$ver" ]] || ver="$(cat "${SCRIPT_DIR}/version.txt" 2>/dev/null || echo "0.00.00")"
+    echo "$ver" > "${INSTALL_DIR}/version.txt"
 fi
 
 echo "==> Creation des raccourcis Linux"

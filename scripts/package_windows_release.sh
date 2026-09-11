@@ -8,9 +8,7 @@ VERSION="$(./scripts/get_version.sh)"
 REPO_NAME="${DINOTOFU_REPO:-TON_COMPTE/TON_REPO}"
 PACKAGE_DIR="release_packages"
 STAGING_DIR="${PACKAGE_DIR}/Dinotofu-Windows-v${VERSION}"
-INSTALLER_DIR="${PACKAGE_DIR}/DinotofuInstaller-Windows-v${VERSION}"
-GAME_ZIP="${PACKAGE_DIR}/Dinotofu-Windows-v${VERSION}.zip"
-INSTALLER_ZIP="${PACKAGE_DIR}/DinotofuInstaller-Windows-v${VERSION}.zip"
+GAME_ARCHIVE="${PACKAGE_DIR}/Dinotofu-Windows-v${VERSION}.7z"
 
 CROSS_CXX="${CXX:-x86_64-w64-mingw32-g++}"
 
@@ -24,7 +22,7 @@ path = sys.argv[1]
 repo = sys.argv[2]
 config = {
     "repo": repo,
-    "assetPattern": "Dinotofu-Windows-v*.zip",
+    "assetPattern": "Dinotofu-Windows-v*.7z",
     "installDir": r"%USERPROFILE%\Downloads\ProjetDinotofu",
 }
 with open(path, "w", encoding="utf-8") as handle:
@@ -34,11 +32,12 @@ PY_JSON
 }
 
 mkdir -p "${PACKAGE_DIR}"
-rm -rf "${STAGING_DIR}" "${INSTALLER_DIR}" "${GAME_ZIP}" "${INSTALLER_ZIP}"
+rm -rf "${STAGING_DIR}" "${GAME_ARCHIVE}"
 
 if ! command -v "${CROSS_CXX}" >/dev/null 2>&1; then
     echo "Compilateur Windows introuvable : ${CROSS_CXX}" >&2
     echo "Sur Ubuntu/GitHub Actions : sudo apt-get install -y mingw-w64" >&2
+    echo "Sur Arch/CachyOS : sudo pacman -S mingw-w64-gcc" >&2
     exit 1
 fi
 
@@ -46,13 +45,17 @@ make clean >/dev/null 2>&1 || true
 make -j"$(nproc 2>/dev/null || echo 2)" \
     CXX="${CROSS_CXX}" \
     APP_NAME="Dinotofu.exe" \
-    CXXFLAGS="-std=c++17 -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8" \
+    TARGET_ARCH="${TARGET_ARCH:-x86-64}" \
+    OPT_LEVEL="${OPT_LEVEL:--O3}" \
+    CXXFLAGS="-std=c++17 ${OPT_LEVEL:--O3} -march=${TARGET_ARCH:-x86-64} -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8" \
     LDFLAGS="-static -static-libgcc -static-libstdc++"
 
 mkdir -p "${STAGING_DIR}"
 cp -r assets "${STAGING_DIR}/" 2>/dev/null || true
 cp README.md READMEFR.md PATCHNOTE_DINOTOFU.md PATCHNOTE_DINOTOFU_FR.md SYSTEMES_PREVUS.txt PERSONNAGES_SPECIAUX_DINOTOFU.txt CHEATS_DINOTOFU.txt BOSS_DINOTOFU.txt TITRES_DINOTOFU.txt HISTOIRE_PREPARATION_DINOTOFU.txt "${STAGING_DIR}/" 2>/dev/null || true
 cp output/Dinotofu.exe "${STAGING_DIR}/Dinotofu.exe"
+cp tools/windows/DinotofuInstaller.ps1 "${STAGING_DIR}/DinotofuInstaller.ps1"
+cp tools/windows/Installer-Dinotofu.cmd "${STAGING_DIR}/Installer-Dinotofu.cmd"
 cp tools/windows/DinotofuLauncher.ps1 "${STAGING_DIR}/DinotofuLauncher.ps1"
 cp tools/windows/Lancer-Dinotofu.cmd "${STAGING_DIR}/Lancer-Dinotofu.cmd"
 cp tools/windows/Lancer-Dinotofu.vbs "${STAGING_DIR}/Lancer-Dinotofu.vbs"
@@ -62,60 +65,36 @@ cp -r tools/gui "${STAGING_DIR}/tools/gui"
 write_installer_config_json "${STAGING_DIR}/dinotofu-installer.config.json"
 echo "${VERSION}" > "${STAGING_DIR}/version.txt"
 
-(
-    cd "${PACKAGE_DIR}"
-    zip -r "$(basename "${GAME_ZIP}")" "$(basename "${STAGING_DIR}")" \
-        -x "*/assets/saves/*" \
-        -x "*/saves/*" \
-        -x "*/accounts/*" \
-        -x "*/characters/*" \
-        -x "*/exported_accounts/*" \
-        -x "*/import_accounts/*" \
-        -x "*.o" \
-        -x "*.d" \
-        -x "*.log" \
-        -x "*.tmp"
-)
+cat > "${STAGING_DIR}/LISEZ-MOI.txt" <<TXT
+Dinotofu Windows (Version Portable)
 
-mkdir -p "${INSTALLER_DIR}"
-cp tools/windows/DinotofuInstaller.ps1 "${INSTALLER_DIR}/DinotofuInstaller.ps1"
-cp tools/windows/DinotofuLauncher.ps1 "${INSTALLER_DIR}/DinotofuLauncher.ps1"
-cp tools/windows/Installer-Dinotofu.cmd "${INSTALLER_DIR}/Installer-Dinotofu.cmd"
-cp tools/windows/Lancer-Dinotofu.cmd "${INSTALLER_DIR}/Lancer-Dinotofu.cmd"
-cp tools/windows/Lancer-Dinotofu.vbs "${INSTALLER_DIR}/Lancer-Dinotofu.vbs"
-cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${INSTALLER_DIR}/Lancer-Dinotofu-Terminal.cmd"
-write_installer_config_json "${INSTALLER_DIR}/dinotofu-installer.config.json"
-if [[ -f "${GAME_ZIP}" ]]; then
-    cp "${GAME_ZIP}" "${INSTALLER_DIR}/"
-fi
-cat > "${INSTALLER_DIR}/LISEZ-MOI.txt" <<TXT
-Dinotofu Installer Windows
+Ce pack contient le jeu complet directement pret a l'emploi !
 
-1. Double-clique sur Installer-Dinotofu.cmd.
-2. Le script installe le ZIP Windows inclus dans ce pack si présent, sinon il télécharge la dernière release Windows depuis GitHub.
-3. Par defaut, il installe Dinotofu dans %%USERPROFILE%%\Downloads\ProjetDinotofu.
-4. Tu peux choisir un autre dossier parent, mais le dossier final s'appellera toujours ProjetDinotofu.
-5. Il cree exactement deux raccourcis sur le bureau :
-   - ProjetDinotofu Launcher
-   - ProjetDinotofu Launcher Terminal version
-6. Le raccourci principal lance le mode Auto : vraie IG si elle existe, sinon IG experimentale, sinon terminal.
-7. Le raccourci Terminal version force toujours le terminal, sans IG.
-8. Dans le dossier du jeu, Lancer-Dinotofu.vbs lance l'IG sans console visible, Lancer-Dinotofu.cmd reste un secours technique, et Lancer-Dinotofu-Terminal.cmd force la version terminal.
+Lancement direct (sans installation) :
+Double-clique sur Lancer-Dinotofu.cmd (ou Lancer-Dinotofu.vbs, ou directement Dinotofu.exe).
 
-Aucun WSL n'est requis pour la version Windows. La release Windows doit contenir Dinotofu.exe.
-Si Windows bloque l'execution, clic droit sur le fichier, Proprietes, puis Debloquer si l'option existe.
+Installation optionnelle :
+Si tu souhaites creer deux raccourcis sur ton bureau,
+double-clique sur Installer-Dinotofu.cmd.
+
+Aucun WSL n'est requis.
+Si Windows bloque l'execution d'un script, clic droit sur le fichier, Proprietes, puis Debloquer.
 TXT
 
 (
     cd "${PACKAGE_DIR}"
-    zip -r "$(basename "${INSTALLER_ZIP}")" "$(basename "${INSTALLER_DIR}")" \
-        -x "*.o" \
-        -x "*.d" \
-        -x "*.log" \
-        -x "*.tmp"
+    7z a -t7z -m0=lzma2 -mx=9 -ms=on "$(basename "${GAME_ARCHIVE}")" "$(basename "${STAGING_DIR}")" \
+        -xr!saves \
+        -xr!accounts \
+        -xr!characters \
+        -xr!exported_accounts \
+        -xr!import_accounts \
+        -xr!*.o \
+        -xr!*.d \
+        -xr!*.log \
+        -xr!*.tmp
 )
 
 make clean >/dev/null 2>&1 || true
 
-echo "Release Windows creee : ${GAME_ZIP}"
-echo "Installer Windows cree : ${INSTALLER_ZIP}"
+echo "Release Windows creee : ${GAME_ARCHIVE}"

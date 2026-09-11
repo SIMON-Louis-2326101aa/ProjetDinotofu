@@ -89,7 +89,7 @@ if ($config) {
 
 if ($installDirFromArgument) { $InstallDir = Normalize-ProjectInstallDir $InstallDir }
 else { $InstallDir = $PSScriptRoot }
-if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.zip" }
+if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.7z" }
 
 function Is-RepoConfigured {
     return (-not [string]::IsNullOrWhiteSpace($Repo)) -and $Repo -ne "TON_COMPTE/TON_REPO" -and $Repo -match "^[^/]+/[^/]+$"
@@ -147,7 +147,62 @@ function Get-LatestRelease {
 
 function Select-ReleaseAsset {
     param($Release, [string]$Pattern)
-    return $Release.assets | Where-Object { $_.name -like $Pattern } | Select-Object -First 1
+    $asset = $Release.assets | Where-Object { $_.name -like $Pattern } | Select-Object -First 1
+    if (-not $asset) {
+        $fallbackPattern = if ($Pattern -like "*.7z") { ($Pattern -replace '\.7z$', '.zip') } else { ($Pattern -replace '\.zip$', '.7z') }
+        $asset = $Release.assets | Where-Object { $_.name -like $fallbackPattern } | Select-Object -First 1
+    }
+    return $asset
+}
+
+function Expand-ArchiveAny {
+    param(
+        [string]$Path,
+        [string]$DestinationPath
+    )
+
+    New-Item -ItemType Directory -Path $DestinationPath -Force | Out-Null
+
+    if ($Path -like "*.zip") {
+        Expand-Archive -Path $Path -DestinationPath $DestinationPath -Force
+        return
+    }
+
+    # 1. Native Windows 10/11 tar.exe (libarchive with 7z support)
+    $tarCmd = Get-Command "tar.exe" -ErrorAction SilentlyContinue
+    if (-not $tarCmd -and (Test-Path "$env:SystemRoot\System32\tar.exe")) {
+        $tarCmd = "$env:SystemRoot\System32\tar.exe"
+    }
+    if ($tarCmd) {
+        $tarPath = if ($tarCmd -is [string]) { $tarCmd } else { $tarCmd.Source }
+        & $tarPath -xf $Path -C $DestinationPath
+        if ($LASTEXITCODE -eq 0) { return }
+    }
+
+    # 2. 7z.exe if installed
+    $sevenZip = Get-Command "7z.exe" -ErrorAction SilentlyContinue
+    if (-not $sevenZip) {
+        $common7z = @(
+            (Join-Path $env:ProgramFiles "7-Zip\7z.exe"),
+            (Join-Path ${env:ProgramFiles(x86)} "7-Zip\7z.exe")
+        )
+        foreach ($c in $common7z) {
+            if (Test-Path $c) { $sevenZip = $c; break }
+        }
+    }
+    if ($sevenZip) {
+        $szPath = if ($sevenZip -is [string]) { $sevenZip } else { $sevenZip.Source }
+        & $szPath x -y "-o$DestinationPath" $Path | Out-Null
+        if ($LASTEXITCODE -eq 0) { return }
+    }
+
+    try {
+        Expand-Archive -Path $Path -DestinationPath $DestinationPath -Force
+        return
+    }
+    catch {
+        throw "Impossible d'extraire $Path. Windows 10/11 integre nativement tar.exe pour les .7z, sinon installe 7-Zip (https://www.7-zip.org/)."
+    }
 }
 
 function Download-WithProgress {
@@ -229,7 +284,7 @@ function Apply-Update {
     Write-Step "Installation de la mise a jour"
     Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
     Start-Sleep -Milliseconds 400
-    Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+    Expand-ArchiveAny -Path $tempZip -DestinationPath $tempExtract
     $rootCandidate = Get-ChildItem $tempExtract -Directory | Select-Object -First 1
     if ($rootCandidate) { $sourceDir = $rootCandidate.FullName } else { $sourceDir = $tempExtract }
 
@@ -829,7 +884,7 @@ if (-not $NoUpdateCheck -and (Is-RepoConfigured)) {
             }
             else {
                 Write-Warning "Mise a jour ou reparation necessaire, mais aucun asset Windows ne correspond a $AssetPattern."
-                Write-Warning "La release GitHub doit contenir Dinotofu-Windows-v*.zip, pas seulement le ZIP source."
+                Write-Warning "La release GitHub doit contenir Dinotofu-Windows-v*.7z (ou .zip), pas seulement le ZIP source."
             }
         }
         else {

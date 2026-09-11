@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/dinotofu-installer.config.json"
 REPO="${DINOTOFU_REPO:-}"
-ASSET_PATTERN="${DINOTOFU_ASSET_PATTERN:-Dinotofu-Linux-v*.zip}"
+ASSET_PATTERN="${DINOTOFU_ASSET_PATTERN:-Dinotofu-Linux-v*.7z}"
 INSTALL_DIR="$SCRIPT_DIR"
 NO_UPDATE="false"
 LAUNCH_MODE="auto"

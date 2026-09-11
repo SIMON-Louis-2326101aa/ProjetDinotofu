@@ -1,5 +1,5 @@
 {
   "repo": "TON_COMPTE/TON_REPO",
-  "assetPattern": "Dinotofu-Linux-v*.zip",
+  "assetPattern": "Dinotofu-Linux-v*.7z",
   "installDir": "~/Downloads/ProjetDinotofu"
 }

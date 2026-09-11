@@ -132,6 +132,10 @@ function Select-ReleaseAsset {
     param($Release, [string]$Pattern)
     $asset = $Release.assets | Where-Object { $_.name -like $Pattern } | Select-Object -First 1
     if (-not $asset) {
+        $fallbackPattern = if ($Pattern -like "*.7z") { ($Pattern -replace '\.7z$', '.zip') } else { ($Pattern -replace '\.zip$', '.7z') }
+        $asset = $Release.assets | Where-Object { $_.name -like $fallbackPattern } | Select-Object -First 1
+    }
+    if (-not $asset) {
         $available = ($Release.assets | ForEach-Object { $_.name }) -join ", "
         throw "Aucun fichier de release ne correspond a '$Pattern'. Fichiers disponibles : $available"
     }
@@ -175,9 +179,59 @@ function Write-NetworkRecoveryHelp {
     Write-Host "Impossible de contacter GitHub pour telecharger Dinotofu." -ForegroundColor Yellow
     Write-Host "Verifie ta connexion Internet, ton DNS, ton proxy ou ton pare-feu, puis relance l'installateur."
     Write-Host "Teste aussi l'ouverture de https://github.com dans ton navigateur."
-    Write-Host "Si GitHub est bloque mais que tu as deja le ZIP du jeu, place Dinotofu-Windows-vX.YY.ZZ.zip a cote de cet installateur et relance-le."
+    Write-Host "Si GitHub est bloque mais que tu as deja l'archive du jeu, place Dinotofu-Windows-vX.YY.ZZ.7z (ou .zip) a cote de cet installateur et relance-le."
     if (-not [string]::IsNullOrWhiteSpace($Detail)) {
         Write-Host "Detail technique : $Detail" -ForegroundColor DarkYellow
+    }
+}
+
+function Expand-ArchiveAny {
+    param(
+        [string]$Path,
+        [string]$DestinationPath
+    )
+
+    New-Item -ItemType Directory -Path $DestinationPath -Force | Out-Null
+
+    if ($Path -like "*.zip") {
+        Expand-Archive -Path $Path -DestinationPath $DestinationPath -Force
+        return
+    }
+
+    # 1. Native Windows 10/11 tar.exe (libarchive with 7z support)
+    $tarCmd = Get-Command "tar.exe" -ErrorAction SilentlyContinue
+    if (-not $tarCmd -and (Test-Path "$env:SystemRoot\System32\tar.exe")) {
+        $tarCmd = "$env:SystemRoot\System32\tar.exe"
+    }
+    if ($tarCmd) {
+        $tarPath = if ($tarCmd -is [string]) { $tarCmd } else { $tarCmd.Source }
+        & $tarPath -xf $Path -C $DestinationPath
+        if ($LASTEXITCODE -eq 0) { return }
+    }
+
+    # 2. 7z.exe if installed
+    $sevenZip = Get-Command "7z.exe" -ErrorAction SilentlyContinue
+    if (-not $sevenZip) {
+        $common7z = @(
+            (Join-Path $env:ProgramFiles "7-Zip\7z.exe"),
+            (Join-Path ${env:ProgramFiles(x86)} "7-Zip\7z.exe")
+        )
+        foreach ($c in $common7z) {
+            if (Test-Path $c) { $sevenZip = $c; break }
+        }
+    }
+    if ($sevenZip) {
+        $szPath = if ($sevenZip -is [string]) { $sevenZip } else { $sevenZip.Source }
+        & $szPath x -y "-o$DestinationPath" $Path | Out-Null
+        if ($LASTEXITCODE -eq 0) { return }
+    }
+
+    try {
+        Expand-Archive -Path $Path -DestinationPath $DestinationPath -Force
+        return
+    }
+    catch {
+        throw "Impossible d'extraire $Path. Windows 10/11 integre nativement tar.exe pour les .7z, sinon installe 7-Zip (https://www.7-zip.org/)."
     }
 }
 
@@ -186,7 +240,7 @@ function Find-LocalReleaseZip {
 
     $patterns = @()
     if (-not [string]::IsNullOrWhiteSpace($Pattern)) { $patterns += $Pattern }
-    $patterns += @("Dinotofu-Windows-v*.zip", "Dinotofu-Windows-*.zip")
+    $patterns += @("Dinotofu-Windows-v*.7z", "Dinotofu-Windows-*.7z", "Dinotofu-Windows-v*.zip", "Dinotofu-Windows-*.zip")
     $patterns = $patterns | Select-Object -Unique
 
     $searchDirs = @($PSScriptRoot)
@@ -510,64 +564,54 @@ if ($config) {
 
 if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = Join-Path (Get-DefaultInstallParent) "ProjetDinotofu" }
 if (-not $installDirFromArgument) { $InstallDir = Ask-InstallDir $InstallDir } else { $InstallDir = Normalize-ProjectInstallDir $InstallDir }
-if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.zip" }
+if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.7z" }
 
-Assert-RepoConfigured
-
-$release = $null
-$asset = $null
-$localZip = $null
-$usingLocalZip = $false
-
-Write-Step "Recherche de la derniere release GitHub"
-try {
-    $release = Get-LatestRelease -Repository $Repo
-    $asset = Select-ReleaseAsset -Release $release -Pattern $AssetPattern
-    Write-Host "Release trouvee : $($release.tag_name)"
-    Write-Host "Fichier : $($asset.name)"
-}
-catch {
-    $localZip = Find-LocalReleaseZip -Pattern $AssetPattern
-    if ($localZip) {
-        $usingLocalZip = $true
-        Write-Warning "GitHub est inaccessible. Utilisation du ZIP Windows local trouve a cote de l'installateur."
-        Write-Host "Fichier local : $($localZip.FullName)"
-    }
-    else {
-        Write-NetworkRecoveryHelp -Detail $_.Exception.Message
-        Read-Host "Appuie sur Entree pour fermer"
-        exit 1
-    }
-}
-
-Write-Host "Installation finale : $InstallDir"
-
+$localGameExists = (Test-Path (Join-Path $PSScriptRoot "Dinotofu.exe")) -and (Test-Path (Join-Path $PSScriptRoot "assets"))
 $tempRoot = Join-Path $env:TEMP "DinotofuInstall"
-$tempZipName = if ($usingLocalZip) { $localZip.Name } else { $asset.name }
-$tempZip = Join-Path $tempRoot $tempZipName
-$tempExtract = Join-Path $tempRoot "extract"
 $backupDir = Join-Path $tempRoot "player_data_backup"
 
-Remove-Item $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory -Path $tempRoot, $tempExtract | Out-Null
-
-Write-Step "Telechargement"
-if ($usingLocalZip) {
-    Write-Host "GitHub non utilise : copie du ZIP local."
-    Copy-Item $localZip.FullName $tempZip -Force
+if ($localGameExists -and ($InstallDir -ieq $PSScriptRoot)) {
+    Write-Host "Dinotofu est deja dans son dossier d'execution : $InstallDir"
+    Write-Host "Configuration et creation des raccourcis bureau..."
+    Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
+    Write-InstalledConfig -TargetDir $InstallDir
+    if (-not (Test-Path (Join-Path $InstallDir "version.txt"))) {
+        "0.00.00" | Set-Content -Path (Join-Path $InstallDir "version.txt") -Encoding UTF8
+    }
+}
+elseif ($localGameExists) {
+    Write-Host "Installation depuis le dossier local du jeu : $PSScriptRoot -> $InstallDir"
+    Remove-Item $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $tempRoot, $backupDir | Out-Null
+    Backup-PlayerData -FromDir $InstallDir -BackupDir $backupDir
+    Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
+    Start-Sleep -Milliseconds 400
+    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+    Copy-Item -Path (Join-Path $PSScriptRoot "*") -Destination $InstallDir -Recurse -Force
+    Restore-PlayerData -BackupDir $backupDir -ToDir $InstallDir
+    Write-InstalledConfig -TargetDir $InstallDir
 }
 else {
+    Assert-RepoConfigured
+
+    $release = $null
+    $asset = $null
+    $localZip = $null
+    $usingLocalZip = $false
+
+    Write-Step "Recherche de la derniere release GitHub"
     try {
-        Download-WithProgress -Url $asset.browser_download_url -OutFile $tempZip -Activity "Telechargement de Dinotofu"
+        $release = Get-LatestRelease -Repository $Repo
+        $asset = Select-ReleaseAsset -Release $release -Pattern $AssetPattern
+        Write-Host "Release trouvee : $($release.tag_name)"
+        Write-Host "Fichier : $($asset.name)"
     }
     catch {
-        $fallbackZip = Find-LocalReleaseZip -Pattern $AssetPattern
-        if ($fallbackZip) {
-            Write-Warning "Telechargement impossible. Utilisation du ZIP Windows local trouve a cote de l'installateur."
-            Write-Host "Fichier local : $($fallbackZip.FullName)"
-            Copy-Item $fallbackZip.FullName $tempZip -Force
+        $localZip = Find-LocalReleaseZip -Pattern $AssetPattern
+        if ($localZip) {
             $usingLocalZip = $true
-            $localZip = $fallbackZip
+            Write-Warning "GitHub est inaccessible. Utilisation de l'archive Windows locale trouvee a cote de l'installateur."
+            Write-Host "Fichier local : $($localZip.FullName)"
         }
         else {
             Write-NetworkRecoveryHelp -Detail $_.Exception.Message
@@ -575,26 +619,61 @@ else {
             exit 1
         }
     }
-}
 
-Write-Step "Extraction"
-Expand-Archive -Path $tempZip -DestinationPath $tempExtract -Force
+    Write-Host "Installation finale : $InstallDir"
 
-$rootCandidate = Get-ChildItem $tempExtract -Directory | Select-Object -First 1
-if ($rootCandidate) { $sourceDir = $rootCandidate.FullName } else { $sourceDir = $tempExtract }
+    $tempZipName = if ($usingLocalZip) { $localZip.Name } else { $asset.name }
+    $tempZip = Join-Path $tempRoot $tempZipName
+    $tempExtract = Join-Path $tempRoot "extract"
 
-Write-Step "Installation dans $InstallDir"
-Backup-PlayerData -FromDir $InstallDir -BackupDir $backupDir
-Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
-Start-Sleep -Milliseconds 400
-New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-Copy-Item -Path (Join-Path $sourceDir "*") -Destination $InstallDir -Recurse -Force
-Restore-PlayerData -BackupDir $backupDir -ToDir $InstallDir
-Write-InstalledConfig -TargetDir $InstallDir
+    Remove-Item $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Path $tempRoot, $tempExtract | Out-Null
 
-if (-not (Test-Path (Join-Path $InstallDir "version.txt"))) {
-    $installedVersion = if ($release) { ($release.tag_name -replace '^v','') } else { Get-VersionFromZipName -FileName $tempZipName }
-    $installedVersion | Set-Content -Path (Join-Path $InstallDir "version.txt") -Encoding UTF8
+    Write-Step "Telechargement"
+    if ($usingLocalZip) {
+        Write-Host "GitHub non utilise : copie de l'archive locale."
+        Copy-Item $localZip.FullName $tempZip -Force
+    }
+    else {
+        try {
+            Download-WithProgress -Url $asset.browser_download_url -OutFile $tempZip -Activity "Telechargement de Dinotofu"
+        }
+        catch {
+            $fallbackZip = Find-LocalReleaseZip -Pattern $AssetPattern
+            if ($fallbackZip) {
+                Write-Warning "Telechargement impossible. Utilisation de l'archive Windows locale trouvee a cote de l'installateur."
+                Write-Host "Fichier local : $($fallbackZip.FullName)"
+                Copy-Item $fallbackZip.FullName $tempZip -Force
+                $usingLocalZip = $true
+                $localZip = $fallbackZip
+            }
+            else {
+                Write-NetworkRecoveryHelp -Detail $_.Exception.Message
+                Read-Host "Appuie sur Entree pour fermer"
+                exit 1
+            }
+        }
+    }
+
+    Write-Step "Extraction"
+    Expand-ArchiveAny -Path $tempZip -DestinationPath $tempExtract
+
+    $rootCandidate = Get-ChildItem $tempExtract -Directory | Select-Object -First 1
+    if ($rootCandidate) { $sourceDir = $rootCandidate.FullName } else { $sourceDir = $tempExtract }
+
+    Write-Step "Installation dans $InstallDir"
+    Backup-PlayerData -FromDir $InstallDir -BackupDir $backupDir
+    Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
+    Start-Sleep -Milliseconds 400
+    New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+    Copy-Item -Path (Join-Path $sourceDir "*") -Destination $InstallDir -Recurse -Force
+    Restore-PlayerData -BackupDir $backupDir -ToDir $InstallDir
+    Write-InstalledConfig -TargetDir $InstallDir
+
+    if (-not (Test-Path (Join-Path $InstallDir "version.txt"))) {
+        $installedVersion = if ($release) { ($release.tag_name -replace '^v','') } else { Get-VersionFromZipName -FileName $tempZipName }
+        $installedVersion | Set-Content -Path (Join-Path $InstallDir "version.txt") -Encoding UTF8
+    }
 }
 
 $launcherPath = Join-Path $InstallDir "DinotofuLauncher.ps1"

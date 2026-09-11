@@ -3,23 +3,27 @@
 Ce guide explique comment distribuer Dinotofu sans demander au joueur de compiler le projet.   
 
 
-## Installer depuis une release GitHub   
+## Jouer ou installer depuis une release GitHub   
 
-Pour installer Dinotofu sans compiler le projet manuellement :   
+Pour jouer à Dinotofu sans compiler le projet manuellement :   
 
 1. aller sur la page du dépôt GitHub ;   
 2. ouvrir la dernière Release affichée à droite du dépôt ;   
-3. télécharger uniquement l’archive **DinotofuInstaller** correspondant à ton système d’exploitation : Windows ou Linux ;   
-4. dézipper l’archive, puis lancer **Installer-Dinotofu**. Le ZIP du jeu est inclus dans le pack installateur comme secours local.   
+3. télécharger l’archive `.7z` correspondant à ton système : **Dinotofu-Windows** ou **Dinotofu-Linux** (format `.7z`, compression maximale LZMA2) ;   
+4. décompresser l’archive où tu veux ;   
+5. lancer directement le jeu via **Lancer-Dinotofu** (ou l'exécutable) !   
+6. si tu souhaites créer des raccourcis sur ton bureau, lance **Installer-Dinotofu** inclus directement dans le dossier du jeu.   
 
-Sur les versions desktop Windows/Linux, l'installateur ou le launcher doit créer deux entrées claires :   
+Sur les versions desktop Windows/Linux, le launcher ou l'installateur crée deux entrées claires :   
 
 - **ProjetDinotofu Launcher** : lancement normal / Auto, via le launcher adapté à l'OS ;   
 - **ProjetDinotofu Launcher Terminal version** : lancement forcé en terminal, via le launcher Windows/Linux correspondant.   
 
 ## Fichiers générés attendus   
 
-Les releases GitHub doivent surtout exposer les deux archives installateurs : **DinotofuInstaller-Windows** et **DinotofuInstaller-Linux**. Les scripts peuvent encore construire les ZIP du jeu, mais ils sont intégrés dans les installateurs pour éviter de multiplier les liens publics.   
+Les releases GitHub exposent exactement les deux archives portables au format `.7z` (compression maximale LZMA2) :   
+- **Dinotofu-Windows-vX.YY.ZZ.7z** : version portable Windows tout-en-un ;   
+- **Dinotofu-Linux-vX.YY.ZZ.7z** : version portable Linux tout-en-un.   
 
 Les raccourcis visibles doivent rester clairs :   
 
@@ -45,4 +49,4 @@ make -j4
 ./scripts/package_source_clean.sh   
 ```   
 
-Le ZIP source ne doit pas contenir `build/`, `output/`, d'exécutable, de cache local, de fichier de reprise ou de données privées de sauvegarde.   
+L'archive source ne doit pas contenir `build/`, `output/`, d'exécutable, de cache local, de fichier de reprise ou de données privées de sauvegarde.   
