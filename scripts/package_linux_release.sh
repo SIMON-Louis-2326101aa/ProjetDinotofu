@@ -53,7 +53,7 @@ mkdir -p "${PACKAGE_DIR}"
 rm -rf "${STAGING_DIR}" "${PACKAGE_PATH}"
 
 make clean >/dev/null 2>&1 || true
-make -j"$(nproc 2>/dev/null || echo 2)" TARGET_ARCH="${TARGET_ARCH:-x86-64}" OPT_LEVEL="${OPT_LEVEL:--O3}"
+make -j"$(nproc 2>/dev/null || echo 2)" TARGET_ARCH="${TARGET_ARCH:-x86-64}" OPT_LEVEL="${OPT_LEVEL:--O3}" LDFLAGS="-s"
 
 mkdir -p "${STAGING_DIR}"
 cp -r assets "${STAGING_DIR}/" 2>/dev/null || true
@@ -66,6 +66,9 @@ mkdir -p "${STAGING_DIR}/tools"
 cp -r tools/gui "${STAGING_DIR}/tools/gui"
 write_installer_config_json "${STAGING_DIR}/dinotofu-installer.config.json"
 cp output/Dinotofu "${STAGING_DIR}/Dinotofu"
+if command -v strip >/dev/null 2>&1; then
+    strip --strip-all "${STAGING_DIR}/Dinotofu" 2>/dev/null || true
+fi
 echo "${VERSION}" > "${STAGING_DIR}/version.txt"
 
 cat > "${STAGING_DIR}/LISEZ-MOI.txt" <<TXT

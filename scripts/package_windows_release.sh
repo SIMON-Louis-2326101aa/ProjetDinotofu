@@ -68,12 +68,18 @@ make -j"$(nproc 2>/dev/null || echo 2)" \
     TARGET_ARCH="${TARGET_ARCH:-x86-64}" \
     OPT_LEVEL="${OPT_LEVEL:--O3}" \
     CXXFLAGS="-std=c++17 ${OPT_LEVEL:--O3} -march=${TARGET_ARCH:-x86-64} -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8" \
-    LDFLAGS="-static -static-libgcc -static-libstdc++"
+    LDFLAGS="-s -static -static-libgcc -static-libstdc++"
 
 mkdir -p "${STAGING_DIR}"
 cp -r assets "${STAGING_DIR}/" 2>/dev/null || true
 cp README.md READMEFR.md PATCHNOTE_DINOTOFU.md PATCHNOTE_DINOTOFU_FR.md SYSTEMES_PREVUS.txt PERSONNAGES_SPECIAUX_DINOTOFU.txt CHEATS_DINOTOFU.txt BOSS_DINOTOFU.txt TITRES_DINOTOFU.txt HISTOIRE_PREPARATION_DINOTOFU.txt "${STAGING_DIR}/" 2>/dev/null || true
 cp output/Dinotofu.exe "${STAGING_DIR}/Dinotofu.exe"
+local_strip="${CROSS_CXX%g++}strip"
+if command -v "${local_strip}" >/dev/null 2>&1; then
+    "${local_strip}" --strip-all "${STAGING_DIR}/Dinotofu.exe" 2>/dev/null || true
+elif command -v strip >/dev/null 2>&1; then
+    strip --strip-all "${STAGING_DIR}/Dinotofu.exe" 2>/dev/null || true
+fi
 cp tools/windows/DinotofuInstaller.ps1 "${STAGING_DIR}/DinotofuInstaller.ps1"
 cp tools/windows/Installer-Dinotofu.cmd "${STAGING_DIR}/Installer-Dinotofu.cmd"
 cp tools/windows/DinotofuLauncher.ps1 "${STAGING_DIR}/DinotofuLauncher.ps1"
