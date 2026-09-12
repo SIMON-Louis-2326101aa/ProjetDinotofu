@@ -81,4 +81,6 @@ chmod +x "${STAGING_DIR}/output/Dinotofu" "${STAGING_DIR}/Dinotofu" "${STAGING_D
         -xr!*.tmp
 )
 
+rm -rf "${STAGING_DIR}"
+
 echo "Release Linux créée : ${PACKAGE_PATH}"

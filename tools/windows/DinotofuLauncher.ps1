@@ -727,9 +727,14 @@ function Start-GameExecutable {
             }
         }
         elseif ($UseTerminalWrapper) {
-            $safeExecutablePath = $ExecutablePath -replace "'", "''"
-            $command = "[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new(`$false); [Console]::InputEncoding = [System.Text.UTF8Encoding]::new(`$false); `$OutputEncoding = [Console]::OutputEncoding; chcp 65001 > `$null; & '$safeExecutablePath'"
-            Start-Process -FilePath "powershell.exe" -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $command) -WorkingDirectory $workingDir | Out-Null
+            Push-Location $workingDir
+            try {
+                try { $null = & chcp 65001 } catch { }
+                & $ExecutablePath
+            }
+            finally {
+                Pop-Location
+            }
         }
         else {
             Start-Process -FilePath $ExecutablePath -WorkingDirectory $workingDir | Out-Null
@@ -911,7 +916,19 @@ elseif (-not (Is-RepoConfigured)) {
 Repair-DinotofuDesktopShortcuts -RootDir $InstallDir
 
 if ($updateApplied) {
-    Restart-LauncherAfterUpdate
+    Write-Host ""
+    Write-Host "=================================================" -ForegroundColor Green
+    Write-Host " Mise a jour terminee avec succes !" -ForegroundColor Green
+    Write-Host "=================================================" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Appuie sur une touche pour lancer Dinotofu..." -ForegroundColor Cyan
+    try {
+        $null = [Console]::ReadKey($true)
+    }
+    catch {
+        $null = Read-Host "Appuie sur Entree pour lancer Dinotofu"
+    }
+    Clear-Host
 }
 
 Launch-Game

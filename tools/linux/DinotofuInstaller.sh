@@ -385,5 +385,11 @@ repair_desktop_shortcut_set "${HOME}/.local/share/applications/projetdinotofu-la
 
 echo "Dinotofu est installe."
 if [[ "$SKIP_LAUNCH" != "true" ]]; then
-    exec "${INSTALL_DIR}/Lancer-Dinotofu.sh"
+    if [[ -t 0 ]]; then
+        echo ""
+        read -r -s -n 1 -p "Appuie sur une touche pour lancer Dinotofu..." _ || true
+        echo ""
+    fi
+    clear 2>/dev/null || tput clear 2>/dev/null || true
+    exec "${INSTALL_DIR}/Lancer-Dinotofu.sh" --no-update
 fi

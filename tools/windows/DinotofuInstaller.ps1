@@ -699,7 +699,16 @@ else {
 
 Write-Step "Installation terminee"
 if (-not $SkipLaunch -and (Test-Path $launcherPath)) {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $launcherPath -Repo $Repo -InstallDir $InstallDir
+    Write-Host ""
+    Write-Host "Appuie sur une touche pour lancer Dinotofu..." -ForegroundColor Cyan
+    try {
+        $null = [Console]::ReadKey($true)
+    }
+    catch {
+        $null = Read-Host "Appuie sur Entree pour lancer Dinotofu"
+    }
+    Clear-Host
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $launcherPath -Repo $Repo -InstallDir $InstallDir -NoUpdateCheck
 }
 
 # Noms de raccourcis historiques conservés pour validation :

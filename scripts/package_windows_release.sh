@@ -95,6 +95,7 @@ TXT
         -xr!*.tmp
 )
 
+rm -rf "${STAGING_DIR}"
 make clean >/dev/null 2>&1 || true
 
 echo "Release Windows creee : ${GAME_ARCHIVE}"

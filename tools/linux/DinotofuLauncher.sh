@@ -179,9 +179,20 @@ fi
 
 repair_linux_desktop_shortcuts
 
-if [[ "$UPDATE_APPLIED" == "true" && -x "${INSTALL_DIR}/DinotofuLauncher.sh" ]]; then
-    echo "Redemarrage du launcher apres mise a jour."
-    exec "${INSTALL_DIR}/DinotofuLauncher.sh" --no-update "--mode=${LAUNCH_MODE}"
+if [[ "$UPDATE_APPLIED" == "true" ]]; then
+    echo ""
+    echo "================================================="
+    echo " Mise a jour terminee avec succes !"
+    echo "================================================="
+    echo ""
+    if [[ -t 0 ]]; then
+        read -r -s -n 1 -p "Appuie sur une touche pour lancer Dinotofu..." _ || true
+        echo ""
+    fi
+    clear 2>/dev/null || tput clear 2>/dev/null || true
+    if [[ -x "${INSTALL_DIR}/DinotofuLauncher.sh" ]]; then
+        exec "${INSTALL_DIR}/DinotofuLauncher.sh" --no-update "--mode=${LAUNCH_MODE}"
+    fi
 fi
 
 
