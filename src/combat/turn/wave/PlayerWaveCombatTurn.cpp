@@ -793,19 +793,6 @@ namespace
         return hint + ".";
     }
 
-    int tacticalMasteryCooldownReduction(const Player& player, const std::string& actionKey)
-    {
-        // Une maîtrise haute aide le rythme, mais ne supprime pas le cooldown.
-        // Un passif de maîtrise activé peut aider un cran, jamais rendre la technique gratuite.
-        const int activeLevel = tacticalMasteryLevel(player, actionKey);
-        const int passiveLevel = tacticalPassiveMasteryLevel(player, actionKey);
-        const int activeReduction = (activeLevel >= 6 ? 1 : 0) + (activeLevel >= 9 ? 1 : 0);
-        const int passiveReduction = passiveLevel >= 4 ? 1 : 0;
-        const int loadoutModifier = tacticalLoadoutSynergyModifier(player, actionKey);
-        const int loadoutReduction = loadoutModifier >= 3 ? 1 : 0;
-        return std::min(2, activeReduction + passiveReduction + loadoutReduction);
-    }
-
     void updateTacticalLearning(Player& player, const std::string& actionKey)
     {
         const int actionCount = canonicalEventCount(player, "actions_tactiques_combat", actionKey);
@@ -3734,7 +3721,6 @@ namespace
             const MonsterBehaviorProfile profile = MonsterBehaviorProfileCatalog::build(target);
             const bool trained = player.hasPassiveSkill("stopping_shot_mastery") || player.hasPassiveSkill("ranger_eye") || player.hasActiveSkill("tracking_mark");
             const int masteryBonus = tacticalMasterySoftBonus(player, "tir_arret");
-            const int masteryDuration = tacticalMasteryDurationBonus(player, "tir_arret");
             int damage = std::max(2, player.getLevel() / 6 + random.between(3, trained ? 9 : 6) + masteryBonus);
             if (profile.incomingAccuracyModifier <= -10)
             {

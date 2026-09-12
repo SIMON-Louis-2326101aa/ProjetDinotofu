@@ -32,6 +32,7 @@
 #include "quest/Quest.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "story/StoryCampaign.hpp"
+#include "world/LocalReputationSystem.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -1219,86 +1220,11 @@ namespace
         return player.getInventory().countMaterialById(id);
     }
 
-    struct LocalReputationSummary
-    {
-        int score = 0;
-        int successfulPersonalServices = 0;
-        int failedPersonalServices = 0;
-        int warningNotes = 0;
-        std::string label = "inconnue";
-        int discountPercent = 0;
-    };
+    using LocalReputationSummary = LocalReputationResult;
 
     LocalReputationSummary localReputationForPlayer(const Player& player)
     {
-        LocalReputationSummary summary;
-        for (const Quest& quest : player.getQuestLog().getQuests())
-        {
-            if (!quest.guildQuest)
-            {
-                if (quest.turnedIn)
-                {
-                    ++summary.successfulPersonalServices;
-                }
-                if (quest.failed)
-                {
-                    ++summary.failedPersonalServices;
-                }
-            }
-        }
-
-        int proofScore = 0;
-        proofScore += countMaterial(player, "local_service_letter") * 2;
-        proofScore += countMaterial(player, "client_recommendation") * 3;
-        proofScore += countMaterial(player, "guild_favor_token") * 3;
-        proofScore += countMaterial(player, "municipal_proof_letter") * 2;
-        proofScore += countMaterial(player, "local_reputation_note") * 1;
-        proofScore += countMaterial(player, "city_service_stamp") * 1;
-        proofScore += countMaterial(player, "city_defense_medal") * 4;
-        proofScore += countMaterial(player, "warm_meal_voucher") * 1;
-        proofScore += countMaterial(player, "lodging_bed_token") * 1;
-        proofScore += countMaterial(player, "stable_stall_ticket") * 1;
-        proofScore += countMaterial(player, "travel_pass_note") * 1;
-        proofScore += countMaterial(player, "route_toll_receipt") * 1;
-        proofScore += countMaterial(player, "caravan_seat_ticket") * 2;
-        proofScore += countMaterial(player, "guarded_transport_pass") * 3;
-        proofScore += countMaterial(player, "stable_box_reservation") * 2;
-        proofScore += countMaterial(player, "rental_mount_voucher") * 2;
-        proofScore += countMaterial(player, "relay_route_badge") * 2;
-
-        summary.warningNotes = countMaterial(player, "local_service_warning");
-        const int serviceScore = summary.successfulPersonalServices * 3;
-        const int warningScore = summary.warningNotes * 2;
-        const int penaltyScore = summary.failedPersonalServices * 2 + warningScore;
-        summary.score = std::max(0, proofScore + serviceScore - penaltyScore);
-
-        if (summary.score >= 65)
-        {
-            summary.label = "partenaire fiable de la ville";
-            summary.discountPercent = 15;
-        }
-        else if (summary.score >= 45)
-        {
-            summary.label = "habituée des comptoirs";
-            summary.discountPercent = 12;
-        }
-        else if (summary.score >= 28)
-        {
-            summary.label = "fiable en ville";
-            summary.discountPercent = 8;
-        }
-        else if (summary.score >= 14)
-        {
-            summary.label = "utile localement";
-            summary.discountPercent = 5;
-        }
-        else if (summary.score >= 5)
-        {
-            summary.label = "connue de quelques PNJ";
-            summary.discountPercent = 0;
-        }
-
-        return summary;
+        return LocalReputationSystem::evaluate(player, player.getCurrentCityId());
     }
 
     bool isLocalServiceShop(ShopType type)
@@ -3879,6 +3805,28 @@ namespace
                     }
 
                     auto acceptOath = [&](const std::string& id, const std::string& name, const std::vector<std::string>& extraLines) {
+                        const bool alreadyKnown = player.isPassiveSkillUnlocked(id);
+                        const bool alreadyActive = player.hasPassiveSkill(id);
+                        if (alreadyKnown)
+                        {
+                            if (alreadyActive)
+                            {
+                                showShopResult("SERMENT DÉJÀ ACTIF", "shop.church.oath.already_active", {
+                                    name + " est déjà inscrit comme contrat actif.",
+                                    "Un serment ne se cumule pas avec lui-même et ne consomme pas d'emplacement passif."
+                                });
+                            }
+                            else
+                            {
+                                showShopResult("SERMENT DÉJÀ ROMPU", "shop.church.oath.broken", {
+                                    name + " porte déjà une rupture dans le registre.",
+                                    "Il ne peut pas être réactivé gratuitement depuis le menu des compétences ni reprêté comme si rien ne s'était passé.",
+                                    "Une future voie de réparation/restauration devra demander un vrai prix et des conséquences."
+                                });
+                            }
+                            return;
+                        }
+
                         const bool hadBlood = player.hasPassiveSkill("church_oath_blood");
                         const bool hadShield = player.hasPassiveSkill("church_oath_shield");
                         const bool hadSilence = player.hasPassiveSkill("church_oath_silence");
@@ -3914,6 +3862,7 @@ namespace
                         lines.insert(lines.end(), extraLines.begin(), extraLines.end());
                         lines.push_back("Rupture prévue : revenir à l'église pour rompre proprement le contrat, avec prix, témoin et trace, au lieu d'effacer ça comme une option gratuite.");
                         player.recordCanonicalEvent("serments_eglise", id, name, 1);
+                        player.recordHistoricalEvent("oath_sworn", id, "Serment prêté : " + name, false);
                         showShopResult("SERMENT ACCEPTÉ", "shop.church.oath.accepted", lines);
                     };
 
@@ -4074,7 +4023,7 @@ namespace
                         struct OathBreakOption { int id; std::string skill; std::string name; };
                         std::vector<OathBreakOption> breakOptions;
                         auto addBreak = [&](const std::string& skill, const std::string& name) {
-                            if (player.isPassiveSkillUnlocked(skill))
+                            if (player.hasPassiveSkill(skill))
                             {
                                 breakOptions.push_back({static_cast<int>(breakOptions.size()) + 1, skill, name});
                             }
@@ -4123,12 +4072,12 @@ namespace
                                 showShopResult("RUPTURE REFUSÉE", "shop.church.oath.break.refused", breakLines);
                                 continue;
                             }
-                            const bool wasActive = player.disablePassiveSkill(selected.skill);
                             player.unlockPassiveSkill("church_oath_broken_trace", "Trace de serment rompu");
                             player.recordCanonicalEvent("serments_rompus", selected.skill, selected.name, 1);
+                            player.recordHistoricalEvent("oath_broken", selected.skill, "Rupture de " + selected.name, false);
                             player.recordCanonicalEvent("eglise", "rupture_serment", "Le joueur a rompu un serment d'église", 1);
                             breakLines.push_back("Contrat rompu : " + selected.name + ".");
-                            breakLines.push_back(wasActive ? "Effet : le serment était actif et vient d'être désactivé." : "Effet : le serment était déjà inactif, mais la rupture est quand même inscrite.");
+                            breakLines.push_back("Effet : le contrat cesse d'agir immédiatement. Il ne peut pas être réactivé depuis le loadout passif.");
                             breakLines.push_back("Trace : le registre garde le nom du serment, la date, le prix payé et le fait qu'il n'a pas disparu gratuitement.");
                             breakLines.push_back("Conséquence : la Trace de serment rompu pourra servir aux prêtres, villes, boss, compagnons ou héritages futurs.");
                             showShopResult("SERMENT ROMPU", "shop.church.oath.break.done", breakLines);
@@ -8799,3 +8748,4 @@ void ShopMenu::open(Player& player)
         else if (choice == 15) ShopMenu::openShopOfType(player, ShopType::MonsterMaterial);
     }
 }
+

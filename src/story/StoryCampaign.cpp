@@ -715,12 +715,26 @@ bool StoryCampaign::canUnlockChapterThree(const Player& player)
 
 bool StoryCampaign::canUnlockChapterFour(const Player& player)
 {
-    if (player.hasStorySkip() || player.getStoryChapter() >= 4)
-    {
-        return true;
-    }
-    return player.getStoryChapter() >= 3
-        && (player.getStoryStep() >= 9 || hasTurnedInStoryQuest(player, "story_ch3_convoy_return"));
+    (void)player;
+    // Chapter 4 content remains in source for later rework, but normal gameplay is intentionally capped
+    // after the introduction of Chapter 3 during the current development phase.
+    return false;
+}
+
+bool StoryCampaign::isDevelopmentLimitReached(const Player& player)
+{
+    return player.hasStoryModeStarted() && player.getStoryChapter() >= 3;
+}
+
+std::vector<std::string> StoryCampaign::buildDevelopmentLimitLines(const Player& player)
+{
+    return {
+        "Fin temporaire du contenu histoire actuellement jouable.",
+        player.getName() + " a atteint l'introduction du chapitre 3 : Les routes qui répondent mal.",
+        "Les chapitres et scènes suivants existent encore dans le code comme travail préparatoire, mais ils sont volontairement désactivés pendant leur refonte.",
+        "Priorité actuelle du développement : monde vivant, entités différenciées, monstres/boss, systèmes persistants, recrues, rivaux et contenu libre.",
+        "Le personnage reste disponible : le reste du jeu, l'exploration et les systèmes hors progression principale peuvent continuer à être utilisés."
+    };
 }
 
 int StoryCampaign::maxUnlockedChapter(const Player& player)
@@ -744,12 +758,8 @@ int StoryCampaign::maxUnlockedChapter(const Player& player)
     {
         unlocked = std::max(unlocked, 3);
     }
-    if (canUnlockChapterFour(player) || player.getStoryChapter() >= 4)
-    {
-        unlocked = std::max(unlocked, 4);
-    }
-
-    return std::max(unlocked, player.getStoryChapter());
+    // Current playable development cap: introduction of Chapter 3.
+    return std::min(3, std::max(unlocked, player.getStoryChapter()));
 }
 
 bool StoryCampaign::isChapterUnlocked(const Player& player, int chapter)

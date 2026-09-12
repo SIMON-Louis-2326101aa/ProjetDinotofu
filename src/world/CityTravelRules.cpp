@@ -4,6 +4,7 @@
 
 #include "economy/EconomyBalance.hpp"
 #include "world/WorldMap.hpp"
+#include "world/LocalReputationSystem.hpp"
 
 #include "boss/BossCatalog.hpp"
 
@@ -13,33 +14,8 @@
 
 namespace
 {
-    int localReputationScore(const Player& player, const std::string& cityId)
-    {
-        int score = 0;
-        for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
-        {
-            if (record.locationId != cityId)
-            {
-                continue;
-            }
-            if (record.category == "pnj_servis") score += record.count * 3;
-            else if (record.category == "types_quetes_completees") score += record.count * 2;
-            else if (record.category == "lieux_visites") score += record.count;
-            else if (record.category == "coffres_achetes" || record.category == "coffres_ameliores") score += record.count;
-        }
-        return score;
-    }
-
-    std::string localReputationLabel(int score)
-    {
-        if (score >= 80) return "héros local";
-        if (score >= 45) return "fiable";
-        if (score >= 20) return "apprécié";
-        if (score >= 8) return "connu";
-        if (score < 0) return "suspect";
-        return "neutre";
-    }
 }
+
 
 
 CityAccessReport CityTravelRules::evaluateAccess(const Player& player, const City& city)
@@ -48,8 +24,8 @@ CityAccessReport CityTravelRules::evaluateAccess(const Player& player, const Cit
     report.allowed = true;
     report.lines.push_back("Ville : " + city.getName() + ".");
     report.lines.push_back("Condition officielle : " + city.getAccessRequirementText());
-    const int reputationScore = localReputationScore(player, city.getId());
-    report.lines.push_back("Réputation locale : " + localReputationLabel(reputationScore) + " (" + std::to_string(reputationScore) + ").");
+    const int reputationScore = LocalReputationSystem::score(player, city.getId());
+    report.lines.push_back("Réputation locale : " + LocalReputationSystem::labelForScore(reputationScore) + " (" + std::to_string(reputationScore) + ").");
 
     if (player.getLevel() < city.getMinimumLevel())
     {
@@ -347,8 +323,8 @@ std::vector<std::string> CityTravelRules::buildLocalCityDifferentiationLines(con
     lines.push_back("Profil local : " + city->getName() + ".");
     lines.push_back("Guilde locale : " + city->getGuildName() + ".");
     lines.push_back("Inscription locale : " + std::string(player.isRegisteredAtCityGuild(city->getId()) ? "validée" : "mise à niveau disponible") + ".");
-    const int reputationScore = localReputationScore(player, city->getId());
-    lines.push_back("Réputation locale : " + localReputationLabel(reputationScore) + " (score " + std::to_string(reputationScore) + ").");
+    const int reputationScore = LocalReputationSystem::score(player, city->getId());
+    lines.push_back("Réputation locale : " + LocalReputationSystem::labelForScore(reputationScore) + " (score " + std::to_string(reputationScore) + ").");
     lines.push_back("Effet futur : prix, négociations, accès, gardes, réservations et quêtes locales pourront utiliser ce score.");
     lines.push_back("Ressources proches :");
     for (const std::string& resource : city->getResourceSpecialties())

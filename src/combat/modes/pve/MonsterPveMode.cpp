@@ -712,7 +712,76 @@ namespace
         {
             const Monster& monster = wave.getDefeatedEnemy(i);
             player.recordEnemyKillByName(monster.getName());
+            if (monster.isPersistentRival())
+            {
+                player.markRivalDefeated(monster.getRivalId(), player.getCurrentCityId());
+            }
         }
+    }
+
+    std::string returningRivalDisplayName(const PlayerRivalRecord& rival)
+    {
+        if (rival.returns >= 4) return rival.enemyName + " — Némésis";
+        if (rival.returns >= 3) return rival.enemyName + " — Fléau familier";
+        if (rival.returns >= 2) return rival.enemyName + " — Ombre revenue";
+        return rival.enemyName + " — Rancune tenace";
+    }
+
+    bool maybeAppendReturningRival(Player& player, EnemyCombatQueue& wave, Random& random)
+    {
+        std::vector<std::string> candidates;
+        for (const PlayerRivalRecord& rival : player.getRivalRecords())
+        {
+            if (!rival.alive || rival.lastSeenDay >= player.getWorldDaysElapsed()) continue;
+            const bool localTrace = rival.lastKnownLocationId.empty() || rival.lastKnownLocationId == player.getCurrentCityId();
+            int chance = localTrace ? 24 : 7;
+            if (player.hasPassiveSkill("church_oath_rivals")) chance += 10;
+            if (player.hasPassiveSkill("church_oath_memory")) chance += 5;
+            if (random.between(1, 100) <= chance) candidates.push_back(rival.rivalId);
+        }
+        if (candidates.empty()) return false;
+
+        const std::string rivalId = candidates[static_cast<std::size_t>(random.between(0, static_cast<int>(candidates.size()) - 1))];
+        const PlayerRivalRecord* rival = player.findRival(rivalId);
+        if (rival == nullptr || !rival->alive) return false;
+
+        player.recordRivalReturn(rivalId, player.getCurrentCityId());
+        rival = player.findRival(rivalId);
+        if (rival == nullptr) return false;
+
+        const int hp = std::max(8, rival->baseMaxHp + rival->returns * std::max(4, rival->baseMaxHp / 5));
+        const int attack = std::max(2, rival->baseAttack + rival->returns * 2);
+        Monster returning(
+            returningRivalDisplayName(*rival),
+            rival->enemyFamily.empty() ? "Rival" : rival->enemyFamily,
+            Race::Unknown,
+            rival->currentLevel,
+            hp,
+            std::max(1, attack - 2),
+            attack,
+            attack + 4,
+            rival->returns >= 2 ? 1 : 0,
+            rival->returns >= 3 ? 1 : 0,
+            false,
+            rival->returns >= 2,
+            false,
+            rival->returns >= 3
+        );
+        returning.setRivalId(rivalId);
+        wave.addWaitingEnemy(returning);
+
+        MessageScreen::show(
+            "TRACE FAMILIÈRE",
+            "combat.pve.rival.return",
+            {
+                "Une présence déjà connue suit la rencontre au lieu d'apparaître comme un ennemi anonyme.",
+                returning.getName() + " | retour " + std::to_string(rival->returns) + " | niveau " + std::to_string(rival->currentLevel) + ".",
+                "Dernière trace connue : " + (rival->lastKnownLocationId.empty() ? std::string("inconnue") : rival->lastKnownLocationId) + ".",
+                "Ce retour existe parce que cet individu a survécu auparavant. Sa mort, elle, restera définitive."
+            },
+            false
+        );
+        return true;
     }
 
 
@@ -817,38 +886,6 @@ namespace
         return fallback;
     }
 
-    int extractLocalLabelIntField(const std::string& label, const std::string& fieldName, int fallback)
-    {
-        const std::string marker = fieldName + "=";
-        const std::size_t pos = label.find(marker);
-        if (pos == std::string::npos)
-        {
-            return fallback;
-        }
-        std::size_t start = pos + marker.size();
-        std::size_t end = start;
-        if (end < label.size() && label[end] == '-')
-        {
-            ++end;
-        }
-        while (end < label.size() && std::isdigit(static_cast<unsigned char>(label[end])))
-        {
-            ++end;
-        }
-        if (end <= start)
-        {
-            return fallback;
-        }
-        try
-        {
-            return std::stoi(label.substr(start, end - start));
-        }
-        catch (...)
-        {
-            return fallback;
-        }
-    }
-
     bool recruitedAllyIsInInfirmary(const Player& player, const std::string& recruitName)
     {
         if (recruitName.empty())
@@ -857,30 +894,6 @@ namespace
         }
         return localJournalCount(player, "recrues_infirmerie_sejours", recruitName)
             > localJournalCount(player, "recrues_infirmerie_recuperees", recruitName);
-    }
-
-    int recruitedAllyInfirmaryReadyDay(const Player& player, const std::string& recruitName)
-    {
-        const std::string label = localJournalLabel(player, "recrues_infirmerie_sejours", recruitName);
-        return extractLocalLabelIntField(label, "pret_jour", player.getWorldDaysElapsed());
-    }
-
-    std::string recruitedAllyInfirmarySeverity(const Player& player, const std::string& recruitName)
-    {
-        const std::string label = localJournalLabel(player, "recrues_infirmerie_sejours", recruitName, "gravite=surveillance");
-        const std::string marker = "gravite=";
-        const std::size_t pos = label.find(marker);
-        if (pos == std::string::npos)
-        {
-            return "surveillance";
-        }
-        const std::size_t start = pos + marker.size();
-        std::size_t end = label.find(" | ", start);
-        if (end == std::string::npos)
-        {
-            end = label.size();
-        }
-        return label.substr(start, end - start);
     }
 
     bool recruitedAllyIsAwaitingInfirmaryTransfer(const Player& player, const std::string& recruitName)
@@ -1050,6 +1063,7 @@ namespace
         bool groupHealOneTurn = false;
         bool groupGuardOneTurn = false;
         bool groupTechniqueOneTurn = false;
+        bool groupCombinedTechniqueOneTurn = false;
         bool groupSpreadTargetsOneTurn = false;
         bool groupPriorityTarget = false;
         std::string groupPriorityTargetName;
@@ -2020,6 +2034,7 @@ namespace
         orders.groupHealOneTurn = false;
         orders.groupGuardOneTurn = false;
         orders.groupTechniqueOneTurn = false;
+        orders.groupCombinedTechniqueOneTurn = false;
         orders.groupSpreadTargetsOneTurn = false;
         for (auto& entry : orders.uniqueOrders)
         {
@@ -2037,6 +2052,7 @@ namespace
         RecruitedAllyOrderState& orders
     )
     {
+        (void)player;
         if (activeAllies.empty())
         {
             MessageScreen::show("CONSIGNE CIBLÉE", "combat.team_orders.unique.empty", {"Aucune recrue active à commander."}, false);
@@ -2150,9 +2166,10 @@ namespace
         screen.addOption(1, "Demander du soin au groupe", "Les soutiens/alliés disponibles tenteront de couvrir le chef ce tour. Consigne 1 tour.", true, "combat.team_orders.group.heal");
         screen.addOption(2, "Prioriser une cible", "Toute l'équipe active visera cette cible jusqu'à sa mort/disparition.", wave.hasActiveEnemies(), "combat.team_orders.group.focus");
         screen.addOption(3, "Tenir la ligne", "Consigne prudente 1 tour : moins d'agression, plus de couverture.", true, "combat.team_orders.group.guard");
-        screen.addOption(4, "Percée coordonnée", "Les recrues dont la technique est prête tenteront de l'utiliser ce tour. Consigne 1 tour.", true, "combat.team_orders.group.technique");
-        screen.addOption(5, "Répartir les cibles", "L'équipe évite de tous taper la même cible ce tour, utile contre plusieurs ennemis.", wave.getActiveEnemyCount() >= 2, "combat.team_orders.group.spread");
-        screen.addOption(6, "Annuler la priorité de groupe", "Retire la cible prioritaire globale.", orders.groupPriorityTarget, "combat.team_orders.group.clear_focus");
+        screen.addOption(4, "Percée coordonnée", "Les recrues dont la technique est prête tenteront chacune leur technique ce tour. Consigne 1 tour.", true, "combat.team_orders.group.technique");
+        screen.addOption(5, "Technique combinée", "Les deux recrues actives dépensent leurs deux tours dans une seule technique de duo si leurs techniques sont prêtes.", true, "combat.team_orders.group.combo");
+        screen.addOption(6, "Répartir les cibles", "L'équipe évite de tous taper la même cible ce tour, utile contre plusieurs ennemis.", wave.getActiveEnemyCount() >= 2, "combat.team_orders.group.spread");
+        screen.addOption(7, "Annuler la priorité de groupe", "Retire la cible prioritaire globale.", orders.groupPriorityTarget, "combat.team_orders.group.clear_focus");
         const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis la consigne de groupe.");
         Console::clear();
         if (choice == 1)
@@ -2182,10 +2199,15 @@ namespace
         }
         else if (choice == 5)
         {
+            orders.groupCombinedTechniqueOneTurn = true;
+            MessageScreen::show("TECHNIQUE COMBINÉE", "combat.team_orders.group.combo.done", {"Les deux recrues actives tenteront une vraie technique de duo.", "Le duo consomme leurs deux tours alliés et demande leurs deux techniques prêtes.", "Le résultat dépend de leurs profils : garde, soutien, distance ou assaut."}, false);
+        }
+        else if (choice == 6)
+        {
             orders.groupSpreadTargetsOneTurn = true;
             MessageScreen::show("CIBLES RÉPARTIES", "combat.team_orders.group.spread.done", {"L'équipe répartira ses cibles pendant 1 tour au lieu de tunnel automatiquement.", "Cette consigne est utile contre plusieurs ennemis, moins contre un boss seul."}, false);
         }
-        else if (choice == 6)
+        else if (choice == 7)
         {
             orders.groupPriorityTarget = false;
             orders.groupPriorityTargetName.clear();
@@ -2237,6 +2259,7 @@ namespace
             lines.push_back("Soin groupe 1 tour : " + std::string(orders.groupHealOneTurn ? "oui" : "non") + ".");
             lines.push_back("Tenir ligne 1 tour : " + std::string(orders.groupGuardOneTurn ? "oui" : "non") + ".");
             lines.push_back("Percée coordonnée 1 tour : " + std::string(orders.groupTechniqueOneTurn ? "oui" : "non") + ".");
+            lines.push_back("Technique combinée 1 tour : " + std::string(orders.groupCombinedTechniqueOneTurn ? "oui" : "non") + ".");
             lines.push_back("Répartition cibles 1 tour : " + std::string(orders.groupSpreadTargetsOneTurn ? "oui" : "non") + ".");
             lines.push_back("Priorité groupe : " + std::string(orders.groupPriorityTarget ? orders.groupPriorityTargetName : "aucune") + ".");
             for (const auto& entry : orders.uniqueOrders)
@@ -2271,6 +2294,159 @@ namespace
         MessageScreen::show("RECRUES ÉQUIPÉES", "combat.pve.recruited_allies.start", lines, false);
     }
 
+    std::string recruitedAllyPairKey(const RecruitedAllyCombatSupport& a, const RecruitedAllyCombatSupport& b)
+    {
+        if (a.name <= b.name) return a.name + "|" + b.name;
+        return b.name + "|" + a.name;
+    }
+
+    bool recruitedAllyIsRangedProfile(const RecruitedAllyCombatSupport& ally)
+    {
+        return recruitedAllyJobContains(ally, "archer")
+            || recruitedAllyJobContains(ally, "mage")
+            || recruitedAllyJobContains(ally, "tireur");
+    }
+
+    bool recruitedAllyIsSupportProfile(const RecruitedAllyCombatSupport& ally)
+    {
+        return recruitedAllyJobContains(ally, "soigneur")
+            || recruitedAllyJobContains(ally, "mage d'appui")
+            || recruitedAllyJobContains(ally, "intendant");
+    }
+
+    bool recruitedAllyIsTankProfile(const RecruitedAllyCombatSupport& ally)
+    {
+        return recruitedAllyJobContains(ally, "gardien") || recruitedAllyJobContains(ally, "tank");
+    }
+
+    bool recruitedAllyIsAssaultProfile(const RecruitedAllyCombatSupport& ally)
+    {
+        return recruitedAllyJobContains(ally, "assassin")
+            || recruitedAllyJobContains(ally, "roublard")
+            || recruitedAllyJobContains(ally, "brigand")
+            || recruitedAllyJobContains(ally, "lancier");
+    }
+
+    bool executeRecruitedAllyCombinedTechnique(
+        Player& player,
+        EnemyCombatQueue& wave,
+        Random& random,
+        std::vector<RecruitedAllyCombatSupport>& allies,
+        RecruitedAllyOrderState& orders,
+        std::vector<std::string>& lines
+    )
+    {
+        if (!orders.groupCombinedTechniqueOneTurn || allies.size() < 2 || !wave.hasActiveEnemies())
+        {
+            return false;
+        }
+
+        RecruitedAllyCombatSupport& first = allies[0];
+        RecruitedAllyCombatSupport& second = allies[1];
+        if (first.currentHp <= 0 || second.currentHp <= 0)
+        {
+            lines.push_back("Technique combinée annulée : les deux recrues doivent être encore debout.");
+            return false;
+        }
+        if (first.activeSkillCooldown > 0 || second.activeSkillCooldown > 0)
+        {
+            lines.push_back("Technique combinée impossible : les deux techniques personnelles doivent être prêtes.");
+            return false;
+        }
+
+        ++first.turnsTaken;
+        ++second.turnsTaken;
+
+        const bool firstTank = recruitedAllyIsTankProfile(first);
+        const bool secondTank = recruitedAllyIsTankProfile(second);
+        const bool firstSupport = recruitedAllyIsSupportProfile(first);
+        const bool secondSupport = recruitedAllyIsSupportProfile(second);
+        const bool firstRanged = recruitedAllyIsRangedProfile(first);
+        const bool secondRanged = recruitedAllyIsRangedProfile(second);
+        const bool firstAssault = recruitedAllyIsAssaultProfile(first);
+        const bool secondAssault = recruitedAllyIsAssaultProfile(second);
+
+        std::string techniqueName = "Assaut synchronisé";
+        int powerPercent = 100;
+        int vulnerability = 0;
+        int weakening = 0;
+
+        if ((firstTank && secondAssault) || (secondTank && firstAssault))
+        {
+            techniqueName = "Brèche sous garde";
+            powerPercent = 112;
+            vulnerability = 18;
+            weakening = 8;
+        }
+        else if ((firstSupport && !secondSupport) || (secondSupport && !firstSupport))
+        {
+            techniqueName = "Faille relayée";
+            powerPercent = 92;
+            vulnerability = 24;
+        }
+        else if (firstRanged && secondRanged)
+        {
+            techniqueName = "Feu croisé";
+            powerPercent = 120;
+            vulnerability = 10;
+        }
+        else if (firstRanged != secondRanged)
+        {
+            techniqueName = "Croisement de lignes";
+            powerPercent = 108;
+            weakening = 10;
+        }
+
+        Monster& target = wave.getActiveEnemy(0);
+        const std::string targetName = target.getName();
+        const int maturity = recruitedAllyMaturityTier(first) + recruitedAllyMaturityTier(second);
+        int baseDamage = std::max(6,
+            first.estimatedLevel / 2 + second.estimatedLevel / 2
+            + first.weaponQuality + second.weaponQuality
+            + first.currentRankIndex * 3 + second.currentRankIndex * 3
+            + maturity * 2 + random.between(4, 11));
+        if (player.hasPassiveSkill("church_oath_bonds"))
+        {
+            baseDamage += 2;
+        }
+        const int damage = std::max(3, baseDamage * powerPercent / 100);
+        target.takeDamage(damage);
+        if (!target.isDead() && vulnerability > 0) target.applyVulnerability(2, vulnerability);
+        if (!target.isDead() && weakening > 0) target.applyWeakening(2, weakening);
+        const bool killed = target.isDead();
+        wave.removeDeadAndReplace();
+
+        first.damageDealt += damage / 2;
+        second.damageDealt += damage - damage / 2;
+        if (killed)
+        {
+            ++first.finishBlows;
+            ++second.finishBlows;
+        }
+        first.activeSkillCooldown = std::max(2, 4 - recruitedAllyMaturityTier(first) / 2);
+        second.activeSkillCooldown = std::max(2, 4 - recruitedAllyMaturityTier(second) / 2);
+
+        const std::string pairKey = recruitedAllyPairKey(first, second);
+        player.recordCanonicalEvent(
+            "techniques_combinees_alliees",
+            pairKey + ":" + techniqueName,
+            first.name + " + " + second.name + " : " + techniqueName,
+            1
+        );
+        player.recordHistoricalEvent(
+            "ally_combo",
+            "duo:" + pairKey,
+            first.name + " et " + second.name + " exécutent " + techniqueName + " sur " + targetName + "."
+        );
+
+        lines.push_back("TECHNIQUE COMBINÉE — " + techniqueName + " : " + first.name + " et " + second.name + " consomment leurs deux tours alliés.");
+        lines.push_back("- Cible : " + targetName + " | dégâts : " + std::to_string(damage) + (killed ? " | cible vaincue." : "."));
+        if (vulnerability > 0 && !killed) lines.push_back("- Effet duo : vulnérabilité " + std::to_string(vulnerability) + "% pendant 2 tours.");
+        if (weakening > 0 && !killed) lines.push_back("- Effet duo : affaiblissement " + std::to_string(weakening) + " pendant 2 tours.");
+        lines.push_back("- Récupération : " + first.name + " CD " + std::to_string(first.activeSkillCooldown) + " | " + second.name + " CD " + std::to_string(second.activeSkillCooldown) + ".");
+        return true;
+    }
+
     void playRecruitedAllyCombatTurns(
         Player& player,
         EnemyCombatQueue& wave,
@@ -2289,6 +2465,14 @@ namespace
         std::vector<std::string> lines;
         lines.push_back("Les recrues équipées agissent après le joueur et les invocations, avant la riposte ennemie.");
         lines.push_back("Les consignes de soin/protection/technique/répartition expirent après ce tour allié. Les priorités de cible restent jusqu'à mort/disparition.");
+
+        if (executeRecruitedAllyCombinedTechnique(player, wave, random, allies, orders, lines))
+        {
+            clearOneTurnTeamOrders(orders);
+            MessageScreen::show("TOUR DES RECRUES ÉQUIPÉES", "combat.pve.recruited_allies.combo", lines, false);
+            return;
+        }
+
         for (RecruitedAllyCombatSupport& ally : allies)
         {
             if (!wave.hasActiveEnemies())
@@ -2310,6 +2494,7 @@ namespace
                 || orders.groupHealOneTurn
                 || orders.groupGuardOneTurn
                 || orders.groupTechniqueOneTurn
+                || orders.groupCombinedTechniqueOneTurn
                 || orders.groupSpreadTargetsOneTurn
                 || orders.groupPriorityTarget;
             lines.push_back("- Présence alliée : " + recruitedAllyPresenceLine(ally, player, wave) + ".");
@@ -3171,6 +3356,7 @@ void MonsterPveMode::run(
     {
         WaveCombatSystem::displayWaveIntroduction();
         wave = WaveCombatSystem::createWaveForPlayer(player, random, difficulty);
+        maybeAppendReturningRival(player, wave, random);
     }
 
     WaveCombatSystem::displayFrontLineArrival(wave);

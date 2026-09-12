@@ -37,6 +37,7 @@ private:
     int reinforcementSpawnGroupSize;
     bool spawnedByReinforcementCall;
     bool weakenedReinforcementCaller;
+    std::string rivalId;
 
 public:
     // EN: Monster declares or implements a focused behavior used by this module.
@@ -77,6 +78,10 @@ public:
     // EN: isEvolved declares or implements a focused behavior used by this module.
     // FR: isEvolved déclare ou implémente un comportement précis utilisé par ce module.
     bool isEvolved() const;
+
+    bool isPersistentRival() const;
+    const std::string& getRivalId() const;
+    void setRivalId(const std::string& id);
 
     bool doesSplitOnDeath() const;
     int getSplitMinCount() const;

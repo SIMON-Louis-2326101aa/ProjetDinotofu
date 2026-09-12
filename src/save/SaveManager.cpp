@@ -1508,6 +1508,49 @@ bool SaveManager::savePlayerSnapshot(
     file << "]\n";
     file << "  },\n";
 
+    file << "  \"worldMemory\": {\n";
+    file << "    \"historicalEvents\": [";
+    const std::vector<PlayerHistoricalEvent>& historicalEvents = player.getHistoricalEvents();
+    for (std::size_t i = 0; i < historicalEvents.size(); ++i)
+    {
+        const PlayerHistoricalEvent& event = historicalEvents[i];
+        file << "{\"id\":\"" << escapeJson(event.id)
+             << "\",\"category\":\"" << escapeJson(event.category)
+             << "\",\"subjectId\":\"" << escapeJson(event.subjectId)
+             << "\",\"label\":\"" << escapeJson(event.label)
+             << "\",\"locationId\":\"" << escapeJson(event.locationId)
+             << "\",\"day\":" << event.day
+             << ",\"resolved\":" << (event.resolved ? "true" : "false") << "}";
+        if (i + 1 < historicalEvents.size()) file << ", ";
+    }
+    file << "],\n";
+    file << "    \"rivals\": [";
+    const std::vector<PlayerRivalRecord>& rivals = player.getRivalRecords();
+    for (std::size_t i = 0; i < rivals.size(); ++i)
+    {
+        const PlayerRivalRecord& rival = rivals[i];
+        file << "{\"rivalId\":\"" << escapeJson(rival.rivalId)
+             << "\",\"enemyName\":\"" << escapeJson(rival.enemyName)
+             << "\",\"enemyFamily\":\"" << escapeJson(rival.enemyFamily)
+             << "\",\"originLocationId\":\"" << escapeJson(rival.originLocationId)
+             << "\",\"lastKnownLocationId\":\"" << escapeJson(rival.lastKnownLocationId)
+             << "\",\"rivalryReason\":\"" << escapeJson(rival.rivalryReason)
+             << "\",\"baseLevel\":" << rival.baseLevel
+             << ",\"currentLevel\":" << rival.currentLevel
+             << ",\"baseMaxHp\":" << rival.baseMaxHp
+             << ",\"baseAttack\":" << rival.baseAttack
+             << ",\"encounters\":" << rival.encounters
+             << ",\"escapes\":" << rival.escapes
+             << ",\"returns\":" << rival.returns
+             << ",\"wounds\":" << rival.wounds
+             << ",\"firstSeenDay\":" << rival.firstSeenDay
+             << ",\"lastSeenDay\":" << rival.lastSeenDay
+             << ",\"alive\":" << (rival.alive ? "true" : "false") << "}";
+        if (i + 1 < rivals.size()) file << ", ";
+    }
+    file << "]\n";
+    file << "  },\n";
+
     file << "  \"cheatState\": {\n";
     file << "    \"altered\": " << (player.isAlteredByCheats() ? "true" : "false") << ",\n";
     file << "    \"godMode\": " << (player.isGodModeEnabled() ? "true" : "false") << ",\n";
@@ -1544,7 +1587,7 @@ bool SaveManager::savePlayerSnapshot(
     if (player.hasGrinkaStolenWeapon())
     {
         Weapon stolenWeapon = player.getGrinkaStolenWeapon();
-        file << "{\"name\": \"" << escapeJson(stolenWeapon.getName())
+        file << "{\"persistentId\": \"" << escapeJson(stolenWeapon.getPersistentId()) << "\", \"name\": \"" << escapeJson(stolenWeapon.getName())
              << "\", \"description\": \"" << escapeJson(stolenWeapon.getDescription())
              << "\", \"value\": " << stolenWeapon.getValue()
              << ", \"type\": \"" << weaponTypeToSaveText(stolenWeapon.getType())
@@ -1560,7 +1603,7 @@ bool SaveManager::savePlayerSnapshot(
     if (player.hasGrinkaStolenArmor())
     {
         Armor stolenArmor = player.getGrinkaStolenArmor();
-        file << "{\"name\": \"" << escapeJson(stolenArmor.getName())
+        file << "{\"persistentId\": \"" << escapeJson(stolenArmor.getPersistentId()) << "\", \"name\": \"" << escapeJson(stolenArmor.getName())
              << "\", \"description\": \"" << escapeJson(stolenArmor.getDescription())
              << "\", \"value\": " << stolenArmor.getValue()
              << ", \"type\": \"" << armorTypeToSaveText(stolenArmor.getType())
@@ -1581,7 +1624,7 @@ bool SaveManager::savePlayerSnapshot(
 
     for (std::size_t i = 0; i < weapons.size(); i++)
     {
-        file << "      {\"name\": \"" << escapeJson(weapons[i].getName())
+        file << "      {\"persistentId\": \"" << escapeJson(weapons[i].getPersistentId()) << "\", \"name\": \"" << escapeJson(weapons[i].getName())
              << "\", \"description\": \"" << escapeJson(weapons[i].getDescription())
              << "\", \"value\": " << weapons[i].getValue()
              << ", \"type\": \"" << weaponTypeToSaveText(weapons[i].getType())
@@ -1607,7 +1650,7 @@ bool SaveManager::savePlayerSnapshot(
 
     for (std::size_t i = 0; i < armors.size(); i++)
     {
-        file << "      {\"name\": \"" << escapeJson(armors[i].getName())
+        file << "      {\"persistentId\": \"" << escapeJson(armors[i].getPersistentId()) << "\", \"name\": \"" << escapeJson(armors[i].getName())
              << "\", \"description\": \"" << escapeJson(armors[i].getDescription())
              << "\", \"value\": " << armors[i].getValue()
              << ", \"type\": \"" << armorTypeToSaveText(armors[i].getType())
@@ -1685,7 +1728,7 @@ bool SaveManager::savePlayerSnapshot(
     const std::vector<Weapon>& vaultWeapons = player.getCityVault().getWeapons();
     for (std::size_t i = 0; i < vaultWeapons.size(); ++i)
     {
-        file << "      {\"name\": \"" << escapeJson(vaultWeapons[i].getName())
+        file << "      {\"persistentId\": \"" << escapeJson(vaultWeapons[i].getPersistentId()) << "\", \"name\": \"" << escapeJson(vaultWeapons[i].getName())
              << "\", \"description\": \"" << escapeJson(vaultWeapons[i].getDescription())
              << "\", \"value\": " << vaultWeapons[i].getValue()
              << ", \"type\": \"" << weaponTypeToSaveText(vaultWeapons[i].getType())
@@ -1703,7 +1746,7 @@ bool SaveManager::savePlayerSnapshot(
     const std::vector<Armor>& vaultArmors = player.getCityVault().getArmors();
     for (std::size_t i = 0; i < vaultArmors.size(); ++i)
     {
-        file << "      {\"name\": \"" << escapeJson(vaultArmors[i].getName())
+        file << "      {\"persistentId\": \"" << escapeJson(vaultArmors[i].getPersistentId()) << "\", \"name\": \"" << escapeJson(vaultArmors[i].getName())
              << "\", \"description\": \"" << escapeJson(vaultArmors[i].getDescription())
              << "\", \"value\": " << vaultArmors[i].getValue()
              << ", \"type\": \"" << armorTypeToSaveText(vaultArmors[i].getType())
@@ -1784,6 +1827,7 @@ bool SaveManager::savePlayerSnapshot(
         {
             if (wroteCityVaultWeapon) file << ", ";
             file << "{\"cityId\":\"" << escapeJson(record.cityId)
+                 << "\",\"persistentId\":\"" << escapeJson(weaponEntry.getPersistentId())
                  << "\",\"name\":\"" << escapeJson(weaponEntry.getName())
                  << "\",\"description\":\"" << escapeJson(weaponEntry.getDescription())
                  << "\",\"value\":" << weaponEntry.getValue()
@@ -1808,6 +1852,7 @@ bool SaveManager::savePlayerSnapshot(
         {
             if (wroteCityVaultArmor) file << ", ";
             file << "{\"cityId\":\"" << escapeJson(record.cityId)
+                 << "\",\"persistentId\":\"" << escapeJson(armorEntry.getPersistentId())
                  << "\",\"name\":\"" << escapeJson(armorEntry.getName())
                  << "\",\"description\":\"" << escapeJson(armorEntry.getDescription())
                  << "\",\"value\":" << armorEntry.getValue()
@@ -2254,6 +2299,8 @@ bool SaveManager::loadPlayerSnapshot(
     std::vector<std::string> explorationSceneCooldownObjects = extractObjectsFromArray(content, "sceneCooldowns");
     std::vector<std::string> shopPromotionPurchaseObjects = extractObjectsFromArray(content, "promotionPurchases");
     std::vector<std::string> canonicalJournalObjects = extractObjectsFromArray(content, "canonicalJournalSnapshot");
+    std::vector<std::string> historicalEventObjects = extractObjectsFromArray(content, "historicalEvents");
+    std::vector<std::string> rivalObjects = extractObjectsFromArray(content, "rivals");
     std::vector<std::string> grinkaStolenWeaponObjects = extractObjectsFromArray(content, "grinkaStolenWeapons");
     std::vector<std::string> grinkaStolenArmorObjects = extractObjectsFromArray(content, "grinkaStolenArmors");
 
@@ -2294,6 +2341,7 @@ bool SaveManager::loadPlayerSnapshot(
 
             applySavedWeaponDurability(weapon, extractIntValue(object, "durability", weapon.getDurability()));
             weapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+            weapon.setPersistentId(extractStringValue(object, "persistentId", ""));
             player.getInventory().addWeapon(weapon);
         }
 
@@ -2314,6 +2362,7 @@ bool SaveManager::loadPlayerSnapshot(
 
             applySavedArmorDurability(armor, extractIntValue(object, "durability", armor.getDurability()));
             armor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+            armor.setPersistentId(extractStringValue(object, "persistentId", ""));
             player.getInventory().addArmor(armor);
         }
 
@@ -2378,6 +2427,7 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedWeaponDurability(weapon, extractIntValue(object, "durability", weapon.getDurability()));
         weapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        weapon.setPersistentId(extractStringValue(object, "persistentId", ""));
         loadedCityVault.addWeapon(weapon);
     }
     for (const std::string& object : vaultArmorObjects)
@@ -2395,6 +2445,7 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedArmorDurability(armor, extractIntValue(object, "durability", armor.getDurability()));
         armor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        armor.setPersistentId(extractStringValue(object, "persistentId", ""));
         loadedCityVault.addArmor(armor);
     }
     for (const std::string& object : vaultConsumableObjects)
@@ -2463,6 +2514,7 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedWeaponDurability(weapon, extractIntValue(object, "durability", weapon.getDurability()));
         weapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        weapon.setPersistentId(extractStringValue(object, "persistentId", ""));
         record.inventory.addWeapon(weapon);
     }
 
@@ -2486,6 +2538,7 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedArmorDurability(armor, extractIntValue(object, "durability", armor.getDurability()));
         armor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        armor.setPersistentId(extractStringValue(object, "persistentId", ""));
         record.inventory.addArmor(armor);
     }
 
@@ -2800,6 +2853,47 @@ bool SaveManager::loadPlayerSnapshot(
     }
     player.setLoadedCanonicalJournalRecords(loadedCanonicalJournalRecords);
 
+    std::vector<PlayerHistoricalEvent> loadedHistoricalEvents;
+    for (const std::string& object : historicalEventObjects)
+    {
+        PlayerHistoricalEvent event;
+        event.id = extractStringValue(object, "id", "");
+        event.category = extractStringValue(object, "category", "");
+        event.subjectId = extractStringValue(object, "subjectId", "");
+        event.label = extractStringValue(object, "label", event.subjectId);
+        event.locationId = extractStringValue(object, "locationId", "");
+        event.day = extractIntValue(object, "day", 0);
+        event.resolved = extractBoolValue(object, "resolved", false);
+        if (!event.category.empty() && !event.subjectId.empty()) loadedHistoricalEvents.push_back(event);
+    }
+    player.setLoadedHistoricalEvents(loadedHistoricalEvents);
+
+    std::vector<PlayerRivalRecord> loadedRivals;
+    for (const std::string& object : rivalObjects)
+    {
+        PlayerRivalRecord rival;
+        rival.rivalId = extractStringValue(object, "rivalId", "");
+        rival.enemyName = extractStringValue(object, "enemyName", "");
+        rival.enemyFamily = extractStringValue(object, "enemyFamily", "");
+        rival.originLocationId = extractStringValue(object, "originLocationId", "");
+        rival.lastKnownLocationId = extractStringValue(object, "lastKnownLocationId", rival.originLocationId);
+        rival.rivalryReason = extractStringValue(object, "rivalryReason", "");
+        rival.baseLevel = extractIntValue(object, "baseLevel", 1);
+        rival.currentLevel = extractIntValue(object, "currentLevel", rival.baseLevel);
+        rival.baseMaxHp = extractIntValue(object, "baseMaxHp", 1);
+        rival.baseAttack = extractIntValue(object, "baseAttack", 1);
+        rival.encounters = extractIntValue(object, "encounters", 1);
+        rival.escapes = extractIntValue(object, "escapes", 0);
+        rival.returns = extractIntValue(object, "returns", 0);
+        rival.wounds = extractIntValue(object, "wounds", 0);
+        rival.firstSeenDay = extractIntValue(object, "firstSeenDay", 0);
+        rival.lastSeenDay = extractIntValue(object, "lastSeenDay", 0);
+        rival.alive = extractBoolValue(object, "alive", true);
+        if (!rival.enemyName.empty()) loadedRivals.push_back(rival);
+    }
+    player.setLoadedRivalRecords(loadedRivals);
+    if (loadedHistoricalEvents.empty()) player.migrateImportantCanonicalHistory();
+
     Weapon loadedGrinkaWeapon = WeaponCatalog::createRustySword();
     bool hasLoadedGrinkaWeapon = false;
     if (!grinkaStolenWeaponObjects.empty())
@@ -2819,6 +2913,7 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedWeaponDurability(loadedGrinkaWeapon, extractIntValue(object, "durability", loadedGrinkaWeapon.getDurability()));
         loadedGrinkaWeapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        loadedGrinkaWeapon.setPersistentId(extractStringValue(object, "persistentId", ""));
         hasLoadedGrinkaWeapon = true;
     }
 
@@ -2840,6 +2935,7 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedArmorDurability(loadedGrinkaArmor, extractIntValue(object, "durability", loadedGrinkaArmor.getDurability()));
         loadedGrinkaArmor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        loadedGrinkaArmor.setPersistentId(extractStringValue(object, "persistentId", ""));
         hasLoadedGrinkaArmor = true;
     }
 

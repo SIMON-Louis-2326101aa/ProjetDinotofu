@@ -393,14 +393,18 @@ const std::vector<Material>& Inventory::getMaterials() const
 // FR: addWeapon déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::addWeapon(const Weapon& weapon)
 {
-    weapons.push_back(weapon);
+    Weapon stored = weapon;
+    stored.ensurePersistentId("weapon");
+    weapons.push_back(stored);
 }
 
 // EN: addArmor declares or implements a focused behavior used by this module.
 // FR: addArmor déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::addArmor(const Armor& armor)
 {
-    armors.push_back(armor);
+    Armor stored = armor;
+    stored.ensurePersistentId("armor");
+    armors.push_back(stored);
 }
 
 // EN: addConsumable declares or implements a focused behavior used by this module.

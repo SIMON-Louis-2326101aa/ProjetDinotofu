@@ -963,6 +963,15 @@ namespace
 
         int amountToRepair = cap - weapon->getDurability();
         weapon->repair(amountToRepair);
+        if (!weapon->getPersistentId().empty() && (durabilityBefore <= 0 || amountToRepair >= std::max(1, weapon->getMaxDurability() / 3)))
+        {
+            player.recordHistoricalEvent(
+                "item_memory_repair",
+                weapon->getPersistentId(),
+                weapon->getName() + " a subi une réparation importante avec " + kitChoice.label + "."
+            );
+            player.recordCanonicalEvent("objets_avec_memoire", weapon->getPersistentId(), weapon->getName() + " porte une trace de réparation", 1);
+        }
 
         std::vector<std::string> lines;
         lines.push_back("Arme : " + weapon->getName());
@@ -1045,6 +1054,15 @@ namespace
 
         int amountToRepair = cap - armor->getDurability();
         armor->repair(amountToRepair);
+        if (!armor->getPersistentId().empty() && (durabilityBefore <= 0 || amountToRepair >= std::max(1, armor->getMaxDurability() / 3)))
+        {
+            player.recordHistoricalEvent(
+                "item_memory_repair",
+                armor->getPersistentId(),
+                armor->getName() + " a subi une réparation importante avec " + kitChoice.label + "."
+            );
+            player.recordCanonicalEvent("objets_avec_memoire", armor->getPersistentId(), armor->getName() + " porte une trace de réparation", 1);
+        }
 
         std::vector<std::string> lines;
         lines.push_back("Armure : " + armor->getName());

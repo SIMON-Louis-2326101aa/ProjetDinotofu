@@ -199,6 +199,23 @@ namespace
         };
         appendEquipmentWarnings(lines, DurabilityRules::describeWeaponUseWarnings(weapon, player.getRace()));
         appendEquipmentWarnings(lines, DurabilityRules::describeWeaponMaintenanceAdvice(weapon, player.getRace()));
+        if (!weapon.getPersistentId().empty())
+        {
+            const std::vector<PlayerHistoricalEvent> memories = player.getHistoricalEventsForSubject(weapon.getPersistentId(), 6);
+            lines.push_back("");
+            lines.push_back("Mémoire de cet exemplaire : " + std::to_string(memories.size()) + " trace(s) connue(s).");
+            if (memories.empty())
+            {
+                lines.push_back("- Aucun événement assez marquant n'est encore attaché à cette arme.");
+            }
+            else
+            {
+                for (const PlayerHistoricalEvent& memory : memories)
+                {
+                    lines.push_back("- Jour " + std::to_string(memory.day + 1) + " : " + memory.label);
+                }
+            }
+        }
         MessageScreen::show("INSPECTION - ARME", "equipment.weapon.inspect.details", lines);
     }
 
@@ -217,6 +234,23 @@ namespace
         };
         appendEquipmentWarnings(lines, DurabilityRules::describeArmorFitWarnings(armor, player.getRace()));
         appendEquipmentWarnings(lines, DurabilityRules::describeArmorMaintenanceAdvice(armor, player.getRace()));
+        if (!armor.getPersistentId().empty())
+        {
+            const std::vector<PlayerHistoricalEvent> memories = player.getHistoricalEventsForSubject(armor.getPersistentId(), 6);
+            lines.push_back("");
+            lines.push_back("Mémoire de cet exemplaire : " + std::to_string(memories.size()) + " trace(s) connue(s).");
+            if (memories.empty())
+            {
+                lines.push_back("- Aucun événement assez marquant n'est encore attaché à cette armure.");
+            }
+            else
+            {
+                for (const PlayerHistoricalEvent& memory : memories)
+                {
+                    lines.push_back("- Jour " + std::to_string(memory.day + 1) + " : " + memory.label);
+                }
+            }
+        }
         MessageScreen::show("INSPECTION - ARMURE", "equipment.armor.inspect.details", lines);
     }
 

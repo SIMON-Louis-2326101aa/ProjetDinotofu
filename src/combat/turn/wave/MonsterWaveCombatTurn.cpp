@@ -989,6 +989,35 @@ namespace
                 lines.push_back("Destin instable : la fuite ne devient importante que parce qu'elle a été vécue et pourrait recroiser ta route.");
             }
             lines.push_back("Mémoire du monde : si quelqu'un voit cette fuite ou si l'ennemi survit vraiment, il pourra devenir une rumeur ou un rival plus tard.");
+
+            if (monster.isPersistentRival())
+            {
+                player.recordRivalEscape(monster.getRivalId(), player.getCurrentCityId());
+                lines.push_back("Rival connu : cette fuite appartient au même individu. Sa trace reste attachée à son identité.");
+            }
+            else
+            {
+                int rivalChance = 12;
+                if (player.hasPassiveSkill("church_oath_rivals")) rivalChance += 48;
+                if (player.hasPassiveSkill("church_oath_witness")) rivalChance += 18;
+                if (player.hasPassiveSkill("church_oath_memory")) rivalChance += 12;
+                if (monster.isElite() || monster.isEvolved()) rivalChance += 10;
+                if (random.between(1, 100) <= std::min(90, rivalChance))
+                {
+                    const std::string rivalId = player.createRivalFromEnemy(
+                        monster.getName(),
+                        monster.getType(),
+                        monster.getLevel(),
+                        monster.getMaxHp(),
+                        std::max(1, monster.getMaxDamage()),
+                        "Fuite vécue après une rupture de morale"
+                    );
+                    monster.setRivalId(rivalId);
+                    player.recordRivalEscape(rivalId, player.getCurrentCityId());
+                    lines.push_back("Trace persistante : cet ennemi n'est plus seulement un type de monstre. Son identité peut survivre à cette rencontre.");
+                }
+            }
+
             showWaveTurnNotice("MORALE ENNEMIE", "wave.monster.morale.flee", lines);
             wave.removeActiveEnemyAsEscaped(monsterIndex);
             return true;

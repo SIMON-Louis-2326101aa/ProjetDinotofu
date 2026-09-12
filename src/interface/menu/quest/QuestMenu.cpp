@@ -4599,7 +4599,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         );
     }
 
-    Quest createChapterThreeLonelyConvoyQuest()
+    [[maybe_unused]] Quest createChapterThreeLonelyConvoyQuest()
     {
         return buildChapterOneStoryQuest(
             "story_ch3_lonely_convoy", "Le convoi qui revient seul", "Mira",
@@ -4608,7 +4608,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         );
     }
 
-    Quest createChapterThreeThreeRoutesQuest()
+    [[maybe_unused]] Quest createChapterThreeThreeRoutesQuest()
     {
         Quest quest = buildChapterOneStoryQuest(
             "story_ch3_three_routes", "Trois routes pour une même borne", "Orren",
@@ -4619,7 +4619,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         return quest;
     }
 
-    Quest createChapterThreeSignaturesQuest()
+    [[maybe_unused]] Quest createChapterThreeSignaturesQuest()
     {
         Quest quest = buildChapterOneStoryQuest(
             "story_ch3_signatures", "Les signatures sans voyageurs", "Soryn",
@@ -4630,7 +4630,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         return quest;
     }
 
-    Quest createChapterThreeEscortWithdrawalQuest()
+    [[maybe_unused]] Quest createChapterThreeEscortWithdrawalQuest()
     {
         Quest quest = buildChapterOneStoryQuest(
             "story_ch3_escort_withdrawal", "Une escorte qui sait renoncer", "Orren",
@@ -4641,7 +4641,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         return quest;
     }
 
-    Quest createChapterThreeMarginVillageQuest()
+    [[maybe_unused]] Quest createChapterThreeMarginVillageQuest()
     {
         return buildChapterOneStoryQuest(
             "story_ch3_margin_village", "Le village écrit dans la marge", "Nell",
@@ -4650,7 +4650,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         );
     }
 
-    Quest createChapterThreeCorrectedRouteQuest()
+    [[maybe_unused]] Quest createChapterThreeCorrectedRouteQuest()
     {
         return buildChapterOneStoryQuest(
             "story_ch3_corrected_route", "La route corrigée", "Mira",
@@ -4659,7 +4659,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         );
     }
 
-    Quest createChapterThreeMapGuardianQuest()
+    [[maybe_unused]] Quest createChapterThreeMapGuardianQuest()
     {
         return buildChapterOneStoryQuest(
             "story_ch3_map_guardian", "Le Gardien de la Carte Juste", "Soryn",
@@ -4668,7 +4668,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         );
     }
 
-    Quest createChapterThreeConvoyReturnQuest()
+    [[maybe_unused]] Quest createChapterThreeConvoyReturnQuest()
     {
         return buildChapterOneStoryQuest(
             "story_ch3_convoy_return", "Ce que le convoi a rapporté", "Mira",
@@ -13803,37 +13803,14 @@ void QuestMenu::syncMainStoryQuests(Player& player)
 
     if (player.getStoryChapter() == 3)
     {
-        addNonRefusableQuestIfMissing(player, createChapterThreeLonelyConvoyQuest());
-
-        const std::vector<std::pair<std::string, Quest(*)()>> chain = {
-            {"story_ch3_lonely_convoy", createChapterThreeThreeRoutesQuest},
-            {"story_ch3_three_routes", createChapterThreeSignaturesQuest},
-            {"story_ch3_signatures", createChapterThreeEscortWithdrawalQuest},
-            {"story_ch3_escort_withdrawal", createChapterThreeMarginVillageQuest},
-            {"story_ch3_margin_village", createChapterThreeCorrectedRouteQuest},
-            {"story_ch3_corrected_route", createChapterThreeMapGuardianQuest},
-            {"story_ch3_map_guardian", createChapterThreeConvoyReturnQuest}
-        };
-
-        int completedSteps = 0;
-        for (std::size_t index = 0; index < chain.size(); ++index)
+        // Development cap: Chapter 3 is introduced, but its quest chain is intentionally not
+        // injected into normal saves until the chapter receives its planned full rework.
+        if (player.getStoryStep() < 1)
         {
-            if (!questIsTurnedInInLog(player, chain[index].first)) break;
-            ++completedSteps;
-            addNonRefusableQuestIfMissing(player, chain[index].second());
-        }
-
-        const int expectedStep = std::min(9, completedSteps + 1);
-        if (player.getStoryStep() < expectedStep)
-        {
-            player.setStoryProgress(3, expectedStep, std::max(9, player.getStoryCityDevelopmentLevel()));
-        }
-
-        if (questIsTurnedInInLog(player, "story_ch3_convoy_return") && player.getStoryStep() < 9)
-        {
-            player.setStoryProgress(3, 9, std::max(11, player.getStoryCityDevelopmentLevel()));
+            player.setStoryProgress(3, 1, std::max(9, player.getStoryCityDevelopmentLevel()));
         }
         player.getQuestLog().refreshLinkedQuestProgress();
+        return;
     }
 }
 
@@ -14087,38 +14064,12 @@ void QuestMenu::openMainQuestSection(Player& player)
         else if (player.getStoryChapter() == 3)
         {
             screen.addLine("Chapitre actuel : 3 — Les routes qui répondent mal.");
-            screen.addLine("Progression : " + player.getStoryProgressLabel());
-            screen.addLine("Lecture : les étapes validées restent [fait], une seule étape actuelle est détaillée et les futures restent masquées.");
-
-            bool currentShown = false;
-            int hiddenSteps = 0;
-            for (const StoryStepDescriptor& step : chapterThreeStoryStepDescriptors())
-            {
-                const bool exists = questExistsInAnyState(player, step.id);
-                const bool done = questIsTurnedInInLog(player, step.id);
-                const bool readyToNotify = questIsCompletedInLog(player, step.id);
-                const bool active = questIsActiveInLog(player, step.id);
-                if (done)
-                {
-                    addQuestGuidedStoryLine(screen, player, step);
-                    continue;
-                }
-                if ((exists || readyToNotify || active) && !currentShown)
-                {
-                    addQuestGuidedStoryLine(screen, player, step);
-                    currentShown = true;
-                    continue;
-                }
-                ++hiddenSteps;
-            }
-            if (hiddenSteps > 0)
-            {
-                screen.addLine("Étapes suivantes : " + std::to_string(hiddenSteps) + " étape(s) masquée(s) jusqu'à validation de l'étape actuelle.");
-            }
-            screen.addLine("Bilan chapitre 3 : " + std::to_string(countTurnedInChapterThreeRequests(player)) + "/8 quête(s) principales rendue(s).");
-            screen.addLine(player.getStoryStep() >= 9
-                ? "[fait] Le convoi est classé et le village absent des cartes devient la prochaine direction connue."
-                : "Suite : accomplis l'étape visible, puis rends-la auprès du PNJ indiqué pour dévoiler la suivante.");
+            screen.addLine("Progression : introduction atteinte.");
+            screen.addLine("");
+            screen.addLine("[FIN TEMPORAIRE DU DÉVELOPPEMENT HISTOIRE]");
+            screen.addLine("La suite du chapitre 3 est volontairement désactivée pendant sa refonte.");
+            screen.addLine("Aucune étape future n'est injectée dans le journal : les anciennes scènes restent seulement conservées dans le code pour reprise ultérieure.");
+            screen.addLine("Le monde libre, les contrats, l'exploration et les autres systèmes restent jouables.");
         }
         else
         {

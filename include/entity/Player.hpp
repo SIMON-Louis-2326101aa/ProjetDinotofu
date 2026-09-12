@@ -14,6 +14,7 @@
 #include "progression/DndAttributes.hpp"
 #include "quest/QuestLog.hpp"
 #include "progression/blessing/BlessingInventory.hpp"
+#include "entity/player/PlayerHistoryTypes.hpp"
 
 #include <string>
 #include <vector>
@@ -155,6 +156,8 @@ private:
     std::vector<PlayerExplorationCooldown> explorationSceneCooldowns;
     std::vector<PlayerPersistentCounter> shopPromotionPurchaseCounters;
     std::vector<PlayerJournalRecord> canonicalJournalRecords;
+    std::vector<PlayerHistoricalEvent> historicalEvents;
+    std::vector<PlayerRivalRecord> rivalRecords;
     std::vector<std::string> recentCombatEquipmentUsage;
     bool bossEquipmentSealActive;
     std::string bossEquipmentSealReason;
@@ -468,6 +471,23 @@ public:
     void recordPnjServed(const std::string& pnjName, int amount = 1);
     void recordQuestTypeCompleted(const std::string& questTypeName, int amount = 1);
     void setLoadedCanonicalJournalRecords(const std::vector<PlayerJournalRecord>& records);
+
+    void recordHistoricalEvent(const std::string& category, const std::string& subjectId, const std::string& label, bool resolved = false);
+    const std::vector<PlayerHistoricalEvent>& getHistoricalEvents() const;
+    std::vector<PlayerHistoricalEvent> getHistoricalEventsForSubject(const std::string& subjectId, int limit = 12) const;
+    void resolveHistoricalEvent(const std::string& eventId);
+    void setLoadedHistoricalEvents(const std::vector<PlayerHistoricalEvent>& events);
+    void migrateImportantCanonicalHistory();
+
+    std::string createRivalFromEnemy(const std::string& enemyName, const std::string& enemyFamily, int level, int maxHp, int attack, const std::string& reason);
+    PlayerRivalRecord* findMutableRival(const std::string& rivalId);
+    const PlayerRivalRecord* findRival(const std::string& rivalId) const;
+    const std::vector<PlayerRivalRecord>& getRivalRecords() const;
+    void recordRivalEscape(const std::string& rivalId, const std::string& locationId = "");
+    void recordRivalReturn(const std::string& rivalId, const std::string& locationId = "");
+    void recordRivalWound(const std::string& rivalId, int amount = 1);
+    void markRivalDefeated(const std::string& rivalId, const std::string& locationId = "");
+    void setLoadedRivalRecords(const std::vector<PlayerRivalRecord>& rivals);
 
     const std::vector<PlayerLocalSubscription>& getLocalSubscriptions() const;
     bool hasActiveLocalSubscription(const std::string& subscriptionId) const;

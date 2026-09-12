@@ -1056,34 +1056,8 @@ namespace
         return "Le gardien t'entend. Ces mots ne modifient pas encore le monde, mais ils restent au bord de la faille.";
     }
 
-    std::string normalizeValueName(std::string value)
-    {
-        std::string out;
-        for (unsigned char character : value)
-        {
-            if (std::isalnum(character))
-            {
-                out += static_cast<char>(std::tolower(character));
-            }
-        }
-        return out;
-    }
-
     // EN: valueNameContainsAny declares or implements a focused behavior used by this module.
     // FR: valueNameContainsAny déclare ou implémente un comportement précis utilisé par ce module.
-    bool valueNameContainsAny(const std::string& value, const std::vector<std::string>& words)
-    {
-        std::string normalized = normalizeValueName(value);
-        for (const std::string& word : words)
-        {
-            if (normalized.find(normalizeValueName(word)) != std::string::npos)
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
     // EN: rarityEstimateMultiplier declares or implements a focused behavior used by this module.
     // FR: rarityEstimateMultiplier déclare ou implémente un comportement précis utilisé par ce module.
     int rarityEstimateMultiplier(const std::string& name)
@@ -3890,23 +3864,7 @@ void Game::continueStoryRoute()
         );
     }
 
-    if (StoryCampaign::canUnlockChapterFour(mainPlayer) && mainPlayer.getStoryChapter() < 4)
-    {
-        mainPlayer.setStoryProgress(4, 1, std::max(10, mainPlayer.getStoryCityDevelopmentLevel()));
-        saveCurrentProgress("Chapitre 4 débloqué après le classement du convoi");
-        MessageScreen::show(
-            "CHAPITRE 4 DÉBLOQUÉ",
-            "story.chapter_4.unlocked",
-            {
-                "La route corrigée mène enfin quelque part au lieu de simplement répondre aux mesures.",
-                "Au bout du trajet se trouve un village présent dans les marges, mais daté d'une année incompatible avec les registres de la ville.",
-                "Chapitre 4 débloqué : Le village à la mauvaise date. Aucun boss majeur n'est encore désigné."
-            },
-            false
-        );
-    }
-
-    if (mainPlayer.getStoryChapter() >= 4)
+    if (false && mainPlayer.getStoryChapter() >= 4)
     {
         playStoryChapterFour();
         return;
@@ -5696,6 +5654,20 @@ void Game::playStoryChapterThree()
         );
         return;
     }
+
+    MessageScreen::show(
+        "CHAPITRE 3 — LES ROUTES QUI RÉPONDENT MAL",
+        "story.chapter_3.introduction",
+        StoryCampaign::buildChapterThreeLines(mainPlayer),
+        false
+    );
+    MessageScreen::show(
+        "FIN TEMPORAIRE DU DÉVELOPPEMENT HISTOIRE",
+        "story.development_limit",
+        StoryCampaign::buildDevelopmentLimitLines(mainPlayer),
+        false
+    );
+    return;
 
     const std::array<std::string, 8> questIds = {
         "story_ch3_lonely_convoy",

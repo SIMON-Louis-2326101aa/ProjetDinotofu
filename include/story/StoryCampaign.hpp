@@ -85,6 +85,8 @@ public:
     static bool canUnlockChapterTwo(const Player& player);
     static bool canUnlockChapterThree(const Player& player);
     static bool canUnlockChapterFour(const Player& player);
+    static bool isDevelopmentLimitReached(const Player& player);
+    static std::vector<std::string> buildDevelopmentLimitLines(const Player& player);
     static int maxUnlockedChapter(const Player& player);
     static bool isChapterUnlocked(const Player& player, int chapter);
 };

@@ -15,6 +15,7 @@ protected:
     std::string name;
     std::string description;
     int value;
+    std::string persistentId;
 
 public:
     // EN: Item declares or implements a focused behavior used by this module.
@@ -34,6 +35,10 @@ public:
     // EN: getValue declares or implements a focused behavior used by this module.
     // FR: getValue déclare ou implémente un comportement précis utilisé par ce module.
     int getValue() const;
+
+    const std::string& getPersistentId() const;
+    void setPersistentId(const std::string& id);
+    void ensurePersistentId(const std::string& prefix = "item");
 
     virtual std::vector<std::string> toDisplayLines() const;
 

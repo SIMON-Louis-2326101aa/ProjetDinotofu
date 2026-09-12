@@ -92,6 +92,67 @@ namespace
         return std::find(skills.begin(), skills.end(), skillId) != skills.end();
     }
 
+    bool isChurchOathSkillId(const std::string& skillId)
+    {
+        return skillId.rfind("church_oath_", 0) == 0;
+    }
+
+    bool isChurchOathContractId(const std::string& skillId)
+    {
+        return isChurchOathSkillId(skillId) && skillId != "church_oath_broken_trace";
+    }
+
+    int canonicalKeyCount(const Player& player, const std::string& category, const std::string& key)
+    {
+        int total = 0;
+        for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+        {
+            if (record.category == category && record.key == key && record.count > 0)
+            {
+                total += record.count;
+            }
+        }
+        return total;
+    }
+
+    bool isActiveChurchOathContract(const Player& player, const std::string& skillId)
+    {
+        if (!isChurchOathContractId(skillId) || !player.isPassiveSkillUnlocked(skillId))
+        {
+            return false;
+        }
+
+        const int sworn = canonicalKeyCount(player, "serments_eglise", skillId);
+        const int broken = canonicalKeyCount(player, "serments_rompus", skillId);
+        if (sworn == 0 && broken == 0)
+        {
+            // Compatibility with very old saves where an oath was stored only as an unlocked passive.
+            return true;
+        }
+        return sworn > broken;
+    }
+
+    bool canonicalCategoryIsLocalScoped(const std::string& category)
+    {
+        static const std::vector<std::string> localCategories = {
+            "pnj_servis", "types_quetes_completees", "lieux_visites", "coffres",
+            "reputation_locale_positive", "reputation_locale_negative",
+            "services_locaux_reussis", "services_locaux_echoues", "avertissements_locaux",
+            "consultations_comptoir_mercenaire", "participation_recrues"
+        };
+        return std::find(localCategories.begin(), localCategories.end(), category) != localCategories.end();
+    }
+
+    bool canonicalCategoryIsNarrativePersistent(const std::string& category)
+    {
+        static const std::vector<std::string> protectedCategories = {
+            "rivaux_potentiels", "destin_instable", "serments_eglise", "serments_rompus",
+            "objets_avec_memoire", "cicatrices", "traumatismes", "heritage", "tombes",
+            "techniques_combinees_alliees", "serments_fragilises"
+        };
+        return std::find(protectedCategories.begin(), protectedCategories.end(), category) != protectedCategories.end();
+    }
+
     std::vector<int> activeMasteryThresholdsForMax(int maxLevel)
     {
         const std::vector<int> allThresholds = {3, 6, 10, 15, 22, 30, 40, 55, 75, 100};
@@ -2006,6 +2067,14 @@ void Player::normalizeSkillLoadout()
     uniqueUnlocked(enabledPassiveSkills);
     uniqueUnlocked(equippedActiveSkills);
 
+    // Church oaths are persistent contracts/statuses, not loadout passives.
+    enabledPassiveSkills.erase(
+        std::remove_if(enabledPassiveSkills.begin(), enabledPassiveSkills.end(), [](const std::string& skillId) {
+            return isChurchOathSkillId(skillId);
+        }),
+        enabledPassiveSkills.end()
+    );
+
     enabledPassiveSkills.erase(
         std::remove_if(enabledPassiveSkills.begin(), enabledPassiveSkills.end(), [&](const std::string& skillId) {
             return !containsSkillId(unlockedPassiveSkills, skillId);
@@ -2022,6 +2091,7 @@ void Player::normalizeSkillLoadout()
 
     for (const std::string& skillId : unlockedPassiveSkills)
     {
+        if (isChurchOathSkillId(skillId)) continue;
         if (static_cast<int>(enabledPassiveSkills.size()) >= MAX_ENABLED_PASSIVE_SKILLS) break;
         if (!containsSkillId(enabledPassiveSkills, skillId)) enabledPassiveSkills.push_back(skillId);
     }
@@ -2090,6 +2160,10 @@ bool Player::isActiveSkillEquipped(const std::string& skillId) const
 
 bool Player::enablePassiveSkill(const std::string& skillId)
 {
+    if (isChurchOathSkillId(skillId))
+    {
+        return false;
+    }
     if (!isPassiveSkillUnlocked(skillId) || containsSkillId(enabledPassiveSkills, skillId))
     {
         return false;
@@ -2104,6 +2178,10 @@ bool Player::enablePassiveSkill(const std::string& skillId)
 
 bool Player::disablePassiveSkill(const std::string& skillId)
 {
+    if (isChurchOathSkillId(skillId))
+    {
+        return false;
+    }
     auto it = std::find(enabledPassiveSkills.begin(), enabledPassiveSkills.end(), skillId);
     if (it == enabledPassiveSkills.end())
     {
@@ -2246,6 +2324,14 @@ int Player::getSpearKillProgress() const
 // FR: hasPassiveSkill déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::hasPassiveSkill(const std::string& skillId) const
 {
+    if (skillId == "church_oath_broken_trace")
+    {
+        return isPassiveSkillUnlocked(skillId);
+    }
+    if (isChurchOathContractId(skillId))
+    {
+        return isActiveChurchOathContract(*this, skillId);
+    }
     return isPassiveSkillEnabled(skillId);
 }
 
@@ -2266,7 +2352,8 @@ bool Player::unlockPassiveSkill(const std::string& skillId, const std::string& s
     }
 
     unlockedPassiveSkills.push_back(skillId);
-    const bool autoEnabled = static_cast<int>(enabledPassiveSkills.size()) < MAX_ENABLED_PASSIVE_SKILLS;
+    const bool churchStatus = isChurchOathSkillId(skillId);
+    const bool autoEnabled = !churchStatus && static_cast<int>(enabledPassiveSkills.size()) < MAX_ENABLED_PASSIVE_SKILLS;
     if (autoEnabled)
     {
         enabledPassiveSkills.push_back(skillId);
@@ -2274,12 +2361,19 @@ bool Player::unlockPassiveSkill(const std::string& skillId, const std::string& s
     normalizeSkillLoadout();
 
     std::vector<std::string> lines = {
-        "Nouvelle compétence passive : " + skillName,
-        "Elle s'est développée à force de vivre, combattre et apprendre."
+        churchStatus ? ("Nouveau statut d'église : " + skillName) : ("Nouvelle compétence passive : " + skillName),
+        churchStatus ? "Ce statut suit son propre contrat et ne consomme aucun emplacement passif." : "Elle s'est développée à force de vivre, combattre et apprendre."
     };
-    lines.push_back(autoEnabled
-        ? "État : activée dans les passifs équipés."
-        : "État : connue, mais non activée car les 10 emplacements passifs sont déjà occupés.");
+    if (churchStatus)
+    {
+        lines.push_back("État : géré par le registre de l'église, pas par le loadout de compétences.");
+    }
+    else
+    {
+        lines.push_back(autoEnabled
+            ? "État : activée dans les passifs équipés."
+            : "État : connue, mais non activée car les 10 emplacements passifs sont déjà occupés.");
+    }
 
     MessageScreen::show(
         "NOUVELLE COMPÉTENCE PASSIVE",
@@ -3029,13 +3123,20 @@ void Player::recordCanonicalEvent(const std::string& category, const std::string
     }
 
     const std::string cleanLabel = label.empty() ? key : label;
+    const bool localScoped = canonicalCategoryIsLocalScoped(category);
     for (PlayerJournalRecord& record : canonicalJournalRecords)
     {
-        if (record.category == category && record.key == key)
+        const bool sameLocation = !localScoped || record.locationId == currentCityId;
+        if (record.category == category && record.key == key && sameLocation)
         {
             record.count = std::max(0, record.count + amount);
             record.label = cleanLabel;
-            record.locationId = currentCityId;
+            // A global historical/statistical record keeps its original place. A local record
+            // is already matched against the current city and therefore cannot migrate.
+            if (record.locationId.empty())
+            {
+                record.locationId = currentCityId;
+            }
             record.lastDay = worldDaysElapsed;
             return;
         }
@@ -3052,7 +3153,10 @@ void Player::recordCanonicalEvent(const std::string& category, const std::string
 
     if (canonicalJournalRecords.size() > 260)
     {
-        std::sort(canonicalJournalRecords.begin(), canonicalJournalRecords.end(), [](const PlayerJournalRecord& a, const PlayerJournalRecord& b) {
+        std::stable_sort(canonicalJournalRecords.begin(), canonicalJournalRecords.end(), [](const PlayerJournalRecord& a, const PlayerJournalRecord& b) {
+            const bool aProtected = canonicalCategoryIsNarrativePersistent(a.category);
+            const bool bProtected = canonicalCategoryIsNarrativePersistent(b.category);
+            if (aProtected != bProtected) return aProtected;
             if (a.count != b.count) return a.count > b.count;
             return a.lastDay > b.lastDay;
         });

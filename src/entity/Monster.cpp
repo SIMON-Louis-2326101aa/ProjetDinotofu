@@ -33,7 +33,8 @@ Monster::Monster()
       reinforcementEntryCooldownTurns(0),
       reinforcementSpawnGroupSize(0),
       spawnedByReinforcementCall(false),
-      weakenedReinforcementCaller(false)
+      weakenedReinforcementCaller(false),
+      rivalId("")
 {
 }
 
@@ -83,7 +84,8 @@ Monster::Monster(
       reinforcementEntryCooldownTurns(0),
       reinforcementSpawnGroupSize(0),
       spawnedByReinforcementCall(false),
-      weakenedReinforcementCaller(false)
+      weakenedReinforcementCaller(false),
+      rivalId("")
 {
 }
 
@@ -125,6 +127,21 @@ bool Monster::isElite() const
 bool Monster::isEvolved() const
 {
     return evolved;
+}
+
+bool Monster::isPersistentRival() const
+{
+    return !rivalId.empty();
+}
+
+const std::string& Monster::getRivalId() const
+{
+    return rivalId;
+}
+
+void Monster::setRivalId(const std::string& id)
+{
+    rivalId = id;
 }
 
 bool Monster::doesSplitOnDeath() const

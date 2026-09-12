@@ -63,7 +63,7 @@ Interface graphique
 Documentation propre
 --------------------
 - README.md et READMEFR.md restent courts et décrivent seulement l’état actuel.
-- Les historiques de version restent uniquement dans PATCHNOTE_DINOTOFU.md et PATCHNOTE_DINOTOFU_FR.md.
+- Les historiques de version restent uniquement dans CHANGELOG.md.
 - Aucun nouveau README de version ne doit être créé.
 
 [V3.30.00 - socle validé / futur IG pixel-art]
@@ -128,3 +128,13 @@ Documentation propre
 - Serment des Rivaux : base plus claire pour transformer des survivants/fuyards en futurs mini-boss récurrents.
 - Serment du Destin instable : base légère pour conséquences longues, classes évolutives et oscillations liées aux traces réellement vécues.
 - Règle rappelée : pas d'omniscience, une conséquence doit venir d'un témoin, d'un survivant, d'un objet, d'un registre, d'une cicatrice ou d'une rumeur logique.
+
+
+=== V3.49.92 — consolidation persistante ===
+- Serments hors loadout : vrais contrats avec rupture persistante.
+- Journal local protégé contre les migrations de ville ; réputation locale centralisée.
+- Vrais rivaux persistants, mémoire historique distincte et équipements identifiés individuellement.
+- Première vraie technique combinée de recrues consommant leurs deux tours.
+- Histoire volontairement arrêtée après l’introduction du chapitre 3 pendant la refonte.
+- make test léger ajouté.
+- Prochaine priorité : approfondir mini-boss rivaux, mémoire d’objets, combos, classes évolutives, contenu/variété des entités et découpage de QuestMenu uniquement en .cpp/.hpp.

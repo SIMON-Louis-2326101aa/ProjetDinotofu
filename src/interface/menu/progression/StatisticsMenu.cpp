@@ -496,9 +496,10 @@ MenuScreen StatisticsMenu::buildHubScreen(bool allowSkillLoadoutManagement)
     screen.addOption(6, "Titres disponibles et obtenus", "Lister les titres connus : guilde, chasse, anomalies et rangs.", true, "statistics.titles", makeStatisticsItemData("inspect", "Titres", "Lister les titres connus : guilde, chasse, anomalies et rangs."));
     screen.addOption(7, "Affichage complet historique", "Afficher les statistiques longues du personnage.", true, "statistics.full_history", makeStatisticsItemData("inspect", "Historique complet", "Afficher les statistiques longues du personnage."));
     screen.addOption(8, "Top 3 du personnage", "Ennemis, boss, matériaux, consommables, armes, lieux, PNJ et quêtes avec total complet de chaque catégorie.", true, "statistics.top3", makeStatisticsItemData("inspect", "Top 3", "Compteurs persistants du journal moteur."));
+    screen.addOption(9, "Mémoire du monde / Rivaux", "Souvenirs persistants et adversaires réellement rencontrés, sans prédiction de leurs actions futures.", true, "statistics.world_memory", makeStatisticsItemData("inspect", "Mémoire du monde / Rivaux", "Traces historiques persistantes connues du personnage."));
     if (allowSkillLoadoutManagement)
     {
-        screen.addOption(9, "Gérer actifs / passifs", "Équiper ou déséquiper des actifs, activer ou désactiver des passifs.", true, "statistics.skills.loadout", makeStatisticsItemData("equip", "Gérer actifs / passifs", "Limite : 10 actifs équipés et 10 passifs activés."));
+        screen.addOption(10, "Gérer actifs / passifs", "Équiper ou déséquiper des actifs, activer ou désactiver des passifs. Les serments d'église sont gérés séparément comme contrats.", true, "statistics.skills.loadout", makeStatisticsItemData("equip", "Gérer actifs / passifs", "Limite : 10 actifs équipés et 10 passifs activés ; serments hors loadout."));
     }
     screen.addBackOption("Retour", "statistics.back");
     return screen;
@@ -563,7 +564,11 @@ void StatisticsMenu::open(Player& player, DifficultyMode difficulty, bool allowS
         {
             displayTopThreeStats(player);
         }
-        else if (choice == 9 && allowSkillLoadoutManagement)
+        else if (choice == 9)
+        {
+            displayWorldMemory(player);
+        }
+        else if (choice == 10 && allowSkillLoadoutManagement)
         {
             displaySkillLoadoutMenu(player);
         }
@@ -632,7 +637,11 @@ void StatisticsMenu::open(Player& player, bool allowSkillLoadoutManagement)
         {
             displayTopThreeStats(player);
         }
-        else if (choice == 9 && allowSkillLoadoutManagement)
+        else if (choice == 9)
+        {
+            displayWorldMemory(player);
+        }
+        else if (choice == 10 && allowSkillLoadoutManagement)
         {
             displaySkillLoadoutMenu(player);
         }
@@ -644,6 +653,72 @@ void StatisticsMenu::openSkillLoadoutMenu(Player& player)
     displaySkillLoadoutMenu(player);
 }
 
+
+void StatisticsMenu::displayWorldMemory(const Player& player)
+{
+    std::vector<std::string> lines;
+    lines.push_back("Cette vue montre seulement des faits déjà vécus, observés ou enregistrés.");
+    lines.push_back("Elle ne révèle jamais la prochaine action, la prochaine apparition ou l'intention cachée d'un rival.");
+
+    const std::vector<PlayerRivalRecord>& rivals = player.getRivalRecords();
+    lines.push_back("");
+    lines.push_back("Rivaux connus : " + std::to_string(rivals.size()));
+    if (rivals.empty())
+    {
+        lines.push_back("- Aucun adversaire n'a encore acquis une identité de rival persistante.");
+    }
+    else
+    {
+        std::vector<PlayerRivalRecord> ordered = rivals;
+        std::stable_sort(ordered.begin(), ordered.end(), [](const PlayerRivalRecord& a, const PlayerRivalRecord& b) {
+            if (a.alive != b.alive) return a.alive > b.alive;
+            if (a.lastSeenDay != b.lastSeenDay) return a.lastSeenDay > b.lastSeenDay;
+            return a.enemyName < b.enemyName;
+        });
+        for (const PlayerRivalRecord& rival : ordered)
+        {
+            std::ostringstream line;
+            line << "- " << rival.enemyName
+                 << " | " << (rival.alive ? "vivant" : "vaincu")
+                 << " | niv. " << rival.currentLevel
+                 << " | rencontres " << rival.encounters
+                 << " | fuites " << rival.escapes
+                 << " | retours " << rival.returns
+                 << " | blessures " << rival.wounds;
+            if (!rival.lastKnownLocationId.empty())
+            {
+                line << " | dernière trace : " << rival.lastKnownLocationId;
+            }
+            lines.push_back(line.str());
+            if (!rival.rivalryReason.empty())
+            {
+                lines.push_back("  Origine de la rivalité : " + rival.rivalryReason);
+            }
+        }
+    }
+
+    lines.push_back("");
+    lines.push_back("Souvenirs persistants récents :");
+    const std::vector<PlayerHistoricalEvent>& events = player.getHistoricalEvents();
+    if (events.empty())
+    {
+        lines.push_back("- Aucun souvenir historique distinct n'a encore été enregistré.");
+    }
+    else
+    {
+        int shown = 0;
+        for (auto it = events.rbegin(); it != events.rend() && shown < 14; ++it, ++shown)
+        {
+            std::ostringstream line;
+            line << "- Jour " << it->day << " | " << it->label;
+            if (!it->locationId.empty()) line << " | " << it->locationId;
+            if (it->resolved) line << " | résolu";
+            lines.push_back(line.str());
+        }
+    }
+
+    showStatisticsScreen("MÉMOIRE DU MONDE / RIVAUX", "statistics.world_memory.detail", lines);
+}
 
 void StatisticsMenu::displayTopThreeStats(const Player& player)
 {
@@ -872,6 +947,10 @@ void StatisticsMenu::displaySkillLoadoutMenu(Player& player)
         std::vector<std::string> passivesToEnable;
         for (const std::string& skillId : unlockedPassives)
         {
+            if (skillId.rfind("church_oath_", 0) == 0)
+            {
+                continue;
+            }
             if (!skillListContains(enabledPassives, skillId))
             {
                 passivesToEnable.push_back(skillId);

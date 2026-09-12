@@ -9,6 +9,7 @@
 #   make                 Build the project / Compiler le projet
 #   make run             Build and run / Compiler et lancer
 #   make clean           Remove generated files / Supprimer les fichiers générés
+#   make test            Build and run lightweight project checks / Compiler et tester les invariants
 #   make rebuild         Clean then rebuild / Nettoyer puis recompiler
 #   make launch          Build then launch / Compiler puis lancer
 #   make install-desktop Create a Linux desktop launcher / Créer un lanceur Linux
@@ -88,6 +89,10 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 # USEFUL COMMANDS
 # COMMANDES UTILES
 # =========================================================
+
+
+test: all
+	@bash ./scripts/test_project.sh
 
 run: all
 	@echo "Lancement de $(APP_NAME)..."
@@ -169,4 +174,4 @@ gui-preview:
 	@chmod +x ./tools/gui/run_gui_debug.sh
 	@./tools/gui/run_gui_debug.sh
 
-.PHONY: all run launch clean rebuild install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-check gui-preview
+.PHONY: all test run launch clean rebuild install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-check gui-preview

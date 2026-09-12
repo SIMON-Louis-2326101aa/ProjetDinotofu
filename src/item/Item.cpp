@@ -9,6 +9,8 @@
 
 #include <vector>
 #include <string>
+#include <atomic>
+#include <chrono>
 
 // EN: Item declares or implements a focused behavior used by this module.
 // FR: Item déclare ou implémente un comportement précis utilisé par ce module.
@@ -17,6 +19,7 @@ Item::Item()
     name = "Objet inconnu";
     description = "Un objet mystérieux dont l'utilité reste floue.";
     value = 0;
+    persistentId.clear();
 }
 
 Item::Item(
@@ -28,6 +31,7 @@ Item::Item(
     this->name = name;
     this->description = description;
     this->value = value;
+    persistentId.clear();
 }
 
 std::string Item::getName() const
@@ -45,6 +49,30 @@ std::string Item::getDescription() const
 int Item::getValue() const
 {
     return value;
+}
+
+
+const std::string& Item::getPersistentId() const
+{
+    return persistentId;
+}
+
+void Item::setPersistentId(const std::string& id)
+{
+    persistentId = id;
+}
+
+void Item::ensurePersistentId(const std::string& prefix)
+{
+    if (!persistentId.empty())
+    {
+        return;
+    }
+
+    static std::atomic<unsigned long long> counter{1};
+    const auto now = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    const unsigned long long serial = counter.fetch_add(1);
+    persistentId = prefix + "-" + std::to_string(static_cast<unsigned long long>(now)) + "-" + std::to_string(serial);
 }
 
 std::vector<std::string> Item::toDisplayLines() const

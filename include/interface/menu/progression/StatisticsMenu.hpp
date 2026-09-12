@@ -57,6 +57,10 @@ private:
     // EN: displaySpecialStates prints altered, clone and boss consequence states.
     // FR: displaySpecialStates affiche les états altéré, clone et conséquences de boss.
     static void displaySpecialStates(const Player& player);
+
+    // EN: displayWorldMemory prints persistent world memories and known rivals without future spoilers.
+    // FR: displayWorldMemory affiche les souvenirs persistants et rivaux connus sans prédire leurs intentions.
+    static void displayWorldMemory(const Player& player);
 };
 
 #endif
