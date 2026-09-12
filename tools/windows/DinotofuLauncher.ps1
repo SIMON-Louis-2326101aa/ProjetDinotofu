@@ -375,6 +375,33 @@ function Test-ShortcutCreated {
 }
 
 
+function Get-DesktopDirectories {
+    $dirs = @()
+    $envDesktop = [Environment]::GetFolderPath("Desktop")
+    if (-not [string]::IsNullOrWhiteSpace($envDesktop) -and (Test-Path $envDesktop)) {
+        $dirs += $envDesktop
+    }
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $folder = $shell.Namespace("shell:Desktop")
+        if ($folder -and -not [string]::IsNullOrWhiteSpace($folder.Self.Path) -and (Test-Path $folder.Self.Path)) {
+            $dirs += $folder.Self.Path
+        }
+    }
+    catch { }
+    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
+        $profileDesktop = Join-Path $env:USERPROFILE "Desktop"
+        if (Test-Path $profileDesktop) {
+            $dirs += $profileDesktop
+        }
+    }
+    $unique = @($dirs | Select-Object -Unique)
+    if ($unique.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($envDesktop)) {
+        return @($envDesktop)
+    }
+    return $unique
+}
+
 function Get-DinotofuShortcutCandidates {
     param(
         [string]$DisplayName,
@@ -382,33 +409,35 @@ function Get-DinotofuShortcutCandidates {
         [switch]$TerminalShortcut
     )
 
-    $desktopPath = [Environment]::GetFolderPath("Desktop")
-    if ([string]::IsNullOrWhiteSpace($desktopPath) -or -not (Test-Path $desktopPath)) { return @() }
+    $desktopDirs = Get-DesktopDirectories
+    if (-not $desktopDirs -or $desktopDirs.Count -eq 0) { return @() }
 
     $matches = @()
     try {
-        $allLinks = Get-ChildItem -Path $desktopPath -Filter "*.lnk" -File -Recurse -ErrorAction SilentlyContinue
         $wsh = New-Object -ComObject WScript.Shell
-        foreach ($link in $allLinks) {
-            $name = $link.BaseName
-            $nameMatches = $false
-            if ($TerminalShortcut) {
-                $nameMatches = ($name -ieq $DisplayName) -or ($name -like "*Dinotofu*Terminal*")
-            }
-            else {
-                $nameMatches = ($name -ieq $DisplayName) -or (($name -like "*Dinotofu*Launcher*") -and ($name -notlike "*Terminal*"))
-            }
+        foreach ($desktopPath in $desktopDirs) {
+            $allLinks = Get-ChildItem -Path $desktopPath -Filter "*.lnk" -File -Recurse -ErrorAction SilentlyContinue
+            foreach ($link in $allLinks) {
+                $name = $link.BaseName
+                $nameMatches = $false
+                if ($TerminalShortcut) {
+                    $nameMatches = ($name -ieq $DisplayName) -or ($name -like "*Dinotofu*Terminal*")
+                }
+                else {
+                    $nameMatches = ($name -ieq $DisplayName) -or (($name -like "*Dinotofu*Launcher*") -and ($name -notlike "*Terminal*"))
+                }
 
-            $targetMatches = $false
-            try {
-                $shortcut = $wsh.CreateShortcut($link.FullName)
-                $targetLeaf = Split-Path -Path $shortcut.TargetPath -Leaf
-                $targetMatches = ($targetLeaf -ieq $ExpectedTargetFile)
-            }
-            catch { }
+                $targetMatches = $false
+                try {
+                    $shortcut = $wsh.CreateShortcut($link.FullName)
+                    $targetLeaf = Split-Path -Path $shortcut.TargetPath -Leaf
+                    $targetMatches = ($targetLeaf -ieq $ExpectedTargetFile)
+                }
+                catch { }
 
-            if ($nameMatches -or $targetMatches) {
-                $matches += $link.FullName
+                if ($nameMatches -or $targetMatches) {
+                    $matches += $link.FullName
+                }
             }
         }
     }
@@ -426,12 +455,13 @@ function Repair-DinotofuShortcutSet {
         [switch]$TerminalShortcut
     )
 
-    $desktopPath = [Environment]::GetFolderPath("Desktop")
-    if ([string]::IsNullOrWhiteSpace($desktopPath) -or -not (Test-Path $desktopPath)) { return @() }
+    $desktopDirs = Get-DesktopDirectories
+    if (-not $desktopDirs -or $desktopDirs.Count -eq 0) { return @() }
+    $primaryDesktop = $desktopDirs[0]
 
     $targets = @(Get-DinotofuShortcutCandidates -DisplayName $DisplayName -ExpectedTargetFile $ExpectedTargetFile -TerminalShortcut:$TerminalShortcut)
     if (-not $targets -or $targets.Count -eq 0) {
-        $targets = @(Join-Path $desktopPath ($DisplayName + ".lnk"))
+        $targets = @(Join-Path $primaryDesktop ($DisplayName + ".lnk"))
     }
 
     foreach ($shortcutPath in $targets) {

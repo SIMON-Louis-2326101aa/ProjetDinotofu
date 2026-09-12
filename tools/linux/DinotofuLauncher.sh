@@ -98,6 +98,33 @@ run_installer_repair() {
 }
 
 
+get_desktop_dirs() {
+    local dirs=()
+    if command -v xdg-user-dir >/dev/null 2>&1; then
+        local xdg_desktop
+        xdg_desktop="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
+        if [[ -n "$xdg_desktop" && -d "$xdg_desktop" ]]; then
+            dirs+=("$xdg_desktop")
+        fi
+    fi
+    if [[ -f "${HOME}/.config/user-dirs.dirs" ]]; then
+        local conf_desktop
+        conf_desktop="$(sed -n 's/^XDG_DESKTOP_DIR="\(.*\)"/\1/p' "${HOME}/.config/user-dirs.dirs" 2>/dev/null || true)"
+        conf_desktop="${conf_desktop/\$HOME/$HOME}"
+        if [[ -n "$conf_desktop" && -d "$conf_desktop" ]]; then
+            dirs+=("$conf_desktop")
+        fi
+    fi
+    for d in "${HOME}/Desktop" "${HOME}/Bureau" "${HOME}/Escritorio" "${HOME}/Schreibtisch" "${HOME}/Scrivania" "${HOME}/Bureaublad" "${HOME}/Skrivebord" "${HOME}/Рабочий стол"; do
+        if [[ -d "$d" ]]; then
+            dirs+=("$d")
+        fi
+    done
+    if [[ ${#dirs[@]} -gt 0 ]]; then
+        printf '%s\n' "${dirs[@]}" | awk '!seen[$0]++'
+    fi
+}
+
 repair_linux_desktop_shortcuts() {
     mkdir -p "${HOME}/.local/share/applications"
     local gui_icon="${INSTALL_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"
@@ -130,8 +157,11 @@ Categories=Game;
 DESKTOP
     chmod +x "$gui_app" "$terminal_app" 2>/dev/null || true
 
-    for desktop_dir in "${HOME}/Desktop" "${HOME}/Bureau"; do
-        [[ -d "$desktop_dir" ]] || continue
+    local desktop_dirs=()
+    mapfile -t desktop_dirs < <(get_desktop_dirs || true)
+
+    for desktop_dir in "${desktop_dirs[@]}"; do
+        [[ -n "$desktop_dir" && -d "$desktop_dir" ]] || continue
         local found_gui="false"
         local found_terminal="false"
         while IFS= read -r candidate; do

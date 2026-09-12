@@ -129,14 +129,25 @@ install-desktop: all
 	@echo "Terminal=true" >> ~/.local/share/applications/$(APP_NAME).desktop
 	@echo "Categories=Game;" >> ~/.local/share/applications/$(APP_NAME).desktop
 	@chmod +x ~/.local/share/applications/$(APP_NAME).desktop
-	@if [ -d "$$HOME/Desktop" ]; then cp ~/.local/share/applications/$(APP_NAME).desktop "$$HOME/Desktop/$(APP_NAME).desktop"; chmod +x "$$HOME/Desktop/$(APP_NAME).desktop"; fi
-	@if [ -d "$$HOME/Bureau" ]; then cp ~/.local/share/applications/$(APP_NAME).desktop "$$HOME/Bureau/$(APP_NAME).desktop"; chmod +x "$$HOME/Bureau/$(APP_NAME).desktop"; fi
+	@DESK_DIR=$$(command -v xdg-user-dir >/dev/null 2>&1 && xdg-user-dir DESKTOP 2>/dev/null || true); \
+	for d in "$$DESK_DIR" "$$HOME/Desktop" "$$HOME/Bureau" "$$HOME/Escritorio" "$$HOME/Schreibtisch"; do \
+		if [ -n "$$d" ] && [ -d "$$d" ]; then \
+			cp ~/.local/share/applications/$(APP_NAME).desktop "$$d/$(APP_NAME).desktop"; \
+			chmod +x "$$d/$(APP_NAME).desktop"; \
+		fi; \
+	done
 	@echo "Lanceur installé : ~/.local/share/applications/$(APP_NAME).desktop"
 
 desktop: install-desktop
 
 remove-desktop:
 	@rm -f ~/.local/share/applications/$(APP_NAME).desktop
+	@DESK_DIR=$$(command -v xdg-user-dir >/dev/null 2>&1 && xdg-user-dir DESKTOP 2>/dev/null || true); \
+	for d in "$$DESK_DIR" "$$HOME/Desktop" "$$HOME/Bureau" "$$HOME/Escritorio" "$$HOME/Schreibtisch"; do \
+		if [ -n "$$d" ] && [ -d "$$d" ]; then \
+			rm -f "$$d/$(APP_NAME).desktop"; \
+		fi; \
+	done
 	@echo "Lanceur supprimé."
 
 
