@@ -4,14 +4,35 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
+detect_repo_name() {
+    if [[ -n "${DINOTOFU_REPO:-}" ]]; then
+        echo "${DINOTOFU_REPO}"
+        return
+    fi
+
+    local origin_url
+    origin_url="$(git config --get remote.origin.url 2>/dev/null || true)"
+    if [[ -n "${origin_url}" ]]; then
+        local parsed
+        parsed="$(echo "${origin_url}" | sed -E 's/.*github\.com[:\/]//; s/\.git$//')"
+        if [[ "${parsed}" =~ ^[^/]+/[^/]+$ ]]; then
+            echo "${parsed}"
+            return
+        fi
+    fi
+
+    echo "SIMON-Louis-2326101aa/ProjetDinotofu"
+}
+
 VERSION="$(./scripts/get_version.sh)"
+REPO_NAME="$(detect_repo_name)"
 PACKAGE_DIR="release_packages"
 STAGING_DIR="${PACKAGE_DIR}/Dinotofu-Linux-v${VERSION}"
 PACKAGE_PATH="${PACKAGE_DIR}/Dinotofu-Linux-v${VERSION}.7z"
 
 write_installer_config_json() {
     local target_file="$1"
-    python3 - "$target_file" "${DINOTOFU_REPO:-TON_COMPTE/TON_REPO}" <<'PY_JSON'
+    python3 - "$target_file" "$REPO_NAME" <<'PY_JSON'
 import json
 import sys
 

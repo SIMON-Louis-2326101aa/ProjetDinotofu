@@ -87,12 +87,14 @@ if ($config) {
     if ([string]::IsNullOrWhiteSpace($AssetPattern) -and $config.assetPattern) { $AssetPattern = [string]$config.assetPattern }
 }
 
+if ([string]::IsNullOrWhiteSpace($Repo)) { $Repo = "SIMON-Louis-2326101aa/ProjetDinotofu" }
+
 if ($installDirFromArgument) { $InstallDir = Normalize-ProjectInstallDir $InstallDir }
 else { $InstallDir = $PSScriptRoot }
 if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.7z" }
 
 function Is-RepoConfigured {
-    return (-not [string]::IsNullOrWhiteSpace($Repo)) -and $Repo -ne "TON_COMPTE/TON_REPO" -and $Repo -match "^[^/]+/[^/]+$"
+    return (-not [string]::IsNullOrWhiteSpace($Repo)) -and $Repo -match "^[^/]+/[^/]+$"
 }
 
 function Normalize-Version {

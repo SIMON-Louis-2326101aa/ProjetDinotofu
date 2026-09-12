@@ -87,6 +87,9 @@ ask_install_dir() {
 if [[ -z "$REPO" ]]; then
     REPO="$(read_config_value repo)"
 fi
+if [[ -z "$REPO" ]]; then
+    REPO="SIMON-Louis-2326101aa/ProjetDinotofu"
+fi
 if [[ "$ASSET_PATTERN" == "Dinotofu-Linux-v*.zip" || "$ASSET_PATTERN" == "Dinotofu-Linux-v*.7z" ]]; then
     configured_pattern="$(read_config_value assetPattern)"
     [[ -z "$configured_pattern" ]] || ASSET_PATTERN="$configured_pattern"
@@ -196,18 +199,18 @@ elif [[ "$local_game_found" == "true" ]]; then
         cp -a "${BACKUP_DIR}/." "$INSTALL_DIR/" 2>/dev/null || true
     fi
 else
-    if [[ -z "$REPO" || "$REPO" == "TON_COMPTE/TON_REPO" || "$REPO" != */* ]]; then
+    if [[ -z "$REPO" || "$REPO" != */* ]]; then
         LOCAL_ARCHIVE="$(find_local_release_archive "$ASSET_PATTERN" || true)"
         if [[ -z "$LOCAL_ARCHIVE" ]]; then
             echo "Repo GitHub non configure et aucune archive locale trouvee." >&2
-            echo "DINOTOFU_REPO='tonPseudo/tonDepot' ./Installer-Dinotofu.sh" >&2
+            echo "DINOTOFU_REPO='SIMON-Louis-2326101aa/ProjetDinotofu' ./Installer-Dinotofu.sh" >&2
             exit 1
         fi
     fi
 
     echo "==> Recherche de la derniere release GitHub (${REPO})"
     LOCAL_ARCHIVE=""
-    if [[ -n "$REPO" && "$REPO" != "TON_COMPTE/TON_REPO" && "$REPO" == */* ]] && curl -fsSL -H "User-Agent: DinotofuInstaller" "https://api.github.com/repos/${REPO}/releases/latest" -o "$RELEASE_JSON"; then
+    if [[ -n "$REPO" && "$REPO" == */* ]] && curl -fsSL -H "User-Agent: DinotofuInstaller" "https://api.github.com/repos/${REPO}/releases/latest" -o "$RELEASE_JSON"; then
         mapfile -t ASSET_INFO < <(python3 - "$RELEASE_JSON" "$ASSET_PATTERN" <<'PY' 2>/dev/null || true
 import fnmatch, json, sys
 with open(sys.argv[1], encoding='utf-8') as f:

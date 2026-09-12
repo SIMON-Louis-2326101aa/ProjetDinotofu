@@ -44,6 +44,7 @@ normalize_project_dir() {
 }
 
 if [[ -z "$REPO" ]]; then REPO="$(read_config_value repo)"; fi
+if [[ -z "$REPO" ]]; then REPO="SIMON-Louis-2326101aa/ProjetDinotofu"; fi
 configured_pattern="$(read_config_value assetPattern)"
 [[ -z "$configured_pattern" ]] || ASSET_PATTERN="$configured_pattern"
 if [[ "$INSTALL_DIR_FROM_ARG" == "true" ]]; then
@@ -152,7 +153,7 @@ DESKTOP
 }
 
 UPDATE_APPLIED="false"
-if [[ "$NO_UPDATE" != "true" && -n "$REPO" && "$REPO" != "TON_COMPTE/TON_REPO" && "$REPO" == */* ]] && command -v curl >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
+if [[ "$NO_UPDATE" != "true" && -n "$REPO" && "$REPO" == */* ]] && command -v curl >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
     tmp_json="$(mktemp)"
     if curl -fsSL -H "User-Agent: DinotofuLauncher" "https://api.github.com/repos/${REPO}/releases/latest" -o "$tmp_json"; then
         remote_tag="$(python3 - "$tmp_json" <<'PY'

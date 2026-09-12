@@ -112,8 +112,8 @@ function Ask-InstallDir {
 }
 
 function Assert-RepoConfigured {
-    if ([string]::IsNullOrWhiteSpace($Repo) -or $Repo -eq "TON_COMPTE/TON_REPO" -or $Repo -notmatch "^[^/]+/[^/]+$") {
-        throw "Repo GitHub non configure. Utilise un pack installer genere par la release GitHub, ou relance avec : -Repo 'tonPseudo/tonDepot'"
+    if ([string]::IsNullOrWhiteSpace($Repo) -or $Repo -notmatch "^[^/]+/[^/]+$") {
+        throw "Repo GitHub non configure. Utilise un pack installer genere par la release GitHub, ou relance avec : -Repo 'SIMON-Louis-2326101aa/ProjetDinotofu'"
     }
 }
 
@@ -524,6 +524,8 @@ if ($config) {
     if ([string]::IsNullOrWhiteSpace($InstallDir) -and $config.installDir) { $InstallDir = Expand-PathText ([string]$config.installDir) }
     if ([string]::IsNullOrWhiteSpace($AssetPattern) -and $config.assetPattern) { $AssetPattern = [string]$config.assetPattern }
 }
+
+if ([string]::IsNullOrWhiteSpace($Repo)) { $Repo = "SIMON-Louis-2326101aa/ProjetDinotofu" }
 
 if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = Join-Path (Get-DefaultInstallParent) "ProjetDinotofu" }
 if (-not $installDirFromArgument) { $InstallDir = Ask-InstallDir $InstallDir } else { $InstallDir = Normalize-ProjectInstallDir $InstallDir }
