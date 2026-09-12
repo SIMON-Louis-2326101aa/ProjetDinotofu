@@ -52,8 +52,18 @@ def update_sync_files(old_ver: str, new_ver: str) -> None:
     changelog = ROOT / "CHANGELOG.md"
     if changelog.exists():
         content = changelog.read_text(encoding="utf-8")
-        content = re.sub(rf"## V{re.escape(old_ver)}", f"## V{new_ver}", content)
-        changelog.write_text(content, encoding="utf-8")
+        if f"V{new_ver}" not in content:
+            pattern = re.compile(r'(## V[0-9]+\.[0-9]+\.[0-9]+)')
+            new_section = (
+                f"## V{new_ver} — Notes de mise à jour   \n\n"
+                f"- Mises à jour et améliorations de Dinotofu.   \n\n"
+                f"---   \n\n"
+            )
+            if pattern.search(content):
+                content = pattern.sub(rf"{new_section}\g<1>", content, count=1)
+            else:
+                content += f"\n\n{new_section}"
+            changelog.write_text(content, encoding="utf-8")
 
     # 4. PATCHNOTE_DINOTOFU_FR.md (si encore présent sur d'anciennes branches)
     pn_fr = ROOT / "PATCHNOTE_DINOTOFU_FR.md"
