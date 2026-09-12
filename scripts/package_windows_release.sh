@@ -58,7 +58,6 @@ cp tools/windows/DinotofuInstaller.ps1 "${STAGING_DIR}/DinotofuInstaller.ps1"
 cp tools/windows/Installer-Dinotofu.cmd "${STAGING_DIR}/Installer-Dinotofu.cmd"
 cp tools/windows/DinotofuLauncher.ps1 "${STAGING_DIR}/DinotofuLauncher.ps1"
 cp tools/windows/Lancer-Dinotofu.cmd "${STAGING_DIR}/Lancer-Dinotofu.cmd"
-cp tools/windows/Lancer-Dinotofu.vbs "${STAGING_DIR}/Lancer-Dinotofu.vbs"
 cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${STAGING_DIR}/Lancer-Dinotofu-Terminal.cmd"
 mkdir -p "${STAGING_DIR}/tools"
 cp -r tools/gui "${STAGING_DIR}/tools/gui"
@@ -66,19 +65,41 @@ write_installer_config_json "${STAGING_DIR}/dinotofu-installer.config.json"
 echo "${VERSION}" > "${STAGING_DIR}/version.txt"
 
 cat > "${STAGING_DIR}/LISEZ-MOI.txt" <<TXT
-Dinotofu Windows (Version Portable)
+============================================================
+ DINOTOFU Windows (Version Portable)
+============================================================
 
 Ce pack contient le jeu complet directement pret a l'emploi !
 
 Lancement direct (sans installation) :
-Double-clique sur Lancer-Dinotofu.cmd (ou Lancer-Dinotofu.vbs, ou directement Dinotofu.exe).
+Double-clique sur "Lancer-Dinotofu.cmd" (ou directement "Dinotofu.exe").
 
-Installation optionnelle :
-Si tu souhaites creer deux raccourcis sur ton bureau,
-double-clique sur Installer-Dinotofu.cmd.
+Creation des raccourcis bureau (optionnel) :
+Si tu souhaites ajouter des raccourcis sur ton bureau,
+double-clique sur "Installer-Dinotofu.cmd".
 
-Aucun WSL n'est requis.
-Si Windows bloque l'execution d'un script, clic droit sur le fichier, Proprietes, puis Debloquer.
+Remarques :
+- Aucun WSL n'est requis.
+- Si Windows bloque un script : Clic droit sur le fichier -> Proprietes -> Cocher 'Debloquer'.
+TXT
+
+cat > "${STAGING_DIR}/README.txt" <<TXT
+============================================================
+ DINOTOFU Windows (Portable Edition)
+============================================================
+
+This package contains the complete game, ready to play immediately!
+
+Quick Play (No installation required) :
+Double-click "Lancer-Dinotofu.cmd" (or directly "Dinotofu.exe").
+
+Create Desktop Shortcuts (Optional) :
+If you want to create shortcuts on your desktop,
+double-click "Installer-Dinotofu.cmd".
+
+Notes :
+- No WSL required.
+- If Windows blocks execution: Right-click the file -> Properties -> Check 'Unblock'.
 TXT
 
 (

@@ -37,7 +37,6 @@ make -j"$(nproc 2>/dev/null || echo 2)" TARGET_ARCH="${TARGET_ARCH:-x86-64}" OPT
 mkdir -p "${STAGING_DIR}"
 cp -r assets "${STAGING_DIR}/" 2>/dev/null || true
 cp README.md READMEFR.md PATCHNOTE_DINOTOFU.md PATCHNOTE_DINOTOFU_FR.md SYSTEMES_PREVUS.txt PERSONNAGES_SPECIAUX_DINOTOFU.txt CHEATS_DINOTOFU.txt BOSS_DINOTOFU.txt TITRES_DINOTOFU.txt HISTOIRE_PREPARATION_DINOTOFU.txt "${STAGING_DIR}/" 2>/dev/null || true
-cp tools/linux/DinotofuInstaller.sh "${STAGING_DIR}/DinotofuInstaller.sh" 2>/dev/null || true
 cp tools/linux/DinotofuInstaller.sh "${STAGING_DIR}/Installer-Dinotofu.sh" 2>/dev/null || true
 cp tools/linux/DinotofuLauncher.sh "${STAGING_DIR}/DinotofuLauncher.sh" 2>/dev/null || true
 cp tools/linux/Lancer-Dinotofu.sh "${STAGING_DIR}/Lancer-Dinotofu.sh" 2>/dev/null || true
@@ -45,27 +44,44 @@ cp tools/linux/Lancer-Dinotofu-Terminal.sh "${STAGING_DIR}/Lancer-Dinotofu-Termi
 mkdir -p "${STAGING_DIR}/tools"
 cp -r tools/gui "${STAGING_DIR}/tools/gui"
 write_installer_config_json "${STAGING_DIR}/dinotofu-installer.config.json"
-mkdir -p "${STAGING_DIR}/output"
-cp output/Dinotofu "${STAGING_DIR}/output/Dinotofu"
 cp output/Dinotofu "${STAGING_DIR}/Dinotofu"
 echo "${VERSION}" > "${STAGING_DIR}/version.txt"
 
 cat > "${STAGING_DIR}/LISEZ-MOI.txt" <<TXT
-Dinotofu Linux (Version Portable)
+============================================================
+ DINOTOFU Linux (Version Portable)
+============================================================
 
 Ce pack contient le jeu complet directement pret a l'emploi !
 
 Lancement direct (sans installation) :
 1. Ouvre un terminal dans ce dossier.
 2. Lance : ./Lancer-Dinotofu.sh
-   (Ou ./Lancer-Dinotofu-Terminal.sh pour forcer le mode terminal).
+   (Ou ./Lancer-Dinotofu-Terminal.sh pour forcer le mode terminal, ou directement ./Dinotofu).
 
-Installation optionnelle :
-Si tu souhaites installer le jeu dans un autre dossier et creer des raccourcis bureau/applications,
+Creation des raccourcis bureau/applications (optionnel) :
+Si tu souhaites ajouter des raccourcis sur ton bureau,
 lance : ./Installer-Dinotofu.sh
 TXT
 
-chmod +x "${STAGING_DIR}/output/Dinotofu" "${STAGING_DIR}/Dinotofu" "${STAGING_DIR}/Installer-Dinotofu.sh" "${STAGING_DIR}/DinotofuInstaller.sh" "${STAGING_DIR}/DinotofuLauncher.sh" "${STAGING_DIR}/Lancer-Dinotofu.sh" "${STAGING_DIR}/Lancer-Dinotofu-Terminal.sh" || true
+cat > "${STAGING_DIR}/README.txt" <<TXT
+============================================================
+ DINOTOFU Linux (Portable Edition)
+============================================================
+
+This package contains the complete game, ready to play immediately!
+
+Quick Play (No installation required) :
+1. Open a terminal in this directory.
+2. Run: ./Lancer-Dinotofu.sh
+   (Or ./Lancer-Dinotofu-Terminal.sh to force terminal mode, or directly ./Dinotofu).
+
+Create Desktop/Application Shortcuts (Optional) :
+If you want to create desktop/application shortcuts,
+run: ./Installer-Dinotofu.sh
+TXT
+
+chmod +x "${STAGING_DIR}/Dinotofu" "${STAGING_DIR}/Installer-Dinotofu.sh" "${STAGING_DIR}/DinotofuLauncher.sh" "${STAGING_DIR}/Lancer-Dinotofu.sh" "${STAGING_DIR}/Lancer-Dinotofu-Terminal.sh" || true
 
 (
     cd "${PACKAGE_DIR}"

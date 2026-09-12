@@ -374,58 +374,23 @@ function Test-ShortcutCreated {
     return $true
 }
 
-function Ensure-LauncherVbs {
-    param([string]$TargetPath)
-
-    $content = @(
-        'Option Explicit',
-        'Dim shell, fso, scriptDir, ps1, command',
-        'Set shell = CreateObject("WScript.Shell")',
-        'Set fso = CreateObject("Scripting.FileSystemObject")',
-        'scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)',
-        'ps1 = fso.BuildPath(scriptDir, "DinotofuLauncher.ps1")',
-        'command = "powershell.exe -NoProfile -ExecutionPolicy Bypass -File """ & ps1 & """ -Mode Auto"',
-        'shell.CurrentDirectory = scriptDir',
-        'shell.Run command, 0, False'
-    ) -join "`r`n"
-
-    $content | Set-Content -Path $TargetPath -Encoding ASCII
-}
-
 function Ensure-LauncherCmd {
     param(
         [string]$TargetPath,
         [string]$Mode
     )
 
-    if ($Mode -eq "Auto") {
-        $content = @(
-            "@echo off",
-            "setlocal",
-            "set PYTHONUTF8=1",
-            "set PYTHONIOENCODING=utf-8",
-            "set LANG=C.UTF-8",
-            "set LC_ALL=C.UTF-8",
-            "if exist `"%~dp0Lancer-Dinotofu.vbs`" (",
-            "    wscript.exe `"%~dp0Lancer-Dinotofu.vbs`"",
-            ") else (",
-            "    start `"`" /b powershell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode Auto",
-            ")",
-            "exit /b"
-        ) -join "`r`n"
-    }
-    else {
-        $content = @(
-            "@echo off",
-            "chcp 65001 >nul",
-            "setlocal",
-            "set PYTHONUTF8=1",
-            "set PYTHONIOENCODING=utf-8",
-            "set LANG=C.UTF-8",
-            "set LC_ALL=C.UTF-8",
-            "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode $Mode"
-        ) -join "`r`n"
-    }
+    $content = @(
+        "@echo off",
+        "chcp 65001 >nul",
+        "setlocal",
+        "set PYTHONUTF8=1",
+        "set PYTHONIOENCODING=utf-8",
+        "set LANG=C.UTF-8",
+        "set LC_ALL=C.UTF-8",
+        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode $Mode",
+        "exit /b"
+    ) -join "`r`n"
 
     $content | Set-Content -Path $TargetPath -Encoding ASCII
 }
@@ -531,11 +496,9 @@ function Repair-DinotofuDesktopShortcuts {
     $launcherPath = Join-Path $RootDir "DinotofuLauncher.ps1"
     if (-not (Test-Path $launcherPath)) { return }
 
-    $normalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu.vbs"
     $normalLauncherCmd = Join-Path $RootDir "Lancer-Dinotofu.cmd"
     $terminalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu-Terminal.cmd"
 
-    if (-not (Test-Path $normalLauncherEntry)) { Ensure-LauncherVbs -TargetPath $normalLauncherEntry }
     if (-not (Test-Path $normalLauncherCmd)) { Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto" }
     if (-not (Test-Path $terminalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal" }
 
@@ -546,10 +509,10 @@ function Repair-DinotofuDesktopShortcuts {
     if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
 
     Write-Step "Reparation des raccourcis bureau Dinotofu"
-    $guiTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher" -TargetPath $normalLauncherEntry -IconPath $guiIconPath -ExpectedTargetFile "Lancer-Dinotofu.vbs"
+    $guiTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher" -TargetPath $normalLauncherCmd -IconPath $guiIconPath -ExpectedTargetFile "Lancer-Dinotofu.cmd"
     $terminalTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher Terminal version" -TargetPath $terminalLauncherEntry -IconPath $terminalIconPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" -TerminalShortcut
 
-    foreach ($shortcutPath in $guiTargets) { Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu.vbs" | Out-Null }
+    foreach ($shortcutPath in $guiTargets) { Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu.cmd" | Out-Null }
     foreach ($shortcutPath in $terminalTargets) { Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" | Out-Null }
 }
 
@@ -683,11 +646,9 @@ if (-not (Test-Path $launcherPath)) {
 }
 
 if (Test-Path $launcherPath) {
-    $normalLauncherEntry = Join-Path $InstallDir "Lancer-Dinotofu.vbs"
     $normalLauncherCmd = Join-Path $InstallDir "Lancer-Dinotofu.cmd"
     $terminalLauncherEntry = Join-Path $InstallDir "Lancer-Dinotofu-Terminal.cmd"
 
-    if (-not (Test-Path $normalLauncherEntry)) { Ensure-LauncherVbs -TargetPath $normalLauncherEntry }
     if (-not (Test-Path $normalLauncherCmd)) { Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto" }
     if (-not (Test-Path $terminalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal" }
 
