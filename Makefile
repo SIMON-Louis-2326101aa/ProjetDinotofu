@@ -11,6 +11,7 @@
 #   make clean           Remove generated files / Supprimer les fichiers générés
 #   make test            Build and run lightweight project checks / Compiler et tester les invariants
 #   make rebuild         Clean then rebuild / Nettoyer puis recompiler
+#   make strip           Strip debug symbols from binary / Retirer les symboles de debug
 #   make launch          Build then launch / Compiler puis lancer
 #   make install-desktop Create a Linux desktop launcher / Créer un lanceur Linux
 #   make desktop         Alias for install-desktop / Alias de install-desktop
@@ -41,7 +42,7 @@ CXX         := g++
 TARGET_ARCH ?= native
 OPT_LEVEL   ?= -O3
 CXXFLAGS    := -std=c++17 $(OPT_LEVEL) -march=$(TARGET_ARCH) -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
-LDFLAGS     :=
+LDFLAGS     ?=
 
 SRC_DIR  := src
 OBJ_DIR  := build
@@ -107,6 +108,10 @@ clean:
 	@echo "Nettoyage terminé."
 
 rebuild: clean all
+
+strip: $(TARGET)
+	@strip --strip-all $(TARGET) 2>/dev/null || true
+	@echo "Symboles de debug retirés de $(TARGET)."
 
 
 # =========================================================
@@ -174,4 +179,4 @@ gui-preview:
 	@chmod +x ./tools/gui/run_gui_debug.sh
 	@./tools/gui/run_gui_debug.sh
 
-.PHONY: all test run launch clean rebuild install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-check gui-preview
+.PHONY: all test run launch clean rebuild strip install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-check gui-preview

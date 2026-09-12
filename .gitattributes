@@ -1,0 +1,47 @@
+# Définir le comportement par défaut : normalisation automatique en LF dans Git
+* text=auto eol=lf
+
+# Fichiers source C / C++
+*.cpp text eol=lf
+*.hpp text eol=lf
+*.c text eol=lf
+*.h text eol=lf
+
+# Scripts Linux et Makefiles (critique : LF obligatoire)
+*.sh text eol=lf
+Makefile text eol=lf
+*.mk text eol=lf
+
+# Scripts et batchs Windows (critique : CRLF obligatoire)
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Configuration, documentation et données
+*.py text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+
+# Fichiers binaires (images, polices, audio, archives)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.bmp binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.ogg binary
+*.wav binary
+*.mp3 binary
+*.7z binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.so binary
+*.a binary
