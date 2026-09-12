@@ -101,15 +101,9 @@ jobs:
           elif [[ "${FORCE_RELEASE:-false}" == "true" ]]; then
             SHOULD_PUBLISH="true"
             REASON="force_release demande : reconstruction des assets de ${TAG}"
-          elif [[ "${RELEASE_EXISTS}" == "false" ]]; then
-            SHOULD_PUBLISH="true"
-            REASON="le tag ${TAG} existe deja mais la release GitHub manque"
-          elif [[ "${RELEASE_HAS_REQUIRED_ASSETS}" == "false" ]]; then
-            SHOULD_PUBLISH="true"
-            REASON="la release ${TAG} existe mais il manque au moins une archive .7z Windows/Linux"
           else
             SHOULD_PUBLISH="false"
-            REASON="le tag ${TAG} et les archives .7z Windows/Linux attendues existent deja"
+            REASON="le tag ${TAG} existe deja. Aucune nouvelle version a publier (augmenter la version pour declencher une release)."
           fi
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -137,7 +131,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare-release.outputs.tag }}
+          ref: ${{ github.sha }}
 
       - name: Install build tools
         run: |
@@ -157,6 +151,7 @@ jobs:
         with:
           name: Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}
           path: release_packages/Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}.7z
+          if-no-files-found: error
 
   build-windows:
     runs-on: ubuntu-latest
@@ -166,7 +161,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.prepare-release.outputs.tag }}
+          ref: ${{ github.sha }}
 
       - name: Install Windows cross-compiler
         run: |
@@ -186,6 +181,7 @@ jobs:
         with:
           name: Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}
           path: release_packages/Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}.7z
+          if-no-files-found: error
 
   publish-release:
     runs-on: ubuntu-latest
@@ -209,6 +205,7 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
 
+          mkdir -p release_upload
           ls -la release_upload
           files=(release_upload/*.7z)
           if (( ${#files[@]} == 0 )); then
