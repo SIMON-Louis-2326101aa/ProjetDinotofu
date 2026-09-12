@@ -61,7 +61,7 @@ default_download_parent() {
 normalize_project_dir() {
     local path_text="$1"
     if [[ -z "$path_text" ]]; then
-        path_text="$(default_download_parent)/ProjetDinotofu"
+        path_text="${HOME}/ProjetDinotofu"
     fi
     path_text="${path_text/#\~/$HOME}"
     path_text="${path_text%/}"
@@ -108,7 +108,7 @@ if [[ -z "${DINOTOFU_INSTALL_DIR:-}" && -z "$INSTALL_DIR" ]]; then
     if [[ -n "$configured_install_dir" ]]; then
         INSTALL_DIR="$configured_install_dir"
     else
-        INSTALL_DIR="$(default_download_parent)/ProjetDinotofu"
+        INSTALL_DIR="${HOME}/ProjetDinotofu"
     fi
 fi
 INSTALL_DIR="$(ask_install_dir "$INSTALL_DIR")"
@@ -428,7 +428,9 @@ repair_desktop_shortcut_set() {
 repair_desktop_shortcut_set "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" "ProjetDinotofu Launcher" "false"
 repair_desktop_shortcut_set "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" "ProjetDinotofu Launcher Terminal version" "true"
 
-echo "Dinotofu est installe."
+echo "================================================="
+echo " Dinotofu est installe dans : ${INSTALL_DIR}"
+echo "================================================="
 if [[ "$SKIP_LAUNCH" != "true" ]]; then
     if [[ -t 0 ]]; then
         echo ""

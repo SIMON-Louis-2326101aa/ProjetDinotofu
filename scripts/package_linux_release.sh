@@ -41,7 +41,7 @@ repo = sys.argv[2]
 config = {
     "repo": repo,
     "assetPattern": "Dinotofu-Linux-v*.7z",
-    "installDir": "~/Downloads/ProjetDinotofu",
+    "installDir": "~/ProjetDinotofu",
 }
 with open(path, "w", encoding="utf-8") as handle:
     json.dump(config, handle, ensure_ascii=False, indent=2)

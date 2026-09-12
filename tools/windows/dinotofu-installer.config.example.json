@@ -1,5 +1,5 @@
 {
   "repo": "SIMON-Louis-2326101aa/ProjetDinotofu",
   "assetPattern": "Dinotofu-Windows-v*.7z",
-  "installDir": "%USERPROFILE%\\Downloads\\ProjetDinotofu"
+  "installDir": "%USERPROFILE%\\ProjetDinotofu"
 }

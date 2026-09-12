@@ -65,7 +65,7 @@ function Expand-PathText {
     return [Environment]::ExpandEnvironmentVariables($PathText)
 }
 
-function Get-DefaultInstallParent {
+function Get-DefaultDownloadFolder {
     try {
         $shell = New-Object -ComObject Shell.Application
         $folder = $shell.Namespace("shell:Downloads")
@@ -89,6 +89,16 @@ function Get-DefaultInstallParent {
         return $downloads
     }
 
+    return $env:LOCALAPPDATA
+}
+
+function Get-DefaultInstallParent {
+    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE) -and (Test-Path $env:USERPROFILE)) {
+        return $env:USERPROFILE
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:HOME) -and (Test-Path $env:HOME)) {
+        return $env:HOME
+    }
     return $env:LOCALAPPDATA
 }
 
@@ -266,9 +276,9 @@ function Find-LocalReleaseZip {
 
     $searchDirs = @($PSScriptRoot)
     try { $searchDirs += (Split-Path -Path $PSScriptRoot -Parent) } catch { }
-    $defaultParent = Get-DefaultInstallParent
-    if (-not [string]::IsNullOrWhiteSpace($defaultParent)) {
-        $searchDirs += $defaultParent
+    $downloadFolder = Get-DefaultDownloadFolder
+    if (-not [string]::IsNullOrWhiteSpace($downloadFolder)) {
+        $searchDirs += $downloadFolder
     }
     if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
         $searchDirs += (Join-Path $env:USERPROFILE "Downloads")
@@ -716,6 +726,7 @@ else {
 }
 
 Write-Step "Installation terminee"
+Write-Host "Dinotofu est installe dans : $InstallDir" -ForegroundColor Green
 if (-not $SkipLaunch -and (Test-Path $launcherPath)) {
     Write-Host ""
     Write-Host "Appuie sur une touche pour lancer Dinotofu..." -ForegroundColor Cyan

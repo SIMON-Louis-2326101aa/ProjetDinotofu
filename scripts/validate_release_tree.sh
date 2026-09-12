@@ -149,7 +149,7 @@ if 'write_installer_config_json()' not in package_windows or 'json.dump(config' 
     errors.append('scripts/package_windows_release.sh doit generer les configs JSON via Python/json.dump.')
 if 'cat > "${STAGING_DIR}/dinotofu-installer.config.json" <<JSON' in package_windows:
     errors.append('scripts/package_windows_release.sh ne doit plus ecrire la config Windows via heredoc JSON non echappe.')
-if 'r"%USERPROFILE%\\Downloads\\ProjetDinotofu"' not in package_windows:
+if 'r"%USERPROFILE%\\ProjetDinotofu"' not in package_windows:
     errors.append('scripts/package_windows_release.sh doit conserver le chemin Windows en raw string Python valide.')
 
 workflow = Path('.github/workflows/release-dinotofu.yml').read_text(encoding='utf-8')
