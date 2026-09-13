@@ -311,7 +311,7 @@ function Backup-PlayerData {
     param([string]$FromDir, [string]$BackupDir)
     if (-not (Test-Path $FromDir)) { return }
     New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
-    $paths = @("assets\saves", "saves", "accounts", "characters", "exported_accounts", "import_accounts")
+    $paths = @("assets\saves", "data\assets\saves", "saves", "accounts", "characters", "exported_accounts", "import_accounts")
     foreach ($relative in $paths) {
         $source = Join-Path $FromDir $relative
         if (Test-Path $source) {
@@ -569,7 +569,9 @@ function Repair-DinotofuDesktopShortcuts {
 
     $fallbackIconPath = Join-Path $RootDir "Dinotofu.exe"
     $guiIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_graphical.ico"
+    if (-not (Test-Path $guiIconPath)) { $guiIconPath = Join-Path $RootDir "data\assets\branding\dinotofu_launcher_graphical.ico" }
     $terminalIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_terminal.ico"
+    if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = Join-Path $RootDir "data\assets\branding\dinotofu_launcher_terminal.ico" }
     if (-not (Test-Path $guiIconPath)) { $guiIconPath = $fallbackIconPath }
     if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
 
@@ -596,7 +598,7 @@ if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = Join-Path (Get-De
 if (-not $installDirFromArgument) { $InstallDir = Ask-InstallDir $InstallDir } else { $InstallDir = Normalize-ProjectInstallDir $InstallDir }
 if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.7z" }
 
-$localGameExists = (Test-Path (Join-Path $PSScriptRoot "Dinotofu.exe")) -and (Test-Path (Join-Path $PSScriptRoot "assets"))
+$localGameExists = (Test-Path (Join-Path $PSScriptRoot "Dinotofu.exe")) -and ((Test-Path (Join-Path $PSScriptRoot "assets")) -or (Test-Path (Join-Path $PSScriptRoot "data\assets")))
 $tempRoot = Join-Path $env:TEMP "DinotofuInstall"
 $backupDir = Join-Path $tempRoot "player_data_backup"
 

@@ -188,7 +188,7 @@ mkdir -p "$EXTRACT_DIR" "$BACKUP_DIR"
 
 # Detection : si on lance l'installer depuis un dossier du jeu dezippe
 local_game_found="false"
-if [[ -f "${SCRIPT_DIR}/output/Dinotofu" || -f "${SCRIPT_DIR}/Dinotofu" ]] && [[ -d "${SCRIPT_DIR}/assets" ]]; then
+if [[ -f "${SCRIPT_DIR}/output/Dinotofu" || -f "${SCRIPT_DIR}/Dinotofu" ]] && [[ -d "${SCRIPT_DIR}/assets" || -d "${SCRIPT_DIR}/data/assets" ]]; then
     local_game_found="true"
 fi
 
@@ -199,7 +199,7 @@ elif [[ "$local_game_found" == "true" ]]; then
     echo "==> Installation depuis le dossier local : ${SCRIPT_DIR} -> ${INSTALL_DIR}"
     if [[ -d "$INSTALL_DIR" ]]; then
         echo "==> Sauvegarde des donnees joueur"
-        for p in assets/saves saves accounts characters exported_accounts import_accounts; do
+        for p in assets/saves data/assets/saves saves accounts characters exported_accounts import_accounts; do
             if [[ -e "${INSTALL_DIR}/${p}" ]]; then
                 mkdir -p "${BACKUP_DIR}/$(dirname "$p")"
                 cp -a "${INSTALL_DIR}/${p}" "${BACKUP_DIR}/${p}"
@@ -284,7 +284,7 @@ PY
 
     if [[ -d "$INSTALL_DIR" ]]; then
         echo "==> Sauvegarde des donnees joueur"
-        for p in assets/saves saves accounts characters exported_accounts import_accounts; do
+        for p in assets/saves data/assets/saves saves accounts characters exported_accounts import_accounts; do
             if [[ -e "${INSTALL_DIR}/${p}" ]]; then
                 mkdir -p "${BACKUP_DIR}/$(dirname "$p")"
                 cp -a "${INSTALL_DIR}/${p}" "${BACKUP_DIR}/${p}"
@@ -335,7 +335,10 @@ echo "==> Creation des raccourcis Linux"
 mkdir -p "${HOME}/.local/share/applications"
 GUI_ICON="${INSTALL_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"
 TERMINAL_ICON="${INSTALL_DIR}/assets/branding/dinotofu_launcher_terminal_512.png"
+if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${INSTALL_DIR}/data/assets/branding/dinotofu_launcher_graphical_512.png"; fi
+if [[ ! -f "$TERMINAL_ICON" ]]; then TERMINAL_ICON="${INSTALL_DIR}/data/assets/branding/dinotofu_launcher_terminal_512.png"; fi
 if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${INSTALL_DIR}/assets/branding/dinotofu_site_logo_512.png"; fi
+if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${INSTALL_DIR}/data/assets/branding/dinotofu_site_logo_512.png"; fi
 if [[ ! -f "$TERMINAL_ICON" ]]; then TERMINAL_ICON="$GUI_ICON"; fi
 cat > "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" <<DESKTOP
 [Desktop Entry]

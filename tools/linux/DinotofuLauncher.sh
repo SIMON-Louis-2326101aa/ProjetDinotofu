@@ -129,7 +129,10 @@ repair_linux_desktop_shortcuts() {
     mkdir -p "${HOME}/.local/share/applications"
     local gui_icon="${INSTALL_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"
     local terminal_icon="${INSTALL_DIR}/assets/branding/dinotofu_launcher_terminal_512.png"
+    [[ -f "$gui_icon" ]] || gui_icon="${INSTALL_DIR}/data/assets/branding/dinotofu_launcher_graphical_512.png"
+    [[ -f "$terminal_icon" ]] || terminal_icon="${INSTALL_DIR}/data/assets/branding/dinotofu_launcher_terminal_512.png"
     [[ -f "$gui_icon" ]] || gui_icon="${INSTALL_DIR}/assets/branding/dinotofu_site_logo_512.png"
+    [[ -f "$gui_icon" ]] || gui_icon="${INSTALL_DIR}/data/assets/branding/dinotofu_site_logo_512.png"
     [[ -f "$terminal_icon" ]] || terminal_icon="$gui_icon"
 
     local gui_app="${HOME}/.local/share/applications/projetdinotofu-launcher.desktop"
@@ -288,9 +291,13 @@ open_url_or_file() {
 
 start_gui_preview() {
     local gui_debug_dir="${INSTALL_DIR}/gui_debug"
-    local gui_file="${INSTALL_DIR}/tools/gui/dinotofu_gui_experimental.html"
-    local fallback_gui_file="${INSTALL_DIR}/tools/gui/dinotofu_gui_preview.html"
-    local server_script="${INSTALL_DIR}/tools/gui/serve_gui_preview.py"
+    local gui_root="${INSTALL_DIR}"
+    if [[ -d "${INSTALL_DIR}/data/tools/gui" ]]; then
+        gui_root="${INSTALL_DIR}/data"
+    fi
+    local gui_file="${gui_root}/tools/gui/dinotofu_gui_experimental.html"
+    local fallback_gui_file="${gui_root}/tools/gui/dinotofu_gui_preview.html"
+    local server_script="${gui_root}/tools/gui/serve_gui_preview.py"
     local port="${DINOTOFU_GUI_PREVIEW_PORT:-8787}"
     if command -v python3 >/dev/null 2>&1; then
         port="$(find_free_port "$port")"
@@ -311,7 +318,7 @@ start_gui_preview() {
         local server_out="${gui_debug_dir}/server_stdout.log"
         local server_err="${gui_debug_dir}/server_stderr.log"
         rm -f "$server_out" "$server_err"
-        nohup python3 "$server_script" --root "$INSTALL_DIR" --port "$port" --gui-debug-dir "$gui_debug_dir" >"$server_out" 2>"$server_err" &
+        nohup python3 "$server_script" --root "$gui_root" --port "$port" --gui-debug-dir "$gui_debug_dir" >"$server_out" 2>"$server_err" &
         if wait_for_gui_server "$port" 32; then
             open_url_or_file "http://127.0.0.1:${port}/tools/gui/dinotofu_gui_experimental.html"
         else

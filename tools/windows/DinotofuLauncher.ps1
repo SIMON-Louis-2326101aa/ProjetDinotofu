@@ -492,7 +492,9 @@ function Repair-DinotofuDesktopShortcuts {
 
     $fallbackIconPath = Join-Path $RootDir "Dinotofu.exe"
     $guiIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_graphical.ico"
+    if (-not (Test-Path $guiIconPath)) { $guiIconPath = Join-Path $RootDir "data\assets\branding\dinotofu_launcher_graphical.ico" }
     $terminalIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_terminal.ico"
+    if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = Join-Path $RootDir "data\assets\branding\dinotofu_launcher_terminal.ico" }
     if (-not (Test-Path $guiIconPath)) { $guiIconPath = $fallbackIconPath }
     if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
 
@@ -754,15 +756,20 @@ function Start-GameExecutable {
 function Start-ExperimentalGui {
     param([string]$GuiDebugDir)
 
+    $guiRoot = $InstallDir
+    if (Test-Path (Join-Path $InstallDir "data\tools\gui")) {
+        $guiRoot = Join-Path $InstallDir "data"
+    }
+
     $guiFileCandidates = @(
-        (Join-Path $InstallDir "tools\gui\dinotofu_gui_experimental.html"),
-        (Join-Path $InstallDir "tools\gui\dinotofu_gui_preview.html")
+        (Join-Path $guiRoot "tools\gui\dinotofu_gui_experimental.html"),
+        (Join-Path $guiRoot "tools\gui\dinotofu_gui_preview.html")
     )
     $guiFile = Get-FirstExistingPath $guiFileCandidates
     if ([string]::IsNullOrWhiteSpace($guiFile)) { return $false }
 
     New-Item -ItemType Directory -Path $GuiDebugDir -Force | Out-Null
-    $serverScript = Join-Path $InstallDir "tools\gui\serve_gui_preview.py"
+    $serverScript = Join-Path $guiRoot "tools\gui\serve_gui_preview.py"
     $port = 8787
     if (-not [string]::IsNullOrWhiteSpace($env:DINOTOFU_GUI_PREVIEW_PORT)) {
         try { $port = [int]$env:DINOTOFU_GUI_PREVIEW_PORT } catch { $port = 8787 }
@@ -779,7 +786,7 @@ function Start-ExperimentalGui {
 
         $arguments = @()
         if ($pythonSpec.PrefixArgs) { $arguments += $pythonSpec.PrefixArgs }
-        $arguments += @($serverScript, "--root", $InstallDir, "--port", "$port", "--gui-debug-dir", $GuiDebugDir)
+        $arguments += @($serverScript, "--root", $guiRoot, "--port", "$port", "--gui-debug-dir", $GuiDebugDir)
 
         $serverProcess = Start-HiddenProcessNoWindow -FilePath $pythonSpec.FilePath -ArgumentList $arguments -WorkingDirectory $InstallDir
         if ($serverProcess) { $serverProcess.Id | Set-Content -Path (Join-Path $GuiDebugDir "server.pid") -Encoding ASCII }

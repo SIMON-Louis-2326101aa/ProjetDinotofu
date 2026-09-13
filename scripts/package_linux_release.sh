@@ -55,15 +55,16 @@ rm -rf "${STAGING_DIR}" "${PACKAGE_PATH}"
 make clean >/dev/null 2>&1 || true
 make -j"$(nproc 2>/dev/null || echo 2)" TARGET_ARCH="${TARGET_ARCH:-x86-64}" OPT_LEVEL="${OPT_LEVEL:--O3}" LDFLAGS="-s"
 
-mkdir -p "${STAGING_DIR}"
-cp -r assets "${STAGING_DIR}/" 2>/dev/null || true
-cp README.md READMEFR.md CHANGELOG.md SYSTEMES_PREVUS.txt PERSONNAGES_SPECIAUX_DINOTOFU.txt CHEATS_DINOTOFU.txt BOSS_DINOTOFU.txt TITRES_DINOTOFU.txt HISTOIRE_PREPARATION_DINOTOFU.txt "${STAGING_DIR}/" 2>/dev/null || true
+mkdir -p "${STAGING_DIR}/data"
+cp -r assets "${STAGING_DIR}/data/" 2>/dev/null || true
+mkdir -p "${STAGING_DIR}/data/docs"
+cp README.md READMEFR.md CHANGELOG.md SYSTEMES_PREVUS.txt PERSONNAGES_SPECIAUX_DINOTOFU.txt CHEATS_DINOTOFU.txt BOSS_DINOTOFU.txt TITRES_DINOTOFU.txt HISTOIRE_PREPARATION_DINOTOFU.txt "${STAGING_DIR}/data/docs/" 2>/dev/null || true
+mkdir -p "${STAGING_DIR}/data/tools"
+cp -r tools/gui "${STAGING_DIR}/data/tools/gui"
 cp tools/linux/DinotofuInstaller.sh "${STAGING_DIR}/Installer-Dinotofu.sh" 2>/dev/null || true
 cp tools/linux/DinotofuLauncher.sh "${STAGING_DIR}/DinotofuLauncher.sh" 2>/dev/null || true
 cp tools/linux/Lancer-Dinotofu.sh "${STAGING_DIR}/Lancer-Dinotofu.sh" 2>/dev/null || true
 cp tools/linux/Lancer-Dinotofu-Terminal.sh "${STAGING_DIR}/Lancer-Dinotofu-Terminal.sh" 2>/dev/null || true
-mkdir -p "${STAGING_DIR}/tools"
-cp -r tools/gui "${STAGING_DIR}/tools/gui"
 write_installer_config_json "${STAGING_DIR}/dinotofu-installer.config.json"
 cp output/Dinotofu "${STAGING_DIR}/Dinotofu"
 if command -v strip >/dev/null 2>&1; then
@@ -86,6 +87,10 @@ Lancement direct (sans installation) :
 Creation des raccourcis bureau/applications (optionnel) :
 Si tu souhaites ajouter des raccourcis sur ton bureau,
 lance : ./Installer-Dinotofu.sh
+
+Organisation des dossiers :
+- L'executable et les scripts de lancement/installation sont a la racine.
+- Les ressources du jeu, outils et documents complets sont dans data/.
 TXT
 
 cat > "${STAGING_DIR}/README.txt" <<TXT
@@ -103,6 +108,10 @@ Quick Play (No installation required) :
 Create Desktop/Application Shortcuts (Optional) :
 If you want to create desktop/application shortcuts,
 run: ./Installer-Dinotofu.sh
+
+Folder structure :
+- Executable and launch/installer scripts are at the root.
+- Game assets, tools, and full documentation are inside data/.
 TXT
 
 chmod +x "${STAGING_DIR}/Dinotofu" "${STAGING_DIR}/Installer-Dinotofu.sh" "${STAGING_DIR}/DinotofuLauncher.sh" "${STAGING_DIR}/Lancer-Dinotofu.sh" "${STAGING_DIR}/Lancer-Dinotofu-Terminal.sh" || true

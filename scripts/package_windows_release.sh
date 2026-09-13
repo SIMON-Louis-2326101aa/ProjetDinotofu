@@ -70,9 +70,12 @@ make -j"$(nproc 2>/dev/null || echo 2)" \
     CXXFLAGS="-std=c++17 ${OPT_LEVEL:--O3} -march=${TARGET_ARCH:-x86-64} -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8" \
     LDFLAGS="-s -static -static-libgcc -static-libstdc++"
 
-mkdir -p "${STAGING_DIR}"
-cp -r assets "${STAGING_DIR}/" 2>/dev/null || true
-cp README.md READMEFR.md CHANGELOG.md SYSTEMES_PREVUS.txt PERSONNAGES_SPECIAUX_DINOTOFU.txt CHEATS_DINOTOFU.txt BOSS_DINOTOFU.txt TITRES_DINOTOFU.txt HISTOIRE_PREPARATION_DINOTOFU.txt "${STAGING_DIR}/" 2>/dev/null || true
+mkdir -p "${STAGING_DIR}/data"
+cp -r assets "${STAGING_DIR}/data/" 2>/dev/null || true
+mkdir -p "${STAGING_DIR}/data/docs"
+cp README.md READMEFR.md CHANGELOG.md SYSTEMES_PREVUS.txt PERSONNAGES_SPECIAUX_DINOTOFU.txt CHEATS_DINOTOFU.txt BOSS_DINOTOFU.txt TITRES_DINOTOFU.txt HISTOIRE_PREPARATION_DINOTOFU.txt "${STAGING_DIR}/data/docs/" 2>/dev/null || true
+mkdir -p "${STAGING_DIR}/data/tools"
+cp -r tools/gui "${STAGING_DIR}/data/tools/gui"
 cp output/Dinotofu.exe "${STAGING_DIR}/Dinotofu.exe"
 local_strip="${CROSS_CXX%g++}strip"
 if command -v "${local_strip}" >/dev/null 2>&1; then
@@ -85,8 +88,6 @@ cp tools/windows/Installer-Dinotofu.cmd "${STAGING_DIR}/Installer-Dinotofu.cmd"
 cp tools/windows/DinotofuLauncher.ps1 "${STAGING_DIR}/DinotofuLauncher.ps1"
 cp tools/windows/Lancer-Dinotofu.cmd "${STAGING_DIR}/Lancer-Dinotofu.cmd"
 cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${STAGING_DIR}/Lancer-Dinotofu-Terminal.cmd"
-mkdir -p "${STAGING_DIR}/tools"
-cp -r tools/gui "${STAGING_DIR}/tools/gui"
 write_installer_config_json "${STAGING_DIR}/dinotofu-installer.config.json"
 echo "${VERSION}" > "${STAGING_DIR}/version.txt"
 
@@ -103,6 +104,10 @@ Double-clique sur "Lancer-Dinotofu.cmd" (ou directement "Dinotofu.exe").
 Creation des raccourcis bureau (optionnel) :
 Si tu souhaites ajouter des raccourcis sur ton bureau,
 double-clique sur "Installer-Dinotofu.cmd".
+
+Organisation des dossiers :
+- L'executable et les scripts de lancement/installation sont a la racine.
+- Les ressources du jeu, outils et documents complets sont dans data/.
 
 Remarques :
 - Aucun WSL n'est requis.
@@ -122,6 +127,10 @@ Double-click "Lancer-Dinotofu.cmd" (or directly "Dinotofu.exe").
 Create Desktop Shortcuts (Optional) :
 If you want to create shortcuts on your desktop,
 double-click "Installer-Dinotofu.cmd".
+
+Folder structure :
+- Executable and launch/installer scripts are at the root.
+- Game assets, tools, and full documentation are inside data/.
 
 Notes :
 - No WSL required.

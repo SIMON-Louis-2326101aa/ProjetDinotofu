@@ -76,14 +76,21 @@ namespace
 
         const std::filesystem::path exeDir = exePath.parent_path();
 
-        // 1. If assets/ is directly next to the executable (standard release package):
+        // 1. If assets/ is directly next to the executable:
         if (std::filesystem::is_directory(exeDir / "assets", ec))
         {
             std::filesystem::current_path(exeDir, ec);
             return;
         }
 
-        // 2. If the executable is in output/ or bin/ and assets/ is in the parent directory:
+        // 2. If assets/ is inside data/assets (tidy release package):
+        if (std::filesystem::is_directory(exeDir / "data" / "assets", ec))
+        {
+            std::filesystem::current_path(exeDir / "data", ec);
+            return;
+        }
+
+        // 3. If the executable is in output/ or bin/ and assets/ is in the parent directory:
         const std::filesystem::path parentDir = exeDir.parent_path();
         if (!parentDir.empty() && std::filesystem::is_directory(parentDir / "assets", ec))
         {
@@ -91,7 +98,14 @@ namespace
             return;
         }
 
-        // 3. Fallback: change directory to the executable's folder:
+        // 4. If the executable is in output/ or bin/ and assets/ is in parentDir/data/assets:
+        if (!parentDir.empty() && std::filesystem::is_directory(parentDir / "data" / "assets", ec))
+        {
+            std::filesystem::current_path(parentDir / "data", ec);
+            return;
+        }
+
+        // 5. Fallback: change directory to the executable's folder:
         std::filesystem::current_path(exeDir, ec);
     }
 }
