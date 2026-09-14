@@ -10,9 +10,11 @@
 #   make run             Build and run / Compiler et lancer
 #   make clean           Remove generated files / Supprimer les fichiers générés
 #   make test            Build and run lightweight project checks / Compiler et tester les invariants
+#   make check           Clean, validate tree, branding and run tests / Contrôles complets avant commit
 #   make rebuild         Clean then rebuild / Nettoyer puis recompiler
 #   make strip           Strip debug symbols from binary / Retirer les symboles de debug
 #   make launch          Build then launch / Compiler puis lancer
+#   make help            Display help with all available commands / Afficher l'aide
 #   make install-desktop Create a Linux desktop launcher / Créer un lanceur Linux
 #   make desktop         Alias for install-desktop / Alias de install-desktop
 #   make remove-desktop  Remove the Linux desktop launcher / Supprimer le lanceur Linux
@@ -94,6 +96,57 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 
 test: all
 	@bash ./scripts/test_project.sh
+
+check: clean
+	@echo "=== [1/3] Validation de l'arborescence et des conventions ==="
+	@chmod +x ./scripts/validate_release_tree.sh
+	@./scripts/validate_release_tree.sh
+	@echo ""
+	@echo "=== [2/3] Validation des assets de branding ==="
+	@chmod +x ./scripts/validate_branding_assets.sh
+	@./scripts/validate_branding_assets.sh
+	@echo ""
+	@echo "=== [3/3] Compilation et exécution de la suite de tests ==="
+	@$(MAKE) test
+	@echo ""
+	@echo "========================================================="
+	@echo " Tous les contrôles ont réussi avec succès !"
+	@echo "========================================================="
+
+help:
+	@echo "========================================================="
+	@echo " DINOTOFU - AIDE MAKEFILE"
+	@echo "========================================================="
+	@echo ""
+	@echo " Compilation & Exécution locale :"
+	@echo "   make                     Compiler le projet (output/$(APP_NAME))"
+	@echo "   make -j\$$(nproc)          Compiler en parallèle sur tous les cœurs"
+	@echo "   make run                 Compiler puis lancer le jeu dans le terminal"
+	@echo "   make launch              Compiler, effacer l'écran puis lancer"
+	@echo "   make clean               Supprimer les objets et binaires compilés"
+	@echo "   make rebuild             Nettoyer puis recompiler de zéro"
+	@echo "   make strip               Retirer les symboles de débogage du binaire"
+	@echo ""
+	@echo " Tests & Qualité de code :"
+	@echo "   make test                Exécuter la suite de tests du projet"
+	@echo "   make check               Nettoyer, valider l'arborescence, branding et tests"
+	@echo "   make release-check       Vérifier l'arborescence avant création d'archive"
+	@echo ""
+	@echo " Interface Graphique Expérimentale :"
+	@echo "   make gui-preview         Lancer le jeu avec le serveur d'aperçu web IG"
+	@echo ""
+	@echo " Raccourcis Système (Linux Desktop) :"
+	@echo "   make install-desktop     Créer le raccourci (.desktop) sur le bureau"
+	@echo "   make remove-desktop      Supprimer le raccourci (.desktop)"
+	@echo ""
+	@echo " Distribution & Packaging :"
+	@echo "   make package-linux-release   Compiler et créer l'archive 7z Linux"
+	@echo "   make package-windows-release Compiler et créer l'archive 7z Windows"
+	@echo "   make package-source          Créer l'archive 7z des sources propres"
+	@echo "   make bump-patch / minor      Incrémenter la version (patch/minor)"
+	@echo "   make release-push            Incrémenter le patch, commiter et pusher"
+	@echo "   make help                Afficher ce message d'aide"
+	@echo "========================================================="
 
 run: all
 	@echo "Lancement de $(APP_NAME)..."
@@ -186,8 +239,8 @@ release-check: clean
 	@chmod +x ./scripts/validate_release_tree.sh
 	@./scripts/validate_release_tree.sh
 
-gui-preview:
+gui-preview: all
 	@chmod +x ./tools/gui/run_gui_debug.sh
 	@./tools/gui/run_gui_debug.sh
 
-.PHONY: all test run launch clean rebuild strip install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-check gui-preview
+.PHONY: all test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-check gui-preview
