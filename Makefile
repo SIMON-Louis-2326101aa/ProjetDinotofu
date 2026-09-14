@@ -38,7 +38,13 @@
 # =========================================================
 # CONFIGURATION
 # CONFIGURATION
-# =========================================================
+.DEFAULT_GOAL := all
+
+# Compilation parallèle automatique sur tous les cœurs disponibles
+ifeq ($(filter -j%,$(MAKEFLAGS)),)
+  NPROCS ?= $(shell nproc 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)
+  MAKEFLAGS += -j$(NPROCS)
+endif
 
 CXX         := g++
 TARGET_ARCH ?= native
@@ -119,11 +125,10 @@ help:
 	@echo "========================================================="
 	@echo ""
 	@echo " Compilation & Exécution locale :"
-	@echo "   make                     Compiler le projet (output/$(APP_NAME))"
-	@echo "   make -j\$$(nproc)          Compiler en parallèle sur tous les cœurs"
-	@echo "   make run                 Compiler puis lancer le jeu dans le terminal"
-	@echo "   make launch              Compiler, effacer l'écran puis lancer"
-	@echo "   make clean               Supprimer les objets et binaires compilés"
+	@echo "   make                     Compiler le projet en parallèle (output/$(APP_NAME))"
+	@echo "   make run [ARGS=...]      Compiler puis lancer le jeu dans le terminal"
+	@echo "   make launch [ARGS=...]   Compiler, effacer l'écran puis lancer"
+	@echo "   make clean               Supprimer les objets, binaires et dossiers de debug"
 	@echo "   make rebuild             Nettoyer puis recompiler de zéro"
 	@echo "   make strip               Retirer les symboles de débogage du binaire"
 	@echo ""
@@ -150,17 +155,18 @@ help:
 
 run: all
 	@echo "Lancement de $(APP_NAME)..."
-	@./$(TARGET)
+	@./$(TARGET) $(ARGS)
 
 launch: all
 	@clear 2>/dev/null || true
-	@./$(TARGET)
+	@./$(TARGET) $(ARGS)
 
 clean:
-	@rm -rf $(OBJ_DIR) $(BIN_DIR)
+	@rm -rf $(OBJ_DIR) $(BIN_DIR) gui_debug
 	@echo "Nettoyage terminé."
 
-rebuild: clean all
+rebuild: clean
+	@$(MAKE) all
 
 strip: $(TARGET)
 	@strip --strip-all $(TARGET) 2>/dev/null || true
