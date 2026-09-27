@@ -471,5 +471,6 @@ void CombatStateSnapshot::addWaveSummaryToSnapshot(GuiCombatStateSnapshot& snaps
     snapshot.summaryLines.push_back("Ennemis blessés encore en vie : " + std::to_string(wave.getDamagedAliveEnemyCount()));
     snapshot.summaryLines.push_back("Ennemis vaincus : " + std::to_string(wave.getDefeatedEnemyCount()));
     snapshot.summaryLines.push_back("Ennemis en fuite : " + std::to_string(wave.getEscapedEnemyCount()));
+    snapshot.summaryLines.push_back("Ennemis rendus : " + std::to_string(wave.getSurrenderedEnemyCount()));
     snapshot.summaryLines.push_back("Total restant : " + std::to_string(wave.getTotalRemainingEnemyCount()));
 }

@@ -12,6 +12,7 @@
 #include "item/Inventory.hpp"
 #include "item/durability/DurabilityRules.hpp"
 #include "progression/Level.hpp"
+#include "progression/language/LanguageSystem.hpp"
 #include "progression/TitleCatalog.hpp"
 
 #include <algorithm>
@@ -659,6 +660,9 @@ void StatisticsMenu::displayWorldMemory(const Player& player)
     std::vector<std::string> lines;
     lines.push_back("Cette vue montre seulement des faits déjà vécus, observés ou enregistrés.");
     lines.push_back("Elle ne révèle jamais la prochaine action, la prochaine apparition ou l'intention cachée d'un rival.");
+    lines.push_back("Fuites ennemies observées : " + std::to_string(player.getCanonicalJournalCategoryTotal("fuites_ennemies"))
+        + " | rivalités réellement fixées : " + std::to_string(player.getCanonicalJournalCategoryTotal("rivaux_confirmes")) + ".");
+    lines.push_back("Une fuite n'est donc pas une promesse de retour : les fuyards ordinaires restent distincts des rivaux persistants.");
 
     const std::vector<PlayerRivalRecord>& rivals = player.getRivalRecords();
     lines.push_back("");
@@ -684,7 +688,8 @@ void StatisticsMenu::displayWorldMemory(const Player& player)
                  << " | rencontres " << rival.encounters
                  << " | fuites " << rival.escapes
                  << " | retours " << rival.returns
-                 << " | blessures " << rival.wounds;
+                 << " | blessures " << rival.wounds
+                 << " | notoriété " << rival.notoriety;
             if (!rival.lastKnownLocationId.empty())
             {
                 line << " | dernière trace : " << rival.lastKnownLocationId;
@@ -694,6 +699,9 @@ void StatisticsMenu::displayWorldMemory(const Player& player)
             {
                 lines.push_back("  Origine de la rivalité : " + rival.rivalryReason);
             }
+            lines.push_back("  Tempérament observé : " + (rival.temperament.empty() ? std::string("survivant prudent") : rival.temperament) + ".");
+            if (!rival.visibleMark.empty()) lines.push_back("  Marque visible : " + rival.visibleMark + ".");
+            if (!rival.lastOutcome.empty()) lines.push_back("  Dernier fait connu : " + rival.lastOutcome + ".");
         }
     }
 
@@ -921,6 +929,16 @@ void StatisticsMenu::displaySkillStats(const Player& player)
     lines.push_back(progressLine("Lances et contrôle de distance", player.getSpearKillProgress(), 7));
     lines.push_back("");
     lines.push_back("Ces traces montrent ce que ton personnage répète assez souvent pour l'intégrer à son style.");
+    lines.push_back("");
+    lines.push_back("Langues comprises :");
+    for (const PlayerLanguageKnowledge& knowledge : player.getLanguageKnowledge())
+    {
+        if (knowledge.level <= 0) continue;
+        std::string line = "- " + LanguageSystem::displayName(knowledge.languageId) + " : " + LanguageSystem::knowledgeLabel(knowledge.level);
+        if (knowledge.nativeLanguage) line += " (langue de départ)";
+        lines.push_back(line);
+    }
+    lines.push_back("Les cours de bibliothèque peuvent débloquer des dialogues, indices et contrats étrangers sans révéler leurs conséquences futures.");
     appendSkillRoadmap(lines, player);
 
     showStatisticsScreen("COMPÉTENCES", "statistics.skills.detail", lines);

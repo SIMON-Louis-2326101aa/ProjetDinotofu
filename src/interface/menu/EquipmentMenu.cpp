@@ -18,6 +18,7 @@
 #include "item/equipment/EquipmentWeightRules.hpp"
 
 #include <iostream>
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -52,6 +53,75 @@ namespace
             {
                 lines.push_back(warning);
             }
+        }
+    }
+
+    std::string equipmentMemoryRank(std::size_t memoryCount)
+    {
+        if (memoryCount >= 12) return "relique personnelle";
+        if (memoryCount >= 7) return "objet de légende locale";
+        if (memoryCount >= 3) return "exemplaire éprouvé";
+        if (memoryCount >= 1) return "exemplaire marqué";
+        return "sans légende";
+    }
+
+    std::string equipmentEmergentNickname(const std::vector<PlayerHistoricalEvent>& memories, bool armor)
+    {
+        int repairs = 0;
+        int signatures = 0;
+        int boundStrikes = 0;
+        int recoveredAfterSale = 0;
+        for (const PlayerHistoricalEvent& memory : memories)
+        {
+            if (memory.category == "item_memory_repair") ++repairs;
+            else if (memory.category == "item_memory_enemy_signature") ++signatures;
+            else if (memory.category == "item_memory_bound_strike") ++boundStrikes;
+            else if (memory.category == "item_memory_recovered_after_sale") ++recoveredAfterSale;
+        }
+
+        if (recoveredAfterSale >= 1) return armor ? "la Revenue" : "la Revenante";
+        if (repairs >= 3) return armor ? "la Recousue" : "la Reforgée";
+        if (signatures >= 3) return armor ? "l'Encaisseuse" : "la Tenace";
+        if (!armor && boundStrikes >= 3) return "la Fidèle";
+        if (memories.size() >= 7) return "la Persistante";
+        if (memories.size() >= 3) return "l'Éprouvée";
+        return "";
+    }
+
+    void appendEquipmentMemory(
+        std::vector<std::string>& lines,
+        const Player& player,
+        const std::string& persistentId,
+        bool armor
+    )
+    {
+        if (persistentId.empty()) return;
+
+        const std::vector<PlayerHistoricalEvent> memories = player.getHistoricalEventsForSubject(persistentId, 40);
+        lines.push_back("");
+        lines.push_back("Mémoire de cet exemplaire : " + std::to_string(memories.size()) + " trace(s) connue(s).");
+        lines.push_back("Renommée vécue : " + equipmentMemoryRank(memories.size()) + ".");
+        const std::string nickname = equipmentEmergentNickname(memories, armor);
+        if (!nickname.empty())
+        {
+            lines.push_back("Surnom émergent : « " + nickname + " » — gagné par les faits de cet exemplaire, pas donné gratuitement par un menu.");
+        }
+
+        if (memories.empty())
+        {
+            lines.push_back("- Aucun événement assez marquant n'est encore attaché à cet exemplaire.");
+            return;
+        }
+
+        const std::size_t shown = std::min<std::size_t>(6, memories.size());
+        for (std::size_t index = 0; index < shown; ++index)
+        {
+            const PlayerHistoricalEvent& memory = memories[index];
+            lines.push_back("- Jour " + std::to_string(memory.day + 1) + " : " + memory.label);
+        }
+        if (memories.size() > shown)
+        {
+            lines.push_back("- ... " + std::to_string(memories.size() - shown) + " autre(s) trace(s) plus ancienne(s).");
         }
     }
 
@@ -199,23 +269,7 @@ namespace
         };
         appendEquipmentWarnings(lines, DurabilityRules::describeWeaponUseWarnings(weapon, player.getRace()));
         appendEquipmentWarnings(lines, DurabilityRules::describeWeaponMaintenanceAdvice(weapon, player.getRace()));
-        if (!weapon.getPersistentId().empty())
-        {
-            const std::vector<PlayerHistoricalEvent> memories = player.getHistoricalEventsForSubject(weapon.getPersistentId(), 6);
-            lines.push_back("");
-            lines.push_back("Mémoire de cet exemplaire : " + std::to_string(memories.size()) + " trace(s) connue(s).");
-            if (memories.empty())
-            {
-                lines.push_back("- Aucun événement assez marquant n'est encore attaché à cette arme.");
-            }
-            else
-            {
-                for (const PlayerHistoricalEvent& memory : memories)
-                {
-                    lines.push_back("- Jour " + std::to_string(memory.day + 1) + " : " + memory.label);
-                }
-            }
-        }
+        appendEquipmentMemory(lines, player, weapon.getPersistentId(), false);
         MessageScreen::show("INSPECTION - ARME", "equipment.weapon.inspect.details", lines);
     }
 
@@ -234,23 +288,7 @@ namespace
         };
         appendEquipmentWarnings(lines, DurabilityRules::describeArmorFitWarnings(armor, player.getRace()));
         appendEquipmentWarnings(lines, DurabilityRules::describeArmorMaintenanceAdvice(armor, player.getRace()));
-        if (!armor.getPersistentId().empty())
-        {
-            const std::vector<PlayerHistoricalEvent> memories = player.getHistoricalEventsForSubject(armor.getPersistentId(), 6);
-            lines.push_back("");
-            lines.push_back("Mémoire de cet exemplaire : " + std::to_string(memories.size()) + " trace(s) connue(s).");
-            if (memories.empty())
-            {
-                lines.push_back("- Aucun événement assez marquant n'est encore attaché à cette armure.");
-            }
-            else
-            {
-                for (const PlayerHistoricalEvent& memory : memories)
-                {
-                    lines.push_back("- Jour " + std::to_string(memory.day + 1) + " : " + memory.label);
-                }
-            }
-        }
+        appendEquipmentMemory(lines, player, armor.getPersistentId(), true);
         MessageScreen::show("INSPECTION - ARMURE", "equipment.armor.inspect.details", lines);
     }
 

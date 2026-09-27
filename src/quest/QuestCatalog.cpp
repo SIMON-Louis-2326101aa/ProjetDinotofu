@@ -4,6 +4,7 @@
 // Description: Builds quest templates for guild and notable NPCs.
 
 #include "quest/QuestCatalog.hpp"
+#include "quest/language/QuestLanguageSystem.hpp"
 
 #include <algorithm>
 #include <array>
@@ -701,7 +702,7 @@ namespace
             finalTarget
         );
 
-        return buildQuest(
+        Quest quest = buildQuest(
             questId(idPrefix, playerLevel),
             finalRank, questTemplate.title, "Guilde", "Maître de guilde", suggestedGuildQuestLocation(questTemplate),
             finalObjective, questTemplate.type, questTemplate.family,
@@ -711,6 +712,8 @@ namespace
             "", "", 0,
             extraReward.materialId, extraReward.materialName, extraReward.materialQuantity, extraReward.note
         );
+        QuestLanguageSystem::assignOptionalForeignLanguage(quest);
+        return quest;
     }
 
     bool boardAlreadyHasTitle(const std::vector<Quest>& board, const std::string& title)

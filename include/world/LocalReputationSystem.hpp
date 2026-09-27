@@ -13,6 +13,8 @@ struct LocalReputationResult
     int warningNotes = 0;
     std::string label = "neutre";
     int discountPercent = 0;
+    int surchargePercent = 0;
+    std::string reactionLine;
 };
 
 class LocalReputationSystem
@@ -22,6 +24,8 @@ public:
     static int score(const Player& player, const std::string& cityId);
     static std::string labelForScore(int score);
     static int discountForScore(int score);
+    static int surchargeForScore(int score);
+    static std::string reactionForScore(int score);
 };
 
 #endif

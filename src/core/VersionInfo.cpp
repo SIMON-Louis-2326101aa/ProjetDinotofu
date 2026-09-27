@@ -9,7 +9,7 @@
 
 std::string VersionInfo::currentVersion()
 {
-    return "3.49.92";
+    return "3.50.09";
 }
 
 std::string VersionInfo::recreateRecommendedBeforeVersion()
@@ -19,7 +19,23 @@ std::string VersionInfo::recreateRecommendedBeforeVersion()
 
 std::string VersionInfo::importantSaveUpdateVersion()
 {
-    return "3.00.00";
+    return "3.50.09";
+}
+
+
+bool VersionInfo::requiresImportantSaveUpdate(const std::string& lastAdaptedVersion)
+{
+    const VersionNumber saved = parse(lastAdaptedVersion);
+    const VersionNumber checkpoint = parse(importantSaveUpdateVersion());
+    const VersionNumber current = parse(currentVersion());
+
+    if (!saved.known || !checkpoint.known || !current.known)
+    {
+        return false;
+    }
+
+    return compare(lastAdaptedVersion, importantSaveUpdateVersion()) < 0
+        && compare(currentVersion(), importantSaveUpdateVersion()) >= 0;
 }
 
 std::string VersionInfo::currentDateText()

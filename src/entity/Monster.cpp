@@ -34,7 +34,11 @@ Monster::Monster()
       reinforcementSpawnGroupSize(0),
       spawnedByReinforcementCall(false),
       weakenedReinforcementCaller(false),
-      rivalId("")
+      rivalId(""),
+      preparedSignatureActive(false),
+      preparedSignatureHpSnapshot(0),
+      preparedSignatureTier(0),
+      preparedSignatureLabel("")
 {
 }
 
@@ -85,7 +89,11 @@ Monster::Monster(
       reinforcementSpawnGroupSize(0),
       spawnedByReinforcementCall(false),
       weakenedReinforcementCaller(false),
-      rivalId("")
+      rivalId(""),
+      preparedSignatureActive(false),
+      preparedSignatureHpSnapshot(0),
+      preparedSignatureTier(0),
+      preparedSignatureLabel("")
 {
 }
 
@@ -291,6 +299,42 @@ void Monster::setReinforcementSpawnGroupSize(int size)
 int Monster::getReinforcementSpawnGroupSize() const
 {
     return reinforcementSpawnGroupSize;
+}
+
+void Monster::startPreparedSignature(const std::string& label, int tier)
+{
+    preparedSignatureActive = true;
+    preparedSignatureHpSnapshot = getHp();
+    preparedSignatureTier = std::clamp(tier, 1, 4);
+    preparedSignatureLabel = label.empty() ? "Compétence lourde préparée" : label;
+}
+
+bool Monster::hasPreparedSignature() const
+{
+    return preparedSignatureActive;
+}
+
+int Monster::getPreparedSignatureHpSnapshot() const
+{
+    return preparedSignatureHpSnapshot;
+}
+
+int Monster::getPreparedSignatureTier() const
+{
+    return preparedSignatureTier;
+}
+
+const std::string& Monster::getPreparedSignatureLabel() const
+{
+    return preparedSignatureLabel;
+}
+
+void Monster::clearPreparedSignature()
+{
+    preparedSignatureActive = false;
+    preparedSignatureHpSnapshot = 0;
+    preparedSignatureTier = 0;
+    preparedSignatureLabel.clear();
 }
 
 int Monster::getSplitStagesRemaining() const

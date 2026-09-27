@@ -6,6 +6,7 @@
 // Français : Implémente les achats de boutique et les règles de revente sécurisée.
 
 #include "economy/shop/ShopTransactionSystem.hpp"
+#include "progression/language/LanguageSystem.hpp"
 
 #include "economy/shop/ShopPriceRules.hpp"
 #include "item/armor/ArmorCatalog.hpp"
@@ -1197,6 +1198,12 @@ bool ShopTransactionSystem::buyItem(
         addTransactionNote("Renseignement recopié dans le bestiaire de cette session.");
     }
 
+    std::vector<std::string> languageNotes;
+    if (LanguageSystem::applyStudyItem(player, item.getId(), &languageNotes))
+    {
+        for (const std::string& note : languageNotes) addTransactionNote(note);
+    }
+
     applyMagicLearningEffect(player, item);
 
     return true;
@@ -1436,10 +1443,28 @@ bool ShopTransactionSystem::sellInventoryEntry(
     if (rememberWeapon)
     {
         rememberSoldWeapon(shopType, soldWeapon, finalSellPrice);
+        if (!soldWeapon.getPersistentId().empty())
+        {
+            player.recordHistoricalEvent(
+                "item_memory_transferred_sale",
+                soldWeapon.getPersistentId(),
+                soldWeapon.getName() + " a quitté ton inventaire par une vente réelle au comptoir.",
+                true
+            );
+        }
     }
     else if (rememberArmor)
     {
         rememberSoldArmor(shopType, soldArmor, finalSellPrice);
+        if (!soldArmor.getPersistentId().empty())
+        {
+            player.recordHistoricalEvent(
+                "item_memory_transferred_sale",
+                soldArmor.getPersistentId(),
+                soldArmor.getName() + " a quitté ton inventaire par une vente réelle au comptoir.",
+                true
+            );
+        }
     }
     else if (rememberConsumable)
     {
@@ -1558,10 +1583,28 @@ bool ShopTransactionSystem::buyBackEntry(
     if (entry.kind == BuybackItemKind::Weapon)
     {
         player.getInventory().addWeapon(entry.weapon);
+        if (!entry.weapon.getPersistentId().empty())
+        {
+            player.recordHistoricalEvent(
+                "item_memory_recovered_after_sale",
+                entry.weapon.getPersistentId(),
+                entry.weapon.getName() + " a été racheté au comptoir : c'est le même exemplaire qui revient.",
+                true
+            );
+        }
     }
     else if (entry.kind == BuybackItemKind::Armor)
     {
         player.getInventory().addArmor(entry.armor);
+        if (!entry.armor.getPersistentId().empty())
+        {
+            player.recordHistoricalEvent(
+                "item_memory_recovered_after_sale",
+                entry.armor.getPersistentId(),
+                entry.armor.getName() + " a été rachetée au comptoir : c'est le même exemplaire qui revient.",
+                true
+            );
+        }
     }
     else if (entry.kind == BuybackItemKind::Consumable)
     {

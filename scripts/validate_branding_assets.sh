@@ -39,7 +39,7 @@ for asset in "${required_assets[@]}"; do
     fi
 done
 
-current_version="$(./scripts/get_version.sh)"
+current_version="$(bash ./scripts/get_version.sh)"
 grep -q "\"version\": \"${current_version}\"" assets/branding/branding_manifest.json || fail "branding_manifest.json n'est pas synchronisé avec V${current_version}."
 
 # GUI must use the official branding files and keep the banner as a visual background only.

@@ -1153,7 +1153,18 @@ void CombatAttack::executeBoostedAttack(
             {
                 const int forgeDamage = std::max(1, 1 + attackingPlayerIdentity->getLevel() / 55);
                 rawDamage += forgeDamage;
-                attackingPlayerIdentity->recordCanonicalEvent("objets_avec_memoire", "arme_liee:" + oathWeapon.getName(), oathWeapon.getName() + " a porté un coup cohérent avec son serment", 1);
+                const std::string subjectId = oathWeapon.getPersistentId().empty()
+                    ? "arme_sans_identite:" + oathWeapon.getName()
+                    : oathWeapon.getPersistentId();
+                attackingPlayerIdentity->recordCanonicalEvent("objets_avec_memoire", subjectId, oathWeapon.getName() + " a porté un coup cohérent avec son serment", 1);
+                if (!oathWeapon.getPersistentId().empty())
+                {
+                    attackingPlayerIdentity->recordHistoricalEvent(
+                        "item_memory_bound_strike",
+                        oathWeapon.getPersistentId(),
+                        oathWeapon.getName() + " a répondu au Serment de la Forge liée pendant un impact maîtrisé."
+                    );
+                }
                 preparationBuffer << "Serment de la Forge liée : " << oathWeapon.getName() << " répond à une classe qui sait vraiment la tenir. La trace compte pour les futurs objets avec mémoire." << std::endl;
             }
         }

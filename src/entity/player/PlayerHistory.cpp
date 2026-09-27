@@ -17,7 +17,7 @@ namespace
     bool shouldMigrateCanonicalCategory(const std::string& category)
     {
         static const std::set<std::string> important = {
-            "rivaux_potentiels", "destin_instable", "serments_pretes", "serments_rompus",
+            "rivaux_potentiels", "rivaux_confirmes", "rumeurs_rivaux", "destin_instable", "serments_pretes", "serments_rompus",
             "objets_avec_memoire", "cicatrices", "traumatismes", "heritage",
             "tombes", "techniques_combinees_alliees", "serments_fragilises"
         };
@@ -114,7 +114,16 @@ void Player::migrateImportantCanonicalHistory()
     }
 }
 
-std::string Player::createRivalFromEnemy(const std::string& enemyName, const std::string& enemyFamily, int level, int maxHp, int attack, const std::string& reason)
+std::string Player::createRivalFromEnemy(
+    const std::string& enemyName,
+    const std::string& enemyFamily,
+    int level,
+    int maxHp,
+    int attack,
+    const std::string& reason,
+    const std::string& temperament,
+    int emergenceScore
+)
 {
     PlayerRivalRecord rival;
     rival.rivalId = makeHistoryId("rival");
@@ -123,12 +132,16 @@ std::string Player::createRivalFromEnemy(const std::string& enemyName, const std
     rival.originLocationId = currentCityId;
     rival.lastKnownLocationId = currentCityId;
     rival.rivalryReason = reason;
+    rival.temperament = temperament.empty() ? "survivant prudent" : temperament;
+    rival.lastOutcome = "fuite fondatrice";
     rival.baseLevel = std::max(1, level);
     rival.currentLevel = rival.baseLevel;
     rival.baseMaxHp = std::max(1, maxHp);
     rival.baseAttack = std::max(1, attack);
     rival.firstSeenDay = worldDaysElapsed;
     rival.lastSeenDay = worldDaysElapsed;
+    rival.emergenceScore = std::clamp(emergenceScore, 0, 100);
+    rival.notoriety = 1;
     rivalRecords.push_back(rival);
     recordHistoricalEvent("rival_created", rival.rivalId, rival.enemyName + " devient un rival identifiable.");
     return rival.rivalId;
@@ -156,6 +169,8 @@ void Player::recordRivalEscape(const std::string& rivalId, const std::string& lo
     PlayerRivalRecord* rival = findMutableRival(rivalId);
     if (!rival || !rival->alive) return;
     ++rival->escapes;
+    rival->notoriety = std::min(100, rival->notoriety + 1);
+    rival->lastOutcome = "nouvelle fuite";
     rival->lastSeenDay = worldDaysElapsed;
     if (!locationId.empty()) rival->lastKnownLocationId = locationId;
     recordHistoricalEvent("rival_escape", rivalId, rival->enemyName + " survit et s'échappe.");
@@ -167,10 +182,13 @@ void Player::recordRivalReturn(const std::string& rivalId, const std::string& lo
     if (!rival || !rival->alive) return;
     ++rival->returns;
     ++rival->encounters;
+    rival->notoriety = std::min(100, rival->notoriety + 2);
+    rival->lastOutcome = "retour confirmé";
     const int evolvedLevel = rival->baseLevel + rival->returns * 2 + rival->wounds;
     rival->currentLevel = evolvedLevel > 255 ? 255 : evolvedLevel;
     rival->lastSeenDay = worldDaysElapsed;
     if (!locationId.empty()) rival->lastKnownLocationId = locationId;
+    recordCanonicalEvent("rumeurs_rivaux", rivalId, rival->enemyName + " a été reconnu lors d'un retour réel", 1);
     recordHistoricalEvent("rival_return", rivalId, rival->enemyName + " réapparaît après avoir survécu.");
 }
 
@@ -179,6 +197,18 @@ void Player::recordRivalWound(const std::string& rivalId, int amount)
     PlayerRivalRecord* rival = findMutableRival(rivalId);
     if (!rival || !rival->alive || amount <= 0) return;
     rival->wounds += amount;
+    rival->notoriety = std::min(100, rival->notoriety + amount);
+    rival->lastOutcome = "blessure conservée";
+    if (rival->visibleMark.empty())
+    {
+        rival->visibleMark = rival->wounds >= 2
+            ? "cicatrices visibles laissées par plusieurs rencontres"
+            : "cicatrice encore visible de sa fuite";
+    }
+    else if (rival->wounds >= 3)
+    {
+        rival->visibleMark = "silhouette marquée par plusieurs blessures anciennes";
+    }
     rival->lastSeenDay = worldDaysElapsed;
     recordHistoricalEvent("rival_wound", rivalId, rival->enemyName + " conserve une blessure de la rencontre.");
 }
@@ -188,6 +218,8 @@ void Player::markRivalDefeated(const std::string& rivalId, const std::string& lo
     PlayerRivalRecord* rival = findMutableRival(rivalId);
     if (!rival || !rival->alive) return;
     rival->alive = false;
+    rival->lastOutcome = "vaincu définitivement";
+    rival->notoriety = std::min(100, rival->notoriety + 3);
     rival->lastSeenDay = worldDaysElapsed;
     if (!locationId.empty()) rival->lastKnownLocationId = locationId;
     recordHistoricalEvent("rival_defeated", rivalId, rival->enemyName + " est définitivement vaincu.", true);
@@ -204,6 +236,9 @@ void Player::setLoadedRivalRecords(const std::vector<PlayerRivalRecord>& rivals)
         rival.currentLevel = std::max(rival.baseLevel, rival.currentLevel);
         rival.baseMaxHp = std::max(1, rival.baseMaxHp);
         rival.baseAttack = std::max(1, rival.baseAttack);
+        if (rival.temperament.empty()) rival.temperament = "survivant prudent";
+        rival.emergenceScore = std::clamp(rival.emergenceScore, 0, 100);
+        rival.notoriety = std::clamp(rival.notoriety, 0, 100);
         rivalRecords.push_back(rival);
     }
 }

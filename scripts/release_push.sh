@@ -21,7 +21,7 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 
 python3 scripts/bump_version.py "${BUMP_MODE}"
-VERSION="$(./scripts/get_version.sh)"
+VERSION="$(bash ./scripts/get_version.sh)"
 
 if [[ -z "${COMMIT_MESSAGE}" ]]; then
     COMMIT_MESSAGE="Patch Dinotofu ${VERSION}"

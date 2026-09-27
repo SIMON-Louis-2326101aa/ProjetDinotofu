@@ -100,7 +100,10 @@ namespace
             createMonster("Éclat de bougie arcanique", "Élémentaire mineur", Race::Elementaire, 1, 36, 3, 8, 14),
             createMonster("Chien errant affamé", "Bête affamée", Race::Bete, 1, 55, 3, 9, 15),
             createMonster("Rat couineur de terrier", "Nuisible rameuteur fragile", Race::Bete, 1, 38, 2, 6, 10),
-            createMonster("Guetteur gobelin de haie", "Gobelin rameuteur nerveux", Race::Gobelin, 1, 46, 3, 8, 13)
+            createMonster("Guetteur gobelin de haie", "Gobelin rameuteur nerveux", Race::Gobelin, 1, 46, 3, 8, 13),
+            createMonster("Escargot cuirassé de fossé", "Bête lente à coquille épaisse", Race::Bete, 1, 64, 2, 8, 12),
+            createMonster("Corbeau voleur de ficelle", "Bête curieuse qui harcèle puis recule", Race::Bete, 1, 40, 3, 9, 15),
+            createMonster("Gobelin porteur de casserole", "Gobelin improvisant son armure", Race::Gobelin, 1, 54, 3, 9, 14)
         };
     }
 
@@ -122,7 +125,10 @@ namespace
             createMonster("Essaim d'insectes de cave", "Nuée fragile", Race::Insectoide, 2, 84, 5, 20, 31),
             createMonster("Racine étrangleuse jeune", "Plante entravante", Race::Plante, 2, 125, 6, 17, 27),
             createMonster("Loup hurleur maigre", "Bête de meute rameuteuse", Race::Bete, 2, 82, 7, 17, 25),
-            createMonster("Corneur gobelin fêlé", "Gobelin rameuteur à corne", Race::Gobelin, 2, 88, 6, 16, 24)
+            createMonster("Corneur gobelin fêlé", "Gobelin rameuteur à corne", Race::Gobelin, 2, 88, 6, 16, 24),
+            createMonster("Sangsue de mare pâle", "Créature aquatique qui s'accroche aux bottes", Race::Bete, 2, 76, 5, 16, 22),
+            createMonster("Champignon souffleur de spores", "Plante nerveuse à nuage irritant", Race::Plante, 2, 90, 5, 17, 24),
+            createMonster("Kobold collecteur d'éclats", "Petit draconide obsédé par les objets brillants", Race::Draconide, 2, 78, 6, 18, 25)
         };
     }
 
@@ -143,7 +149,10 @@ namespace
             createMonster("Draconide à écailles grises", "Draconide jeune", Race::Draconide, 3, 230, 12, 30, 45, 0, 1, false, true),
             createMonster("Araignée verrière", "Insectoïde rapide", Race::Insectoide, 3, 175, 10, 34, 51),
             createMonster("Kobold tambour de fuite", "Kobold rameuteur paniqué", Race::Draconide, 3, 112, 8, 24, 34),
-            createMonster("Hurleur de meute borgne", "Bête rameuteuse", Race::Bete, 3, 130, 10, 26, 38)
+            createMonster("Hurleur de meute borgne", "Bête rameuteuse", Race::Bete, 3, 130, 10, 26, 38),
+            createMonster("Hobgobelin porte-bouclier", "Soldat de ligne discipliné", Race::Hobgobelin, 3, 168, 8, 24, 36),
+            createMonster("Esprit des panneaux perdus", "Esprit attaché aux routes oubliées", Race::Esprit, 3, 102, 8, 27, 39),
+            createMonster("Araignée tisse-fil de cuivre", "Insectoïde attiré par le métal", Race::Insectoide, 3, 118, 9, 28, 41)
         };
     }
 
@@ -164,7 +173,10 @@ namespace
             createMonster("Serpent d'écailles noires", "Draconide toxique", Race::Draconide, 4, 290, 21, 46, 70, 0, 1, false, true, true),
             createMonster("Ruche mutée des anciennes mines", "Insectoïde évolué", Race::Insectoide, 4, 275, 16, 50, 76, 0, 0, false, true, true),
             createMonster("Tambour gobelin de route", "Gobelin rameuteur de bande", Race::Gobelin, 4, 170, 10, 30, 44, 1, 1, false, true),
-            createMonster("Pillard siffleur", "Humain rameuteur d'embuscade", Race::Humain, 4, 140, 12, 31, 46, 1, 0, false, true)
+            createMonster("Pillard siffleur", "Humain rameuteur d'embuscade", Race::Humain, 4, 140, 12, 31, 46, 1, 0, false, true),
+            createMonster("Orc briseur de bornes", "Pillard lourd qui détruit les repères de route", Race::Orc, 4, 152, 15, 33, 48, 0, 0, false, true),
+            createMonster("Fée voleuse d'échos", "Fée qui imite les voix entendues", Race::Fee, 4, 116, 11, 34, 52, 0, 1),
+            createMonster("Automate de péage rouillé", "Construction appliquant un ordre disparu", Race::Construction, 4, 178, 10, 30, 43, 0, 0, false, true)
         };
     }
 
@@ -381,7 +393,9 @@ namespace
                 createMonster("Coursier louche", "Humain fuyant", Race::Humain, 2, 62, 6, 16, 24, 0, 0),
                 createMonster("Gobelin porteur", "Gobelin chargé de sacs", Race::Gobelin, 2, 88, 7, 16, 22),
                 createMonster("Slime doré minuscule", "Gelée brillante attirée par les pièces perdues", Race::Slime, 3, 74, 5, 17, 24),
-                createMonster("Apprenti receleur", "Humain nerveux avec une fiole et trop d'excuses", Race::Humain, 3, 78, 8, 19, 28, 1, 1)
+                createMonster("Apprenti receleur", "Humain nerveux avec une fiole et trop d'excuses", Race::Humain, 3, 78, 8, 19, 28, 1, 1),
+                createMonster("Porte-enseigne bandit", "Humain de bande qui protège les ordres et les replis", Race::Humain, 4, 118, 8, 24, 34, 1, 0, false, true),
+                createMonster("Arbalétrier de relais", "Tireur de route qui arme lentement un carreau lourd", Race::Humain, 4, 102, 12, 29, 42, 1, 0, false, true)
             };
         }
 
@@ -394,7 +408,9 @@ namespace
                 createMonster("Slime vert mousse", "Gelée camouflée", Race::Slime, 4, 112, 8, 21, 28),
                 createMonster("Slime ambré de sève", "Gelée collante attirée par les vieux arbres", Race::Slime, 5, 126, 9, 24, 32),
                 createMonster("Slime vert ancien", "Gelée stable nourrie par la mousse", Race::Slime, 6, 142, 10, 27, 36, 0, 0, false, true),
-                createMonster("Sanglier moussu", "Bête ancienne", Race::Bete, 5, 150, 15, 30, 38, 0, 0, false, true)
+                createMonster("Sanglier moussu", "Bête ancienne", Race::Bete, 5, 150, 15, 30, 38, 0, 0, false, true),
+                createMonster("Tisseuse de racines anciennes", "Plante qui prépare des nappes d'entrave plutôt que de mordre", Race::Plante, 6, 154, 9, 28, 39, 0, 1, false, true),
+                createMonster("Cerf garde-clairière", "Bête territoriale qui couvre les créatures plus fragiles du sous-bois", Race::Bete, 6, 178, 13, 31, 42, 0, 0, false, true)
             };
         }
 
@@ -418,7 +434,9 @@ namespace
                 createMonster("Slime vert putride jeune", "Gelée marécageuse chargée de toxines", Race::Slime, 13, 250, 16, 37, 48, 0, 0, false, true, true),
                 createMonster("Noyé du marais", "Mort-vivant humide", Race::MortVivant, 13, 235, 19, 38, 50, 0, 0, false, true, true),
                 createMonster("Insectoïde des eaux sales", "Prédateur toxique", Race::Insectoide, 12, 205, 18, 40, 52, 0, 1, false, true),
-                createMonster("Plante toxique", "Végétal venimeux", Race::Plante, 14, 240, 16, 42, 56, 0, 1, false, true, true)
+                createMonster("Plante toxique", "Végétal venimeux", Race::Plante, 14, 240, 16, 42, 56, 0, 1, false, true, true),
+                createMonster("Chaman de vase au souffle long", "Humanoïde marécageux qui prépare des rites de brouillard", Race::Humain, 14, 228, 13, 44, 64, 2, 2, false, true, true),
+                createMonster("Porte-bouclier des pilotis", "Humanoïde de marais qui couvre les soigneurs et les retraites", Race::Humain, 13, 290, 14, 36, 50, 1, 0, false, true, true)
             };
         }
 
@@ -539,7 +557,9 @@ namespace
             return {
                 createMonster("Rat de sacristie", "Bête nerveuse attirée par la cire", Race::Bete, 15, 210, 22, 44, 58, 0, 0, false, true),
                 createMonster("Novice fantôme", "Esprit de sanctuaire incomplet", Race::Esprit, 16, 220, 20, 56, 74, 1, 1, false, true, true),
-                createMonster("Gardien de nef fissuré", "Construction sacrée abîmée", Race::Construction, 17, 330, 24, 52, 68, 0, 0, false, true, true)
+                createMonster("Gardien de nef fissuré", "Construction sacrée abîmée", Race::Construction, 17, 330, 24, 52, 68, 0, 0, false, true, true),
+                createMonster("Pèlerin au vœu cassé", "Voyageur armé qui refuse d'expliquer quelle promesse l'a conduit ici", Race::Humain, 16, 245, 27, 55, 74, 1, 0, false, true),
+                createMonster("Sonneur novice nerveux", "Humain qui surveille les cloches et sursaute avant qu'elles vibrent", Race::Humain, 16, 230, 23, 60, 82, 1, 1, false, true, true)
             };
         }
 
@@ -548,7 +568,9 @@ namespace
             return {
                 createMonster("Anguille de brume pâle", "Bête d'eau presque invisible", Race::Bete, 9, 135, 16, 36, 50, 0, 0, false, false, true),
                 createMonster("Voleur de quai mouillé", "Humain opportuniste", Race::Humain, 10, 160, 20, 42, 58, 1, 0, false, true),
-                createMonster("Slime d'eau pâle", "Gelée froide des canaux", Race::Slime, 10, 185, 15, 38, 52, 0, 0, false, true)
+                createMonster("Slime d'eau pâle", "Gelée froide des canaux", Race::Slime, 10, 185, 15, 38, 52, 0, 0, false, true),
+                createMonster("Batelier de brume opportuniste", "Humain qui connaît les raccourcis et facture aussi les mauvaises directions", Race::Humain, 10, 175, 21, 46, 64, 1, 0, false, true),
+                createMonster("Grenouille-verre des écluses", "Bête translucide qui se plaque contre les pierres quand une barque approche", Race::Bete, 9, 145, 18, 40, 56, 0, 0, false, true)
             };
         }
 
@@ -557,7 +579,9 @@ namespace
             return {
                 createMonster("Scarabée d'os", "Insectoïde pâle et bruyant", Race::Insectoide, 20, 300, 30, 62, 82, 0, 0, false, true),
                 createMonster("Golem de craie jeune", "Construction blanche friable", Race::Construction, 21, 420, 28, 60, 78, 0, 0, false, true, true),
-                createMonster("Mineur pâle", "Humanoïde perdu dans la poussière", Race::Humain, 20, 280, 32, 66, 88, 1, 0, false, true, true)
+                createMonster("Mineur pâle", "Humanoïde perdu dans la poussière", Race::Humain, 20, 280, 32, 66, 88, 1, 0, false, true, true),
+                createMonster("Porteur de craie épuisé", "Humain couvert de poussière qui protège encore sa besace", Race::Humain, 20, 295, 29, 68, 92, 1, 0, false, true),
+                createMonster("Chien fossilier", "Bête dressée à gratter les strates où l'odeur des os persiste", Race::Bete, 21, 255, 36, 72, 98, 0, 0, false, true, true)
             };
         }
 
@@ -566,7 +590,9 @@ namespace
             return {
                 createMonster("Chien de quai nerveux", "Bête dressée pour flairer les dettes", Race::Bete, 12, 180, 24, 50, 68, 0, 0, false, true),
                 createMonster("Gobelin prêteur", "Gobelin sûr de ses taux", Race::Gobelin, 12, 170, 20, 48, 70, 1, 1, false, true),
-                createMonster("Contrebandier à cape sale", "Humain armé d'excuses et d'une lame", Race::Humain, 13, 210, 27, 58, 76, 1, 0, false, true)
+                createMonster("Contrebandier à cape sale", "Humain armé d'excuses et d'une lame", Race::Humain, 13, 210, 27, 58, 76, 1, 0, false, true),
+                createMonster("Gobelin courtier de ficelle", "Petit négociant qui code ses dettes avec des nœuds colorés", Race::Gobelin, 12, 185, 22, 54, 74, 1, 1, false, true),
+                createMonster("Guetteur de dette", "Humain posté sous une arche qui mémorise surtout les visages", Race::Humain, 13, 195, 29, 62, 84, 1, 0, false, true, true)
             };
         }
 
@@ -575,7 +601,9 @@ namespace
             return {
                 createMonster("Oiseau de pierre", "Construction légère perchée sur les grilles", Race::Construction, 14, 205, 24, 54, 72, 0, 0, false, true, true),
                 createMonster("Ronce blanche", "Plante noble devenue hostile", Race::Plante, 15, 260, 20, 56, 75, 0, 1, false, true, true),
-                createMonster("Statue fissurée", "Gardien de jardin presque immobile", Race::Construction, 16, 380, 25, 58, 76, 0, 0, false, true, true)
+                createMonster("Statue fissurée", "Gardien de jardin presque immobile", Race::Construction, 16, 380, 25, 58, 76, 0, 0, false, true, true),
+                createMonster("Tailleur de haies égaré", "Humain qui continue de tailler les mêmes formes avec un regard absent", Race::Humain, 15, 245, 27, 64, 88, 1, 0, false, true),
+                createMonster("Lézard de statue", "Bête minérale qui se confond avec les socles mouillés", Race::Bete, 14, 220, 30, 58, 80, 0, 0, false, true, true)
             };
         }
 
@@ -584,7 +612,9 @@ namespace
             return {
                 createMonster("Ronce noire rampante", "Plante corrompue qui cherche les chevilles", Race::Plante, 18, 310, 26, 68, 92, 0, 1, false, true, true),
                 createMonster("Loup au museau d'encre", "Bête contaminée par le bois sombre", Race::Bete, 19, 285, 36, 78, 105, 0, 0, false, true, true),
-                createMonster("Esprit collant", "Mémoire sombre qui s'accroche aux vivants", Race::Esprit, 20, 250, 28, 86, 120, 0, 2, false, true, true)
+                createMonster("Esprit collant", "Mémoire sombre qui s'accroche aux vivants", Race::Esprit, 20, 250, 28, 86, 120, 0, 2, false, true, true),
+                createMonster("Charbonnier contaminé", "Humain qui jure que la suie sur sa peau vient seulement de son métier", Race::Humain, 19, 300, 34, 82, 112, 1, 1, false, true, true),
+                createMonster("Renard aux racines noires", "Bête vive dont le pelage retient de petites fibres végétales sombres", Race::Bete, 18, 265, 38, 78, 106, 0, 1, false, true, true)
             };
         }
 
@@ -593,7 +623,9 @@ namespace
             return {
                 createMonster("Squelette lié", "Mort-vivant attaché à un vieux nom", Race::MortVivant, 20, 330, 32, 72, 96, 0, 0, false, true, true),
                 createMonster("Cultiste pâle", "Humain qui a trop lu les murs", Race::Humain, 21, 290, 26, 90, 126, 2, 2, false, true, true),
-                createMonster("Chaîne d'ombre rampante", "Construction d'ombre plus têtue que solide", Race::Construction, 22, 390, 28, 82, 110, 0, 1, false, true, true)
+                createMonster("Chaîne d'ombre rampante", "Construction d'ombre plus têtue que solide", Race::Construction, 22, 390, 28, 82, 110, 0, 1, false, true, true),
+                createMonster("Veilleur de sceau pâle", "Humain qui protège une porte dont il refuse de prononcer le nom", Race::Humain, 21, 320, 31, 94, 132, 2, 1, false, true, true),
+                createMonster("Rat aux anneaux funéraires", "Bête des cryptes qui accumule les petits objets métalliques des tombes", Race::Bete, 20, 275, 35, 76, 104, 0, 0, false, true, true)
             };
         }
 
@@ -792,7 +824,9 @@ namespace
                 createMonster("Chien de convoi", "Bête dressée pour garder les roues", Race::Bete, 5, 130, 16, 33, 44, 0, 0, false, true),
                 createMonster("Faux péager souriant", "Humain qui a inventé sa propre loi", Race::Humain, 6, 148, 15, 36, 50, 1, 1, false, true),
                 createMonster("Hobgobelin comptable", "Organisateur de butin qui protège les sacs", Race::Hobgobelin, 7, 165, 12, 31, 45, 2, 1, false, true, true),
-                createMonster("Mule mordante", "Bête de convoi traumatisée par les bandits", Race::Bete, 5, 150, 15, 34, 44, 0, 0, false, true)
+                createMonster("Mule mordante", "Bête de convoi traumatisée par les bandits", Race::Bete, 5, 150, 15, 34, 44, 0, 0, false, true),
+                createMonster("Caporal du péage sauvage", "Humain qui maintient une formation et protège les tireurs lourds", Race::Humain, 8, 230, 18, 46, 64, 1, 1, false, true, true),
+                createMonster("Arbalétrier à treuil", "Tireur lourd dont chaque trait demande une vraie préparation", Race::Humain, 8, 190, 24, 56, 82, 1, 1, false, true, true)
             };
         }
 
@@ -811,7 +845,9 @@ namespace
                 createMonster("Abeille de sève", "Insectoïde forestier attiré par les plaies", Race::Insectoide, 7, 128, 17, 36, 49, 0, 1, false, true),
                 createMonster("Biche aux yeux verts", "Bête paisible devenue dangereuse si acculée", Race::Bete, 7, 175, 16, 35, 48, 0, 0, false, true),
                 createMonster("Mousse rampante", "Plante lente qui recouvre les bottes", Race::Plante, 8, 210, 10, 30, 42, 0, 1, false, true),
-                createMonster("Pixie des épines", "Petite fée agressive des ronces", Race::Fee, 8, 125, 18, 44, 62, 1, 2, false, true, true)
+                createMonster("Pixie des épines", "Petite fée agressive des ronces", Race::Fee, 8, 125, 18, 44, 62, 1, 2, false, true, true),
+                createMonster("Dryade du cercle noué", "Esprit végétal qui prépare des racines en cercle", Race::Esprit, 9, 220, 17, 52, 76, 1, 2, false, true, true),
+                createMonster("Gardien aux bois cassés", "Bête ancienne qui protège les contrôleurs du sous-bois", Race::Bete, 9, 280, 24, 54, 72, 0, 1, false, true, true)
             };
         }
 
@@ -943,7 +979,9 @@ namespace
                 createMonster("Greffier fantôme", "Esprit administratif qui refuse les erreurs", Race::Esprit, 18, 360, 27, 84, 118, 1, 3, false, true, true),
                 createMonster("Archive vivante mineure", "Livre géant qui respire sous l'eau", Race::AnomalieArcanique, 19, 430, 30, 88, 125, 1, 3, false, true, true),
                 createMonster("Slime d'encre profonde", "Gelée lourde qui tache même les souvenirs", Race::Slime, 18, 410, 28, 78, 110, 0, 2, false, true, true),
-                createMonster("Archiviste noyé", "Mort-vivant lettré avec une haine des pages pliées", Race::MortVivant, 19, 395, 31, 82, 115, 2, 2, false, true, true)
+                createMonster("Archiviste noyé", "Mort-vivant lettré avec une haine des pages pliées", Race::MortVivant, 19, 395, 31, 82, 115, 2, 2, false, true, true),
+                createMonster("Copiste de sceau noyé", "Mort-vivant qui prépare de longs sceaux avant de frapper", Race::MortVivant, 20, 410, 28, 88, 126, 2, 3, false, true, true),
+                createMonster("Porte-registre blindé", "Construction qui couvre les scribes et bloque les couloirs", Race::Construction, 20, 540, 26, 76, 105, 0, 1, false, true, true)
             };
         }
 
@@ -953,7 +991,9 @@ namespace
                 createMonster("Drake gris de corniche", "Draconide assez grand pour mépriser les cordes", Race::Draconide, 24, 620, 52, 116, 158, 0, 3, false, true, true),
                 createMonster("Harpie coupeuse d'ancrage", "Bête ailée qui vise les sécurités avant les aventuriers", Race::Bete, 23, 430, 48, 112, 150, 0, 2, false, true, true),
                 createMonster("Esprit du vide bas", "Esprit né des chutes et des regrets", Race::Esprit, 24, 390, 42, 128, 176, 0, 3, false, true, true),
-                createMonster("Éboulement à cœur gris", "Construction naturelle qui se reforme lentement", Race::Construction, 25, 720, 46, 108, 145, 0, 1, false, true, true)
+                createMonster("Éboulement à cœur gris", "Construction naturelle qui se reforme lentement", Race::Construction, 25, 720, 46, 108, 145, 0, 1, false, true, true),
+                createMonster("Drake gris plongeur", "Draconide de corniche qui engage une charge aérienne avant de fondre", Race::Draconide, 25, 650, 50, 122, 168, 0, 3, false, true, true),
+                createMonster("Harpie veille-nid", "Bête ailée qui couvre les drakes pendant leurs prises d'élan", Race::Bete, 24, 470, 44, 108, 148, 0, 2, false, true, true)
             };
         }
 
@@ -973,7 +1013,9 @@ namespace
             return {
                 createMonster("Sonneur creux", "Esprit de cloche qui frappe sans bras", Race::Esprit, 21, 420, 34, 92, 126, 1, 3, false, true, true),
                 createMonster("Autel animé", "Construction sacrée qui refuse les mains sales", Race::Construction, 22, 600, 32, 84, 115, 0, 2, false, true, true),
-                createMonster("Chevalier de vœu fissuré", "Mort-vivant lié à une promesse mal tenue", Race::MortVivant, 23, 560, 40, 96, 130, 0, 1, false, true, true)
+                createMonster("Chevalier de vœu fissuré", "Mort-vivant lié à une promesse mal tenue", Race::MortVivant, 23, 560, 40, 96, 130, 0, 1, false, true, true),
+                createMonster("Sonneur de grand serment", "Esprit qui prépare un appel de cloche avant de libérer sa pression", Race::Esprit, 23, 490, 34, 108, 152, 1, 4, false, true, true),
+                createMonster("Gardien de nef au pavois", "Construction sacrée qui couvre ceux qui maintiennent un rituel", Race::Construction, 23, 690, 32, 90, 124, 0, 2, false, true, true)
             };
         }
 
@@ -1355,7 +1397,8 @@ namespace
         {
             return {
                 createMonster("Grand sonneur de silence", "Esprit rare dont la cloche coupe les certitudes", Race::Esprit, 34, 720, 56, 170, 240, 2, 6, false, true, true),
-                createMonster("Chevalier du vœu final", "Mort-vivant sacré qui ne recule pas", Race::MortVivant, 35, 980, 70, 160, 225, 0, 4, false, true, true)
+                createMonster("Chevalier du vœu final", "Mort-vivant sacré qui ne recule pas", Race::MortVivant, 35, 980, 70, 160, 225, 0, 4, false, true, true),
+                createMonster("Maître-carillonneur du pacte", "Esprit ancien dont le rituel de cloches exige plusieurs respirations", Race::Esprit, 36, 860, 58, 188, 268, 3, 7, false, true, true)
             };
         }
 
@@ -1379,7 +1422,8 @@ namespace
         {
             return {
                 createMonster("Notaire de l'ombre", "Esprit qui transforme les promesses en chaînes", Race::Esprit, 32, 650, 50, 210, 295, 4, 7, false, true, true),
-                createMonster("Roi des mauvais trocs", "Humain presque mythique du marché noir", Race::Humain, 34, 820, 76, 220, 310, 5, 5, false, true, true)
+                createMonster("Roi des mauvais trocs", "Humain presque mythique du marché noir", Race::Humain, 34, 820, 76, 220, 310, 5, 5, false, true, true),
+                createMonster("Huissier des trois versions", "Esprit qui conserve plusieurs contrats contradictoires et refuse d'en oublier un", Race::Esprit, 35, 760, 58, 230, 325, 4, 7, false, true, true)
             };
         }
 

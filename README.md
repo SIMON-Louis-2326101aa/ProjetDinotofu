@@ -4,9 +4,9 @@ Dinotofu is a C++17 RPG / arena game. The terminal version remains the stable fo
 
 ## Current version   
 
-- Current version: **V3.49.92**   
-- Strongly recommended character recreation baseline: **V3.00.00**   
-- Characters created before **V3.00.00** may still work, but recreating them is recommended to use the story foundation cleanly.   
+- Current version: **V3.50.09**   
+- Important save checkpoint: **V3.50.09**. Characters last adapted before this checkpoint must complete the explicit transition ritual before normal loading.   
+- Before that transition, Dinotofu creates a dedicated non-overwriting pre-update backup. Very old pre-V3.00.00 characters still keep the legacy recreation recommendation.   
 
 ## What is already in the game   
 
@@ -14,10 +14,10 @@ The game already lets players:
 
 - create, load, and save accounts and characters;   
 - choose a race, an exact race-compatible age, visual presentation, final variant, class, difficulty, death rule, and certain protected special identities;   
-- fight in AI PvP, two-player PvP, monster PvE, solo boss fights, and cooperative boss fights, with recruited allies, real two-ally combo techniques, and persistent enemy rivals that can return after surviving;   
-- manage inventory, weapons, armor, consumables, materials, durability, repairs, and item quality; weapons and armor now have persistent individual identities so specific copies can accumulate their own memories;   
+- fight in AI PvP, two-player PvP, monster PvE, solo boss fights, and cooperative boss fights, with recruited allies, two-ally techniques that gain persistent duo mastery, ordinary enemy escapes, rarer persistent rivals that may logically return, and conscious encounter speakers whose language can affect what the player understands;   
+- manage inventory, weapons, armor, consumables, materials, durability, repairs, and item quality; weapons and armor have persistent individual identities so a specific copy can accumulate memories, reputation and an emergent nickname;   
 - buy, sell and barter through one unified **Boutiques et comptoirs** menu with quick categories or complete list, visit locations, use the guild, library, field observation post, mercenary counter, training stand, and purchase/upgrade independent municipal vaults per town;   
-- explore biomes containing resources, chests, traps, tracks, events, dangerous locations, fused slimes, and a four-stage dividing slime mini-boss;   
+- explore a broader catalog of biomes containing resources, chests, traps, tracks, events, dangerous locations, biome-specific observations, fused slimes, and a four-stage dividing slime mini-boss;   
 - follow guild, client, exploration, combat, delivery, service, bestiary, and main-story quests;   
 - accept up to three daily guild challenges, earn Challenge Marks, and unlock titles tied to real combat restrictions;   
 - consult three special permanent registers: Bestiary for beings, Encyclopedia for systems/items/areas, and Discovery Notebook for lore, legends, and rumours;   
@@ -85,8 +85,9 @@ When you become a legend in Dinotofu, congratulations. When you die to the first
 
 ## Release notes   
 
-Detailed version history is kept in one dedicated file:   
+Detailed version history is kept in two matching language files:   
 
 - Detailed version history: `CHANGELOG.md`.   
+- French version history: `CHANGELOG_FR.md`.   
 
-README files and design documents are not development logs. They contain only useful player and project information; use `CHANGELOG.md` for version history.   
+README files and design documents are not development logs. They contain only useful player and project information; use the two CHANGELOG files for version history.   

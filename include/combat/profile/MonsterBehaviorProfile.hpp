@@ -29,6 +29,18 @@ struct MonsterBehaviorProfile
     int physicalDamageModifierPercent = 0;
     int magicalDamageModifierPercent = 0;
     std::string durabilityLine;
+    bool moraleSensitive = false;
+    bool canFlee = false;
+    bool rivalEligible = false;
+    std::string rivalTemperament = "survivant prudent";
+    std::string groupRole = "isolé";
+    bool groupLeader = false;
+    bool protectsLeader = false;
+    bool cooperativeGroup = false;
+    bool canSurrender = false;
+    bool abandonsWounded = false;
+    bool coversRetreat = false;
+    bool controlsTerrain = false;
 };
 
 namespace MonsterBehaviorProfileCatalog

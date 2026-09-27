@@ -697,12 +697,14 @@ std::vector<std::string> Console::captureLines(const std::function<void()>& acti
 void Console::clear()
 {
 #if defined(_WIN32)
-    system("cls");
+    const int clearResult = system("cls");
+    (void)clearResult;
 #else
     const char* term = std::getenv("TERM");
     if (term != nullptr && std::string(term).empty() == false && std::string(term) != "dumb")
     {
-        system("clear");
+        const int clearResult = system("clear");
+        (void)clearResult;
         applyConsoleTheme();
         return;
     }

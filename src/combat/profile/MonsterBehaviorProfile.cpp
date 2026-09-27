@@ -4,6 +4,7 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "combat/profile/MonsterBehaviorProfile.hpp"
+#include "combat/flavor/MonsterFlavorCatalog.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -246,6 +247,83 @@ namespace
         }
 
         profile.durabilityLine = "Corps lisible : la taille, la matière et le rythme ne modifient pas fortement les dégâts physiques.";
+    }
+
+    void applyGroupTraits(MonsterBehaviorProfile& profile, const Monster& monster, const std::string& combined)
+    {
+        const std::string text = normalizeProfileText(combined + " " + profile.archetype);
+        auto hasToken = [&](const std::string& token) {
+            return text.find(normalizeProfileText(token)) != std::string::npos;
+        };
+
+        const bool humanoid = hasToken("humain") || hasToken("bandit") || hasToken("mercenaire")
+            || hasToken("gobelin") || hasToken("hobgobelin") || hasToken("kobold") || hasToken("orc")
+            || hasToken("voleur") || hasToken("brigand") || hasToken("pillard");
+        const bool pack = hasToken("loup") || hasToken("meute") || hasToken("chien") || hasToken("prédateur") || hasToken("predateur");
+        const bool colony = hasToken("nid") || hasToken("essaim") || hasToken("insecte") || hasToken("araignée") || hasToken("araignee");
+        const bool leader = hasToken("chef") || hasToken("capitaine") || hasToken("alpha") || hasToken("matriarche")
+            || hasToken("reine") || hasToken("commandant") || hasToken("rameuteur") || hasToken("corneur");
+        const bool guard = hasToken("garde") || hasToken("bouclier") || hasToken("protecteur") || hasToken("sentinelle");
+        const bool coward = hasToken("voleur") || hasToken("contrebandier") || hasToken("gobelin") || hasToken("kobold") || hasToken("pillard");
+
+        profile.groupLeader = leader || (monster.isElite() && (humanoid || pack));
+        profile.protectsLeader = guard || hasToken("garde du corps") || hasToken("porte-bouclier");
+        profile.cooperativeGroup = humanoid || pack || colony || hasToken("escouade") || hasToken("patrouille");
+        profile.canSurrender = humanoid && !hasToken("fanatique") && !hasToken("berserker") && !hasToken("assassin sans souffle");
+        profile.abandonsWounded = coward && !profile.protectsLeader;
+        profile.coversRetreat = profile.protectsLeader || hasToken("archer") || hasToken("tireur")
+            || hasToken("arbalétrier") || hasToken("sentinelle") || hasToken("escarmouche");
+        profile.controlsTerrain = colony || hasToken("racine") || hasToken("ronce") || hasToken("spore")
+            || hasToken("toile") || hasToken("boue") || hasToken("gel") || hasToken("piège") || hasToken("piege");
+
+        if (profile.groupLeader) profile.groupRole = "meneur";
+        else if (profile.protectsLeader) profile.groupRole = "protecteur";
+        else if (hasToken("soigneur") || hasToken("chaman") || hasToken("prêtre") || hasToken("pretresse")) profile.groupRole = "soutien";
+        else if (hasToken("archer") || hasToken("tireur") || hasToken("arbalétrier")) profile.groupRole = "distance";
+        else if (profile.cooperativeGroup) profile.groupRole = "membre de groupe";
+        else profile.groupRole = "isolé";
+    }
+
+    void applyMoraleTraits(MonsterBehaviorProfile& profile, const Monster& monster, const std::string& combined)
+    {
+        const std::string archetype = normalizeProfileText(profile.archetype);
+        const bool mindless = containsAny(combined, {
+            "mort-vivant", "mort vivant", "zombie", "squelette", "anomalie", "golem", "construction",
+            "spectre", "âme errante", "ame errante", "serment brisé", "serment brise"
+        }) || archetype.find("mort-vivant") != std::string::npos
+           || archetype.find("construction") != std::string::npos
+           || archetype.find("spectral") != std::string::npos
+           || archetype.find("serment sacré") != std::string::npos;
+
+        if (mindless)
+        {
+            profile.moraleSensitive = false;
+            profile.canFlee = false;
+            profile.rivalEligible = false;
+            profile.rivalTemperament = "volonté étrangère";
+            return;
+        }
+
+        const bool survivalMind = containsAny(combined, {
+            "gobelin", "kobold", "voleur", "roublard", "brigand", "bandit", "mercenaire", "humain",
+            "orc", "hobgobelin", "loup", "meute", "chien", "bête", "bete", "renard", "prédateur",
+            "predateur", "rat", "nuisible", "archer", "tireur", "lancier", "piquier", "alchimiste",
+            "soigneur", "barde", "dompteur", "moine", "berserker", "pillard", "assassin"
+        }) || archetype.find("opportuniste") != std::string::npos
+           || archetype.find("sournois") != std::string::npos
+           || archetype.find("meute") != std::string::npos
+           || archetype.find("prédateur") != std::string::npos
+           || archetype.find("rameuteur") != std::string::npos
+           || archetype.find("duelliste") != std::string::npos;
+
+        profile.moraleSensitive = survivalMind;
+        profile.canFlee = survivalMind;
+        profile.rivalEligible = survivalMind && !containsAny(combined, {"nuée", "nuee", "essaim"});
+
+        if (monster.isElite() || monster.isEvolved()) profile.rivalTemperament = "endurci";
+        else if (archetype.find("sournois") != std::string::npos || archetype.find("opportuniste") != std::string::npos) profile.rivalTemperament = "calculateur";
+        else if (archetype.find("meute") != std::string::npos || archetype.find("prédateur") != std::string::npos) profile.rivalTemperament = "traqueur";
+        else if (archetype.find("gobelin") != std::string::npos || archetype.find("kobold") != std::string::npos) profile.rivalTemperament = "rancunier";
     }
 }
 
@@ -970,6 +1048,8 @@ namespace MonsterBehaviorProfileCatalog
         }
 
         applyMaterialAndBodyTraits(profile, monster, combined);
+        applyGroupTraits(profile, monster, combined);
+        applyMoraleTraits(profile, monster, combined);
 
         const bool dedicatedCaller = containsAny(combined, {"chef", "capitaine", "sergent", "crieur", "crieuse", "corneur", "corne", "hurleur", "hurleuse", "rameuteur", "rameuteuse", "guetteur", "guetteuse", "tambour", "éclaireur", "eclaireur", "sentinelle", "alarme", "reine", "matriarche", "nid", "alpha", "scribe", "chaman", "chamane", "shaman"});
         const bool commonBandRace = containsAny(combined, {"meute", "slime", "gobelin", "kobold", "loup", "rat", "nuisible", "insecte", "insectoïde", "insectoide", "araignée", "araignee"});
@@ -1084,6 +1164,8 @@ namespace MonsterBehaviorProfileCatalog
         const int defenderHpPercent = defender.getMaxHp() > 0 ? defender.getHp() * 100 / defender.getMaxHp() : 0;
 
         lines.push_back("Lecture vivante : " + profile.archetype + " - " + profile.attackDescription + ".");
+        lines.push_back("Présence : " + MonsterFlavorCatalog::buildIdleLine(monster));
+        lines.push_back("Mouvement : " + MonsterFlavorCatalog::buildAttackMotionLine(monster) + ".");
 
         const std::string archetype = normalizeProfileText(profile.archetype);
         const int monsterStatusPressure = (monster.hasBurning() ? 1 : 0)
@@ -1227,7 +1309,8 @@ namespace MonsterBehaviorProfileCatalog
         {
             stream << " avec une puissance renforcée";
         }
-        stream << " et inflige " << rawDamage << " dégâts bruts.";
+        stream << " et inflige " << rawDamage << " dégâts bruts. ";
+        stream << MonsterFlavorCatalog::buildImpactTextureLine(monster, critical, boosted);
         return stream.str();
     }
 

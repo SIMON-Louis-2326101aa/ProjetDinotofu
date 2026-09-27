@@ -14,6 +14,9 @@
 #include "combat/role/CombatRoleSystem.hpp"
 #include "combat/system/DefensePostureSystem.hpp"
 #include "combat/profile/MonsterBehaviorProfile.hpp"
+#include "combat/system/MonsterPreparedActionSystem.hpp"
+#include "combat/rival/RivalEmergenceSystem.hpp"
+#include "combat/flavor/MonsterFlavorCatalog.hpp"
 
 #include "core/Console.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
@@ -281,6 +284,7 @@ namespace
         return std::max(1,
             wave.getDefeatedEnemyCount()
             + wave.getEscapedEnemyCount()
+            + wave.getSurrenderedEnemyCount()
             + wave.getActiveEnemyCount()
             + wave.getWaitingEnemyCount()
         );
@@ -918,29 +922,207 @@ namespace
     }
 
 
+    bool tryMonsterLeaderProtectionReaction(Monster& monster, EnemyCombatQueue& wave, int monsterIndex, Player& player, Random& random)
+    {
+        const MonsterBehaviorProfile protectorProfile = MonsterBehaviorProfileCatalog::build(monster);
+        if (!protectorProfile.protectsLeader || monster.isDead()) return false;
+
+        Monster* threatenedLeader = nullptr;
+        for (int index = 0; index < wave.getActiveEnemyCount(); ++index)
+        {
+            if (index == monsterIndex) continue;
+            Monster& candidate = wave.getActiveEnemy(index);
+            if (candidate.isDead()) continue;
+            const MonsterBehaviorProfile candidateProfile = MonsterBehaviorProfileCatalog::build(candidate);
+            if (!candidateProfile.groupLeader || !monsterCanLeadCompatibleAlly(candidate, monster)) continue;
+            if (candidate.getMaxHp() <= 0 || candidate.getHp() * 100 > candidate.getMaxHp() * 55) continue;
+            threatenedLeader = &candidate;
+            break;
+        }
+        if (threatenedLeader == nullptr) return false;
+
+        int chance = 17;
+        if (threatenedLeader->getHp() * 100 <= threatenedLeader->getMaxHp() * 30) chance += 11;
+        if (monster.isElite()) chance += 5;
+        if (monster.getMaxHp() > 0 && monster.getHp() * 100 <= monster.getMaxHp() * 25) chance -= 7;
+        chance = std::clamp(chance, 5, 38);
+        if (random.between(1, 100) > chance) return false;
+
+        monster.startDefensePosture(15, 5, "Protection du meneur");
+        monster.startProvocation(1);
+        threatenedLeader->applyElementalWard(1, 7 + std::max(1, monster.getLevel()) / 28);
+        threatenedLeader->applyPrecisionBoost(1, 1);
+
+        std::vector<std::string> lines = {
+            monster.getName() + " voit " + threatenedLeader->getName() + " vaciller et se place réellement entre lui et la pression.",
+            "Rôle structuré : " + protectorProfile.groupRole + ". Cette réaction vient de son profil de groupe, pas d'un mot caché dans son nom au moment de l'action.",
+            "Couverture : le protecteur prend une garde courte et provoque davantage ; le meneur reçoit une protection et un bref repère de précision.",
+            "Contre-jeu : éliminer ou contrôler les protecteurs avant de concentrer le meneur réduit cette capacité de la ligne ennemie."
+        };
+        player.recordCanonicalEvent(
+            "protections_de_meneur_ennemies",
+            monster.getName() + "->" + threatenedLeader->getName(),
+            monster.getName() + " a couvert " + threatenedLeader->getName(),
+            1
+        );
+        showWaveTurnNotice("PROTECTION DU MENEUR", "wave.monster.group.leader_protection", lines);
+        return true;
+    }
+
+    bool tryProtectPreparedAlly(Monster& monster, EnemyCombatQueue& wave, int monsterIndex, Player& player, Random& random)
+    {
+        if (monster.isDead() || monster.hasPreparedSignature()) return false;
+        const MonsterBehaviorProfile protectorProfile = MonsterBehaviorProfileCatalog::build(monster);
+        if (!protectorProfile.protectsLeader && !protectorProfile.cooperativeGroup) return false;
+
+        Monster* preparingAlly = nullptr;
+        for (int index = 0; index < wave.getActiveEnemyCount(); ++index)
+        {
+            if (index == monsterIndex) continue;
+            Monster& candidate = wave.getActiveEnemy(index);
+            if (candidate.isDead() || !candidate.hasPreparedSignature()) continue;
+            if (!monsterCanLeadCompatibleAlly(monster, candidate) && !monsterCanLeadCompatibleAlly(candidate, monster)) continue;
+            preparingAlly = &candidate;
+            break;
+        }
+        if (preparingAlly == nullptr) return false;
+
+        int chance = protectorProfile.protectsLeader ? 38 : 22;
+        if (monster.isElite()) chance += 6;
+        if (preparingAlly->isElite()) chance += 5;
+        if (monster.getMaxHp() > 0 && monster.getHp() * 100 <= monster.getMaxHp() * 25) chance -= 10;
+        chance = std::clamp(chance, 8, 52);
+        if (random.between(1, 100) > chance) return false;
+
+        monster.startDefensePosture(16, 6, "Couverture d'une préparation");
+        monster.startProvocation(1);
+        preparingAlly->applyElementalWard(1, 8 + std::max(1, monster.getLevel()) / 24);
+
+        const std::string family = MonsterPreparedActionSystem::familyForLabel(preparingAlly->getPreparedSignatureLabel());
+        std::vector<std::string> lines = {
+            monster.getName() + " voit " + preparingAlly->getName() + " maintenir une compétence préparée et sacrifie son propre tour pour couvrir la fenêtre.",
+            "Préparation protégée : " + preparingAlly->getPreparedSignatureLabel() + " (" + family + ").",
+            "Le protecteur provoque davantage et prend une garde courte ; le préparateur reçoit une protection temporaire, pas une immunité à l'interruption.",
+            "Contre-jeu : contrôler le protecteur, contourner sa provocation ou concentrer assez de pression pour dépasser malgré tout la protection."
+        };
+        player.recordCanonicalEvent(
+            "protections_competences_preparees",
+            monster.getName() + "->" + preparingAlly->getName(),
+            monster.getName() + " a couvert une préparation de " + preparingAlly->getName(),
+            1
+        );
+        showWaveTurnNotice("COUVERTURE DE PRÉPARATION", "wave.monster.group.prepared_cover", lines);
+        return true;
+    }
+
+
+    bool tryMonsterGroupShockReaction(Monster& monster, EnemyCombatQueue& wave, int monsterIndex, Player& player, Random& random)
+    {
+        if (wave.getDefeatedEnemyCount() <= 0 || monster.isDead()) return false;
+
+        const MonsterBehaviorProfile behavior = MonsterBehaviorProfileCatalog::build(monster);
+        if (!behavior.cooperativeGroup || !behavior.moraleSensitive) return false;
+
+        const Monster* fallenLeader = nullptr;
+        for (int index = wave.getDefeatedEnemyCount() - 1; index >= 0; --index)
+        {
+            const Monster& defeated = wave.getDefeatedEnemy(index);
+            const MonsterBehaviorProfile defeatedBehavior = MonsterBehaviorProfileCatalog::build(defeated);
+            if (defeatedBehavior.groupLeader && monsterCanLeadCompatibleAlly(defeated, monster))
+            {
+                fallenLeader = &defeated;
+                break;
+            }
+        }
+        if (fallenLeader == nullptr) return false;
+
+        const std::string reactionKey = fallenLeader->getName() + "->" + monster.getName();
+        for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+        {
+            if (record.category == "chocs_de_groupe_ennemis" && record.key == reactionKey)
+            {
+                return false;
+            }
+        }
+
+        // La mort d'un meneur ne peut provoquer qu'une seule lecture de choc par individu.
+        player.recordCanonicalEvent("chocs_de_groupe_ennemis", reactionKey, monster.getName() + " a vu tomber " + fallenLeader->getName(), 1);
+        int chance = 24;
+        if (behavior.abandonsWounded) chance += 16;
+        if (wave.getActiveEnemyCount() <= 2) chance += 10;
+        if (monster.getMaxHp() > 0 && monster.getHp() * 100 <= monster.getMaxHp() * 45) chance += 8;
+        chance = std::clamp(chance, 0, 58);
+        if (random.between(1, 100) > chance) return false;
+
+        std::vector<std::string> lines;
+        lines.push_back(fallenLeader->getName() + " est tombé : " + monster.getName() + " réagit à la perte d'un meneur réellement présent dans ce groupe.");
+        lines.push_back("Rôle : " + behavior.groupRole + ". La réaction vient du combat vécu, pas d'une information globale invisible.");
+
+        if (behavior.abandonsWounded && behavior.canFlee && random.between(1, 100) <= 48)
+        {
+            lines.push_back("Débandade : cet ennemi rompt la ligne dès que l'autorité disparaît.");
+            lines.push_back(MonsterFlavorCatalog::buildFleeLine(monster));
+            lines.push_back("Cette retraite de groupe reste une fuite ordinaire : aucune identité de rival n'est créée ici.");
+            player.recordCanonicalEvent("retraites_organisees_ou_debandades", monster.getName(), monster.getName() + " a abandonné la ligne après la chute du meneur", 1);
+            showWaveTurnNotice("LIGNE ENNEMIE BRISÉE", "wave.monster.group_shock.retreat", lines);
+            wave.removeActiveEnemyAsEscaped(monsterIndex);
+            return true;
+        }
+
+        monster.applyWeakening(2, 8 + monster.getLevel() / 24);
+        if (random.between(1, 100) <= 40) monster.applyVulnerability(1, 6 + monster.getLevel() / 30);
+        lines.push_back("Panique de groupe : l'ennemi reste, mais son rythme et sa défense se dégradent brièvement.");
+        showWaveTurnNotice("CHOC DE GROUPE", "wave.monster.group_shock", lines);
+        return true;
+    }
+
+    bool tryApplyRetreatCoverReaction(Monster& fleeingMonster, EnemyCombatQueue& wave, int fleeingIndex, Player& player, Random& random, std::vector<std::string>& lines)
+    {
+        for (int index = 0; index < wave.getActiveEnemyCount(); ++index)
+        {
+            if (index == fleeingIndex) continue;
+            Monster& ally = wave.getActiveEnemy(index);
+            if (ally.isDead()) continue;
+
+            const MonsterBehaviorProfile allyProfile = MonsterBehaviorProfileCatalog::build(ally);
+            if (!allyProfile.coversRetreat || !allyProfile.cooperativeGroup) continue;
+            if (!monsterCanLeadCompatibleAlly(ally, fleeingMonster) && !monsterCanLeadCompatibleAlly(fleeingMonster, ally)) continue;
+
+            int chance = 24;
+            if (allyProfile.protectsLeader) chance += 8;
+            if (allyProfile.groupRole == "distance") chance += 6;
+            if (ally.isElite()) chance += 4;
+            chance = std::clamp(chance, 8, 42);
+            if (random.between(1, 100) > chance) continue;
+
+            ally.startDefensePosture(10, 4, "Couverture de retraite");
+            ally.applyWeakening(1, 7);
+            ally.applyVulnerability(1, 5);
+            player.applyWeakening(1, 4 + std::max(1, ally.getLevel()) / 45);
+
+            lines.push_back("Couverture réelle : " + ally.getName() + " coupe brièvement ta poursuite pour laisser " + fleeingMonster.getName() + " décrocher.");
+            lines.push_back("Coût de la réaction : le couvreur se découvre et perd de la puissance sur son prochain geste ; ce n'est pas une protection gratuite.");
+            lines.push_back("Effet : ta pression offensive baisse légèrement pendant un tour, sans empêcher de continuer le combat.");
+            player.recordCanonicalEvent(
+                "couvertures_de_retraite_ennemies",
+                ally.getName() + "->" + fleeingMonster.getName(),
+                ally.getName() + " a couvert la retraite de " + fleeingMonster.getName(),
+                1
+            );
+            return true;
+        }
+        return false;
+    }
+
     bool tryMonsterMoraleReaction(Monster& monster, EnemyCombatQueue& wave, int monsterIndex, Player& player, Random& random)
     {
-        if (monster.isElite() || monster.getMaxHp() <= 0 || monster.getHp() * 100 > monster.getMaxHp() * 18)
+        if (monster.getMaxHp() <= 0 || monster.getHp() * 100 > monster.getMaxHp() * 18)
         {
             return false;
         }
 
-        const std::string text = normalizeMonsterWaveText(monster.getName() + " " + monster.getType() + " " + monster.getRaceText());
-        const bool canFear = text.find("gobelin") != std::string::npos
-            || text.find("voleur") != std::string::npos
-            || text.find("bandit") != std::string::npos
-            || text.find("humain") != std::string::npos
-            || text.find("loup") != std::string::npos
-            || text.find("bete") != std::string::npos
-            || text.find("bête") != std::string::npos
-            || text.find("mercenaire") != std::string::npos;
-        const bool almostNever = text.find("mort-vivant") != std::string::npos
-            || text.find("anomalie") != std::string::npos
-            || text.find("golem") != std::string::npos
-            || text.find("spectre") != std::string::npos
-            || text.find("serment") != std::string::npos;
-
-        if (!canFear || almostNever)
+        const MonsterBehaviorProfile behavior = MonsterBehaviorProfileCatalog::build(monster);
+        if (!behavior.moraleSensitive)
         {
             return false;
         }
@@ -961,17 +1143,37 @@ namespace
 
         std::vector<std::string> lines;
         lines.push_back(monster.getName() + " ne lit plus le combat comme une simple bagarre : la peur entre dans son tour.");
+        lines.push_back("Rôle de groupe lu : " + behavior.groupRole + ".");
 
-        if (random.between(1, 100) <= 45)
+        const bool isolatedEnoughToYield = wave.getActiveEnemyCount() <= 2 && wave.getWaitingEnemyCount() == 0;
+        if (behavior.canSurrender && isolatedEnoughToYield && random.between(1, 100) <= 32)
+        {
+            lines.push_back("Réaction : reddition. L'ennemi baisse réellement son arme au lieu de se transformer en cadavre ou en fuyard.");
+            lines.push_back(MonsterFlavorCatalog::buildSurrenderLine(monster));
+            lines.push_back("Conséquence : pas de butin de mort. Une petite part d'expérience reste accordée pour avoir brisé sa volonté de combattre.");
+            lines.push_back("Mémoire : une reddition est enregistrée séparément d'une fuite et ne crée aucun rival automatiquement.");
+            player.recordCanonicalEvent("redditions_ennemies", monster.getName(), monster.getName() + " s'est rendu après rupture de morale", 1);
+            player.recordHistoricalEvent("enemy_surrender", monster.getName(), monster.getName() + " s'est rendu vivant", true);
+            showWaveTurnNotice("REDDITION ENNEMIE", "wave.monster.morale.surrender", lines);
+            wave.removeActiveEnemyAsSurrendered(monsterIndex);
+            return true;
+        }
+
+        if (behavior.canFlee && random.between(1, 100) <= 45)
         {
             lines.push_back("Réaction : fuite courte. L'ennemi préfère survivre plutôt que mourir proprement.");
+            lines.push_back(MonsterFlavorCatalog::buildFleeLine(monster));
+            tryApplyRetreatCoverReaction(monster, wave, monsterIndex, player, random, lines);
             lines.push_back("Logique : tous les ennemis ne sont pas des suicidaires ; morts-vivants, anomalies ou serments brisés réagissent autrement.");
             player.recordCanonicalEvent("morale_ennemie", "fuite_ou_panique", "Un ennemi a paniqué ou fui", 1);
-            player.recordCanonicalEvent("rivaux_potentiels", monster.getName(), monster.getName() + " a survécu à une fuite/panique et pourrait revenir changé", 1);
-            if (player.hasPassiveSkill("church_oath_witness") || player.hasPassiveSkill("church_oath_memory"))
+            player.recordCanonicalEvent("fuites_ennemies", monster.getName(), monster.getName() + " a fui sans que cela garantisse un retour", 1);
+
+            const bool witnessed = player.hasPassiveSkill("church_oath_witness");
+            const bool memoryKept = player.hasPassiveSkill("church_oath_memory");
+            if (witnessed || memoryKept)
             {
-                player.recordCanonicalEvent("rumeurs_temoin", monster.getName(), monster.getName() + " a été vu en train de fuir ou paniquer", 1);
-                lines.push_back("Témoin logique : la fuite peut devenir rumeur parce qu'elle a été vue, pas parce que le monde est omniscient.");
+                player.recordCanonicalEvent("fugitifs_signales", monster.getName(), monster.getName() + " a laissé une trace vérifiable après sa fuite", 1);
+                lines.push_back("Trace logique : la fuite reste notée parce qu'elle a été observée ou mémorisée, pas parce que le monde est omniscient.");
             }
             if (player.hasPassiveSkill("church_oath_bonds"))
             {
@@ -980,29 +1182,48 @@ namespace
             }
             if (player.hasPassiveSkill("church_oath_rivals"))
             {
-                player.recordCanonicalEvent("rivaux_potentiels", "serment_rivaux:" + monster.getName(), monster.getName() + " a fui sous un serment qui garde les noms", 1);
-                lines.push_back("Serment des Rivaux : cette fuite garde un nom. Si l'ennemi revient, il ne reviendra pas comme un mob anonyme.");
+                lines.push_back("Serment des Rivaux : la chance de fixer cette identité augmente, mais le serment ne transforme pas chaque fuyard en rival.");
             }
             if (player.hasPassiveSkill("church_oath_unstable_fate") && random.between(1, 100) <= 20)
             {
                 player.recordCanonicalEvent("destin_instable", "fuite_marquee", "Une fuite ennemie a déplacé un fil du destin", 1);
                 lines.push_back("Destin instable : la fuite ne devient importante que parce qu'elle a été vécue et pourrait recroiser ta route.");
             }
-            lines.push_back("Mémoire du monde : si quelqu'un voit cette fuite ou si l'ennemi survit vraiment, il pourra devenir une rumeur ou un rival plus tard.");
+            lines.push_back("Mémoire du monde : survivre ne suffit pas. La plupart des fuyards restent de simples survivants et peuvent ne jamais revenir.");
 
             if (monster.isPersistentRival())
             {
                 player.recordRivalEscape(monster.getRivalId(), player.getCurrentCityId());
+                if (calculateHpPercentage(monster) <= 10)
+                {
+                    player.recordRivalWound(monster.getRivalId());
+                }
                 lines.push_back("Rival connu : cette fuite appartient au même individu. Sa trace reste attachée à son identité.");
             }
             else
             {
-                int rivalChance = 12;
-                if (player.hasPassiveSkill("church_oath_rivals")) rivalChance += 48;
-                if (player.hasPassiveSkill("church_oath_witness")) rivalChance += 18;
-                if (player.hasPassiveSkill("church_oath_memory")) rivalChance += 12;
-                if (monster.isElite() || monster.isEvolved()) rivalChance += 10;
-                if (random.between(1, 100) <= std::min(90, rivalChance))
+                int priorTraces = 0;
+                for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+                {
+                    if (record.category == "fugitifs_signales" && record.key == monster.getName())
+                    {
+                        priorTraces += record.count;
+                    }
+                }
+
+                RivalEmergenceContext context;
+                context.eligible = behavior.rivalEligible;
+                context.elite = monster.isElite();
+                context.evolved = monster.isEvolved();
+                context.witnessed = witnessed;
+                context.memoryKept = memoryKept;
+                context.rivalOath = player.hasPassiveSkill("church_oath_rivals");
+                context.priorTraces = priorTraces;
+                context.remainingHpPercent = calculateHpPercentage(monster);
+                context.behaviorArchetype = behavior.archetype;
+                RivalEmergenceDecision decision = RivalEmergenceSystem::evaluate(context, random.between(1, 100));
+
+                if (decision.becomesRival)
                 {
                     const std::string rivalId = player.createRivalFromEnemy(
                         monster.getName(),
@@ -1010,11 +1231,23 @@ namespace
                         monster.getLevel(),
                         monster.getMaxHp(),
                         std::max(1, monster.getMaxDamage()),
-                        "Fuite vécue après une rupture de morale"
+                        "Fuite vécue après une rupture de morale",
+                        behavior.rivalTemperament.empty() ? decision.temperament : behavior.rivalTemperament,
+                        decision.chancePercent
                     );
                     monster.setRivalId(rivalId);
                     player.recordRivalEscape(rivalId, player.getCurrentCityId());
+                    if (calculateHpPercentage(monster) <= 10)
+                    {
+                        player.recordRivalWound(rivalId);
+                    }
+                    player.recordCanonicalEvent("rivaux_confirmes", rivalId, monster.getName() + " a acquis une identité de rival persistante", 1);
                     lines.push_back("Trace persistante : cet ennemi n'est plus seulement un type de monstre. Son identité peut survivre à cette rencontre.");
+                }
+                else
+                {
+                    lines.push_back(decision.reason);
+                    lines.push_back("Aucun rival créé : cette fuite reste une fuite, pas la promesse artificielle d'un mini-boss futur.");
                 }
             }
 
@@ -1032,6 +1265,56 @@ namespace
         return true;
     }
 
+
+    bool tryResolveMonsterPreparedAction(Monster& monster, Player& player)
+    {
+        const MonsterPreparedActionResolution resolution = MonsterPreparedActionSystem::resolve(monster, player);
+        if (!resolution.hadPreparation) return false;
+
+        std::vector<std::string> lines;
+        lines.push_back(monster.getName() + " reprend la compétence annoncée : " + resolution.label + ".");
+        if (resolution.interrupted)
+        {
+            lines.push_back("Interruption réussie : " + resolution.interruptReason + ".");
+            lines.push_back("Conséquence : la préparation est perdue, le tour ennemi est consommé et sa garde reste brièvement ouverte.");
+            player.recordCanonicalEvent(
+                "interruptions_competences_ennemies",
+                monster.getName(),
+                monster.getName() + " a perdu une compétence préparée après un contre-jeu réel",
+                1
+            );
+            showWaveTurnNotice("COMPÉTENCE INTERROMPUE", "wave.monster.prepared.interrupted", lines);
+            return true;
+        }
+
+        if (resolution.resolved)
+        {
+            lines.push_back("La préparation n'a pas été cassée à temps : le geste lourd part réellement.");
+            lines.push_back("Famille : " + resolution.family + ".");
+            lines.push_back("Dégâts : " + std::to_string(resolution.damage) + ".");
+            if (!resolution.effectLine.empty()) lines.push_back(resolution.effectLine);
+            if (resolution.forcedReposition)
+            {
+                lines.push_back("Déplacement forcé : l'impact te chasse de ton appui. Sans grille de cases, cela se traduit par une brève perte de puissance et une ouverture au prochain coup.");
+                player.recordCanonicalEvent(
+                    "deplacements_forces_ennemis",
+                    monster.getName(),
+                    monster.getName() + " a forcé un repositionnement après une compétence préparée",
+                    1
+                );
+            }
+            player.recordCanonicalEvent(
+                "competences_ennemies",
+                "attaque_preparee_resolue",
+                monster.getName() + " a mené une compétence préparée jusqu'au bout",
+                1
+            );
+            showWaveTurnNotice("COMPÉTENCE PRÉPARÉE", "wave.monster.prepared.resolved", lines);
+            ThreatSystem::consumeForcedTargetIfNeeded(player);
+            return true;
+        }
+        return false;
+    }
 
     bool tryMonsterSignatureSkill(Monster& monster, EnemyCombatQueue& wave, int monsterIndex, Player& player, Random& random)
     {
@@ -1110,15 +1393,16 @@ namespace
             || hasToken("orc") || hasToken("géant") || hasToken("geant") || hasToken("rituel") || hasToken("serment")
             || hasToken("sphinx") || hasToken("marteau") || hasToken("massue") || hasToken("charge") || hasToken("canon");
         if (heavyOrLongSignature
-            && !monster.hasPowerBoost()
+            && !monster.hasPreparedSignature()
             && signatureTier >= 1
             && random.between(1, 100) <= 16 + signatureTier * 5)
         {
-            monster.applyPowerBoost(1, 12 + signatureTier * 4);
-            monster.applyPrecisionBoost(1, 1 + signatureTier / 3);
-            lines.push_back("Compétence annoncée : " + monster.getName() + " prend un temps de trop pour charger quelque chose de lourd.");
-            lines.push_back("Ce n'est pas un texte décoratif : le prochain impact gagne puissance/précision si personne ne casse le rythme.");
-            lines.push_back("Contre-jeu : défense, retrait, brise-garde, choc/givre, entrave, ordre allié ou pression immédiate.");
+            monster.startPreparedSignature(profile.signatureMove, signatureTier);
+            lines.push_back("Compétence annoncée : " + monster.getName() + " prend un temps de trop pour préparer quelque chose de lourd.");
+            lines.push_back(MonsterPreparedActionSystem::telegraphLineForLabel(profile.signatureMove));
+            lines.push_back("Ce n'est pas un texte décoratif : au prochain tour de cet ennemi, la compétence part réellement si son rythme n'est pas cassé.");
+            lines.push_back(MonsterPreparedActionSystem::interruptHintForLabel(profile.signatureMove));
+            lines.push_back("Aucune intention future supplémentaire n'est affichée : tu sais seulement ce que ton personnage vient de voir être préparé.");
             player.recordCanonicalEvent("competences_ennemies", "attaque_annoncee", "Une grosse compétence ennemie a été annoncée", 1);
             showWaveTurnNotice("COMPÉTENCE ANNONCÉE", "wave.monster.signature_announced", lines);
             return true;
@@ -1267,8 +1551,34 @@ namespace
         }
         if (player.hasPassiveSkill("church_oath_bound_forge") && signatureTier >= 2 && random.between(1, 100) <= 14)
         {
-            player.recordCanonicalEvent("objets_avec_memoire", "arme_marquee_par_signature", "Une arme ou armure a subi une compétence ennemie marquante", 1);
-            lines.push_back("Serment de la Forge liée : l'équipement pourra se souvenir de ce choc seulement parce qu'il l'a vraiment vécu.");
+            std::string itemId;
+            std::string itemName;
+            std::string itemKind;
+            if (player.hasEquippedArmor() && !player.getEquippedArmor().getPersistentId().empty())
+            {
+                const Armor armor = player.getEquippedArmor();
+                itemId = armor.getPersistentId();
+                itemName = armor.getName();
+                itemKind = "L'armure";
+            }
+            else if (player.hasEquippedWeapon() && !player.getEquippedWeapon().getPersistentId().empty())
+            {
+                const Weapon weapon = player.getEquippedWeapon();
+                itemId = weapon.getPersistentId();
+                itemName = weapon.getName();
+                itemKind = "L'arme";
+            }
+
+            if (!itemId.empty())
+            {
+                player.recordCanonicalEvent("objets_avec_memoire", itemId, itemName + " a subi une compétence ennemie marquante", 1);
+                player.recordHistoricalEvent(
+                    "item_memory_enemy_signature",
+                    itemId,
+                    itemName + " conserve la trace de " + monster.getName() + " et de sa compétence signature."
+                );
+                lines.push_back("Serment de la Forge liée : " + itemKind + " " + itemName + " gardera précisément la mémoire de ce choc vécu.");
+            }
         }
         if (player.hasPassiveSkill("church_oath_bonds") && wave.getActiveEnemyCount() >= 2 && random.between(1, 100) <= 12)
         {
@@ -1336,7 +1646,17 @@ namespace
         const MonsterBehaviorProfile formationProfileInfo = MonsterBehaviorProfileCatalog::build(monster);
         lines.push_back("Style de formation : " + formationProfileInfo.archetype + " - " + formationProfileInfo.behaviorLine);
 
-        if (defensiveProfile && random.between(1, 100) <= 55)
+        if (formationProfileInfo.controlsTerrain && random.between(1, 100) <= 58)
+        {
+            const int terrainPenalty = 5 + std::max(1, monster.getLevel()) / 34;
+            player.applyWeakening(2, terrainPenalty);
+            player.applyNextHitVulnerability(1, 5 + std::max(1, monster.getLevel()) / 45);
+            monster.applyPrecisionBoost(1, 1);
+            lines.push_back("Contrôle du terrain : toile, racines, boue, spores ou obstacle naturel réduisent réellement tes appuis.");
+            lines.push_back("Conséquence : ta puissance baisse brièvement et la prochaine ouverture est plus dangereuse ; cette action consomme le tour de l'ennemi.");
+            player.recordCanonicalEvent("controles_de_terrain_ennemis", monster.getName(), monster.getName() + " a modifié localement le terrain du combat", 1);
+        }
+        else if (defensiveProfile && random.between(1, 100) <= 55)
         {
             monster.startDefensePosture(16, 5, "Couverture de formation");
             monster.startProvocation(2);
@@ -1558,6 +1878,13 @@ void MonsterWaveCombatTurn::playMonsterTurns(
             continue;
         }
 
+        if (tryResolveMonsterPreparedAction(monster, player))
+        {
+            Console::pauseSeconds(1);
+            ++i;
+            continue;
+        }
+
         if (monster.consumeEntanglementTurn())
         {
             showWaveTurnNotice(
@@ -1612,7 +1939,11 @@ void MonsterWaveCombatTurn::playMonsterTurns(
             continue;
         }
 
-        if (!tryMonsterMoraleReaction(monster, wave, i, player, random)
+        const int activeCountBeforeAction = wave.getActiveEnemyCount();
+        if (!tryProtectPreparedAlly(monster, wave, i, player, random)
+            && !tryMonsterLeaderProtectionReaction(monster, wave, i, player, random)
+            && !tryMonsterGroupShockReaction(monster, wave, i, player, random)
+            && !tryMonsterMoraleReaction(monster, wave, i, player, random)
             && !tryMonsterSignatureSkill(monster, wave, i, player, random)
             && !tryMonsterFormationAction(monster, wave, i, player, random)
             && !tryMonsterTacticalAction(monster, player, random))
@@ -1628,6 +1959,10 @@ void MonsterWaveCombatTurn::playMonsterTurns(
 
         Console::pauseSeconds(1);
 
+        if (wave.getActiveEnemyCount() < activeCountBeforeAction)
+        {
+            continue;
+        }
         ++i;
     }
 
@@ -1664,6 +1999,13 @@ void MonsterWaveCombatTurn::playMonsterTurns(
             continue;
         }
 
+        if (tryResolveMonsterPreparedAction(monster, player))
+        {
+            Console::pauseSeconds(1);
+            ++i;
+            continue;
+        }
+
         if (monster.consumeEntanglementTurn())
         {
             showWaveTurnNotice(
@@ -1718,6 +2060,7 @@ void MonsterWaveCombatTurn::playMonsterTurns(
             continue;
         }
 
+        const int activeCountBeforeAction = wave.getActiveEnemyCount();
         bool attackedSummon = false;
 
         if (ThreatSystem::shouldForceTargetMainEntity(player, monster.getName()))
@@ -1757,7 +2100,10 @@ void MonsterWaveCombatTurn::playMonsterTurns(
 
         if (!attackedSummon)
         {
-            if (!tryMonsterMoraleReaction(monster, wave, i, player, random)
+            if (!tryProtectPreparedAlly(monster, wave, i, player, random)
+                && !tryMonsterLeaderProtectionReaction(monster, wave, i, player, random)
+                && !tryMonsterGroupShockReaction(monster, wave, i, player, random)
+                && !tryMonsterMoraleReaction(monster, wave, i, player, random)
                 && !tryMonsterSignatureSkill(monster, wave, i, player, random)
                 && !tryMonsterFormationAction(monster, wave, i, player, random)
                 && !tryMonsterTacticalAction(monster, player, random))
@@ -1774,6 +2120,10 @@ void MonsterWaveCombatTurn::playMonsterTurns(
 
         Console::pauseSeconds(1);
 
+        if (wave.getActiveEnemyCount() < activeCountBeforeAction)
+        {
+            continue;
+        }
         ++i;
     }
 

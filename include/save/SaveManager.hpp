@@ -98,6 +98,13 @@ public:
         DeathRuleMode& deathRule
     );
 
+    // EN: Creates a versioned, non-overwriting checkpoint before an important save migration.
+    // FR: Crée un point de sauvegarde versionné et non écrasant avant une migration importante.
+    static bool createImportantUpdateBackup(
+        const CharacterSaveSummary& summary,
+        std::string& backupDirectory
+    );
+
     static bool movePlayableCharacterToDead(
         const std::string& accountName,
         const std::string& characterName

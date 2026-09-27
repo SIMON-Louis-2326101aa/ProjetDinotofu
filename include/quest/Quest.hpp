@@ -41,6 +41,10 @@ struct Quest
     bool turnedIn = false;
     bool failed = false;
     std::string failureReason;
+    // Optional foreign-language source attached to a quest contract.
+    std::string requiredLanguage;
+    int requiredLanguageLevel = 0;
+    std::string sourceLanguageText;
 
     // EN: Optional dependency metadata for multi-step or aggregate quests.
     // A pipe-separated list keeps save files simple and backward compatible.

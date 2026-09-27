@@ -148,20 +148,30 @@ namespace
     )
     {
         VersionCompatibilityImpact impact = VersionInfo::evaluateCompatibility(character.lastAdaptedVersion);
-        std::string message = VersionInfo::compatibilityMessage(impact);
+        const bool importantCheckpoint = VersionInfo::requiresImportantSaveUpdate(character.lastAdaptedVersion);
+        std::string message = importantCheckpoint
+            ? "Cette version marque un point de sauvegarde important. Une adaptation explicite est obligatoire avant de reprendre ce personnage."
+            : VersionInfo::compatibilityMessage(impact);
 
         if (message.empty())
         {
             return;
         }
 
-        MenuScreen screen("TRACE DE VERSION", "save.characters.version.warning");
+        MenuScreen screen(importantCheckpoint ? "POINT DE SAUVEGARDE IMPORTANT" : "TRACE DE VERSION", importantCheckpoint ? "save.characters.version.important_checkpoint" : "save.characters.version.warning");
         screen.setDisplayOnlyInput("Alerte temporaire avant le menu d'actions du personnage.");
         screen.addLine(message);
         screen.addLine("Profil concerné : " + accountName);
         screen.addLine("Personnage concerné : " + character.characterName);
         screen.addLine("Version actuelle : V" + VersionInfo::currentVersion());
         screen.addLine("Dernière adaptation connue : V" + character.lastAdaptedVersion);
+
+        if (importantCheckpoint)
+        {
+            screen.addLine("Avant toute modification, Dinotofu créera une copie pré-mise-à-jour séparée de cette sauvegarde.");
+            screen.addLine("La reprise normale est bloquée tant que le rituel d'adaptation de cette grosse mise à jour n'a pas été effectué.");
+            screen.addLine("Le backup de point de sauvegarde ne sera jamais écrasé par les sauvegardes ordinaires .bak.");
+        }
 
         if (impact == VersionCompatibilityImpact::RecreateRecommended)
         {
@@ -186,6 +196,30 @@ namespace
     )
     {
         VersionCompatibilityImpact impact = VersionInfo::evaluateCompatibility(character.lastAdaptedVersion);
+        const bool importantCheckpoint = VersionInfo::requiresImportantSaveUpdate(character.lastAdaptedVersion);
+
+        if (importantCheckpoint && impact != VersionCompatibilityImpact::RecreateRecommended)
+        {
+            MenuScreen checkpointScreen("POINT DE SAUVEGARDE IMPORTANT", "save.characters.important_checkpoint.decision");
+            checkpointScreen.addLine("Dinotofu V" + VersionInfo::currentVersion() + " introduit un nouveau jalon de compatibilité des sauvegardes.");
+            checkpointScreen.addLine("Pour éviter une reprise silencieuse avec d'anciennes règles, l'adaptation doit être lancée manuellement une fois.");
+            checkpointScreen.addLine("Étape 1 : copie intégrale du personnage avant mise à jour dans assets/saves/update_backups/.");
+            checkpointScreen.addLine("Étape 2 : chargement de la sauvegarde puis application des sécurités de compatibilité.");
+            checkpointScreen.addLine("Étape 3 : sauvegarde immédiate avec la nouvelle marque de version.");
+            checkpointScreen.addOption(0, "Retour", "Ne rien modifier pour le moment.", true, "save.characters.important_checkpoint.back");
+            checkpointScreen.addOption(1, "Effectuer le rituel de transition", "Créer le backup important puis adapter ce personnage à la nouvelle version.", true, "save.characters.important_checkpoint.apply", makeCharacterMenuItem("adapt", "Rituel de transition", "Point de sauvegarde obligatoire avant reprise.", "OBLIGATOIRE", "Backup + adaptation", "Profil : " + accountName, true));
+
+            const int checkpointChoice = TerminalInterface::askMenuChoice(
+                checkpointScreen,
+                0,
+                1,
+                "Veuillez choisir 0 ou 1."
+            );
+
+            return checkpointChoice == 1
+                ? LegacyCharacterDecision::HeavyAdaptation
+                : LegacyCharacterDecision::Back;
+        }
 
         if (impact != VersionCompatibilityImpact::RecreateRecommended)
         {
@@ -338,7 +372,9 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
         for (int i = 0; i < static_cast<int>(characters.size()); i++)
         {
             VersionCompatibilityImpact listImpact = VersionInfo::evaluateCompatibility(characters[i].lastAdaptedVersion);
-            std::string versionLabel = versionImpactShortLabel(listImpact);
+            std::string versionLabel = VersionInfo::requiresImportantSaveUpdate(characters[i].lastAdaptedVersion)
+                ? "POINT DE SAUVEGARDE REQUIS"
+                : versionImpactShortLabel(listImpact);
 
             std::string label = characters[i].characterName
                 + " | " + characters[i].raceName
@@ -526,6 +562,29 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
                 continue;
             }
 
+            const bool importantCheckpoint = VersionInfo::requiresImportantSaveUpdate(selectedCharacter.lastAdaptedVersion);
+            std::string importantBackupDirectory;
+
+            if (importantCheckpoint
+                && (legacyDecision == LegacyCharacterDecision::HeavyAdaptation
+                    || legacyDecision == LegacyCharacterDecision::Recreate))
+            {
+                if (!SaveManager::createImportantUpdateBackup(selectedCharacter, importantBackupDirectory))
+                {
+                    Console::clear();
+                    MessageScreen::show(
+                        "POINT DE SAUVEGARDE REFUSÉ",
+                        "save.characters.important_checkpoint.backup_failed",
+                        {
+                            "La copie de sécurité pré-mise-à-jour n'a pas pu être créée.",
+                            "Par sécurité, Dinotofu refuse d'adapter ou recréer ce personnage maintenant.",
+                            "Vérifie les droits d'écriture de assets/saves/ puis réessaie."
+                        }
+                    );
+                    continue;
+                }
+            }
+
             if (legacyDecision == LegacyCharacterDecision::Recreate)
             {
                 CharacterMenuResult result = createEmptyResult();
@@ -560,6 +619,11 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
                 if (!SaveManager::savePlayerSnapshot(player, accountName, result.difficulty, result.deathRule))
                 {
                     adaptationChanges.push_back("Attention : adaptation appliquée en mémoire, mais sauvegarde immédiate impossible.");
+                }
+                else if (importantCheckpoint)
+                {
+                    adaptationChanges.push_back("Point de sauvegarde pré-V" + VersionInfo::importantSaveUpdateVersion() + " conservé dans " + importantBackupDirectory + ".");
+                    adaptationChanges.push_back("Rituel de transition terminé : cette manipulation ne sera plus demandée pour ce personnage sur ce jalon.");
                 }
             }
             else if (result.characterLoaded

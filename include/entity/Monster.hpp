@@ -38,6 +38,10 @@ private:
     bool spawnedByReinforcementCall;
     bool weakenedReinforcementCaller;
     std::string rivalId;
+    bool preparedSignatureActive;
+    int preparedSignatureHpSnapshot;
+    int preparedSignatureTier;
+    std::string preparedSignatureLabel;
 
 public:
     // EN: Monster declares or implements a focused behavior used by this module.
@@ -111,6 +115,13 @@ public:
     void reduceReinforcementEntryCooldown();
     void setReinforcementSpawnGroupSize(int size);
     int getReinforcementSpawnGroupSize() const;
+
+    void startPreparedSignature(const std::string& label, int tier);
+    bool hasPreparedSignature() const;
+    int getPreparedSignatureHpSnapshot() const;
+    int getPreparedSignatureTier() const;
+    const std::string& getPreparedSignatureLabel() const;
+    void clearPreparedSignature();
 
     // EN: areStatsVisible declares or implements a focused behavior used by this module.
     // FR: areStatsVisible déclare ou implémente un comportement précis utilisé par ce module.

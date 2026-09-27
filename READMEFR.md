@@ -4,9 +4,9 @@ Dinotofu est un RPG / jeu d'arène en C++17. La version terminal reste le socle 
 
 ## Version actuelle   
 
-- Version actuelle : **V3.49.92**   
-- Base de recréation fortement conseillée : **V3.00.00**   
-- Les personnages créés avant **V3.00.00** peuvent fonctionner, mais une recréation est conseillée pour profiter proprement du socle histoire.   
+- Version actuelle : **V3.50.09**   
+- Point de sauvegarde important : **V3.50.09**. Tout personnage dont la dernière adaptation est antérieure à ce jalon doit effectuer explicitement le rituel de transition avant un chargement normal.   
+- Avant cette transition, Dinotofu crée une copie de sécurité pré-mise-à-jour dédiée qui n'est jamais écrasée. Les très anciennes sauvegardes antérieures à V3.00.00 conservent la recommandation historique de recréation.   
 
 ## Ce qu'il y a déjà dans le jeu   
 
@@ -14,8 +14,8 @@ Le jeu permet déjà de :
 
 - créer, charger et sauvegarder des comptes/personnages ;   
 - choisir race, âge exact compatible avec la race, présentation visuelle, variante finale, classe, difficulté et certaines identités spéciales protégées ;   
-- combattre en PvP IA, PvP deux joueurs, PvE monstres, boss solo et boss coop, avec compétences actives, consignes d’équipe, recrues de soutien, premières techniques combinées réelles et rivaux ennemis persistants capables de revenir après avoir survécu ;   
-- gérer inventaire, armes, armures, consommables, matériaux, durabilité, réparation et qualités ; les armes et armures possèdent désormais une identité individuelle persistante permettant à certains exemplaires de conserver leurs propres souvenirs ;   
+- combattre en PvP IA, PvP deux joueurs, PvE monstres, boss solo et boss coop, avec compétences actives, consignes d’équipe, recrues de soutien, techniques combinées gagnant une maîtrise de duo, fuites ennemies ordinaires et rivaux persistants plus rares capables de revenir logiquement ;   
+- gérer inventaire, armes, armures, consommables, matériaux, durabilité, réparation et qualités ; les armes et armures possèdent une identité individuelle persistante permettant à un exemplaire précis de gagner souvenirs, renommée et surnom émergent ;   
 - acheter, vendre et troquer via un menu unifié **Boutiques et comptoirs** proposant catégories rapides ou liste complète, visiter des lieux, consulter la guilde, la bibliothèque, le poste d’observation, le comptoir mercenaire, Torvald au rang D, louer le stand d’entraînement, et acheter/améliorer des coffres municipaux indépendants selon la ville ;   
 - explorer des biomes avec ressources, coffres, pièges, traces, événements, lieux dangereux, rencontres, slimes fusionnés et un mini-boss gélatineux à quatre étages de division ;   
 - suivre des quêtes de guilde, de clients, d'exploration, de combat, de livraison, de service, de bestiaire et de quête principale ;   
@@ -46,7 +46,7 @@ Pour installer Dinotofu sans compiler le projet manuellement :
 1. aller sur la page du dépôt GitHub ;   
 2. ouvrir la dernière Release affichée à droite du dépôt ;   
 3. télécharger uniquement l’archive **DinotofuInstaller** correspondant à ton système d’exploitation : Windows ou Linux ;   
-4. dézipper l’archive, puis lancer **Installer-Dinotofu**. Le pack contient aussi le ZIP du jeu en secours local si GitHub ne le fournit pas directement.   
+4. décompresser l’archive, puis lancer **Installer-Dinotofu**. Le pack contient aussi l’archive du jeu en secours local si GitHub ne la fournit pas directement.   
 
 Sur les versions desktop Windows/Linux, l'installateur ou le launcher doit créer deux entrées claires :   
 
@@ -66,7 +66,7 @@ Sur les versions desktop Windows/Linux, l'installateur ou le launcher doit crée
 - `tools/windows/` et `tools/linux/` : launchers/installateurs ;   
 - `scripts/` : packaging, version, release et contrôles ;   
 - `release/` : manifeste et données de publication ;   
-- `assets/saves/` : dossiers de sauvegarde locaux, sans données privées dans les ZIP.   
+- `assets/saves/` : dossiers de sauvegarde locaux, sans données privées dans les archives de release.   
 - `logs/dinotofu_session_latest.txt` : journal local de session bêta, supprimable sans risque, utile à envoyer au dev en cas de bug ou combat étrange.   
 
 ## Note spéciale du développeur   
@@ -89,5 +89,5 @@ Si vous arrivez à devenir une légende dans Dinotofu, félicitations. Si vous m
 
 ## Notes de publication   
 
-L’historique détaillé des versions est regroupé dans `CHANGELOG.md`. Les README et fichiers de suivi restent centrés sur les informations utiles aux joueurs et au projet.   
+L’historique détaillé existe dans `CHANGELOG.md` en anglais et `CHANGELOG_FR.md` en français. Les README et fichiers de suivi restent centrés sur les informations utiles aux joueurs et au projet.   
 

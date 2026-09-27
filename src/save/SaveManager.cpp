@@ -1068,7 +1068,7 @@ bool SaveManager::saveAccountSnapshot(
     }
 
     file << "{\n";
-    file << "  \"saveVersion\": 20,\n";
+    file << "  \"saveVersion\": 23,\n";
     file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
     file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
@@ -1130,7 +1130,7 @@ bool SaveManager::savePlayerSnapshot(
         : player.getCreatorAccountName();
 
     file << "{\n";
-    file << "  \"saveVersion\": 20,\n";
+    file << "  \"saveVersion\": 23,\n";
     file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
     file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
@@ -1535,6 +1535,9 @@ bool SaveManager::savePlayerSnapshot(
              << "\",\"originLocationId\":\"" << escapeJson(rival.originLocationId)
              << "\",\"lastKnownLocationId\":\"" << escapeJson(rival.lastKnownLocationId)
              << "\",\"rivalryReason\":\"" << escapeJson(rival.rivalryReason)
+             << "\",\"temperament\":\"" << escapeJson(rival.temperament)
+             << "\",\"visibleMark\":\"" << escapeJson(rival.visibleMark)
+             << "\",\"lastOutcome\":\"" << escapeJson(rival.lastOutcome)
              << "\",\"baseLevel\":" << rival.baseLevel
              << ",\"currentLevel\":" << rival.currentLevel
              << ",\"baseMaxHp\":" << rival.baseMaxHp
@@ -1543,10 +1546,52 @@ bool SaveManager::savePlayerSnapshot(
              << ",\"escapes\":" << rival.escapes
              << ",\"returns\":" << rival.returns
              << ",\"wounds\":" << rival.wounds
+             << ",\"emergenceScore\":" << rival.emergenceScore
+             << ",\"notoriety\":" << rival.notoriety
              << ",\"firstSeenDay\":" << rival.firstSeenDay
              << ",\"lastSeenDay\":" << rival.lastSeenDay
              << ",\"alive\":" << (rival.alive ? "true" : "false") << "}";
         if (i + 1 < rivals.size()) file << ", ";
+    }
+    file << "]\n";
+    file << "  },\n";
+
+    file << "  \"npcMemoryState\": {\n";
+    file << "    \"npcKnownFacts\": [";
+    const std::vector<NpcKnownFact>& npcKnownFacts = player.getNpcKnownFacts();
+    for (std::size_t i = 0; i < npcKnownFacts.size(); ++i)
+    {
+        const NpcKnownFact& fact = npcKnownFacts[i];
+        file << "{\"npcId\":\"" << escapeJson(fact.npcId)
+             << "\",\"factType\":\"" << escapeJson(fact.factType)
+             << "\",\"subjectId\":\"" << escapeJson(fact.subjectId)
+             << "\",\"label\":\"" << escapeJson(fact.label)
+             << "\",\"sourceType\":\"" << escapeJson(fact.sourceType)
+             << "\",\"sourceId\":\"" << escapeJson(fact.sourceId)
+             << "\",\"locationId\":\"" << escapeJson(fact.locationId)
+             << "\",\"claimVariant\":\"" << escapeJson(fact.claimVariant)
+             << "\",\"relayChannel\":\"" << escapeJson(fact.relayChannel)
+             << "\",\"firstLearnedDay\":" << fact.firstLearnedDay
+             << ",\"lastReinforcedDay\":" << fact.lastReinforcedDay
+             << ",\"confidence\":" << fact.confidence
+             << ",\"evidenceLevel\":" << fact.evidenceLevel
+             << ",\"timesHeard\":" << fact.timesHeard << "}";
+        if (i + 1 < npcKnownFacts.size()) file << ", ";
+    }
+    file << "]\n";
+    file << "  },\n";
+
+    file << "  \"languageState\": {\n";
+    file << "    \"languageKnowledge\": [";
+    const std::vector<PlayerLanguageKnowledge>& languageKnowledge = player.getLanguageKnowledge();
+    for (std::size_t i = 0; i < languageKnowledge.size(); ++i)
+    {
+        const PlayerLanguageKnowledge& language = languageKnowledge[i];
+        file << "{\"id\":\"" << escapeJson(language.languageId)
+             << "\",\"level\":" << language.level
+             << ",\"studyProgress\":" << language.studyProgress
+             << ",\"native\":" << (language.nativeLanguage ? "true" : "false") << "}";
+        if (i + 1 < languageKnowledge.size()) file << ", ";
     }
     file << "]\n";
     file << "  },\n";
@@ -1985,6 +2030,9 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"turnedIn\": " << (quest.turnedIn ? "true" : "false")
              << ", \"failed\": " << (quest.failed ? "true" : "false")
              << ", \"failureReason\": \"" << escapeJson(quest.failureReason) << "\""
+             << ", \"requiredLanguage\": \"" << escapeJson(quest.requiredLanguage) << "\""
+             << ", \"requiredLanguageLevel\": " << quest.requiredLanguageLevel
+             << ", \"sourceLanguageText\": \"" << escapeJson(quest.sourceLanguageText) << "\""
              << ", \"linkedQuestIds\": \"" << escapeJson(quest.linkedQuestIds) << "\""
              << ", \"stageLabels\": \"" << escapeJson(quest.stageLabels) << "\""
              << ", \"serviceChallengeHistory\": \"" << escapeJson(quest.serviceChallengeHistory) << "\""
@@ -2301,8 +2349,44 @@ bool SaveManager::loadPlayerSnapshot(
     std::vector<std::string> canonicalJournalObjects = extractObjectsFromArray(content, "canonicalJournalSnapshot");
     std::vector<std::string> historicalEventObjects = extractObjectsFromArray(content, "historicalEvents");
     std::vector<std::string> rivalObjects = extractObjectsFromArray(content, "rivals");
+    std::vector<std::string> npcKnownFactObjects = extractObjectsFromArray(content, "npcKnownFacts");
+    std::vector<std::string> languageKnowledgeObjects = extractObjectsFromArray(content, "languageKnowledge");
     std::vector<std::string> grinkaStolenWeaponObjects = extractObjectsFromArray(content, "grinkaStolenWeapons");
     std::vector<std::string> grinkaStolenArmorObjects = extractObjectsFromArray(content, "grinkaStolenArmors");
+
+    std::vector<NpcKnownFact> loadedNpcKnownFacts;
+    for (const std::string& object : npcKnownFactObjects)
+    {
+        NpcKnownFact fact;
+        fact.npcId = extractStringValue(object, "npcId", "");
+        fact.factType = extractStringValue(object, "factType", "");
+        fact.subjectId = extractStringValue(object, "subjectId", "");
+        fact.label = extractStringValue(object, "label", "");
+        fact.sourceType = extractStringValue(object, "sourceType", "");
+        fact.sourceId = extractStringValue(object, "sourceId", "");
+        fact.locationId = extractStringValue(object, "locationId", "");
+        fact.claimVariant = extractStringValue(object, "claimVariant", "default");
+        fact.relayChannel = extractStringValue(object, "relayChannel", "");
+        fact.firstLearnedDay = extractIntValue(object, "firstLearnedDay", 0);
+        fact.lastReinforcedDay = extractIntValue(object, "lastReinforcedDay", fact.firstLearnedDay);
+        fact.confidence = extractIntValue(object, "confidence", 0);
+        fact.evidenceLevel = extractIntValue(object, "evidenceLevel", 0);
+        fact.timesHeard = extractIntValue(object, "timesHeard", 1);
+        if (!fact.npcId.empty() && !fact.factType.empty()) loadedNpcKnownFacts.push_back(fact);
+    }
+    player.setLoadedNpcKnownFacts(loadedNpcKnownFacts);
+
+    std::vector<PlayerLanguageKnowledge> loadedLanguageKnowledge;
+    for (const std::string& object : languageKnowledgeObjects)
+    {
+        PlayerLanguageKnowledge language;
+        language.languageId = extractStringValue(object, "id", "");
+        language.level = extractIntValue(object, "level", 0);
+        language.studyProgress = extractIntValue(object, "studyProgress", 0);
+        language.nativeLanguage = extractBoolValue(object, "native", false);
+        if (!language.languageId.empty()) loadedLanguageKnowledge.push_back(language);
+    }
+    player.setLoadedLanguageKnowledge(loadedLanguageKnowledge);
 
     MaterialKnowledgeProgress::clear();
     for (const std::string& object : materialKnowledgeObjects)
@@ -2878,6 +2962,9 @@ bool SaveManager::loadPlayerSnapshot(
         rival.originLocationId = extractStringValue(object, "originLocationId", "");
         rival.lastKnownLocationId = extractStringValue(object, "lastKnownLocationId", rival.originLocationId);
         rival.rivalryReason = extractStringValue(object, "rivalryReason", "");
+        rival.temperament = extractStringValue(object, "temperament", "survivant prudent");
+        rival.visibleMark = extractStringValue(object, "visibleMark", "");
+        rival.lastOutcome = extractStringValue(object, "lastOutcome", "");
         rival.baseLevel = extractIntValue(object, "baseLevel", 1);
         rival.currentLevel = extractIntValue(object, "currentLevel", rival.baseLevel);
         rival.baseMaxHp = extractIntValue(object, "baseMaxHp", 1);
@@ -2886,6 +2973,8 @@ bool SaveManager::loadPlayerSnapshot(
         rival.escapes = extractIntValue(object, "escapes", 0);
         rival.returns = extractIntValue(object, "returns", 0);
         rival.wounds = extractIntValue(object, "wounds", 0);
+        rival.emergenceScore = extractIntValue(object, "emergenceScore", 0);
+        rival.notoriety = extractIntValue(object, "notoriety", 0);
         rival.firstSeenDay = extractIntValue(object, "firstSeenDay", 0);
         rival.lastSeenDay = extractIntValue(object, "lastSeenDay", 0);
         rival.alive = extractBoolValue(object, "alive", true);
@@ -3102,6 +3191,9 @@ bool SaveManager::loadPlayerSnapshot(
         quest.turnedIn = extractBoolValue(object, "turnedIn", false);
         quest.failed = extractBoolValue(object, "failed", false);
         quest.failureReason = extractStringValue(object, "failureReason", "");
+        quest.requiredLanguage = extractStringValue(object, "requiredLanguage", "");
+        quest.requiredLanguageLevel = extractIntValue(object, "requiredLanguageLevel", quest.requiredLanguage.empty() ? 0 : 2);
+        quest.sourceLanguageText = extractStringValue(object, "sourceLanguageText", "");
         quest.linkedQuestIds = extractStringValue(object, "linkedQuestIds", "");
         quest.stageLabels = extractStringValue(object, "stageLabels", "");
         quest.serviceChallengeHistory = extractStringValue(object, "serviceChallengeHistory", "");
@@ -3149,6 +3241,68 @@ bool SaveManager::loadPlayerSnapshot(
 }
 
 
+
+bool SaveManager::createImportantUpdateBackup(
+    const CharacterSaveSummary& summary,
+    std::string& backupDirectory
+)
+{
+    backupDirectory.clear();
+
+    try
+    {
+        if (summary.path.empty() || !std::filesystem::exists(summary.path))
+        {
+            return false;
+        }
+
+        const std::string checkpointVersion = VersionInfo::importantSaveUpdateVersion();
+        const std::string safeAccount = buildSafeFileName(summary.accountName);
+        const std::string safeCharacter = buildSafeFileName(summary.characterName);
+        const std::string root = SAVE_ROOT
+            + "/update_backups/V" + checkpointVersion
+            + "/" + safeAccount;
+
+        std::filesystem::create_directories(root);
+        backupDirectory = root;
+
+        const std::string characterBackup = root + "/" + safeCharacter + "__before_V" + checkpointVersion + ".json";
+        if (!std::filesystem::exists(characterBackup))
+        {
+            std::filesystem::copy_file(summary.path, characterBackup, std::filesystem::copy_options::none);
+        }
+
+        const std::string accountSource = getAccountSavePath(summary.accountName);
+        const std::string accountBackup = root + "/account__before_V" + checkpointVersion + ".json";
+        if (std::filesystem::exists(accountSource) && !std::filesystem::exists(accountBackup))
+        {
+            std::filesystem::copy_file(accountSource, accountBackup, std::filesystem::copy_options::none);
+        }
+
+        const std::string manifestPath = root + "/checkpoint.txt";
+        if (!std::filesystem::exists(manifestPath))
+        {
+            std::ofstream manifest(manifestPath);
+            if (manifest.is_open())
+            {
+                manifest << "Dinotofu important save checkpoint\n";
+                manifest << "targetVersion=V" << checkpointVersion << "\n";
+                manifest << "character=" << summary.characterName << "\n";
+                manifest << "account=" << summary.accountName << "\n";
+                manifest << "lastAdaptedVersion=V" << summary.lastAdaptedVersion << "\n";
+                manifest << "source=" << summary.path << "\n";
+                manifest << "policy=pre_update_backup_never_overwritten\n";
+            }
+        }
+
+        return std::filesystem::exists(characterBackup);
+    }
+    catch (...)
+    {
+        backupDirectory.clear();
+        return false;
+    }
+}
 
 bool SaveManager::movePlayableCharacterToDead(
     const std::string& accountName,

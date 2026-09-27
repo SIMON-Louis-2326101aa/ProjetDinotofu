@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-VERSION="$(./scripts/get_version.sh)"
+VERSION="$(bash ./scripts/get_version.sh)"
 PACKAGE_DIR="release_packages"
 PACKAGE_NAME="dinotofu_source_${VERSION}.7z"
 PACKAGE_PATH="${PACKAGE_DIR}/${PACKAGE_NAME}"

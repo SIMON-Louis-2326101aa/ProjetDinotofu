@@ -23,6 +23,7 @@ public:
     static constexpr int PLAYER_PVE_ESCAPE_DEFEATED_REWARD_PERCENTAGE = 50;
     static constexpr int PLAYER_PVE_ESCAPE_DAMAGED_ALIVE_REWARD_PERCENTAGE = 25;
     static constexpr int MONSTER_ESCAPE_REWARD_PERCENTAGE = 75;
+    static constexpr int MONSTER_SURRENDER_EXPERIENCE_PERCENTAGE = 30;
 
     // EN: calculateMonsterReward declares or implements a focused behavior used by this module.
     // FR: calculateMonsterReward déclare ou implémente un comportement précis utilisé par ce module.
@@ -40,6 +41,7 @@ public:
     // EN: calculateEscapedEnemiesReward declares or implements a focused behavior used by this module.
     // FR: calculateEscapedEnemiesReward déclare ou implémente un comportement précis utilisé par ce module.
     static CombatReward calculateEscapedEnemiesReward(const EnemyCombatQueue& wave);
+    static CombatReward calculateSurrenderedEnemiesReward(const EnemyCombatQueue& wave);
     // EN: calculateDamagedAliveEnemiesReward declares or implements a focused behavior used by this module.
     // FR: calculateDamagedAliveEnemiesReward déclare ou implémente un comportement précis utilisé par ce module.
     static CombatReward calculateDamagedAliveEnemiesReward(const EnemyCombatQueue& wave);

@@ -1,7 +1,7 @@
 {
   "name": "Dinotofu",
-  "version": "3.49.92",
-  "releaseTag": "v3.49.92",
-  "assetPattern": "Dinotofu-Windows-v3.49.92.7z",
-  "notes": "V3.49.92 ajoute les serments Rivaux et Destin instable, avec traces logiques pour mini-boss récurrents, conséquences longues et oscillations de destin contrôlées."
+  "version": "3.50.09",
+  "releaseTag": "v3.50.09",
+  "assetPattern": "Dinotofu-Windows-v3.50.09.7z",
+  "notes": "V3.50.09 impose un checkpoint de sauvegarde important avec backup dédié non écrasable et extrait le moteur d’exploration hors de QuestMenu."
 }

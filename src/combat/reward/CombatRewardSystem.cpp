@@ -369,6 +369,7 @@ namespace
         CombatReward totalReward;
         totalReward.addReward(calculateDefeatedEnemiesRewardWithRandom(wave, random));
         totalReward.addReward(CombatRewardSystem::calculateEscapedEnemiesReward(wave));
+        totalReward.addReward(CombatRewardSystem::calculateSurrenderedEnemiesReward(wave));
         return totalReward;
     }
 
@@ -411,6 +412,20 @@ CombatReward CombatRewardSystem::calculateEscapedEnemiesReward(const EnemyCombat
         totalReward.addReward(
             enemyReward.getPercentage(MONSTER_ESCAPE_REWARD_PERCENTAGE)
         );
+    }
+
+    return totalReward;
+}
+
+CombatReward CombatRewardSystem::calculateSurrenderedEnemiesReward(const EnemyCombatQueue& wave)
+{
+    CombatReward totalReward;
+
+    for (int i = 0; i < wave.getSurrenderedEnemyCount(); ++i)
+    {
+        const CombatReward enemyReward = calculateMonsterReward(wave.getSurrenderedEnemy(i));
+        totalReward.addExperience(enemyReward.getExperience() * MONSTER_SURRENDER_EXPERIENCE_PERCENTAGE / 100);
+        // Une reddition ne crée pas magiquement de butin : l'ennemi est encore vivant.
     }
 
     return totalReward;
@@ -467,6 +482,10 @@ CombatReward CombatRewardSystem::calculateWaveReward(const EnemyCombatQueue& wav
 
     totalReward.addReward(
         calculateEscapedEnemiesReward(wave)
+    );
+
+    totalReward.addReward(
+        calculateSurrenderedEnemiesReward(wave)
     );
 
     return totalReward;

@@ -1,263 +1,204 @@
-# Changelog Dinotofu   
+# Dinotofu Changelog   
 
-Historique détaillé des versions de Dinotofu. Les README restent volontairement centrés sur le jeu, son installation et les informations utiles au joueur.   
+Detailed English version history for Dinotofu. The matching French history is stored in `CHANGELOG_FR.md`. README files remain focused on installation and useful player information.   
 
-## V3.49.92 — Consolidation persistante, contrats et contenu vivant   
+## V3.50.09 — Mandatory save checkpoint and major exploration split   
+- **V3.50.09 is a new important save checkpoint.** `VersionInfo::importantSaveUpdateVersion()` now points to 3.50.09. A character whose `lastAdaptedVersion` predates this checkpoint cannot silently resume normal play: the character menu explicitly marks it as requiring an important save update and offers the known heavy transition ritual.   
+- Before the transition is allowed, `SaveManager::createImportantUpdateBackup()` creates a dedicated checkpoint under `assets/saves/update_backups/V3.50.09/<account>/`, including the character save, account save and a small manifest. The pre-update character/account copies use fixed `__before_V3.50.09` names and are deliberately **never overwritten** by later attempts or ordinary `.bak` rotation. If the checkpoint backup cannot be created, Dinotofu refuses to adapt/recreate the save instead of risking a destructive migration.   
+- Completing the heavy transition marks the character as adapted to the current version, so the ritual is requested once for this checkpoint rather than at every launch. Existing pre-V3.00.00 legacy compatibility/recreation rules remain separate. Save schema remains **23** because this checkpoint protects/migrates existing state without adding a new serialized field.   
+- Added `ImportantSaveCheckpointTest.cpp`, covering checkpoint detection, dedicated character/account backup creation, manifest policy, and the non-overwrite guarantee after the live save changes. `make test` also checks that the mandatory checkpoint wording/wiring cannot disappear silently.   
+- Continued the no-`.inc` modularization with the largest `QuestMenu` split so far. The exploration engine — biome setup, distance/intensity, travel/night/temperature risk, quest-search clues, combat/event flow, micro-challenges, chests, mini-bosses, dangerous sites, discoveries, rewards and the exploration menus — now lives in the real `QuestExplorationMenu.cpp` module.   
+- `QuestMenu.cpp` falls from roughly **12,334 to ~6,176 lines**. `QuestExplorationMenu.cpp` contains ~6,347 lines and is connected through `QuestExplorationSupport.hpp` plus a narrow `QuestMenuInternalSupport.hpp` bridge for the few helpers still shared with guild/client flows. Shared behavior was exposed through interfaces instead of copied, and no `.inc` fragment was introduced.   
+- Structural tests now require the exploration module/support files and enforce a `< 7,000` line guard on `QuestMenu.cpp`, preventing the extracted engine from quietly drifting back into the monolith. Existing biome living-content, ambient-event, multilingual trace and non-combat-interaction checks now target the exploration module where those responsibilities actually live.   
+- Full C++17 build/link and the complete `make test` suite pass with `-Wall -Wextra`. Main-story progression remains locked immediately after the Chapter 3 introduction; this pass changes save safety and architecture only, not story reach.   
 
-- Reconstruction et consolidation de la branche de travail sur une base compilable afin de conserver les ajouts de mémoire persistante sans réintroduire les anciens PATCHNOTE.   
+## V3.50.08 — Story/runtime separation, tactical support modules and richer biome choices   
+- Continued the no-`.inc` structural pass with real `.cpp/.hpp` boundaries. The already-existing story runtime moved out of `Game.cpp` into `GameStory.cpp`; no new main-story scene was added and the Chapter 3 development lock remains unchanged. `Game.cpp` falls from roughly 6,225 to **3,250 lines**, while `GameStory.cpp` contains the isolated existing story runtime.   
+- `QuestMenu.cpp` falls again from roughly 14,100 to **12,334 lines**. Main-story synchronization/browsing now lives in `QuestStoryMenu.cpp`, story-only helpers in `QuestStorySupport.cpp/.hpp`, and shared quest-kind/progress presentation logic in `QuestPresentationSupport.cpp/.hpp`. The split exposed hidden cross-file dependencies, which were centralized instead of duplicated.   
+- `PlayerWaveTacticalActionMenu.cpp` falls from roughly 4,410 to **2,901 lines**. Seventy-four helpers for affinity, targeting, tactical mastery, equipment synergy, formations, coatings, lanterns, traps and body/status selection now live in `PlayerWaveTacticalSupport.cpp/.hpp`; the action module keeps execution responsibilities instead of low-level shared helpers.   
+- Added **10 further biome-specific non-combat interactions**: overturned wagon in the Wild Plain, extinguished lantern in the Lantern Hedgerow, disputed well markers in the Red Clay Desert, marked window in the Abandoned Quarter, cracked support in the Whistling Mine, magnetized tool in the Iron Firefly Orchard, fresh black bark in the Corruption Woods, offering circle in the Mana Fairy Grove, nine-version ribbons at the Kitsune shrine and a drifting mooring in the Floating Isles. Each provides local choices, bounded exploration consequences, history traces and same-day anti-farming.   
+- Prepared enemy signatures gain three additional mechanical families: **elemental breath**, **aerial dive** and **prepared venom**. Each has its own visible telegraph, interrupt threshold and resolution profile. Elemental breath weakens and opens the target, aerial dive trades commitment for heavier damage and forced repositioning, and prepared venom emphasizes poison over immediate damage.   
+- Expanded targeted C++ coverage for the new biome interactions and prepared-action families. Structural tests now protect the new `GameStory`, quest-story/presentation and tactical-support modules and enforce tighter size ceilings on the remaining orchestrators.   
+- Full C++17 build/link and the complete `make test` suite pass with `-Wall -Wextra` before the release bump. Save schema remains **23** because this pass introduces no new persistent save fields.   
+- Main story progression remains locked immediately after the Chapter 3 introduction. Current priority remains living-world depth, meaningful content, combat variety, stability and continued decomposition of oversized files.   
 
-- Les serments d’église sont désormais traités comme de vrais contrats persistants : ils ne consomment plus de place dans les 10 passifs, ne peuvent pas être activés/désactivés depuis le loadout et un serment rompu ne peut pas être réactivé gratuitement.   
+## V3.50.07 — Modularized player turns, biome interactions and richer enemy tactics   
+- Major combat-structure pass: `PlayerWaveCombatTurn.cpp` drops from roughly 4,769 to **394 lines**. Thousands of player tactical-action lines now live in the real `PlayerWaveTacticalActionMenu.cpp/.hpp` module (~4,410 lines), while the main turn file returns to being a readable orchestrator. No `.inc` fragments were introduced, and project invariants now enforce this split.   
+- Added and wired `BiomeNonCombatInteractionSystem` into exploration. Several biomes can now surface small contextual local choices — conflicting road markers, a forgotten snare, a damaged marsh footbridge, a tended grave, a drowned register page, rope near a drake nest, a disputed debt or an oath bell — with exploration consequences, history traces and occasional quest progress. The same interaction cannot be farmed by reopening the menu on the same day.   
+- Prepared enemy signatures now have observable mechanical families: heavy charge, heavy shot, massive restraint, pack cry, ritual and committed strike. Each family has its own damage-interruption threshold, effect and telegraph; shock, frost and entanglement remain valid hard interrupts.   
+- Compatible protectors/coordinated allies may now sacrifice their own turn to **cover an enemy preparing a signature**. Cover grants temporary defense/ward rather than immunity, consumes the protector's turn and creates an observable combat reaction.   
+- Added **18 new creatures/variants** tied to biomes and the new mechanics, including relay crossbowmen, ancient-root weavers, long-breath mire shamans, drowned-seal scribes, grey diving drakes, great-oath bell ringers and rare contradictory-rumor themed enemies.   
+- Added `NpcRelationshipSystem`: named NPC pairs can have explicit reciprocal relationships such as professional trust, local coordination, scholarly links, partnership, caution or useful distrust. Relationships alter the priority of relaying an already-known fact without creating information or bypassing source requirements.   
+- More named NPCs now use explicit living profiles instead of generic inference: Mira, Orren, Lysa, Bram, Soryn, Eda, Nell, Meron, Prunigil, Bob and Maurice. Stewardship, healer, logistics, messenger and travelling-merchant professions also have dedicated relay rules/channels instead of falling back to generic word of mouth.   
+- Tests now cover biome interactions and same-day anti-farming, NPC relationships and named profiles, the 18 monster additions, prepared-action variants and group protection of a preparer. Full C++17 build/link and `make test` pass with `-Wall -Wextra`.   
+- Save schema remains **23**: these systems reuse existing persistent NPC facts and canonical history, while prepared combat actions remain transient combat state.   
+- Main story progression remains locked immediately after the Chapter 3 introduction. Development continues to prioritize a living world, variety, consequences, systems and progressive reduction of oversized files.   
 
-- Le journal canonique distingue mieux les événements locaux : une action attachée à une ville ne migre plus vers une autre ville lorsqu’une clé identique est réutilisée. Les catégories narratives importantes restent prioritaires lors du nettoyage du journal.   
+## V3.50.06 — Inter-city knowledge, interruptible threats and deeper modularization   
+- Continued the no-`.inc` structural pass with real `.cpp/.hpp` boundaries. Character creation, difficulty/death-rule selection, race/class/appearance choices and local party setup moved from `Game.cpp` into `GameSetup.cpp`; `Game.cpp` falls from roughly 7,642 to 6,225 lines.   
+- `QuestMenu.cpp` falls again from roughly 14,989 to 14,017 lines. Location navigation and notable-NPC browsing now live in `QuestLocationNpcMenu.cpp`, while shared client status, ready-to-turn-in rules, material-delivery checks and recommended-client navigation live in `QuestClientNavigationSupport.cpp`. Regression tests now protect the new file-size boundaries.   
+- NPC knowledge can now travel between real cities without teleportation. Inter-city propagation uses `CityTravelRules` distances and a network-specific carrier/delay such as guard messenger, guild courier, merchant caravan, pilgrim, relay traveler, archive copy or artisan convoy. Fresh information therefore cannot appear in another city before enough world days have elapsed.   
+- Inter-city information preserves source identity and contradictory claim variants while losing confidence according to distance/network. Ordinary rumors cannot become hard proof merely by traveling; stronger scholar/guild reports can preserve limited evidence when their original source actually carried it.   
+- Added `MonsterPreparedActionSystem`: selected heavy enemy signatures can be visibly prepared for one enemy turn instead of resolving as a hidden instant buff. The preparation can be interrupted by shock, frost, entanglement or enough immediate damage. Successful interruption consumes the enemy's prepared move and briefly exposes it.   
+- A prepared signature that resolves deals its committed hit and causes an abstract forced reposition/opening without inventing a grid system the game does not have. The UI only announces preparation the player has actually observed; it still never displays hidden future AI intentions.   
+- Added lightweight C++ coverage for inter-city knowledge delays/carriers and prepared-action resolution/interruption, and wired those tests into `make test`. Existing architecture checks were updated so moving responsibilities out of monolithic files is treated as the expected design rather than a failure.   
+- Full C++17 build/link passes with `-Wall -Wextra`, and the full `make test` suite passes. Save schema remains 23 because the new inter-city propagation reuses already-persisted NPC fact metadata and prepared combat actions are transient combat state.   
+- Main story progression remains locked immediately after the Chapter 3 introduction. Development priority stays on world life, systems, content, stability and continued decomposition of oversized files.   
 
-- La réputation locale reste centralisée dans `LocalReputationSystem` afin que villes et boutiques lisent la même réputation positive ou négative.   
+## V3.50.05 — Information networks, group tactics and further modularization   
+- Continued structural cleanup without `.inc` fragments: the city/travel/inn/municipal-vault/route-discovery block moved out of `QuestMenu.cpp` into `QuestWorldMenuSupport.cpp`, while deadline expiration is centralized in `QuestDeadlineSupport.cpp`. `QuestMenu.cpp` falls from roughly 16,457 to 14,989 lines.   
+- `ShopMenu.cpp` falls from roughly 6,123 to 4,075 lines. City services, subscriptions, local events, lodging, transport and municipal work now live in `ShopCityServiceMenu.cpp`, reusing `ShopServiceSupport` instead of duplicating payment/display helpers.   
+- Living NPC profiles now carry a structured information network: guard, trade, guild, scholar, contacts, inns, artisans, temple or neighborhood. Relay priority considers profession, source/recipient network, evidence strength and the actual age of the fact.   
+- Networks now have different relay delays: guard/guild/contact information can move immediately, trade/scholar/inn networks usually need one day, and artisan/temple channels are slower. Fresh rumors therefore remain local instead of teleporting instantly.   
+- Strong local proof can weaken weaker contradictory variants known by THAT NPC without deleting the older account or globally correcting everyone. Contradictions remain inspectable with their original source and confidence.   
+- Enemy group profiles gain `coversRetreat` and `controlsTerrain`. Some ranged/protector units can briefly cover an ally's escape with a real cost to the covering unit rather than a free defensive reaction.   
+- Web, root, thorn, spore, mud, ice and trap-oriented creatures can spend a formation turn controlling local terrain, briefly weakening the player and creating an opening instead of making a direct attack.   
+- `EnemyGroupBehaviorTest` covers the new roles, while `NpcInformationPropagationSystemTest` verifies network delays, contradictory accounts, no inter-city teleportation and local proof-based correction.   
+- Full C++17 build/link passes with `-Wall -Wextra`, and the complete `make test` suite passes after updating expectations for real relay delays.   
+- Main story progression still stops after the Chapter 3 introduction. Current priority remains living systems, free content, consistency, stability and splitting oversized files.   
 
-- Les rivaux possèdent une identité individuelle persistante, un historique de fuites/retours/blessures et peuvent revenir comme le même adversaire. Une mort enregistrée met fin à leurs retours vivants.   
 
-- Les statistiques proposent une vue `Mémoire du monde / Rivaux` qui affiche uniquement les faits déjà vécus ou enregistrés, sans prédire les intentions ou prochaines actions des entités.   
+## V3.50.04 — Major modularization, conflicting rumors and living world   
+- Major structural pass with no `.inc` fragments: oversized files are split only into real `.cpp/.hpp` modules with explicit responsibilities and independently compilable boundaries.   
+- `Player.cpp` drops from roughly 8,394 to 4,507 lines. Skills, cheats, challenge tracking, municipal storage, equipment lifecycle and attack resolution now live in dedicated player modules.   
+- `MonsterPveMode.cpp` drops from roughly 4,917 to 3,608 lines. Cooperative PvE now lives in `MonsterPveCoopMode.cpp`, while wave bestiary/journal/dialogue support lives in `PveWaveNarrativeSupport.cpp`.   
+- `ShopMenu.cpp` drops from roughly 8,800 to 6,123 lines. Church and enchanter services moved into dedicated modules with a shared `ShopServiceSupport.cpp`; oath tests now follow the new architecture rather than the old monolith.   
+- `QuestMenu.cpp` drops from roughly 21,500 to 16,457 lines. Contractor/delegated mission/guild sanction logic moved to `QuestContractorMenu.cpp`, while team/recruit/clan/infirmary/Torvald/order/group mission management moved to `QuestTeamMenu.cpp`. Shared hooks are exposed through normal headers.   
+- NPC memory can now keep several contradictory variants of the same subject instead of silently overwriting the previous one. Each version keeps its source, confidence, evidence level and transmission channel such as guard post, market, inn, guild, library, temple or word of mouth. The game may therefore mark a claim as disputed without magically knowing which version is true.   
+- Save schema moves to 23 to persist NPC knowledge variants/channels. Older memories remain compatible and receive a safe default variant without inventing new knowledge.   
+- Living biome content now covers many early and mid-game areas as well, adding stronger visual identity, hazards, resources, neutral life, social traces and unusual details instead of reserving the system for advanced zones.   
+- Structured enemy-group behavior gains leader protection for compatible formations, extending the existing surrender, panic and retreat logic.   
+- Post-extraction cleanup removed obsolete helpers and updated project invariants to target the new modules. Full compilation/linking was validated with `-Wall -Wextra`.   
+- Main-story progression still does not advance beyond the Chapter 3 introduction; current priority remains world life, systems, free content, stability and modularization.   
 
-- Les armes et armures disposent d’identifiants persistants et peuvent accumuler des souvenirs liés à l’exemplaire exact, notamment via la Forge liée, certaines attaques marquantes et des réparations importantes.   
+## V3.50.03 — Local rumors, biome micro-events and item memory   
+- Added sourced local NPC-to-NPC information propagation. An NPC only relays facts they actually know, within the same city, with confidence loss at every relay and preservation of the previous source identity. Professions prioritize plausible subjects: guards favor threats/attacks/rivals, scholars favor writings/unusual creatures, guild contacts favor quests and danger, and so on.   
+- Relays do not create omniscience: information does not teleport between cities and a relayed statement becomes an explicit `rumeur_locale`. Re-learning the exact same relay from the same source is blocked so reopening a menu cannot manufacture certainty.   
+- NPCs capable of initiative can now occasionally start a conversation themselves. Their opening line is driven by profession, profile and memories they actually hold, keeping a clear distinction between what the NPC believes and invisible global world state.   
+- Added biome ambient micro-events such as recent passage, shifted terrain, active wildlife, exposed resources and unusual details. They only describe currently observable conditions, never future outcomes, and can slightly alter that exploration. A biome/day event is journaled after use so repeatedly reopening the menu cannot farm its effect.   
+- Expanded creature lifecycle flavor with family/archetype-specific death, escape and surrender descriptions. Constructs no longer “die” like humans, undead do not flee with the same body language as bandits, and surrender keeps its own narrative identity.   
+- Equipment sale and buyback now fully use exact persistent instance identity. A sold then repurchased weapon/armor keeps its `persistentId`, records transfer and recovery memories, and can earn the emergent `la Revenante` / `la Revenue` nickname without renaming every copy of the item type.   
+- Fixed a defect found while testing NPC propagation: retaining a pointer into the fact vector and then extending NPC memory could invalidate that pointer. Propagation now copies the selected fact before mutating memory, removing the crash risk.   
+- Added lightweight C++ tests for local knowledge propagation, no cross-city teleportation, death/escape/surrender flavor and ambient biome events. Project invariants also check that the systems are actually wired into gameplay and that equipment sale/recovery memory hooks remain present.   
+- Final portability validation now covers every shell script in the project; a remaining CRLF-formatted `tools/linux/DinotofuLauncher.sh` was normalized to LF to prevent a Linux shell syntax failure.   
+- Main story progression still does not advance beyond the Chapter 3 introduction. Development remains focused on systems, consistency, world life, variety and free content.   
 
-- Ajout d’une vraie action de technique combinée pour deux recrues : elle exige deux alliés disponibles, consomme leurs deux tours, met leurs techniques en récupération et choisit un effet selon les profils du duo.   
+## V3.50.02 — NPC memory, group morale and local repair   
+- Added persistent NPC factual memory. A named NPC can now remember a fact with source, subject, place, first/last reinforcement day, confidence, evidence level and number of times heard. NPC memory is saved in schema 22 and old saves safely start with no invented memories.   
+- NPC knowledge remains deliberately non-omniscient. Player testimony, direct observation, proof, registers and rumors are distinguished, and repeated hearing from the exact same source cannot magically manufacture certainty.   
+- Added memory aging: proofs and direct interactions remain reliable much longer, while unsupported testimony and rumors lose effective confidence over time. The original stored source is preserved instead of silently rewriting history.   
+- Quest clients and shop contacts now expose fact-based memory reactions. Accepting or completing a client quest can become a direct remembered interaction, and the player can deliberately share a recent witnessed fact with a named NPC.   
+- Fixed language `studyProgress` being serialized but discarded on load. Conversational languages can now advance toward fluent level through guided library practice; level 3 requires repeated practice and time rather than one instant purchase. Anomaly notation still cannot become normal fluent speech.   
+- Extracted allied duo mastery into the real `DuoMasterySystem` module. Added role-based pair plans including Tank+Tank `Mur en mouvement`, Support+Support `Relais vital`, ranged crossfire and guarded assault, while preserving real two-turn consumption and coordination failure.   
+- Added structured enemy group roles (leader, protector, coordinated member, surrender-capable, wounded-abandoning). Morale can now cause a true surrender state distinct from death and escape; surrendered enemies remain alive, grant only reduced experience and no death loot, and never become rivals merely because they yielded.   
+- Added group shock after the actual death of a compatible leader. Some enemies panic, weaken or break formation, while cowardly groups may retreat without being promoted into rivals. Fixed combat iteration so removing a surrendering/fleeing enemy no longer skips the next shifted enemy's turn.   
+- Added richer living-biome observations with visual identity, terrain hazard, visible resources, neutral life, social traces and unusual signs. Observations rotate with the current day without predicting future events. Advanced locations such as assassin rooftops, draconic nests, black lava flows, the mana-fey grove and oath glaciers now have their own environmental identity.   
+- Expanded seven previously sparse common monster pools with additional humans, goblins, beasts and corrupted creatures whose language, morale, group behavior and flavor systems apply automatically.   
+- Added real local-reputation rehabilitation. A municipal mediation office now offers proportional reparative fines and once-per-day community service that consumes world time, so negative reputation has meaningful recovery paths rather than becoming only a permanent surcharge.   
+- Extended save round-trip tests to cover NPC facts, language study progress, a full rival lifecycle, duo mastery and exact per-instance equipment memory. Added dedicated tests for duo mastery, enemy surrender/group profiles and local-reputation repair.   
+- Continued modularization with real `.cpp/.hpp` modules only; no `.inc` fragments were introduced. Main story progression remains capped immediately after the Chapter 3 introduction.   
 
-- Le mode histoire normal est volontairement limité après l’introduction du chapitre 3. Les anciennes scènes ultérieures restent dans le code pour refonte future mais ne sont plus injectées dans une progression normale.   
+## V3.50.01   
+- Added persistent multilingual exploration traces for advanced biomes. Written clues now use the player's actual language knowledge and can remain unreadable, partially understood, or fully translated.   
+- Added a structured living NPC profile foundation with profession, temperament, native language, conversation capability, local memory intent and fact-based reactions.   
+- Wired multilingual traces into careful exploration observations and world history without granting omniscient knowledge.   
+- Expanded save round-trip coverage to include a complete rival lifecycle (escape, wounds, visible mark, return) and persistent allied-duo mastery records.   
+- Added lightweight C++ tests for living-world content and language traces.   
+- Story progression remains capped after the chapter 3 introduction.   
 
-- Ajout d’un `make test` léger couvrant version, CHANGELOG, absence de PATCHNOTE et `.inc`, mémoire/rivaux, identité d’équipement, combos alliés, serments-contracts, réputation locale et limite histoire.   
+## V3.50.00 — Languages, living encounters and exploration identity   
 
-- Nettoyage des warnings préparatoires afin de viser une compilation `-Wall -Wextra` sans warning.   
+- Added a persistent language system with Common plus racial native languages at character start. Current characters always know Common as requested; race-specific native speech is added without making the spawn unplayable. Knowledge has unknown, notions, conversational and fluent/native levels.   
+
+- The library now sells introductory and advanced language material for goblin, orcish, infernal, draconic, elven, dark-elven, celestial, fey, kitsune, dwarven, gnomish, halfling, vampiric and spirit speech. Anomaly notation can only be recognized in fragments rather than spoken normally.   
+
+- Conscious monster/NPC-like encounter speakers can now introduce themselves or react before combat with a probability based on importance. Their speech uses their actual racial language; unknown languages stay foreign, partial knowledge gives fragments, and sufficient knowledge reveals meaning. Mindless creatures do not suddenly talk.   
+
+- Guild contracts can occasionally contain a thematically appropriate foreign-language annex. The guild refuses to make the player sign an annex they cannot verify, so learning a language at the library has a concrete quest purpose. Main-story quests are not blocked by this system.   
+
+- Language knowledge and foreign quest metadata are persisted in save files. Save schema moved to 21 while older saves default safely to Common plus the character's native racial language. Known languages are visible in the progression/statistics screen.   
+
+- Added `MonsterFlavorCatalog` so named monsters, species and attacks gain stable appearance, posture, motion and impact texture instead of sharing one generic description. The flavor is deterministic for a given identity and still respects race, type, elite/evolved state and visible injury.   
+
+- Expanded low- and mid-tier monster variety with new goblins, beasts, plants, spirits, kobolds, hobgoblins, fey, orcs and constructs.   
+
+- Expanded the world map and city biome routes to expose many combat biomes that previously existed mostly in backend pools: troubled marsh, forgotten cemetery, drowned archives, abandoned fair, weeping-statue garden, kitsune sanctuary, pure-mana confluence, floating islands and others. Each received its own place text and exploration identity.   
+
+- Extracted exploration biome flavor out of the oversized `QuestMenu.cpp` into a real `.cpp/.hpp` module, and extracted encounter dialogue/language behavior out of `MonsterPveMode.cpp`. No `.inc` fragments were reintroduced.   
+
+- Added lightweight runtime tests for language mappings and thematic foreign-quest assignment, plus project invariants covering save schema, library courses, multilingual encounters and quest gating.   
+
+- Story progression remains intentionally capped after the Chapter 3 introduction. This pass develops systems, free exploration and content rather than advancing the main plot.   
 
 ---   
 
-## V3.49.91 — Mémoire persistante, vrais rivaux et identité des équipements   
+## V3.49.93 — Living rivals, social consequences and persistent mastery   
 
-- Séparation du journal canonique agrégé et des événements historiques persistants : les compteurs servent aux statistiques tandis que les faits narratifs importants disposent désormais d’événements individuels sauvegardés avec identifiant, sujet, lieu, jour et état résolu/non résolu.   
+- Enemy escape and rival creation are now separate outcomes. An ordinary escape records survival without promising a return, while a persistent rival requires a dedicated emergence roll based on real traces, elite/evolved status, witnessed memory and relevant oaths.   
 
-- Migration automatique des anciennes traces narratives importantes vers la nouvelle mémoire persistante lors du chargement des sauvegardes antérieures compatibles.   
+- Even the strongest combination of rival conditions is capped at a 65% emergence chance. The Rival Oath increases the chance but never turns every fleeing enemy into a recurring mini-boss.   
 
-- Ajout de vrais rivaux ennemis persistants : un ennemi ayant réellement survécu peut recevoir une identité individuelle, conserver son origine, son niveau, ses statistiques, ses blessures, ses fuites, ses retours, sa dernière localisation et son état vivant/mort.   
+- Enemy morale eligibility now comes from the centralized behavior profile instead of being re-guessed inside the combat turn. Mindless undead, anomalies, constructs, spectres and twisted oath entities do not suddenly gain human fear behavior.   
 
-- Un rival qui revient est le même individu, identifié par le moteur et sauvegardé ; s’il est vaincu, il est marqué mort définitivement et ne peut plus être réinjecté comme rival vivant.   
+- Persistent rivals now save temperament, visible marks, last known outcome, emergence strength and notoriety. Wounded rivals keep scars, returning rivals become more recognizable, and defeated rivals remain permanently dead.   
 
-- Ajout d’une inspection « Mémoire du monde / Rivaux » dans les statistiques afin de consulter uniquement les faits déjà vécus ou connus, sans révéler les intentions futures des rivaux.   
+- Rival returns now respect an unseen minimum delay and decreasing return chance. The memory screen only reports known facts and never displays the next return date or hidden intention.   
 
-- Ajout d’une identité persistante propre à chaque exemplaire d’arme et d’armure lors de son entrée dans un inventaire ; cette identité suit l’objet pendant les copies, transferts, équipements et sauvegardes pris en charge.   
+- Allied combination techniques now use persistent duo experience. Coordination can fail while still consuming both ally turns, the Bonds Oath helps without guaranteeing success, and successful duos unlock shared mastery milestones at 3, 7 and 12 executions.   
 
-- Le Serment de la Forge liée et les compétences signatures ennemies peuvent désormais attacher une mémoire à l’exemplaire exact d’une arme ou d’une armure au lieu de confondre tous les objets portant le même nom.   
+- Exact equipment instances now remember Bound Forge strikes and enemy signature impacts through their persistent IDs. Repeated repairs, impacts and linked strikes can produce an emergent reputation and nickname during inspection without renaming every copy of the same item.   
 
-- L’inspection d’une arme ou d’une armure affiche ses souvenirs individuels connus ; une réparation après forte usure, une réparation d’un objet déjà marqué ou une réparation sous Serment de la Forge liée peut devenir une nouvelle trace historique de cet exemplaire.   
+- Negative local reputation now produces visible social reactions, service surcharges, smaller price pressure in ordinary shops and refusal of expensive trusted sales when the player is locally undesirable. Positive and negative consequences use the same centralized reputation result.   
 
-- Ajout de la première vraie mécanique de techniques combinées des recrues : une consigne explicite engage deux alliés disponibles dans une action commune et consomme leurs deux tours au lieu d’ajouter une attaque gratuite.   
+- Added a real lightweight C++ test for rival emergence and return-delay rules. Project checks also verify ordinary escapes, dual changelogs, duo mastery, equipment-instance memory and negative local-reputation effects.   
 
-- Les combinaisons varient déjà selon les profils du duo : Brèche sous garde, Faille relayée, Feu croisé, Croisement de lignes ou Assaut synchronisé ; le Serment des Liens facilite légèrement la coordination des duos moins expérimentés sans garantir le résultat gratuitement.   
+- Fixed the ignored `system()` result warning in the console clear path and strengthened clean-build validation.   
 
-- Les techniques combinées réellement exécutées sont enregistrées dans la mémoire persistante avec l’identité des deux recrues, afin de préparer leur évolution future selon l’expérience commune.   
-
-- Abandon des fichiers `.inc` temporaires : aucun `.inc` ne doit rester dans `src/` ou `include/`. La réduction de `QuestMenu.cpp` doit se poursuivre uniquement avec de vrais modules `.cpp/.hpp`.   
-
-- Le mode histoire possède maintenant une limite de développement centralisée : la progression normale s’arrête volontairement à l’introduction du chapitre 3 avec un message de fin temporaire. Les chapitres et quêtes déjà écrits après ce point restent dans le code pour leur future réécriture, mais ne sont plus injectés dans une nouvelle progression normale.   
-
-- Renforcement de `make test` : contrôle des modules QuestMenu, de l’absence de `.inc`, de la mémoire persistante, des rivaux, de l’identité des équipements, des techniques combinées, de la limite histoire et de la cohérence de version.   
+- Normalized every shell script to Unix line endings and added a regression check, so Linux test and release commands no longer fail on a stray carriage return.   
 
 ---   
 
-## V3.49.90 — Consolidation technique et documentation   
+## V3.49.92 — Persistent consolidation, contracts and living content   
 
-- Migration de l’historique détaillé des versions depuis les README vers ce CHANGELOG unique.   
+- Rebuilt and consolidated the working branch on a compilable base while preserving persistent-memory additions and keeping the obsolete PATCHNOTE files removed.   
 
-- Remplacement des anciens fichiers PATCHNOTE par ce CHANGELOG comme source d’historique de version.   
+- Church oaths became persistent contracts outside the passive loadout: they consume no passive slot, cannot be toggled from the skill menu, and a broken oath cannot be restored for free.   
 
-- Séparation progressive du très volumineux `QuestMenu.cpp` en fichiers de détail thématiques sans changer le comportement du jeu.   
+- The canonical journal now keeps local actions attached to their actual city, while important narrative categories remain protected during journal cleanup.   
 
-- Consolidation des serments d’église afin qu’ils soient traités comme des contrats persistants et non comme de simples passifs activables ou désactivables.   
+- Local reputation uses the centralized `LocalReputationSystem` for both city and shop rules.   
 
-- Première consolidation du journal canonique : les traces historiques importantes sont protégées du nettoyage automatique et certaines statistiques locales restent attachées à leur ville réelle.   
+- Rivals gained individual persistent identity, escape/return/wound history and permanent death state.   
 
-- Centralisation du calcul de réputation locale dans `CityTravelRules`, utilisé maintenant par les règles de ville et les boutiques afin d’éviter deux scores concurrents.   
+- The statistics menu gained a World Memory / Rivals view that reports experienced facts without predicting future actions.   
 
-- Nettoyage de plusieurs warnings de compilation liés à des helpers préparatoires ou variables inutilisées, sans modifier le gameplay.   
+- Weapons and armor gained per-instance persistent IDs and early equipment-memory events.   
 
-- Ajout d’une cible `make test` légère pour vérifier les invariants essentiels du projet sans créer une infrastructure de tests lourde.   
+- Added the first two-recruit combined techniques, consuming both ally turns and placing both personal techniques on cooldown.   
+
+- Normal story progression is intentionally capped after the chapter 3 introduction. Later draft scenes remain in code for future rework but are not injected into a normal playthrough.   
+
+- Added a lightweight `make test` target covering the main project invariants.   
 
 ---   
 
-## Historique français   
+## V3.49.91 — Persistent memory, true rivals and equipment identity   
 
-## V3.49.89 — Rivaux et destin instable   
+- Separated aggregate canonical statistics from individual historical events with unique ID, subject, location, day and resolution state.   
 
-- La V3.49.89 ajoute les serments des Rivaux et du Destin instable. Les fuites, paniques et compétences signatures peuvent laisser des traces plus nettes de rival potentiel, tandis que le destin instable crée de petites oscillations seulement lorsqu'une trace existe déjà : mémoire, rupture, rival ou objet marqué.   
+- Added persistent rival records, save migration, rival return handling, permanent rival death, world-memory inspection, per-instance equipment IDs and the first real ally combination action.   
 
-
-## V3.30.00 — routes et poids d’équipement   
-
-- Les villes disposent désormais de distances entre elles, de distances vers les biomes et de conditions d’accès par niveau ou boss vaincu.   
-
-- Les coffres restent indépendants par ville : le voyage change la ville active, mais ne mélange pas les contenus.   
-
-- La carte d’exploration textuelle prépare les futurs fonds pixel-art par biome, avec lieux inconnus grisés ou enfumés.   
-
-- Les armes et armures ont maintenant un poids léger, moyen ou lourd. Les bonus et contreparties sont appliqués au combat, aux dégâts et à la fuite, avec des malus volontairement modérés.   
-
-## V3.31.00 — hubs de ville et journal canonique   
-
-- La V3.31.00 rend la ville actuelle plus structurée : bâtiments locaux, contacts, verrous et indices pixel-art viennent maintenant des règles du monde plutôt que d'une liste fixe. Les destinations de ville fournissent des métadonnées IG structurées pour l'accès, la distance, le temps de trajet et le coût futur. Un journal canonique sauvegardé enregistre les événements importants comme les lieux visités, routes prises et mouvements de coffre, afin que les futurs Top 3 utilisent des données moteur au lieu de texte deviné.   
-
-## V3.49.86 — Maîtrise tactique liée au build   
-
-- La V3.49.86 relie davantage les maîtrises actives à la cohérence de l’équipement. Une arme ou armure cohérente avec la classe soutient légèrement les gestes liés, tandis qu’un [malus de classe] peut rendre une action moins propre malgré la maîtrise. L’audit de classe affiche aussi survie, critique et équipement attendu, et les passifs d’observation réduisent un peu les mauvaises surprises face aux compétences signatures ennemies.   
-
-## V3.49.36 — Visée des créatures et textes plus immersifs   
-
-- La V3.49.36 ajoute une lecture de visée aux profils ennemis : les petites créatures comme rats, fées, chauves-souris, insectes et profils sournois sont plus difficiles à cadrer, tandis que les brutes, constructions, dragons, plantes enracinées et gardiens ouvrent parfois des fenêtres plus faciles à toucher. L'observation et le bestiaire indiquent maintenant cette lecture de visée. Plusieurs textes en combat ont aussi été reformulés pour rester dans l'univers du jeu au lieu de parler comme une note de mise à jour.   
-
-## V3.49.36 — Variantes ennemies et affinité féerique   
-
-- La V3.49.36 étend les profils comportementaux avec des variantes plus précises : chauve-souris, rat/nuisible, chargeur massif, araignée, kobold, archer, alchimiste, fée, spectre, construction, dragon et serment sacré. Les profils ont maintenant une attaque signature, des réactions plus propres et une ligne de contre-jeu. Les fées gagnent aussi une vraie règle : 50% de résistance magique, mais 50% de faiblesse physique. Les parchemins offensifs comptent comme dégâts magiques pour que cette faiblesse/résistance soit réellement visible.   
-
-## V3.49.34 — Profils de monstres et attaques signature   
-
-- La V3.49.34 ajoute une première couche centrale de profils comportementaux pour les ennemis. Les slimes, voleurs, gobelins, brutes, prédateurs, gardiens, plantes, insectoïdes, supports et entités instables gagnent des descriptions d'attaque, forces, failles et réactions plus propres. L'observation active et le bestiaire affichent maintenant ces profils pour aider le joueur à comprendre pourquoi un ennemi agit différemment d'un autre.   
-
-## V3.49.33 — Formations ennemies et rupture de formation   
-
-- La V3.49.33 ajoute une couche de combat autour des tours de formation ennemie. Certaines vagues coordonnées peuvent maintenant utiliser couverture, précision courte, petite garde ou posture défensive au lieu d'attaquer basiquement. Le joueur reçoit la réponse **Casser la formation**, une action tactique qui perturbe plusieurs ennemis, peut retirer des postures défensives, et peut débloquer **Briseur de formation** après plusieurs vrais usages.   
-
-## V3.49.31 — Brise-garde et posture de soutien   
-
-- La V3.49.31 avait ajouté deux actions tactiques : **Brise-garde**, une action de contrôle courte avec affaiblissement/vulnérabilité, et **Tenir la ligne / couvrir**, une posture de soutien avec provocation courte, garde élémentaire et précision. Ces actions commençaient la progression passive vers **Casseur de garde** et **Rythme de soutien**.   
-
-## V3.49.30 — Rumeur Hero Villager retardée et pression ennemie   
-
-- La V3.49.30 corrige la rumeur Hero Villager trop précoce : la guilde ne parle plus de lui directement après l'inscription au jour 0. La rumeur et la rencontre rare sur route demandent maintenant une vraie progression : jours passés, niveau, contrats, histoire, actions tactiques ou observation. Les ennemis gagnent aussi une petite pression non basique : profils intelligents capables de feinte, créatures opportunistes qui exploitent les ouvertures visibles, et pression bestiale pouvant créer une vulnérabilité au lieu de toujours faire une attaque simple.   
-
-## V3.49.29 — Préparation d'arme, lecture voleur et coffres reliés   
-
-- La V3.49.29 ajoute l'action tactique **Enduire / fusionner vite l'arme**, qui consomme un composant pour appliquer un effet temporaire sur une cible : poison, choc, givre, vulnérabilité, précision ou puissance selon le matériau. Les dagues gagnent une synergie spéciale proche de l'idée de dague empoisonnée. L'observation active peut aussi apprendre **Lecture des serrures et failles** aux profils discrets, puis cette lecture aide réellement sur les coffres suspects d'exploration.   
-
-## V3.49.28 — Ouvertures tactiques et artisanat de combat   
-
-- La V3.49.28 enrichit le menu **Actions tactiques** avec **Exploiter une ouverture** et **Piège improvisé d'artisan**. Les blessures et statuts peuvent maintenant créer des réactions tactiques utiles, et certains petits matériaux deviennent consommables en combat pour gêner la ligne ennemie. Les actions tactiques font aussi progresser des passifs comme **Lecture du terrain** et **Improvisateur de combat**.   
-
-## V3.49.27 — Audit retours, compagnon Dinotofu et combos de statuts   
-
-- La V3.49.27 ajoute un premier **Compagnon Dinotofu** accessible depuis les activités et le menu hors combat. Il donne des conseils courts selon les PV, les quêtes, les lanternes, les compétences et le journal beta local. Les techniques d'arme profitent aussi de réactions de statuts, par exemple brûlure + givre, poison + saignement, choc + vulnérabilité, ou affaiblissement + vulnérabilité. Cette passe corrige aussi la cohérence des fichiers de version après la V3.49.26.   
-
-## V3.49.26 — Actions tactiques, panneau de guilde et catégories rapides   
-
-- La V3.49.26 ajoute le menu **Actions tactiques** en combat de vague : lancer une lanterne, jeter une lanterne au sol, repousser, utiliser la poussière ou observer activement. Le panneau de guilde utilise un libellé d'offre séparé du journal actif, affiche le rang et clarifie le cas même lieu. Le menu **Boutiques et comptoirs** gagne aussi plusieurs catégories rapides utiles.   
-
-## V3.49.25 — Consignes alliées plus tactiques   
-
-- La V3.49.25 ajoute des consignes de combat plus utiles pour les recrues : forcer une technique prête sur une recrue précise, demander une percée coordonnée de groupe, ou répartir les cibles pendant 1 tour contre plusieurs ennemis. Ces consignes ne consomment pas le tour du joueur, mais elles expirent après le tour allié, sauf la priorité de cible qui reste jusqu’à mort/disparition de la cible.   
-
-## V3.49.25 — Variété combat et journal bêta   
-
-- La V3.49.25 ajoute Rupture de ligne, Suture de fortune et Signal de focus, stabilise légèrement les attaques normales avec une énorme plage de dégâts, et ajoute un accès Journal bêta dans l’après-combat pour retrouver facilement `logs/dinotofu_session_latest.txt`.   
-
-## V3.49.25 — Quêtes personnelles de recrues et contributions alliées plus riches   
-
-- La V3.49.25 ajoute une première boucle de quêtes personnelles pour les recrues. Une recrue peut maintenant avoir un problème personnel lié à son profil, la progression peut se faire sur plusieurs tentatives, et la réussite améliore légèrement la loyauté tout en ajoutant de la réputation de clan. Les contributions alliées deviennent aussi plus lisibles : actions de soutien et coups de finition sont suivis, avec des techniques plus distinctes pour gardiens/roublards.   
-
-## V3.49.19 — Dettes d’infirmerie bloquantes   
-
-- La V3.49.19 rend les dettes d’infirmerie réellement contraignantes : tant qu’une dette existe, les soins payants sont bloqués. Si la dette totale dépasse 100 or, la récupération/réanimation d’une recrue prête à sortir est aussi bloquée jusqu’au remboursement partiel.   
-
-## V3.49.17 — Infirmerie complète et auberge moins cheatée   
-
-- La V3.49.17 ajoute un vrai service d’infirmerie : se soigner, soigner un membre d’équipe, ou gérer l’entrée/sortie des recrues KO. Les soins payants montent jusqu’à 90% PV maximum. L’auberge est rééquilibrée : les lits communs/simples plafonnent à 50% PV, tandis que la chambre sûre plus chère peut monter jusqu’à 90% sans full heal gratuit.   
-
-## V3.49.16 — Recrues persistantes et évacuation infirmerie   
-
-- La V3.49.16 continue d’améliorer les combats : les recrues ont maintenant de vrais PV persistants sauvegardés, plus des PV temporaires de combat. Elles peuvent commencer entre 70% et 100% de PV, garder leurs PV/potions entre les combats, et si une recrue tombe à 0 PV elle doit être amenée à l’infirmerie au lieu d’y être envoyée automatiquement. Si le joueur tombe aussi, plusieurs jours peuvent passer selon la gravité, et les recrues KO suivent le transfert vers les soins.   
-
-## V3.49.11 — Recrues en combat PvE   
-
-- Les recrues équipées commencent à agir dans les vrais combats PvE standard : soutien, dégâts simples, soin contextuel et partage de récompenses. Le joueur reste premier et conserve toujours la plus grosse part ; l’ordre manuel d’équipe reste prioritaire sur le tri automatique.   
-
-## V3.49.70 — Marque mortelle collective de FireFlight   
-
-- La V3.49.70 transforme la marque mortelle de FireFlight : elle ne vise plus une seule cible, mais tout le camp adverse en même temps. Pendant 2 tours de boss, chaque adversaire marqué qui tombe subit une vraie mort définitive, avec des lignes RP indiquant que FireFlight joue avec la panique du groupe entier.   
-
-## V3.49.69 — Marque mortelle FireFlight et hésitation des recrues   
-
-- La V3.49.69 transforme la fenêtre de panique de FireFlight en vraie **marque mortelle** ciblée sur le joueur. Pendant 2 tours de boss, tomber sous cette marque est traité comme une mort définitive et non comme une défaite non létale classique. La passe ajoute aussi une petite règle d’hésitation pour les recrues bas rang : sans ordre clair, elles peuvent renoncer à une technique trop avancée et revenir à une action plus simple.   
-
-## V3.49.68 — Paliers variables et FireFlight mortel   
-
-- La V3.49.68 corrige l’idée de plafond fixe : 10 niveaux actifs et 5 niveaux passifs restent seulement les maximums absolus. Les compétences simples peuvent avoir moins de paliers, et l’affichage montre maintenant le plafond local. FireFlight gagne aussi une fenêtre rare de 2 tours où les règles de mortel peuvent s’imposer temporairement, pour ajouter panique et stress sans changer la difficulté sauvegardée.   
-
-## V3.49.67 — Progression actifs/passifs plus lisible   
-
-- La V3.49.67 améliore les retours de progression des compétences. La maîtrise active affiche maintenant le prochain palier d’usage et le type de petit effet gagné, tandis que les passifs de maîtrise montrent leur progression en 5 niveaux et leur effet léger. Le menu des actions tactiques rappelle aussi que les paliers restent équilibrés : surtout fiabilité, précision, souffle, rythme ou contrôle léger, pas de montée cheat trop tôt. Les menus de consignes alliées rappellent aussi qu’une recrue faible rang comprend mieux un ordre clair qu’une intention de groupe trop vague.   
-
-## V3.49.66 — Maturité de combat des recrues   
-
-- La V3.49.66 ajoute une couche de maturité de combat aux recrues. Une recrue faible rang lit moins souvent le terrain, choisit des cibles plus simples, utilise rarement ses techniques avancées et profite davantage d’un ordre clair que de son instinct. Le rang, le niveau et l’équipement améliorent progressivement les réactions, commentaires tactiques, choix de cible et fiabilité des techniques pour mieux sentir son évolution.   
-
-## V3.49.65 — Lectures vivantes ennemies et alliées   
-
-- La V3.49.65 ajoute des lectures de combat plus contextuelles sans changer la structure des menus. Les lignes ennemies réagissent mieux à l’archétype, aux états visibles et au danger côté cible, tandis que les recrues peuvent commenter le premier profil ennemi, le danger sur le joueur, la pression de groupe et leur propre rôle ou race. **Monde / ville** gagne aussi de courtes lignes d’ambiance et de rumeur selon le moment, l’état du joueur et le contexte de quête.   
-
-## V3.49.62 — Routage clair vers le menu de base   
-
-- La V3.49.62 clarifie le flux après combat. **Continuer** signifie maintenant revenir au **Menu de base**. **Monde / ville** reste une activité normale du menu de base pour les lieux explorables, boutiques, guilde, PNJ et services, tandis que le menu rapide reste un hub constant pour personnage/session/sauvegarde.   
-
-## V3.49.61 — Refonte du menu rapide et rangement personnage/monde   
-
-- La V3.49.61 range les accès hors combat autour d’un menu rapide plus lisible. **Personnage** regroupe inventaire, titres, compétences actifs/passifs, quêtes acceptées, statistiques, équipement rapide, équipe et échange. Correction V3.49.61 : **Monde / ville** redevient une activité de lieux explorables accessible depuis les activités, pas depuis le menu rapide. L’après-combat renvoie vers le menu rapide pour le personnage/options/sauvegarde, ou vers Continuer pour retourner aux activités et visiter la ville.   
-
-## V3.49.59 — Menu de charge et audit actifs/passifs   
-
-- La V3.49.59 ajoute le menu hors combat de gestion des compétences dans le hub statistiques. Les actifs peuvent être équipés ou déséquipés, les passifs peuvent être activés ou désactivés, et les statistiques ouvertes pendant un combat restent seulement consultatives pour éviter de changer de build au milieu d’un tour. La passe vérifie aussi les techniques tactiques récentes pour que les identifiants d’actifs ne soient plus traités comme des effets passifs.   
-
-## V3.49.58 — Charge de compétences et maîtrise progressive   
-
-- La V3.49.58 ajoute une vraie base pour différencier les compétences connues, équipées et activées. Un personnage peut connaître plus de compétences, mais seules 10 compétences actives peuvent être équipées et seuls 10 passifs peuvent être activés en même temps. Les actifs restent des actions choisies, tandis que les passifs restent des effets automatiques ou semi-automatiques pouvant aussi servir hors combat selon leur nature.   
-
-- Les actifs gagnent maintenant une maîtrise sur 10 paliers maximum, avec des seuils espacés pour ne pas devenir trop forts trop tôt dans une progression prévue jusqu'au niveau 255. Les passifs issus d'une pratique répétée doivent d'abord passer par trois essais réussis visibles avant de se débloquer réellement.   
-
-## V3.49.57 — Séparation actif / maîtrise passive   
-
-- La V3.49.57 clarifie la différence entre technique de combat sélectionnable et maîtrise passive. Les techniques d'affinité restent des actions actives du menu tactique, tandis que les vrais usages répétés débloquent désormais des maîtrises passives avec un nom séparé : **Maîtrise élémentaire**, **Garde circulaire**, **Trait entravant**, **Voix revigorante**, **Instinct canalisé** et **Rythme de lame**. Les anciens identifiants de sauvegarde restent reconnus, mais l'affichage ne donne plus l'impression que **Danse de lame** ou les autres techniques deviennent automatiques.   
-
-## V3.49.56 — Techniques variées d'affinité   
-
-- La V3.49.56 ajoute six techniques d’affinité supplémentaires pour éviter que les combats ne tournent seulement autour des ruptures/débuffs : **Lame élémentaire**, **Cercle protecteur**, **Flèche entravante**, **Chant revigorant**, **Instinct de bête** et **Danse de lame**. Les profils élémentaires, protecteurs, pisteurs, bardes/chefs, sauvages et duellistes gagnent chacun une option dédiée avec passif après vrais usages.   
-
-## V3.49.55 — Affinités de classe élargies   
-
-- La V3.49.55 ajoute cinq techniques d’affinité supplémentaires : **Rage maîtrisée**, **Ordre de bataille**, **Totem de souffle**, **Bombe d’atelier** et **Prière d’acier**. Cette passe élargit les classes spécialisées sans rendre toutes les actions universelles : front, commandement, nature, atelier et sacré gagnent chacun une option avec passif après vrais usages.   
-
-## V3.49.53 — Techniques d’affinité de classe   
-
-- La V3.49.53 ajoute une première couche de **techniques d’affinité de classe** : **Pas de l’ombre** n’est plus universel, et les profils sournois, soutien, arcanique, rempart et pisteur gagnent chacun une technique dédiée avec progression après vrais usages.   
-
-## V3.49.50 — Allonge, remparts et ancrages   
-
-- La V3.49.50 ajoute trois actions tactiques : **Rompre l’allonge**, **Percer le rempart** et **Rompre l’ancrage occulte**. Elle ajoute aussi les profils **Allonge prudente**, **Ancre nécrotique** et **Drain de vie**, avec réactions de distance, froid de tombe, récupération courte et contre-jeu par rupture d’espace ou d’ancrage.   
-
-## V3.49.49 — Chaînes d’états, proies marquées et profils ennemis   
-
-- La V3.49.49 ajoute trois actions tactiques : **Forcer une chaîne d’états**, **Marquer une proie** et **Retrait contrôlé**. Elle ajoute aussi les profils **Soigneur de fortune**, **Porte-bouclier**, **Berserker blessé** et **Porte-malédiction**, avec observations, faiblesses, attaques signatures et réactions mécaniques propres.   
-
-## V3.49.38 — Taille, matière et résistance physique   
-
-- La V3.49.38 ajoute une vraie lecture de résistance liée au corps des créatures : petit fragile, petit protégé, grande masse organique, grande masse dure, matière mauvaise, slime, spectre ou fée ne se comportent plus pareil face aux dégâts physiques. L'observation et le bestiaire affichent cette lecture, et le rapport de dégâts montre une phrase immersive quand le corps modifie l'impact. Les techniques de recrues gagnent aussi des gestes plus liés à leur profil.   
-
-## V3.49.74 — Maîtrises élargies et préparation de sortie   
-
-- La V3.49.74 continue les six chantiers actifs en même temps : plusieurs anciennes techniques d’affinité reçoivent de vrais effets de maîtrise, les passifs tactiques restent des soutiens et non des actions automatiques, la pression ennemie gagne des intentions contextuelles, les recrues utilisent davantage leurs techniques selon leur maturité, et Monde / ville gagne une lecture de préparation de sortie pour soin, outils, observation, coffres, artisanat combat et renforts mercenaires.   
-
-## V3.49.73 — Passifs de maîtrise actifs et ville plus lisible   
-
-- La V3.49.73 branche davantage les passifs de maîtrise dans les effets réels des actions tactiques : un passif débloqué et activé peut maintenant soutenir légèrement la puissance, la chance secondaire, la durée ou le rythme, sans jamais lancer l’actif à la place du joueur. Monde / ville affiche aussi plus de repères locaux : ville actuelle, inscription de guilde et temps de voyage.   
-
-## V3.49.81 — Synergies lisibles et impact de maîtrise   
-
-- La V3.49.81 ajoute une lecture globale du build dans le menu Personnage et la préparation de sortie : arme, armure, bonus/malus de classe et cohérence générale. Les maîtrises actives/passives utilisent des libellés plus clairs sur l’impact réel, les techniques de recrues profitent davantage de la maturité et des ordres, et les compétences signatures ennemies deviennent un peu plus présentes quand l’ennemi est entraîné, élite ou face à un joueur déjà ouvert.   
+- Removed temporary `.inc` fragments. Future modularization must use real `.cpp/.hpp` modules only.   
 
 ---   
 
-## English history   
+## V3.49.90 — Technical and documentation consolidation   
+
+- Moved detailed version history out of README files and replaced obsolete PATCHNOTE documents with the changelog.   
+
+- Consolidated oath contracts, canonical journal localization, centralized local reputation and a lightweight invariant test target.   
+
+---   
 
 ## V3.49.89 — Rivals and unstable fate   
 
@@ -431,4 +372,3 @@ Historique détaillé des versions de Dinotofu. Les README restent volontairemen
 ## V3.49.81 — Readable synergies and mastery impact   
 
 - V3.49.81 adds a global build read to the Character menu and run preparation: weapon, armor, class bonus/malus and overall coherence. Active/passive mastery labels describe impact more clearly, recruited ally techniques scale more with maturity and orders, and enemy signature skills become slightly more present when an enemy is trained, elite or facing an already-open player.   
-

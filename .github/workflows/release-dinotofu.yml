@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="$(./scripts/get_version.sh)"
+          VERSION="$(bash ./scripts/get_version.sh)"
           TAG="v${VERSION}"
           SHOULD_PUBLISH="false"
           REASON=""

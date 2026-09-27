@@ -4,6 +4,7 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "combat/EnemyCombatQueue.hpp"
+#include "combat/flavor/MonsterFlavorCatalog.hpp"
 
 #include "interface/menu/common/MessageScreen.hpp"
 
@@ -97,6 +98,11 @@ int EnemyCombatQueue::getEscapedEnemyCount() const
     return static_cast<int>(escapedEnemies.size());
 }
 
+int EnemyCombatQueue::getSurrenderedEnemyCount() const
+{
+    return static_cast<int>(surrenderedEnemies.size());
+}
+
 // EN: getDamagedAliveEnemyCount declares or implements a focused behavior used by this module.
 // FR: getDamagedAliveEnemyCount déclare ou implémente un comportement précis utilisé par ce module.
 int EnemyCombatQueue::getDamagedAliveEnemyCount() const
@@ -154,6 +160,11 @@ const Monster& EnemyCombatQueue::getDefeatedEnemy(int index) const
 const Monster& EnemyCombatQueue::getEscapedEnemy(int index) const
 {
     return escapedEnemies[index];
+}
+
+const Monster& EnemyCombatQueue::getSurrenderedEnemy(int index) const
+{
+    return surrenderedEnemies[index];
 }
 
 // EN: getDamagedAliveEnemy declares or implements a focused behavior used by this module.
@@ -255,6 +266,22 @@ void EnemyCombatQueue::removeActiveEnemyAsEscaped(int index)
     }
 }
 
+void EnemyCombatQueue::removeActiveEnemyAsSurrendered(int index)
+{
+    if (!isActiveIndexValid(index))
+    {
+        return;
+    }
+
+    surrenderedEnemies.push_back(activeEnemies[index]);
+    activeEnemies.erase(activeEnemies.begin() + index);
+
+    if (canAddActiveEnemy() && !waitingEnemies.empty())
+    {
+        bringNextEnemyIn(true);
+    }
+}
+
 // EN: switchActiveEnemyWithWaiting rotates one active enemy with one waiting enemy without defeat/escape.
 // FR: switchActiveEnemyWithWaiting échange un ennemi actif avec un ennemi en réserve sans défaite/fuite.
 bool EnemyCombatQueue::switchActiveEnemyWithWaiting(int activeIndex, int waitingIndex)
@@ -285,8 +312,8 @@ void EnemyCombatQueue::removeDeadAndReplace()
                 "combat.wave.enemy_removed",
                 {
                     activeEnemies[i].doesSplitOnDeath()
-                        ? enemyName + " s'affaisse et sa masse commence à se diviser."
-                        : enemyName + " disparaît de la première ligne."
+                        ? enemyName + " s'affaisse et sa masse commence à se diviser. " + MonsterFlavorCatalog::buildDeathLine(activeEnemies[i])
+                        : enemyName + " disparaît de la première ligne. " + MonsterFlavorCatalog::buildDeathLine(activeEnemies[i])
                 },
                 false
             );
@@ -380,6 +407,7 @@ std::vector<std::string> EnemyCombatQueue::getQueueSummaryLines() const
         "Ennemis blessés encore en vie : " + std::to_string(getDamagedAliveEnemyCount()),
         "Ennemis vaincus : " + std::to_string(getDefeatedEnemyCount()),
         "Ennemis en fuite : " + std::to_string(getEscapedEnemyCount()),
+        "Ennemis rendus : " + std::to_string(getSurrenderedEnemyCount()),
         "Total restant : " + std::to_string(getTotalRemainingEnemyCount())
     };
 }

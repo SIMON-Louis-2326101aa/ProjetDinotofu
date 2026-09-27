@@ -88,6 +88,9 @@ const std::vector<City>& City::getCatalog()
                 {"Route commerciale", 6, "route pavée, bornes et convois", true},
                 {"Forêt ancienne", 12, "lisière verte et sous-bois", true},
                 {"Mares gélatineuses", 15, "sol humide et flaques colorées", true},
+                {"Marais trouble", 19, "roseaux noirs et eau opaque", false},
+                {"Cimetière oublié", 23, "stèles effacées et brume basse", false},
+                {"Verger des lucioles de fer", 25, "arbres noueux et essaims métalliques", false},
                 {"Bocage aux lanternes", 28, "bosquets nocturnes et champignons-lampes", false},
                 {"Désert d'argile rouge", 45, "poussière rouge et fausses oasis", false}
             }
@@ -109,6 +112,7 @@ const std::vector<City>& City::getCatalog()
                 {"Mine sifflante", 4, "galeries, rails et lampes de mine", true},
                 {"Montagne froide", 8, "rochers froids et vent de pente", true},
                 {"Ruines effondrées", 18, "pierres cassées et poussière arcanique", false},
+                {"Jardin des statues qui pleurent", 22, "marbre humide et haies silencieuses", false},
                 {"Carrière des os blancs", 25, "craie blanche, fossiles et machines de taille", false},
                 {"Falaises des drakes gris", 31, "corniches et nids de drakes", false}
             }
@@ -130,6 +134,7 @@ const std::vector<City>& City::getCatalog()
                 {"Canaux de brume bleue", 5, "ponts bas, roseaux bleutés et barques", true},
                 {"Archives noyées", 12, "bibliothèque inondée et couloirs humides", false},
                 {"Marché sous les ponts", 9, "arches, étals illégaux et lanternes basses", true},
+                {"Quartier abandonné", 16, "façades murées et cours envahies", false},
                 {"Foire abandonnée", 22, "stands morts et fanions déchirés", false},
                 {"Désert d'argile rouge", 38, "dunes rouges et caravanes", false}
             }
@@ -152,7 +157,9 @@ const std::vector<City>& City::getCatalog()
                 {"Montagne froide", 14, "cols gelés et vents coupants", true},
                 {"Temple des cloches fendues", 26, "sanctuaire givré et cloches cassées", false},
                 {"Bosquet des Fées du Mana", 33, "lumières de mana et fées joueuses", false},
-                {"Confluence du Mana pur", 42, "rivières magiques et halos instables", false}
+                {"Sanctuaire kitsuné des Neuf Étincelles", 37, "torii givrés, lanternes et feux follets", false},
+                {"Confluence du Mana pur", 42, "rivières magiques et halos instables", false},
+                {"Archipel des îles flottantes", 51, "îlots suspendus et courants ascendants", false}
             }
         )
     };

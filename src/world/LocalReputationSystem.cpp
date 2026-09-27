@@ -23,6 +23,28 @@ int LocalReputationSystem::discountForScore(int score)
     return 0;
 }
 
+int LocalReputationSystem::surchargeForScore(int score)
+{
+    if (score <= -50) return 14;
+    if (score <= -35) return 10;
+    if (score <= -18) return 6;
+    if (score < 0) return 3;
+    return 0;
+}
+
+std::string LocalReputationSystem::reactionForScore(int score)
+{
+    if (score >= 80) return "Les habitants te reconnaissent avant même que tu présentes tes preuves.";
+    if (score >= 45) return "Les services locaux prennent ta parole au sérieux.";
+    if (score >= 20) return "Quelques visages te saluent et les comptoirs se montrent plus souples.";
+    if (score >= 8) return "Ton nom circule un peu, sans ouvrir toutes les portes.";
+    if (score <= -50) return "Les volets se ferment plus vite et les services protégés refusent les gros risques.";
+    if (score <= -35) return "Les gardes et commerçants vérifient chaque demande avant de répondre.";
+    if (score <= -18) return "Les prix se tendent et les marchandises importantes restent derrière le comptoir.";
+    if (score < 0) return "Les conversations ralentissent quand tu approches : la ville reste méfiante.";
+    return "La ville ne te doit rien et ne te reproche encore rien.";
+}
+
 LocalReputationResult LocalReputationSystem::evaluate(const Player& player, const std::string& cityId)
 {
     LocalReputationResult result;
@@ -57,6 +79,8 @@ LocalReputationResult LocalReputationSystem::evaluate(const Player& player, cons
 
     result.label = labelForScore(result.score);
     result.discountPercent = discountForScore(result.score);
+    result.surchargePercent = surchargeForScore(result.score);
+    result.reactionLine = reactionForScore(result.score);
     return result;
 }
 

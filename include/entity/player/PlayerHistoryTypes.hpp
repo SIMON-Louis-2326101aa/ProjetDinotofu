@@ -22,6 +22,9 @@ struct PlayerRivalRecord
     std::string originLocationId;
     std::string lastKnownLocationId;
     std::string rivalryReason;
+    std::string temperament = "survivant prudent";
+    std::string visibleMark;
+    std::string lastOutcome;
     int baseLevel = 1;
     int currentLevel = 1;
     int baseMaxHp = 1;
@@ -30,6 +33,8 @@ struct PlayerRivalRecord
     int escapes = 0;
     int returns = 0;
     int wounds = 0;
+    int emergenceScore = 0;
+    int notoriety = 0;
     int firstSeenDay = 0;
     int lastSeenDay = 0;
     bool alive = true;

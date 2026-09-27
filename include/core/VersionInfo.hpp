@@ -25,6 +25,7 @@ public:
     static std::string currentVersion();
     static std::string recreateRecommendedBeforeVersion();
     static std::string importantSaveUpdateVersion();
+    static bool requiresImportantSaveUpdate(const std::string& lastAdaptedVersion);
     static std::string currentDateText();
 
     static VersionNumber parse(const std::string& versionText);

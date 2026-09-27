@@ -63,7 +63,7 @@ Interface graphique
 Documentation propre
 --------------------
 - README.md et READMEFR.md restent courts et décrivent seulement l’état actuel.
-- Les historiques de version restent uniquement dans CHANGELOG.md.
+- Les historiques de version restent uniquement dans CHANGELOG.md et CHANGELOG_FR.md.
 - Aucun nouveau README de version ne doit être créé.
 
 [V3.30.00 - socle validé / futur IG pixel-art]

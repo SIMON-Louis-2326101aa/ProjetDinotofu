@@ -11,10 +11,12 @@
 #include "item/Inventory.hpp"
 #include "progression/DifficultyMode.hpp"
 #include "character/CharacterRace.hpp"
+#include "progression/language/LanguageKnowledge.hpp"
 #include "progression/DndAttributes.hpp"
 #include "quest/QuestLog.hpp"
 #include "progression/blessing/BlessingInventory.hpp"
 #include "entity/player/PlayerHistoryTypes.hpp"
+#include "world/npc/NpcKnownFact.hpp"
 
 #include <string>
 #include <vector>
@@ -108,6 +110,7 @@ private:
     int equippedWeaponIndex;
     int equippedArmorIndex;
     CharacterRace race;
+    std::vector<PlayerLanguageKnowledge> languageKnowledge;
     int characterAge = 18;
     std::string visualPresentation = "Non précisé";
     std::string visualVariant = "Variante A";
@@ -158,6 +161,7 @@ private:
     std::vector<PlayerJournalRecord> canonicalJournalRecords;
     std::vector<PlayerHistoricalEvent> historicalEvents;
     std::vector<PlayerRivalRecord> rivalRecords;
+    std::vector<NpcKnownFact> npcKnownFacts;
     std::vector<std::string> recentCombatEquipmentUsage;
     bool bossEquipmentSealActive;
     std::string bossEquipmentSealReason;
@@ -279,6 +283,13 @@ public:
     // EN: getRace declares or implements a focused behavior used by this module.
     // FR: getRace déclare ou implémente un comportement précis utilisé par ce module.
     CharacterRace getRace() const;
+    const std::vector<PlayerLanguageKnowledge>& getLanguageKnowledge() const;
+    int getLanguageKnowledgeLevel(const std::string& languageId) const;
+    int getLanguageStudyProgress(const std::string& languageId) const;
+    void setLanguageKnowledgeLevel(const std::string& languageId, int level, bool nativeLanguage = false);
+    void setLanguageStudyProgress(const std::string& languageId, int progress);
+    void addLanguageStudyProgress(const std::string& languageId, int amount);
+    void setLoadedLanguageKnowledge(const std::vector<PlayerLanguageKnowledge>& loadedKnowledge);
     std::string getRaceText() const;
     int getCharacterAge() const;
     const std::string& getVisualPresentation() const;
@@ -479,7 +490,16 @@ public:
     void setLoadedHistoricalEvents(const std::vector<PlayerHistoricalEvent>& events);
     void migrateImportantCanonicalHistory();
 
-    std::string createRivalFromEnemy(const std::string& enemyName, const std::string& enemyFamily, int level, int maxHp, int attack, const std::string& reason);
+    std::string createRivalFromEnemy(
+        const std::string& enemyName,
+        const std::string& enemyFamily,
+        int level,
+        int maxHp,
+        int attack,
+        const std::string& reason,
+        const std::string& temperament = "survivant prudent",
+        int emergenceScore = 0
+    );
     PlayerRivalRecord* findMutableRival(const std::string& rivalId);
     const PlayerRivalRecord* findRival(const std::string& rivalId) const;
     const std::vector<PlayerRivalRecord>& getRivalRecords() const;
@@ -488,6 +508,23 @@ public:
     void recordRivalWound(const std::string& rivalId, int amount = 1);
     void markRivalDefeated(const std::string& rivalId, const std::string& locationId = "");
     void setLoadedRivalRecords(const std::vector<PlayerRivalRecord>& rivals);
+
+    void rememberNpcFact(
+        const std::string& npcId,
+        const std::string& factType,
+        const std::string& subjectId,
+        const std::string& label,
+        const std::string& sourceType,
+        const std::string& sourceId,
+        int confidence,
+        int evidenceLevel,
+        const std::string& claimVariant = "default",
+        const std::string& relayChannel = ""
+    );
+    const std::vector<NpcKnownFact>& getNpcKnownFacts() const;
+    std::vector<NpcKnownFact> getNpcKnownFactsFor(const std::string& npcId, int limit = 8) const;
+    bool npcKnowsFact(const std::string& npcId, const std::string& factType, const std::string& subjectId) const;
+    void setLoadedNpcKnownFacts(const std::vector<NpcKnownFact>& facts);
 
     const std::vector<PlayerLocalSubscription>& getLocalSubscriptions() const;
     bool hasActiveLocalSubscription(const std::string& subscriptionId) const;

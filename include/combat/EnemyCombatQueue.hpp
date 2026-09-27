@@ -53,6 +53,7 @@ public:
     // EN: getEscapedEnemyCount declares or implements a focused behavior used by this module.
     // FR: getEscapedEnemyCount déclare ou implémente un comportement précis utilisé par ce module.
     int getEscapedEnemyCount() const;
+    int getSurrenderedEnemyCount() const;
     // EN: getDamagedAliveEnemyCount declares or implements a focused behavior used by this module.
     // FR: getDamagedAliveEnemyCount déclare ou implémente un comportement précis utilisé par ce module.
     int getDamagedAliveEnemyCount() const;
@@ -75,6 +76,7 @@ public:
     // EN: getEscapedEnemy declares or implements a focused behavior used by this module.
     // FR: getEscapedEnemy déclare ou implémente un comportement précis utilisé par ce module.
     const Monster& getEscapedEnemy(int index) const;
+    const Monster& getSurrenderedEnemy(int index) const;
     // EN: getDamagedAliveEnemy declares or implements a focused behavior used by this module.
     // FR: getDamagedAliveEnemy déclare ou implémente un comportement précis utilisé par ce module.
     const Monster& getDamagedAliveEnemy(int index) const;
@@ -85,6 +87,7 @@ public:
     // EN: removeActiveEnemyAsEscaped declares or implements a focused behavior used by this module.
     // FR: removeActiveEnemyAsEscaped déclare ou implémente un comportement précis utilisé par ce module.
     void removeActiveEnemyAsEscaped(int index);
+    void removeActiveEnemyAsSurrendered(int index);
     // EN: switchActiveEnemyWithWaiting rotates one active enemy with one waiting enemy without defeat/escape.
     // FR: switchActiveEnemyWithWaiting échange un ennemi actif avec un ennemi en réserve sans défaite/fuite.
     bool switchActiveEnemyWithWaiting(int activeIndex, int waitingIndex = 0);
@@ -107,6 +110,7 @@ private:
     std::vector<Monster> waitingEnemies;
     std::vector<Monster> defeatedEnemies;
     std::vector<Monster> escapedEnemies;
+    std::vector<Monster> surrenderedEnemies;
     bool frontLineInitialized;
 
     // EN: canAddActiveEnemy declares or implements a focused behavior used by this module.
