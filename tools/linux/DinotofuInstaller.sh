@@ -2,6 +2,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ "$(basename "$SCRIPT_DIR")" == "linux" && "$(basename "$(dirname "$SCRIPT_DIR")")" == "tools" ]]; then
+    SCRIPT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+fi
 CONFIG_FILE="${SCRIPT_DIR}/dinotofu-installer.config.json"
 REPO="${DINOTOFU_REPO:-}"
 ASSET_PATTERN="${DINOTOFU_ASSET_PATTERN:-Dinotofu-Linux-v*.7z}"
@@ -79,11 +82,11 @@ ask_install_dir() {
         return
     fi
 
-    echo ""
-    echo "Dossier d'installation : le jeu sera toujours installe dans un dossier nomme ProjetDinotofu."
-    echo "Par defaut : ${default_dir}"
-    echo "Tu peux entrer un autre dossier parent, par exemple /home/$USER/Jeux."
-    printf "Emplacement parent (Entree = defaut) : "
+    echo "" >&2
+    echo "Dossier d'installation : le jeu sera toujours installe dans un dossier nomme ProjetDinotofu." >&2
+    echo "Par defaut : ${default_dir}" >&2
+    echo "Tu peux entrer un autre dossier parent, par exemple /home/$USER/Jeux." >&2
+    printf "Emplacement parent (Entree = defaut) : " >&2
     local answer=""
     read -r answer || true
     if [[ -z "$answer" ]]; then
@@ -187,7 +190,12 @@ EXTRACT_DIR="${TMP_DIR}/extract"
 BACKUP_DIR="${TMP_DIR}/save_backup"
 mkdir -p "$EXTRACT_DIR" "$BACKUP_DIR"
 
-# Detection : si on lance l'installer depuis un dossier du jeu dezippe
+# Detection : si on lance l'installer depuis un dossier du jeu dezippe ou un clone git
+if [[ ! -f "${SCRIPT_DIR}/output/Dinotofu" && ! -f "${SCRIPT_DIR}/Dinotofu" && -f "${SCRIPT_DIR}/Makefile" ]] && command -v make >/dev/null 2>&1; then
+    echo "==> Compilation locale de Dinotofu pour l'installation..."
+    make -C "${SCRIPT_DIR}" >/dev/null 2>&1 || true
+fi
+
 local_game_found="false"
 if [[ -f "${SCRIPT_DIR}/output/Dinotofu" || -f "${SCRIPT_DIR}/Dinotofu" ]] && [[ -d "${SCRIPT_DIR}/assets" || -d "${SCRIPT_DIR}/data/assets" ]]; then
     local_game_found="true"
@@ -208,7 +216,37 @@ elif [[ "$local_game_found" == "true" ]]; then
         done
     fi
     mkdir -p "$INSTALL_DIR"
-    cp -a "${SCRIPT_DIR}/." "$INSTALL_DIR/"
+    for item in "${SCRIPT_DIR}"/*; do
+        [[ -e "$item" ]] || continue
+        base="$(basename "$item")"
+        case "$base" in
+            build|obj|output)
+                continue
+                ;;
+        esac
+        cp -a "$item" "$INSTALL_DIR/"
+    done
+    mkdir -p "${INSTALL_DIR}/output"
+    if [[ -f "${SCRIPT_DIR}/output/Dinotofu" ]]; then
+        cp -a "${SCRIPT_DIR}/output/Dinotofu" "${INSTALL_DIR}/output/Dinotofu"
+        cp -a "${SCRIPT_DIR}/output/Dinotofu" "${INSTALL_DIR}/Dinotofu"
+    fi
+    if [[ -f "${INSTALL_DIR}/tools/linux/DinotofuLauncher.sh" ]]; then
+        cp -a "${INSTALL_DIR}/tools/linux/DinotofuLauncher.sh" "${INSTALL_DIR}/DinotofuLauncher.sh"
+    fi
+    if [[ -f "${INSTALL_DIR}/tools/linux/Lancer-Dinotofu.sh" ]]; then
+        cp -a "${INSTALL_DIR}/tools/linux/Lancer-Dinotofu.sh" "${INSTALL_DIR}/Lancer-Dinotofu.sh"
+    fi
+    if [[ -f "${INSTALL_DIR}/tools/linux/Lancer-Dinotofu-Terminal.sh" ]]; then
+        cp -a "${INSTALL_DIR}/tools/linux/Lancer-Dinotofu-Terminal.sh" "${INSTALL_DIR}/Lancer-Dinotofu-Terminal.sh"
+    fi
+    if [[ -f "${INSTALL_DIR}/tools/linux/Installer-Dinotofu.sh" ]]; then
+        cp -a "${INSTALL_DIR}/tools/linux/Installer-Dinotofu.sh" "${INSTALL_DIR}/Installer-Dinotofu.sh"
+    fi
+    if [[ -f "${SCRIPT_DIR}/scripts/get_version.sh" ]]; then
+        current_v="$(bash "${SCRIPT_DIR}/scripts/get_version.sh" 2>/dev/null || echo "0.00.00")"
+        echo "$current_v" > "${INSTALL_DIR}/version.txt"
+    fi
     if [[ -d "$BACKUP_DIR" ]]; then
         cp -a "${BACKUP_DIR}/." "$INSTALL_DIR/" 2>/dev/null || true
     fi
@@ -235,6 +273,7 @@ if pattern.endswith('.7z'):
     patterns.append(pattern[:-3] + '.zip')
 elif pattern.endswith('.zip'):
     patterns.append(pattern[:-4] + '.7z')
+patterns.extend(['Dinotofu-Linux-v*.7z', 'Dinotofu-Linux-v*.zip', 'Dinotofu-Linux*.7z', 'Dinotofu-Linux*.zip'])
 
 for p in patterns:
     for asset in data.get('assets', []):
@@ -243,6 +282,15 @@ for p in patterns:
             print(asset.get('name', ''))
             print(asset.get('browser_download_url', ''))
             sys.exit(0)
+
+for asset in data.get('assets', []):
+    name = asset.get('name', '')
+    if 'Linux' in name and 'Installer' not in name and (name.endswith('.7z') or name.endswith('.zip')):
+        print(data.get('tag_name', ''))
+        print(name)
+        print(asset.get('browser_download_url', ''))
+        sys.exit(0)
+
 sys.exit(2)
 PY
 )
@@ -260,6 +308,10 @@ PY
         LOCAL_ARCHIVE="$(find_local_release_archive "$ASSET_PATTERN" || true)"
         if [[ -z "$LOCAL_ARCHIVE" ]]; then
             echo "Aucun asset ne correspond a ${ASSET_PATTERN}, et aucune archive locale (.7z ou .zip) n'a ete trouvee." >&2
+            echo "" >&2
+            echo "Astuce : Si la mise a jour automatique ne fonctionne pas, tu peux telecharger directement l'archive sur :" >&2
+            echo "https://github.com/${REPO}/releases/latest" >&2
+            echo "puis la decompresser dans ton dossier de jeu." >&2
             exit 1
         fi
         TAG_NAME="$(basename "$LOCAL_ARCHIVE" | sed -E 's/.*-v([0-9]+\.[0-9]{2}\.[0-9]{2}).*/v\1/')"
@@ -307,15 +359,26 @@ PY
     fi
 fi
 
-python3 - "${INSTALL_DIR}/dinotofu-installer.config.json" "${REPO}" "${ASSET_PATTERN}" "${INSTALL_DIR}" <<'PYCONFIG'
+CREATE_DESKTOP_SHORTCUT="true"
+if [[ "$NO_PROMPT" != "true" && -t 0 ]]; then
+    echo ""
+    read -r -p "Voulez-vous creer un raccourci sur le Bureau ? (O/n) [Defaut: O] : " sc_choice || true
+    if [[ -n "$sc_choice" && ! "$sc_choice" =~ ^[oOyY]$ ]]; then
+        CREATE_DESKTOP_SHORTCUT="false"
+        echo "Creation du raccourci bureau ignoree a la demande de l'utilisateur."
+    fi
+fi
+
+python3 - "${INSTALL_DIR}/dinotofu-installer.config.json" "${REPO}" "${ASSET_PATTERN}" "${INSTALL_DIR}" "${CREATE_DESKTOP_SHORTCUT}" <<'PYCONFIG'
 import json
 import sys
-path, repo, asset_pattern, install_dir = sys.argv[1:5]
+path, repo, asset_pattern, install_dir, create_sc = sys.argv[1:6]
 with open(path, "w", encoding="utf-8") as handle:
     json.dump({
         "repo": repo,
         "assetPattern": asset_pattern,
         "installDir": install_dir,
+        "createDesktopShortcut": create_sc.lower() == "true",
     }, handle, ensure_ascii=False, indent=2)
     handle.write("\n")
 PYCONFIG
@@ -332,7 +395,7 @@ if [[ ! -f "${INSTALL_DIR}/version.txt" ]]; then
     echo "$ver" > "${INSTALL_DIR}/version.txt"
 fi
 
-echo "==> Creation des raccourcis Linux"
+echo "==> Configuration des raccourcis Linux"
 mkdir -p "${HOME}/.local/share/applications"
 GUI_ICON="${INSTALL_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"
 TERMINAL_ICON="${INSTALL_DIR}/assets/branding/dinotofu_launcher_terminal_512.png"
@@ -340,29 +403,32 @@ if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${INSTALL_DIR}/data/assets/branding/di
 if [[ ! -f "$TERMINAL_ICON" ]]; then TERMINAL_ICON="${INSTALL_DIR}/data/assets/branding/dinotofu_launcher_terminal_512.png"; fi
 if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${INSTALL_DIR}/assets/branding/dinotofu_site_logo_512.png"; fi
 if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${INSTALL_DIR}/data/assets/branding/dinotofu_site_logo_512.png"; fi
-if [[ ! -f "$TERMINAL_ICON" ]]; then TERMINAL_ICON="$GUI_ICON"; fi
-cat > "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" <<DESKTOP
+if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${SCRIPT_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"; fi
+
+LOCAL_LAUNCHER_EXEC="${INSTALL_DIR}/Lancer-Dinotofu.sh"
+if [[ ! -f "$LOCAL_LAUNCHER_EXEC" && -f "${INSTALL_DIR}/tools/linux/Lancer-Dinotofu.sh" ]]; then
+    LOCAL_LAUNCHER_EXEC="${INSTALL_DIR}/tools/linux/Lancer-Dinotofu.sh"
+elif [[ ! -f "$LOCAL_LAUNCHER_EXEC" && -f "${INSTALL_DIR}/DinotofuLauncher.sh" ]]; then
+    LOCAL_LAUNCHER_EXEC="${INSTALL_DIR}/DinotofuLauncher.sh"
+elif [[ ! -f "$LOCAL_LAUNCHER_EXEC" && -f "${INSTALL_DIR}/tools/linux/DinotofuLauncher.sh" ]]; then
+    LOCAL_LAUNCHER_EXEC="${INSTALL_DIR}/tools/linux/DinotofuLauncher.sh"
+fi
+
+GUI_APP="${HOME}/.local/share/applications/projetdinotofu-launcher.desktop"
+cat > "$GUI_APP" <<DESKTOP
 [Desktop Entry]
 Type=Application
 Name=ProjetDinotofu Launcher
-Comment=Lancer Dinotofu avec le launcher principal
-Exec=${INSTALL_DIR}/Lancer-Dinotofu.sh
+Comment=Lancer Dinotofu (choix Interface Graphique ou Terminal)
+Exec=${LOCAL_LAUNCHER_EXEC}
+Path=$(dirname "${LOCAL_LAUNCHER_EXEC}")
 Icon=${GUI_ICON}
-Terminal=false
-Categories=Game;
-DESKTOP
-cat > "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" <<DESKTOP
-[Desktop Entry]
-Type=Application
-Name=ProjetDinotofu Launcher Terminal version
-Comment=Lancer la version terminale de secours de Dinotofu
-Exec=${INSTALL_DIR}/Lancer-Dinotofu-Terminal.sh
-Icon=${TERMINAL_ICON}
 Terminal=true
 Categories=Game;
 DESKTOP
-chmod +x "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" || true
-chmod +x "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" || true
+chmod +x "$GUI_APP" || true
+rm -f "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" 2>/dev/null || true
+
 get_desktop_dirs() {
     local dirs=()
     if command -v xdg-user-dir >/dev/null 2>&1; then
@@ -390,47 +456,34 @@ get_desktop_dirs() {
     fi
 }
 
-repair_desktop_shortcut_set() {
-    local source_file="$1"
-    local display_name="$2"
-    local terminal_flag="${3:-false}"
-    local desktop_dir found target base candidate
-    local desktop_dirs=()
+if [[ "$CREATE_DESKTOP_SHORTCUT" == "true" ]]; then
+    desktop_dirs=()
     mapfile -t desktop_dirs < <(get_desktop_dirs || true)
 
     for desktop_dir in "${desktop_dirs[@]}"; do
         [[ -n "$desktop_dir" && -d "$desktop_dir" ]] || continue
-        found=""
-        while IFS= read -r target; do
-            [[ -n "$target" ]] || continue
-            found="true"
-            cp "$source_file" "$target" || true
-            chmod +x "$target" 2>/dev/null || true
-            echo "Raccourci repare : $target"
-        done < <(find "$desktop_dir" -type f -name "*.desktop" 2>/dev/null | while read -r candidate; do
+        found_gui="false"
+        while IFS= read -r candidate; do
+            [[ -n "$candidate" ]] || continue
             base="$(basename "$candidate")"
-            if [[ "$terminal_flag" == "true" ]]; then
-                if [[ "$base" == "$display_name.desktop" || "$base" == *Dinotofu*Terminal*.desktop ]] || grep -qi "Lancer-Dinotofu-Terminal.sh" "$candidate" 2>/dev/null; then
-                    printf '%s\n' "$candidate"
-                fi
-            else
-                if [[ "$base" == "$display_name.desktop" || ( "$base" == *Dinotofu*Launcher*.desktop && "$base" != *Terminal* ) ]] || grep -qi "Lancer-Dinotofu.sh" "$candidate" 2>/dev/null; then
-                    printf '%s\n' "$candidate"
-                fi
+            if [[ "$base" == "ProjetDinotofu Launcher Terminal version.desktop" || "$base" == *Terminal* || "$base" == *terminal* ]] || grep -qi "Lancer-Dinotofu-Terminal" "$candidate" 2>/dev/null; then
+                rm -f "$candidate" 2>/dev/null || true
+            elif [[ "$base" == "ProjetDinotofu Launcher.desktop" || ( "$base" == *Dinotofu*Launcher*.desktop && "$base" != *Terminal* ) ]] || grep -qi "Lancer-Dinotofu.sh" "$candidate" 2>/dev/null; then
+                cp "$GUI_APP" "$candidate" || true
+                chmod +x "$candidate" 2>/dev/null || true
+                echo "Raccourci repare : $candidate"
+                found_gui="true"
             fi
-        done)
+        done < <(find "$desktop_dir" -type f -name "*.desktop" 2>/dev/null)
 
-        if [[ -z "$found" ]]; then
-            target="$desktop_dir/${display_name}.desktop"
-            cp "$source_file" "$target" || true
+        if [[ "$found_gui" != "true" ]]; then
+            target="$desktop_dir/ProjetDinotofu Launcher.desktop"
+            cp "$GUI_APP" "$target" || true
             chmod +x "$target" 2>/dev/null || true
             echo "Raccourci cree : $target"
         fi
     done
-}
-
-repair_desktop_shortcut_set "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" "ProjetDinotofu Launcher" "false"
-repair_desktop_shortcut_set "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" "ProjetDinotofu Launcher Terminal version" "true"
+fi
 
 echo "================================================="
 echo " Dinotofu est installe dans : ${INSTALL_DIR}"

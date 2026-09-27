@@ -2,6 +2,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ "$(basename "$SCRIPT_DIR")" == "linux" && "$(basename "$(dirname "$SCRIPT_DIR")")" == "tools" ]]; then
+    SCRIPT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+fi
 CONFIG_FILE="${SCRIPT_DIR}/dinotofu-installer.config.json"
 REPO="${DINOTOFU_REPO:-}"
 ASSET_PATTERN="${DINOTOFU_ASSET_PATTERN:-Dinotofu-Linux-v*.7z}"
@@ -83,6 +86,8 @@ PY_VERSION_COMPARE
 local_version="0.00.00"
 if [[ -f "${INSTALL_DIR}/version.txt" ]]; then
     local_version="$(normalize_version "$(cat "${INSTALL_DIR}/version.txt")")"
+elif [[ -f "${INSTALL_DIR}/scripts/get_version.sh" ]]; then
+    local_version="$(normalize_version "$(bash "${INSTALL_DIR}/scripts/get_version.sh" 2>/dev/null || echo "0.00.00")")"
 fi
 
 installed_runnable_exists() {
@@ -149,6 +154,12 @@ get_desktop_dirs() {
 }
 
 repair_linux_desktop_shortcuts() {
+    local create_sc
+    create_sc="$(read_config_value createDesktopShortcut)"
+    if [[ "$create_sc" == "false" || "$create_sc" == "False" ]]; then
+        return 0
+    fi
+
     mkdir -p "${HOME}/.local/share/applications"
     local gui_icon="${INSTALL_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"
     local terminal_icon="${INSTALL_DIR}/assets/branding/dinotofu_launcher_terminal_512.png"
@@ -156,7 +167,26 @@ repair_linux_desktop_shortcuts() {
     [[ -f "$terminal_icon" ]] || terminal_icon="${INSTALL_DIR}/data/assets/branding/dinotofu_launcher_terminal_512.png"
     [[ -f "$gui_icon" ]] || gui_icon="${INSTALL_DIR}/assets/branding/dinotofu_site_logo_512.png"
     [[ -f "$gui_icon" ]] || gui_icon="${INSTALL_DIR}/data/assets/branding/dinotofu_site_logo_512.png"
+    [[ -f "$gui_icon" ]] || gui_icon="${SCRIPT_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"
     [[ -f "$terminal_icon" ]] || terminal_icon="$gui_icon"
+
+    local launch_exec="${INSTALL_DIR}/Lancer-Dinotofu.sh"
+    if [[ ! -x "$launch_exec" && -x "${INSTALL_DIR}/tools/linux/Lancer-Dinotofu.sh" ]]; then
+        launch_exec="${INSTALL_DIR}/tools/linux/Lancer-Dinotofu.sh"
+    elif [[ ! -x "$launch_exec" && -x "${INSTALL_DIR}/DinotofuLauncher.sh" ]]; then
+        launch_exec="${INSTALL_DIR}/DinotofuLauncher.sh"
+    elif [[ ! -x "$launch_exec" && -x "${INSTALL_DIR}/tools/linux/DinotofuLauncher.sh" ]]; then
+        launch_exec="${INSTALL_DIR}/tools/linux/DinotofuLauncher.sh"
+    elif [[ ! -x "$launch_exec" && -x "${SCRIPT_DIR}/tools/linux/Lancer-Dinotofu.sh" ]]; then
+        launch_exec="${SCRIPT_DIR}/tools/linux/Lancer-Dinotofu.sh"
+    elif [[ ! -x "$launch_exec" && -x "${SCRIPT_DIR}/tools/linux/DinotofuLauncher.sh" ]]; then
+        launch_exec="${SCRIPT_DIR}/tools/linux/DinotofuLauncher.sh"
+    fi
+
+    local run_root="${INSTALL_DIR}"
+    if [[ ! -d "$run_root" || "$(basename "$run_root")" == "linux" ]]; then
+        run_root="${SCRIPT_DIR}"
+    fi
 
     local gui_app="${HOME}/.local/share/applications/projetdinotofu-launcher.desktop"
     local terminal_app="${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop"
@@ -165,23 +195,15 @@ repair_linux_desktop_shortcuts() {
 [Desktop Entry]
 Type=Application
 Name=ProjetDinotofu Launcher
-Comment=Lancer Dinotofu avec le launcher principal
-Exec=${INSTALL_DIR}/Lancer-Dinotofu.sh
+Comment=Lancer Dinotofu (choix Interface Graphique ou Terminal)
+Exec=${launch_exec}
+Path=${run_root}
 Icon=${gui_icon}
-Terminal=false
-Categories=Game;
-DESKTOP
-    cat > "$terminal_app" <<DESKTOP
-[Desktop Entry]
-Type=Application
-Name=ProjetDinotofu Launcher Terminal version
-Comment=Lancer la version terminale de secours de Dinotofu
-Exec=${INSTALL_DIR}/Lancer-Dinotofu-Terminal.sh
-Icon=${terminal_icon}
 Terminal=true
 Categories=Game;
 DESKTOP
-    chmod +x "$gui_app" "$terminal_app" 2>/dev/null || true
+    chmod +x "$gui_app" 2>/dev/null || true
+    rm -f "$terminal_app" 2>/dev/null || true
 
     local desktop_dirs=()
     mapfile -t desktop_dirs < <(get_desktop_dirs || true)
@@ -189,13 +211,11 @@ DESKTOP
     for desktop_dir in "${desktop_dirs[@]}"; do
         [[ -n "$desktop_dir" && -d "$desktop_dir" ]] || continue
         local found_gui="false"
-        local found_terminal="false"
         while IFS= read -r candidate; do
+            [[ -n "$candidate" ]] || continue
             base="$(basename "$candidate")"
-            if [[ "$base" == "ProjetDinotofu Launcher Terminal version.desktop" || "$base" == *Dinotofu*Terminal*.desktop ]] || grep -qi "Lancer-Dinotofu-Terminal.sh" "$candidate" 2>/dev/null; then
-                cp "$terminal_app" "$candidate" || true
-                chmod +x "$candidate" 2>/dev/null || true
-                found_terminal="true"
+            if [[ "$base" == "ProjetDinotofu Launcher Terminal version.desktop" || "$base" == *Terminal* || "$base" == *terminal* ]] || grep -qi "Lancer-Dinotofu-Terminal" "$candidate" 2>/dev/null; then
+                rm -f "$candidate" 2>/dev/null || true
             elif [[ "$base" == "ProjetDinotofu Launcher.desktop" || ( "$base" == *Dinotofu*Launcher*.desktop && "$base" != *Terminal* ) ]] || grep -qi "Lancer-Dinotofu.sh" "$candidate" 2>/dev/null; then
                 cp "$gui_app" "$candidate" || true
                 chmod +x "$candidate" 2>/dev/null || true
@@ -203,8 +223,10 @@ DESKTOP
             fi
         done < <(find "$desktop_dir" -type f -name "*.desktop" 2>/dev/null)
 
-        if [[ "$found_gui" != "true" ]]; then cp "$gui_app" "$desktop_dir/ProjetDinotofu Launcher.desktop" || true; chmod +x "$desktop_dir/ProjetDinotofu Launcher.desktop" 2>/dev/null || true; fi
-        if [[ "$found_terminal" != "true" ]]; then cp "$terminal_app" "$desktop_dir/ProjetDinotofu Launcher Terminal version.desktop" || true; chmod +x "$desktop_dir/ProjetDinotofu Launcher Terminal version.desktop" 2>/dev/null || true; fi
+        if [[ "$found_gui" != "true" ]]; then
+            cp "$gui_app" "$desktop_dir/ProjetDinotofu Launcher.desktop" || true
+            chmod +x "$desktop_dir/ProjetDinotofu Launcher.desktop" 2>/dev/null || true
+        fi
     done
 }
 
@@ -312,6 +334,29 @@ open_url_or_file() {
     fi
 }
 
+stop_dinotofu_background_processes() {
+    local target_dir="${1:-$INSTALL_DIR}"
+    local debug_dir="${target_dir}/gui_debug"
+    if [[ -f "${debug_dir}/server.pid" ]]; then
+        local spid
+        spid="$(cat "${debug_dir}/server.pid" 2>/dev/null || true)"
+        if [[ -n "$spid" && "$spid" =~ ^[0-9]+$ ]]; then
+            kill -TERM "$spid" 2>/dev/null || true
+        fi
+        rm -f "${debug_dir}/server.pid"
+    fi
+    if [[ -f "${debug_dir}/game.pid" ]]; then
+        local gpid
+        gpid="$(cat "${debug_dir}/game.pid" 2>/dev/null || true)"
+        if [[ -n "$gpid" && "$gpid" =~ ^[0-9]+$ ]]; then
+            kill -TERM "$gpid" 2>/dev/null || true
+        fi
+        rm -f "${debug_dir}/game.pid"
+    fi
+    pkill -f "serve_gui_preview.py.*${target_dir}" 2>/dev/null || true
+    pkill -f "${target_dir}/(output/)?Dinotofu" 2>/dev/null || true
+}
+
 start_gui_preview() {
     local gui_debug_dir="${INSTALL_DIR}/gui_debug"
     local gui_root="${INSTALL_DIR}"
@@ -342,6 +387,8 @@ start_gui_preview() {
         local server_err="${gui_debug_dir}/server_stderr.log"
         rm -f "$server_out" "$server_err"
         nohup python3 "$server_script" --root "$gui_root" --port "$port" --gui-debug-dir "$gui_debug_dir" >"$server_out" 2>"$server_err" &
+        local server_pid=$!
+        echo "$server_pid" > "${gui_debug_dir}/server.pid"
         if wait_for_gui_server "$port" 32; then
             open_url_or_file "http://127.0.0.1:${port}/tools/gui/dinotofu_gui_experimental.html"
         else
@@ -370,18 +417,44 @@ find_terminal_executable() {
         printf '%s\n' "${INSTALL_DIR}/Dinotofu"
         return 0
     fi
+    if [[ -x "${SCRIPT_DIR}/output/Dinotofu" ]]; then
+        printf '%s\n' "${SCRIPT_DIR}/output/Dinotofu"
+        return 0
+    fi
+    if [[ -x "${SCRIPT_DIR}/Dinotofu" ]]; then
+        printf '%s\n' "${SCRIPT_DIR}/Dinotofu"
+        return 0
+    fi
+    if [[ -f "${SCRIPT_DIR}/Makefile" ]] && command -v make >/dev/null 2>&1; then
+        echo "==> Binaire introuvable. Compilation locale de Dinotofu via make..." >&2
+        if make -C "${SCRIPT_DIR}" >/dev/null 2>&1; then
+            if [[ -x "${SCRIPT_DIR}/output/Dinotofu" ]]; then
+                printf '%s\n' "${SCRIPT_DIR}/output/Dinotofu"
+                return 0
+            fi
+        fi
+    fi
     return 1
 }
 
 launch_terminal() {
     local executable
     if executable="$(find_terminal_executable)"; then
-        cd "$INSTALL_DIR"
-        exec "$executable"
+        local run_dir="$(dirname "$executable")"
+        if [[ "$(basename "$run_dir")" == "output" ]]; then
+            run_dir="$(dirname "$run_dir")"
+        fi
+        cd "$run_dir"
+        trap 'exit 0' INT TERM
+        "$executable" "$@" || true
+        exit 0
     fi
 
     echo "Impossible de trouver l'executable terminal Dinotofu." >&2
     echo "Chemins attendus : ${INSTALL_DIR}/output/Dinotofu ou ${INSTALL_DIR}/Dinotofu" >&2
+    if [[ -t 0 ]]; then
+        read -r -p "Appuie sur Entree pour fermer..." _ || true
+    fi
     exit 1
 }
 
@@ -391,10 +464,34 @@ launch_hidden_gui_backend() {
         return 1
     fi
 
-    cd "$INSTALL_DIR"
-    nohup "$executable" >"${INSTALL_DIR}/gui_debug/game_stdout.log" 2>"${INSTALL_DIR}/gui_debug/game_stderr.log" &
+    local run_dir="$(dirname "$executable")"
+    if [[ "$(basename "$run_dir")" == "output" ]]; then
+        run_dir="$(dirname "$run_dir")"
+    fi
+    cd "$run_dir"
+    mkdir -p "${run_dir}/gui_debug"
+    nohup "$executable" >"${run_dir}/gui_debug/game_stdout.log" 2>"${run_dir}/gui_debug/game_stderr.log" &
+    local game_pid=$!
+    echo "$game_pid" > "${run_dir}/gui_debug/game.pid"
     return 0
 }
+
+if [[ "$LAUNCH_MODE" == "auto" && -t 0 ]]; then
+    echo ""
+    echo "================================================="
+    echo " Dinotofu - Choix du mode de lancement"
+    echo "================================================="
+    echo "  1. Interface Graphique (GUI / Navigateur web)"
+    echo "  2. Mode Terminal (Classique dans la console)"
+    echo "================================================="
+    read -r -p "Choix [1 ou 2, Defaut = 1] : " user_choice || true
+    if [[ "$user_choice" == "2" ]]; then
+        LAUNCH_MODE="terminal"
+    else
+        LAUNCH_MODE="gui"
+    fi
+    echo ""
+fi
 
 if [[ "$LAUNCH_MODE" != "terminal" ]]; then
     for candidate in \
@@ -404,13 +501,42 @@ if [[ "$LAUNCH_MODE" != "terminal" ]]; then
         "${INSTALL_DIR}/DinotofuGui"; do
         if [[ -x "$candidate" ]]; then
             cd "$INSTALL_DIR"
-            exec "$candidate"
+            trap 'exit 0' INT TERM
+            "$candidate" "$@" || true
+            exit 0
         fi
     done
 
+    stop_dinotofu_background_processes "$INSTALL_DIR"
     if start_gui_preview; then
-        launch_hidden_gui_backend || launch_terminal
-        exit 0
+        if launch_hidden_gui_backend; then
+            echo ""
+            echo "================================================="
+            echo " Dinotofu - Session Interface Graphique active"
+            echo "================================================="
+            echo "  Moteur de jeu Dinotofu actif en arriere-plan."
+            echo ""
+            echo "  Pour arreter le jeu et fermer la session :"
+            echo "  Appuie sur Entree (ou fais Ctrl+C dans cette console)."
+            echo "================================================="
+            cleanup_gui_session() {
+                trap - INT TERM EXIT
+                echo ""
+                echo "==> Arret des processus en arriere-plan..."
+                stop_dinotofu_background_processes "$INSTALL_DIR"
+                exit 0
+            }
+            trap cleanup_gui_session INT TERM EXIT
+            if [[ -t 0 ]]; then
+                read -r -p "Appuie sur Entree pour arreter Dinotofu : " _ || true
+            else
+                wait 2>/dev/null || true
+            fi
+            cleanup_gui_session
+        else
+            launch_terminal
+            exit 0
+        fi
     fi
 
     if [[ "$LAUNCH_MODE" == "gui" ]]; then

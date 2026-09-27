@@ -21,15 +21,20 @@ cat > "$DEST/INSTALLATION.txt" <<TXT
  DINOTOFU - INSTALLATION ${PLATFORM}
 ============================================================
 
-Le fichier d'installation se trouve a la racine du pack.
-Il telecharge automatiquement la derniere archive de jeu compatible depuis GitHub,
-puis installe/met a jour ProjetDinotofu en preservant les donnees joueur connues.
+Le fichier d'installation et les lanceurs se trouvent a la racine du dossier.
 
-Les archives nommees Dinotofu-${PLATFORM}-vX.YY.ZZ.7z publiees sur GitHub sont les
-payloads techniques utilises par l'installateur et l'updater. Pour une installation
-normale, telecharge de preference le pack Installer-Dinotofu-${PLATFORM}-vX.YY.ZZ.7z.
+Pour jouer directement sans installer :
+- Windows : double-clique sur Lancer-Dinotofu.cmd
+- Linux   : execute ./Lancer-Dinotofu.sh
 
-En cas de grosse mise a jour de sauvegarde, le jeu peut imposer un checkpoint avec
-backup de securite avant adaptation. Ne supprime pas manuellement les dossiers de
-sauvegarde pendant une mise a jour.
+Le lanceur vous demande au demarrage de choisir :
+  1. Interface Graphique (GUI / Navigateur web)
+  2. Mode Terminal (Classique dans la console)
+
+Pour installer le jeu dans votre profil et configurer un raccourci Bureau :
+- Windows : execute Installer-Dinotofu.cmd
+- Linux   : execute ./Installer-Dinotofu.sh
+
+L'installateur vous demande si vous voulez creer un raccourci sur le Bureau.
+En cas de mise a jour, vos donnees joueur (sauvegardes, comptes) sont preservees.
 TXT

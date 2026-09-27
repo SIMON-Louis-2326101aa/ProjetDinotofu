@@ -2,14 +2,14 @@
   "name": "Dinotofu",
   "version": "3.50.12",
   "releaseTag": "v3.50.12",
-  "assetPattern": "Installer-Dinotofu-Windows-v3.50.12.7z",
-  "notes": "V3.50.11 sépare version du jeu, saveVersion et checkpoint, fiabilise les releases GitHub et ajoute des packs installateur propres.",
+  "assetPattern": "Dinotofu-Windows-v3.50.12.zip",
+  "notes": "V3.50.12 simplifie la distribution avec un seul package complet par OS (ZIP haute compression pour Windows et 7Z pour Linux).",
   "installerAssets": {
-    "windows": "Installer-Dinotofu-Windows-v3.50.12.7z",
-    "linux": "Installer-Dinotofu-Linux-v3.50.12.7z"
+    "windows": "Dinotofu-Windows-v3.50.12.zip",
+    "linux": "Dinotofu-Linux-v3.50.12.7z"
   },
   "updaterPayloads": {
-    "windows": "Dinotofu-Windows-v3.50.12.7z",
+    "windows": "Dinotofu-Windows-v3.50.12.zip",
     "linux": "Dinotofu-Linux-v3.50.12.7z"
   }
 }

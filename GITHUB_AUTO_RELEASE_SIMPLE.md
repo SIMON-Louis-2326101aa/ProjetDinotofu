@@ -59,22 +59,12 @@ gh workflow run release-dinotofu.yml --ref main -f force_release=true
 
 ## Assets publiés   
 
-Les joueurs doivent télécharger de préférence :   
+Chaque release publie désormais exactement un package complet et autonome par système d'exploitation :   
 
-- `Installer-Dinotofu-Windows-vX.YY.ZZ.7z` ;   
-- `Installer-Dinotofu-Linux-vX.YY.ZZ.7z`.   
+- `Dinotofu-Windows-vX.YY.ZZ.zip` (Windows, format ZIP natif haute compression décompressable sans logiciel tiers) ;   
+- `Dinotofu-Linux-vX.YY.ZZ.7z` (Linux, format 7z compression maximale LZMA2).   
 
-Après extraction, chacun de ces packs contient volontairement seulement :   
-
-- le fichier d'installation ;   
-- `Documentation/` avec les TXT importants.   
-
-La release conserve également :   
-
-- `Dinotofu-Windows-vX.YY.ZZ.7z` ;   
-- `Dinotofu-Linux-vX.YY.ZZ.7z`.   
-
-Ces deux archives sont les **payloads techniques** utilisés par l'installateur et l'updater. Elles restent nécessaires pour la compatibilité des anciennes installations, même si les joueurs normaux n'ont plus besoin de les manipuler directement.   
+Chaque package contient directement l'exécutable, les scripts de lancement et d'installation, ainsi que la documentation. Les joueurs n'ont plus à hésiter entre plusieurs archives cliquables.   
 
 ## Si rien ne démarre après le push   
 

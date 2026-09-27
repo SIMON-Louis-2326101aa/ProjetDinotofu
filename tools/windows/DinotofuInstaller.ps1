@@ -33,8 +33,18 @@ function Get-LooseJsonStringValue {
     return ($value -replace '\\\\','\')
 }
 
+$defaultRoot = $PSScriptRoot
+try {
+    if ((Split-Path -Path $PSScriptRoot -Leaf) -ieq "windows" -and (Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Leaf) -ieq "tools") {
+        $defaultRoot = Split-Path -Path (Split-Path -Path $PSScriptRoot -Parent) -Parent
+    }
+} catch { }
+
 function Load-Config {
     $configPath = Join-Path $PSScriptRoot "dinotofu-installer.config.json"
+    if (-not (Test-Path $configPath)) {
+        $configPath = Join-Path $defaultRoot "dinotofu-installer.config.json"
+    }
     if (-not (Test-Path $configPath)) { return $null }
 
     $rawConfig = Get-Content $configPath -Raw
@@ -161,16 +171,51 @@ function Get-LatestRelease {
 
 function Select-ReleaseAsset {
     param($Release, [string]$Pattern)
-    $asset = $Release.assets | Where-Object { $_.name -like $Pattern } | Select-Object -First 1
-    if (-not $asset) {
-        $fallbackPattern = if ($Pattern -like "*.7z") { ($Pattern -replace '\.7z$', '.zip') } else { ($Pattern -replace '\.zip$', '.7z') }
-        $asset = $Release.assets | Where-Object { $_.name -like $fallbackPattern } | Select-Object -First 1
+
+    if (-not $Release -or -not $Release.assets) {
+        throw "La reponse GitHub ne contient aucun fichier de release."
     }
-    if (-not $asset) {
-        $available = ($Release.assets | ForEach-Object { $_.name }) -join ", "
-        throw "Aucun fichier de release ne correspond a '$Pattern'. Fichiers disponibles : $available"
+
+    # 1. Nettoyage si l'etoile a ete perdue ou pattern incomplet
+    $cleanPattern = $Pattern
+    if ($cleanPattern -match '^Dinotofu-Windows-v\.(zip|7z)$') {
+        $cleanPattern = "Dinotofu-Windows-v*.$($Matches[1])"
     }
-    return $asset
+    elseif ($cleanPattern -match '^Dinotofu-Linux-v\.(zip|7z)$') {
+        $cleanPattern = "Dinotofu-Linux-v*.$($Matches[1])"
+    }
+
+    # 2. Test avec le pattern principal
+    $asset = $Release.assets | Where-Object { $_.name -like $cleanPattern } | Select-Object -First 1
+    if ($asset) { return $asset }
+
+    # 3. Bascule automatique entre .zip et .7z
+    $fallbackPattern = if ($cleanPattern -like "*.7z") { 
+        ($cleanPattern -replace '\.7z$', '.zip') 
+    } else { 
+        ($cleanPattern -replace '\.zip$', '.7z') 
+    }
+    $asset = $Release.assets | Where-Object { $_.name -like $fallbackPattern } | Select-Object -First 1
+    if ($asset) { return $asset }
+
+    # 4. Fallback universel sur n'importe quel package Windows officiel
+    $globalCandidates = @(
+        "Dinotofu-Windows-v*.zip",
+        "Dinotofu-Windows-v*.7z",
+        "Dinotofu-Windows*.zip",
+        "Dinotofu-Windows*.7z"
+    )
+    foreach ($cand in $globalCandidates) {
+        $asset = $Release.assets | Where-Object { $_.name -like $cand } | Select-Object -First 1
+        if ($asset) { return $asset }
+    }
+
+    # 5. Dernier recours : toute archive Windows du jeu (hors Installer-*)
+    $asset = $Release.assets | Where-Object { $_.name -like "*Windows*" -and $_.name -notlike "*Installer*" -and ($_.name -like "*.zip" -or $_.name -like "*.7z") } | Select-Object -First 1
+    if ($asset) { return $asset }
+
+    $available = ($Release.assets | ForEach-Object { $_.name }) -join ", "
+    throw "Aucun fichier de release compatible trouve pour Windows. Fichiers disponibles : $available`nTelecharge directement l'archive sur : https://github.com/$Repo/releases/latest"
 }
 
 function Download-WithProgress {
@@ -210,7 +255,10 @@ function Write-NetworkRecoveryHelp {
     Write-Host "Impossible de contacter GitHub pour telecharger Dinotofu." -ForegroundColor Yellow
     Write-Host "Verifie ta connexion Internet, ton DNS, ton proxy ou ton pare-feu, puis relance l'installateur."
     Write-Host "Teste aussi l'ouverture de https://github.com dans ton navigateur."
-    Write-Host "Si GitHub est bloque mais que tu as deja l'archive du jeu, place Dinotofu-Windows-vX.YY.ZZ.7z (ou .zip) a cote de cet installateur et relance-le."
+    Write-Host ""
+    Write-Host "Astuce : Tu peux telecharger directement la derniere archive de jeu depuis GitHub :" -ForegroundColor Cyan
+    Write-Host "https://github.com/$Repo/releases/latest" -ForegroundColor Cyan
+    Write-Host "Place ensuite le fichier (.zip ou .7z) a cote de cet installateur ou decompresse-le dans ton dossier de jeu."
     if (-not [string]::IsNullOrWhiteSpace($Detail)) {
         Write-Host "Detail technique : $Detail" -ForegroundColor DarkYellow
     }
@@ -225,22 +273,16 @@ function Expand-ArchiveAny {
     New-Item -ItemType Directory -Path $DestinationPath -Force | Out-Null
 
     if ($Path -like "*.zip") {
-        Expand-Archive -Path $Path -DestinationPath $DestinationPath -Force
-        return
+        try {
+            Expand-Archive -Path $Path -DestinationPath $DestinationPath -Force
+            return
+        }
+        catch {
+            # Si Expand-Archive rencontre une difficulte, fallback vers tar/7z ci-dessous
+        }
     }
 
-    # 1. Native Windows 10/11 tar.exe (libarchive with 7z support)
-    $tarCmd = Get-Command "tar.exe" -ErrorAction SilentlyContinue
-    if (-not $tarCmd -and (Test-Path "$env:SystemRoot\System32\tar.exe")) {
-        $tarCmd = "$env:SystemRoot\System32\tar.exe"
-    }
-    if ($tarCmd) {
-        $tarPath = if ($tarCmd -is [string]) { $tarCmd } else { $tarCmd.Source }
-        & $tarPath -xf $Path -C $DestinationPath
-        if ($LASTEXITCODE -eq 0) { return }
-    }
-
-    # 2. 7z.exe if installed
+    # 1. 7z.exe installe sur le systeme
     $sevenZip = Get-Command "7z.exe" -ErrorAction SilentlyContinue
     if (-not $sevenZip) {
         $common7z = @(
@@ -257,12 +299,23 @@ function Expand-ArchiveAny {
         if ($LASTEXITCODE -eq 0) { return }
     }
 
+    # 2. tar.exe natif Windows (si disponible et compatible)
+    $tarCmd = Get-Command "tar.exe" -ErrorAction SilentlyContinue
+    if (-not $tarCmd -and (Test-Path "$env:SystemRoot\System32\tar.exe")) {
+        $tarCmd = "$env:SystemRoot\System32\tar.exe"
+    }
+    if ($tarCmd) {
+        $tarPath = if ($tarCmd -is [string]) { $tarCmd } else { $tarCmd.Source }
+        & $tarPath -xf $Path -C $DestinationPath 2>$null
+        if ($LASTEXITCODE -eq 0) { return }
+    }
+
     try {
         Expand-Archive -Path $Path -DestinationPath $DestinationPath -Force
         return
     }
     catch {
-        throw "Impossible d'extraire $Path. Windows 10/11 integre nativement tar.exe pour les .7z, sinon installe 7-Zip (https://www.7-zip.org/)."
+        throw "Impossible d'extraire $Path. Windows integre nativement le support des fichiers .zip (Expand-Archive). Pour les fichiers .7z, installe 7-Zip (https://www.7-zip.org/)."
     }
 }
 
@@ -271,7 +324,7 @@ function Find-LocalReleaseZip {
 
     $patterns = @()
     if (-not [string]::IsNullOrWhiteSpace($Pattern)) { $patterns += $Pattern }
-    $patterns += @("Dinotofu-Windows-v*.7z", "Dinotofu-Windows-*.7z", "Dinotofu-Windows-v*.zip", "Dinotofu-Windows-*.zip")
+    $patterns += @("Dinotofu-Windows-v*.zip", "Dinotofu-Windows-*.zip", "Dinotofu-Windows-v*.7z", "Dinotofu-Windows-*.7z")
     $patterns = $patterns | Select-Object -Unique
 
     $searchDirs = @($PSScriptRoot)
@@ -371,11 +424,15 @@ function Stop-DinotofuBackgroundProcesses {
 }
 
 function Write-InstalledConfig {
-    param([string]$TargetDir)
+    param(
+        [string]$TargetDir,
+        [bool]$CreateShortcut = $true
+    )
     $configObject = [ordered]@{
         repo = $Repo
         assetPattern = $AssetPattern
         installDir = $TargetDir
+        createDesktopShortcut = $CreateShortcut
     }
     $configObject | ConvertTo-Json | Set-Content -Path (Join-Path $TargetDir "dinotofu-installer.config.json") -Encoding UTF8
 }
@@ -454,10 +511,24 @@ function Create-DesktopShortcut {
 
 function Get-DesktopDirectories {
     $dirs = @()
+
+    # 1. Registre Windows User Shell Folders (crucial pour OneDrive et bureaux deplaces)
+    try {
+        $regDesktop = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "Desktop" -ErrorAction SilentlyContinue).Desktop
+        if (-not [string]::IsNullOrWhiteSpace($regDesktop)) {
+            $expandedReg = [Environment]::ExpandEnvironmentVariables($regDesktop)
+            if (Test-Path $expandedReg) { $dirs += $expandedReg }
+        }
+    }
+    catch { }
+
+    # 2. Dossier special standard
     $envDesktop = [Environment]::GetFolderPath("Desktop")
     if (-not [string]::IsNullOrWhiteSpace($envDesktop) -and (Test-Path $envDesktop)) {
         $dirs += $envDesktop
     }
+
+    # 3. Shell.Application shell:Desktop
     try {
         $shell = New-Object -ComObject Shell.Application
         $folder = $shell.Namespace("shell:Desktop")
@@ -466,12 +537,23 @@ function Get-DesktopDirectories {
         }
     }
     catch { }
+
+    # 4. Chemins standards du profil utilisateur (Desktop, Bureau, OneDrive)
     if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
-        $profileDesktop = Join-Path $env:USERPROFILE "Desktop"
-        if (Test-Path $profileDesktop) {
-            $dirs += $profileDesktop
+        foreach ($name in @("Desktop", "Bureau", "OneDrive\Desktop", "OneDrive\Bureau")) {
+            $candidate = Join-Path $env:USERPROFILE $name
+            if (Test-Path $candidate) { $dirs += $candidate }
         }
     }
+
+    # 5. Variable d'environnement OneDrive explicite
+    if (-not [string]::IsNullOrWhiteSpace($env:OneDrive)) {
+        foreach ($name in @("Desktop", "Bureau")) {
+            $candidate = Join-Path $env:OneDrive $name
+            if (Test-Path $candidate) { $dirs += $candidate }
+        }
+    }
+
     $unique = @($dirs | Select-Object -Unique)
     if ($unique.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($envDesktop)) {
         return @($envDesktop)
@@ -575,12 +657,16 @@ function Repair-DinotofuDesktopShortcuts {
     if (-not (Test-Path $guiIconPath)) { $guiIconPath = $fallbackIconPath }
     if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
 
-    Write-Step "Reparation des raccourcis bureau Dinotofu"
+    Write-Step "Creation / reparation du raccourci bureau Dinotofu"
+    # Un unique lanceur propre sur le bureau : ProjetDinotofu Launcher (qui proposera le choix GUI ou Terminal au lancement)
     $guiTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher" -TargetPath $normalLauncherCmd -IconPath $guiIconPath -ExpectedTargetFile "Lancer-Dinotofu.cmd"
-    $terminalTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher Terminal version" -TargetPath $terminalLauncherEntry -IconPath $terminalIconPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" -TerminalShortcut
-
     foreach ($shortcutPath in $guiTargets) { Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu.cmd" | Out-Null }
-    foreach ($shortcutPath in $terminalTargets) { Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" | Out-Null }
+
+    # Nettoyage de l'ancien raccourci terminal doublon sur le bureau s'il etait present pour eviter la surcharge de cliquables
+    $oldTerminalTargets = Get-DinotofuShortcutCandidates -DisplayName "ProjetDinotofu Launcher Terminal version" -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" -TerminalShortcut
+    foreach ($oldLnk in $oldTerminalTargets) {
+        Remove-Item -Path $oldLnk -Force -ErrorAction SilentlyContinue
+    }
 }
 
 $config = Load-Config
@@ -598,11 +684,21 @@ if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = Join-Path (Get-De
 if (-not $installDirFromArgument) { $InstallDir = Ask-InstallDir $InstallDir } else { $InstallDir = Normalize-ProjectInstallDir $InstallDir }
 if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.7z" }
 
-$localGameExists = (Test-Path (Join-Path $PSScriptRoot "Dinotofu.exe")) -and ((Test-Path (Join-Path $PSScriptRoot "assets")) -or (Test-Path (Join-Path $PSScriptRoot "data\assets")))
+$localSourceDir = $PSScriptRoot
+$localExe = Join-Path $PSScriptRoot "Dinotofu.exe"
+if (-not (Test-Path $localExe)) {
+    $localExe = Join-Path $defaultRoot "Dinotofu.exe"
+    if (Test-Path $localExe) { $localSourceDir = $defaultRoot }
+    else {
+        $localExe = Join-Path $defaultRoot "output\Dinotofu.exe"
+        if (Test-Path $localExe) { $localSourceDir = $defaultRoot }
+    }
+}
+$localGameExists = (Test-Path $localExe) -and ((Test-Path (Join-Path $localSourceDir "assets")) -or (Test-Path (Join-Path $defaultRoot "assets")) -or (Test-Path (Join-Path $localSourceDir "data\assets")))
 $tempRoot = Join-Path $env:TEMP "DinotofuInstall"
 $backupDir = Join-Path $tempRoot "player_data_backup"
 
-if ($localGameExists -and ($InstallDir -ieq $PSScriptRoot)) {
+if ($localGameExists -and ($InstallDir -ieq $localSourceDir)) {
     Write-Host "Dinotofu est deja dans son dossier d'execution : $InstallDir"
     Write-Host "Configuration et creation des raccourcis bureau..."
     Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
@@ -612,14 +708,14 @@ if ($localGameExists -and ($InstallDir -ieq $PSScriptRoot)) {
     }
 }
 elseif ($localGameExists) {
-    Write-Host "Installation depuis le dossier local du jeu : $PSScriptRoot -> $InstallDir"
+    Write-Host "Installation depuis le dossier local du jeu : $localSourceDir -> $InstallDir"
     Remove-Item $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Path $tempRoot, $backupDir | Out-Null
     Backup-PlayerData -FromDir $InstallDir -BackupDir $backupDir
     Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
     Start-Sleep -Milliseconds 400
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-    Copy-Item -Path (Join-Path $PSScriptRoot "*") -Destination $InstallDir -Recurse -Force
+    Copy-Item -Path (Join-Path $localSourceDir "*") -Destination $InstallDir -Recurse -Force
     Restore-PlayerData -BackupDir $backupDir -ToDir $InstallDir
     Write-InstalledConfig -TargetDir $InstallDir
 }
@@ -710,8 +806,17 @@ else {
 
 $launcherPath = Join-Path $InstallDir "DinotofuLauncher.ps1"
 if (-not (Test-Path $launcherPath)) {
-    $localLauncher = Join-Path $PSScriptRoot "DinotofuLauncher.ps1"
-    if (Test-Path $localLauncher) { Copy-Item $localLauncher $launcherPath -Force }
+    $candidates = @(
+        (Join-Path $PSScriptRoot "DinotofuLauncher.ps1"),
+        (Join-Path $defaultRoot "DinotofuLauncher.ps1"),
+        (Join-Path $defaultRoot "tools\windows\DinotofuLauncher.ps1")
+    )
+    foreach ($cand in $candidates) {
+        if (Test-Path $cand) {
+            Copy-Item $cand $launcherPath -Force
+            break
+        }
+    }
 }
 
 if (Test-Path $launcherPath) {
@@ -721,7 +826,19 @@ if (Test-Path $launcherPath) {
     if (-not (Test-Path $normalLauncherCmd)) { Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto" }
     if (-not (Test-Path $terminalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal" }
 
-    Repair-DinotofuDesktopShortcuts -RootDir $InstallDir
+    $createDesktopShortcut = $true
+    if (-not $NoPrompt -and [Environment]::UserInteractive) {
+        Write-Host ""
+        $createShortcutAnswer = Read-Host "Voulez-vous creer un raccourci sur le Bureau ? (O/n) [Defaut: O]"
+        $createDesktopShortcut = [string]::IsNullOrWhiteSpace($createShortcutAnswer) -or ($createShortcutAnswer -match '^[oOyY]')
+    }
+    if ($createDesktopShortcut) {
+        Repair-DinotofuDesktopShortcuts -RootDir $InstallDir
+    }
+    else {
+        Write-Host "Creation du raccourci bureau ignoree a la demande de l'utilisateur."
+    }
+    Write-InstalledConfig -TargetDir $InstallDir -CreateShortcut $createDesktopShortcut
 }
 else {
     Write-Warning "Launcher introuvable. Installation faite, mais aucun raccourci n'a ete cree."

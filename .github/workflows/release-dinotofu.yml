@@ -54,9 +54,7 @@ jobs:
           REASON=""
 
           REQUIRED_ASSETS=(
-            "Installer-Dinotofu-Windows-v${VERSION}.7z"
-            "Installer-Dinotofu-Linux-v${VERSION}.7z"
-            "Dinotofu-Windows-v${VERSION}.7z"
+            "Dinotofu-Windows-v${VERSION}.zip"
             "Dinotofu-Linux-v${VERSION}.7z"
           )
 
@@ -150,13 +148,11 @@ jobs:
           DINOTOFU_REPO: ${{ github.repository }}
         run: ./scripts/package_linux_release.sh
 
-      - name: Upload Linux release artifacts
+      - name: Upload Linux release artifact
         uses: actions/upload-artifact@v4
         with:
           name: Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}
-          path: |
-            release_packages/Installer-Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}.7z
-            release_packages/Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}.7z
+          path: release_packages/Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}.7z
           if-no-files-found: error
 
   build-windows:
@@ -182,13 +178,11 @@ jobs:
           DINOTOFU_REPO: ${{ github.repository }}
         run: ./scripts/package_windows_release.sh
 
-      - name: Upload Windows release artifacts
+      - name: Upload Windows release artifact
         uses: actions/upload-artifact@v4
         with:
           name: Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}
-          path: |
-            release_packages/Installer-Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}.7z
-            release_packages/Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}.7z
+          path: release_packages/Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}.zip
           if-no-files-found: error
 
   publish-release:
@@ -215,9 +209,9 @@ jobs:
 
           mkdir -p release_upload
           ls -la release_upload
-          files=(release_upload/*.7z)
+          files=(release_upload/*.7z release_upload/*.zip)
           if (( ${#files[@]} == 0 )); then
-            echo "::error::Aucun fichier .7z trouve dans release_upload. Publication annulee."
+            echo "::error::Aucun fichier .7z ou .zip trouve dans release_upload. Publication annulee."
             exit 1
           fi
 
@@ -228,20 +222,15 @@ jobs:
 
           Raison : ${RELEASE_REASON}
 
-          Fichiers conseilles aux joueurs :
-          - Installer-Dinotofu-Windows-v${RELEASE_VERSION}.7z
-          - Installer-Dinotofu-Linux-v${RELEASE_VERSION}.7z
+          Fichiers disponibles :
+          - Dinotofu-Windows-v${RELEASE_VERSION}.zip : Version Windows (Archive standard ZIP - decompresse et joue directement sans outil tiers !)
+          - Dinotofu-Linux-v${RELEASE_VERSION}.7z : Version Linux (Archive 7z LZMA2)
 
-          Ces packs ont une racine volontairement propre : un seul fichier d'installation + Documentation/.
-
-          Payloads techniques utilises par l'installateur et l'updater (ne pas supprimer de la release) :
-          - Dinotofu-Windows-v${RELEASE_VERSION}.7z
-          - Dinotofu-Linux-v${RELEASE_VERSION}.7z
-
-          Installation :
-          1. Telecharge le pack Installer correspondant a ton systeme.
-          2. Decompresse-le.
-          3. Lance Installer-Dinotofu.cmd (Windows) ou ./Installer-Dinotofu.sh (Linux).
+          Lancement rapide :
+          1. Telecharge le fichier correspondant a ton systeme.
+          2. Decompresse l'archive où tu veux (Explorateur de fichiers Windows ou 7-Zip).
+          3. Lance Lancer-Dinotofu (qui propose au choix l'Interface Graphique ou le Mode Terminal) !
+          4. Si tu souhaites creer un raccourci sur ton bureau, lance Installer-Dinotofu.
           EOF
 
           if gh release view "${RELEASE_TAG}" --repo "${GH_REPO}" >/dev/null 2>&1; then

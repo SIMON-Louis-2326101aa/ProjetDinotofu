@@ -29,8 +29,6 @@ REPO_NAME="$(detect_repo_name)"
 PACKAGE_DIR="release_packages"
 STAGING_DIR="${PACKAGE_DIR}/Dinotofu-Linux-v${VERSION}"
 PACKAGE_PATH="${PACKAGE_DIR}/Dinotofu-Linux-v${VERSION}.7z"
-INSTALLER_STAGING_DIR="${PACKAGE_DIR}/Installer-Dinotofu-Linux-v${VERSION}"
-INSTALLER_PACKAGE_PATH="${PACKAGE_DIR}/Installer-Dinotofu-Linux-v${VERSION}.7z"
 
 write_installer_config_json() {
     local target_file="$1"
@@ -52,7 +50,7 @@ PY_JSON
 }
 
 mkdir -p "${PACKAGE_DIR}"
-rm -rf "${STAGING_DIR}" "${PACKAGE_PATH}" "${INSTALLER_STAGING_DIR}" "${INSTALLER_PACKAGE_PATH}"
+rm -rf "${STAGING_DIR}" "${PACKAGE_PATH}"
 
 make clean >/dev/null 2>&1 || true
 make -j"$(nproc 2>/dev/null || echo 2)" TARGET_ARCH="${TARGET_ARCH:-x86-64}" OPT_LEVEL="${OPT_LEVEL:--O3}" LDFLAGS="-s"
@@ -87,43 +85,7 @@ chmod +x "${STAGING_DIR}/Dinotofu" "${STAGING_DIR}/Installer-Dinotofu.sh" "${STA
         -xr!*.o -xr!*.d -xr!*.log -xr!*.tmp
 )
 
-# -----------------------------------------------------------------------------
-# Clean player-facing installer pack: exactly one installer + Documentation/.
-# The installer downloads the technical payload above from GitHub Releases.
-# -----------------------------------------------------------------------------
-mkdir -p "${INSTALLER_STAGING_DIR}/Documentation"
-cp tools/linux/DinotofuInstaller.sh "${INSTALLER_STAGING_DIR}/Installer-Dinotofu.sh"
-chmod +x "${INSTALLER_STAGING_DIR}/Installer-Dinotofu.sh" || true
-bash ./scripts/stage_release_documentation.sh "${INSTALLER_STAGING_DIR}/Documentation" "Linux"
-cat > "${INSTALLER_STAGING_DIR}/Documentation/LISEZ-MOI.txt" <<TXT
-DINOTOFU Linux V${VERSION}
-
-1. Decompresse ce pack.
-2. Lance ./Installer-Dinotofu.sh
-3. L'installateur telecharge automatiquement le payload Dinotofu-Linux-v*.7z
-   depuis ${REPO_NAME}, preserve les sauvegardes connues et cree les raccourcis.
-
-La racine de ce pack est volontairement propre : un seul fichier d'installation
-et le dossier Documentation/.
-TXT
-
-# Guard the player-facing installer layout against future root clutter.
-mapfile -t installer_root_entries < <(find "${INSTALLER_STAGING_DIR}" -mindepth 1 -maxdepth 1 -printf '%f\n' | sort)
-[[ "${#installer_root_entries[@]}" -eq 2 ]] || { echo "Pack installateur invalide : la racine doit contenir exactement 2 entrees." >&2; printf '%s\n' "${installer_root_entries[@]}" >&2; exit 1; }
-printf '%s\n' "${installer_root_entries[@]}" | grep -Fxq 'Installer-Dinotofu.sh' || { echo "Fichier installateur manquant : Installer-Dinotofu.sh" >&2; exit 1; }
-printf '%s\n' "${installer_root_entries[@]}" | grep -Fxq 'Documentation' || { echo "Dossier Documentation manquant." >&2; exit 1; }
-if find "${INSTALLER_STAGING_DIR}/Documentation" -type f ! -name '*.txt' | grep -q .; then
-    echo "Documentation du pack installateur : seuls les .txt sont autorises." >&2
-    exit 1
-fi
-
-(
-    cd "${PACKAGE_DIR}"
-    7z a -t7z -m0=lzma2 -mx=9 -ms=on "$(basename "${INSTALLER_PACKAGE_PATH}")" "$(basename "${INSTALLER_STAGING_DIR}")"
-)
-
-rm -rf "${STAGING_DIR}" "${INSTALLER_STAGING_DIR}"
+rm -rf "${STAGING_DIR}"
 make clean >/dev/null 2>&1 || true
 
-echo "Payload Linux cree : ${PACKAGE_PATH}"
-echo "Pack installateur Linux cree : ${INSTALLER_PACKAGE_PATH}"
+echo "Release Linux créée : ${PACKAGE_PATH}"
