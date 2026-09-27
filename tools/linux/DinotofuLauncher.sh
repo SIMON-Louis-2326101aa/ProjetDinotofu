@@ -44,7 +44,10 @@ normalize_project_dir() {
 }
 
 if [[ -z "$REPO" ]]; then REPO="$(read_config_value repo)"; fi
-if [[ -z "$REPO" ]]; then REPO="SIMON-Louis-2326101aa/ProjetDinotofu"; fi
+# Legacy packages used a placeholder repo. Treat it as unconfigured so old installs can update again.
+if [[ -z "$REPO" || "$REPO" == "TON_COMPTE/TON_REPO" || "$REPO" != */* ]]; then
+    REPO="SIMON-Louis-2326101aa/ProjetDinotofu"
+fi
 configured_pattern="$(read_config_value assetPattern)"
 [[ -z "$configured_pattern" ]] || ASSET_PATTERN="$configured_pattern"
 if [[ "$INSTALL_DIR_FROM_ARG" == "true" ]]; then
@@ -55,6 +58,26 @@ fi
 
 normalize_version() {
     echo "${1#v}" | tr -d '[:space:]'
+}
+
+version_is_older() {
+    local local_version_text="$1"
+    local remote_version_text="$2"
+    python3 - "$local_version_text" "$remote_version_text" <<'PY_VERSION_COMPARE' >/dev/null 2>&1
+import re
+import sys
+
+def parse(value):
+    value = value.strip().lstrip('vV')
+    if not re.fullmatch(r'\d+(?:\.\d+){0,2}', value):
+        return (0, 0, 0)
+    parts = [int(part) for part in value.split('.')]
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts[:3])
+
+sys.exit(0 if parse(sys.argv[1]) < parse(sys.argv[2]) else 1)
+PY_VERSION_COMPARE
 }
 
 local_version="0.00.00"
@@ -196,8 +219,8 @@ with open(sys.argv[1], encoding='utf-8') as f:
 PY
 )"
         remote_version="$(normalize_version "$remote_tag")"
-        if [[ -n "$remote_version" && "$remote_version" != "$local_version" ]]; then
-            echo "Mise a jour disponible : ${local_version} -> ${remote_version}"
+        if [[ -n "$remote_version" ]] && version_is_older "$local_version" "$remote_version"; then
+            echo "Mise a jour obligatoire disponible : ${local_version} -> ${remote_version}"
             if run_installer_repair; then
                 UPDATE_APPLIED="true"
             fi

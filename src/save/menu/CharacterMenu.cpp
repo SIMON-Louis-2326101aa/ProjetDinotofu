@@ -198,10 +198,14 @@ namespace
         VersionCompatibilityImpact impact = VersionInfo::evaluateCompatibility(character.lastAdaptedVersion);
         const bool importantCheckpoint = VersionInfo::requiresImportantSaveUpdate(character.lastAdaptedVersion);
 
-        if (importantCheckpoint && impact != VersionCompatibilityImpact::RecreateRecommended)
+        if (importantCheckpoint)
         {
             MenuScreen checkpointScreen("POINT DE SAUVEGARDE IMPORTANT", "save.characters.important_checkpoint.decision");
             checkpointScreen.addLine("Dinotofu V" + VersionInfo::currentVersion() + " introduit un nouveau jalon de compatibilité des sauvegardes.");
+            if (impact == VersionCompatibilityImpact::RecreateRecommended)
+            {
+                checkpointScreen.addLine("Cette sauvegarde est très ancienne ou sa version est inconnue : le rituel est quand même imposé avant toute reprise.");
+            }
             checkpointScreen.addLine("Pour éviter une reprise silencieuse avec d'anciennes règles, l'adaptation doit être lancée manuellement une fois.");
             checkpointScreen.addLine("Étape 1 : copie intégrale du personnage avant mise à jour dans assets/saves/update_backups/.");
             checkpointScreen.addLine("Étape 2 : chargement de la sauvegarde puis application des sécurités de compatibilité.");

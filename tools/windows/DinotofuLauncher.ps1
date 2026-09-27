@@ -87,7 +87,7 @@ if ($config) {
     if ([string]::IsNullOrWhiteSpace($AssetPattern) -and $config.assetPattern) { $AssetPattern = [string]$config.assetPattern }
 }
 
-if ([string]::IsNullOrWhiteSpace($Repo)) { $Repo = "SIMON-Louis-2326101aa/ProjetDinotofu" }
+if ([string]::IsNullOrWhiteSpace($Repo) -or $Repo -eq "TON_COMPTE/TON_REPO" -or $Repo -notmatch "^[^/]+/[^/]+$") { $Repo = "SIMON-Louis-2326101aa/ProjetDinotofu" }
 
 if ($installDirFromArgument) { $InstallDir = Normalize-ProjectInstallDir $InstallDir }
 else { $InstallDir = $PSScriptRoot }

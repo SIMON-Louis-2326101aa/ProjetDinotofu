@@ -241,6 +241,10 @@ release-push:
 	@chmod +x ./scripts/release_push.sh
 	@./scripts/release_push.sh patch
 
+release-trigger:
+	@chmod +x ./scripts/trigger_release.sh
+	@./scripts/trigger_release.sh
+
 release-check: clean
 	@chmod +x ./scripts/validate_release_tree.sh
 	@./scripts/validate_release_tree.sh
@@ -249,4 +253,4 @@ gui-preview: all
 	@chmod +x ./tools/gui/run_gui_debug.sh
 	@./tools/gui/run_gui_debug.sh
 
-.PHONY: all test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-check gui-preview
+.PHONY: all test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check gui-preview

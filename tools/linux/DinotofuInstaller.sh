@@ -96,7 +96,8 @@ ask_install_dir() {
 if [[ -z "$REPO" ]]; then
     REPO="$(read_config_value repo)"
 fi
-if [[ -z "$REPO" ]]; then
+# Legacy packages used a placeholder repo. Treat it as unconfigured so old installs can update again.
+if [[ -z "$REPO" || "$REPO" == "TON_COMPTE/TON_REPO" || "$REPO" != */* ]]; then
     REPO="SIMON-Louis-2326101aa/ProjetDinotofu"
 fi
 if [[ "$ASSET_PATTERN" == "Dinotofu-Linux-v*.zip" || "$ASSET_PATTERN" == "Dinotofu-Linux-v*.7z" ]]; then

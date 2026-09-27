@@ -23,12 +23,19 @@ int main()
 {
     namespace fs = std::filesystem;
 
-    assert(VersionInfo::currentVersion() == "3.50.09");
-    assert(VersionInfo::importantSaveUpdateVersion() == "3.50.09");
+    const std::string currentVersion = VersionInfo::currentVersion();
+    const std::string checkpointVersion = VersionInfo::importantSaveUpdateVersion();
+    assert(VersionInfo::compare(currentVersion, checkpointVersion) >= 0);
+    assert(checkpointVersion == "3.50.12");
     assert(VersionInfo::requiresImportantSaveUpdate("3.50.08"));
     assert(VersionInfo::requiresImportantSaveUpdate("3.49.93"));
-    assert(!VersionInfo::requiresImportantSaveUpdate("3.50.09"));
-    assert(!VersionInfo::requiresImportantSaveUpdate("3.50.10"));
+    assert(VersionInfo::requiresImportantSaveUpdate("2.99.99"));
+    assert(VersionInfo::requiresImportantSaveUpdate("1.00.00"));
+    assert(VersionInfo::requiresImportantSaveUpdate("inconnue"));
+    assert(VersionInfo::requiresImportantSaveUpdate(""));
+    assert(!VersionInfo::requiresImportantSaveUpdate("3.50.12"));
+    assert(!VersionInfo::requiresImportantSaveUpdate(currentVersion));
+    assert(!VersionInfo::requiresImportantSaveUpdate("3.51.00"));
 
     fs::remove_all("assets/saves");
 
@@ -46,8 +53,8 @@ int main()
     assert(fs::exists(backupDirectory));
 
     const fs::path expectedCharacterBackup = fs::path(backupDirectory)
-        / (SaveManager::buildSafeFileName(summaries.front().characterName) + "__before_V3.50.09.json");
-    const fs::path expectedAccountBackup = fs::path(backupDirectory) / "account__before_V3.50.09.json";
+        / (SaveManager::buildSafeFileName(summaries.front().characterName) + "__before_V" + checkpointVersion + ".json");
+    const fs::path expectedAccountBackup = fs::path(backupDirectory) / ("account__before_V" + checkpointVersion + ".json");
     const fs::path manifest = fs::path(backupDirectory) / "checkpoint.txt";
 
     assert(fs::exists(expectedCharacterBackup));

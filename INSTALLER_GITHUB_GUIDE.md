@@ -3,6 +3,13 @@
 Ce guide explique comment distribuer Dinotofu sans demander au joueur de compiler le projet.   
 
 
+## Packs installateur propres   
+
+Les releases publient maintenant deux packs conseillés aux joueurs : `Installer-Dinotofu-Windows-vX.YY.ZZ.7z` et `Installer-Dinotofu-Linux-vX.YY.ZZ.7z`. Après extraction, leur racine contient uniquement le fichier d’installation et `Documentation/`.   
+
+Les archives `Dinotofu-Windows-vX.YY.ZZ.7z` et `Dinotofu-Linux-vX.YY.ZZ.7z` restent publiées comme payloads techniques utilisés par l’installateur et l’updater pour préserver la compatibilité des anciennes installations.   
+
+
 ## Jouer ou installer depuis une release GitHub   
 
 Pour jouer à Dinotofu sans compiler le projet manuellement :   

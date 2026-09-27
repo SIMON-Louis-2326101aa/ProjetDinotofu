@@ -9,7 +9,7 @@
 
 std::string VersionInfo::currentVersion()
 {
-    return "3.50.09";
+    return "3.50.12";
 }
 
 std::string VersionInfo::recreateRecommendedBeforeVersion()
@@ -19,7 +19,7 @@ std::string VersionInfo::recreateRecommendedBeforeVersion()
 
 std::string VersionInfo::importantSaveUpdateVersion()
 {
-    return "3.50.09";
+    return "3.50.12";
 }
 
 
@@ -29,9 +29,18 @@ bool VersionInfo::requiresImportantSaveUpdate(const std::string& lastAdaptedVers
     const VersionNumber checkpoint = parse(importantSaveUpdateVersion());
     const VersionNumber current = parse(currentVersion());
 
-    if (!saved.known || !checkpoint.known || !current.known)
+    if (!checkpoint.known || !current.known)
     {
         return false;
+    }
+
+    // EN: Unknown legacy metadata is treated as older than the checkpoint so very old saves
+    // cannot silently bypass the mandatory migration.
+    // FR: Une métadonnée de version inconnue est considérée antérieure au jalon afin que les
+    // très anciennes sauvegardes ne puissent jamais contourner silencieusement la migration.
+    if (!saved.known)
+    {
+        return compare(currentVersion(), importantSaveUpdateVersion()) >= 0;
     }
 
     return compare(lastAdaptedVersion, importantSaveUpdateVersion()) < 0

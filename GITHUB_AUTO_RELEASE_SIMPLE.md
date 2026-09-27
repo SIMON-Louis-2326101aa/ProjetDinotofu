@@ -1,50 +1,96 @@
-# Dinotofu — automatisation GitHub simple   
+# Dinotofu — publication GitHub simple   
 
-Ce document décrit comment publier Dinotofu depuis le dépôt source sans transformer les README en journal de versions.   
+## Ce qui déclenche une release   
 
-## Principe   
+Le workflow `.github/workflows/release-dinotofu.yml` se lance automatiquement à chaque `git push` sur `main` ou `master`.   
 
-La version du jeu est lue depuis `src/core/VersionInfo.cpp`. Le manifeste de release doit rester aligné avec cette version dans `release/manifest.example.json`.   
+Il lit la version courante dans `src/core/VersionInfo.cpp` :   
 
-Les notes détaillées vont dans `CHANGELOG.md` et `CHANGELOG_FR.md`. Les README restent centrés sur l'installation, la présentation du jeu et la note du développeur. Si GitHub Actions est activé sur le dépôt, un simple `git push` sur `main` ou `master` suffit : le workflow crée le tag de version et publie les archives .7z (jeux portables et installateurs Windows/Linux utiles aux joueurs).   
+- si `vX.YY.ZZ` n'existe pas encore, il construit et publie cette nouvelle release ;   
+- si le tag existe mais que la release ou certains assets manquent, il répare la release ;   
+- si la release de cette version est déjà complète, il ne republie rien ;   
+- si tu pushes des changements sans augmenter la version, il est donc normal qu'aucune nouvelle release ne soit créée.   
 
-## Avant publication   
+Le tag n'est plus poussé avant la compilation. Les builds Windows/Linux utilisent le commit qui a déclenché le workflow et le tag/release est créé seulement après des builds réussis. Cela évite les tags vides et réduit les problèmes de permissions/protection de tags.   
 
-1. Vérifier la version dans le code et le manifeste.   
-2. Compiler le projet.   
-3. Lancer les contrôles de release.   
-4. Nettoyer les dossiers générés.   
-5. Faire `git push` sur `main` ou `master` et laisser GitHub Actions générer les archives .7z Windows/Linux.   
+## Workflow conseillé pour publier   
 
-L'archive source propre reste utile pour une reprise de développement ou un envoi manuel, mais elle ne doit pas être exposée comme asset principal de release joueur.   
-
-## Commandes utiles   
+Depuis un terminal à la racine du dépôt :   
 
 ```bash   
-make -j4   
-./output/Dinotofu --version   
-./scripts/validate_release_tree.sh   
-./scripts/package_source_clean.sh   
+python3 scripts/bump_version.py patch   
+# Le script demande aussi si saveVersion et/ou le checkpoint obligatoire doivent changer.   
+
+git add .   
+git commit -m "Dinotofu Vx.yy.zz"   
+git push   
 ```   
 
-## Publication avec simple git push   
+Ou en une commande :   
 
-Quand la version change dans `src/core/VersionInfo.cpp`, le push sur `main` ou `master` déclenche le workflow `.github/workflows/release-dinotofu.yml`.   
+```bash   
+./scripts/release_push.sh patch "Description courte de la mise à jour"   
+```   
 
-Le workflow :   
+Après le push, ouvre l'onglet **Actions** de GitHub et regarde le workflow **Build and Publish Dinotofu Releases**.   
 
-- lit la version du jeu ;   
-- crée automatiquement le tag `vX.Y.Z` s'il n'existe pas ;   
-- compile les paquets de jeu Linux/Windows au format .7z (compression maximale LZMA2) ;   
-- publie directement les deux versions portables autonomes (avec scripts de raccourcis inclus) ;   
-- publie ou répare la release GitHub ;   
-- vérifie que les deux archives .7z Windows/Linux attendues sont bien présentes avant de considérer la release complète.   
+## Forcer/réparer une release manuellement   
 
-Si une release existe mais ne contient pas les bonnes archives .7z, elle est traitée comme incomplète et le workflow republie les assets nécessaires.   
+Méthode GitHub :   
 
-## Règles importantes   
+1. ouvre le dépôt GitHub ;   
+2. ouvre **Actions** ;   
+3. choisis **Build and Publish Dinotofu Releases** ;   
+4. clique **Run workflow** ;   
+5. choisis la branche contenant la version voulue ;   
+6. mets `force_release` sur `true` pour reconstruire/remplacer les assets même si le tag existe déjà.   
 
-- Ne pas mettre d'historique de versions dans les README, guides ou fichiers de conception.   
-- Utiliser `CHANGELOG.md` pour l’historique anglais et `CHANGELOG_FR.md` pour l’historique français.   
-- Ne jamais inclure `build/`, `output/`, `gui_debug/`, un exécutable ou un fichier de reprise local dans le ZIP source de développement.   
-- Garder la version actuelle visible dans les README, car les scripts de validation en ont besoin.   
+Avec GitHub CLI :   
+
+```bash   
+./scripts/trigger_release.sh   
+```   
+
+ou directement :   
+
+```bash   
+gh workflow run release-dinotofu.yml --ref main -f force_release=true   
+```   
+
+## Assets publiés   
+
+Les joueurs doivent télécharger de préférence :   
+
+- `Installer-Dinotofu-Windows-vX.YY.ZZ.7z` ;   
+- `Installer-Dinotofu-Linux-vX.YY.ZZ.7z`.   
+
+Après extraction, chacun de ces packs contient volontairement seulement :   
+
+- le fichier d'installation ;   
+- `Documentation/` avec les TXT importants.   
+
+La release conserve également :   
+
+- `Dinotofu-Windows-vX.YY.ZZ.7z` ;   
+- `Dinotofu-Linux-vX.YY.ZZ.7z`.   
+
+Ces deux archives sont les **payloads techniques** utilisés par l'installateur et l'updater. Elles restent nécessaires pour la compatibilité des anciennes installations, même si les joueurs normaux n'ont plus besoin de les manipuler directement.   
+
+## Si rien ne démarre après le push   
+
+Vérifie dans GitHub :   
+
+- que tu as bien poussé sur `main` ou `master` ;   
+- que la version a réellement changé ;   
+- que **Actions** est activé pour le dépôt ;   
+- que le workflow apparaît dans l'onglet Actions ;   
+- qu'aucune règle du dépôt n'interdit l'exécution ou la création de releases/tags.   
+
+Puis utilise le déclenchement manuel ci-dessus pour voir immédiatement les logs d'erreur.   
+
+## Documentation des versions   
+
+Les README restent courts. L'historique détaillé doit continuer à vivre dans :   
+
+- `CHANGELOG.md` ;   
+- `CHANGELOG_FR.md`.   

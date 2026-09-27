@@ -1,7 +1,15 @@
 {
   "name": "Dinotofu",
-  "version": "3.50.09",
-  "releaseTag": "v3.50.09",
-  "assetPattern": "Dinotofu-Windows-v3.50.09.7z",
-  "notes": "V3.50.09 impose un checkpoint de sauvegarde important avec backup dédié non écrasable et extrait le moteur d’exploration hors de QuestMenu."
+  "version": "3.50.12",
+  "releaseTag": "v3.50.12",
+  "assetPattern": "Installer-Dinotofu-Windows-v3.50.12.7z",
+  "notes": "V3.50.11 sépare version du jeu, saveVersion et checkpoint, fiabilise les releases GitHub et ajoute des packs installateur propres.",
+  "installerAssets": {
+    "windows": "Installer-Dinotofu-Windows-v3.50.12.7z",
+    "linux": "Installer-Dinotofu-Linux-v3.50.12.7z"
+  },
+  "updaterPayloads": {
+    "windows": "Dinotofu-Windows-v3.50.12.7z",
+    "linux": "Dinotofu-Linux-v3.50.12.7z"
+  }
 }

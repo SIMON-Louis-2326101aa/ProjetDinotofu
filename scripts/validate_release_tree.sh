@@ -157,6 +157,20 @@ if 'r"%USERPROFILE%\\ProjetDinotofu"' not in package_windows:
 workflow = Path('.github/workflows/release-dinotofu.yml').read_text(encoding='utf-8')
 if 'package-source:' in workflow or ('no_' + 'exe') in workflow:
     errors.append('Le workflow GitHub ne doit plus publier de ZIP source dans les releases.')
+if 'Installer-Dinotofu-Windows-v${VERSION}.7z' not in workflow or 'Installer-Dinotofu-Linux-v${VERSION}.7z' not in workflow:
+    errors.append('Le workflow GitHub doit publier les deux packs installateur propres.')
+if '--target "${GITHUB_SHA}"' not in workflow:
+    errors.append('La release GitHub doit créer le tag seulement après les builds en ciblant GITHUB_SHA.')
+
+for package_script, installer_name in [
+    ('scripts/package_windows_release.sh', 'Installer-Dinotofu.cmd'),
+    ('scripts/package_linux_release.sh', 'Installer-Dinotofu.sh'),
+]:
+    package_text = Path(package_script).read_text(encoding='utf-8')
+    if 'Documentation' not in package_text or 'exactement 2 entrees' not in package_text:
+        errors.append(f'{package_script} ne protège pas le layout installateur propre.')
+    if installer_name not in package_text:
+        errors.append(f'{package_script} ne contient pas le fichier installateur attendu {installer_name}.')
 
 for entry in errors:
     print(entry)

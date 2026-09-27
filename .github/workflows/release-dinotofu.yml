@@ -54,6 +54,8 @@ jobs:
           REASON=""
 
           REQUIRED_ASSETS=(
+            "Installer-Dinotofu-Windows-v${VERSION}.7z"
+            "Installer-Dinotofu-Linux-v${VERSION}.7z"
             "Dinotofu-Windows-v${VERSION}.7z"
             "Dinotofu-Linux-v${VERSION}.7z"
           )
@@ -92,18 +94,20 @@ jobs:
           fi
 
           if [[ "${TAG_EXISTS}" == "false" ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git tag -a "${TAG}" -m "Dinotofu ${TAG}"
-            git push origin "${TAG}"
             SHOULD_PUBLISH="true"
-            REASON="nouveau tag ${TAG} cree automatiquement depuis la version du code"
+            REASON="nouvelle version ${TAG} : le tag sera cree seulement apres des builds reussis"
           elif [[ "${FORCE_RELEASE:-false}" == "true" ]]; then
             SHOULD_PUBLISH="true"
             REASON="force_release demande : reconstruction des assets de ${TAG}"
+          elif [[ "${RELEASE_EXISTS}" == "false" ]]; then
+            SHOULD_PUBLISH="true"
+            REASON="le tag ${TAG} existe deja mais la release GitHub manque"
+          elif [[ "${RELEASE_HAS_REQUIRED_ASSETS}" == "false" ]]; then
+            SHOULD_PUBLISH="true"
+            REASON="la release ${TAG} existe mais il manque au moins une archive .7z Windows/Linux"
           else
             SHOULD_PUBLISH="false"
-            REASON="le tag ${TAG} existe deja. Aucune nouvelle version a publier (augmenter la version pour declencher une release)."
+            REASON="le tag ${TAG} et les archives .7z Windows/Linux attendues existent deja"
           fi
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -146,11 +150,13 @@ jobs:
           DINOTOFU_REPO: ${{ github.repository }}
         run: ./scripts/package_linux_release.sh
 
-      - name: Upload Linux portable game artifact
+      - name: Upload Linux release artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}
-          path: release_packages/Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}.7z
+          path: |
+            release_packages/Installer-Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}.7z
+            release_packages/Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}.7z
           if-no-files-found: error
 
   build-windows:
@@ -176,11 +182,13 @@ jobs:
           DINOTOFU_REPO: ${{ github.repository }}
         run: ./scripts/package_windows_release.sh
 
-      - name: Upload Windows portable game artifact
+      - name: Upload Windows release artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}
-          path: release_packages/Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}.7z
+          path: |
+            release_packages/Installer-Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}.7z
+            release_packages/Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}.7z
           if-no-files-found: error
 
   publish-release:
@@ -220,15 +228,20 @@ jobs:
 
           Raison : ${RELEASE_REASON}
 
-          Fichiers disponibles (.7z - compression maximale LZMA2) :
-          - Dinotofu-Windows-v${RELEASE_VERSION}.7z : Version portable Windows — Decompresse et lance directement sans installation !
-          - Dinotofu-Linux-v${RELEASE_VERSION}.7z : Version portable Linux — Decompresse et lance directement sans installation !
+          Fichiers conseilles aux joueurs :
+          - Installer-Dinotofu-Windows-v${RELEASE_VERSION}.7z
+          - Installer-Dinotofu-Linux-v${RELEASE_VERSION}.7z
 
-          Lancement rapide :
-          1. Telecharge l'archive correspondant a ton systeme.
-          2. Decompresse l'archive où tu veux (7-Zip ou explorateur de fichiers).
-          3. Lance Lancer-Dinotofu !
-             (Des scripts sont egalement inclus dans le dossier pour creer des raccourcis bureau si souhaite).
+          Ces packs ont une racine volontairement propre : un seul fichier d'installation + Documentation/.
+
+          Payloads techniques utilises par l'installateur et l'updater (ne pas supprimer de la release) :
+          - Dinotofu-Windows-v${RELEASE_VERSION}.7z
+          - Dinotofu-Linux-v${RELEASE_VERSION}.7z
+
+          Installation :
+          1. Telecharge le pack Installer correspondant a ton systeme.
+          2. Decompresse-le.
+          3. Lance Installer-Dinotofu.cmd (Windows) ou ./Installer-Dinotofu.sh (Linux).
           EOF
 
           if gh release view "${RELEASE_TAG}" --repo "${GH_REPO}" >/dev/null 2>&1; then
@@ -238,5 +251,6 @@ jobs:
             gh release create "${RELEASE_TAG}" "${files[@]}" \
               --title "Dinotofu ${RELEASE_TAG}" \
               --notes-file release_notes.md \
+              --target "${GITHUB_SHA}" \
               --repo "${GH_REPO}"
           fi

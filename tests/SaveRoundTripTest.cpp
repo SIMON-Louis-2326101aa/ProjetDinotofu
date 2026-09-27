@@ -1,6 +1,7 @@
 #include "entity/Player.hpp"
 #include "quest/Quest.hpp"
 #include "save/SaveManager.hpp"
+#include "save/SaveSchemaVersion.hpp"
 #include "item/weapon/Weapon.hpp"
 
 #include <cassert>
@@ -142,7 +143,7 @@ int main()
         const std::size_t next = legacy.find("  \"cheatState\": {", start);
         assert(start != std::string::npos && next != std::string::npos);
         legacy.erase(start, next - start);
-        const std::string currentVersion = "\"saveVersion\": 23";
+        const std::string currentVersion = "\"saveVersion\": " + std::to_string(SaveSchemaVersion::Current);
         const std::size_t versionPos = legacy.find(currentVersion);
         assert(versionPos != std::string::npos);
         legacy.replace(versionPos, currentVersion.size(), "\"saveVersion\": 20");

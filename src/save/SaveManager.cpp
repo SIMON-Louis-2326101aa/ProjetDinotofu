@@ -5,6 +5,7 @@
 // Description: Minimal JSON-like save manager for accounts, playable characters, future bestiary and materials.
 
 #include "save/SaveManager.hpp"
+#include "save/SaveSchemaVersion.hpp"
 #include "core/VersionInfo.hpp"
 
 #include "character/CharacterRace.hpp"
@@ -969,7 +970,7 @@ namespace
         summary.clone = extractBoolValue(content, "clone", false);
         summary.gameVersion = extractStringValue(content, "gameVersion", "inconnue");
         summary.createdAt = extractStringValue(content, "createdAt", "Inconnue");
-        summary.createdForVersion = extractStringValue(content, "createdForVersion", "inconnue");
+        summary.createdForVersion = extractStringValue(content, "createdForVersion", summary.gameVersion);
         summary.lastAdaptedVersion = extractStringValue(content, "lastAdaptedVersion", summary.createdForVersion);
         summary.storyModeStarted = extractBoolValue(content, "storyModeStarted", false);
         summary.storyChapter = extractIntValue(content, "storyChapter", 0);
@@ -1068,7 +1069,7 @@ bool SaveManager::saveAccountSnapshot(
     }
 
     file << "{\n";
-    file << "  \"saveVersion\": 23,\n";
+    file << "  \"saveVersion\": " << SaveSchemaVersion::Current << ",\n";
     file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
     file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
@@ -1130,7 +1131,7 @@ bool SaveManager::savePlayerSnapshot(
         : player.getCreatorAccountName();
 
     file << "{\n";
-    file << "  \"saveVersion\": 23,\n";
+    file << "  \"saveVersion\": " << SaveSchemaVersion::Current << ",\n";
     file << "  \"gameVersion\": \"" << escapeJson(VersionInfo::currentVersion()) << "\",\n";
     file << "  \"versionPolicy\": \"X=phase majeure, Y=ajout/changement important, Z=correctif mineur\",\n";
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
@@ -2244,7 +2245,8 @@ bool SaveManager::loadPlayerSnapshot(
     std::string visualPresentation = extractStringValue(content, "visualPresentation", summary.visualPresentation);
     std::string visualVariant = extractStringValue(content, "visualVariant", summary.visualVariant);
     std::string createdAt = extractStringValue(content, "createdAt", "Inconnue");
-    std::string createdForVersion = extractStringValue(content, "createdForVersion", "inconnue");
+    std::string gameVersion = extractStringValue(content, "gameVersion", "inconnue");
+    std::string createdForVersion = extractStringValue(content, "createdForVersion", gameVersion);
     std::string lastAdaptedVersion = extractStringValue(content, "lastAdaptedVersion", createdForVersion);
     std::string saveAccountName = extractStringValue(content, "account", summary.accountName);
     std::string creatorAccountName = extractStringValue(content, "creatorAccount", saveAccountName);
