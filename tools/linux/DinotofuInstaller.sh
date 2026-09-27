@@ -40,19 +40,28 @@ default_download_parent() {
             return
         fi
     fi
-    if [[ -d "${HOME}/Downloads" ]]; then
-        echo "${HOME}/Downloads"
-    elif [[ -d "${HOME}/Téléchargements" ]]; then
-        echo "${HOME}/Téléchargements"
-    else
-        echo "${HOME}/Downloads"
+    if [[ -f "${HOME}/.config/user-dirs.dirs" ]]; then
+        local conf_dir
+        conf_dir="$(sed -n 's/^XDG_DOWNLOAD_DIR="\(.*\)"/\1/p' "${HOME}/.config/user-dirs.dirs" 2>/dev/null || true)"
+        conf_dir="${conf_dir/\$HOME/$HOME}"
+        if [[ -n "$conf_dir" && -d "$conf_dir" ]]; then
+            echo "$conf_dir"
+            return
+        fi
     fi
+    for d in "${HOME}/Downloads" "${HOME}/Téléchargements" "${HOME}/Descargas" "${HOME}/Scaricati" "${HOME}/Загрузки" "${HOME}/Download"; do
+        if [[ -d "$d" ]]; then
+            echo "$d"
+            return
+        fi
+    done
+    echo "${HOME}/Downloads"
 }
 
 normalize_project_dir() {
     local path_text="$1"
     if [[ -z "$path_text" ]]; then
-        path_text="$(default_download_parent)/ProjetDinotofu"
+        path_text="${HOME}/ProjetDinotofu"
     fi
     path_text="${path_text/#\~/$HOME}"
     path_text="${path_text%/}"
@@ -87,6 +96,9 @@ ask_install_dir() {
 if [[ -z "$REPO" ]]; then
     REPO="$(read_config_value repo)"
 fi
+if [[ -z "$REPO" ]]; then
+    REPO="SIMON-Louis-2326101aa/ProjetDinotofu"
+fi
 if [[ "$ASSET_PATTERN" == "Dinotofu-Linux-v*.zip" || "$ASSET_PATTERN" == "Dinotofu-Linux-v*.7z" ]]; then
     configured_pattern="$(read_config_value assetPattern)"
     [[ -z "$configured_pattern" ]] || ASSET_PATTERN="$configured_pattern"
@@ -96,7 +108,7 @@ if [[ -z "${DINOTOFU_INSTALL_DIR:-}" && -z "$INSTALL_DIR" ]]; then
     if [[ -n "$configured_install_dir" ]]; then
         INSTALL_DIR="$configured_install_dir"
     else
-        INSTALL_DIR="$(default_download_parent)/ProjetDinotofu"
+        INSTALL_DIR="${HOME}/ProjetDinotofu"
     fi
 fi
 INSTALL_DIR="$(ask_install_dir "$INSTALL_DIR")"
@@ -147,8 +159,12 @@ find_local_release_archive() {
     local parent_dir
     parent_dir="$(dirname "$SCRIPT_DIR")"
     search_dirs+=("$parent_dir")
-    if [[ -d "${HOME}/Downloads" ]]; then search_dirs+=("${HOME}/Downloads"); fi
-    if [[ -d "${HOME}/Téléchargements" ]]; then search_dirs+=("${HOME}/Téléchargements"); fi
+    local dl_parent
+    dl_parent="$(default_download_parent)"
+    if [[ -d "$dl_parent" ]]; then search_dirs+=("$dl_parent"); fi
+    for d in "${HOME}/Downloads" "${HOME}/Téléchargements" "${HOME}/Descargas" "${HOME}/Scaricati" "${HOME}/Загрузки" "${HOME}/Download"; do
+        if [[ -d "$d" ]]; then search_dirs+=("$d"); fi
+    done
 
     local dir candidate
     for dir in "${search_dirs[@]}"; do
@@ -172,7 +188,7 @@ mkdir -p "$EXTRACT_DIR" "$BACKUP_DIR"
 
 # Detection : si on lance l'installer depuis un dossier du jeu dezippe
 local_game_found="false"
-if [[ -f "${SCRIPT_DIR}/output/Dinotofu" || -f "${SCRIPT_DIR}/Dinotofu" ]] && [[ -d "${SCRIPT_DIR}/assets" ]]; then
+if [[ -f "${SCRIPT_DIR}/output/Dinotofu" || -f "${SCRIPT_DIR}/Dinotofu" ]] && [[ -d "${SCRIPT_DIR}/assets" || -d "${SCRIPT_DIR}/data/assets" ]]; then
     local_game_found="true"
 fi
 
@@ -183,7 +199,7 @@ elif [[ "$local_game_found" == "true" ]]; then
     echo "==> Installation depuis le dossier local : ${SCRIPT_DIR} -> ${INSTALL_DIR}"
     if [[ -d "$INSTALL_DIR" ]]; then
         echo "==> Sauvegarde des donnees joueur"
-        for p in assets/saves saves accounts characters exported_accounts import_accounts; do
+        for p in assets/saves data/assets/saves saves accounts characters exported_accounts import_accounts; do
             if [[ -e "${INSTALL_DIR}/${p}" ]]; then
                 mkdir -p "${BACKUP_DIR}/$(dirname "$p")"
                 cp -a "${INSTALL_DIR}/${p}" "${BACKUP_DIR}/${p}"
@@ -196,18 +212,18 @@ elif [[ "$local_game_found" == "true" ]]; then
         cp -a "${BACKUP_DIR}/." "$INSTALL_DIR/" 2>/dev/null || true
     fi
 else
-    if [[ -z "$REPO" || "$REPO" == "TON_COMPTE/TON_REPO" || "$REPO" != */* ]]; then
+    if [[ -z "$REPO" || "$REPO" != */* ]]; then
         LOCAL_ARCHIVE="$(find_local_release_archive "$ASSET_PATTERN" || true)"
         if [[ -z "$LOCAL_ARCHIVE" ]]; then
             echo "Repo GitHub non configure et aucune archive locale trouvee." >&2
-            echo "DINOTOFU_REPO='tonPseudo/tonDepot' ./Installer-Dinotofu.sh" >&2
+            echo "DINOTOFU_REPO='SIMON-Louis-2326101aa/ProjetDinotofu' ./Installer-Dinotofu.sh" >&2
             exit 1
         fi
     fi
 
     echo "==> Recherche de la derniere release GitHub (${REPO})"
     LOCAL_ARCHIVE=""
-    if [[ -n "$REPO" && "$REPO" != "TON_COMPTE/TON_REPO" && "$REPO" == */* ]] && curl -fsSL -H "User-Agent: DinotofuInstaller" "https://api.github.com/repos/${REPO}/releases/latest" -o "$RELEASE_JSON"; then
+    if [[ -n "$REPO" && "$REPO" == */* ]] && curl -fsSL -H "User-Agent: DinotofuInstaller" "https://api.github.com/repos/${REPO}/releases/latest" -o "$RELEASE_JSON"; then
         mapfile -t ASSET_INFO < <(python3 - "$RELEASE_JSON" "$ASSET_PATTERN" <<'PY' 2>/dev/null || true
 import fnmatch, json, sys
 with open(sys.argv[1], encoding='utf-8') as f:
@@ -268,7 +284,7 @@ PY
 
     if [[ -d "$INSTALL_DIR" ]]; then
         echo "==> Sauvegarde des donnees joueur"
-        for p in assets/saves saves accounts characters exported_accounts import_accounts; do
+        for p in assets/saves data/assets/saves saves accounts characters exported_accounts import_accounts; do
             if [[ -e "${INSTALL_DIR}/${p}" ]]; then
                 mkdir -p "${BACKUP_DIR}/$(dirname "$p")"
                 cp -a "${INSTALL_DIR}/${p}" "${BACKUP_DIR}/${p}"
@@ -319,7 +335,10 @@ echo "==> Creation des raccourcis Linux"
 mkdir -p "${HOME}/.local/share/applications"
 GUI_ICON="${INSTALL_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"
 TERMINAL_ICON="${INSTALL_DIR}/assets/branding/dinotofu_launcher_terminal_512.png"
+if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${INSTALL_DIR}/data/assets/branding/dinotofu_launcher_graphical_512.png"; fi
+if [[ ! -f "$TERMINAL_ICON" ]]; then TERMINAL_ICON="${INSTALL_DIR}/data/assets/branding/dinotofu_launcher_terminal_512.png"; fi
 if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${INSTALL_DIR}/assets/branding/dinotofu_site_logo_512.png"; fi
+if [[ ! -f "$GUI_ICON" ]]; then GUI_ICON="${INSTALL_DIR}/data/assets/branding/dinotofu_site_logo_512.png"; fi
 if [[ ! -f "$TERMINAL_ICON" ]]; then TERMINAL_ICON="$GUI_ICON"; fi
 cat > "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" <<DESKTOP
 [Desktop Entry]
@@ -343,14 +362,43 @@ Categories=Game;
 DESKTOP
 chmod +x "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" || true
 chmod +x "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" || true
+get_desktop_dirs() {
+    local dirs=()
+    if command -v xdg-user-dir >/dev/null 2>&1; then
+        local xdg_desktop
+        xdg_desktop="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
+        if [[ -n "$xdg_desktop" && -d "$xdg_desktop" ]]; then
+            dirs+=("$xdg_desktop")
+        fi
+    fi
+    if [[ -f "${HOME}/.config/user-dirs.dirs" ]]; then
+        local conf_desktop
+        conf_desktop="$(sed -n 's/^XDG_DESKTOP_DIR="\(.*\)"/\1/p' "${HOME}/.config/user-dirs.dirs" 2>/dev/null || true)"
+        conf_desktop="${conf_desktop/\$HOME/$HOME}"
+        if [[ -n "$conf_desktop" && -d "$conf_desktop" ]]; then
+            dirs+=("$conf_desktop")
+        fi
+    fi
+    for d in "${HOME}/Desktop" "${HOME}/Bureau" "${HOME}/Escritorio" "${HOME}/Schreibtisch" "${HOME}/Scrivania" "${HOME}/Bureaublad" "${HOME}/Skrivebord" "${HOME}/Рабочий стол"; do
+        if [[ -d "$d" ]]; then
+            dirs+=("$d")
+        fi
+    done
+    if [[ ${#dirs[@]} -gt 0 ]]; then
+        printf '%s\n' "${dirs[@]}" | awk '!seen[$0]++'
+    fi
+}
+
 repair_desktop_shortcut_set() {
     local source_file="$1"
     local display_name="$2"
     local terminal_flag="${3:-false}"
     local desktop_dir found target base candidate
+    local desktop_dirs=()
+    mapfile -t desktop_dirs < <(get_desktop_dirs || true)
 
-    for desktop_dir in "${HOME}/Desktop" "${HOME}/Bureau"; do
-        [[ -d "$desktop_dir" ]] || continue
+    for desktop_dir in "${desktop_dirs[@]}"; do
+        [[ -n "$desktop_dir" && -d "$desktop_dir" ]] || continue
         found=""
         while IFS= read -r target; do
             [[ -n "$target" ]] || continue
@@ -383,7 +431,9 @@ repair_desktop_shortcut_set() {
 repair_desktop_shortcut_set "${HOME}/.local/share/applications/projetdinotofu-launcher.desktop" "ProjetDinotofu Launcher" "false"
 repair_desktop_shortcut_set "${HOME}/.local/share/applications/projetdinotofu-launcher-terminal.desktop" "ProjetDinotofu Launcher Terminal version" "true"
 
-echo "Dinotofu est installe."
+echo "================================================="
+echo " Dinotofu est installe dans : ${INSTALL_DIR}"
+echo "================================================="
 if [[ "$SKIP_LAUNCH" != "true" ]]; then
     if [[ -t 0 ]]; then
         echo ""

@@ -42,5 +42,5 @@ Push terminé.
 Si GitHub Actions est activé, le workflow va :
 - lire la version ${VERSION},
 - créer le tag v${VERSION} s'il n'existe pas,
-- publier les archives .7z Windows/Linux + installers dans GitHub Releases.
+- publier les archives .7z Windows/Linux dans GitHub Releases.
 TXT

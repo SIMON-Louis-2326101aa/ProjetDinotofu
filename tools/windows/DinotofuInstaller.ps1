@@ -65,10 +65,41 @@ function Expand-PathText {
     return [Environment]::ExpandEnvironmentVariables($PathText)
 }
 
+function Get-DefaultDownloadFolder {
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $folder = $shell.Namespace("shell:Downloads")
+        if ($folder -and -not [string]::IsNullOrWhiteSpace($folder.Self.Path) -and (Test-Path $folder.Self.Path)) {
+            return $folder.Self.Path
+        }
+    }
+    catch { }
+
+    try {
+        $regVal = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "{374DE290-123F-4565-9164-39C4925E467B}" -ErrorAction SilentlyContinue)."{374DE290-123F-4565-9164-39C4925E467B}"
+        if (-not [string]::IsNullOrWhiteSpace($regVal)) {
+            $expandedReg = [Environment]::ExpandEnvironmentVariables($regVal)
+            if (Test-Path $expandedReg) { return $expandedReg }
+        }
+    }
+    catch { }
+
+    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
+        $downloads = Join-Path $env:USERPROFILE "Downloads"
+        return $downloads
+    }
+
+    return $env:LOCALAPPDATA
+}
+
 function Get-DefaultInstallParent {
-    $downloads = Join-Path $env:USERPROFILE "Downloads"
-    if ([string]::IsNullOrWhiteSpace($env:USERPROFILE)) { return $env:LOCALAPPDATA }
-    return $downloads
+    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE) -and (Test-Path $env:USERPROFILE)) {
+        return $env:USERPROFILE
+    }
+    if (-not [string]::IsNullOrWhiteSpace($env:HOME) -and (Test-Path $env:HOME)) {
+        return $env:HOME
+    }
+    return $env:LOCALAPPDATA
 }
 
 function Normalize-ProjectInstallDir {
@@ -112,8 +143,8 @@ function Ask-InstallDir {
 }
 
 function Assert-RepoConfigured {
-    if ([string]::IsNullOrWhiteSpace($Repo) -or $Repo -eq "TON_COMPTE/TON_REPO" -or $Repo -notmatch "^[^/]+/[^/]+$") {
-        throw "Repo GitHub non configure. Utilise un pack installer genere par la release GitHub, ou relance avec : -Repo 'tonPseudo/tonDepot'"
+    if ([string]::IsNullOrWhiteSpace($Repo) -or $Repo -notmatch "^[^/]+/[^/]+$") {
+        throw "Repo GitHub non configure. Utilise un pack installer genere par la release GitHub, ou relance avec : -Repo 'SIMON-Louis-2326101aa/ProjetDinotofu'"
     }
 }
 
@@ -245,6 +276,10 @@ function Find-LocalReleaseZip {
 
     $searchDirs = @($PSScriptRoot)
     try { $searchDirs += (Split-Path -Path $PSScriptRoot -Parent) } catch { }
+    $downloadFolder = Get-DefaultDownloadFolder
+    if (-not [string]::IsNullOrWhiteSpace($downloadFolder)) {
+        $searchDirs += $downloadFolder
+    }
     if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
         $searchDirs += (Join-Path $env:USERPROFILE "Downloads")
     }
@@ -276,7 +311,7 @@ function Backup-PlayerData {
     param([string]$FromDir, [string]$BackupDir)
     if (-not (Test-Path $FromDir)) { return }
     New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
-    $paths = @("assets\saves", "saves", "accounts", "characters", "exported_accounts", "import_accounts")
+    $paths = @("assets\saves", "data\assets\saves", "saves", "accounts", "characters", "exported_accounts", "import_accounts")
     foreach ($relative in $paths) {
         $source = Join-Path $FromDir $relative
         if (Test-Path $source) {
@@ -417,6 +452,33 @@ function Create-DesktopShortcut {
 }
 
 
+function Get-DesktopDirectories {
+    $dirs = @()
+    $envDesktop = [Environment]::GetFolderPath("Desktop")
+    if (-not [string]::IsNullOrWhiteSpace($envDesktop) -and (Test-Path $envDesktop)) {
+        $dirs += $envDesktop
+    }
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $folder = $shell.Namespace("shell:Desktop")
+        if ($folder -and -not [string]::IsNullOrWhiteSpace($folder.Self.Path) -and (Test-Path $folder.Self.Path)) {
+            $dirs += $folder.Self.Path
+        }
+    }
+    catch { }
+    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
+        $profileDesktop = Join-Path $env:USERPROFILE "Desktop"
+        if (Test-Path $profileDesktop) {
+            $dirs += $profileDesktop
+        }
+    }
+    $unique = @($dirs | Select-Object -Unique)
+    if ($unique.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($envDesktop)) {
+        return @($envDesktop)
+    }
+    return $unique
+}
+
 function Get-DinotofuShortcutCandidates {
     param(
         [string]$DisplayName,
@@ -424,33 +486,35 @@ function Get-DinotofuShortcutCandidates {
         [switch]$TerminalShortcut
     )
 
-    $desktopPath = [Environment]::GetFolderPath("Desktop")
-    if ([string]::IsNullOrWhiteSpace($desktopPath) -or -not (Test-Path $desktopPath)) { return @() }
+    $desktopDirs = Get-DesktopDirectories
+    if (-not $desktopDirs -or $desktopDirs.Count -eq 0) { return @() }
 
     $matches = @()
     try {
-        $allLinks = Get-ChildItem -Path $desktopPath -Filter "*.lnk" -File -Recurse -ErrorAction SilentlyContinue
         $wsh = New-Object -ComObject WScript.Shell
-        foreach ($link in $allLinks) {
-            $name = $link.BaseName
-            $nameMatches = $false
-            if ($TerminalShortcut) {
-                $nameMatches = ($name -ieq $DisplayName) -or ($name -like "*Dinotofu*Terminal*")
-            }
-            else {
-                $nameMatches = ($name -ieq $DisplayName) -or (($name -like "*Dinotofu*Launcher*") -and ($name -notlike "*Terminal*"))
-            }
+        foreach ($desktopPath in $desktopDirs) {
+            $allLinks = Get-ChildItem -Path $desktopPath -Filter "*.lnk" -File -Recurse -ErrorAction SilentlyContinue
+            foreach ($link in $allLinks) {
+                $name = $link.BaseName
+                $nameMatches = $false
+                if ($TerminalShortcut) {
+                    $nameMatches = ($name -ieq $DisplayName) -or ($name -like "*Dinotofu*Terminal*")
+                }
+                else {
+                    $nameMatches = ($name -ieq $DisplayName) -or (($name -like "*Dinotofu*Launcher*") -and ($name -notlike "*Terminal*"))
+                }
 
-            $targetMatches = $false
-            try {
-                $shortcut = $wsh.CreateShortcut($link.FullName)
-                $targetLeaf = Split-Path -Path $shortcut.TargetPath -Leaf
-                $targetMatches = ($targetLeaf -ieq $ExpectedTargetFile)
-            }
-            catch { }
+                $targetMatches = $false
+                try {
+                    $shortcut = $wsh.CreateShortcut($link.FullName)
+                    $targetLeaf = Split-Path -Path $shortcut.TargetPath -Leaf
+                    $targetMatches = ($targetLeaf -ieq $ExpectedTargetFile)
+                }
+                catch { }
 
-            if ($nameMatches -or $targetMatches) {
-                $matches += $link.FullName
+                if ($nameMatches -or $targetMatches) {
+                    $matches += $link.FullName
+                }
             }
         }
     }
@@ -468,12 +532,13 @@ function Repair-DinotofuShortcutSet {
         [switch]$TerminalShortcut
     )
 
-    $desktopPath = [Environment]::GetFolderPath("Desktop")
-    if ([string]::IsNullOrWhiteSpace($desktopPath) -or -not (Test-Path $desktopPath)) { return @() }
+    $desktopDirs = Get-DesktopDirectories
+    if (-not $desktopDirs -or $desktopDirs.Count -eq 0) { return @() }
+    $primaryDesktop = $desktopDirs[0]
 
     $targets = @(Get-DinotofuShortcutCandidates -DisplayName $DisplayName -ExpectedTargetFile $ExpectedTargetFile -TerminalShortcut:$TerminalShortcut)
     if (-not $targets -or $targets.Count -eq 0) {
-        $targets = @(Join-Path $desktopPath ($DisplayName + ".lnk"))
+        $targets = @(Join-Path $primaryDesktop ($DisplayName + ".lnk"))
     }
 
     foreach ($shortcutPath in $targets) {
@@ -504,7 +569,9 @@ function Repair-DinotofuDesktopShortcuts {
 
     $fallbackIconPath = Join-Path $RootDir "Dinotofu.exe"
     $guiIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_graphical.ico"
+    if (-not (Test-Path $guiIconPath)) { $guiIconPath = Join-Path $RootDir "data\assets\branding\dinotofu_launcher_graphical.ico" }
     $terminalIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_terminal.ico"
+    if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = Join-Path $RootDir "data\assets\branding\dinotofu_launcher_terminal.ico" }
     if (-not (Test-Path $guiIconPath)) { $guiIconPath = $fallbackIconPath }
     if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
 
@@ -525,11 +592,13 @@ if ($config) {
     if ([string]::IsNullOrWhiteSpace($AssetPattern) -and $config.assetPattern) { $AssetPattern = [string]$config.assetPattern }
 }
 
+if ([string]::IsNullOrWhiteSpace($Repo)) { $Repo = "SIMON-Louis-2326101aa/ProjetDinotofu" }
+
 if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = Join-Path (Get-DefaultInstallParent) "ProjetDinotofu" }
 if (-not $installDirFromArgument) { $InstallDir = Ask-InstallDir $InstallDir } else { $InstallDir = Normalize-ProjectInstallDir $InstallDir }
 if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.7z" }
 
-$localGameExists = (Test-Path (Join-Path $PSScriptRoot "Dinotofu.exe")) -and (Test-Path (Join-Path $PSScriptRoot "assets"))
+$localGameExists = (Test-Path (Join-Path $PSScriptRoot "Dinotofu.exe")) -and ((Test-Path (Join-Path $PSScriptRoot "assets")) -or (Test-Path (Join-Path $PSScriptRoot "data\assets")))
 $tempRoot = Join-Path $env:TEMP "DinotofuInstall"
 $backupDir = Join-Path $tempRoot "player_data_backup"
 
@@ -659,6 +728,7 @@ else {
 }
 
 Write-Step "Installation terminee"
+Write-Host "Dinotofu est installe dans : $InstallDir" -ForegroundColor Green
 if (-not $SkipLaunch -and (Test-Path $launcherPath)) {
     Write-Host ""
     Write-Host "Appuie sur une touche pour lancer Dinotofu..." -ForegroundColor Cyan

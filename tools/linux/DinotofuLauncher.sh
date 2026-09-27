@@ -44,6 +44,7 @@ normalize_project_dir() {
 }
 
 if [[ -z "$REPO" ]]; then REPO="$(read_config_value repo)"; fi
+if [[ -z "$REPO" ]]; then REPO="SIMON-Louis-2326101aa/ProjetDinotofu"; fi
 configured_pattern="$(read_config_value assetPattern)"
 [[ -z "$configured_pattern" ]] || ASSET_PATTERN="$configured_pattern"
 if [[ "$INSTALL_DIR_FROM_ARG" == "true" ]]; then
@@ -97,11 +98,41 @@ run_installer_repair() {
 }
 
 
+get_desktop_dirs() {
+    local dirs=()
+    if command -v xdg-user-dir >/dev/null 2>&1; then
+        local xdg_desktop
+        xdg_desktop="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
+        if [[ -n "$xdg_desktop" && -d "$xdg_desktop" ]]; then
+            dirs+=("$xdg_desktop")
+        fi
+    fi
+    if [[ -f "${HOME}/.config/user-dirs.dirs" ]]; then
+        local conf_desktop
+        conf_desktop="$(sed -n 's/^XDG_DESKTOP_DIR="\(.*\)"/\1/p' "${HOME}/.config/user-dirs.dirs" 2>/dev/null || true)"
+        conf_desktop="${conf_desktop/\$HOME/$HOME}"
+        if [[ -n "$conf_desktop" && -d "$conf_desktop" ]]; then
+            dirs+=("$conf_desktop")
+        fi
+    fi
+    for d in "${HOME}/Desktop" "${HOME}/Bureau" "${HOME}/Escritorio" "${HOME}/Schreibtisch" "${HOME}/Scrivania" "${HOME}/Bureaublad" "${HOME}/Skrivebord" "${HOME}/Рабочий стол"; do
+        if [[ -d "$d" ]]; then
+            dirs+=("$d")
+        fi
+    done
+    if [[ ${#dirs[@]} -gt 0 ]]; then
+        printf '%s\n' "${dirs[@]}" | awk '!seen[$0]++'
+    fi
+}
+
 repair_linux_desktop_shortcuts() {
     mkdir -p "${HOME}/.local/share/applications"
     local gui_icon="${INSTALL_DIR}/assets/branding/dinotofu_launcher_graphical_512.png"
     local terminal_icon="${INSTALL_DIR}/assets/branding/dinotofu_launcher_terminal_512.png"
+    [[ -f "$gui_icon" ]] || gui_icon="${INSTALL_DIR}/data/assets/branding/dinotofu_launcher_graphical_512.png"
+    [[ -f "$terminal_icon" ]] || terminal_icon="${INSTALL_DIR}/data/assets/branding/dinotofu_launcher_terminal_512.png"
     [[ -f "$gui_icon" ]] || gui_icon="${INSTALL_DIR}/assets/branding/dinotofu_site_logo_512.png"
+    [[ -f "$gui_icon" ]] || gui_icon="${INSTALL_DIR}/data/assets/branding/dinotofu_site_logo_512.png"
     [[ -f "$terminal_icon" ]] || terminal_icon="$gui_icon"
 
     local gui_app="${HOME}/.local/share/applications/projetdinotofu-launcher.desktop"
@@ -129,8 +160,11 @@ Categories=Game;
 DESKTOP
     chmod +x "$gui_app" "$terminal_app" 2>/dev/null || true
 
-    for desktop_dir in "${HOME}/Desktop" "${HOME}/Bureau"; do
-        [[ -d "$desktop_dir" ]] || continue
+    local desktop_dirs=()
+    mapfile -t desktop_dirs < <(get_desktop_dirs || true)
+
+    for desktop_dir in "${desktop_dirs[@]}"; do
+        [[ -n "$desktop_dir" && -d "$desktop_dir" ]] || continue
         local found_gui="false"
         local found_terminal="false"
         while IFS= read -r candidate; do
@@ -152,7 +186,7 @@ DESKTOP
 }
 
 UPDATE_APPLIED="false"
-if [[ "$NO_UPDATE" != "true" && -n "$REPO" && "$REPO" != "TON_COMPTE/TON_REPO" && "$REPO" == */* ]] && command -v curl >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
+if [[ "$NO_UPDATE" != "true" && -n "$REPO" && "$REPO" == */* ]] && command -v curl >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1; then
     tmp_json="$(mktemp)"
     if curl -fsSL -H "User-Agent: DinotofuLauncher" "https://api.github.com/repos/${REPO}/releases/latest" -o "$tmp_json"; then
         remote_tag="$(python3 - "$tmp_json" <<'PY'
@@ -257,9 +291,13 @@ open_url_or_file() {
 
 start_gui_preview() {
     local gui_debug_dir="${INSTALL_DIR}/gui_debug"
-    local gui_file="${INSTALL_DIR}/tools/gui/dinotofu_gui_experimental.html"
-    local fallback_gui_file="${INSTALL_DIR}/tools/gui/dinotofu_gui_preview.html"
-    local server_script="${INSTALL_DIR}/tools/gui/serve_gui_preview.py"
+    local gui_root="${INSTALL_DIR}"
+    if [[ -d "${INSTALL_DIR}/data/tools/gui" ]]; then
+        gui_root="${INSTALL_DIR}/data"
+    fi
+    local gui_file="${gui_root}/tools/gui/dinotofu_gui_experimental.html"
+    local fallback_gui_file="${gui_root}/tools/gui/dinotofu_gui_preview.html"
+    local server_script="${gui_root}/tools/gui/serve_gui_preview.py"
     local port="${DINOTOFU_GUI_PREVIEW_PORT:-8787}"
     if command -v python3 >/dev/null 2>&1; then
         port="$(find_free_port "$port")"
@@ -280,7 +318,7 @@ start_gui_preview() {
         local server_out="${gui_debug_dir}/server_stdout.log"
         local server_err="${gui_debug_dir}/server_stderr.log"
         rm -f "$server_out" "$server_err"
-        nohup python3 "$server_script" --root "$INSTALL_DIR" --port "$port" --gui-debug-dir "$gui_debug_dir" >"$server_out" 2>"$server_err" &
+        nohup python3 "$server_script" --root "$gui_root" --port "$port" --gui-debug-dir "$gui_debug_dir" >"$server_out" 2>"$server_err" &
         if wait_for_gui_server "$port" 32; then
             open_url_or_file "http://127.0.0.1:${port}/tools/gui/dinotofu_gui_experimental.html"
         else

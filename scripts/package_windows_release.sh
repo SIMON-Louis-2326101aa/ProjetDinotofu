@@ -4,6 +4,26 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
+detect_repo_name() {
+    if [[ -n "${DINOTOFU_REPO:-}" ]]; then
+        echo "${DINOTOFU_REPO}"
+        return
+    fi
+
+    local origin_url
+    origin_url="$(git config --get remote.origin.url 2>/dev/null || true)"
+    if [[ -n "${origin_url}" ]]; then
+        local parsed
+        parsed="$(echo "${origin_url}" | sed -E 's/.*github\.com[:\/]//; s/\.git$//')"
+        if [[ "${parsed}" =~ ^[^/]+/[^/]+$ ]]; then
+            echo "${parsed}"
+            return
+        fi
+    fi
+
+    echo "SIMON-Louis-2326101aa/ProjetDinotofu"
+}
+
 VERSION="$(bash ./scripts/get_version.sh)"
 REPO_NAME="${DINOTOFU_REPO:-TON_COMPTE/TON_REPO}"
 PACKAGE_DIR="release_packages"
@@ -23,7 +43,7 @@ repo = sys.argv[2]
 config = {
     "repo": repo,
     "assetPattern": "Dinotofu-Windows-v*.7z",
-    "installDir": r"%USERPROFILE%\Downloads\ProjetDinotofu",
+    "installDir": r"%USERPROFILE%\ProjetDinotofu",
 }
 with open(path, "w", encoding="utf-8") as handle:
     json.dump(config, handle, ensure_ascii=False, indent=2)
@@ -48,19 +68,23 @@ make -j"$(nproc 2>/dev/null || echo 2)" \
     TARGET_ARCH="${TARGET_ARCH:-x86-64}" \
     OPT_LEVEL="${OPT_LEVEL:--O3}" \
     CXXFLAGS="-std=c++17 ${OPT_LEVEL:--O3} -march=${TARGET_ARCH:-x86-64} -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8" \
-    LDFLAGS="-static -static-libgcc -static-libstdc++"
+    LDFLAGS="-s -static -static-libgcc -static-libstdc++"
 
 mkdir -p "${STAGING_DIR}"
 cp -r assets "${STAGING_DIR}/" 2>/dev/null || true
 cp README.md READMEFR.md CHANGELOG.md CHANGELOG_FR.md SYSTEMES_PREVUS.txt PERSONNAGES_SPECIAUX_DINOTOFU.txt CHEATS_DINOTOFU.txt BOSS_DINOTOFU.txt TITRES_DINOTOFU.txt HISTOIRE_PREPARATION_DINOTOFU.txt "${STAGING_DIR}/" 2>/dev/null || true
 cp output/Dinotofu.exe "${STAGING_DIR}/Dinotofu.exe"
+local_strip="${CROSS_CXX%g++}strip"
+if command -v "${local_strip}" >/dev/null 2>&1; then
+    "${local_strip}" --strip-all "${STAGING_DIR}/Dinotofu.exe" 2>/dev/null || true
+elif command -v strip >/dev/null 2>&1; then
+    strip --strip-all "${STAGING_DIR}/Dinotofu.exe" 2>/dev/null || true
+fi
 cp tools/windows/DinotofuInstaller.ps1 "${STAGING_DIR}/DinotofuInstaller.ps1"
 cp tools/windows/Installer-Dinotofu.cmd "${STAGING_DIR}/Installer-Dinotofu.cmd"
 cp tools/windows/DinotofuLauncher.ps1 "${STAGING_DIR}/DinotofuLauncher.ps1"
 cp tools/windows/Lancer-Dinotofu.cmd "${STAGING_DIR}/Lancer-Dinotofu.cmd"
 cp tools/windows/Lancer-Dinotofu-Terminal.cmd "${STAGING_DIR}/Lancer-Dinotofu-Terminal.cmd"
-mkdir -p "${STAGING_DIR}/tools"
-cp -r tools/gui "${STAGING_DIR}/tools/gui"
 write_installer_config_json "${STAGING_DIR}/dinotofu-installer.config.json"
 echo "${VERSION}" > "${STAGING_DIR}/version.txt"
 
@@ -77,6 +101,10 @@ Double-clique sur "Lancer-Dinotofu.cmd" (ou directement "Dinotofu.exe").
 Creation des raccourcis bureau (optionnel) :
 Si tu souhaites ajouter des raccourcis sur ton bureau,
 double-clique sur "Installer-Dinotofu.cmd".
+
+Organisation des dossiers :
+- L'executable et les scripts de lancement/installation sont a la racine.
+- Les ressources du jeu, outils et documents complets sont dans data/.
 
 Remarques :
 - Aucun WSL n'est requis.
@@ -96,6 +124,10 @@ Double-click "Lancer-Dinotofu.cmd" (or directly "Dinotofu.exe").
 Create Desktop Shortcuts (Optional) :
 If you want to create shortcuts on your desktop,
 double-click "Installer-Dinotofu.cmd".
+
+Folder structure :
+- Executable and launch/installer scripts are at the root.
+- Game assets, tools, and full documentation are inside data/.
 
 Notes :
 - No WSL required.
