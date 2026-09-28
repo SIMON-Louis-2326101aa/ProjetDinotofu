@@ -92,3 +92,7 @@ release_packages/
 # Python temporary files
 __pycache__/
 *.pyc
+
+
+# Dossier Perso (debug perso, images, fichiers temporaires)
+tmp/

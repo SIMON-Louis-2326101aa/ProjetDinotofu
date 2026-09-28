@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Bump Dinotofu's game version without rewriting historical release references.
+Bump Dinotofu's game version across the project (VersionInfo.cpp, READMEs, changelogs, manifests).
 
 Interactive usage (recommended):
-  python3 scripts/bump_version.py
-  python3 scripts/bump_version.py patch
-  python3 scripts/bump_version.py minor
-  python3 scripts/bump_version.py major
-  python3 scripts/bump_version.py 3.51.00
+  python3 scripts/bump_version.py           # Augmente le patch (+1, mode par défaut)
+  python3 scripts/bump_version.py patch     # Augmente le patch (+1, ex: 3.50.12 -> 3.50.13)
+  python3 scripts/bump_version.py minor     # Augmente la version mineure (+1, patch=0, ex: 3.50.12 -> 3.51.00)
+  python3 scripts/bump_version.py major     # Augmente la version majeure (+1, minor=0, patch=0, ex: 3.50.12 -> 4.00.00)
+  python3 scripts/bump_version.py 3.50.13   # Définit une version explicite (ex: 3.50.13)
 
 The interactive mode also asks whether to:
 - change the internal save schema version (`saveVersion`);
-- make the new game version a mandatory important-save checkpoint.
+- make the new game version a mandatory important-save checkpoint (`importantSaveUpdateVersion`).
 
 Automation flags:
   --save-schema keep|next|N
@@ -195,7 +195,7 @@ def update_sync_files(new_ver: str) -> None:
             raise RuntimeError(f"Champ version introuvable dans {manifest}")
         if manifest.name == "manifest.example.json":
             content = re.sub(r'("releaseTag"\s*:\s*"v)[0-9]+\.[0-9]+\.[0-9]+(")', rf'\g<1>{new_ver}\g<2>', content, count=1)
-            content = re.sub(r'((?:Installer-)?Dinotofu-(?:Windows|Linux)-v)[0-9]+\.[0-9]+\.[0-9]+(\.7z)', rf'\g<1>{new_ver}\g<2>', content)
+            content = re.sub(r'((?:Installer-)?Dinotofu-(?:Windows|Linux)-v)[0-9]+\.[0-9]+\.[0-9]+(\.(?:7z|zip))', rf'\g<1>{new_ver}\g<2>', content)
         manifest.write_text(content, encoding="utf-8")
 
 
