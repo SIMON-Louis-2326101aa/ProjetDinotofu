@@ -434,7 +434,23 @@ function Apply-Update {
     if ($rootCandidate) { $sourceDir = $rootCandidate.FullName } else { $sourceDir = $tempExtract }
 
     New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-    Copy-Item -Path (Join-Path $sourceDir "*") -Destination $InstallDir -Recurse -Force
+    $copySuccess = $false
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try {
+            Copy-Item -Path (Join-Path $sourceDir "*") -Destination $InstallDir -Recurse -Force -ErrorAction Stop
+            $copySuccess = $true
+            break
+        }
+        catch {
+            if ($attempt -lt 3) {
+                Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
+                Start-Sleep -Milliseconds 800
+            }
+            else {
+                throw "Impossible de copier les fichiers de mise a jour : $($_.Exception.Message)"
+            }
+        }
+    }
     Restore-Saves -BackupDir $backupDir
     (Normalize-Version $Release.tag_name) | Set-Content -Path (Join-Path $InstallDir "version.txt") -Encoding UTF8
     Write-InstalledConfig
@@ -693,6 +709,7 @@ function Repair-DinotofuShortcutSet {
     $configured = @()
 
     foreach ($shortcutPath in $targets) {
+        if (-not [System.IO.Path]::IsPathRooted($shortcutPath)) { continue }
         try {
             $parentDir = Split-Path $shortcutPath
             if (-not (Test-Path $parentDir)) {
@@ -726,20 +743,18 @@ function Repair-DinotofuDesktopShortcuts {
     }
 
     $launcherPath = Join-Path $RootDir "DinotofuLauncher.ps1"
-    if (-not (Test-Path $launcherPath)) {
-        $candidates = @(
-            (Join-Path $RootDir "tools\windows\DinotofuLauncher.ps1"),
-            (Join-Path $PSScriptRoot "DinotofuLauncher.ps1"),
-            (Join-Path $defaultRoot "DinotofuLauncher.ps1"),
-            (Join-Path $defaultRoot "tools\windows\DinotofuLauncher.ps1")
-        )
-        foreach ($cand in $candidates) {
-            if (Test-Path $cand) {
-                try {
-                    Copy-Item $cand $launcherPath -Force
-                    break
-                } catch { }
-            }
+    $candidates = @(
+        (Join-Path $PSScriptRoot "DinotofuLauncher.ps1"),
+        (Join-Path $defaultRoot "tools\windows\DinotofuLauncher.ps1"),
+        (Join-Path $defaultRoot "DinotofuLauncher.ps1"),
+        (Join-Path $RootDir "tools\windows\DinotofuLauncher.ps1")
+    )
+    foreach ($cand in $candidates) {
+        if (Test-Path $cand) {
+            try {
+                Copy-Item $cand $launcherPath -Force
+                break
+            } catch { }
         }
     }
 
@@ -751,8 +766,8 @@ function Repair-DinotofuDesktopShortcuts {
     $normalLauncherCmd = Join-Path $RootDir "Lancer-Dinotofu.cmd"
     $terminalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu-Terminal.cmd"
 
-    if (-not (Test-Path $normalLauncherCmd)) { Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto" }
-    if (-not (Test-Path $terminalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal" }
+    Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto"
+    Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal"
 
     # Verifier si les raccourcis bureau existent deja et sont valides
     $desktopDirs = Get-DesktopDirectories
@@ -800,6 +815,35 @@ function Repair-DinotofuDesktopShortcuts {
     $oldTerminalTargets = Get-DinotofuShortcutCandidates -DisplayName "ProjetDinotofu Launcher Terminal version" -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" -TerminalShortcut
     foreach ($oldLnk in $oldTerminalTargets) {
         Remove-Item -Path $oldLnk -Force -ErrorAction SilentlyContinue
+    }
+
+    # Nettoyage d'eventuels raccourcis ou repertoires parasites crees par d'anciennes versions
+    $strayCandidates = @(
+        (Join-Path (Get-Location) "C\ProjetDinotofu Launcher Terminal version.lnk"),
+        (Join-Path (Get-Location) "C\ProjetDinotofu Launcher.lnk"),
+        (Join-Path $defaultRoot "C\ProjetDinotofu Launcher Terminal version.lnk"),
+        (Join-Path $defaultRoot "C\ProjetDinotofu Launcher.lnk")
+    )
+    foreach ($strayLnk in $strayCandidates) {
+        if (Test-Path $strayLnk) {
+            Remove-Item -Path $strayLnk -Force -ErrorAction SilentlyContinue
+        }
+    }
+    foreach ($loc in @((Get-Location), $defaultRoot)) {
+        $strayDir = Join-Path $loc "C"
+        if ((Test-Path $strayDir) -and ((Get-Item $strayDir).PSIsContainer) -and ((Split-Path $strayDir -Leaf) -eq "C") -and ($strayDir -notmatch '^[a-zA-Z]:\\?$')) {
+            try {
+                $items = Get-ChildItem -Path $strayDir -Recurse -File -ErrorAction SilentlyContinue
+                $allDinotofuLnk = $true
+                foreach ($f in $items) {
+                    if ($f.Extension -ne ".lnk" -and $f.Name -notlike "*Dinotofu*") { $allDinotofuLnk = $false; break }
+                }
+                if ($allDinotofuLnk) {
+                    Remove-Item -Path $strayDir -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
+            catch { }
+        }
     }
 }
 
@@ -860,6 +904,8 @@ function Stop-DinotofuBackgroundProcesses {
 
     if ([string]::IsNullOrWhiteSpace($RootDir)) { return }
 
+    $normalizedRoot = try { [System.IO.Path]::GetFullPath($RootDir) } catch { $RootDir }
+
     $pidFiles = @(
         (Join-Path $RootDir "gui_debug\server.pid"),
         (Join-Path $RootDir "gui_debug\game.pid")
@@ -881,17 +927,51 @@ function Stop-DinotofuBackgroundProcesses {
     }
 
     try {
-        $normalizedRoot = [System.IO.Path]::GetFullPath($RootDir)
         $processes = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
-            $_.ProcessId -ne $PID -and $_.CommandLine -and (
-                $_.CommandLine -like "*$normalizedRoot*" -or
-                $_.CommandLine -like "*serve_gui_preview.py*" -or
-                $_.CommandLine -like "*DINOTOFU_GUI_DEBUG_DIR*"
+            $_.ProcessId -ne $PID -and (
+                ($_.ExecutablePath -and $_.ExecutablePath -like "*$normalizedRoot*") -or
+                ($_.CommandLine -and (
+                    $_.CommandLine -like "*$normalizedRoot*" -or
+                    $_.CommandLine -like "*serve_gui_preview.py*" -or
+                    $_.CommandLine -like "*DINOTOFU_GUI_DEBUG_DIR*"
+                ))
             )
         }
 
         foreach ($process in $processes) {
             Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+        }
+    }
+    catch { }
+
+    try {
+        $gameProcesses = Get-Process -Name "Dinotofu", "DinotofuGUI", "DinotofuGui" -ErrorAction SilentlyContinue
+        foreach ($gp in $gameProcesses) {
+            if ($gp.Id -eq $PID) { continue }
+            $shouldKill = $false
+            try {
+                if ($gp.Path -and $gp.Path -like "*$normalizedRoot*") {
+                    $shouldKill = $true
+                }
+                elseif (-not $gp.Path) {
+                    $shouldKill = $true
+                }
+            }
+            catch {
+                $shouldKill = $true
+            }
+            if ($shouldKill) {
+                Stop-Process -Id $gp.Id -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+    catch { }
+
+    try {
+        $stillRunning = Get-Process -Name "Dinotofu", "DinotofuGUI", "DinotofuGui" -ErrorAction SilentlyContinue
+        if ($stillRunning) {
+            Start-Process -FilePath "taskkill.exe" -ArgumentList "/F", "/IM", "Dinotofu.exe" -WindowStyle Hidden -Wait -ErrorAction SilentlyContinue
+            Start-Process -FilePath "taskkill.exe" -ArgumentList "/F", "/IM", "DinotofuGUI.exe" -WindowStyle Hidden -Wait -ErrorAction SilentlyContinue
         }
     }
     catch { }
