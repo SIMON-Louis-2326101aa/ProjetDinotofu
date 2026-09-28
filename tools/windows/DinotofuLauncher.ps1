@@ -665,12 +665,13 @@ function Repair-DinotofuShortcutSet {
         [string]$TargetPath,
         [string]$IconPath,
         [string]$ExpectedTargetFile,
-        [switch]$TerminalShortcut
+        [switch]$TerminalShortcut,
+        [switch]$Quiet
     )
 
     $desktopDirs = Get-DesktopDirectories
     if (-not $desktopDirs -or $desktopDirs.Count -eq 0) {
-        Write-Warning "Aucun dossier de Bureau trouve."
+        if (-not $Quiet) { Write-Warning "Aucun dossier de Bureau trouve." }
         return @()
     }
 
@@ -698,11 +699,15 @@ function Repair-DinotofuShortcutSet {
                 New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
             }
             Create-DesktopShortcut -TargetPath $TargetPath -ShortcutPath $shortcutPath -IconPath $IconPath
-            Write-Host "Raccourci bureau configure : $shortcutPath"
+            if (-not $Quiet) {
+                Write-Host "Raccourci bureau configure : $shortcutPath"
+            }
             $configured += $shortcutPath
         }
         catch {
-            Write-Warning "Impossible de configurer le raccourci $shortcutPath : $($_.Exception.Message)"
+            if (-not $Quiet) {
+                Write-Warning "Impossible de configurer le raccourci $shortcutPath : $($_.Exception.Message)"
+            }
         }
     }
 
@@ -710,7 +715,10 @@ function Repair-DinotofuShortcutSet {
 }
 
 function Repair-DinotofuDesktopShortcuts {
-    param([string]$RootDir)
+    param(
+        [string]$RootDir,
+        [switch]$Quiet
+    )
 
     $cfg = Load-Config
     if ($cfg -and $cfg.createDesktopShortcut -ne $null -and -not [bool]$cfg.createDesktopShortcut) {
@@ -736,7 +744,7 @@ function Repair-DinotofuDesktopShortcuts {
     }
 
     if (-not (Test-Path $launcherPath)) {
-        Write-Warning "DinotofuLauncher.ps1 introuvable dans $RootDir. Raccourcis bureau non configures."
+        if (-not $Quiet) { Write-Warning "DinotofuLauncher.ps1 introuvable dans $RootDir. Raccourcis bureau non configures." }
         return
     }
 
@@ -745,6 +753,24 @@ function Repair-DinotofuDesktopShortcuts {
 
     if (-not (Test-Path $normalLauncherCmd)) { Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto" }
     if (-not (Test-Path $terminalLauncherEntry)) { Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal" }
+
+    # Verifier si les raccourcis bureau existent deja et sont valides
+    $desktopDirs = Get-DesktopDirectories
+    if (-not $desktopDirs -or $desktopDirs.Count -eq 0) { return }
+
+    $allValid = $true
+    foreach ($d in $desktopDirs) {
+        $expectedLnk = Join-Path $d "ProjetDinotofu Launcher.lnk"
+        if (-not (Test-ShortcutCreated -ShortcutPath $expectedLnk -ExpectedTargetFile "Lancer-Dinotofu.cmd")) {
+            $allValid = $false
+            break
+        }
+    }
+
+    # Si le raccourci est deja parfaitement en place et qu'on est en mode silencieux, rien a faire !
+    if ($allValid -and $Quiet) {
+        return
+    }
 
     $fallbackIconPath = Join-Path $RootDir "Dinotofu.exe"
     $guiIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_graphical.ico"
@@ -760,9 +786,12 @@ function Repair-DinotofuDesktopShortcuts {
     if (-not (Test-Path $guiIconPath)) { $guiIconPath = $fallbackIconPath }
     if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
 
-    Write-Step "Creation / reparation du raccourci bureau Dinotofu"
+    if (-not $Quiet) {
+        Write-Step "Creation / reparation du raccourci bureau Dinotofu"
+    }
+
     # Un unique lanceur propre sur le bureau : ProjetDinotofu Launcher (qui proposera le choix GUI ou Terminal au lancement)
-    $guiTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher" -TargetPath $normalLauncherCmd -IconPath $guiIconPath -ExpectedTargetFile "Lancer-Dinotofu.cmd"
+    $guiTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher" -TargetPath $normalLauncherCmd -IconPath $guiIconPath -ExpectedTargetFile "Lancer-Dinotofu.cmd" -Quiet:$Quiet
     foreach ($shortcutPath in $guiTargets) {
         Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu.cmd" | Out-Null
     }
@@ -1080,31 +1109,26 @@ function Start-ExperimentalGui {
 
 function Launch-Game {
     if ($Mode -eq "Auto") {
+        Write-Host ""
+        Write-Host "=================================================" -ForegroundColor Cyan
+        Write-Host " Dinotofu - Choix du mode de lancement" -ForegroundColor Cyan
+        Write-Host "=================================================" -ForegroundColor Cyan
+        Write-Host "  1. Interface Graphique (GUI / Navigateur web)"
+        Write-Host "  2. Mode Terminal (Classique dans la console)"
+        Write-Host "================================================="
         try {
-            if ([Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
-                Write-Host ""
-                Write-Host "=================================================" -ForegroundColor Cyan
-                Write-Host " Dinotofu - Choix du mode de lancement" -ForegroundColor Cyan
-                Write-Host "=================================================" -ForegroundColor Cyan
-                Write-Host "  1. Interface Graphique (GUI / Navigateur web)"
-                Write-Host "  2. Mode Terminal (Classique dans la console)"
-                Write-Host "================================================="
-                $userChoice = Read-Host "Choix [1 ou 2, Defaut = 1]"
-                if ($userChoice -eq "2") {
-                    $Mode = "Terminal"
-                }
-                else {
-                    $Mode = "Gui"
-                }
-                Write-Host ""
+            $userChoice = Read-Host "Choix [1 ou 2, Defaut = 1]"
+            if ($userChoice -eq "2") {
+                $Mode = "Terminal"
+            }
+            else {
+                $Mode = "Gui"
             }
         }
-        catch { }
-    }
-
-    if ($Mode -ne "Terminal") {
-        Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
-        Start-Sleep -Milliseconds 200
+        catch {
+            $Mode = "Gui"
+        }
+        Write-Host ""
     }
 
     $guiCandidates = @(
@@ -1126,18 +1150,60 @@ function Launch-Game {
         (Join-Path $defaultRoot "output\Dinotofu.exe")
     )
 
+    $terminal = Get-FirstExistingPath $terminalCandidates
+    if ([string]::IsNullOrWhiteSpace($terminal)) {
+        # Fallback compilation locale si Makefile et compilateur presents
+        $makeFile = Join-Path $defaultRoot "Makefile"
+        if (Test-Path $makeFile) {
+            $makeCmd = Get-Command "make.exe", "mingw32-make.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($makeCmd) {
+                Write-Host "==> Binaire introuvable. Compilation locale de Dinotofu via $($makeCmd.Name)..." -ForegroundColor Cyan
+                try {
+                    Push-Location $defaultRoot
+                    & $makeCmd.Source | Out-Null
+                }
+                catch { }
+                finally {
+                    Pop-Location
+                }
+                $terminal = Get-FirstExistingPath $terminalCandidates
+            }
+        }
+    }
+
     if ($Mode -ne "Terminal") {
+        Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
+        Start-Sleep -Milliseconds 200
+
         $realGui = Get-FirstExistingPath $guiCandidates
         if (-not [string]::IsNullOrWhiteSpace($realGui)) {
             Start-GameExecutable -ExecutablePath $realGui -Label "Dinotofu GUI"
             return
         }
 
-        $terminal = Get-FirstExistingPath $terminalCandidates
         if (-not [string]::IsNullOrWhiteSpace($terminal)) {
             $debugDir = Join-Path $InstallDir "gui_debug"
             if (Start-ExperimentalGui -GuiDebugDir $debugDir) {
-                Start-GameExecutable -ExecutablePath $terminal -Label "moteur Dinotofu en arriere-plan IG" -GuiDebugDir $debugDir -HiddenWindow -UseTerminalWrapper
+                Start-GameExecutable -ExecutablePath $terminal -Label "moteur Dinotofu en arriere-plan IG" -GuiDebugDir $debugDir -HiddenWindow
+
+                Write-Host ""
+                Write-Host "=================================================" -ForegroundColor Green
+                Write-Host " Dinotofu - Session Interface Graphique active" -ForegroundColor Green
+                Write-Host "=================================================" -ForegroundColor Green
+                Write-Host "  Moteur de jeu Dinotofu actif en arriere-plan."
+                Write-Host ""
+                Write-Host "  Pour arreter le jeu et fermer la session :"
+                Write-Host "  Appuie sur Entree (ou fais Ctrl+C dans cette console)."
+                Write-Host "================================================="
+                try {
+                    $null = Read-Host "Appuie sur Entree pour arreter Dinotofu"
+                }
+                catch { }
+                finally {
+                    Write-Host ""
+                    Write-Host "==> Arret des processus en arriere-plan..." -ForegroundColor Cyan
+                    Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
+                }
                 return
             }
         }
@@ -1147,9 +1213,8 @@ function Launch-Game {
         }
     }
 
-    $terminalFallback = Get-FirstExistingPath $terminalCandidates
-    if (-not [string]::IsNullOrWhiteSpace($terminalFallback)) {
-        Start-GameExecutable -ExecutablePath $terminalFallback -Label "Dinotofu Terminal" -UseTerminalWrapper
+    if (-not [string]::IsNullOrWhiteSpace($terminal)) {
+        Start-GameExecutable -ExecutablePath $terminal -Label "Dinotofu Terminal" -UseTerminalWrapper
         return
     }
 
@@ -1219,7 +1284,7 @@ elseif (-not (Is-RepoConfigured)) {
     Write-Warning "Repo GitHub non configure dans le launcher. Lancement sans auto-update."
 }
 
-Repair-DinotofuDesktopShortcuts -RootDir $InstallDir
+Repair-DinotofuDesktopShortcuts -RootDir $InstallDir -Quiet
 
 if ($updateApplied) {
     Write-Host ""
