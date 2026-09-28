@@ -81,13 +81,101 @@ function Expand-PathText {
     return [Environment]::ExpandEnvironmentVariables($PathText)
 }
 
+function Combine-WinPath {
+    param([string]$Parent, [string]$Child)
+    if ([string]::IsNullOrWhiteSpace($Parent)) { return $Child }
+    if ([string]::IsNullOrWhiteSpace($Child)) { return $Parent }
+    $p = $Parent -replace "[\\/]+$", ""
+    return "$p\$Child"
+}
+
+function Get-DefaultInstallParent {
+    $parent = ""
+    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE) -and (Test-Path $env:USERPROFILE)) {
+        $parent = $env:USERPROFILE
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace([Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)) -and (Test-Path [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile))) {
+        $parent = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+    }
+    elseif (-not [string]::IsNullOrWhiteSpace($env:HOME) -and (Test-Path $env:HOME)) {
+        $parent = $env:HOME
+    }
+    else {
+        $parent = $env:LOCALAPPDATA
+    }
+    try {
+        return [System.IO.Path]::GetFullPath($parent)
+    } catch {
+        return $parent
+    }
+}
+
 function Normalize-ProjectInstallDir {
     param([string]$PathText)
+
     if ([string]::IsNullOrWhiteSpace($PathText)) { return $defaultRoot }
-    $expanded = (Expand-PathText $PathText).Trim().Trim('"')
-    $leaf = Split-Path -Path $expanded -Leaf
-    if ($leaf -ieq "ProjetDinotofu") { return $expanded }
-    return (Join-Path $expanded "ProjetDinotofu")
+
+    $defaultParent = Get-DefaultInstallParent
+    $raw = (Expand-PathText $PathText).Trim().Trim('"').Trim()
+    if ([string]::IsNullOrWhiteSpace($raw)) { return $defaultRoot }
+
+    # Expand ~
+    if ($raw -eq "~") {
+        $raw = $defaultParent
+    }
+    elseif ($raw.StartsWith("~/") -or $raw.StartsWith("~\")) {
+        $raw = Combine-WinPath $defaultParent ($raw.Substring(2))
+    }
+
+    # Convert Git Bash / MSYS style: /c or /c/ or /c/something -> C:\something
+    if ($raw -match "^/([a-zA-Z])(/.*)?$") {
+        $driveLetter = $Matches[1].ToUpper()
+        $rest = $Matches[2]
+        if ([string]::IsNullOrWhiteSpace($rest) -or $rest -eq "/") {
+            $raw = "$($driveLetter):\"
+        } else {
+            $raw = "$($driveLetter):$($rest -replace '/', '\')"
+        }
+    }
+
+    # Handle drive alone: "C" or "c" -> C:\
+    if ($raw -match "^[a-zA-Z]$") {
+        $raw = "$($raw.ToUpper()):\"
+    }
+    # Handle drive with colon: "C:" or "c:" -> C:\
+    elseif ($raw -match "^[a-zA-Z]:$") {
+        $raw = "$($raw.Substring(0, 1).ToUpper()):\"
+    }
+
+    # Normalize forward slashes to backslashes
+    $raw = $raw -replace "/", "\"
+
+    # If relative path (does not start with drive letter X:\ or UNC \\),
+    # anchor it to defaultParent
+    if ($raw -notmatch "^[a-zA-Z]:" -and $raw -notmatch "^\\\\") {
+        $raw = Combine-WinPath $defaultParent $raw
+    }
+
+    # Remove trailing backslash unless it is a drive root like C:\
+    if ($raw -notmatch "^[a-zA-Z]:\\$") {
+        $raw = $raw -replace "[\\/]+$", ""
+    }
+
+    # If already ending in ProjetDinotofu, do not append duplicate
+    if ($raw -match "(?i)\\ProjetDinotofu$") {
+        try {
+            return [System.IO.Path]::GetFullPath($raw)
+        } catch {
+            return $raw
+        }
+    }
+
+    $finalPath = Combine-WinPath $raw "ProjetDinotofu"
+    try {
+        return [System.IO.Path]::GetFullPath($finalPath)
+    } catch {
+        return $finalPath
+    }
 }
 
 $config = Load-Config
@@ -386,7 +474,14 @@ function Ensure-LauncherCmd {
         "set PYTHONIOENCODING=utf-8",
         "set LANG=C.UTF-8",
         "set LC_ALL=C.UTF-8",
-        "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode $Mode",
+        "if exist `"%~dp0DinotofuLauncher.ps1`" (",
+        "    powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0DinotofuLauncher.ps1`" -Mode $Mode",
+        ") else if exist `"%~dp0tools\windows\DinotofuLauncher.ps1`" (",
+        "    powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"%~dp0tools\windows\DinotofuLauncher.ps1`" -Mode $Mode",
+        ") else (",
+        "    echo DinotofuLauncher.ps1 introuvable.",
+        "    pause",
+        ")",
         "exit /b"
     ) -join "`r`n"
 
@@ -400,18 +495,26 @@ function Create-DesktopShortcut {
         [string]$IconPath = ""
     )
 
+    $fullTarget = [System.IO.Path]::GetFullPath($TargetPath)
+    $workDir = [System.IO.Path]::GetDirectoryName($fullTarget)
+
     $wsh = New-Object -ComObject WScript.Shell
     $shortcut = $wsh.CreateShortcut($ShortcutPath)
-    $shortcut.TargetPath = $TargetPath
+    $shortcut.TargetPath = $fullTarget
     $shortcut.Arguments = ""
-    $shortcut.WorkingDirectory = Split-Path $TargetPath
+    $shortcut.WorkingDirectory = $workDir
+
     if (-not [string]::IsNullOrWhiteSpace($IconPath) -and (Test-Path $IconPath)) {
-        $shortcut.IconLocation = "$IconPath,0"
+        $fullIcon = [System.IO.Path]::GetFullPath($IconPath)
+        $shortcut.IconLocation = "$fullIcon,0"
     }
     else {
-        $shortcut.IconLocation = "cmd.exe,0"
+        $shortcut.IconLocation = "$env:SystemRoot\System32\cmd.exe,0"
     }
+
     $shortcut.Save()
+    try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($shortcut) | Out-Null } catch { }
+    try { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wsh) | Out-Null } catch { }
 }
 
 function Test-ShortcutCreated {
@@ -424,30 +527,43 @@ function Test-ShortcutCreated {
     try {
         $wsh = New-Object -ComObject WScript.Shell
         $shortcut = $wsh.CreateShortcut($ShortcutPath)
-        return ((Split-Path -Path $shortcut.TargetPath -Leaf) -ieq $ExpectedTargetFile)
+        $matches = ((Split-Path -Path $shortcut.TargetPath -Leaf) -ieq $ExpectedTargetFile)
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($shortcut) | Out-Null
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wsh) | Out-Null
+        return $matches
     }
     catch { return $false }
 }
 
-
 function Get-DesktopDirectories {
     $dirs = @()
 
-    # 1. Registre Windows User Shell Folders (crucial pour OneDrive et bureaux deplaces)
+    # 1. Registre Windows User Shell Folders (Desktop standard + GUID Windows 10/11)
+    $regPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
     try {
-        $regDesktop = (Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "Desktop" -ErrorAction SilentlyContinue).Desktop
-        if (-not [string]::IsNullOrWhiteSpace($regDesktop)) {
-            $expandedReg = [Environment]::ExpandEnvironmentVariables($regDesktop)
-            if (Test-Path $expandedReg) { $dirs += $expandedReg }
+        $regProps = Get-ItemProperty -Path $regPath -ErrorAction SilentlyContinue
+        if ($regProps) {
+            if ($regProps.Desktop) {
+                $expandedReg = [Environment]::ExpandEnvironmentVariables([string]$regProps.Desktop)
+                if (Test-Path $expandedReg) { $dirs += $expandedReg }
+            }
+            $guidDesktop = $regProps."{754AC886-DF64-4C36-86F5-E1E0FEE00552}"
+            if ($guidDesktop) {
+                $expandedGuid = [Environment]::ExpandEnvironmentVariables([string]$guidDesktop)
+                if (Test-Path $expandedGuid) { $dirs += $expandedGuid }
+            }
         }
     }
     catch { }
 
-    # 2. Dossier special standard
-    $envDesktop = [Environment]::GetFolderPath("Desktop")
-    if (-not [string]::IsNullOrWhiteSpace($envDesktop) -and (Test-Path $envDesktop)) {
-        $dirs += $envDesktop
+    # 2. .NET Standard SpecialFolder.Desktop
+    try {
+        $envDesktop = [Environment]::GetFolderPath([Environment+SpecialFolder]::Desktop)
+        if (-not [string]::IsNullOrWhiteSpace($envDesktop) -and (Test-Path $envDesktop)) {
+            $dirs += $envDesktop
+        }
     }
+    catch { }
 
     # 3. Shell.Application shell:Desktop
     try {
@@ -459,23 +575,37 @@ function Get-DesktopDirectories {
     }
     catch { }
 
-    # 4. Chemins standards du profil utilisateur (Desktop, Bureau, OneDrive)
-    if (-not [string]::IsNullOrWhiteSpace($env:USERPROFILE)) {
+    # 4. Chemins standards du profil utilisateur (Desktop, Bureau, OneDrive\Desktop, OneDrive\Bureau)
+    $userProf = $env:USERPROFILE
+    if ([string]::IsNullOrWhiteSpace($userProf)) {
+        try { $userProf = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile) } catch { }
+    }
+    if (-not [string]::IsNullOrWhiteSpace($userProf) -and (Test-Path $userProf)) {
         foreach ($name in @("Desktop", "Bureau", "OneDrive\Desktop", "OneDrive\Bureau")) {
-            $candidate = Join-Path $env:USERPROFILE $name
+            $candidate = Join-Path $userProf $name
             if (Test-Path $candidate) { $dirs += $candidate }
         }
     }
 
-    # 5. Variable d'environnement OneDrive explicite
-    if (-not [string]::IsNullOrWhiteSpace($env:OneDrive)) {
-        foreach ($name in @("Desktop", "Bureau")) {
-            $candidate = Join-Path $env:OneDrive $name
-            if (Test-Path $candidate) { $dirs += $candidate }
+    # 5. Variables d'environnement OneDrive explicites
+    foreach ($oneDriveVar in @($env:OneDrive, $env:OneDriveConsumer, $env:OneDriveCommercial)) {
+        if (-not [string]::IsNullOrWhiteSpace($oneDriveVar) -and (Test-Path $oneDriveVar)) {
+            foreach ($name in @("Desktop", "Bureau")) {
+                $candidate = Join-Path $oneDriveVar $name
+                if (Test-Path $candidate) { $dirs += $candidate }
+            }
         }
     }
 
-    $unique = @($dirs | Select-Object -Unique)
+    $normalizedDirs = @()
+    foreach ($d in $dirs) {
+        try {
+            $full = [System.IO.Path]::GetFullPath($d)
+            if (Test-Path $full) { $normalizedDirs += $full }
+        } catch { }
+    }
+
+    $unique = @($normalizedDirs | Select-Object -Unique)
     if ($unique.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($envDesktop)) {
         return @($envDesktop)
     }
@@ -496,7 +626,8 @@ function Get-DinotofuShortcutCandidates {
     try {
         $wsh = New-Object -ComObject WScript.Shell
         foreach ($desktopPath in $desktopDirs) {
-            $allLinks = Get-ChildItem -Path $desktopPath -Filter "*.lnk" -File -Recurse -ErrorAction SilentlyContinue
+            # Recherche directe sur le bureau sans -Recurse pour ne pas cibler des sous-dossiers
+            $allLinks = Get-ChildItem -Path $desktopPath -Filter "*.lnk" -File -ErrorAction SilentlyContinue
             foreach ($link in $allLinks) {
                 $name = $link.BaseName
                 $nameMatches = $false
@@ -512,6 +643,7 @@ function Get-DinotofuShortcutCandidates {
                     $shortcut = $wsh.CreateShortcut($link.FullName)
                     $targetLeaf = Split-Path -Path $shortcut.TargetPath -Leaf
                     $targetMatches = ($targetLeaf -ieq $ExpectedTargetFile)
+                    [System.Runtime.InteropServices.Marshal]::ReleaseComObject($shortcut) | Out-Null
                 }
                 catch { }
 
@@ -520,6 +652,7 @@ function Get-DinotofuShortcutCandidates {
                 }
             }
         }
+        [System.Runtime.InteropServices.Marshal]::ReleaseComObject($wsh) | Out-Null
     }
     catch { }
 
@@ -536,26 +669,44 @@ function Repair-DinotofuShortcutSet {
     )
 
     $desktopDirs = Get-DesktopDirectories
-    if (-not $desktopDirs -or $desktopDirs.Count -eq 0) { return @() }
-    $primaryDesktop = $desktopDirs[0]
-
-    $targets = @(Get-DinotofuShortcutCandidates -DisplayName $DisplayName -ExpectedTargetFile $ExpectedTargetFile -TerminalShortcut:$TerminalShortcut)
-    if (-not $targets -or $targets.Count -eq 0) {
-        $targets = @(Join-Path $primaryDesktop ($DisplayName + ".lnk"))
+    if (-not $desktopDirs -or $desktopDirs.Count -eq 0) {
+        Write-Warning "Aucun dossier de Bureau trouve."
+        return @()
     }
+
+    $existingMatches = @(Get-DinotofuShortcutCandidates -DisplayName $DisplayName -ExpectedTargetFile $ExpectedTargetFile -TerminalShortcut:$TerminalShortcut)
+    $targets = @()
+    if ($existingMatches -and $existingMatches.Count -gt 0) {
+        $targets += $existingMatches
+    }
+
+    # S'assurer que le raccourci est configure sur chaque bureau detecte (local et OneDrive)
+    foreach ($d in $desktopDirs) {
+        $desiredLnk = Join-Path $d ($DisplayName + ".lnk")
+        if ($targets -notcontains $desiredLnk) {
+            $targets += $desiredLnk
+        }
+    }
+
+    $targets = @($targets | Select-Object -Unique)
+    $configured = @()
 
     foreach ($shortcutPath in $targets) {
         try {
-            New-Item -ItemType Directory -Path (Split-Path $shortcutPath) -Force | Out-Null
+            $parentDir = Split-Path $shortcutPath
+            if (-not (Test-Path $parentDir)) {
+                New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
+            }
             Create-DesktopShortcut -TargetPath $TargetPath -ShortcutPath $shortcutPath -IconPath $IconPath
-            Write-Host "Raccourci repare : $shortcutPath"
+            Write-Host "Raccourci bureau configure : $shortcutPath"
+            $configured += $shortcutPath
         }
         catch {
-            Write-Warning "Impossible de reparer le raccourci $shortcutPath : $($_.Exception.Message)"
+            Write-Warning "Impossible de configurer le raccourci $shortcutPath : $($_.Exception.Message)"
         }
     }
 
-    return $targets
+    return $configured
 }
 
 function Repair-DinotofuDesktopShortcuts {
@@ -567,7 +718,27 @@ function Repair-DinotofuDesktopShortcuts {
     }
 
     $launcherPath = Join-Path $RootDir "DinotofuLauncher.ps1"
-    if (-not (Test-Path $launcherPath)) { return }
+    if (-not (Test-Path $launcherPath)) {
+        $candidates = @(
+            (Join-Path $RootDir "tools\windows\DinotofuLauncher.ps1"),
+            (Join-Path $PSScriptRoot "DinotofuLauncher.ps1"),
+            (Join-Path $defaultRoot "DinotofuLauncher.ps1"),
+            (Join-Path $defaultRoot "tools\windows\DinotofuLauncher.ps1")
+        )
+        foreach ($cand in $candidates) {
+            if (Test-Path $cand) {
+                try {
+                    Copy-Item $cand $launcherPath -Force
+                    break
+                } catch { }
+            }
+        }
+    }
+
+    if (-not (Test-Path $launcherPath)) {
+        Write-Warning "DinotofuLauncher.ps1 introuvable dans $RootDir. Raccourcis bureau non configures."
+        return
+    }
 
     $normalLauncherCmd = Join-Path $RootDir "Lancer-Dinotofu.cmd"
     $terminalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu-Terminal.cmd"
@@ -578,15 +749,23 @@ function Repair-DinotofuDesktopShortcuts {
     $fallbackIconPath = Join-Path $RootDir "Dinotofu.exe"
     $guiIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_graphical.ico"
     if (-not (Test-Path $guiIconPath)) { $guiIconPath = Join-Path $RootDir "data\assets\branding\dinotofu_launcher_graphical.ico" }
+    if (-not (Test-Path $guiIconPath)) { $guiIconPath = Join-Path $defaultRoot "assets\branding\dinotofu_launcher_graphical.ico" }
+    if (-not (Test-Path $guiIconPath)) { $guiIconPath = Join-Path $RootDir "assets\branding\dinotofu.ico" }
+    if (-not (Test-Path $guiIconPath)) { $guiIconPath = Join-Path $defaultRoot "assets\branding\dinotofu.ico" }
+
     $terminalIconPath = Join-Path $RootDir "assets\branding\dinotofu_launcher_terminal.ico"
     if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = Join-Path $RootDir "data\assets\branding\dinotofu_launcher_terminal.ico" }
+    if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = Join-Path $defaultRoot "assets\branding\dinotofu_launcher_terminal.ico" }
+
     if (-not (Test-Path $guiIconPath)) { $guiIconPath = $fallbackIconPath }
     if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
 
     Write-Step "Creation / reparation du raccourci bureau Dinotofu"
     # Un unique lanceur propre sur le bureau : ProjetDinotofu Launcher (qui proposera le choix GUI ou Terminal au lancement)
     $guiTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher" -TargetPath $normalLauncherCmd -IconPath $guiIconPath -ExpectedTargetFile "Lancer-Dinotofu.cmd"
-    foreach ($shortcutPath in $guiTargets) { Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu.cmd" | Out-Null }
+    foreach ($shortcutPath in $guiTargets) {
+        Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu.cmd" | Out-Null
+    }
 
     # Nettoyage de l'ancien raccourci terminal doublon sur le bureau s'il etait present pour eviter la surcharge de cliquables
     $oldTerminalTargets = Get-DinotofuShortcutCandidates -DisplayName "ProjetDinotofu Launcher Terminal version" -ExpectedTargetFile "Lancer-Dinotofu-Terminal.cmd" -TerminalShortcut
