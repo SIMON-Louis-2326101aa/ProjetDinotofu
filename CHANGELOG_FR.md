@@ -2,6 +2,17 @@
 
 Historique détaillé des versions de Dinotofu en français. Le journal anglais équivalent se trouve dans `CHANGELOG.md`.   
 
+## V3.50.13 — Notes de mise à jour   
+
+- Correction et fiabilisation des installateurs et lanceurs Windows et Linux.   
+- Windows : synchronisation systématique des scripts du launcher (`DinotofuLauncher.ps1`, `Lancer-Dinotofu.cmd`, `Lancer-Dinotofu-Terminal.cmd`), des outils GUI et des assets pour écraser les versions antérieures extraites des archives de release.   
+- Windows : arrêt complet et robuste des processus en arrière-plan (`Stop-DinotofuBackgroundProcesses` avec PID, WMI/CIM, détection par nom .NET et filet de sécurité `taskkill`) pour éliminer les verrous de fichiers lors de la copie (`Copy-Item`). Ajout de plusieurs tentatives de copie avec temporisation.   
+- Windows : correction du bogue de chemin relatif qui créait un dossier parasite `C\` dans le dépôt, avec suppression automatique des liens orphelins et vérification de chemins absolus (`IsPathRooted`).   
+- Windows & Linux : interface interactive au lancement (choix entre Interface Graphique et Mode Terminal classique), gestion de session propre en console pour couper le serveur web et le moteur de jeu avec Entrée ou Ctrl+C.   
+- Aucune modification du schéma de sauvegarde (`saveVersion = 23`) ni du jalon obligatoire (`V3.50.12`).   
+
+---   
+
 ## V3.50.12 — Notes de mise à jour   
 
 - Synchronisation de version. Remplacer par les notes détaillées avant publication.   

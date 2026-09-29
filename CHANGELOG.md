@@ -2,6 +2,17 @@
 
 Detailed English version history for Dinotofu. The matching French history is stored in `CHANGELOG_FR.md`. README files remain focused on installation and useful player information.   
 
+## V3.50.13 — Update notes   
+
+- Bug fixes and stabilization for Windows and Linux installers and launchers.   
+- Windows: unconditional synchronization of launcher scripts (`DinotofuLauncher.ps1`, `Lancer-Dinotofu.cmd`, `Lancer-Dinotofu-Terminal.cmd`), GUI tools, and assets during installation to overwrite stale files extracted from downloaded release archives.   
+- Windows: robust process termination in `Stop-DinotofuBackgroundProcesses` (PID files, WMI/CIM, .NET process filtering, and `taskkill` safety net) to prevent file locking during `Copy-Item`. Added retries with backoff during installation and update extraction.   
+- Windows: resolved relative path issue that created a stray `C\` directory in the repository, adding automatic cleanup of orphaned shortcuts/folders and enforcing rooted paths (`IsPathRooted`).   
+- Windows & Linux: interactive launcher menu at startup (choice between Graphical Browser Interface and Classic Terminal Mode), with interactive console session management to cleanly stop background processes via Enter or Ctrl+C.   
+- No change to the save schema (`saveVersion = 23`) or mandatory save checkpoint (`V3.50.12`).   
+
+---   
+
 ## V3.50.12 — Update notes   
 
 - Version synchronization placeholder. Replace with detailed release notes before publishing.   

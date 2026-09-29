@@ -20,7 +20,7 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     exit 1
 fi
 
-python3 scripts/bump_version.py "${BUMP_MODE}"
+python3 scripts/bump_version.py "${BUMP_MODE}" --no-commit
 VERSION="$(bash ./scripts/get_version.sh)"
 
 if [[ -z "${COMMIT_MESSAGE}" ]]; then

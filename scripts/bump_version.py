@@ -16,6 +16,9 @@ The interactive mode also asks whether to:
 Automation flags:
   --save-schema keep|next|N
   --checkpoint keep|current|X.Y.Z
+  --commit / --no-commit
+  --edit-changelog / --no-edit-changelog
+  --custom-message / --no-custom-message
   --non-interactive
 
 Examples:
@@ -25,7 +28,11 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import os
 import re
+import shlex
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -151,7 +158,8 @@ def resolve_checkpoint(current: str, new_game_version: str, option: str | None, 
     return current
 
 
-def update_sync_files(new_ver: str) -> None:
+def update_sync_files(new_ver: str) -> list[Path]:
+    changed: list[Path] = []
     readme_rules = [
         (ROOT / "READMEFR.md", r'(- Version actuelle : \*\*V)[0-9]+\.[0-9]+\.[0-9]+(\*\*)'),
         (ROOT / "README.md", r'(- Current version: \*\*V)[0-9]+\.[0-9]+\.[0-9]+(\*\*)'),
@@ -164,6 +172,7 @@ def update_sync_files(new_ver: str) -> None:
         if count == 0:
             raise RuntimeError(f"Ligne de version courante introuvable dans {readme.name}")
         readme.write_text(content, encoding="utf-8")
+        changed.append(readme)
 
     changelog_sections = [
         (ROOT / "CHANGELOG.md", f"## V{new_ver} — Update notes   \n\n- Version synchronization placeholder. Replace with detailed release notes before publishing.   \n\n---   \n\n"),
@@ -180,6 +189,7 @@ def update_sync_files(new_ver: str) -> None:
             else:
                 content += "\n\n" + new_section
             changelog.write_text(content, encoding="utf-8")
+            changed.append(changelog)
 
     for manifest in [ROOT / "release" / "manifest.example.json", ROOT / "assets" / "branding" / "branding_manifest.json"]:
         if not manifest.exists():
@@ -197,17 +207,22 @@ def update_sync_files(new_ver: str) -> None:
             content = re.sub(r'("releaseTag"\s*:\s*"v)[0-9]+\.[0-9]+\.[0-9]+(")', rf'\g<1>{new_ver}\g<2>', content, count=1)
             content = re.sub(r'((?:Installer-)?Dinotofu-(?:Windows|Linux)-v)[0-9]+\.[0-9]+\.[0-9]+(\.(?:7z|zip))', rf'\g<1>{new_ver}\g<2>', content)
         manifest.write_text(content, encoding="utf-8")
+        changed.append(manifest)
+
+    return changed
 
 
-def update_checkpoint_docs(old_checkpoint: str, new_checkpoint: str) -> None:
+def update_checkpoint_docs(old_checkpoint: str, new_checkpoint: str) -> list[Path]:
     if old_checkpoint == new_checkpoint:
-        return
+        return []
 
+    changed: list[Path] = []
     version_source = VERSION_FILE.read_text(encoding="utf-8")
     version_source, count = CHECKPOINT_RE.subn(rf'\g<1>{new_checkpoint}\g<3>', version_source, count=1)
     if count != 1:
         raise RuntimeError("Impossible de mettre à jour importantSaveUpdateVersion()")
     VERSION_FILE.write_text(version_source, encoding="utf-8")
+    changed.append(VERSION_FILE)
 
     # Current-status docs may move with the checkpoint. Historical changelog entries must never move.
     for path in [ROOT / "README.md", ROOT / "READMEFR.md"]:
@@ -215,26 +230,136 @@ def update_checkpoint_docs(old_checkpoint: str, new_checkpoint: str) -> None:
             content = path.read_text(encoding="utf-8")
             content = content.replace(f"V{old_checkpoint}", f"V{new_checkpoint}")
             path.write_text(content, encoding="utf-8")
+            changed.append(path)
 
     test_cpp = ROOT / "tests" / "ImportantSaveCheckpointTest.cpp"
     if test_cpp.exists():
         content = test_cpp.read_text(encoding="utf-8").replace(old_checkpoint, new_checkpoint)
         test_cpp.write_text(content, encoding="utf-8")
+        changed.append(test_cpp)
 
     test_sh = ROOT / "scripts" / "test_project.sh"
     if test_sh.exists():
         content = test_sh.read_text(encoding="utf-8").replace(old_checkpoint, new_checkpoint)
         test_sh.write_text(content, encoding="utf-8")
+        changed.append(test_sh)
+
+    return changed
 
 
-def update_save_schema(old_schema: int, new_schema: int) -> None:
+def update_save_schema(old_schema: int, new_schema: int) -> list[Path]:
     if old_schema == new_schema:
-        return
+        return []
     source = SAVE_SCHEMA_FILE.read_text(encoding="utf-8")
     source, count = SAVE_SCHEMA_RE.subn(rf'\g<1>{new_schema}\g<3>', source, count=1)
     if count != 1:
         raise RuntimeError("Impossible de mettre à jour SaveSchemaVersion::Current")
     SAVE_SCHEMA_FILE.write_text(source, encoding="utf-8")
+    return [SAVE_SCHEMA_FILE]
+
+
+def open_in_editor(file_path: Path) -> None:
+    editor = os.environ.get("VISUAL") or os.environ.get("EDITOR")
+    if not editor:
+        for cand in ["nano", "vim", "vi"]:
+            if shutil.which(cand):
+                editor = cand
+                break
+    if editor:
+        try:
+            print(f"\nOuverture de {file_path.name} avec {editor}...")
+            cmd = shlex.split(editor) + [str(file_path)]
+            subprocess.run(cmd, cwd=ROOT, check=False)
+        except Exception as exc:
+            print(f"Impossible d'ouvrir l'éditeur '{editor}' : {exc}", file=sys.stderr)
+    else:
+        print(f"Aucun éditeur ($EDITOR / $VISUAL / nano / vim) trouvé pour ouvrir {file_path.name}.")
+
+
+def ask_commit_mode(default_choice: str = "1") -> str:
+    print("\nChoix du mode de commit Git :")
+    print("  1. Message automatique [Défaut]")
+    print("  2. Message personnalisé (ouvre $EDITOR via 'git commit')")
+    print("  3. Ne pas commiter maintenant")
+    while True:
+        try:
+            choice = input(f"Choix [1, 2 ou 3, Défaut = {default_choice}] : ").strip()
+        except EOFError:
+            return default_choice
+        if not choice:
+            return default_choice
+        if choice in {"1", "2", "3"}:
+            return choice
+        print("Choix invalide. Entre 1, 2 ou 3.")
+
+
+def stage_files(files: set[Path]) -> bool:
+    if not shutil.which("git"):
+        print("Avertissement : 'git' introuvable dans le PATH. Fichiers non ajoutés.")
+        return False
+
+    res = subprocess.run(["git", "rev-parse", "--is-inside-work-tree"], cwd=ROOT, capture_output=True, text=True)
+    if res.returncode != 0:
+        print("Avertissement : le dossier n'est pas un dépôt Git. Fichiers non ajoutés.")
+        return False
+
+    rel_paths = [str(f.relative_to(ROOT)) for f in files if f.exists()]
+    if not rel_paths:
+        return False
+
+    add_res = subprocess.run(["git", "add", "--"] + rel_paths, cwd=ROOT, capture_output=True, text=True)
+    if add_res.returncode != 0:
+        print(f"Erreur lors de 'git add' : {add_res.stderr}", file=sys.stderr)
+        return False
+
+    return True
+
+
+def commit_changes(
+    files: set[Path],
+    current_ver: str,
+    new_ver: str,
+    current_schema: int,
+    new_schema: int,
+    current_checkpoint: str,
+    new_checkpoint: str,
+    custom_message: bool = False,
+) -> bool:
+    if not stage_files(files):
+        return False
+
+    if custom_message:
+        print("\nOuverture de l'éditeur pour saisir le message de commit Git...")
+        commit_res = subprocess.run(["git", "commit"], cwd=ROOT)
+        if commit_res.returncode != 0:
+            print("Commit Git annulé ou échoué.")
+            return False
+        print("\n[OK] Commit Git personnalisé créé avec succès.")
+        return True
+
+    commit_title = f"chore(release): bump version to {new_ver}"
+    commit_body_lines = [
+        f"- Version du jeu : {current_ver} -> {new_ver}",
+    ]
+    if new_schema != current_schema:
+        commit_body_lines.append(f"- Schéma de sauvegarde : {current_schema} -> {new_schema}")
+    if new_checkpoint != current_checkpoint:
+        commit_body_lines.append(f"- Checkpoint important : V{current_checkpoint} -> V{new_checkpoint}")
+
+    commit_args = ["git", "commit", "-m", commit_title]
+    if commit_body_lines:
+        commit_args.extend(["-m", "\n".join(commit_body_lines)])
+
+    commit_res = subprocess.run(commit_args, cwd=ROOT, capture_output=True, text=True)
+    if commit_res.returncode != 0:
+        if "nothing to commit" in commit_res.stdout or "nothing to commit" in commit_res.stderr:
+            print("Aucune modification à commiter.")
+            return True
+        print(f"Erreur lors de 'git commit' : {commit_res.stderr}", file=sys.stderr)
+        return False
+
+    print(f"\n[OK] Commit Git créé automatiquement : {commit_title}")
+    return True
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -242,6 +367,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("mode", nargs="?", default="patch", help="patch, minor, major ou version explicite X.Y.Z")
     parser.add_argument("--save-schema", dest="save_schema", help="keep, next ou entier explicite")
     parser.add_argument("--checkpoint", help="keep, current ou version explicite X.Y.Z")
+    parser.add_argument("--commit", action=argparse.BooleanOptionalAction, default=True, help="ajoute les fichiers modifiés et crée le commit Git (défaut: activé)")
+    parser.add_argument("--edit-changelog", action=argparse.BooleanOptionalAction, default=None, help="ouvre CHANGELOG.md dans l'éditeur (défaut: demande en mode interactif)")
+    parser.add_argument("--custom-message", action=argparse.BooleanOptionalAction, default=None, help="ouvre l'éditeur Git pour saisir un message personnalisé (défaut: demande en mode interactif)")
     parser.add_argument("--non-interactive", action="store_true", help="ne pose aucune question; conserve les valeurs non précisées")
     return parser
 
@@ -267,21 +395,64 @@ def main() -> int:
         print("Annulé. Aucun fichier modifié.")
         return 0
 
+    modified_files: set[Path] = {VERSION_FILE}
     updated, count = VERSION_RE.subn(rf'\g<1>{new_version}\g<3>', version_source, count=1)
     if count != 1:
         print("Impossible de mettre à jour la version du jeu.", file=sys.stderr)
         return 1
     VERSION_FILE.write_text(updated, encoding="utf-8")
 
-    update_save_schema(current_schema, new_schema)
-    update_checkpoint_docs(current_checkpoint, new_checkpoint)
-    update_sync_files(new_version)
+    modified_files.update(update_save_schema(current_schema, new_schema))
+    modified_files.update(update_checkpoint_docs(current_checkpoint, new_checkpoint))
+    modified_files.update(update_sync_files(new_version))
 
     print("\nDinotofu mis à jour.")
     if new_schema != current_schema:
         print(f"ATTENTION : saveVersion est passé de {current_schema} à {new_schema}. Vérifie/ajoute la migration correspondante.")
     if new_checkpoint != current_checkpoint:
         print(f"ATTENTION : V{new_checkpoint} devient un nouveau checkpoint obligatoire de sauvegarde.")
+
+    if interactive:
+        should_edit_changelog = args.edit_changelog
+        if should_edit_changelog is None:
+            should_edit_changelog = ask_yes_no("Ouvrir CHANGELOG.md pour éditer les notes de version ?", default=True)
+        if should_edit_changelog:
+            open_in_editor(ROOT / "CHANGELOG.md")
+            if (ROOT / "CHANGELOG_FR.md").exists() and ask_yes_no("Ouvrir aussi CHANGELOG_FR.md ?", default=False):
+                open_in_editor(ROOT / "CHANGELOG_FR.md")
+    elif args.edit_changelog:
+        open_in_editor(ROOT / "CHANGELOG.md")
+
+    should_commit = args.commit
+    custom_msg = args.custom_message
+
+    if not should_commit:
+        print("\nCommit automatique désactivé via --no-commit. Pense à faire 'git add' et 'git commit' manuellement.")
+        return 0
+
+    if interactive and custom_msg is None:
+        mode_choice = ask_commit_mode(default_choice="1")
+        if mode_choice == "1":
+            custom_msg = False
+        elif mode_choice == "2":
+            custom_msg = True
+        else:
+            print("\nCommit ignoré. Pense à faire 'git add' et 'git commit' manuellement.")
+            return 0
+    elif custom_msg is None:
+        custom_msg = False
+
+    commit_changes(
+        files=modified_files,
+        current_ver=current,
+        new_ver=new_version,
+        current_schema=current_schema,
+        new_schema=new_schema,
+        current_checkpoint=current_checkpoint,
+        new_checkpoint=new_checkpoint,
+        custom_message=custom_msg,
+    )
+
     return 0
 
 

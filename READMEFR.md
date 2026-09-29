@@ -4,7 +4,7 @@ Dinotofu est un RPG / jeu d'arène en C++17. La version terminal reste le socle 
 
 ## Version actuelle   
 
-- Version actuelle : **V3.50.12**   
+- Version actuelle : **V3.50.13**   
 - Point de sauvegarde important : **V3.50.12**. Tout personnage dont la dernière adaptation est antérieure à ce jalon doit effectuer explicitement le rituel de transition avant un chargement normal.   
 - Avant cette transition, Dinotofu crée une copie de sécurité pré-mise-à-jour dédiée qui n'est jamais écrasée. Les très anciennes sauvegardes — y compris celles sans métadonnée de version — conservent l’alerte historique forte, mais ne peuvent plus contourner le backup + rituel obligatoire du jalon V3.50.12.   
 
