@@ -53,7 +53,7 @@ mkdir -p "${PACKAGE_DIR}"
 rm -rf "${STAGING_DIR}" "${PACKAGE_PATH}"
 
 make clean >/dev/null 2>&1 || true
-make -j"$(nproc 2>/dev/null || echo 2)" TARGET_ARCH="${TARGET_ARCH:-x86-64}" OPT_LEVEL="${OPT_LEVEL:--O3}" LDFLAGS="-s"
+make -j"$(nproc 2>/dev/null || echo 2)" TARGET_ARCH="${TARGET_ARCH:-x86-64}" OPT_LEVEL="${OPT_LEVEL:--O3}" LDFLAGS="-static-libstdc++ -static-libgcc -s"
 
 # -----------------------------------------------------------------------------
 # Technical game payload. Keep the historical name for old launchers/updaters.

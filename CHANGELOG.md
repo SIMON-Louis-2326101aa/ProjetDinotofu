@@ -2,6 +2,13 @@
 
 Detailed English version history for Dinotofu. The matching French history is stored in `CHANGELOG_FR.md`. README files remain focused on installation and useful player information.   
 
+## V3.50.15 — Update notes   
+
+- Fixed installation scripts by correctly filtering running programs (was killing the script itself).
+- Staticly linked some library and downgraded the OS version to ubuntu-22.04 for some library compatibility.
+
+---   
+
 ## V3.50.14 — Update notes   
 
 - Fixed Linux launcher self-termination bug in `tools/linux/DinotofuLauncher.sh`.   

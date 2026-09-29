@@ -2,6 +2,13 @@
 
 Historique détaillé des versions de Dinotofu en français. Le journal anglais équivalent se trouve dans `CHANGELOG.md`.   
 
+## V3.50.15 — Notes de mise à jour   
+
+- Correction des scripts d'installation en filtrant correctement les processus actifs (ça tué les scripts eux-même).
+- Liaison statique de certaines librairies et rétrogradation de la version d'OS à ubuntu-22.04 pour la compatibilité d'autres libraires.
+
+---   
+
 ## V3.50.14 — Notes de mise à jour   
 
 - Correction du bogue d'auto-terminaison du lanceur Linux dans `tools/linux/DinotofuLauncher.sh`.   

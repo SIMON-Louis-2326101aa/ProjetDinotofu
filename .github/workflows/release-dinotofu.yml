@@ -126,7 +126,7 @@ jobs:
           echo "Pour publier une nouvelle release automatiquement, augmente la version dans src/core/VersionInfo.cpp puis push sur main/master."
 
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     needs: prepare-release
     if: needs.prepare-release.outputs.should_publish == 'true'
     steps:
