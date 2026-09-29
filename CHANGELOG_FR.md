@@ -2,6 +2,15 @@
 
 Historique détaillé des versions de Dinotofu en français. Le journal anglais équivalent se trouve dans `CHANGELOG.md`.   
 
+## V3.50.14 — Notes de mise à jour   
+
+- Correction du bogue d'auto-terminaison du lanceur Linux dans `tools/linux/DinotofuLauncher.sh`.   
+- Dans `stop_dinotofu_background_processes`, remplacement du filtre large `pkill -f "${target_dir}/(output/)?Dinotofu"` par un ciblage précis via `pgrep` avec ancrage et exclusion des PIDs et des scripts shell, évitant que le script du lanceur ne s'interrompe lui-même lors du lancement de l'interface graphique depuis un dossier contenant `Dinotofu`.   
+- Validation complète de la suite de tests et de la structure des releases.   
+- Aucun changement du schéma de sauvegarde (`saveVersion = 23`) ni du jalon obligatoire (`V3.50.12`).   
+
+---   
+
 ## V3.50.13 — Notes de mise à jour   
 
 - Correction et fiabilisation des installateurs et lanceurs Windows et Linux.   

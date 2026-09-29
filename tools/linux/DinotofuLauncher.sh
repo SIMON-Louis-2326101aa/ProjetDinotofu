@@ -336,11 +336,12 @@ open_url_or_file() {
 
 stop_dinotofu_background_processes() {
     local target_dir="${1:-$INSTALL_DIR}"
+    target_dir="${target_dir%/}"
     local debug_dir="${target_dir}/gui_debug"
     if [[ -f "${debug_dir}/server.pid" ]]; then
         local spid
         spid="$(cat "${debug_dir}/server.pid" 2>/dev/null || true)"
-        if [[ -n "$spid" && "$spid" =~ ^[0-9]+$ ]]; then
+        if [[ -n "$spid" && "$spid" =~ ^[0-9]+$ && "$spid" != "$$" && "$spid" != "$PPID" ]]; then
             kill -TERM "$spid" 2>/dev/null || true
         fi
         rm -f "${debug_dir}/server.pid"
@@ -348,13 +349,32 @@ stop_dinotofu_background_processes() {
     if [[ -f "${debug_dir}/game.pid" ]]; then
         local gpid
         gpid="$(cat "${debug_dir}/game.pid" 2>/dev/null || true)"
-        if [[ -n "$gpid" && "$gpid" =~ ^[0-9]+$ ]]; then
+        if [[ -n "$gpid" && "$gpid" =~ ^[0-9]+$ && "$gpid" != "$$" && "$gpid" != "$PPID" ]]; then
             kill -TERM "$gpid" 2>/dev/null || true
         fi
         rm -f "${debug_dir}/game.pid"
     fi
-    pkill -f "serve_gui_preview.py.*${target_dir}" 2>/dev/null || true
-    pkill -f "${target_dir}/(output/)?Dinotofu" 2>/dev/null || true
+
+    # Arret des serveurs preview associes au repertoire cible
+    local pids
+    pids="$(pgrep -f "serve_gui_preview.py.*${target_dir}" 2>/dev/null || true)"
+    for pid in $pids; do
+        if [[ "$pid" != "$$" && "$pid" != "$PPID" ]]; then
+            kill -TERM "$pid" 2>/dev/null || true
+        fi
+    done
+
+    # Arret des binaires de jeu Dinotofu / DinotofuGUI (en excluant strictement le launcher et les scripts shell)
+    pids="$(pgrep -f "${target_dir}/(output/)?(Dinotofu|DinotofuGUI)($|[[:space:]])" 2>/dev/null || true)"
+    for pid in $pids; do
+        if [[ "$pid" != "$$" && "$pid" != "$PPID" ]]; then
+            local cmd
+            cmd="$(ps -p "$pid" -o args= 2>/dev/null || true)"
+            if [[ "$cmd" != *DinotofuLauncher* && "$cmd" != *Lancer-Dinotofu* && "$cmd" != *Installer-Dinotofu* && "$cmd" != *bump_version* && "$cmd" != *make* && "$cmd" != *g++* ]]; then
+                kill -TERM "$pid" 2>/dev/null || true
+            fi
+        fi
+    done
 }
 
 start_gui_preview() {

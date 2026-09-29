@@ -2,6 +2,15 @@
 
 Detailed English version history for Dinotofu. The matching French history is stored in `CHANGELOG_FR.md`. README files remain focused on installation and useful player information.   
 
+## V3.50.14 — Update notes   
+
+- Fixed Linux launcher self-termination bug in `tools/linux/DinotofuLauncher.sh`.   
+- In `stop_dinotofu_background_processes`, replaced broad `pkill -f "${target_dir}/(output/)?Dinotofu"` with precise PID checks (`pgrep` with process name anchoring and self/parent/script exclusions) so launching the graphical interface does not terminate the launcher script when installed in a path containing `Dinotofu`.   
+- Verified full test suite and packaging validation.   
+- No change to the save schema (`saveVersion = 23`) or mandatory save checkpoint (`V3.50.12`).   
+
+---   
+
 ## V3.50.13 — Update notes   
 
 - Bug fixes and stabilization for Windows and Linux installers and launchers.   

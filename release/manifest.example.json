@@ -1,15 +1,15 @@
 {
   "name": "Dinotofu",
-  "version": "3.50.13",
-  "releaseTag": "v3.50.13",
-  "assetPattern": "Dinotofu-Windows-v3.50.13.zip",
+  "version": "3.50.14",
+  "releaseTag": "v3.50.14",
+  "assetPattern": "Dinotofu-Windows-v3.50.14.zip",
   "notes": "V3.50.12 simplifie la distribution avec un seul package complet par OS (ZIP haute compression pour Windows et 7Z pour Linux).",
   "installerAssets": {
-    "windows": "Dinotofu-Windows-v3.50.13.zip",
-    "linux": "Dinotofu-Linux-v3.50.13.7z"
+    "windows": "Dinotofu-Windows-v3.50.14.zip",
+    "linux": "Dinotofu-Linux-v3.50.14.7z"
   },
   "updaterPayloads": {
-    "windows": "Dinotofu-Windows-v3.50.13.zip",
-    "linux": "Dinotofu-Linux-v3.50.13.7z"
+    "windows": "Dinotofu-Windows-v3.50.14.zip",
+    "linux": "Dinotofu-Linux-v3.50.14.7z"
   }
 }
