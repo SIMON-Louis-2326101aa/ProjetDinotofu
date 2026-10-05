@@ -28,7 +28,9 @@ VERSION="$(bash ./scripts/get_version.sh)"
 REPO_NAME="$(detect_repo_name)"
 PACKAGE_DIR="release_packages"
 STAGING_DIR="${PACKAGE_DIR}/Dinotofu-Linux-v${VERSION}"
-PACKAGE_PATH="${PACKAGE_DIR}/Dinotofu-Linux-v${VERSION}.7z"
+PACKAGE_PATH="${PACKAGE_DIR}/Dinotofu-Linux-v${VERSION}-TECHNICAL-PAYLOAD.7z"
+INSTALLER_STAGING_DIR="${PACKAGE_DIR}/INSTALLER-DINOTOFU-LINUX-v${VERSION}"
+INSTALLER_PACKAGE_PATH="${PACKAGE_DIR}/INSTALLER-DINOTOFU-LINUX-v${VERSION}.7z"
 
 write_installer_config_json() {
     local target_file="$1"
@@ -50,13 +52,13 @@ PY_JSON
 }
 
 mkdir -p "${PACKAGE_DIR}"
-rm -rf "${STAGING_DIR}" "${PACKAGE_PATH}"
+rm -rf "${STAGING_DIR}" "${PACKAGE_PATH}" "${INSTALLER_STAGING_DIR}" "${INSTALLER_PACKAGE_PATH}"
 
 make clean >/dev/null 2>&1 || true
 make -j"$(nproc 2>/dev/null || echo 2)" TARGET_ARCH="${TARGET_ARCH:-x86-64}" OPT_LEVEL="${OPT_LEVEL:--O3}" LDFLAGS="-static-libstdc++ -static-libgcc -s"
 
 # -----------------------------------------------------------------------------
-# Technical game payload. Keep the historical name for old launchers/updaters.
+# Technical game payload. The historical Dinotofu-<OS>-v* prefix is preserved for old launcher/updater wildcard compatibility; the visible suffix marks it as technical.
 # -----------------------------------------------------------------------------
 mkdir -p "${STAGING_DIR}"
 cp -r assets "${STAGING_DIR}/" 2>/dev/null || true
@@ -86,6 +88,30 @@ chmod +x "${STAGING_DIR}/Dinotofu" "${STAGING_DIR}/Installer-Dinotofu.sh" "${STA
 )
 
 rm -rf "${STAGING_DIR}"
+
+# -----------------------------------------------------------------------------
+# Player-facing installer pack: installer only + text documentation.
+# -----------------------------------------------------------------------------
+mkdir -p "${INSTALLER_STAGING_DIR}/Documentation"
+bash ./scripts/stage_release_documentation.sh "${INSTALLER_STAGING_DIR}/Documentation" "Linux" "installer"
+cp tools/linux/DinotofuInstaller.sh "${INSTALLER_STAGING_DIR}/INSTALLER-DINOTOFU.sh"
+chmod +x "${INSTALLER_STAGING_DIR}/INSTALLER-DINOTOFU.sh"
+
+if find "${INSTALLER_STAGING_DIR}/Documentation" -type f ! -name '*.txt' | grep -q .; then
+    echo "Erreur : le dossier Documentation du pack installateur Linux contient autre chose que des .txt" >&2
+    exit 1
+fi
+if [[ "$(find "${INSTALLER_STAGING_DIR}" -mindepth 1 -maxdepth 1 | wc -l)" -ne 2 ]]; then
+    echo "Erreur : le pack installateur Linux doit contenir exactement INSTALLER-DINOTOFU.sh + Documentation/" >&2
+    exit 1
+fi
+(
+    cd "${INSTALLER_STAGING_DIR}"
+    7z a -t7z -m0=lzma2 -mx=9 -ms=on "../$(basename "${INSTALLER_PACKAGE_PATH}")" INSTALLER-DINOTOFU.sh Documentation >/dev/null
+)
+rm -rf "${INSTALLER_STAGING_DIR}"
+
 make clean >/dev/null 2>&1 || true
 
-echo "Release Linux créée : ${PACKAGE_PATH}"
+echo "Payload Linux créé : ${PACKAGE_PATH}"
+echo "Pack installateur Linux créé : ${INSTALLER_PACKAGE_PATH}"

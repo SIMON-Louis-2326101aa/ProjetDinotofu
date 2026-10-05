@@ -55,6 +55,9 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getEntranceLines(
     bool hasSkuro = containsName(names, "Skuro");
     bool hasFireFlight = containsName(names, "Fire Flight");
     bool hasMattPro = containsName(names, "Matt (PRO)");
+    bool hasWillow = containsName(names, "Willow");
+    bool hasDwarf = containsName(names, "Dwarf");
+    bool hasBadr = containsName(names, "Badr");
     bool hasLesBrasCasses = hasHazak && hasFail && hasAoi && hasKanade && hasSanctus;
 
     if (hasLesBrasCasses)
@@ -116,6 +119,28 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getEntranceLines(
         return {"Henrique avance en premier. Mattzelda rit derrière lui. Skuro ne rit pas : il choisit déjà où couper.", "Mattzelda : Je sens que ce groupe est sain et équilibré.", "Henrique : Mensonge, mais avance.", "Skuro : Tant que ça finit ouvert."};
     }
 
+    if (hasWillow && hasDwarf && hasBadr)
+    {
+        return {
+            "Willow garde déjà quelques mètres d'écart avec les deux autres.",
+            "Dwarf : Tu sais, à force de rester seule, tu vas finir par croire que tout le monde est pénible.",
+            "Willow : J'ai voyagé avec toi. J'ai des preuves.",
+            "Badr : Mes amis, gardons notre énergie pour le combat.",
+            "Dwarf : Même le cadavre me demande de me calmer. Quelle journée.",
+            "Badr : Semi-cadavre. Et Second t'entend."
+        };
+    }
+
+    if (hasWillow && hasBadr)
+    {
+        return {"Willow vérifie son angle sans regarder Badr.", "Willow : Tant que Second ne touche pas mes flèches, on s'entendra.", "Badr : C'est une limite parfaitement raisonnable."};
+    }
+
+    if (hasDwarf && hasBadr)
+    {
+        return {"Dwarf observe la main de Badr beaucoup trop longtemps.", "Dwarf : Je vais regretter de demander, mais Second mord ?", "Badr : Seulement quand la conversation le mérite."};
+    }
+
     if (hasSkuro)
     {
         return {"Skuro lève sa lame comme si le poids du métal était une invitation.", "Personne dans son groupe ne semble totalement rassuré par sa présence.", "Skuro : Si ça crie, c'est que ça coupe bien."};
@@ -169,6 +194,11 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getVictoryLines(c
     if (containsName(names, "Louis") && containsName(names, "Fire Flight") && containsName(names, "Trexof"))
     {
         return {"Fire Flight : Passe terminée.", "Louis : Et on a encore des amis ?", "Trexof : Selon l'état de chacun, ça dépend de la définition d'ami."};
+    }
+
+    if (containsName(names, "Willow") && containsName(names, "Dwarf") && containsName(names, "Badr"))
+    {
+        return {"Dwarf lève son arme comme s'il avait gagné un tournoi entier.", "Dwarf : Facile.", "Willow : Tu as crié pendant la moitié du combat.", "Badr : Et Second a été plus discret. C'est une information importante."};
     }
 
     if (containsName(names, "Skuro"))
@@ -232,6 +262,11 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getDefeatLines(co
     if (containsName(names, "Louis") && containsName(names, "Fire Flight") && containsName(names, "Trexof"))
     {
         return {"Louis : On a perdu, mais c'était presque stylé.", "Fire Flight : Presque n'est pas une condition de victoire.", "Trexof : Mais ça reste une leçon utile."};
+    }
+
+    if (containsName(names, "Willow") && containsName(names, "Dwarf") && containsName(names, "Badr"))
+    {
+        return {"Willow range une flèche cassée avec un calme très peu rassurant.", "Willow : Personne ne parle pendant cinq minutes.", "Dwarf : Même pas une petite vanne ?", "Badr : Pour une fois, écoute-la."};
     }
 
     if (containsName(names, "Skuro"))

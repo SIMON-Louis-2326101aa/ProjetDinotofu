@@ -6,6 +6,8 @@
 
 #include "progression/material/MaterialKnowledgeProgress.hpp"
 
+#include "economy/Money.hpp"
+
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 
 #include <algorithm>
@@ -48,7 +50,7 @@ namespace
             description += " Qualité observée : normale.";
         }
 
-        description += " Valeur unitaire actuelle : " + std::to_string(material.getValue()) + " pièce(s).";
+        description += " Valeur unitaire actuelle : " + Money::formatEconomyUnits(material.getValue()) + ".";
 
         if (material.getQualityCraftWeight() >= 4)
         {

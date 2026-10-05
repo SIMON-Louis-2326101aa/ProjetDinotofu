@@ -8,6 +8,7 @@
 
 #include "progression/DifficultyMode.hpp"
 #include "progression/DeathRuleMode.hpp"
+#include "economy/Money.hpp"
 
 class DifficultyRules
 {
@@ -21,9 +22,9 @@ public:
     // EN: getVictoryExperienceRewardPercentage declares or implements a focused behavior used by this module.
     // FR: getVictoryExperienceRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
     static int getVictoryExperienceRewardPercentage(DifficultyMode difficulty);
-    // EN: getVictoryGoldRewardPercentage declares or implements a focused behavior used by this module.
-    // FR: getVictoryGoldRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
-    static int getVictoryGoldRewardPercentage(DifficultyMode difficulty);
+    // EN: getVictoryEconomyRewardPercentage declares or implements a focused behavior used by this module.
+    // FR: getVictoryEconomyRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
+    static int getVictoryEconomyRewardPercentage(DifficultyMode difficulty);
     // EN: getPlayerEscapeChanceModifier declares or implements a focused behavior used by this module.
     // FR: getPlayerEscapeChanceModifier déclare ou implémente un comportement précis utilisé par ce module.
     static int getPlayerEscapeChanceModifier(DifficultyMode difficulty);
@@ -46,9 +47,9 @@ public:
     // EN: getNonLethalDeathInventoryLossPercentage declares or implements a focused behavior used by this module.
     // FR: getNonLethalDeathInventoryLossPercentage déclare ou implémente un comportement précis utilisé par ce module.
     static int getNonLethalDeathInventoryLossPercentage(DifficultyMode difficulty);
-    // EN: getNonLethalDeathGoldLossPercentage declares or implements a focused behavior used by this module.
-    // FR: getNonLethalDeathGoldLossPercentage déclare ou implémente un comportement précis utilisé par ce module.
-    static int getNonLethalDeathGoldLossPercentage(DifficultyMode difficulty);
+    // EN: getNonLethalDeathEconomyLossPercentage declares or implements a focused behavior used by this module.
+    // FR: getNonLethalDeathEconomyLossPercentage déclare ou implémente un comportement précis utilisé par ce module.
+    static int getNonLethalDeathEconomyLossPercentage(DifficultyMode difficulty);
     // EN: getNonLethalDeathExperienceLossPercentage declares or implements a focused behavior used by this module.
     // FR: getNonLethalDeathExperienceLossPercentage déclare ou implémente un comportement précis utilisé par ce module.
     static int getNonLethalDeathExperienceLossPercentage(DifficultyMode difficulty);
@@ -56,9 +57,9 @@ public:
     // FR: getNonLethalRespawnHealthPercentage déclare ou implémente un comportement précis utilisé par ce module.
     static int getNonLethalRespawnHealthPercentage(DifficultyMode difficulty);
 
-    // EN: getStarterGold declares or implements a focused behavior used by this module.
-    // FR: getStarterGold déclare ou implémente un comportement précis utilisé par ce module.
-    static int getStarterGold(DifficultyMode difficulty);
+    // Physical starting coins. The starter purse intentionally preserves denominations.
+    static CoinBreakdown getStarterCoinStacks(DifficultyMode difficulty);
+    static long long getStarterCopper(DifficultyMode difficulty);
     // EN: getStarterHealingPotionCount declares or implements a focused behavior used by this module.
     // FR: getStarterHealingPotionCount déclare ou implémente un comportement précis utilisé par ce module.
     static int getStarterHealingPotionCount(int baseCount, DifficultyMode difficulty);

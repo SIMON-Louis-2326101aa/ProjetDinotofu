@@ -672,6 +672,24 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.fail_hazak", {"Le contrat de non-agression force Fail à viser ailleurs que sur Hazak : +5 dégâts bruts utiles."});
     }
 
+    if (isName(attacker, "Willow") && isGroupedWith(attacker, "Dwarf"))
+    {
+        rawDamage += 4;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.willow_dwarf", {"Dwarf attire assez de regards pour laisser à Willow un angle propre : +4 dégâts bruts."});
+    }
+
+    if (isName(attacker, "Willow") && isGroupedWith(attacker, "Badr"))
+    {
+        rawDamage += 3;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.willow_badr", {"Badr tient la ligne assez longtemps pour que Willow décoche sans se presser : +3 dégâts bruts."});
+    }
+
+    if (isName(attacker, "Dwarf") && isGroupedWith(attacker, "Badr"))
+    {
+        rawDamage += 3;
+        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.dwarf_badr", {"Badr stabilise l'avancée de Dwarf. Le guerrier peut frapper sans se retourner : +3 dégâts bruts."});
+    }
+
     if (rawDamage < 0)
     {
         rawDamage = 0;
@@ -893,6 +911,18 @@ void SpecialCombatEffects::applySpecialCharacterAfterReceivingDamage(
     {
         defender.heal(4);
         showSpecialCombatMessage("SOUTIEN DE MATTZELDA", "combat.special.mattzelda.louis_support", {"Mattzelda fait écran avec une blague beaucoup trop bruyante. Louis reprend 4 PV."});
+    }
+
+    if ((isName(defender, "Willow") || isName(defender, "Dwarf"))
+        && isGroupedWith(defender, "Badr")
+        && random.between(1, 100) <= 18)
+    {
+        defender.heal(4);
+        showSpecialCombatMessage(
+            "SOUTIEN DE BADR",
+            "combat.special.badr.group_support",
+            {"Badr murmure une prière courte et stabilise son allié : +4 PV.", "Second reste à sa place. Pour l'instant."}
+        );
     }
 
     if (isName(defender, "Aoi") && random.between(1, 100) <= 20)

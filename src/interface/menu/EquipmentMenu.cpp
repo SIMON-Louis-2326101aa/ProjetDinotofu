@@ -265,7 +265,7 @@ namespace
             "Contrepartie : " + EquipmentWeightRules::getWeaponTradeoffText(weapon),
             "Durabilité : " + equipmentWeaponDurabilityText(weapon),
             weapon.isBroken() ? "État : Cassée" : "État : Utilisable",
-            "Valeur estimée : " + Money::formatGoldWithRaw(weapon.getValue())
+            "Valeur estimée : " + Money::formatEconomyUnits(weapon.getValue())
         };
         appendEquipmentWarnings(lines, DurabilityRules::describeWeaponUseWarnings(weapon, player.getRace()));
         appendEquipmentWarnings(lines, DurabilityRules::describeWeaponMaintenanceAdvice(weapon, player.getRace()));
@@ -284,7 +284,7 @@ namespace
             "Contrepartie : " + EquipmentWeightRules::getArmorTradeoffText(armor),
             "Durabilité : " + equipmentArmorDurabilityText(armor),
             armor.isBroken() ? "État : Cassée" : "État : Utilisable",
-            "Valeur estimée : " + Money::formatGoldWithRaw(armor.getValue())
+            "Valeur estimée : " + Money::formatEconomyUnits(armor.getValue())
         };
         appendEquipmentWarnings(lines, DurabilityRules::describeArmorFitWarnings(armor, player.getRace()));
         appendEquipmentWarnings(lines, DurabilityRules::describeArmorMaintenanceAdvice(armor, player.getRace()));

@@ -127,6 +127,7 @@ namespace TitleCatalog
             title("Mandataire des rois", "Guilde", "Réussir une mission de portée royale ou mondiale.", false),
             title("Ligne vivante du registre", "Guilde", "Approcher les contrats que les registres modifient eux-mêmes.", false),
 
+            title("Premier éclat de platine", "Économie", "Obtenir et posséder au moins une pièce de platine pour la première fois.", false, "Titre de seuil monétaire : le platine attire immédiatement l’attention et peut colorer les réactions de marchands, notables ou aventuriers."),
             title("Millionnaire qui recompte", "Économie", "Posséder au moins 1 000 000 de pièces.", false),
             title("Banquier de l'impossible", "Économie", "Posséder au moins 10 000 000 de pièces.", false),
             title("Le coffre a peur de toi", "Économie", "Accumuler une richesse assez absurde pour inquiéter les marchands.", false, "Titre drôle et économique : peut provoquer des réactions de marchands ou de banquiers."),

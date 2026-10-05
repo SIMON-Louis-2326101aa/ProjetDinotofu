@@ -398,6 +398,11 @@ DRÔLE / SURVIE
 ============================================================
 ÉCONOMIE
 ============================================================
+- Premier éclat de platine
+  Affichage avant obtention : secret / ????
+  Obtention : Obtenir et posséder au moins une pièce de platine pour la première fois.
+  Effet : Le platine marque un vrai seuil social ; certains marchands, notables ou aventuriers peuvent te regarder autrement.
+  Requis pour le titre ultime : oui
 - Millionnaire qui recompte
   Affichage avant obtention : secret / ????
   Obtention : Posséder au moins 1 000 000 de pièces.

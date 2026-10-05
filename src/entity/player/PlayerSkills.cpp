@@ -693,15 +693,15 @@ namespace
         if (skillId == "learned_frost_needle") return "Sort de bibliothèque sans parchemin courant : givre précis, fragile et exigeant.";
         if (skillId == "learned_mana_suture") return "Sort appris par grimoire, sans parchemin courant : referme lentement les blessures pendant quelques tours.";
         if (skillId == "learned_occult_bramble") return "Sort appris par grimoire, sans parchemin courant : entrave la cible avec ronces, poison et fatigue magique.";
-        if (skillId == "church_oath_shield") return "Serment d'église : promesse de tenir la ligne. Effets futurs : protection, alliés, prix si la ligne est abandonnée.";
-        if (skillId == "church_oath_blood") return "Serment d'église : promesse de payer un prix réel pour un élan réel. Effets futurs : dégâts/risque, soins plus délicats.";
-        if (skillId == "church_oath_hunter") return "Serment d'église : promesse de comprendre la proie avant de réclamer l'avantage. Effets futurs : familles ennemies, piste, observation.";
-        if (skillId == "church_oath_king") return "Serment d'église : promesse de responsabilité visible. Effets futurs : ordres, alliés, réputation, prix si tu fuis tes responsabilités.";
-        if (skillId == "church_oath_guarded_flame") return "Serment d'église : garder une flamme qui protège avant de brûler. Effets futurs : chaleur, courage, anti-brûlure, prix contre les abus de feu.";
-        if (skillId == "church_oath_shadow") return "Serment d'église : marcher dans l'ombre sans transformer la ruse en trahison. Effets futurs : discrétion, angle, esquive, prix moral.";
-        if (skillId == "church_oath_pilgrim") return "Serment d'église : respecter routes, relais et villages traversés. Effets futurs : voyage, fatigue, réputation locale et qualité des services.";
-        if (skillId == "church_oath_memory") return "Serment d'église : porter les traces, témoins et morts dans le récit. Effets futurs : mémoire du monde, héritage et rumeurs mieux reliées.";
-        if (skillId == "church_oath_silence") return "Serment d'église : garder assez de calme pour lire peur, illusions et provocations. Effets futurs : anti-panique, anti-illusion, concentration.";
+        if (skillId == "church_oath_shield") return "Serment d'église : promesse de tenir la ligne, protéger les alliés et accepter le prix d'un abandon.";
+        if (skillId == "church_oath_blood") return "Serment d'église : promesse de payer un prix réel pour un élan réel, au risque de rendre les soins plus délicats.";
+        if (skillId == "church_oath_hunter") return "Serment d'église : promesse de comprendre la proie par la piste et l'observation avant de réclamer l'avantage.";
+        if (skillId == "church_oath_king") return "Serment d'église : promesse de responsabilité visible envers les alliés, les ordres donnés et la réputation acquise.";
+        if (skillId == "church_oath_guarded_flame") return "Serment d'église : garder une flamme qui protège avant de brûler, liée à la chaleur, au courage et à la maîtrise du feu.";
+        if (skillId == "church_oath_shadow") return "Serment d'église : marcher dans l'ombre sans transformer discrétion, esquive et ruse en trahison.";
+        if (skillId == "church_oath_pilgrim") return "Serment d'église : respecter routes, relais et villages traversés, même lorsque la fatigue ou la réputation compliquent le voyage.";
+        if (skillId == "church_oath_memory") return "Serment d'église : porter les traces, témoins et morts dans le récit afin que leur mémoire ne disparaisse pas.";
+        if (skillId == "church_oath_silence") return "Serment d'église : garder assez de calme et de concentration pour lire peur, illusions et provocations.";
         if (skillId == "church_oath_open_sky") return "Serment d'église : apprendre à répondre aux ennemis en Vol par angle, patience, allonge ou tir. Effet actuel : petite chance de trouver une ouverture avec arme courte.";
         if (skillId == "church_oath_roots") return "Serment d'église : garder ses appuis face aux fils, racines et lianes. Effet actuel : chance de briser une entrave au début du tour.";
         if (skillId == "church_oath_broken_mirror") return "Serment d'église : lire les reflets sans prétendre deviner gratuitement. Effet actuel : réduit le risque de frapper une illusion.";
@@ -709,10 +709,10 @@ namespace
         if (skillId == "church_oath_scars") return "Serment d'église : transformer une blessure vécue en tenue réelle. Effet actuel : petite aide sous pression, sans chercher la douleur gratuitement.";
         if (skillId == "church_oath_legacy") return "Serment d'église : préparer héritage, tombes, objets avec mémoire et traces Mortel/Léthal. Effet actuel : aide rare si une trace existe déjà.";
         if (skillId == "church_oath_bound_forge") return "Serment d'église : lier une arme ou armure à ce qu'elle a vécu. Effet actuel : une arme cohérente peut laisser une trace d'objet avec mémoire.";
-        if (skillId == "church_oath_bonds") return "Serment d'église : porter les liens du groupe et les futurs combos alliés. Effet actuel : petite pression de groupe si les alliés, ordres ou traces le justifient.";
+        if (skillId == "church_oath_bonds") return "Serment d'église : porter les liens du groupe. Les alliés, ordres ou traces cohérentes peuvent renforcer légèrement la pression collective.";
         if (skillId == "church_oath_rivals") return "Serment d'église : ne pas laisser une fuite ou une humiliation devenir anonyme. Effet actuel : les ennemis qui survivent peuvent laisser une trace de rival plus nette.";
         if (skillId == "church_oath_unstable_fate") return "Serment d'église : accepter un destin qui bouge selon les actes réels. Effet actuel : rare oscillation en combat, surtout quand une vraie trace existe déjà.";
-        if (skillId == "church_oath_broken_trace") return "Trace d'église : au moins un serment a été rompu. Ce n'est pas un malus direct, mais le registre et certains futurs PNJ pourront s'en souvenir.";
+        if (skillId == "church_oath_broken_trace") return "Trace d'église : au moins un serment a été rompu. Ce n'est pas un malus direct, mais le registre en garde la mémoire.";
         return "Compétence instable : son usage reste difficile à canaliser.";
     }
 }
@@ -1014,7 +1014,7 @@ bool Player::hasActiveSkill(const std::string& skillId) const
 
 // EN: unlockPassiveSkill declares or implements a focused behavior used by this module.
 // FR: unlockPassiveSkill déclare ou implémente un comportement précis utilisé par ce module.
-bool Player::unlockPassiveSkill(const std::string& skillId, const std::string& skillName)
+bool Player::unlockPassiveSkill(const std::string& skillId, const std::string& skillName, bool silent)
 {
     if (isPassiveSkillUnlocked(skillId))
     {
@@ -1045,18 +1045,21 @@ bool Player::unlockPassiveSkill(const std::string& skillId, const std::string& s
             : "État : connue, mais non activée car les 10 emplacements passifs sont déjà occupés.");
     }
 
-    MessageScreen::show(
-        "NOUVELLE COMPÉTENCE PASSIVE",
-        "player.skill.passive_unlocked",
-        lines,
-        false
-    );
+    if (!silent)
+    {
+        MessageScreen::show(
+            "NOUVELLE COMPÉTENCE PASSIVE",
+            "player.skill.passive_unlocked",
+            lines,
+            false
+        );
+    }
     return true;
 }
 
 // EN: unlockActiveSkill declares or implements a focused behavior used by this module.
 // FR: unlockActiveSkill déclare ou implémente un comportement précis utilisé par ce module.
-bool Player::unlockActiveSkill(const std::string& skillId, const std::string& skillName)
+bool Player::unlockActiveSkill(const std::string& skillId, const std::string& skillName, bool silent)
 {
     if (isActiveSkillUnlocked(skillId))
     {
@@ -1079,12 +1082,15 @@ bool Player::unlockActiveSkill(const std::string& skillId, const std::string& sk
         ? "État : équipée dans les actifs utilisables."
         : "État : connue, mais déséquipée car les 10 emplacements actifs sont déjà occupés.");
 
-    MessageScreen::show(
-        "NOUVELLE COMPÉTENCE ACTIVE",
-        "player.skill.active_unlocked",
-        lines,
-        false
-    );
+    if (!silent)
+    {
+        MessageScreen::show(
+            "NOUVELLE COMPÉTENCE ACTIVE",
+            "player.skill.active_unlocked",
+            lines,
+            false
+        );
+    }
     return true;
 }
 
@@ -1167,29 +1173,29 @@ void Player::recordGameplaySkillProgressForKills(int amount)
 
 // EN: refreshLevelAndIdentitySkills declares or implements a focused behavior used by this module.
 // FR: refreshLevelAndIdentitySkills déclare ou implémente un comportement précis utilisé par ce module.
-void Player::refreshLevelAndIdentitySkills()
+void Player::refreshLevelAndIdentitySkills(bool silent)
 {
     CharacterRace currentRace = getRace();
 
     if (RaceCatalog::hasInnateNightVision(currentRace))
     {
-        unlockPassiveSkill("night_vision", "Vision nocturne");
+        unlockPassiveSkill("night_vision", "Vision nocturne", silent);
     }
 
     if (currentRace == CharacterRace::Kitsune || currentRace == CharacterRace::HalfDragon)
     {
-        unlockPassiveSkill("temperature_adaptation", "Adaptation aux températures");
-        unlockPassiveSkill("minor_fire_resistance", currentRace == CharacterRace::Kitsune ? "Résistance légère au feu kitsune" : "Résistance légère au feu draconique");
+        unlockPassiveSkill("temperature_adaptation", "Adaptation aux températures", silent);
+        unlockPassiveSkill("minor_fire_resistance", currentRace == CharacterRace::Kitsune ? "Résistance légère au feu kitsune" : "Résistance légère au feu draconique", silent);
     }
 
     if (currentRace == CharacterRace::Tiefling || currentRace == CharacterRace::Demon)
     {
-        unlockPassiveSkill("infernal_fire_resistance", currentRace == CharacterRace::Tiefling ? "Résistance infernale tieffeline" : "Résistance infernale démoniaque");
+        unlockPassiveSkill("infernal_fire_resistance", currentRace == CharacterRace::Tiefling ? "Résistance infernale tieffeline" : "Résistance infernale démoniaque", silent);
     }
 
     if (currentRace == CharacterRace::Dwarf || currentRace == CharacterRace::Vampire || currentRace == CharacterRace::HalfDragon)
     {
-        unlockPassiveSkill("minor_cold_resistance", currentRace == CharacterRace::Vampire ? "Résistance froide vampirique" : "Résistance légère au froid");
+        unlockPassiveSkill("minor_cold_resistance", currentRace == CharacterRace::Vampire ? "Résistance froide vampirique" : "Résistance légère au froid", silent);
     }
 
     if (RaceCatalog::hasFireWeakness(currentRace))
@@ -1198,97 +1204,97 @@ void Player::refreshLevelAndIdentitySkills()
         if (currentRace == CharacterRace::Fairy) fireWeaknessName = "Faiblesse des ailes aux flammes";
         else if (currentRace == CharacterRace::Vampire) fireWeaknessName = "Faiblesse vampirique au feu";
         else if (currentRace == CharacterRace::SemiBird) fireWeaknessName = "Faiblesse des plumes aux flammes";
-        unlockPassiveSkill("fire_vulnerability", fireWeaknessName);
+        unlockPassiveSkill("fire_vulnerability", fireWeaknessName, silent);
     }
 
     if (currentRace == CharacterRace::SemiWolf)
     {
-        unlockPassiveSkill("semi_wolf_tracking", "Flair de meute");
+        unlockPassiveSkill("semi_wolf_tracking", "Flair de meute", silent);
     }
     else if (currentRace == CharacterRace::SemiFox)
     {
-        unlockPassiveSkill("semi_fox_cunning", "Flair rusé de renard");
+        unlockPassiveSkill("semi_fox_cunning", "Flair rusé de renard", silent);
     }
     else if (currentRace == CharacterRace::SemiDog)
     {
-        unlockPassiveSkill("semi_dog_loyal_scent", "Flair loyal");
+        unlockPassiveSkill("semi_dog_loyal_scent", "Flair loyal", silent);
     }
     else if (currentRace == CharacterRace::SemiCat)
     {
-        unlockPassiveSkill("semi_cat_reflexes", "Réflexes félins");
+        unlockPassiveSkill("semi_cat_reflexes", "Réflexes félins", silent);
     }
     else if (currentRace == CharacterRace::SemiLizard)
     {
-        unlockPassiveSkill("semi_lizard_scales", "Écailles tempérées");
-        unlockPassiveSkill("minor_fire_resistance", "Résistance légère au feu lézard");
+        unlockPassiveSkill("semi_lizard_scales", "Écailles tempérées", silent);
+        unlockPassiveSkill("minor_fire_resistance", "Résistance légère au feu lézard", silent);
     }
     else if (currentRace == CharacterRace::SemiBird)
     {
-        unlockPassiveSkill("semi_bird_open_sky", "Vue des hauteurs");
+        unlockPassiveSkill("semi_bird_open_sky", "Vue des hauteurs", silent);
     }
     else if (currentRace == CharacterRace::Dwarf || currentRace == CharacterRace::Gnome)
     {
-        unlockPassiveSkill("dwarven_mine_sense", currentRace == CharacterRace::Dwarf ? "Sens des galeries" : "Sens des galeries gnome");
+        unlockPassiveSkill("dwarven_mine_sense", currentRace == CharacterRace::Dwarf ? "Sens des galeries" : "Sens des galeries gnome", silent);
     }
     else if (currentRace == CharacterRace::Elf)
     {
-        unlockPassiveSkill("elven_fine_perception", "Perception elfique");
+        unlockPassiveSkill("elven_fine_perception", "Perception elfique", silent);
     }
     else if (currentRace == CharacterRace::Halfling)
     {
-        unlockPassiveSkill("halfling_lucky_step", "Pas chanceux");
+        unlockPassiveSkill("halfling_lucky_step", "Pas chanceux", silent);
     }
     else if (currentRace == CharacterRace::HalfDragon)
     {
-        unlockPassiveSkill("dragon_weather_blood", "Sang draconique d'endurance");
+        unlockPassiveSkill("dragon_weather_blood", "Sang draconique d'endurance", silent);
     }
     else if (currentRace == CharacterRace::Orc)
     {
-        unlockPassiveSkill("orcish_forced_march", "Marche forcée orque");
+        unlockPassiveSkill("orcish_forced_march", "Marche forcée orque", silent);
     }
     else if (currentRace == CharacterRace::Fairy || currentRace == CharacterRace::Aasimar)
     {
-        unlockPassiveSkill("fairy_mana_sense", currentRace == CharacterRace::Fairy ? "Sens féerique du mana" : "Sens lumineux du mana");
+        unlockPassiveSkill("fairy_mana_sense", currentRace == CharacterRace::Fairy ? "Sens féerique du mana" : "Sens lumineux du mana", silent);
     }
 
     if (level >= 3)
     {
-        unlockPassiveSkill("survival_breath", "Souffle de survie");
+        unlockPassiveSkill("survival_breath", "Souffle de survie", silent);
     }
 
     std::string className = getType();
 
-    if (level >= 4 && className == "Assassin")
+    if (level >= 5 && className == "Assassin")
     {
-        unlockActiveSkill("shadow_step", "Pas de l'ombre");
+        unlockActiveSkill("shadow_step", "Pas de l'ombre", silent);
     }
-    else if (level >= 4 && className == "Chevalier")
+    else if (level >= 5 && className == "Chevalier")
     {
-        unlockPassiveSkill("steady_guard", "Garde stable");
+        unlockPassiveSkill("steady_guard", "Garde stable", silent);
     }
-    else if (level >= 4 && className == "Colosse")
+    else if (level >= 5 && className == "Colosse")
     {
-        unlockPassiveSkill("living_rampart", "Rempart vivant");
+        unlockPassiveSkill("living_rampart", "Rempart vivant", silent);
     }
-    else if (level >= 4 && className == "Mage")
+    else if (level >= 5 && className == "Mage")
     {
-        unlockActiveSkill("arcane_impulse", "Élan arcanique");
+        unlockActiveSkill("arcane_impulse", "Élan arcanique", silent);
     }
-    else if (level >= 4 && className == "Forgeron")
+    else if (level >= 5 && className == "Forgeron")
     {
-        unlockPassiveSkill("sure_hand", "Main sûre");
+        unlockPassiveSkill("sure_hand", "Main sûre", silent);
     }
-    else if (level >= 4 && className == "Alchimiste")
+    else if (level >= 5 && className == "Alchimiste")
     {
-        unlockPassiveSkill("careful_dosage", "Dosage prudent");
+        unlockPassiveSkill("careful_dosage", "Dosage prudent", silent);
     }
-    else if (level >= 4 && className == "Rôdeur")
+    else if (level >= 5 && className == "Rôdeur")
     {
-        unlockActiveSkill("tracking_mark", "Marque de pisteur");
+        unlockActiveSkill("tracking_mark", "Marque de pisteur", silent);
     }
-    else if (level >= 4 && className == "Artificier")
+    else if (level >= 5 && className == "Artificier")
     {
-        unlockActiveSkill("prepared_volley", "Salve préparée");
+        unlockActiveSkill("prepared_volley", "Salve préparée", silent);
     }
 
     refreshCareerSkillProgress();
@@ -1418,12 +1424,22 @@ void Player::refreshCareerSkillProgress()
         grantTitle("Niveau maximum, problème minimum");
     }
 
-    const int currentGold = inventory.getGold();
-    if (currentGold >= 1000000)
+    refreshCurrencyTitles();
+}
+
+void Player::refreshCurrencyTitles()
+{
+    if (inventory.getCoinCount(CoinType::Platinum) > 0)
+    {
+        grantTitle("Premier éclat de platine");
+    }
+
+    const long long currentEconomy = inventory.getEconomyUnits();
+    if (currentEconomy >= 1000000)
     {
         grantTitle("Millionnaire qui recompte");
     }
-    if (currentGold >= 10000000)
+    if (currentEconomy >= 10000000)
     {
         grantTitle("Banquier de l'impossible");
         grantTitle("Le coffre a peur de toi");

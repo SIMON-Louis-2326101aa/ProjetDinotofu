@@ -1,15 +1,15 @@
 {
   "name": "Dinotofu",
-  "version": "3.50.15",
-  "releaseTag": "v3.50.15",
-  "assetPattern": "Dinotofu-Windows-v3.50.15.zip",
-  "notes": "V3.50.12 simplifie la distribution avec un seul package complet par OS (ZIP haute compression pour Windows et 7Z pour Linux).",
+  "version": "3.50.34",
+  "releaseTag": "v3.50.34",
+  "assetPattern": "Dinotofu-Windows-v3.50.34-TECHNICAL-PAYLOAD.zip",
+  "notes": "Les fichiers INSTALLER-DINOTOFU sont les seuls telechargements conseilles aux joueurs; les archives marquees TECHNICAL-PAYLOAD sont reservees aux installateurs/updaters.",
   "installerAssets": {
-    "windows": "Dinotofu-Windows-v3.50.15.zip",
-    "linux": "Dinotofu-Linux-v3.50.15.7z"
+    "windows": "INSTALLER-DINOTOFU-WINDOWS-v3.50.34.zip",
+    "linux": "INSTALLER-DINOTOFU-LINUX-v3.50.34.7z"
   },
   "updaterPayloads": {
-    "windows": "Dinotofu-Windows-v3.50.15.zip",
-    "linux": "Dinotofu-Linux-v3.50.15.7z"
+    "windows": "Dinotofu-Windows-v3.50.34-TECHNICAL-PAYLOAD.zip",
+    "linux": "Dinotofu-Linux-v3.50.34-TECHNICAL-PAYLOAD.7z"
   }
 }

@@ -1,12 +1,12 @@
 # Dinotofu   
 
-Dinotofu est un RPG / jeu d'arène en C++17. La version terminal reste le socle stable, avec une interface graphique expérimentale HTML/JS pour préparer une version desktop plus confortable.   
+Dinotofu est un RPG / jeu d'arène en C++23. La version terminal reste le socle stable, avec une interface graphique expérimentale HTML/JS pour préparer une version desktop plus confortable.   
 
 ## Version actuelle   
 
-- Version actuelle : **V3.50.15**   
-- Point de sauvegarde important : **V3.50.12**. Tout personnage dont la dernière adaptation est antérieure à ce jalon doit effectuer explicitement le rituel de transition avant un chargement normal.   
-- Avant cette transition, Dinotofu crée une copie de sécurité pré-mise-à-jour dédiée qui n'est jamais écrasée. Les très anciennes sauvegardes — y compris celles sans métadonnée de version — conservent l’alerte historique forte, mais ne peuvent plus contourner le backup + rituel obligatoire du jalon V3.50.12.   
+- Version actuelle : **V3.50.34**   
+- Point de sauvegarde important : **V3.50.33**. Tout personnage dont la dernière adaptation est antérieure à ce jalon doit effectuer explicitement le rituel de transition avant un chargement normal.   
+- Avant cette transition, Dinotofu crée une copie de sécurité pré-mise-à-jour dédiée qui n'est jamais écrasée. Les très anciennes sauvegardes — y compris celles sans métadonnée de version — conservent l’alerte historique forte, mais ne peuvent plus contourner le backup + rituel obligatoire du jalon V3.50.33.   
 
 ## Ce qu'il y a déjà dans le jeu   
 
@@ -37,21 +37,18 @@ La progression des boss est ordonnée sans révéler la liste complète au joueu
 
 ## Interface graphique   
 
-L’interface graphique reste expérimentale mais jouable et reflète le moteur C++ sans inventer de logique cachée. La V3.49.62 clarifie le routage terminal après combat : **Continuer** ramène au **Menu de base**, puis **Monde / ville** se choisit comme activité explorable normale. Le menu rapide reste concentré sur Personnage, saisie libre, options de partie et sauvegarde. Le terminal reste le secours le plus fiable : les images de gameplay y sont désactivées, non activables, mais les raccourcis/installateurs peuvent utiliser leur icône dédiée.   
+L’interface graphique est actuellement **en cours de refonte** et ne doit pas être considérée comme jouable. Son mode provisoire conserve uniquement l’accueil visuel : **Jouer** affiche un message de production, puis permet d’arrêter cet accueil et de basculer vers le Terminal. Aucun moteur de partie n’est lancé en arrière-plan pendant cette attente. Le terminal reste l’interface stable et le mode lancé par défaut sous Windows et Linux, en attendant une vraie application desktop.   
 
 ## Installer depuis une release GitHub   
 
 Pour installer Dinotofu sans compiler le projet manuellement :   
 
-1. aller sur la page du dépôt GitHub ;   
-2. ouvrir la dernière Release affichée à droite du dépôt ;   
-3. télécharger uniquement l’archive **DinotofuInstaller** correspondant à ton système d’exploitation : Windows ou Linux ;   
-4. décompresser l’archive, puis lancer **Installer-Dinotofu**. Le pack contient aussi l’archive du jeu en secours local si GitHub ne la fournit pas directement.   
+1. ouvrir la dernière Release GitHub ;   
+2. télécharger `INSTALLER-DINOTOFU-WINDOWS-vX.YY.ZZ.zip` ou `INSTALLER-DINOTOFU-LINUX-vX.YY.ZZ.7z` ;   
+3. décompresser le petit pack : sa racine contient uniquement l'installateur et `Documentation/` ;   
+4. lancer **INSTALLER-DINOTOFU**. L'installateur télécharge ensuite le payload technique complet du jeu depuis la release.   
 
-Sur les versions desktop Windows/Linux, l'installateur ou le launcher doit créer deux entrées claires :   
-
-- **ProjetDinotofu Launcher** : lancement normal / Auto, via le launcher adapté à l'OS ;   
-- **ProjetDinotofu Launcher Terminal version** : lancement forcé en terminal, via le launcher Windows/Linux correspondant.   
+Le raccourci **ProjetDinotofu Launcher** lance actuellement le Terminal par défaut. Le mode graphique est réservé au développement jusqu'à sa refonte.   
 
 
 ## Structure rapide   

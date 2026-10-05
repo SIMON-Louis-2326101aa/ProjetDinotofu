@@ -729,11 +729,11 @@ bool StoryCampaign::isDevelopmentLimitReached(const Player& player)
 std::vector<std::string> StoryCampaign::buildDevelopmentLimitLines(const Player& player)
 {
     return {
-        "Fin temporaire du contenu histoire actuellement jouable.",
+        "La suite de l'histoire principale n'est pas encore accessible.",
         player.getName() + " a atteint l'introduction du chapitre 3 : Les routes qui répondent mal.",
-        "Les chapitres et scènes suivants existent encore dans le code comme travail préparatoire, mais ils sont volontairement désactivés pendant leur refonte.",
-        "Priorité actuelle du développement : monde vivant, entités différenciées, monstres/boss, systèmes persistants, recrues, rivaux et contenu libre.",
-        "Le personnage reste disponible : le reste du jeu, l'exploration et les systèmes hors progression principale peuvent continuer à être utilisés."
+        "Le journal principal s'arrête ici pour le moment, sans créer de fausses étapes ni de quêtes incomplètes.",
+        "Le personnage peut continuer à vivre dans le monde libre, explorer, combattre, accepter des contrats et faire progresser ses autres activités.",
+        "Aucune progression principale supplémentaire n'est ajoutée tant que la suite du récit n'est pas disponible."
     };
 }
 
@@ -830,9 +830,9 @@ StoryAccessSnapshot StoryCampaign::buildAccessSnapshot(const Player& player)
             "Chapitre 2 : route du relais silencieux, première vraie enquête, menace imposée, relais stabilisé, premier sauvetage et sacoche de routes.",
             "Développement de ville : demandes liées aux PNJ présentés, stocks moins ridicules, premières vraies priorités de forge/herboristerie et comptoirs relancés.",
             "Route du nord : après le signal, le joueur sauve Nell, exploite ses informations, suit l'encre froide et commence à comprendre que la route est réécrite.",
-            "Économie histoire légère : les boutiques affichent maintenant pourquoi leurs stocks respirent ou restent pauvres selon la progression, avec un contre-registre de routes courtes.",
-            "Temps de réparation : certaines étapes demandent maintenant de s'occuper utilement avec patrouilles, services et quêtes secondaires avant que la suite ne soit prête.",
-            "Borne noire : la ville peut maintenant passer d'une rumeur de menace à un premier affrontement d'étape contre le verrou qui garde la route.",
+            "Économie locale : l’état des routes, des stocks et des réparations se reflète dans les boutiques de la ville.",
+            "Temps de réparation : pendant certains travaux, la ville s’appuie sur les patrouilles, services et demandes secondaires.",
+            "Borne noire : les informations réunies suffisent à préparer un premier affrontement contre le verrou qui garde la route.",
             "Combat histoire : menaces imposées dans l'ordre, pas comme le bac à sable."
         };
         snapshot.limitedSystems = {
@@ -897,13 +897,13 @@ StoryAccessSnapshot StoryCampaign::buildAccessSnapshot(const Player& player)
             "Registre contradictoire : dates de mairie, tombes, cloche et témoignages peuvent être conservés sans en effacer une version."
         };
         snapshot.limitedSystems = {
-            "Village : seule la première fenêtre d'accès et la première nuit sont actuellement stabilisées.",
+            "Village : la première fenêtre d'accès et la première nuit constituent les repères connus de cette enquête.",
             "Enquête : les preuves indiquent une anomalie temporelle, mais pas encore l'identité certaine de ses gardiens.",
             "Exploration : les événements proches restent soumis aux conséquences et aux routes choisies au chapitre 3."
         };
         snapshot.lockedSystems = {
-            "Seconde phase du village : à détailler à partir des preuves réunies.",
-            "Mini-boss et boss majeur du chapitre 4 : volontairement non sélectionnés tant que leur rôle narratif n'est pas établi.",
+            "Seconde phase du village : inaccessible tant que les preuves réunies ne permettent pas d'aller plus loin.",
+            "Les gardiens majeurs du village restent inconnus tant que leur rôle n'est pas établi par des preuves.",
             "Légendes profondes et vérité de la fissure : réservées aux chapitres suivants."
         };
         snapshot.mainObjectives = {
@@ -911,13 +911,13 @@ StoryAccessSnapshot StoryCampaign::buildAccessSnapshot(const Player& player)
             "Comparer trois dates incompatibles sans choisir arbitrairement la plus pratique.",
             "Interroger les habitants qui connaissent le convoi avant son départ.",
             "Observer ce que la cloche retire réellement du village pendant la première nuit.",
-            "Transformer les preuves en structure de chapitre avant de nommer les ennemis majeurs."
+            "Croiser les preuves avant de donner un nom aux ennemis majeurs."
         };
     }
 
     snapshot.sideObjectives = {
         "Tuer des monstres proches pour réduire la pression et récolter des matériaux.",
-        "Parler d’abord aux référents, puis accepter des demandes proches quand la mission principale demande du développement.",
+        "Parler d’abord aux référents, puis accepter des demandes proches quand la mission principale laisse du temps libre.",
         "Aider certains clients amis déjà présentés afin qu'ils deviennent de vrais référents utiles.",
         "Inspecter le bestiaire et les matériaux pour comprendre d'où viennent les créatures."
     };
@@ -948,30 +948,27 @@ StoryAccessSnapshot StoryCampaign::buildAccessSnapshot(const Player& player)
 std::vector<std::string> StoryCampaign::buildLongIntroductionLines(const Player& player)
 {
     std::vector<std::string> lines = {
-        "Avant la ville, avant la fumée blanche, il y avait une mission presque banale.",
-        "Pas une légende. Pas une prophétie. Juste une sortie de guilde comme on en donne à des gens qui savent tenir une arme et rapporter des matériaux.",
-        "Tu étais avec d'autres. Des voix familières, des sacs trop lourds, des plaisanteries de route, une promesse simple : exterminer quelques nuisibles, récolter ce qui pouvait servir, rentrer avant que le soir ne rende la forêt stupide.",
-        "La mission devait être courte. Les traces étaient fraîches, les monstres signalés n'avaient rien d'un désastre, et personne n'avait demandé à la ville de fermer ses portes derrière vous.",
-        "Puis les oiseaux se sont tus en même temps.",
-        "Le chemin a changé de pente. Les marques de passage se sont répétées sur trois arbres différents. Un ami a juré qu'il avait déjà vu cette souche. Un autre a ri trop fort pour faire semblant de ne pas avoir peur."
+        "Avant la ville, avant le niveau 1, il y a un souvenir qui refuse de disparaître complètement.",
+        "Ce n'est pas un tutoriel déguisé ni une vision du futur : c'est un morceau de la dernière journée que ton personnage a réellement vécue avant la Brume blanche.",
+        "Dans ce morceau, tu étais déjà expérimenté. Ton corps connaissait sa classe, ton équipement était solide et deux compagnons savaient se placer autour de toi sans recevoir d'ordre.",
+        "Le contrat menait au Glacier des Serments froids, une zone que les débutants n'auraient aucune raison de traverser vivants.",
+        "La cible était un chef de meute accompagné de deux garde-crocs. Une vraie chasse, dangereuse, mais encore assez normale pour votre groupe.",
+        "Le problème est que le souvenir lui-même a été mangé. Les noms, certaines phrases et des morceaux du contrat sont déjà absents quand tu les revis."
     };
 
     const std::vector<std::string> specialLines = specialStoryHookLines(player);
     lines.insert(lines.end(), specialLines.begin(), specialLines.end());
 
     const std::vector<std::string> endLines = {
-        "La fumée blanche est arrivée sans bruit. Pas comme du brouillard. Comme une chose qui savait exactement qui elle venait chercher.",
-        "Elle n'a pas seulement séparé le groupe. Elle a commencé à retirer les liens entre les souvenirs : les noms des autres, leurs visages, la raison de la mission, puis la certitude même d'avoir marché avec eux.",
-        "Tu te souviens de mains qui attrapent ton bras. Tu te souviens d'un cri qui aurait dû être important. Tu te souviens d'avoir voulu répondre. Ensuite, le blanc.",
-        "Quand le joueur reprend vraiment la main, il ne reste plus que la forêt, la fumée et un prénom : " + player.getName() + ".",
-        "Le personnage ne commence pas héros. Il commence survivant, amputé de son propre passé, avec l'impression qu'il vient d'abandonner quelqu'un sans savoir qui.",
-        "Sans équipement, sans groupe, sans carte fiable, il doit sortir de la forêt. Si quelque chose attaque, il ne s'agit pas de gagner : seulement parer ou fuir.",
-        "La sortie mène à un cadavre et à un paquet abîmé. Ce kit de départ n'est pas un cadeau héroïque : c'est ce qui reste d'une personne qui n'a pas eu la même chance.",
-        "Au loin, une ville tient à peine debout. Les murs sont trop bas pour rassurer. Les lanternes sont accrochées trop près du sol. Les marchands parlent doucement, comme si les choses dehors pouvaient comprendre les prix.",
-        "La guilde existe, mais elle n'a rien d'une grande institution. Pour l'instant, c'est un comptoir, deux bancs, un registre humide et des gens qui font semblant de savoir quoi faire.",
-        "Ici, rien ne s'ouvre par simple décision de registre. Les choses s'ouvrent parce que quelqu'un est sauvé, parce qu'une route tient encore, parce qu'une menace tombe, parce que des matériaux reviennent vivants jusqu'aux portes.",
-        "Les monstres ne sont pas seulement des obstacles. Certains ont l'air d'avoir fui quelque chose. D'autres semblent avoir été fabriqués par une peur plus ancienne que la ville.",
-        "Le but final ne sera pas donné au début. Il commencera petit : retrouver son nom complet, comprendre la mission perdue, rouvrir une route, sauver un référent, puis découvrir contre quoi le monde se défend vraiment."
+        "La chasse peut être gagnée ou perdue. Dans les deux cas, ce n'est pas le chef de meute qui décide de ton avenir.",
+        "Après le combat, la Brume blanche remonte le glacier contre le vent et commence par effacer les informations les plus faciles : l'heure, l'objectif, le chemin.",
+        "Puis elle attaque les deux personnes qui étaient avec toi. Leurs noms se cassent avant leurs voix, leurs visages avant le souvenir de leurs gestes.",
+        "Ton propre niveau, ton ancien équipement et tes techniques deviennent ensuite des sensations sans origine.",
+        "Quand le souvenir cède, le vrai départ reprend : seul, désarmé, dans une forêt blanche, avec un unique mot qui résiste encore — " + player.getName() + ".",
+        "Le personnage ne commence donc pas comme un héros inexpérimenté. Il commence comme quelqu'un qui a déjà été compétent et entouré, mais auquel on a retiré les raisons, les liens et les preuves.",
+        "Le cadavre et le paquet trouvés ensuite restent le kit de départ générique lié à la classe. Ce n'est pas l'ancienne arme du souvenir revenue par magie.",
+        "Au loin, une ville tient à peine debout. Ce sera le premier refuge de la progression réelle, niveau 1, avec une économie, des routes et des relations à reconstruire.",
+        "Le but final ne sera toujours pas expliqué gratuitement : le monde devra rendre ses réponses morceau par morceau."
     };
     lines.insert(lines.end(), endLines.begin(), endLines.end());
     return lines;
@@ -980,34 +977,23 @@ std::vector<std::string> StoryCampaign::buildLongIntroductionLines(const Player&
 std::vector<std::string> StoryCampaign::buildWhiteFogPrologueLines(const Player& player)
 {
     std::vector<std::string> lines = {
-        "Prologue — Mission ordinaire",
-        "La journée avait commencé avec des voix autour de toi.",
-        "Pas des voix de rêve. Des voix proches. Des gens avec qui tu marchais depuis assez longtemps pour reconnaître leurs pas sans les regarder.",
-        "Quelqu'un râlait parce que les sacs de récolte étaient déjà humides. Quelqu'un d'autre comptait les fioles vides en disant que cette fois, il ne porterait pas les organes de slime pour tout le monde.",
-        "La mission n'avait rien d'une grande bataille : nettoyer une zone de nuisance, récupérer des matériaux, confirmer que le sentier restait praticable, puis rentrer avant la fermeture des portes.",
-        "Tu avais un équipement. Un sac. Une raison d'être là. Et surtout, tu n'étais pas seul.",
-        "Une voix te lance : « " + player.getName() + ", tu fermes la marche ? »",
-        "Tu réponds quelque chose. Le souvenir garde le mouvement de ta bouche, mais pas les mots exacts."
+        "Prologue — Dernier souvenir avant le blanc",
+        "Tu ne te réveilles pas encore dans la forêt.",
+        "Pendant quelques minutes, tu redeviens la personne que tu étais juste avant de tout perdre.",
+        "Tu es plus fort, mieux équipé, et tes mains retrouvent des techniques que le personnage du présent ne sait plus expliquer.",
+        "Deux compagnons marchent avec toi. Tu sais qu'ils comptent. Le souvenir refuse déjà de te rendre leurs noms correctement.",
+        "La mission est lisible par fragments : Glacier des Serments froids. Chef de meute. Deux garde-crocs. Retour avant une heure que la Brume a arrachée.",
+        "Ce qui suit est jouable, mais rien de ce build temporaire ne sera offert au personnage niveau 1. C'est un passé, pas un raccourci de progression."
     };
 
     const std::vector<std::string> specialLines = specialStoryHookLines(player);
     lines.insert(lines.end(), specialLines.begin(), specialLines.end());
 
     const std::vector<std::string> endLines = {
-        "Puis les traces deviennent étranges.",
-        "Une empreinte de monstre s'arrête au milieu du chemin. Une corde de balise pend à une branche, blanche de givre alors qu'il ne fait pas froid. Les oiseaux se taisent tous en même temps.",
-        "Un de tes compagnons murmure qu'il faut rentrer. Un autre dit que ce n'est qu'un brouillard de vallée. Personne ne croit vraiment cette phrase.",
-        "La fumée blanche arrive entre deux arbres.",
-        "Elle n'avance pas avec le vent. Elle avance contre lui.",
-        "Quelqu'un attrape ton bras. Quelqu'un crie ton prénom. Ou peut-être le sien. Tu n'arrives déjà plus à distinguer.",
-        "La mission habituelle se brise là, dans un silence trop propre.",
-        "Quand tu ouvres les yeux pour de bon, tu es seul.",
-        "Le monde autour de toi n'a presque plus de couleur. Les troncs sont noirs, le sol est humide, et tout le reste disparaît dans une fumée blanche qui respire comme une chose vivante.",
-        "Tes mains sont vides. Pas d'arme. Pas de sac. Pas de signe clair de ce que tu étais avant cette forêt.",
-        "Il reste pourtant un mot, planté au milieu du vide : " + player.getName() + ".",
-        "Tu ne sais pas si c'est ton prénom, un avertissement, ou le dernier morceau de quelqu'un qui te connaissait.",
-        "Dans cette séquence, aucun vrai combat n'est gagné. Si quelque chose attaque, il faudra parer assez longtemps pour respirer, ou fuir assez vite pour rester vivant.",
-        "La sortie de forêt mènera au premier équipement, mais pas comme un cadeau. Ici, même les objets de départ auront une histoire."
+        "Tu reconnais les automatismes du groupe avant de reconnaître les souvenirs qui les ont créés.",
+        "La chasse doit encore sembler réelle : le chef de meute peut tomber, ou vous forcer à décrocher.",
+        "Mais quelque chose attend après le combat, quel qu'en soit le résultat.",
+        "La Brume ne va pas seulement vous séparer. Elle va rendre difficile jusqu'à la preuve que vous vous êtes connus."
     };
     lines.insert(lines.end(), endLines.begin(), endLines.end());
     return lines;
@@ -1016,11 +1002,11 @@ std::vector<std::string> StoryCampaign::buildWhiteFogPrologueLines(const Player&
 std::vector<std::string> StoryCampaign::buildWhiteFogMemoryLossLines(const Player& player)
 {
     std::vector<std::string> lines = {
-        "La fumée blanche avance.",
+        "La Brume blanche avance.",
         "Elle touche d'abord les souvenirs qui semblaient solides : la mission, le nombre de compagnons, le chemin du retour.",
-        "Tu essaies de compter les autres. Un. Deux. Trois... Le quatrième devient une forme sans visage. Le cinquième n'a plus de voix. Ou peut-être qu'il n'y en avait jamais eu cinq.",
+        "Tu essaies de compter les autres. Un. Deux. Trois. Tu sais qu'il y avait trois silhouettes dans la chasse, puis même ce chiffre commence à perdre son sens.",
         "Un rire disparaît. Une main sur ton épaule disparaît. La phrase « on rentre ensemble » se coupe avant le dernier mot.",
-        "Puis la fumée devient plus précise.",
+        "Puis la Brume devient plus précise.",
         "Ton âge se brouille. Ton origine se replie sur elle-même. Même ton ancienne façon de tenir une arme devient une image sans muscle."
     };
 
@@ -1028,13 +1014,14 @@ std::vector<std::string> StoryCampaign::buildWhiteFogMemoryLossLines(const Playe
     lines.insert(lines.end(), specialLines.begin(), specialLines.end());
 
     const std::vector<std::string> endLines = {
-        "Tu essaies de penser à ta famille, à ta maison, à la guilde qui vous a envoyés. La fumée répond par un blanc parfait.",
+        "Tu essaies de penser à ta famille, à ta maison, à la guilde qui vous a envoyés. La Brume répond par un blanc parfait.",
         "Il reste une seule chose assez lourde pour ne pas partir tout de suite : " + player.getName() + ".",
         player.getName() + "... Tu répètes ce mot dans ta tête jusqu'à ce qu'il ressemble à une corde au-dessus du vide.",
         player.getName() + " : « C'est moi... non ? Oui. Je crois. »",
         player.getName() + " : « J'étais avec... avec qui ? »",
-        "La forêt ne répond pas. Elle garde les noms des autres comme si elle les avait avalés avant toi.",
+        "La forêt ne répond pas. La Brume garde les noms des autres comme si elle les avait avalés avant toi.",
         player.getName() + " : « Je dois sortir. Après, je me souviendrai. Peut-être. »",
+        "Tes épaules cherchent encore le poids d’une arme qui n’existe plus. Tes mains savent qu’elles étaient fortes ; ton corps actuel ne sait plus pourquoi.",
         "Le prénom est réel. Le reste devra être reconstruit."
     };
     lines.insert(lines.end(), endLines.begin(), endLines.end());
@@ -1567,7 +1554,7 @@ std::vector<std::string> StoryCampaign::buildChapterTwoCityRecoveryLines(const P
         "Forge : Bram repère deux itinéraires où les plaques et sangles de convoi peuvent être récupérées sans envoyer une caravane entière au suicide.",
         "Guilde : le maître accepte d'afficher des contrats de route un peu plus sérieux, tant qu'ils restent près du relais et pas vers les grands biomes.",
         "Relais : Orren et Nell ajoutent une règle simple : chaque départ doit laisser un signe de retour, même si le groupe pense revenir vite.",
-        "Conséquence : les boutiques et PNJ peuvent maintenant commenter le palier de ville et justifier de meilleurs stocks de terrain sans ouvrir toute la route trop tôt."
+        "Conséquence : l’état de la ville se reflète dans certains stocks, services et réactions des habitants."
     };
 }
 
@@ -1625,7 +1612,7 @@ std::vector<std::string> StoryCampaign::buildChapterTwoShortRouteCounterLines(co
         "Eda : « Si la carte ment, on ne suit plus la carte seule. On suit les retours, les marques, les stocks réellement revenus et les témoins encore vivants. »",
         "Herboristerie : les paniers de plantes sont marqués par provenance réelle, pas seulement par destination prévue.",
         "Forge : Bram note quels clous, plaques et sangles reviennent par trajet confirmé.",
-        "Guilde : les contrats de route courte affichent maintenant un avertissement quand leur destination dépend d'une carte non vérifiée.",
+        "Guilde : les contrats de route courte signalent les destinations dépendant d’une carte non vérifiée.",
         "Objectif : installer ce contre-registre pour donner une conséquence économique concrète à l'enquête, sans ouvrir toutes les boutiques d'un coup."
     };
 }
@@ -1948,7 +1935,7 @@ std::vector<std::string> StoryCampaign::buildChapterFourProgressLines(const Play
     if (step >= 9)
     {
         lines.push_back("[menace majeure identifiée] L'Intendant de la Date Vide classe les événements refusés par les autres calendriers.");
-        lines.push_back("[préparation] Son affrontement devra être développé dans la phase suivante avec la salle des dates et ses règles propres.");
+        lines.push_back("[préparation] Son affrontement exige encore d'atteindre la salle des dates et d'en comprendre les règles.");
     }
     else
     {
@@ -1969,12 +1956,12 @@ std::vector<std::string> StoryCampaign::buildChapterFourActionLines(const Player
         "Suis la corde de la cloche jusqu'au Sonneur sans heure et brise son rythme sans détruire les preuves.",
         "Cherche le nom effacé dans le cimetière, l'auberge et le registre de mairie avant la prochaine nuit.",
         "Ouvre le registre intérieur et compare son sceau avec les trois dates incompatibles.",
-        "La deuxième phase est terminée. Prépare l'accès à la salle des dates et les règles du futur combat majeur."
+        "La deuxième phase est terminée. Prépare l'accès à la salle des dates et découvre les règles de l'affrontement majeur."
     };
     return {
         "Étape actuelle : " + std::to_string(step) + ".",
         actions[static_cast<std::size_t>(step - 1)],
-        step < 9 ? "La prochaine scène reste masquée jusqu'à l'accomplissement de cette action." : "La menace majeure est identifiée, mais son combat reste volontairement réservé à la phase suivante."
+        step < 9 ? "La prochaine scène reste masquée jusqu'à l'accomplissement de cette action." : "La menace majeure est identifiée, mais l'accès à son affrontement n'est pas encore ouvert."
     };
 }
 
@@ -1987,7 +1974,7 @@ std::vector<std::string> StoryCampaign::buildSandboxRulesLines(const Player& pla
         "Le mode histoire, lui, ne doit pas tout ouvrir dès le début. Il verrouille volontairement les menus par logique narrative.",
         "Différence importante : un boss peut exister dans le bac à sable sans être disponible dans l'histoire au même moment.",
         "Même chose pour les boutiques : la forge complète peut exister techniquement, mais l'histoire peut n'autoriser qu'une forge pauvre tant que Bram n'a pas ses matériaux.",
-        "Cette séparation permet de continuer à développer les fonctionnalités sans casser l'immersion du début d'histoire.",
+        "Cette séparation garde une progression narrative cohérente tout en laissant le mode libre accessible.",
         "Le menu d'entrée du mode histoire est volontairement séparé : Nouvelle histoire, Continuer, Sélectionner le chapitre.",
         "Nouvelle histoire recommence au début commun : niveau 1, aucun confort, prologue de la fumée blanche.",
         "Continuer lance automatiquement la prochaine étape dans l'ordre, sans demander au joueur de choisir un chapitre à chaque fois.",
@@ -2002,7 +1989,7 @@ std::vector<std::string> StoryCampaign::buildDevelopmentLines(const Player& play
 {
     StoryAccessSnapshot snapshot = buildAccessSnapshot(player);
     std::vector<std::string> lines;
-    lines.push_back("Développement actuel de la ville : palier " + std::to_string(snapshot.cityDevelopment) + ".");
+    lines.push_back("État actuel de la ville : palier " + std::to_string(snapshot.cityDevelopment) + ".");
     lines.push_back("Chapitre sauvegardé : " + std::to_string(snapshot.chapter) + " | Étape : " + std::to_string(snapshot.step) + ".");
     lines.push_back("");
     lines.push_back("Débloqué / ouvert :");
@@ -2020,7 +2007,7 @@ std::vector<std::string> StoryCampaign::buildReferentNpcLines(const Player& play
 {
     StoryAccessSnapshot snapshot = buildAccessSnapshot(player);
     std::vector<std::string> lines = {
-        "Clients amis / référents prévus",
+        "Clients amis / référents connus",
         "Ces PNJ ne sont pas forcément des alliés de combat. Certains servent de repères, de donneurs de missions ou de verrous narratifs."
     };
     for (const std::string& line : snapshot.referentNpcs) lines.push_back("- " + line);
@@ -2031,7 +2018,7 @@ std::vector<std::string> StoryCampaign::buildIntrigueLines(const Player& player)
 {
     StoryAccessSnapshot snapshot = buildAccessSnapshot(player);
     std::vector<std::string> lines = {
-        "Intrigues suivies prévues",
+        "Intrigues suivies",
         "Le but final ne doit pas être donné directement au début. Chaque intrigue apporte une partie du vrai problème."
     };
     for (const std::string& line : snapshot.intrigueThreads) lines.push_back("- " + line);
@@ -2052,7 +2039,7 @@ std::vector<std::string> StoryCampaign::buildNextObjectiveLines(const Player& pl
     lines.push_back("Objectifs principaux :");
     for (const std::string& line : snapshot.mainObjectives) lines.push_back("- " + line);
     lines.push_back("");
-    lines.push_back("Objectifs secondaires utiles au développement :");
+    lines.push_back("Objectifs secondaires utiles à la progression locale :");
     for (const std::string& line : snapshot.sideObjectives) lines.push_back("- " + line);
     return lines;
 }

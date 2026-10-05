@@ -8,6 +8,7 @@
 #include "economy/shop/ShopPriceRules.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cctype>
 
 int ShopPriceRules::applyBuyModifier(
@@ -104,6 +105,52 @@ int ShopPriceRules::applySellModifier(
     }
 
     return std::max(1, modifiedPrice);
+}
+
+bool ShopPriceRules::usesRoundedBuyQuotes(ShopType shopType)
+{
+    return shopType == ShopType::Weapon
+        || shopType == ShopType::Armor
+        || shopType == ShopType::Blacksmith;
+}
+
+int ShopPriceRules::roundBuyQuote(ShopType shopType, int economyUnits)
+{
+    if (economyUnits <= 0 || !usesRoundedBuyQuotes(shopType))
+    {
+        return std::max(0, economyUnits);
+    }
+
+    // FR: Les artisans aiment annoncer des sommes faciles à compter. On cherche la plus grosse
+    // dénomination raisonnable (PO puis PE), mais on refuse un arrondi qui déformerait trop le tarif.
+    // EN: Craftspeople favor easy-to-count quotes. Use the largest sensible denomination while
+    // refusing rounding that would distort the underlying price by more than roughly twelve percent.
+    for (const int step : {100, 10})
+    {
+        if (economyUnits < step)
+        {
+            continue;
+        }
+
+        const int rounded = std::max(step, ((economyUnits + step / 2) / step) * step);
+        const int difference = std::abs(rounded - economyUnits);
+        if (difference * 100 <= economyUnits * 12)
+        {
+            return rounded;
+        }
+    }
+
+    return economyUnits;
+}
+
+std::string ShopPriceRules::buyQuoteStyleText(ShopType shopType)
+{
+    if (usesRoundedBuyQuotes(shopType))
+    {
+        return "Tarif d'artisan : somme arrondie à une dénomination simple quand l'écart reste raisonnable.";
+    }
+
+    return "Tarif de comptoir : montant exact, monnaie rendue au besoin.";
 }
 
 // EN: hasCraftClassTradeBonus declares or implements a focused behavior used by this module.

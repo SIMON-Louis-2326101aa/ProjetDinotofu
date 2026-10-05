@@ -1,4 +1,5 @@
 #include "combat/system/MonsterPreparedActionSystem.hpp"
+#include "combat/system/DefensePostureSystem.hpp"
 #include "entity/Monster.hpp"
 #include "entity/Player.hpp"
 
@@ -117,13 +118,19 @@ MonsterPreparedActionResolution MonsterPreparedActionSystem::resolve(Monster& mo
 
     result.resolved = true;
     const int base = std::max(6, monster.getMaxDamage() + monster.getLevel() / 3 + result.tier * 3);
+    auto applyPreparedDamage = [&](int rawDamage)
+    {
+        const int actualDamage = DefensePostureSystem::reduceIncomingDamage(player, std::max(0, rawDamage));
+        player.takeDamage(actualDamage);
+        result.damage = actualDamage;
+    };
 
     if (result.family == "charge_lourde")
     {
         result.damage = base + 4 + result.tier * 2;
         result.forcedReposition = true;
         result.effectLine = "L'impact casse les appuis et force à reprendre la position.";
-        player.takeDamage(result.damage);
+        applyPreparedDamage(result.damage);
         player.applyWeakening(1, 6 + result.tier * 2);
         player.applyNextHitVulnerability(1, 6 + result.tier * 2);
     }
@@ -131,7 +138,7 @@ MonsterPreparedActionResolution MonsterPreparedActionSystem::resolve(Monster& mo
     {
         result.damage = base + 2 + result.tier;
         result.effectLine = "Le souffle chargé frappe surtout par pression et exposition : il laisse le corps affaibli même sans déplacement forcé.";
-        player.takeDamage(result.damage);
+        applyPreparedDamage(result.damage);
         player.applyWeakening(2, 5 + result.tier * 2);
         player.applyNextHitVulnerability(1, 3 + result.tier);
     }
@@ -140,7 +147,7 @@ MonsterPreparedActionResolution MonsterPreparedActionSystem::resolve(Monster& mo
         result.damage = base + 5 + result.tier;
         result.forcedReposition = true;
         result.effectLine = "Le piqué traverse la ligne de garde et force une reprise d'appui après l'impact.";
-        player.takeDamage(result.damage);
+        applyPreparedDamage(result.damage);
         player.applyWeakening(1, 4 + result.tier);
         player.applyNextHitVulnerability(1, 8 + result.tier * 2);
     }
@@ -148,21 +155,21 @@ MonsterPreparedActionResolution MonsterPreparedActionSystem::resolve(Monster& mo
     {
         result.damage = std::max(3, base - 4);
         result.effectLine = "La frappe directe reste modeste : le vrai danger vient du venin préparé qui continue d'agir après l'impact.";
-        player.takeDamage(result.damage);
+        applyPreparedDamage(result.damage);
         player.applyPoison(2 + result.tier / 2, 2 + result.tier);
     }
     else if (result.family == "tir_lourd")
     {
         result.damage = base + 3;
         result.effectLine = "Le tir engagé ne pousse pas forcément, mais laisse une ouverture nette après l'esquive ou l'impact.";
-        player.takeDamage(result.damage);
+        applyPreparedDamage(result.damage);
         player.applyNextHitVulnerability(1, 7 + result.tier * 2);
     }
     else if (result.family == "entrave_massive")
     {
         result.damage = std::max(4, base - 3);
         result.effectLine = "La matière préparée se referme sur les appuis : l'entrave devient la vraie menace, pas les dégâts bruts.";
-        player.takeDamage(result.damage);
+        applyPreparedDamage(result.damage);
         player.applyEntanglement(1);
         player.applyWeakening(1, 4 + result.tier);
     }
@@ -170,7 +177,7 @@ MonsterPreparedActionResolution MonsterPreparedActionSystem::resolve(Monster& mo
     {
         result.damage = std::max(3, base - 5);
         result.effectLine = "Le cri secoue surtout le rythme : la prochaine pression ennemie devient plus dangereuse.";
-        player.takeDamage(result.damage);
+        applyPreparedDamage(result.damage);
         player.applyWeakening(2, 5 + result.tier * 2);
         monster.applyPrecisionBoost(1, 1);
     }
@@ -178,7 +185,7 @@ MonsterPreparedActionResolution MonsterPreparedActionSystem::resolve(Monster& mo
     {
         result.damage = base;
         result.effectLine = "Le rituel aboutit sans déplacement forcé, mais laisse une faiblesse plus longue à exploiter par le groupe ennemi.";
-        player.takeDamage(result.damage);
+        applyPreparedDamage(result.damage);
         player.applyWeakening(2, 6 + result.tier * 2);
         player.applyNextHitVulnerability(1, 4 + result.tier);
     }
@@ -187,7 +194,7 @@ MonsterPreparedActionResolution MonsterPreparedActionSystem::resolve(Monster& mo
         result.damage = base;
         result.forcedReposition = true;
         result.effectLine = "Le geste engagé rompt brièvement les appuis.";
-        player.takeDamage(result.damage);
+        applyPreparedDamage(result.damage);
         player.applyWeakening(1, 5 + result.tier * 2);
         player.applyNextHitVulnerability(1, 5 + result.tier * 2);
     }

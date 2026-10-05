@@ -26,6 +26,7 @@
 #include "combat/loot/LootGenerator.hpp"
 #include "combat/turn/wave/PlayerWaveCombatTurn.hpp"
 #include "combat/turn/wave/MonsterWaveCombatTurn.hpp"
+#include "economy/Money.hpp"
 #include "core/Console.hpp"
 #include <algorithm>
 #include <cctype>
@@ -437,7 +438,7 @@ namespace
         itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = potion.getDescription();
         itemData.status = "Soin : " + potion.getPowerDisplayText();
-        itemData.price = "Valeur : " + std::to_string(potion.getValue()) + " or";
+        itemData.price = "Valeur : " + Money::formatEconomyUnits(potion.getValue());
         itemData.stock = "Index inventaire : " + std::to_string(inventoryIndex + 1);
         itemData.owner = healer.getName();
         itemData.important = potion.getPower() >= 35;

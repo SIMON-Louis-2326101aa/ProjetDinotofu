@@ -34,7 +34,7 @@ const std::vector<WorldMapPlace>& WorldMap::getPlaces()
         {"kitsune_nine_sparks", "Sentier des Neuf Étincelles", "Sanctuaire kitsuné des Neuf Étincelles", "Neuf lanternes marquent un sentier dont l'ordre change selon l'heure et l'humeur des esprits.", "torii, lanternes, feu follet", 18, false, false, true},
         {"pure_mana_confluence", "Confluence des trois halos", "Confluence du Mana pur", "Trois courants de mana se rencontrent sans se mélanger et altèrent brièvement sons, couleurs et sorts.", "rivières de mana, halos instables", 20, false, false, true},
         {"floating_island_anchor", "Ancre des îles flottantes", "Archipel des îles flottantes", "Des blocs de roche dérivent autour d'une ancienne ancre de pierre, reliés par des courants ascendants imprévisibles.", "îlots suspendus, nuages rapides", 23, false, false, true},
-        {"city_arena_valebrume", "Arène urbaine de Valebrume", "Ville", "Lieu prévu pour les combats uniques en ville.", "arène de pierre, gradins simples", 1, true, true, false}
+        {"city_arena_valebrume", "Arène urbaine de Valebrume", "Ville", "Arène de pierre réservée aux combats uniques et aux entraînements.", "arène de pierre, gradins simples", 1, true, true, false}
     };
     return places;
 }
@@ -57,7 +57,7 @@ std::vector<std::string> WorldMap::buildPlacePreviewLines(const std::string& bio
     std::vector<std::string> lines;
     lines.push_back("Biome : " + biomeName + " — " + fogStateText(known) + ".");
     lines.push_back("Distance depuis la ville actuelle : " + (distanceKm >= 0 ? std::to_string(distanceKm) + " km." : std::string("inconnue.")));
-    lines.push_back("Animation future : trajet depuis la porte des remparts, puis animation dans le lieu choisi.");
+    lines.push_back("Trajet : départ depuis la porte des remparts vers le lieu choisi.");
 
     const std::vector<WorldMapPlace> places = getPlacesForBiome(biomeName);
     if (places.empty())
@@ -73,7 +73,7 @@ std::vector<std::string> WorldMap::buildPlacePreviewLines(const std::string& bio
         if (placeKnown)
         {
             lines.push_back("  " + place.description);
-            lines.push_back("  Fond futur : " + place.backgroundTheme + ". Niveau conseillé : " + std::to_string(place.recommendedLevel) + ".");
+            lines.push_back("  Décor : " + place.backgroundTheme + ". Niveau conseillé : " + std::to_string(place.recommendedLevel) + ".");
         }
         else
         {

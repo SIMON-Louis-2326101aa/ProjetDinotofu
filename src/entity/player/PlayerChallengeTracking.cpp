@@ -133,6 +133,7 @@ void Player::finishChallengeCombatTracking(bool victory, bool bossFight, bool el
     std::vector<std::string> heroCompletedTitles;
     int heroExperienceReward = 0;
     int heroGoldReward = 0;
+    CoinBreakdown heroExactCoinReward;
     int heroMarkReward = 0;
 
     for (Quest& quest : questLog.getQuests())
@@ -268,7 +269,18 @@ void Player::finishChallengeCombatTracking(bool victory, bool bossFight, bool el
         {
             quest.turnedIn = true;
             heroExperienceReward += std::max(0, quest.rewardExperience);
-            heroGoldReward += std::max(0, quest.rewardGold);
+            if (Money::coinStacksValueInCopper(quest.rewardCoins) > 0)
+            {
+                heroExactCoinReward.copper += std::max(0LL, quest.rewardCoins.copper);
+                heroExactCoinReward.iron += std::max(0LL, quest.rewardCoins.iron);
+                heroExactCoinReward.electrum += std::max(0LL, quest.rewardCoins.electrum);
+                heroExactCoinReward.gold += std::max(0LL, quest.rewardCoins.gold);
+                heroExactCoinReward.platinum += std::max(0LL, quest.rewardCoins.platinum);
+            }
+            else
+            {
+                heroGoldReward += std::max(0, quest.rewardGold);
+            }
             heroMarkReward += std::max(0, quest.rewardMaterialQuantity);
             if (quest.challengeMarkReward > 0)
             {
@@ -313,7 +325,13 @@ void Player::finishChallengeCombatTracking(bool victory, bool bossFight, bool el
         }
         if (heroGoldReward > 0)
         {
-            inventory.earnGold(heroGoldReward);
+            inventory.earnEconomyUnits(heroGoldReward);
+            refreshCurrencyTitles();
+        }
+        if (Money::coinStacksValueInCopper(heroExactCoinReward) > 0)
+        {
+            inventory.earnCoinStacks(heroExactCoinReward);
+            refreshCurrencyTitles();
         }
         if (heroMarkReward > 0)
         {
@@ -330,7 +348,8 @@ void Player::finishChallengeCombatTracking(bool victory, bool bossFight, bool el
         }
         lines.push_back("Hmmm... J'ai vu. Tu as réussi. La guilde n'a pas besoin de tamponner ce qui est déjà évident... Huuuh.");
         if (heroExperienceReward > 0) lines.push_back("Expérience reçue : " + std::to_string(heroExperienceReward) + ".");
-        if (heroGoldReward > 0) lines.push_back("Récompense reçue : " + Money::formatGoldWithRaw(heroGoldReward) + ".");
+        if (heroGoldReward > 0) lines.push_back("Récompense reçue : " + Money::formatEconomyUnits(heroGoldReward) + ".");
+        if (Money::coinStacksValueInCopper(heroExactCoinReward) > 0) lines.push_back("Pièces reçues exactement : " + Money::formatCoinStacks(heroExactCoinReward, false) + ".");
         if (heroMarkReward > 0) lines.push_back("Marques de défi reçues : " + std::to_string(heroMarkReward) + ".");
         for (const std::string& titleName : heroCompletedTitles)
         {

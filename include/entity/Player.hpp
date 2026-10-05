@@ -18,6 +18,7 @@
 #include "entity/player/PlayerHistoryTypes.hpp"
 #include "world/npc/NpcKnownFact.hpp"
 
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -220,6 +221,8 @@ private:
     int refundUsesRemaining;
 
     std::string createdAtText;
+    long long accumulatedRealPlaySeconds;
+    std::chrono::steady_clock::time_point realPlaySessionStartedAt;
     std::string createdForVersion;
     std::string lastAdaptedVersion;
     std::string creatorAccountName;
@@ -298,6 +301,8 @@ public:
     std::string getAppearanceDescription() const;
     void setAppearanceProfile(int age, const std::string& presentation, const std::string& variant);
     const std::string& getCreatedAtText() const;
+    long long getRealPlayTimeSeconds() const;
+    void setLoadedRealPlayTimeSeconds(long long seconds);
     const std::string& getCreatedForVersion() const;
     const std::string& getLastAdaptedVersion() const;
     void setVersionMetadata(const std::string& createdAt, const std::string& createdFor, const std::string& lastAdapted);
@@ -415,19 +420,22 @@ public:
     bool hasActiveSkill(const std::string& skillId) const;
     // EN: unlockPassiveSkill declares or implements a focused behavior used by this module.
     // FR: unlockPassiveSkill déclare ou implémente un comportement précis utilisé par ce module.
-    bool unlockPassiveSkill(const std::string& skillId, const std::string& skillName);
+    bool unlockPassiveSkill(const std::string& skillId, const std::string& skillName, bool silent = false);
     // EN: unlockActiveSkill declares or implements a focused behavior used by this module.
     // FR: unlockActiveSkill déclare ou implémente un comportement précis utilisé par ce module.
-    bool unlockActiveSkill(const std::string& skillId, const std::string& skillName);
+    bool unlockActiveSkill(const std::string& skillId, const std::string& skillName, bool silent = false);
     // EN: recordGameplaySkillProgressForKills declares or implements a focused behavior used by this module.
     // FR: recordGameplaySkillProgressForKills déclare ou implémente un comportement précis utilisé par ce module.
     void recordGameplaySkillProgressForKills(int amount);
     // EN: refreshLevelAndIdentitySkills declares or implements a focused behavior used by this module.
     // FR: refreshLevelAndIdentitySkills déclare ou implémente un comportement précis utilisé par ce module.
-    void refreshLevelAndIdentitySkills();
+    void refreshLevelAndIdentitySkills(bool silent = false);
     // EN: refreshCareerSkillProgress unlocks passive skills from long-term play statistics.
     // FR: refreshCareerSkillProgress débloque des passifs selon les statistiques durables du personnage.
     void refreshCareerSkillProgress();
+    // EN: refreshCurrencyTitles grants permanent money milestones after the wallet really changes.
+    // FR: refreshCurrencyTitles accorde les jalons monétaires permanents après un vrai changement de bourse.
+    void refreshCurrencyTitles();
     void setLoadedSkillState(
         const std::vector<std::string>& passiveSkills,
         const std::vector<std::string>& activeSkills,

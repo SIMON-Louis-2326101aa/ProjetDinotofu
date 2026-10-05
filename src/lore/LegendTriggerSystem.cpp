@@ -301,12 +301,12 @@ namespace
             "Rumeur du conteur qui change de table",
             "Déclencheurs et rumeurs",
             "Taverne / PNJ conteur",
-            "Un conteur de passage annonce que certaines légendes pourront être racontées par PNJ plutôt que par menu fixe.",
+            "Un conteur de passage affirme que certaines légendes ne circulent que de bouche à oreille.",
             {
                 "Dans certaines tavernes, un vieux conteur commence toujours par dire qu'il ne connaît rien.",
                 "Puis il décrit une cicatrice, un emblème, une salle ou un groupe avec assez de détails pour que le registre se mette à gratter tout seul.",
                 "Il ne raconte jamais tout. Un bon conteur garde une porte fermée pour que l'aventurier ait encore envie de l'ouvrir.",
-                "Le système pourra plus tard utiliser ces PNJ comme déclencheurs doux : pas obligatoires, mais utiles pour donner vie au monde entre deux combats."
+                "Ces rencontres ne sont jamais obligatoires, mais elles donnent aux récits une place naturelle entre deux combats."
             }
         };
     }
@@ -672,7 +672,7 @@ std::vector<LegendArchiveEntry> LegendTriggerSystem::getArchiveEntries()
             "Rumeur du conteur prudent",
             "Déclencheurs et rumeurs",
             "Bibliothèque / note de conteur",
-            "Un rappel méta-lore : une légende doit apparaître quand elle a du sens, pas parce qu'un menu existe.",
+            "Une règle des vieux conteurs : une légende doit surgir au bon endroit et au bon moment.",
             {
                 "Les vieux conteurs ont une règle simple : une bonne légende ne se répète pas à chaque porte.",
                 "Elle attend une salle marquée, un PNJ qui a vraiment quelque chose à dire, ou une rumeur assez étrange pour survivre au bruit de la taverne.",
@@ -776,7 +776,7 @@ std::vector<LegendArchiveEntry> LegendTriggerSystem::getArchiveEntries()
             "Note de l'archiviste de terrain",
             "Règles du registre",
             "Comptoir de guilde / carnet taché",
-            "Une note méta-lore explique pourquoi les classes de connaissance ont une place dans l'aventure.",
+            "Une note d'archiviste explique pourquoi le savoir de terrain a sa place parmi les aventuriers.",
             {
                 "L'archiviste de terrain n'a pas besoin de tuer plus fort que les autres pour être utile.",
                 "Il sait reconnaître une trace, dater une morsure, lire un symbole et éviter qu'un groupe confonde une faiblesse avec une superstition.",

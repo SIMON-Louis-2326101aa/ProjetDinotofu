@@ -217,9 +217,9 @@ namespace
             return false;
         }
 
-        if (!player.getInventory().spendGold(offer.price))
+        if (!player.getInventory().spendEconomyUnits(offer.price))
         {
-            lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(offer.price) + ".");
+            lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(offer.price) + ".");
             return false;
         }
 
@@ -229,7 +229,7 @@ namespace
             return false;
         }
 
-        lines.push_back("Coût payé : " + Money::formatGoldWithRaw(offer.price) + " + " + offer.materialName + " x" + std::to_string(offer.materialQuantity) + ".");
+        lines.push_back("Coût payé : " + Money::formatEconomyUnits(offer.price) + " + " + offer.materialName + " x" + std::to_string(offer.materialQuantity) + ".");
         return true;
     }
 
@@ -243,7 +243,7 @@ namespace
             const EnchantmentOffer& offer = offers[i];
             screen.addOption(
                 static_cast<int>(i + 1),
-                offer.label + " | " + Money::formatGoldWithRaw(offer.price) + " + " + offer.materialName + " x" + std::to_string(offer.materialQuantity),
+                offer.label + " | " + Money::formatEconomyUnits(offer.price) + " + " + offer.materialName + " x" + std::to_string(offer.materialQuantity),
                 offer.description,
                 true,
                 "shop.enchanter.offer." + std::to_string(i + 1)
@@ -301,7 +301,7 @@ namespace
                 "Arme : " + weapon->getName(),
                 "Enchantements actuels : " + std::to_string(weapon->getEnchantmentCount()) + " — " + weapon->getEnchantmentSummaryText(),
                 "Rune : " + offer.label,
-                "Coût : " + Money::formatGoldWithRaw(offer.price) + " + " + offer.materialName + " x" + std::to_string(offer.materialQuantity),
+                "Coût : " + Money::formatEconomyUnits(offer.price) + " + " + offer.materialName + " x" + std::to_string(offer.materialQuantity),
                 "Risque de casse définitive : " + std::to_string(risk) + "%.",
                 weapon->getEnchantmentCount() == 0
                     ? "Note : premier enchantement très stable sur une bonne arme, mais les armes nulles restent dangereuses."
@@ -382,7 +382,7 @@ namespace
                 "Armure : " + armor->getName(),
                 "Enchantements actuels : " + std::to_string(armor->getEnchantmentCount()) + " — " + armor->getEnchantmentSummaryText(),
                 "Rune : " + offer.label,
-                "Coût : " + Money::formatGoldWithRaw(offer.price) + " + " + offer.materialName + " x" + std::to_string(offer.materialQuantity),
+                "Coût : " + Money::formatEconomyUnits(offer.price) + " + " + offer.materialName + " x" + std::to_string(offer.materialQuantity),
                 "Risque de casse définitive : " + std::to_string(risk) + "%.",
                 armor->getEnchantmentCount() == 0
                     ? "Note : premier enchantement très stable sur une bonne armure, mais les tenues trop faibles peuvent céder."
@@ -436,7 +436,7 @@ namespace
             armor->addEnchantment(offer.effectLabel);
             lines.push_back("Enchantement réussi : " + offer.effectLabel + " gravé sur " + armor->getName() + ".");
             lines.push_back("Nouveau total : " + std::to_string(armor->getEnchantmentCount()) + " enchantement(s).");
-            lines.push_back("Effet : l'armure peut maintenant compter dans les protections de température et affinités élémentaires.");
+            lines.push_back("Effet : l’armure compte dans les protections de température et les affinités élémentaires.");
         }
         showShopResult("ENCHANTEMENT RÉUSSI", "shop.enchanter.armor.success", lines);
     }
@@ -515,14 +515,14 @@ namespace
             lines.push_back("Composant manquant : Poussière arcanique x" + std::to_string(dustCost) + " requis.");
             return false;
         }
-        if (!player.getInventory().spendGold(price))
+        if (!player.getInventory().spendEconomyUnits(price))
         {
-            lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(price) + ".");
-            lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+            lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
+            lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
             return false;
         }
         player.getInventory().removeMaterialQuantityById("arcane_dust", dustCost);
-        lines.push_back("Coût payé : " + Money::formatGoldWithRaw(price) + " + Poussière arcanique x" + std::to_string(dustCost) + ".");
+        lines.push_back("Coût payé : " + Money::formatEconomyUnits(price) + " + Poussière arcanique x" + std::to_string(dustCost) + ".");
         return true;
     }
 
@@ -640,15 +640,15 @@ namespace
             lines.push_back("Composant manquant : Poussière arcanique x" + std::to_string(dustCost) + " requis.");
             return false;
         }
-        if (!player.getInventory().spendGold(price))
+        if (!player.getInventory().spendEconomyUnits(price))
         {
-            lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(price) + ".");
-            lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+            lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
+            lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
             return false;
         }
         player.getInventory().removeMaterialQuantityById("runic_stabilizer", 1);
         player.getInventory().removeMaterialQuantityById("arcane_dust", dustCost);
-        lines.push_back("Coût payé : " + Money::formatGoldWithRaw(price) + " + Stabilisateur runique x1 + Poussière arcanique x" + std::to_string(dustCost) + ".");
+        lines.push_back("Coût payé : " + Money::formatEconomyUnits(price) + " + Stabilisateur runique x1 + Poussière arcanique x" + std::to_string(dustCost) + ".");
         return true;
     }
 
@@ -688,15 +688,15 @@ namespace
             lines.push_back("Composant manquant : Poussière arcanique x" + std::to_string(dustCost) + " requis.");
             return false;
         }
-        if (!player.getInventory().spendGold(price))
+        if (!player.getInventory().spendEconomyUnits(price))
         {
-            lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(price) + ".");
-            lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+            lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
+            lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
             return false;
         }
         player.getInventory().removeMaterialQuantityById("runic_extraction_note", 1);
         player.getInventory().removeMaterialQuantityById("arcane_dust", dustCost);
-        lines.push_back("Coût payé : " + Money::formatGoldWithRaw(price) + " + Note d'extraction runique x1 + Poussière arcanique x" + std::to_string(dustCost) + ".");
+        lines.push_back("Coût payé : " + Money::formatEconomyUnits(price) + " + Note d'extraction runique x1 + Poussière arcanique x" + std::to_string(dustCost) + ".");
         return true;
     }
 
@@ -881,7 +881,7 @@ namespace
     {
         MenuScreen typeScreen("TRANSFERT DE RUNE RISQUÉ", "shop.enchanter.transfer.type");
         typeScreen.addLine("Le transfert retire la dernière rune d'un équipement source et tente de la poser sur une cible.");
-        typeScreen.addLine("Coût : 95 pièces + Note d'extraction runique x1 + Poussière arcanique x3.");
+        typeScreen.addLine("Coût : " + Money::formatEconomyUnits(95) + " + Note d'extraction runique x1 + Poussière arcanique x3.");
         typeScreen.addLine("Échec : la rune peut se dissoudre. Ce service n'est donc pas une duplication gratuite.");
         typeScreen.addOption(0, "Retour", "Revenir à l'atelier.", true, "shop.enchanter.transfer.back");
         typeScreen.addOption(1, "Transférer entre armes", "Déplace la dernière rune d'une arme vers une autre arme.", player.getInventory().getWeaponCount() >= 2, "shop.enchanter.transfer.weapon");
@@ -908,7 +908,7 @@ void EnchanterServiceMenu::open(Player& player)
         screen.addLine("Limite pratique : 5 enchantements environ. Passé 5, l'enchanteur peut tenter, mais stabiliser devient vraiment dur.");
         screen.addLine("Échec critique : l'objet est perdu, mais tu récupères au moins des restes de métal/matière et des résidus arcaniques.");
         screen.addLine("Premier essai : très fiable sur une bonne pièce, beaucoup moins sur une arme/armure claquée au sol.");
-        screen.addLine("Argent : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()));
+        screen.addLine("Argent : " + player.getInventory().getWalletLine());
         screen.addLine("Composants : Poussière arcanique x" + std::to_string(player.getInventory().countMaterialById("arcane_dust"))
             + ", Fleur bleue x" + std::to_string(player.getInventory().countMaterialById("mountain_blue_flower"))
             + ", Fragment draconique x" + std::to_string(player.getInventory().countMaterialById("draconic_scale_fragment"))
@@ -977,10 +977,10 @@ void EnchanterServiceMenu::open(Player& player)
         {
             std::vector<std::string> lines;
             const int price = 42;
-            if (!player.getInventory().spendGold(price))
+            if (!player.getInventory().spendEconomyUnits(price))
             {
-                lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(price) + ".");
-                lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+                lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
+                lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
                 showShopResult("NOTE REFUSÉE", "shop.enchanter.overload_note.failed", lines);
                 continue;
             }

@@ -838,7 +838,7 @@ function Repair-DinotofuDesktopShortcuts {
     $normalLauncherCmd = Join-Path $RootDir "Lancer-Dinotofu.cmd"
     $terminalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu-Terminal.cmd"
 
-    Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto"
+    Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Terminal"
     Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal"
 
     $fallbackIconPath = Join-Path $RootDir "Dinotofu.exe"
@@ -856,7 +856,7 @@ function Repair-DinotofuDesktopShortcuts {
     if (-not (Test-Path $terminalIconPath)) { $terminalIconPath = $fallbackIconPath }
 
     Write-Step "Creation / reparation du raccourci bureau Dinotofu"
-    # Un unique lanceur propre sur le bureau : ProjetDinotofu Launcher (qui proposera le choix GUI ou Terminal au lancement)
+    # Un unique lanceur propre sur le bureau : ProjetDinotofu Launcher (Terminal par defaut ; GUI uniquement si demandee explicitement)
     $guiTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher" -TargetPath $normalLauncherCmd -IconPath $guiIconPath -ExpectedTargetFile "Lancer-Dinotofu.cmd"
     foreach ($shortcutPath in $guiTargets) {
         Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu.cmd" | Out-Null
@@ -912,7 +912,7 @@ if ([string]::IsNullOrWhiteSpace($Repo) -or $Repo -eq "TON_COMPTE/TON_REPO" -or 
 
 if ([string]::IsNullOrWhiteSpace($InstallDir)) { $InstallDir = Join-Path (Get-DefaultInstallParent) "ProjetDinotofu" }
 if (-not $installDirFromArgument) { $InstallDir = Ask-InstallDir $InstallDir } else { $InstallDir = Normalize-ProjectInstallDir $InstallDir }
-if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.7z" }
+if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.zip" }
 
 $localSourceDir = $PSScriptRoot
 $localExe = Join-Path $PSScriptRoot "Dinotofu.exe"
@@ -1094,7 +1094,7 @@ foreach ($cand in $candidates) {
 $normalLauncherCmd = Join-Path $InstallDir "Lancer-Dinotofu.cmd"
 $terminalLauncherEntry = Join-Path $InstallDir "Lancer-Dinotofu-Terminal.cmd"
 
-Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto"
+Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Terminal"
 Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal"
 
 # Synchronisation des outils GUI et assets recents si presents dans la source locale

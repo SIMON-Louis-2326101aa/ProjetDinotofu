@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+class City;
+
 class QuestLog
 {
 private:
@@ -83,8 +85,9 @@ public:
     // FR: clear déclare ou implémente un comportement précis utilisé par ce module.
     const std::vector<Quest>& getGuildBoardOffers() const;
     std::vector<Quest>& getGuildBoardOffers();
-    void ensureGuildBoardReady(int playerLevel, int currentCombatsStarted, int targetSizeBonus = 0);
-    bool removeGuildBoardOfferAt(int offerIndex, int currentCombatsStarted);
+    void ensureGuildBoardReady(int playerLevel, int currentDay, int targetSizeBonus = 0);
+    void prioritizeGuildBoardForCity(const City& city);
+    bool removeGuildBoardOfferAt(int offerIndex, int currentDay);
     int getGuildBoardCombatsBeforeRefresh(int currentCombatsStarted) const;
     int getGuildBoardPendingReplacements() const;
     int getGuildBoardTargetSize() const;

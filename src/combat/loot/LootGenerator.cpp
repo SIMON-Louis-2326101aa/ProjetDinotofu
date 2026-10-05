@@ -7,6 +7,8 @@
 
 #include "combat/loot/LootGenerator.hpp"
 
+#include "economy/Money.hpp"
+
 #include "entity/Race.hpp"
 #include "item/material/MaterialCatalog.hpp"
 #include "item/weapon/WeaponType.hpp"
@@ -185,8 +187,9 @@ namespace
         if (random.between(1, 100) <= smallCoinChance)
         {
             int coins = random.between(3, 8) + monster.getLevel() * 2;
-            player.getInventory().earnGold(coins);
-            lines.push_back(monster.getName() + " avait " + std::to_string(coins) + " pièce(s) sur lui.");
+            player.getInventory().earnEconomyUnits(coins);
+            player.refreshCurrencyTitles();
+            lines.push_back(monster.getName() + " avait " + Money::formatEconomyUnits(coins) + " sur lui.");
         }
 
         int largePurseChance = canCarryLargePurse(monster) ? 8 : 1;
@@ -199,8 +202,9 @@ namespace
         if (random.between(1, 100) <= largePurseChance)
         {
             int coins = random.between(55, 85) + monster.getLevel() * random.between(8, 12);
-            player.getInventory().earnGold(coins);
-            lines.push_back("Belle trouvaille : une bourse plus lourde que prévu contient " + std::to_string(coins) + " pièce(s).");
+            player.getInventory().earnEconomyUnits(coins);
+            player.refreshCurrencyTitles();
+            lines.push_back("Belle trouvaille : une bourse plus lourde que prévu contient " + Money::formatEconomyUnits(coins) + ".");
         }
     }
 
@@ -858,7 +862,7 @@ namespace
             sameSize ? "Armure récupérée adaptée" : "Armure récupérée non ajustée",
             sameSize
                 ? "Armure récupérée sur une race compatible. Elle peut être équipée après réparation si son état le permet."
-                : "Armure récupérée sur une morphologie différente. Mauvaise taille : non ajustée, elle sert surtout à la revente, au démontage ou à une future retouche.",
+                : "Armure récupérée sur une morphologie différente. Mauvaise taille : non ajustée, elle sert surtout à la revente, au démontage ou à une retouche ultérieure.",
             28 + level * 8,
             heavy ? ArmorType::Chainmail : ArmorType::Leather,
             std::max(1, level),
@@ -929,7 +933,7 @@ namespace
             lines.push_back("Équipement récupéré : " + armor.getName() + " | Durabilité : " + dur + ".");
             if (armor.getDescription().find("non ajustée") != std::string::npos)
             {
-                lines.push_back("Note : cette armure n'est pas à ta taille. Elle ne peut pas être équipée sans future retouche, mais garde une valeur de revente/démontage.");
+                lines.push_back("Note : cette armure n'est pas à ta taille. Elle ne peut pas être équipée sans retouche ultérieure, mais garde une valeur de revente/démontage.");
             }
         }
     }
@@ -1043,7 +1047,8 @@ void LootGenerator::giveDefeatedBossLoot(
     else if (boss.getBossId() == 5)
     {
         bossFragment = MaterialCatalog::createGrinkaAvariceCoin(fragmentQuantity);
-        player.getInventory().earnGold(random.between(35, 85));
+        player.getInventory().earnEconomyUnits(random.between(35, 85));
+        player.refreshCurrencyTitles();
         lines.push_back("Quelques pièces tombent du sac royal avant que les collecteurs ne les récupèrent.");
     }
     else if (boss.getBossId() == 6)
@@ -1139,7 +1144,8 @@ void LootGenerator::giveDefeatedBossLoot(
     else if (boss.getBossId() == 20)
     {
         bossFragment = MaterialCatalog::createConsciousLuckShard(fragmentQuantity);
-        player.getInventory().earnGold(random.between(20, 70));
+        player.getInventory().earnEconomyUnits(random.between(20, 70));
+        player.refreshCurrencyTitles();
         lines.push_back("Quelques pièces tombent du bon côté, comme si le hasard avait souri une dernière fois.");
     }
     else if (boss.getBossId() == 21)

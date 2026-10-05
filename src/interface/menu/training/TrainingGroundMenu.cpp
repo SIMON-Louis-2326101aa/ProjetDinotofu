@@ -4,6 +4,7 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "interface/menu/training/TrainingGroundMenu.hpp"
+#include "economy/Money.hpp"
 
 #include "entity/Player.hpp"
 #include "interface/TerminalInterface.hpp"
@@ -88,21 +89,21 @@ namespace
 
     bool payTraining(Player& player, int cost, const std::string& screenId)
     {
-        if (player.getInventory().getGold() < cost)
+        if (player.getInventory().getEconomyUnits() < cost)
         {
             MessageScreen::show(
                 "ENTRAÎNEMENT IMPOSSIBLE",
                 screenId + ".not_enough_gold",
                 {
-                    "Coût demandé : " + std::to_string(cost) + " pièces d'or.",
-                    "Or actuel : " + std::to_string(player.getInventory().getGold()) + " pièces d'or.",
+                    "Coût demandé : " + Money::formatEconomyUnits(cost) + ".",
+                    "Argent actuel : " + player.getInventory().getWalletLine() + ".",
                     "Le stand reste louable plus tard : pas besoin de forcer maintenant."
                 }
             );
             return false;
         }
 
-        player.getInventory().spendGold(cost);
+        player.getInventory().spendEconomyUnits(cost);
         return true;
     }
 
@@ -153,7 +154,7 @@ bool TrainingGroundMenu::open(Player& player)
 
         MenuScreen screen("STAND D'ENTRAÎNEMENT", "training.ground.main");
         screen.addSubtitle("Louable entre deux combats");
-        screen.addLine("Or disponible : " + player.getInventory().getWalletTotalLine());
+        screen.addLine("Argent disponible : " + player.getInventory().getWalletTotalLine());
         screen.addLine("Le stand sert à apprendre plus vite, pas à remplacer toute la progression naturelle.");
         screen.addLine("Certaines séances débloquent des passifs qui se combinent plus tard avec d'autres passifs de température, terrain ou résistance.");
         if (player.hasEquippedWeapon())
@@ -169,42 +170,42 @@ bool TrainingGroundMenu::open(Player& player)
         screen.addOption(
             1,
             "Séance technique d'arme",
-            "Coût " + std::to_string(weaponCost) + " PO. Débloque ou consolide : " + weaponUnlock.name + ".",
+            "Coût " + Money::formatEconomyUnits(weaponCost) + ". Débloque ou consolide : " + weaponUnlock.name + ".",
             !hasWeaponUnlock,
             "training.ground.weapon",
-            makeTrainingData(player, "Séance technique d'arme", weaponUnlock.explanation, hasWeaponUnlock ? "Déjà maîtrisé" : std::to_string(weaponCost) + " PO", !hasWeaponUnlock)
+            makeTrainingData(player, "Séance technique d'arme", weaponUnlock.explanation, hasWeaponUnlock ? "Déjà maîtrisé" : Money::formatEconomyUnits(weaponCost), !hasWeaponUnlock)
         );
         screen.addOption(
             2,
             "Observation tactique",
-            "Coût " + std::to_string(observationCost) + " PO. Compétence de combat : lire la cible, créer une faille courte.",
+            "Coût " + Money::formatEconomyUnits(observationCost) + ". Compétence de combat : lire la cible, créer une faille courte.",
             !knowsObservation,
             "training.ground.observation",
-            makeTrainingData(player, "Observation tactique", "Débloque une compétence générale utilisable via Compétence de classe.", knowsObservation ? "Déjà appris" : std::to_string(observationCost) + " PO", !knowsObservation)
+            makeTrainingData(player, "Observation tactique", "Débloque une compétence générale utilisable via Compétence de classe.", knowsObservation ? "Déjà appris" : Money::formatEconomyUnits(observationCost), !knowsObservation)
         );
         screen.addOption(
             3,
             "Habitude chaleur / froid",
-            "Coût " + std::to_string(environmentCost) + " PO. Ajoute un passif compatible Résilience environnementale.",
+            "Coût " + Money::formatEconomyUnits(environmentCost) + ". Ajoute un passif compatible Résilience environnementale.",
             !knowsTemperatureDrill,
             "training.ground.temperature",
-            makeTrainingData(player, "Habitude chaleur / froid", "Travaille les transitions de température sans donner une immunité gratuite.", knowsTemperatureDrill ? "Déjà appris" : std::to_string(environmentCost) + " PO")
+            makeTrainingData(player, "Habitude chaleur / froid", "Travaille les transitions de température sans donner une immunité gratuite.", knowsTemperatureDrill ? "Déjà appris" : Money::formatEconomyUnits(environmentCost))
         );
         screen.addOption(
             4,
             "Habitude terrain difficile",
-            "Coût " + std::to_string(environmentCost) + " PO. Ajoute un passif compatible Résilience environnementale.",
+            "Coût " + Money::formatEconomyUnits(environmentCost) + ". Ajoute un passif compatible Résilience environnementale.",
             !knowsTerrainDrill,
             "training.ground.terrain",
-            makeTrainingData(player, "Habitude terrain difficile", "Travaille boue, pente, cailloux, souffle et appuis.", knowsTerrainDrill ? "Déjà appris" : std::to_string(environmentCost) + " PO")
+            makeTrainingData(player, "Habitude terrain difficile", "Travaille boue, pente, cailloux, souffle et appuis.", knowsTerrainDrill ? "Déjà appris" : Money::formatEconomyUnits(environmentCost))
         );
         screen.addOption(
             5,
             "Appuis entraînés",
-            "Coût " + std::to_string(sparringCost) + " PO. Améliore aussi l'action tactique Coup de pied / repousser.",
+            "Coût " + Money::formatEconomyUnits(sparringCost) + ". Améliore aussi l'action tactique Coup de pied / repousser.",
             !knowsFootworkDrill,
             "training.ground.footwork",
-            makeTrainingData(player, "Appuis entraînés", "Apprend à replacer les pieds, attaquer moins mécaniquement et mieux repousser une cible.", knowsFootworkDrill ? "Déjà appris" : std::to_string(sparringCost) + " PO")
+            makeTrainingData(player, "Appuis entraînés", "Apprend à replacer les pieds, attaquer moins mécaniquement et mieux repousser une cible.", knowsFootworkDrill ? "Déjà appris" : Money::formatEconomyUnits(sparringCost))
         );
         screen.addOption(
             6,

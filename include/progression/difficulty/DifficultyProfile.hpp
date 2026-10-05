@@ -19,17 +19,19 @@ struct DifficultyProfile
     int playerPveEscapeDefeatedRewardPercentage;
     int playerPveEscapeDamagedAliveRewardPercentage;
     int victoryExperienceRewardPercentage;
-    int victoryGoldRewardPercentage;
+    int victoryEconomyRewardPercentage;
 
     int lootChancePercentage;
     int lootQuantityBonusChance;
 
     int nonLethalDeathInventoryLossPercentage;
-    int nonLethalDeathGoldLossPercentage;
+    int nonLethalDeathEconomyLossPercentage;
     int nonLethalDeathExperienceLossPercentage;
     int nonLethalRespawnHealthPercentage;
 
-    int starterGold;
+    // Physical starter purse. Denominations matter socially; do not flatten this into PF.
+    int starterIronCoins;
+    int starterCopperCoins;
     int starterHealingPotionBonus;
     int starterDamagePotionBonus;
     int starterWeaponDurabilityLoss;

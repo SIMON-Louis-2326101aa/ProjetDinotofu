@@ -2,10 +2,282 @@
 
 Detailed English version history for Dinotofu. The matching French history is stored in `CHANGELOG_FR.md`. README files remain focused on installation and useful player information.   
 
+## V3.50.34 — Prologue stabilization and important V3.50.33 checkpoint   
+
+- **V3.50.33 officially becomes the new important save checkpoint.** Characters last adapted before V3.50.33 go through the existing non-overwriting pre-update backup and transition ritual; saves already adapted on V3.50.33 or later are not prompted again. Save schema remains **26**.   
+- The memory battle now applies the game's official difficulty multipliers to **pack HP and damage**: Easy genuinely softens the encounter, while Hard/Nightmare/Lethal progressively strengthen the pack leader and frost fangs. Difficulty therefore no longer affects almost only escape odds in this special prologue battle.   
+- **Victory / retreat / defeat** now receive more distinct emotional transitions before converging into the Mist: retreat reads as an experienced team decision, while defeat emphasizes that a companion physically comes back for the player instead of abandoning them.   
+- The new erasure sequence now consistently uses **White Mist** wording, and the level-42-to-level-1 contrast is reinforced by the body instinctively searching for a weapon and strength that are no longer there.   
+- `StoryPrologueMemoryTest` now protects actual difficulty scaling and three distinct outcome transitions in addition to the existing temporary-build, equipment and erased-name guards.   
+
+---   
+
+## V3.50.33 — The last hunt before the White Mist   
+
+- The opening prologue is fully rebuilt as a **playable memory of the character's last day before erasure**, not as a computer interface malfunction. Broken text, truncated names and missing information are memory holes already being eaten by the White Mist.   
+- The memory uses an **advanced temporary copy** of the created character: same name, class and identity, memory level 42, reinforced combat stats, class-appropriate high-end gear, consumables and already-unlocked skills. This copy is isolated and discarded after the memory; it never mutates the real saved character.   
+- Skill refresh now supports a silent mode reserved for temporary reconstructions: the memory build gets its techniques without fake “NEW SKILL” popups, while normal player progression keeps the existing visible unlock behavior.   
+- Memory equipment now distinguishes the major playable families: crossbow users receive an actual crossbow with frozen bolts, ranged archers receive bow/ammunition, magic/invocation/healing profiles receive staff/robe gear, assassins use daggers, spear users keep spears, heavy profiles receive a hammer, and remaining martial cases use the runic fallback. Representative tests prevent obviously mismatched memory loadouts from returning.   
+- The last mission takes place in an already-existing dangerous zone, the **Glacier des Serments froids**, hunting a **Chef de meute du Serment froid** with two **Garde-crocs givrés**. The encounter uses the real turn/wave combat engine rather than a text-only cutscene.   
+- Three pre-fight approaches — tight formation, fast hunt or normal rhythm — apply small different advantages so the travel choice matters without deciding the fight automatically.   
+- The two experienced allies have fixed internal design identities, but their real names are deliberately absent from runtime prologue files. The memory only displays eroded variants such as “Sca—”, “S…lett?”, “Lor—”, “L?ren…”, “[nom arraché]” or “[nom perdu]”. `scripts/test_project.sh` explicitly rejects any leak of their real names into runtime prologue files.   
+- During combat, the player can issue **team orders**: focus the pack leader, finish the weakest target, request cover, or let the allies act freely. Companions attack, heal, apply vulnerability/ward/regeneration and periodically perform coordinated actions so the party feels experienced and familiar with each other.   
+- **Victory, voluntary retreat and defeat are all valid outcomes.** Victory gives a short moment of relief; retreat/defeat forces the group to disengage. All three branches then converge into the same rising Mist, erasing objective, route, gear, skills and finally identities before a full white-out.   
+- The memory battle is deliberately **outside persistent progression**: it grants no XP, money, loot, bestiary entry or durable stat to the present-day character. Existing special-identity reactions to the Mist are preserved.   
+- After erasure, the existing forest survival sequence resumes with the **real unequipped beginner character**. The later corpse kit remains the generic class starter kit and is not presented as the advanced gear used in the memory.   
+- `HISTOIRE_DINOTOFU.txt` now explicitly documents the hunt, progressive erasure, the companions' internal design identities, all three accepted outcomes, and the strict separation between the memory build and real progression.   
+- Added the `StoryPrologueMemory` module and `StoryPrologueMemoryTest`; temporary-player creation, the pack, ally-name masking, mission fragments and Mist transition are regression-tested. The complete `scripts/test_project.sh` suite passes through its final **“Tous les tests Dinotofu sont passés.”** message before versioning.   
+- Save schema remains **26** and the important checkpoint remains **V3.50.30**.   
+
+---   
+
+## V3.50.32 — Exact rewards and voluntary currency exchange   
+
+- Quests can now define an **exact physical coin-stack reward** through `Quest::rewardCoins`. If a quest promises **17 PC + 2 PF + 3 PO**, those exact denominations are added unchanged to the wallet; no silent normalization or conversion occurs. Legacy rewards authored as abstract economy value keep their separate compact-payout behavior.   
+- Exact quest payouts are serialized with the quest (`rewardCoinCopper`, `rewardCoinIron`, `rewardCoinElectrum`, `rewardCoinGold`, `rewardCoinPlatinum`) and survive a save/load round trip without denomination changes. These fields are optional, so save schema remains **26**.   
+- The guild **Currency Exchange Desk** now asks for one of three intentions before selecting denominations: **Custom conversion**, **Everything toward highest denominations**, or **Everything toward the lowest denomination**. The former “ideal wallet” therefore remains available only when the player explicitly requests it.   
+- Custom conversion lets the player choose the **source denomination**, **target denomination**, then the **number of conversion lots**. The menu displays the exact input/output ratio and the **maximum possible** before quantity entry; conversions may skip tiers directly (for example PC -> PO or PO -> PF) without value loss.   
+- **Everything toward highest denominations** voluntarily compacts wealth into PP/PO/PE/PF plus the exact PC remainder; **Everything toward the lowest denomination** voluntarily flattens the whole wallet into PC. Both modes verify exact copper value before and after the operation.   
+- The **“Premier éclat de platine”** milestone no longer waits for an unrelated skill refresh: monetary gains, sales, loot, rewards and exchange operations now trigger a dedicated economy-title refresh. Receiving or creating the first PP therefore grants the milestone immediately.   
+- `EconomyScaleTest`, `SaveRoundTripTest` and `scripts/test_project.sh` now guard arbitrary conversions, both voluntary normalization modes, exact quest denominations, their persistence and the platinum-title refresh.   
+- Full C++23 build validated; targeted economy/save tests pass, and the complete `scripts/test_project.sh` suite was validated through its final **“Tous les tests Dinotofu sont passés.”** message (split into two executions because of the environment time limit).   
+- Save schema remains **26** and the important checkpoint remains **V3.50.30**. No main-story progression is added: **V3.50.33 remains reserved for the major update / pre-Mist prologue**.   
+
+---   
+
+## V3.50.31 — Physical money, social status and a modest start   
+
+- Normal starting money is no longer 50 abstract PF: the purse physically contains **5 PF + 15 PC**, exactly **65 PC**. Other difficulties also use physical starter stacks.   
+- Legacy economy-unit rewards are now paid in **compact physical denominations** without normalizing stacks already owned: 13 PF of value becomes 1 PE + 3 PF, while 100 PF becomes 1 PO.   
+- Coin denominations now carry social meaning: copper = modest means, iron = ordinary money, electrum = visible comfort, gold = notable/noble-like wealth, platinum = exceptional fortune. Shops and inventory expose this perception from the real stacks held.   
+- Added the secret title **“Premier éclat de platine”** for first possession of a platinum coin.   
+- Current-wallet screens now show the **actual physical stacks** instead of recomputing an ideal denomination split from total value.   
+- Character selection shows **total real play time and exact wealth in PC side by side**; `CharacterSaveSummary` now reads `totalCopperCurrency`.   
+- Small living-cost references were tightened toward the intended medieval-fantasy scale: Valebrume level-1 warm meal **50 PC**, common bed **100 PC**, safe room **192 PC**. A 65-PC starter can eat, but must earn money before comfortably paying for lodging.   
+- `EconomyScaleTest` now protects physical starter stacks, social tiers, natural PE/PO payouts and exact-copper purchasing power.   
+- Save schema remains **26** and the important checkpoint remains **V3.50.30**. **V3.50.32** is reserved as stabilization margin and **V3.50.33** for the major pre-Mist prologue pass.   
+
+---   
+
+## V3.50.30 — Major economy checkpoint: purchasing power, units and regression guards   
+
+- **Completed a cross-system economy audit** covering guild quests, ordinary combat, bosses, PvP, exploration, sales/buyback, city and church services, training, reputation repair, death penalties, travel, inns and municipal vaults. The current economy is broadly coherent on the authored **PF-unit scale**, so no destructive global x10/x100 rescale is applied merely to chase isolated-looking values.   
+- Real purchasing power is now protected at **levels 1, 5, 10, 25 and 50**. `EconomyScaleTest` samples guild boards, checks average/maximum payouts and verifies that a representative wallet unlocks progressively more shop listings without making the whole catalogue trivial.   
+- The **municipal vault** remains a medium-term goal: it stays above a representative level-10 wallet after a few contracts, while becoming realistically reachable later in progression.   
+- **Combat income** is covered by the same audit. Ordinary humanoid rewards remain level-scaled pocket money, while a benchmark boss pays materially more without immediately funding major structural purchases. Friendly PvP remains symbolic and dangerous loot duels transfer wealth between players instead of minting new currency.   
+- Exploration jackpots and carried coin purses were reviewed with their current probabilities and soft caps. They remain intentionally exciting without requiring a global scale change; exploration overflow compression continues to absorb extreme rolls.   
+- Several **misleading currency displays** were fixed: training, equipment lists, inventory selections, potions, merchant buyback and the money cheat no longer display raw PF-scale values as literal `PO`/“gold”. They now use `Money::formatEconomyUnits`.   
+- Ambiguous internal names were cleaned up before freezing the checkpoint: `starterGold` becomes `starterEconomyUnits`, `getStarterGold` becomes `getStarterEconomyUnits`, `fineCostGold` becomes `fineCostEconomyUnits`, `CombatReward` explicitly stores/exposes `economyUnits`, difficulty percentages refer to economy reward/loss, and `DeathPenaltyResult` exposes `lostEconomyUnits`. The persisted historical `Quest::rewardGold` field is intentionally retained for save compatibility and remains documented as PF units rather than literal PO.   
+- The denomination ladder is regression-tested through large values: **1 economy unit = 1 PF = 10 PC**, **100 units = 1 PO**, **1000 units = 1 PP**. Systems authored in exact copper continue to stay exact-PC systems.   
+- `scripts/test_project.sh` now rejects the reintroduction of several ambiguous economy identifiers and raw `PO/or` formatting in the audited menus. It also verifies that README current-status checkpoint lines match the actual important checkpoint.   
+- `bump_version.py` now synchronizes README checkpoint status lines by pattern even if a README had drifted to an older checkpoint; historical changelog entries are never rewritten.   
+- Full C++23 build and `scripts/test_project.sh`: **all tests pass before the 3.50.30 version bump**. A second post-version validation protects the new checkpoint.   
+- Save schema remains **26**. **V3.50.30 becomes the new mandatory important-save checkpoint**, using the existing non-overwriting pre-update backup and transition ritual for older characters.   
+- No main-story progression was added in this pass. The **pre-Mist prologue remains reserved for V3.50.31** as planned.   
+
+---   
+
+## V3.50.29 — Pre-checkpoint: special characters, navigation, combat readability and explicit units   
+
+- **Willow**, **Dwarf** and **Badr** join the protected special-character catalog with the shared identity date **15/12/2025**. Willow is a 20-year-old human archer who travels alone and complains easily; Dwarf is a 24-year-old dwarf warrior and provocative joker whose flaws are not treated as virtues; Badr is a 48-year-old semi-human cleric with an undead-like body and the organic companion **Second**.   
+- `SpecialCharacter` can now store known age/gender information without forcing legacy characters to define it. The new identities are wired through name protection, date validation, native-class bonuses, dialogue and progressive bestiary data.   
+- The **Willow / Dwarf / Badr** trio plus two coherent sub-groups join special adventurer encounters. Group dialogue covers entrance, victory and defeat. Modest combat synergies make the team meaningful while **"En avant Second"** remains deliberately deferred.   
+- Terminal selection is more forgiving: both menu readers now understand `help`/`aide`/`?` and `back`/`retour`/`r` when zero is a valid exit, report valid ranges/choices after invalid input and can redisplay menu descriptions. Legacy character/account menus benefit as well.   
+- Combat turn screens now summarize active player statuses and explicitly show a pending defense posture, including its reduction/counter values and whether selecting defense again would replace it.   
+- V3.50.30 economy-checkpoint preparation: helpers returning **exact copper (PC)** now use explicit `Copper` suffixes (`innCommonBedCostCopper`, `innSafeRoomCostCopper`, `innWarmMealCostCopper`, `cityVaultMaterialTransferCostCopper`, `routeRewardBudgetCopperForDistance`). Vault purchase/upgrade values remain documented PF economy units.   
+- `EconomyScaleTest` now protects concrete starter purchasing-power landmarks and the separation between exact-PC costs and PF economy-unit prices.   
+- Removed an accidental duplicate Sanctus combat condition found during the audit.   
+- Regression guards cover Terminal navigation, combat-state readability, explicit economy-unit naming and the new special trio.   
+- Full C++23 build and `scripts/test_project.sh`: **all Dinotofu tests pass** before versioning.   
+- Save schema remains **26** and the important checkpoint remains **V3.50.20**. **V3.50.30 remains reserved for the major economy audit/checkpoint.**   
+
+---   
+
+## V3.50.28 — Physical currency, proportionate memory, visible crafting and prepared-attack defense   
+
+- Non-combat interactions are no longer all promoted to permanent character history. The local/anti-farm journal still tracks resolved interactions, but only genuinely unusual discoveries are flagged as `notableForLongTermHistory`. A mundane, unseen action therefore no longer becomes an artificial world-defining event.   
+- The guild gains a **Currency Exchange Desk** that rearranges physical coin stacks without creating or destroying value: one coin can be broken into ten coins of the next lower denomination, or ten lower coins can be combined into one higher coin. Total copper value is checked before and after each operation.   
+- The full currency legend is no longer repeated throughout the UI. It is centralized at the exchange desk: **Copper Coin (PC), Iron Coin (PF), Electrum Coin (PE), Gold Coin (PO), Platinum Coin (PP)**, with the rule **10 coins of one tier = 1 coin of the next tier**. Other screens may naturally use abbreviations or full names depending on context.   
+- `Money` and `Inventory` now expose an explicit physical-denomination API (`CoinType`, stack counting, lower/higher tier lookup, breaking/combining), giving future economy systems one consistent conversion path.   
+- A structured-inventory economy remnant was corrected: weapon, armor, consumable and material values are no longer exposed as raw “gold” when the stored number actually represents historical economy units. They now use the same economy formatting as the Terminal UI.   
+- **Crafting** is discoverable without first guessing it exists inside the inventory: the Character menu now has a direct “Crafting” entry, navigation descriptions mention it, and the quick menu has continuous numbering instead of artificial 8/9 jumps.   
+- In combat, **defensive posture** now also mitigates prepared/telegraphed enemy abilities (charges, breaths, heavy shots, rituals, etc.). Their damage passes through `DefensePostureSystem`; ability-specific side effects may still occur, so defending mitigates the hit without deleting the mechanic.   
+- Tests now protect exact value conservation during physical coin exchange, denomination names/abbreviations, one player-facing full currency legend, crafting discoverability, local-vs-durable exploration memory and real mitigation of prepared attacks under defensive posture.   
+- Full C++23 build and `scripts/test_project.sh` validated.   
+- Save schema remains **26** and the important checkpoint remains **V3.50.20**. **V3.50.30** is intentionally reserved for a future major economy audit/checkpoint, with V3.50.29 available as a preparation pass if needed.   
+
+---   
+
+## V3.50.27 — Weeping statue garden, guild variety and exploration traces   
+
+- The **Garden of Weeping Statues** now has a signature location mechanic: some statues can change position only between two observations, without leaving movement traces in the gravel.   
+- A dedicated Garden event lets the player physically mark statue positions, collect a mineral tear without touching the statues, approach the stone circle directly, or leave carefully. Outcomes can produce observations, resources, quest progress or combat.   
+- Repeated Garden observations persist in character history. After enough comparisons the game can confirm an impossible displacement instead of treating every visit as an isolated scene.   
+- Dangerous-site name, warning, boss trace, environmental hazard and field observation text for the Garden are now location-specific.   
+- A new non-combat interaction, **Bouquet before the angel**, adds recent human traces to the mystery through footprints, an altered offering and cautious observation.   
+- Six additional biomes receive dedicated non-combat interactions: **Gelatinous Pools** (neutral slime migration), **Cold Mountain** (collapsed cairn), **Collapsed Ruins** (mosaic under unstable structure), **Blue Mist Canals** (boat without a ferryman), **Abandoned Fair** (one-turn carousel) and **White Bone Quarry** (recent tool mark).   
+- Resolved biome non-combat interactions now also leave a character-history trace in addition to the canonical anti-farm journal entry.   
+- Guild boards now maximize objective-family variety among the templates actually available. With at least three visible offers, the board tries to mix at least three types among combat, exploration, service and bestiary work.   
+- Tiny three-offer boards are no longer forced to contain three field jobs. From level 7 onward they preserve at least two combat/exploration offers while leaving room for service or bestiary work; larger boards keep the existing field-work minimum.   
+- Added/expanded regression coverage for Garden identity, Garden non-combat content, guild-board diversity across several levels and field-work minimums.   
+- Full C++23 build validated. `scripts/test_project.sh` was executed in chunks because of the environment execution limit and every section passed.   
+- No save-schema change (**26**) and no mandatory checkpoint change (**V3.50.20**).   
+
+---   
+
+## V3.50.26 — Social quest memory   
+
+- Expired quests are no longer socially forgotten after archival: the relevant client now stores a local `quest_failed` fact.   
+- Deadline failures are also recorded in the local canonical journal through `quetes_echouees`, with idempotent synchronization to prevent duplicate counting.   
+- Turned-in quests now explicitly record `quetes_reussies`, alongside the existing `quest_completed` NPC memory.   
+- NPC reactions to failure depend on profile and profession. Failure does not automatically become hostility or an arbitrary reputation penalty.   
+- Declining a personal request now creates a `quest_declined` memory. Contacts can remember that the player declined, while clearly distinguishing it from a broken promise.   
+- Appropriate local information networks may relay quest failures. Propagation remains sourced, local and confidence-decaying; no omniscience is introduced.   
+- Main time-advancing paths that can expire quests now synchronize these social consequences.   
+- Added regression coverage for expiry-to-client memory, idempotent local journaling, NPC reactions and `quest_failed` relay rules.   
+- Full C++23 build and `scripts/test_project.sh` passed.   
+- No save-schema change (**26**) and no mandatory checkpoint change (**V3.50.20**).   
+
+---   
+
+## V3.50.25 — Local guild-board prioritization   
+
+- The guild board now goes beyond checking whether a location matches the player level: already generated offers are ordered by their **coherence with the current city**.   
+- Counter service contracts remain naturally local even when paperwork mentions an item or document originating from a remote zone. Generic village, road and creature-family jobs also remain well placed when no precise biome requires a long trip.   
+- When a contract names a concrete biome, the system checks the city’s regional distance data: nearby, initially known biomes are shown before more distant or less familiar regions. A remote contract remains possible; it is merely deprioritized rather than artificially deleted.   
+- This weighting complements V3.50.21’s real minimum-level filter, so beginners avoid both over-level locations and unnecessarily remote offers among the places they can legitimately visit.   
+- Ordering is recalculated when the board is opened from the current city, allowing the same stored offer set to become more sensible after travel without changing the save format.   
+- Added coverage asserting that, from Valebrume, a local Plains mission and a counter service rank ahead of an exploration contract for the Grey Drake Cliffs.   
+- Full C++23 build and test suite were validated before versioning.   
+- No save-schema change (**26**) and no mandatory checkpoint change (**V3.50.20**).   
+
+---   
+
+## V3.50.24 — Minimal graphical welcome screen and clean Terminal handoff   
+
+- The previous large experimental HTML interface has been removed from the temporary graphical entry point. The graphical page now keeps only the official visual identity, banner, logo and **Play** button.   
+- **Play** no longer opens a pseudo-playable web UI. It clearly displays **Graphical interface in production** and then offers **Stop and switch to Terminal mode**.   
+- The graphical placeholder dropped from roughly 6,300 lines of HTML/JavaScript to a lightweight page of roughly 140 lines, without combat, inventory, quest panels or snapshot polling while the real interface is being rebuilt.   
+- A local `/gui/switch-terminal` endpoint writes a handoff request, clears legacy GUI inputs and cleanly shuts down the small local server after replying to the browser.   
+- Linux and Windows launchers watch this request, stop the placeholder and launch the real Terminal version. The C++ game engine is no longer started hidden in the background merely to display the graphical welcome screen.   
+- Terminal remains the default mode. The server temporarily keeps its older debug endpoints for development tools, but the public placeholder no longer uses them.   
+- README files and the graphical-interface guide now distinguish the minimal current state from the future target: a real desktop application rather than a second large web interface maintained in parallel.   
+- Regression guards protect the GUI-to-Terminal handoff and prevent the hidden engine from returning behind the placeholder. The endpoint was also exercised with a real marker write and server shutdown.   
+- No save-schema change (**26**) and no mandatory checkpoint change (**V3.50.20**).   
+
+---   
+
+## V3.50.23 — Context categories for service challenges   
+
+- Intellectual checks inside service contracts now show an explicit **service category** tied to the task actually being performed: transport and logistics, appraisal and negotiation, records and administration, commercial arithmetic, French and writing, equipment and morphology, inventory and logistics, guild procedure, and similar contexts.   
+- Internal families already used by merchant paperwork are now visible to the player rather than remaining hidden selection metadata. Other challenges infer their category from their title and question.   
+- The challenge screen also states that the question belongs to the concrete step of the active contract, reducing the feeling of an unrelated random quiz.   
+- Generic service challenges now receive a stable title-derived ID and use `serviceChallengeHistory`. A question already seen in that contract is avoided while unseen questions remain in the relevant pool.   
+- Once every appropriate challenge has been seen, the local history can restart cleanly instead of blocking progress. The existing merchant-specific selection keeps its specialized families and unusual/confidential document handling.   
+- `scripts/test_project.sh` protects both the player-facing service category and the `serviceChallengeCategory` logic.   
+- No save-schema change (**26**) and no mandatory checkpoint change (**V3.50.20**).   
+
+---   
+
+## V3.50.22 — RP pricing, consistent money display and anti-inflation guards   
+
+- Audited early-game baskets after the V3.50.19/V3.50.20 normalization. Core prices deliberately stay on the current PF scale: the Training Bow remains around 85 PF, the Hunting Bow around 205 PF, Survival Rations around 15–17 PF and minor potions around 12–13 PF. No second global division was applied.   
+- Beginner quests now have tighter regression guards: level-1 F contracts stay below 20 PF, small F services below 5 PF, and E contracts offered at level 2 below 30 PF. This prevents trivial local jobs from drifting back into literal PO/PP payouts.   
+- Weapon shops, armor shops and blacksmiths now use **craftsman quotes**. After race, class, city, crisis and promotion modifiers, the actually charged price may be rounded to a clean coin denomination when the difference stays within roughly 12%. For example, 205 PF can become exactly 2 PO.   
+- Other counters keep an **exact quote** and make change when necessary. Shop screens state which pricing style is in use so players can tell whether a merchant quotes a round sum or counts exact change.   
+- Merchant rounding changes the amount actually charged rather than merely prettifying the label. Regression tests also ensure the rounded buy price cannot create buy/resell arbitrage under the main race/class modifiers.   
+- Removed ambiguous legacy `X coins` displays from player-facing economy values. Item sheets, weapons, armor, consumables, materials, material journal entries, inventory inspection, character exchanges, monetary loot, PvP valuation, city vault prices and rune transfer costs now use `Money::formatEconomyUnits(...)` when the underlying value is an economy-unit amount.   
+- Genuine lore references to generic physical pieces remain untouched. Cheats that explicitly grant historical gold coins also remain explicitly PO-based.   
+- Added regression caps for representative starter goods: Training Bow <= 100 PF, Rusty Sword <= 80 PF, Worn Leather Armor <= 100 PF, Minor Healing Potion <= 20 PF and Survival Ration <= 20 PF.   
+- No save-schema change (**26**) and no mandatory checkpoint change (**V3.50.20**).   
+
+---   
+
+## V3.50.21 — Coherent quests, challenge variety and exploration supplies   
+
+- Guild contracts now account for the **actual minimum level of explicitly named locations**, in addition to quest rank and template level. F/E offers can therefore no longer send a beginner directly into a biome intended for much later progression. City-side service requests remain exempt when they merely handle an item originating from a dangerous area.   
+- Suggested quest locations are more precise: an explicitly named exploration biome wins over generic inference, while route, relay and delivery wording is no longer accidentally mapped to ruins.   
+- A **search/exploration quest that names a precise biome** can no longer progress in another biome merely because generic words such as plants, tracks or materials happen to match. Hunt quests intentionally remain target-family based, so defeating the correct enemy type elsewhere can still count when that makes sense.   
+- Exploration micro-challenges now carry a **context category** such as orientation, observation, survival, cartography, weather, first aid, logistics or tracking. Twelve new generic challenges were added, and selection avoids recently seen categories as well as duplicate questions.   
+- Recent challenge history grows from 4 to **10 questions**, while existing cooldowns remain active. Biome-specific challenges are tagged as local-terrain questions so the screen explains why the question belongs to the current activity.   
+- Exploration endurance is now checked **before each new field run**. The intensity screen shows remaining autonomous segments and Survival Ration count; when the planned run would exceed the reserve, the required ration is consumed before departure or the run is refused without advancing world time.   
+- Continue/return summaries clearly show remaining endurance and rations. An expedition with no endurance and no ration must return instead of silently overshooting the limit and only discovering it afterward.   
+- Added regression coverage that generates guild boards across levels 1–12 to reject over-level locations, checks the longer anti-repeat history, and protects the new quest/exploration coherence guards.   
+- No save-schema change (**26**) and no mandatory checkpoint change (**V3.50.20**).   
+
+---   
+
+## V3.50.20 — Physical wallet and persistent coin stacks   
+
+- The wallet no longer auto-normalizes coins into larger denominations. A stack of **51 PO remains 51 PO** instead of silently becoming 5 PP + 1 PO.   
+- `Inventory` now preserves five independent physical stacks: PC, PF, PE, PO and PP. Historical economy-unit income adds PF, explicit copper income adds PC, and legacy explicit gold income adds PO.   
+- Payments spend available coins without rewriting unrelated stacks. When a larger coin must be broken, ordinary lower-denomination change is returned while preserving the exact total value.   
+- Exact total-PC value remains available for balance checks and compatibility; only the physical wallet representation becomes more faithful to the world.   
+- Save schema advances **25 -> 26**. New saves persist each denomination stack. Older saves, which only knew a total value, retain that exact value and receive an initial denomination breakdown during migration.   
+- The mandatory checkpoint advances to **V3.50.20** to protect the new persisted wallet representation before adapting older saves.   
+- Economy regression coverage now explicitly checks a 51-PO stack, change-making from an oversized coin, the 50-PF starter wallet, and exact five-stack save/load persistence.   
+
+---   
+
+## V3.50.19 — Economy normalization and save-safe currency migration   
+
+- Rebased the historical gameplay economy around the intended denomination scale: **1 authored economy unit = 1 PF = 10 PC**. Existing shop prices, quest rewards, combat rewards and service values that historically used small integer “gold” values now keep their relative balance without being interpreted as full PO.   
+- Normal starting money remains `50` authored units but now means **50 PF = 5 PE = 500 PC**, instead of 50 PO.   
+- Shop transactions, quest payouts, combat rewards, exploration rewards, PvP/boss money transfers, training, reputation repair and other historical `earnGold/spendGold` paths now use economy units. Explicit micro-prices already authored in copper (inns, meals, travel taxes, infirmary, delegated missions and similar systems) stay exact-PC values.   
+- Added explicit `Money`/`Inventory` APIs for economy units while preserving legacy PO helpers only for backward compatibility. Player-facing wallet totals no longer display confusing decimal PO equivalents: exact PC totals and denomination breakdowns are used instead.   
+- Save schema advances **24 -> 25**. Saves from schema <25 receive a one-time wallet normalization so wealth created by the old PO interpretation is converted to the new PF-scale economy. The migration cannot be applied twice once the save is rewritten as schema 25.   
+- Because wallet normalization changes persisted monetary value, the mandatory important-save checkpoint advances to **V3.50.19**, creating the pre-update backup/transition protection before migration.   
+- Exact-copper preservation was fixed in combat recap, PvP snapshots, cheat class switching, death penalties and exploration summaries so sub-PO money is never silently rounded away.   
+- Added economy regression coverage for PF/PC conversion, the normal starter wallet, shop/quest/combat payout paths, legacy-save migration and guards preventing gameplay code from reintroducing `earnGold/spendGold`.   
+- Continued RP-facing wording cleanup around money: generic rewards use “argent” where appropriate instead of pretending every payment is literal gold; true coin/lore references keep their denomination names.   
+
+---   
+   
+
+## V3.50.18 — RP text cleanup, class-skill pacing and elite density   
+
+- Cleaned player-facing text that read like patch notes or development commentary: `Future IG`, future asset mentions, development priorities, meta-lore wording, announced future functionality, and unnecessary comparisons with previous behavior were removed or rewritten in-world. Real progression feedback (unlocks, quest progress, actual state changes) remains visible. Necessary save-migration messages also remain explicit.   
+- The current story boundary after the Chapter 3 introduction is presented as **story continuation unavailable** instead of exposing internal refactor notes, disabled source scenes or development priorities. Free-world play remains available.   
+- Class-skill progression is spread out: most first class techniques now start around **level 5**, summoning at level 6, and later techniques are distributed across wider milestones. The arcane branch now reaches levels 14–17 for advanced techniques. Spells genuinely learned from grimoires keep their specific unlock bypasses.   
+- `PlayerSkills` class-identity unlocks move from level 4 to level 5, and AI class-skill requirements are aligned so ordinary enemies do not systematically access their class techniques before the player.   
+- Ambient elite density is capped at selection time: no random elites at levels 1–2, roughly 5% at levels 3–4, then a gradual increase with level. Very high-level regions made entirely of elites can still produce them, and explicit scripted elites/minibosses are unchanged.   
+- Normal waves can no longer apply an evolved variant on top of a monster that is already elite, preventing accidental catalogue-elite + evolution stacking.   
+- Added a statistical early-game elite-density regression test plus invariants for class-skill milestones and the main RP-text cleanup rules.   
+- No save-schema change (**24**) and no mandatory checkpoint change (**V3.50.12**). Economy and full low-level quest filtering remain separate passes to avoid mixing a risky currency rebalance into this gameplay cleanup.   
+
+---   
+
+## V3.50.17 — Installer stabilization, C++23 and tooling clarity   
+
+- Migrated the project toolchain to **C++23**. The Makefile, tests and Windows/Linux builds now share a detector that uses `-std=c++23` when available and falls back to the historical `-std=c++2b` alias on older GCC/MinGW toolchains that expose C++23 under that spelling. Save schema stays at **24** and the mandatory checkpoint remains **V3.50.12**.   
+- Important Windows fix: both the installer and launcher could still repair `Lancer-Dinotofu.cmd` in `Auto` mode, which could re-enable the GUI chooser. The main launcher is now always rebuilt in **Terminal** mode; `Auto`/`Gui` remain opt-in only.   
+- Fixed the Windows installer default `AssetPattern`: its fallback incorrectly targeted `Dinotofu-Windows-v*.7z` even though the Windows release payload is ZIP. It now targets `Dinotofu-Windows-v*.zip`.   
+- Clearer GitHub Releases: player downloads now use the highly visible **`INSTALLER-DINOTOFU-...`** prefix. Large updater files remain necessary but now end in **`-TECHNICAL-PAYLOAD`** so players do not mistake them for the installer. Their historical `Dinotofu-<OS>-v*` prefix is intentionally preserved so legacy wildcard-based installers can still find them.   
+- Player installer bundles still contain exactly **one `INSTALLER-DINOTOFU` file plus `Documentation/`**, with `.txt` files only inside Documentation. The full game is not bundled in the player installer download.   
+- `scripts/bump_version.py` still asks before creating the final Git commit, but **Yes is now the interactive default**. Non-interactive use remains safe and never commits without `--commit`; development/ChatGPT passes can explicitly use `--no-commit`.   
+- Added `tools/windows/README_TOOLS.txt` and `tools/linux/README_TOOLS.txt` to explain the clickable wrappers (`Installer/Lancer`) versus the internal engines (`DinotofuInstaller/DinotofuLauncher`). Legacy Terminal aliases remain only for compatibility and are not separate game versions.   
+- The large GUI rewrite, economy pass, progressive class-skill unlocks, elite density and full low-level quest filtering remain intentionally separate from this technical pass.   
+
+---   
+
+## V3.50.16 — Save, quest and distribution stabilization   
+
+- Character saves now persist `realPlayTimeSeconds` and `lastSavedAt`, while remaining compatible with older saves. Character selection now displays creation date, real play time and last-save time. Save schema moves to **24** while the mandatory checkpoint stays at **V3.50.12**, because this is an additive migration that does not require a destructive transition ritual.   
+- The save round-trip test now explicitly verifies **level**, experience, the **exact copper total**, and real play time after save/reload. This directly covers the reported regression where level or money could appear to fall back after loading.   
+- Guild board: accepting a quest now truly leaves its slot empty until the **next in-game day**. `ensureGuildBoardReady()` accounts for deferred replacements instead of immediately filling the gap on the same day. A regression test covers this behavior.   
+- Inn: added a free **stable-floor** rest option. It advances one day but only restores health up to 25% of maximum HP so paid beds remain useful.   
+- Windows/Linux launchers now use **Terminal as the default mode**. The previous graphical interface remains explicitly available for development but is marked as being rebuilt; the large GUI rewrite is deliberately deferred to a dedicated pass.   
+- Distribution restores **four release assets**. Players get `Installer-Dinotofu-Windows-v*.zip` or `Installer-Dinotofu-Linux-v*.7z`, whose root contains only the installer plus `.txt` files under `Documentation/`. Full `Dinotofu-Windows-v*.zip` and `Dinotofu-Linux-v*.7z` archives remain technical payloads so existing launchers/updaters are not broken.   
+- `scripts/bump_version.py` no longer commits implicitly in interactive mode: after all file edits it explicitly asks whether to create a Git commit, with **No as the default**. Non-interactive mode never commits unless `--commit` is supplied.   
+- Release documentation and validation are aligned with Terminal-by-default and the 2 installer + 2 payload model.   
+- This pass intentionally does not yet rebalance starting money, class-skill unlock pacing, elite frequency, or the full low-level quest-distance filter; those balancing topics remain separate from technical stabilization.   
+
+---   
+
 ## V3.50.15 — Update notes   
 
-- Fixed installation scripts by correctly filtering running programs (was killing the script itself).
-- Staticly linked some library and downgraded the OS version to ubuntu-22.04 for some library compatibility.
+- Fixed installation scripts by correctly filtering running programs (was killing the script itself).   
+- Staticly linked some library and downgraded the OS version to ubuntu-22.04 for some library compatibility.   
 
 ---   
 

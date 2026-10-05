@@ -1150,7 +1150,7 @@ namespace
 
     int infirmaryRevivalDebtThresholdCopper()
     {
-        return static_cast<int>(Money::copperFromGold(100));
+        return static_cast<int>(Money::copperFromEconomyUnits(100));
     }
 
     bool infirmaryDebtBlocksHealing(const Player& player)
@@ -2236,7 +2236,7 @@ namespace
                     recruitTitleEquipped
                         ? "Même avec On recrute ! équipé, personne de fiable ne se présente dans cette fenêtre."
                         : "Sans signal clair de recrutement, les candidats sérieux restent rares.",
-                    "Sources futures : sauvetage, collaboration de quête, balade à la guilde, ville ou exploration urbaine."
+                    "Sources de rencontre : sauvetage, collaboration de quête, guilde, ville ou exploration urbaine."
                 },
                 false
             );
@@ -2258,13 +2258,13 @@ namespace
         lines.push_back(candidate.personalQuestRequired
             ? "Condition : quête personnelle requise avant recrutement réel."
             : "Condition : peut accepter sans quête personnelle, cas plus rare.");
-        lines.push_back("Cette passe crée la base de lecture/retenue. L'équipement réel en équipe sera branché ensuite dans le menu rapide Équipe.");
+        lines.push_back("Torvald conserve ce profil dans le registre afin que tu puisses décider s'il mérite une place dans le groupe.");
         MessageScreen::show("CANDIDAT RECRUTABLE", "quest.guild.torvald.recruit.preview", lines, false);
 
         MenuScreen keepScreen("RETENIR LE PROFIL ?", "quest.guild.torvald.recruit.keep");
-        keepScreen.addLine("Retenir le profil marque l'intérêt dans le registre et garde ses bases économiques pour les futurs calculs d'équipe.");
+        keepScreen.addLine("Retenir le profil marque ton intérêt et conserve ses conditions économiques dans le registre de recrutement.");
         keepScreen.addBackOption("Ne pas retenir", "quest.guild.torvald.recruit.keep.no");
-        keepScreen.addOption(1, "Retenir ce profil", "Ajoute ce candidat aux profils retenus pour la future équipe.", true, "quest.guild.torvald.recruit.keep.yes");
+        keepScreen.addOption(1, "Retenir ce profil", "Ajoute ce candidat aux profils retenus pour le recrutement.", true, "quest.guild.torvald.recruit.keep.yes");
         int keepChoice = TerminalInterface::askMenuChoiceFromOptions(keepScreen, "Choix invalide.");
         Console::clear();
         if (keepChoice == 1)
@@ -2366,7 +2366,7 @@ namespace
             screen.addOption(5, "Bilan hebdomadaire des recrues", "Achats autonomes, salaire et tentative de montée de rang.", true, "quest.guild.torvald.weekly");
             screen.addOption(6, "Ouvrir le menu Équipe", "Accès rapide : inspection, parts, ordre, bilan, quêtes de groupe, multi en ligne.", true, "quest.guild.torvald.team_menu");
             screen.addOption(7, "Quêtes de groupe", "Premières missions de clan filtrées par rang moyen.", true, "quest.guild.torvald.group_quests");
-            screen.addOption(8, "Résumé système équipe", "Rappelle ce qui existe maintenant et ce qui sera branché ensuite.", true, "quest.guild.torvald.team_summary");
+            screen.addOption(8, "Règles de l’équipe", "Rappelle les règles de recrutement, de partage, de rang et de groupe.", true, "quest.guild.torvald.team_summary");
 
             const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une action auprès de Torvald.");
             Console::clear();
@@ -2402,14 +2402,13 @@ namespace
             else if (choice == 8)
             {
                 MessageScreen::show(
-                    "SYSTÈME ÉQUIPE — BASE",
+                    "RÈGLES DE L’ÉQUIPE",
                     "quest.guild.torvald.team_summary",
                     {
-                        "Présent maintenant : arrivée de Torvald au rang D, duel amical, titres de recrutement, blocage Anti clan, CV de candidats, registre de profils retenus et menu Équipe hors combat.",
-                        "Présent maintenant : prévisualisation des parts, plafonds par taille de groupe, remise de fidélité pour recrue prise tôt, bilan hebdomadaire, achats autonomes et tentatives de rang.",
-                        "Présent maintenant : test de groupe à la guilde, nom de clan, équipement/déséquipement de 2 recrues actives, mission courte, renvoi confirmé et économie hebdo corrigée.",
-                        "Présent maintenant : premières quêtes de groupe selon rang moyen, ordre d'équipe priorisable, part or plafonnée et XP selon contribution simulée.",
-                        "À brancher ensuite : combat réel joueur + 2 alliés, quêtes personnelles poussées et contribution réelle issue des tours de combat."
+                        "Torvald devient disponible au rang D et gère les bases du recrutement, les profils retenus et les tests amicaux.",
+                        "Les parts sont plafonnées selon la taille du groupe ; fidélité, salaire, achats autonomes et rang sont suivis chaque semaine.",
+                        "Le groupe actif accepte jusqu’à deux recrues équipées ; la guilde suit aussi le clan, les missions courtes et les renvois.",
+                        "Les quêtes de groupe suivent le rang moyen ; l’ordre d’équipe, les parts d’or et la contribution sont suivis séparément.",
                     },
                     false
                 );
@@ -2792,7 +2791,7 @@ void openInfirmaryServiceMenu(Player& player)
 
         MenuScreen screen("INFIRMERIE DE LYSA", "team.infirmary.service.menu");
         screen.addLine("Lysa ne transforme pas une nuit de sommeil en miracle : les soins sérieux se paient.");
-        screen.addLine("Soin payant : jusqu'à 90% des PV, jamais plus, sauf futurs traitements spéciaux.");
+        screen.addLine("Soin payant : jusqu'à 90% des PV, jamais plus avec les soins ordinaires de l'infirmerie.");
         screen.addLine("Tes PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + " | seuil infirmerie : " + std::to_string(playerTarget) + ".");
         screen.addLine("Membres blessés disponibles : " + std::to_string(woundedAvailable) + " | immobilisés/à évacuer : " + std::to_string(immobilized) + " dont " + std::to_string(awaitingTransfer) + " à amener.");
         if (debtBlocksHealing)

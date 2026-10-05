@@ -18,8 +18,9 @@ Menu d'entrée du mode histoire
 1) Nouvelle histoire
 - Lance le vrai départ commun.
 - Confirmation obligatoire si le personnage vient du bac à sable ou a déjà une progression.
-- Reset au départ histoire : niveau 1, inventaire vidé avant prologue, progression neuve.
-- Lance ensuite le prologue de la fumée blanche dans l'ordre.
+- Reset de la progression persistante : le vrai personnage repart niveau 1 et sans inventaire fiable.
+- Le prologue commence toutefois par un souvenir jouable temporaire de son ancien état avancé ; ce build est jeté avant le réveil niveau 1.
+- Lance ensuite la rupture par la fumée blanche puis la séquence de survie dans la forêt.
 
 2) Continuer
 - Disponible seulement si une histoire est déjà commencée.
@@ -32,17 +33,36 @@ Menu d'entrée du mode histoire
 - Les chapitres non débloqués restent verrouillés / affichés comme inconnus.
 - Sert à relire, revoir ou reprendre un chapitre autorisé, pas à sauter la progression.
 
-Prologue jouable — Mission ordinaire puis fumée blanche
--------------------------------------------------------
-Le mode histoire commence avant la ville et même avant la fumée : le personnage faisait partie d'un petit groupe parti pour une mission habituelle d'extermination et de récolte.
-La mission devait être simple : nettoyer quelques nuisibles, récolter des matériaux, confirmer que le sentier restait praticable, puis rentrer avant la fermeture des portes.
-Les choses dérapent : traces incohérentes, balises gelées, silence brutal des oiseaux, fumée blanche qui avance contre le vent.
-La fumée sépare le groupe et mange les souvenirs : d'abord les noms des compagnons, puis la raison de la mission, puis l'origine, l'âge, les routes connues et les gestes de combat.
-Le personnage ne garde clairement que son prénom, celui donné par le joueur, et quelques fragments confus : un bras saisi, une voix qui crie, une promesse de rentrer ensemble.
-Départ réel après la rupture : aucun équipement fiable, aucun stock, aucune carte.
-Si une menace surgit, le joueur ne peut pas vraiment combattre : les seules réponses cohérentes sont parer pour survivre ou fuir pour trouver la sortie.
-À la sortie, le joueur trouve un cadavre et un paquet abîmé. C'est à ce moment qu'il récupère son kit de départ.
-Cette intro installe : perte de repères, dette envers les compagnons oubliés, survie, forêt étrange, respect possible du mort, arrivée dans une ville fragile.
+Prologue jouable — Dernière chasse avant la Brume blanche
+-----------------------------------------------------------
+Le prologue ne montre plus une interface informatique qui « bug ». Le joueur REVIT un souvenir de la dernière journée de son personnage avant la perte, et les incohérences visibles sont des trous de mémoire déjà provoqués par la Brume blanche.
+
+Le vrai personnage persistant est bien destiné à repartir niveau 1. Pour le souvenir seulement, une copie temporaire du personnage reprend son nom, sa classe et sa race, puis reçoit un ancien état avancé autour du niveau 42, de bons attributs de combat, des compétences de classe déjà débloquées et un équipement cohérent avec sa classe. Cette copie n'est jamais sauvegardée comme nouvelle progression.
+
+Le souvenir se déroule dans une zone dangereuse déjà existante : le Glacier des Serments froids.
+Contrat mémoriel : chasser un chef de meute du Serment froid accompagné de deux garde-crocs lourds.
+Le contrat est déjà partiellement effacé : certaines informations, l'heure de retour et des morceaux d'objectif ne peuvent plus être lus correctement.
+
+Deux compagnons expérimentés accompagnent le joueur. Leurs vrais noms de conception sont Scarlett et Lorenzo, mais le personnage est en train de les oublier : le runtime ne doit donc jamais les présenter proprement. Des variantes comme « Sca— », « S…lett? », « Lor— », « L?ren… », « [nom arraché] » ou « [nom perdu] » remplacent progressivement leurs identités.
+Le joueur ne doit jamais recevoir gratuitement un nom que son souvenir ne possède plus.
+
+Avant le combat, le groupe échange quelques phrases de voyage et le joueur choisit son approche : formation serrée, chasse rapide ou automatisme habituel. Ces choix influencent légèrement l'ouverture du combat.
+Le combat est réellement jouable contre les trois bêtes. Le joueur peut utiliser ses techniques et son équipement avancé de souvenir. Les deux alliés agissent également et un menu d'ordres permet de demander de concentrer le chef, achever le plus faible, couvrir le joueur ou garder un rythme libre. Les PV et dégâts de la meute suivent les multiplicateurs officiels de difficulté : Facile adoucit réellement la chasse, tandis que Difficile/Cauchemar/Létal la rendent progressivement plus dangereuse.
+Le groupe doit donner l'impression de personnes ayant déjà combattu ensemble : ouvertures, protection, soins et synchronisations existent sans transformer les alliés en trois personnages contrôlés manuellement.
+
+Le résultat du combat n'est pas un verrou narratif :
+- victoire -> la meute tombe, courte détente / plaisanterie familière, puis la Brume remonte le glacier ;
+- fuite/retraite -> le groupe décroche, un allié revient vers le joueur, puis la Brume remonte le glacier ;
+- défaite -> le corps du joueur cède dans le souvenir, les alliés tentent une retraite, puis la même rupture arrive.
+
+Le combat-souvenir n'accorde au personnage persistant ni XP, ni argent, ni butin, ni entrée de bestiaire, ni statistique de victoire. Son équipement avancé n'est pas transféré.
+La Brume efface ensuite, dans cet ordre approximatif, l'heure et les détails du contrat, la zone, les noms des compagnons, leurs visages, l'ancien équipement, le niveau, les compétences puis les liens entre les souvenirs.
+Le prénom donné par le joueur reste l'ancre la plus solide.
+
+Après le blanc, le prologue rejoint volontairement la séquence de survie déjà existante : forêt blanche, mains vides, première réaction, menace impossible à affronter correctement sans arme, parade ou fuite, puis sortie vers un cadavre et un paquet abîmé.
+Le kit récupéré sur ce mort reste le kit de départ générique lié à la classe et à la difficulté. Ce n'est PAS l'arme utilisée dans le souvenir et aucune récupération artificielle de l'ancien stuff ne doit être ajoutée.
+
+Cette intro installe désormais une perte plus forte : le joueur voit d'abord ce qu'il a réellement perdu — puissance, habitudes, deux relations et une place dans un groupe — avant de devoir reconstruire sa vie depuis presque rien.
 
 Chapitre 1 — La ville qui tient à peine
 ---------------------------------------

@@ -371,7 +371,7 @@ std::string RaceCatalog::getRaceFamilyLine(CharacterRace race)
 
     if (race == CharacterRace::SemiHuman)
     {
-        return "Famille : semi-humain générique. Plus tard, ce choix pourra ouvrir un sous-type plus précis.";
+        return "Famille : semi-humain générique. Ce choix représente une identité hybride sans sous-type imposé.";
     }
 
     if (isSemiHumanFamily(race))
@@ -477,7 +477,7 @@ std::string RaceCatalog::getElementalAffinityLine(CharacterRace race)
         case CharacterRace::Orc:
             return "Affinités : marche forcée et endurance physique ; peu sensible aux saignements simples.";
         default:
-            return "Affinités : pas de résistance ou faiblesse élémentaire majeure pour l'instant.";
+            return "Affinités : aucune résistance ou faiblesse élémentaire majeure.";
     }
 }
 
@@ -561,7 +561,7 @@ std::string RaceCatalog::getInnatePassiveLine(CharacterRace race)
         return "Passif racial : Marche forcée orque. Les trajets physiques restent pénibles, mais la race encaisse mieux les longues distances.";
     }
 
-    return "Passif racial prévu : identité surtout sociale/statistique pour l'instant, avec évolutions possibles plus tard.";
+    return "Identité raciale surtout sociale et statistique, sans affinité élémentaire majeure supplémentaire.";
 }
 
 int RaceCatalog::getMaximumAge(CharacterRace race)

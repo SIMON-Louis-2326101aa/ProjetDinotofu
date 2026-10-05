@@ -113,7 +113,7 @@ namespace ShopCityServiceMenu
             return "Coût prévu : " + voucherName + " x1 déjà présent dans l'inventaire.";
         }
 
-        return "Coût prévu : " + Money::formatGoldWithRaw(fallbackPrice) + " si aucun bon/ticket n'est présenté.";
+        return "Coût prévu : " + Money::formatEconomyUnits(fallbackPrice) + " si aucun bon/ticket n'est présenté.";
     }
 
     bool payServiceWithSubscriptionVoucherOrGold(
@@ -144,7 +144,7 @@ namespace ShopCityServiceMenu
             screen.addLine(offer.name);
             screen.addLine(offer.description);
             screen.addLine("Durée : 7 jours. Si tu annules, l'effet reste actif jusqu'à la fin de la période déjà payée.");
-            screen.addLine("Prix de période : " + Money::formatGoldWithRaw(offer.price) + ".");
+            screen.addLine("Prix de période : " + Money::formatEconomyUnits(offer.price) + ".");
             screen.addLine("Temps actuel : " + player.formatWorldDateTimeLine());
             screen.addLine(subscriptionStatusLine(player, offer));
             screen.addOption(0, "Retour", "Revenir aux abonnements.", true, "shop.subscription.back");
@@ -163,10 +163,10 @@ namespace ShopCityServiceMenu
             if (choice == 1)
             {
                 std::vector<std::string> lines;
-                if (!player.getInventory().spendGold(offer.price))
+                if (!player.getInventory().spendEconomyUnits(offer.price))
                 {
-                    lines.push_back("Paiement refusé : il manque " + Money::formatGoldWithRaw(offer.price) + ".");
-                    lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+                    lines.push_back("Paiement refusé : il manque " + Money::formatEconomyUnits(offer.price) + ".");
+                    lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
                     showShopResult("ABONNEMENT REFUSÉ", "shop.subscription.failed", lines);
                     continue;
                 }
@@ -208,7 +208,7 @@ namespace ShopCityServiceMenu
 
             for (std::size_t i = 0; i < offers.size(); ++i)
             {
-                std::string label = offers[i].name + " | " + Money::formatGoldWithRaw(offers[i].price);
+                std::string label = offers[i].name + " | " + Money::formatEconomyUnits(offers[i].price);
                 if (player.hasActiveLocalSubscription(offers[i].id))
                 {
                     label += " | actif jusqu'au jour " + std::to_string(player.getLocalSubscriptionExpiresAtDay(offers[i].id) + 1);
@@ -597,10 +597,11 @@ namespace ShopCityServiceMenu
         if (event.id == "royal_merit_reward")
         {
             const int reward = 10 + player.getLevel() / 2;
-            player.getInventory().earnGold(reward);
+            player.getInventory().earnEconomyUnits(reward);
+            player.refreshCurrencyTitles();
             player.getInventory().addMaterial(MaterialCatalog::createById("local_reputation_note", 1));
             lines.push_back("Le héraut insiste : ce n'est pas une foire permanente, juste une grâce rare pour services rendus au peuple.");
-            lines.push_back("Récompense : " + Money::formatGoldWithRaw(reward) + " + Note de réputation locale x1.");
+            lines.push_back("Récompense : " + Money::formatEconomyUnits(reward) + " + Note de réputation locale x1.");
         }
         else if (event.id == "royal_whim_games")
         {
@@ -619,18 +620,20 @@ namespace ShopCityServiceMenu
         else if (event.id == "royal_patrol_gratitude")
         {
             const int reward = 12 + player.getLevel();
-            player.getInventory().earnGold(reward);
+            player.getInventory().earnEconomyUnits(reward);
+            player.refreshCurrencyTitles();
             player.getInventory().addMaterial(MaterialCatalog::createById("city_service_stamp", 1));
             lines.push_back("La patrouille n'a rien d'une guerre, mais la présence d'un aventurier rassure les rues." );
-            lines.push_back("Récompense : " + Money::formatGoldWithRaw(reward) + " + Tampon de service municipal x1.");
+            lines.push_back("Récompense : " + Money::formatEconomyUnits(reward) + " + Tampon de service municipal x1.");
         }
         else if (event.id == "guild_tournament")
         {
             const int reward = 14 + player.getLevel();
-            player.getInventory().earnGold(reward);
+            player.getInventory().earnEconomyUnits(reward);
+            player.refreshCurrencyTitles();
             player.getInventory().addMaterial(MaterialCatalog::createById("guild_favor_token", 1));
             lines.push_back("Tu combats ou arbitres en cadre sécurisé : assez réel pour apprendre, pas assez libre pour finir en massacre.");
-            lines.push_back("Récompense : " + Money::formatGoldWithRaw(reward) + " + Jeton de faveur de guilde x1.");
+            lines.push_back("Récompense : " + Money::formatEconomyUnits(reward) + " + Jeton de faveur de guilde x1.");
         }
         else if (event.id == "monster_hunt")
         {
@@ -645,14 +648,15 @@ namespace ShopCityServiceMenu
         else if (event.id == "merchant_fair")
         {
             const int reward = 10 + player.getLevel() / 2;
-            player.getInventory().earnGold(reward);
+            player.getInventory().earnEconomyUnits(reward);
+            player.refreshCurrencyTitles();
             player.getInventory().addMaterial(MaterialCatalog::createById("local_service_letter", 1));
             lines.push_back("Tu aides à tenir un étal, contrôler une facture ou calmer une dispute de prix sans reprendre les mauvais prix des fiches.");
-            lines.push_back("Récompense : " + Money::formatGoldWithRaw(reward) + " + Lettre de service local x1.");
+            lines.push_back("Récompense : " + Money::formatEconomyUnits(reward) + " + Lettre de service local x1.");
         }
         else if (event.id == "knowledge_day")
         {
-            if (player.getInventory().spendGold(12))
+            if (player.getInventory().spendEconomyUnits(12))
             {
                 player.getInventory().addMaterial(MaterialCatalog::createById("magic_learning_notes", 1));
                 lines.push_back("Tu paies une place modeste pour copier des notes propres au lieu d'écouter depuis la fenêtre.");
@@ -684,10 +688,11 @@ namespace ShopCityServiceMenu
         else if (event.id == "village_games")
         {
             const int reward = random.between(6, 18 + player.getLevel());
-            player.getInventory().earnGold(reward);
+            player.getInventory().earnEconomyUnits(reward);
+            player.refreshCurrencyTitles();
             player.getInventory().addMaterial(MaterialCatalog::createById("survival_ration", 1));
             lines.push_back("Tu gagnes surtout de la boue, quelques rires, et assez de nourriture pour ne pas appeler ça une perte de temps.");
-            lines.push_back("Récompense : " + Money::formatGoldWithRaw(reward) + " + ration de survie x1.");
+            lines.push_back("Récompense : " + Money::formatEconomyUnits(reward) + " + ration de survie x1.");
         }
         else
         {
@@ -889,7 +894,7 @@ namespace ShopCityServiceMenu
             screen.addOption(4, "Stabiliser une faille mineure", "Demande : Poussière arcanique x2. Utile si la crise a une trace magique.", true, "shop.city.repair.order.arcane");
             screen.addOption(5, "Aider selon tes atouts", "Petite intervention selon race/classe : toit, garde, canal, mesure, négociation. Gain modeste, pas farm gratuit.", true, "shop.city.repair.order.personal_skill");
             screen.addOption(6, "Consolider des murs fissurés", "Demande : Argile rouge séchée x2 + Fragment de métal rouillé x2.", true, "shop.city.repair.order.walls");
-            screen.addOption(7, "Organiser une collecte de quartier", "Pas d'or direct : transforme un peu de temps en ressources simples pour les réparations.", true, "shop.city.repair.order.collection");
+            screen.addOption(7, "Organiser une collecte de quartier", "Pas d'argent direct : transforme un peu de temps en ressources simples pour les réparations.", true, "shop.city.repair.order.collection");
             screen.addOption(8, "Remettre une route de relais en état", "Demande : Reçu de péage de route x1 + Fragment de métal rouillé x2.", true, "shop.city.repair.order.relay_road");
             screen.addOption(9, "Préparer une réserve de secours", "Demande : Ration de survie x3 + Feuille amère de soin x1.", true, "shop.city.repair.order.reserve");
             screen.addOption(10, "Rouvrir le panneau des quêtes", "Demande : Lettre de service local x1 + Tampon municipal x1. Aide la guilde à relancer les petites missions.", true, "shop.city.repair.order.quest_board");
@@ -1354,13 +1359,14 @@ namespace ShopCityServiceMenu
                 };
                 player.getInventory().addMaterial(MaterialCatalog::createById("city_repair_receipt", 1));
                 player.getInventory().addMaterial(MaterialCatalog::createById("city_service_stamp", 1));
-                player.getInventory().earnGold(18 + player.getLevel());
+                player.getInventory().earnEconomyUnits(18 + player.getLevel());
+                player.refreshCurrencyTitles();
                 if (cityRepairDaysRemaining(player) <= 2)
                 {
                     reduceCityRepairDays(player, 1);
                     lines.push_back("La surveillance accélère la réouverture d'un secteur : réparations réduites de 1 jour.");
                 }
-                lines.push_back("Récompense de patrouille : " + Money::formatGoldWithRaw(18 + player.getLevel()) + ".");
+                lines.push_back("Récompense de patrouille : " + Money::formatEconomyUnits(18 + player.getLevel()) + ".");
                 showLocalServiceResult("PATROUILLE DE RÉPARATION", "shop.city.repair.guard.success", player, lines, 1);
             }
             else if (repairDays <= 0 && choice == 1)
@@ -1546,7 +1552,7 @@ namespace ShopCityServiceMenu
                 player.getInventory().addMaterial(MaterialCatalog::createById("travel_distance_mark", 1));
                 lines.push_back("Écurie préparée : box réservé, sacoches notées, départ un peu moins chaotique.");
                 lines.push_back("Preuves obtenues : Note de pass de voyage x1, Marque de distance de trajet x1.");
-                lines.push_back("Usage prévu : demandes de Noro, caravanes, contrôles de relais ou quêtes qui exigent une préparation crédible.");
+                lines.push_back("Le registre d'écurie garde cette préparation comme preuve de départ organisé.");
                 showLocalServiceResult("ÉCURIE PRÉPARÉE", "shop.lodging.stable.success", player, lines, 1);
             }
             else if (choice == 5)
@@ -1561,7 +1567,7 @@ namespace ShopCityServiceMenu
                 player.getInventory().addMaterial(MaterialCatalog::createById("prepared_saddlebags", 1));
                 lines.push_back("Sacoches préparées : charge répartie, sangles vérifiées, rien ne pendouille au mauvais endroit.");
                 lines.push_back("Preuve obtenue : Sacoches préparées x1.");
-                lines.push_back("Usage prévu : réduit un déplacement d'exploration/biome plus tard, surtout quand la distance compte.");
+                lines.push_back("Les sacoches répartissent la charge pour les voyages où la distance compte vraiment.");
                 showLocalServiceResult("SACOCHES PRÉPARÉES", "shop.lodging.saddlebags.success", player, lines, 1);
             }
             else if (choice == 6)
@@ -1576,7 +1582,7 @@ namespace ShopCityServiceMenu
                 player.getInventory().addMaterial(MaterialCatalog::createById("temporary_stable_storage", 1));
                 lines.push_back("Dépôt enregistré : la charge est gardée au sec, loin des bols de soupe et des bardes.");
                 lines.push_back("Preuve obtenue : Dépôt temporaire d'écurie x1.");
-                lines.push_back("Usage prévu : justificatif pour demandes de route, auberge, stockage ou préparation de convoi.");
+                lines.push_back("Le reçu prouve qu'une charge a été confiée à l'écurie.");
                 showLocalServiceResult("DÉPÔT D'ÉCURIE", "shop.lodging.storage.success", player, lines, 1);
             }
             else if (choice == 7)
@@ -1592,7 +1598,7 @@ namespace ShopCityServiceMenu
                 player.getInventory().addMaterial(MaterialCatalog::createById("loaded_pack_saddle", 1));
                 lines.push_back("Monture louée : animal nourri, bride vérifiée, selle chargée sans angle idiot.");
                 lines.push_back("Preuves obtenues : Bon de monture de location x1, Selle de bât chargée x1.");
-                lines.push_back("Usage prévu : fortes réductions de déplacement sur biomes vastes/lointains, surtout en exploration longue.");
+                lines.push_back("La monture est destinée aux biomes vastes et aux longues explorations.");
                 showLocalServiceResult("MONTURE PRÊTE", "shop.lodging.mount.success", player, lines, 1);
             }
             else if (choice == 8)
@@ -1608,7 +1614,7 @@ namespace ShopCityServiceMenu
                 player.getInventory().addMaterial(MaterialCatalog::createById("temporary_stable_storage", 1));
                 lines.push_back("Box réservé : une place propre, une serrure honnête et une note claire dans le registre.");
                 lines.push_back("Preuves obtenues : Réservation de box sécurisé x1, Dépôt temporaire d'écurie x1.");
-                lines.push_back("Usage prévu : quêtes de relais, stockage, cargaison légère ou départ reporté.");
+                lines.push_back("La réservation protège une cargaison légère ou un départ reporté.");
                 showLocalServiceResult("BOX RÉSERVÉ", "shop.lodging.box.success", player, lines, 1);
             }
             else if (choice == 10)
@@ -1623,10 +1629,10 @@ namespace ShopCityServiceMenu
                 }
 
                 const int price = 240;
-                if (!player.getInventory().spendGold(price))
+                if (!player.getInventory().spendEconomyUnits(price))
                 {
-                    lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(price) + ".");
-                    lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+                    lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
+                    lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
                     showShopResult("MONTURE REFUSÉE", "shop.lodging.owned_mount.failed", lines);
                     continue;
                 }
@@ -1713,10 +1719,10 @@ namespace ShopCityServiceMenu
             {
                 std::vector<std::string> lines;
                 const int price = 8;
-                if (!player.getInventory().spendGold(price))
+                if (!player.getInventory().spendEconomyUnits(price))
                 {
-                    lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(price) + ".");
-                    lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+                    lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
+                    lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
                     showShopResult("NOM REFUSÉ", "shop.lodging.mount_name.failed", lines);
                     continue;
                 }
@@ -1769,10 +1775,10 @@ namespace ShopCityServiceMenu
             {
                 std::vector<std::string> lines;
                 const int price = 86;
-                if (!player.getInventory().spendGold(price))
+                if (!player.getInventory().spendEconomyUnits(price))
                 {
-                    lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(price) + ".");
-                    lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+                    lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
+                    lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
                     showShopResult("BRIDON REFUSÉ", "shop.lodging.mount_bridle.failed", lines);
                     continue;
                 }
@@ -1785,10 +1791,10 @@ namespace ShopCityServiceMenu
             {
                 std::vector<std::string> lines;
                 const int price = 74;
-                if (!player.getInventory().spendGold(price))
+                if (!player.getInventory().spendEconomyUnits(price))
                 {
-                    lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(price) + ".");
-                    lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+                    lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
+                    lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
                     showShopResult("COUVERTURE REFUSÉE", "shop.lodging.mount_blanket.failed", lines);
                     continue;
                 }
@@ -1801,10 +1807,10 @@ namespace ShopCityServiceMenu
             {
                 std::vector<std::string> lines;
                 const int price = 92;
-                if (!player.getInventory().spendGold(price))
+                if (!player.getInventory().spendEconomyUnits(price))
                 {
-                    lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(price) + ".");
-                    lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+                    lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
+                    lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
                     showShopResult("HARNAIS REFUSÉ", "shop.lodging.mount_harness.failed", lines);
                     continue;
                 }
@@ -1858,10 +1864,10 @@ namespace ShopCityServiceMenu
             {
                 std::vector<std::string> lines;
                 const int price = 88;
-                if (!player.getInventory().spendGold(price))
+                if (!player.getInventory().spendEconomyUnits(price))
                 {
-                    lines.push_back("Paiement refusé : il faut " + Money::formatGoldWithRaw(price) + ".");
-                    lines.push_back("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()) + ".");
+                    lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
+                    lines.push_back("Argent disponible : " + player.getInventory().getWalletLine() + ".");
                     showShopResult("FERRAGE REFUSÉ", "shop.lodging.mount_road_shoes.failed", lines);
                     continue;
                 }
@@ -1980,7 +1986,7 @@ namespace ShopCityServiceMenu
                 player.getInventory().addMaterial(MaterialCatalog::createById("route_scout_note", 1));
                 lines.push_back("Itinéraire relu : Noro note un raccourci, une route fermée et un relais à éviter si tu tiens à tes bottes.");
                 lines.push_back("Preuve obtenue : Note d'éclaireur de route x1.");
-                lines.push_back("Usage prévu : réduit un déplacement d'exploration plus tard, surtout sur biomes éloignés.");
+                lines.push_back("Cette préparation facilite les longues sorties vers les biomes éloignés.");
                 showLocalServiceResult("ITINÉRAIRE RELU", "shop.transport.scout.success", player, lines, 1);
             }
             else if (choice == 5)
@@ -1996,7 +2002,7 @@ namespace ShopCityServiceMenu
                 player.getInventory().addMaterial(MaterialCatalog::createById("route_scout_note", 1));
                 lines.push_back("Badge signé : le relais confirme que ton passage est préparé et que ton itinéraire n'est pas improvisé au hasard.");
                 lines.push_back("Preuves obtenues : Badge de route du relais x1, Note d'éclaireur de route x1.");
-                lines.push_back("Usage prévu : routes contrôlées, quêtes de transport, et réduction de déplacements préparés.");
+                lines.push_back("Ce justificatif accompagne les routes contrôlées et les transports préparés.");
                 showLocalServiceResult("BADGE DE ROUTE", "shop.transport.badge.success", player, lines, 1);
             }
             else if (choice == 6)

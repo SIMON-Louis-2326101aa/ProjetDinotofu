@@ -6,12 +6,11 @@
 #include "interface/TerminalInterface.hpp"
 
 #include "core/Console.hpp"
-
-#include "core/Console.hpp"
 #include "interface/menu/common/MenuFrame.hpp"
 #include "interface/GuiDebugExporter.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -23,6 +22,32 @@ namespace
     {
         const std::string& actionId = option.getActionId();
         return actionId.rfind("utility.", 0) == 0;
+    }
+
+    std::string normalizeMenuCommand(std::string value)
+    {
+        value.erase(
+            std::remove_if(value.begin(), value.end(), [](unsigned char c) { return std::isspace(c); }),
+            value.end()
+        );
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return value;
+    }
+
+    bool hasAllowedChoice(const std::vector<int>& allowedChoices, int choice)
+    {
+        return std::find(allowedChoices.begin(), allowedChoices.end(), choice) != allowedChoices.end();
+    }
+
+    std::string formatAllowedChoices(const std::vector<int>& allowedChoices)
+    {
+        std::ostringstream out;
+        for (std::size_t i = 0; i < allowedChoices.size(); ++i)
+        {
+            if (i > 0) out << ", ";
+            out << allowedChoices[i];
+        }
+        return out.str();
     }
 
     void renderOptionLine(const MenuOption& option)
@@ -134,7 +159,48 @@ int TerminalInterface::askMenuChoice(
 )
 {
     renderMenuScreen(screen);
-    return Console::askNumberBetween(minChoice, maxChoice, invalidMessage);
+
+    while (true)
+    {
+        std::string line;
+        if (!Console::readLine(line, true))
+        {
+            std::cin.clear();
+            return (minChoice <= 0 && maxChoice >= 0) ? 0 : minChoice;
+        }
+
+        const std::string command = normalizeMenuCommand(line);
+        if ((command == "r" || command == "retour" || command == "back")
+            && minChoice <= 0 && maxChoice >= 0)
+        {
+            Console::flushAvailableInputBuffer();
+            return 0;
+        }
+
+        if (command == "?" || command == "aide" || command == "help")
+        {
+            std::cout << "Choisis un nombre entre " << minChoice << " et " << maxChoice << "." << std::endl;
+            if (minChoice <= 0 && maxChoice >= 0)
+            {
+                std::cout << "Astuce : 0, r ou retour reviennent à l'écran précédent." << std::endl;
+            }
+            renderMenuScreen(screen);
+            continue;
+        }
+
+        std::istringstream stream(line);
+        int choice = 0;
+        char extraCharacter = '\0';
+        if (!(stream >> choice) || (stream >> extraCharacter) || choice < minChoice || choice > maxChoice)
+        {
+            std::cout << invalidMessage << " Valeurs autorisées : " << minChoice << " à " << maxChoice << "." << std::endl;
+            MenuFrame::prompt();
+            continue;
+        }
+
+        Console::flushAvailableInputBuffer();
+        return choice;
+    }
 }
 
 
@@ -167,13 +233,32 @@ int TerminalInterface::askMenuChoiceFromOptions(
             return 0;
         }
 
+        const std::string command = normalizeMenuCommand(line);
+        if ((command == "r" || command == "retour" || command == "back") && hasAllowedChoice(allowedChoices, 0))
+        {
+            Console::flushAvailableInputBuffer();
+            return 0;
+        }
+
+        if (command == "?" || command == "aide" || command == "help")
+        {
+            std::cout << "Choix disponibles : " << formatAllowedChoices(allowedChoices) << "." << std::endl;
+            if (hasAllowedChoice(allowedChoices, 0))
+            {
+                std::cout << "Astuce : 0, r ou retour reviennent à l'écran précédent." << std::endl;
+            }
+            std::cout << "Le menu est réaffiché pour retrouver les descriptions." << std::endl;
+            renderMenuScreen(screen);
+            continue;
+        }
+
         std::istringstream stream(line);
         int choice = 0;
         char extraCharacter = '\0';
 
         if (!(stream >> choice) || (stream >> extraCharacter))
         {
-            std::cout << invalidMessage << std::endl;
+            std::cout << invalidMessage << " Choix disponibles : " << formatAllowedChoices(allowedChoices) << "." << std::endl;
             MenuFrame::prompt();
             continue;
         }
@@ -203,7 +288,7 @@ int TerminalInterface::askMenuChoiceFromOptions(
             }
             else
             {
-                std::cout << invalidMessage << std::endl;
+                std::cout << invalidMessage << " Choix disponibles : " << formatAllowedChoices(allowedChoices) << "." << std::endl;
             }
 
             MenuFrame::prompt();

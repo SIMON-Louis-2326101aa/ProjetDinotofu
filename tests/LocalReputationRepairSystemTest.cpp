@@ -8,18 +8,18 @@ int main()
     Player player;
     const std::string city = player.getCurrentCityId();
     player.recordCanonicalEvent("reputation_locale_negative", "incident_test", "Incident local de test", 20);
-    player.getInventory().earnGold(500);
+    player.getInventory().earnEconomyUnits(500);
 
     const int initial = LocalReputationSystem::score(player, city);
     assert(initial == -20);
-    assert(LocalReputationRepairSystem::fineCostGold(initial) > 0);
+    assert(LocalReputationRepairSystem::fineCostEconomyUnits(initial) > 0);
     assert(LocalReputationRepairSystem::fineReputationGain(initial) > 0);
     assert(LocalReputationRepairSystem::canPayFine(player, city));
 
-    const int goldBefore = player.getInventory().getGold();
+    const int goldBefore = player.getInventory().getEconomyUnits();
     const auto fineLines = LocalReputationRepairSystem::payFine(player, city);
     assert(!fineLines.empty());
-    assert(player.getInventory().getGold() < goldBefore);
+    assert(player.getInventory().getEconomyUnits() < goldBefore);
     const int afterFine = LocalReputationSystem::score(player, city);
     assert(afterFine > initial && afterFine < 0);
 

@@ -992,7 +992,7 @@ namespace QuestContractorMenu
             screen.addBackOption("Retour", "quest.guild_tribunal.back");
             screen.addOption(1, "Consulter le dossier", "Voir ce que la guilde retient sans ouvrir de nouveau choix risqué.", true, "quest.guild_tribunal.file");
             screen.addOption(2, "Demander un pardon progressif", "Coût : " + Money::formatCopper(pardonCost) + ". N'efface pas l'historique, mais améliore le dossier officiel.", !banned && (probation || underground > 0), "quest.guild_tribunal.pardon");
-            screen.addOption(3, "Rendre un service de réparation", "Prend 1 segment, note une réparation propre et baisse la méfiance officielle future.", !banned, "quest.guild_tribunal.service");
+            screen.addOption(3, "Rendre un service de réparation", "Prend 1 segment, note une réparation propre et baisse la méfiance officielle du registre.", !banned, "quest.guild_tribunal.service");
             screen.addOption(4, "Parler au médiateur", "Disponible pendant une suspension active.", banned, "quest.guild_tribunal.mediation");
 
             const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
@@ -1030,7 +1030,7 @@ namespace QuestContractorMenu
                 player.advanceWorldDayUnits(1);
                 player.recordCanonicalEvent("reparations_officielles_guilde", player.getCurrentCityId(), "Service de réparation au conseil de " + currentCityName(player));
                 recordRecentAction(player, "guild_repair_service", "Service officiel rendu au conseil de guilde");
-                MessageScreen::show("SERVICE OFFICIEL", "quest.guild_tribunal.service.done", {"Tu aides la guilde sans recevoir de récompense.", "C'est une réparation officielle : utile pour le lore et les futures décisions de relation.", player.formatWorldDateTimeLine()}, false);
+                MessageScreen::show("SERVICE OFFICIEL", "quest.guild_tribunal.service.done", {"Tu aides la guilde sans recevoir de récompense.", "C'est une réparation officielle : elle compte dans la relation avec la guilde.", player.formatWorldDateTimeLine()}, false);
                 continue;
             }
             if (choice == 4)

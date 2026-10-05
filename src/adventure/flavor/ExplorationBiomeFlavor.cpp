@@ -59,6 +59,7 @@ std::string ExplorationBiomeFlavor::dangerousSiteName(const std::string& name)
     if (name == "Cimetière oublié") return "allée de tombes qui ne portent plus de noms";
     if (name == "Archives noyées") return "salle de lecture dont les pages tournent sous l'eau";
     if (name == "Foire abandonnée") return "chapiteau dont les cordes sont encore tendues";
+    if (name == "Jardin des statues qui pleurent") return "allée des anges aux visages mouillés";
     if (name == "Sanctuaire kitsuné des Neuf Étincelles") return "pavillon aux neuf lanternes désaccordées";
     if (name == "Confluence du Mana pur") return "berge où les trois courants se touchent";
     if (name == "Archipel des îles flottantes") return "îlot qui dérive contre le vent";
@@ -80,6 +81,7 @@ std::string ExplorationBiomeFlavor::dangerousSiteWarning(const std::string& name
     if (name == "Cimetière oublié") return "Certaines tombes semblent plus récentes que les dates gravées dessus.";
     if (name == "Archives noyées") return "Une phrase lisible apparaît sur une page immergée puis s'efface lorsque tu approches.";
     if (name == "Foire abandonnée") return "Une clochette de stand répond deux fois à chacun de tes pas.";
+    if (name == "Jardin des statues qui pleurent") return "Plusieurs statues ne regardent plus dans la même direction que lors de ton arrivée, mais aucune trace ne marque le gravier.";
     if (name == "Sanctuaire kitsuné des Neuf Étincelles") return "Une dixième lumière apparaît toujours hors de ton champ de vision.";
     if (name == "Confluence du Mana pur") return "Ta voix revient avec un mot que tu n'as pas prononcé.";
     if (name == "Archipel des îles flottantes") return "Les cailloux tombent latéralement vers un autre îlot.";
@@ -101,6 +103,7 @@ std::string ExplorationBiomeFlavor::bossTrace(const std::string& name)
     if (name == "Cimetière oublié") return "un nom gravé disparaît lentement d'une pierre pendant que tu le regardes";
     if (name == "Archives noyées") return "une ombre tourne les pages d'un livre que l'eau ne touche pas";
     if (name == "Foire abandonnée") return "une silhouette trop haute passe derrière trois stands sans jamais apparaître entre eux";
+    if (name == "Jardin des statues qui pleurent") return "une rangée d’anges de pierre semble gagner un pas chaque fois que ton regard quitte leurs visages";
     if (name == "Sanctuaire kitsuné des Neuf Étincelles") return "neuf queues de lumière se séparent puis se rejoignent derrière le dernier torii";
     if (name == "Confluence du Mana pur") return "un volume invisible déforme les trois courants comme s'il respirait";
     if (name == "Archipel des îles flottantes") return "une aile immense coupe le soleil puis disparaît sous un îlot";
@@ -123,6 +126,7 @@ std::string ExplorationBiomeFlavor::environmentalHazard(const std::string& name)
     if (name == "Mine sifflante") return "une poutre rouillée retient un petit mécanisme encore récupérable";
     if (name == "Archives noyées") return "un rayonnage penché retient une poche d'air et plusieurs feuillets encore secs";
     if (name == "Foire abandonnée") return "une toile de chapiteau prête à céder couvre une caisse encore fermée";
+    if (name == "Jardin des statues qui pleurent") return "des racines de marbre serrent une vasque où les larmes minérales s’accumulent sans pluie";
     if (name == "Sanctuaire kitsuné des Neuf Étincelles") return "un feu follet garde une offrande sans attaquer tant qu'on ne franchit pas sa ligne de lanternes";
     if (name == "Confluence du Mana pur") return "une vague de mana change de polarité autour d'un cristal exploitable";
     if (name == "Archipel des îles flottantes") return "un courant ascendant violent protège un nid rempli de matériaux légers";
@@ -145,6 +149,7 @@ std::string ExplorationBiomeFlavor::environmentalObservation(const std::string& 
     if (name == "Mine sifflante") return "Observation : la mine répond aux vibrations. Les ressorts et clous rares se trouvent près des machines encore tièdes.";
     if (name == "Archives noyées") return "Observation : certaines encres deviennent lisibles uniquement sous l'eau ; la langue du texte compte autant que son état.";
     if (name == "Foire abandonnée") return "Observation : les mécanismes de foire réagissent encore aux poids, aux sons et parfois à la présence d'une foule qui n'existe plus.";
+    if (name == "Jardin des statues qui pleurent") return "Observation : les statues ne semblent pas se déplacer lorsqu’elles sont regardées. Les changements apparaissent surtout entre deux observations vérifiables.";
     if (name == "Sanctuaire kitsuné des Neuf Étincelles") return "Observation : les feux du sanctuaire semblent répondre davantage à l'intention et au respect du lieu qu'à la force brute.";
     if (name == "Confluence du Mana pur") return "Observation : les trois courants n'altèrent pas les mêmes sorts ; observer leur rythme avant d'agir réduit les mauvaises surprises.";
     if (name == "Archipel des îles flottantes") return "Observation : ici les traces sont aussi verticales. Plumes, poussière et débris indiquent souvent quel courant relie deux îlots.";

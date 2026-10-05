@@ -481,7 +481,7 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
         unlockEntry(
             "Armes et classes",
             "Matériaux et plantes",
-            "Note achetée : une classe à distance ne tire pas avec une épée. Les tirs spéciaux vérifient l'arme équipée. Une bonne arme pour une bonne classe donne maintenant un très léger bonus de maîtrise ; une arme incohérente ne reçoit pas ce coup de pouce."
+            "Note achetée : une classe à distance ne tire pas avec une épée. Les tirs spéciaux exigent l'arme adaptée, et une arme cohérente avec la classe accorde un léger bonus de maîtrise."
         );
         return;
     }
@@ -631,7 +631,7 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
         unlockEntry(
             "Matt (PRO)",
             "Personnages spéciaux",
-            "Dossier de rumeur : adversaire spécial à posture parfaite, bonus légers et IA propre. Sa réputation suffit maintenant à confirmer son existence sans détailler toutes ses valeurs."
+            "Dossier de rumeur : adversaire spécial à posture parfaite et comportement très discipliné. Sa réputation suffit à confirmer son existence sans révéler toutes ses capacités."
         );
         unlockEntry(
             "Louis",
@@ -776,7 +776,7 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
         unlockEntry(
             "Affinités élémentaires faibles",
             "Entités hostiles / ennemis",
-            "Notes lues : certains monstres peuvent déclencher brûlure, poison, givre ou choc. L'électricité devient plus dangereuse contre les armes et armures métalliques. Les potions anti-statut existent maintenant : antidote, baume anti-brûlure, anti-givre et isolante."
+            "Notes lues : certains monstres peuvent déclencher brûlure, poison, givre ou choc. L'électricité est plus dangereuse contre les armes et armures métalliques. Antidotes, baumes anti-brûlure, anti-givre et potions isolantes servent à contrer ces effets."
         );
         return;
     }

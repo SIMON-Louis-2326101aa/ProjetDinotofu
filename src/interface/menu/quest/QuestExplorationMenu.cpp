@@ -476,7 +476,7 @@ namespace
             lines.push_back("Combat : la chaleur fatigue le corps et peut affaiblir les prochains gestes.");
         }
 
-        lines.push_back("Température : protection insuffisante. Une tenue équipée, une couverture adaptée, un kit thermique ou un futur enchantement serait conseillé.");
+        lines.push_back("Température : protection insuffisante. Une tenue équipée, une couverture adaptée, un kit thermique ou un enchantement approprié serait conseillé.");
         return rollShift;
     }
 
@@ -1039,8 +1039,41 @@ namespace
         return false;
     }
 
+    bool questLocationNamesConcreteBiome(const std::string& location)
+    {
+        static const std::vector<std::string> concreteBiomes = {
+            "Plaine sauvage", "Route commerciale", "Mares gélatineuses", "Forêt ancienne",
+            "Montagne froide", "Marais trouble", "Cimetière oublié", "Ruines effondrées",
+            "Bocage aux lanternes", "Désert d'argile rouge", "Quartier abandonné", "Mine sifflante",
+            "Verger des lucioles de fer", "Archives noyées", "Falaises des drakes gris", "Foire abandonnée",
+            "Temple des cloches fendues", "Canaux de brume bleue", "Carrière des os blancs", "Marché sous les ponts",
+            "Jardin des statues qui pleurent", "Bois de la Corruption", "Crypte du Sombre-Lien", "Désert des Protecteurs",
+            "Sanctuaire antique des Veilleurs", "Quartier des Lames Muettes", "Toits des Assassins", "Nid draconique rouge",
+            "Coulées de lave noire", "Glacier des Serments froids", "Bosquet des Fées du Mana",
+            "Sanctuaire kitsuné des Neuf Étincelles", "Confluence du Mana pur", "Bastion majeur scellé",
+            "Archipel des îles flottantes", "Ponts translucides de mana", "Cieux des Légendes", "Parvis des Divinités"
+        };
+
+        for (const std::string& biome : concreteBiomes)
+        {
+            if (textContainsInsensitive(location, biome))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool questTextMentionsBiome(const Quest& quest, const std::string& biomeName)
     {
+        // A named destination is authoritative for search/exploration objectives. Generic
+        // words such as "plantes", "traces" or "ruines" must not let the same search
+        // complete in an unrelated biome. Combat-family objectives stay flexible elsewhere.
+        if (questLocationNamesConcreteBiome(quest.location))
+        {
+            return textContainsInsensitive(quest.location, biomeName);
+        }
+
         return questTextImpliesBiome(quest.location, biomeName)
             || questTextImpliesBiome(quest.targetFamily, biomeName)
             || questTextImpliesBiome(quest.objective, biomeName)
@@ -1194,7 +1227,7 @@ namespace
     }
 
     // EN: applyExplorationGoldReward controls direct gold inflation from exploration events.
-    // FR: applyExplorationGoldReward limite l'inflation d'or direct venant des événements d'exploration.
+    // FR: applyExplorationGoldReward limite l'inflation d'argent direct venant des événements d'exploration.
     int applyExplorationGoldReward(int baseGold, const Player& player, const ExplorationIntensity& intensity, DifficultyMode difficulty, int rewardTier)
     {
         int scaledGold = std::max(1, baseGold * intensity.goldPercent / 100);
@@ -1371,6 +1404,7 @@ namespace
             std::string successLine;
             std::string failureLine;
             int cooldownDays = 2;
+            std::string category = "terrain";
         };
 
         std::vector<Challenge> challenges = {
@@ -1466,8 +1500,45 @@ namespace
             }
         };
 
+        auto setChallengeCategory = [&](const std::string& id, const std::string& category) {
+            for (Challenge& challenge : challenges)
+            {
+                if (challenge.id == id)
+                {
+                    challenge.category = category;
+                    return;
+                }
+            }
+        };
+
+        setChallengeCategory("generic_orientation", "orientation");
+        setChallengeCategory("generic_calculation_markers", "logistique");
+        setChallengeCategory("generic_french_notes", "rapport de terrain");
+        setChallengeCategory("generic_observation", "observation");
+        setChallengeCategory("generic_supply_weight", "logistique");
+        setChallengeCategory("generic_safe_water", "survie");
+        setChallengeCategory("generic_signal_code", "communication");
+        setChallengeCategory("generic_distance_pace", "orientation");
+        setChallengeCategory("generic_footprint_order", "pistage");
+        setChallengeCategory("generic_inventory_count", "logistique");
+
+        challenges.push_back({"generic_map_scale", "ÉPREUVE DE CARTOGRAPHIE", "Sur ta carte, 1 cm représente 2 km. Deux repères sont séparés de 3 cm. Quelle distance réelle les sépare ?", {{1, "5 km"}, {2, "6 km"}, {3, "8 km"}}, 2, "Échelle comprise : ton détour reste mesurable.", "Échelle mal lue : tu reprends la carte avant de transformer trois centimètres en expédition.", 3, "cartographie"});
+        challenges.push_back({"generic_weather_shelter", "ÉPREUVE DE MÉTÉO", "Le vent forcit et des nuages très sombres arrivent vite. Quel choix protège le mieux une courte pause ?", {{1, "Le point le plus haut"}, {2, "Un abri bas, stable et hors d'un lit de rivière"}, {3, "Sous l'arbre isolé le plus grand"}}, 2, "Abri cohérent : tu évites d'ajouter la météo à la liste des monstres.", "Abri douteux : tu changes d'idée avant que le ciel ne tranche.", 3, "météo"});
+        challenges.push_back({"generic_first_aid", "ÉPREUVE DE PREMIERS SOINS", "Une petite coupure saigne après avoir accroché une roche sale. Quel geste vient d'abord ?", {{1, "Nettoyer puis protéger la plaie"}, {2, "Mettre de la terre dessus"}, {3, "Continuer sans regarder"}}, 1, "Soin simple : tu évites qu'une égratignure devienne une vraie gêne.", "Mauvais réflexe : ton kit de soin te rappelle sa raison d'exister.", 4, "premiers soins"});
+        challenges.push_back({"generic_camp_position", "ÉPREUVE DE CAMPEMENT", "Tu dois poser un camp temporaire. Quel emplacement paraît le plus raisonnable ?", {{1, "Au fond d'une ravine"}, {2, "Sur un sol sec, visible et hors du passage principal"}, {3, "Juste devant une tanière vide"}}, 2, "Camp propre : le repos n'annonce pas ta présence à toute la zone.", "Camp mal choisi : quelques indices suffisent à te faire déménager.", 3, "campement"});
+        challenges.push_back({"generic_rope_length", "ÉPREUVE DE CORDAGE", "Tu as 18 m de corde. Tu réserves 3 m pour les nœuds et la sécurité. Quelle longueur reste réellement utilisable ?", {{1, "15 m"}, {2, "16 m"}, {3, "21 m"}}, 1, "Marge gardée : la corde est comptée comme du matériel, pas comme une promesse.", "Mauvais calcul : tu mesures avant d'apprendre la réponse au bord d'un vide.", 3, "cordage"});
+        challenges.push_back({"generic_torch_reserve", "ÉPREUVE DE RESSOURCES", "Quatre torches durent chacune environ une heure et tu veux garder une torche de secours. Combien d'heures peux-tu planifier sans toucher à la réserve ?", {{1, "2 heures"}, {2, "3 heures"}, {3, "4 heures"}}, 2, "Réserve respectée : tu ne dépenses pas ta dernière lumière sur le trajet aller.", "Réserve oubliée : tu recompte avant de confondre autonomie et optimisme.", 3, "ressources"});
+        challenges.push_back({"generic_crossing_tracks", "ÉPREUVE DE PISTAGE", "Deux pistes se croisent. L'une recouvre nettement l'autre au point de croisement. Que peux-tu conclure ?", {{1, "La piste du dessus est passée après"}, {2, "La piste du dessous est forcément animale"}, {3, "Les deux sont exactement simultanées"}}, 1, "Lecture correcte : l'ordre des passages devient un indice exploitable.", "Conclusion trop rapide : tu reviens aux couches visibles plutôt qu'à ton intuition.", 4, "pistage"});
+        challenges.push_back({"generic_pack_balance", "ÉPREUVE D'ÉQUIPEMENT", "Ton sac tire fortement d'un seul côté. Quelle correction est la plus saine avant de repartir ?", {{1, "Répartir les objets lourds près du centre"}, {2, "Ajouter du poids de l'autre côté"}, {3, "Desserrer toutes les sangles"}}, 1, "Charge recentrée : tes épaules te remercieront plus tard.", "Correction bancale : tu réorganises avant que le sac ne décide de ta trajectoire.", 3, "équipement"});
+        challenges.push_back({"generic_return_bearing", "ÉPREUVE DE RETOUR", "Tu pars plein nord sur une ligne simple. Sans détour, quelle direction générale te ramène vers ton point de départ ?", {{1, "Nord"}, {2, "Sud"}, {3, "Est"}}, 2, "Retour évident mais vérifié : même les choses simples méritent un repère.", "Direction fausse : mieux vaut corriger ici que plusieurs heures plus tard.", 3, "orientation"});
+        challenges.push_back({"generic_bridge_load", "ÉPREUVE DE PASSAGE", "Une vieille passerelle supporte 120 kg. Deux sacs de 25 kg accompagnent un aventurier de 65 kg. Quel poids total passe ?", {{1, "90 kg"}, {2, "115 kg"}, {3, "130 kg"}}, 2, "Charge sous la limite : tu traverses sans demander au bois de faire un miracle.", "Total faux : les planches grincent assez pour provoquer un nouveau calcul.", 4, "estimation"});
+        challenges.push_back({"generic_signal_visibility", "ÉPREUVE DE SIGNAL", "Ton groupe doit retrouver ton passage sans attirer toute la région. Quel repère est le plus discret ?", {{1, "Un petit ruban placé à hauteur convenue"}, {2, "Un feu énorme"}, {3, "Des cris réguliers"}}, 1, "Signal discret : tes alliés le voient, la moitié du biome non.", "Signal trop voyant : tu choisis finalement quelque chose de moins spectaculaire.", 3, "communication"});
+        challenges.push_back({"generic_stream_direction", "ÉPREUVE DE TERRAIN", "Tu suis un petit cours d'eau pour rejoindre une vallée située en aval. Dans quel sens progresses-tu ?", {{1, "Contre le courant"}, {2, "Dans le sens du courant"}, {3, "Perpendiculairement sans regarder"}}, 2, "Lecture du terrain : l'eau te sert de repère plutôt que d'obstacle.", "Mauvaise direction : le courant finit par te corriger.", 3, "cartographie"});
+
         auto addBiomeChallenge = [&](const Challenge& challenge) {
-            challenges.push_back(challenge);
+            Challenge contextual = challenge;
+            contextual.category = "terrain local";
+            challenges.push_back(contextual);
         };
 
         if (biome.name == "Plaine sauvage")
@@ -1559,14 +1630,42 @@ namespace
             addBiomeChallenge({"garden_statues", "ÉPREUVE D'OBSERVATION", "Trois statues regardent la fontaine, sauf une qui regarde la sortie. Laquelle surveiller ?", {{1, "Celle qui regarde la sortie"}, {2, "La plus jolie"}, {3, "Aucune"}}, 1, "Observation utile : tu repères celle qui connaît ton chemin de fuite.", "Observation ratée : le jardin change quand tu clignes des yeux."});
         }
 
+        std::set<std::string> veryRecentCategories;
+        const std::vector<std::string>& recentChallengeKeys = player.getRecentExplorationChallengeKeys();
+        int recentCategoryBudget = 3;
+        for (auto it = recentChallengeKeys.rbegin(); it != recentChallengeKeys.rend() && recentCategoryBudget > 0; ++it, --recentCategoryBudget)
+        {
+            for (const Challenge& challenge : challenges)
+            {
+                if (challenge.id == *it)
+                {
+                    veryRecentCategories.insert(challenge.category);
+                    break;
+                }
+            }
+        }
+
         std::vector<std::size_t> availableIndexes;
         for (std::size_t index = 0; index < challenges.size(); ++index)
         {
             const std::string cooldownKey = "challenge:" + challenges[index].id;
             if (!player.wasExplorationChallengeRecentlySeen(challenges[index].id)
-                && !player.isExplorationSceneOnCooldown(cooldownKey))
+                && !player.isExplorationSceneOnCooldown(cooldownKey)
+                && veryRecentCategories.find(challenges[index].category) == veryRecentCategories.end())
             {
                 availableIndexes.push_back(index);
+            }
+        }
+        if (availableIndexes.empty())
+        {
+            for (std::size_t index = 0; index < challenges.size(); ++index)
+            {
+                const std::string cooldownKey = "challenge:" + challenges[index].id;
+                if (!player.wasExplorationChallengeRecentlySeen(challenges[index].id)
+                    && !player.isExplorationSceneOnCooldown(cooldownKey))
+                {
+                    availableIndexes.push_back(index);
+                }
             }
         }
         if (availableIndexes.empty())
@@ -1593,7 +1692,8 @@ namespace
             challenge.title,
             "exploration.micro_challenge." + challenge.id,
             {
-                "Avant de continuer, la zone demande un petit choix actif.",
+                "Catégorie : " + challenge.category + ".",
+                "Cette épreuve correspond à ce que tu es en train de faire sur le terrain.",
                 challenge.question
             },
             challenge.options,
@@ -2767,16 +2867,89 @@ namespace
             });
         }
 
+        auto serviceChallengeIdFromTitle = [](const std::string& title)
+        {
+            std::string id;
+            for (unsigned char c : title)
+            {
+                if (std::isalnum(c)) id.push_back(static_cast<char>(std::tolower(c)));
+                else if (!id.empty() && id.back() != '_') id.push_back('_');
+            }
+            while (!id.empty() && id.back() == '_') id.pop_back();
+            return std::string("service_") + id;
+        };
+
+        auto serviceHistoryContains = [&](const std::string& id)
+        {
+            std::stringstream stream(quest.serviceChallengeHistory);
+            std::string value;
+            while (std::getline(stream, value, '|'))
+            {
+                if (value == id) return true;
+            }
+            return false;
+        };
+
+        auto serviceChallengeCategory = [](const Challenge& challenge)
+        {
+            if (challenge.family == "transport") return std::string("transport et logistique");
+            if (challenge.family == "estimation") return std::string("estimation et négociation");
+            if (challenge.family == "registre") return std::string("registre et administration");
+            if (challenge.family == "calcul") return std::string("calcul commercial");
+            if (challenge.family == "francais") return std::string("français et rédaction");
+
+            const std::string text = toLowerChoiceText(challenge.title + " " + challenge.question);
+            if (text.find("armure") != std::string::npos || text.find("sangle") != std::string::npos
+                || text.find("morphologie") != std::string::npos || text.find("équipement") != std::string::npos
+                || text.find("equipement") != std::string::npos) return std::string("équipement et morphologie");
+            if (text.find("inventaire") != std::string::npos || text.find("sac") != std::string::npos
+                || text.find("fragile") != std::string::npos || text.find("tri") != std::string::npos) return std::string("inventaire et logistique");
+            if (text.find("caravane") != std::string::npos || text.find("transport") != std::string::npos
+                || text.find("péage") != std::string::npos || text.find("peage") != std::string::npos
+                || text.find("relais") != std::string::npos) return std::string("transport et logistique");
+            if (text.find("facture") != std::string::npos || text.find("reçu") != std::string::npos
+                || text.find("recu") != std::string::npos || text.find("monnaie") != std::string::npos
+                || text.find("prime") != std::string::npos || text.find("coût") != std::string::npos
+                || text.find("cout") != std::string::npos || text.find("total") != std::string::npos) return std::string("calcul et économie");
+            if (text.find("phrase") != std::string::npos || text.find("correction") != std::string::npos
+                || text.find("accord") != std::string::npos || text.find("français") != std::string::npos
+                || text.find("francais") != std::string::npos) return std::string("français et rédaction");
+            if (text.find("dossier") != std::string::npos || text.find("archive") != std::string::npos
+                || text.find("formulaire") != std::string::npos || text.find("tampon") != std::string::npos
+                || text.find("contrat") != std::string::npos || text.find("preuve") != std::string::npos) return std::string("procédure de guilde");
+            return std::string("service de guilde");
+        };
+
+        for (Challenge& candidate : challenges)
+        {
+            if (candidate.id.empty()) candidate.id = serviceChallengeIdFromTitle(candidate.title);
+        }
+
+        std::vector<Challenge> unseenServiceChallenges;
+        if (merchantSelectedChallenges.empty())
+        {
+            for (const Challenge& candidate : challenges)
+            {
+                if (!serviceHistoryContains(candidate.id)) unseenServiceChallenges.push_back(candidate);
+            }
+            if (unseenServiceChallenges.empty())
+            {
+                quest.serviceChallengeHistory.clear();
+                unseenServiceChallenges = challenges;
+            }
+        }
+
         const std::vector<Challenge>& selectedPool = !merchantSelectedChallenges.empty()
             ? merchantSelectedChallenges
-            : challenges;
+            : unseenServiceChallenges;
         const Challenge& challenge = selectedPool[random.between(0, static_cast<int>(selectedPool.size()) - 1)];
+        const std::string challengeCategory = serviceChallengeCategory(challenge);
         int choice = askChoiceScreen(
             challenge.title,
             "quest.guild.service.micro_challenge",
             {
-                "Ce service ne se règle pas en aller-retour automatique.",
-                "Petite épreuve intellectuelle :",
+                "Catégorie de service : " + challengeCategory + ".",
+                "Contexte : cette épreuve correspond à l'étape concrète du contrat en cours.",
                 challenge.question
             },
             challenge.options,
@@ -3459,7 +3632,7 @@ namespace
         const ExplorationIntensity& intensity,
         const std::string& eventLabel,
         int hpBefore,
-        int goldBefore,
+        long long copperBeforeExploration,
         int readyBefore,
         int dayBeforeExploration,
         int unitBeforeExploration,
@@ -3467,7 +3640,11 @@ namespace
     )
     {
         const int hpAfter = player.getHp();
-        const int goldAfter = player.getInventory().getGold();
+        const long long copperAfter = player.getInventory().getTotalCopper();
+        const long long copperDelta = copperAfter - copperBeforeExploration;
+        const std::string moneyDelta = copperDelta > 0
+            ? "+" + Money::formatCopper(copperDelta)
+            : (copperDelta < 0 ? "-" + Money::formatCopper(-copperDelta) : "0 cuivre");
         const int readyAfter = countReadyToTurnInQuests(player);
 
         std::vector<std::string> lines = {
@@ -3478,8 +3655,8 @@ namespace
             "Événement principal : " + eventLabel + ".",
             "PV : " + std::to_string(hpBefore) + " -> " + std::to_string(hpAfter)
                 + " / " + std::to_string(player.getMaxHp()) + ".",
-            "Argent : " + Money::formatGold(goldBefore) + " -> " + Money::formatGold(goldAfter)
-                + " (écart : " + std::to_string(goldAfter - goldBefore) + ").",
+            "Argent : " + Money::formatCopper(copperBeforeExploration) + " -> " + Money::formatCopper(copperAfter)
+                + " (écart : " + moneyDelta + ").",
             "Demandes prêtes à rendre : " + std::to_string(readyBefore)
                 + " -> " + std::to_string(readyAfter) + "."
         };
@@ -3826,8 +4003,9 @@ namespace
             int baseGold = random.between(8, 24 + player.getLevel() * 2);
             baseGold = baseGold * chestOpeningGoldMultiplier(choice) / 100;
             int gold = applyExplorationGoldReward(std::max(1, baseGold), player, intensity, difficulty, 1);
-            player.getInventory().earnGold(gold);
-            std::vector<std::string> mimicLines = {"Dans les restes visqueux, tu récupères " + Money::formatGoldWithRaw(gold) + "."};
+            player.getInventory().earnEconomyUnits(gold);
+            player.refreshCurrencyTitles();
+            std::vector<std::string> mimicLines = {"Dans les restes visqueux, tu récupères " + Money::formatEconomyUnits(gold) + "."};
             if (random.between(1, 100) <= 16)
             {
                 applyExplorationCurse(
@@ -3863,11 +4041,12 @@ namespace
             int baseGold = random.between(8, 30 + player.getLevel() * 3);
             baseGold = baseGold * chestOpeningGoldMultiplier(choice) / 100;
             int gold = applyExplorationGoldReward(std::max(1, baseGold), player, intensity, difficulty, 1);
-            player.getInventory().earnGold(gold);
+            player.getInventory().earnEconomyUnits(gold);
+            player.refreshCurrencyTitles();
             const int quantity = std::max(1, applyExplorationQuantityBonus(1 + std::max(0, rewardQuantityBonus), intensity));
             std::vector<std::string> rewardLines = {
                 alreadyUnlocked ? "Le coffre était déjà ouvert, mais personne n'avait regardé assez correctement." : "Le coffre est réel, mais son contenu reste modeste.",
-                "Argent gagné : " + Money::formatGoldWithRaw(gold),
+                "Argent gagné : " + Money::formatEconomyUnits(gold),
                 addExplorationMaterial(player, biome.commonMaterialId, quantity, chooseExplorationQuality(random, true))
             };
             if (random.between(1, 100) <= 8)
@@ -3901,11 +4080,12 @@ namespace
             int baseGold = random.between(35 + player.getLevel() * 3, 90 + player.getLevel() * 8);
             baseGold = baseGold * chestOpeningGoldMultiplier(choice) / 100;
             int gold = applyExplorationGoldReward(std::max(1, baseGold), player, intensity, difficulty, 2);
-            player.getInventory().earnGold(gold);
+            player.getInventory().earnEconomyUnits(gold);
+            player.refreshCurrencyTitles();
             const int quantity = std::max(1, applyExplorationQuantityBonus(1 + std::max(0, rewardQuantityBonus), intensity));
             std::vector<std::string> rewardLines = {
                 alreadyUnlocked ? "Le coffre n'était pas fermé : le vrai gain vient de la fouille propre." : "Le coffre est réel, et pour une fois il n'a pas décidé de te mordre.",
-                "Argent gagné : " + Money::formatGoldWithRaw(gold),
+                "Argent gagné : " + Money::formatEconomyUnits(gold),
                 addExplorationMaterial(player, biome.rareMaterialId, quantity, chooseExplorationQuality(random, true))
             };
             if (choice == 2 && (nimbleOrThief || craftSpecialist) && random.between(1, 100) <= 28)
@@ -4014,7 +4194,8 @@ namespace
         if (victory)
         {
             const int rewardGold = applyExplorationGoldReward(random.between(40 + player.getLevel() * 2, 90 + player.getLevel() * 4), player, intensity, difficulty, 2);
-            player.getInventory().earnGold(rewardGold);
+            player.getInventory().earnEconomyUnits(rewardGold);
+            player.refreshCurrencyTitles();
             player.getInventory().addMaterial(MaterialCatalog::createById("city_defense_medal", 1));
             player.getInventory().addMaterial(MaterialCatalog::createById("city_service_stamp", 1));
             const int previousGratitudeDays = player.getInventory().countMaterialById("city_defense_gratitude_days_marker");
@@ -4030,7 +4211,7 @@ namespace
                 "Tampon de service municipal x1.",
                 "Reconnaissance locale : certains commerçants feront une petite remise pendant " + std::to_string(gratitudeDays) + " jour(s).",
                 "Limite : la gratitude commerciale ne dépasse jamais 10 jours, même si la ville te doit une fière chandelle.",
-                "Prime de défense : " + Money::formatGoldWithRaw(rewardGold) + "."
+                "Prime de défense : " + Money::formatEconomyUnits(rewardGold) + "."
             };
             appendCombatQuestProgressLine(player, 2, "Défense de ville", lines, "La défense de ville fait progresser certains contrats de protection");
             showExplorationNotice("VILLE DÉFENDUE", "exploration.rare.city_defense.victory", lines);
@@ -4072,11 +4253,12 @@ namespace
         if (roll <= 40)
         {
             int gold = applyExplorationGoldReward(random.between(45 + player.getLevel() * 4, 120 + player.getLevel() * 9), player, intensity, difficulty, 3);
-            player.getInventory().earnGold(gold);
+            player.getInventory().earnEconomyUnits(gold);
+            player.refreshCurrencyTitles();
             std::vector<std::string> lines = {
                 "Une cache ancienne est dissimulée sous des marques presque effacées.",
                 "Ce n'est pas un trésor de roi, mais ce n'est clairement pas une trouvaille normale.",
-                "Argent gagné : " + Money::formatGoldWithRaw(gold),
+                "Argent gagné : " + Money::formatEconomyUnits(gold),
                 addExplorationMaterial(player, biome.rareMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
             };
             if (random.between(1, 100) <= 12)
@@ -4466,10 +4648,21 @@ namespace
         }
         else
         {
+            const std::string contact = offeredQuest.client.empty() ? std::string("Contact local") : offeredQuest.client;
+            player.rememberNpcFact(
+                contact,
+                "quest_declined",
+                offeredQuest.id,
+                "Demande déclinée : " + offeredQuest.title,
+                "interaction_directe",
+                player.getName(),
+                100,
+                3
+            );
             MessageScreen::show(
                 "DEMANDE REFUSÉE",
                 "quest.event.offer.declined",
-                {"Tu refuses la demande pour l'instant."}
+                {"Tu refuses la demande pour l'instant.", "Le contact pourra s'en souvenir, sans considérer cela comme une promesse rompue."}
             );
         }
     }
@@ -4836,6 +5029,150 @@ namespace
 
     void triggerActiveExplorationEvent(Player& player, Random& random, const ExplorationBiome& biome, const ExplorationIntensity& intensity, DifficultyMode difficulty, DeathRuleMode deathRule)
     {
+        if (biome.name == "Jardin des statues qui pleurent" && random.between(1, 100) <= 58)
+        {
+            int previousObservations = 0;
+            for (const PlayerHistoricalEvent& event : player.getHistoricalEvents())
+            {
+                if (event.category == "weeping_garden_observation" && event.subjectId == "weeping_statue_garden")
+                {
+                    previousObservations++;
+                }
+            }
+
+            std::vector<std::string> intro = {
+                "Le gravier est intact, mais trois statues n'occupent plus exactement la place que ton souvenir leur donne.",
+                "Leurs joues sont mouillées. Il n'a pourtant pas plu.",
+                "Aucune ne bouge pendant que tu la regardes."
+            };
+            if (previousObservations > 0)
+            {
+                intro.push_back("Ton journal possède déjà " + std::to_string(previousObservations) + " observation(s) comparable(s) de ce jardin.");
+            }
+
+            int choice = askChoiceScreen(
+                "LES STATUES QUI PLEURENT",
+                "exploration.event.weeping_garden.choice",
+                intro,
+                {
+                    {1, "Marquer précisément leurs positions puis détourner le regard"},
+                    {2, "Prélever une larme minérale sans toucher aux statues"},
+                    {3, "Approcher la statue qui semble la plus proche"},
+                    {0, "Quitter l'allée sans provoquer le lieu"}
+                },
+                0,
+                3
+            );
+            Console::clear();
+
+            if (choice == 0)
+            {
+                player.recordHistoricalEvent(
+                    "weeping_garden_observation",
+                    "weeping_statue_garden",
+                    "Le personnage a quitté une allée du Jardin après avoir constaté des positions incohérentes sans provoquer les statues."
+                );
+                std::vector<std::string> lines = {
+                    "Tu recules sans leur tourner complètement le dos.",
+                    "Au prochain carrefour, tu comptes une statue de plus derrière toi que dans ton souvenir."
+                };
+                appendExplorationQuestProgressLine(player, biome, 1, lines, "L'observation prudente du jardin fait progresser le journal");
+                showExplorationNotice("ALLÉE QUITTÉE", "exploration.event.weeping_garden.leave", lines);
+                return;
+            }
+
+            if (choice == 1)
+            {
+                const bool undeniableShift = previousObservations >= 2 || random.between(1, 100) <= 62;
+                std::vector<std::string> lines = {
+                    "Tu marques le gravier, les angles des socles et la direction de chaque visage avant de détourner les yeux quelques secondes."
+                };
+
+                if (undeniableShift)
+                {
+                    lines.push_back("Quand tu regardes de nouveau, une statue a quitté son repère sans avoir déplacé un seul grain de gravier.");
+                    lines.push_back("Ce n'est plus une impression : le jardin change réellement entre deux observations.");
+                    player.recordHistoricalEvent(
+                        "weeping_garden_shift_confirmed",
+                        "weeping_statue_garden",
+                        "Déplacement impossible confirmé dans le Jardin des statues qui pleurent : un socle a changé de position sans trace au sol."
+                    );
+                    lines.push_back(addExplorationMaterial(player, biome.rareMaterialId, 1, chooseExplorationQuality(random, true)));
+                }
+                else
+                {
+                    lines.push_back("Aucun déplacement certain cette fois. Une main de pierre semble toutefois plus basse qu'avant, juste assez pour te faire douter.");
+                }
+
+                player.recordHistoricalEvent(
+                    "weeping_garden_observation",
+                    "weeping_statue_garden",
+                    "Positions de statues comparées par repères physiques dans le Jardin des statues qui pleurent."
+                );
+                recordBiomeFieldObservation(biome, "Les statues du jardin changent parfois de position uniquement entre deux observations, sans traces de déplacement sur le gravier.");
+                appendExplorationQuestProgressLine(player, biome, undeniableShift ? 3 : 2, lines, "Les positions mesurées des statues font progresser les recherches sur le jardin");
+                showExplorationNotice("POSITIONS COMPARÉES", "exploration.event.weeping_garden.markers", lines);
+                return;
+            }
+
+            if (choice == 2)
+            {
+                std::vector<std::string> lines = {
+                    "Tu utilises la vasque et les rigoles du socle plutôt que le visage de pierre.",
+                    "La larme est froide, beaucoup plus lourde qu'une goutte d'eau et ne s'évapore pas."
+                };
+                lines.push_back(addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true)));
+                player.recordHistoricalEvent(
+                    "weeping_garden_observation",
+                    "weeping_statue_garden",
+                    "Une larme minérale a été prélevée sans toucher directement aux statues du Jardin."
+                );
+                appendExplorationQuestProgressLine(player, biome, 2, lines, "Le prélèvement propre du jardin fait progresser les recherches");
+                showExplorationNotice("LARME MINÉRALE", "exploration.event.weeping_garden.tear", lines);
+                return;
+            }
+
+            std::vector<std::string> lines = {
+                "Tu avances vers la statue la plus proche.",
+                "À chaque vérification derrière toi, les autres semblent former un demi-cercle un peu plus fermé."
+            };
+            player.recordHistoricalEvent(
+                "weeping_garden_observation",
+                "weeping_statue_garden",
+                "Approche directe d'une statue mobile du Jardin ; plusieurs positions périphériques sont devenues incohérentes."
+            );
+
+            if (random.between(1, 100) <= 48)
+            {
+                lines.push_back("Tu refuses de tester combien de pas il leur reste et tu romps l'approche avant d'être encerclé.");
+                appendExplorationQuestProgressLine(player, biome, 2, lines, "L'approche risquée du jardin laisse des observations exploitables");
+                showExplorationNotice("CERCLE DE PIERRE", "exploration.event.weeping_garden.approach_retreat", lines);
+                return;
+            }
+
+            lines.push_back("Une fissure s'ouvre dans le socle et quelque chose de vivant répond sous le marbre.");
+            showExplorationNotice("LE JARDIN RÉPOND", "exploration.event.weeping_garden.awakening", lines);
+            bool victory = runTrackedExplorationWave(
+                player,
+                random,
+                difficulty,
+                deathRule,
+                createExplorationGroup(player, random, biome, intensity, 1, 2, true),
+                "Jardin des statues qui pleurent : cercle de pierre"
+            );
+            if (victory)
+            {
+                std::vector<std::string> rewardLines = {
+                    "Le cercle se fige de nouveau. Les statues restent silencieuses, mais leurs visages ne sont plus orientés comme avant le combat.",
+                    addExplorationMaterial(player, biome.rareMaterialId, 1, chooseExplorationQuality(random, true))
+                };
+                appendCombatQuestProgressLine(player, 2, "Statues / ronces / noblesse abandonnée", rewardLines, "La réaction du jardin fait progresser les contrats liés aux statues");
+                appendExplorationQuestProgressLine(player, biome, 3, rewardLines, "Le réveil du jardin fait progresser les recherches locales");
+                showExplorationNotice("SILENCE RETROUVÉ", "exploration.event.weeping_garden.awakening_reward", rewardLines);
+            }
+            return;
+        }
+
         int eventRoll = chooseVariedActiveExplorationRoll(player, random);
         const std::string activeEventKey = activeExplorationEventKeyFromRoll(eventRoll);
         player.recordExplorationEventKey(activeEventKey);
@@ -4890,9 +5227,10 @@ namespace
             }
 
             int gold = applyExplorationGoldReward(random.between(12, 38 + player.getLevel() * 2), player, intensity, difficulty, 1);
-            player.getInventory().earnGold(gold);
+            player.getInventory().earnEconomyUnits(gold);
+            player.refreshCurrencyTitles();
             std::vector<std::string> rewardLines = {
-                "Tu récupères dans le camp : " + Money::formatGoldWithRaw(gold) + ".",
+                "Tu récupères dans le camp : " + Money::formatEconomyUnits(gold) + ".",
                 addExplorationMaterial(player, biome.commonMaterialId, applyExplorationQuantityBonus(1, intensity), chooseExplorationQuality(random, true))
             };
             showExplorationNotice("CAMP FOUILLÉ", "exploration.event.abandoned_camp.reward", rewardLines);
@@ -5240,7 +5578,8 @@ namespace
                     "Tu murmures une promesse courte au signe, sans vraiment savoir à qui tu parles.",
                     "La zone répond par une aide immédiate... et par un silence beaucoup trop poli."
                 };
-                player.getInventory().earnGold(applyExplorationGoldReward(random.between(20, 55 + player.getLevel() * 3), player, intensity, difficulty, 1));
+                player.getInventory().earnEconomyUnits(applyExplorationGoldReward(random.between(20, 55 + player.getLevel() * 3), player, intensity, difficulty, 1));
+                player.refreshCurrencyTitles();
                 lines.push_back(addExplorationMaterial(player, "variation_residue", 1, chooseExplorationQuality(random, true)));
                 applyExplorationCurse(
                     player,
@@ -5352,8 +5691,9 @@ namespace
         }
 
         int gold = applyExplorationGoldReward(random.between(18, 55 + player.getLevel() * 2), player, intensity, difficulty, 2);
-        player.getInventory().earnGold(gold);
-        std::vector<std::string> rewardLines = {"Récompense improvisée : " + Money::formatGoldWithRaw(gold) + "."};
+        player.getInventory().earnEconomyUnits(gold);
+        player.refreshCurrencyTitles();
+        std::vector<std::string> rewardLines = {"Récompense improvisée : " + Money::formatEconomyUnits(gold) + "."};
         appendExplorationQuestProgressLine(
             player,
             biome,
@@ -5498,7 +5838,7 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
         }
         screen.addLine("Exploration = fouille de terrain : plantes, matériaux, traces, trésors, coffres ou dangers imprévus.");
         screen.addLine("Tu pars chercher des traces, mais le terrain peut décider de te répondre avec des griffes.");
-        screen.addLine("Économie : l'or direct d'exploration est pondéré par la difficulté ; les matériaux restent une grosse partie de la valeur.");
+        screen.addLine("Économie : l'argent direct d'exploration est pondéré par la difficulté ; les matériaux restent une grosse partie de la valeur.");
         const City* explorationOriginCity = City::findById(player.getCurrentCityId());
         if (explorationOriginCity != nullptr)
         {
@@ -5638,13 +5978,22 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
         const bool wasUnknownBiome = isBiomeUnknownToPlayer(player, biome);
         const std::string selectedBiomeDisplayName = wasUnknownBiome ? "cette zone inconnue" : biome.name;
         int expeditionElapsedUnits = 0;
-        int expeditionFoodUnitsSinceLastRation = 0;
+        int expeditionFoodUnitsRemaining = player.getWorldDayUnitsPerDay();
         bool firstExplorationAtThisBiome = true;
 
         while (true)
         {
         MenuScreen intensityScreen("INTENSITÉ", "exploration.intensity");
         intensityScreen.addLine("Choisis comment tu veux explorer " + selectedBiomeDisplayName + ".");
+        intensityScreen.addLine(
+            "Autonomie de sortie restante : " + std::to_string(expeditionFoodUnitsRemaining)
+            + "/" + std::to_string(player.getWorldDayUnitsPerDay()) + " segment(s). Rations : "
+            + std::to_string(player.getInventory().countMaterialById("survival_ration")) + "."
+        );
+        intensityScreen.addLine(
+            "Chaque Ration de survie ajoute " + std::to_string(player.getWorldDayUnitsPerDay())
+            + " segment(s) d'autonomie et sera consommée avant un départ qui dépasserait la réserve."
+        );
         intensityScreen.addOption(0, "Retour aux biomes", "", true, "exploration.intensity.back");
 
         for (int i = 0; i < static_cast<int>(intensities.size()); ++i)
@@ -5695,15 +6044,54 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             travelLines.push_back("Taille du biome : le terrain reste compté, parce que fouiller un grand lieu prend encore du temps même sans refaire la route.");
         }
         const int totalTimeUnits = std::max(1, intensity.durationUnits + travelUnits + biomeSizeUnits);
+        const int foodUnitsPerRation = std::max(1, player.getWorldDayUnitsPerDay());
+        const int missingFoodUnits = std::max(0, totalTimeUnits - expeditionFoodUnitsRemaining);
+        const int rationsNeeded = missingFoodUnits <= 0
+            ? 0
+            : (missingFoodUnits + foodUnitsPerRation - 1) / foodUnitsPerRation;
+        const int rationsAvailable = player.getInventory().countMaterialById("survival_ration");
+
+        if (rationsNeeded > rationsAvailable)
+        {
+            showExplorationNotice(
+                "AUTONOMIE INSUFFISANTE",
+                "exploration.before_run.ration_missing",
+                {
+                    "Cette sortie demanderait " + std::to_string(totalTimeUnits) + " segment(s) avec le trajet et la taille du lieu.",
+                    "Autonomie encore disponible : " + std::to_string(expeditionFoodUnitsRemaining) + " segment(s).",
+                    "Rations nécessaires pour partir : " + std::to_string(rationsNeeded) + " ; dans le sac : " + std::to_string(rationsAvailable) + ".",
+                    "La sortie n'est pas lancée. Choisis une exploration plus courte, rentre, ou prépare davantage de Rations de survie."
+                },
+                false
+            );
+            Console::clear();
+            continue;
+        }
+
+        for (int ration = 0; ration < rationsNeeded; ++ration)
+        {
+            if (player.getInventory().removeMaterialQuantityById("survival_ration", 1))
+            {
+                expeditionFoodUnitsRemaining += foodUnitsPerRation;
+            }
+        }
+        if (rationsNeeded > 0)
+        {
+            travelLines.push_back(
+                "Vivres : " + std::to_string(rationsNeeded) + " Ration(s) de survie préparée(s) avant le départ (+"
+                + std::to_string(rationsNeeded * foodUnitsPerRation) + " segment(s) d'autonomie)."
+            );
+        }
+        expeditionFoodUnitsRemaining = std::max(0, expeditionFoodUnitsRemaining - totalTimeUnits);
+
         const int dayBeforeExploration = player.getWorldDaysElapsed();
         const int unitBeforeExploration = player.getWorldDayProgressUnits();
         const bool touchesNight = explorationTouchesNight(unitBeforeExploration, totalTimeUnits, player.getWorldDayUnitsPerDay());
         player.advanceWorldDayUnits(totalTimeUnits);
         expeditionElapsedUnits += totalTimeUnits;
-        expeditionFoodUnitsSinceLastRation += totalTimeUnits;
         expireOverdueQuestDeadlines(player, "exploration.run", true);
         const int hpBeforeExploration = player.getHp();
-        const int goldBeforeExploration = player.getInventory().getGold();
+        const long long copperBeforeExploration = player.getInventory().getTotalCopper();
         const int readyBeforeExploration = countReadyToTurnInQuests(player);
 
         QuestSearchHint questHint = getQuestSearchHintForBiome(player, biome);
@@ -5952,6 +6340,16 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
                         nonCombatInteraction.title + " — " + interactionResult.choiceLabel,
                         1
                     );
+                    if (interactionResult.notableForLongTermHistory)
+                    {
+                        player.recordHistoricalEvent(
+                            "biome_interaction",
+                            biome.name,
+                            nonCombatInteraction.title + " — " + interactionResult.choiceLabel,
+                            true
+                        );
+                        resultLines.push_back("Cette action est assez inhabituelle pour rejoindre l'histoire durable du personnage.");
+                    }
                     recordBiomeFieldObservation(
                         biome,
                         "Interaction locale : " + nonCombatInteraction.title + " / " + interactionResult.choiceLabel + "."
@@ -5980,7 +6378,7 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
 
         if (isBiomeEvolvedForPlayer(player, biome))
         {
-            entryLines.push_back("Adaptation de zone : ton niveau attire maintenant des menaces plus fortes ici.");
+            entryLines.push_back("Cette zone attire des menaces plus fortes à mesure que ta réputation de combattant grandit.");
             entryLines.push_back("Niveaux effectifs actuels : "
                 + std::to_string(evolvedBiomeMinLevel(player, biome))
                 + "-" + std::to_string(evolvedBiomeMaxLevel(player, biome)) + ".");
@@ -6125,8 +6523,9 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
                     if (random.between(1, 100) <= 40)
                     {
                         int recoveredGold = applyExplorationGoldReward(random.between(2, 10 + player.getLevel()), player, intensity, difficulty, 0);
-                        player.getInventory().earnGold(recoveredGold);
-                        lines.push_back("Quelques pièces encore valables restent coincées dedans : " + Money::formatGoldWithRaw(recoveredGold) + ".");
+                        player.getInventory().earnEconomyUnits(recoveredGold);
+                        player.refreshCurrencyTitles();
+                        lines.push_back("Quelques pièces encore valables restent coincées dedans : " + Money::formatEconomyUnits(recoveredGold) + ".");
                     }
                 }
                 int updated = progressExplorationQuests(player, biome.name, progress);
@@ -6150,12 +6549,13 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
                     difficulty,
                     1
                 );
-                player.getInventory().earnGold(gold);
+                player.getInventory().earnEconomyUnits(gold);
+                player.refreshCurrencyTitles();
                 std::vector<std::string> lines = {
                     oldDeposit
                         ? "Tu découvres un petit dépôt ancien, protégé par une pierre plate et beaucoup de poussière."
                         : "Une bourse oubliée a glissé hors du passage principal.",
-                    "Argent gagné : " + Money::formatGoldWithRaw(gold)
+                    "Argent gagné : " + Money::formatEconomyUnits(gold)
                 };
                 if (oldDeposit && random.between(1, 100) <= 55)
                 {
@@ -6262,7 +6662,7 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             intensity,
             eventLabel,
             hpBeforeExploration,
-            goldBeforeExploration,
+            copperBeforeExploration,
             readyBeforeExploration,
             dayBeforeExploration,
             unitBeforeExploration,
@@ -6273,11 +6673,11 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             "Zone actuelle : " + biome.name + ".",
             "Temps passé dehors depuis le départ : " + std::to_string(expeditionElapsedUnits)
                 + " segment(s) (" + std::to_string(player.getWorldDayUnitsPerDay()) + " segment(s) = 1 journée complète).",
-            "Autonomie depuis la dernière ration : " + std::to_string(expeditionFoodUnitsSinceLastRation)
-                + "/" + std::to_string(player.getWorldDayUnitsPerDay()) + " segment(s).",
+            "Autonomie de sortie restante : " + std::to_string(expeditionFoodUnitsRemaining)
+                + " segment(s) ; Rations restantes : " + std::to_string(player.getInventory().countMaterialById("survival_ration")) + ".",
             "Continuer ici ne repaie pas le trajet : tu es déjà sur place.",
             "La taille du biome reste comptée à chaque nouvelle fouille : seul le trajet d'arrivée disparaît.",
-            "Si une journée complète d'autonomie est utilisée dehors, il faut une Ration de survie pour continuer sans rentrer."
+            "Une ration sera demandée avant la prochaine sortie si sa durée dépasse l'autonomie encore disponible."
         };
 
         const int continuationChoice = askChoiceScreen(
@@ -6299,7 +6699,7 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
                 "RETOUR",
                 "exploration.after_run.return",
                 {
-                    "Tu rentres sans repayer le trajet retour dans cette version : le coût important était surtout l'aller et la préparation.",
+                    "Tu rentres sans repayer le trajet retour : le coût principal couvre surtout l’aller et la préparation.",
                     "Le prochain départ vers une autre zone recalculera la distance normalement."
                 },
                 false
@@ -6307,37 +6707,20 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             break;
         }
 
-        if (expeditionFoodUnitsSinceLastRation >= player.getWorldDayUnitsPerDay())
+        if (expeditionFoodUnitsRemaining <= 0
+            && player.getInventory().countMaterialById("survival_ration") <= 0)
         {
-            if (player.getInventory().removeMaterialQuantityById("survival_ration", 1))
-            {
-                expeditionFoodUnitsSinceLastRation = 0;
-                showExplorationNotice(
-                    "RATION CONSOMMÉE",
-                    "exploration.after_run.ration_used",
-                    {
-                        "Tu as utilisé une journée complète d'autonomie dehors depuis le départ ou la dernière ration.",
-                        "Ration de survie consommée x1 : l'autonomie d'exploration est réinitialisée.",
-                        "Tu ne dois donc pas spammer les rations à chaque clic : une ration couvre une nouvelle journée complète de sortie.",
-                        "Tu choisiras à nouveau si la suite est courte, normale ou longue, puis l'approche de route prudente ou audacieuse."
-                    },
-                    false
-                );
-            }
-            else
-            {
-                showExplorationNotice(
-                    "RATION MANQUANTE",
-                    "exploration.after_run.ration_missing",
-                    {
-                        "Tu as utilisé une journée complète d'autonomie dehors depuis le départ ou la dernière ration.",
-                        "Impossible de continuer sans Ration de survie : le personnage doit éviter de crever de faim hors simulation détaillée.",
-                        "Tu rentres donc en ville. Les auberges, relais et boutiques de consommables vendent des rations abordables, mais pas données gratuitement."
-                    },
-                    false
-                );
-                break;
-            }
+            showExplorationNotice(
+                "AUTONOMIE ÉPUISÉE",
+                "exploration.after_run.ration_required",
+                {
+                    "Tu as utilisé toute l'autonomie prévue pour cette sortie.",
+                    "Aucune Ration de survie ne reste dans le sac : continuer plus loin serait incohérent.",
+                    "Tu rentres donc avant de repartir avec de nouveaux vivres."
+                },
+                false
+            );
+            break;
         }
 
         firstExplorationAtThisBiome = false;

@@ -11,6 +11,7 @@
 #include "class_system/ClassCatalog.hpp"
 #include "core/Console.hpp"
 #include "core/Random.hpp"
+#include "economy/Money.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/model/MenuScreen.hpp"
@@ -240,13 +241,13 @@ void CheatManager::switchClassAndStarterEquipment(Player& player, DifficultyMode
     CharacterRace race = player.getRace();
     int oldLevel = player.getLevel();
     int oldExperience = player.getExperience();
-    int oldGold = player.getInventory().getGold();
+    const long long oldCopper = player.getInventory().getTotalCopper();
 
     player = Player(name, newClass);
     player.setRace(race);
     player.initializeStarterInventory(difficulty);
     player.setLoadedProgress(oldLevel, oldExperience, player.getMaxHp());
-    player.getInventory().earnGold(oldGold);
+    player.getInventory().setTotalCopper(oldCopper);
     player.setCheatState(true, false, false, false, false, false, false, 3);
     player.recordSwitchClassCheatUse();
 }
@@ -294,7 +295,7 @@ void CheatManager::displayKnownAlterations(const Player& player)
 
     if (player.getGoldCheatUseCount() > 0)
     {
-        addAlteration("givemesomegolds", "utilisé " + std::to_string(player.getGoldCheatUseCount()) + " fois", "donne entre 100 et 1000 pièces d'or.");
+        addAlteration("givemesomegolds", "utilisé " + std::to_string(player.getGoldCheatUseCount()) + " fois", "donne une bourse aléatoire de 100 à 1000 PF de valeur.");
     }
 
     if (player.getLevelCheatUseCount() > 0)
@@ -532,10 +533,11 @@ bool CheatManager::activateCode(Player& player, DifficultyMode difficulty, Death
     if (normalizedCode == "givemesomegolds")
     {
         Random random;
-        int gold = random.between(100, 1000);
+        int economyUnits = random.between(100, 1000);
         player.recordGoldCheatUse();
-        player.getInventory().earnGold(gold);
-        displayInstantResult("+" + std::to_string(gold) + " pièces d'or.");
+        player.getInventory().earnEconomyUnits(economyUnits);
+        player.refreshCurrencyTitles();
+        displayInstantResult("+" + Money::formatEconomyUnits(economyUnits) + ".");
         return true;
     }
 

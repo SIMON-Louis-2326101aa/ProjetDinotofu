@@ -5,6 +5,8 @@
 
 #include "item/weapon/Weapon.hpp"
 
+#include "economy/Money.hpp"
+
 #include "interface/menu/common/MessageScreen.hpp"
 #include "item/equipment/EquipmentWeightRules.hpp"
 
@@ -334,7 +336,7 @@ std::vector<std::string> Weapon::toDisplayLines() const
         "===== ARME =====",
         "Nom : " + name,
         "Description : " + description,
-        "Valeur : " + std::to_string(value) + " pièces",
+        "Valeur : " + Money::formatEconomyUnits(value),
         "Type : " + weaponTypeLabel(type),
         "Catégorie de poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getWeaponWeightClass(*this)),
         "Contrepartie : " + EquipmentWeightRules::getWeaponTradeoffText(*this),

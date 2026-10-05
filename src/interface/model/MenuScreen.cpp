@@ -901,7 +901,7 @@ namespace
         if (snapshot.specializedView == "session" || containsAny(snapshot.screenId, {"session.party"})) return "session";
         if (snapshot.specializedView == "creation" || containsAny(snapshot.screenId, {"character.creation", "save.characters.create"})) return "creation";
         if (containsAny(text, {"page.previous", "page.next", "previous_page", "next_page", "page précédente", "page precedente", "page suivante", "retour"})) return "navigation";
-        if (containsAny(text, {"combat.reward", "récompense", "recompense", "xp +", "or +", "or récupéré", "or recupere"})) return "reward";
+        if (containsAny(text, {"combat.reward", "récompense", "recompense", "xp +", "or +", "or récupéré", "or recupere", "argent +", "argent récupéré", "argent recupere"})) return "reward";
         if (containsAny(text, {"combat.role", "compétence de rôle", "competence de role", "provocation", "menace", "soutien d'allié", "soutien d'allie"})) return "combat_role";
         if (containsAny(text, {"combat.escape", "fuite", "fuir", "abandon du duel", "échappatoire", "echappatoire"})) return "escape";
         if (containsAny(text, {"pvp.ai.opponent", "adversaire ia", "arène ia", "arene ia", "duel ia"})) return "combat_route";
@@ -990,7 +990,7 @@ namespace
         if (snapshot.specializedView == "session" || containsAny(snapshot.screenId, {"session.party"})) return "Session";
         if (snapshot.specializedView == "creation" || containsAny(snapshot.screenId, {"character.creation", "save.characters.create"})) return "Création";
         if (containsAny(text, {"page.previous", "page.next", "previous_page", "next_page", "page précédente", "page precedente", "page suivante", "retour"})) return "Navigation";
-        if (containsAny(text, {"combat.reward", "récompense", "recompense", "xp +", "or +", "or récupéré", "or recupere"})) return "Récompenses";
+        if (containsAny(text, {"combat.reward", "récompense", "recompense", "xp +", "or +", "or récupéré", "or recupere", "argent +", "argent récupéré", "argent recupere"})) return "Récompenses";
         if (containsAny(text, {"combat.role", "provocation", "menace", "soutien d'allié", "soutien d'allie"})) return "Compétences de rôle";
         if (containsAny(text, {"combat.escape", "fuite", "fuir", "abandon du duel", "échappatoire", "echappatoire"})) return "Fuite / abandon";
         if (containsAny(text, {"pvp.ai.opponent", "adversaire ia", "arène ia", "arene ia", "duel ia"})) return "Arène IA";
@@ -1588,7 +1588,7 @@ namespace
         else if (snapshot.specializedView == "shop")
         {
             addFocusCard(snapshot, "shop.stock", "Stock", "Voir les offres disponibles.", {"stock", "voir", "shop.stock"});
-            addFocusCard(snapshot, "shop.buy", "Acheter", "Acheter avec de l'or si possible.", {"acheter", "buy", "shop.item.buy"});
+            addFocusCard(snapshot, "shop.buy", "Acheter", "Acheter avec l'argent disponible si possible.", {"acheter", "buy", "shop.item.buy"});
             addFocusCard(snapshot, "shop.sell", "Vendre", "Vendre des objets ou ressources.", {"vendre", "sell", "vente"});
             addFocusCard(snapshot, "shop.buyback", "Rachat", "Récupérer une vente récente avant le prochain combat.", {"racheter", "rachat", "buyback"});
             addFocusCard(snapshot, "shop.barter", "Troc", "Échanges contre objets ou matériaux.", {"troquer", "troc", "barter"});

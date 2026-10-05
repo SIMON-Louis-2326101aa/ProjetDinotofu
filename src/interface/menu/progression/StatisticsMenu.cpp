@@ -794,7 +794,7 @@ void StatisticsMenu::displaySummary(const Player& player)
     }
 
     lines.push_back("PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()));
-    lines.push_back("Or : " + std::to_string(player.getInventory().getGold()));
+    lines.push_back("Argent : " + player.getInventory().getWalletLine());
     lines.push_back("État : " + std::string(player.isAlteredByCheats() ? "Altéré" : "Normal"));
     lines.push_back("Clone : " + std::string(player.isClone() ? "oui" : "non"));
 

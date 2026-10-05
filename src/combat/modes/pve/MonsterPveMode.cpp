@@ -2417,7 +2417,7 @@ namespace
 
         lines.push_back("Repos estimé : " + std::to_string(recoveryDays) + " jour(s). Retour opérationnel prévu jour " + std::to_string(readyDay) + ".");
         lines.push_back("Le monde avance réellement de " + std::to_string(recoveryDays) + " jour(s) pendant les soins.");
-        lines.push_back("Note gameplay : en solo, le secours inconnu coûte cher ; en équipe, le groupe amortit le retour du chef, sauf manque de réserve.");
+        lines.push_back("En solo, le secours d'un inconnu coûte cher ; en équipe, le groupe amortit le retour du chef, sauf manque de réserve.");
         MessageScreen::show("INFIRMERIE DU JOUEUR", "combat.pve.player.infirmary." + contextId, lines, false);
         player.advanceWorldDays(recoveryDays);
     }
@@ -2545,7 +2545,7 @@ namespace
         {
             return reward;
         }
-        if (reward.getGold() <= 0)
+        if (reward.getEconomyUnits() <= 0)
         {
             persistRecruitedAllyVitals(player, allies, "combat_sans_or");
             return reward;
@@ -2554,17 +2554,17 @@ namespace
         const int playerShare = normalizeRecruitedAllyShares(allies);
         const int weekIndex = std::max(0, player.getWorldDaysElapsed() / 7);
         std::vector<std::string> lines;
-        lines.push_back("Récompense de groupe : " + Money::formatCopper(reward.getGold()) + " et " + std::to_string(reward.getExperience()) + " XP.");
+        lines.push_back("Récompense de groupe : " + Money::formatEconomyUnits(reward.getEconomyUnits()) + " et " + std::to_string(reward.getExperience()) + " XP.");
         lines.push_back("Part du chef : " + std::to_string(playerShare) + "%. Le joueur garde la plus grosse part, même avec plusieurs alliés.");
         for (const RecruitedAllyCombatSupport& ally : allies)
         {
-            const int copper = std::max(0, (reward.getGold() * ally.normalizedShare) / 100);
+            const int economyUnits = std::max(0, (reward.getEconomyUnits() * ally.normalizedShare) / 100);
             const int activityScore = ally.damageDealt + ally.healingDone + ally.supportActions * 8 + ally.finishBlows * 15 + ally.turnsTaken * 3;
             const int xp = std::max(0, (reward.getExperience() * std::max(5, activityScore)) / std::max(100, activityScore + player.getLevel() * 8));
-            if (copper > 0)
+            if (economyUnits > 0)
             {
                 player.recordCanonicalEvent("recrues_equipees_semaines", ally.name + ":semaine_" + std::to_string(weekIndex), ally.name + " a été équipé cette semaine", 1);
-                player.recordCanonicalEvent("parts_or_recrues", ally.name + ":semaine_" + std::to_string(weekIndex), ally.name + " reçoit une part de combat réel", copper);
+                player.recordCanonicalEvent("parts_or_recrues", ally.name + ":semaine_" + std::to_string(weekIndex), ally.name + " reçoit une part de combat réel", economyUnits);
             }
             if (xp > 0)
             {
@@ -2572,7 +2572,7 @@ namespace
             }
             player.recordCanonicalEvent("participation_recrues", ally.name, ally.name + " participe au combat réel", std::max(1, ally.turnsTaken));
             persistRecruitedAllyVitals(player, ally, "combat_recompense");
-            lines.push_back("- " + ally.name + " : " + Money::formatCopper(copper) + " (" + std::to_string(ally.normalizedShare) + "%), " + std::to_string(xp) + " XP, dégâts " + std::to_string(ally.damageDealt) + ", soutien " + std::to_string(ally.healingDone) + ", actions utiles " + std::to_string(ally.supportActions) + ", finitions " + std::to_string(ally.finishBlows) + ".");
+            lines.push_back("- " + ally.name + " : " + Money::formatEconomyUnits(economyUnits) + " (" + std::to_string(ally.normalizedShare) + "%), " + std::to_string(xp) + " XP, dégâts " + std::to_string(ally.damageDealt) + ", soutien " + std::to_string(ally.healingDone) + ", actions utiles " + std::to_string(ally.supportActions) + ", finitions " + std::to_string(ally.finishBlows) + ".");
         }
         lines.push_back("Le salaire hebdo pourra baisser seulement si la recrue était équipée ET si ces parts couvrent son salaire.");
         MessageScreen::show("PARTAGE AVEC RECRUES", "combat.pve.recruited_allies.reward." + contextId, lines, false);

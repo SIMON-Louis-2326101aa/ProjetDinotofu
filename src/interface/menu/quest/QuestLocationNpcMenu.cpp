@@ -132,7 +132,7 @@ void QuestMenu::openLocations(Player& player)
 
             entries.push_back({
                 city->getName() + " — " + building.name + (building.unlocked ? "" : " [verrouillé]"),
-                building.detail + " Asset futur : " + building.pixelArtHint + ".",
+                building.detail + " Ambiance : " + building.pixelArtHint + ".",
                 building.contact,
                 LocationCategory::City,
                 false,

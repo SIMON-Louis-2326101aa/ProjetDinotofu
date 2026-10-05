@@ -20,6 +20,9 @@ Dates spéciales :
 - Louis : 01/02/2005
 - Henrique : 29/11/2024
 - Hestia : 11/11/1111
+- Willow : 15/12/2025
+- Dwarf : 15/12/2025
+- Badr : 15/12/2025
 - Matt (PRO) : non jouable.
 
 Personnages spéciaux :
@@ -35,6 +38,9 @@ Personnages spéciaux :
 - Mattzelda : colosse humain, blagueur.
 - Trexof : assassin humain, analyste instinctif des failles.
 - Henrique : chevalier, fonce dans le tas, peut revenir une fois à la vie.
+- Willow : humaine, 20 ans, archère. Parle peu, voyage souvent seule, râle facilement et préfère garder ses distances.
+- Dwarf : nain, 24 ans, guerrier. Gros blagueur et provocateur ; certaines vannes peuvent être sexistes ou racistes et les autres personnages peuvent les désapprouver au lieu de les valider.
+- Badr : semi-humain, 48 ans, clerc croyant au corps proche d’un mort-vivant. Sympathique mais inquiétant le jour ; la nuit, son humeur devient très dépressive, il n’aime plus grand-chose et retrouve paradoxalement beaucoup plus de lucidité. Un ver nommé Second vit dans son corps et peut sortir par sa main. La compétence « En avant Second » est prévue plus tard.
 - Matt (PRO) : adversaire spécial très fort, respectueux, silencieux.
 
 Relations et groupes :
@@ -45,6 +51,9 @@ Relations et groupes :
 - Fail / Hazak.
 - Skuro avec personnages compatibles.
 - FireFlight / Matt (PRO).
+- Willow / Dwarf / Badr.
+- Willow / Badr.
+- Dwarf / Badr.
 
 Règles spéciales de groupe :
 - Hazak protège davantage Hestia et peut punir une attaque contre elle.
@@ -54,6 +63,9 @@ Règles spéciales de groupe :
 - Fail profite de son contrat de non-agression avec Hazak pour mieux viser.
 - Si Hazak ou Skuro est présent, un combat peut devenir très dangereux selon le contexte.
 - Si Hazak est avec Hestia, il évite normalement de transformer le combat en massacre pour ne pas la traumatiser.
+- Willow profite des alliés qui attirent l’attention pour garder ses angles de tir.
+- Dwarf prend volontiers la ligne de front et supporte mal qu’un combat reste trop calme.
+- Badr stabilise le trio par son rôle de clerc ; Second reste un compagnon organique distinct dont la vraie compétence spéciale sera ajoutée plus tard.
 
 Effets spéciaux en combat :
 - Hazak : ouverture brutale, contrat de silence, pression froide.

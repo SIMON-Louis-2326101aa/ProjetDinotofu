@@ -5,6 +5,8 @@
 
 #include "item/Item.hpp"
 
+#include "economy/Money.hpp"
+
 #include "interface/menu/common/MessageScreen.hpp"
 
 #include <vector>
@@ -81,7 +83,7 @@ std::vector<std::string> Item::toDisplayLines() const
         "===== OBJET =====",
         "Nom : " + name,
         "Description : " + description,
-        "Valeur : " + std::to_string(value) + " pièces",
+        "Valeur : " + Money::formatEconomyUnits(value),
         "================="
     };
 }

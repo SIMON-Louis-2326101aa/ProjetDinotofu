@@ -9,7 +9,7 @@
 
 std::string VersionInfo::currentVersion()
 {
-    return "3.50.15";
+    return "3.50.34";
 }
 
 std::string VersionInfo::recreateRecommendedBeforeVersion()
@@ -19,7 +19,7 @@ std::string VersionInfo::recreateRecommendedBeforeVersion()
 
 std::string VersionInfo::importantSaveUpdateVersion()
 {
-    return "3.50.12";
+    return "3.50.33";
 }
 
 
@@ -63,6 +63,28 @@ std::string VersionInfo::currentDateText()
            << std::setw(2) << localTime.tm_mday << "/"
            << std::setw(2) << (localTime.tm_mon + 1) << "/"
            << (localTime.tm_year + 1900);
+    return output.str();
+}
+
+std::string VersionInfo::currentDateTimeText()
+{
+    std::time_t now = std::time(nullptr);
+    std::tm localTime{};
+
+#if defined(_WIN32)
+    localtime_s(&localTime, &now);
+#else
+    localtime_r(&now, &localTime);
+#endif
+
+    std::ostringstream output;
+    output << std::setfill('0')
+           << std::setw(2) << localTime.tm_mday << "/"
+           << std::setw(2) << (localTime.tm_mon + 1) << "/"
+           << (localTime.tm_year + 1900) << " "
+           << std::setw(2) << localTime.tm_hour << ":"
+           << std::setw(2) << localTime.tm_min << ":"
+           << std::setw(2) << localTime.tm_sec;
     return output.str();
 }
 

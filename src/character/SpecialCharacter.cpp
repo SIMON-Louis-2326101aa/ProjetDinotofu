@@ -19,6 +19,8 @@ SpecialCharacter::SpecialCharacter()
     permanentlyNonPlayable = false;
     specialDate = "";
     spawnWeight = 1;
+    age = 0;
+    gender = "";
 }
 
 SpecialCharacter::SpecialCharacter(
@@ -30,7 +32,9 @@ SpecialCharacter::SpecialCharacter(
     bool playableWithSpecialDate,
     bool permanentlyNonPlayable,
     const std::string& specialDate,
-    int spawnWeight
+    int spawnWeight,
+    int age,
+    const std::string& gender
 )
 {
     this->name = name;
@@ -42,6 +46,8 @@ SpecialCharacter::SpecialCharacter(
     this->permanentlyNonPlayable = permanentlyNonPlayable;
     this->specialDate = specialDate;
     this->spawnWeight = spawnWeight;
+    this->age = age;
+    this->gender = gender;
 }
 
 std::string SpecialCharacter::getName() const
@@ -109,4 +115,24 @@ bool SpecialCharacter::matchesSpecialDate(const std::string& date) const
 int SpecialCharacter::getSpawnWeight() const
 {
     return spawnWeight;
+}
+
+int SpecialCharacter::getAge() const
+{
+    return age;
+}
+
+std::string SpecialCharacter::getGender() const
+{
+    return gender;
+}
+
+bool SpecialCharacter::hasKnownAge() const
+{
+    return age > 0;
+}
+
+bool SpecialCharacter::hasKnownGender() const
+{
+    return !gender.empty();
 }

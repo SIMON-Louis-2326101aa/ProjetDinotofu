@@ -1,8 +1,12 @@
 # Dinotofu — interface graphique   
 
-L’interface graphique reprend le fonctionnement du jeu terminal dans une présentation plus lisible, interactive et adaptée à une utilisation desktop.   
+## État actuel   
 
-## Principe général   
+L’interface graphique jouable a été retirée provisoirement pendant sa reconstruction. Le mode graphique actuel ne conserve que l’accueil officiel, le bouton **Jouer**, un message **Interface graphique en production**, puis une bascule vers la version terminale. Aucun moteur de partie ne tourne en arrière-plan tant que cet accueil est ouvert.   
+
+L’objectif final reste une vraie application desktop plutôt qu’une grosse interface web maintenue en parallèle. Les sections ci-dessous décrivent donc la **cible fonctionnelle future**, pas l’état jouable actuel.   
+
+## Principe général de la future interface   
 
 - Le moteur C++ reste la source de vérité.   
 - L’interface lit les écrans et états de combat fournis par le jeu sous forme de snapshots JSON.   

@@ -930,16 +930,16 @@ bool CombatActions::executeClassSkill(
         }
     }
 
-    if (hasAny({"voleur", "roublard", "brigand"}) && level >= 3)
+    if (hasAny({"voleur", "roublard", "brigand"}) && level >= 5)
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE VOLEUR",
             "combat.class_skill.thief",
             {attacker.getName() + " cherche une ouverture sale, pratique ou simplement rentable."},
             {
-                {1, "Coup opportuniste", "Niv. 3, recharge 3 tours. Vulnérabilité courte.", true, "opportunist_hit"},
-                {2, "Poudre d'échappée", "Niv. 7, recharge 4 tours. Défense + affaiblissement.", level >= 7, "escape_powder"},
-                {3, "Frappe aux poches", "Niv. 10, recharge 5 tours. Blessure + gêne durable.", level >= 10, "pocket_strike"},
+                {1, "Coup opportuniste", "Niv. 5, recharge 3 tours. Vulnérabilité courte.", true, "opportunist_hit"},
+                {2, "Poudre d'échappée", "Niv. 10, recharge 4 tours. Défense + affaiblissement.", level >= 10, "escape_powder"},
+                {3, "Frappe aux poches", "Niv. 15, recharge 5 tours. Blessure + gêne durable.", level >= 15, "pocket_strike"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -993,15 +993,15 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"assassin", "ombrelame", "lanceur de dagues"}) && level >= 3)
+    if (hasAny({"assassin", "ombrelame", "lanceur de dagues"}) && level >= 5)
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE ASSASSIN",
             "combat.class_skill.assassin",
             {attacker.getName() + " cherche une ouverture d'assassin."},
             {
-                {1, "Pas dans l'angle mort", "Niv. 3, recharge 3 tours. Saignement préparé.", true, "shadow_step"},
-                {2, "Disparition basse", "Niv. 8, recharge 4 tours. Défense + blessure longue.", level >= 8, "low_disappearance"},
+                {1, "Pas dans l'angle mort", "Niv. 5, recharge 3 tours. Saignement préparé.", true, "shadow_step"},
+                {2, "Disparition basse", "Niv. 12, recharge 4 tours. Défense + blessure longue.", level >= 12, "low_disappearance"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1031,15 +1031,15 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"gardien", "tank", "colosse"}) && level >= 3)
+    if (hasAny({"gardien", "tank", "colosse"}) && level >= 5)
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE DÉFENSIVE",
             "combat.class_skill.defense",
             {attacker.getName() + " choisit une posture de protection."},
             {
-                {1, "Rempart provoquant", "Niv. 3, recharge 3 tours. Défense et menace.", true, "taunting_wall"},
-                {2, "Ancrage total", "Niv. 8, recharge 4 tours. Défense très forte.", level >= 8, "total_anchor"},
+                {1, "Rempart provoquant", "Niv. 5, recharge 3 tours. Défense et menace.", true, "taunting_wall"},
+                {2, "Ancrage total", "Niv. 12, recharge 4 tours. Défense très forte.", level >= 12, "total_anchor"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1068,15 +1068,15 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"clerc", "prêtre", "pretre", "paladin"}) && level >= 3)
+    if (hasAny({"clerc", "prêtre", "pretre", "paladin"}) && level >= 5)
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE SACRÉE",
             "combat.class_skill.sacred",
             {attacker.getName() + " rassemble une énergie protectrice."},
             {
-                {1, "Serment de survie", "Niv. 3, recharge 3 tours. Soin personnel + garde légère.", true, "survival_oath"},
-                {2, "Prière purificatrice", "Niv. 7, recharge 5 tours. Soin + purification.", level >= 7, "purifying_prayer"},
+                {1, "Serment de survie", "Niv. 5, recharge 3 tours. Soin personnel + garde légère.", true, "survival_oath"},
+                {2, "Prière purificatrice", "Niv. 10, recharge 5 tours. Soin + purification.", level >= 10, "purifying_prayer"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1130,7 +1130,7 @@ bool CombatActions::executeClassSkill(
     }
 
     if (hasAny({"mage", "magicien", "ensorceleur", "sorcier", "arcaniste", "pyromancien", "cryomancien", "occultiste", "invocateur", "nécromancien", "necromancien", "pactisant", "clerc", "prêtre", "pretre", "paladin", "druide", "shaman", "templier", "mage-lame", "chevalier runique"})
-        && (level >= 4
+        && (level >= 5
             || (player != nullptr && (player->hasActiveSkill("learned_arcane_mark")
                 || player->hasActiveSkill("learned_arcane_binding")
                 || player->hasActiveSkill("learned_elemental_ward")
@@ -1139,11 +1139,11 @@ bool CombatActions::executeClassSkill(
                 || player->hasActiveSkill("learned_mana_suture")
                 || player->hasActiveSkill("learned_occult_bramble")))))
     {
-        bool canArcaneMark = level >= 4 || (player != nullptr && player->hasActiveSkill("learned_arcane_mark"));
-        bool canArcaneBinding = level >= 6 || (player != nullptr && player->hasActiveSkill("learned_arcane_binding"));
-        bool canElementalWard = level >= 8 || (player != nullptr && player->hasActiveSkill("learned_elemental_ward"));
-        bool canControlledOverload = level >= 9;
-        bool canResistanceRift = level >= 11 || (player != nullptr && player->hasActiveSkill("learned_resistance_rift"));
+        bool canArcaneMark = level >= 5 || (player != nullptr && player->hasActiveSkill("learned_arcane_mark"));
+        bool canArcaneBinding = level >= 8 || (player != nullptr && player->hasActiveSkill("learned_arcane_binding"));
+        bool canElementalWard = level >= 11 || (player != nullptr && player->hasActiveSkill("learned_elemental_ward"));
+        bool canControlledOverload = level >= 14;
+        bool canResistanceRift = level >= 17 || (player != nullptr && player->hasActiveSkill("learned_resistance_rift"));
         bool canFrostNeedle = player != nullptr && player->hasActiveSkill("learned_frost_needle");
         bool canManaSuture = player != nullptr && player->hasActiveSkill("learned_mana_suture");
         bool canOccultBramble = player != nullptr && player->hasActiveSkill("learned_occult_bramble");
@@ -1156,11 +1156,11 @@ bool CombatActions::executeClassSkill(
                 "Les sorts non compris restent visibles mais verrouillés."
             },
             {
-                {1, "Marque élémentaire", "Recharge 3 tours.", canArcaneMark, "arcane_mark"},
-                {2, "Entrave arcanique", "Recharge 4 tours.", canArcaneBinding, "arcane_binding"},
-                {3, "Voile élémentaire", "Recharge 4 tours.", canElementalWard, "elemental_ward"},
-                {4, "Surcharge contrôlée", "Niv. 9, recharge 5 tours.", canControlledOverload, "controlled_overload"},
-                {5, "Faille de résistance", "Recharge 5 tours.", canResistanceRift, "resistance_rift"},
+                {1, "Marque élémentaire", "Niv. 5 ou grimoire, recharge 3 tours.", canArcaneMark, "arcane_mark"},
+                {2, "Entrave arcanique", "Niv. 8 ou grimoire, recharge 4 tours.", canArcaneBinding, "arcane_binding"},
+                {3, "Voile élémentaire", "Niv. 11 ou grimoire, recharge 4 tours.", canElementalWard, "elemental_ward"},
+                {4, "Surcharge contrôlée", "Niv. 14, recharge 5 tours.", canControlledOverload, "controlled_overload"},
+                {5, "Faille de résistance", "Niv. 17 ou grimoire, recharge 5 tours.", canResistanceRift, "resistance_rift"},
                 {6, "Aiguille de givre étudiée", "Grimoire, recharge 4 tours.", canFrostNeedle, "frost_needle"},
                 {7, "Suture de mana étudiée", "Grimoire, recharge 5 tours.", canManaSuture, "mana_suture"},
                 {8, "Ronces occultes étudiées", "Grimoire, recharge 4 tours.", canOccultBramble, "occult_bramble"},
@@ -1383,7 +1383,7 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"archer", "rôdeur", "rodeur", "tireur"}) && level >= 4)
+    if (hasAny({"archer", "rôdeur", "rodeur", "tireur"}) && level >= 5)
     {
         if (!hasRangedWeapon())
         {
@@ -1401,8 +1401,8 @@ bool CombatActions::executeClassSkill(
             "combat.class_skill.ranged",
             {attacker.getName() + " prépare une technique à distance."},
             {
-                {1, "Tir de couverture", "Niv. 4, recharge 3 tours. Contrôle la cible.", true, "cover_shot"},
-                {2, "Tir d'arrêt", "Niv. 8, recharge 4 tours. Casse l'élan.", level >= 8, "stopping_shot"},
+                {1, "Tir de couverture", "Niv. 5, recharge 3 tours. Contrôle la cible.", true, "cover_shot"},
+                {2, "Tir d'arrêt", "Niv. 10, recharge 4 tours. Casse l'élan.", level >= 10, "stopping_shot"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1432,15 +1432,15 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"berserker", "barbare", "briseur"}) && level >= 4)
+    if (hasAny({"berserker", "barbare", "briseur"}) && level >= 5)
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE BRUTALE",
             "combat.class_skill.brutal",
             {attacker.getName() + " canalise une violence directe."},
             {
-                {1, "Rage assumée", "Niv. 4, recharge 3 tours. Bonus de dégâts avec contrecoup.", true, "assumed_rage"},
-                {2, "Coup de rupture", "Niv. 8, recharge 4 tours. Frappe plus lourde et saignement.", level >= 8, "rupture_blow"},
+                {1, "Rage assumée", "Niv. 5, recharge 3 tours. Bonus de dégâts avec contrecoup.", true, "assumed_rage"},
+                {2, "Coup de rupture", "Niv. 10, recharge 4 tours. Frappe plus lourde et saignement.", level >= 10, "rupture_blow"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1490,16 +1490,16 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"alchim", "artific", "bricoleur"}) && level >= 4)
+    if (hasAny({"alchim", "artific", "bricoleur"}) && level >= 5)
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE EXPÉRIMENTALE",
             "combat.class_skill.experimental",
             {attacker.getName() + " choisit un procédé instable."},
             {
-                {1, "Mélange improvisé", "Niv. 4, recharge 3 tours. Effet aléatoire.", true, "improvised_mix"},
-                {2, "Fiole tactique", "Niv. 7, recharge 4 tours. Choix d'effet.", level >= 7, "tactical_vial"},
-                {3, "Poudre de fragilisation", "Niv. 9, recharge 5 tours. Vulnérabilité.", level >= 9, "fragility_powder"},
+                {1, "Mélange improvisé", "Niv. 5, recharge 3 tours. Effet aléatoire.", true, "improvised_mix"},
+                {2, "Fiole tactique", "Niv. 9, recharge 4 tours. Choix d'effet.", level >= 9, "tactical_vial"},
+                {3, "Poudre de fragilisation", "Niv. 13, recharge 5 tours. Vulnérabilité.", level >= 13, "fragility_powder"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1554,15 +1554,15 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"invoc", "dresseur", "nécro", "necro"}) && level >= 5)
+    if (hasAny({"invoc", "dresseur", "nécro", "necro"}) && level >= 6)
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE D'APPEL",
             "combat.class_skill.call",
             {attacker.getName() + " appelle une pression de groupe."},
             {
-                {1, "Ordre spectral", "Niv. 5, recharge 3 tours. Appui invisible et froid.", true, "spectral_order"},
-                {2, "Lien de meute / ombre", "Niv. 9, recharge 4 tours. Pression renforcée.", level >= 9, "pack_shadow_link"},
+                {1, "Ordre spectral", "Niv. 6, recharge 3 tours. Appui invisible et froid.", true, "spectral_order"},
+                {2, "Lien de meute / ombre", "Niv. 12, recharge 4 tours. Pression renforcée.", level >= 12, "pack_shadow_link"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );

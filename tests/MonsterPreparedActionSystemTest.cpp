@@ -1,4 +1,5 @@
 #include "combat/system/MonsterPreparedActionSystem.hpp"
+#include "combat/system/DefensePostureSystem.hpp"
 #include "entity/Monster.hpp"
 #include "entity/Player.hpp"
 #include <cassert>
@@ -21,6 +22,19 @@ int main()
     assert(player.hasWeakening());
     assert(player.hasNextHitVulnerability());
     assert(!brute.hasPreparedSignature());
+
+
+    Player guardedPlayer;
+    Monster guardedBrute("Brute gardée", "Brute lourde", Race::Orc, 20, 120, 8, 14, 20, 0, 0, false, true, false, false);
+    guardedBrute.startPreparedSignature("Charge écrasante", 2);
+    guardedPlayer.startDefensePosture(35, 0, "Posture de test");
+    const int guardedHpBefore = guardedPlayer.getHp();
+    MonsterPreparedActionResolution guarded = MonsterPreparedActionSystem::resolve(guardedBrute, guardedPlayer);
+    assert(guarded.resolved);
+    assert(guarded.damage > 0);
+    assert(guarded.damage < resolved.damage);
+    assert(guardedPlayer.getHp() == guardedHpBefore - guarded.damage);
+    assert(!guardedPlayer.isInDefensePosture());
 
     Player secondPlayer;
     Monster shocked("Golem chargé", "Construction lourde", Race::Construction, 25, 140, 9, 15, 22, 0, 0, false, true, false, false);

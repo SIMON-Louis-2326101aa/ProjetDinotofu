@@ -3,6 +3,7 @@
 #include "world/CityTravelRules.hpp"
 
 #include "economy/EconomyBalance.hpp"
+#include "economy/Money.hpp"
 #include "world/WorldMap.hpp"
 #include "world/LocalReputationSystem.hpp"
 
@@ -86,7 +87,7 @@ CityAccessReport CityTravelRules::evaluateAccess(const Player& player, const Cit
     }
     else
     {
-        report.lines.push_back("Accès : ville fermée pour l'instant, sans téléportation forcée ni raccourci gratuit.");
+        report.lines.push_back("Accès : ville fermée, sans téléportation forcée ni raccourci gratuit.");
     }
 
     return report;
@@ -151,9 +152,8 @@ std::vector<std::string> CityTravelRules::buildNightTravelWarningLines(const Pla
     if (isNightTravelClosed(player))
     {
         lines.push_back("Les portes de route contrôlée sont fermées par les gardes pendant la nuit.");
-        lines.push_back("But gameplay : éviter que le joueur marche volontairement sans payer d'auberge juste pour faire passer la nuit.");
-        lines.push_back("Voyage nocturne futur : seulement via convoi gardé, permis spécial, urgence de quête ou événement scénarisé.");
-        lines.push_back("Aucune attente gratuite jusqu'au matin n'est ajoutée ici, sinon l'auberge deviendrait inutile.");
+        lines.push_back("Voyage nocturne : réservé aux convois gardés, permis spéciaux, urgences reconnues ou événements exceptionnels.");
+        lines.push_back("Les gardes conseillent de trouver un abri et d'attendre la réouverture des portes.");
     }
     else
     {
@@ -210,10 +210,10 @@ std::vector<std::string> CityTravelRules::buildTravelPreviewLines(const Player& 
     {
         lines.push_back("Réduction : coffre municipal possédé à " + destination.getName() + " → taxe divisée par deux (base " + std::to_string(normalTax) + " cuivre).");
     }
-    lines.push_back("Important : aucune taxe n'est prévue pour chaque exploration, afin d'éviter le côté relou à chaque sortie.");
-    lines.push_back("Référence économie : trajet estimé à " + std::to_string(EconomyBalance::estimatedTravelCopperCost(distance)) + " cuivre pour billets/convois et équilibrage des routes.");
-    lines.push_back("Animation future : chemin entre les remparts de " + origin->getName() + " et les portes de " + destination.getName() + ".");
-    lines.push_back("Background de trajet futur : route, relais, météo et biome traversé selon la distance réelle.");
+    lines.push_back("La taxe concerne le changement de ville, pas chaque sortie d'exploration.");
+    lines.push_back("Coût de trajet estimé : " + Money::formatCopper(EconomyBalance::estimatedTravelCopperCost(distance)) + ".");
+    lines.push_back("Trajet : des remparts de " + origin->getName() + " jusqu'aux portes de " + destination.getName() + ".");
+    lines.push_back("En chemin : routes, relais, météo et biomes varient selon la distance parcourue.");
     const std::vector<std::string> nightLines = buildNightTravelWarningLines(player);
     for (const std::string& nightLine : nightLines)
     {
@@ -222,15 +222,15 @@ std::vector<std::string> CityTravelRules::buildTravelPreviewLines(const Player& 
 
     if (distance <= 20)
     {
-        lines.push_back("Durée estimée : trajet court, animation rapide.");
+        lines.push_back("Durée estimée : trajet court.");
     }
     else if (distance <= 45)
     {
-        lines.push_back("Durée estimée : trajet moyen, animation de route complète.");
+        lines.push_back("Durée estimée : trajet moyen.");
     }
     else
     {
-        lines.push_back("Durée estimée : long voyage, animation plus longue et transitions possibles.");
+        lines.push_back("Durée estimée : long voyage, avec plusieurs étapes possibles.");
     }
 
     const std::vector<std::string> routeLines = buildRouteSystemLines(player, destination);
@@ -264,17 +264,17 @@ std::vector<CityBuildingPreview> CityTravelRules::getBuildingsForCity(const Play
     }
     else if (city.getId() == "port_lanterne")
     {
-        buildings.push_back({"harbor", "Quais des lanternes", "Commerce", "Négociante des routes salées", "Commandes marchandes, cargaisons variables et futures réservations.", "quais, barques, lanternes basses", true});
-        buildings.push_back({"underbridge", "Marché sous les ponts", "Risque", "Collecteur masqué", "Stocks rares, parfois douteux, à encadrer plus tard par réputation et risques.", "arches sombres, étals cachés", player.getLevel() >= 8});
+        buildings.push_back({"harbor", "Quais des lanternes", "Commerce", "Négociante des routes salées", "Commandes marchandes et cargaisons variables selon les arrivages.", "quais, barques, lanternes basses", true});
+        buildings.push_back({"underbridge", "Marché sous les ponts", "Risque", "Collecteur masqué", "Stocks rares et parfois douteux, accessibles aux voyageurs déjà aguerris.", "arches sombres, étals cachés", player.getLevel() >= 8});
     }
     else if (city.getId() == "lys_de_givre")
     {
-        buildings.push_back({"sanctuary", "Sanctuaire du Lys boréal", "Soin", "Soigneuse du nord", "Soins rares, résistances élémentaires et futures bénédictions contrôlées.", "sanctuaire glacé, vitraux bleus", player.getLevel() >= 15});
+        buildings.push_back({"sanctuary", "Sanctuaire du Lys boréal", "Soin", "Soigneuse du nord", "Soins rares et savoirs liés aux résistances élémentaires.", "sanctuaire glacé, vitraux bleus", player.getLevel() >= 15});
         buildings.push_back({"frost_gate", "Porte du nord", "Exploration", "Garde boréal", "Accès aux glaciers et routes froides après preuve de valeur.", "grande porte gelée", player.isBossDefeated(1)});
     }
     else
     {
-        buildings.push_back({"mira_office", "Intendance de Mira", "Histoire", "Mira", "Développement de Valebrume, priorités de survie et objectifs de chapitre.", "bureau simple, cartes et listes de matériaux", true});
+        buildings.push_back({"mira_office", "Intendance de Mira", "Histoire", "Mira", "Priorités de Valebrume, besoins de survie et objectifs du moment.", "bureau simple, cartes et listes de matériaux", true});
         buildings.push_back({"bram_forge", "Forge de Bram", "Forge", "Bram", "Réparations, outils de départ et récupération de matériaux utiles.", "petite forge usée mais active", true});
     }
 
@@ -294,8 +294,8 @@ std::vector<std::string> CityTravelRules::buildCityHubLines(const Player& player
     lines.push_back("Ville : " + city->getName() + ".");
     lines.push_back(city->getDescription());
     lines.push_back("Guilde : " + city->getGuildName() + (player.isRegisteredAtCityGuild(city->getId()) ? " [enregistrée]." : " [mise à niveau locale non faite]."));
-    lines.push_back("Future IG : image de ville cliquable, bâtiments séparés, grande porte pour explorer et arène urbaine pour combat unique.");
-    lines.push_back("Politique images : elles restent 100% supplément visuel ; les textes et menus conservent toutes les informations utiles.");
+    lines.push_back("Quartiers principaux : guilde, auberge, marché, archives, grande porte et arène urbaine.");
+    lines.push_back("Les panneaux et registres locaux décrivent les services disponibles dans chaque quartier.");
     const std::vector<std::string> localLines = buildLocalCityDifferentiationLines(player);
     lines.push_back("");
     lines.insert(lines.end(), localLines.begin(), localLines.end());
@@ -306,7 +306,7 @@ std::vector<std::string> CityTravelRules::buildCityHubLines(const Player& player
     {
         lines.push_back("- " + building.name + " [" + building.category + "] " + (building.unlocked ? "accessible" : "verrouillé") + ".");
         lines.push_back("  " + building.detail);
-        lines.push_back("  Asset futur : " + building.pixelArtHint + ".");
+        lines.push_back("  Ambiance : " + building.pixelArtHint + ".");
     }
     return lines;
 }
@@ -327,7 +327,7 @@ std::vector<std::string> CityTravelRules::buildLocalCityDifferentiationLines(con
     const LocalReputationResult reputation = LocalReputationSystem::evaluate(player, city->getId());
     lines.push_back("Réputation locale : " + reputation.label + " (score " + std::to_string(reputation.score) + ").");
     lines.push_back("Réaction locale : " + reputation.reactionLine);
-    lines.push_back("Effet futur : prix, négociations, accès, gardes, réservations et quêtes locales pourront utiliser ce score.");
+    lines.push_back("Ce score résume la manière dont la ville perçoit tes actions et ta fiabilité locale.");
     lines.push_back("Ressources proches :");
     for (const std::string& resource : city->getResourceSpecialties())
     {
@@ -364,7 +364,7 @@ std::vector<std::string> CityTravelRules::buildLocalCityDifferentiationLines(con
         lines.push_back("Quêtes locales : preuve de valeur, expéditions gelées, fragments lunaires et serments anciens.");
     }
 
-    lines.push_back("Règle future : une quête de guilde locale devra généralement être rendue à la bonne guilde, pas dans n'importe quelle ville.");
+    lines.push_back("Les guildes locales attendent généralement que leurs contrats soient rendus au bon comptoir.");
     return lines;
 }
 
@@ -385,13 +385,13 @@ std::vector<std::string> CityTravelRules::buildRouteSystemLines(const Player& pl
     const int eventLimit = getRouteEventLimit(distance);
     lines.push_back("Routes possibles entre " + origin->getName() + " et " + destination.getName() + " :");
     lines.push_back("- Route contrôlée : choix par défaut, taxe " + std::to_string(baseTax) + " cuivre, danger normal, fiable pour le moteur actuel.");
-    lines.push_back("- Route sûre : plus lente, danger réduit, coût futur plus élevé via escorte/convoi.");
+    lines.push_back("- Route sûre : plus lente, danger réduit, escorte ou convoi plus coûteux.");
     lines.push_back("- Route rapide : plus courte en animation, danger supérieur, événements de route plus probables.");
-    lines.push_back("- Convoi marchand : payant, stable, utile pour les longues distances et futures commandes.");
+    lines.push_back("- Convoi marchand : payant, stable, utile pour les longues distances et les commandes marchandes.");
     lines.push_back("- Raccourci découvert : indisponible tant que le lieu ou la route n'a pas été trouvé en exploration.");
     lines.push_back("Découvertes de route : " + std::to_string(discoveryCount) + "/" + std::to_string(discoveryLimit) + " pour cette liaison. Une fois la limite atteinte, la route est considérée comme bien connue.");
     lines.push_back("Événements importants de route : " + std::to_string(eventCount) + "/" + std::to_string(eventLimit) + ". Les gros événements ne peuvent pas se répéter à l'infini.");
-    lines.push_back("État V3.34 : le joueur choisit maintenant une route réelle avant validation ; les effets restent légers tant que les systèmes d'embuscade/convoi ne sont pas complets.");
+    lines.push_back("Le trajet doit être choisi avant le départ ; distance, danger et coût dépendent de la route retenue.");
     lines.push_back("Rappel taxe : elle s'applique seulement au changement de ville, jamais à chaque exploration depuis la porte.");
     return lines;
 }
@@ -407,13 +407,13 @@ std::vector<std::string> CityTravelRules::buildExplorationMapLines(const Player&
     }
 
     lines.push_back("Ville actuelle : " + currentCity->getName() + ".");
-    lines.push_back("Future IG : grande carte par biomes, lieux cliquables, zones inconnues grisées ou enfumées.");
+    lines.push_back("Carte d'exploration : biomes connus, lieux accessibles et zones inconnues encore grisées ou enfumées.");
     lines.push_back("Même avec les images activées en IG, les distances, dangers, conditions et récompenses restent écrits.");
     lines.push_back("La distance d'un même biome varie selon la ville de départ.");
     for (const CityBiomeDistance& distance : currentCity->getBiomeDistances())
     {
         const std::string knowledge = distance.initiallyKnown ? "connu" : "gris/enfumé tant que non découvert";
-        lines.push_back("- " + distance.biomeName + " : " + std::to_string(distance.distanceKm) + " km | " + knowledge + " | fond futur : " + distance.backgroundTheme + ".");
+        lines.push_back("- " + distance.biomeName + " : " + std::to_string(distance.distanceKm) + " km | " + knowledge + " | ambiance : " + distance.backgroundTheme + ".");
         std::vector<std::string> placeLines = WorldMap::buildPlacePreviewLines(distance.biomeName, distance.distanceKm, distance.initiallyKnown);
         for (const std::string& placeLine : placeLines)
         {
@@ -427,7 +427,7 @@ std::vector<std::string> CityTravelRules::buildSchematicMapLines(const Player& p
 {
     std::vector<std::string> lines;
     const City* currentCity = City::findById(player.getCurrentCityId());
-    lines.push_back("Carte schématique IG temporaire : points de ville, routes et biomes avant le vrai pixel-art.");
+    lines.push_back("La carte indique les villes, routes et biomes déjà connus.");
     lines.push_back("Ville actuelle : " + std::string(currentCity == nullptr ? "inconnue" : currentCity->getName()) + ".");
     lines.push_back("");
     lines.push_back("Villes :");
@@ -459,7 +459,7 @@ std::vector<std::string> CityTravelRules::buildSchematicMapLines(const Player& p
     {
         for (const CityBiomeDistance& biome : currentCity->getBiomeDistances())
         {
-            lines.push_back("- " + std::string(biome.initiallyKnown ? "visible" : "gris/enfumé") + " : " + biome.biomeName + " à " + std::to_string(biome.distanceKm) + " km — fond futur : " + biome.backgroundTheme + ".");
+            lines.push_back("- " + std::string(biome.initiallyKnown ? "visible" : "gris/enfumé") + " : " + biome.biomeName + " à " + std::to_string(biome.distanceKm) + " km — ambiance : " + biome.backgroundTheme + ".");
         }
     }
     lines.push_back("Note : cette carte est volontairement schématique. Le vrai hub cliquable arrivera avec la bible pixel-art et les assets.");
@@ -470,7 +470,7 @@ std::vector<std::string> CityTravelRules::buildSchematicMapLines(const Player& p
 std::vector<std::string> CityTravelRules::buildFutureVisualPlanningLines()
 {
     return {
-        "Ville future : une vraie image pixel-art de ville servira de hub.",
+        "La ville rassemble les services principaux autour de quartiers clairement identifiés.",
         "Paramètres : en terminal, les images sont désactivées et non activables ; en IG, elles pourront être désactivées.",
         "Règle accessibilité : aucune information ne doit être retirée du texte sous prétexte qu’une image existe.",
         "Bâtiments : guilde, coffre, forge, boutiques, auberge, archives et autres services deviendront cliquables.",

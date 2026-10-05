@@ -54,8 +54,10 @@ jobs:
           REASON=""
 
           REQUIRED_ASSETS=(
-            "Dinotofu-Windows-v${VERSION}.zip"
-            "Dinotofu-Linux-v${VERSION}.7z"
+            "INSTALLER-DINOTOFU-WINDOWS-v${VERSION}.zip"
+            "INSTALLER-DINOTOFU-LINUX-v${VERSION}.7z"
+            "Dinotofu-Windows-v${VERSION}-TECHNICAL-PAYLOAD.zip"
+            "Dinotofu-Linux-v${VERSION}-TECHNICAL-PAYLOAD.7z"
           )
 
           echo "Version detectee dans le code : ${VERSION}"
@@ -102,10 +104,10 @@ jobs:
             REASON="le tag ${TAG} existe deja mais la release GitHub manque"
           elif [[ "${RELEASE_HAS_REQUIRED_ASSETS}" == "false" ]]; then
             SHOULD_PUBLISH="true"
-            REASON="la release ${TAG} existe mais il manque au moins une archive .7z Windows/Linux"
+            REASON="la release ${TAG} existe mais il manque au moins un pack installateur ou payload technique"
           else
             SHOULD_PUBLISH="false"
-            REASON="le tag ${TAG} et les archives .7z Windows/Linux attendues existent deja"
+            REASON="le tag ${TAG} et les 4 assets attendus existent deja"
           fi
 
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
@@ -152,7 +154,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}
-          path: release_packages/Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}.7z
+          path: |
+            release_packages/Dinotofu-Linux-v${{ needs.prepare-release.outputs.version }}-TECHNICAL-PAYLOAD.7z
+            release_packages/INSTALLER-DINOTOFU-LINUX-v${{ needs.prepare-release.outputs.version }}.7z
           if-no-files-found: error
 
   build-windows:
@@ -182,7 +186,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}
-          path: release_packages/Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}.zip
+          path: |
+            release_packages/Dinotofu-Windows-v${{ needs.prepare-release.outputs.version }}-TECHNICAL-PAYLOAD.zip
+            release_packages/INSTALLER-DINOTOFU-WINDOWS-v${{ needs.prepare-release.outputs.version }}.zip
           if-no-files-found: error
 
   publish-release:
@@ -222,15 +228,19 @@ jobs:
 
           Raison : ${RELEASE_REASON}
 
-          Fichiers disponibles :
-          - Dinotofu-Windows-v${RELEASE_VERSION}.zip : Version Windows (Archive standard ZIP - decompresse et joue directement sans outil tiers !)
-          - Dinotofu-Linux-v${RELEASE_VERSION}.7z : Version Linux (Archive 7z LZMA2)
+          Fichiers conseilles aux joueurs :
+          - INSTALLER-DINOTOFU-WINDOWS-v${RELEASE_VERSION}.zip : installateur Windows + documentation texte uniquement.
+          - INSTALLER-DINOTOFU-LINUX-v${RELEASE_VERSION}.7z : installateur Linux + documentation texte uniquement.
 
-          Lancement rapide :
-          1. Telecharge le fichier correspondant a ton systeme.
-          2. Decompresse l'archive où tu veux (Explorateur de fichiers Windows ou 7-Zip).
-          3. Lance Lancer-Dinotofu (qui propose au choix l'Interface Graphique ou le Mode Terminal) !
-          4. Si tu souhaites creer un raccourci sur ton bureau, lance Installer-Dinotofu.
+          Payloads techniques (conserves pour installateurs / mises a jour / compatibilite) :
+          - Dinotofu-Windows-v${RELEASE_VERSION}-TECHNICAL-PAYLOAD.zip
+          - Dinotofu-Linux-v${RELEASE_VERSION}-TECHNICAL-PAYLOAD.7z
+
+          Installation rapide :
+          1. Telecharge uniquement le fichier qui commence par INSTALLER-DINOTOFU correspondant a ton systeme.
+          2. Decompresse ce petit pack.
+          3. Lance INSTALLER-DINOTOFU. Le jeu complet sera recupere automatiquement depuis le fichier marque TECHNICAL-PAYLOAD.
+          4. Le mode Terminal est le mode de jeu par defaut. L'interface graphique reste en cours de developpement.
           EOF
 
           if gh release view "${RELEASE_TAG}" --repo "${GH_REPO}" >/dev/null 2>&1; then

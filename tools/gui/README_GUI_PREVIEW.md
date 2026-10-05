@@ -26,35 +26,12 @@ http://127.0.0.1:8787/tools/gui/dinotofu_gui_experimental.html
 
 ## Rôle actuel   
 
-L'IG lit les snapshots produits par le jeu, affiche les menus, combats et cartes, puis envoie les choix dans une file de commandes consommée par le moteur. En combat, les choix du joueur disparaissent dès leur validation, le déroulement du tour reste regroupé dans un même écran et les petites transitions peuvent avancer après un délai de lecture. L'écran ajoute aussi un bandeau permanent avec PV, jour, moment de journée et portefeuille complet, plus une couche de cartes de lecture graphique pour rendre les informations terminal plus rapides à comprendre. Le terminal reste disponible comme secours.   
+Cette page n’est plus une tentative d’interface jouable. Elle sert uniquement d’accueil graphique léger pendant la reconstruction de la vraie application desktop.   
 
-## Entrées supportées   
+- **Jouer** affiche l’état « interface graphique en production ».   
+- **Arrêter et passer à la version terminale** envoie une demande locale au launcher.   
+- Le launcher coupe le petit serveur d’accueil puis démarre la version terminale.   
+- Aucun moteur C++ de partie ne tourne en arrière-plan pendant l’attente sur l’accueil.   
+- Si le serveur local n’est pas disponible, la page indique d’utiliser le raccourci Terminal.   
 
-- choix numériques ;   
-- quantités ;   
-- confirmations exactes ;   
-- textes libres ;   
-- codes cachés ;   
-- clics sur actions, cartes métier, focus cards et unités ciblables ;   
-- listes de quêtes condensées, inspection des contrats acceptés et demandes d'informations avant acceptation.   
-
-## Règles importantes   
-
-- Les numéros doivent rester visibles sur les actions.   
-- Les recommandations ne doivent pas forcer la main.   
-- Les attaques ne doivent être mises en avant que si une faiblesse est connue/débloquée.   
-- Le heal peut être recommandé quand il est pertinent.   
-- Une unique action sûre peut être mise en avant.   
-- Le terminal reste obligatoire comme secours.   
-
-## Jalons   
-
-- V2.01.03 : légendes automatiques moins répétitives après reprise de sauvegarde et dialogues d’ambiance PNJ/guilde ajoutés.   
-- V3.00.00 : premier chapitre d'histoire.   
-- Multijoueur en ligne : grosse version future, pas prioritaire.   
-
-## Note V2.01.03   
-
-- Le bestiaire expose maintenant un registre séparé des légendes.   
-- Les sous-sections de légendes doivent rester lisibles dans l'IG comme dans le terminal : retour séparé, choix numérotés, textes blancs sur fonds sombres.   
-- La V2.01.03 est maintenant le socle de sauvegarde conseillé côté registre/lore ; les personnages plus anciens déclenchent une recommandation forte de recréation.   
+Le serveur conserve temporairement ses anciens endpoints de debug/snapshot pour compatibilité avec les outils de développement, mais l’accueil public ne les utilise plus.   

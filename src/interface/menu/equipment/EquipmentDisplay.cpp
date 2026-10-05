@@ -7,6 +7,7 @@
 
 #include "interface/TerminalInterface.hpp"
 #include "combat/system/CombatClassSystem.hpp"
+#include "economy/Money.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 
@@ -85,7 +86,7 @@ namespace
             itemData.status = weapon.isBroken() ? "Cassée | Malus de classe" : "Malus de classe";
             itemData.reward = "Avertissement : " + CombatClassSystem::getWeaponHandlingLabel(player, weapon.getType(), weapon.getName());
         }
-        itemData.price = std::to_string(weapon.getValue()) + " or";
+        itemData.price = Money::formatEconomyUnits(weapon.getValue());
         itemData.important = weapon.isBroken();
         return itemData;
     }
@@ -103,7 +104,7 @@ namespace
             + " | Critique : +" + std::to_string(weapon.getCriticalBonus());
         itemData.status = weapon.isBroken() ? "Cassée" : "Utilisable";
         itemData.progress = "Durabilité : " + EquipmentDisplay::weaponDurabilityText(weapon);
-        itemData.price = std::to_string(weapon.getValue()) + " or";
+        itemData.price = Money::formatEconomyUnits(weapon.getValue());
         itemData.important = weapon.isBroken();
         return itemData;
     }
@@ -129,7 +130,7 @@ namespace
             itemData.status = armor.isBroken() ? "Cassée | Malus de classe" : "Malus de classe";
             itemData.reward = "Avertissement : " + CombatClassSystem::getArmorHandlingLabel(player, armor.getType(), armor.getName());
         }
-        itemData.price = std::to_string(armor.getValue()) + " or";
+        itemData.price = Money::formatEconomyUnits(armor.getValue());
         itemData.important = armor.isBroken();
         return itemData;
     }
@@ -146,7 +147,7 @@ namespace
             + " | Réduction : " + std::to_string(armor.getDamageReduction());
         itemData.status = armor.isBroken() ? "Cassée" : "Utilisable";
         itemData.progress = "Durabilité : " + EquipmentDisplay::armorDurabilityText(armor);
-        itemData.price = std::to_string(armor.getValue()) + " or";
+        itemData.price = Money::formatEconomyUnits(armor.getValue());
         itemData.important = armor.isBroken();
         return itemData;
     }

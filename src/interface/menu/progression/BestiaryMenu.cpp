@@ -313,6 +313,9 @@ namespace
             {"Personnages spéciaux", "Louis", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué progressivement. Le bestiaire évite de spoiler son rôle, ses amis et son style de combat.", "Identité verrouillée", 0, 0},
             {"Personnages spéciaux", "Trexof", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué par progression ou rencontre. Ses liens et son vrai style restent cachés au départ.", "Identité verrouillée", 0, 0},
             {"Personnages spéciaux", "Mattzelda", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué progressivement. Le registre ne dévoile pas encore son profil de colosse humain.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Willow", "Archère humaine solitaire non confirmée.", "Le registre sait qu'une archère de 20 ans voyage souvent seule, parle peu et préfère résoudre les problèmes à distance. Ses détails restent à confirmer par rencontre ou rumeur crédible.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Dwarf", "Guerrier nain non confirmé.", "Un guerrier nain de 24 ans circule avec une réputation de combattant solide et de blagueur provocateur. Le registre ne transforme pas ses défauts en qualités : certaines de ses vannes passent très mal.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Badr", "Clerc semi-humain inquiétant non confirmé.", "Un clerc de 48 ans, croyant et bienveillant malgré une apparence proche d'un mort-vivant. Des témoignages mentionnent aussi un compagnon organique nommé Second, sans expliquer encore ce qu'il est.", "Identité verrouillée", 0, 0},
             {"Légendes / contes", "Légendes de bibliothèque", "Rayonnage de récits du monde.", "La bibliothèque classe des légendes longues, des histoires pour enfant et des récits incomplets. Ces textes ajoutent du lore sans bloquer le voyage.", "Archive de bibliothèque", 0, 0},
             {"Légendes / contes", "Légendes de salle de boss", "Certains lieux racontent plus qu'un combat.", "Certaines salles anciennes ou certains conteurs laissent parfois une légende rare. Le registre les traite comme des moments spéciaux, pas comme un rituel obligatoire avant chaque boss.", "Rumeur de salle", 0, 0},
             {"Légendes / contes", "Conte des Bras cassés", "Un conte populaire parle d'un groupe trop bruyant pour être discret.", "Les enfants retiennent surtout la version drôle : cinq héros sauvent un village, se disputent avec les règles, puis repartent comme si le chaos était une méthode officielle. La vraie réputation reste plus nuancée.", "Conte connu", 0, 0},
@@ -348,22 +351,22 @@ namespace
             {"Matériaux et plantes", "Récolte propre", "Une récolte bien faite peut améliorer une qualité.", "Une récolte propre peut faire passer impur vers normal, normal vers pur/haute qualité, puis exceptionnel. L'achat direct d'exceptionnel reste impossible.", "Renseignement commun", 0, 0},
             {"Classes", "Gladiateur", "Classe de contact orientée arène.", "Le Gladiateur cherche la pression constante : pas aussi noble qu'un Chevalier, pas aussi suicidaire qu'un Berserker, mais très bon pour garder l'adversaire dans le rythme qu'il impose.", "Classe jouable", 0, 0},
             {"Classes", "Ravageur", "Briseur frontal très risqué.", "Le Ravageur existe pour casser une garde, une armure ou une ligne ennemie. Il frappe fort, mais son style laisse des ouvertures si le combat dure trop.", "Classe jouable", 0, 0},
-            {"Classes", "Maître d'armes", "Combattant martial polyvalent.", "Le Maître d'armes préfère comprendre l'équipement avant d'agir. Il n'a pas encore de système complet de styles, mais sa présence prépare les futures spécialisations d'armes.", "Classe jouable", 0, 0},
+            {"Classes", "Maître d'armes", "Combattant martial polyvalent.", "Le Maître d'armes préfère comprendre l'équipement avant d'agir et cherche à adapter son style à l'arme tenue.", "Classe jouable", 0, 0},
             {"Classes", "Pisteur", "Classe de distance liée aux traces.", "Le Pisteur donne une identité plus sauvage aux combattants à distance : lire un terrain, prévoir une proie, choisir la munition utile plutôt que tirer au hasard.", "Classe jouable", 0, 0},
             {"Classes", "Frondeur tactique", "Harceleur à distance économique.", "Le Frondeur tactique représente les profils qui gagnent par petites ouvertures, gestion de consommables et gêne répétée. Il sera utile quand les munitions auront encore plus de poids.", "Classe jouable", 0, 0},
             {"Classes", "Éclaireur d'élite", "Distance mobile et préparation.", "L'Éclaireur d'élite sert à ceux qui veulent commencer les combats avec de l'information, choisir les cibles et sortir avant que la ligne casse.", "Classe jouable", 0, 0},
-            {"Classes", "Électromancien", "Mage du choc et des réactions métalliques.", "L'Électromancien prépare les futurs liens entre équipement métallique, humidité, choc et interruptions. Il est fort quand l'ennemi porte trop de métal sans protection.", "Classe jouable", 0, 0},
+            {"Classes", "Électromancien", "Mage du choc et des réactions métalliques.", "L'Électromancien exploite le métal, l'humidité, le choc et les interruptions. Les ennemis trop chargés de métal sont ses cibles favorites.", "Classe jouable", 0, 0},
             {"Classes", "Gravemage", "Mage de runes lentes.", "Le Gravemage ne cherche pas toujours le gros chiffre immédiat. Il prépare, verrouille, grave et force le combat à respecter une cadence moins nerveuse.", "Classe jouable", 0, 0},
-            {"Classes", "Miragien", "Mage d'illusions et d'erreurs.", "Le Miragien annonce les mécaniques futures de confusion, faux choix, images et lectures trompeuses, sans donner gratuitement les pouvoirs d'Inakari.", "Classe jouable", 0, 0},
+            {"Classes", "Miragien", "Mage d'illusions et d'erreurs.", "Le Miragien joue sur la confusion, les faux choix, les images et les lectures trompeuses sans imiter gratuitement les pouvoirs d'Inakari.", "Classe jouable", 0, 0},
             {"Classes", "Marionnettiste", "Invocateur à fils et contrôle.", "Le Marionnettiste préfère manipuler une présence fragile plutôt que se battre seul. Sa logique prépare les invocations contrôlées et les ennemis à pantins.", "Classe jouable", 0, 0},
-            {"Classes", "Totémiste", "Invocateur de soutien de zone.", "Le Totémiste pose une présence qui aide le combat à durer : protection, patience, zone de repos ou pression rituelle selon les futurs totems.", "Classe jouable", 0, 0},
+            {"Classes", "Totémiste", "Invocateur de soutien de zone.", "Le Totémiste pose une présence qui aide le combat à durer : protection, patience, zone de repos ou pression rituelle selon le totem choisi.", "Classe jouable", 0, 0},
             {"Classes", "Corbeaumancien", "Invocateur de familier et mauvais présages.", "Le Corbeaumancien donne une place aux familiers de reconnaissance, petites malédictions et messages. Il peut devenir très lore avec les cimetières et les ruines.", "Classe jouable", 0, 0},
             {"Classes", "Oracle", "Support de lecture du danger.", "L'Oracle n'est pas forcément un soigneur pur : il devine, prévient, détourne et explique parfois une menace avant que l'équipe comprenne pourquoi elle saigne.", "Classe jouable", 0, 0},
             {"Classes", "Protecteur", "Tank d'interception.", "Le Protecteur sert à incarner la garde d'un allié précis. Il ne tape pas forcément fort, mais il existe pour décider qui a le droit d'atteindre la cible fragile.", "Classe jouable", 0, 0},
             {"Classes", "Médecin de terrain", "Support pratique et non sacré.", "Le Médecin de terrain permet d'avoir du soin sans forcément passer par la foi ou la lumière. Pansements, remèdes, stabilisation et survie deviennent son identité.", "Classe jouable", 0, 0},
             {"Classes", "Chevalier draconique", "Hybride martial à écailles.", "Le Chevalier draconique prépare un style entre arme lourde, résistance, souffle mineur et matériaux draconiques, sans devenir un dragon complet gratuitement.", "Classe jouable", 0, 0},
             {"Classes", "Rôdeur arcanique", "Hybride distance-magie.", "Le Rôdeur arcanique mélange munitions, terrain et magie légère. Il devrait aimer les flèches spéciales et les grimoires utilitaires.", "Classe jouable", 0, 0},
-            {"Classes", "Moine solaire", "Hybride discipline-lumière.", "Le Moine solaire ajoute un profil de contact plus lumineux que le Moine classique, avec une identité de contre-pression et purification future.", "Classe jouable", 0, 0},
+            {"Classes", "Moine solaire", "Hybride discipline-lumière.", "Le Moine solaire combat au contact avec une discipline lumineuse tournée vers la contre-pression et la purification.", "Classe jouable", 0, 0},
             {"Classes", "Cuisinier de guilde", "Artisan des rations et petits buffs.", "Le Cuisinier de guilde n'est pas une blague gratuite : en aventure longue, une bonne ration peut éviter de gaspiller une potion chère avant un boss.", "Classe jouable", 0, 0},
             {"Classes", "Cartographe", "Artisan de lecture de zone.", "Le Cartographe sert à renforcer l'exploration : cartes, dangers probables, coffres, traces, biomes et contrats de terrain.", "Classe jouable", 0, 0},
             {"Classes", "Récupérateur", "Artisan du loot propre.", "Le Récupérateur représente le joueur qui garde tout, démonte tout et finit par fabriquer une solution avec trois bouts de cuir et un clou suspect.", "Classe jouable", 0, 0},
@@ -395,7 +398,7 @@ namespace
             {"Divinités / lore", "Obérion", "Dieu universel et père des primordiaux.", "Obérion complet dépasse le combat actuel. Seuls des fragments approuvés sont affrontables sans briser l'échelle du monde.", "Trace divine", 0, 0},
             {"Objets rares", "Invitations scellées", "Preuves nécessaires pour FireFlight.", "La première victoire contre chaque boss requis laisse une preuve unique. Refaire le même combat ne crée pas une nouvelle invitation. Quand toutes les preuves nécessaires existent, l'entrée du test final accepte enfin de s'ouvrir.", "Système final secret", 0, 0},
             {"Objets rares", "Fragments de boss avancés", "Matériaux uniques de boss.", "Fragments de nom perdu, miroir fendu, noyau de version instable, sceaux et traces divines nourrissent les crafts ou reliques majeures.", "Fiche archivée", 0, 0},
-            {"Objets rares", "Particularités de craft", "Effets faibles nés de matériaux exceptionnels.", "Un objet crafté peut recevoir une petite particularité si plus de 50% de sa valeur de craft vient de matériaux exceptionnels. Les classes d'artisanat augmentent maintenant légèrement cette chance.", "Étude active", 0, 0},
+            {"Objets rares", "Particularités de craft", "Effets faibles nés de matériaux exceptionnels.", "Un objet crafté peut recevoir une petite particularité si plus de 50% de sa valeur de craft vient de matériaux exceptionnels. Les classes d’artisanat augmentent légèrement cette chance.", "Étude active", 0, 0},
             {"Habitats / zones", "Traces de territoire", "Les zones racontent parfois le monstre avant le combat.", "Griffures sur un arbre, os déplacés, gel anormal, suie récente ou silence soudain peuvent ajouter une entrée sans tuer la créature. Une trace ne donne pas tout : elle confirme surtout l'existence et le terrain probable.", "Méthode d'observation", 0, 0},
             {"Habitats / zones", "Cadavre étudié", "Une victoire n'est pas la seule manière d'apprendre.", "Un corps ancien, une mue, un nid abandonné ou une arme cassée peut révéler faiblesse, résistance ou butin possible. Les informations restent moins fiables qu'une vraie rencontre, mais elles aident à préparer la chasse.", "Méthode d'observation", 0, 0},
             {"Matériaux et plantes", "Qualité de dépouille", "La manière de vaincre change ce qui reste.", "Une dépouille brûlée, explosée ou percée trop violemment peut donner moins de composants propres. Une mise à mort contrôlée, une arme adaptée ou une récolte calme augmente les chances de matière propre.", "Méthode d'observation", 0, 0},
@@ -405,7 +408,7 @@ namespace
             {"Classes jouables", "Martelier", "Briseur lourd orienté armures.", "Il apporte une réponse naturelle aux constructions, armures mortes et ennemis trop solides pour les petites lames.", "Classe jouable", 0, 0},
             {"Classes jouables", "Arquebusier expérimental", "Distance lourde et risquée.", "Tire très fort mais demande préparation, munitions et acceptation du raté. Une classe drôle si on aime les gros coups qui ne pardonnent pas.", "Classe jouable", 0, 0},
             {"Classes jouables", "Bibliomancien", "Mage de savoir et grimoires.", "Il valorise les livres, indices et préparations. Fragile, mais très intéressant pour un joueur qui veut lier magie et progression de connaissance.", "Classe jouable", 0, 0},
-            {"Classes jouables", "Reliquaire vivant", "Invocateur d'artefacts temporaires.", "Il ne se contente pas d'appeler des bêtes : il anime des objets, charges et reliques instables, avec un risque cohérent avec le craft futur.", "Classe jouable", 0, 0},
+            {"Classes jouables", "Reliquaire vivant", "Invocateur d'artefacts temporaires.", "Il ne se contente pas d'appeler des bêtes : il anime des objets, charges et reliques instables au prix d'un risque lié à leur fabrication.", "Classe jouable", 0, 0},
             {"Classes jouables", "Archiviste de terrain", "Support de connaissance.", "Il soutient moins par les dégâts que par l'identification, la préparation et la lecture des menaces. Très cohérent avec le bestiaire progressif.", "Classe jouable", 0, 0},
             {"Classes jouables", "Herboriste de combat", "Artisan de remèdes en situation dangereuse.", "Il donne une raison jouable de valoriser les plantes, antidotes et récoltes propres sans transformer tout le monde en mage.", "Classe jouable", 0, 0},
             {"Entités hostiles / ennemis", "Faux péager souriant", "Humain hostile de route.", "Un bon exemple d'ennemi non monstrueux : peu de résistance naturelle, mais rusé, socialement pénible et parfois accompagné.", "Observation de terrain", 0, 0},
@@ -847,7 +850,10 @@ namespace
             {"Henrique", "Henrique", "Nom non confirmé", "Liens spéciaux", "Rencontre ou information crédible avant de révéler ses liens.", false},
             {"Louis", "Louis", "Artificier non confirmé", "Trio d'arène", "Rencontre, défi ou rumeur fiable avant de révéler son rôle.", false},
             {"Trexof", "Trexof", "Analyste non confirmé", "Trio d'arène", "Rencontre, défi ou rumeur fiable avant de révéler son style.", false},
-            {"Mattzelda", "Mattzelda", "Colosse non confirmé", "Trio d'arène", "Rencontre, défi ou rumeur fiable avant de révéler son profil.", false}
+            {"Mattzelda", "Mattzelda", "Colosse non confirmé", "Trio d'arène", "Rencontre, défi ou rumeur fiable avant de révéler son profil.", false},
+            {"Willow", "Willow", "Archère solitaire non confirmée", "Voyageurs indépendants", "Rencontre ou rumeur fiable avant de révéler son profil complet.", false},
+            {"Dwarf", "Dwarf", "Guerrier nain non confirmé", "Voyageurs indépendants", "Rencontre ou rumeur fiable avant de révéler son profil complet.", false},
+            {"Badr", "Badr", "Clerc semi-humain non confirmé", "Voyageurs indépendants", "Rencontre ou rumeur fiable avant de révéler son état réel et l'existence de Second.", false}
         };
     }
 
@@ -1298,7 +1304,7 @@ namespace
             "JOURNAL DES INVOCATIONS",
             "bestiary.summon_journal.detail",
             {
-                "Les invocations utilisent maintenant une base plus claire : slots, maintien, durée, contrôle manuel et sacrifice.",
+                "Les invocations reposent sur des emplacements, du maintien, une durée, un contrôle manuel et parfois un sacrifice.",
                 "",
                 "Règles observées :",
                 "- slots d'invocation : certaines invocations lourdes occupent plus d'un slot ;",
@@ -1445,7 +1451,7 @@ namespace
             screen.addLine("Catégorie : " + categoryFilter);
             screen.addLine(discoveredOnly
                 ? "Filtre : seulement les légendes déjà découvertes, lues ou ouvertes par la bibliothèque."
-                : "Filtre : archives complètes de développement, à éviter en jeu normal si tu veux garder les surprises.");
+                : "Filtre : toutes les légendes connues du registre, y compris celles qui peuvent révéler des surprises.");
 
             if (entries.empty())
             {

@@ -8,6 +8,7 @@
 #include "combat/TurnManager.hpp"
 
 #include "core/Console.hpp"
+#include "economy/Money.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "boss/BossCatalog.hpp"
 #include "interface/CombatDisplay.hpp"
@@ -906,7 +907,7 @@ namespace
         lines.push_back("Récupération future : rebattre Grinka pour réclamer ce qui a été pris");
         lines.push_back("Grinka a gagné. Ses taxes ne sont plus une menace de combat : elles deviennent réelles.");
 
-        int gold = player.getInventory().getGold();
+        int gold = player.getInventory().getEconomyUnits();
 
         if (gold > 0)
         {
@@ -916,15 +917,15 @@ namespace
                 stolenGold = gold;
             }
 
-            player.getInventory().spendGold(stolenGold);
+            player.getInventory().spendEconomyUnits(stolenGold);
             player.recordGrinkaGoldTheft(stolenGold);
-            lines.push_back("Or confisqué : " + std::to_string(stolenGold) + " pièce(s).");
+            lines.push_back("Argent confisqué : " + Money::formatEconomyUnits(stolenGold) + ".");
         }
         else
         {
             int xpLoss = 20 + player.getLevel() * 8;
             player.loseExperience(xpLoss);
-            lines.push_back("Tu n'avais pas d'or sur toi.");
+            lines.push_back("Tu n'avais pas d'argent sur toi.");
             lines.push_back("Grinka transforme la dette en humiliation administrative : perte de " + std::to_string(xpLoss) + " XP.");
         }
 
@@ -1745,7 +1746,7 @@ namespace
         itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = potion.getDescription();
         itemData.status = "Soin : " + potion.getPowerDisplayText();
-        itemData.price = "Valeur : " + std::to_string(potion.getValue()) + " or";
+        itemData.price = "Valeur : " + Money::formatEconomyUnits(potion.getValue());
         itemData.stock = "Index inventaire : " + std::to_string(inventoryIndex + 1);
         itemData.owner = healer.getName();
         itemData.important = potion.getPower() >= 35;

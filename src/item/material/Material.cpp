@@ -7,6 +7,8 @@
 
 #include "item/material/Material.hpp"
 
+#include "economy/Money.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include "interface/menu/common/MessageScreen.hpp"
@@ -339,10 +341,10 @@ std::vector<std::string> Material::toDisplayLines() const
         lines.push_back("Quantité : " + std::to_string(quantity));
     }
 
-    std::string valueLine = "Valeur unitaire : " + std::to_string(value * getQualityPricePercent() / 100) + " pièces";
+    std::string valueLine = "Valeur unitaire : " + Money::formatEconomyUnits(value * getQualityPricePercent() / 100);
     if (hasSpecialQuality())
     {
-        valueLine += " (base " + std::to_string(value) + ")";
+        valueLine += " (base " + Money::formatEconomyUnits(value) + ")";
     }
 
     lines.push_back("Description : " + description);

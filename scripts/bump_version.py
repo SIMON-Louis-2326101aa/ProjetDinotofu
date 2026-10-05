@@ -205,7 +205,7 @@ def update_sync_files(new_ver: str) -> list[Path]:
             raise RuntimeError(f"Champ version introuvable dans {manifest}")
         if manifest.name == "manifest.example.json":
             content = re.sub(r'("releaseTag"\s*:\s*"v)[0-9]+\.[0-9]+\.[0-9]+(")', rf'\g<1>{new_ver}\g<2>', content, count=1)
-            content = re.sub(r'((?:Installer-)?Dinotofu-(?:Windows|Linux)-v)[0-9]+\.[0-9]+\.[0-9]+(\.(?:7z|zip))', rf'\g<1>{new_ver}\g<2>', content)
+            content = re.sub(r'((?:INSTALLER-DINOTOFU-(?:WINDOWS|LINUX)|Installer-Dinotofu-(?:Windows|Linux)|Dinotofu-(?:Windows|Linux))-v)[0-9]+\.[0-9]+\.[0-9]+((?:-TECHNICAL-PAYLOAD)?\.(?:7z|zip))', rf'\g<1>{new_ver}\g<2>', content)
         manifest.write_text(content, encoding="utf-8")
         changed.append(manifest)
 
@@ -225,12 +225,26 @@ def update_checkpoint_docs(old_checkpoint: str, new_checkpoint: str) -> list[Pat
     changed.append(VERSION_FILE)
 
     # Current-status docs may move with the checkpoint. Historical changelog entries must never move.
-    for path in [ROOT / "README.md", ROOT / "READMEFR.md"]:
-        if path.exists():
-            content = path.read_text(encoding="utf-8")
-            content = content.replace(f"V{old_checkpoint}", f"V{new_checkpoint}")
-            path.write_text(content, encoding="utf-8")
-            changed.append(path)
+    readme_checkpoint_rules = {
+        ROOT / "README.md": [
+            (r'(- Important save checkpoint: \*\*V)[0-9]+\.[0-9]+\.[0-9]+(\*\*)', rf'\g<1>{new_checkpoint}\g<2>'),
+            (r'(mandatory V)[0-9]+\.[0-9]+\.[0-9]+( backup \+ transition ritual)', rf'\g<1>{new_checkpoint}\g<2>'),
+        ],
+        ROOT / "READMEFR.md": [
+            (r'(- Point de sauvegarde important : \*\*V)[0-9]+\.[0-9]+\.[0-9]+(\*\*)', rf'\g<1>{new_checkpoint}\g<2>'),
+            (r'(du jalon V)[0-9]+\.[0-9]+\.[0-9]+', rf'\g<1>{new_checkpoint}'),
+        ],
+    }
+    for path, rules in readme_checkpoint_rules.items():
+        if not path.exists():
+            continue
+        content = path.read_text(encoding="utf-8")
+        for pattern, replacement in rules:
+            content, count = re.subn(pattern, replacement, content, count=1)
+            if count != 1:
+                raise RuntimeError(f"Impossible de synchroniser le checkpoint dans {path.name}")
+        path.write_text(content, encoding="utf-8")
+        changed.append(path)
 
     test_cpp = ROOT / "tests" / "ImportantSaveCheckpointTest.cpp"
     if test_cpp.exists():
@@ -367,7 +381,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("mode", nargs="?", default="patch", help="patch, minor, major ou version explicite X.Y.Z")
     parser.add_argument("--save-schema", dest="save_schema", help="keep, next ou entier explicite")
     parser.add_argument("--checkpoint", help="keep, current ou version explicite X.Y.Z")
-    parser.add_argument("--commit", action=argparse.BooleanOptionalAction, default=True, help="ajoute les fichiers modifiés et crée le commit Git (défaut: activé)")
+    parser.add_argument("--commit", action=argparse.BooleanOptionalAction, default=None, help="ajoute les fichiers modifiés et crée le commit Git (défaut: demande en interactif, désactivé en non-interactif)")
     parser.add_argument("--edit-changelog", action=argparse.BooleanOptionalAction, default=None, help="ouvre CHANGELOG.md dans l'éditeur (défaut: demande en mode interactif)")
     parser.add_argument("--custom-message", action=argparse.BooleanOptionalAction, default=None, help="ouvre l'éditeur Git pour saisir un message personnalisé (défaut: demande en mode interactif)")
     parser.add_argument("--non-interactive", action="store_true", help="ne pose aucune question; conserve les valeurs non précisées")
@@ -426,8 +440,14 @@ def main() -> int:
     should_commit = args.commit
     custom_msg = args.custom_message
 
+    if interactive and should_commit is None:
+        should_commit = ask_yes_no("Tout est modifié. Créer maintenant un commit Git ?", default=True)
+    elif should_commit is None:
+        # Safety for automation / other developers: an explicit --commit is required.
+        should_commit = False
+
     if not should_commit:
-        print("\nCommit automatique désactivé via --no-commit. Pense à faire 'git add' et 'git commit' manuellement.")
+        print("\nAucun commit créé. Les fichiers restent modifiés localement pour permettre d'autres changements ou une revue avant commit.")
         return 0
 
     if interactive and custom_msg is None:
@@ -437,7 +457,7 @@ def main() -> int:
         elif mode_choice == "2":
             custom_msg = True
         else:
-            print("\nCommit ignoré. Pense à faire 'git add' et 'git commit' manuellement.")
+            print("\nCommit ignoré. Les modifications restent locales.")
             return 0
     elif custom_msg is None:
         custom_msg = False

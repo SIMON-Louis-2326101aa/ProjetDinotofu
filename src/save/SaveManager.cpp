@@ -7,6 +7,7 @@
 #include "save/SaveManager.hpp"
 #include "save/SaveSchemaVersion.hpp"
 #include "core/VersionInfo.hpp"
+#include "economy/Money.hpp"
 
 #include "character/CharacterRace.hpp"
 #include "class_system/ClassCatalog.hpp"
@@ -970,12 +971,15 @@ namespace
         summary.clone = extractBoolValue(content, "clone", false);
         summary.gameVersion = extractStringValue(content, "gameVersion", "inconnue");
         summary.createdAt = extractStringValue(content, "createdAt", "Inconnue");
+        summary.realPlayTimeSeconds = extractLongLongValue(content, "realPlayTimeSeconds", 0);
+        summary.totalCopperCurrency = extractLongLongValue(content, "totalCopperCurrency", 0);
+        summary.lastSavedAt = extractStringValue(content, "lastSavedAt", "");
         summary.createdForVersion = extractStringValue(content, "createdForVersion", summary.gameVersion);
         summary.lastAdaptedVersion = extractStringValue(content, "lastAdaptedVersion", summary.createdForVersion);
         summary.storyModeStarted = extractBoolValue(content, "storyModeStarted", false);
         summary.storyChapter = extractIntValue(content, "storyChapter", 0);
         summary.storyStep = extractIntValue(content, "storyStep", 0);
-        summary.lastActivityText = formatLastActivityText(path);
+        summary.lastActivityText = summary.lastSavedAt.empty() ? formatLastActivityText(path) : summary.lastSavedAt;
 
         return summary;
     }
@@ -1142,6 +1146,8 @@ bool SaveManager::savePlayerSnapshot(
     file << "  \"deathRule\": \"" << escapeJson(DeathRuleRules::toSaveText(deathRule)) << "\",\n";
     file << "  \"character\": {\n";
     file << "    \"createdAt\": \"" << escapeJson(player.getCreatedAtText()) << "\",\n";
+    file << "    \"lastSavedAt\": \"" << escapeJson(VersionInfo::currentDateTimeText()) << "\",\n";
+    file << "    \"realPlayTimeSeconds\": " << player.getRealPlayTimeSeconds() << ",\n";
     file << "    \"creatorAccount\": \"" << escapeJson(creatorAccount) << "\",\n";
     file << "    \"currentOwnerAccount\": \"" << escapeJson(accountName) << "\",\n";
     file << "    \"createdForVersion\": \"" << escapeJson(player.getCreatedForVersion()) << "\",\n";
@@ -1162,6 +1168,12 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"criticalDamage\": " << player.getCriticalDamage() << ",\n";
     file << "    \"gold\": " << player.getInventory().getGold() << ",\n";
     file << "    \"totalCopperCurrency\": " << player.getInventory().getTotalCopper() << ",\n";
+    const CoinBreakdown currencyStacks = player.getInventory().getCoinStacks();
+    file << "    \"currencyCopperCoins\": " << currencyStacks.copper << ",\n";
+    file << "    \"currencyIronCoins\": " << currencyStacks.iron << ",\n";
+    file << "    \"currencyElectrumCoins\": " << currencyStacks.electrum << ",\n";
+    file << "    \"currencyGoldCoins\": " << currencyStacks.gold << ",\n";
+    file << "    \"currencyPlatinumCoins\": " << currencyStacks.platinum << ",\n";
     file << "    \"unspentAttributePoints\": " << player.getUnspentAttributePoints() << ",\n";
     file << "    \"attributes\": {\n";
     file << "      \"strength\": " << player.getAttributes().getStrength() << ",\n";
@@ -2010,6 +2022,11 @@ bool SaveManager::savePlayerSnapshot(
              << "\", \"targetFamily\": \"" << escapeJson(quest.targetFamily)
              << "\", \"rewardExperience\": " << quest.rewardExperience
              << ", \"rewardGold\": " << quest.rewardGold
+             << ", \"rewardCoinCopper\": " << quest.rewardCoins.copper
+             << ", \"rewardCoinIron\": " << quest.rewardCoins.iron
+             << ", \"rewardCoinElectrum\": " << quest.rewardCoins.electrum
+             << ", \"rewardCoinGold\": " << quest.rewardCoins.gold
+             << ", \"rewardCoinPlatinum\": " << quest.rewardCoins.platinum
              << ", \"rewardMaterialId\": \"" << escapeJson(quest.rewardMaterialId)
              << "\", \"rewardMaterialName\": \"" << escapeJson(quest.rewardMaterialName)
              << "\", \"rewardMaterialQuantity\": " << quest.rewardMaterialQuantity
@@ -2238,6 +2255,7 @@ bool SaveManager::loadPlayerSnapshot(
         return false;
     }
 
+    const int loadedSaveVersion = extractIntValue(content, "saveVersion", 0);
     std::string characterName = extractStringValue(content, "name", summary.characterName);
     std::string className = extractStringValue(content, "class", summary.className);
     std::string raceName = extractStringValue(content, "race", summary.raceName);
@@ -2245,6 +2263,7 @@ bool SaveManager::loadPlayerSnapshot(
     std::string visualPresentation = extractStringValue(content, "visualPresentation", summary.visualPresentation);
     std::string visualVariant = extractStringValue(content, "visualVariant", summary.visualVariant);
     std::string createdAt = extractStringValue(content, "createdAt", "Inconnue");
+    long long realPlayTimeSeconds = extractLongLongValue(content, "realPlayTimeSeconds", 0);
     std::string gameVersion = extractStringValue(content, "gameVersion", "inconnue");
     std::string createdForVersion = extractStringValue(content, "createdForVersion", gameVersion);
     std::string lastAdaptedVersion = extractStringValue(content, "lastAdaptedVersion", createdForVersion);
@@ -2261,6 +2280,11 @@ bool SaveManager::loadPlayerSnapshot(
     int loadedCriticalDamage = extractIntValue(content, "criticalDamage", 10);
     int gold = extractIntValue(content, "gold", 0);
     long long totalCopperCurrency = extractLongLongValue(content, "totalCopperCurrency", -1);
+    const long long savedCopperCoins = extractLongLongValue(content, "currencyCopperCoins", -1);
+    const long long savedIronCoins = extractLongLongValue(content, "currencyIronCoins", -1);
+    const long long savedElectrumCoins = extractLongLongValue(content, "currencyElectrumCoins", -1);
+    const long long savedGoldCoins = extractLongLongValue(content, "currencyGoldCoins", -1);
+    const long long savedPlatinumCoins = extractLongLongValue(content, "currencyPlatinumCoins", -1);
     int unspentAttributePoints = extractIntValue(content, "unspentAttributePoints", 0);
     int strength = extractIntValue(content, "strength", 10);
     int dexterity = extractIntValue(content, "dexterity", 10);
@@ -2298,6 +2322,7 @@ bool SaveManager::loadPlayerSnapshot(
     PlayerClass loadedClass = ClassCatalog::createClassByName(className);
     player = Player(characterName, loadedClass);
     player.setVersionMetadata(createdAt, createdForVersion, lastAdaptedVersion);
+    player.setLoadedRealPlayTimeSeconds(realPlayTimeSeconds);
     player.setOwnershipMetadata(creatorAccountName, currentOwnerAccountName);
     player.setRace(raceFromText(raceName));
     player.setAppearanceProfile(characterAge, visualPresentation, visualVariant);
@@ -2667,7 +2692,45 @@ bool SaveManager::loadPlayerSnapshot(
         loadedCityVaults
     );
 
-    if (totalCopperCurrency >= 0)
+    // V3.50.19 / schema 25: historical economy numbers were authored as small price points
+    // but were converted as whole PO. Normalize old wallets exactly once so one historical
+    // price/reward point becomes one PF (10 PC), not one PO (1000 PC).
+    if (loadedSaveVersion < 25)
+    {
+        if (totalCopperCurrency >= 0)
+        {
+            // Convert each legacy whole-PO block to one economy unit (PF) while preserving
+            // the sub-PO copper remainder. This keeps already-exact PC micro-payments intact.
+            const long long legacyWholeGold = totalCopperCurrency / Money::COPPER_PER_GOLD;
+            const long long exactCopperRemainder = totalCopperCurrency % Money::COPPER_PER_GOLD;
+            totalCopperCurrency = Money::copperFromEconomyUnits(legacyWholeGold) + exactCopperRemainder;
+        }
+        else
+        {
+            totalCopperCurrency = Money::copperFromEconomyUnits(gold);
+        }
+    }
+
+    // Schema 26 preserves the physical denomination stacks. Older saves only know a
+    // total value, so they are decomposed once during migration; no value is lost.
+    const bool hasSavedCoinStacks = loadedSaveVersion >= 26
+        && savedCopperCoins >= 0
+        && savedIronCoins >= 0
+        && savedElectrumCoins >= 0
+        && savedGoldCoins >= 0
+        && savedPlatinumCoins >= 0;
+
+    if (hasSavedCoinStacks)
+    {
+        CoinBreakdown savedStacks;
+        savedStacks.copper = savedCopperCoins;
+        savedStacks.iron = savedIronCoins;
+        savedStacks.electrum = savedElectrumCoins;
+        savedStacks.gold = savedGoldCoins;
+        savedStacks.platinum = savedPlatinumCoins;
+        player.getInventory().setCoinStacks(savedStacks);
+    }
+    else if (totalCopperCurrency >= 0)
     {
         player.getInventory().setTotalCopper(totalCopperCurrency);
     }
@@ -3171,6 +3234,11 @@ bool SaveManager::loadPlayerSnapshot(
         quest.objective = extractStringValue(object, "objective", "Objectif sauvegardé.");
         quest.rewardExperience = extractIntValue(object, "rewardExperience", 0);
         quest.rewardGold = extractIntValue(object, "rewardGold", 0);
+        quest.rewardCoins.copper = extractLongLongValue(object, "rewardCoinCopper", 0);
+        quest.rewardCoins.iron = extractLongLongValue(object, "rewardCoinIron", 0);
+        quest.rewardCoins.electrum = extractLongLongValue(object, "rewardCoinElectrum", 0);
+        quest.rewardCoins.gold = extractLongLongValue(object, "rewardCoinGold", 0);
+        quest.rewardCoins.platinum = extractLongLongValue(object, "rewardCoinPlatinum", 0);
         quest.rewardMaterialId = extractStringValue(object, "rewardMaterialId", "");
         quest.rewardMaterialName = extractStringValue(object, "rewardMaterialName", "");
         quest.rewardMaterialQuantity = extractIntValue(object, "rewardMaterialQuantity", 0);

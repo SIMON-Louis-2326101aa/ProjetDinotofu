@@ -160,7 +160,7 @@ EnemyCombatQueue WaveGenerator::createWaveForPlayer(
 
         Monster monster = MonsterCatalog::createRandomMonsterForLevel(monsterLevel, random);
 
-        if (shouldCreateEvolvedMonster(player, monsterLevel, random, difficulty))
+        if (!monster.isElite() && shouldCreateEvolvedMonster(player, monsterLevel, random, difficulty))
         {
             monster = MonsterCatalog::createEvolvedVariant(monster, random);
         }

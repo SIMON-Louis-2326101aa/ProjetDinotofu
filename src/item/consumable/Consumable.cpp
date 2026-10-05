@@ -5,6 +5,8 @@
 
 #include "item/consumable/Consumable.hpp"
 
+#include "economy/Money.hpp"
+
 #include "interface/menu/common/MessageScreen.hpp"
 
 #include <algorithm>
@@ -147,7 +149,7 @@ std::vector<std::string> Consumable::toDisplayLines() const
         "===== CONSOMMABLE =====",
         "Nom : " + name,
         "Description : " + description,
-        "Valeur : " + std::to_string(value) + " pièces",
+        "Valeur : " + Money::formatEconomyUnits(value),
         "Type : " + consumableTypeLabel(type),
         "Puissance : " + getPowerDisplayText(),
         "======================="

@@ -53,21 +53,21 @@ bool NpcInformationPropagationSystem::professionWouldRelay(const std::string& pr
     if (profession == "garde")
         return factType == "rival_seen" || factType == "local_attack" || factType == "unusual_monster";
     if (profession == "marchand" || profession == "marchand itinérant")
-        return factType == "rival_seen" || factType == "local_attack" || factType == "unusual_monster" || factType == "debt_paid";
+        return factType == "rival_seen" || factType == "local_attack" || factType == "unusual_monster" || factType == "debt_paid" || factType == "quest_failed";
     if (profession == "intendance")
-        return factType == "rival_seen" || factType == "local_attack" || factType == "quest_completed" || factType == "unusual_monster";
+        return factType == "rival_seen" || factType == "local_attack" || factType == "quest_completed" || factType == "quest_failed" || factType == "unusual_monster";
     if (profession == "soigneuse")
         return factType == "local_attack" || factType == "unusual_monster" || factType == "quest_completed";
     if (profession == "logistique")
-        return factType == "local_attack" || factType == "debt_paid" || factType == "quest_completed";
+        return factType == "local_attack" || factType == "debt_paid" || factType == "quest_completed" || factType == "quest_failed";
     if (profession == "messagère")
         return true;
     if (profession == "érudit")
         return factType == "discovered_writing" || factType == "unusual_monster";
     if (profession == "guilde")
-        return factType == "rival_seen" || factType == "local_attack" || factType == "quest_completed" || factType == "unusual_monster";
+        return factType == "rival_seen" || factType == "local_attack" || factType == "quest_completed" || factType == "quest_failed" || factType == "unusual_monster";
     if (profession == "religieux")
-        return factType == "local_attack" || factType == "quest_completed";
+        return factType == "local_attack" || factType == "quest_completed" || factType == "quest_failed";
     if (profession == "aubergiste" || profession == "contact")
         return true;
     return factType == "local_attack" || factType == "rival_seen";

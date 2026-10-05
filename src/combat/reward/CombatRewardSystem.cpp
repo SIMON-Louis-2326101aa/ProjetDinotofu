@@ -6,6 +6,7 @@
 #include "combat/reward/CombatRewardSystem.hpp"
 
 #include "progression/DifficultyRules.hpp"
+#include "economy/Money.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
 
@@ -106,7 +107,7 @@ namespace
     {
         if (gold <= 0)
         {
-            return "aucun or direct";
+            return "aucun argent direct";
         }
 
         if (gold >= 500)
@@ -136,7 +137,7 @@ namespace
         }
 
         const int experience = reward.getExperience();
-        const int gold = reward.getGold();
+        const int gold = reward.getEconomyUnits();
 
         screen.addLine(
             "- Expérience | Récompense : XP +" + std::to_string(experience)
@@ -144,7 +145,7 @@ namespace
             + " | Source : combat terminé"
         );
         screen.addLine(
-            "- Or | Or : +" + std::to_string(gold) + " pièces"
+            "- Argent : +" + Money::formatEconomyUnits(gold)
             + " | État : " + rewardGoldStatus(gold, partial)
             + " | Source : registre de combat"
         );
@@ -155,7 +156,7 @@ namespace
         }
         else if (gold >= 500)
         {
-            screen.addLine("Le registre marchand marque ce gain comme exceptionnel.");
+            screen.addLine("Le registre marchand marque cette prime comme exceptionnelle.");
         }
 
         screen.addFooterLine(partial ? "Type : récompense partielle" : "Type : récompense complète");
@@ -328,7 +329,7 @@ CombatReward CombatRewardSystem::calculateBossReward(
     CombatReward reward(experience, gold);
     return reward.getModified(
         DifficultyRules::getVictoryExperienceRewardPercentage(difficulty),
-        DifficultyRules::getVictoryGoldRewardPercentage(difficulty)
+        DifficultyRules::getVictoryEconomyRewardPercentage(difficulty)
     );
 }
 
@@ -388,12 +389,12 @@ namespace
             default: break;
         }
 
-        if (reward.getGold() <= goldCap)
+        if (reward.getEconomyUnits() <= goldCap)
         {
             return reward;
         }
 
-        const int overflow = reward.getGold() - goldCap;
+        const int overflow = reward.getEconomyUnits() - goldCap;
         return CombatReward(reward.getExperience(), goldCap + overflow / 5);
     }
 }
@@ -501,7 +502,7 @@ CombatReward CombatRewardSystem::calculateWaveReward(
 
     return baseReward.getModified(
         DifficultyRules::getVictoryExperienceRewardPercentage(difficulty),
-        DifficultyRules::getVictoryGoldRewardPercentage(difficulty)
+        DifficultyRules::getVictoryEconomyRewardPercentage(difficulty)
     );
 }
 
@@ -540,7 +541,7 @@ CombatReward CombatRewardSystem::calculateWaveReward(
 {
     CombatReward totalReward = calculateWaveRewardWithRandom(wave, random).getModified(
         DifficultyRules::getVictoryExperienceRewardPercentage(difficulty),
-        DifficultyRules::getVictoryGoldRewardPercentage(difficulty)
+        DifficultyRules::getVictoryEconomyRewardPercentage(difficulty)
     );
 
     totalReward.addReward(
@@ -608,9 +609,10 @@ void CombatRewardSystem::giveRewardToPlayer(
         player.gainExperience(reward.getExperience());
     }
 
-    if (reward.getGold() > 0)
+    if (reward.getEconomyUnits() > 0)
     {
-        player.getInventory().earnGold(reward.getGold());
+        player.getInventory().earnEconomyUnits(reward.getEconomyUnits());
+        player.refreshCurrencyTitles();
     }
 }
 
@@ -620,7 +622,7 @@ void CombatRewardSystem::displayReward(
 {
     MenuScreen screen("RÉCOMPENSES", "combat.reward.full");
     screen.addSubtitle("Bilan de récompense complète");
-    screen.addLine(reward.getExperience() <= 0 && reward.getGold() <= 0
+    screen.addLine(reward.getExperience() <= 0 && reward.getEconomyUnits() <= 0
         ? "Statut : aucune récompense"
         : "Statut : récompense obtenue");
     addRewardBreakdownLines(screen, reward, false, "");
@@ -636,7 +638,7 @@ void CombatRewardSystem::displayPartialReward(
 {
     MenuScreen screen("RÉCOMPENSES PARTIELLES", "combat.reward.partial");
     screen.addSubtitle("Bilan de récompense partielle");
-    screen.addLine(reward.getExperience() <= 0 && reward.getGold() <= 0
+    screen.addLine(reward.getExperience() <= 0 && reward.getEconomyUnits() <= 0
         ? "Statut : aucune récompense partielle"
         : "Statut : récompense partielle obtenue");
     addRewardBreakdownLines(screen, reward, true, reason);

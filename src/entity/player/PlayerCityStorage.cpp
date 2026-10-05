@@ -262,7 +262,7 @@ bool Player::purchaseCityVault()
     {
         return false;
     }
-    if (!inventory.spendGold(getCityVaultPurchaseCost()))
+    if (!inventory.spendEconomyUnits(getCityVaultPurchaseCost()))
     {
         return false;
     }
@@ -281,7 +281,7 @@ bool Player::upgradeCityVault()
         return false;
     }
     const int cost = getCityVaultUpgradeCost();
-    if (cost <= 0 || !inventory.spendGold(cost))
+    if (cost <= 0 || !inventory.spendEconomyUnits(cost))
     {
         return false;
     }

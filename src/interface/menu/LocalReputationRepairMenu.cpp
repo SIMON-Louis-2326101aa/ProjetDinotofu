@@ -1,5 +1,6 @@
 #include "interface/menu/LocalReputationRepairMenu.hpp"
 #include "world/LocalReputationRepairSystem.hpp"
+#include "economy/Money.hpp"
 #include "world/LocalReputationSystem.hpp"
 #include "entity/Player.hpp"
 #include "interface/TerminalInterface.hpp"
@@ -22,12 +23,12 @@ void LocalReputationRepairMenu::open(Player& player)
 
         if (reputation.score < 0)
         {
-            const int cost = LocalReputationRepairSystem::fineCostGold(reputation.score);
+            const int cost = LocalReputationRepairSystem::fineCostEconomyUnits(reputation.score);
             const int gain = LocalReputationRepairSystem::fineReputationGain(reputation.score);
             screen.addOption(
                 1,
                 "Régler une amende réparatrice",
-                std::to_string(cost) + " or | réparation estimée : +" + std::to_string(gain) + " réputation. Le paiement ne garantit pas une bonne réputation instantanée.",
+                Money::formatEconomyUnits(cost) + " | réparation estimée : +" + std::to_string(gain) + " réputation. Le paiement ne garantit pas une bonne réputation instantanée.",
                 true,
                 "local_reputation.repair.fine"
             );

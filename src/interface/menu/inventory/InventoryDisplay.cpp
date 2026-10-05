@@ -7,6 +7,7 @@
 
 #include "interface/menu/inventory/InventoryUtils.hpp"
 #include "combat/system/CombatClassSystem.hpp"
+#include "economy/Money.hpp"
 #include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
 
@@ -87,7 +88,7 @@ namespace
             + " | Critique : +" + std::to_string(weapon.getCriticalBonus());
         itemData.status = weapon.isBroken() ? "Cassée" : "Utilisable";
         itemData.progress = "Durabilité : " + InventoryUtils::weaponDurabilityText(weapon);
-        itemData.price = std::to_string(weapon.getValue()) + " or";
+        itemData.price = Money::formatEconomyUnits(weapon.getValue());
         itemData.important = weapon.isBroken();
         return itemData;
     }
@@ -104,7 +105,7 @@ namespace
             + " | Réduction : " + std::to_string(armor.getDamageReduction());
         itemData.status = armor.isBroken() ? "Cassée" : "Utilisable";
         itemData.progress = "Durabilité : " + InventoryUtils::armorDurabilityText(armor);
-        itemData.price = std::to_string(armor.getValue()) + " or";
+        itemData.price = Money::formatEconomyUnits(armor.getValue());
         itemData.important = armor.isBroken();
         return itemData;
     }
@@ -121,7 +122,7 @@ namespace
         itemData.detail = InventoryUtils::consumableTypeToText(consumable.getType());
         itemData.status = status;
         itemData.progress = "Puissance : " + consumable.getPowerDisplayText();
-        itemData.price = std::to_string(consumable.getValue()) + " or";
+        itemData.price = Money::formatEconomyUnits(consumable.getValue());
         itemData.important = consumable.isHealing();
         return itemData;
     }
@@ -137,7 +138,7 @@ namespace
         itemData.quantity = std::to_string(material.getQuantity());
         itemData.detail = material.getCategory();
         itemData.status = material.hasSpecialQuality() ? material.getQualityLabel() : "Qualité normale";
-        itemData.price = std::to_string(material.getValue()) + " or/unité";
+        itemData.price = Money::formatEconomyUnits(material.getValue()) + "/unité";
         itemData.important = material.hasSpecialQuality();
         return itemData;
     }
@@ -248,6 +249,7 @@ MenuScreen InventoryDisplay::buildSimpleFullInventoryScreen(const Player& player
     screen.addSubtitle("Affichage volontairement court : noms, quantités et états importants.");
     screen.addLine("Argent séparé : " + inventory.getWalletLine());
     screen.addLine("Argent total : " + inventory.getWalletTotalLine());
+    screen.addLine("Perception sociale de la bourse : " + Money::socialStandingLabel(inventory.getCoinStacks()));
     screen.addLine("Objets spéciaux : Bestiaire + Encyclopédie + Carnet de découvertes (impossibles à perdre)");
     screen.addLine("Armes : " + std::to_string(inventory.getWeaponCount()));
 

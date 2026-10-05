@@ -14,6 +14,7 @@
 #include "item/consumable/Consumable.hpp"
 #include "item/consumable/ConsumableType.hpp"
 #include "item/material/Material.hpp"
+#include "economy/Money.hpp"
 
 class Inventory
 {
@@ -23,7 +24,13 @@ private:
     std::vector<Consumable> consumables;
     std::vector<Material> materials;
 
-    long long totalCopper_;
+    // Physical coin stacks are preserved instead of auto-normalizing the wallet.
+    // 51 PO can therefore remain 51 PO rather than silently becoming 5 PP + 1 PO.
+    long long copperCoins_;
+    long long ironCoins_;
+    long long electrumCoins_;
+    long long goldCoins_;
+    long long platinumCoins_;
 
 public:
     // EN: Inventory declares or implements a focused behavior used by this module.
@@ -34,18 +41,31 @@ public:
     // FR: getGold déclare ou implémente un comportement précis utilisé par ce module.
     int getGold() const;
     long long getTotalCopper() const;
+    long long getEconomyUnits() const;
+    CoinBreakdown getCoinStacks() const;
+    long long getCoinCount(CoinType type) const;
+    bool breakCoinsToLower(CoinType type, long long coinCount);
+    bool combineCoinsToHigher(CoinType lowerType, long long higherCoinCount);
+    bool convertCoinLots(CoinType sourceType, CoinType targetType, long long lotCount);
+    bool compactCoinsToHighest();
+    bool flattenCoinsToCopper();
     // EN: setGold declares or implements a focused behavior used by this module.
     // FR: setGold déclare ou implémente un comportement précis utilisé par ce module.
     void setGold(int amount);
     void setTotalCopper(long long amount);
+    void setEconomyUnits(long long amount);
+    void setCoinStacks(const CoinBreakdown& stacks);
     // EN: earnGold declares or implements a focused behavior used by this module.
     // FR: earnGold déclare ou implémente un comportement précis utilisé par ce module.
     void earnGold(int amount);
     void earnCopper(long long amount);
+    void earnCoinStacks(const CoinBreakdown& stacks);
+    void earnEconomyUnits(long long amount);
     // EN: spendGold declares or implements a focused behavior used by this module.
     // FR: spendGold déclare ou implémente un comportement précis utilisé par ce module.
     bool spendGold(int amount);
     bool spendCopper(long long amount);
+    bool spendEconomyUnits(long long amount);
     std::string getWalletLine() const;
     std::string getWalletTotalLine() const;
 

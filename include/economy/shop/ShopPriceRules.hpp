@@ -8,6 +8,8 @@
 #ifndef INCLUDE_ECONOMY_SHOP_SHOPPRICERULES_HPP
 #define INCLUDE_ECONOMY_SHOP_SHOPPRICERULES_HPP
 
+#include "economy/shop/ShopType.hpp"
+
 #include <string>
 
 class ShopPriceRules
@@ -24,6 +26,11 @@ public:
         const std::string& raceName,
         const std::string& className = ""
     );
+
+    // Some merchants quote clean denomination totals instead of exact mixed-coin prices.
+    static bool usesRoundedBuyQuotes(ShopType shopType);
+    static int roundBuyQuote(ShopType shopType, int economyUnits);
+    static std::string buyQuoteStyleText(ShopType shopType);
 
     // EN: hasCraftClassTradeBonus declares or implements a focused behavior used by this module.
     // FR: hasCraftClassTradeBonus déclare ou implémente un comportement précis utilisé par ce module.

@@ -23,6 +23,8 @@ private:
     bool permanentlyNonPlayable;
     std::string specialDate;
     int spawnWeight;
+    int age;
+    std::string gender;
 
 public:
     // EN: SpecialCharacter declares or implements a focused behavior used by this module.
@@ -38,7 +40,9 @@ public:
         bool playableWithSpecialDate,
         bool permanentlyNonPlayable,
         const std::string& specialDate,
-        int spawnWeight
+        int spawnWeight,
+        int age = 0,
+        const std::string& gender = ""
     );
 
     std::string getName() const;
@@ -64,6 +68,10 @@ public:
     // EN: getSpawnWeight declares or implements a focused behavior used by this module.
     // FR: getSpawnWeight déclare ou implémente un comportement précis utilisé par ce module.
     int getSpawnWeight() const;
+    int getAge() const;
+    std::string getGender() const;
+    bool hasKnownAge() const;
+    bool hasKnownGender() const;
 };
 
 #endif

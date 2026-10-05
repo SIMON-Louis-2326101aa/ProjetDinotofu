@@ -32,6 +32,7 @@ struct BiomeNonCombatInteractionResult
     std::vector<std::string> lines;
     int explorationRollShift = 0;
     int questProgress = 0;
+    bool notableForLongTermHistory = false;
 };
 
 class BiomeNonCombatInteractionSystem

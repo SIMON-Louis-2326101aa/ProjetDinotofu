@@ -1,6 +1,7 @@
 #include "world/LocalReputationRepairSystem.hpp"
 #include "world/LocalReputationSystem.hpp"
 #include "entity/Player.hpp"
+#include "economy/Money.hpp"
 
 #include <algorithm>
 
@@ -25,7 +26,7 @@ int localJournalCount(const Player& player, const std::string& category, const s
 }
 }
 
-int LocalReputationRepairSystem::fineCostGold(int reputationScore)
+int LocalReputationRepairSystem::fineCostEconomyUnits(int reputationScore)
 {
     if (reputationScore >= 0) return 0;
     const int debt = std::min(80, -reputationScore);
@@ -44,7 +45,7 @@ bool LocalReputationRepairSystem::canPayFine(const Player& player, const std::st
     return !cityId.empty()
         && cityId == player.getCurrentCityId()
         && LocalReputationSystem::score(player, cityId) < 0
-        && player.getInventory().getGold() >= fineCostGold(LocalReputationSystem::score(player, cityId));
+        && player.getInventory().getEconomyUnits() >= fineCostEconomyUnits(LocalReputationSystem::score(player, cityId));
 }
 
 bool LocalReputationRepairSystem::canPerformCommunityService(const Player& player, const std::string& cityId)
@@ -65,11 +66,11 @@ std::vector<std::string> LocalReputationRepairSystem::payFine(Player& player, co
         return {"La médiation doit être réglée dans la ville concernée ; la réputation ne se répare pas à distance par magie."};
     }
 
-    const int cost = fineCostGold(before);
+    const int cost = fineCostEconomyUnits(before);
     const int gain = fineReputationGain(before);
-    if (!player.getInventory().spendGold(cost))
+    if (!player.getInventory().spendEconomyUnits(cost))
     {
-        return {"Fonds insuffisants : l'amende proposée est de " + std::to_string(cost) + " or."};
+        return {"Fonds insuffisants : l'amende proposée est de " + Money::formatEconomyUnits(cost) + "."};
     }
 
     player.recordCanonicalEvent("reputation_locale_positive", "amende_reparatrice", "Amende réparatrice réglée", gain);
@@ -77,7 +78,7 @@ std::vector<std::string> LocalReputationRepairSystem::payFine(Player& player, co
     player.recordHistoricalEvent("local_reputation_repair", cityId, "Amende réparatrice réglée à " + cityId, true);
     const int after = LocalReputationSystem::score(player, cityId);
     return {
-        "Amende réglée : -" + std::to_string(cost) + " or.",
+        "Amende réglée : -" + Money::formatEconomyUnits(cost) + ".",
         "Réparation reconnue : +" + std::to_string(gain) + " de réputation locale.",
         "Réputation : " + std::to_string(before) + " -> " + std::to_string(after) + ".",
         after < 0

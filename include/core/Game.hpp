@@ -25,7 +25,7 @@ private:
         int experience = 0;
         int hp = 0;
         int maxHp = 0;
-        int gold = 0;
+        long long totalCopper = 0;
         int victories = 0;
         int defeats = 0;
         int escapes = 0;

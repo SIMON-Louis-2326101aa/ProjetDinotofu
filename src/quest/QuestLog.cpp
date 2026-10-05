@@ -5,6 +5,7 @@
 
 #include "quest/QuestLog.hpp"
 #include "quest/QuestCatalog.hpp"
+#include "world/City.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -44,6 +45,56 @@ namespace
         if (requiredState == "known") return true;
         if (requiredState == "completed") return quest.completed || quest.turnedIn;
         return quest.turnedIn;
+    }
+
+    std::string explicitBiomeNameInGuildOffer(const Quest& quest)
+    {
+        for (const City& catalogCity : City::getCatalog())
+        {
+            for (const CityBiomeDistance& distance : catalogCity.getBiomeDistances())
+            {
+                if (!distance.biomeName.empty() && quest.location.find(distance.biomeName) != std::string::npos)
+                {
+                    return distance.biomeName;
+                }
+            }
+        }
+        return "";
+    }
+
+    int guildOfferLocalityScore(const Quest& quest, const City& city)
+    {
+        // Counter/service contracts are handled in town even when their paperwork mentions a remote source.
+        if (quest.objectiveType == "service")
+        {
+            return 0;
+        }
+
+        const std::string biomeName = explicitBiomeNameInGuildOffer(quest);
+        if (biomeName.empty())
+        {
+            // Generic village, guild, road or creature-family jobs are assumed local until a precise biome is named.
+            return 1;
+        }
+
+        for (const CityBiomeDistance& distance : city.getBiomeDistances())
+        {
+            if (distance.biomeName != biomeName)
+            {
+                continue;
+            }
+
+            const int km = std::max(0, distance.distanceKm);
+            if (distance.initiallyKnown && km <= 10) return 0;
+            if (distance.initiallyKnown && km <= 20) return 1;
+            if (km <= 20) return 2;
+            if (distance.initiallyKnown && km <= 30) return 2;
+            if (km <= 30) return 3;
+            return 4;
+        }
+
+        // A concrete biome absent from this city's regional map is not forbidden, only deprioritized.
+        return 5;
     }
 
     bool questLogTextContainsAny(const std::string& value, const std::vector<std::string>& needles)
@@ -841,21 +892,40 @@ void QuestLog::ensureGuildBoardReady(int playerLevel, int currentDay, int target
         guildBoardTargetSize = 10;
     }
 
-    if (guildBoardCreatedAtCombat < 0)
+    const bool firstInitialization = guildBoardCreatedAtCombat < 0;
+    if (firstInitialization)
     {
         guildBoardCreatedAtCombat = currentDay;
+        guildBoardPendingReplacements = 0;
+        guildBoardReplacementDueAtCombat = -1;
     }
+
+    if (guildBoardPendingReplacements > 0
+        && guildBoardReplacementDueAtCombat >= 0
+        && currentDay >= guildBoardReplacementDueAtCombat)
+    {
+        guildBoardPendingReplacements = 0;
+        guildBoardReplacementDueAtCombat = -1;
+    }
+
+    // Accepted offers deliberately leave empty slots until the following world day.
+    // Expired offers may still be replaced immediately, but they must not accidentally
+    // refill slots that are waiting for their next-day replacement.
+    const int visibleTarget = std::max(
+        0,
+        guildBoardTargetSize - std::max(0, guildBoardPendingReplacements)
+    );
 
     auto addFreshCandidates = [&](int maxAttempts) {
         int attempts = 0;
-        while (static_cast<int>(guildBoardOffers.size()) < guildBoardTargetSize && attempts < maxAttempts)
+        while (static_cast<int>(guildBoardOffers.size()) < visibleTarget && attempts < maxAttempts)
         {
             attempts++;
             std::vector<Quest> candidates = QuestCatalog::createGuildBoard(playerLevel);
 
             for (Quest candidate : candidates)
             {
-                if (static_cast<int>(guildBoardOffers.size()) >= guildBoardTargetSize)
+                if (static_cast<int>(guildBoardOffers.size()) >= visibleTarget)
                 {
                     break;
                 }
@@ -871,25 +941,21 @@ void QuestLog::ensureGuildBoardReady(int playerLevel, int currentDay, int target
         }
     };
 
-    if (guildBoardOffers.empty())
-    {
-        guildBoardTargetSize = desiredTargetSize;
-        guildBoardCreatedAtCombat = currentDay;
-    }
-
-    addFreshCandidates(6);
-
-    if (guildBoardPendingReplacements > 0
-        && guildBoardReplacementDueAtCombat >= 0
-        && currentDay >= guildBoardReplacementDueAtCombat)
-    {
-        addFreshCandidates(4);
-        guildBoardPendingReplacements = 0;
-        guildBoardReplacementDueAtCombat = -1;
-    }
+    addFreshCandidates(firstInitialization ? 6 : 8);
 }
 
-bool QuestLog::removeGuildBoardOfferAt(int offerIndex, int currentCombatsStarted)
+void QuestLog::prioritizeGuildBoardForCity(const City& city)
+{
+    std::stable_sort(
+        guildBoardOffers.begin(),
+        guildBoardOffers.end(),
+        [&city](const Quest& left, const Quest& right) {
+            return guildOfferLocalityScore(left, city) < guildOfferLocalityScore(right, city);
+        }
+    );
+}
+
+bool QuestLog::removeGuildBoardOfferAt(int offerIndex, int currentDay)
 {
     if (offerIndex < 0 || offerIndex >= static_cast<int>(guildBoardOffers.size()))
     {
@@ -899,7 +965,7 @@ bool QuestLog::removeGuildBoardOfferAt(int offerIndex, int currentCombatsStarted
     guildBoardOffers.erase(guildBoardOffers.begin() + offerIndex);
     guildBoardPendingReplacements++;
 
-    const int dueAt = currentCombatsStarted + 1;
+    const int dueAt = std::max(0, currentDay) + 1;
     if (guildBoardReplacementDueAtCombat < 0 || dueAt < guildBoardReplacementDueAtCombat)
     {
         guildBoardReplacementDueAtCombat = dueAt;

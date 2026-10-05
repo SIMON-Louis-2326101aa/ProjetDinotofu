@@ -520,9 +520,9 @@ void QuestMenu::openMainQuestSection(Player& player)
             screen.addLine("Chapitre actuel : 3 — Les routes qui répondent mal.");
             screen.addLine("Progression : introduction atteinte.");
             screen.addLine("");
-            screen.addLine("[FIN TEMPORAIRE DU DÉVELOPPEMENT HISTOIRE]");
-            screen.addLine("La suite du chapitre 3 est volontairement désactivée pendant sa refonte.");
-            screen.addLine("Aucune étape future n'est injectée dans le journal : les anciennes scènes restent seulement conservées dans le code pour reprise ultérieure.");
+            screen.addLine("[SUITE DE L'HISTOIRE INDISPONIBLE]");
+            screen.addLine("La suite du chapitre 3 n'est pas encore accessible.");
+            screen.addLine("Aucune étape incomplète n'est ajoutée au journal principal.");
             screen.addLine("Le monde libre, les contrats, l'exploration et les autres systèmes restent jouables.");
         }
         else

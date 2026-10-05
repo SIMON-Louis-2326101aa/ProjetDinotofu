@@ -340,6 +340,63 @@ namespace
         return monsters[index];
     }
 
+    int ambientEliteChanceForLevel(int targetLevel)
+    {
+        if (targetLevel <= 2) return 0;
+        if (targetLevel <= 4) return 5;
+        if (targetLevel <= 9) return 8;
+        if (targetLevel <= 19) return 11;
+        return 14;
+    }
+
+    Monster chooseAmbientMonster(
+        const std::vector<Monster>& preferredPool,
+        int targetLevel,
+        Random& random,
+        const std::vector<Monster>* fallbackPool = nullptr,
+        int eliteChanceBonus = 0
+    )
+    {
+        std::vector<Monster> regular;
+        std::vector<Monster> elites;
+
+        for (const Monster& monster : preferredPool)
+        {
+            if (monster.isElite()) elites.push_back(monster);
+            else regular.push_back(monster);
+        }
+
+        int eliteChance = ambientEliteChanceForLevel(targetLevel) + eliteChanceBonus;
+        eliteChance = std::max(0, std::min(100, eliteChance));
+
+        if (!elites.empty() && random.between(1, 100) <= eliteChance)
+        {
+            return chooseFromList(elites, random);
+        }
+
+        if (!regular.empty())
+        {
+            return chooseFromList(regular, random);
+        }
+
+        if (fallbackPool != nullptr)
+        {
+            std::vector<Monster> fallbackRegular;
+            for (const Monster& monster : *fallbackPool)
+            {
+                if (!monster.isElite()) fallbackRegular.push_back(monster);
+            }
+
+            if (!fallbackRegular.empty())
+            {
+                return chooseFromList(fallbackRegular, random);
+            }
+        }
+
+        // Some very high-level regions intentionally contain only elites.
+        return chooseFromList(preferredPool, random);
+    }
+
 
 
     std::vector<Monster> createBiomeCommonMonsters(const std::string& biomeName)
@@ -1534,7 +1591,7 @@ namespace
         if (biomeName == "Bastion majeur scellé")
         {
             return {
-                createMonster("Commandant du Bastion scellé", "Gardien majeur d'un arc futur", Race::Aasimar, 112, 3600, 280, 1300, 1820, 6, 18, false, true, true),
+                createMonster("Commandant du Bastion scellé", "Gardien majeur d'un bastion oublié", Race::Aasimar, 112, 3600, 280, 1300, 1820, 6, 18, false, true, true),
                 createMonster("Porte qui refuse la fin", "Anomalie de scénario condensée", Race::AnomalieArcanique, 115, 4200, 250, 1450, 2040, 4, 22, false, true, true)
             };
         }
@@ -1576,23 +1633,44 @@ namespace
 
     Monster chooseBiomeMonster(const std::string& biomeName, int targetLevel, Random& random)
     {
+        const std::vector<Monster> common = createBiomeCommonMonsters(biomeName);
+        const std::vector<Monster> unusual = createBiomeUnusualMonsters(biomeName);
+        const std::vector<Monster> rare = createBiomeRareMonsters(biomeName);
+
+        std::vector<Monster> allCandidates;
+        allCandidates.reserve(common.size() + unusual.size() + rare.size());
+        allCandidates.insert(allCandidates.end(), common.begin(), common.end());
+        allCandidates.insert(allCandidates.end(), unusual.begin(), unusual.end());
+        allCandidates.insert(allCandidates.end(), rare.begin(), rare.end());
+
         int roll = random.between(1, 100);
-        std::vector<Monster> pool;
+        const std::vector<Monster>* preferredPool = &common;
+        int eliteChanceBonus = 0;
 
-        if (roll <= 70)
+        if (roll > 90)
         {
-            pool = createBiomeCommonMonsters(biomeName);
+            preferredPool = &rare;
+            eliteChanceBonus = 5;
         }
-        else if (roll <= 90)
+        else if (roll > 70)
         {
-            pool = createBiomeUnusualMonsters(biomeName);
-        }
-        else
-        {
-            pool = createBiomeRareMonsters(biomeName);
+            preferredPool = &unusual;
+            eliteChanceBonus = 2;
         }
 
-        Monster monster = chooseFromList(pool, random);
+        if (preferredPool->empty())
+        {
+            preferredPool = &allCandidates;
+            eliteChanceBonus = 0;
+        }
+
+        Monster monster = chooseAmbientMonster(
+            *preferredPool,
+            targetLevel,
+            random,
+            &allCandidates,
+            eliteChanceBonus
+        );
         return scaleMonsterToTargetLevel(monster, targetLevel);
     }
 
@@ -1750,23 +1828,23 @@ Monster MonsterCatalog::createRandomMonsterForLevel(int level, Random& random)
 
     if (level <= 1)
     {
-        monster = chooseFromList(createTierOneMonsters(), random);
+        monster = chooseAmbientMonster(createTierOneMonsters(), level, random);
     }
     else if (level == 2)
     {
-        monster = chooseFromList(createTierTwoMonsters(), random);
+        monster = chooseAmbientMonster(createTierTwoMonsters(), level, random);
     }
     else if (level == 3)
     {
-        monster = chooseFromList(createTierThreeMonsters(), random);
+        monster = chooseAmbientMonster(createTierThreeMonsters(), level, random);
     }
     else if (level == 4)
     {
-        monster = chooseFromList(createTierFourMonsters(), random);
+        monster = chooseAmbientMonster(createTierFourMonsters(), level, random);
     }
     else
     {
-        monster = chooseFromList(createTierFivePlusMonsters(), random);
+        monster = chooseAmbientMonster(createTierFivePlusMonsters(), level, random);
     }
 
     return scaleMonsterToTargetLevel(monster, level);

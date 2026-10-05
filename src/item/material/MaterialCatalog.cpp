@@ -488,7 +488,7 @@ Material MaterialCatalog::createOccultBrambleGrimoire(int quantity)
 // FR: createCrackedBone déclare ou implémente un comportement précis utilisé par ce module.
 Material MaterialCatalog::createCrackedBone(int quantity)
 {
-    return Material("cracked_bone", "Os fissuré", "Matériau récupéré sur les morts-vivants. Plus tard, il servira à la nécromancie et à certains crafts sombres.", "Matériau de monstre", 7, quantity);
+    return Material("cracked_bone", "Os fissuré", "Matériau récupéré sur les morts-vivants, associé à la nécromancie et aux crafts sombres.", "Matériau de monstre", 7, quantity);
 }
 
 // EN: createArcaneDust declares or implements a focused behavior used by this module.

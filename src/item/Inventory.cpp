@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <iterator>
 
 
 namespace
@@ -172,15 +173,19 @@ namespace
 // EN: Inventory declares or implements a focused behavior used by this module.
 // FR: Inventory déclare ou implémente un comportement précis utilisé par ce module.
 Inventory::Inventory()
+    : copperCoins_(0),
+      ironCoins_(0),
+      electrumCoins_(0),
+      goldCoins_(0),
+      platinumCoins_(0)
 {
-    totalCopper_ = 0;
 }
 
 // EN: getGold declares or implements a focused behavior used by this module.
 // FR: getGold déclare ou implémente un comportement précis utilisé par ce module.
 int Inventory::getGold() const
 {
-    const long long gold = totalCopper_ / Money::COPPER_PER_GOLD;
+    const long long gold = getTotalCopper() / Money::COPPER_PER_GOLD;
     if (gold > 2147483647LL)
     {
         return 2147483647;
@@ -190,41 +195,230 @@ int Inventory::getGold() const
 
 long long Inventory::getTotalCopper() const
 {
-    return totalCopper_ < 0 ? 0 : totalCopper_;
+    return std::max(0LL, copperCoins_)
+        + std::max(0LL, ironCoins_) * static_cast<long long>(Money::COPPER_PER_IRON)
+        + std::max(0LL, electrumCoins_) * static_cast<long long>(Money::COPPER_PER_IRON * Money::IRON_PER_ELECTRUM)
+        + std::max(0LL, goldCoins_) * Money::COPPER_PER_GOLD
+        + std::max(0LL, platinumCoins_) * Money::COPPER_PER_PLATINUM;
+}
+
+long long Inventory::getEconomyUnits() const
+{
+    return Money::economyUnitsFromCopper(getTotalCopper());
+}
+
+CoinBreakdown Inventory::getCoinStacks() const
+{
+    CoinBreakdown stacks;
+    stacks.copper = std::max(0LL, copperCoins_);
+    stacks.iron = std::max(0LL, ironCoins_);
+    stacks.electrum = std::max(0LL, electrumCoins_);
+    stacks.gold = std::max(0LL, goldCoins_);
+    stacks.platinum = std::max(0LL, platinumCoins_);
+    return stacks;
+}
+
+long long Inventory::getCoinCount(CoinType type) const
+{
+    switch (type)
+    {
+        case CoinType::Copper: return std::max(0LL, copperCoins_);
+        case CoinType::Iron: return std::max(0LL, ironCoins_);
+        case CoinType::Electrum: return std::max(0LL, electrumCoins_);
+        case CoinType::Gold: return std::max(0LL, goldCoins_);
+        case CoinType::Platinum: return std::max(0LL, platinumCoins_);
+    }
+    return 0;
+}
+
+bool Inventory::breakCoinsToLower(CoinType type, long long coinCount)
+{
+    if (coinCount <= 0 || !Money::hasLowerCoin(type) || getCoinCount(type) < coinCount)
+    {
+        return false;
+    }
+
+    CoinBreakdown stacks = getCoinStacks();
+    long long* source = nullptr;
+    long long* target = nullptr;
+    switch (type)
+    {
+        case CoinType::Platinum: source = &stacks.platinum; target = &stacks.gold; break;
+        case CoinType::Gold: source = &stacks.gold; target = &stacks.electrum; break;
+        case CoinType::Electrum: source = &stacks.electrum; target = &stacks.iron; break;
+        case CoinType::Iron: source = &stacks.iron; target = &stacks.copper; break;
+        case CoinType::Copper: return false;
+    }
+
+    *source -= coinCount;
+    *target += coinCount * 10;
+    setCoinStacks(stacks);
+    return true;
+}
+
+bool Inventory::combineCoinsToHigher(CoinType lowerType, long long higherCoinCount)
+{
+    if (higherCoinCount <= 0 || !Money::hasHigherCoin(lowerType))
+    {
+        return false;
+    }
+
+    const long long lowerNeeded = higherCoinCount * 10;
+    if (getCoinCount(lowerType) < lowerNeeded)
+    {
+        return false;
+    }
+
+    CoinBreakdown stacks = getCoinStacks();
+    long long* source = nullptr;
+    long long* target = nullptr;
+    switch (lowerType)
+    {
+        case CoinType::Copper: source = &stacks.copper; target = &stacks.iron; break;
+        case CoinType::Iron: source = &stacks.iron; target = &stacks.electrum; break;
+        case CoinType::Electrum: source = &stacks.electrum; target = &stacks.gold; break;
+        case CoinType::Gold: source = &stacks.gold; target = &stacks.platinum; break;
+        case CoinType::Platinum: return false;
+    }
+
+    *source -= lowerNeeded;
+    *target += higherCoinCount;
+    setCoinStacks(stacks);
+    return true;
+}
+
+bool Inventory::convertCoinLots(CoinType sourceType, CoinType targetType, long long lotCount)
+{
+    if (sourceType == targetType || lotCount <= 0)
+    {
+        return false;
+    }
+
+    const long long sourceValue = Money::coinValueInCopper(sourceType);
+    const long long targetValue = Money::coinValueInCopper(targetType);
+    if (sourceValue <= 0 || targetValue <= 0)
+    {
+        return false;
+    }
+
+    const long long sourcePerLot = sourceValue < targetValue ? targetValue / sourceValue : 1;
+    const long long targetPerLot = sourceValue > targetValue ? sourceValue / targetValue : 1;
+    if (sourcePerLot <= 0 || targetPerLot <= 0 || getCoinCount(sourceType) < sourcePerLot * lotCount)
+    {
+        return false;
+    }
+
+    CoinBreakdown stacks = getCoinStacks();
+    auto stackFor = [&stacks](CoinType type) -> long long* {
+        switch (type)
+        {
+            case CoinType::Copper: return &stacks.copper;
+            case CoinType::Iron: return &stacks.iron;
+            case CoinType::Electrum: return &stacks.electrum;
+            case CoinType::Gold: return &stacks.gold;
+            case CoinType::Platinum: return &stacks.platinum;
+        }
+        return nullptr;
+    };
+
+    long long* source = stackFor(sourceType);
+    long long* target = stackFor(targetType);
+    if (source == nullptr || target == nullptr)
+    {
+        return false;
+    }
+
+    *source -= sourcePerLot * lotCount;
+    *target += targetPerLot * lotCount;
+    setCoinStacks(stacks);
+    return true;
+}
+
+bool Inventory::compactCoinsToHighest()
+{
+    const long long before = getTotalCopper();
+    setCoinStacks(Money::breakdownFromCopper(before));
+    return getTotalCopper() == before;
+}
+
+bool Inventory::flattenCoinsToCopper()
+{
+    const long long before = getTotalCopper();
+    CoinBreakdown stacks;
+    stacks.copper = before;
+    setCoinStacks(stacks);
+    return getTotalCopper() == before;
 }
 
 // EN: setGold declares or implements a focused behavior used by this module.
 // FR: setGold déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::setGold(int amount)
 {
-    setTotalCopper(Money::copperFromGold(amount));
+    copperCoins_ = 0;
+    ironCoins_ = 0;
+    electrumCoins_ = 0;
+    goldCoins_ = std::max(0, amount);
+    platinumCoins_ = 0;
 }
 
 void Inventory::setTotalCopper(long long amount)
 {
-    if (amount < 0)
-    {
-        amount = 0;
-    }
+    const CoinBreakdown normalized = Money::breakdownFromCopper(std::max(0LL, amount));
+    setCoinStacks(normalized);
+}
 
-    totalCopper_ = amount;
+void Inventory::setEconomyUnits(long long amount)
+{
+    copperCoins_ = 0;
+    ironCoins_ = std::max(0LL, amount);
+    electrumCoins_ = 0;
+    goldCoins_ = 0;
+    platinumCoins_ = 0;
+}
+
+void Inventory::setCoinStacks(const CoinBreakdown& stacks)
+{
+    copperCoins_ = std::max(0LL, stacks.copper);
+    ironCoins_ = std::max(0LL, stacks.iron);
+    electrumCoins_ = std::max(0LL, stacks.electrum);
+    goldCoins_ = std::max(0LL, stacks.gold);
+    platinumCoins_ = std::max(0LL, stacks.platinum);
 }
 
 // EN: earnGold declares or implements a focused behavior used by this module.
 // FR: earnGold déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::earnGold(int amount)
 {
-    earnCopper(Money::copperFromGold(amount));
+    if (amount > 0) goldCoins_ += amount;
 }
 
 void Inventory::earnCopper(long long amount)
 {
-    if (amount <= 0)
-    {
-        return;
-    }
+    if (amount > 0) copperCoins_ += amount;
+}
 
-    totalCopper_ += amount;
+void Inventory::earnCoinStacks(const CoinBreakdown& stacks)
+{
+    copperCoins_ += std::max(0LL, stacks.copper);
+    ironCoins_ += std::max(0LL, stacks.iron);
+    electrumCoins_ += std::max(0LL, stacks.electrum);
+    goldCoins_ += std::max(0LL, stacks.gold);
+    platinumCoins_ += std::max(0LL, stacks.platinum);
+}
+
+void Inventory::earnEconomyUnits(long long amount)
+{
+    if (amount <= 0) return;
+
+    // Authored rewards/prices still use the historical economy unit (1 PF = 10 PC),
+    // but an actual payout is handed over in sensible physical denominations.
+    // Existing stacks are never normalized: only the newly received amount is broken down.
+    const CoinBreakdown payout = Money::breakdownFromCopper(Money::copperFromEconomyUnits(amount));
+    copperCoins_ += payout.copper;
+    ironCoins_ += payout.iron;
+    electrumCoins_ += payout.electrum;
+    goldCoins_ += payout.gold;
+    platinumCoins_ += payout.platinum;
 }
 
 // EN: spendGold declares or implements a focused behavior used by this module.
@@ -241,18 +435,81 @@ bool Inventory::spendCopper(long long amount)
         return true;
     }
 
-    if (totalCopper_ < amount)
+    if (getTotalCopper() < amount)
     {
         return false;
     }
 
-    totalCopper_ -= amount;
+    struct StackRef
+    {
+        long long value;
+        long long* count;
+    };
+
+    StackRef stacks[] = {
+        {Money::COPPER_PER_PLATINUM, &platinumCoins_},
+        {Money::COPPER_PER_GOLD, &goldCoins_},
+        {static_cast<long long>(Money::COPPER_PER_IRON) * Money::IRON_PER_ELECTRUM, &electrumCoins_},
+        {Money::COPPER_PER_IRON, &ironCoins_},
+        {1, &copperCoins_}
+    };
+
+    long long remaining = amount;
+
+    // Spend existing exact/lower denominations first without touching unrelated stacks.
+    for (StackRef& stack : stacks)
+    {
+        if (remaining <= 0) break;
+        if (stack.value > remaining || *stack.count <= 0) continue;
+
+        const long long take = std::min(*stack.count, remaining / stack.value);
+        *stack.count -= take;
+        remaining -= take * stack.value;
+    }
+
+    if (remaining <= 0)
+    {
+        return true;
+    }
+
+    // No exact combination was available. Break the smallest larger physical coin and
+    // receive ordinary change in lower denominations, like a merchant making change.
+    StackRef* coinToBreak = nullptr;
+    for (auto it = std::rbegin(stacks); it != std::rend(stacks); ++it)
+    {
+        if (it->value > remaining && *it->count > 0)
+        {
+            coinToBreak = &(*it);
+            break;
+        }
+    }
+
+    if (coinToBreak == nullptr)
+    {
+        // Should be unreachable after the total-value guard, but never lose money silently.
+        setTotalCopper(getTotalCopper());
+        return false;
+    }
+
+    (*coinToBreak->count)--;
+    long long change = coinToBreak->value - remaining;
+    const CoinBreakdown changeCoins = Money::breakdownFromCopper(change);
+    copperCoins_ += changeCoins.copper;
+    ironCoins_ += changeCoins.iron;
+    electrumCoins_ += changeCoins.electrum;
+    goldCoins_ += changeCoins.gold;
+    platinumCoins_ += changeCoins.platinum;
     return true;
+}
+
+bool Inventory::spendEconomyUnits(long long amount)
+{
+    return spendCopper(Money::copperFromEconomyUnits(amount));
 }
 
 std::string Inventory::getWalletLine() const
 {
-    return Money::formatWalletFromCopper(getTotalCopper());
+    return Money::formatCoinStacks(getCoinStacks(), true);
 }
 
 std::string Inventory::getWalletTotalLine() const
@@ -752,7 +1009,11 @@ void Inventory::clearAll()
     armors.clear();
     consumables.clear();
     materials.clear();
-    totalCopper_ = 0;
+    copperCoins_ = 0;
+    ironCoins_ = 0;
+    electrumCoins_ = 0;
+    goldCoins_ = 0;
+    platinumCoins_ = 0;
 }
 
 // EN: displayWeaponList declares or implements a focused behavior used by this module.
@@ -932,7 +1193,6 @@ void Inventory::displaySummary() const
         {
             "Argent séparé : " + getWalletLine(),
             "Argent total : " + getWalletTotalLine(),
-            "Échelle : " + Money::coinScaleText(),
             "Armes : " + std::to_string(getWeaponCount()),
             "Armures : " + std::to_string(getArmorCount()),
             "Consommables : " + std::to_string(getConsumableCount()),
@@ -977,7 +1237,7 @@ void Inventory::inspectWeapon(int index) const
     }
 
     lines.push_back(std::string("État : ") + (weapon.isBroken() ? "Cassée" : "Utilisable"));
-    lines.push_back("Valeur : " + Money::formatGoldWithRaw(weapon.getValue()));
+    lines.push_back("Valeur : " + Money::formatEconomyUnits(weapon.getValue()));
     showInventoryScreen("ARME", "inventory.weapon.inspect", lines, false);
 }
 
@@ -1009,7 +1269,7 @@ void Inventory::inspectArmor(int index) const
     }
 
     lines.push_back(std::string("État : ") + (armor.isBroken() ? "Cassée" : "Utilisable"));
-    lines.push_back("Valeur : " + Money::formatGoldWithRaw(armor.getValue()));
+    lines.push_back("Valeur : " + Money::formatEconomyUnits(armor.getValue()));
     showInventoryScreen("ARMURE", "inventory.armor.inspect", lines, false);
 }
 
@@ -1032,7 +1292,7 @@ void Inventory::inspectConsumable(int index) const
             "Nom : " + consumable.getName(),
             "Description : " + consumable.getDescription(),
             "Puissance : " + consumable.getPowerDisplayText(),
-            "Valeur : " + std::to_string(consumable.getValue()) + " pièces"
+            "Valeur : " + Money::formatEconomyUnits(consumable.getValue())
         },
         false
     );
@@ -1090,11 +1350,10 @@ void Inventory::inspectMaterial(int index) const
     lines.push_back("Description : " + material.getDescription());
 
     std::string valueLine = "Valeur unitaire : "
-        + std::to_string(material.getValue() * material.getQualityPricePercent() / 100)
-        + " pièces";
+        + Money::formatEconomyUnits(material.getValue() * material.getQualityPricePercent() / 100);
     if (material.hasSpecialQuality())
     {
-        valueLine += " (base " + std::to_string(material.getValue()) + ")";
+        valueLine += " (base " + Money::formatEconomyUnits(material.getValue()) + ")";
     }
     lines.push_back(valueLine);
 

@@ -1,12 +1,12 @@
 # Dinotofu   
 
-Dinotofu is a C++17 RPG / arena game. The terminal version remains the stable foundation, while an experimental HTML/JavaScript graphical interface is being developed for a more comfortable desktop experience.   
+Dinotofu is a C++23 RPG / arena game. The terminal version remains the stable foundation, while an experimental HTML/JavaScript graphical interface is being developed for a more comfortable desktop experience.   
 
 ## Current version   
 
-- Current version: **V3.50.15**   
-- Important save checkpoint: **V3.50.12**. Characters last adapted before this checkpoint must complete the explicit transition ritual before normal loading.   
-- Before that transition, Dinotofu creates a dedicated non-overwriting pre-update backup. Very old or unversioned characters keep the stronger legacy warning, but they can no longer bypass the mandatory V3.50.12 backup + transition ritual.   
+- Current version: **V3.50.34**   
+- Important save checkpoint: **V3.50.33**. Characters last adapted before this checkpoint must complete the explicit transition ritual before normal loading.   
+- Before that transition, Dinotofu creates a dedicated non-overwriting pre-update backup. Very old or unversioned characters keep the stronger legacy warning, but they can no longer bypass the mandatory V3.50.33 backup + transition ritual.   
 
 ## What is already in the game   
 
@@ -36,21 +36,18 @@ Boss discovery follows an internal ordered progression without exposing the full
 
 ## Graphical interface   
 
-The graphical interface remains experimental but playable and mirrors the C++ engine without inventing hidden game logic. V3.49.62 clarifies terminal routing after combat: Continue returns to the **Base menu**, and **World / city** is selected there as a normal explorable activity. The quick menu stays focused on the character, free input, session options and save options. Terminal mode remains the most reliable fallback: gameplay images are disabled and not toggleable there, while launchers/installers may use their dedicated icons.   
+The graphical interface is currently **being rebuilt** and should not be considered playable. Its temporary mode now keeps only the visual welcome screen: **Play** shows the production notice and can then stop the placeholder and switch to Terminal mode. No game engine is launched in the background while this screen is waiting. Terminal mode remains the stable default on Windows and Linux until a real desktop application replaces the placeholder.   
 
 ## Installing from a GitHub release   
 
 To install Dinotofu without compiling the project manually:   
 
-1. open the GitHub repository page;   
-2. open the latest Release shown on the repository page;   
-3. download the launcher for your operating system: Windows or Linux;   
-4. run the launcher, which opens or repairs the appropriate game version.   
+1. open the latest GitHub Release;   
+2. download `INSTALLER-DINOTOFU-WINDOWS-vX.YY.ZZ.zip` or `INSTALLER-DINOTOFU-LINUX-vX.YY.ZZ.7z`;   
+3. extract the small pack: its root contains only the installer and `Documentation/`;   
+4. run **INSTALLER-DINOTOFU**. The installer then downloads the full technical game payload from the release.   
 
-On desktop Windows/Linux builds, the installer or launcher should create two clear entries:   
-
-- **ProjetDinotofu Launcher**: normal / automatic launch through the OS-specific launcher;   
-- **ProjetDinotofu Launcher Terminal version**: forces the terminal version through the corresponding Windows/Linux launcher.   
+The **ProjetDinotofu Launcher** currently starts Terminal mode by default. Graphical mode is reserved for development until its rebuild.   
 
 ## Quick project structure   
 

@@ -93,29 +93,29 @@ int EconomyBalance::cityChangeTaxCopper(const std::string& destinationCityId, in
     return tax;
 }
 
-int EconomyBalance::routeRewardBudgetForDistance(int distanceKm, int dangerLevel)
+int EconomyBalance::routeRewardBudgetCopperForDistance(int distanceKm, int dangerLevel)
 {
     const int safeDistance = std::max(1, distanceKm);
     const int safeDanger = std::max(0, dangerLevel);
     return 25 + safeDistance * 3 + safeDanger * 18;
 }
 
-int EconomyBalance::innCommonBedCost(const std::string& cityId, int playerLevel)
+int EconomyBalance::innCommonBedCostCopper(const std::string& cityId, int playerLevel)
 {
-    return (55 + std::max(1, playerLevel) * 3) * cityVaultMultiplier(cityId) / 100;
+    return (96 + std::max(1, playerLevel) * 4) * cityVaultMultiplier(cityId) / 100;
 }
 
-int EconomyBalance::innSafeRoomCost(const std::string& cityId, int playerLevel)
+int EconomyBalance::innSafeRoomCostCopper(const std::string& cityId, int playerLevel)
 {
-    return (120 + std::max(1, playerLevel) * 6) * cityVaultMultiplier(cityId) / 100;
+    return (185 + std::max(1, playerLevel) * 7) * cityVaultMultiplier(cityId) / 100;
 }
 
-int EconomyBalance::innWarmMealCost(const std::string& cityId, int playerLevel)
+int EconomyBalance::innWarmMealCostCopper(const std::string& cityId, int playerLevel)
 {
-    return std::max(8, (24 + std::max(1, playerLevel)) * cityVaultMultiplier(cityId) / 100);
+    return std::max(12, (48 + std::max(1, playerLevel) * 2) * cityVaultMultiplier(cityId) / 100);
 }
 
-int EconomyBalance::cityVaultMaterialTransferCost(const std::string& fromCityId, const std::string& toCityId, int distanceKm, int quantity)
+int EconomyBalance::cityVaultMaterialTransferCostCopper(const std::string& fromCityId, const std::string& toCityId, int distanceKm, int quantity)
 {
     const int safeDistance = std::max(1, distanceKm);
     const int safeQuantity = std::max(1, quantity);

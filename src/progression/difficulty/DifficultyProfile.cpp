@@ -18,7 +18,7 @@ DifficultyProfile DifficultyProfile::forMode(DifficultyMode difficulty)
                 90, 35, 90, 110,
                 75, 35,
                 10, 10, 5, 75,
-                75, 1, 0, 0, 0,
+                8, 15, 1, 0, 0, 0,
                 35, 10, 5, 2, 1
             };
 
@@ -28,7 +28,7 @@ DifficultyProfile DifficultyProfile::forMode(DifficultyMode difficulty)
                 35, 20, 115, 90,
                 55, 15,
                 20, 20, 15, 30,
-                30, -1, -1, 20, 25,
+                4, 0, -1, -1, 20, 25,
                 55, 25, 12, 5, 3
             };
 
@@ -38,7 +38,7 @@ DifficultyProfile DifficultyProfile::forMode(DifficultyMode difficulty)
                 25, 10, 130, 75,
                 45, 8,
                 25, 25, 20, 10,
-                20, -2, -1, 30, 35,
+                3, 0, -2, -1, 30, 35,
                 65, 30, 18, 7, 5
             };
 
@@ -48,7 +48,7 @@ DifficultyProfile DifficultyProfile::forMode(DifficultyMode difficulty)
                 25, 10, 150, 65,
                 40, 0,
                 0, 0, 0, 1,
-                15, -2, -1, 35, 45,
+                2, 5, -2, -1, 35, 45,
                 100, 40, 25, 9, 7
             };
 
@@ -59,7 +59,7 @@ DifficultyProfile DifficultyProfile::forMode(DifficultyMode difficulty)
                 50, 25, 100, 100,
                 65, 25,
                 15, 15, 10, 50,
-                50, 0, 0, 0, 0,
+                5, 15, 0, 0, 0, 0,
                 50, 20, 10, 4, 2
             };
     }

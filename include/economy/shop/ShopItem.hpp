@@ -19,6 +19,7 @@ private:
     std::string name;
     std::string description;
     ShopItemCategory category;
+    // Historical names kept for compatibility: values are economy units (1 unit = 1 PF), not PO.
     int buyPrice;
     int sellPrice;
     int stock;

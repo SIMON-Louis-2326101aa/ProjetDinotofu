@@ -1026,7 +1026,7 @@ namespace MonsterBehaviorProfileCatalog
             profile.behaviorLine = "Comportement magique ou soutien : il cherche rarement le meilleur coup physique, mais amplifie le problème si on lui laisse un tour.";
             profile.attackDescription = monster.getName() + " accompagne son attaque d'un geste rituel bref";
             profile.signatureMove = "geste rituel qui prépare des statuts ou aide ses alliés";
-            profile.counterplayLine = "Réponse conseillée : cible prioritaire, pression rapide ou silence tactique futur.";
+            profile.counterplayLine = "Réponse conseillée : cible prioritaire, pression rapide ou silence tactique.";
             profile.strengths = {"soutien", "statuts", "soins ou boosts courts"};
             profile.weaknesses = {"pression rapide", "silence tactique", "cible prioritaire en groupe"};
             profile.reactions = {"soigne parfois", "soutient les alliés", "prépare des statuts"};

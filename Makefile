@@ -46,10 +46,11 @@ ifeq ($(filter -j%,$(MAKEFLAGS)),)
   MAKEFLAGS += -j$(NPROCS)
 endif
 
-CXX         := g++
+CXX         ?= g++
 TARGET_ARCH ?= native
 OPT_LEVEL   ?= -O3
-CXXFLAGS    := -std=c++17 $(OPT_LEVEL) -march=$(TARGET_ARCH) -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
+CXX_STD_FLAG ?= $(shell bash ./scripts/detect_cpp23_flag.sh "$(CXX)")
+CXXFLAGS    := $(CXX_STD_FLAG) $(OPT_LEVEL) -march=$(TARGET_ARCH) -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
 LDFLAGS     ?=
 
 SRC_DIR  := src

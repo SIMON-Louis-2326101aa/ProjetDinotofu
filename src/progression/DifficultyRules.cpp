@@ -7,6 +7,8 @@
 #include "progression/difficulty/DifficultyProfile.hpp"
 #include "progression/DeathRuleRules.hpp"
 
+#include <algorithm>
+
 // EN: getPlayerPveEscapeDefeatedRewardPercentage declares or implements a focused behavior used by this module.
 // FR: getPlayerPveEscapeDefeatedRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
 int DifficultyRules::getPlayerPveEscapeDefeatedRewardPercentage(DifficultyMode difficulty)
@@ -28,11 +30,11 @@ int DifficultyRules::getVictoryExperienceRewardPercentage(DifficultyMode difficu
     return DifficultyProfile::forMode(difficulty).victoryExperienceRewardPercentage;
 }
 
-// EN: getVictoryGoldRewardPercentage declares or implements a focused behavior used by this module.
-// FR: getVictoryGoldRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
-int DifficultyRules::getVictoryGoldRewardPercentage(DifficultyMode difficulty)
+// EN: getVictoryEconomyRewardPercentage declares or implements a focused behavior used by this module.
+// FR: getVictoryEconomyRewardPercentage déclare ou implémente un comportement précis utilisé par ce module.
+int DifficultyRules::getVictoryEconomyRewardPercentage(DifficultyMode difficulty)
 {
-    return DifficultyProfile::forMode(difficulty).victoryGoldRewardPercentage;
+    return DifficultyProfile::forMode(difficulty).victoryEconomyRewardPercentage;
 }
 
 // EN: getPlayerEscapeChanceModifier declares or implements a focused behavior used by this module.
@@ -84,11 +86,11 @@ int DifficultyRules::getNonLethalDeathInventoryLossPercentage(DifficultyMode dif
     return DifficultyProfile::forMode(difficulty).nonLethalDeathInventoryLossPercentage;
 }
 
-// EN: getNonLethalDeathGoldLossPercentage declares or implements a focused behavior used by this module.
-// FR: getNonLethalDeathGoldLossPercentage déclare ou implémente un comportement précis utilisé par ce module.
-int DifficultyRules::getNonLethalDeathGoldLossPercentage(DifficultyMode difficulty)
+// EN: getNonLethalDeathEconomyLossPercentage declares or implements a focused behavior used by this module.
+// FR: getNonLethalDeathEconomyLossPercentage déclare ou implémente un comportement précis utilisé par ce module.
+int DifficultyRules::getNonLethalDeathEconomyLossPercentage(DifficultyMode difficulty)
 {
-    return DifficultyProfile::forMode(difficulty).nonLethalDeathGoldLossPercentage;
+    return DifficultyProfile::forMode(difficulty).nonLethalDeathEconomyLossPercentage;
 }
 
 // EN: getNonLethalDeathExperienceLossPercentage declares or implements a focused behavior used by this module.
@@ -105,11 +107,19 @@ int DifficultyRules::getNonLethalRespawnHealthPercentage(DifficultyMode difficul
     return DifficultyProfile::forMode(difficulty).nonLethalRespawnHealthPercentage;
 }
 
-// EN: getStarterGold declares or implements a focused behavior used by this module.
-// FR: getStarterGold déclare ou implémente un comportement précis utilisé par ce module.
-int DifficultyRules::getStarterGold(DifficultyMode difficulty)
+CoinBreakdown DifficultyRules::getStarterCoinStacks(DifficultyMode difficulty)
 {
-    return DifficultyProfile::forMode(difficulty).starterGold;
+    const DifficultyProfile profile = DifficultyProfile::forMode(difficulty);
+    CoinBreakdown stacks;
+    stacks.iron = std::max(0, profile.starterIronCoins);
+    stacks.copper = std::max(0, profile.starterCopperCoins);
+    return stacks;
+}
+
+long long DifficultyRules::getStarterCopper(DifficultyMode difficulty)
+{
+    const CoinBreakdown stacks = getStarterCoinStacks(difficulty);
+    return stacks.iron * Money::COPPER_PER_IRON + stacks.copper;
 }
 
 // EN: getStarterHealingPotionCount declares or implements a focused behavior used by this module.

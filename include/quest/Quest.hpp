@@ -7,6 +7,7 @@
 #define INCLUDE_QUEST_QUEST_HPP
 
 #include <string>
+#include "economy/Money.hpp"
 
 struct Quest
 {
@@ -20,7 +21,11 @@ struct Quest
     std::string objectiveType;
     std::string targetFamily;
     int rewardExperience = 0;
+    // Historical field name kept in saves: this is an economy-unit reward (1 unit = 1 PF), not PO.
     int rewardGold = 0;
+    // Optional exact physical payout. When at least one stack is non-zero, these exact pieces
+    // are awarded as authored and rewardGold is not converted or substituted.
+    CoinBreakdown rewardCoins;
     std::string rewardMaterialId;
     std::string rewardMaterialName;
     int rewardMaterialQuantity = 0;

@@ -13,9 +13,9 @@ public:
     // FR: DeathPenaltyResult déclare ou implémente un comportement précis utilisé par ce module.
     DeathPenaltyResult();
 
-    // EN: getLostGold declares or implements a focused behavior used by this module.
-    // FR: getLostGold déclare ou implémente un comportement précis utilisé par ce module.
-    int getLostGold() const;
+    // EN: getLostEconomyUnits declares or implements a focused behavior used by this module.
+    // FR: getLostEconomyUnits déclare ou implémente un comportement précis utilisé par ce module.
+    int getLostEconomyUnits() const;
     // EN: getLostExperience declares or implements a focused behavior used by this module.
     // FR: getLostExperience déclare ou implémente un comportement précis utilisé par ce module.
     int getLostExperience() const;
@@ -51,9 +51,9 @@ public:
     // FR: wasArmorStolen déclare ou implémente un comportement précis utilisé par ce module.
     bool wasArmorStolen() const;
 
-    // EN: addLostGold declares or implements a focused behavior used by this module.
-    // FR: addLostGold déclare ou implémente un comportement précis utilisé par ce module.
-    void addLostGold(int amount);
+    // EN: addLostEconomyUnits declares or implements a focused behavior used by this module.
+    // FR: addLostEconomyUnits déclare ou implémente un comportement précis utilisé par ce module.
+    void addLostEconomyUnits(int amount);
     // EN: addLostExperience declares or implements a focused behavior used by this module.
     // FR: addLostExperience déclare ou implémente un comportement précis utilisé par ce module.
     void addLostExperience(int amount);
@@ -90,7 +90,7 @@ public:
     void markArmorStolen();
 
 private:
-    int lostGold;
+    int lostEconomyUnits;
     int lostExperience;
     int lostConsumables;
     int weaponDurabilityLost;

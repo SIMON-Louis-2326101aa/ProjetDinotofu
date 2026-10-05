@@ -32,7 +32,7 @@ namespace
         itemData.quantity = std::to_string(std::max(1, amount));
         itemData.detail = CombatPotionUtils::typeToText(potion.getType());
         itemData.progress = "Puissance : " + potion.getPowerDisplayText();
-        itemData.price = std::to_string(potion.getValue()) + " or";
+        itemData.price = Money::formatEconomyUnits(potion.getValue());
         itemData.important = potion.isHealing();
         return itemData;
     }
@@ -342,7 +342,7 @@ void CombatPotionDisplay::showPotionDetails(const Consumable& potion)
             "Description : " + potion.getDescription(),
             "Type : " + CombatPotionUtils::typeToText(potion.getType()),
             "Puissance : " + potion.getPowerDisplayText(),
-            "Valeur estimée : " + Money::formatGoldWithRaw(potion.getValue())
+            "Valeur estimée : " + Money::formatEconomyUnits(potion.getValue())
         }
     );
 }

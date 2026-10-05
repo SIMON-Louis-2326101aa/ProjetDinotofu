@@ -10,9 +10,44 @@
 
 #include <sstream>
 #include <string>
+#include <vector>
 
 namespace
 {
+    std::string activeCombatStatusSummary(const Entity& entity)
+    {
+        std::vector<std::string> statuses;
+        if (entity.isInDefensePosture()) statuses.push_back("garde : " + entity.getDefensePostureLabel());
+        if (entity.hasBurning()) statuses.push_back("brûlure");
+        if (entity.hasPoison()) statuses.push_back("poison");
+        if (entity.hasFrost()) statuses.push_back("givre");
+        if (entity.hasShock()) statuses.push_back("choc");
+        if (entity.hasBleeding()) statuses.push_back("saignement");
+        if (entity.hasEntanglement()) statuses.push_back("entrave");
+        if (entity.hasWeakening()) statuses.push_back("affaiblissement");
+        if (entity.hasVulnerability()) statuses.push_back("vulnérabilité");
+        if (entity.hasNextHitVulnerability()) statuses.push_back("prochain impact aggravé");
+        if (entity.hasElementalWard()) statuses.push_back("protection élémentaire");
+        if (entity.hasRegeneration()) statuses.push_back("régénération");
+        if (entity.hasPowerBoost()) statuses.push_back("puissance renforcée");
+        if (entity.hasPrecisionBoost()) statuses.push_back("précision renforcée");
+        if (entity.hasGuardBoost()) statuses.push_back("garde renforcée");
+        if (entity.hasFlight()) statuses.push_back("vol");
+        if (entity.hasIllusion()) statuses.push_back("illusion");
+
+        if (statuses.empty()) return "Aucun état de combat actif notable.";
+
+        std::ostringstream out;
+        out << "États actifs : ";
+        for (std::size_t i = 0; i < statuses.size(); ++i)
+        {
+            if (i > 0) out << ", ";
+            out << statuses[i];
+        }
+        out << ".";
+        return out.str();
+    }
+
     MenuOptionItemData buildCombatTurnActionData(
         const Entity& entity,
         const std::string& actionType,
@@ -41,6 +76,14 @@ MenuScreen CombatMenu::buildTurnScreen(const Entity& entity, bool teamOrdersAvai
 {
     MenuScreen screen("COMBAT", "combat.turn");
     screen.addSubtitle("Tour de " + entity.getName());
+    screen.addLine(activeCombatStatusSummary(entity));
+    if (entity.isInDefensePosture())
+    {
+        screen.addLine(
+            "Posture actuelle : -" + std::to_string(entity.getDefenseReductionPercent())
+            + "% sur le prochain impact, contre " + std::to_string(entity.getDefenseCounterChance()) + "% si la posture le permet."
+        );
+    }
 
     if (entity.getClassSkillCooldownTurns() > 0)
     {
@@ -114,10 +157,17 @@ MenuScreen CombatMenu::buildTurnScreen(const Entity& entity, bool teamOrdersAvai
     screen.addOption(
         6,
         "Posture de défense",
-        "Renforce la survie jusqu'au prochain tour.",
+        "Renforce la survie jusqu'au prochain coup, y compris contre une attaque préparée qui aboutit.",
         true,
         "combat.defend",
-        buildCombatTurnActionData(entity, "defend", "Posture de défense", "Consomme le tour pour améliorer la survie immédiate.", "Action défensive")
+        buildCombatTurnActionData(
+            entity,
+            "defend",
+            "Posture de défense",
+            "Consomme le tour pour réduire le prochain impact ; utile aussi si une grosse attaque télégraphiée n'est pas interrompue.",
+            entity.isInDefensePosture() ? "Déjà active — la reprendre remplace la garde actuelle" : "Action défensive",
+            entity.isInDefensePosture()
+        )
     );
     screen.addOption(
         7,

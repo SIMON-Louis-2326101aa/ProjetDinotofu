@@ -8,6 +8,7 @@
 #include "combat/TurnManager.hpp"
 
 #include "core/Console.hpp"
+#include "economy/Money.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "interface/CombatDisplay.hpp"
 #include "interface/TerminalInterface.hpp"
@@ -53,7 +54,7 @@ namespace
         int criticalDamage;
         int equippedWeaponIndex;
         int equippedArmorIndex;
-        int gold;
+        long long totalCopper;
         std::vector<Weapon> weapons;
         std::vector<Armor> armors;
         std::vector<Consumable> consumables;
@@ -72,7 +73,7 @@ namespace
         snapshot.criticalDamage = player.getCriticalDamage();
         snapshot.equippedWeaponIndex = player.getEquippedWeaponIndex();
         snapshot.equippedArmorIndex = player.getEquippedArmorIndex();
-        snapshot.gold = player.getInventory().getGold();
+        snapshot.totalCopper = player.getInventory().getTotalCopper();
         snapshot.weapons = player.getInventory().getWeapons();
         snapshot.armors = player.getInventory().getArmors();
         snapshot.consumables = player.getInventory().getConsumables();
@@ -87,7 +88,7 @@ namespace
         player.unequipArmor();
         player.unequipWeapon();
         player.getInventory().clearAll();
-        player.getInventory().setGold(snapshot.gold);
+        player.getInventory().setTotalCopper(snapshot.totalCopper);
 
         for (const Weapon& weapon : snapshot.weapons)
         {
@@ -174,7 +175,8 @@ namespace
         int symbolicGold = 3;
         int symbolicExperience = 8;
 
-        winner.getInventory().earnGold(symbolicGold);
+        winner.getInventory().earnEconomyUnits(symbolicGold);
+        winner.refreshCurrencyTitles();
         winner.gainExperience(symbolicExperience);
 
         MessageScreen::show(
@@ -182,7 +184,7 @@ namespace
             "pvp.local.friendly.reward",
             {
                 "Gain symbolique de l'arène pour " + winner.getName() + " : "
-                    + std::to_string(symbolicGold) + " or et "
+                    + Money::formatEconomyUnits(symbolicGold) + " et "
                     + std::to_string(symbolicExperience) + " expérience."
             },
             false
@@ -848,7 +850,7 @@ namespace
     // FR: estimateInventoryAndEquipmentValue déclare ou implémente un comportement précis utilisé par ce module.
     int estimateInventoryAndEquipmentValue(const Player& player)
     {
-        int total = player.getInventory().getGold();
+        int total = player.getInventory().getEconomyUnits();
 
         for (const Weapon& weapon : player.getInventory().getWeapons())
         {
@@ -882,9 +884,9 @@ namespace
             "pvp.local.duel_value",
             {
                 "Estimation de l'inventaire et de l'équipement de " + player1.getName()
-                    + " : " + std::to_string(estimateInventoryAndEquipmentValue(player1)) + " pièces.",
+                    + " : " + Money::formatEconomyUnits(estimateInventoryAndEquipmentValue(player1)) + ".",
                 "Estimation de l'inventaire et de l'équipement de l'opposant " + player2.getName()
-                    + " : " + std::to_string(estimateInventoryAndEquipmentValue(player2)) + " pièces."
+                    + " : " + Money::formatEconomyUnits(estimateInventoryAndEquipmentValue(player2)) + "."
             },
             false
         );
@@ -995,27 +997,28 @@ namespace
         int valueCap = lethalDuel ? 1000000000 : std::max(1, winnerPreFightValue);
         int stolenValue = 0;
         int goldPercent = lethalDuel ? 45 : 18;
-        int stolenGold = loser.getInventory().getGold() * goldPercent / 100;
+        int stolenGold = loser.getInventory().getEconomyUnits() * goldPercent / 100;
 
         if (!lethalDuel)
         {
             stolenGold = std::min(stolenGold, valueCap);
         }
 
-        if (stolenGold > 0 && loser.getInventory().spendGold(stolenGold))
+        if (stolenGold > 0 && loser.getInventory().spendEconomyUnits(stolenGold))
         {
-            winner.getInventory().earnGold(stolenGold);
+            winner.getInventory().earnEconomyUnits(stolenGold);
+            winner.refreshCurrencyTitles();
             stolenValue += stolenGold;
-            lootLines.push_back("Or récupéré : " + std::to_string(stolenGold) + ".");
+            lootLines.push_back("Argent récupéré : " + Money::formatEconomyUnits(stolenGold) + ".");
         }
         else
         {
-            lootLines.push_back("Aucun or récupérable.");
+            lootLines.push_back("Aucun argent récupérable.");
         }
 
         if (!lethalDuel)
         {
-            lootLines.push_back("Limite anti-abus : le perdant ne pourra pas perdre plus que la valeur estimée de son adversaire avant duel (" + std::to_string(valueCap) + " pièces).");
+            lootLines.push_back("Limite anti-abus : le perdant ne pourra pas perdre plus que la valeur estimée de son adversaire avant duel (" + Money::formatEconomyUnits(valueCap) + ").");
         }
 
         int stealChance = lethalDuel ? 78 : 35;
@@ -1353,7 +1356,7 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
             {
                 "PV, consommables, équipement et inventaire reviennent à l'état d'avant-duel.",
                 "Aucun gain ou dommage sérieux n'est conservé hors statistiques JcJ.",
-                "Stat JcJ mise à jour : victoire pour " + winner->getName() + ", défaite pour " + loser->getName() + "."
+                "Stat JcJ : victoire pour " + winner->getName() + ", défaite pour " + loser->getName() + "."
             },
             false
         );
@@ -1391,7 +1394,7 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
                 player2,
                 player2Slot.accountName,
                 "mise à jour",
-                "Sauvegarde J2 mise à jour après le duel local."
+                "Sauvegarde J2 effectuée après le duel local."
             );
         }
     }

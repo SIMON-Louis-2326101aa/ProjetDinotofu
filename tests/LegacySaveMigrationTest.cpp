@@ -54,6 +54,7 @@ int main()
     DifficultyMode difficulty = DifficultyMode::Normal;
     DeathRuleMode deathRule = DeathRuleMode::NonDefinitive;
     assert(SaveManager::loadPlayerSnapshot(summaries.front(), loaded, difficulty, deathRule));
+    assert(loaded.getInventory().getTotalCopper() == 120);
     loaded.applyHeavyVersionAdaptation(difficulty);
     assert(loaded.getLastAdaptedVersion() == VersionInfo::currentVersion());
     assert(SaveManager::savePlayerSnapshot(loaded, account, difficulty, deathRule));

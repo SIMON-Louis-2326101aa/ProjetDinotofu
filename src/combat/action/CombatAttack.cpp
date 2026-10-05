@@ -1165,7 +1165,7 @@ void CombatAttack::executeBoostedAttack(
                         oathWeapon.getName() + " a répondu au Serment de la Forge liée pendant un impact maîtrisé."
                     );
                 }
-                preparationBuffer << "Serment de la Forge liée : " << oathWeapon.getName() << " répond à une classe qui sait vraiment la tenir. La trace compte pour les futurs objets avec mémoire." << std::endl;
+                preparationBuffer << "Serment de la Forge liée : " << oathWeapon.getName() << " répond à une classe qui sait vraiment la tenir. La trace compte dans la mémoire de l'arme." << std::endl;
             }
         }
 
@@ -1176,7 +1176,7 @@ void CombatAttack::executeBoostedAttack(
             rawDamage += 1;
             attacker.startDefensePosture(3, 1, "Serment des Liens");
             attackingPlayerIdentity->recordCanonicalEvent("techniques_combinees_alliees", "lien_en_combat", "Le Serment des Liens a soutenu une action de groupe", 1);
-            preparationBuffer << "Serment des Liens : l'attaque garde une place pour les alliés et les futurs combos de groupe, sans jouer leur tour à leur place." << std::endl;
+            preparationBuffer << "Serment des Liens : l'attaque garde une place pour les alliés et les combinaisons de groupe, sans jouer leur tour à leur place." << std::endl;
         }
 
         if (attackingPlayerIdentity->hasPassiveSkill("church_oath_rivals")

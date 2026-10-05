@@ -105,6 +105,21 @@ namespace
             return {"Trexof observe ton nom sans vraiment te regarder.", "Trexof : Ce nom appartient à quelqu'un qui repère les failles.", "Trexof : Si tu n'es pas la limite, tu vas juste la heurter."};
         }
 
+        if (name == "willow")
+        {
+            return {"Willow lève à peine les yeux.", "Willow : Mon nom ne va pas rendre ton tir meilleur.", "Willow : Si tu veux vraiment le porter, prouve au moins que tu sais rester silencieux deux minutes."};
+        }
+
+        if (name == "dwarf")
+        {
+            return {"Dwarf éclate de rire avant même la fin de la vérification.", "Dwarf : Ah, carrément mon nom ? Fallait prévenir, j'aurais préparé une vanne meilleure.", "Dwarf : Si tu mens, j'espère au moins que tu encaisses aussi bien que moi."};
+        }
+
+        if (name == "badr")
+        {
+            return {"Badr te regarde avec un calme qui contraste avec son apparence.", "Badr : Mon nom fait déjà assez peur sans qu'on le prête au premier venu.", "Une forme remue sous sa main. Badr : Second est du même avis."};
+        }
+
         if (name == "mattpro")
         {
             return {"Matt (PRO) ne dit rien.", "Le silence dure assez longtemps pour devenir une menace pédagogique.", "Verdict : non jouable. Même le menu semble éviter son regard."};
@@ -172,6 +187,21 @@ namespace
         if (name == "trexof")
         {
             return {"Trexof observe ton nom, puis hoche très légèrement la tête.", "Trexof : Le nom t'a reconnu.", "Trexof : Alors avance. Mais ne confonds pas reconnaissance et sécurité."};
+        }
+
+        if (name == "willow")
+        {
+            return {"Willow vérifie la date, puis hausse une épaule.", "Willow : Bon. C'est bien toi.", "Willow : Maintenant évite juste de me faire regretter d'avoir répondu."};
+        }
+
+        if (name == "dwarf")
+        {
+            return {"Dwarf relit la date et son sourire devient beaucoup trop satisfait.", "Dwarf : Ah ! Là on parle. C'est bien moi.", "Dwarf : Allez, viens. On va probablement faire une connerie, mais au moins elle sera authentique."};
+        }
+
+        if (name == "badr")
+        {
+            return {"Badr incline la tête avec sérieux.", "Badr : La date répond correctement. Très bien.", "Quelque chose bouge sous sa peau. Badr : Second aussi te reconnaît. C'est rarement un compliment rassurant."};
         }
 
         if (name == "mattpro")

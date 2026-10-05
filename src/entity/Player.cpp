@@ -40,6 +40,7 @@ namespace
             "pnj_servis", "types_quetes_completees", "lieux_visites", "coffres",
             "reputation_locale_positive", "reputation_locale_negative",
             "services_locaux_reussis", "services_locaux_echoues", "avertissements_locaux", "rehabilitations_locales",
+            "quetes_reussies", "quetes_echouees",
             "consultations_comptoir_mercenaire", "participation_recrues",
             "fuites_ennemies", "fugitifs_signales", "rivaux_confirmes", "rumeurs_rivaux"
         };
@@ -308,6 +309,8 @@ Player::Player() : Entity()
 
     refundUsesRemaining = 3;
     createdAtText = VersionInfo::currentDateText();
+    accumulatedRealPlaySeconds = 0;
+    realPlaySessionStartedAt = std::chrono::steady_clock::now();
     createdForVersion = VersionInfo::currentVersion();
     lastAdaptedVersion = VersionInfo::currentVersion();
     creatorAccountName = "";
@@ -436,6 +439,8 @@ Player::Player(
 
     refundUsesRemaining = 3;
     createdAtText = VersionInfo::currentDateText();
+    accumulatedRealPlaySeconds = 0;
+    realPlaySessionStartedAt = std::chrono::steady_clock::now();
     createdForVersion = VersionInfo::currentVersion();
     lastAdaptedVersion = VersionInfo::currentVersion();
     creatorAccountName = "";
@@ -487,6 +492,20 @@ void Player::clearLastConsumedAmmunition()
 const std::string& Player::getCreatedAtText() const
 {
     return createdAtText;
+}
+
+long long Player::getRealPlayTimeSeconds() const
+{
+    const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::steady_clock::now() - realPlaySessionStartedAt
+    ).count();
+    return std::max(0LL, accumulatedRealPlaySeconds + elapsed);
+}
+
+void Player::setLoadedRealPlayTimeSeconds(long long seconds)
+{
+    accumulatedRealPlaySeconds = std::max(0LL, seconds);
+    realPlaySessionStartedAt = std::chrono::steady_clock::now();
 }
 
 const std::string& Player::getCreatorAccountName() const
@@ -1606,7 +1625,7 @@ void Player::processEndOfWorldDay()
         }
 
         subscription.renewalPrice = renewalPrice;
-        if (inventory.spendGold(renewalPrice))
+        if (inventory.spendEconomyUnits(renewalPrice))
         {
             subscription.expiresAtDay = worldDaysElapsed + 7;
             subscription.cancellationRequested = false;
@@ -1614,7 +1633,7 @@ void Player::processEndOfWorldDay()
             ++renewedToday;
             dayLines.push_back(
                 "Renouvellement payé : " + subscriptionName
-                + " — " + Money::formatGoldWithRaw(renewalPrice)
+                + " — " + Money::formatEconomyUnits(renewalPrice)
                 + " (actif jusqu'à la fin du jour " + std::to_string(subscription.expiresAtDay + 1) + ")."
             );
         }
@@ -1622,8 +1641,8 @@ void Player::processEndOfWorldDay()
         {
             dayLines.push_back(
                 "Renouvellement impossible : " + subscriptionName
-                + " demandait " + Money::formatGoldWithRaw(renewalPrice)
-                + ", mais l'or est insuffisant. L'abonnement s'arrête."
+                + " demandait " + Money::formatEconomyUnits(renewalPrice)
+                + ", mais les fonds sont insuffisants. L'abonnement s'arrête."
             );
         }
     }
@@ -1756,7 +1775,7 @@ void Player::processEndOfWorldDay()
     {
         pendingWorldTimeReportLines.push_back(
             "Fin de journée : " + std::to_string(renewedToday)
-            + " renouvellement(s) payé(s), total " + Money::formatGoldWithRaw(paidToday) + "."
+            + " renouvellement(s) payé(s), total " + Money::formatEconomyUnits(paidToday) + "."
         );
         pendingWorldTimeReportLines.insert(pendingWorldTimeReportLines.end(), dayLines.begin(), dayLines.end());
     }
@@ -1770,7 +1789,7 @@ void Player::appendWeeklyRenewalSummaryIfNeeded()
     {
         pendingWorldTimeReportLines.push_back(
             "Bilan de fin de semaine : renouvellements d'abonnements payés cette semaine = "
-            + Money::formatGoldWithRaw(localSubscriptionRenewalPaidThisWeek) + "."
+            + Money::formatEconomyUnits(localSubscriptionRenewalPaidThisWeek) + "."
         );
         localSubscriptionRenewalPaidThisWeek = 0;
     }
@@ -3356,7 +3375,7 @@ void Player::recordExplorationChallengeKey(const std::string& key)
         recentExplorationChallengeKeys.end()
     );
     recentExplorationChallengeKeys.push_back(key);
-    while (recentExplorationChallengeKeys.size() > 4)
+    while (recentExplorationChallengeKeys.size() > 10)
     {
         recentExplorationChallengeKeys.erase(recentExplorationChallengeKeys.begin());
     }
@@ -3669,7 +3688,8 @@ void Player::restoreGrinkaBossTheft()
 
     if (grinkaStolenGold > 0)
     {
-        inventory.earnGold(grinkaStolenGold);
+        inventory.earnEconomyUnits(grinkaStolenGold);
+        refreshCurrencyTitles();
     }
 
     if (grinkaHasStolenWeapon)
@@ -3765,9 +3785,9 @@ void Player::applyLethalCheatAttemptPenalty()
         hp = 1;
     }
 
-    int currentGold = inventory.getGold();
-    int goldLoss = currentGold / 4;
-    inventory.setGold(currentGold - goldLoss);
+    const long long currentCopper = inventory.getTotalCopper();
+    const long long copperLoss = currentCopper / 4;
+    inventory.spendCopper(copperLoss);
 
     if (worldGazeMaxHpPenalty > 0)
     {

@@ -46,7 +46,8 @@ grep -q "\"version\": \"${current_version}\"" assets/branding/branding_manifest.
 grep -q "assets/branding/dinotofu.ico" tools/gui/dinotofu_gui_experimental.html || fail "L'IG ne référence pas le favicon Dinotofu."
 grep -q "assets/branding/dinotofu_site_logo_512.png" tools/gui/dinotofu_gui_experimental.html || fail "L'IG ne référence pas le logo site 512 dans l'en-tête."
 grep -q "assets/branding/dinotofu_banner_web.png" tools/gui/dinotofu_gui_experimental.html || fail "L'IG ne référence pas la bannière web."
-grep -q "Les textes restent la source complète" tools/gui/dinotofu_gui_experimental.html || fail "L'IG doit rappeler que les textes restent la source complète."
+grep -q "Interface graphique en production" tools/gui/dinotofu_gui_experimental.html || fail "L'accueil IG doit signaler clairement que l'interface est encore en production."
+grep -q "Arrêter et passer à la version terminale" tools/gui/dinotofu_gui_experimental.html || fail "L'accueil IG doit proposer la bascule vers le Terminal."
 
 # Windows shortcuts must point to distinct launcher icons and distinct launch targets.
 grep -q "dinotofu_launcher_graphical.ico" tools/windows/DinotofuInstaller.ps1 || fail "L'installateur Windows ne référence pas l'icône graphique."

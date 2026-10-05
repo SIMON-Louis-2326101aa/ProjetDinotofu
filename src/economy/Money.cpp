@@ -3,6 +3,7 @@
 
 #include "economy/Money.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <sstream>
 #include <string>
@@ -26,7 +27,91 @@ namespace
 
 std::string Money::coinScaleText()
 {
-    return "1 platine = 10 or | 1 or = 10 électrum | 1 électrum = 10 fer | 1 fer = 10 cuivre";
+    return "Pièce de cuivre (PC) -> Pièce de fer (PF) -> Pièce d'électrum (PE) -> Pièce d'or (PO) -> Pièce de platine (PP) | 10 pièces d'un rang = 1 pièce du rang supérieur";
+}
+
+std::string Money::coinName(CoinType type)
+{
+    switch (type)
+    {
+        case CoinType::Copper: return "pièce de cuivre";
+        case CoinType::Iron: return "pièce de fer";
+        case CoinType::Electrum: return "pièce d'électrum";
+        case CoinType::Gold: return "pièce d'or";
+        case CoinType::Platinum: return "pièce de platine";
+    }
+    return "pièce";
+}
+
+std::string Money::coinAbbreviation(CoinType type)
+{
+    switch (type)
+    {
+        case CoinType::Copper: return "PC";
+        case CoinType::Iron: return "PF";
+        case CoinType::Electrum: return "PE";
+        case CoinType::Gold: return "PO";
+        case CoinType::Platinum: return "PP";
+    }
+    return "?";
+}
+
+long long Money::coinValueInCopper(CoinType type)
+{
+    switch (type)
+    {
+        case CoinType::Copper: return 1;
+        case CoinType::Iron: return COPPER_PER_IRON;
+        case CoinType::Electrum: return static_cast<long long>(COPPER_PER_IRON) * IRON_PER_ELECTRUM;
+        case CoinType::Gold: return COPPER_PER_GOLD;
+        case CoinType::Platinum: return COPPER_PER_PLATINUM;
+    }
+    return 1;
+}
+
+long long Money::coinStacksValueInCopper(const CoinBreakdown& stacks)
+{
+    return std::max(0LL, stacks.copper)
+        + std::max(0LL, stacks.iron) * coinValueInCopper(CoinType::Iron)
+        + std::max(0LL, stacks.electrum) * coinValueInCopper(CoinType::Electrum)
+        + std::max(0LL, stacks.gold) * coinValueInCopper(CoinType::Gold)
+        + std::max(0LL, stacks.platinum) * coinValueInCopper(CoinType::Platinum);
+}
+
+bool Money::hasLowerCoin(CoinType type)
+{
+    return type != CoinType::Copper;
+}
+
+bool Money::hasHigherCoin(CoinType type)
+{
+    return type != CoinType::Platinum;
+}
+
+CoinType Money::nextLowerCoin(CoinType type)
+{
+    switch (type)
+    {
+        case CoinType::Platinum: return CoinType::Gold;
+        case CoinType::Gold: return CoinType::Electrum;
+        case CoinType::Electrum: return CoinType::Iron;
+        case CoinType::Iron: return CoinType::Copper;
+        case CoinType::Copper: return CoinType::Copper;
+    }
+    return CoinType::Copper;
+}
+
+CoinType Money::nextHigherCoin(CoinType type)
+{
+    switch (type)
+    {
+        case CoinType::Copper: return CoinType::Iron;
+        case CoinType::Iron: return CoinType::Electrum;
+        case CoinType::Electrum: return CoinType::Gold;
+        case CoinType::Gold: return CoinType::Platinum;
+        case CoinType::Platinum: return CoinType::Platinum;
+    }
+    return CoinType::Platinum;
 }
 
 CoinBreakdown Money::breakdownFromGold(int goldAmount)
@@ -131,6 +216,29 @@ long long Money::copperFromGold(int goldAmount)
     return static_cast<long long>(goldAmount) * COPPER_PER_GOLD;
 }
 
+long long Money::copperFromEconomyUnits(long long economyUnits)
+{
+    if (economyUnits <= 0)
+    {
+        return 0;
+    }
+    return economyUnits * COPPER_PER_ECONOMY_UNIT;
+}
+
+long long Money::economyUnitsFromCopper(long long copperAmount)
+{
+    if (copperAmount <= 0)
+    {
+        return 0;
+    }
+    return copperAmount / COPPER_PER_ECONOMY_UNIT;
+}
+
+std::string Money::formatEconomyUnits(long long economyUnits)
+{
+    return formatCopper(copperFromEconomyUnits(economyUnits));
+}
+
 std::string Money::formatGold(int goldAmount)
 {
     return formatBreakdown(breakdownFromGold(goldAmount));
@@ -160,6 +268,11 @@ std::string Money::formatWalletFromCopper(long long copperAmount)
     return formatBreakdown(breakdownFromCopper(copperAmount), true);
 }
 
+std::string Money::formatCoinStacks(const CoinBreakdown& stacks, bool includeZeroCoins)
+{
+    return formatBreakdown(stacks, includeZeroCoins);
+}
+
 std::string Money::formatWalletTotalFromCopper(long long copperAmount)
 {
     if (copperAmount < 0)
@@ -167,27 +280,45 @@ std::string Money::formatWalletTotalFromCopper(long long copperAmount)
         copperAmount = 0;
     }
 
-    const long long wholeGold = copperAmount / COPPER_PER_GOLD;
-    const long long remainder = copperAmount % COPPER_PER_GOLD;
-    std::string goldText = formatSeparatedNumber(wholeGold);
-    if (remainder > 0)
-    {
-        std::string decimals = std::to_string(remainder);
-        while (decimals.size() < 3)
-        {
-            decimals.insert(decimals.begin(), '0');
-        }
-        while (!decimals.empty() && decimals.back() == '0')
-        {
-            decimals.pop_back();
-        }
-        goldText += "." + decimals;
-    }
-
-    return goldText + " po équivalentes (= " + formatSeparatedNumber(copperAmount) + " cuivre)";
+    return formatSeparatedNumber(copperAmount) + " PC";
 }
 
 std::string Money::formatCurrencyOverviewFromCopper(long long copperAmount)
 {
-    return formatWalletFromCopper(copperAmount) + " | Total converti : " + formatWalletTotalFromCopper(copperAmount);
+    return formatWalletFromCopper(copperAmount);
+}
+
+std::string Money::socialStandingLabel(const CoinBreakdown& stacks)
+{
+    if (stacks.platinum > 0) return "Fortune exceptionnelle";
+    if (stacks.gold > 0) return "Très aisé / allure de notable";
+    if (stacks.electrum > 0) return "Aisé / respectable";
+    if (stacks.iron > 0) return "Monnaie courante";
+    if (stacks.copper > 0) return "Petite monnaie / moyens modestes";
+    return "Sans monnaie visible";
+}
+
+std::string Money::socialStandingReaction(const CoinBreakdown& stacks)
+{
+    if (stacks.platinum > 0)
+    {
+        return "Une pièce de platine suffit à attirer les regards : on te suppose immensément riche, puissant ou lié aux hautes sphères.";
+    }
+    if (stacks.gold > 0)
+    {
+        return "Voir de l'or dans ta bourse te fait passer pour quelqu'un de très aisé ; certains peuvent te croire noble, marchand majeur ou aventurier important.";
+    }
+    if (stacks.electrum > 0)
+    {
+        return "L'électrum donne l'image de quelqu'un qui vit correctement et manipule déjà des sommes respectables.";
+    }
+    if (stacks.iron > 0)
+    {
+        return "Le fer est la monnaie quotidienne : rien de honteux, rien qui impressionne vraiment.";
+    }
+    if (stacks.copper > 0)
+    {
+        return "Une bourse composée uniquement de cuivre fait très modeste ; dans certains milieux, on peut vite te prendre pour un plouc ou quelqu'un de fauché.";
+    }
+    return "Une bourse vide parle d'elle-même : personne ne te prend pour un client fortuné.";
 }

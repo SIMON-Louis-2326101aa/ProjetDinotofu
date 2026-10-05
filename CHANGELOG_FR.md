@@ -2,10 +2,283 @@
 
 Historique détaillé des versions de Dinotofu en français. Le journal anglais équivalent se trouve dans `CHANGELOG.md`.   
 
+## V3.50.34 — Stabilisation du prologue et checkpoint important V3.50.33   
+
+- **V3.50.33 devient officiellement le nouveau checkpoint important de sauvegarde.** Les personnages dont la dernière adaptation est antérieure à V3.50.33 passent par le backup pré-mise-à-jour non écrasant et le rituel de transition déjà existants ; une sauvegarde déjà adaptée en V3.50.33 ou plus récente n'est pas redemandée. Le schéma reste **26**.   
+- Le combat du souvenir applique désormais les multiplicateurs officiels de difficulté aux **PV et dégâts de la meute** : Facile allège réellement le combat, tandis que Difficile/Cauchemar/Létal renforcent progressivement le Chef de meute et ses garde-crocs. La difficulté ne se limite donc plus presque uniquement aux chances de fuite dans ce prologue spécial.   
+- Les transitions **victoire / retraite / défaite** sont davantage différenciées avant leur convergence vers la Brume : la retraite ressemble à une décision d'équipe expérimentée, tandis que la défaite insiste sur le fait qu'un compagnon revient physiquement chercher le joueur plutôt que de l'abandonner.   
+- Le vocabulaire du nouvel effacement est harmonisé autour de la **Brume blanche** dans la séquence mémoire ; le contraste avec le réveil niveau 1 est renforcé par le réflexe corporel de chercher une arme et une puissance qui ne sont plus là.   
+- `StoryPrologueMemoryTest` protège maintenant l'échelonnement réel de la meute selon la difficulté et l'existence de trois transitions distinctes, en plus des garde-fous déjà présents sur le build temporaire, les équipements et l'oubli des noms.   
+
+---   
+
+## V3.50.33 — Dernière chasse avant la Brume blanche   
+
+- Le prologue d'ouverture est entièrement reconstruit comme un **souvenir jouable de la dernière journée du personnage avant l'effacement**, et non comme une interface informatique qui dysfonctionne. Les textes cassés, noms tronqués et informations manquantes représentent des trous de mémoire déjà rongés par la Brume blanche.   
+- Le souvenir utilise une **copie temporaire avancée** du personnage créé : même nom, classe et identité, niveau mémoriel 42, statistiques renforcées, équipement de haut niveau cohérent avec la classe, consommables et compétences déjà acquises. Cette copie est isolée puis détruite après le souvenir ; elle ne modifie jamais le vrai personnage sauvegardé.   
+- Le moteur de compétences accepte désormais un rafraîchissement silencieux réservé aux reconstructions temporaires : le build mémoriel dispose de ses techniques sans afficher de faux écrans « NOUVELLE COMPÉTENCE », tandis que le comportement normal des vrais personnages reste inchangé.   
+- La sélection d'équipement du souvenir distingue les grandes familles réellement jouables : arbalétriers avec une vraie arbalète et des carreaux gelés, archers/tireurs avec arc et flèches, profils magie/invocation/soin avec bâton et robe, assassins avec dague, lanciers avec lance, profils lourds avec marteau, puis fallback runique pour les cas martiaux non spécialisés. Des tests représentatifs empêchent le retour d'un équipement manifestement incohérent.   
+- La dernière mission mène vers une zone dangereuse déjà existante, le **Glacier des Serments froids**, pour chasser un **Chef de meute du Serment froid** accompagné de deux **Garde-crocs givrés**. Le combat utilise le vrai moteur de tours/vagues, pas une simple scène textuelle.   
+- Trois approches précèdent l'affrontement — formation serrée, chasse rapide ou rythme habituel — et appliquent de petits avantages différents au groupe afin que le choix de voyage ait un effet concret sans décider automatiquement du combat.   
+- Les deux alliés expérimentés possèdent des identités de conception fixes, mais leurs vrais noms sont volontairement absents du runtime. Le souvenir n'affiche que des variantes rongées comme « Sca— », « S…lett? », « Lor— », « L?ren… », « [nom arraché] » ou « [nom perdu] ». `scripts/test_project.sh` interdit explicitement toute fuite de leurs noms réels dans les fichiers runtime du prologue.   
+- Pendant le combat, le joueur peut donner des **ordres de groupe** : concentrer le chef, achever la cible la plus faible, demander une couverture ou laisser les alliés agir librement. Les compagnons tirent, soignent, posent vulnérabilité/ward/régénération et déclenchent périodiquement des attaques coordonnées afin de donner l'impression d'une équipe qui se connaît déjà.   
+- **Victoire, retraite volontaire et défaite sont toutes acceptées.** La victoire produit un bref relâchement ; la retraite/défaite force le groupe à décrocher. Les trois branches convergent ensuite vers la même montée de la Brume, qui efface objectif, route, équipements, compétences puis identités avant le blanc total.   
+- Le combat-souvenir est volontairement **hors progression** : aucun XP, argent, butin, entrée de bestiaire ou statistique durable n'est accordé au personnage du présent. Les réactions personnalisées à la Brume des identités spéciales déjà existantes sont conservées.   
+- Après l'effacement, la séquence de survie existante dans la forêt reprend avec le **vrai personnage débutant sans équipement**. Le kit trouvé ensuite sur le cadavre reste le kit générique lié à la classe et n'est pas présenté comme l'équipement avancé utilisé dans le souvenir.   
+- `HISTOIRE_DINOTOFU.txt` documente désormais explicitement la chasse, l'effacement progressif, les identités de conception des deux alliés, les trois issues admises et la séparation stricte entre build mémoriel et progression réelle.   
+- Nouveau module `StoryPrologueMemory` et nouveau `StoryPrologueMemoryTest` : création du personnage temporaire, meute, masquage des alliés, fragments de mission et transition de Brume sont protégés par tests. La suite globale `scripts/test_project.sh` passe jusqu'au message final **« Tous les tests Dinotofu sont passés. »** avant versionnement.   
+- Schéma de sauvegarde **26 inchangé** ; checkpoint important toujours **V3.50.30**.   
+
+---   
+
+## V3.50.32 — Récompenses exactes et bureau de change volontaire   
+
+- Les quêtes peuvent désormais définir une **prime en piles de pièces exactes** via `Quest::rewardCoins`. Lorsqu'une quête promet par exemple **17 PC + 2 PF + 3 PO**, ces pièces précises sont ajoutées telles quelles au porte-monnaie : aucune normalisation ou conversion silencieuse n'est appliquée. Les récompenses historiques exprimées en valeur économique conservent leur comportement compact séparé.   
+- Les primes exactes sont sérialisées avec la quête (`rewardCoinCopper`, `rewardCoinIron`, `rewardCoinElectrum`, `rewardCoinGold`, `rewardCoinPlatinum`) et survivent à un aller-retour sauvegarde/rechargement sans changer de dénomination. Ces champs sont optionnels, donc le schéma de sauvegarde reste **26**.   
+- Le **Bureau de change de la guilde** propose maintenant trois intentions avant toute sélection de pièce : **Conversion personnalisée**, **Tout vers les pièces les plus élevées**, ou **Tout vers la pièce la plus faible**. La « bourse idéale » reste donc disponible, mais uniquement sur décision du joueur.   
+- La conversion personnalisée permet de choisir directement la **pièce source**, la **pièce cible**, puis le **nombre de conversions**. Le menu affiche le lot exact requis/produit et le **maximum possible** avant la saisie ; les conversions peuvent sauter plusieurs rangs (par exemple PC -> PO ou PO -> PF) sans perte de valeur.   
+- **Tout vers les pièces les plus élevées** compacte volontairement la richesse en PP/PO/PE/PF avec le reliquat PC exact ; **Tout vers la pièce la plus faible** transforme volontairement toute la bourse en PC. Dans les deux cas le total en cuivre est contrôlé avant/après.   
+- Le jalon **« Premier éclat de platine »** ne dépend plus d'un futur rafraîchissement de compétences : les gains, ventes, butins, récompenses et conversions monétaires déclenchent maintenant un rafraîchissement dédié des titres économiques. Obtenir ou fabriquer sa première PP suffit donc immédiatement.   
+- `EconomyScaleTest`, `SaveRoundTripTest` et `scripts/test_project.sh` protègent désormais les conversions arbitraires, les deux normalisations volontaires, les primes de quête exactes, leur persistance et le rafraîchissement du titre platine.   
+- Build C++23 complet validé ; les tests économiques et de sauvegarde ciblés passent, puis l'intégralité de `scripts/test_project.sh` a été validée jusqu'au message final **« Tous les tests Dinotofu sont passés. »** (en deux exécutions à cause de la limite de durée de l'environnement).   
+- Schéma de sauvegarde **26 inchangé** ; checkpoint important toujours **V3.50.30**. Aucun scénario principal n'est avancé : **V3.50.33 reste réservée à la grosse mise à jour / prologue pré-Brume**.   
+
+---   
+
+## V3.50.31 — Monnaie physique, statut social et départ modeste   
+
+- Le porte-monnaie de départ Normal n'est plus 50 PF abstraits : il contient physiquement **5 PF + 15 PC**, soit **65 PC** exacts. Les autres difficultés utilisent elles aussi des piles de départ physiques.   
+- Les gains exprimés par les anciens systèmes en unités économiques sont désormais versés en **dénominations physiques compactes** sans normaliser les piles déjà possédées : 13 PF de valeur arrivent comme 1 PE + 3 PF, 100 PF comme 1 PO.   
+- Les pièces prennent une vraie signification sociale : cuivre = moyens modestes, fer = monnaie courante, électrum = aisance visible, or = notable/noble potentiel, platine = fortune exceptionnelle. Les boutiques et l'inventaire exposent cette perception à partir des vraies piles détenues.   
+- Nouveau titre secret **« Premier éclat de platine »**, accordé lorsqu'un personnage possède pour la première fois une pièce de platine.   
+- Les menus utilisant le portefeuille courant affichent désormais les **piles physiques réelles** au lieu de recalculer une décomposition théorique depuis le total.   
+- La sélection des personnages affiche le **temps total de jeu et la richesse exacte en PC côte à côte** ; `CharacterSaveSummary` lit maintenant `totalCopperCurrency`.   
+- Références de petit train de vie recalibrées vers une économie médiéval-fantasy plus serrée : à Valebrume niveau 1, repas chaud **50 PC**, lit commun **100 PC**, chambre sûre **192 PC**. Avec 65 PC au départ, le joueur peut manger mais doit déjà gagner sa nuit.   
+- Les garde-fous de `EconomyScaleTest` vérifient désormais le départ physique, la hiérarchie sociale, les paiements PE/PO naturels et le pouvoir d'achat en cuivre exact.   
+- Schéma de sauvegarde **26 inchangé** ; checkpoint important toujours **V3.50.30**. **V3.50.32** reste disponible pour stabilisation et **V3.50.33** est réservée à la grosse passe/prologue pré-Brume.   
+
+---   
+
+## V3.50.30 — Checkpoint économique majeur : pouvoir d’achat, unités et garde-fous   
+
+- **Audit économique transversal terminé** : revenus de quêtes, combats ordinaires, boss, PvP, exploration, ventes/rachats, services de ville et d’église, entraînement, réputation, pénalités de mort, transports, auberges et coffre municipal ont été relus sur la même échelle. L’audit confirme que l’économie actuelle est globalement cohérente en **unités PF** ; aucun rescale global x10/x100 n’est appliqué, afin de ne pas détruire des rapports de prix déjà corrects pour quelques outliers supposés.   
+- Le pouvoir d’achat est désormais protégé à **5 jalons de progression : niveaux 1, 5, 10, 25 et 50**. `EconomyScaleTest` échantillonne les panneaux de guilde, contrôle leurs récompenses moyennes et maximales, puis vérifie qu’un portefeuille représentatif débloque progressivement davantage d’offres de boutique sans rendre tout le catalogue trivial.   
+- Le **coffre municipal** reste explicitement un objectif de moyen terme : il est hors de portée d’un portefeuille représentatif de niveau 10 après quelques contrats, mais devient raisonnablement atteignable à progression plus avancée.   
+- Les récompenses de **combat** sont intégrées au même audit : un humanoïde ordinaire reste de l’argent de poche cohérent avec son niveau, tandis qu’un boss étalon paie sensiblement davantage sans financer instantanément les achats structurants. Les gains PvP amicaux restent symboliques et les duels à butin dangereux transfèrent la richesse du perdant au gagnant au lieu de créer de la monnaie.   
+- Les jackpots d’exploration et les bourses de butin ont été contrôlés avec leurs caps/chances actuels. Ils restent volontairement excitants mais ne justifient pas un changement d’échelle global ; les soft caps d’exploration continuent d’absorber les valeurs extrêmes.   
+- Plusieurs **affichages trompeurs** ont été corrigés : le stand d’entraînement, les listes d’équipement, certaines sélections d’inventaire, les potions, le rachat marchand et le cheat d’argent n’affichent plus une valeur PF brute comme si elle était directement en `PO`/« or ». Ils passent maintenant par `Money::formatEconomyUnits`.   
+- Nettoyage des noms d’API qui pouvaient recréer une confusion d’unité : `starterGold` devient `starterEconomyUnits`, `getStarterGold` devient `getStarterEconomyUnits`, `fineCostGold` devient `fineCostEconomyUnits`, `CombatReward` stocke/expose des `economyUnits`, les pourcentages de difficulté parlent explicitement de récompense/perte économique et `DeathPenaltyResult` expose `lostEconomyUnits`. Le champ historique `Quest::rewardGold` reste volontairement inchangé car il est sérialisé ; son commentaire rappelle qu’il représente des unités PF et non des PO.   
+- La hiérarchie monétaire est verrouillée jusqu’aux grosses valeurs : **1 unité économique = 1 PF = 10 PC**, **100 unités = 1 PO**, **1000 unités = 1 PP**. Les prix exacts déjà conçus en cuivre (PC) restent exacts et ne sont pas réinterprétés comme des unités PF.   
+- `scripts/test_project.sh` refuse désormais la réintroduction de plusieurs anciens noms ambigus et de certains affichages `PO/or` bruts dans les menus économiques. Il vérifie également que les README suivent réellement le checkpoint important au lieu de pouvoir rester bloqués sur un ancien jalon.   
+- `bump_version.py` synchronise maintenant les lignes de checkpoint des README par motif de statut courant, même si leur valeur avait dérivé d’un ancien checkpoint ; les entrées historiques de changelog ne sont jamais réécrites.   
+- Build C++23 complet et suite `scripts/test_project.sh` : **tous les tests passent avant le versionnement 3.50.30**. Une seconde validation post-versionnement protège le nouveau checkpoint.   
+- Schéma de sauvegarde **26 inchangé**. **V3.50.30 devient le nouveau checkpoint important obligatoire** : les personnages plus anciens passent par le backup pré-mise-à-jour non écrasant et le rituel de transition déjà existants.   
+- Aucun avancement du scénario principal dans cette passe. Le **prologue pré-Brume reste réservé à V3.50.31**, comme prévu.   
+
+---   
+
+## V3.50.29 — Pré-checkpoint : personnages spéciaux, navigation, combat lisible et unités explicites   
+
+- **Willow**, **Dwarf** et **Badr** rejoignent le catalogue des personnages spéciaux avec la date protégée commune **15/12/2025**. Willow est une humaine archère de 20 ans, solitaire et râleuse ; Dwarf un guerrier nain de 24 ans, blagueur provocateur dont les défauts peuvent être désapprouvés par les autres ; Badr un clerc semi-humain de 48 ans, croyant, inquiétant et lié au ver organique **Second**.   
+- Le modèle `SpecialCharacter` peut désormais porter un âge et un genre connus sans obliger les anciens personnages à en posséder. Les nouveaux profils sont couverts par le garde de nom, la validation de date, les dialogues, le bonus de classe native et le bestiaire progressif.   
+- Le trio **Willow / Dwarf / Badr** et deux sous-groupes cohérents rejoignent les rencontres spéciales. Les dialogues de groupe couvrent entrée, victoire et défaite. Des synergies modestes rendent le trio utile : Dwarf crée des ouvertures pour Willow, Badr stabilise ses alliés et peut leur rendre quelques PV. La compétence **« En avant Second »** reste volontairement réservée à une future passe.   
+- La sélection Terminal devient plus tolérante : les deux lecteurs de menus comprennent désormais `aide`, `?`, `retour`, `r` (quand 0 est une sortie valide), rappellent les choix/plages autorisés après une erreur et réaffichent les descriptions sur demande. Les anciens menus personnage/compte bénéficient donc aussi de cette ergonomie.   
+- Le menu de combat affiche un résumé des états actifs du joueur et détaille la posture défensive encore en attente. Une posture déjà active est clairement signalée afin d'éviter de la remplacer sans comprendre ce qui restait.   
+- Préparation du checkpoint économie V3.50.30 : plusieurs fonctions retournant du **cuivre exact (PC)** ont reçu un suffixe `Copper` explicite (`innCommonBedCostCopper`, `innSafeRoomCostCopper`, `innWarmMealCostCopper`, `cityVaultMaterialTransferCostCopper`, `routeRewardBudgetCopperForDistance`). Les achats/améliorations de coffre restent documentés comme **unités économiques PF**.   
+- `EconomyScaleTest` protège maintenant plusieurs repères concrets : lit/repas accessibles avec le portefeuille de départ normal, achat de coffre municipal restant un objectif de moyen terme, et séparation claire entre coûts PC exacts et unités PF.   
+- Nettoyage d'une duplication accidentelle dans le hook de combat de Sanctus détectée pendant l'audit.   
+- `scripts/test_project.sh` protège la navigation Terminal, la lisibilité des états de combat, les suffixes économiques explicites et l'intégration du nouveau trio.   
+- Build C++23 complet et suite `scripts/test_project.sh` : **tous les tests Dinotofu passent** avant versionnement.   
+- Schéma de sauvegarde **26 inchangé** ; checkpoint important toujours **V3.50.20**. **V3.50.30 reste réservé au gros audit/checkpoint économique.**   
+
+---   
+
+## V3.50.28 — Monnaie physique, mémoire dosée, craft visible et défense préparée   
+
+- Les interactions non-combat ne rejoignent plus systématiquement l'historique durable du personnage. Le journal local/anti-farm continue de suivre les interactions résolues, mais seules quelques découvertes réellement inhabituelles sont désormais marquées comme `notableForLongTermHistory`. Une action banale, isolée ou sans témoin ne devient donc plus artificiellement un événement important du monde.   
+- La guilde reçoit un **Bureau de change** qui manipule les piles physiques sans créer ni détruire de valeur : le joueur peut casser une pièce d'un rang en dix pièces du rang inférieur, ou regrouper dix pièces en une pièce du rang supérieur. Le total en cuivre est vérifié avant/après chaque opération.   
+- La légende complète des monnaies n'est plus répétée partout. Elle est centralisée au Bureau de change : **Pièce de cuivre (PC), Pièce de fer (PF), Pièce d'électrum (PE), Pièce d'or (PO), Pièce de platine (PP)**, avec la règle **10 pièces d'un rang = 1 pièce du rang supérieur**. Les autres écrans peuvent continuer d'utiliser naturellement abréviations ou noms selon le contexte.   
+- `Money` et `Inventory` exposent maintenant une API explicite de dénominations physiques (`CoinType`, comptage, rang inférieur/supérieur, cassage/regroupement), afin que les futurs systèmes économiques ne soient pas obligés de réinventer les conversions.   
+- Correction d'un reliquat économique dans les données structurées de l'inventaire : armes, armures, consommables et matériaux ne présentent plus une ancienne valeur d'unité économique comme si elle était directement en « or ». Ils utilisent maintenant les mêmes formats économiques que l'interface Terminal.   
+- L'**artisanat/craft** devient découvrable sans devoir deviner son existence dans l'inventaire : le menu Personnage possède un accès direct « Artisanat / craft », les descriptions de navigation le mentionnent, et le menu rapide a été renuméroté de façon continue au lieu de sauter artificiellement vers 8/9.   
+- En combat, la **posture défensive** s'applique désormais aussi aux compétences ennemies préparées/télégraphiées (charge, souffle, tir lourd, rituel, etc.). Les dégâts passent par `DefensePostureSystem` avant d'être appliqués. Les effets secondaires propres à la compétence peuvent toujours se produire : défendre atténue l'impact, mais n'annule pas gratuitement toute la mécanique.   
+- Tests renforcés : conservation exacte de la valeur lors des conversions physiques, dénominations/abréviations, unicité de la légende monétaire complète, visibilité du craft, distinction interaction locale / événement durable et réduction réelle d'une attaque préparée sous posture défensive.   
+- Build C++23 complet et suite `scripts/test_project.sh` validés.   
+- Aucun changement du schéma de sauvegarde (**26**) ni du checkpoint obligatoire (**V3.50.20**). La version **V3.50.30** est volontairement réservée comme future grosse passe/checkpoint d'audit économique, après une V3.50.29 de préparation si nécessaire.   
+
+---   
+
+## V3.50.27 — Jardin des statues pleureuses, diversité de guilde et traces d'exploration   
+
+- Le **Jardin des statues qui pleurent** reçoit enfin une mécanique signature propre au lieu : certaines statues peuvent changer de position uniquement entre deux observations, sans trace de déplacement dans le gravier.   
+- Un événement spécial du Jardin permet de marquer physiquement les positions, prélever une larme minérale sans toucher aux statues, approcher directement le cercle de pierre ou quitter prudemment les lieux. Les conséquences diffèrent et peuvent déclencher observation, ressource, progression de quête ou combat.   
+- Les observations répétées du Jardin sont persistantes via l'historique du personnage. Après plusieurs relevés, le système peut confirmer un déplacement impossible au lieu de traiter chaque visite comme une scène sans mémoire.   
+- Les descriptions de lieu dangereux, avertissement, trace de boss, obstacle environnemental et observation de terrain du Jardin ont été spécialisées pour renforcer son identité.   
+- Une nouvelle interaction non-combat **Bouquet devant l'ange** ajoute des traces humaines récentes au mystère : comparaison des pas, offrande déplacée ou observation sans intervention.   
+- Six biomes supplémentaires reçoivent une interaction non-combat propre : **Mares gélatineuses** (migration de slimes neutres), **Montagne froide** (cairn écroulé), **Ruines effondrées** (mosaïque sous structure instable), **Canaux de brume bleue** (barque sans passeur), **Foire abandonnée** (manège d’un seul tour) et **Carrière des os blancs** (marque de taille récente).   
+- Les interactions non-combat de biome résolues laissent désormais aussi une trace dans l'historique du personnage, en plus du journal canonique anti-farm.   
+- Le panneau de guilde maximise maintenant la diversité des familles d'objectifs disponibles. Lorsqu'au moins trois offres sont affichées et que le catalogue le permet, le panneau cherche à mélanger au moins trois types parmi combat, exploration, service et bestiaire.   
+- Les petits panneaux de trois offres ne sont plus forcés à contenir trois missions terrain : à partir du niveau 7, ils conservent au moins deux missions combat/exploration et libèrent une place pour un service ou un dossier de bestiaire. Les panneaux plus grands conservent le minimum de terrain existant.   
+- Tests ajoutés/renforcés : identité du Jardin, contenu non-combat propre au Jardin, diversité du panneau sur plusieurs niveaux et conservation du minimum de missions terrain.   
+- Build C++23 complet validé. La suite `scripts/test_project.sh` a été exécutée par tranches à cause de la limite d'exécution de l'environnement et toutes ses sections ont passé.   
+- Aucun changement du schéma de sauvegarde (**26**) ni du checkpoint obligatoire (**V3.50.20**).   
+
+---   
+
+## V3.50.26 — Mémoire sociale des quêtes   
+
+- Les quêtes expirées ne disparaissent plus socialement après leur archivage : le client concerné enregistre désormais un fait `quest_failed` dans sa mémoire locale.   
+- Les échecs de délai sont aussi inscrits dans le journal canonique local via `quetes_echouees`, avec protection contre le double comptage lors des synchronisations répétées.   
+- Les quêtes rendues enregistrent désormais explicitement `quetes_reussies`, en complément de la mémoire PNJ `quest_completed` déjà existante.   
+- Les PNJ réagissent différemment à un échec selon leur profil : garde, marchand, guilde/intendance, tempérament méthodique ou comportement générique. Un échec n'entraîne pas automatiquement une hostilité ou un gros malus arbitraire.   
+- Refuser une demande personnelle crée maintenant un souvenir `quest_declined` : le contact peut se rappeler que le joueur n'était pas disponible, mais distingue clairement ce refus d'une promesse rompue.   
+- Les réseaux d'information locaux peuvent relayer certains échecs de quête lorsque leur profession s'y prête. La transmission reste sourcée, locale et perd en certitude comme les autres rumeurs ; aucune omniscience n'est ajoutée.   
+- Tous les chemins principaux qui font avancer le temps et expirent des quêtes synchronisent maintenant ces conséquences sociales.   
+- Tests ajoutés : expiration -> mémoire client, journal local idempotent, réaction PNJ et relais de `quest_failed`.   
+- Build C++23 complet et suite `scripts/test_project.sh` validés.   
+- Aucun changement du schéma de sauvegarde (**26**) ni du checkpoint obligatoire (**V3.50.20**).   
+
+---   
+
+## V3.50.25 — Priorité locale du panneau de guilde   
+
+- Le panneau de guilde ne se contente plus de vérifier que le niveau d’un lieu est compatible : les offres déjà générées sont maintenant ordonnées selon leur **cohérence avec la ville actuelle**.   
+- Les services au comptoir restent naturellement locaux, même lorsqu’un dossier mentionne un objet ou un document provenant d’une zone éloignée. Les contrats génériques de village, route ou famille de créatures restent également bien placés tant qu’aucun biome précis n’impose un long déplacement.   
+- Lorsqu’un contrat nomme un biome concret, le système consulte les distances régionales de la ville : les biomes proches et déjà connus passent avant les zones plus éloignées ou moins connues. Un contrat lointain reste possible ; il est simplement moins prioritaire au lieu d’être supprimé artificiellement.   
+- Cette pondération complète le filtre V3.50.21 sur le niveau minimum réel des lieux : un débutant évite donc à la fois les zones trop hautes et, parmi les lieux autorisés, les propositions inutilement éloignées.   
+- La logique est recalculée à l’ouverture du panneau depuis la ville courante, ce qui permet au même ensemble d’offres de retrouver un ordre plus logique après un changement de ville sans modifier la structure de sauvegarde.   
+- Test ajouté : depuis Valebrume, une mission locale de Plaine et un service au comptoir sont prioritaires face à une exploration des Falaises des drakes gris.   
+- Build C++23 et suite de tests complète validés avant versionnement.   
+- Aucun changement du schéma de sauvegarde (**26**) ni du checkpoint obligatoire (**V3.50.20**).   
+
+---   
+
+## V3.50.24 — Accueil graphique minimal et bascule propre vers le Terminal   
+
+- L’ancienne grosse interface HTML expérimentale a été retirée de l’accueil provisoire. La page graphique ne conserve plus que l’identité visuelle officielle, la bannière, le logo et le bouton **Jouer**.   
+- **Jouer** n’essaie plus d’ouvrir une pseudo-interface de partie : il affiche clairement **Interface graphique en production** puis propose **Arrêter et passer à la version terminale**.   
+- Le placeholder graphique est passé d’environ 6 300 lignes de HTML/JS à une page légère d’environ 140 lignes, sans panneaux de combat, inventaire, quêtes ou polling de snapshots inutiles pendant la reconstruction.   
+- Un endpoint local `/gui/switch-terminal` crée une demande de bascule, vide les anciennes entrées GUI puis arrête proprement le petit serveur local après avoir répondu au navigateur.   
+- Les launchers Linux et Windows surveillent cette demande : ils ferment le placeholder puis lancent réellement la version Terminal. Le moteur C++ de partie n’est plus démarré caché en arrière-plan simplement pour afficher l’accueil graphique.   
+- Le mode Terminal reste le mode par défaut. Le serveur conserve provisoirement ses anciens endpoints de debug pour les outils de développement, mais l’accueil public ne les utilise plus.   
+- Les README et le guide d’interface distinguent maintenant explicitement l’état actuel minimal de la cible future : une vraie application desktop, plutôt qu’une seconde grosse interface web maintenue en parallèle.   
+- Ajout de gardes de non-régression pour la bascule IG → Terminal et pour empêcher le retour du moteur caché derrière le placeholder. L’endpoint a également été testé avec création réelle du signal et arrêt du serveur.   
+- Aucun changement du schéma de sauvegarde (**26**) ni du checkpoint obligatoire (**V3.50.20**).   
+
+---   
+
+## V3.50.23 — Catégories contextuelles des épreuves de service   
+
+- Les épreuves intellectuelles des contrats de service affichent maintenant une **catégorie de service** explicite liée à l’action réellement demandée : transport et logistique, estimation et négociation, registre et administration, calcul commercial, français et rédaction, équipement et morphologie, inventaire et logistique, procédure de guilde, etc.   
+- Les familles internes déjà utilisées par les dossiers marchands deviennent visibles au joueur au lieu de rester une simple règle de sélection cachée. Les autres épreuves déduisent leur catégorie depuis leur titre et leur question.   
+- L’écran explique également que l’épreuve correspond à l’étape concrète du contrat en cours, afin d’éviter l’impression d’un quiz aléatoire posé hors contexte.   
+- Les épreuves génériques de service reçoivent désormais un identifiant stable dérivé de leur titre et utilisent `serviceChallengeHistory`. Une question déjà vue pour ce contrat est évitée tant qu’il reste des questions inédites dans le pool pertinent.   
+- Lorsque toutes les épreuves adaptées au contrat ont été vues, l’historique local peut repartir proprement au lieu de bloquer la progression. Le système marchand existant conserve sa sélection spécialisée et ses questions rares/confidentielles.   
+- `scripts/test_project.sh` protège la présence de la catégorie de service et de la logique `serviceChallengeCategory`.   
+- Aucun changement du schéma de sauvegarde (**26**) ni du checkpoint obligatoire (**V3.50.20**).   
+
+---   
+
+## V3.50.22 — Tarifs RP, affichage monétaire cohérent et garde anti-inflation   
+
+- Audit des paniers de début de jeu après les normalisations V3.50.19/V3.50.20 : les montants principaux restent volontairement sur l’échelle PF actuelle. L’Arc d’entraînement reste autour de 85 PF, l’Arc de chasse autour de 205 PF, la ration autour de 15–17 PF et les petites potions autour de 12–13 PF ; aucune nouvelle division globale n’a été appliquée.   
+- Les quêtes de départ sont désormais protégées par des tests plus stricts : les contrats F niveau 1 restent sous 20 PF et les petits services F sous 5 PF ; les contrats E proposés au niveau 2 restent sous 30 PF. Cela empêche le retour involontaire des primes absurdes en PO/PP sur des tâches locales.   
+- Les armuriers, boutiques d’armes et forgerons utilisent maintenant un **tarif d’artisan** : après les modificateurs de race, classe, ville, crise ou promotion, ils peuvent arrondir le prix réellement demandé à une dénomination simple lorsque l’écart reste inférieur à environ 12 %. Exemple : 205 PF peut devenir exactement 2 PO.   
+- Les autres comptoirs gardent un **montant exact** et rendent la monnaie si nécessaire. Le texte de boutique indique le style de tarification utilisé afin que le joueur sache si le marchand annonce un prix rond ou compte précisément les pièces.   
+- L’arrondi marchand modifie le prix réellement débité, pas seulement son affichage. Les tests vérifient aussi que cet arrondi ne crée pas de revente plus rentable que l’achat sous les principaux modificateurs de race/classe.   
+- Nettoyage des anciens affichages « X pièces » ambigus : fiches d’objets, armes, armures, consommables, matériaux, journal de matériaux, inventaire, échanges entre personnages, loot monétaire, estimation PvP, coffre municipal et transfert de rune utilisent désormais `Money::formatEconomyUnits(...)` lorsque la valeur est exprimée en unités économiques.   
+- Les valeurs physiques/lore qui parlent réellement de pièces au sens générique restent inchangées. Les cheats explicitement décrits en pièces d’or restent également des PO historiques explicites.   
+- Ajout de gardes de non-régression sur les prix de quelques références de début de jeu : Arc d’entraînement <= 100 PF, Épée rouillée <= 80 PF, Armure de cuir usée <= 100 PF, Petite potion <= 20 PF et Ration de survie <= 20 PF.   
+- Aucun changement du schéma de sauvegarde (**26**) ni du checkpoint obligatoire (**V3.50.20**).   
+
+---   
+
+## V3.50.21 — Quêtes cohérentes, variété des épreuves et autonomie d’exploration   
+
+- Les contrats de guilde tiennent désormais compte du **niveau minimum réel des lieux explicitement cités**, en plus du rang et du niveau propre au modèle de quête. Les offres F/E ne peuvent donc plus envoyer un débutant fouiller directement une zone prévue plusieurs paliers plus haut. Les services réalisés en ville restent exemptés lorsqu’ils manipulent simplement un objet venant d’une zone dangereuse.   
+- La localisation suggérée des quêtes a été rendue plus précise : une zone concrète citée par le contrat reste prioritaire, tandis que les routes, relais et livraisons ne sont plus confondus avec des ruines à cause d’un mot générique.   
+- Une quête de **fouille/exploration qui nomme un biome précis** ne progresse plus dans un autre biome à cause d’un mot vague comme « plantes », « traces » ou « matériaux ». Les chasses restent volontairement basées sur la famille de cible : vaincre le bon type d’ennemi ailleurs continue donc de compter lorsque cela reste logique.   
+- Les petites épreuves d’exploration possèdent maintenant une **catégorie contextuelle** (orientation, observation, survie, cartographie, météo, premiers secours, logistique, pistage, etc.). Douze nouvelles épreuves génériques ont été ajoutées et le choix évite aussi les catégories récemment vues, pas seulement les questions identiques.   
+- L’historique anti-répétition des épreuves passe de 4 à **10 questions récentes**, avec maintien des cooldowns existants. Les épreuves propres à un biome sont identifiées comme « terrain local » afin que l’écran explique pourquoi cette question arrive à ce moment-là.   
+- L’autonomie d’exploration est maintenant vérifiée **avant le départ de chaque nouvelle fouille**. L’écran d’intensité affiche l’autonomie restante et le nombre de Rations de survie ; si la sortie prévue dépasse la réserve, les rations nécessaires sont consommées avant le départ ou la sortie est refusée sans faire avancer le temps.   
+- Le résumé de poursuite indique clairement les segments d’autonomie restants et les rations encore disponibles. Une expédition sans autonomie ni ration doit rentrer au lieu de dépasser silencieusement la limite puis de la découvrir après coup.   
+- Ajout de tests de non-régression qui génèrent des tableaux de guilde aux niveaux 1–12 pour interdire les lieux trop hauts, vérifient l’historique anti-répétition étendu et protègent les nouvelles gardes de cohérence exploration/quêtes.   
+- Aucun changement du schéma de sauvegarde (**26**) ni du checkpoint obligatoire (**V3.50.20**).   
+
+---   
+
+## V3.50.20 — Portefeuille physique et piles de pièces persistantes   
+
+- Le portefeuille ne normalise plus automatiquement les pièces vers les plus grosses dénominations. Une pile de **51 PO reste 51 PO** dans l’inventaire au lieu d’être affichée comme 5 PP + 1 PO.   
+- `Inventory` conserve désormais cinq piles physiques indépendantes : PC, PF, PE, PO et PP. Les gains historiques en unités économiques ajoutent des PF, les gains explicitement en cuivre ajoutent des PC, et les anciens gains explicites en or ajoutent des PO.   
+- Les paiements utilisent d’abord les pièces disponibles sans modifier les autres piles. Lorsqu’une pièce plus grosse doit être cassée, le système simule la monnaie rendue dans les dénominations inférieures tout en conservant exactement la valeur totale.   
+- Le total en PC reste disponible pour toutes les vérifications de fonds et pour la compatibilité des systèmes existants ; seule la représentation physique du portefeuille devient plus fidèle au monde.   
+- Le schéma de sauvegarde passe de **25 à 26**. Les nouvelles sauvegardes enregistrent chaque pile de pièces séparément. Les sauvegardes antérieures, qui ne connaissaient qu’un total, conservent exactement leur valeur et reçoivent une décomposition initiale lors de la migration.   
+- Le checkpoint obligatoire avance à **V3.50.20** afin de protéger la nouvelle représentation persistante du portefeuille avant adaptation d’une ancienne sauvegarde.   
+- Les tests économiques couvrent maintenant explicitement la pile de 51 PO, la monnaie rendue lors d’un paiement avec une pièce trop grosse, le départ à 50 PF et la persistance exacte des cinq piles après sauvegarde/rechargement.   
+
+---   
+
+## V3.50.19 — Normalisation complète de l’économie et migration monétaire sûre   
+
+- Recentrage de l’économie historique sur l’échelle de pièces voulue : **1 unité économique écrite dans les anciens prix/récompenses = 1 PF = 10 PC**. Les prix de boutique, récompenses de quêtes, combats et services historiques gardent ainsi leurs proportions sans être interprétés comme des PO entiers.   
+- L’argent de départ normal reste `50` unités écrites, mais signifie désormais **50 PF = 5 PE = 500 PC**, et non plus 50 PO.   
+- Achats/ventes, récompenses de quêtes, combats, exploration, transferts PvP/boss, entraînement, réparation de réputation et autres anciens flux `earnGold/spendGold` passent par les unités économiques. Les micro-prix déjà réellement conçus en cuivre (auberge, repas, taxes de voyage, infirmerie, missions déléguées et systèmes similaires) restent des valeurs PC exactes.   
+- Ajout d’API explicites `Money`/`Inventory` pour les unités économiques, tout en conservant les helpers PO historiques uniquement pour compatibilité. L’affichage du portefeuille n’utilise plus de total décimal trompeur en PO : le total PC exact et le détail des pièces sont privilégiés.   
+- Le schéma de sauvegarde passe de **24 à 25**. Les sauvegardes de schéma <25 reçoivent une normalisation monétaire unique afin de ramener les fortunes créées par l’ancienne interprétation en PO vers la nouvelle échelle PF. Une sauvegarde réécrite en schéma 25 ne peut pas subir la migration une seconde fois.   
+- Comme cette normalisation modifie une valeur persistante importante, le checkpoint obligatoire avance à **V3.50.19** afin de déclencher la protection/backup pré-mise-à-jour avant migration.   
+- Conservation du cuivre exact corrigée dans les récapitulatifs de combat, snapshots PvP, changement de classe via cheat, pénalités de mort et résumés d’exploration : les petites valeurs ne sont plus perdues par arrondi en PO.   
+- Ajout de tests de non-régression sur la conversion PF/PC, l’argent de départ normal, les flux boutique/quêtes/combats, la migration des anciennes sauvegardes et une garde empêchant le retour de `earnGold/spendGold` dans le gameplay.   
+- Poursuite du nettoyage des textes RP liés à l’argent : les récompenses génériques parlent d’« argent » lorsque la pièce exacte n’est pas imposée ; les vraies références de lore ou de dénomination restent intactes.   
+
+---   
+   
+
+## V3.50.18 — Nettoyage RP, progression des compétences et densité des élites   
+
+- Nettoyage des textes affichés au joueur qui ressemblaient à des notes de mise à jour ou à des commentaires de développement : mentions de `Future IG`, assets futurs, priorités de développement, « méta-lore », fonctionnalités annoncées comme futures et comparaisons inutiles avec un ancien comportement ont été retirées ou reformulées dans le ton du monde. Les vrais messages de progression (déblocage, quête qui progresse, état qui change) restent affichés. Les messages techniques indispensables de migration de sauvegarde restent également explicites.   
+- La limite actuelle de l'histoire après l'introduction du chapitre 3 est présentée comme une **suite indisponible**, sans exposer au joueur la refonte interne, les scènes conservées dans le code ou les priorités de développement. Le monde libre reste accessible.   
+- Progression des compétences de classe étalée : la plupart des premières techniques commencent autour du **niveau 5**, l'invocation au niveau 6, puis les techniques suivantes sont réparties sur des paliers plus espacés. La branche arcanique s'étend notamment jusqu'aux niveaux 14–17 pour ses techniques avancées. Les sorts réellement appris par grimoire conservent leurs déblocages spécifiques.   
+- Les déblocages d'identité de classe de `PlayerSkills` passent du niveau 4 au niveau 5 et les profils d'IA sont alignés pour éviter que les ennemis ordinaires utilisent systématiquement leurs techniques de classe avant le joueur.   
+- Densité d'élites ambiantes limitée au moment du tirage : aucune élite aléatoire aux niveaux 1–2, environ 5 % aux niveaux 3–4, puis une hausse progressive avec le niveau. Les régions très haut niveau composées uniquement d'élites peuvent toujours en produire, et les mini-boss/élites explicitement scénarisés ne sont pas touchés.   
+- Une vague normale ne peut plus appliquer une variante évoluée à un monstre déjà élite, ce qui évite l'empilement involontaire « élite de catalogue + évolution ».   
+- Ajout d'un test statistique de non-régression sur la densité d'élites de début de jeu ainsi que d'invariants sur les paliers de compétences et les principaux textes RP nettoyés.   
+- `scripts/validate_release_tree.sh --skip-branding` permet de valider explicitement un backup essentiel sans images. Le contrôle branding reste strict par défaut pour une vraie release.   
+- Aucun changement du schéma de sauvegarde (**24**) ni du checkpoint obligatoire (**V3.50.12**). L'économie et le filtrage complet des quêtes bas niveau restent des passes séparées afin de ne pas mélanger une refonte monétaire risquée avec cet équilibrage.   
+
+---   
+
+## V3.50.17 — Stabilisation installateurs, C++23 et clarification des outils   
+
+- Migration de la toolchain vers **C++23**. Le Makefile, les tests et les builds Windows/Linux utilisent maintenant un détecteur commun : `-std=c++23` lorsqu'il est accepté, avec repli sur l'alias historique `-std=c++2b` pour les compilateurs GCC/MinGW plus anciens qui implémentent C++23 sous ce nom. Aucun changement du schéma de sauvegarde : il reste **24**, checkpoint obligatoire **V3.50.12**.   
+- Correction Windows importante : l'installateur **et** le launcher réparaient encore parfois `Lancer-Dinotofu.cmd` en mode `Auto`, ce qui pouvait réactiver le choix GUI. Le lanceur principal est désormais systématiquement reconstruit en **Terminal** ; `Auto`/`Gui` ne restent accessibles que sur demande explicite.   
+- Correction de l'installateur Windows : le fallback `AssetPattern` par défaut visait encore `Dinotofu-Windows-v*.7z` alors que la release Windows est un ZIP. Le fallback vise maintenant `Dinotofu-Windows-v*.zip`.   
+- Releases plus lisibles : les deux téléchargements joueur portent désormais le préfixe très visible **`INSTALLER-DINOTOFU-...`**. Les deux gros fichiers nécessaires aux installateurs restent publiés, mais leur nom se termine par **`-TECHNICAL-PAYLOAD`** afin d'éviter que les joueurs les prennent pour l'installateur. Leur préfixe historique `Dinotofu-<OS>-v*` est volontairement conservé afin que les anciens installateurs utilisant ce wildcard puissent encore les trouver.   
+- Les petits packs joueurs contiennent toujours exactement **un fichier `INSTALLER-DINOTOFU` + `Documentation/`**, et `Documentation/` ne contient que des `.txt`. Le jeu complet n'est pas inclus dans ce téléchargement joueur.   
+- `scripts/bump_version.py` pose toujours la question finale avant de commiter, mais **Oui devient maintenant la réponse par défaut en mode interactif**, comme demandé. Le mode non interactif reste sûr : aucun commit n'est créé sans `--commit`; pour les passes ChatGPT/dev on peut donc utiliser explicitement `--no-commit`.   
+- Ajout de `tools/windows/README_TOOLS.txt` et `tools/linux/README_TOOLS.txt` pour expliquer clairement la différence entre les wrappers cliquables (`Installer/Lancer`) et les moteurs internes (`DinotofuInstaller/DinotofuLauncher`). Les anciens alias Terminal restent présents uniquement pour compatibilité, pas comme deuxième version du jeu.   
+- La grosse refonte de l'interface graphique, l'économie, les compétences de classe, la densité d'élites et le filtrage complet des quêtes bas niveau restent volontairement séparés de cette passe technique.   
+
+---   
+
+## V3.50.16 — Stabilisation sauvegardes, quêtes et distribution   
+
+- Sauvegardes personnage : ajout des métadonnées persistantes `realPlayTimeSeconds` et `lastSavedAt`, avec lecture compatible des anciennes sauvegardes. L'écran de sélection affiche désormais date de création, temps réel de jeu et dernière sauvegarde. Le schéma de sauvegarde passe à **24** ; le checkpoint obligatoire reste **V3.50.12**, car cette évolution est additive et ne nécessite pas de rituel destructif.   
+- Renforcement du test de round-trip : il vérifie désormais explicitement le **niveau**, l'expérience, le **montant exact en cuivre** et le temps réel joué après sauvegarde/rechargement. Cela couvre directement la régression signalée où le niveau ou l'argent pouvaient sembler retomber après reprise.   
+- Tableau de guilde : accepter une quête laisse maintenant réellement son emplacement vide jusqu'au **jour de jeu suivant**. `ensureGuildBoardReady()` tient compte des remplacements différés au lieu de remplir immédiatement le trou dans la même journée. Un test de non-régression couvre ce comportement.   
+- Auberge : ajout d'un repos gratuit au **fond de l'écurie**. Il fait passer un jour mais ne rend que jusqu'à 25 % des PV maximum afin de préserver l'intérêt des lits payants.   
+- Lanceurs Windows/Linux : le **Terminal devient le mode par défaut**. L'ancienne interface graphique reste accessible explicitement pour le développement mais est signalée comme en cours de refonte ; sa grosse reconstruction est volontairement reportée à une passe dédiée.   
+- Distribution : rétablissement de **quatre assets** par release. Les joueurs reçoivent `Installer-Dinotofu-Windows-v*.zip` ou `Installer-Dinotofu-Linux-v*.7z`, dont la racine contient uniquement l'installateur + `Documentation/` en `.txt`. Les gros `Dinotofu-Windows-v*.zip` et `Dinotofu-Linux-v*.7z` restent des payloads techniques afin de ne pas casser les anciens launchers/updaters.   
+- `scripts/bump_version.py` ne commit plus implicitement en mode interactif : après toutes les modifications, il demande explicitement s'il faut créer un commit Git, avec **Non par défaut**. En non-interactif, aucun commit n'est créé sans `--commit`.   
+- Documentation et validations de release alignées sur le Terminal par défaut et le modèle 2 installateurs + 2 payloads.   
+- Cette passe ne change pas encore l'économie de départ, la courbe de déblocage des compétences, la fréquence des élites ni le filtrage complet des quêtes trop éloignées pour les bas niveaux : ces sujets restent séparés pour éviter de mélanger équilibrage massif et stabilisation technique.   
+
+---   
+
 ## V3.50.15 — Notes de mise à jour   
 
-- Correction des scripts d'installation en filtrant correctement les processus actifs (ça tué les scripts eux-même).
-- Liaison statique de certaines librairies et rétrogradation de la version d'OS à ubuntu-22.04 pour la compatibilité d'autres libraires.
+- Correction des scripts d'installation en filtrant correctement les processus actifs (ça tué les scripts eux-même).   
+- Liaison statique de certaines librairies et rétrogradation de la version d'OS à ubuntu-22.04 pour la compatibilité d'autres libraires.   
 
 ---   
 

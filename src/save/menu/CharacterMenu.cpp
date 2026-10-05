@@ -12,6 +12,7 @@
 #include "character/SpecialCharacterNameGuard.hpp"
 #include "core/Console.hpp"
 #include "core/VersionInfo.hpp"
+#include "economy/Money.hpp"
 #include "progression/DeathRuleRules.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
@@ -72,6 +73,15 @@ namespace
             default:
                 return "";
         }
+    }
+
+    std::string formatRealPlayTime(long long totalSeconds)
+    {
+        if (totalSeconds < 0) totalSeconds = 0;
+        const long long hours = totalSeconds / 3600;
+        const long long minutes = (totalSeconds % 3600) / 60;
+        const long long seconds = totalSeconds % 60;
+        return std::to_string(hours) + " h " + std::to_string(minutes) + " min " + std::to_string(seconds) + " s";
     }
 
     std::string characterStoryLabel(const CharacterSaveSummary& character)
@@ -136,7 +146,9 @@ namespace
                 + " | Créé V" + character.createdForVersion
                 + " | Adapté V" + character.lastAdaptedVersion,
             status,
-            "Niveau " + std::to_string(character.level) + " | " + characterStoryLabel(character),
+            "Niveau " + std::to_string(character.level) + " | " + characterStoryLabel(character)
+                + " | Jeu " + formatRealPlayTime(character.realPlayTimeSeconds)
+                + " | " + Money::formatWalletTotalFromCopper(character.totalCopperCurrency),
             "Dernière activité : " + (character.lastActivityText.empty() ? std::string("Inconnue") : character.lastActivityText),
             impact != VersionCompatibilityImpact::None || character.clone
         );
@@ -466,6 +478,11 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
         selectedCharacterScreen.addLine("Créateur : " + selectedCharacter.creatorAccountName);
         selectedCharacterScreen.addLine("Joueur / maître actuel : " + selectedCharacter.currentOwnerAccountName);
         selectedCharacterScreen.addLine("Créé le : " + selectedCharacter.createdAt + " | V" + selectedCharacter.createdForVersion);
+        selectedCharacterScreen.addLine(
+            "Temps réel de jeu : " + formatRealPlayTime(selectedCharacter.realPlayTimeSeconds)
+            + " | Argent total : " + Money::formatWalletTotalFromCopper(selectedCharacter.totalCopperCurrency)
+        );
+        selectedCharacterScreen.addLine("Dernière sauvegarde : " + (selectedCharacter.lastSavedAt.empty() ? selectedCharacter.lastActivityText : selectedCharacter.lastSavedAt));
         selectedCharacterScreen.addLine("Dernière adaptation faite pour la V" + selectedCharacter.lastAdaptedVersion);
         selectedCharacterScreen.addLine("Mode : " + characterStoryLabel(selectedCharacter));
         selectedCharacterScreen.addLine("Dernière activité connue : " + (selectedCharacter.lastActivityText.empty() ? std::string("Inconnue") : selectedCharacter.lastActivityText));

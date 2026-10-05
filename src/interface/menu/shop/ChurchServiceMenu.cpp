@@ -56,7 +56,7 @@ namespace
     {
         const int voucherCount = player.getInventory().countMaterialById(voucherId);
         if (voucherCount > 0) return "Coût prévu : " + voucherName + " x1 déjà présent dans l'inventaire.";
-        return "Coût prévu : " + Money::formatGoldWithRaw(fallbackPrice) + " si aucun bon/ticket n'est présenté.";
+        return "Coût prévu : " + Money::formatEconomyUnits(fallbackPrice) + " si aucun bon/ticket n'est présenté.";
     }
 
     const PlayerCurse* findActiveCurseById(const Player& player, const std::string& curseId)
@@ -1243,12 +1243,12 @@ namespace
     void runFullChurchExorcism(Player& player)
     {
         std::vector<std::string> lines;
-        if (!player.getInventory().spendGold(180))
+        if (!player.getInventory().spendEconomyUnits(180))
         {
-            showShopResult("EXORCISME COMPLET REFUSÉ", "shop.church.full_exorcism.failed_cost", {"Paiement refusé : il faut " + Money::formatGoldWithRaw(180) + "."});
+            showShopResult("EXORCISME COMPLET REFUSÉ", "shop.church.full_exorcism.failed_cost", {"Paiement refusé : il faut " + Money::formatEconomyUnits(180) + "."});
             return;
         }
-        lines.push_back("Coût payé : " + Money::formatGoldWithRaw(180) + ".");
+        lines.push_back("Coût payé : " + Money::formatEconomyUnits(180) + ".");
         int acted = 0;
         int removed = 0;
         const std::vector<PlayerCurse> curses = player.getActiveCurses();
@@ -1305,7 +1305,7 @@ void ChurchServiceMenu::open(Player& player)
         screen.addLine("Règle : une malédiction inconnue reste affichée ????? et ne peut pas être exorcisée avant le niveau 1.");
         screen.addLine("Chaque diagnostic peut échouer : 10% de chance de lecture inutilisable.");
         screen.addLine("Temps : " + worldTimeLineForPlayer(player));
-        screen.addLine("Argent : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()));
+        screen.addLine("Argent : " + player.getInventory().getWalletLine());
         screen.addLine("Traces actives : " + std::to_string(player.getActiveCurseCount()) + ".");
         screen.addLine(serviceCostLine(player, "sanctuary_candle", "Cierge de veille", 32));
         screen.addLine(serviceCostLine(player, "exorcism_incense", "Encens d'exorcisme", 86));
@@ -1323,7 +1323,7 @@ void ChurchServiceMenu::open(Player& player)
         screen.addOption(10, "Solutions spéciales", "Objet à détruire, serment à briser, contre-légende, source à sceller.", player.getActiveCurseCount() > 0, "shop.church.special_solution");
         screen.addOption(11, "Lire les légendes de malédiction", "Bibliothèque/archives : donne du contexte sans révéler de chiffres.", true, "shop.church.curse_legends");
         screen.addOption(12, "Parler des cas d'église", "Scènes courtes avec Mira/Lysa, Ronan, le dortoir, Elian ou le vieux seuil.", true, "shop.church.case_dialogues");
-        screen.addOption(13, "Prêter serment", "Fondation : serments acceptés sous conditions, futurs bonus forts avec contraintes et rupture à l'église.", true, "shop.church.oath");
+        screen.addOption(13, "Prêter serment", "Serments acceptés sous conditions, avec avantages, contraintes et rupture à l’église.", true, "shop.church.oath");
 
         const std::vector<PlayerCurse>& curses = player.getActiveCurses();
         for (std::size_t i = 0; i < curses.size(); ++i)
@@ -1400,27 +1400,27 @@ void ChurchServiceMenu::open(Player& player)
 
                 MenuScreen oathScreen("SERMENTS D'ÉGLISE", "shop.church.oath.menu");
                 oathScreen.addLine("Père Orwan refuse les serments gratuits : une promesse doit être entendue, méritée, puis portée comme un vrai statut.");
-                oathScreen.addLine("Les serments deviennent des passifs/statuts forts mais contraignants. La rupture reste prévue à l'église, avec prix et trace.");
-                oathScreen.addLine("Attention : plusieurs serments pourront se contredire plus tard. L'église note déjà les promesses cumulées.");
+                oathScreen.addLine("Les serments sont des passifs forts mais contraignants. La rupture se fait à l’église, avec prix et trace.");
+                oathScreen.addLine("Attention : plusieurs serments peuvent entrer en tension. L’église note toutes les promesses cumulées.");
                 oathScreen.addBackOption();
-                oathScreen.addOption(1, "Serment du Bouclier" + std::string(shieldKnown ? " [déjà prêté]" : ""), "Condition : niveau 3+ ou vraie habitude d'armure. Bonus futur : protection/alliés, prix moral si tu abandonnes la ligne.", player.getLevel() >= 3 || player.hasPassiveSkill("armor_habit") || player.hasPassiveSkill("steady_guard"), "shop.church.oath.shield");
-                oathScreen.addOption(2, "Serment du Sang" + std::string(bloodKnown ? " [déjà prêté]" : ""), "Condition : niveau 5+ ou maîtrise/pacte sanguin déjà approché. Bonus futur : dégâts/élan, prix sur soins ou sécurité.", player.getLevel() >= 5 || player.hasPassiveSkill("blood_pact_mastery") || player.hasPassiveSkill("scar_tissue"), "shop.church.oath.blood");
-                oathScreen.addOption(3, "Serment du Chasseur" + std::string(hunterKnown ? " [déjà prêté]" : ""), "Condition : au moins 5 ennemis tués ou vraie lecture des familles. Bonus futur : piste/familles ennemies, prix si tu frappes sans comprendre.", enemyKills >= 5 || player.hasPassiveSkill("bestiary_family_reader") || player.hasPassiveSkill("ranger_eye"), "shop.church.oath.hunter");
-                oathScreen.addOption(4, "Serment du Roi" + std::string(kingKnown ? " [déjà prêté]" : ""), "Condition : avoir aidé des PNJ ou prouvé une présence de meneur. Bonus futur : alliés/ordres, prix si tu fuis tes responsabilités.", pnjServed >= 2 || player.hasPassiveSkill("battle_order_mastery") || player.hasPassiveSkill("war_cry_caller"), "shop.church.oath.king");
-                oathScreen.addOption(5, "Serment de la Flamme gardée" + std::string(flameKnown ? " [déjà prêté]" : ""), "Condition : niveau 7+ ou vraie maîtrise du feu/élémentaire. Bonus futur : chaleur, courage, protection contre brûlure ; prix si tu consumes sans protéger.", player.getLevel() >= 7 || player.hasPassiveSkill("elemental_blade_mastery") || player.hasPassiveSkill("minor_fire_resistance") || player.hasPassiveSkill("infernal_fire_resistance"), "shop.church.oath.guarded_flame");
-                oathScreen.addOption(6, "Serment des Ombres franches" + std::string(shadowKnown ? " [déjà prêté]" : ""), "Condition : niveau 8+ ou vraie habitude de ruse/déplacement. Bonus futur : discrétion, esquive, angle ; prix si tu trahis la parole donnée.", player.getLevel() >= 8 || player.hasPassiveSkill("shadow_stepper") || player.hasPassiveSkill("rogue_feinter") || player.hasPassiveSkill("trick_image_mastery"), "shop.church.oath.shadow");
-                oathScreen.addOption(7, "Serment du Pèlerin" + std::string(pilgrimKnown ? " [déjà prêté]" : ""), "Condition : avoir voyagé, être inscrit localement ou niveau 4+. Bonus futur : route, fatigue, villages ; prix si tu refuses toute aide de passage.", player.getWorldDaysElapsed() >= 2 || player.isRegisteredAtCurrentCityGuild() || player.getLevel() >= 4, "shop.church.oath.pilgrim");
-                oathScreen.addOption(8, "Serment de Mémoire" + std::string(memoryKnown ? " [déjà prêté]" : ""), "Condition : niveau 6+ ou quêtes/observations suffisantes. Bonus futur : traces, rumeurs, héritage moral ; prix si tu mens sur ce qui a été vu.", player.getLevel() >= 6 || questsDone >= 2 || observedThreats >= 3, "shop.church.oath.memory");
-                oathScreen.addOption(9, "Serment du Silence" + std::string(silenceKnown ? " [déjà prêté]" : ""), "Condition : niveau 10+ ou maîtrise de lecture/ruse. Bonus futur : anti-panique, anti-illusion, concentration ; prix si tu brises le calme pour provoquer inutilement.", player.getLevel() >= 10 || player.hasPassiveSkill("threat_reader") || player.hasPassiveSkill("body_reader") || player.hasPassiveSkill("trick_image_mastery"), "shop.church.oath.silence");
+                oathScreen.addOption(1, "Serment du Bouclier" + std::string(shieldKnown ? " [déjà prêté]" : ""), "Condition : niveau 3+ ou vraie habitude d'armure. Orientation : protection/alliés, prix moral si tu abandonnes la ligne.", player.getLevel() >= 3 || player.hasPassiveSkill("armor_habit") || player.hasPassiveSkill("steady_guard"), "shop.church.oath.shield");
+                oathScreen.addOption(2, "Serment du Sang" + std::string(bloodKnown ? " [déjà prêté]" : ""), "Condition : niveau 5+ ou maîtrise/pacte sanguin déjà approché. Orientation : dégâts/élan, prix sur soins ou sécurité.", player.getLevel() >= 5 || player.hasPassiveSkill("blood_pact_mastery") || player.hasPassiveSkill("scar_tissue"), "shop.church.oath.blood");
+                oathScreen.addOption(3, "Serment du Chasseur" + std::string(hunterKnown ? " [déjà prêté]" : ""), "Condition : au moins 5 ennemis tués ou vraie lecture des familles. Orientation : piste/familles ennemies, prix si tu frappes sans comprendre.", enemyKills >= 5 || player.hasPassiveSkill("bestiary_family_reader") || player.hasPassiveSkill("ranger_eye"), "shop.church.oath.hunter");
+                oathScreen.addOption(4, "Serment du Roi" + std::string(kingKnown ? " [déjà prêté]" : ""), "Condition : avoir aidé des PNJ ou prouvé une présence de meneur. Orientation : alliés/ordres, prix si tu fuis tes responsabilités.", pnjServed >= 2 || player.hasPassiveSkill("battle_order_mastery") || player.hasPassiveSkill("war_cry_caller"), "shop.church.oath.king");
+                oathScreen.addOption(5, "Serment de la Flamme gardée" + std::string(flameKnown ? " [déjà prêté]" : ""), "Condition : niveau 7+ ou vraie maîtrise du feu/élémentaire. Orientation : chaleur, courage, protection contre brûlure ; prix si tu consumes sans protéger.", player.getLevel() >= 7 || player.hasPassiveSkill("elemental_blade_mastery") || player.hasPassiveSkill("minor_fire_resistance") || player.hasPassiveSkill("infernal_fire_resistance"), "shop.church.oath.guarded_flame");
+                oathScreen.addOption(6, "Serment des Ombres franches" + std::string(shadowKnown ? " [déjà prêté]" : ""), "Condition : niveau 8+ ou vraie habitude de ruse/déplacement. Orientation : discrétion, esquive, angle ; prix si tu trahis la parole donnée.", player.getLevel() >= 8 || player.hasPassiveSkill("shadow_stepper") || player.hasPassiveSkill("rogue_feinter") || player.hasPassiveSkill("trick_image_mastery"), "shop.church.oath.shadow");
+                oathScreen.addOption(7, "Serment du Pèlerin" + std::string(pilgrimKnown ? " [déjà prêté]" : ""), "Condition : avoir voyagé, être inscrit localement ou niveau 4+. Orientation : route, fatigue, villages ; prix si tu refuses toute aide de passage.", player.getWorldDaysElapsed() >= 2 || player.isRegisteredAtCurrentCityGuild() || player.getLevel() >= 4, "shop.church.oath.pilgrim");
+                oathScreen.addOption(8, "Serment de Mémoire" + std::string(memoryKnown ? " [déjà prêté]" : ""), "Condition : niveau 6+ ou quêtes/observations suffisantes. Orientation : traces, rumeurs, héritage moral ; prix si tu mens sur ce qui a été vu.", player.getLevel() >= 6 || questsDone >= 2 || observedThreats >= 3, "shop.church.oath.memory");
+                oathScreen.addOption(9, "Serment du Silence" + std::string(silenceKnown ? " [déjà prêté]" : ""), "Condition : niveau 10+ ou maîtrise de lecture/ruse. Orientation : anti-panique, anti-illusion, concentration ; prix si tu brises le calme pour provoquer inutilement.", player.getLevel() >= 10 || player.hasPassiveSkill("threat_reader") || player.hasPassiveSkill("body_reader") || player.hasPassiveSkill("trick_image_mastery"), "shop.church.oath.silence");
                 oathScreen.addOption(10, "Serment du Ciel ouvert" + std::string(skyKnown ? " [déjà prêté]" : ""), "Condition : niveau 6+, vraie habitude de tir/allonge ou sang des hauteurs. Bonus : mieux gérer Vol ; prix si tu ignores le sol et les alliés.", player.getLevel() >= 6 || player.hasPassiveSkill("ranger_eye") || player.hasPassiveSkill("semi_bird_open_sky") || player.getBowKillProgress() >= 4 || player.getSpearKillProgress() >= 4, "shop.church.oath.open_sky");
                 oathScreen.addOption(11, "Serment des Racines" + std::string(rootsKnown ? " [déjà prêté]" : ""), "Condition : niveau 6+, lecture de terrain ou route prudente. Bonus : contre-entrave ; prix si tu piétines les lieux traversés.", player.getLevel() >= 6 || player.hasPassiveSkill("terrain_reader") || player.hasPassiveSkill("cautious_pathing") || player.hasPassiveSkill("threat_route_planner"), "shop.church.oath.roots");
                 oathScreen.addOption(12, "Serment du Miroir brisé" + std::string(mirrorKnown ? " [déjà prêté]" : ""), "Condition : niveau 9+ ou vraie expérience des illusions. Bonus : lire les faux reflets ; prix si tu refuses la vérité vue.", player.getLevel() >= 9 || player.hasPassiveSkill("trick_image_mastery") || player.hasPassiveSkill("body_reader") || player.hasPassiveSkill("semi_fox_cunning"), "shop.church.oath.broken_mirror");
                 oathScreen.addOption(13, "Serment du Témoin" + std::string(witnessKnown ? " [déjà prêté]" : ""), "Condition : quêtes, observations ou PNJ servis. Bonus : mémoire logique, rumeurs vues, contre-lecture ; prix si tu affirmes sans témoin.", questsDone >= 1 || observedThreats >= 2 || pnjServed >= 1 || player.hasPassiveSkill("church_oath_memory"), "shop.church.oath.witness");
                 oathScreen.addOption(14, "Serment des Cicatrices" + std::string(scarsKnown ? " [déjà prêté]" : ""), "Condition : niveau 8+, vraie survie ou trace déjà portée. Bonus : douleur utile, tenue sous pression ; prix si tu cherches la blessure gratuitement.", player.getLevel() >= 8 || player.hasPassiveSkill("scar_tissue") || player.hasPassiveSkill("church_oath_blood") || player.hasPassiveSkill("church_oath_broken_trace"), "shop.church.oath.scars");
-                oathScreen.addOption(15, "Serment de l'Héritage" + std::string(legacyKnown ? " [déjà prêté]" : ""), "Condition : niveau 12+, mémoire ou trace de rupture. Bonus futur : Mortel/Léthal, objets avec mémoire, tombes ; prix si tu profanes l'héritage.", player.getLevel() >= 12 || player.hasPassiveSkill("church_oath_memory") || player.hasPassiveSkill("church_oath_broken_trace"), "shop.church.oath.legacy");
+                oathScreen.addOption(15, "Serment de l'Héritage" + std::string(legacyKnown ? " [déjà prêté]" : ""), "Condition : niveau 12+, mémoire ou trace de rupture. Orientation : Mortel/Léthal, objets avec mémoire, tombes ; prix si tu profanes l'héritage.", player.getLevel() >= 12 || player.hasPassiveSkill("church_oath_memory") || player.hasPassiveSkill("church_oath_broken_trace"), "shop.church.oath.legacy");
                 oathScreen.addOption(16, "Serment de la Forge liée" + std::string(forgeKnown ? " [déjà prêté]" : ""), "Condition : niveau 6+, arme entretenue ou build mémorisé. Bonus : objets avec mémoire, arme cohérente, forge ; prix si tu traites l'équipement comme jetable.", player.getLevel() >= 6 || player.hasPassiveSkill("weapon_care_habit") || player.hasPassiveSkill("loadout_memory") || player.hasPassiveSkill("field_maintenance"), "shop.church.oath.bound_forge");
                 oathScreen.addOption(17, "Serment des Liens" + std::string(bondsKnown ? " [déjà prêté]" : ""), "Condition : niveau 7+, ordres/recrues ou présence de groupe. Bonus : techniques combinées alliées, loyauté, combat psychologique de groupe ; prix si tu brises les liens.", player.getLevel() >= 7 || player.hasPassiveSkill("battle_order_mastery") || player.hasPassiveSkill("war_cry_caller") || player.getCanonicalJournalCategoryTotal("participation_recrues") >= 3, "shop.church.oath.bonds");
-                oathScreen.addOption(18, "Serment des Rivaux" + std::string(rivalsKnown ? " [déjà prêté]" : ""), "Condition : ennemi déjà fui/paniqué, niveau 9+ ou témoin/mémoire. Bonus : traces de rivaux et futurs mini-boss ; prix si tu humilies sans assumer.", player.getLevel() >= 9 || player.getCanonicalJournalCategoryTotal("rivaux_potentiels") >= 1 || player.hasPassiveSkill("church_oath_witness") || player.hasPassiveSkill("church_oath_memory"), "shop.church.oath.rivals");
+                oathScreen.addOption(18, "Serment des Rivaux" + std::string(rivalsKnown ? " [déjà prêté]" : ""), "Condition : ennemi déjà fui/paniqué, niveau 9+ ou témoin/mémoire. Orientation : traces de rivaux et adversaires récurrents ; prix si tu humilies sans assumer.", player.getLevel() >= 9 || player.getCanonicalJournalCategoryTotal("rivaux_potentiels") >= 1 || player.hasPassiveSkill("church_oath_witness") || player.hasPassiveSkill("church_oath_memory"), "shop.church.oath.rivals");
                 oathScreen.addOption(19, "Serment du Destin instable" + std::string(fateKnown ? " [déjà prêté]" : ""), "Condition : niveau 10+, trace de rupture, mémoire ou cicatrice. Bonus : destin réactif aux actes réels ; prix si tu cherches à forcer l'anomalie.", player.getLevel() >= 10 || player.hasPassiveSkill("church_oath_broken_trace") || player.hasPassiveSkill("church_oath_memory") || player.hasPassiveSkill("church_oath_scars"), "shop.church.oath.unstable_fate");
                 oathScreen.addOption(20, "Rompre un contrat", "Rupture réelle : coûte un rite, désactive le serment choisi, ajoute une trace de registre et garde l'événement en mémoire.", oathCount > 0, "shop.church.oath.break");
 
@@ -1448,7 +1448,7 @@ void ChurchServiceMenu::open(Player& player)
                             showShopResult("SERMENT DÉJÀ ROMPU", "shop.church.oath.broken", {
                                 name + " porte déjà une rupture dans le registre.",
                                 "Il ne peut pas être réactivé gratuitement depuis le menu des compétences ni reprêté comme si rien ne s'était passé.",
-                                "Une future voie de réparation/restauration devra demander un vrai prix et des conséquences."
+                                "La rupture reste inscrite dans le registre et ne se répare pas gratuitement depuis ce menu."
                             });
                         }
                         return;
@@ -1476,7 +1476,7 @@ void ChurchServiceMenu::open(Player& player)
                     }
                     if ((id == "church_oath_legacy" && !hadMemory) || (id == "church_oath_memory" && hadLegacy))
                     {
-                        lines.push_back("Contrat lié : l'héritage sans mémoire est fragile. L'église notera plus tard si l'histoire est portée ou seulement utilisée.");
+                        lines.push_back("Contrat lié : l’héritage sans mémoire est fragile. L’église conserve la trace de ce qui est réellement porté ou seulement revendiqué.");
                     }
                     if ((id == "church_oath_rivals" && !hadMemory && !hadRivals) || (id == "church_oath_memory" && hadRivals))
                     {
@@ -1487,7 +1487,7 @@ void ChurchServiceMenu::open(Player& player)
                         lines.push_back("Contradiction surveillée : Silence veut tenir le calme, Destin instable accepte les oscillations. Les deux pourront cohabiter, mais pas sans tension.");
                     }
                     lines.insert(lines.end(), extraLines.begin(), extraLines.end());
-                    lines.push_back("Rupture prévue : revenir à l'église pour rompre proprement le contrat, avec prix, témoin et trace, au lieu d'effacer ça comme une option gratuite.");
+                    lines.push_back("Rupture : revenir à l’église pour rompre proprement le contrat, avec prix, témoin et trace.");
                     player.recordCanonicalEvent("serments_eglise", id, name, 1);
                     player.recordHistoricalEvent("oath_sworn", id, "Serment prêté : " + name, false);
                     showShopResult("SERMENT ACCEPTÉ", "shop.church.oath.accepted", lines);
@@ -1496,8 +1496,8 @@ void ChurchServiceMenu::open(Player& player)
                 if (oathChoice == 1)
                 {
                     acceptOath("church_oath_shield", "Serment du Bouclier", {
-                        "Sens : protéger avant de briller. Les futurs effets devront valoriser garde, alliés et refus d'abandon.",
-                        "Prix prévu : la promesse supportera mal les alliés laissés sans couverture."
+                        "Sens : protéger avant de briller, tenir la garde et ne pas abandonner ceux que tu couvres.",
+                        "Prix moral : la promesse supportera mal les alliés laissés sans couverture."
                     });
                     continue;
                 }
@@ -1505,7 +1505,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_blood", "Serment du Sang", {
                         "Sens : payer quelque chose de réel pour obtenir un élan réel.",
-                        "Prix prévu : soins, sécurité ou stabilité devront compter ; ce ne sera pas juste un bonus de dégâts gratuit."
+                        "Prix moral : soins, sécurité ou stabilité devront compter ; ce ne sera pas juste un bonus de dégâts gratuit."
                     });
                     continue;
                 }
@@ -1513,7 +1513,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_hunter", "Serment du Chasseur", {
                         "Sens : comprendre la proie, sa famille, ses traces et le terrain avant de réclamer l'avantage.",
-                        "Prix prévu : frapper sans lecture ou contre une mauvaise cible pourra rendre le serment instable."
+                        "Prix moral : frapper sans lecture ou contre une mauvaise cible pourra rendre le serment instable."
                     });
                     continue;
                 }
@@ -1521,7 +1521,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_king", "Serment du Roi", {
                         "Sens : tenir une responsabilité visible. Ce serment doit valoriser ordres, alliés, présence et réputation.",
-                        "Prix prévu : fuir trop facilement ou sacrifier les autres devra abîmer la promesse."
+                        "Prix moral : fuir trop facilement ou sacrifier les autres devra abîmer la promesse."
                     });
                     continue;
                 }
@@ -1529,7 +1529,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_guarded_flame", "Serment de la Flamme gardée", {
                         "Sens : garder une chaleur qui protège avant de chercher à brûler plus fort.",
-                        "Prix prévu : les futurs abus de feu sans protection pourront fragiliser le serment."
+                        "Prix moral : abuser du feu sans protéger ce qui t’entoure fragilise la promesse."
                     });
                     continue;
                 }
@@ -1537,7 +1537,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_shadow", "Serment des Ombres franches", {
                         "Sens : avancer dans l'ombre sans transformer la discrétion en trahison gratuite.",
-                        "Prix prévu : mensonge, vol ou abandon d'allié pourront salir la promesse."
+                        "Prix moral : mensonge, vol ou abandon d'allié pourront salir la promesse."
                     });
                     continue;
                 }
@@ -1545,7 +1545,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_pilgrim", "Serment du Pèlerin", {
                         "Sens : respecter les routes, les relais, les villages et les témoins qui rendent un voyage possible.",
-                        "Prix prévu : ignorer systématiquement les lieux traversés pourra rendre la promesse creuse."
+                        "Prix moral : ignorer systématiquement les lieux traversés pourra rendre la promesse creuse."
                     });
                     continue;
                 }
@@ -1553,7 +1553,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_memory", "Serment de Mémoire", {
                         "Sens : ne pas laisser les morts, les témoins, les objets et les erreurs disparaître du récit.",
-                        "Prix prévu : mentir sur une trace ou effacer une responsabilité devra laisser une marque."
+                        "Prix moral : mentir sur une trace ou effacer une responsabilité devra laisser une marque."
                     });
                     continue;
                 }
@@ -1561,7 +1561,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_silence", "Serment du Silence", {
                         "Sens : garder assez de calme pour lire peur, illusions, panique et provocations.",
-                        "Prix prévu : rompre le calme par orgueil pourra affaiblir la concentration promise."
+                        "Prix moral : rompre le calme par orgueil pourra affaiblir la concentration promise."
                     });
                     continue;
                 }
@@ -1569,7 +1569,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_open_sky", "Serment du Ciel ouvert", {
                         "Sens : ne pas paniquer quand l'ennemi quitte le sol. Le ciel s'affronte avec lecture, allonge, tir ou patience.",
-                        "Effet actuel : une arme courte peut parfois trouver un angle contre Vol, mais jamais gratuitement."
+                        "Effet : une arme courte peut parfois trouver un angle contre Vol, mais jamais gratuitement."
                     });
                     continue;
                 }
@@ -1577,7 +1577,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_roots", "Serment des Racines", {
                         "Sens : sentir les appuis, les fils et les racines avant qu'ils ne volent tout le tour.",
-                        "Effet actuel : une entrave peut parfois être arrachée en début de tour au prix d'un effort visible."
+                        "Effet : une entrave peut parfois être arrachée en début de tour au prix d'un effort visible."
                     });
                     continue;
                 }
@@ -1585,7 +1585,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_broken_mirror", "Serment du Miroir brisé", {
                         "Sens : casser le faux reflet sans prétendre recevoir une vérité divine.",
-                        "Effet actuel : réduit le risque de frapper le mauvais reflet si des indices existent."
+                        "Effet : réduit le risque de frapper le mauvais reflet si des indices existent."
                     });
                     continue;
                 }
@@ -1593,7 +1593,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_witness", "Serment du Témoin", {
                         "Sens : ne croire qu'une trace parce qu'elle a une source : témoin, rumeur, registre, bestiaire ou observation réelle.",
-                        "Effet actuel : aide légèrement les contre-lectures et les coups portés sur une faille réellement observée."
+                        "Effet : aide légèrement les contre-lectures et les coups portés sur une faille réellement observée."
                     });
                     continue;
                 }
@@ -1601,15 +1601,15 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_scars", "Serment des Cicatrices", {
                         "Sens : transformer une blessure vécue en tenue, pas chercher la douleur pour faire joli.",
-                        "Effet actuel : sous pression, la cicatrice peut soutenir un impact ou une garde courte."
+                        "Effet : sous pression, la cicatrice peut soutenir un impact ou une garde courte."
                     });
                     continue;
                 }
                 if (oathChoice == 15)
                 {
                     acceptOath("church_oath_legacy", "Serment de l'Héritage", {
-                        "Sens : préparer les systèmes Mortel/Léthal, les tombes, les objets avec mémoire et ce qui reste après une vraie perte.",
-                        "Effet actuel : petite aide rare quand une action prolonge une trace déjà inscrite."
+                        "Sens : respecter ce qui reste après une vraie perte : tombes, objets marqués, noms et souvenirs transmis.",
+                        "Effet : petite aide rare quand une action prolonge une trace déjà inscrite."
                     });
                     continue;
                 }
@@ -1617,7 +1617,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_bound_forge", "Serment de la Forge liée", {
                         "Sens : lier l'objet à ce qu'il a vraiment vécu : coups portés, réparations, boss affrontés et mains qui l'ont porté.",
-                        "Effet actuel : une arme cohérente avec la classe peut laisser une trace de mémoire d'objet, sans devenir légendaire gratuitement."
+                        "Effet : une arme cohérente avec la classe peut laisser une trace de mémoire d'objet, sans devenir légendaire gratuitement."
                     });
                     continue;
                 }
@@ -1625,7 +1625,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_bonds", "Serment des Liens", {
                         "Sens : valoriser le groupe, les recrues, les ordres et les techniques combinées sans transformer les alliés faibles en vétérans instantanés.",
-                        "Effet actuel : la présence de groupe peut soutenir une pression courte et laisser une trace pour les futurs combos alliés."
+                        "Effet : la présence du groupe peut soutenir une pression courte et renforcer la coordination alliée."
                     });
                     continue;
                 }
@@ -1633,7 +1633,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_rivals", "Serment des Rivaux", {
                         "Sens : si un ennemi survit à une fuite, une humiliation ou une défaite interrompue, il peut porter une histoire au lieu de disparaître dans une statistique.",
-                        "Effet actuel : les fuites, paniques et compétences ennemies marquantes laissent plus facilement une trace de rival potentiel."
+                        "Effet : les fuites, paniques et compétences ennemies marquantes laissent plus facilement une trace de rival potentiel."
                     });
                     continue;
                 }
@@ -1641,7 +1641,7 @@ void ChurchServiceMenu::open(Player& player)
                 {
                     acceptOath("church_oath_unstable_fate", "Serment du Destin instable", {
                         "Sens : accepter que certains chemins se déplacent selon les actes réels : serments rompus, cicatrices, rumeurs, objets marqués ou classes en mutation.",
-                        "Effet actuel : de rares oscillations peuvent soutenir ou durcir une action quand une trace existe, sans garantir le résultat."
+                        "Effet : de rares oscillations peuvent soutenir ou durcir une action quand une trace existe, sans garantir le résultat."
                     });
                     continue;
                 }
@@ -1677,7 +1677,7 @@ void ChurchServiceMenu::open(Player& player)
 
                     MenuScreen breakScreen("ROMPRE UN CONTRAT", "shop.church.oath.break.menu");
                     breakScreen.addLine("Frère Calixte sort un registre noir : rompre ne supprime pas l'histoire, ça la déplace dans les traces.");
-                    breakScreen.addLine("Effet actuel : le serment choisi est désactivé, une rupture est enregistrée et les futurs PNJ pourront s'en souvenir.");
+                    breakScreen.addLine("Effet : le serment choisi est désactivé et sa rupture reste inscrite dans les registres accessibles aux personnes concernées.");
                     breakScreen.addBackOption();
                     for (const OathBreakOption& option : breakOptions)
                     {
@@ -1706,7 +1706,7 @@ void ChurchServiceMenu::open(Player& player)
                         breakLines.push_back("Contrat rompu : " + selected.name + ".");
                         breakLines.push_back("Effet : le contrat cesse d'agir immédiatement. Il ne peut pas être réactivé depuis le loadout passif.");
                         breakLines.push_back("Trace : le registre garde le nom du serment, la date, le prix payé et le fait qu'il n'a pas disparu gratuitement.");
-                        breakLines.push_back("Conséquence : la Trace de serment rompu pourra servir aux prêtres, villes, boss, compagnons ou héritages futurs.");
+                        breakLines.push_back("Conséquence : la Trace de serment rompu peut être relue par les prêtres, villes, adversaires, compagnons ou héritiers concernés.");
                         showShopResult("SERMENT ROMPU", "shop.church.oath.break.done", breakLines);
                     }
                     continue;
@@ -1727,7 +1727,7 @@ void ChurchServiceMenu::open(Player& player)
             player.getInventory().addMaterial(MaterialCatalog::createById("blessing_note", 1));
             lines.push_back("Père Orwan trace un signe court au bas d'un papier et refuse d'en faire une promesse absolue.");
             lines.push_back("Preuve obtenue : Note de bénédiction x1.");
-            lines.push_back("Limite : utile pour des routes, quêtes et futurs dialogues, mais cela ne retire pas une vraie malédiction.");
+            lines.push_back("Limite : utile pour certaines routes, quêtes et discussions, mais cela ne retire pas une vraie malédiction.");
             showLocalServiceResult("BÉNÉDICTION DE ROUTE", "shop.church.route_blessing.success", player, lines, 1);
             continue;
         }
@@ -1744,7 +1744,7 @@ void ChurchServiceMenu::open(Player& player)
             player.getInventory().addMaterial(MaterialCatalog::createById("sanctuary_wax_seal", 1));
             lines.push_back("Rite d'apaisement : Frère Calixte grave ton nom sur une cire froide, puis la casse avant qu'elle ne colle à ton ombre.");
             lines.push_back("Preuve obtenue : Sceau de cire sanctuaire x1.");
-            lines.push_back("Limite : cela ne retire pas les grandes malédictions, mais peut aider des quêtes, PNJ ou rites futurs.");
+            lines.push_back("Limite : cela ne retire pas les grandes malédictions, mais peut aider certaines quêtes, certains PNJ ou certains rites.");
             showLocalServiceResult("RITE D'APAISEMENT", "shop.church.blessing.success", player, lines, 1);
             continue;
         }

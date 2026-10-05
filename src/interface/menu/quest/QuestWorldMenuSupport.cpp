@@ -387,7 +387,7 @@ namespace QuestWorldMenuSupport
         recordRecentAction(player, "rare_route_group:" + routeKey, "Groupe croisé sur la route : " + group.second);
         lines.push_back("Événement rare : " + group.second + " te croisent sur la route.");
         lines.push_back("Ils proposent une aide ponctuelle sur leur propre quête. Une micro-quête de route est notée dans le registre, sans spammer le journal principal.");
-        lines.push_back("Effet actuel : contact découvert, rumeur ajoutée, micro-quête active enregistrée. La résolution complète restera à brancher dans le futur panneau de routes.");
+        lines.push_back("Contact découvert, rumeur ajoutée et micro-quête de route inscrite dans le registre.");
         return lines;
     }
 
@@ -521,7 +521,7 @@ namespace QuestWorldMenuSupport
         lines.push_back("Le coffre personnel est sécurisé et ne fait pas partie de l'inventaire transporté.");
         lines.push_back("Chaque ville possède son propre coffre : achat, niveau, capacité et contenu sont indépendants.");
         lines.push_back("Depuis une autre ville, un coffre déjà acheté peut être consulté à distance, mais aucun retrait n'est permis sans être au bon comptoir.");
-        lines.push_back("Un futur service coûteux pourra transférer une petite quantité entre coffres municipaux avec plusieurs jours de délai.");
+        lines.push_back("Chaque coffre municipal reste indépendant : le contenu ne voyage pas automatiquement d'une ville à l'autre.");
         lines.push_back("");
         const City* currentCity = City::findById(player.getCurrentCityId());
         for (const City& city : City::getCatalog())
@@ -657,7 +657,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
 
         std::vector<std::string> lines;
         lines.push_back("Nom joueur : Dernières actions.");
-        lines.push_back("But : préparer helpmerefundmyaction et éviter de deviner l'historique depuis le texte affiché.");
+        lines.push_back("Historique court des actions récentes enregistrées pour ce personnage.");
         if (actions.empty())
         {
             lines.push_back("Aucune action récente enregistrée pour l'instant.");
@@ -730,7 +730,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             {
                 player.getInventory().addMaterial(MaterialCatalog::createRouteScoutNote(1));
                 player.recordCanonicalEvent("micro_quetes_route_partielles", quest.key, quest.label);
-                lines.push_back("Résultat : partiel. Pas de vraie récompense d'or, mais une note de route utile.");
+                lines.push_back("Résultat : partiel. Pas de vraie récompense en argent, mais une note de route utile.");
             }
             else
             {
@@ -759,11 +759,8 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
 
     void showExplorationMapPreview(const Player& player)
     {
-        std::vector<std::string> lines = CityTravelRules::buildExplorationMapLines(player);
-        const std::vector<std::string> visualLines = CityTravelRules::buildFutureVisualPlanningLines();
-        lines.push_back("");
-        lines.insert(lines.end(), visualLines.begin(), visualLines.end());
-        MessageScreen::show("CARTE D'EXPLORATION — PRÉPARATION", "quest.city_travel.exploration_map", lines, false);
+        const std::vector<std::string> lines = CityTravelRules::buildExplorationMapLines(player);
+        MessageScreen::show("CARTE D'EXPLORATION", "quest.city_travel.exploration_map", lines, false);
     }
 
     void openGroupedShopShortcut(Player& player)
@@ -784,15 +781,15 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         {
             const std::vector<CityBuildingPreview> buildings = CityTravelRules::getBuildingsForCity(player, *city);
             MenuScreen screen("VILLE — " + city->getName(), "quest.city_hub.menu");
-            screen.addLine("Hub jouable actuel : les bâtiments sont encore en terminal, mais chaque entrée prépare le futur clic pixel-art.");
-            screen.addLine("Plus tard : vraie image de ville, bâtiments cliquables, arène visible et grande porte vers la carte.");
+            screen.addLine("Services de la ville : choisis un bâtiment ou un comptoir.");
+            screen.addLine("Chaque lieu garde ses propres services, contacts et conditions d'accès.");
             screen.addBackOption("Retour", "quest.city_hub.menu.back");
             screen.addOption(90, "Résumé de la ville", "Identité locale, ressources, stocks, bâtiments et conditions.", true, "quest.city_hub.summary");
             screen.addOption(91, "Boutiques et comptoirs", "Accès unique : catégories rapides ou liste complète sans doublon.", true, "quest.city_hub.shops.shortcut");
             for (std::size_t i = 0; i < buildings.size(); ++i)
             {
                 const CityBuildingPreview& building = buildings[i];
-                std::string detail = building.category + " — " + building.contact + " | " + building.detail + " | Pixel-art futur : " + building.pixelArtHint + ".";
+                std::string detail = building.category + " — " + building.contact + " | " + building.detail + " | Ambiance : " + building.pixelArtHint + ".";
                 screen.addOption(static_cast<int>(i + 1), building.name, detail, building.unlocked, "quest.city_hub.building." + building.id);
             }
 
@@ -841,17 +838,17 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             else if (building.id == "arena")
             {
                 MessageScreen::show("ARÈNE DE VILLE", "quest.city_hub.arena", {
-                    "Accès logique préparé : combat unique / entraînement via bâtiment d'arène.",
-                    "La sélection réelle de combat reste dans les modes de combat actuels pour ne pas dupliquer les règles.",
-                    "Future IG : ce bâtiment deviendra le point cliquable d'entrée vers le combat unique."
+                    "Cette arène accueille les combats uniques et les entraînements de la ville.",
+                    "Les règles de combat restent identiques à celles des autres affrontements.",
+                    "Le maître d'arène tient le registre des affrontements disponibles."
                 }, false);
             }
             else if (building.id == "market" || building.id == "harbor" || building.id == "underbridge")
             {
                 std::vector<std::string> lines = CityTravelRules::buildLocalCityDifferentiationLines(player);
                 lines.insert(lines.begin(), "Commerce local : " + building.name + ".");
-                lines.push_back("Ce bâtiment ouvre maintenant un vrai comptoir : achat, vente, discussion et services restent accessibles.");
-                lines.push_back("Les images futures seront seulement décoratives : les stocks, prix et conditions restent écrits.");
+                lines.push_back("Ce comptoir permet achat, vente, discussion et services locaux.");
+                lines.push_back("Les stocks, prix et conditions sont consignés directement au comptoir.");
                 MessageScreen::show("COMMERCE LOCAL", "quest.city_hub.market", lines, false);
                 if (building.id == "harbor")
                 {
@@ -870,9 +867,9 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             {
                 MessageScreen::show("ARCHIVES LOCALES", "quest.city_hub.archives", {
                     "Archives de " + city->getName() + ".",
-                    "Rôle actuel : rappeler les rumeurs, biomes et connaissances régionales sans tout révéler gratuitement.",
-                    "Comptoir réel : livres, cartes, renseignements et ventes restent accessibles par le service de bibliothèque.",
-                    "Future IG : cartes murales, livres, légendes, informations achetables et petites illustrations de lore."
+                    "Rôle : conserver les rumeurs, biomes et connaissances régionales sans tout révéler gratuitement.",
+                    "Le comptoir propose livres, cartes, renseignements et autres services de bibliothèque.",
+                    "Cartes murales, livres et légendes donnent à la salle son identité d'archives."
                 }, false);
                 ShopMenu::openShopOfType(player, ShopType::Library);
             }
@@ -882,7 +879,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                     building.name + " — " + building.category + ".",
                     "Contact : " + building.contact + ".",
                     building.detail,
-                    "Comptoir réel : achats, ventes, réparations et discussion du forgeron restent accessibles."
+                    "Le comptoir propose achats, ventes, réparations et discussion avec le forgeron."
                 }, false);
                 ShopMenu::openShopOfType(player, ShopType::Blacksmith);
             }
@@ -892,7 +889,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                     building.name + " — " + building.category + ".",
                     "Contact : " + building.contact + ".",
                     building.detail,
-                    "Comptoir réel : soins, bénédictions encadrées et services religieux restent accessibles."
+                    "Le sanctuaire propose soins, bénédictions encadrées et services religieux."
                 }, false);
                 ShopMenu::openShopOfType(player, ShopType::Church);
             }
@@ -902,7 +899,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                     building.name + " — " + building.category + ".",
                     "Contact : " + building.contact + ".",
                     building.detail,
-                    "Indice pixel-art : " + building.pixelArtHint + "."
+                    "Ambiance : " + building.pixelArtHint + "."
                 }, false);
             }
         }
@@ -912,9 +909,9 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
     {
         while (true)
         {
-            const int commonBedCost = EconomyBalance::innCommonBedCost(player.getCurrentCityId(), player.getLevel());
-            const int roomCost = EconomyBalance::innSafeRoomCost(player.getCurrentCityId(), player.getLevel());
-            const int mealCost = EconomyBalance::innWarmMealCost(player.getCurrentCityId(), player.getLevel());
+            const int commonBedCost = EconomyBalance::innCommonBedCostCopper(player.getCurrentCityId(), player.getLevel());
+            const int roomCost = EconomyBalance::innSafeRoomCostCopper(player.getCurrentCityId(), player.getLevel());
+            const int mealCost = EconomyBalance::innWarmMealCostCopper(player.getCurrentCityId(), player.getLevel());
             MenuScreen screen("AUBERGE — " + currentCityName(player), "quest.city_hub.inn");
             screen.addLine("Repos réel : l'auberge existe pour éviter que les routes deviennent un lit gratuit.");
             screen.addLine("PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".");
@@ -925,6 +922,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             screen.addOption(2, "Chambre sûre — " + Money::formatCopper(roomCost), "Lit cher et chambre fermée : repos plus profond, plafonné à 90% PV.", true, "quest.city_hub.inn.room");
             screen.addOption(3, "Repas chaud — " + Money::formatCopper(mealCost), "Petit soin et baisse narrative de fatigue sans dormir. Jamais gratuit : le prix est affiché avant validation.", true, "quest.city_hub.inn.meal");
             screen.addOption(4, "Comptoir de l'auberge", "Acheter, vendre, discuter avec l'aubergiste et utiliser les services détaillés de l'auberge.", true, "quest.city_hub.inn.shop");
+            screen.addOption(5, "Fond de l'écurie — gratuit", "Un coin de paille offert aux voyageurs sans le sou. Avance au lendemain, récupération très limitée (25% PV max).", true, "quest.city_hub.inn.stable_floor");
             const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
             Console::clear();
             if (choice == 0) return;
@@ -991,6 +989,30 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 ShopMenu::openShopOfType(player, ShopType::Lodging);
                 continue;
             }
+            if (choice == 5)
+            {
+                player.advanceWorldDays(1);
+                const int targetHp = std::max(1, player.getMaxHp() * 25 / 100);
+                if (player.getHp() < targetHp)
+                {
+                    player.heal(targetHp - player.getHp());
+                }
+                player.recordCanonicalEvent("repos_auberge", player.getCurrentCityId(), "Nuit gratuite dans l'écurie à " + currentCityName(player));
+                recordRecentAction(player, "inn_stable_floor", "Nuit gratuite dans l'écurie à " + currentCityName(player));
+                MessageScreen::show(
+                    "PAILLE DE L'ÉCURIE",
+                    "quest.city_hub.inn.stable_floor.done",
+                    {
+                        "L'aubergiste te laisse un coin sec au fond de l'écurie. Ce n'est pas confortable, mais personne n'est obligé de rester bloqué dehors faute d'argent.",
+                        "Prix payé : gratuit.",
+                        "Récupération maximale : 25% des PV. Les lits payants restent nettement meilleurs.",
+                        "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".",
+                        player.formatWorldDateTimeLine()
+                    },
+                    false
+                );
+                return;
+            }
         }
     }
 
@@ -1044,14 +1066,13 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 ++option;
             }
 
-            screen.addOption(89, "Voir la ville actuelle", "Bâtiments locaux, services, accès et préparation de la future image cliquable.", true, "quest.city_travel.city_hub");
-            screen.addOption(90, "Voir la carte d'exploration prévue", "Distances vers biomes, zones grisées/enfumées et plan visuel futur.", true, "quest.city_travel.map_preview");
-            screen.addOption(91, "Voir les règles visuelles futures", "Ville pixel-art, bâtiments cliquables, porte des remparts, arène et backgrounds.", true, "quest.city_travel.visual_future");
-            screen.addOption(92, "Voir le registre moteur", "Top 3 basé sur des événements moteur enregistrés, pas sur du texte deviné.", true, "quest.city_travel.canonical_journal");
-            screen.addOption(93, "Voir les dernières actions", "Historique court utile pour comprendre les erreurs et préparer helpmerefundmyaction.", true, "quest.city_travel.recent_actions");
+            screen.addOption(89, "Voir la ville actuelle", "Bâtiments locaux, services et conditions d'accès.", true, "quest.city_travel.city_hub");
+            screen.addOption(90, "Voir la carte d'exploration", "Distances vers les biomes et zones encore inconnues.", true, "quest.city_travel.map_preview");
+            screen.addOption(92, "Voir le registre des événements", "Événements enregistrés par lieu et catégorie.", true, "quest.city_travel.canonical_journal");
+            screen.addOption(93, "Voir les dernières actions", "Historique court des actions récentes du personnage.", true, "quest.city_travel.recent_actions");
             screen.addOption(94, "Bureau des missions déléguées", "Payer des aventuriers/PNJ pour une mission avec coût, jours et taux de réussite.", true, "quest.city_travel.delegated_missions");
-            screen.addOption(95, "Carte schématique", "Voir la carte simple actuelle avant la vraie carte pixel-art cliquable.", true, "quest.city_travel.schematic_map");
-            screen.addOption(96, "Registre avancé / incidents", "Illégal, sanctions, ramasse-miettes, aides rares et debug lore. Caché du Top 3 principal.", true, "quest.city_travel.canonical_journal_advanced");
+            screen.addOption(95, "Carte schématique", "Voir une carte simple des routes, villes et biomes connus.", true, "quest.city_travel.schematic_map");
+            screen.addOption(96, "Registre avancé / incidents", "Infractions, sanctions, aides rares et événements secondaires.", true, "quest.city_travel.canonical_journal_advanced");
             screen.addOption(97, "Auberge locale", "Lit, chambre sûre ou repas chaud. Repos réel pour ne pas remplacer l'auberge par la route.", true, "quest.city_travel.inn");
             screen.addOption(98, "Micro-quêtes de route", "Résoudre les aides rares proposées par des groupes croisés pendant un trajet.", true, "quest.city_travel.route_micro_quests");
 
@@ -1070,11 +1091,6 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             if (choice == 90)
             {
                 showExplorationMapPreview(player);
-                continue;
-            }
-            if (choice == 91)
-            {
-                MessageScreen::show("VILLE ET EXPLORATION — FUTUR PIXEL-ART", "quest.city_travel.visual_future", CityTravelRules::buildFutureVisualPlanningLines(), false);
                 continue;
             }
             if (choice == 92)
@@ -1238,7 +1254,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 "Taxe/frais de changement de ville payés : " + Money::formatCopper(travelTaxCopper) + ".",
                 "Temps écoulé : +" + std::to_string(timeUnits) + " segment(s).",
                 player.formatWorldTimeChange(dayBefore, unitBefore),
-                "Future animation : route entre villes, puis arrivée devant les portes/remparts de la ville."
+                "Le trajet se termine devant les portes de " + destination->getName() + "."
             };
             if (player.hasCityVaultInCity(destination->getId()))
             {
@@ -1270,7 +1286,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
 
         std::vector<std::pair<int, const City*>> destinationChoices;
         MenuScreen cityScreen("TRANSPORT DE COFFRE", "quest.city_vault.transfer.city");
-        cityScreen.addLine("Transport encadré : seules les piles de matériaux sont gérées pour l'instant, avec coût et coffre de destination requis.");
+        cityScreen.addLine("Transport encadré : les piles de matériaux peuvent être expédiées avec un coût et un coffre de destination.");
         cityScreen.addLine("Le retrait reste impossible à distance : tu envoies depuis le coffre actuel vers un autre coffre possédé.");
         cityScreen.addBackOption("Retour", "quest.city_vault.transfer.city.back");
         int option = 1;
@@ -1300,14 +1316,14 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         for (const Material& material : player.getCityVault().getMaterials())
         {
             const int distance = CityTravelRules::getDistanceBetweenCities(player.getCurrentCityId(), destination->getId());
-            const int cost = EconomyBalance::cityVaultMaterialTransferCost(player.getCurrentCityId(), destination->getId(), distance, material.getQuantity());
+            const int cost = EconomyBalance::cityVaultMaterialTransferCostCopper(player.getCurrentCityId(), destination->getId(), distance, material.getQuantity());
             labels.push_back(material.getName() + " x" + std::to_string(material.getQuantity()) + " [" + material.getQualityLabel() + "] — coût " + Money::formatCopper(cost));
         }
         const int materialIndex = askVaultEntryChoice("CHOISIR UNE PILE À TRANSPORTER", "quest.city_vault.transfer.material", labels);
         if (materialIndex < 0) return;
         const Material selected = player.getCityVault().getMaterial(materialIndex);
         const int distance = CityTravelRules::getDistanceBetweenCities(player.getCurrentCityId(), destination->getId());
-        const int cost = EconomyBalance::cityVaultMaterialTransferCost(player.getCurrentCityId(), destination->getId(), distance, selected.getQuantity());
+        const int cost = EconomyBalance::cityVaultMaterialTransferCostCopper(player.getCurrentCityId(), destination->getId(), distance, selected.getQuantity());
 
         MenuScreen confirm("CONFIRMER LE TRANSPORT", "quest.city_vault.transfer.confirm");
         confirm.addLine("Pile : " + selected.getName() + " x" + std::to_string(selected.getQuantity()) + ".");
@@ -1342,14 +1358,14 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             MenuScreen screen("COFFRE MUNICIPAL — " + currentCityName(player), "quest.city_vault");
             screen.addLine("Stockage personnel sécurisé : son contenu n'est pas accessible depuis l'inventaire normal.");
             screen.addLine("Une mort ou un vol d'inventaire n'atteint pas les objets déjà déposés ici.");
-            screen.addLine("Argent transporté : " + std::to_string(player.getInventory().getGold()) + " pièces.");
+            screen.addLine("Argent transporté : " + player.getInventory().getWalletLine() + ".");
             screen.addBackOption("Retour aux lieux", "quest.city_vault.back");
 
             if (!player.hasCityVault())
             {
                 screen.addLine("Statut : aucun coffre acheté.");
                 screen.addLine("Premier coffre : 12 emplacements.");
-                screen.addOption(1, "Acheter le coffre personnel", "Coût : " + std::to_string(player.getCityVaultPurchaseCost()) + " pièces.", true, "quest.city_vault.purchase");
+                screen.addOption(1, "Acheter le coffre personnel", "Coût : " + Money::formatEconomyUnits(player.getCityVaultPurchaseCost()) + ".", true, "quest.city_vault.purchase");
                 screen.addOption(2, "Voir les villes et les règles distantes", "Consulter le réseau municipal sans inventer un voyage encore verrouillé.", true, "quest.city_vault.cities");
                 screen.addOption(3, "Consulter un autre coffre", "Lecture seule si un coffre existe ailleurs.", true, "quest.city_vault.remote_browser");
 
@@ -1364,7 +1380,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                     }
                     else
                     {
-                        MessageScreen::show("ACHAT IMPOSSIBLE", "quest.city_vault.purchase.failed", {"Or insuffisant ou coffre déjà possédé.", "Aucune pièce n'a été dépensée."}, false);
+                        MessageScreen::show("ACHAT IMPOSSIBLE", "quest.city_vault.purchase.failed", {"Fonds insuffisants ou coffre déjà possédé.", "Aucune pièce n'a été dépensée."}, false);
                     }
                 }
                 else if (choice == 2)
@@ -1382,7 +1398,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             screen.addLine("Occupation : " + std::to_string(player.getCityVaultUsedSlots()) + "/" + std::to_string(player.getCityVaultCapacity()) + " emplacements.");
             screen.addLine("Coût par entrée : arme 3, armure 3, consommable 1, pile de matériau 1.");
             const std::string upgradeHint = player.canUpgradeCityVault()
-                ? "Coût : " + std::to_string(player.getCityVaultUpgradeCost()) + " pièces. Ajoute 8 emplacements."
+                ? "Coût : " + Money::formatEconomyUnits(player.getCityVaultUpgradeCost()) + ". Ajoute 8 emplacements."
                 : "Niveau maximal atteint.";
             screen.addOption(1, "Améliorer le coffre", upgradeHint, player.canUpgradeCityVault(), "quest.city_vault.upgrade");
             screen.addOption(2, "Consulter le contenu", "Vue complète en lecture seule.", true, "quest.city_vault.contents");

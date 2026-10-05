@@ -5,6 +5,7 @@
 #include "entity/Player.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/quest/QuestDeadlineSupport.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "world/LocalReputationSystem.hpp"
 
@@ -43,6 +44,7 @@ namespace
         resultLines.insert(resultLines.end(), timeReportLines.begin(), timeReportLines.end());
 
         const int expired = player.getQuestLog().expireOverdueQuests(player.getWorldDaysElapsed());
+        QuestDeadlineSupport::synchronizeQuestConsequences(player);
         if (expired > 0)
         {
             resultLines.push_back("Attention : " + std::to_string(expired) + " quête(s) ont dépassé leur date limite pendant ce service.");
@@ -109,13 +111,13 @@ namespace ShopServiceSupport
             return true;
         }
 
-        if (!player.getInventory().spendGold(fallbackPrice))
+        if (!player.getInventory().spendEconomyUnits(fallbackPrice))
         {
-            resultLines.push_back("Paiement refusé : il manque " + Money::formatGoldWithRaw(fallbackPrice) + ".");
+            resultLines.push_back("Paiement refusé : il manque " + Money::formatEconomyUnits(fallbackPrice) + ".");
             return false;
         }
 
-        resultLines.push_back("Paiement effectué : " + Money::formatGoldWithRaw(fallbackPrice) + ".");
+        resultLines.push_back("Paiement effectué : " + Money::formatEconomyUnits(fallbackPrice) + ".");
         return true;
     }
 

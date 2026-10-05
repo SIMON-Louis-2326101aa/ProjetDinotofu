@@ -46,10 +46,23 @@ std::string LivingNpcProfileSystem::reactionToKnownFact(const LivingNpcProfile& 
     }
     if (factType == "debt_paid") return p.profession == "marchand" ? "Le compte est soldé. Le ton du marchand se détend immédiatement." : "La dette réglée circule comme un signe de parole tenue.";
     if (factType == "local_attack") return p.profession == "garde" ? "Le garde compare ton récit aux témoignages déjà recueillis." : "L'attaque a laissé des traces visibles ; la conversation revient vite sur les dégâts et les absents.";
+    if (factType == "quest_declined") {
+        if (p.profession == "marchand" || p.profession == "marchand itinérant") return "Le marchand se souvient surtout que tu n'as pas pris l'affaire cette fois-ci ; il ne confond pas un refus clair avec une promesse rompue.";
+        if (p.profession == "garde") return "Le garde préfère un refus net à un engagement abandonné en route ; il cherchera simplement quelqu'un d'autre pour cette affaire.";
+        if (p.profession == "guilde" || p.profession == "intendance") return "Le refus est noté comme un choix de disponibilité, pas comme un échec. La fiche peut être confiée à quelqu'un d'autre.";
+        return "Ce PNJ se souvient que tu avais décliné cette demande, sans en faire automatiquement un grief.";
+    }
     if (factType == "quest_accepted") {
         if (p.profession == "garde") return "Le garde retient que tu as accepté cette affaire, mais ne considère pas encore le problème comme résolu.";
         if (p.profession == "marchand") return "Le marchand note surtout qu'un engagement a été pris ; il attend de voir s'il sera tenu.";
         return "Ce PNJ se souvient t'avoir confié ou vu accepter cette affaire ; pour lui, la promesse compte encore.";
+    }
+    if (factType == "quest_failed") {
+        if (p.profession == "garde") return "Le garde n'efface pas l'affaire du registre : il veut surtout savoir si le danger existe encore et s'il faut réassigner la tâche.";
+        if (p.profession == "marchand" || p.profession == "marchand itinérant") return "Le marchand se souvient que l'engagement n'a pas été tenu à temps ; il reste poli, mais devient plus prudent avant de confier une urgence.";
+        if (p.profession == "guilde") return "La guilde classe l'échec comme un fait, pas comme une condamnation : les prochains contrats urgents seront simplement observés avec plus d'attention.";
+        if (p.temperament == "curieux" || p.temperament == "méthodique") return "Le résultat manqué compte, mais les raisons l'intéressent aussi : retard, fausse piste ou difficulté imprévue ne racontent pas la même histoire.";
+        return "Ce PNJ se souvient que cette affaire n'a pas été menée à temps ; son ton devient un peu plus réservé sans transformer un échec en hostilité automatique.";
     }
     if (factType == "quest_completed") {
         if (p.profession == "garde") return "Le garde associe désormais ton nom à une affaire réellement terminée, pas seulement à une promesse.";

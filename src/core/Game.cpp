@@ -19,13 +19,16 @@
 #include "save/SaveManager.hpp"
 #include "save/menu/AccountMenu.hpp"
 #include "save/menu/CharacterMenu.hpp"
+#include "economy/Money.hpp"
 #include "economy/shop/ShopRotationSystem.hpp"
 #include "economy/shop/ShopTransactionSystem.hpp"
 #include "interface/menu/shop/ShopMenu.hpp"
 #include "interface/menu/progression/AttributeMenu.hpp"
 #include "interface/menu/progression/StatisticsMenu.hpp"
 #include "interface/menu/quest/QuestMenu.hpp"
+#include "interface/menu/quest/QuestDeadlineSupport.hpp"
 #include "interface/menu/InventoryMenu.hpp"
+#include "interface/menu/inventory/InventorySelection.hpp"
 #include "interface/menu/PostCombatMenu.hpp"
 #include "interface/menu/training/TrainingGroundMenu.hpp"
 #include "interface/TerminalInterface.hpp"
@@ -56,7 +59,7 @@
 
 namespace
 {
-    constexpr int UtilityChoiceOutOfCombatMenu = 89;
+    constexpr int UtilityChoiceOutOfCombatMenu = 8;
     constexpr int UtilityChoiceGuardian = 90;
     constexpr int UtilityChoiceInventory = 91;
     constexpr int UtilityChoiceQuickSave = 92;
@@ -242,7 +245,7 @@ namespace
         lines.push_back("Moral ennemi : certains humains, gobelins, bêtes ou voleurs blessés peuvent paniquer, fuir ou se désorganiser. Morts-vivants, anomalies, serments et golems ne réagissent pas pareil.");
         lines.push_back("Information : observer ne donne pas une vérité divine. Une info claire doit venir d'une trace, d'un bestiaire, d'un témoin, d'une rumeur ou d'une vraie logique de terrain.");
         lines.push_back("Quêtes : l'affichage reste efficace, mais Inspecter / demander plus d'informations peut donner le contexte RP, la peur du client et les indices utiles.");
-        lines.push_back("Église : les serments commencent à devenir des statuts/passifs avec conditions. Ils seront forts, mais devront garder un prix et une rupture à l'église.");
+        lines.push_back("Église : les serments sont des contrats passifs soumis à conditions. Ils peuvent apporter un avantage, mais gardent un prix et une rupture à l'église.");
         lines.push_back("Serments de contre-jeu : Ciel ouvert aide contre Vol, Racines aide contre entraves, Miroir brisé aide contre illusions. Ce sont des contrats, pas des immunités gratuites.");
         if (player.hasPassiveSkill("church_oath_shield") || player.hasPassiveSkill("church_oath_blood") || player.hasPassiveSkill("church_oath_hunter") || player.hasPassiveSkill("church_oath_king")
             || player.hasPassiveSkill("church_oath_guarded_flame") || player.hasPassiveSkill("church_oath_shadow") || player.hasPassiveSkill("church_oath_pilgrim") || player.hasPassiveSkill("church_oath_memory") || player.hasPassiveSkill("church_oath_silence")
@@ -251,20 +254,20 @@ namespace
             || player.hasPassiveSkill("church_oath_bound_forge") || player.hasPassiveSkill("church_oath_bonds")
             || player.hasPassiveSkill("church_oath_rivals") || player.hasPassiveSkill("church_oath_unstable_fate"))
         {
-            lines.push_back("Serment porté : l'église a déjà une promesse inscrite à ton nom. Les futurs effets devront être visibles, mais la rupture devra rester un vrai acte.");
+            lines.push_back("Serment porté : l'église a déjà une promesse inscrite à ton nom. La rupture reste un acte volontaire et laisse une trace.");
         }
         else
         {
-            lines.push_back("Serment possible : l'église peut maintenant proposer plusieurs promesses selon ton niveau, tes traces, ton rôle ou tes voyages.");
+            lines.push_back("Serment possible : l'église propose plusieurs promesses selon ton niveau, tes traces, ton rôle ou tes voyages.");
         }
-        lines.push_back("Nouveaux serments : Flamme gardée, Ombres franches, Pèlerin, Mémoire, Silence, Ciel ouvert, Racines, Miroir brisé, Témoin, Cicatrices, Héritage, Forge liée, Liens, Rivaux et Destin instable ouvrent des directions pour feu, ruse, route, mémoire, anti-panique, blessures utiles, objets avec mémoire, combos alliés, mini-boss récurrents et conséquences longues.");
-        lines.push_back("Rupture : rompre un serment à l'église coûte maintenant un rite ou de l'or, désactive le contrat et laisse une trace de registre au lieu de l'effacer gratuitement.");
-        lines.push_back("Axe 8 - conséquences longues : les promesses, ruptures, témoins, rivaux et objets avec mémoire doivent laisser des traces seulement quand quelqu'un ou quelque chose peut logiquement les porter.");
+        lines.push_back("Serments disponibles : Flamme gardée, Ombres franches, Pèlerin, Mémoire, Silence, Ciel ouvert, Racines, Miroir brisé, Témoin, Cicatrices, Héritage, Forge liée, Liens, Rivaux et Destin instable couvrent des voies très différentes.");
+        lines.push_back("Rupture : rompre un serment à l'église coûte un rite ou de l'or, désactive le contrat et laisse une trace dans le registre.");
+        lines.push_back("Conséquences longues : promesses, ruptures, témoins, rivaux et objets marqués laissent des traces lorsqu'un témoin, un survivant, un objet ou un registre peut réellement les porter.");
         lines.push_back("Forge liée / Liens : une arme ou un groupe ne gagne pas une légende parce qu'un menu l'affirme ; il faut des coups vécus, des réparations, des témoins, des recrues, des ordres ou des combats communs.");
-        lines.push_back("Systèmes majeurs validés : mémoire du monde avec témoins, cicatrices utiles, rivaux ennemis, serments d'église, héritage en Mortel, réputation locale, objets avec mémoire et classes qui évoluent selon la façon de jouer.");
+        lines.push_back("Mémoire du monde : témoins, cicatrices, rivaux, réputation locale et objets marqués peuvent conserver les conséquences de tes actes.");
         lines.push_back("Rivaux / destin : un ennemi qui fuit, une compétence signature ou une trace d'objet ne devient importante que s'il existe une raison de la porter : témoin, mémoire, survivant, registre ou cicatrice.");
-        lines.push_back("Classes évolutives : les statistiques de jeu devront plus tard ouvrir des branches selon les actes réels, pas seulement selon un choix de menu au niveau X.");
-        lines.push_back("Réputation locale : les villages pourront influencer stocks, qualité, confiance et rumeurs selon ce qui a vraiment été vu ou rapporté.");
+        lines.push_back("Classes évolutives : les actes réels, les maîtrises et les habitudes de combat comptent davantage qu'un simple choix de menu.");
+        lines.push_back("Réputation locale : les villages réagissent à ce qui a réellement été vu, rapporté ou inscrit dans leurs registres.");
         if (questHubLikely)
         {
             lines.push_back("Signal de quête : le comptoir de guilde semble avoir une validation, une offre ou un retour à traiter.");
@@ -631,7 +634,7 @@ namespace
     // FR: estimatePlayerTradeValue déclare ou implémente un comportement précis utilisé par ce module.
     int estimatePlayerTradeValue(const Player& player)
     {
-        int total = player.getInventory().getGold();
+        int total = static_cast<int>(std::min<long long>(2147483647LL, player.getInventory().getEconomyUnits()));
 
         for (const Weapon& weapon : player.getInventory().getWeapons())
         {
@@ -664,8 +667,8 @@ namespace
             "ESTIMATION D'ÉCHANGE",
             "exchange.value_estimation",
             {
-                "Valeur estimée de " + first.getName() + " : " + std::to_string(estimatePlayerTradeValue(first)) + " pièces.",
-                "Valeur estimée de " + second.getName() + " : " + std::to_string(estimatePlayerTradeValue(second)) + " pièces."
+                "Valeur estimée de " + first.getName() + " : " + Money::formatEconomyUnits(estimatePlayerTradeValue(first)) + ".",
+                "Valeur estimée de " + second.getName() + " : " + Money::formatEconomyUnits(estimatePlayerTradeValue(second)) + "."
             },
             false
         );
@@ -903,7 +906,7 @@ namespace
                         weapon.getName(),
                         hint.str(),
                         equipped ? "Équipée - non transférable" : "Transférable",
-                        "Valeur estimée " + std::to_string(estimateWeaponTradeValue(weapon)),
+                        "Valeur estimée " + Money::formatEconomyUnits(estimateWeaponTradeValue(weapon)),
                         "",
                         estimateWeaponTradeValue(weapon),
                         1,
@@ -1005,7 +1008,7 @@ namespace
                         armor.getName(),
                         hint.str(),
                         equipped ? "Portée - non transférable" : "Transférable",
-                        "Valeur estimée " + std::to_string(estimateArmorTradeValue(armor)),
+                        "Valeur estimée " + Money::formatEconomyUnits(estimateArmorTradeValue(armor)),
                         "",
                         estimateArmorTradeValue(armor),
                         1,
@@ -1078,7 +1081,7 @@ namespace
                 screen.addOption(
                     static_cast<int>(i - first + 1),
                     consumable.getName(),
-                    "Puissance " + consumable.getPowerDisplayText() + " | Valeur " + std::to_string(consumable.getValue()),
+                    "Puissance " + consumable.getPowerDisplayText() + " | Valeur " + Money::formatEconomyUnits(consumable.getValue()),
                     true,
                     "exchange.consumable.select",
                     makeExchangeItemData(
@@ -1089,7 +1092,7 @@ namespace
                         consumable.getName(),
                         "Puissance " + consumable.getPowerDisplayText(),
                         "Transférable",
-                        "Valeur " + std::to_string(consumable.getValue()),
+                        "Valeur " + Money::formatEconomyUnits(consumable.getValue()),
                         "",
                         consumable.getValue(),
                         1,
@@ -1161,7 +1164,7 @@ namespace
                 screen.addOption(
                     static_cast<int>(i - first + 1),
                     material.getName() + " x" + std::to_string(material.getQuantity()),
-                    material.getCategory() + " | Qualité " + material.getQualityLabel() + " | Valeur " + std::to_string(material.getValue()),
+                    material.getCategory() + " | Qualité " + material.getQualityLabel() + " | Valeur " + Money::formatEconomyUnits(material.getValue()),
                     true,
                     "exchange.material.select",
                     makeExchangeItemData(
@@ -1172,7 +1175,7 @@ namespace
                         material.getName(),
                         material.getCategory() + " | Qualité " + material.getQualityLabel(),
                         "Transférable",
-                        "Valeur unitaire " + std::to_string(material.getValue()),
+                        "Valeur unitaire " + Money::formatEconomyUnits(material.getValue()),
                         "",
                         material.getValue(),
                         material.getQuantity(),
@@ -1379,7 +1382,7 @@ void Game::chooseGameMode()
         screen.addSubtitle("Activités principales : histoire, combats, exploration, personnage et lieux visitables.");
         screen.addLine("Date : " + mainPlayer.formatWorldDateLine() + " | Moment : " + mainPlayer.formatWorldDayPartLine());
         screen.addLine("Exploration = sorties par biome. Monde / ville = lieux visitables, boutiques, forge, guilde, PNJ et services.");
-        screen.addLine("Menu rapide = seulement personnage, saisie libre, options de partie et sauvegarde.");
+        screen.addLine("Menu rapide = personnage, saisie libre, options de partie et sauvegarde. L’artisanat est aussi visible dans Personnage.");
         screen.addOption(
             1,
             "Histoire",
@@ -1407,10 +1410,10 @@ void Game::chooseGameMode()
         screen.addOption(
             4,
             "Personnage",
-            "Inventaire, compétences, actifs/passifs, titres, quêtes acceptées, stats, équipe et échange.",
+            "Inventaire, craft, compétences, actifs/passifs, titres, quêtes acceptées, stats, équipe et échange.",
             true,
             "activity.character",
-            makeActivityItemData("Menu de voyage", "inspect", "Personnage", "Tout ce qui appartient directement au personnage.", "Disponible", "Personnage")
+            makeActivityItemData("Menu de voyage", "inspect", "Personnage", "Inventaire, artisanat et progression personnelle.", "Disponible", "Personnage")
         );
         screen.addOption(
             5,
@@ -1622,7 +1625,7 @@ Game::CombatRecapSnapshot Game::captureCombatRecapSnapshot() const
     snapshot.experience = mainPlayer.getExperience();
     snapshot.hp = mainPlayer.getHp();
     snapshot.maxHp = mainPlayer.getMaxHp();
-    snapshot.gold = mainPlayer.getInventory().getGold();
+    snapshot.totalCopper = mainPlayer.getInventory().getTotalCopper();
     snapshot.victories = mainPlayer.getVictories();
     snapshot.defeats = mainPlayer.getDefeats();
     snapshot.escapes = mainPlayer.getEscapes();
@@ -1668,18 +1671,18 @@ void Game::displayLastCombatRecap() const
             "Avant : niveau " + std::to_string(before.level)
                 + " | XP " + std::to_string(before.experience)
                 + " | PV " + std::to_string(before.hp) + "/" + std::to_string(before.maxHp)
-                + " | Or " + std::to_string(before.gold),
+                + " | Argent " + Money::formatCopper(before.totalCopper),
             "Après : niveau " + std::to_string(after.level)
                 + " | XP " + std::to_string(after.experience)
                 + " | PV " + std::to_string(after.hp) + "/" + std::to_string(after.maxHp)
-                + " | Or " + std::to_string(after.gold),
+                + " | Argent " + Money::formatCopper(after.totalCopper),
             "",
             "Variations :",
             "- Niveau : " + std::to_string(after.level - before.level),
             "- Expérience : " + std::to_string(after.experience - before.experience),
             "- PV actuels : " + std::to_string(after.hp - before.hp),
             "- PV max : " + std::to_string(after.maxHp - before.maxHp),
-            "- Or : " + std::to_string(after.gold - before.gold),
+            "- Argent : " + Money::formatCopper(after.totalCopper >= before.totalCopper ? after.totalCopper - before.totalCopper : before.totalCopper - after.totalCopper) + (after.totalCopper < before.totalCopper ? " perdus" : " gagnés"),
             "- Victoires : " + std::to_string(after.victories - before.victories),
             "- Défaites : " + std::to_string(after.defeats - before.defeats),
             "- Fuites : " + std::to_string(after.escapes - before.escapes),
@@ -1757,7 +1760,7 @@ void Game::displayActivityInformation() const
                 {
                     "Argent séparé : " + mainPlayer.getInventory().getWalletLine(),
                     "Argent total : " + mainPlayer.getInventory().getWalletTotalLine(),
-                    "L'or vient surtout des combats, quêtes, explorations, reventes et événements.",
+                    "L'argent vient surtout des combats, quêtes, explorations, reventes et événements.",
                     "Les boutiques peuvent changer leurs stocks après les combats ou selon l'état de la ville.",
                     "Certains marchés accepteront plus tard du troc ou des objets précis, pas seulement de l'or.",
                     "L'économie est volontairement surveillée pour éviter que les événements chanceux détruisent les prix."
@@ -1963,6 +1966,7 @@ void Game::launchSelectedMode()
             mainPlayer.advanceWorldDays(2);
         }
         mainPlayer.getQuestLog().expireOverdueQuests(mainPlayer.getWorldDaysElapsed());
+        QuestDeadlineSupport::synchronizeQuestConsequences(mainPlayer);
         ShopTransactionSystem::clearBuybackAfterCombat();
         Console::useCombatTheme();
 
@@ -2124,7 +2128,7 @@ void Game::openQuickCharacterMenu(bool inventoryAvailable)
         screen.addOption(
             1,
             "Inventaire",
-            "Gérer objets, équipement et potions hors combat.",
+            "Gérer objets, équipement et potions hors combat. Le craft reste aussi accessible directement ci-dessous.",
             inventoryAvailable,
             "utility.character.inventory",
             makeUtilityItemData(mainPlayer, "open", "Inventaire", "Gestion hors combat.", inventoryAvailable ? "Disponible" : "Indisponible")
@@ -2192,6 +2196,14 @@ void Game::openQuickCharacterMenu(bool inventoryAvailable)
             true,
             "utility.character.exchange",
             makeUtilityItemData(mainPlayer, "barter", "Échange / don", "Transfert protégé entre personnages.")
+        );
+        screen.addOption(
+            10,
+            "Artisanat / craft",
+            "Ouvrir directement les schémas de fabrication connus sans devoir chercher l'option au fond de l'inventaire.",
+            inventoryAvailable,
+            "utility.character.craft",
+            makeUtilityItemData(mainPlayer, "create", "Artisanat / craft", "Fabrication à partir des recettes dont les composants sont connus.", inventoryAvailable ? "Disponible" : "Indisponible")
         );
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option personnage.");
@@ -2262,6 +2274,18 @@ void Game::openQuickCharacterMenu(bool inventoryAvailable)
         {
             openExchangeMenu();
             saveCurrentProgress("Échange entre personnages");
+            continue;
+        }
+        if (choice == 10)
+        {
+            if (!inventoryAvailable)
+            {
+                MessageScreen::show("ARTISANAT", "utility.character.craft.unavailable", {"L'inventaire n'est pas disponible sur cet écran, donc les composants ne peuvent pas être utilisés."});
+                continue;
+            }
+            InventorySelection::openCraft(mainPlayer);
+            saveCurrentProgress("Artisanat depuis Personnage");
+            Console::clear();
             continue;
         }
     }
@@ -2539,8 +2563,8 @@ void Game::openOutOfCombatUtilityMenu(bool inventoryAvailable)
         screen.addOption(1, "Personnage", "Inventaire, compétences, actifs/passifs, titres, quêtes, stats, équipe et échange.", true, "utility.quick.character", makeUtilityItemData(mainPlayer, "menu", "Personnage", "Ce qui appartient directement au personnage."));
         screen.addOption(2, "Parler au gardien / saisie libre", "Écrire une phrase, un choix ou une commande.", true, "utility.quick.guardian", makeUtilityItemData(mainPlayer, "guardian", "Gardien du monde", "Saisie libre hors combat."));
         screen.addOption(3, "Compagnon Dinotofu", "Conseils courts selon la situation actuelle.", true, "utility.quick.companion", makeUtilityItemData(mainPlayer, "inspect", "Compagnon Dinotofu", "Assistant du logo.", "Guide"));
-        screen.addOption(8, "Options de partie", "Paramètres, journal bêta, données altérées et options de confort.", true, "utility.quick.session_options", makeUtilityItemData(mainPlayer, "settings", "Options de partie", "Réglages et informations de session."));
-        screen.addOption(9, "Options de sauvegarde", "Sauvegarder, retourner au menu ou quitter proprement.", true, "utility.quick.save_options", makeUtilityItemData(mainPlayer, "save", "Options de sauvegarde", "Sauvegarde et sortie.", "Fin de menu"));
+        screen.addOption(4, "Options de partie", "Paramètres, journal bêta, données altérées et options de confort.", true, "utility.quick.session_options", makeUtilityItemData(mainPlayer, "settings", "Options de partie", "Réglages et informations de session."));
+        screen.addOption(5, "Options de sauvegarde", "Sauvegarder, retourner au menu ou quitter proprement.", true, "utility.quick.save_options", makeUtilityItemData(mainPlayer, "save", "Options de sauvegarde", "Sauvegarde et sortie.", "Fin de menu"));
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option du menu hors combat.");
         Console::clear();
@@ -2565,12 +2589,12 @@ void Game::openOutOfCombatUtilityMenu(bool inventoryAvailable)
             saveCurrentProgress("Consultation du compagnon Dinotofu");
             continue;
         }
-        if (choice == 8)
+        if (choice == 4)
         {
             openQuickSessionOptionsMenu();
             continue;
         }
-        if (choice == 9)
+        if (choice == 5)
         {
             openQuickSaveOptionsMenu();
             continue;
@@ -2773,7 +2797,7 @@ bool Game::openPostCombatMenu()
             const CombatRecapSnapshot& before = lastCombatRecap.before;
             const CombatRecapSnapshot& after = lastCombatRecap.after;
             const int xpDelta = after.experience - before.experience;
-            const int goldDelta = after.gold - before.gold;
+            const long long copperDelta = after.totalCopper - before.totalCopper;
             const int hpDelta = after.hp - before.hp;
             const int victoryDelta = after.victories - before.victories;
             const int defeatDelta = after.defeats - before.defeats;
@@ -2785,7 +2809,7 @@ bool Game::openPostCombatMenu()
             screen.addLine("Résumé de la sortie : " + lastCombatRecap.modeName + " | " + lastCombatRecap.difficultyName + ".");
             screen.addLine(
                 "Bilan : XP " + std::to_string(xpDelta)
-                + " | Or " + std::to_string(goldDelta)
+                + " | Argent " + Money::formatCopper(copperDelta >= 0 ? copperDelta : -copperDelta) + (copperDelta < 0 ? " perdus" : " gagnés")
                 + " | PV " + std::to_string(hpDelta)
                 + " | Ennemis " + std::to_string(enemyDelta)
                 + " | Boss " + std::to_string(bossDelta)
@@ -3009,7 +3033,7 @@ void Game::openExchangeMenu()
         exchangeScreen.addLine("Source principale : " + mainPlayer.getName());
         exchangeScreen.addLine("Cible : " + targetPlayer.getName() + " (" + targetAccount + ")");
         exchangeScreen.addBackOption();
-        exchangeScreen.addOption(1, "Donner de l'or", "Transfert direct depuis " + mainPlayer.getName() + ".", true, "exchange.give.gold");
+        exchangeScreen.addOption(1, "Donner de l'argent", "Transfert direct depuis " + mainPlayer.getName() + ".", true, "exchange.give.gold");
         exchangeScreen.addOption(2, "Donner une arme", "Impossible avec l'arme équipée.", true, "exchange.give.weapon");
         exchangeScreen.addOption(3, "Donner une armure", "Impossible avec l'armure portée.", true, "exchange.give.armor");
         exchangeScreen.addOption(4, "Donner un consommable", "Transfert d'un objet consommable.", true, "exchange.give.consumable");
@@ -3040,7 +3064,7 @@ void Game::openExchangeMenu()
             receiveScreen.addLine("Depuis : " + giver->getName());
             receiveScreen.addLine("Vers : " + receiver->getName());
             receiveScreen.addBackOption("Annuler");
-            receiveScreen.addOption(1, "Or", "Transférer une quantité d'or.", true, "exchange.receive.gold");
+            receiveScreen.addOption(1, "Argent", "Transférer une quantité d'or.", true, "exchange.receive.gold");
             receiveScreen.addOption(2, "Arme", "Choisir une arme non équipée.", true, "exchange.receive.weapon");
             receiveScreen.addOption(3, "Armure", "Choisir une armure non portée.", true, "exchange.receive.armor");
             receiveScreen.addOption(4, "Consommable", "Choisir un consommable.", true, "exchange.receive.consumable");
@@ -3063,25 +3087,26 @@ void Game::openExchangeMenu()
         if (choice == 1)
         {
             int amount = MessageScreen::askQuantity(
-                "OR À TRANSFÉRER",
+                "ARGENT À TRANSFÉRER",
                 "exchange.gold.quantity",
                 {
-                    giver->getName() + " possède " + std::to_string(giver->getInventory().getGold()) + " or.",
+                    giver->getName() + " possède " + giver->getInventory().getWalletLine() + ".",
                     "Montant à transférer ?"
                 },
                 0,
-                giver->getInventory().getGold(),
+                static_cast<int>(std::min<long long>(2147483647LL, giver->getInventory().getEconomyUnits())),
                 "Montant invalide."
             );
 
-            if (amount > 0 && giver->getInventory().spendGold(amount))
+            if (amount > 0 && giver->getInventory().spendEconomyUnits(amount))
             {
-                receiver->getInventory().earnGold(amount);
-                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.gold.success", {std::to_string(amount) + " or transféré."}, false);
+                receiver->getInventory().earnEconomyUnits(amount);
+                receiver->refreshCurrencyTitles();
+                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.gold.success", {Money::formatEconomyUnits(amount) + " transféré."}, false);
             }
             else
             {
-                MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.gold.none", {"Aucun or transféré."}, false);
+                MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.gold.none", {"Aucun argent transféré."}, false);
             }
         }
         else if (choice == 2)

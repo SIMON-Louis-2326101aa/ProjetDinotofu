@@ -7,6 +7,16 @@
 #include <string>
 #include <vector>
 
+
+enum class CoinType
+{
+    Copper,
+    Iron,
+    Electrum,
+    Gold,
+    Platinum
+};
+
 struct CoinBreakdown
 {
     long long platinum = 0;
@@ -28,18 +38,35 @@ public:
     static constexpr int GOLD_PER_PLATINUM = 10;
 
     static constexpr long long COPPER_PER_GOLD = static_cast<long long>(COPPER_PER_IRON) * IRON_PER_ELECTRUM * ELECTRUM_PER_GOLD;
+    // Historical gameplay prices were authored as small integer price points.
+    // From V3.50.19 onward, one price/reward unit intentionally equals one iron coin (PF), not one gold coin (PO).
+    static constexpr long long COPPER_PER_ECONOMY_UNIT = COPPER_PER_IRON;
     static constexpr long long COPPER_PER_PLATINUM = COPPER_PER_GOLD * GOLD_PER_PLATINUM;
 
     static std::string coinScaleText();
+    static std::string coinName(CoinType type);
+    static std::string coinAbbreviation(CoinType type);
+    static long long coinValueInCopper(CoinType type);
+    static long long coinStacksValueInCopper(const CoinBreakdown& stacks);
+    static bool hasLowerCoin(CoinType type);
+    static bool hasHigherCoin(CoinType type);
+    static CoinType nextLowerCoin(CoinType type);
+    static CoinType nextHigherCoin(CoinType type);
     static std::string formatGold(int goldAmount);
     static std::string formatGoldWithRaw(int goldAmount);
     static std::string formatCopper(int copperAmount);
     static std::string formatCopper(long long copperAmount);
     static std::string formatWalletFromCopper(long long copperAmount);
+    static std::string formatCoinStacks(const CoinBreakdown& stacks, bool includeZeroCoins = true);
     static std::string formatWalletTotalFromCopper(long long copperAmount);
     static std::string formatCurrencyOverviewFromCopper(long long copperAmount);
+    static std::string socialStandingLabel(const CoinBreakdown& stacks);
+    static std::string socialStandingReaction(const CoinBreakdown& stacks);
     static std::string formatSeparatedNumber(long long value);
     static long long copperFromGold(int goldAmount);
+    static long long copperFromEconomyUnits(long long economyUnits);
+    static long long economyUnitsFromCopper(long long copperAmount);
+    static std::string formatEconomyUnits(long long economyUnits);
     static CoinBreakdown breakdownFromGold(int goldAmount);
     static CoinBreakdown breakdownFromCopper(int copperAmount);
     static CoinBreakdown breakdownFromCopper(long long copperAmount);

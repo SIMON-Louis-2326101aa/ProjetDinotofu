@@ -6,7 +6,7 @@
 #include "progression/death/DeathPenaltyResult.hpp"
 
 DeathPenaltyResult::DeathPenaltyResult()
-    : lostGold(0),
+    : lostEconomyUnits(0),
       lostExperience(0),
       lostConsumables(0),
       weaponDurabilityLost(0),
@@ -23,9 +23,9 @@ DeathPenaltyResult::DeathPenaltyResult()
 {
 }
 
-// EN: getLostGold declares or implements a focused behavior used by this module.
-// FR: getLostGold déclare ou implémente un comportement précis utilisé par ce module.
-int DeathPenaltyResult::getLostGold() const { return lostGold; }
+// EN: getLostEconomyUnits declares or implements a focused behavior used by this module.
+// FR: getLostEconomyUnits déclare ou implémente un comportement précis utilisé par ce module.
+int DeathPenaltyResult::getLostEconomyUnits() const { return lostEconomyUnits; }
 // EN: getLostExperience declares or implements a focused behavior used by this module.
 // FR: getLostExperience déclare ou implémente un comportement précis utilisé par ce module.
 int DeathPenaltyResult::getLostExperience() const { return lostExperience; }
@@ -61,11 +61,11 @@ bool DeathPenaltyResult::wasWeaponStolen() const { return weaponStolen; }
 // FR: wasArmorStolen déclare ou implémente un comportement précis utilisé par ce module.
 bool DeathPenaltyResult::wasArmorStolen() const { return armorStolen; }
 
-// EN: addLostGold declares or implements a focused behavior used by this module.
-// FR: addLostGold déclare ou implémente un comportement précis utilisé par ce module.
-void DeathPenaltyResult::addLostGold(int amount)
+// EN: addLostEconomyUnits declares or implements a focused behavior used by this module.
+// FR: addLostEconomyUnits déclare ou implémente un comportement précis utilisé par ce module.
+void DeathPenaltyResult::addLostEconomyUnits(int amount)
 {
-    if (amount > 0) { lostGold += amount; }
+    if (amount > 0) { lostEconomyUnits += amount; }
 }
 
 // EN: addLostExperience declares or implements a focused behavior used by this module.

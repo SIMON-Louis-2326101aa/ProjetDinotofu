@@ -18,6 +18,22 @@ std::uint32_t stableHash(const std::string& text)
 
 using Interaction = BiomeNonCombatInteraction;
 
+bool interactionChoiceIsNotableForLongTermHistory(const std::string& interactionId, int choiceId)
+{
+    // Most local interactions remain field notes only. Long-term character history is
+    // reserved for discoveries/actions that are unusual enough to matter later.
+    if (choiceId <= 0) return false;
+
+    if (interactionId == "feuillet_a_secher") return choiceId <= 2;
+    if (interactionId == "barque_sans_passeur") return choiceId <= 2;
+    if (interactionId == "manege_un_tour") return choiceId <= 2;
+    if (interactionId == "cloche_sans_nom") return choiceId <= 2;
+    if (interactionId == "rubans_neuf_versions") return choiceId <= 2;
+    if (interactionId == "amarre_derivante") return choiceId <= 2;
+
+    return false;
+}
+
 const std::unordered_map<std::string, Interaction>& catalog()
 {
     static const std::unordered_map<std::string, Interaction> values = {
@@ -76,6 +92,62 @@ const std::unordered_map<std::string, Interaction>& catalog()
                 {1, "Comparer les sceaux", "Regarder seulement les éléments matériels disponibles.", "Les sceaux ne suffisent pas à trancher, mais l'un d'eux est nettement plus ancien que le récit associé.", -2, 1},
                 {2, "Écouter les témoins", "Demander qui a réellement vu l'échange initial.", "Tu sépares deux témoins directs de plusieurs personnes qui ne font que répéter l'histoire.", -1, 2},
                 {3, "Refuser l'affaire", "Ne pas devenir arbitre improvisé.", "Tu repars avant que quelqu'un transforme ton silence en soutien officiel.", 0, 0}
+            }}},
+        {"Mares gélatineuses", {true, "passage_de_slimes_neutres", "Passage de slimes neutres",
+            "Une file de petits slimes translucides traverse lentement le sentier vers une mare plus profonde sans montrer d'agressivité.",
+            {"Leur trajet recoupe une zone de récolte ; intervenir peut aider le passage ou simplement déplacer le problème."},
+            {
+                {1, "Observer leur trajet", "Attendre quelques minutes et noter ce qu'ils évitent naturellement.", "Le groupe contourne une eau trop brillante et révèle un bord de mare plus sûr que le centre.", -2, 1},
+                {2, "Dégager le sentier", "Déplacer quelques pierres sans toucher directement aux slimes.", "Le passage devient plus fluide et les slimes quittent la zone sans réaction hostile.", -2, 1},
+                {3, "Faire un détour", "Laisser la petite migration suivre son cours.", "Tu changes de rive et conserves seulement l'heure et la direction du passage dans tes notes.", 0, 0}
+            }}},
+        {"Montagne froide", {true, "cairn_ecroule", "Cairn écroulé",
+            "Un cairn de voyageurs s'est affaissé sous le gel. Deux pierres portent encore des marques de route lisibles.",
+            {"Le réparer peut aider les prochains passages, mais une mauvaise orientation serait pire qu'un cairn cassé."},
+            {
+                {1, "Comparer les marques", "Vérifier pente, vent et anciennes traces avant de replacer quoi que ce soit.", "Les deux marques indiquent bien le même col ; l'une a simplement pivoté avec l'effondrement.", -2, 2},
+                {2, "Reconstruire prudemment", "Remonter le cairn en conservant l'orientation vérifiée.", "Le repère tient de nouveau et reste assez distinct pour ne pas être confondu avec une simple pile de pierres.", -3, 1},
+                {3, "Ne pas toucher", "Éviter de créer un faux repère sous la neige.", "Tu notes le cairn comme endommagé et continues sans modifier la pente.", 0, 0}
+            }}},
+        {"Ruines effondrées", {true, "poutre_sur_mosaique", "Poutre sur la mosaïque",
+            "Une poutre tombée masque une partie d'une mosaïque et retient en même temps quelques pierres instables du plafond.",
+            {"Dégager l'image trop vite peut détruire exactement ce que tu essaies d'étudier."},
+            {
+                {1, "Lire les fragments visibles", "Reconstituer seulement ce que montrent les morceaux accessibles.", "Tu identifies un motif de sentinelle sans déplacer la poutre ni prétendre connaître la scène entière.", -2, 2},
+                {2, "Caler avant de déplacer", "Renforcer le plafond puis soulever légèrement la poutre.", "Une portion supplémentaire apparaît sans provoquer d'effondrement ; le reste demeure volontairement couvert.", -1, 2},
+                {3, "Laisser la structure", "Ne pas risquer les ruines pour une image incomplète.", "Tu notes l'emplacement et conserves la mosaïque en l'état.", 0, 0}
+            }}},
+        {"Canaux de brume bleue", {true, "barque_sans_passeur", "Barque sans passeur",
+            "Une petite barque vide cogne doucement contre le quai. La corde est humide et le nœud a été refait récemment.",
+            {"La brume cache l'autre rive par intermittence ; utiliser la barque sans contexte peut transformer un raccourci en disparition administrative."},
+            {
+                {1, "Examiner le nœud", "Comparer la corde, les marques du quai et le niveau de l'eau.", "Le nœud vient d'un batelier habitué aux canaux ; rien ne prouve pourtant qu'il ait abandonné la barque volontairement.", -2, 2},
+                {2, "Sécuriser l'amarre", "Refaire l'attache sans déplacer la barque du quai.", "La barque cesse de dériver et le passage reste disponible à son propriétaire.", -2, 1},
+                {3, "Laisser la barque", "Ne pas utiliser un moyen de transport qui ne t'appartient pas.", "Tu gardes seulement la position du quai et l'heure du constat.", 0, 0}
+            }}},
+        {"Foire abandonnée", {true, "manege_un_tour", "Manège d'un seul tour",
+            "Un petit manège tourne d'un cran puis s'arrête alors qu'aucun vent ne pousse sa mécanique.",
+            {"Les pigeons du toit s'envolent juste avant le mouvement et reviennent aussitôt après."},
+            {
+                {1, "Observer le mécanisme", "Chercher ressort, contrepoids et déclencheur sans monter sur le manège.", "Un ressort travaille encore, mais il n'explique pas pourquoi le mouvement commence toujours après le départ des oiseaux.", -1, 2},
+                {2, "Bloquer la roue", "Sécuriser temporairement le mécanisme avec une cale visible.", "Le manège reste immobile pour cette visite ; la cale porte une marque claire afin qu'un autre explorateur sache qu'elle n'est pas d'origine.", -2, 1},
+                {3, "Attendre un second mouvement", "Ne rien toucher et vérifier si le phénomène se répète.", "Après plusieurs minutes, rien ne bouge. Tu repars avec un événement daté plutôt qu'une théorie définitive.", 0, 1}
+            }}},
+        {"Carrière des os blancs", {true, "marque_de_taille_recente", "Marque de taille récente",
+            "Une strate fossile porte une marque de taille très récente au milieu de poussières anciennes.",
+            {"Quelqu'un travaille donc encore ici, mais la carrière ne dit pas si cette présence est autorisée, perdue ou dangereuse."},
+            {
+                {1, "Comparer les outils", "Lire largeur, profondeur et angle de la marque sans prélever le fossile.", "La trace vient d'un outil de mineur plus fin que ceux utilisés autrefois dans cette couche.", -2, 2},
+                {2, "Baliser la strate", "Rendre l'emplacement visible sans écrire sur le fossile.", "La strate pourra être retrouvée sans ajouter une nouvelle marque directement sur l'os blanc.", -1, 1},
+                {3, "Continuer", "Ne pas transformer chaque coup d'outil récent en enquête.", "Tu conserves la position dans tes notes et poursuis la carrière.", 0, 0}
+            }}},
+        {"Jardin des statues qui pleurent", {true, "bouquet_devant_ange", "Bouquet devant l'ange",
+            "Un bouquet très récent repose devant une statue en pleurs. Une fleur a été déplacée hors du cercle, comme si quelqu'un avait interrompu le geste.",
+            {"Le jardin est réputé dans plusieurs villes : toucher aux offrandes peut modifier autant les traces humaines que le phénomène de pierre lui-même."},
+            {
+                {1, "Comparer les traces", "Observer graviers, humidité et tiges sans déplacer le bouquet.", "Deux séries de pas arrivent au socle, mais une seule repart. Tu notes le fait sans inventer ce qui manque.", -2, 2},
+                {2, "Redresser seulement la fleur", "Remettre la fleur tombée sans réorganiser le reste de l'offrande.", "La fleur retrouve le cercle. Quand tu relèves les yeux, la main de la statue semble légèrement plus proche du bouquet.", -1, 1},
+                {3, "Laisser l'offrande intacte", "Ne rien toucher et mémoriser la disposition actuelle.", "Tu repars avec un repère précis : bouquet, socle, humidité et orientation du visage restent notés pour comparaison future.", 0, 1}
             }}},
         {"Temple des cloches fendues", {true, "cloche_sans_nom", "Cloche sans nom",
             "Une petite cloche fendue porte un serment dont le nom du signataire a été volontairement gratté.",
@@ -198,6 +270,7 @@ BiomeNonCombatInteractionResult BiomeNonCombatInteractionSystem::resolve(const B
         result.choiceLabel = choice.label;
         result.explorationRollShift = choice.explorationRollShift;
         result.questProgress = choice.questProgress;
+        result.notableForLongTermHistory = interactionChoiceIsNotableForLongTermHistory(interaction.id, choice.id);
         result.lines = {choice.resultLine};
         return result;
     }

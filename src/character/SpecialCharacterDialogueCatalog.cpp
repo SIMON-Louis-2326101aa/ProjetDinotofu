@@ -190,6 +190,30 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getEntranceLines(const
         };
     }
 
+    if (normalizedName == "willow")
+    {
+        return {
+            "Willow reste légèrement en retrait, déjà agacée d'avoir dû s'arrêter pour ce combat.",
+            "Willow : Fais vite. J'avais prévu de voyager seule, et tu prends déjà trop de place dans mon programme."
+        };
+    }
+
+    if (normalizedName == "dwarf")
+    {
+        return {
+            "Dwarf craque ses épaules avec le sourire de quelqu'un qui considère un combat comme une excellente interruption.",
+            "Dwarf : Bon ! Si je gagne, je raconte que c'était facile. Si je perds, je raconte que le sol était truqué."
+        };
+    }
+
+    if (normalizedName == "badr")
+    {
+        return {
+            "Badr joint brièvement les mains malgré le silence inquiet autour de son corps de mort-vivant.",
+            "Badr : Je préférerais éviter de te faire peur. Second, lui, n'a pas reçu la consigne."
+        };
+    }
+
     return {};
 }
 
@@ -250,6 +274,10 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getLowHealthLines(cons
         return {"Mattzelda sourit encore, mais ses appuis deviennent sérieux.", "Ah ouais ? Là tu m'obliges à arrêter les blagues deux secondes."};
     }
 
+    if (normalizedName == "willow") return {"Willow serre les dents et recule d'un pas.", "Willow : Génial. Maintenant je saigne ET je dois continuer à parler."};
+    if (normalizedName == "dwarf") return {"Dwarf souffle plus fort, mais garde son arme haute.", "Dwarf : J'ai connu des gueules de bois plus propres. Pas forcément moins dangereuses."};
+    if (normalizedName == "badr") return {"Badr regarde ses blessures comme si elles appartenaient déjà à un cadavre.", "Badr : La nuit serait presque jalouse de mon humeur actuelle. Second, reste dedans encore une seconde."};
+
     return {};
 }
 
@@ -263,6 +291,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getCombatActionLines(
         if (normalizedName == "hestia") return {"Hestia cherche instinctivement à refermer ses blessures avant de paniquer davantage."};
         if (normalizedName == "sanctus") return {"Sanctus transforme son soin en serment : il ne tombera pas tant qu'il protège encore quelque chose."};
         if (normalizedName == "hazak") return {"Hazak se soigne sans fierté inutile. Survivre fait partie du meurtre."};
+        if (normalizedName == "badr") return {"Badr murmure une courte prière. Même Second cesse de remuer pendant le soin."};
     }
 
     if (actionLabel == "damage")
@@ -270,6 +299,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getCombatActionLines(
         if (normalizedName == "skuro") return {"Skuro renforce son prochain coup. La lame réclame un angle plus violent."};
         if (normalizedName == "fail") return {"Fail ajoute un réactif de trop. Évidemment."};
         if (normalizedName == "louis") return {"Louis arme un projectile supplémentaire avec un sourire beaucoup trop innocent."};
+        if (normalizedName == "dwarf") return {"Dwarf resserre sa prise. Le prochain coup n'a clairement pas vocation à être subtil."};
     }
 
     if (actionLabel == "attack")
@@ -280,6 +310,9 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getCombatActionLines(
         if (normalizedName == "trexof") return {"Trexof vise une ouverture précise, plus froidement qu'il ne frappe fort."};
         if (normalizedName == "henrique") return {"Henrique charge comme si reculer était une erreur de traduction."};
         if (normalizedName == "fire flight") return {"Fire Flight donne l'impression de commander une salve entière, même seul."};
+        if (normalizedName == "willow") return {"Willow décoche sans commentaire, déjà en train de chercher son prochain angle."};
+        if (normalizedName == "dwarf") return {"Dwarf attaque en riant un peu trop fort pour quelqu'un censé surveiller sa garde."};
+        if (normalizedName == "badr") return {"Badr avance avec une prudence presque sacerdotale. Sous sa main, Second semble beaucoup moins patient."};
     }
 
     return {};
@@ -311,6 +344,9 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getVictoryLines(const 
     if (normalizedName == "trexof") return {"Trexof hoche la tête.", "Je vois. Tu étais plus solide que je pensais."};
     if (normalizedName == "henrique") return {"Henrique souffle, droit malgré les impacts.", "Un pas de plus. Toujours."};
     if (normalizedName == "fire flight") return {"Fire Flight abaisse son arme.", "La ligne a tenu. C'était le seul objectif."};
+    if (normalizedName == "willow") return {"Willow récupère une flèche encore utilisable.", "Willow : Voilà. Maintenant on peut recommencer à ne pas se parler."};
+    if (normalizedName == "dwarf") return {"Dwarf pose son arme sur l'épaule.", "Dwarf : Tu vois ? Technique ancestrale naine : frapper jusqu'à ce que le problème arrête d'avoir un avis."};
+    if (normalizedName == "badr") return {"Badr souffle lentement et remercie à voix basse quelqu'un que personne d'autre ne voit.", "Badr : C'est terminé. Second, non. On ne mange rien."};
 
     return {};
 }
@@ -341,6 +377,9 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getDefeatLines(const s
     if (normalizedName == "trexof") return {"Trexof expire lentement.", "Limite dépassée. Bien joué."};
     if (normalizedName == "henrique") return {"Henrique tombe lourdement, mais son regard reste vivant.", "Je t'avais dit qu'une fois ne suffisait pas toujours."};
     if (normalizedName == "fire flight") return {"Fire Flight baisse les yeux, inquiet plus que vaincu.", "J'espère seulement que cette hostilité avait une raison."};
+    if (normalizedName == "willow") return {"Willow lâche un long soupir avant même de toucher le sol.", "Willow : Parfait. Exactement la raison pour laquelle je préfère voyager seule."};
+    if (normalizedName == "dwarf") return {"Dwarf s'effondre avec beaucoup moins d'élégance que prévu.", "Dwarf : Personne ne raconte cette partie. Surtout pas toi."};
+    if (normalizedName == "badr") return {"Badr reste silencieux un moment, presque paisible malgré la défaite.", "Badr : J'ai connu des nuits pires. Ce n'est pas vraiment rassurant."};
 
     return {};
 }

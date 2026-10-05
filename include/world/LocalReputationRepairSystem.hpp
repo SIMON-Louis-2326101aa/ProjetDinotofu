@@ -9,7 +9,7 @@ class Player;
 class LocalReputationRepairSystem
 {
 public:
-    static int fineCostGold(int reputationScore);
+    static int fineCostEconomyUnits(int reputationScore);
     static int fineReputationGain(int reputationScore);
     static bool canPayFine(const Player& player, const std::string& cityId);
     static bool canPerformCommunityService(const Player& player, const std::string& cityId);

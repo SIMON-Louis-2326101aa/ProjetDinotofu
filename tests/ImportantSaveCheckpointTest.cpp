@@ -26,14 +26,18 @@ int main()
     const std::string currentVersion = VersionInfo::currentVersion();
     const std::string checkpointVersion = VersionInfo::importantSaveUpdateVersion();
     assert(VersionInfo::compare(currentVersion, checkpointVersion) >= 0);
-    assert(checkpointVersion == "3.50.12");
+    assert(checkpointVersion == "3.50.33");
     assert(VersionInfo::requiresImportantSaveUpdate("3.50.08"));
     assert(VersionInfo::requiresImportantSaveUpdate("3.49.93"));
     assert(VersionInfo::requiresImportantSaveUpdate("2.99.99"));
     assert(VersionInfo::requiresImportantSaveUpdate("1.00.00"));
     assert(VersionInfo::requiresImportantSaveUpdate("inconnue"));
     assert(VersionInfo::requiresImportantSaveUpdate(""));
-    assert(!VersionInfo::requiresImportantSaveUpdate("3.50.12"));
+    assert(VersionInfo::requiresImportantSaveUpdate("3.50.12"));
+    assert(VersionInfo::requiresImportantSaveUpdate("3.50.18"));
+    assert(VersionInfo::requiresImportantSaveUpdate("3.50.30"));
+    assert(VersionInfo::requiresImportantSaveUpdate("3.50.32"));
+    assert(!VersionInfo::requiresImportantSaveUpdate("3.50.33"));
     assert(!VersionInfo::requiresImportantSaveUpdate(currentVersion));
     assert(!VersionInfo::requiresImportantSaveUpdate("3.51.00"));
 

@@ -275,7 +275,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
 
         case ShopType::Weapon:
             shop.addItem(ShopItem("rusty_sword", "Épée rouillée", "Une arme modeste, mais mieux que les mains nues.", ShopItemCategory::Weapon, 60, 18, 1));
-            shop.addItem(ShopItem("training_bow", "Arc d'entraînement", "Arme à distance simple. Les tirs demandent maintenant des munitions compatibles.", ShopItemCategory::Weapon, 85, 24, 1));
+            shop.addItem(ShopItem("training_bow", "Arc d'entraînement", "Arme à distance simple. Les tirs demandent des munitions compatibles.", ShopItemCategory::Weapon, 85, 24, 1));
             if (rotation % 5 == 0)
             {
                 shop.addItem(ShopItem("training_crossbow", "Arbalète d'occasion", "Une arbalète simple, pas luxueuse, mais légale.", ShopItemCategory::Weapon, 118, 30, 1));
@@ -535,7 +535,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 5 == 2)
             {
-                shop.addItem(ShopItem("witch_bottle", "Bouteille de sorcière vide", "Outil alchimique pour mélanges de terrain et futures recettes.", ShopItemCategory::Material, 92, 38, 1));
+                shop.addItem(ShopItem("witch_bottle", "Bouteille de sorcière vide", "Outil alchimique pour mélanges de terrain et préparations avancées.", ShopItemCategory::Material, 92, 38, 1));
             }
             if (rotation % 6 == 0)
             {
@@ -659,11 +659,11 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 8 == 6)
             {
-                shop.addItem(ShopItem("legend_storyteller_routes", "Carnet des conteurs itinérants", "Ajoute des rumeurs de bibliothèque et de taverne pour le futur lore PNJ.", ShopItemCategory::Information, 105, 0, 1, true));
+                shop.addItem(ShopItem("legend_storyteller_routes", "Carnet des conteurs itinérants", "Carnet de rumeurs recueillies auprès des bibliothèques, tavernes et voyageurs.", ShopItemCategory::Information, 105, 0, 1, true));
             }
             if (rotation % 9 == 2)
             {
-                shop.addItem(ShopItem("sanctuary_wax_seal", "Sceau de cire sanctuaire", "Document sacré utile aux futures légendes de temple et aux quêtes administratives nobles.", ShopItemCategory::Information, 116, 0, 1, true));
+                shop.addItem(ShopItem("sanctuary_wax_seal", "Sceau de cire sanctuaire", "Document sacré utile aux légendes de temple et aux démarches administratives nobles.", ShopItemCategory::Information, 116, 0, 1, true));
             }
             if (rotation % 9 == 5)
             {
@@ -818,7 +818,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 3 == 2)
             {
-                shop.addItem(ShopItem("runic_iron_shard", "Éclat de fer runique", "Métal stable pour futurs enchantements appliqués aux armes.", ShopItemCategory::Material, 74, 26, 1 + rotation % 2));
+                shop.addItem(ShopItem("runic_iron_shard", "Éclat de fer runique", "Métal stable adapté aux enchantements appliqués aux armes.", ShopItemCategory::Material, 74, 26, 1 + rotation % 2));
                 shop.addItem(ShopItem("rare_cold_rune_core", "Cœur de rune antigel", "Noyau de rune plus cher pour protections froid/givre sérieuses.", ShopItemCategory::Material, 158, 56, 1));
             }
             break;
@@ -833,7 +833,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             if (rotation % 3 == 1)
             {
-                shop.addItem(ShopItem("client_recommendation", "Recommandation de client", "Recommandation simple pour un futur service. Trop faible pour une promotion, utile pour convaincre.", ShopItemCategory::Information, 34, 10, 1));
+                shop.addItem(ShopItem("client_recommendation", "Recommandation de client", "Recommandation simple pour un service à venir. Trop faible pour une promotion, mais utile pour convaincre.", ShopItemCategory::Information, 34, 10, 1));
             }
             break;
 

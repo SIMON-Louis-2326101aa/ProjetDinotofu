@@ -40,6 +40,7 @@
 #include "item/consumable/Consumable.hpp"
 #include "item/material/Material.hpp"
 #include "story/StoryCampaign.hpp"
+#include "story/StoryPrologueMemory.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -243,10 +244,10 @@ void Game::launchStoryModePlaceholder()
                 infoScreen.addSubtitle("Contexte regroupé");
                 infoScreen.addBackOption();
                 infoScreen.addOption(1, "Lire la longue introduction", "Ton de départ et contexte général.", true, "story.long_intro");
-                infoScreen.addOption(2, "Développement de la ville", "Voir ce qui est ouvert, limité ou fermé dans la route histoire.", true, "story.city_development");
+                infoScreen.addOption(2, "État de la ville", "Voir ce qui est ouvert, limité ou fermé dans la route histoire.", true, "story.city_development");
                 infoScreen.addOption(3, "Clients amis / référents", "Voir les PNJ qui peuvent aider ou orienter la quête principale.", true, "story.referents");
                 infoScreen.addOption(4, "Intrigues suivies", "Voir les grands fils narratifs prévus sans révéler la fin.", true, "story.intrigues");
-                infoScreen.addOption(5, "Prochains objectifs", "Voir missions principales et secondaires utiles au développement.", true, "story.next_objectives");
+                infoScreen.addOption(5, "Prochains objectifs", "Voir les missions principales et secondaires utiles à la progression locale.", true, "story.next_objectives");
 
                 const int infoChoice = TerminalInterface::askMenuChoiceFromOptions(infoScreen, "Choisis une information histoire.");
                 Console::clear();
@@ -263,7 +264,7 @@ void Game::launchStoryModePlaceholder()
                 }
                 if (infoChoice == 2)
                 {
-                    MessageScreen::show("DÉVELOPPEMENT DE LA VILLE", "story.city_development", StoryCampaign::buildDevelopmentLines(mainPlayer));
+                    MessageScreen::show("ÉTAT DE LA VILLE", "story.city_development", StoryCampaign::buildDevelopmentLines(mainPlayer));
                     continue;
                 }
                 if (infoChoice == 3)
@@ -407,7 +408,7 @@ void Game::continueStoryRoute()
             {
                 "Les preuves, les monstres vaincus ou le premier boss ont assez fait bouger la ville.",
                 "La route du relais silencieux peut commencer.",
-                "Les chapitres restent joués dans l’ordre : le chapitre 2 est maintenant sélectionnable."
+                "Les chapitres restent joués dans l’ordre : le chapitre 2 devient accessible après le premier."
             },
             false
         );
@@ -689,7 +690,7 @@ void Game::openStoryAccessMenu()
                 {
                     "Le journal histoire a été relu avec l'état réel du personnage.",
                     "Aucune étape n'a été validée gratuitement.",
-                    "Les quêtes déjà terminées ou prêtes à rendre devraient maintenant apparaître dans les vrais menus concernés."
+                    "Les quêtes terminées ou prêtes à rendre apparaissent dans les menus concernés."
                 },
                 false
             );
@@ -714,7 +715,7 @@ bool Game::shouldResetCharacterForStoryStart() const
         || mainPlayer.getEnemiesKilled() > 0
         || mainPlayer.getBossesKilled() > 0
         || mainPlayer.getDeaths() > 0
-        || mainPlayer.getInventory().getGold() > 0
+        || mainPlayer.getInventory().getTotalCopper() > 0
         || mainPlayer.getInventory().getWeaponCount() > 0
         || mainPlayer.getInventory().getArmorCount() > 0
         || mainPlayer.getInventory().getConsumableCount() > 0
@@ -1966,7 +1967,7 @@ void Game::playStoryChapterTwo()
                 lines.push_back(progressed
                     ? "Quête principale mise à jour : Les comptoirs rouvrent un œil — " + storyQuestProgressText(mainPlayer, "story_ch2_city_recovery") + "."
                     : "Aucune progression directe : la quête est peut-être déjà prête à rendre auprès de Mira.");
-                lines.push_back("Effet visible : les menus de boutique et PNJ peuvent maintenant afficher un palier de ville plus crédible autour des stocks, routes courtes et demandes locales.");
+                lines.push_back("Les commerçants et habitants réagissent à l’état de la ville, de ses stocks et de ses routes courtes.");
                 MessageScreen::show("LA VILLE RÉAGIT", "story.chapter_2.city_recovery", lines, false);
                 saveCurrentProgress("Chapitre 2 : informations de Nell distribuées aux comptoirs");
                 continue;
@@ -2228,7 +2229,7 @@ void Game::playStoryChapterThree()
         false
     );
     MessageScreen::show(
-        "FIN TEMPORAIRE DU DÉVELOPPEMENT HISTOIRE",
+        "SUITE DE L'HISTOIRE INDISPONIBLE",
         "story.development_limit",
         StoryCampaign::buildDevelopmentLimitLines(mainPlayer),
         false
@@ -2826,8 +2827,70 @@ void Game::playStoryWhiteFogPrologue()
     mainPlayer.getInventory().clearAll();
     mainPlayer.setStoryProgress(1, 1, std::max(0, mainPlayer.getStoryCityDevelopmentLevel()));
 
-    MessageScreen::show("PROLOGUE — MISSION ORDINAIRE", "story.white_fog.intro", StoryCampaign::buildWhiteFogPrologueLines(mainPlayer));
-    MessageScreen::show("LA FUMÉE MANGE LES NOMS", "story.white_fog.memory_loss", StoryCampaign::buildWhiteFogMemoryLossLines(mainPlayer), false);
+    Player memoryPlayer = StoryPrologueMemory::createTemporaryPlayer(mainPlayer, selectedDifficulty);
+
+    MessageScreen::show(
+        "PROLOGUE — UN SOUVENIR AVANT LE DÉBUT",
+        "story.white_fog.intro",
+        StoryCampaign::buildWhiteFogPrologueLines(mainPlayer)
+    );
+    MessageScreen::show(
+        "CONTRAT — FRAGMENT MÉMORIEL",
+        "story.white_fog.memory_contract",
+        StoryPrologueMemory::buildMissionFragmentLines(memoryPlayer),
+        false
+    );
+
+    MenuScreen approachChoice("GLACIER DES SERMENTS FROIDS", "story.white_fog.memory.approach");
+    approachChoice.addSubtitle("Derniers mètres avant la tanière");
+    approachChoice.addLine("Trois signatures hostiles. Un chef de meute et deux garde-crocs.");
+    approachChoice.addLine("Tes deux compagnons attendent ton rythme sans avoir besoin d'explications.");
+    approachChoice.addOption(1, "Formation serrée", "Avancer groupés et préparer une couverture défensive.", true, "story.white_fog.memory.approach.guard");
+    approachChoice.addOption(2, "Chasse rapide", "Prendre l'initiative et mettre immédiatement la pression sur le chef.", true, "story.white_fog.memory.approach.pressure");
+    approachChoice.addOption(3, "Comme d'habitude", "Laisser les automatismes du groupe retrouver leur propre rythme.", true, "story.white_fog.memory.approach.balance");
+    int approach = TerminalInterface::askMenuChoiceFromOptions(approachChoice, "Choisis comment votre ancien groupe aborde la chasse.");
+    Console::clear();
+
+    MessageScreen::show(
+        "LE CHEMIN VERS LA MEUTE",
+        "story.white_fog.memory.travel",
+        StoryPrologueMemory::buildTravelLines(memoryPlayer, approach),
+        false
+    );
+
+    Random memoryRandom;
+    const StoryPrologueCombatResult memoryResult = StoryPrologueMemory::runPackHunt(
+        memoryPlayer,
+        memoryRandom,
+        selectedDifficulty,
+        approach
+    );
+
+    std::vector<std::string> memoryOutcomeLines;
+    if (memoryResult.outcome == StoryPrologueOutcome::Victory)
+    {
+        memoryOutcomeLines.push_back("La meute est tombée. Le contrat aurait dû être terminé ici.");
+    }
+    else if (memoryResult.outcome == StoryPrologueOutcome::Retreat)
+    {
+        memoryOutcomeLines.push_back("Tu as donné le signal de décrocher. Le groupe quitte la chasse vivant, mais pas intact.");
+    }
+    else
+    {
+        memoryOutcomeLines.push_back("Ton corps cède avant la meute. Une voix ordonne la retraite pendant qu'une autre revient vers toi.");
+    }
+    memoryOutcomeLines.push_back("Tours vécus dans le souvenir : " + std::to_string(memoryResult.turns) + ".");
+    memoryOutcomeLines.push_back("Ennemis abattus dans le souvenir : " + std::to_string(memoryResult.defeatedEnemies) + "/3.");
+    memoryOutcomeLines.push_back("Cette bataille n'accorde ni expérience, ni butin, ni entrée de bestiaire au personnage du présent.");
+    MessageScreen::show("FIN DE LA CHASSE", "story.white_fog.memory.outcome", memoryOutcomeLines, false);
+
+    MessageScreen::show(
+        "QUELQUE CHOSE REMONTE LE GLACIER",
+        "story.white_fog.memory.fog_transition",
+        StoryPrologueMemory::buildFogTransitionLines(mainPlayer, memoryResult),
+        false
+    );
+    MessageScreen::show("LA BRUME MANGE LES NOMS", "story.white_fog.memory_loss", StoryCampaign::buildWhiteFogMemoryLossLines(mainPlayer), false);
 
     MenuScreen firstChoice("FORÊT BLANCHE", "story.white_fog.choice_1");
     firstChoice.addSubtitle("Aucun équipement. Aucun souvenir fiable.");
@@ -2945,32 +3008,15 @@ void Game::launchEphemeralSandboxCloneFromStory()
     }
 
     MenuScreen choice("BAC À SABLE ÉPHÉMÈRE", "story.ephemeral.choice");
-    choice.addSubtitle("Abandonner le monde à sa destinée, ou cloner juste aujourd’hui ?");
-    choice.addLine("Passer réellement en bac à sable abandonnerait la route histoire de ce personnage.");
+    choice.addSubtitle("Créer une copie temporaire pour jouer librement aujourd’hui ?");
     choice.addLine("Le clone éphémère permet de jouer librement pendant la session sans sauvegarder ni perturber l’histoire.");
     choice.addOption(0, "Retour", "Ne rien changer.", true, "story.ephemeral.back");
-    choice.addOption(1, "Abandonner le monde à sa destinée", "Quitter mentalement la route histoire. Pour l’instant, cette option reste une décision forte à confirmer plus tard.", true, "story.ephemeral.abandon");
     choice.addOption(2, "Créer un clone pour aujourd’hui", "Session non sauvegardée, supprimée à la fin ou au prochain nettoyage si elle existe encore.", true, "story.ephemeral.clone");
     const int selected = TerminalInterface::askMenuChoiceFromOptions(choice, "Choisis la sortie temporaire ou le retour.");
     Console::clear();
 
     if (selected == 0)
     {
-        return;
-    }
-
-    if (selected == 1)
-    {
-        MessageScreen::show(
-            "DESTIN REFUSÉ",
-            "story.ephemeral.abandon_scaffold",
-            {
-                "Cette option représentera plus tard un vrai abandon du fil histoire.",
-                "Pour éviter une erreur définitive pendant le développement, elle reste informative pour l’instant.",
-                "Utilise plutôt le clone éphémère si tu veux te régaler sans casser la campagne."
-            },
-            false
-        );
         return;
     }
 

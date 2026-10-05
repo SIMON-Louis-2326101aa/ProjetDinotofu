@@ -10,6 +10,7 @@
 #include <array>
 #include <cctype>
 #include <cstdint>
+#include <map>
 #include <random>
 #include <string>
 #include <vector>
@@ -538,6 +539,99 @@ namespace
         return lowerQuestCatalogText(haystack).find(lowerQuestCatalogText(needle)) != std::string::npos;
     }
 
+    struct GuildBiomeLevelRule
+    {
+        const char* name;
+        int minLevel;
+    };
+
+    constexpr std::array<GuildBiomeLevelRule, 30> guildBiomeLevelRules = {{
+        {"Plaine sauvage", 1},
+        {"Route commerciale", 1},
+        {"Mares gélatineuses", 3},
+        {"Forêt ancienne", 5},
+        {"Verger des lucioles de fer", 6},
+        {"Montagne froide", 7},
+        {"Bocage aux lanternes", 8},
+        {"Quartier abandonné", 8},
+        {"Canaux de brume bleue", 9},
+        {"Cimetière oublié", 10},
+        {"Désert d'argile rouge", 10},
+        {"Foire abandonnée", 10},
+        {"Marais trouble", 12},
+        {"Archives noyées", 12},
+        {"Marché sous les ponts", 12},
+        {"Ruines effondrées", 14},
+        {"Mine sifflante", 14},
+        {"Jardin des statues qui pleurent", 14},
+        {"Temple des cloches fendues", 16},
+        {"Falaises des drakes gris", 18},
+        {"Bois de la Corruption", 18},
+        {"Crypte du Sombre-Lien", 20},
+        {"Carrière des os blancs", 20},
+        {"Désert des Protecteurs", 22},
+        {"Sanctuaire antique des Veilleurs", 24},
+        {"Quartier des Lames Muettes", 28},
+        {"Toits des Assassins", 30},
+        {"Nid draconique rouge", 36},
+        {"Coulées de lave noire", 38},
+        {"Glacier des Serments froids", 38}
+    }};
+
+    std::string explicitGuildBiomeInTemplate(const GuildTemplate& questTemplate)
+    {
+        if (questTemplate.type == "service")
+        {
+            // A service can legitimately manipulate material originating from a dangerous
+            // biome while remaining at the guild counter. Do not force travel from a lore word.
+            return "";
+        }
+
+        const std::string combined = questTemplate.family + " " + questTemplate.objective + " " + questTemplate.title;
+        for (const GuildBiomeLevelRule& rule : guildBiomeLevelRules)
+        {
+            if (questCatalogTextContains(combined, rule.name))
+            {
+                return rule.name;
+            }
+        }
+        return "";
+    }
+
+    int minimumLevelForGuildTemplateLocation(const GuildTemplate& questTemplate)
+    {
+        if (questTemplate.type == "service")
+        {
+            return 1;
+        }
+
+        const std::string explicitBiome = explicitGuildBiomeInTemplate(questTemplate);
+        if (!explicitBiome.empty())
+        {
+            for (const GuildBiomeLevelRule& rule : guildBiomeLevelRules)
+            {
+                if (explicitBiome == rule.name) return rule.minLevel;
+            }
+        }
+
+        const std::string combined = questTemplate.family + " " + questTemplate.objective + " " + questTemplate.title;
+        if (questCatalogTextContains(combined, "marais") || questCatalogTextContains(combined, "noy")) return 12;
+        if (questCatalogTextContains(combined, "mort") || questCatalogTextContains(combined, "ombre") || questCatalogTextContains(combined, "os")) return 10;
+        if (questCatalogTextContains(combined, "automate") || questCatalogTextContains(combined, "golem") || questCatalogTextContains(combined, "armure") || questCatalogTextContains(combined, "sentinelle") || questCatalogTextContains(combined, "mannequin") || questCatalogTextContains(combined, "pantin")) return 14;
+        if (questCatalogTextContains(combined, "ruine") || questCatalogTextContains(combined, "archive")) return 14;
+        if (questCatalogTextContains(combined, "montagne") || questCatalogTextContains(combined, "froid") || questCatalogTextContains(combined, "métal") || questCatalogTextContains(combined, "metal") || questCatalogTextContains(combined, "forge")) return 7;
+        if (questCatalogTextContains(combined, "forêt") || questCatalogTextContains(combined, "foret") || questCatalogTextContains(combined, "plante")) return 5;
+        if (questCatalogTextContains(combined, "slime") || questCatalogTextContains(combined, "gélatine") || questCatalogTextContains(combined, "gelatine")) return 3;
+        return 1;
+    }
+
+    bool guildTemplateAvailableAtLevel(const GuildTemplate& questTemplate, int playerLevel)
+    {
+        return playerLevel >= questTemplate.minLevel
+            && playerLevel >= minimumLevelForRank(questTemplate.rank)
+            && playerLevel >= minimumLevelForGuildTemplateLocation(questTemplate);
+    }
+
     bool isCountedHuntTemplate(const GuildTemplate& questTemplate)
     {
         if (questTemplate.type != "combat")
@@ -604,14 +698,18 @@ namespace
             return "Comptoir de guilde / ville";
         }
 
-        if (questCatalogTextContains(combined, "ruine") || questCatalogTextContains(combined, "relais") || questCatalogTextContains(combined, "archive"))
+        const std::string explicitBiome = explicitGuildBiomeInTemplate(questTemplate);
+        if (!explicitBiome.empty())
         {
-            return "Ruines effondrées";
+            return explicitBiome;
         }
 
-        if (questCatalogTextContains(combined, "mort") || questCatalogTextContains(combined, "ombre") || questCatalogTextContains(combined, "os"))
+        // Generic wording is mapped only after explicit named places. This prevents a
+        // low-level "road relay" from being mistaken for high-level ruins just because
+        // the word "relais" appears in its text.
+        if (questCatalogTextContains(combined, "route") || questCatalogTextContains(combined, "livraison") || questCatalogTextContains(combined, "village") || questCatalogTextContains(combined, "client") || questCatalogTextContains(combined, "humano") || questCatalogTextContains(combined, "relais") || questCatalogTextContains(combined, "pont"))
         {
-            return "Cimetière oublié";
+            return "Route commerciale";
         }
 
         if (questCatalogTextContains(combined, "slime") || questCatalogTextContains(combined, "gélatine") || questCatalogTextContains(combined, "gelatine"))
@@ -619,29 +717,34 @@ namespace
             return "Mares gélatineuses";
         }
 
-        if (questCatalogTextContains(combined, "marais") || questCatalogTextContains(combined, "noy"))
-        {
-            return "Marais trouble";
-        }
-
         if (questCatalogTextContains(combined, "forêt") || questCatalogTextContains(combined, "foret") || questCatalogTextContains(combined, "plante"))
         {
             return "Forêt ancienne";
         }
 
-        if (questCatalogTextContains(combined, "automate") || questCatalogTextContains(combined, "golem") || questCatalogTextContains(combined, "armure") || questCatalogTextContains(combined, "sentinelle") || questCatalogTextContains(combined, "mannequin") || questCatalogTextContains(combined, "pantin"))
-        {
-            return "Atelier abandonné / Ruines effondrées";
-        }
-
         if (questCatalogTextContains(combined, "montagne") || questCatalogTextContains(combined, "froid") || questCatalogTextContains(combined, "métal") || questCatalogTextContains(combined, "metal") || questCatalogTextContains(combined, "forge"))
         {
-            return "Montagne froide / Ruines effondrées";
+            return "Montagne froide";
         }
 
-        if (questCatalogTextContains(combined, "route") || questCatalogTextContains(combined, "livraison") || questCatalogTextContains(combined, "village") || questCatalogTextContains(combined, "client") || questCatalogTextContains(combined, "humano"))
+        if (questCatalogTextContains(combined, "mort") || questCatalogTextContains(combined, "ombre") || questCatalogTextContains(combined, "os"))
         {
-            return "Route commerciale";
+            return "Cimetière oublié";
+        }
+
+        if (questCatalogTextContains(combined, "marais") || questCatalogTextContains(combined, "noy"))
+        {
+            return "Marais trouble";
+        }
+
+        if (questCatalogTextContains(combined, "ruine") || questCatalogTextContains(combined, "archive"))
+        {
+            return "Ruines effondrées";
+        }
+
+        if (questCatalogTextContains(combined, "automate") || questCatalogTextContains(combined, "golem") || questCatalogTextContains(combined, "armure") || questCatalogTextContains(combined, "sentinelle") || questCatalogTextContains(combined, "mannequin") || questCatalogTextContains(combined, "pantin"))
+        {
+            return "Ruines effondrées";
         }
 
         if (questCatalogTextContains(combined, "mini-boss") || questCatalogTextContains(combined, "menace") || questCatalogTextContains(combined, "élite") || questCatalogTextContains(combined, "elite"))
@@ -660,7 +763,7 @@ namespace
 
         for (const GuildTemplate& questTemplate : templates)
         {
-            if (playerLevel >= questTemplate.minLevel && playerLevel >= minimumLevelForRank(questTemplate.rank))
+            if (guildTemplateAvailableAtLevel(questTemplate, playerLevel))
             {
                 available.push_back(questTemplate);
             }
@@ -678,7 +781,7 @@ namespace
     {
         for (const GuildTemplate& questTemplate : templates)
         {
-            if (playerLevel >= questTemplate.minLevel && playerLevel >= minimumLevelForRank(questTemplate.rank))
+            if (guildTemplateAvailableAtLevel(questTemplate, playerLevel))
             {
                 return true;
             }
@@ -770,8 +873,7 @@ namespace
     bool isAvailableActionTemplate(const GuildTemplate& questTemplate, int playerLevel)
     {
         return isActionQuestType(questTemplate.type)
-            && playerLevel >= questTemplate.minLevel
-            && playerLevel >= minimumLevelForRank(questTemplate.rank);
+            && guildTemplateAvailableAtLevel(questTemplate, playerLevel);
     }
 
     void enforceActionQuestPresence(std::vector<Quest>& board, int playerLevel, const std::vector<GuildTemplate>& templates, int desiredMinimum)
@@ -814,6 +916,83 @@ namespace
             }
 
             current = actionQuestCount(board);
+        }
+    }
+
+    int distinctQuestObjectiveTypeCount(const std::vector<Quest>& board)
+    {
+        std::vector<std::string> types;
+        for (const Quest& quest : board)
+        {
+            if (quest.objectiveType.empty()) continue;
+            if (std::find(types.begin(), types.end(), quest.objectiveType) == types.end())
+            {
+                types.push_back(quest.objectiveType);
+            }
+        }
+        return static_cast<int>(types.size());
+    }
+
+    void enforceQuestObjectiveTypeDiversity(
+        std::vector<Quest>& board,
+        int playerLevel,
+        const std::vector<GuildTemplate>& templates,
+        int desiredDistinctTypes,
+        int requiredActionMinimum
+    )
+    {
+        desiredDistinctTypes = std::min(desiredDistinctTypes, static_cast<int>(board.size()));
+        if (desiredDistinctTypes <= 1) return;
+
+        const std::array<std::string, 4> preferredTypes = {"combat", "exploration", "service", "bestiaire"};
+        int safety = 0;
+
+        while (distinctQuestObjectiveTypeCount(board) < desiredDistinctTypes && safety++ < 12)
+        {
+            std::map<std::string, int> counts;
+            for (const Quest& quest : board) counts[quest.objectiveType]++;
+
+            bool changed = false;
+            for (const std::string& missingType : preferredTypes)
+            {
+                if (counts[missingType] > 0) continue;
+
+                std::vector<GuildTemplate> candidates;
+                for (const GuildTemplate& questTemplate : templates)
+                {
+                    if (questTemplate.type != missingType) continue;
+                    if (!guildTemplateAvailableAtLevel(questTemplate, playerLevel)) continue;
+                    if (boardAlreadyHasTitle(board, questTemplate.title)) continue;
+                    candidates.push_back(questTemplate);
+                }
+                if (candidates.empty()) continue;
+
+                int victimIndex = -1;
+                for (int index = 0; index < static_cast<int>(board.size()); ++index)
+                {
+                    const Quest& victim = board[index];
+                    if (counts[victim.objectiveType] <= 1) continue;
+
+                    const bool victimIsAction = isActionQuestType(victim.objectiveType);
+                    const bool replacementIsAction = isActionQuestType(missingType);
+                    if (victimIsAction && !replacementIsAction && actionQuestCount(board) <= requiredActionMinimum)
+                    {
+                        continue;
+                    }
+
+                    victimIndex = index;
+                    break;
+                }
+
+                if (victimIndex < 0) continue;
+
+                const GuildTemplate& replacementTemplate = candidates[randomBetween(0, static_cast<int>(candidates.size()) - 1)];
+                board[victimIndex] = buildGuildQuest("guild_diversity", playerLevel, replacementTemplate);
+                changed = true;
+                break;
+            }
+
+            if (!changed) break;
         }
     }
 
@@ -1415,7 +1594,20 @@ std::vector<Quest> QuestCatalog::createGuildBoard(int playerLevel)
     // FR: Le panneau doit proposer davantage de vrai terrain maintenant : combat/exploration.
     // EN: The board should now lean more toward real field work: combat/exploration.
     const int desiredActionMinimum = playerLevel >= 7 ? 3 : 2;
-    enforceActionQuestPresence(board, playerLevel, fillerTemplates, std::min(desiredActionMinimum, desiredBoardSize));
+    // Keep at least one slot available for service/bestiary variety on tiny boards.
+    // A 3-offer board made exclusively of combat/exploration looked repetitive even
+    // when the catalogue had good non-combat work available.
+    const int requiredActionMinimum = std::min(
+        desiredActionMinimum,
+        std::max(1, desiredBoardSize - 1)
+    );
+    enforceActionQuestPresence(board, playerLevel, fillerTemplates, requiredActionMinimum);
+
+    // FR: quand le catalogue le permet, un panneau ne doit pas ressembler à six variantes
+    // de la même corvée. Combat, exploration, service et bestiaire restent mélangés
+    // sans sacrifier le minimum de vrai terrain imposé ci-dessus.
+    const int desiredDistinctTypes = desiredBoardSize >= 3 ? 3 : desiredBoardSize;
+    enforceQuestObjectiveTypeDiversity(board, playerLevel, fillerTemplates, desiredDistinctTypes, requiredActionMinimum);
 
     return board;
 }
@@ -2078,7 +2270,7 @@ Quest QuestCatalog::createTransportLogisticsQuestionRequest(int playerLevel)
         questExperience(rank, playerLevel, target + 1), adjustedQuestGold(rank, playerLevel, target + 1, "service", true), target, false,
         requiredMaterialId, requiredMaterialName, requiredMaterialQuantity,
         rewardMaterialId, rewardMaterialName, rewardMaterialQuantity,
-        "Objectif de quête probable : parler à Noro et traiter une épreuve de route ou de transport. Certains trajets demandent maintenant un ticket, reçu ou pass réel."
+        "Objectif de quête probable : parler à Noro et traiter une épreuve de route ou de transport. Certains trajets demandent un ticket, un reçu ou un laissez-passer."
     );
 }
 

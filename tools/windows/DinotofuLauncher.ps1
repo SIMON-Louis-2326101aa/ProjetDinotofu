@@ -17,7 +17,7 @@ param(
     [string]$AssetPattern = "",
     [switch]$NoUpdateCheck,
     [ValidateSet("Auto", "Gui", "Terminal")]
-    [string]$Mode = "Auto"
+    [string]$Mode = "Terminal"
 )
 
 $ErrorActionPreference = "Stop"
@@ -189,7 +189,7 @@ if ([string]::IsNullOrWhiteSpace($Repo) -or $Repo -eq "TON_COMPTE/TON_REPO" -or 
 
 if ($installDirFromArgument) { $InstallDir = Normalize-ProjectInstallDir $InstallDir }
 else { $InstallDir = $defaultRoot }
-if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.7z" }
+if ([string]::IsNullOrWhiteSpace($AssetPattern)) { $AssetPattern = "Dinotofu-Windows-v*.zip" }
 
 function Is-RepoConfigured {
     return (-not [string]::IsNullOrWhiteSpace($Repo)) -and $Repo -match "^[^/]+/[^/]+$"
@@ -766,7 +766,7 @@ function Repair-DinotofuDesktopShortcuts {
     $normalLauncherCmd = Join-Path $RootDir "Lancer-Dinotofu.cmd"
     $terminalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu-Terminal.cmd"
 
-    Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto"
+    Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Terminal"
     Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal"
 
     # Verifier si les raccourcis bureau existent deja et sont valides
@@ -805,7 +805,7 @@ function Repair-DinotofuDesktopShortcuts {
         Write-Step "Creation / reparation du raccourci bureau Dinotofu"
     }
 
-    # Un unique lanceur propre sur le bureau : ProjetDinotofu Launcher (qui proposera le choix GUI ou Terminal au lancement)
+    # Un unique lanceur propre sur le bureau : ProjetDinotofu Launcher (Terminal par defaut ; GUI uniquement si demandee explicitement)
     $guiTargets = Repair-DinotofuShortcutSet -DisplayName "ProjetDinotofu Launcher" -TargetPath $normalLauncherCmd -IconPath $guiIconPath -ExpectedTargetFile "Lancer-Dinotofu.cmd" -Quiet:$Quiet
     foreach ($shortcutPath in $guiTargets) {
         Test-ShortcutCreated -ShortcutPath $shortcutPath -ExpectedTargetFile "Lancer-Dinotofu.cmd" | Out-Null
@@ -1130,6 +1130,67 @@ function Start-GameExecutable {
     }
 }
 
+function Start-TerminalHandoff {
+    param([string]$ExecutablePath)
+
+    $terminalLauncher = Join-Path $InstallDir "Lancer-Dinotofu-Terminal.cmd"
+    if (Test-Path $terminalLauncher) {
+        Write-Step "Bascule vers Dinotofu Terminal"
+        Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", ('"' + $terminalLauncher + '"')) -WorkingDirectory $InstallDir | Out-Null
+        return
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ExecutablePath) -and (Test-Path $ExecutablePath)) {
+        Write-Step "Bascule vers Dinotofu Terminal"
+        Start-Process -FilePath $ExecutablePath -WorkingDirectory (Split-Path $ExecutablePath) | Out-Null
+    }
+}
+
+function Wait-GuiPlaceholderAction {
+    param([string]$GuiDebugDir)
+
+    $switchFile = Join-Path $GuiDebugDir "switch_to_terminal.request"
+    $serverPidFile = Join-Path $GuiDebugDir "server.pid"
+
+    while ($true) {
+        if (Test-Path $switchFile) {
+            Remove-Item $switchFile -Force -ErrorAction SilentlyContinue
+            return "terminal"
+        }
+
+        if (-not (Test-Path $serverPidFile)) {
+            return "stop"
+        }
+
+        $serverAlive = $false
+        try {
+            $serverPidText = (Get-Content $serverPidFile -Raw).Trim()
+            if ($serverPidText -match '^\d+$') {
+                $serverProcess = Get-Process -Id ([int]$serverPidText) -ErrorAction SilentlyContinue
+                $serverAlive = $null -ne $serverProcess
+            }
+        } catch { }
+
+        if (-not $serverAlive) {
+            Start-Sleep -Milliseconds 150
+            if (Test-Path $switchFile) {
+                Remove-Item $switchFile -Force -ErrorAction SilentlyContinue
+                return "terminal"
+            }
+            return "stop"
+        }
+
+        try {
+            if ([Console]::KeyAvailable) {
+                $key = [Console]::ReadKey($true)
+                if ($key.Key -eq [ConsoleKey]::Enter) { return "stop" }
+            }
+        } catch { }
+
+        Start-Sleep -Milliseconds 300
+    }
+}
+
 function Start-ExperimentalGui {
     param([string]$GuiDebugDir)
 
@@ -1146,6 +1207,7 @@ function Start-ExperimentalGui {
     if ([string]::IsNullOrWhiteSpace($guiFile)) { return $false }
 
     New-Item -ItemType Directory -Path $GuiDebugDir -Force | Out-Null
+    Remove-Item (Join-Path $GuiDebugDir "switch_to_terminal.request") -Force -ErrorAction SilentlyContinue
     $serverScript = Join-Path $guiRoot "tools\gui\serve_gui_preview.py"
     $port = 8787
     if (-not [string]::IsNullOrWhiteSpace($env:DINOTOFU_GUI_PREVIEW_PORT)) {
@@ -1193,20 +1255,20 @@ function Launch-Game {
         Write-Host "=================================================" -ForegroundColor Cyan
         Write-Host " Dinotofu - Choix du mode de lancement" -ForegroundColor Cyan
         Write-Host "=================================================" -ForegroundColor Cyan
-        Write-Host "  1. Interface Graphique (GUI / Navigateur web)"
-        Write-Host "  2. Mode Terminal (Classique dans la console)"
+        Write-Host "  1. Mode Terminal (recommande / jouable)"
+        Write-Host "  2. Interface Graphique (EN COURS DE DEV)"
         Write-Host "================================================="
         try {
             $userChoice = Read-Host "Choix [1 ou 2, Defaut = 1]"
             if ($userChoice -eq "2") {
-                $Mode = "Terminal"
+                $Mode = "Gui"
             }
             else {
-                $Mode = "Gui"
+                $Mode = "Terminal"
             }
         }
         catch {
-            $Mode = "Gui"
+            $Mode = "Terminal"
         }
         Write-Host ""
     }
@@ -1264,25 +1326,27 @@ function Launch-Game {
         if (-not [string]::IsNullOrWhiteSpace($terminal)) {
             $debugDir = Join-Path $InstallDir "gui_debug"
             if (Start-ExperimentalGui -GuiDebugDir $debugDir) {
-                Start-GameExecutable -ExecutablePath $terminal -Label "moteur Dinotofu en arriere-plan IG" -GuiDebugDir $debugDir -HiddenWindow
-
                 Write-Host ""
                 Write-Host "=================================================" -ForegroundColor Green
-                Write-Host " Dinotofu - Session Interface Graphique active" -ForegroundColor Green
+                Write-Host " Dinotofu - Accueil graphique provisoire" -ForegroundColor Green
                 Write-Host "=================================================" -ForegroundColor Green
-                Write-Host "  Moteur de jeu Dinotofu actif en arriere-plan."
+                Write-Host "  L interface graphique est encore en production."
+                Write-Host "  Aucun moteur de jeu n est lance en arriere-plan."
+                Write-Host "  Le bouton de la page peut basculer vers le Terminal."
                 Write-Host ""
-                Write-Host "  Pour arreter le jeu et fermer la session :"
-                Write-Host "  Appuie sur Entree (ou fais Ctrl+C dans cette console)."
+                Write-Host "  Appuie sur Entree ici pour fermer cet accueil sans lancer de partie."
                 Write-Host "================================================="
+
+                $guiAction = "stop"
                 try {
-                    $null = Read-Host "Appuie sur Entree pour arreter Dinotofu"
+                    $guiAction = Wait-GuiPlaceholderAction -GuiDebugDir $debugDir
                 }
-                catch { }
                 finally {
-                    Write-Host ""
-                    Write-Host "==> Arret des processus en arriere-plan..." -ForegroundColor Cyan
                     Stop-DinotofuBackgroundProcesses -RootDir $InstallDir
+                }
+
+                if ($guiAction -eq "terminal") {
+                    Start-TerminalHandoff -ExecutablePath $terminal
                 }
                 return
             }

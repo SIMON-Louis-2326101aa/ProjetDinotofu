@@ -238,7 +238,7 @@ EnemyCombatQueue AdventurerGroupEncounter::createSpecialGroup(
 {
     EnemyCombatQueue queue;
     int encounterLevel = player.getLevel();
-    int groupChoice = random.between(1, 13);
+    int groupChoice = random.between(1, 16);
     std::vector<std::string> names;
 
     switch (groupChoice)
@@ -295,8 +295,20 @@ EnemyCombatQueue AdventurerGroupEncounter::createSpecialGroup(
             break;
 
         case 13:
-        default:
             names = {"Henrique", "Mattzelda", "Skuro"};
+            break;
+
+        case 14:
+            names = {"Willow", "Dwarf", "Badr"};
+            break;
+
+        case 15:
+            names = {"Willow", "Badr"};
+            break;
+
+        case 16:
+        default:
+            names = {"Dwarf", "Badr"};
             break;
     }
 

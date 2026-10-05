@@ -34,7 +34,7 @@ namespace
     {
         MenuScreen screen("ATTRIBUTS", "attributes.spend");
         screen.addSubtitle("Points disponibles : " + std::to_string(player.getUnspentAttributePoints()));
-        screen.addLine("Choisis l'attribut à renforcer. Les effets profonds restent liés aux futurs systèmes de progression.");
+        screen.addLine("Choisis l'attribut à renforcer.");
         screen.addBackOption("Retour", "attributes.back");
 
         for (int choice = 1; choice <= DndAttributes::getChoiceCount(); choice++)

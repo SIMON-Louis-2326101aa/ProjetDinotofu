@@ -1791,7 +1791,7 @@ namespace
             price = std::max(1, price * (100 - promotionDiscount) / 100);
         }
 
-        return price;
+        return ShopPriceRules::roundBuyQuote(shop.getType(), price);
     }
 
     std::string localReputationAccessBlockReason(const Player& player, ShopType type, const ShopItem& item)
@@ -1932,7 +1932,7 @@ namespace
 
         if (player != nullptr)
         {
-            screen.addLine("Argent : " + Money::formatGoldWithRaw(player->getInventory().getGold()));
+            screen.addLine("Argent : " + player->getInventory().getWalletLine());
             screen.addLine("Date actuelle : " + player->formatWorldDateLine());
             screen.addLine("Moment actuel : " + player->formatWorldDayPartLine());
             screen.addLine("Les stocks changent après les combats, et certaines ventes restent rares.");
@@ -2010,10 +2010,11 @@ namespace
         const bool temporaryRecommended = isTemporaryRecommendedShop(shop);
         const std::string vendorName = temporaryRecommended ? temporaryMerchantDisplayName(shop) : getVendorNameForShop(shop.getType());
         MenuScreen screen(shop.getName(), "shop.single");
-        screen.addLine("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()));
+        screen.addLine("Argent disponible : " + player.getInventory().getWalletLine());
         screen.addLine("Temps actuel : " + player.formatWorldDateTimeLine());
         const bool shopOpen = shopIsOpenForPlayer(shop, player);
         screen.addLine("Interlocuteur : " + vendorName);
+        screen.addLine("Regard sur ta bourse : " + Money::socialStandingLabel(player.getInventory().getCoinStacks()) + ".");
         if (temporaryRecommended)
         {
             screen.addLine("Comptoir temporaire recommandé par Prunigil.");
@@ -2242,8 +2243,9 @@ namespace
         const std::size_t last = PagedMenu::lastIndexExclusive(items.size(), pageIndex, itemsPerPage);
 
         MenuScreen screen(shop.getName(), "shop.stock");
-        screen.addLine("Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()));
+        screen.addLine("Argent disponible : " + player.getInventory().getWalletLine());
         screen.addLine("Race : " + player.getRaceText());
+        screen.addLine(ShopPriceRules::buyQuoteStyleText(shop.getType()));
         const int localDiscount = localReputationDiscountForShop(player, shop.getType());
         if (localDiscount > 0)
         {
@@ -2306,7 +2308,7 @@ namespace
 
             std::string label = items[i].getName() + shopWeaponClassCompatibilityTag(player, items[i])
                 + " | Catégorie : " + categoryLabel
-                + " | Prix : " + Money::formatGoldWithRaw(finalPrice);
+                + " | Prix : " + Money::formatEconomyUnits(finalPrice);
 
             const int itemPromotionDiscount = promotionDiscountPercentForItem(shop, items[i], player);
             if (promotion.active && promotion.itemId == items[i].getId())
@@ -2365,7 +2367,7 @@ namespace
             {
                 itemData.reward = classCompatibilityLine;
             }
-            itemData.price = Money::formatGoldWithRaw(finalPrice);
+            itemData.price = Money::formatEconomyUnits(finalPrice);
             itemData.stock = items[i].getStock() >= 0 ? std::to_string(items[i].getStock()) : "non limité";
             if (soldOut)
             {
@@ -2418,7 +2420,7 @@ namespace
             return 0;
         }
 
-        int affordable = finalPrice <= 0 ? 99 : static_cast<int>(player.getInventory().getTotalCopper() / Money::copperFromGold(finalPrice));
+        int affordable = finalPrice <= 0 ? 99 : static_cast<int>(player.getInventory().getTotalCopper() / Money::copperFromEconomyUnits(finalPrice));
         if (affordable <= 0)
         {
             return 0;
@@ -2517,7 +2519,7 @@ namespace
 
         const int sellPrice = ShopTransactionSystem::getSellPriceForEntry(player, shopType, index);
         const int maxQuantity = ShopTransactionSystem::getMaxSellQuantityForEntry(player, shopType, index);
-        info.price = Money::formatGoldWithRaw(sellPrice);
+        info.price = Money::formatEconomyUnits(sellPrice);
         info.maxQuantity = "x" + std::to_string(maxQuantity);
 
         info.label = info.name;
@@ -2566,7 +2568,8 @@ namespace
         {
             screen.addLine(classCompatibilityLine);
         }
-        screen.addLine("Prix d'achat : " + Money::formatGoldWithRaw(finalBuyPrice));
+        screen.addLine("Prix d'achat : " + Money::formatEconomyUnits(finalBuyPrice));
+        screen.addLine(ShopPriceRules::buyQuoteStyleText(shop.getType()));
         const ShopPromotionOffer promotion = promotionForShop(shop, player);
         if (promotion.active && promotion.itemId == item.getId())
         {
@@ -2638,7 +2641,7 @@ namespace
         if (maxBuyQuantity > 0 && accessBlockReason.empty())
         {
             screen.addLine("Quantité achetable maintenant : max x" + std::to_string(maxBuyQuantity));
-            screen.addLine("Achat maximum estimé : " + Money::formatGoldWithRaw(finalBuyPrice * maxBuyQuantity));
+            screen.addLine("Achat maximum estimé : " + Money::formatEconomyUnits(finalBuyPrice * maxBuyQuantity));
         }
 
         if (hasBlackMarketBarterOffer(shop, item))
@@ -2657,7 +2660,7 @@ namespace
             }
         }
 
-        screen.addLine("Prix de revente estimé : " + Money::formatGoldWithRaw(finalSellPrice));
+        screen.addLine("Prix de revente estimé : " + Money::formatEconomyUnits(finalSellPrice));
 
         if (player.getRaceText().find("Démon") != std::string::npos
             || player.getRaceText().find("démon") != std::string::npos)
@@ -2688,7 +2691,7 @@ namespace
             buyData.actionType = "buy";
             buyData.name = item.getName() + shopWeaponClassCompatibilityTag(player, item);
             buyData.detail = item.getDescription();
-            buyData.price = Money::formatGoldWithRaw(finalBuyPrice);
+            buyData.price = Money::formatEconomyUnits(finalBuyPrice);
             buyData.stock = item.getStock() >= 0 ? std::to_string(item.getStock()) : "non limité";
             buyData.maxQuantity = std::to_string(maxBuyQuantity);
             buyData.status = canBuyWithGold ? "Disponible" : (accessBlockReason.empty() ? std::string("Bloqué") : "Bloqué : " + accessBlockReason);
@@ -2752,7 +2755,7 @@ namespace
             int maxChoice = ShopTransactionSystem::getSellableEntryCount(player, shop.getType());
             MenuScreen sellScreen("REVENTE", "shop.sell");
             sellScreen.addLine("Boutique : " + shop.getName());
-            sellScreen.addLine("Argent actuel : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()));
+            sellScreen.addLine("Argent actuel : " + player.getInventory().getWalletLine());
             sellScreen.addLine("Les entrées protégées ou incompatibles restent visibles, mais ne peuvent pas être vendues.");
             sellScreen.addLine("Prix : la durabilité baisse la valeur, les enchantements l'augmentent, et un bon acheteur paie mieux.");
 
@@ -2895,7 +2898,7 @@ namespace
                     {
                         "Boutique : " + shop.getName(),
                         "Maximum vendable : x" + std::to_string(maxQuantity),
-                        "Prix unitaire estimé : " + Money::formatGoldWithRaw(sellPrice)
+                        "Prix unitaire estimé : " + Money::formatEconomyUnits(sellPrice)
                     },
                     1,
                     maxQuantity,
@@ -2914,8 +2917,8 @@ namespace
                     "Boutique : " + shop.getName(),
                     "Objet : " + selectedEntryLabel,
                     "Quantité : x" + std::to_string(quantity),
-                    "Prix unitaire : " + Money::formatGoldWithRaw(sellPrice),
-                    "Total reçu : " + Money::formatGoldWithRaw(totalSellPrice),
+                    "Prix unitaire : " + Money::formatEconomyUnits(sellPrice),
+                    "Total reçu : " + Money::formatEconomyUnits(totalSellPrice),
                     "Rachat : l'objet restera récupérable ici jusqu'au prochain combat avec un surcoût."
                 },
                 "Confirmer la vente",
@@ -2953,9 +2956,9 @@ namespace
                     ? std::vector<std::string>{
                         "Objet vendu : " + selectedEntryLabel,
                         "Quantité : x" + std::to_string(quantity),
-                        "Argent reçu : " + Money::formatGoldWithRaw(totalSellPrice),
+                        "Argent reçu : " + Money::formatEconomyUnits(totalSellPrice),
                         "Argent avant : " + Money::formatCurrencyOverviewFromCopper(copperBeforeSale),
-                        "Argent actuel : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()),
+                        "Argent actuel : " + player.getInventory().getWalletLine(),
                         "Rachat : disponible dans cette boutique jusqu'au prochain combat."
                     }
                     : std::vector<std::string>{
@@ -2981,7 +2984,7 @@ namespace
             const int count = ShopTransactionSystem::getBuybackEntryCount(shop.getType());
             MenuScreen screen("RACHAT", "shop.buyback");
             screen.addLine("Boutique : " + shop.getName());
-            screen.addLine("Argent actuel : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()));
+            screen.addLine("Argent actuel : " + player.getInventory().getWalletLine());
             screen.addLine("Les objets vendus ici peuvent être rachetés jusqu'au prochain combat.");
             screen.addLine("Le prix est plus haut que la revente : frais, paperasse, mauvaise foi du marchand, bref la vie.");
 
@@ -3019,11 +3022,11 @@ namespace
                 const std::string kindLabel = ShopTransactionSystem::getBuybackEntryKindLabel(shop.getType(), buybackIndex);
                 const int quantity = ShopTransactionSystem::getBuybackEntryQuantity(shop.getType(), buybackIndex);
                 const int price = ShopTransactionSystem::getBuybackEntryPrice(shop.getType(), buybackIndex);
-                const bool affordable = player.getInventory().getTotalCopper() >= Money::copperFromGold(price);
+                const bool affordable = player.getInventory().getTotalCopper() >= Money::copperFromEconomyUnits(price);
                 const std::string label = name
                     + (quantity > 1 ? " x" + std::to_string(quantity) : "")
                     + " | Type : " + kindLabel
-                    + " | Rachat : " + Money::formatGoldWithRaw(price)
+                    + " | Rachat : " + Money::formatEconomyUnits(price)
                     + " | " + (affordable ? "Récupérable" : "Argent insuffisant");
 
                 MenuOptionItemData itemData;
@@ -3033,7 +3036,7 @@ namespace
                 itemData.actionType = "buyback";
                 itemData.name = name;
                 itemData.quantity = quantity > 1 ? "x" + std::to_string(quantity) : "";
-                itemData.price = Money::formatGoldWithRaw(price);
+                itemData.price = Money::formatEconomyUnits(price);
                 itemData.status = affordable ? "Avant prochain combat" : "Argent insuffisant";
                 itemData.detail = "Récupérer un objet vendu récemment dans cette boutique.";
                 itemData.important = !affordable;
@@ -3109,7 +3112,7 @@ namespace
                 {
                     "Boutique : " + shop.getName(),
                     "Objet : " + buybackName,
-                    "Prix de récupération : " + Money::formatGoldWithRaw(buybackPrice),
+                    "Prix de récupération : " + Money::formatEconomyUnits(buybackPrice),
                     "Argent disponible : " + Money::formatCurrencyOverviewFromCopper(copperBeforeBuyback),
                     "Limite : cette occasion disparaît au prochain combat."
                 },
@@ -3141,15 +3144,15 @@ namespace
                     ? std::vector<std::string>{
                         "Objet récupéré : " + buybackName,
                         "Quantité récupérée : x" + std::to_string(std::max(1, buybackQuantity)),
-                        "Prix payé : " + Money::formatGoldWithRaw(buybackPrice),
+                        "Prix payé : " + Money::formatEconomyUnits(buybackPrice),
                         "Argent avant : " + Money::formatCurrencyOverviewFromCopper(copperBeforeBuyback),
-                        "Argent actuel : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()),
+                        "Argent actuel : " + player.getInventory().getWalletLine(),
                         "L'entrée de rachat a été retirée de cette boutique."
                     }
                     : std::vector<std::string>{
                         "Objet demandé : " + buybackName,
-                        "Prix demandé : " + Money::formatGoldWithRaw(buybackPrice),
-                        "Argent actuel : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()),
+                        "Prix demandé : " + Money::formatEconomyUnits(buybackPrice),
+                        "Argent actuel : " + player.getInventory().getWalletLine(),
                         "Raison possible : argent insuffisant ou entrée déjà disparue."
                     }
             );
@@ -3681,7 +3684,7 @@ namespace
                                 "shop.buy.blocked",
                                 {
                                     "Article : " + item.getName(),
-                                    "Argent disponible : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()),
+                                    "Argent disponible : " + player.getInventory().getWalletLine(),
                                     "Statut : achat refusé pour le moment.",
                                     "Raison possible : argent insuffisant, stock épuisé ou article indisponible."
                                 }
@@ -3699,7 +3702,7 @@ namespace
                                     {
                                         "Article : " + item.getName(),
                                         "Maximum achetable : x" + std::to_string(maxQuantity),
-                                        "Prix unitaire : " + Money::formatGoldWithRaw(finalPrice)
+                                        "Prix unitaire : " + Money::formatEconomyUnits(finalPrice)
                                     },
                                     1,
                                     maxQuantity,
@@ -3717,10 +3720,10 @@ namespace
                                 {
                                     "Article : " + item.getName(),
                                     "Quantité : x" + std::to_string(quantity),
-                                    "Prix unitaire : " + Money::formatGoldWithRaw(finalPrice),
-                                    "Total prévu : " + Money::formatGoldWithRaw(expectedTotalPrice),
+                                    "Prix unitaire : " + Money::formatEconomyUnits(finalPrice),
+                                    "Total prévu : " + Money::formatEconomyUnits(expectedTotalPrice),
                                     "Argent disponible : " + Money::formatCurrencyOverviewFromCopper(copperBeforePurchase),
-                                    "Argent après achat prévu : " + Money::formatCurrencyOverviewFromCopper(std::max(0LL, copperBeforePurchase - Money::copperFromGold(expectedTotalPrice))),
+                                    "Argent après achat prévu : " + Money::formatCurrencyOverviewFromCopper(std::max(0LL, copperBeforePurchase - Money::copperFromEconomyUnits(expectedTotalPrice))),
                                     stockBeforePurchase >= 0
                                         ? "Stock avant achat : " + std::to_string(stockBeforePurchase)
                                         : "Stock avant achat : non limité",
@@ -3773,9 +3776,9 @@ namespace
                                         ? std::vector<std::string>{
                                             "Article : " + item.getName(),
                                             "Quantité obtenue : x" + std::to_string(boughtCount) + " / x" + std::to_string(quantity),
-                                            "Argent dépensé : " + Money::formatGoldWithRaw(finalPrice * boughtCount),
+                                            "Argent dépensé : " + Money::formatEconomyUnits(finalPrice * boughtCount),
                                             "Argent avant : " + Money::formatCurrencyOverviewFromCopper(copperBeforePurchase),
-                                            "Argent actuel : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()),
+                                            "Argent actuel : " + player.getInventory().getWalletLine(),
                                             item.getStock() >= 0
                                                 ? "Stock restant : " + std::to_string(item.getStock())
                                                 : "Stock restant : non limité",

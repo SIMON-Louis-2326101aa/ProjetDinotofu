@@ -4,6 +4,14 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
+SKIP_BRANDING=0
+for arg in "$@"; do
+    case "${arg}" in
+        --skip-branding) SKIP_BRANDING=1 ;;
+        *) echo "Usage : $0 [--skip-branding]" >&2; exit 2 ;;
+    esac
+done
+
 failures=0
 
 fail() {
@@ -123,8 +131,13 @@ grep -q "ProjetDinotofu Launcher.lnk" tools/windows/DinotofuInstaller.ps1 || fai
 grep -q "ProjetDinotofu Launcher Terminal version.lnk" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows terminal n'est pas declare correctement."
 grep -q "Lancer-Dinotofu.cmd" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows principal doit cibler Lancer-Dinotofu.cmd."
 grep -q "Lancer-Dinotofu-Terminal.cmd" tools/windows/DinotofuInstaller.ps1 || fail "Le raccourci Windows terminal doit cibler Lancer-Dinotofu-Terminal.cmd."
-grep -q -- "-Mode Auto" tools/windows/Lancer-Dinotofu.cmd || fail "Lancer-Dinotofu.cmd doit lancer le mode Auto."
+grep -q -- "-Mode Terminal" tools/windows/Lancer-Dinotofu.cmd || fail "Lancer-Dinotofu.cmd doit lancer le mode Terminal par defaut."
 grep -q -- "-Mode Terminal" tools/windows/Lancer-Dinotofu-Terminal.cmd || fail "Lancer-Dinotofu-Terminal.cmd doit lancer le mode Terminal."
+grep -q 'Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Terminal"' tools/windows/DinotofuInstaller.ps1 || fail "L installateur Windows doit reparer le lanceur principal en mode Terminal."
+grep -q 'Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Terminal"' tools/windows/DinotofuLauncher.ps1 || fail "Le launcher Windows doit reparer son lanceur principal en mode Terminal."
+grep -Fq '$AssetPattern = "Dinotofu-Windows-v*.zip"' tools/windows/DinotofuInstaller.ps1 || fail "Le fallback de payload Windows doit viser le ZIP de release."
+grep -Fq '$AssetPattern = "Dinotofu-Windows-v*.zip"' tools/windows/DinotofuLauncher.ps1 || fail "Le fallback de mise a jour du launcher Windows doit viser le ZIP de release."
+[[ -x scripts/detect_cpp23_flag.sh ]] || fail "Détecteur de toolchain C++23 absent/non exécutable."
 
 if ! python3 <<'PY_INSTALLER'
 from pathlib import Path
@@ -157,20 +170,27 @@ if 'r"%USERPROFILE%\\ProjetDinotofu"' not in package_windows:
 workflow = Path('.github/workflows/release-dinotofu.yml').read_text(encoding='utf-8')
 if 'package-source:' in workflow or ('no_' + 'exe') in workflow:
     errors.append('Le workflow GitHub ne doit plus publier de ZIP source dans les releases.')
-if 'Dinotofu-Windows-v${VERSION}.zip' not in workflow or 'Dinotofu-Linux-v${VERSION}.7z' not in workflow:
-    errors.append('Le workflow GitHub doit publier Dinotofu-Windows (.zip) et Dinotofu-Linux (.7z).')
+for expected_asset in (
+    'INSTALLER-DINOTOFU-WINDOWS-v${VERSION}.zip',
+    'INSTALLER-DINOTOFU-LINUX-v${VERSION}.7z',
+    'Dinotofu-Windows-v${VERSION}-TECHNICAL-PAYLOAD.zip',
+    'Dinotofu-Linux-v${VERSION}-TECHNICAL-PAYLOAD.7z',
+):
+    if expected_asset not in workflow:
+        errors.append(f'Le workflow GitHub doit publier {expected_asset}.')
 if '--target "${GITHUB_SHA}"' not in workflow:
     errors.append('La release GitHub doit créer le tag seulement après les builds en ciblant GITHUB_SHA.')
 
-for package_script, installer_name, archive_name in [
-    ('scripts/package_windows_release.sh', 'Installer-Dinotofu.cmd', 'Dinotofu-Windows-v${VERSION}.zip'),
-    ('scripts/package_linux_release.sh', 'Installer-Dinotofu.sh', 'Dinotofu-Linux-v${VERSION}.7z'),
+for package_script, installer_name, payload_name, installer_archive in [
+    ('scripts/package_windows_release.sh', 'INSTALLER-DINOTOFU.cmd', 'Dinotofu-Windows-v${VERSION}-TECHNICAL-PAYLOAD.zip', 'INSTALLER-DINOTOFU-WINDOWS-v${VERSION}.zip'),
+    ('scripts/package_linux_release.sh', 'INSTALLER-DINOTOFU.sh', 'Dinotofu-Linux-v${VERSION}-TECHNICAL-PAYLOAD.7z', 'INSTALLER-DINOTOFU-LINUX-v${VERSION}.7z'),
 ]:
     package_text = Path(package_script).read_text(encoding='utf-8')
-    if installer_name not in package_text:
-        errors.append(f'{package_script} ne contient pas le fichier installateur attendu {installer_name}.')
-    if archive_name not in package_text:
-        errors.append(f'{package_script} ne contient pas l\'archive attendue {archive_name}.')
+    for expected in (installer_name, payload_name, installer_archive, 'Documentation'):
+        if expected not in package_text:
+            errors.append(f'{package_script} ne contient pas le marqueur de packaging attendu {expected}.')
+    if '-mindepth 1 -maxdepth 1' not in package_text or 'wc -l' not in package_text:
+        errors.append(f'{package_script} doit verifier que le pack installateur ne contient que l installer et Documentation/.')
 
 for entry in errors:
     print(entry)
@@ -182,8 +202,15 @@ fi
 warn "Configs installateurs/release OK."
 warn "Launchers/installateurs OK."
 
-bash ./scripts/validate_branding_assets.sh || fail "Contrôle branding invalide."
-warn "Branding officiel OK : assets et raccourcis vérifiés."
+if [[ ${SKIP_BRANDING} -eq 1 ]]; then
+    warn "Branding ignoré explicitement : validation adaptée au backup essentiel sans images."
+else
+    if bash ./scripts/validate_branding_assets.sh; then
+        warn "Branding officiel OK : assets et raccourcis vérifiés."
+    else
+        fail "Contrôle branding invalide."
+    fi
+fi
 
 # Private save/account folders.
 for private_path in saves accounts characters exported_accounts import_accounts; do

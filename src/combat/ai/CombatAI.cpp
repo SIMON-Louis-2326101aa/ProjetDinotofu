@@ -161,22 +161,23 @@ namespace
         int requiredLevel = 999;
 
         if (aiTextContainsAny(profile, {
+            "voleur", "roublard", "brigand",
             "assassin", "ombrelame", "lanceur de dagues",
             "gardien", "tank", "colosse",
             "clerc", "pretre", "prêtre", "paladin",
-            "berserker", "barbare", "briseur"
-        }))
-        {
-            requiredLevel = 3;
-        }
-        else if (aiTextContainsAny(profile, {
+            "berserker", "barbare", "briseur",
             "mage", "sorcier", "arcaniste", "pyromancien",
             "archer", "rodeur", "rôdeur", "tireur",
-            "alchim", "artific", "bricoleur",
+            "alchim", "artific", "bricoleur"
+        }))
+        {
+            requiredLevel = 5;
+        }
+        else if (aiTextContainsAny(profile, {
             "invoc", "dresseur", "necro", "nécro"
         }))
         {
-            requiredLevel = 4;
+            requiredLevel = 6;
         }
 
         if (requiredLevel == 999)

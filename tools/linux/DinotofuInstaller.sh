@@ -419,7 +419,7 @@ cat > "$GUI_APP" <<DESKTOP
 [Desktop Entry]
 Type=Application
 Name=ProjetDinotofu Launcher
-Comment=Lancer Dinotofu (choix Interface Graphique ou Terminal)
+Comment=Lancer Dinotofu (Terminal par defaut - GUI en developpement)
 Exec=${LOCAL_LAUNCHER_EXEC}
 Path=$(dirname "${LOCAL_LAUNCHER_EXEC}")
 Icon=${GUI_ICON}

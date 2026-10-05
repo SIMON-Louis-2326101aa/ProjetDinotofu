@@ -70,6 +70,8 @@ int main()
     assert(!player.npcKnowsFact("Aubergiste E", "local_attack", "attaque_porte_nord"));
 
     assert(NpcInformationPropagationSystem::professionWouldRelay("garde", "rival_seen"));
+    assert(NpcInformationPropagationSystem::professionWouldRelay("marchand", "quest_failed"));
+    assert(NpcInformationPropagationSystem::professionWouldRelay("guilde", "quest_failed"));
     assert(!NpcInformationPropagationSystem::professionWouldRelay("érudit", "debt_paid"));
     assert(NpcInformationPropagationSystem::relayChannelForProfession("garde") == "poste_de_garde");
     assert(NpcInformationPropagationSystem::relayChannelForProfession("aubergiste") == "auberge");

@@ -65,12 +65,14 @@ jobs:
 
       - name: Build Dinotofu Windows
         run: |
+          CXX_STD_FLAG="$(bash ./scripts/detect_cpp23_flag.sh x86_64-w64-mingw32-g++)"
+          echo "Windows C++23 flag: ${CXX_STD_FLAG}"
           make -j$(nproc) \
             CXX="x86_64-w64-mingw32-g++" \
             APP_NAME="Dinotofu.exe" \
             TARGET_ARCH="x86-64" \
             OPT_LEVEL="-O3" \
-            CXXFLAGS="-std=c++17 -O3 -march=x86-64 -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8" \
+            CXXFLAGS="${CXX_STD_FLAG} -O3 -march=x86-64 -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8" \
             LDFLAGS="-s -static -static-libgcc -static-libstdc++"
 
       - name: Verify Windows executable

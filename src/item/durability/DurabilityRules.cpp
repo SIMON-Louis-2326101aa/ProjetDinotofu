@@ -213,7 +213,7 @@ std::vector<std::string> DurabilityRules::describeArmorFitWarnings(const Armor& 
         case ArmorType::Plate:
             if (isSmallOrWingedRace(race))
             {
-                lines.push_back("Ajustement racial : plaques lourdes délicates pour ce gabarit ou ces ailes. Une future armure taillée sur mesure serait préférable.");
+                lines.push_back("Ajustement racial : les plaques lourdes sont délicates pour ce gabarit ou ces ailes. Une armure taillée sur mesure serait préférable.");
             }
             if (hasTailOrScales(race))
             {

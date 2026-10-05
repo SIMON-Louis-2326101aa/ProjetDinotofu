@@ -5,6 +5,8 @@
 
 #include "item/armor/Armor.hpp"
 
+#include "economy/Money.hpp"
+
 #include "interface/menu/common/MessageScreen.hpp"
 #include "item/equipment/EquipmentWeightRules.hpp"
 
@@ -318,7 +320,7 @@ std::vector<std::string> Armor::toDisplayLines() const
         "===== ARMURE =====",
         "Nom : " + name,
         "Description : " + description,
-        "Valeur : " + std::to_string(value) + " pièces",
+        "Valeur : " + Money::formatEconomyUnits(value),
         "Type : " + armorTypeLabel(type),
         "Catégorie de poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getArmorWeightClass(*this)),
         "Contrepartie : " + EquipmentWeightRules::getArmorTradeoffText(*this),

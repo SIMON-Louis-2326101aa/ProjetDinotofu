@@ -10,8 +10,9 @@ REPO="${DINOTOFU_REPO:-}"
 ASSET_PATTERN="${DINOTOFU_ASSET_PATTERN:-Dinotofu-Linux-v*.7z}"
 INSTALL_DIR="$SCRIPT_DIR"
 NO_UPDATE="false"
-LAUNCH_MODE="auto"
+LAUNCH_MODE="terminal"
 INSTALL_DIR_FROM_ARG="false"
+GUI_PREVIEW_HAS_SERVER="false"
 
 for arg in "$@"; do
     case "$arg" in
@@ -195,7 +196,7 @@ repair_linux_desktop_shortcuts() {
 [Desktop Entry]
 Type=Application
 Name=ProjetDinotofu Launcher
-Comment=Lancer Dinotofu (choix Interface Graphique ou Terminal)
+Comment=Lancer Dinotofu (Terminal par defaut - GUI en developpement)
 Exec=${launch_exec}
 Path=${run_root}
 Icon=${gui_icon}
@@ -400,6 +401,8 @@ start_gui_preview() {
     fi
 
     mkdir -p "$gui_debug_dir"
+    rm -f "${gui_debug_dir}/switch_to_terminal.request"
+    GUI_PREVIEW_HAS_SERVER="false"
 
     if command -v python3 >/dev/null 2>&1 && [[ -f "$server_script" ]]; then
         echo "Ouverture de l interface graphique experimentale : http://127.0.0.1:${port}/tools/gui/dinotofu_gui_experimental.html"
@@ -410,6 +413,7 @@ start_gui_preview() {
         local server_pid=$!
         echo "$server_pid" > "${gui_debug_dir}/server.pid"
         if wait_for_gui_server "$port" 32; then
+            GUI_PREVIEW_HAS_SERVER="true"
             open_url_or_file "http://127.0.0.1:${port}/tools/gui/dinotofu_gui_experimental.html"
         else
             echo "Serveur IG local non joignable sur 127.0.0.1:${port}. Ouverture du fichier HTML local en secours." >&2
@@ -478,22 +482,43 @@ launch_terminal() {
     exit 1
 }
 
-launch_hidden_gui_backend() {
-    local executable
-    if ! executable="$(find_terminal_executable)"; then
-        return 1
-    fi
+wait_for_gui_placeholder_action() {
+    local debug_dir="${INSTALL_DIR}/gui_debug"
+    local switch_file="${debug_dir}/switch_to_terminal.request"
+    local server_pid_file="${debug_dir}/server.pid"
 
-    local run_dir="$(dirname "$executable")"
-    if [[ "$(basename "$run_dir")" == "output" ]]; then
-        run_dir="$(dirname "$run_dir")"
-    fi
-    cd "$run_dir"
-    mkdir -p "${run_dir}/gui_debug"
-    nohup "$executable" >"${run_dir}/gui_debug/game_stdout.log" 2>"${run_dir}/gui_debug/game_stderr.log" &
-    local game_pid=$!
-    echo "$game_pid" > "${run_dir}/gui_debug/game.pid"
-    return 0
+    while true; do
+        if [[ -f "$switch_file" ]]; then
+            rm -f "$switch_file"
+            return 10
+        fi
+
+        if [[ "$GUI_PREVIEW_HAS_SERVER" != "true" ]]; then
+            return 0
+        fi
+
+        if [[ -f "$server_pid_file" ]]; then
+            local server_pid
+            server_pid="$(cat "$server_pid_file" 2>/dev/null || true)"
+            if [[ -n "$server_pid" && "$server_pid" =~ ^[0-9]+$ ]] && ! kill -0 "$server_pid" 2>/dev/null; then
+                # Le serveur peut se fermer juste après avoir écrit la demande de bascule.
+                sleep 0.15
+                if [[ -f "$switch_file" ]]; then
+                    rm -f "$switch_file"
+                    return 10
+                fi
+                return 0
+            fi
+        fi
+
+        if [[ -t 0 ]]; then
+            if read -r -t 0.5 _; then
+                return 0
+            fi
+        else
+            sleep 0.5
+        fi
+    done
 }
 
 if [[ "$LAUNCH_MODE" == "auto" && -t 0 ]]; then
@@ -501,14 +526,14 @@ if [[ "$LAUNCH_MODE" == "auto" && -t 0 ]]; then
     echo "================================================="
     echo " Dinotofu - Choix du mode de lancement"
     echo "================================================="
-    echo "  1. Interface Graphique (GUI / Navigateur web)"
-    echo "  2. Mode Terminal (Classique dans la console)"
+    echo "  1. Mode Terminal (recommande / jouable)"
+    echo "  2. Interface Graphique (EN COURS DE DEV)"
     echo "================================================="
     read -r -p "Choix [1 ou 2, Defaut = 1] : " user_choice || true
     if [[ "$user_choice" == "2" ]]; then
-        LAUNCH_MODE="terminal"
-    else
         LAUNCH_MODE="gui"
+    else
+        LAUNCH_MODE="terminal"
     fi
     echo ""
 fi
@@ -529,34 +554,45 @@ if [[ "$LAUNCH_MODE" != "terminal" ]]; then
 
     stop_dinotofu_background_processes "$INSTALL_DIR"
     if start_gui_preview; then
-        if launch_hidden_gui_backend; then
-            echo ""
-            echo "================================================="
-            echo " Dinotofu - Session Interface Graphique active"
-            echo "================================================="
-            echo "  Moteur de jeu Dinotofu actif en arriere-plan."
-            echo ""
-            echo "  Pour arreter le jeu et fermer la session :"
-            echo "  Appuie sur Entree (ou fais Ctrl+C dans cette console)."
-            echo "================================================="
-            cleanup_gui_session() {
-                trap - INT TERM EXIT
-                echo ""
-                echo "==> Arret des processus en arriere-plan..."
-                stop_dinotofu_background_processes "$INSTALL_DIR"
-                exit 0
-            }
-            trap cleanup_gui_session INT TERM EXIT
-            if [[ -t 0 ]]; then
-                read -r -p "Appuie sur Entree pour arreter Dinotofu : " _ || true
-            else
-                wait 2>/dev/null || true
-            fi
-            cleanup_gui_session
+        echo ""
+        echo "================================================="
+        echo " Dinotofu - Accueil graphique provisoire"
+        echo "================================================="
+        echo "  L interface graphique est encore en production."
+        echo "  Aucun moteur de jeu n est lance en arriere-plan."
+        if [[ "$GUI_PREVIEW_HAS_SERVER" == "true" ]]; then
+            echo "  Le bouton de la page peut basculer vers le Terminal."
         else
-            launch_terminal
-            exit 0
+            echo "  Serveur local indisponible : utilise Entree pour passer au Terminal."
         fi
+        echo ""
+        echo "  Appuie sur Entree ici pour fermer cet accueil sans lancer de partie."
+        echo "================================================="
+
+        cleanup_gui_placeholder() {
+            trap - INT TERM EXIT
+            stop_dinotofu_background_processes "$INSTALL_DIR"
+            exit 0
+        }
+        trap cleanup_gui_placeholder INT TERM EXIT
+
+        gui_action="stop"
+        if wait_for_gui_placeholder_action; then
+            gui_action="stop"
+        else
+            gui_status=$?
+            if [[ "$gui_status" -eq 10 ]]; then
+                gui_action="terminal"
+            fi
+        fi
+
+        trap - INT TERM EXIT
+        stop_dinotofu_background_processes "$INSTALL_DIR"
+        if [[ "$gui_action" == "terminal" ]]; then
+            echo "==> Bascule vers la version terminale..."
+            launch_terminal
+        fi
+        exit 0
     fi
 
     if [[ "$LAUNCH_MODE" == "gui" ]]; then

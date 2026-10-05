@@ -97,6 +97,18 @@ bool SpecialCharacterNativeBonus::applyForSpecialCharacter(
     {
         player.applyFlatStatBonus(25, 2, 4, 5);
     }
+    else if (normalizedName == normalize("Willow"))
+    {
+        player.applyFlatStatBonus(0, 1, 6, 10);
+    }
+    else if (normalizedName == normalize("Dwarf"))
+    {
+        player.applyFlatStatBonus(25, 3, 4, 3);
+    }
+    else if (normalizedName == normalize("Badr"))
+    {
+        player.applyFlatStatBonus(20, 0, 3, 8);
+    }
     else
     {
         return false;

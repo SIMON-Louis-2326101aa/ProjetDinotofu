@@ -27,6 +27,7 @@ public:
     static std::string importantSaveUpdateVersion();
     static bool requiresImportantSaveUpdate(const std::string& lastAdaptedVersion);
     static std::string currentDateText();
+    static std::string currentDateTimeText();
 
     static VersionNumber parse(const std::string& versionText);
     static int compare(const std::string& left, const std::string& right);

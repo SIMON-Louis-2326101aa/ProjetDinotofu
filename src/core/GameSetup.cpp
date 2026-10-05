@@ -109,66 +109,6 @@ namespace
         }
     }
 
-    std::vector<std::string> classFuturePotentialLines(const ClassOptionInfo& info)
-    {
-        std::vector<std::string> lines;
-        const std::string category = info.categoryName;
-        const std::string name = info.name;
-
-        if (category.find("Corps") != std::string::npos)
-        {
-            lines.push_back("Plus tard : styles d'arme, posture, riposte, provocation ou brise-garde selon la classe.");
-        }
-        else if (category == "Distance")
-        {
-            lines.push_back("Plus tard : munitions spéciales, pistage, tirs préparés, pièges et lecture de terrain.");
-        }
-        else if (category == "Magie")
-        {
-            lines.push_back("Plus tard : grimoires, sorts apprenables, catalyseurs, risques de canalisation et affinités élémentaires.");
-        }
-        else if (category == "Invocation")
-        {
-            lines.push_back("Plus tard : invocations maintenues, contrôle d'alliés, coût en mana et pertes possibles si le rythme casse.");
-        }
-        else if (category == "Soutien")
-        {
-            lines.push_back("Plus tard : soin, protection, stabilisation, lecture du danger et réactions aux alliés en difficulté.");
-        }
-        else if (category == "Hybride")
-        {
-            lines.push_back("Plus tard : mélange d'arme, magie et utilitaire, avec des bonus plus contextuels qu'une classe pure.");
-        }
-        else if (category.find("Artisanat") != std::string::npos)
-        {
-            lines.push_back("Plus tard : recettes, réparation, récolte propre, économie de ressources et services hors combat.");
-        }
-        else
-        {
-            lines.push_back("Plus tard : identité spéciale, effets plus liés au lore, à l'histoire ou à une règle unique.");
-        }
-
-        if (name.find("Rôdeur") != std::string::npos || name.find("Pisteur") != std::string::npos || name.find("Cartographe") != std::string::npos || name.find("Éclaireur") != std::string::npos)
-        {
-            lines.push_back("Évolution probable : meilleur repérage, aide aux explorations longues, distances mieux préparées et risques nocturnes mieux lus.");
-        }
-        if (name.find("Médecin") != std::string::npos || name.find("Clerc") != std::string::npos || name.find("Lumomancien") != std::string::npos)
-        {
-            lines.push_back("Évolution probable : soins plus propres, stabilisation, potions mieux utilisées et récupération hors combat améliorée.");
-        }
-        if (name.find("Forgeron") != std::string::npos || name.find("Récupérateur") != std::string::npos || name.find("Herboriste") != std::string::npos || name.find("Cuisinier") != std::string::npos)
-        {
-            lines.push_back("Évolution probable : meilleures recettes, rendement de matériaux, réparations et bonus de préparation avant sortie.");
-        }
-        if (name.find("Assassin") != std::string::npos || name.find("Umbromancien") != std::string::npos || name.find("Occultiste") != std::string::npos)
-        {
-            lines.push_back("Évolution probable : furtivité, ombre, critique ou approches nocturnes plus dangereuses mais plus rentables.");
-        }
-
-        lines.push_back("Note : ces évolutions prévues n'activent pas tout de suite un pouvoir gratuit ; elles servent à choisir une direction claire.");
-        return lines;
-    }
-
     std::vector<std::string> classWeaponGuidanceLines(const ClassOptionInfo& info)
     {
         std::vector<std::string> lines;
@@ -297,7 +237,7 @@ namespace
         }
         else
         {
-            lines.push_back("Identité : profil standard ou hybride, équilibré par équipement, compétences futures et contexte de combat.");
+            lines.push_back("Identité : profil standard ou hybride, équilibré par équipement, compétences apprises et contexte de combat.");
         }
 
         if (expectedDamage >= 24 && info.maxHp <= 165)
@@ -344,13 +284,6 @@ namespace
         lines.push_back("Ce qu'elle a de base :");
         lines.push_back("- Une identité de combat, des statistiques et un kit initial adaptés à la difficulté.");
         lines.push_back("- Des armes/potions de départ qui seront ensuite complétées par l'inventaire, les boutiques et les quêtes.");
-        lines.push_back("");
-        lines.push_back("Ce qu'elle pourrait avoir plus tard :");
-        const std::vector<std::string> futureLines = classFuturePotentialLines(info);
-        for (const std::string& line : futureLines)
-        {
-            lines.push_back("- " + line);
-        }
         return lines;
     }
 
@@ -864,7 +797,7 @@ void Game::choosePlayerAppearance()
             "Race sélectionnée : " + characterRaceToText(selectedRace) + ".",
             "Âge minimum jouable : 15 ans.",
             "Âge maximum retenu pour cette race : " + std::to_string(maximumAge) + " ans.",
-            "L'âge exact sert au registre et aux futurs filtres d'images ; il ne modifie pas encore les statistiques."
+            "L'âge exact est conservé dans le registre du personnage ; il ne modifie pas les statistiques."
         },
         15,
         maximumAge,
@@ -873,7 +806,7 @@ void Game::choosePlayerAppearance()
     Console::clear();
 
     MenuScreen presentationScreen("PRÉSENTATION VISUELLE", "character.creation.appearance.presentation");
-    presentationScreen.addSubtitle("Ce choix sert à la description et aux futurs sprites. Il n'accorde aucun bonus.");
+    presentationScreen.addSubtitle("Ce choix sert à la description visuelle du personnage. Il n'accorde aucun bonus.");
     presentationScreen.addOption(1, "Femme", "Filtre visuel féminin.", true, "character.appearance.presentation.female");
     presentationScreen.addOption(2, "Homme", "Filtre visuel masculin.", true, "character.appearance.presentation.male");
     presentationScreen.addOption(3, "Non-binaire / autre", "Filtre visuel non-binaire ou personnalisé.", true, "character.appearance.presentation.other");
@@ -883,8 +816,8 @@ void Game::choosePlayerAppearance()
     Console::clear();
 
     MenuScreen variantScreen("VARIANTE VISUELLE", "character.creation.appearance.variant");
-    variantScreen.addSubtitle("Deux propositions finales seront utilisées quand le catalogue pixel-art existera.");
-    variantScreen.addLine("Le terminal n'affiche pas d'image : il conserve uniquement une description courte et fiable.");
+    variantScreen.addSubtitle("Choisis la variante visuelle qui correspond le mieux au personnage.");
+    variantScreen.addLine("La variante choisie est conservée dans la description du personnage.");
     variantScreen.addOption(1, "Variante A — dynamique", "Silhouette plus légère, posture mobile, équipement présenté de façon vive.", true, "character.appearance.variant.a");
     variantScreen.addOption(2, "Variante B — imposante", "Silhouette plus posée, posture robuste, équipement présenté de façon lourde.", true, "character.appearance.variant.b");
     const int variantChoice = TerminalInterface::askMenuChoiceFromOptions(variantScreen, "Choisis la variante finale.");

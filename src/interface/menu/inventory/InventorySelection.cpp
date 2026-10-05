@@ -163,7 +163,7 @@ namespace
         lines.push_back("Bonus critique : +" + std::to_string(weapon.getCriticalBonus()));
         lines.push_back("Durabilité : " + InventoryUtils::weaponDurabilityText(weapon));
         lines.push_back("État : " + yesNoText(weapon.isBroken(), "Cassée, ses bonus ne s'appliquent plus.", "Utilisable"));
-        lines.push_back("Valeur estimée : " + Money::formatGoldWithRaw(weapon.getValue()));
+        lines.push_back("Valeur estimée : " + Money::formatEconomyUnits(weapon.getValue()));
         MessageScreen::show("INSPECTION - ARME", "inventory.weapon.inspect.details", lines);
     }
 
@@ -176,7 +176,7 @@ namespace
         lines.push_back("Réduction dégâts : " + std::to_string(armor.getDamageReduction()));
         lines.push_back("Durabilité : " + InventoryUtils::armorDurabilityText(armor));
         lines.push_back("État : " + yesNoText(armor.isBroken(), "Cassée, ses bonus ne s'appliquent plus.", "Utilisable"));
-        lines.push_back("Valeur estimée : " + Money::formatGoldWithRaw(armor.getValue()));
+        lines.push_back("Valeur estimée : " + Money::formatEconomyUnits(armor.getValue()));
         MessageScreen::show("INSPECTION - ARMURE", "inventory.armor.inspect.details", lines);
     }
 
@@ -193,7 +193,7 @@ namespace
                 "Description : " + consumable.getDescription(),
                 "Type : " + InventoryUtils::consumableTypeToText(consumable.getType()),
                 "Puissance : " + consumable.getPowerDisplayText(),
-                "Valeur estimée : " + Money::formatGoldWithRaw(consumable.getValue())
+                "Valeur estimée : " + Money::formatEconomyUnits(consumable.getValue())
             }
         );
     }
@@ -206,7 +206,7 @@ namespace
         lines.push_back("Catégorie : " + material.getCategory());
         lines.push_back("Quantité : " + std::to_string(material.getQuantity()));
         lines.push_back("Qualité : " + material.getQualityLabel());
-        lines.push_back("Valeur estimée par unité : " + Money::formatGoldWithRaw(material.getValue()));
+        lines.push_back("Valeur estimée par unité : " + Money::formatEconomyUnits(material.getValue()));
 
         if (material.hasSpecialQuality())
         {
@@ -3018,7 +3018,7 @@ bool InventorySelection::openWeapons(Player& player)
                 itemData.status = weapon.isBroken() ? "Cassée | Malus de classe" : "Malus de classe";
                 itemData.reward = "Avertissement : " + CombatClassSystem::getWeaponHandlingLabel(player, weapon.getType(), weapon.getName());
             }
-            itemData.price = std::to_string(weapon.getValue()) + " or";
+            itemData.price = Money::formatEconomyUnits(weapon.getValue());
             itemData.important = weapon.isBroken();
 
             screen.addOption(
@@ -3166,7 +3166,7 @@ bool InventorySelection::openArmors(Player& player)
             itemData.detail = "PV : +" + std::to_string(armor.getMaxHpBonus()) + " | Réduction : " + std::to_string(armor.getDamageReduction());
             itemData.status = armor.isBroken() ? "Cassée" : "Utilisable";
             itemData.progress = "Durabilité : " + InventoryUtils::armorDurabilityText(armor);
-            itemData.price = std::to_string(armor.getValue()) + " or";
+            itemData.price = Money::formatEconomyUnits(armor.getValue());
             itemData.important = armor.isBroken();
 
             screen.addOption(
@@ -3528,7 +3528,7 @@ bool InventorySelection::openMaterials(Player& player)
             itemData.quantity = std::to_string(material.getQuantity());
             itemData.detail = material.getCategory();
             itemData.status = materialAlreadyRead ? "Lu" : (material.hasSpecialQuality() ? material.getQualityLabel() : "Qualité normale");
-            itemData.price = std::to_string(material.getValue()) + " or/unité";
+            itemData.price = Money::formatEconomyUnits(material.getValue()) + "/unité";
             itemData.important = material.hasSpecialQuality();
 
             screen.addOption(

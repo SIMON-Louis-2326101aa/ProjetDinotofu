@@ -18,6 +18,16 @@ int main()
 
     Player original;
     original.setRace(CharacterRace::Demon);
+    original.setLoadedProgress(37, 4242, 73);
+    CoinBreakdown originalCoins;
+    originalCoins.platinum = 2;
+    originalCoins.gold = 51;
+    originalCoins.electrum = 7;
+    originalCoins.iron = 13;
+    originalCoins.copper = 4;
+    original.getInventory().setCoinStacks(originalCoins);
+    const long long originalCopperTotal = original.getInventory().getTotalCopper();
+    original.setLoadedRealPlayTimeSeconds(3661);
     original.setLanguageKnowledgeLevel("gobelin", 2, false);
     original.setLanguageStudyProgress("gobelin", 43);
     Weapon rememberedWeapon(
@@ -62,6 +72,9 @@ int main()
     quest.requiredLanguage = "gobelin";
     quest.requiredLanguageLevel = 2;
     quest.sourceLanguageText = "Grakka tik, vor nakka.";
+    quest.rewardCoins.copper = 17;
+    quest.rewardCoins.iron = 2;
+    quest.rewardCoins.gold = 3;
     original.getQuestLog().getQuests().push_back(quest);
 
     const std::string rivalId = original.createRivalFromEnemy(
@@ -84,12 +97,25 @@ int main()
 
     const std::vector<CharacterSaveSummary> summaries = SaveManager::listPlayableCharacters(account);
     assert(!summaries.empty());
+    assert(summaries.front().level == 37);
+    assert(summaries.front().realPlayTimeSeconds >= 3661);
+    assert(!summaries.front().lastSavedAt.empty());
 
     Player loaded;
     DifficultyMode difficulty = DifficultyMode::Easy;
     DeathRuleMode deathRule = DeathRuleMode::NonDefinitive;
     assert(SaveManager::loadPlayerSnapshot(summaries.front(), loaded, difficulty, deathRule));
 
+    assert(loaded.getLevel() == 37);
+    assert(loaded.getExperience() == 4242);
+    assert(loaded.getInventory().getTotalCopper() == originalCopperTotal);
+    const CoinBreakdown loadedCoins = loaded.getInventory().getCoinStacks();
+    assert(loadedCoins.platinum == 2);
+    assert(loadedCoins.gold == 51);
+    assert(loadedCoins.electrum == 7);
+    assert(loadedCoins.iron == 13);
+    assert(loadedCoins.copper == 4);
+    assert(loaded.getRealPlayTimeSeconds() >= 3661);
     assert(loaded.getLanguageKnowledgeLevel("commun") >= 3);
     assert(loaded.getLanguageKnowledgeLevel("infernal") >= 3);
     assert(loaded.getLanguageKnowledgeLevel("gobelin") == 2);
@@ -129,6 +155,11 @@ int main()
         assert(loadedQuest.requiredLanguage == "gobelin");
         assert(loadedQuest.requiredLanguageLevel == 2);
         assert(loadedQuest.sourceLanguageText == quest.sourceLanguageText);
+        assert(loadedQuest.rewardCoins.copper == 17);
+        assert(loadedQuest.rewardCoins.iron == 2);
+        assert(loadedQuest.rewardCoins.electrum == 0);
+        assert(loadedQuest.rewardCoins.gold == 3);
+        assert(loadedQuest.rewardCoins.platinum == 0);
         foundQuest = true;
     }
     assert(foundQuest);

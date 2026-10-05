@@ -40,6 +40,9 @@ struct CharacterSaveSummary
     bool clone;
     std::string gameVersion;
     std::string createdAt;
+    long long realPlayTimeSeconds = 0;
+    long long totalCopperCurrency = 0;
+    std::string lastSavedAt;
     std::string createdForVersion;
     std::string lastAdaptedVersion;
     bool storyModeStarted = false;

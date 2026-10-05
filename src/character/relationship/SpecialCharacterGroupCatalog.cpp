@@ -27,6 +27,9 @@ std::vector<std::string> SpecialCharacterGroupCatalog::getRoadmapLines()
         "Fail / Aoi / Kanadé : laboratoire magique, instable mais puissant.",
         "Louis / Fire Flight / Trexof : duel d'improvisation entre amis, projectiles et failles utiles.",
         "Henrique / Mattzelda / Skuro : charge instable, humour, endurance et violence lourde.",
+        "Willow / Dwarf / Badr : trio de voyageurs indépendants ; distance sèche, humour lourd et soutien clérical inquiétant.",
+        "Willow / Badr : duo calme en surface, avec une méfiance très concrète envers Second.",
+        "Dwarf / Badr : humour provocateur face à un clerc beaucoup plus patient qu'il en a l'air.",
         "Matt (PRO) peut aussi apparaître seul en Combat IA ou via un tirage spécial d'arène.",
         "Groupe aléatoire normal : aventuriers random sans personnage spécial.",
         "Sanctus et Skuro sont liés : même âme, deux réponses possibles face à la violence."

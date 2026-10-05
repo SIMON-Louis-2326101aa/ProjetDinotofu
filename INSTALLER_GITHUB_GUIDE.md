@@ -5,32 +5,25 @@ Ce guide explique comment distribuer Dinotofu sans demander au joueur de compile
 
 ## Distribution simplifiée par OS   
 
-Pour éviter toute confusion (« trop de fichiers cliquables » dans la release), chaque release GitHub publie désormais un unique package complet par système d'exploitation :   
+Une release contient quatre fichiers. Les deux fichiers à conseiller aux joueurs commencent par **INSTALLER-DINOTOFU** :   
 
-- `Dinotofu-Windows-vX.YY.ZZ.zip` : package Windows au format ZIP natif (compression Deflate maximale), directement décompressable sur Windows 10 et 11 sans nécessiter 7-Zip ou logiciel tiers ;   
-- `Dinotofu-Linux-vX.YY.ZZ.7z` : package Linux au format 7z (compression maximale LZMA2).   
+- `INSTALLER-DINOTOFU-WINDOWS-vX.YY.ZZ.zip` : uniquement l'installateur Windows et un dossier `Documentation/` contenant des `.txt` ;   
+- `INSTALLER-DINOTOFU-LINUX-vX.YY.ZZ.7z` : uniquement l'installateur Linux et un dossier `Documentation/` contenant des `.txt` ;   
+- `Dinotofu-Windows-vX.YY.ZZ-TECHNICAL-PAYLOAD.zip` et `Dinotofu-Linux-vX.YY.ZZ-TECHNICAL-PAYLOAD.7z` : payloads techniques complets téléchargés par l'installateur/updater et conservés pour la compatibilité.   
 
-Chaque package contient l'exécutable, les scripts de lancement direct et l'installateur optionnel pour configurer les raccourcis.   
-
+Le pack **Installer** ne contient donc plus le jeu lui-même. L'installateur récupère le payload correspondant depuis la release GitHub.   
 
 ## Jouer ou installer depuis une release GitHub   
 
-Pour jouer à Dinotofu sans compiler le projet manuellement :   
+1. ouvrir la dernière Release GitHub ;   
+2. télécharger `INSTALLER-DINOTOFU-WINDOWS-v*.zip` ou `INSTALLER-DINOTOFU-LINUX-v*.7z` ;   
+3. décompresser ce petit pack ;   
+4. lancer `INSTALLER-DINOTOFU.cmd` sous Windows ou `INSTALLER-DINOTOFU.sh` sous Linux ;   
+5. l'installateur télécharge et installe le payload technique du jeu.   
 
-1. aller sur la page du dépôt GitHub ;   
-2. ouvrir la dernière Release affichée à droite du dépôt ;   
-3. télécharger l’archive correspondant à ton système : `Dinotofu-Windows-v*.zip` ou `Dinotofu-Linux-v*.7z` ;   
-4. décompresser l’archive où tu veux ;   
-5. lancer directement le jeu via **Lancer-Dinotofu** (ou l'exécutable) !   
-6. si tu souhaites installer le jeu dans ton dossier utilisateur et créer un raccourci Bureau, lance **Installer-Dinotofu**. L'installateur te demandera confirmation avant d'ajouter le raccourci.   
+## Lanceur   
 
-## Lanceur unifié et raccourci unique   
-
-Sur le Bureau, le jeu ne crée plus qu'un **seul et unique raccourci** pour éviter toute surcharge visuelle :   
-
-- **ProjetDinotofu Launcher** : au lancement, une invite interactive te propose de choisir le mode :   
-  - `1. Interface Graphique (GUI / Navigateur web)`   
-  - `2. Mode Terminal (Classique dans la console)`   
+Le lancement normal utilise désormais le **Terminal par défaut**, car il s'agit de l'interface stable. Le mode graphique reste accessible explicitement pour le développement mais n'est plus proposé comme choix normal par défaut tant que sa refonte n'est pas terminée.   
 
 ## Logique de version   
 

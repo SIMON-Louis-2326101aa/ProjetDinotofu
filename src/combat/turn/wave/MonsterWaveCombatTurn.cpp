@@ -1178,7 +1178,7 @@ namespace
             if (player.hasPassiveSkill("church_oath_bonds"))
             {
                 player.recordCanonicalEvent("techniques_combinees_alliees", "pression_morale", "Le groupe a pesé sur une fuite ennemie", 1);
-                lines.push_back("Serment des Liens : la pression vient aussi du groupe, ce qui prépare les futures techniques combinées.");
+                lines.push_back("Serment des Liens : la pression vient aussi du groupe et renforce sa coordination.");
             }
             if (player.hasPassiveSkill("church_oath_rivals"))
             {
@@ -1247,7 +1247,7 @@ namespace
                 else
                 {
                     lines.push_back(decision.reason);
-                    lines.push_back("Aucun rival créé : cette fuite reste une fuite, pas la promesse artificielle d'un mini-boss futur.");
+                    lines.push_back("Aucun rival n'est créé : cette fuite reste une fuite, sans forcer artificiellement une rivalité.");
                 }
             }
 
@@ -1402,7 +1402,7 @@ namespace
             lines.push_back(MonsterPreparedActionSystem::telegraphLineForLabel(profile.signatureMove));
             lines.push_back("Ce n'est pas un texte décoratif : au prochain tour de cet ennemi, la compétence part réellement si son rythme n'est pas cassé.");
             lines.push_back(MonsterPreparedActionSystem::interruptHintForLabel(profile.signatureMove));
-            lines.push_back("Aucune intention future supplémentaire n'est affichée : tu sais seulement ce que ton personnage vient de voir être préparé.");
+            lines.push_back("Aucune autre intention n'est révélée : tu sais seulement ce que ton personnage vient de voir être préparé.");
             player.recordCanonicalEvent("competences_ennemies", "attaque_annoncee", "Une grosse compétence ennemie a été annoncée", 1);
             showWaveTurnNotice("COMPÉTENCE ANNONCÉE", "wave.monster.signature_announced", lines);
             return true;
@@ -1547,7 +1547,7 @@ namespace
         if (player.hasPassiveSkill("church_oath_legacy") && signatureTier >= 3 && random.between(1, 100) <= 12)
         {
             player.recordCanonicalEvent("objets_avec_memoire", "pression_heritee", "Une pression ennemie forte a laissé une trace d'héritage possible", 1);
-            lines.push_back("Serment de l'Héritage : ce genre de choc pourra plus tard nourrir objets, tombes ou souvenirs en Mortel/Léthal.");
+            lines.push_back("Serment de l’Héritage : ce genre de choc laisse une trace digne d’être portée par un objet, une tombe ou un souvenir.");
         }
         if (player.hasPassiveSkill("church_oath_bound_forge") && signatureTier >= 2 && random.between(1, 100) <= 14)
         {
@@ -1583,7 +1583,7 @@ namespace
         if (player.hasPassiveSkill("church_oath_bonds") && wave.getActiveEnemyCount() >= 2 && random.between(1, 100) <= 12)
         {
             player.recordCanonicalEvent("techniques_combinees_alliees", "signature_encadree", "Le groupe a appris d'une compétence signature ennemie", 1);
-            lines.push_back("Serment des Liens : le groupe apprend le rythme adverse pour de futurs combos, mais personne n'agit gratuitement ce tour-ci.");
+            lines.push_back("Serment des Liens : le groupe apprend le rythme adverse pour mieux coordonner ses prochaines actions, sans offrir de tour gratuit.");
         }
         if (player.hasPassiveSkill("church_oath_rivals") && signatureTier >= 2 && random.between(1, 100) <= 14)
         {

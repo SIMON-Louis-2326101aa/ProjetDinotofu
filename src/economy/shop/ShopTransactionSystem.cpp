@@ -9,6 +9,7 @@
 #include "progression/language/LanguageSystem.hpp"
 
 #include "economy/shop/ShopPriceRules.hpp"
+#include "economy/Money.hpp"
 #include "item/armor/ArmorCatalog.hpp"
 #include "item/consumable/ConsumableCatalog.hpp"
 #include "item/material/MaterialCatalog.hpp"
@@ -763,7 +764,7 @@ bool ShopTransactionSystem::buyItem(
         return false;
     }
 
-    if (!player.getInventory().spendGold(finalPrice))
+    if (!player.getInventory().spendEconomyUnits(finalPrice))
     {
         addTransactionNote("Argent insuffisant pour acheter " + item.getName() + ".");
         addTransactionNote("Portefeuille : " + player.getInventory().getWalletLine());
@@ -1371,7 +1372,8 @@ bool ShopTransactionSystem::sellInventoryEntryQuantity(
 
     int totalSellPrice = finalSellPrice * quantity;
     rememberSoldMaterial(shopType, soldMaterial, quantity, totalSellPrice);
-    player.getInventory().earnGold(totalSellPrice);
+    player.getInventory().earnEconomyUnits(totalSellPrice);
+    player.refreshCurrencyTitles();
 
     return true;
 }
@@ -1475,7 +1477,8 @@ bool ShopTransactionSystem::sellInventoryEntry(
         rememberSoldMaterial(shopType, soldMaterial, 1, finalSellPrice);
     }
 
-    player.getInventory().earnGold(finalSellPrice);
+    player.getInventory().earnEconomyUnits(finalSellPrice);
+    player.refreshCurrencyTitles();
 
     return true;
 }
@@ -1496,7 +1499,7 @@ std::string ShopTransactionSystem::getBuybackEntryLabel(ShopType shopType, int v
 
     const BuybackEntry& entry = buybackLedger()[ledgerIndex];
     return entry.label
-        + " | Rachat : " + std::to_string(entry.price) + " or"
+        + " | Rachat : " + Money::formatEconomyUnits(entry.price)
         + " | Disponible jusqu'au prochain combat";
 }
 
@@ -1572,7 +1575,7 @@ bool ShopTransactionSystem::buyBackEntry(
 
     BuybackEntry entry = buybackLedger()[ledgerIndex];
 
-    if (!player.getInventory().spendGold(entry.price))
+    if (!player.getInventory().spendEconomyUnits(entry.price))
     {
         addTransactionNote("Argent insuffisant pour racheter " + entry.label + ".");
         addTransactionNote("Portefeuille : " + player.getInventory().getWalletLine());

@@ -4,6 +4,7 @@
 // Français : Ce fichier prépare les futures pénalités de mort pour les parties non létales.
 
 #include "progression/death/DeathPenaltySystem.hpp"
+#include "economy/Money.hpp"
 
 #include "item/Inventory.hpp"
 #include "item/armor/Armor.hpp"
@@ -72,16 +73,16 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
 {
     DeathPenaltyResult result;
 
-    int goldLossPercentage = DifficultyRules::getNonLethalDeathGoldLossPercentage(difficulty);
+    int economyLossPercentage = DifficultyRules::getNonLethalDeathEconomyLossPercentage(difficulty);
     int experienceLossPercentage = DifficultyRules::getNonLethalDeathExperienceLossPercentage(difficulty);
     int inventoryLossPercentage = DifficultyRules::getNonLethalDeathInventoryLossPercentage(difficulty);
 
-    int lostGold = player.getInventory().getGold() * goldLossPercentage / 100;
+    int lostEconomyUnits = static_cast<int>(player.getInventory().getEconomyUnits() * economyLossPercentage / 100);
     int lostExperience = player.getExperience() * experienceLossPercentage / 100;
 
-    if (lostGold > 0 && player.getInventory().spendGold(lostGold))
+    if (lostEconomyUnits > 0 && player.getInventory().spendEconomyUnits(lostEconomyUnits))
     {
-        result.addLostGold(lostGold);
+        result.addLostEconomyUnits(lostEconomyUnits);
     }
 
     if (lostExperience > 0)
@@ -229,7 +230,7 @@ void DeathPenaltySystem::displayNonLethalDeathPenalty(
     MenuScreen screen("CONSÉQUENCES DE LA MORT", "death.non_lethal.penalty");
     screen.addLine("Ton personnage survit, mais la mort ne repart jamais les mains vides.");
     screen.addLine("");
-    screen.addLine("Or perdu : " + std::to_string(result.getLostGold()) + " pièces");
+    screen.addLine("Argent perdu : " + Money::formatEconomyUnits(result.getLostEconomyUnits()));
     screen.addLine("Expérience perdue : " + std::to_string(result.getLostExperience()));
     screen.addLine("Consommables perdus : " + std::to_string(result.getLostConsumables()));
     screen.addLine("Durabilité perdue sur l'arme équipée : " + std::to_string(result.getWeaponDurabilityLost()));

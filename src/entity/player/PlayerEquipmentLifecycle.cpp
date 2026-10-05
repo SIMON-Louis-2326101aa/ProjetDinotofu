@@ -339,11 +339,17 @@ void Player::initializeStarterInventory(DifficultyMode difficulty)
         recordStarterKitEntry("Potions de rage de départ x" + std::to_string(starterDamagePotions));
     }
 
-    int starterGold = DifficultyRules::getStarterGold(difficulty);
-    inventory.earnGold(starterGold);
-    if (starterGold > 0)
+    const CoinBreakdown starterCoins = DifficultyRules::getStarterCoinStacks(difficulty);
+    CoinBreakdown walletCoins = inventory.getCoinStacks();
+    walletCoins.iron += starterCoins.iron;
+    walletCoins.copper += starterCoins.copper;
+    inventory.setCoinStacks(walletCoins);
+    if (starterCoins.iron > 0 || starterCoins.copper > 0)
     {
-        recordStarterKitEntry("Or de départ : " + std::to_string(starterGold));
+        recordStarterKitEntry(
+            "Argent de départ : " + Money::formatCoinStacks(starterCoins, false)
+            + " (" + Money::formatWalletTotalFromCopper(DifficultyRules::getStarterCopper(difficulty)) + ")"
+        );
     }
 }
 

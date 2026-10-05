@@ -489,6 +489,13 @@ namespace
 
     int balancedQuestGold(const Quest& quest)
     {
+        if (Money::coinStacksValueInCopper(quest.rewardCoins) > 0)
+        {
+            // An explicitly authored physical payout is contractual: do not rebalance or
+            // silently replace its denominations with the legacy PF reward field.
+            return 0;
+        }
+
         if (quest.rewardGold <= 0)
         {
             return 0;
@@ -540,11 +547,16 @@ namespace
     std::string questRewardText(const Quest& quest)
     {
         std::string text = "XP +" + std::to_string(balancedQuestExperience(quest));
+        const long long exactCoinCopper = Money::coinStacksValueInCopper(quest.rewardCoins);
         const int displayedGold = balancedQuestGold(quest);
 
-        if (displayedGold > 0)
+        if (exactCoinCopper > 0)
         {
-            text += " | Argent +" + Money::formatGoldWithRaw(displayedGold);
+            text += " | Pièces exactes +" + Money::formatCoinStacks(quest.rewardCoins, false);
+        }
+        else if (displayedGold > 0)
+        {
+            text += " | Argent +" + Money::formatEconomyUnits(displayedGold);
         }
 
         if (!quest.rewardMaterialId.empty() && quest.rewardMaterialQuantity > 0)
@@ -557,7 +569,7 @@ namespace
             text += " | " + quest.rewardNote;
         }
 
-        if (balancedQuestGold(quest) <= 0 && quest.rewardMaterialId.empty() && quest.rewardNote.empty())
+        if (exactCoinCopper <= 0 && displayedGold <= 0 && quest.rewardMaterialId.empty() && quest.rewardNote.empty())
         {
             text += " | Pas de prime en pièces";
         }
@@ -1768,7 +1780,7 @@ namespace
             if (quest.rewardGold < oldReward)
             {
                 lines.push_back("Conséquence : le contact réduit un peu la prime probable pour le temps perdu.");
-                lines.push_back("Prime ajustée : " + Money::formatGoldWithRaw(oldReward) + " -> " + Money::formatGoldWithRaw(quest.rewardGold) + ".");
+                lines.push_back("Prime ajustée : " + Money::formatEconomyUnits(oldReward) + " -> " + Money::formatEconomyUnits(quest.rewardGold) + ".");
             }
             else
             {
@@ -1777,10 +1789,11 @@ namespace
         }
         else
         {
-            lines.push_back("Conséquence douce : pas de perte d'or ni d'objet, mais le contact demandera une réponse plus propre au prochain essai.");
+            lines.push_back("Conséquence douce : pas de perte d'argent ni d'objet, mais le contact demandera une réponse plus propre au prochain essai.");
         }
 
         const int expired = player.getQuestLog().expireOverdueQuests(player.getWorldDaysElapsed());
+        QuestDeadlineSupport::synchronizeQuestConsequences(player);
         if (expired > 0)
         {
             lines.push_back(std::to_string(expired) + " quête" + (expired > 1 ? "s" : "")
@@ -2203,10 +2216,15 @@ namespace
         lines.push_back("Quête validée : " + quest.title);
         lines.push_back("XP gagnée : " + std::to_string(balancedQuestExperience(quest)));
 
+        const long long exactCoinCopper = Money::coinStacksValueInCopper(quest.rewardCoins);
         const int displayedGold = balancedQuestGold(quest);
-        if (displayedGold > 0)
+        if (exactCoinCopper > 0)
         {
-            lines.push_back("Argent gagné : " + Money::formatGoldWithRaw(displayedGold));
+            lines.push_back("Pièces reçues exactement comme annoncées : " + Money::formatCoinStacks(quest.rewardCoins, false));
+        }
+        else if (displayedGold > 0)
+        {
+            lines.push_back("Argent gagné : " + Money::formatEconomyUnits(displayedGold));
         }
         else
         {
@@ -3756,8 +3774,7 @@ void QuestMenu::openGuildRegistration(Player& player)
                 "Résultat : " + std::to_string(correctAnswers) + "/" + std::to_string(questions.size()) + ".",
                 "Titre obtenu : Aventurier.",
                 "Objets reçus : Carte magique de guilde, Inscription de rang F, Pastille verte de fiabilité.",
-                "Tu peux maintenant accéder au panneau de quêtes officiel et accepter les demandes de vendeurs liées à la guilde.",
-                "Note d'économie : " + Money::coinScaleText()
+                "Tu peux maintenant accéder au panneau de quêtes officiel et accepter les demandes de vendeurs liées à la guilde."
             },
             false
         );
@@ -3774,6 +3791,179 @@ void QuestMenu::openGuildRegistration(Player& player)
             },
             false
         );
+    }
+}
+
+static void openGuildCurrencyExchange(Player& player)
+{
+    auto coinLabel = [](CoinType type) {
+        return Money::coinName(type) + " (" + Money::coinAbbreviation(type) + ")";
+    };
+    const std::vector<CoinType> allTypes = {
+        CoinType::Copper,
+        CoinType::Iron,
+        CoinType::Electrum,
+        CoinType::Gold,
+        CoinType::Platinum
+    };
+
+    auto conversionTerms = [](CoinType source, CoinType target) {
+        const long long sourceValue = Money::coinValueInCopper(source);
+        const long long targetValue = Money::coinValueInCopper(target);
+        const long long sourcePerLot = sourceValue < targetValue ? targetValue / sourceValue : 1;
+        const long long targetPerLot = sourceValue > targetValue ? sourceValue / targetValue : 1;
+        return std::pair<long long, long long>{sourcePerLot, targetPerLot};
+    };
+
+    while (true)
+    {
+        MenuScreen screen("BUREAU DE CHANGE DE LA GUILDE", "quest.guild.currency_exchange");
+        screen.addSubtitle("Organiser volontairement les cinq piles physiques de ta bourse");
+        screen.addLine("Bourse actuelle : " + player.getInventory().getWalletLine() + ".");
+        screen.addLine("Valeur totale exacte : " + player.getInventory().getWalletTotalLine() + ".");
+        screen.addLine(Money::coinScaleText() + ".");
+        screen.addLine("Le change ne crée ni ne détruit d'argent. Il modifie seulement les pièces physiques que tu portes.");
+        screen.addLine("La forme de la bourse peut aussi changer l'impression sociale qu'elle donne : beaucoup de cuivre et une pièce d'or ne racontent pas la même chose.");
+        screen.addBackOption("Retour à la guilde", "quest.guild.currency_exchange.back");
+        screen.addOption(1, "Conversion personnalisée", "Choisir la pièce de départ, la pièce d'arrivée, puis le nombre de conversions.", true, "quest.guild.currency_exchange.custom");
+        screen.addOption(2, "Tout vers les pièces les plus élevées", "Créer une bourse compacte : PP d'abord, puis PO, PE, PF et le reste exact en PC.", player.getInventory().getTotalCopper() > 0, "quest.guild.currency_exchange.compact");
+        screen.addOption(3, "Tout vers la pièce la plus faible", "Transformer toute la valeur en PC physiques. Très précis, très encombrant, et socialement assez modeste.", player.getInventory().getTotalCopper() > 0, "quest.guild.currency_exchange.copper_all");
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une opération de change.");
+        Console::clear();
+        if (choice == 0) return;
+
+        if (choice == 2 || choice == 3)
+        {
+            const long long before = player.getInventory().getTotalCopper();
+            const std::string oldWallet = player.getInventory().getWalletLine();
+            const bool success = choice == 2
+                ? player.getInventory().compactCoinsToHighest()
+                : player.getInventory().flattenCoinsToCopper();
+            if (success)
+            {
+                player.refreshCurrencyTitles();
+            }
+            const long long after = player.getInventory().getTotalCopper();
+
+            MessageScreen::show(
+                success && before == after ? "CHANGE EFFECTUÉ" : "ERREUR DE CHANGE",
+                choice == 2 ? "quest.guild.currency_exchange.compact.done" : "quest.guild.currency_exchange.copper_all.done",
+                {
+                    choice == 2
+                        ? "La guilde regroupe chaque tranche possible vers la pièce la plus élevée sans perdre le moindre PC."
+                        : "La guilde casse toute la bourse jusqu'au cuivre : chaque PC devient une pièce physique.",
+                    "Avant : " + oldWallet + ".",
+                    "Après : " + player.getInventory().getWalletLine() + ".",
+                    "Valeur exacte : " + player.getInventory().getWalletTotalLine() + ".",
+                    "Valeur conservée : " + std::string(before == after ? "oui" : "ERREUR") + "."
+                },
+                false
+            );
+            Console::clear();
+            continue;
+        }
+
+        if (choice != 1)
+        {
+            continue;
+        }
+
+        MenuScreen sourceScreen("CONVERSION PERSONNALISÉE — SOURCE", "quest.guild.currency_exchange.custom.source");
+        sourceScreen.addLine("Choisis la pile physique que tu veux donner au guichet.");
+        sourceScreen.addBackOption("Retour", "quest.guild.currency_exchange.custom.source.back");
+        for (std::size_t i = 0; i < allTypes.size(); ++i)
+        {
+            const CoinType type = allTypes[i];
+            const long long count = player.getInventory().getCoinCount(type);
+            sourceScreen.addOption(
+                static_cast<int>(i + 1),
+                coinLabel(type),
+                "En bourse : " + std::to_string(count) + " " + Money::coinAbbreviation(type) + ".",
+                count > 0,
+                "quest.guild.currency_exchange.custom.source." + Money::coinAbbreviation(type)
+            );
+        }
+
+        const int sourceChoice = TerminalInterface::askMenuChoiceFromOptions(sourceScreen, "Choisis une pile présente dans ta bourse.");
+        Console::clear();
+        if (sourceChoice <= 0 || static_cast<std::size_t>(sourceChoice) > allTypes.size()) continue;
+        const CoinType sourceType = allTypes[static_cast<std::size_t>(sourceChoice - 1)];
+        const long long sourceCount = player.getInventory().getCoinCount(sourceType);
+
+        MenuScreen targetScreen("CONVERSION PERSONNALISÉE — DESTINATION", "quest.guild.currency_exchange.custom.target");
+        targetScreen.addLine("Source : " + coinLabel(sourceType) + " | disponible : " + std::to_string(sourceCount) + " " + Money::coinAbbreviation(sourceType) + ".");
+        targetScreen.addLine("Choisis maintenant la pièce physique que tu veux recevoir.");
+        targetScreen.addBackOption("Retour", "quest.guild.currency_exchange.custom.target.back");
+
+        int targetOption = 1;
+        std::vector<CoinType> targetTypes;
+        for (CoinType targetType : allTypes)
+        {
+            if (targetType == sourceType)
+            {
+                continue;
+            }
+
+            const auto [sourcePerLot, targetPerLot] = conversionTerms(sourceType, targetType);
+            const long long maxLots = sourcePerLot > 0 ? sourceCount / sourcePerLot : 0;
+            targetTypes.push_back(targetType);
+            targetScreen.addOption(
+                targetOption++,
+                coinLabel(sourceType) + " -> " + coinLabel(targetType),
+                "1 conversion : " + std::to_string(sourcePerLot) + " " + Money::coinAbbreviation(sourceType)
+                    + " -> " + std::to_string(targetPerLot) + " " + Money::coinAbbreviation(targetType)
+                    + " | maximum possible : " + std::to_string(maxLots) + ".",
+                maxLots > 0,
+                "quest.guild.currency_exchange.custom.target." + Money::coinAbbreviation(targetType)
+            );
+        }
+
+        const int targetChoice = TerminalInterface::askMenuChoiceFromOptions(targetScreen, "Choisis une destination possible.");
+        Console::clear();
+        if (targetChoice <= 0 || static_cast<std::size_t>(targetChoice) > targetTypes.size()) continue;
+        const CoinType targetType = targetTypes[static_cast<std::size_t>(targetChoice - 1)];
+        const auto [sourcePerLot, targetPerLot] = conversionTerms(sourceType, targetType);
+        const long long maxLots = sourceCount / sourcePerLot;
+        const int maxQuantity = static_cast<int>(std::min(maxLots, 1000000LL));
+        if (maxQuantity <= 0) continue;
+
+        const int lotCount = MessageScreen::askQuantity(
+            "NOMBRE DE CONVERSIONS",
+            "quest.guild.currency_exchange.custom.quantity",
+            {
+                "Conversion choisie : " + std::to_string(sourcePerLot) + " " + Money::coinAbbreviation(sourceType)
+                    + " -> " + std::to_string(targetPerLot) + " " + Money::coinAbbreviation(targetType) + ".",
+                "Pièces source disponibles : " + std::to_string(sourceCount) + " " + Money::coinAbbreviation(sourceType) + ".",
+                "Maximum possible : " + std::to_string(maxLots) + " conversion(s).",
+                "Pour le maximum, le guichet utiliserait " + std::to_string(sourcePerLot * maxLots) + " " + Money::coinAbbreviation(sourceType)
+                    + " et remettrait " + std::to_string(targetPerLot * maxLots) + " " + Money::coinAbbreviation(targetType) + "."
+            },
+            1,
+            maxQuantity,
+            "Le nombre doit rester entre 1 et le maximum convertible affiché."
+        );
+        Console::clear();
+
+        const long long before = player.getInventory().getTotalCopper();
+        if (player.getInventory().convertCoinLots(sourceType, targetType, lotCount))
+        {
+            player.refreshCurrencyTitles();
+            const long long after = player.getInventory().getTotalCopper();
+            MessageScreen::show(
+                "CHANGE EFFECTUÉ",
+                "quest.guild.currency_exchange.custom.done",
+                {
+                    std::to_string(sourcePerLot * static_cast<long long>(lotCount)) + " " + Money::coinAbbreviation(sourceType)
+                        + " échangé(s) contre " + std::to_string(targetPerLot * static_cast<long long>(lotCount)) + " " + Money::coinAbbreviation(targetType) + ".",
+                    "Bourse : " + player.getInventory().getWalletLine() + ".",
+                    "Valeur exacte : " + player.getInventory().getWalletTotalLine() + ".",
+                    "Valeur conservée : " + std::string(before == after ? "oui" : "ERREUR") + "."
+                },
+                false
+            );
+            Console::clear();
+        }
     }
 }
 
@@ -3806,7 +3996,6 @@ void QuestMenu::openGuild(Player& player)
                 screen.addLine(line);
             }
         }
-        screen.addLine("Économie locale : " + Money::coinScaleText());
         screen.addLine("Contrats officiels et défis utilisent deux limites séparées.");
         screen.addLine("Défis actifs : " + std::to_string(player.getQuestLog().getActiveGuildChallengeCount()) + "/3.");
         screen.addLine("Contrats de guilde : " + clientQuestStatusText(guildCounts));
@@ -3920,6 +4109,11 @@ void QuestMenu::openGuild(Player& player)
             guildOpen && isAdventurer,
             "quest.guild.challenges"
         );
+        screen.addOption(7, "Bureau de change",
+            !guildOpen ? guildClosedReason : "Répartir librement les mêmes fonds entre PC, PF, PE, PO et PP, sans frais.",
+            guildOpen,
+            "quest.guild.currency_exchange"
+        );
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
@@ -3964,6 +4158,10 @@ void QuestMenu::openGuild(Player& player)
         {
             openGuildChallenges(player);
         }
+        else if (choice == 7)
+        {
+            openGuildCurrencyExchange(player);
+        }
     }
 }
 
@@ -3995,7 +4193,7 @@ void QuestMenu::openGuildChallenges(Player& player)
         screen.addLine("Un défi accepté reste valable aujourd'hui et le jour suivant, puis disparaît s'il n'est pas réussi.");
         screen.addLine("Les défis expirés peuvent revenir plus tard dans un nouveau tirage.");
         screen.addLine("Défis actifs : " + std::to_string(questLog.getActiveGuildChallengeCount()) + "/3.");
-        screen.addLine("Récompense spéciale : Marques de défi, avec un peu d'expérience et d'or seulement.");
+        screen.addLine("Récompense spéciale : Marques de défi, avec un peu d'expérience et d'argent seulement.");
         if (player.hasTitle("Porte-marque de la guilde"))
         {
             screen.addLine("Le maître de guilde reconnaît ton titre de porte-marque et te laisse consulter le comptoir sans commentaire supplémentaire.");
@@ -4463,6 +4661,10 @@ void QuestMenu::acceptGuildQuest(Player& player)
     QuestLog& questLog = player.getQuestLog();
     const GuildStanding standingForBoard = guildStandingForPlayer(player);
     questLog.ensureGuildBoardReady(player.getLevel(), player.getWorldDaysElapsed(), guildBoardOfferBonusForStanding(standingForBoard));
+    if (const City* currentGuildCity = City::findById(player.getCurrentCityId()))
+    {
+        questLog.prioritizeGuildBoardForCity(*currentGuildCity);
+    }
 
     const std::vector<Quest>& board = questLog.getGuildBoardOffers();
     constexpr std::size_t itemsPerPage = 6;
@@ -5329,10 +5531,20 @@ void QuestMenu::talkToClient(Player& player, const std::string& clientName)
         }
         else
         {
+            player.rememberNpcFact(
+                clientName,
+                "quest_declined",
+                offeredQuest.id,
+                "Demande déclinée : " + offeredQuest.title,
+                "interaction_directe",
+                player.getName(),
+                100,
+                3
+            );
             MessageScreen::show(
                 "DEMANDE REFUSÉE",
                 "quest.client.offer.declined",
-                {"Tu refuses la demande pour l'instant."}
+                {"Tu refuses la demande pour l'instant.", "Le contact retiendra surtout que tu n'as pas pris l'engagement, pas que tu l'as rompu."}
             );
         }
     }
@@ -6080,8 +6292,18 @@ void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientN
         );
         player.recordPnjServed(quest.client.empty() ? std::string("Contact inconnu") : quest.client);
         player.recordQuestTypeCompleted(questKindText(quest));
+        player.recordCanonicalEvent("quetes_reussies", quest.id, quest.title);
         player.gainExperience(balancedQuestExperience(quest));
-        player.getInventory().earnGold(balancedQuestGold(quest));
+        if (Money::coinStacksValueInCopper(quest.rewardCoins) > 0)
+        {
+            player.getInventory().earnCoinStacks(quest.rewardCoins);
+            player.refreshCurrencyTitles();
+        }
+        else
+        {
+            player.getInventory().earnEconomyUnits(balancedQuestGold(quest));
+            player.refreshCurrencyTitles();
+        }
         applyQuestExtraReward(player, quest);
         if (quest.guildQuest && !quest.guildChallenge)
         {
@@ -6095,7 +6317,7 @@ void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientN
 
         appendQuestRewardResultLines(resultLines, quest);
         resultLines.push_back("Argent avant : " + Money::formatCurrencyOverviewFromCopper(copperBefore));
-        resultLines.push_back("Argent actuel : " + Money::formatCurrencyOverviewFromCopper(player.getInventory().getTotalCopper()));
+        resultLines.push_back("Argent actuel : " + player.getInventory().getWalletLine());
         resultLines.push_back("XP : " + std::to_string(experienceBefore) + " -> " + std::to_string(player.getExperience()));
         if (player.getLevel() != levelBefore)
         {

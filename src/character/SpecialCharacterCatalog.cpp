@@ -89,7 +89,7 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             "Aoi",
             CharacterRace::Kitsune,
             "Mage flame",
-            "Future mage flame, invocatrice kitsune avec katana.",
+            "Mage des flammes et invocatrice kitsune maniant un katana.",
             "Aoi mélange flammes, invocations, agilité kitsune et une lame qu'il vaut mieux ne pas ignorer.",
             true,
             false,
@@ -194,6 +194,45 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             false,
             "29/11/2024",
             4
+        ),
+        SpecialCharacter(
+            "Willow",
+            CharacterRace::Human,
+            "Archer",
+            "Archère humaine solitaire, tir précis, mobilité et préférence nette pour la distance.",
+            "Willow a 20 ans. Elle parle à peu de gens, voyage souvent seule et râle facilement, surtout quand quelqu'un transforme un plan simple en discussion interminable.",
+            true,
+            false,
+            "15/12/2025",
+            4,
+            20,
+            "Femme"
+        ),
+        SpecialCharacter(
+            "Dwarf",
+            CharacterRace::Dwarf,
+            "Guerrier",
+            "Guerrier nain frontal, solide, bruyant et très à l'aise au contact.",
+            "Dwarf a 24 ans. Gros blagueur, il provoque beaucoup et son humour peut devenir lourd, sexiste ou raciste ; cela fait partie de ses défauts de personnage et les autres peuvent parfaitement le reprendre ou mal le vivre.",
+            true,
+            false,
+            "15/12/2025",
+            4,
+            24,
+            "Homme"
+        ),
+        SpecialCharacter(
+            "Badr",
+            CharacterRace::SemiHuman,
+            "Clerc",
+            "Clerc semi-humain au corps de mort-vivant, protecteur et inquiétant malgré une intention souvent bienveillante.",
+            "Badr a 48 ans. Croyant et plutôt sympathique le jour, il devient extrêmement dépressif et beaucoup plus lucide la nuit. Son apparence effraie facilement. Un ver nommé Second vit dans son corps et peut sortir par sa main ; sa compétence spéciale « En avant Second » sera développée plus tard.",
+            true,
+            false,
+            "15/12/2025",
+            4,
+            48,
+            "Homme"
         )
     };
 }
@@ -272,6 +311,14 @@ std::vector<std::string> SpecialCharacterCatalog::getSpecialCharactersRoadmapLin
             + " | Race : " + character.getRaceText()
             + " | Classe naturelle : " + specialNativeClassLabel(character)
         );
+        if (character.hasKnownAge() || character.hasKnownGender())
+        {
+            std::string profile = "  Profil : ";
+            if (character.hasKnownAge()) profile += std::to_string(character.getAge()) + " ans";
+            if (character.hasKnownAge() && character.hasKnownGender()) profile += " | ";
+            if (character.hasKnownGender()) profile += character.getGender();
+            lines.push_back(profile);
+        }
         lines.push_back("  Style : " + character.getCombatStyle());
 
         if (character.isPermanentlyNonPlayable())
