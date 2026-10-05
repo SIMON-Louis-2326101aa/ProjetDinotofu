@@ -53,6 +53,10 @@ CXX_STD_FLAG ?= $(shell bash ./scripts/detect_cpp23_flag.sh "$(CXX)")
 CXXFLAGS    := $(CXX_STD_FLAG) $(OPT_LEVEL) -march=$(TARGET_ARCH) -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
 LDFLAGS     ?=
 
+# Qt6
+QT_CXXFLAGS := $(shell pkg-config --cflags Qt6Widgets)
+QT_LIBS     := $(shell pkg-config --libs Qt6Widgets)
+
 SRC_DIR  := src
 OBJ_DIR  := build
 BIN_DIR  := output
@@ -67,8 +71,22 @@ TARGET   := $(BIN_DIR)/$(APP_NAME)
 # =========================================================
 
 SRCS := $(shell find $(SRC_DIR) -type f -name "*.cpp")
-OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
+
+# Sources du jeu terminal
+GAME_SRCS := $(filter-out $(SRC_DIR)/gui_main.cpp,$(SRCS))
+OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(GAME_SRCS))
 DEPS := $(OBJS:.o=.d)
+
+# Sources de l'interface Qt
+GAME_OBJS_NO_MAIN := $(filter-out $(OBJ_DIR)/main.o,$(OBJS))
+GUI_EXTRA_SRCS := $(SRC_DIR)/gui_main.cpp \
+                  $(SRC_DIR)/interface/qt/MainWindow.cpp
+
+GUI_EXTRA_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(GUI_EXTRA_SRCS))
+GUI_OBJS := $(GAME_OBJS_NO_MAIN) $(GUI_EXTRA_OBJS)
+GUI_DEPS := $(GUI_EXTRA_OBJS:.o=.d)
+
+GUI_TARGET := $(BIN_DIR)/DinotofuGUI
 
 
 # =========================================================
@@ -91,6 +109,26 @@ $(TARGET): $(OBJS)
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/interface/qt/%.o: $(SRC_DIR)/interface/qt/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(QT_CXXFLAGS) -c $< -o $@
+
+$(OBJ_DIR)/gui_main.o: $(SRC_DIR)/gui_main.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(QT_CXXFLAGS) -c $< -o $@
+
+$(GUI_TARGET): $(GUI_OBJS)
+	@mkdir -p $(BIN_DIR)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(QT_LIBS)
+	@chmod u+x $@
+
+gui: $(GUI_TARGET)
+	@echo ""
+	@echo "Interface Qt compilée avec succès."
+	@echo "Exécutable : $(GUI_TARGET)"
+	@echo "Pour lancer : ./$(GUI_TARGET)"
+	@echo ""	
 
 -include $(DEPS)
 
@@ -254,4 +292,4 @@ gui-preview: all
 	@chmod +x ./tools/gui/run_gui_debug.sh
 	@./tools/gui/run_gui_debug.sh
 
-.PHONY: all test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check gui-preview
+.PHONY: all test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check gui-preview gui
