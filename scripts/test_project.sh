@@ -8,8 +8,102 @@ fail() { echo "[FAIL] $1" >&2; exit 1; }
 pass() { echo "[OK] $1"; }
 
 TEST_CXX="${CXX:-g++}"
-CXX_STD_FLAG="$(bash ./scripts/detect_cpp23_flag.sh "$TEST_CXX")"
+read -r -a TEST_CXX_CMD <<< "$TEST_CXX"
+CXX_STD_FLAG="$(bash ./scripts/detect_cpp23_flag.sh "${TEST_CXX_CMD[@]}")"
 pass "toolchain C++23 detectee : ${TEST_CXX} ${CXX_STD_FLAG}"
+
+TEST_LDFLAGS=()
+if [[ -n "${LDFLAGS:-}" ]]; then
+    read -r -a TEST_LDFLAGS <<< "${LDFLAGS}"
+elif command -v mold >/dev/null 2>&1; then
+    TEST_LDFLAGS=("-fuse-ld=mold")
+elif command -v lld >/dev/null 2>&1; then
+    TEST_LDFLAGS=("-fuse-ld=lld")
+fi
+
+if [[ -f build/libdinotofu.a ]]; then
+    PROJECT_OBJECTS="build/libdinotofu.a"
+    PROJECT_OBJECTS_LIVING="build/libdinotofu.a"
+else
+    PROJECT_OBJECTS="$(find build -name '*.o' ! -path 'build/main.o' -print)"
+    PROJECT_OBJECTS_LIVING="$PROJECT_OBJECTS"
+fi
+
+PARALLEL_DIR="$(mktemp -d /tmp/dinotofu_tests.XXXXXX)"
+cleanup() {
+    rm -rf "$PARALLEL_DIR"
+}
+trap cleanup EXIT
+
+declare -A TEST_PIDS
+run_bg_test() {
+    local test_id="$1"
+    local src="$2"
+    shift 2
+    local extra_link=("$@")
+    local bin="$PARALLEL_DIR/${test_id}.bin"
+    local log="$PARALLEL_DIR/${test_id}.log"
+    local run_dir="$PARALLEL_DIR/run_${test_id}"
+    mkdir -p "$run_dir"
+
+    (
+        if ! "${TEST_CXX_CMD[@]}" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude "$src" "${extra_link[@]}" "${TEST_LDFLAGS[@]}" -o "$bin" >"$log" 2>&1; then
+            echo "COMPILE_ERROR" > "$PARALLEL_DIR/${test_id}.status"
+            exit 1
+        fi
+        if ! ( cd "$run_dir" && "$bin" >"$log" 2>&1 ); then
+            echo "RUN_ERROR" > "$PARALLEL_DIR/${test_id}.status"
+            exit 1
+        fi
+        echo "OK" > "$PARALLEL_DIR/${test_id}.status"
+        exit 0
+    ) &
+    TEST_PIDS["$test_id"]=$!
+}
+
+wait_bg_test() {
+    local test_id="$1"
+    local fail_msg="$2"
+    local pid="${TEST_PIDS[$test_id]:-}"
+    if [[ -n "$pid" ]]; then
+        wait "$pid" || true
+    fi
+    local status="FAIL"
+    if [[ -f "$PARALLEL_DIR/${test_id}.status" ]]; then
+        status="$(cat "$PARALLEL_DIR/${test_id}.status")"
+    fi
+    if [[ "$status" != "OK" ]]; then
+        echo "[FAIL] $fail_msg" >&2
+        if [[ -f "$PARALLEL_DIR/${test_id}.log" ]]; then
+            cat "$PARALLEL_DIR/${test_id}.log" >&2
+        fi
+        exit 1
+    fi
+}
+
+# Lancement immédiat des 22 tests unitaires C++ en tâche de fond
+run_bg_test "rival" "tests/RivalEmergenceSystemTest.cpp" "src/combat/rival/RivalEmergenceSystem.cpp"
+run_bg_test "lang" "tests/LanguageSystemTest.cpp" "src/progression/language/LanguageSystem.cpp" -ffunction-sections -fdata-sections -Wl,--gc-sections
+run_bg_test "quest_lang" "tests/QuestLanguageSystemTest.cpp" "src/quest/language/QuestLanguageSystem.cpp" -ffunction-sections -fdata-sections -Wl,--gc-sections
+run_bg_test "living" "tests/LivingWorldContentTest.cpp" "$PROJECT_OBJECTS_LIVING"
+run_bg_test "biome" "tests/BiomeNonCombatInteractionSystemTest.cpp" "src/adventure/content/BiomeNonCombatInteractionSystem.cpp"
+run_bg_test "npc_rel" "tests/NpcRelationshipSystemTest.cpp" "src/world/npc/NpcRelationshipSystem.cpp"
+run_bg_test "npc_prop" "tests/NpcInformationPropagationSystemTest.cpp" "$PROJECT_OBJECTS_LIVING"
+run_bg_test "npc_intercity" "tests/NpcIntercityInformationSystemTest.cpp" "$PROJECT_OBJECTS_LIVING"
+run_bg_test "save" "tests/SaveRoundTripTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "economy" "tests/EconomyScaleTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "econ_mig" "tests/EconomySaveMigrationTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "checkpoint" "tests/ImportantSaveCheckpointTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "legacy" "tests/LegacySaveMigrationTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "story" "tests/StoryPrologueMemoryTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "special_char" "tests/SpecialCharacterExpansionTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "duo" "tests/DuoMasterySystemTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "group" "tests/EnemyGroupBehaviorTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "monster_prep" "tests/MonsterPreparedActionSystemTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "monster_content" "tests/MonsterContentExpansionTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "monster_elite" "tests/MonsterAmbientEliteDensityTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "monster_flavor" "tests/MonsterFlavorLifecycleTest.cpp" "$PROJECT_OBJECTS"
+run_bg_test "reputation_repair" "tests/LocalReputationRepairSystemTest.cpp" "$PROJECT_OBJECTS"
 
 VERSION="$(bash ./scripts/get_version.sh)"
 [[ -n "$VERSION" ]] || fail "version introuvable"
@@ -58,12 +152,7 @@ grep -q 'struct PlayerRivalRecord' include/entity/player/PlayerHistoryTypes.hpp 
 grep -q 'recordRivalReturn' src/entity/player/PlayerHistory.cpp || fail "retours de rivaux absents"
 [[ -f include/combat/rival/RivalEmergenceSystem.hpp && -f src/combat/rival/RivalEmergenceSystem.cpp ]] || fail "sélection des rivaux absente"
 grep -q "Aucun rival n'est créé" src/combat/turn/wave/MonsterWaveCombatTurn.cpp || fail "fuite ordinaire non distinguée d'un rival"
-RIVAL_TEST_BIN="$(mktemp /tmp/dinotofu_rival_test.XXXXXX)"
-trap 'rm -f "$RIVAL_TEST_BIN"' EXIT
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/RivalEmergenceSystemTest.cpp src/combat/rival/RivalEmergenceSystem.cpp -o "$RIVAL_TEST_BIN"
-"$RIVAL_TEST_BIN" >/dev/null || fail "logique de sélection des rivaux invalide"
-rm -f "$RIVAL_TEST_BIN"
-trap - EXIT
+wait_bg_test "rival" "logique de sélection des rivaux invalide"
 pass "mémoire persistante, fuites ordinaires et rivaux testés"
 
 [[ -f include/progression/language/LanguageSystem.hpp && -f src/progression/language/LanguageSystem.cpp ]] || fail "système de langues absent"
@@ -74,14 +163,8 @@ SAVE_SCHEMA_VERSION="$(sed -n 's/.*inline constexpr int Current = \([0-9][0-9]*\
 grep -q 'SaveSchemaVersion::Current' src/save/SaveManager.cpp || fail "SaveManager n'utilise pas le schéma de sauvegarde centralisé"
 grep -q 'language_goblin_primer' src/economy/shop/LibraryInformationCatalog.cpp || fail "cours de bibliothèque absents"
 grep -q 'QuestLanguageSystem::canRead' src/interface/menu/quest/QuestMenu.cpp || fail "contrats étrangers non reliés au journal"
-LANG_TEST_BIN="$(mktemp /tmp/dinotofu_language_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -ffunction-sections -fdata-sections -Iinclude tests/LanguageSystemTest.cpp src/progression/language/LanguageSystem.cpp -Wl,--gc-sections -o "$LANG_TEST_BIN"
-"$LANG_TEST_BIN" >/dev/null || fail "catalogue de langues invalide"
-rm -f "$LANG_TEST_BIN"
-QUEST_LANG_TEST_BIN="$(mktemp /tmp/dinotofu_quest_language_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -ffunction-sections -fdata-sections -Iinclude tests/QuestLanguageSystemTest.cpp src/quest/language/QuestLanguageSystem.cpp -Wl,--gc-sections -o "$QUEST_LANG_TEST_BIN"
-"$QUEST_LANG_TEST_BIN" >/dev/null || fail "affectation des langues de quête invalide"
-rm -f "$QUEST_LANG_TEST_BIN"
+wait_bg_test "lang" "catalogue de langues invalide"
+wait_bg_test "quest_lang" "affectation des langues de quête invalide"
 pass "langues, bibliothèque, dialogues et contrats étrangers testés"
 
 [[ -f include/adventure/flavor/ExplorationLanguageTrace.hpp && -f src/adventure/flavor/ExplorationLanguageTrace.cpp ]] || fail "traces linguistiques d'exploration absentes"
@@ -104,56 +187,32 @@ grep -q 'weeping_garden_shift_confirmed' src/interface/menu/quest/QuestExplorati
 grep -q 'bouquet_devant_ange' src/adventure/content/BiomeNonCombatInteractionSystem.cpp || fail "interaction non-combat propre au Jardin absente"
 grep -q 'notableForLongTermHistory' src/interface/menu/quest/QuestExplorationMenu.cpp || fail "filtrage des interactions réellement mémorables absent"
 grep -q 'ExplorationLanguageTraceCatalog::renderForPlayer' src/interface/menu/quest/QuestExplorationMenu.cpp || fail "traces linguistiques non reliées à l'exploration"
-LIVING_WORLD_TEST_BIN="$(mktemp /tmp/dinotofu_living_world_test.XXXXXX)"
-PROJECT_OBJECTS_LIVING="$(find build -name '*.o' ! -path 'build/main.o' -print)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/LivingWorldContentTest.cpp $PROJECT_OBJECTS_LIVING -o "$LIVING_WORLD_TEST_BIN"
-"$LIVING_WORLD_TEST_BIN" >/dev/null || fail "contenu vivant/langues/PNJ invalide"
-rm -f "$LIVING_WORLD_TEST_BIN"
+wait_bg_test "living" "contenu vivant/langues/PNJ invalide"
 pass "traces multilingues d'exploration et profils PNJ vivants testés"
 
-BIOME_INTERACTION_TEST_BIN="$(mktemp /tmp/dinotofu_biome_interaction_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/BiomeNonCombatInteractionSystemTest.cpp src/adventure/content/BiomeNonCombatInteractionSystem.cpp -o "$BIOME_INTERACTION_TEST_BIN"
-"$BIOME_INTERACTION_TEST_BIN" >/dev/null || fail "interactions non-combat de biome invalides"
-rm -f "$BIOME_INTERACTION_TEST_BIN"
+wait_bg_test "biome" "interactions non-combat de biome invalides"
 grep -q 'BiomeNonCombatInteractionSystem::buildCurrentInteraction' src/interface/menu/quest/QuestExplorationMenu.cpp || fail "interactions non-combat non reliées à l'exploration"
 grep -q 'interactions_non_combat_biome' src/interface/menu/quest/QuestExplorationMenu.cpp || fail "anti-farm des interactions de biome absent"
 pass "interactions non-combat contextuelles de biome testées"
 
-NPC_RELATION_TEST_BIN="$(mktemp /tmp/dinotofu_npc_relationship_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/NpcRelationshipSystemTest.cpp src/world/npc/NpcRelationshipSystem.cpp -o "$NPC_RELATION_TEST_BIN"
-"$NPC_RELATION_TEST_BIN" >/dev/null || fail "relations nommées entre PNJ invalides"
-rm -f "$NPC_RELATION_TEST_BIN"
+wait_bg_test "npc_rel" "relations nommées entre PNJ invalides"
 grep -q 'NpcRelationshipSystem::relayModifier' src/world/npc/NpcInformationPropagationSystem.cpp || fail "relations PNJ non reliées à la propagation"
 pass "relations PNJ influençant la circulation des informations testées"
 
-NPC_PROPAGATION_TEST_BIN="$(mktemp /tmp/dinotofu_npc_propagation_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/NpcInformationPropagationSystemTest.cpp $PROJECT_OBJECTS_LIVING -o "$NPC_PROPAGATION_TEST_BIN"
-"$NPC_PROPAGATION_TEST_BIN" >/dev/null || fail "propagation locale des informations PNJ invalide"
-rm -f "$NPC_PROPAGATION_TEST_BIN"
+wait_bg_test "npc_prop" "propagation locale des informations PNJ invalide"
 grep -q 'rumeur_locale' src/world/npc/NpcInformationPropagationSystem.cpp || fail "chaîne de source locale absente"
 grep -q 'spontaneousIntroLines' src/interface/menu/quest/QuestMenu.cpp || fail "prises de parole spontanées PNJ non reliées"
 pass "circulation locale sourcée des informations PNJ testée"
 
-NPC_INTERCITY_TEST_BIN="$(mktemp /tmp/dinotofu_npc_intercity_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/NpcIntercityInformationSystemTest.cpp $PROJECT_OBJECTS_LIVING -o "$NPC_INTERCITY_TEST_BIN"
-"$NPC_INTERCITY_TEST_BIN" >/dev/null || fail "circulation inter-ville des informations PNJ invalide"
-rm -f "$NPC_INTERCITY_TEST_BIN"
+wait_bg_test "npc_intercity" "circulation inter-ville des informations PNJ invalide"
 grep -q 'intercityTravelDelayDays' src/world/npc/NpcInformationPropagationSystem.cpp || fail "délai inter-ville des rumeurs absent"
 grep -q 'messager_de_garde' src/world/npc/NpcInformationPropagationSystem.cpp || fail "canaux physiques inter-ville absents"
 pass "circulation inter-ville temporisée et sourcée des informations PNJ testée"
 
-SAVE_TEST_BIN="$(mktemp /tmp/dinotofu_save_roundtrip_test.XXXXXX)"
-PROJECT_OBJECTS="$(find build -name '*.o' ! -path 'build/main.o' -print)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/SaveRoundTripTest.cpp $PROJECT_OBJECTS -o "$SAVE_TEST_BIN"
-SAVE_TEST_DIR="$(mktemp -d /tmp/dinotofu_save_roundtrip_run.XXXXXX)"
-( cd "$SAVE_TEST_DIR" && "$SAVE_TEST_BIN" >/dev/null ) || fail "round-trip sauvegarde (niveau/argent/temps/langues) ou migration invalide"
-rm -rf "$SAVE_TEST_DIR" "$SAVE_TEST_BIN"
+wait_bg_test "save" "round-trip sauvegarde (niveau/argent/temps/langues) ou migration invalide"
 pass "round-trip sauvegarde niveau/argent/temps + migration sans languageState testés"
 
-ECONOMY_TEST_BIN="$(mktemp /tmp/dinotofu_economy_scale_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/EconomyScaleTest.cpp $PROJECT_OBJECTS -o "$ECONOMY_TEST_BIN"
-"$ECONOMY_TEST_BIN" >/dev/null || fail "échelle monétaire PF/PC invalide"
-rm -f "$ECONOMY_TEST_BIN"
+wait_bg_test "economy" "échelle monétaire PF/PC invalide"
 grep -q 'getStarterCoinStacks(difficulty)' src/entity/player/PlayerEquipmentLifecycle.cpp || fail "argent de départ hors bourse physique"
 grep -q 'currencyIronCoins' src/save/SaveManager.cpp || fail "piles physiques de monnaie non sauvegardées"
 grep -q 'getCoinStacks' src/item/Inventory.cpp || fail "portefeuille physique non exposé"
@@ -186,18 +245,10 @@ if grep -n -E 'std::to_string\([^)]*(Cost|cost|price|getValue\(\))[^;]*\+ " (PO|
 fi
 pass "échelle économique physique PC/PF/PE/PO/PP, départ, boutiques, combats et quêtes protégés"
 
-ECONOMY_MIGRATION_TEST_BIN="$(mktemp /tmp/dinotofu_economy_migration_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/EconomySaveMigrationTest.cpp $PROJECT_OBJECTS -o "$ECONOMY_MIGRATION_TEST_BIN"
-ECONOMY_MIGRATION_TEST_DIR="$(mktemp -d /tmp/dinotofu_economy_migration_run.XXXXXX)"
-( cd "$ECONOMY_MIGRATION_TEST_DIR" && "$ECONOMY_MIGRATION_TEST_BIN" >/dev/null ) || fail "migration monétaire schema 24 -> 25 invalide"
-rm -rf "$ECONOMY_MIGRATION_TEST_DIR" "$ECONOMY_MIGRATION_TEST_BIN"
+wait_bg_test "econ_mig" "migration monétaire schema 24 -> 25 invalide"
 pass "migration monétaire unique 24 -> 25 et conservation du reliquat PC testées"
 
-CHECKPOINT_TEST_BIN="$(mktemp /tmp/dinotofu_important_checkpoint_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/ImportantSaveCheckpointTest.cpp $PROJECT_OBJECTS -o "$CHECKPOINT_TEST_BIN"
-CHECKPOINT_TEST_DIR="$(mktemp -d /tmp/dinotofu_important_checkpoint_run.XXXXXX)"
-( cd "$CHECKPOINT_TEST_DIR" && "$CHECKPOINT_TEST_BIN" >/dev/null ) || fail "point de sauvegarde important V3.50.33 invalide"
-rm -rf "$CHECKPOINT_TEST_DIR" "$CHECKPOINT_TEST_BIN"
+wait_bg_test "checkpoint" "point de sauvegarde important V3.50.33 invalide"
 grep -q 'return "3.50.33";' src/core/VersionInfo.cpp || fail "jalon de sauvegarde important V3.50.33 absent"
 grep -Fq 'Important save checkpoint: **V3.50.33**' README.md || fail "README anglais désynchronisé du checkpoint important"
 grep -Fq 'Point de sauvegarde important : **V3.50.33**' READMEFR.md || fail "README français désynchronisé du checkpoint important"
@@ -205,11 +256,7 @@ grep -q 'POINT DE SAUVEGARDE IMPORTANT' src/save/menu/CharacterMenu.cpp || fail 
 grep -q 'createImportantUpdateBackup' src/save/menu/CharacterMenu.cpp || fail "backup pré-mise-à-jour non branché au chargement"
 pass "point de sauvegarde important, backup non écrasant et rituel de transition testés"
 
-LEGACY_MIGRATION_TEST_BIN="$(mktemp /tmp/dinotofu_legacy_migration_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/LegacySaveMigrationTest.cpp $PROJECT_OBJECTS -o "$LEGACY_MIGRATION_TEST_BIN"
-LEGACY_MIGRATION_TEST_DIR="$(mktemp -d /tmp/dinotofu_legacy_migration_run.XXXXXX)"
-( cd "$LEGACY_MIGRATION_TEST_DIR" && "$LEGACY_MIGRATION_TEST_BIN" >/dev/null ) || fail "migration forcée des anciennes sauvegardes invalide"
-rm -rf "$LEGACY_MIGRATION_TEST_DIR" "$LEGACY_MIGRATION_TEST_BIN"
+wait_bg_test "legacy" "migration forcée des anciennes sauvegardes invalide"
 grep -q 'if (!saved.known)' src/core/VersionInfo.cpp || fail "anciennes sauvegardes non versionnées non forcées vers le checkpoint"
 grep -q 'createdForVersion", summary.gameVersion' src/save/SaveManager.cpp || fail "fallback gameVersion des anciennes sauvegardes absent"
 pass "anciennes sauvegardes versionnées ou non forcées vers la migration V3.50.33"
@@ -271,10 +318,7 @@ grep -q "Cette bataille n'accorde ni expérience, ni butin, ni entrée de bestia
 if grep -n -E 'Scarlett|Lorenzo' src/story/StoryPrologueMemory.cpp src/core/GameStory.cpp | grep -v 'assert' | grep -q .; then
     fail "les vrais noms des compagnons fuitent dans le runtime du souvenir"
 fi
-STORY_PROLOGUE_TEST_BIN="$(mktemp /tmp/dinotofu_story_prologue_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/StoryPrologueMemoryTest.cpp $PROJECT_OBJECTS -o "$STORY_PROLOGUE_TEST_BIN"
-"$STORY_PROLOGUE_TEST_BIN" >/dev/null || fail "build temporaire, meute ou effacement des compagnons invalide"
-rm -f "$STORY_PROLOGUE_TEST_BIN"
+wait_bg_test "story" "build temporaire, meute ou effacement des compagnons invalide"
 pass "nouveau prologue pré-brume, build temporaire et noms effacés testés"
 
 if grep -R -n --include='*.cpp' --include='*.hpp' -E 'innCommonBedCost\(|innSafeRoomCost\(|innWarmMealCost\(|cityVaultMaterialTransferCost\(|routeRewardBudgetForDistance\(' src include | grep -q .; then
@@ -284,10 +328,7 @@ grep -q 'innCommonBedCostCopper' include/economy/EconomyBalance.hpp || fail "co�
 grep -q 'cityVaultMaterialTransferCostCopper' include/economy/EconomyBalance.hpp || fail "transport de coffre PC non explicite"
 pass "noms d API économie explicites au checkpoint V3.50.33"
 
-SPECIAL_CHARACTER_TEST_BIN="$(mktemp /tmp/dinotofu_special_character_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/SpecialCharacterExpansionTest.cpp $PROJECT_OBJECTS -o "$SPECIAL_CHARACTER_TEST_BIN"
-"$SPECIAL_CHARACTER_TEST_BIN" >/dev/null || fail "Willow/Dwarf/Badr ou leurs identités spéciales sont invalides"
-rm -f "$SPECIAL_CHARACTER_TEST_BIN"
+wait_bg_test "special_char" "Willow/Dwarf/Badr ou leurs identités spéciales sont invalides"
 grep -q 'names = {"Willow", "Dwarf", "Badr"}' src/combat/encounter/AdventurerGroupEncounter.cpp || fail "trio Willow/Dwarf/Badr absent des rencontres spéciales"
 grep -q 'En avant Second' src/character/SpecialCharacterCatalog.cpp || fail "Second absent du profil de Badr"
 grep -q 'combat.special.synergy.willow_dwarf' src/combat/action/SpecialCombatEffects.cpp || fail "synergie Willow/Dwarf absente"
@@ -309,10 +350,7 @@ grep -q 'DuoMasterySystem::experience' src/combat/modes/pve/MonsterPveMode.cpp |
 grep -q 'Relais vital' src/combat/ally/DuoMasterySystem.cpp || fail "combo soutien+soutien absent"
 grep -q 'Mur en mouvement' src/combat/ally/DuoMasterySystem.cpp || fail "combo tank+tank absent"
 grep -q 'coordination rompue' src/combat/modes/pve/MonsterPveMode.cpp || fail "échec logique des combos absent"
-DUO_TEST_BIN="$(mktemp /tmp/dinotofu_duo_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/DuoMasterySystemTest.cpp $PROJECT_OBJECTS -o "$DUO_TEST_BIN"
-"$DUO_TEST_BIN" >/dev/null || fail "maîtrise/variantes des duos invalides"
-rm -f "$DUO_TEST_BIN"
+wait_bg_test "duo" "maîtrise/variantes des duos invalides"
 pass "techniques combinées et maîtrise de duo modularisées/testées"
 
 [[ -f include/combat/EnemyCombatQueue.hpp && -f src/combat/EnemyCombatQueue.cpp ]] || fail "file ennemie absente"
@@ -320,41 +358,26 @@ grep -q 'getSurrenderedEnemyCount' include/combat/EnemyCombatQueue.hpp || fail "
 grep -q 'REDDITION ENNEMIE' src/combat/turn/wave/MonsterWaveCombatTurn.cpp || fail "reddition réelle absente du combat"
 grep -q 'chocs_de_groupe_ennemis' src/combat/turn/wave/MonsterWaveCombatTurn.cpp || fail "réaction à la chute du meneur absente"
 grep -q 'calculateSurrenderedEnemiesReward' src/combat/reward/CombatRewardSystem.cpp || fail "récompense de reddition non séparée"
-GROUP_TEST_BIN="$(mktemp /tmp/dinotofu_enemy_group_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/EnemyGroupBehaviorTest.cpp $PROJECT_OBJECTS -o "$GROUP_TEST_BIN"
-"$GROUP_TEST_BIN" >/dev/null || fail "reddition/file ennemie/profils de groupe invalides"
-rm -f "$GROUP_TEST_BIN"
+wait_bg_test "group" "reddition/file ennemie/profils de groupe invalides"
 pass "reddition et réactions de groupe ennemies présentes/testées"
 
-MONSTER_PREPARED_TEST_BIN="$(mktemp /tmp/dinotofu_monster_prepared_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/MonsterPreparedActionSystemTest.cpp $PROJECT_OBJECTS -o "$MONSTER_PREPARED_TEST_BIN"
-"$MONSTER_PREPARED_TEST_BIN" >/dev/null || fail "compétences préparées/interrompables ennemies invalides"
-rm -f "$MONSTER_PREPARED_TEST_BIN"
+wait_bg_test "monster_prep" "compétences préparées/interrompables ennemies invalides"
 grep -q 'COMPÉTENCE INTERROMPUE' src/combat/turn/wave/MonsterWaveCombatTurn.cpp || fail "feedback d'interruption ennemi absent"
 grep -q 'startPreparedSignature' src/combat/turn/wave/MonsterWaveCombatTurn.cpp || fail "préparation ennemie non reliée au tour"
 grep -q 'COUVERTURE DE PRÉPARATION' src/combat/turn/wave/MonsterWaveCombatTurn.cpp || fail "protection de compétence préparée absente"
 grep -q 'DefensePostureSystem::reduceIncomingDamage(player' src/combat/system/MonsterPreparedActionSystem.cpp || fail "posture défensive ignorée par les attaques préparées"
 pass "compétences ennemies préparées, variantes, interruption, défense et protection de groupe testées"
 
-MONSTER_CONTENT_TEST_BIN="$(mktemp /tmp/dinotofu_monster_content_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/MonsterContentExpansionTest.cpp $PROJECT_OBJECTS -o "$MONSTER_CONTENT_TEST_BIN"
-"$MONSTER_CONTENT_TEST_BIN" >/dev/null || fail "nouveaux monstres de biomes absents du catalogue"
-rm -f "$MONSTER_CONTENT_TEST_BIN"
+wait_bg_test "monster_content" "nouveaux monstres de biomes absents du catalogue"
 pass "nouvelles familles de monstres de biomes présentes"
 
 
-MONSTER_AMBIENT_ELITE_TEST_BIN="$(mktemp /tmp/dinotofu_monster_ambient_elite_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/MonsterAmbientEliteDensityTest.cpp $PROJECT_OBJECTS -o "$MONSTER_AMBIENT_ELITE_TEST_BIN"
-"$MONSTER_AMBIENT_ELITE_TEST_BIN" >/dev/null || fail "densité des élites ambiantes trop élevée en début de jeu"
-rm -f "$MONSTER_AMBIENT_ELITE_TEST_BIN"
+wait_bg_test "monster_elite" "densité des élites ambiantes trop élevée en début de jeu"
 grep -q '!monster.isElite() && shouldCreateEvolvedMonster' src/combat/wave/WaveGenerator.cpp || fail "une élite ambiante peut de nouveau être sur-évoluée dans une vague normale"
 pass "densité des élites ambiantes et empilement élite/évolution protégés"
 
 
-MONSTER_FLAVOR_LIFECYCLE_TEST_BIN="$(mktemp /tmp/dinotofu_monster_flavor_lifecycle_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/MonsterFlavorLifecycleTest.cpp $PROJECT_OBJECTS -o "$MONSTER_FLAVOR_LIFECYCLE_TEST_BIN"
-"$MONSTER_FLAVOR_LIFECYCLE_TEST_BIN" >/dev/null || fail "descriptions de mort/fuite/reddition par créature invalides"
-rm -f "$MONSTER_FLAVOR_LIFECYCLE_TEST_BIN"
+wait_bg_test "monster_flavor" "descriptions de mort/fuite/reddition par créature invalides"
 grep -q 'buildSurrenderLine' src/combat/turn/wave/MonsterWaveCombatTurn.cpp || fail "description de reddition non reliée"
 grep -q 'buildDeathLine' src/combat/EnemyCombatQueue.cpp || fail "description de mort non reliée"
 pass "mort, fuite et reddition décrites selon la créature"
@@ -369,10 +392,7 @@ grep -q 'surchargeForScore' src/world/LocalReputationSystem.cpp || fail "conséq
 grep -q 'vente importante refusée' src/interface/menu/shop/ShopMenu.cpp || fail "réaction commerciale négative absente"
 [[ -f include/world/LocalReputationRepairSystem.hpp && -f src/world/LocalReputationRepairSystem.cpp ]] || fail "réhabilitation de réputation locale absente"
 grep -q 'LocalReputationRepairMenu::open' src/interface/menu/quest/QuestLocationNpcMenu.cpp || fail "bureau de médiation locale non relié aux lieux"
-REPUTATION_REPAIR_TEST_BIN="$(mktemp /tmp/dinotofu_reputation_repair_test.XXXXXX)"
-"$TEST_CXX" "$CXX_STD_FLAG" -Wall -Wextra -Iinclude tests/LocalReputationRepairSystemTest.cpp $PROJECT_OBJECTS -o "$REPUTATION_REPAIR_TEST_BIN"
-"$REPUTATION_REPAIR_TEST_BIN" >/dev/null || fail "réhabilitation de réputation locale invalide"
-rm -f "$REPUTATION_REPAIR_TEST_BIN"
+wait_bg_test "reputation_repair" "réhabilitation de réputation locale invalide"
 pass "journal localisé, réputation positive/négative et réhabilitation présents/testés"
 
 grep -q "SUITE DE L'HISTOIRE INDISPONIBLE" src/core/GameStory.cpp || fail "limite histoire absente"

@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-CXX_BIN="${1:-${CXX:-g++}}"
+if [[ $# -gt 0 ]]; then
+    CXX_BIN="$*"
+else
+    CXX_BIN="${CXX:-g++}"
+fi
 probe() {
-    printf 'int main(){return 0;}\n' | "$CXX_BIN" -x c++ "$1" -fsyntax-only - >/dev/null 2>&1
+    printf 'int main(){return 0;}\n' | $CXX_BIN -x c++ "$1" -fsyntax-only - >/dev/null 2>&1
 }
 if probe -std=c++23; then
     printf '%s\n' '-std=c++23'

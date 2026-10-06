@@ -47,11 +47,30 @@ ifeq ($(filter -j%,$(MAKEFLAGS)),)
 endif
 
 CXX         ?= g++
+AR          ?= ar
 TARGET_ARCH ?= native
 OPT_LEVEL   ?= -O3
+
+# Détection et intégration automatique de ccache
+ifneq ($(shell command -v ccache 2>/dev/null),)
+  ifeq ($(findstring ccache,$(CXX)),)
+    CXX := ccache $(CXX)
+  endif
+endif
+
+# Sélection automatique du linker le plus rapide (mold > lld > ld)
+ifeq ($(filter -fuse-ld=%,$(LDFLAGS)),)
+  ifneq ($(shell command -v mold 2>/dev/null),)
+    LDFLAGS += -fuse-ld=mold
+  else ifneq ($(shell command -v lld 2>/dev/null),)
+    LDFLAGS += -fuse-ld=lld
+  endif
+endif
+
 CXX_STD_FLAG ?= $(shell bash ./scripts/detect_cpp23_flag.sh "$(CXX)")
-CXXFLAGS    := $(CXX_STD_FLAG) $(OPT_LEVEL) -march=$(TARGET_ARCH) -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
-LDFLAGS     ?=
+COMMON_FLAGS := $(CXX_STD_FLAG) -march=$(TARGET_ARCH) -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
+CXXFLAGS      = $(COMMON_FLAGS) $(OPT_LEVEL)
+LDFLAGS      ?=
 
 SRC_DIR  := src
 OBJ_DIR  := build
@@ -59,6 +78,7 @@ BIN_DIR  := output
 
 APP_NAME := Dinotofu
 TARGET   := $(BIN_DIR)/$(APP_NAME)
+STATIC_LIB := $(OBJ_DIR)/libdinotofu.a
 
 
 # =========================================================
@@ -69,6 +89,7 @@ TARGET   := $(BIN_DIR)/$(APP_NAME)
 SRCS := $(shell find $(SRC_DIR) -type f -name "*.cpp")
 OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 DEPS := $(OBJS:.o=.d)
+LIB_OBJS := $(filter-out $(OBJ_DIR)/main.o,$(OBJS))
 
 
 # =========================================================
@@ -76,17 +97,24 @@ DEPS := $(OBJS:.o=.d)
 # RÈGLES PRINCIPALES
 # =========================================================
 
-all: $(TARGET)
+all: $(TARGET) $(STATIC_LIB)
 	@echo ""
 	@echo "Build terminé avec succès."
 	@echo "Exécutable : $(TARGET)"
 	@echo "Pour lancer : make run"
 	@echo ""
 
+dev: OPT_LEVEL := -Og
+dev: all
+
 $(TARGET): $(OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@chmod u+x $@
+
+$(STATIC_LIB): $(LIB_OBJS)
+	@mkdir -p $(dir $@)
+	@$(AR) rcs $@ $^
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
@@ -101,8 +129,8 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 # =========================================================
 
 
-test: all
-	@bash ./scripts/test_project.sh
+test: all $(STATIC_LIB)
+	@CXX="$(CXX)" LDFLAGS="$(LDFLAGS)" bash ./scripts/test_project.sh
 
 check: clean
 	@echo "=== [1/3] Validation de l'arborescence et des conventions ==="
@@ -127,6 +155,7 @@ help:
 	@echo ""
 	@echo " Compilation & Exécution locale :"
 	@echo "   make                     Compiler le projet en parallèle (output/$(APP_NAME))"
+	@echo "   make dev                 Compiler rapidement (-Og) pour le dev quotidien"
 	@echo "   make run [ARGS=...]      Compiler puis lancer le jeu dans le terminal"
 	@echo "   make launch [ARGS=...]   Compiler, effacer l'écran puis lancer"
 	@echo "   make clean               Supprimer les objets, binaires et dossiers de debug"
@@ -254,4 +283,4 @@ gui-preview: all
 	@chmod +x ./tools/gui/run_gui_debug.sh
 	@./tools/gui/run_gui_debug.sh
 
-.PHONY: all test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check gui-preview
+.PHONY: all dev test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check gui-preview
