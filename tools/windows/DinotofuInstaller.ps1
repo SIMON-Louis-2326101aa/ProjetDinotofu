@@ -459,6 +459,10 @@ function Restore-PlayerData {
 function Stop-DinotofuBackgroundProcesses {
     param([string]$RootDir)
 
+    Remove-Item Env:DINOTOFU_GUI_INPUT_MODE -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:DINOTOFU_GUI_INPUT_FILE -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:DINOTOFU_GUI_INPUT_QUEUE_DIR -Force -ErrorAction SilentlyContinue
+
     if ([string]::IsNullOrWhiteSpace($RootDir)) { return }
 
     $normalizedRoot = try { [System.IO.Path]::GetFullPath($RootDir) } catch { $RootDir }
@@ -838,7 +842,7 @@ function Repair-DinotofuDesktopShortcuts {
     $normalLauncherCmd = Join-Path $RootDir "Lancer-Dinotofu.cmd"
     $terminalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu-Terminal.cmd"
 
-    Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Terminal"
+    Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto"
     Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal"
 
     $fallbackIconPath = Join-Path $RootDir "Dinotofu.exe"
@@ -1094,7 +1098,7 @@ foreach ($cand in $candidates) {
 $normalLauncherCmd = Join-Path $InstallDir "Lancer-Dinotofu.cmd"
 $terminalLauncherEntry = Join-Path $InstallDir "Lancer-Dinotofu-Terminal.cmd"
 
-Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Terminal"
+Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto"
 Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal"
 
 # Synchronisation des outils GUI et assets recents si presents dans la source locale

@@ -10,7 +10,7 @@ REPO="${DINOTOFU_REPO:-}"
 ASSET_PATTERN="${DINOTOFU_ASSET_PATTERN:-Dinotofu-Linux-v*.7z}"
 INSTALL_DIR="$SCRIPT_DIR"
 NO_UPDATE="false"
-LAUNCH_MODE="terminal"
+LAUNCH_MODE="auto"
 INSTALL_DIR_FROM_ARG="false"
 GUI_PREVIEW_HAS_SERVER="false"
 
@@ -336,6 +336,9 @@ open_url_or_file() {
 }
 
 stop_dinotofu_background_processes() {
+    unset DINOTOFU_GUI_INPUT_MODE || true
+    unset DINOTOFU_GUI_INPUT_FILE || true
+    unset DINOTOFU_GUI_INPUT_QUEUE_DIR || true
     local target_dir="${1:-$INSTALL_DIR}"
     target_dir="${target_dir%/}"
     local debug_dir="${target_dir}/gui_debug"
@@ -426,9 +429,6 @@ start_gui_preview() {
     fi
 
     export DINOTOFU_GUI_DEBUG_DIR="$gui_debug_dir"
-    export DINOTOFU_GUI_INPUT_MODE="1"
-    export DINOTOFU_GUI_INPUT_FILE="$gui_debug_dir/pending_input.txt"
-    export DINOTOFU_GUI_INPUT_QUEUE_DIR="$gui_debug_dir/input_queue"
     return 0
 }
 
@@ -462,6 +462,9 @@ find_terminal_executable() {
 }
 
 launch_terminal() {
+    unset DINOTOFU_GUI_INPUT_MODE || true
+    unset DINOTOFU_GUI_INPUT_FILE || true
+    unset DINOTOFU_GUI_INPUT_QUEUE_DIR || true
     local executable
     if executable="$(find_terminal_executable)"; then
         local run_dir="$(dirname "$executable")"
@@ -521,21 +524,25 @@ wait_for_gui_placeholder_action() {
     done
 }
 
-if [[ "$LAUNCH_MODE" == "auto" && -t 0 ]]; then
-    echo ""
-    echo "================================================="
-    echo " Dinotofu - Choix du mode de lancement"
-    echo "================================================="
-    echo "  1. Mode Terminal (recommande / jouable)"
-    echo "  2. Interface Graphique (EN COURS DE DEV)"
-    echo "================================================="
-    read -r -p "Choix [1 ou 2, Defaut = 1] : " user_choice || true
-    if [[ "$user_choice" == "2" ]]; then
-        LAUNCH_MODE="gui"
+if [[ "$LAUNCH_MODE" == "auto" ]]; then
+    if [[ -t 0 ]]; then
+        echo ""
+        echo "================================================="
+        echo " Dinotofu - Choix du mode de lancement"
+        echo "================================================="
+        echo "  1. Mode Terminal (recommande / jouable)"
+        echo "  2. Interface Graphique (EN COURS DE DEV)"
+        echo "================================================="
+        read -r -p "Choix [1 ou 2, Defaut = 1] : " user_choice || true
+        if [[ "$user_choice" == "2" ]]; then
+            LAUNCH_MODE="gui"
+        else
+            LAUNCH_MODE="terminal"
+        fi
+        echo ""
     else
         LAUNCH_MODE="terminal"
     fi
-    echo ""
 fi
 
 if [[ "$LAUNCH_MODE" != "terminal" ]]; then
