@@ -2,6 +2,13 @@
 
 Detailed English version history for Dinotofu. The matching French history is stored in `CHANGELOG_FR.md`. README files remain focused on installation and useful player information.   
 
+## V3.50.35 — Update notes   
+
+- Giving people back the display mode of the game.   
+- Fixing a bug when executing the GUI mode.   
+
+---   
+
 ## V3.50.34 — Prologue stabilization and important V3.50.33 checkpoint   
 
 - **V3.50.33 officially becomes the new important save checkpoint.** Characters last adapted before V3.50.33 go through the existing non-overwriting pre-update backup and transition ritual; saves already adapted on V3.50.33 or later are not prompted again. Save schema remains **26**.   

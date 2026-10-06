@@ -2,6 +2,13 @@
 
 Historique détaillé des versions de Dinotofu en français. Le journal anglais équivalent se trouve dans `CHANGELOG.md`.   
 
+## V3.50.35 — Notes de mise à jour   
+
+- Les personnes peuvent rechoisir le mode d'affichage du jeu.   
+- Correction de bug lors du lancement en mode graphique.   
+
+---   
+
 ## V3.50.34 — Stabilisation du prologue et checkpoint important V3.50.33   
 
 - **V3.50.33 devient officiellement le nouveau checkpoint important de sauvegarde.** Les personnages dont la dernière adaptation est antérieure à V3.50.33 passent par le backup pré-mise-à-jour non écrasant et le rituel de transition déjà existants ; une sauvegarde déjà adaptée en V3.50.33 ou plus récente n'est pas redemandée. Le schéma reste **26**.   
