@@ -1,26 +1,43 @@
 QMainWindow {
-    background-color: #10141c;
+    border-image: url(assets/logo/ecran_jeu.png) 0 0 0 0 stretch stretch;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+QLabel#MainTitle {
+    color: #FCEC9C;
+    font-family: "Cinzel Decorative";
+    font-size: 92px;
+    font-weight: bold;
 }
 
 QLabel {
-    color: white;
-    font-size: 36px;
+    color: #FCEC9C;
+    font-family: "Cinzel Decorative";
+    font-size: 52px;
     font-weight: bold;
 }
 
 QPushButton {
-    background-color: #043073;
+    background-color: #F4C44C;
     color: white;
     border: none;
     border-radius: 8px;
-    padding: 12px;
+
+    min-width: 250px;
+    max-width: 250px;
+
+    min-height: 50px;
+    max-height: 50px;
+
     font-size: 16px;
+    font-weight: bold;
 }
 
 QPushButton:hover {
-    background-color: #06469c;
+    background-color: #FCDC94;
 }
 
 QPushButton:pressed {
-    background-color: #021d45;
+    background-color: #FCCC54;
 }

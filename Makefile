@@ -56,6 +56,7 @@ LDFLAGS     ?=
 # Qt6
 QT_CXXFLAGS := $(shell pkg-config --cflags Qt6Widgets)
 QT_LIBS     := $(shell pkg-config --libs Qt6Widgets)
+QT_MOC := /usr/lib/qt6/libexec/moc
 
 SRC_DIR  := src
 OBJ_DIR  := build
@@ -63,6 +64,9 @@ BIN_DIR  := output
 
 APP_NAME := Dinotofu
 TARGET   := $(BIN_DIR)/$(APP_NAME)
+
+MOC_NEWGAME_CPP := $(OBJ_DIR)/interface/qt/screens/moc_NewGameScreen.cpp
+MOC_NEWGAME_OBJ := $(OBJ_DIR)/interface/qt/screens/moc_NewGameScreen.o
 
 
 # =========================================================
@@ -83,7 +87,7 @@ GUI_EXTRA_SRCS := $(SRC_DIR)/gui_main.cpp \
                   $(SRC_DIR)/interface/qt/MainWindow.cpp
 
 GUI_EXTRA_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(GUI_EXTRA_SRCS))
-GUI_OBJS := $(GAME_OBJS_NO_MAIN) $(GUI_EXTRA_OBJS)
+GUI_OBJS := $(GAME_OBJS_NO_MAIN) $(GUI_EXTRA_OBJS) $(MOC_NEWGAME_OBJ)
 GUI_DEPS := $(GUI_EXTRA_OBJS:.o=.d)
 
 GUI_TARGET := $(BIN_DIR)/DinotofuGUI
@@ -122,7 +126,13 @@ $(GUI_TARGET): $(GUI_OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(QT_LIBS)
 	@chmod u+x $@
+$(MOC_NEWGAME_CPP): $(SRC_DIR)/interface/qt/screens/NewGameScreen.hpp
+	@mkdir -p $(dir $@)
+	$(QT_MOC) $< -o $@
 
+$(MOC_NEWGAME_OBJ): $(MOC_NEWGAME_CPP)
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) $(QT_CXXFLAGS) -c $< -o $@		
 gui: $(GUI_TARGET)
 	@echo ""
 	@echo "Interface Qt compilée avec succès."
