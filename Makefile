@@ -49,7 +49,7 @@ endif
 CXX         ?= g++
 AR          ?= ar
 TARGET_ARCH ?= native
-OPT_LEVEL   ?= -O3
+OPT_LEVEL   ?= -Og
 
 # Détection et intégration automatique de ccache
 ifneq ($(shell command -v ccache 2>/dev/null),)
@@ -64,6 +64,17 @@ ifeq ($(filter -fuse-ld=%,$(LDFLAGS)),)
     LDFLAGS += -fuse-ld=mold
   else ifneq ($(shell command -v lld 2>/dev/null),)
     LDFLAGS += -fuse-ld=lld
+  endif
+endif
+
+# Détection des paquets optionnels recommandés pour l'accélération
+MISSING_SPEED_TOOLS :=
+ifeq ($(shell command -v ccache 2>/dev/null),)
+  MISSING_SPEED_TOOLS += ccache
+endif
+ifeq ($(shell command -v mold 2>/dev/null),)
+  ifeq ($(shell command -v lld 2>/dev/null),)
+    MISSING_SPEED_TOOLS += mold
   endif
 endif
 
@@ -97,15 +108,32 @@ LIB_OBJS := $(filter-out $(OBJ_DIR)/main.o,$(OBJS))
 # RÈGLES PRINCIPALES
 # =========================================================
 
-all: $(TARGET) $(STATIC_LIB)
+all: show-speed-hints $(TARGET) $(STATIC_LIB)
 	@echo ""
 	@echo "Build terminé avec succès."
 	@echo "Exécutable : $(TARGET)"
 	@echo "Pour lancer : make run"
 	@echo ""
 
-dev: OPT_LEVEL := -Og
 dev: all
+
+opt: OPT_LEVEL := -O3
+opt: all
+
+release: OPT_LEVEL := -O3
+release: all
+
+show-speed-hints:
+ifneq ($(strip $(MISSING_SPEED_TOOLS)),)
+	@echo "---------------------------------------------------------"
+	@echo " [ASTUCE] Des outils d'accélération ne sont pas installés : $(MISSING_SPEED_TOOLS)"
+	@echo "          Pour accélérer la compilation x10 sur votre système :"
+	@echo "            Arch / CachyOS : sudo pacman -S ccache mold"
+	@echo "            Debian / Ubuntu: sudo apt install ccache mold"
+	@echo "            Fedora         : sudo dnf install ccache mold"
+	@echo "---------------------------------------------------------"
+	@echo ""
+endif
 
 $(TARGET): $(OBJS)
 	@mkdir -p $(BIN_DIR)
@@ -154,8 +182,9 @@ help:
 	@echo "========================================================="
 	@echo ""
 	@echo " Compilation & Exécution locale :"
-	@echo "   make                     Compiler le projet en parallèle (output/$(APP_NAME))"
-	@echo "   make dev                 Compiler rapidement (-Og) pour le dev quotidien"
+	@echo "   make                     Compiler rapidement (-Og) en parallèle (output/$(APP_NAME))"
+	@echo "   make dev                 Alias de make (compilation dev rapide -Og)"
+	@echo "   make release / opt       Compiler avec optimisation maximale (-O3) pour le jeu"
 	@echo "   make run [ARGS=...]      Compiler puis lancer le jeu dans le terminal"
 	@echo "   make launch [ARGS=...]   Compiler, effacer l'écran puis lancer"
 	@echo "   make clean               Supprimer les objets, binaires et dossiers de debug"
@@ -283,4 +312,4 @@ gui-preview: all
 	@chmod +x ./tools/gui/run_gui_debug.sh
 	@./tools/gui/run_gui_debug.sh
 
-.PHONY: all dev test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check gui-preview
+.PHONY: all dev opt release show-speed-hints test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check gui-preview
