@@ -17,7 +17,7 @@ param(
     [string]$AssetPattern = "",
     [switch]$NoUpdateCheck,
     [ValidateSet("Auto", "Gui", "Terminal")]
-    [string]$Mode = "Terminal"
+    [string]$Mode = "Auto"
 )
 
 $ErrorActionPreference = "Stop"
@@ -766,7 +766,7 @@ function Repair-DinotofuDesktopShortcuts {
     $normalLauncherCmd = Join-Path $RootDir "Lancer-Dinotofu.cmd"
     $terminalLauncherEntry = Join-Path $RootDir "Lancer-Dinotofu-Terminal.cmd"
 
-    Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Terminal"
+    Ensure-LauncherCmd -TargetPath $normalLauncherCmd -Mode "Auto"
     Ensure-LauncherCmd -TargetPath $terminalLauncherEntry -Mode "Terminal"
 
     # Verifier si les raccourcis bureau existent deja et sont valides
@@ -901,6 +901,10 @@ function ConvertTo-ProcessArgumentsString {
 
 function Stop-DinotofuBackgroundProcesses {
     param([string]$RootDir)
+
+    Remove-Item Env:DINOTOFU_GUI_INPUT_MODE -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:DINOTOFU_GUI_INPUT_FILE -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:DINOTOFU_GUI_INPUT_QUEUE_DIR -Force -ErrorAction SilentlyContinue
 
     if ([string]::IsNullOrWhiteSpace($RootDir)) { return }
 
@@ -1132,6 +1136,10 @@ function Start-GameExecutable {
 
 function Start-TerminalHandoff {
     param([string]$ExecutablePath)
+
+    Remove-Item Env:DINOTOFU_GUI_INPUT_MODE -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:DINOTOFU_GUI_INPUT_FILE -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:DINOTOFU_GUI_INPUT_QUEUE_DIR -Force -ErrorAction SilentlyContinue
 
     $terminalLauncher = Join-Path $InstallDir "Lancer-Dinotofu-Terminal.cmd"
     if (Test-Path $terminalLauncher) {
