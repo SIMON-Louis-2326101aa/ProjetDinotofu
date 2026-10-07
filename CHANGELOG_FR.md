@@ -2,6 +2,14 @@
 
 Historique détaillé des versions de Dinotofu en français. Le journal anglais équivalent se trouve dans `CHANGELOG.md`.   
 
+## V3.50.36 — Notes de mise à jour   
+
+- Correction de script de mise à jour.   
+- Amélioration des scripts de compilations.   
+- Compilation plus rapide.   
+
+---   
+
 ## V3.50.35 — Notes de mise à jour   
 
 - Les personnes peuvent rechoisir le mode d'affichage du jeu.   

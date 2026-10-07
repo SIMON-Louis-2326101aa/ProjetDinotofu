@@ -4,7 +4,7 @@ Dinotofu is a C++23 RPG / arena game. The terminal version remains the stable fo
 
 ## Current version   
 
-- Current version: **V3.50.35**   
+- Current version: **V3.50.36**   
 - Important save checkpoint: **V3.50.33**. Characters last adapted before this checkpoint must complete the explicit transition ritual before normal loading.   
 - Before that transition, Dinotofu creates a dedicated non-overwriting pre-update backup. Very old or unversioned characters keep the stronger legacy warning, but they can no longer bypass the mandatory V3.50.33 backup + transition ritual.   
 

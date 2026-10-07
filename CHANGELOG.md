@@ -2,6 +2,14 @@
 
 Detailed English version history for Dinotofu. The matching French history is stored in `CHANGELOG_FR.md`. README files remain focused on installation and useful player information.   
 
+## V3.50.36 — Update notes   
+
+- Fixed Update script.   
+- Better compiling scripts.   
+- Faster compiling speed.   
+
+---   
+
 ## V3.50.35 — Update notes   
 
 - Giving people back the display mode of the game.   
