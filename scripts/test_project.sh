@@ -7,7 +7,15 @@ cd "${TEST_ROOT_DIR}"
 fail() { echo "[FAIL] $1" >&2; exit 1; }
 pass() { echo "[OK] $1"; }
 
-TEST_CXX="${CXX:-g++}"
+if [[ -z "${CXX:-}" ]]; then
+    if command -v clang++ >/dev/null 2>&1; then
+        TEST_CXX="clang++"
+    else
+        TEST_CXX="g++"
+    fi
+else
+    TEST_CXX="$CXX"
+fi
 read -r -a TEST_CXX_CMD <<< "$TEST_CXX"
 CXX_STD_FLAG="$(bash ./scripts/detect_cpp23_flag.sh "${TEST_CXX_CMD[@]}")"
 pass "toolchain C++23 detectee : ${TEST_CXX} ${CXX_STD_FLAG}"

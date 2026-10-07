@@ -46,7 +46,15 @@ ifeq ($(filter -j%,$(MAKEFLAGS)),)
   MAKEFLAGS += -j$(NPROCS)
 endif
 
-CXX         ?= g++
+# Sélection automatique du compilateur le plus performant (clang++ > g++)
+ifneq ($(filter undefined default,$(origin CXX)),)
+  ifneq ($(shell command -v clang++ 2>/dev/null),)
+    CXX := clang++
+  else
+    CXX := g++
+  endif
+endif
+
 AR          ?= ar
 TARGET_ARCH ?= native
 OPT_LEVEL   ?= -Og
@@ -54,7 +62,7 @@ OPT_LEVEL   ?= -Og
 # Détection et intégration automatique de ccache
 ifneq ($(shell command -v ccache 2>/dev/null),)
   ifeq ($(findstring ccache,$(CXX)),)
-    CXX := ccache $(CXX)
+    override CXX := ccache $(CXX)
   endif
 endif
 
@@ -190,6 +198,7 @@ help:
 	@echo "   make clean               Supprimer les objets, binaires et dossiers de debug"
 	@echo "   make rebuild             Nettoyer puis recompiler de zéro"
 	@echo "   make strip               Retirer les symboles de débogage du binaire"
+	@echo "   make CXX=clang++ / g++   Forcer un compilateur (auto-détecté : clang++ puis g++)"
 	@echo ""
 	@echo " Tests & Qualité de code :"
 	@echo "   make test                Exécuter la suite de tests du projet"

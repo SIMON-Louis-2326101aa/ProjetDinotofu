@@ -3,7 +3,15 @@ set -euo pipefail
 if [[ $# -gt 0 ]]; then
     CXX_BIN="$*"
 else
-    CXX_BIN="${CXX:-g++}"
+    if [[ -z "${CXX:-}" ]]; then
+        if command -v clang++ >/dev/null 2>&1; then
+            CXX_BIN="clang++"
+        else
+            CXX_BIN="g++"
+        fi
+    else
+        CXX_BIN="$CXX"
+    fi
 fi
 probe() {
     printf 'int main(){return 0;}\n' | $CXX_BIN -x c++ "$1" -fsyntax-only - >/dev/null 2>&1
