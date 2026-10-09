@@ -10,7 +10,7 @@ public:
 
 private:
     void showMainMenu();
-    void showNewGameScreen();
+    void showAccountScreen();
 };
 
 #endif

@@ -24,8 +24,8 @@ QPushButton {
     border: none;
     border-radius: 8px;
 
-    min-width: 250px;
-    max-width: 250px;
+    min-width: 350px;
+    max-width: 350px;
 
     min-height: 50px;
     max-height: 50px;
@@ -40,4 +40,99 @@ QPushButton:hover {
 
 QPushButton:pressed {
     background-color: #FCCC54;
+}
+QDialog {
+    background-color: #071426;
+    border: 2px solid #043073;
+    border-radius: 12px;
+}
+
+QLabel#dialogTitle {
+    color: #f5c542;
+    font-family: "Cinzel Decorative";
+    font-size: 26px;
+    font-weight: bold;
+}
+
+QLabel#dialogDescription {
+    color: white;
+    font-size: 14px;
+}
+
+QLineEdit#accountNameInput {
+    background-color: #101f35;
+    color: white;
+    border: 2px solid #043073;
+    border-radius: 7px;
+    padding: 10px;
+    font-size: 15px;
+}
+
+QLineEdit#accountNameInput:focus {
+    border: 2px solid #f5c542;
+}
+
+QPushButton#dialogConfirmButton,
+QPushButton#dialogCancelButton {
+    min-width: 80px;
+    max-width: 80px;
+    min-height: 38px;
+    max-height: 38px;
+
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+QPushButton#dialogConfirmButton {
+    background-color: #043073;
+    color: white;
+}
+
+QPushButton#dialogConfirmButton:hover {
+    background-color: #06469c;
+}
+
+QPushButton#dialogConfirmButton:pressed {
+    background-color: #021d45;
+}
+
+QPushButton#dialogCancelButton {
+    background-color: #18283d;
+    color: white;
+    border: 1px solid #31445e;
+}
+
+QPushButton#dialogCancelButton:hover {
+    background-color: #263b55;
+}
+
+QLabel#accountStat {
+    color: #FCEC9C;
+    font-size: 25px;
+    font-weight: normal;
+}
+
+QDialog#messageDialog {
+    background-color: #101820;
+    color: #f0e6d2;
+}
+
+QLabel#dialogTitle {
+    color: #d4af6a;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+QLabel#dialogMessage {
+    color: #f0e6d2;
+    font-size: 13px;
+}
+
+QPushButton#dialogConfirmButton,
+QPushButton#dialogCancelButton {
+    min-width: 100px;
+    min-height: 36px;
+    padding: 6px 12px;
+    font-size: 12px;
 }

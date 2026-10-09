@@ -65,9 +65,6 @@ BIN_DIR  := output
 APP_NAME := Dinotofu
 TARGET   := $(BIN_DIR)/$(APP_NAME)
 
-MOC_NEWGAME_CPP := $(OBJ_DIR)/interface/qt/screens/moc_NewGameScreen.cpp
-MOC_NEWGAME_OBJ := $(OBJ_DIR)/interface/qt/screens/moc_NewGameScreen.o
-
 
 # =========================================================
 # SOURCES / OBJECT FILES
@@ -75,6 +72,20 @@ MOC_NEWGAME_OBJ := $(OBJ_DIR)/interface/qt/screens/moc_NewGameScreen.o
 # =========================================================
 
 SRCS := $(shell find $(SRC_DIR) -type f -name "*.cpp")
+
+# =========================================================
+# QT / MOC
+# =========================================================
+
+QT_HEADERS := $(shell find $(SRC_DIR)/interface/qt -type f \
+	\( -name "*.hpp" -o -name "*.h" \) \
+	-exec grep -l "Q_OBJECT" {} +)
+
+MOC_HPP_HEADERS := $(filter %.hpp,$(QT_HEADERS))
+
+MOC_SRCS := $(patsubst $(SRC_DIR)/interface/qt/%.hpp,$(OBJ_DIR)/interface/qt/moc_%.cpp,$(MOC_HPP_HEADERS))
+
+MOC_OBJS := $(MOC_SRCS:.cpp=.o)
 
 # Sources du jeu terminal
 GAME_SRCS := $(filter-out $(SRC_DIR)/gui_main.cpp,$(SRCS))
@@ -87,11 +98,10 @@ GUI_EXTRA_SRCS := $(SRC_DIR)/gui_main.cpp \
                   $(SRC_DIR)/interface/qt/MainWindow.cpp
 
 GUI_EXTRA_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(GUI_EXTRA_SRCS))
-GUI_OBJS := $(GAME_OBJS_NO_MAIN) $(GUI_EXTRA_OBJS) $(MOC_NEWGAME_OBJ)
+GUI_OBJS := $(GAME_OBJS_NO_MAIN) $(GUI_EXTRA_OBJS) $(MOC_OBJS)
 GUI_DEPS := $(GUI_EXTRA_OBJS:.o=.d)
 
 GUI_TARGET := $(BIN_DIR)/DinotofuGUI
-
 
 # =========================================================
 # MAIN RULES
@@ -126,13 +136,15 @@ $(GUI_TARGET): $(GUI_OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(QT_LIBS)
 	@chmod u+x $@
-$(MOC_NEWGAME_CPP): $(SRC_DIR)/interface/qt/screens/NewGameScreen.hpp
+
+$(OBJ_DIR)/interface/qt/moc_%.cpp: $(SRC_DIR)/interface/qt/%.hpp
 	@mkdir -p $(dir $@)
 	$(QT_MOC) $< -o $@
 
-$(MOC_NEWGAME_OBJ): $(MOC_NEWGAME_CPP)
+$(OBJ_DIR)/interface/qt/moc_%.o: $(OBJ_DIR)/interface/qt/moc_%.cpp
 	@mkdir -p $(dir $@)
-	$(CXX) $(CXXFLAGS) $(QT_CXXFLAGS) -c $< -o $@		
+	$(CXX) $(CXXFLAGS) $(QT_CXXFLAGS) -c $< -o $@
+	
 gui: $(GUI_TARGET)
 	@echo ""
 	@echo "Interface Qt compilée avec succès."

@@ -1,5 +1,7 @@
 #include "MainWindow.hpp"
-#include "screens/NewGameScreen.hpp"
+#include "screens/AccountScreen.hpp"
+#include "screens/AccountActionScreen.hpp"
+
 #include <QWidget>
 #include <QVBoxLayout>
 #include <QLabel>
@@ -23,8 +25,7 @@ void MainWindow::showMainMenu()
     title->setAlignment(Qt::AlignCenter);
     title->setObjectName("MainTitle");
 
-    auto* newGameButton = new QPushButton("Nouvelle partie", centralWidget);
-    auto* continueButton = new QPushButton("Continuer", centralWidget);
+    auto* account = new QPushButton("Se connecter / Crée un compte", centralWidget);
     auto* optionsButton = new QPushButton("Options", centralWidget);
     auto* quitButton = new QPushButton("Quitter", centralWidget);
 
@@ -33,8 +34,7 @@ void MainWindow::showMainMenu()
     layout->addWidget(title);
     layout->addSpacing(30);
 
-    layout->addWidget(newGameButton, 0, Qt::AlignHCenter);
-    layout->addWidget(continueButton, 0, Qt::AlignHCenter);
+    layout->addWidget(account, 0, Qt::AlignHCenter);
     layout->addWidget(optionsButton, 0, Qt::AlignHCenter);
     layout->addWidget(quitButton, 0, Qt::AlignHCenter);
 
@@ -42,9 +42,9 @@ void MainWindow::showMainMenu()
 
     setCentralWidget(centralWidget);
 
-    connect(newGameButton, &QPushButton::clicked, this, [this]()
+    connect(account, &QPushButton::clicked, this, [this]()
     {
-        showNewGameScreen();
+        showAccountScreen();
     });
 
     connect(quitButton, &QPushButton::clicked, this, [this]()
@@ -53,15 +53,35 @@ void MainWindow::showMainMenu()
     });
 }
 
-void MainWindow::showNewGameScreen()
+void MainWindow::showAccountScreen()
 {
-    auto* newGameScreen = new NewGameScreen(this);
+    auto* accountScreen = new AccountScreen(this);
 
-    setCentralWidget(newGameScreen);
+    setCentralWidget(accountScreen);
 
-    connect(newGameScreen, &NewGameScreen::backRequested,
+    connect(accountScreen, &AccountScreen::backRequested,
             this, [this]()
-    {
-        showMainMenu();
-    });
+            {
+                showMainMenu();
+            });
+
+    connect(accountScreen, &AccountScreen::accountSelected,
+            this, [this](QWidget* screen)
+            {
+                setCentralWidget(screen);
+
+                auto* actionScreen =
+                    qobject_cast<AccountActionScreen*>(screen);
+
+                if (actionScreen == nullptr)
+                {
+                    return;
+                }
+
+                connect(actionScreen, &AccountActionScreen::backRequested,
+                        this, [this]()
+                        {
+                            showAccountScreen();
+                        });
+            });
 }
