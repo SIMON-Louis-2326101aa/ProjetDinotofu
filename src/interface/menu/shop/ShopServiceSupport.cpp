@@ -5,6 +5,7 @@
 #include "entity/Player.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/inventory/InventoryProtection.hpp"
 #include "interface/menu/quest/QuestDeadlineSupport.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "world/LocalReputationSystem.hpp"
@@ -38,7 +39,7 @@ namespace
         const int beforeProgress = player.getWorldDayProgressUnits();
         player.advanceWorldDayUnits(units);
 
-        resultLines.push_back("Temps écoulé : +" + std::to_string(units) + " segment(s) de journée.");
+        resultLines.push_back("Temps écoulé : +" + std::to_string(units) + (units == 1 ? " moment de la journée." : " moments de la journée."));
         resultLines.push_back(player.formatWorldTimeChange(beforeDay, beforeProgress));
         std::vector<std::string> timeReportLines = player.consumeWorldTimeReportLines();
         resultLines.insert(resultLines.end(), timeReportLines.begin(), timeReportLines.end());
@@ -106,18 +107,29 @@ namespace ShopServiceSupport
     {
         if (player.getInventory().countMaterialById(voucherId) > 0)
         {
-            player.getInventory().removeMaterialQuantityById(voucherId, 1);
-            resultLines.push_back("Justificatif utilisé : " + voucherName + " x1.");
-            return true;
+            const bool voucherAllowed = InventoryProtection::confirmLockedMaterialUse(
+                player,
+                voucherId,
+                voucherName,
+                "utiliser ce bon/ticket pour payer le service",
+                "shop.service.locked_voucher"
+            );
+            if (voucherAllowed)
+            {
+                player.getInventory().removeMaterialQuantityById(voucherId, 1);
+                resultLines.push_back("Justificatif utilisé : " + voucherName + " x1.");
+                return true;
+            }
+            resultLines.push_back("Justificatif verrouillé conservé : paiement monétaire proposé à la place.");
         }
 
-        if (!player.getInventory().spendEconomyUnits(fallbackPrice))
+        if (!player.getInventory().spendCopper(fallbackPrice))
         {
-            resultLines.push_back("Paiement refusé : il manque " + Money::formatEconomyUnits(fallbackPrice) + ".");
+            resultLines.push_back("Paiement refusé : il manque " + Money::formatCopper(fallbackPrice) + ".");
             return false;
         }
 
-        resultLines.push_back("Paiement effectué : " + Money::formatEconomyUnits(fallbackPrice) + ".");
+        resultLines.push_back("Paiement effectué : " + Money::formatCopper(fallbackPrice) + ".");
         return true;
     }
 

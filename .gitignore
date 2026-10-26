@@ -96,3 +96,7 @@ __pycache__/
 
 # Dossier Perso (debug perso, images, fichiers temporaires)
 tmp/
+
+# Local handoff / backup artifacts
+reprise_chat_dinotofu_*.txt
+dinotofu_backup_essentiel_*.7z

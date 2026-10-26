@@ -29,6 +29,17 @@ Consumable ConsumableCatalog::createBasicHealingPotion()
     );
 }
 
+Consumable ConsumableCatalog::createManaPotion()
+{
+    return Consumable(
+        "Potion de mana",
+        "Rend rapidement une partie des réserves magiques. Pratique après une incantation lourde, mais ne remplace pas un vrai repos.",
+        24,
+        ConsumableType::Special,
+        30
+    );
+}
+
 // EN: createBasicDamagePotion declares or implements a focused behavior used by this module.
 // FR: createBasicDamagePotion déclare ou implémente un comportement précis utilisé par ce module.
 Consumable ConsumableCatalog::createMinorDamagePotion()

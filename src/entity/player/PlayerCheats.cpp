@@ -29,6 +29,54 @@ bool Player::isAlteredByCheats() const
     return alteredByCheats;
 }
 
+std::vector<std::string> Player::describeCheatAndProtocolHistory() const
+{
+    std::vector<std::string> lines;
+    auto findUsage = [&](const std::string& category, const std::string& key) -> const PlayerJournalRecord* {
+        for (const PlayerJournalRecord& record : canonicalJournalRecords)
+        {
+            if (record.category == category && record.key == key && record.count > 0) return &record;
+        }
+        return nullptr;
+    };
+
+    auto statusFor = [&](const std::string& code, const PlayerJournalRecord& record) {
+        if (code == "idontwanttodie") return std::string(godModeEnabled ? "Actif" : "Inactif");
+        if (code == "infinituseforeverything") return std::string(infiniteConsumablesEnabled ? "Actif" : "Inactif");
+        if (code == "bedrockequipment") return std::string(indestructibleEquipmentEnabled ? "Actif" : "Inactif");
+        if (code == "myweaponandnotother") return std::string(equipmentProtectionEnabled ? "Actif" : "Inactif");
+        if (code == "skipallstory") return std::string(storySkipEnabled ? "Actif" : "Inactif");
+        if (code == "helpmerefundmyaction") return std::string("Ponctuel — ") + std::to_string(refundUsesRemaining) + "/3 aide(s) restante(s)";
+        if (code == "letmecook") return std::string(record.lastDay == worldDaysElapsed ? "Actif jusqu'au prochain jour" : "Inactif");
+        if (code == "whereismyplotarmor") return std::string(hasBlessing("cheat_plot_armor") ? "Actif" : "Consommé ou indisponible");
+        if (code == "iamnotgoblinfood") return std::string("Actif");
+        if (code == "fuckgrindinggimifight") return std::string(specialChallengeAccessUnlocked ? "Actif" : "Connu / désactivé");
+        return std::string("Ponctuel");
+    };
+
+    for (const PlayerJournalRecord& record : canonicalJournalRecords)
+    {
+        if (record.category != "cheat_code_usage" || record.key == "dinotofu:13-02313") continue;
+        lines.push_back("- " + record.key + " | " + statusFor(record.key, record) + " | utilisation(s) : " + std::to_string(record.count));
+    }
+
+    for (const PlayerJournalRecord& record : canonicalJournalRecords)
+    {
+        if (record.category != "secret_code_usage" || record.key == "dinotofu:13-02313") continue;
+        lines.push_back("- " + record.key + " | Secret non altérant | utilisation(s) : " + std::to_string(record.count));
+    }
+
+    const PlayerJournalRecord* protocol = findUsage("protocoles_secrets", "reapers13_protocol_13_signal");
+    if (protocol != nullptr)
+    {
+        const bool alteredUse = findUsage("cheat_code_usage", "dinotofu:13-02313") != nullptr;
+        lines.push_back(std::string("- DINOTOFU:13-02313 | Protocol 13 transmis | ")
+            + (alteredUse ? "usage altérant faute de connaissance préalable" : "usage diégétique non altérant"));
+    }
+
+    return lines;
+}
+
 // EN: isGodModeEnabled declares or implements a focused behavior used by this module.
 // FR: isGodModeEnabled déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::isGodModeEnabled() const
@@ -181,7 +229,11 @@ void Player::setCheatState(
     int refundUses
 )
 {
-    alteredByCheats = altered;
+    alteredByCheats = false;
+    if (altered)
+    {
+        markAsAlteredByCheats();
+    }
     godModeEnabled = godMode;
     infiniteConsumablesEnabled = infiniteConsumables;
     indestructibleEquipmentEnabled = indestructibleEquipment;
@@ -262,14 +314,19 @@ void Player::setCheatKnowledgeState(
 // FR: markAsAlteredByCheats déclare ou implémente un comportement précis utilisé par ce module.
 void Player::markAsAlteredByCheats()
 {
+    const bool wasAlreadyAltered = alteredByCheats;
     alteredByCheats = true;
+    if (!wasAlreadyAltered)
+    {
+        grantCharacterOnlyTitleFromCheat("On ne dira rien...");
+    }
 }
 
 // EN: toggleGodMode declares or implements a focused behavior used by this module.
 // FR: toggleGodMode déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::toggleGodMode()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     godModeKnown = true;
     godModeEnabled = !godModeEnabled;
     return godModeEnabled;
@@ -279,7 +336,7 @@ bool Player::toggleGodMode()
 // FR: toggleInfiniteConsumables déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::toggleInfiniteConsumables()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     infiniteConsumablesKnown = true;
     infiniteConsumablesEnabled = !infiniteConsumablesEnabled;
     return infiniteConsumablesEnabled;
@@ -289,7 +346,7 @@ bool Player::toggleInfiniteConsumables()
 // FR: toggleIndestructibleEquipment déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::toggleIndestructibleEquipment()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     indestructibleEquipmentKnown = true;
     indestructibleEquipmentEnabled = !indestructibleEquipmentEnabled;
     return indestructibleEquipmentEnabled;
@@ -299,7 +356,7 @@ bool Player::toggleIndestructibleEquipment()
 // FR: toggleEquipmentProtection déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::toggleEquipmentProtection()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     equipmentProtectionKnown = true;
     equipmentProtectionEnabled = !equipmentProtectionEnabled;
     return equipmentProtectionEnabled;
@@ -309,7 +366,7 @@ bool Player::toggleEquipmentProtection()
 // FR: toggleStorySkip déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::toggleStorySkip()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     storySkipKnown = true;
     storySkipEnabled = !storySkipEnabled;
     return storySkipEnabled;
@@ -319,7 +376,7 @@ bool Player::toggleStorySkip()
 // FR: unlockSpecialChallengeAccess déclare ou implémente un comportement précis utilisé par ce module.
 void Player::unlockSpecialChallengeAccess()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     specialChallengeAccessKnown = true;
     specialChallengeAccessUnlocked = true;
 }
@@ -346,7 +403,7 @@ void Player::unlockBossRegistryExceptFinal(int maximumBossId, int finalBossId)
 // FR: enableGodMode déclare ou implémente un comportement précis utilisé par ce module.
 void Player::enableGodMode()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     godModeKnown = true;
     godModeEnabled = true;
 }
@@ -355,7 +412,7 @@ void Player::enableGodMode()
 // FR: enableInfiniteConsumables déclare ou implémente un comportement précis utilisé par ce module.
 void Player::enableInfiniteConsumables()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     infiniteConsumablesKnown = true;
     infiniteConsumablesEnabled = true;
 }
@@ -364,7 +421,7 @@ void Player::enableInfiniteConsumables()
 // FR: enableIndestructibleEquipment déclare ou implémente un comportement précis utilisé par ce module.
 void Player::enableIndestructibleEquipment()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     indestructibleEquipmentKnown = true;
     indestructibleEquipmentEnabled = true;
 }
@@ -373,7 +430,7 @@ void Player::enableIndestructibleEquipment()
 // FR: enableEquipmentProtection déclare ou implémente un comportement précis utilisé par ce module.
 void Player::enableEquipmentProtection()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     equipmentProtectionKnown = true;
     equipmentProtectionEnabled = true;
 }
@@ -382,7 +439,7 @@ void Player::enableEquipmentProtection()
 // FR: enableStorySkip déclare ou implémente un comportement précis utilisé par ce module.
 void Player::enableStorySkip()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     storySkipKnown = true;
     storySkipEnabled = true;
 }
@@ -425,7 +482,6 @@ bool Player::disableGodModeForFireFlight()
 // FR: markCreatorMessageSeen déclare ou implémente un comportement précis utilisé par ce module.
 void Player::markCreatorMessageSeen()
 {
-    alteredByCheats = true;
     creatorMessageKnown = true;
 }
 
@@ -433,7 +489,7 @@ void Player::markCreatorMessageSeen()
 // FR: recordGoldCheatUse déclare ou implémente un comportement précis utilisé par ce module.
 void Player::recordGoldCheatUse()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     goldCheatUseCount++;
 }
 
@@ -441,7 +497,7 @@ void Player::recordGoldCheatUse()
 // FR: recordLevelCheatUse déclare ou implémente un comportement précis utilisé par ce module.
 void Player::recordLevelCheatUse()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     levelCheatUseCount++;
 }
 
@@ -449,7 +505,7 @@ void Player::recordLevelCheatUse()
 // FR: recordMaxLevelCheatUse déclare ou implémente un comportement précis utilisé par ce module.
 void Player::recordMaxLevelCheatUse()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     maxLevelCheatUseCount++;
 }
 
@@ -457,7 +513,7 @@ void Player::recordMaxLevelCheatUse()
 // FR: recordRefundCheatUse déclare ou implémente un comportement précis utilisé par ce module.
 void Player::recordRefundCheatUse()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     refundCheatUseCount++;
 }
 
@@ -465,7 +521,7 @@ void Player::recordRefundCheatUse()
 // FR: recordResetCheatUse déclare ou implémente un comportement précis utilisé par ce module.
 void Player::recordResetCheatUse()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     resetCheatUseCount++;
 }
 
@@ -473,7 +529,7 @@ void Player::recordResetCheatUse()
 // FR: recordSwitchClassCheatUse déclare ou implémente un comportement précis utilisé par ce module.
 void Player::recordSwitchClassCheatUse()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     switchClassCheatUseCount++;
 }
 
@@ -481,7 +537,7 @@ void Player::recordSwitchClassCheatUse()
 // FR: consumeRefundUse déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::consumeRefundUse()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
 
     if (refundUsesRemaining <= 0)
     {
@@ -496,7 +552,7 @@ bool Player::consumeRefundUse()
 // FR: forceLevelToMaximum déclare ou implémente un comportement précis utilisé par ce module.
 void Player::forceLevelToMaximum()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
 
     while (level < MAX_LEVEL)
     {
@@ -510,7 +566,7 @@ void Player::forceLevelToMaximum()
 // FR: gainOneLevelByCheat déclare ou implémente un comportement précis utilisé par ce module.
 void Player::gainOneLevelByCheat()
 {
-    alteredByCheats = true;
+    markAsAlteredByCheats();
     levelUp();
 }
 

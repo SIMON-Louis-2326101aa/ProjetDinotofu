@@ -7,6 +7,7 @@
 #include "combat/group/CombatGroupBuilder.hpp"
 
 #include "entity/Monster.hpp"
+#include "combat/unit/CombatSlotRules.hpp"
 #include "entity/Player.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 
@@ -20,7 +21,7 @@ CombatGroup CombatGroupBuilder::buildSideFromEntityAndSummons(
     CombatUnitKind mainKind
 )
 {
-    CombatGroup group(3, 2);
+    CombatGroup group(CombatSlotRules::SharedActiveSlots, CombatSlotRules::SummonOnlyBonusSlots);
 
     group.addSlot(
         CombatUnitSlot::createEntitySlot(
@@ -31,7 +32,10 @@ CombatGroup CombatGroupBuilder::buildSideFromEntityAndSummons(
         )
     );
 
-    int slotIndex = 1;
+    // One fighter occupies the centre. Summons first fill the two remaining shared places,
+    // then the two summon-only bonus places.
+    int nextSharedSlot = 1;
+    int nextBonusSlot = CombatSlotRules::SharedActiveSlots;
 
     for (Summon& summon : summons)
     {
@@ -40,15 +44,21 @@ CombatGroup CombatGroupBuilder::buildSideFromEntityAndSummons(
             continue;
         }
 
-        group.addSlot(
-            CombatUnitSlot::createSummonSlot(
-                slotIndex,
-                side,
-                summon
-            )
-        );
+        int slotIndex = -1;
+        if (nextSharedSlot < CombatSlotRules::SharedActiveSlots)
+        {
+            slotIndex = nextSharedSlot++;
+        }
+        else if (nextBonusSlot < CombatSlotRules::MaxVisibleActiveSlots)
+        {
+            slotIndex = nextBonusSlot++;
+        }
+        else
+        {
+            break;
+        }
 
-        slotIndex++;
+        group.addSlot(CombatUnitSlot::createSummonSlot(slotIndex, side, summon));
     }
 
     return group;
@@ -61,94 +71,78 @@ CombatGroup CombatGroupBuilder::buildSideFromPlayersAndSummons(
     CombatSide side
 )
 {
-    CombatGroup group(3, 2);
+    CombatGroup group(CombatSlotRules::SharedActiveSlots, CombatSlotRules::SummonOnlyBonusSlots);
 
-    // Placement allié validé : centre = joueur principal, deux côtés = joueurs/personnages,
-    // extrémités = invocations uniquement. Les joueurs restent prioritaires sur les alliés IA.
-    const int playerSlots[3] = {0, 1, 2};
+    // Priority is strict: players first. Any shared place left after them may be occupied by
+    // allied AI later or, for this builder, by a summon. Two extra positions remain summon-only.
     int placedPlayers = 0;
-
     for (Player* player : players)
     {
-        if (player == nullptr)
-        {
-            continue;
-        }
+        if (player == nullptr) continue;
 
-        if (placedPlayers >= 3)
+        if (placedPlayers >= CombatSlotRules::SharedActiveSlots)
         {
             MessageScreen::show(
                 "FORMATION COMPLÈTE",
                 "combat.group.player.overflow",
                 {
                     player->getName() + " ne peut pas entrer dans la ligne active.",
-                    "Les trois emplacements de personnage sont déjà pris."
+                    "Les trois places partagées sont déjà prises par des joueurs prioritaires."
                 },
                 false
             );
             continue;
         }
 
-        CombatUnitKind kind = placedPlayers == 0
+        const CombatUnitKind kind = placedPlayers == 0
             ? CombatUnitKind::MainFighter
             : CombatUnitKind::Ally;
-
-        group.addSlot(
-            CombatUnitSlot::createEntitySlot(
-                playerSlots[placedPlayers],
-                side,
-                kind,
-                *player
-            )
-        );
-
-        placedPlayers++;
+        group.addSlot(CombatUnitSlot::createEntitySlot(placedPlayers, side, kind, *player));
+        ++placedPlayers;
     }
 
-    const int summonSlots[2] = {3, 4};
-    int placedSummons = 0;
-
+    int nextSharedSlot = placedPlayers;
+    int nextBonusSlot = CombatSlotRules::SharedActiveSlots;
     for (Summon& summon : summons)
     {
-        if (summon.isDead() || summon.isExpired())
-        {
-            continue;
-        }
+        if (summon.isDead() || summon.isExpired()) continue;
 
-        if (placedSummons >= 2)
+        int slotIndex = -1;
+        if (nextSharedSlot < CombatSlotRules::SharedActiveSlots)
+        {
+            slotIndex = nextSharedSlot++;
+        }
+        else if (nextBonusSlot < CombatSlotRules::MaxVisibleActiveSlots)
+        {
+            slotIndex = nextBonusSlot++;
+        }
+        else
         {
             MessageScreen::show(
-                "INVOCATION EN RETRAIT",
+                "INVOCATION EN ATTENTE",
                 "combat.group.summon.overflow",
                 {
-                    summon.getName() + " reste en retrait.",
-                    "Les extrémités réservées aux invocations sont déjà occupées."
+                    summon.getName() + " reste dans la file d'attente.",
+                    "Les trois places partagées et les deux places bonus d'invocation sont occupées."
                 },
                 false
             );
             continue;
         }
 
-        group.addSlot(
-            CombatUnitSlot::createSummonSlot(
-                summonSlots[placedSummons],
-                side,
-                summon
-            )
-        );
-
-        placedSummons++;
+        group.addSlot(CombatUnitSlot::createSummonSlot(slotIndex, side, summon));
     }
 
     return group;
 }
+
 
 CombatGroup CombatGroupBuilder::buildSideFromWave(
     EnemyCombatQueue& wave,
     CombatSide side
 )
 {
-    CombatGroup group(3, 2);
+    CombatGroup group(CombatSlotRules::SharedActiveSlots, CombatSlotRules::SummonOnlyBonusSlots);
 
     if (!wave.hasActiveEnemies())
     {
@@ -257,10 +251,10 @@ void CombatGroupBuilder::displayFormationRules()
         "combat.group.formation.rules",
         {
             "Formation alliée :",
-            "- centre : joueur principal ;",
-            "- côtés : joueurs secondaires ou personnages alliés ;",
-            "- extrémités : invocations uniquement ;",
-            "- priorité : joueurs > personnages alliés > invocations."
+            "- 3 places partagées : joueurs > personnages alliés > invocations ;",
+            "- 2 places supplémentaires : invocations uniquement ;",
+            "- si une place partagée reste libre, une invocation peut l'occuper ;",
+            "- au-delà : file d'attente/réserve, jamais une sixième unité visible."
         },
         false
     );

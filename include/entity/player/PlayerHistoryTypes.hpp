@@ -38,6 +38,14 @@ struct PlayerRivalRecord
     int firstSeenDay = 0;
     int lastSeenDay = 0;
     bool alive = true;
+
+    // Optional compatible stash used when a fleeing thief becomes a persistent rival.
+    // Only compact, recoverable property is stored here for now; no quest/unique item is stolen.
+    long long stolenCopper = 0;
+    std::string stolenMaterialId;
+    std::string stolenMaterialName;
+    std::string stolenMaterialQuality = "normal";
+    int stolenMaterialQuantity = 0;
 };
 
 #endif

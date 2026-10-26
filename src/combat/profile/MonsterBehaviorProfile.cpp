@@ -318,6 +318,9 @@ namespace
 
         profile.moraleSensitive = survivalMind;
         profile.canFlee = survivalMind;
+        profile.canStealOnEscape = survivalMind && containsAny(combined, {
+            "voleur", "roublard", "brigand", "bandit", "pillard", "contrebandier", "pickpocket", "chapardeur"
+        });
         profile.rivalEligible = survivalMind && !containsAny(combined, {"nuée", "nuee", "essaim"});
 
         if (monster.isElite() || monster.isEvolved()) profile.rivalTemperament = "endurci";

@@ -2038,4 +2038,3 @@ void MonsterCatalog::displayAvailableMonsters()
 {
     MessageScreen::show("MONSTRES PRÉPARÉS", "catalog.monsters.available", getAvailableMonsterLines(), false);
 }
-

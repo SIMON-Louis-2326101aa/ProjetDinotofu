@@ -337,6 +337,8 @@ std::vector<std::string> Weapon::toDisplayLines() const
         "Nom : " + name,
         "Description : " + description,
         "Valeur : " + Money::formatEconomyUnits(value),
+        "Propriété : " + getOwnershipBindingDisplayText(),
+        "Récupération : " + getRecoveryMetadataDisplayText(),
         "Type : " + weaponTypeLabel(type),
         "Catégorie de poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getWeaponWeightClass(*this)),
         "Contrepartie : " + EquipmentWeightRules::getWeaponTradeoffText(*this),

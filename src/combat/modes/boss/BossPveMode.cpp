@@ -1,4 +1,5 @@
 // EN: BossPveMode.cpp briefly defines this Dinotofu module and its responsibilities.
+#include "combat/death/PlayerDeathResolver.hpp"
 // FR: BossPveMode.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
 // English: This file is part of Dinotofu. Code identifiers are written in English, while player-facing text can stay in French.
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
@@ -6,20 +7,33 @@
 #include "combat/modes/boss/BossPveMode.hpp"
 
 #include "combat/TurnManager.hpp"
+#include "combat/ally/RecruitedAllyCombatRoster.hpp"
+#include "combat/ally/RecruitedAllyBossSupport.hpp"
+#include "combat/ally/RecruitedAllyAftermathSystem.hpp"
+#include "combat/death/LethalTeamRescueSystem.hpp"
+#include "combat/death/LethalSpiritResistanceSystem.hpp"
 
 #include "core/Console.hpp"
 #include "economy/Money.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "boss/BossCatalog.hpp"
+#include "entity/Monster.hpp"
+#include "entity/Race.hpp"
 #include "interface/CombatDisplay.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "progression/death/DeathPenaltyResult.hpp"
 #include "progression/death/DeathPenaltySystem.hpp"
+#include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "progression/blessing/BlessingSystem.hpp"
 #include "combat/loot/LootGenerator.hpp"
 #include "combat/reward/CombatRewardSystem.hpp"
 #include "interface/menu/potions/CombatPotionUtils.hpp"
 #include "combat/group/CombatGroupBuilder.hpp"
+#include "combat/group/CombatLeaderRotationSystem.hpp"
+#include "combat/group/TeamEmploymentSystem.hpp"
+#include "combat/group/TeamEmploymentMissionSystem.hpp"
+#include "combat/group/EmployerTeamRosterSystem.hpp"
+#include "combat/group/EmployerTeamDisciplineSystem.hpp"
 #include "combat/group/InitiativeSystem.hpp"
 #include "combat/group/TurnOrder.hpp"
 #include "combat/system/CombatClassSystem.hpp"
@@ -31,6 +45,7 @@
 #include "interface/model/MenuScreen.hpp"
 #include "lore/LegendTriggerSystem.hpp"
 #include "item/material/MaterialCatalog.hpp"
+#include "item/equipment/EquipmentWeightRules.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -40,6 +55,7 @@
 #include <vector>
 #include <memory>
 #include <numeric>
+#include <set>
 
 
 namespace
@@ -101,6 +117,138 @@ namespace
     {
         std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         return value;
+    }
+
+
+    int recruitedBossAllyHpPercent(const RecruitedAllyCombatSupport& ally)
+    {
+        if (ally.maxHp <= 0) return 0;
+        return std::clamp(ally.currentHp * 100 / ally.maxHp, 0, 100);
+    }
+
+    bool recruitedBossAllyLooksStubborn(const RecruitedAllyCombatSupport& ally)
+    {
+        const std::string profile = toLowerAscii(ally.trait + " " + ally.job + " " + ally.motivation);
+        return profile.find("orgueill") != std::string::npos
+            || profile.find("têtu") != std::string::npos
+            || profile.find("tetu") != std::string::npos
+            || profile.find("berser") != std::string::npos
+            || profile.find("fanati") != std::string::npos;
+    }
+
+    bool openPlayerBossLeaderRotationMenu(
+        Player& player,
+        std::vector<RecruitedAllyCombatSupport>& activeAllies,
+        std::vector<RecruitedAllyCombatSupport>& reserveAllies,
+        Random& random,
+        bool& rotationLockedForTurn)
+    {
+        if (rotationLockedForTurn || activeAllies.empty() || reserveAllies.empty()) return false;
+
+        const int maxSwaps = std::min({2, static_cast<int>(activeAllies.size()), static_cast<int>(reserveAllies.size())});
+        MenuScreen countScreen("ROTATION DU CHEF — BOSS", "boss.pve.player_team.leader_rotation.count");
+        countScreen.addLine("Tu es le chef de ton équipe personnelle : tu peux sacrifier ton tour pour réorganiser la ligne face au boss.");
+        countScreen.addLine("Le ou les membres appelés depuis la réserve n'obtiennent aucun tour gratuit pendant cette même phase.");
+        countScreen.addBackOption("Retour", "boss.pve.player_team.leader_rotation.back");
+        countScreen.addOption(1, "Échanger 1 membre", "Une place active contre une place de réserve.", true, "boss.pve.player_team.leader_rotation.one");
+        countScreen.addOption(2, "Échanger 2 membres", "Deux échanges atomiques pour refaire la ligne en une seule action de chef.", maxSwaps >= 2, "boss.pve.player_team.leader_rotation.two");
+        const int requested = TerminalInterface::askMenuChoiceFromOptions(countScreen, "Choisis le nombre d'échanges.");
+        Console::clear();
+        if (requested <= 0 || requested > maxSwaps) return false;
+
+        std::vector<std::string> outgoingNames;
+        std::vector<std::string> incomingNames;
+        std::set<std::string> usedOutgoing;
+        std::set<std::string> usedIncoming;
+        for (int step = 0; step < requested; ++step)
+        {
+            MenuScreen outScreen("ROTATION BOSS — SORTIE", "boss.pve.player_team.leader_rotation.out");
+            outScreen.addBackOption("Annuler toute la rotation", "boss.pve.player_team.leader_rotation.cancel");
+            std::vector<std::size_t> outMap;
+            int option = 1;
+            for (std::size_t i = 0; i < activeAllies.size(); ++i)
+            {
+                if (usedOutgoing.count(activeAllies[i].name) > 0) continue;
+                outMap.push_back(i);
+                outScreen.addOption(option++, activeAllies[i].name,
+                    activeAllies[i].job + " | PV " + std::to_string(activeAllies[i].currentHp) + "/" + std::to_string(activeAllies[i].maxHp),
+                    true, "boss.pve.player_team.leader_rotation.out.member");
+            }
+            const int outChoice = TerminalInterface::askMenuChoiceFromOptions(outScreen, "Qui recule ?");
+            Console::clear();
+            if (outChoice <= 0 || outChoice > static_cast<int>(outMap.size())) return false;
+            const auto& outgoing = activeAllies[outMap[static_cast<std::size_t>(outChoice - 1)]];
+
+            MenuScreen inScreen("ROTATION BOSS — ENTRÉE", "boss.pve.player_team.leader_rotation.in");
+            inScreen.addBackOption("Annuler toute la rotation", "boss.pve.player_team.leader_rotation.cancel");
+            std::vector<std::size_t> inMap;
+            option = 1;
+            for (std::size_t i = 0; i < reserveAllies.size(); ++i)
+            {
+                if (usedIncoming.count(reserveAllies[i].name) > 0) continue;
+                inMap.push_back(i);
+                inScreen.addOption(option++, reserveAllies[i].name,
+                    reserveAllies[i].job + " | PV " + std::to_string(reserveAllies[i].currentHp) + "/" + std::to_string(reserveAllies[i].maxHp),
+                    true, "boss.pve.player_team.leader_rotation.in.member");
+            }
+            const int inChoice = TerminalInterface::askMenuChoiceFromOptions(inScreen, "Qui entre ?");
+            Console::clear();
+            if (inChoice <= 0 || inChoice > static_cast<int>(inMap.size())) return false;
+            const auto& incoming = reserveAllies[inMap[static_cast<std::size_t>(inChoice - 1)]];
+
+            outgoingNames.push_back(outgoing.name);
+            incomingNames.push_back(incoming.name);
+            usedOutgoing.insert(outgoing.name);
+            usedIncoming.insert(incoming.name);
+        }
+
+        // A double rotation is atomic: all refusals are resolved before mutating either vector.
+        for (int step = 0; step < requested; ++step)
+        {
+            auto outIt = std::find_if(activeAllies.begin(), activeAllies.end(), [&](const auto& a) { return a.name == outgoingNames[step]; });
+            auto inIt = std::find_if(reserveAllies.begin(), reserveAllies.end(), [&](const auto& a) { return a.name == incomingNames[step]; });
+            if (outIt == activeAllies.end() || inIt == reserveAllies.end()) return false;
+            const int refusalHp = std::min(recruitedBossAllyHpPercent(*outIt), recruitedBossAllyHpPercent(*inIt));
+            const int loyalty = std::min(
+                RecruitedAllyCombatRoster::relationshipScore(player, outIt->name),
+                RecruitedAllyCombatRoster::relationshipScore(player, inIt->name));
+            if (CombatLeaderRotationSystem::refusesRotation(
+                    refusalHp, loyalty, recruitedBossAllyLooksStubborn(*outIt) || recruitedBossAllyLooksStubborn(*inIt), random))
+            {
+                rotationLockedForTurn = true;
+                MessageScreen::show(
+                    "ROTATION REFUSÉE",
+                    "boss.pve.player_team.leader_rotation.refused",
+                    {
+                        "Un membre en état critique refuse brièvement le changement.",
+                        "Ton tour n'est pas consommé, mais tu ne peux pas relancer Rotation avant ton prochain tour.",
+                        "Tu peux encore effectuer ton action normale contre le boss."
+                    },
+                    false);
+                return false;
+            }
+        }
+
+        std::vector<std::string> lines;
+        for (int step = 0; step < requested; ++step)
+        {
+            auto outIt = std::find_if(activeAllies.begin(), activeAllies.end(), [&](const auto& a) { return a.name == outgoingNames[step]; });
+            auto inIt = std::find_if(reserveAllies.begin(), reserveAllies.end(), [&](const auto& a) { return a.name == incomingNames[step]; });
+            if (outIt == activeAllies.end() || inIt == reserveAllies.end()) continue;
+            std::swap(*outIt, *inIt);
+            RecruitedAllyCombatRoster::markReserveEntryDelay(*outIt);
+            inIt->enteredFromReserveThisPhase = false;
+            lines.push_back("- " + outgoingNames[step] + " recule ; " + incomingNames[step] + " prend sa place.");
+        }
+        lines.push_back("Ton tour de chef est consommé. Le boss conserve sa prochaine phase normale.");
+        lines.push_back("Toute recrue venant d'entrer attend sa prochaine vraie fenêtre d'action : aucun tour gratuit.");
+        player.recordCanonicalEvent(
+            "rotations_tactiques_alliees_boss",
+            "chef:" + player.getName(),
+            player.getName() + " sacrifie son tour face à un boss pour " + std::to_string(requested) + " rotation(s) tactique(s).",
+            requested);
+        MessageScreen::show("ROTATION DU CHEF — BOSS", "boss.pve.player_team.leader_rotation.success", lines, false);
+        return true;
     }
 
     // EN: isAnyName declares or implements a focused behavior used by this module.
@@ -896,6 +1044,170 @@ namespace
         return true;
     }
 
+
+    int equipmentTransportCost(const Weapon& weapon)
+    {
+        switch (EquipmentWeightRules::getWeaponWeightClass(weapon))
+        {
+            case EquipmentWeightClass::Light: return 1;
+            case EquipmentWeightClass::Heavy: return 3;
+            case EquipmentWeightClass::Medium:
+            default: return 2;
+        }
+    }
+
+    int equipmentTransportCost(const Armor& armor)
+    {
+        switch (EquipmentWeightRules::getArmorWeightClass(armor))
+        {
+            case EquipmentWeightClass::Light: return 1;
+            case EquipmentWeightClass::Heavy: return 3;
+            case EquipmentWeightClass::Medium:
+            default: return 2;
+        }
+    }
+
+    struct GrinkaPostKoRecoveryResult
+    {
+        int remainingCarryUnits = 0;
+        int recoveredGold = 0;
+        bool recoveredWeapon = false;
+        bool recoveredArmor = false;
+        bool stashStillPresent = false;
+    };
+
+    GrinkaPostKoRecoveryResult recoverGrinkaStashAfterTeamVictory(Player& player, int availableCarryUnits)
+    {
+        GrinkaPostKoRecoveryResult result;
+        result.remainingCarryUnits = std::max(0, availableCarryUnits);
+
+        if (!player.hasGrinkaBossTheftPresent())
+        {
+            return result;
+        }
+
+        std::vector<std::string> lines = {
+            "Grinka est tombée pendant ton inconscience : l'équipe cherche d'abord tes biens personnels identifiables avant le butin ordinaire.",
+            "La capacité de transport reste une contrainte d'extraction, pas une limite d'inventaire à gérer quand tu es conscient."
+        };
+
+        std::vector<PostKoRecoveryCandidate> personalCandidates;
+        if (player.hasGrinkaStolenWeapon())
+        {
+            const Weapon weapon = player.getGrinkaStolenWeapon();
+            personalCandidates.push_back({
+                "grinka_weapon",
+                equipmentTransportCost(weapon),
+                std::max(95, weapon.getAutomaticRecoveryPriorityScore()),
+                true
+            });
+        }
+        if (player.hasGrinkaStolenArmor())
+        {
+            const Armor armor = player.getGrinkaStolenArmor();
+            personalCandidates.push_back({
+                "grinka_armor",
+                equipmentTransportCost(armor),
+                std::max(95, armor.getAutomaticRecoveryPriorityScore()),
+                true
+            });
+        }
+
+        const PostKoRecoverySelection personalSelection =
+            RecruitedAllyAftermathSystem::selectPostKoRecoveryCandidates(personalCandidates, result.remainingCarryUnits);
+        result.remainingCarryUnits = personalSelection.remainingCarryUnits;
+
+        for (const std::string& id : personalSelection.recoveredIds)
+        {
+            if (id == "grinka_weapon" && player.hasGrinkaStolenWeapon())
+            {
+                const Weapon weapon = player.getGrinkaStolenWeapon();
+                if (player.recoverGrinkaStolenWeapon())
+                {
+                    result.recoveredWeapon = true;
+                    lines.push_back("Bien personnel récupéré en priorité : " + weapon.getName() + ".");
+                    player.recordCanonicalEvent(
+                        "grinka_biens_recuperes",
+                        weapon.getPersistentId().empty() ? "weapon:" + weapon.getName() : weapon.getPersistentId(),
+                        "Arme exactement confisquée par Grinka puis récupérée physiquement par l'équipe après victoire post-KO.",
+                        1);
+                }
+            }
+            else if (id == "grinka_armor" && player.hasGrinkaStolenArmor())
+            {
+                const Armor armor = player.getGrinkaStolenArmor();
+                if (player.recoverGrinkaStolenArmor())
+                {
+                    result.recoveredArmor = true;
+                    lines.push_back("Bien personnel récupéré en priorité : " + armor.getName() + ".");
+                    player.recordCanonicalEvent(
+                        "grinka_biens_recuperes",
+                        armor.getPersistentId().empty() ? "armor:" + armor.getName() : armor.getPersistentId(),
+                        "Armure exactement confisquée par Grinka puis récupérée physiquement par l'équipe après victoire post-KO.",
+                        1);
+                }
+            }
+        }
+
+        for (const std::string& id : personalSelection.deferredIds)
+        {
+            if (id == "grinka_weapon" && player.hasGrinkaStolenWeapon())
+            {
+                lines.push_back("Ton arme confisquée est localisée, mais l'équipe ne peut pas la transporter en plus de ton extraction : elle reste enregistrée comme encore à récupérer.");
+            }
+            else if (id == "grinka_armor" && player.hasGrinkaStolenArmor())
+            {
+                lines.push_back("Ton armure confisquée est localisée, mais elle est trop encombrante pour cette extraction : elle reste enregistrée comme encore à récupérer.");
+            }
+        }
+
+        // Money is treated as one compact secured pouch in this aftermath layer. We deliberately
+        // avoid coin-by-coin encumbrance: this system exists to prevent magical hauling, not to
+        // turn ordinary inventory management into a weight simulator.
+        if (player.getGrinkaStolenGold() > 0)
+        {
+            // Keep one remaining unit for the boss fragment when possible: exact personal gear and
+            // notable/unique boss salvage rank above ordinary currency in an automatic extraction.
+            const int reservedForBossFragment = result.remainingCarryUnits > 0 ? 1 : 0;
+            if (result.remainingCarryUnits - reservedForBossFragment >= 1)
+            {
+                result.recoveredGold = player.recoverGrinkaStolenGold();
+                if (result.recoveredGold > 0)
+                {
+                    --result.remainingCarryUnits;
+                    lines.push_back("Bourse confisquée récupérée : " + Money::formatEconomyUnits(result.recoveredGold) + ".");
+                    player.recordCanonicalEvent(
+                        "grinka_biens_recuperes",
+                        "money:jour_" + std::to_string(player.getWorldDaysElapsed()),
+                        "Argent précédemment confisqué par Grinka récupéré physiquement par l'équipe.",
+                        result.recoveredGold);
+                }
+            }
+            else
+            {
+                lines.push_back("La bourse confisquée reste enregistrée : l'équipe garde sa dernière place de transport pour le fragment notable du boss.");
+            }
+        }
+
+        if (result.recoveredWeapon || result.recoveredArmor)
+        {
+            player.grantTitle("Rends-moi ça.");
+        }
+
+        result.stashStillPresent = player.hasGrinkaBossTheftPresent();
+        lines.push_back(result.stashStillPresent
+            ? "Une partie de tes biens reste encore liée à Grinka : rien n'est supprimé ni recréé artificiellement."
+            : "Tous les biens personnels encore enregistrés chez Grinka ont été récupérés.");
+
+        MessageScreen::show(
+            "BIENS DE GRINKA",
+            "boss.grinka.post_ko_stash_recovery",
+            lines,
+            false);
+
+        return result;
+    }
+
     // EN: applyGrinkaVictoryPenalty declares or implements a focused behavior used by this module.
     // FR: applyGrinkaVictoryPenalty déclare ou implémente un comportement précis utilisé par ce module.
     void applyGrinkaVictoryPenalty(Player& player, Random& random)
@@ -932,9 +1244,20 @@ namespace
         if (!player.hasEquipmentProtection() && player.hasEquippedWeapon() && random.between(1, 100) <= 25)
         {
             Weapon stolenWeapon = player.getEquippedWeapon();
+            if (!stolenWeapon.canChangeOwner())
+            {
+                lines.push_back(stolenWeapon.getName() + " reste lié à son propriétaire : Grinka ne peut pas le confisquer.");
+            }
+            else
             if (player.destroyEquippedWeapon())
             {
                 player.recordGrinkaStolenWeapon(stolenWeapon);
+                player.recordHistoricalEvent(
+                    "equipment_lost",
+                    stolenWeapon.getPersistentId().empty() ? "weapon:" + stolenWeapon.getName() : stolenWeapon.getPersistentId(),
+                    "Équipement confisqué : " + stolenWeapon.getName() + " volé par Grinka après une défaite (récupération possible).",
+                    true
+                );
                 lines.push_back("Un collecteur gobelin repart avec ton arme équipée.");
             }
         }
@@ -942,9 +1265,20 @@ namespace
         if (!player.hasEquipmentProtection() && player.hasEquippedArmor() && random.between(1, 100) <= 18)
         {
             Armor stolenArmor = player.getEquippedArmor();
+            if (!stolenArmor.canChangeOwner())
+            {
+                lines.push_back(stolenArmor.getName() + " reste liée à son propriétaire : Grinka ne peut pas la confisquer.");
+            }
+            else
             if (player.destroyEquippedArmor())
             {
                 player.recordGrinkaStolenArmor(stolenArmor);
+                player.recordHistoricalEvent(
+                    "equipment_lost",
+                    stolenArmor.getPersistentId().empty() ? "armor:" + stolenArmor.getName() : stolenArmor.getPersistentId(),
+                    "Équipement confisqué : " + stolenArmor.getName() + " volé par Grinka après une défaite (récupération possible).",
+                    true
+                );
                 lines.push_back("Un autre collecteur arrache une pièce majeure de ton armure équipée.");
             }
         }
@@ -1484,6 +1818,12 @@ namespace
         {
             grant("Sang noir rendu");
         }
+        if (boss.getBossId() == 5 && (player.hasGrinkaStolenWeapon() || player.hasGrinkaStolenArmor()))
+        {
+            // The exact stolen snapshot still exists at victory time. Personal victory recovers it
+            // immediately below, so this title reflects a real confiscated item rather than generic loot.
+            grant("Rends-moi ça.");
+        }
         if (hadBossLockedCurse)
         {
             grant("Exorcisé par revanche");
@@ -1549,7 +1889,7 @@ namespace
 
     // EN: maybeReviveHitogamiOnce declares or implements a focused behavior used by this module.
     // FR: maybeReviveHitogamiOnce déclare ou implémente un comportement précis utilisé par ce module.
-    void maybeReviveHitogamiOnce(Boss& boss, bool& alreadyRevived, DifficultyMode difficulty)
+    void maybeReviveHitogamiOnce(Boss& boss, bool& alreadyRevived, DifficultyMode difficulty, bool showMessage = true)
     {
         if (boss.getBossId() != 19 || alreadyRevived || !boss.isDead())
         {
@@ -1560,19 +1900,22 @@ namespace
         int revivePercent = getHitogamiRevivePercent(difficulty);
         boss.reviveWithHealthPercentage(revivePercent);
 
-        MessageScreen::show(
-            "ÉCHO D'HITOGAMI",
-            "boss.hitogami.revive_once",
-            {
-                "Hitogami tombe à genoux.",
-                "Pendant une seconde, le combat semble terminé.",
-                "Puis il respire encore.",
-                "Tu n'es pas spécial parce que tu tombes.",
-                "Tu es spécial parce que tu te relèves.",
-                "L'écho d'Hitogami se relève avec " + std::to_string(boss.getHp()) + "/" + std::to_string(boss.getMaxHp()) + " PV."
-            },
-            false
-        );
+        if (showMessage)
+        {
+            MessageScreen::show(
+                "ÉCHO D'HITOGAMI",
+                "boss.hitogami.revive_once",
+                {
+                    "Hitogami tombe à genoux.",
+                    "Pendant une seconde, le combat semble terminé.",
+                    "Puis il respire encore.",
+                    "Tu n'es pas spécial parce que tu tombes.",
+                    "Tu es spécial parce que tu te relèves.",
+                    "L'écho d'Hitogami se relève avec " + std::to_string(boss.getHp()) + "/" + std::to_string(boss.getMaxHp()) + " PV."
+                },
+                false
+            );
+        }
     }
 
 
@@ -2152,76 +2495,186 @@ namespace
         return true;
     }
 
-    void resolveBossLethalGroupDeathSave(Player& player, Random& random)
+    bool tryBossLethalRecruitedTeamRescue(
+        Player& player,
+        const std::vector<RecruitedAllyCombatSupport>& activeAllies,
+        const std::vector<RecruitedAllyCombatSupport>& reserveAllies,
+        Random& random,
+        const std::string& contextId)
     {
-        if (!player.isDead())
+        const LethalTeamRescueResult rescue = LethalTeamRescueSystem::tryRecruitedTeamRescue(
+            player, activeAllies, reserveAllies, random, contextId);
+        if (!rescue.teamPresent) return false;
+
+        std::vector<std::string> lines;
+        lines.push_back(player.getName() + " est au bord de la mort. La suite a été résolue : seuls les alliés encore debout peuvent maintenant tenter le sauvetage.");
+        if (rescue.hasCapableRescuer)
         {
-            return;
+            lines.push_back(rescue.rescuerName + " connaît réellement les gestes/soins nécessaires pour tenter de te ramener.");
+        }
+        else
+        {
+            lines.push_back(rescue.rescuerName + " n'a pas de compétence de réanimation : seule une stabilisation ou un transport d'urgence reste possible.");
+        }
+        lines.push_back("Chance de survie : " + std::to_string(rescue.survivalChancePercent) + "% | jet " + std::to_string(rescue.roll) + "/100.");
+        lines.push_back(rescue.survived
+            ? "La tentative réussit : la mort définitive est évitée, mais le boss n'est pas validé par ce sauvetage."
+            : "La tentative échoue : la mort définitive reprend son cours normal.");
+        showBossPveLines("SAUVETAGE LÉTAL D'ÉQUIPE", "boss.lethal.team_rescue." + contextId, lines);
+        return rescue.survived;
+    }
+
+    bool tryBossFirstLethalSpiritResistance(
+        Player& player,
+        Random& random,
+        const std::string& contextId)
+    {
+        const LethalSpiritResistanceResult spirit = LethalSpiritResistanceSystem::tryFirstLethalResistance(
+            player, random, contextId.c_str());
+        if (!spirit.consumed) return false;
+        DeathPenaltySystem::displayLethalSpiritResistance(spirit);
+        return spirit.survived;
+    }
+
+    RecruitedAllyBossPostKoOutcome simulateBossTeamAfterPlayerDownWithSpecialRules(
+        Player& player,
+        Boss& boss,
+        std::vector<RecruitedAllyCombatSupport>& recruitedAllies,
+        std::vector<RecruitedAllyCombatSupport>& reserveRecruitedAllies,
+        Random& random,
+        DifficultyMode difficulty,
+        bool& hitogamiAlreadyRevived,
+        const std::string& contextId)
+    {
+        RecruitedAllyBossPostKoOutcome teamOutcome;
+        if (recruitedAllies.empty() && reserveRecruitedAllies.empty()) return teamOutcome;
+
+        showBossPveLines(
+            "CHEF À TERRE",
+            "boss.pve.player.down.team_continues." + contextId,
+            {
+                "Ta vision décroche. Le combat ne s'arrête pas forcément avec toi.",
+                "Les places libérées peuvent être reprises par la réserve, jusqu'à trois alliés non invoqués pendant ton inconscience.",
+                "Le moteur continue le combat sans t'afficher des actions que ton personnage ne peut pas voir.",
+                "Pour une mort définitive, seuls les alliés encore debout à la fin pourront ensuite tenter de te sauver."
+            },
+            false
+        );
+
+        const bool allowBossDefeatByAllies = boss.getBossId() != 27;
+        teamOutcome = simulateRecruitedAlliesAfterPlayerDownAgainstBoss(
+            player, boss, recruitedAllies, reserveRecruitedAllies, random, allowBossDefeatByAllies);
+
+        // Hitogami conserve sa seconde vie même si les compagnons font tomber sa première barre.
+        if (teamOutcome.bossDefeated && boss.getBossId() == 19 && !hitogamiAlreadyRevived)
+        {
+            maybeReviveHitogamiOnce(boss, hitogamiAlreadyRevived, difficulty, false);
+            teamOutcome.bossDefeated = boss.isDead();
+            if (!boss.isDead() && teamOutcome.playerRecovered)
+            {
+                for (RecruitedAllyCombatSupport& ally : recruitedAllies)
+                {
+                    ally.postKoObservedFinalOutcome = false;
+                }
+                for (RecruitedAllyCombatSupport& ally : reserveRecruitedAllies)
+                {
+                    ally.postKoObservedFinalOutcome = false;
+                }
+                RecruitedAllyBossPostKoOutcome secondPhase = simulateRecruitedAlliesAfterPlayerDownAgainstBoss(
+                    player, boss, recruitedAllies, reserveRecruitedAllies, random, true, teamOutcome.simulatedRounds);
+                teamOutcome.bossDefeated = secondPhase.bossDefeated;
+                teamOutcome.playerRecovered = secondPhase.playerRecovered;
+                teamOutcome.simulatedRounds += secondPhase.simulatedRounds;
+                teamOutcome.reserveEntries += secondPhase.reserveEntries;
+                teamOutcome.alliesFallen += secondPhase.alliesFallen;
+                for (const auto& participant : secondPhase.participants)
+                {
+                    auto existing = std::find_if(teamOutcome.participants.begin(), teamOutcome.participants.end(), [&](const auto& current) {
+                        return current.name == participant.name;
+                    });
+                    if (existing == teamOutcome.participants.end())
+                        teamOutcome.participants.push_back(participant);
+                    else if (participant.turnsTaken >= existing->turnsTaken)
+                        *existing = participant;
+                }
+            }
         }
 
-        int green = 0;
-        int red = 0;
+        if (boss.getBossId() == 27)
+        {
+            // FireFlight est un test personnel : les compagnons peuvent seulement créer une fenêtre
+            // d'extraction. Ils ne valident ni son dernier PV ni le test final.
+            teamOutcome.bossDefeated = false;
+            if (teamOutcome.playerRecovered)
+            {
+                player.recordCanonicalEvent(
+                    "fireflight_extractions_recrues",
+                    "jour_" + std::to_string(player.getWorldDaysElapsed()),
+                    "Les recrues ont pu extraire le joueur, mais le test final de FireFlight reste personnel.",
+                    1
+                );
+            }
+        }
+
+        return teamOutcome;
+    }
+
+    void resolveBossLethalGroupDeathSave(
+        Player& player,
+        const std::vector<Player*>& party,
+        Random& random,
+        const std::string& contextId)
+    {
+        if (!player.isDead()) return;
+
+        const LethalTeamRescueResult rescue = LethalTeamRescueSystem::tryHumanPartyRescue(
+            player, party, random, contextId);
+
         std::vector<std::string> lines;
-        lines.push_back("Mort définitive coop boss : " + player.getName() + " est au sol.");
-        lines.push_back("3 pastilles vertes le ramènent. 3 rouges le rayent du registre, sauf intervention capable de briser le destin.");
-
-        auto showSave = [&]()
+        lines.push_back("Mort définitive en équipe : " + player.getName() + " est au sol.");
+        if (rescue.teamPresent)
         {
-            showBossPveLines("SURVIE EN MORT DÉFINITIVE COOP", "boss.coop.lethal.save", lines);
-        };
-
-        while (green < 3 && red < 3)
-        {
-            int roll = random.between(1, 20);
-            lines.push_back("Dé de survie : " + std::to_string(roll));
-
-            if (roll == 20)
+            if (rescue.hasCapableRescuer)
             {
-                player.reviveWithHealthPercentage(1);
-                if (player.getHp() <= 0) player.heal(1);
-                lines.push_back("20 naturel : " + player.getName() + " se relève immédiatement à 1 PV et pourra rejouer.");
-                showSave();
-                return;
-            }
-
-            if (roll == 1)
-            {
-                red += 2;
-                lines.push_back("1 naturel : deux pastilles rouges apparaissent d'un coup.");
-            }
-            else if (roll >= 11)
-            {
-                ++green;
-                lines.push_back("Pastille verte : " + std::to_string(green) + "/3.");
+                lines.push_back(rescue.rescuerName + " a les capacités nécessaires pour tenter un véritable sauvetage de terrain.");
             }
             else
             {
-                ++red;
-                lines.push_back("Pastille rouge : " + std::to_string(red) + "/3.");
+                lines.push_back(rescue.rescuerName + " n'est pas soigneur : il ne peut qu'essayer de stabiliser/transporter le corps vers un secours.");
             }
+            lines.push_back("Chance réelle de survie : " + std::to_string(rescue.survivalChancePercent) + "%.");
+            lines.push_back("Jet : " + std::to_string(rescue.roll) + "/100.");
+            if (rescue.survived)
+            {
+                lines.push_back(player.getName() + " survit avec " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + " PV. La mort n'est pas comptée.");
+                showBossPveLines("SURVIE EN MORT DÉFINITIVE COOP", "boss.coop.lethal.team_rescue", lines);
+                return;
+            }
+            lines.push_back("La tentative de l'équipe échoue.");
+        }
+        else
+        {
+            lines.push_back("Aucun coéquipier encore debout ne peut tenter de te sauver.");
         }
 
-        if (green >= 3)
+        if (tryBossFirstLethalSpiritResistance(player, random, contextId))
         {
-            player.reviveWithHealthPercentage(1);
-            if (player.getHp() <= 0) player.heal(1);
-            lines.push_back(player.getName() + " revient à 1 PV. La mort n'est pas comptée.");
-            showSave();
+            lines.push_back("L'équipe n'a pas pu te sauver, mais ton esprit refuse de lâcher prise une unique fois.");
+            showBossPveLines("RÉSISTANCE SPIRITUELLE", "boss.coop.lethal.spirit", lines);
             return;
         }
 
         if (BlessingSystem::tryTriggerLethalSurvival(player))
         {
-            lines.push_back(player.getName() + " reçoit trois pastilles rouges, mais toutes ses bénédictions se consument avant l'effacement.");
-            lines.push_back("Retour à 1 PV, inventaire et équipement détruits, marque irréversible appliquée.");
-            showSave();
+            lines.push_back("L'équipe n'a pas pu te sauver, mais toutes tes bénédictions se consument avant l'effacement définitif.");
+            showBossPveLines("SURVIE EN MORT DÉFINITIVE COOP", "boss.coop.lethal.blessing", lines);
             DeathPenaltySystem::displayLethalSurvivalAnomaly();
             return;
         }
 
         player.recordDeath();
-        lines.push_back(player.getName() + " reçoit trois pastilles rouges : mort définitive. Aucune bénédiction capable de briser le verdict n'a répondu.");
-        showSave();
+        lines.push_back(player.getName() + " ne revient pas : mort définitive enregistrée.");
+        showBossPveLines("MORT DÉFINITIVE COOP", "boss.coop.lethal.death", lines);
     }
 
     bool isBossUnlockedForWholeParty(const std::vector<Player*>& party, int bossId)
@@ -2604,6 +3057,7 @@ void BossPveMode::run(
     DeathRuleMode deathRule
 )
 {
+    player1.resetEscapeOpeningProgress();
     MessageScreen::show(
         "AURA DE BOSS",
         "boss.pve.intro",
@@ -2703,6 +3157,34 @@ void BossPveMode::run(
     }
 
     Boss boss = BossCatalog::createBoss(bossChoice);
+    const bool employerMissionAvailableForBoss = TeamEmploymentSystem::hasActiveContract(player1)
+        && TeamEmploymentMissionSystem::hasOpenEmployerMission(player1);
+
+    bool employerPlayerStartsBossInReserve = false;
+    std::vector<RecruitedAllyCombatSupport> recruitedAllies;
+    std::vector<RecruitedAllyCombatSupport> reserveRecruitedAllies;
+    if (employerMissionAvailableForBoss)
+    {
+        const EmployerTeamFormation formation = EmployerTeamRosterSystem::formationFor(player1, true);
+        employerPlayerStartsBossInReserve = formation.playerInReserve;
+        for (const EmployerTeamMember& member : formation.activeMembers)
+            recruitedAllies.push_back(EmployerTeamRosterSystem::toCombatSupport(member));
+        for (const EmployerTeamMember& member : formation.reserveMembers)
+            reserveRecruitedAllies.push_back(EmployerTeamRosterSystem::toCombatSupport(member));
+    }
+    else
+    {
+        recruitedAllies = RecruitedAllyCombatRoster::collectActive(player1);
+        reserveRecruitedAllies = RecruitedAllyCombatRoster::collectReserve(player1);
+    }
+    const bool employerBossTeam = std::any_of(recruitedAllies.begin(), recruitedAllies.end(), [](const RecruitedAllyCombatSupport& ally) {
+        return ally.teamOrigin == AllyTeamOrigin::EmployerTeam;
+    });
+    bool employerPlayerInReserve = employerBossTeam && employerPlayerStartsBossInReserve;
+    bool employerPlayerEntryDelayActive = false;
+    bool employerPlayerActedAfterReserveStart = !employerPlayerStartsBossInReserve;
+    bool employerReserveAssignmentResolved = false;
+    int employerBossTeamRound = 0;
 
     TemporaryClassGuard temporaryClassGuard(player1);
     PlayerClass evolvedClass = ClassCatalog::createEvolvedClassFromClass(player1.getType());
@@ -2769,6 +3251,39 @@ void BossPveMode::run(
     );
     Console::pauseSeconds(2);
 
+    if (employerBossTeam && employerPlayerInReserve)
+    {
+        showBossPveLines(
+            "LISTE D'ATTENTE — BOSS DE SERVICE",
+            "boss.pve.employer_team.player_reserve.start",
+            {
+                "Ton chef maintient ton affectation en liste d'attente à l'ouverture de ce boss de service.",
+                "Les trois places principales sont occupées par l'escouade : tu observes le combat mais tu n'agis pas encore.",
+                "Le chef peut sacrifier son propre tour pour te rappeler sans attendre un KO ; si une place se libère naturellement, tu pourras aussi entrer.",
+                "Entrer depuis la réserve ne donne jamais une action gratuite pendant la phase où le changement a lieu."
+            },
+            false
+        );
+        // Observer depuis la file d'attente compte comme une vraie rencontre de bestiaire : le
+        // joueur peut apprendre en regardant, sans recevoir pour autant un clear ou un kill.
+        BestiaryRuntimeProgress::recordEncounter(
+            boss.getName(),
+            "Boss observé",
+            "Boss observé directement depuis la file d'attente d'une escouade employeuse.");
+    }
+
+    const std::vector<std::string> recruitedPresence = recruitedAllyBossPresenceLines(recruitedAllies);
+    if (!recruitedPresence.empty())
+    {
+        showBossPveLines(
+            "RECRUES ENGAGÉES",
+            "boss.pve.recruited_allies.presence",
+            recruitedPresence,
+            false
+        );
+        Console::pauseSeconds(1);
+    }
+
     if (player1.getLethalCheatAttemptCount() > 0
         && (boss.getBossId() == 11 || boss.getBossId() == 16 || boss.getBossId() == 26 || boss.getBossId() == 27 || boss.getBossId() == 30 || boss.getBossId() == 36))
     {
@@ -2824,6 +3339,99 @@ void BossPveMode::run(
     int fireFlightMortalRuleBossTurnsRemaining = 0;
     int fireFlightMortalRuleCooldown = 2;
     bool fireFlightMortalRuleKilledPlayer = false;
+    bool employerLeaderActedThisPlayerPhase = false;
+    bool playerBossRotationLockedForTurn = false;
+
+    auto consumeEmployerBossReserveAssignment = [&]() {
+        if (employerReserveAssignmentResolved) return;
+        if (EmployerTeamDisciplineSystem::consumeReserveBattle(player1))
+        {
+            employerReserveAssignmentResolved = true;
+        }
+    };
+
+    auto callEmployerPlayerIntoOpenBossSlot = [&](const std::string& reason) {
+        if (!employerPlayerInReserve) return false;
+        const int aliveFrontliners = static_cast<int>(std::count_if(
+            recruitedAllies.begin(), recruitedAllies.end(), [](const RecruitedAllyCombatSupport& ally) {
+                return ally.currentHp > 0;
+            }));
+        if (aliveFrontliners > RecruitedAllyCombatRoster::MaxActiveRecruitsWithPlayer) return false;
+
+        employerPlayerInReserve = false;
+        employerPlayerEntryDelayActive = false; // La place s'est ouverte pendant la phase ennemie : le prochain tour joueur est normal.
+        consumeEmployerBossReserveAssignment();
+        player1.recordCanonicalEvent(
+            "team_employer_reserve_entries",
+            "boss_open_slot_jour_" + std::to_string(player1.getWorldDaysElapsed()),
+            "Le joueur entre depuis la liste d'attente du boss après libération réelle d'une place : " + reason + ".",
+            1);
+        showBossPveLines(
+            "PLACE LIBÉRÉE — RAPPEL DU JOUEUR",
+            "boss.pve.employer_team.player_reserve.open_slot",
+            {
+                "Une place principale vient de se libérer dans l'escouade employeuse.",
+                "Le chef te rappelle sur la ligne : " + reason + ".",
+                "Tu n'obtiens aucun tour bonus ; tu agiras seulement lors de la prochaine phase normale de ton équipe."
+            },
+            false
+        );
+        return true;
+    };
+
+    auto playBossTurnAgainstEmployerFrontline = [&]() {
+        std::vector<std::size_t> aliveIndices;
+        for (std::size_t index = 0; index < recruitedAllies.size(); ++index)
+        {
+            if (recruitedAllies[index].currentHp > 0) aliveIndices.push_back(index);
+        }
+        if (aliveIndices.empty()) return false;
+
+        const std::size_t chosen = aliveIndices[static_cast<std::size_t>(
+            random.between(0, static_cast<int>(aliveIndices.size()) - 1))];
+        RecruitedAllyCombatSupport& targetAlly = recruitedAllies[chosen];
+        Monster proxyTarget(
+            targetAlly.name,
+            targetAlly.job.empty() ? std::string("Membre de l'escouade") : targetAlly.job,
+            Race::Humain,
+            std::max(1, targetAlly.estimatedLevel),
+            std::max(1, targetAlly.maxHp),
+            1, 1, 1, 0, 0);
+        if (targetAlly.currentHp < targetAlly.maxHp)
+        {
+            proxyTarget.takeDamage(targetAlly.maxHp - std::max(0, targetAlly.currentHp));
+        }
+
+        const int beforeHp = proxyTarget.getHp();
+        const bool finished = TurnManager::playBossTurn(boss, proxyTarget, random);
+        targetAlly.currentHp = std::clamp(proxyTarget.getHp(), 0, targetAlly.maxHp);
+
+        player1.recordCanonicalEvent(
+            "team_employer_boss_frontline_pressure",
+            targetAlly.persistentMemberId.empty() ? targetAlly.name : targetAlly.persistentMemberId,
+            boss.getName() + " cible la ligne employeuse pendant que le joueur est en réserve : "
+                + targetAlly.name + " perd " + std::to_string(std::max(0, beforeHp - proxyTarget.getHp())) + " PV.",
+            1);
+
+        if (targetAlly.currentHp <= 0)
+        {
+            const int readyDay = player1.getWorldDaysElapsed() + 3;
+            EmployerTeamRosterSystem::setMemberVitals(
+                player1, targetAlly.persistentMemberId, 0, false,
+                "ko_boss_employeur | ready_day=" + std::to_string(readyDay));
+            player1.recordCanonicalEvent(
+                "team_employer_members_fallen",
+                targetAlly.persistentMemberId,
+                targetAlly.name + " tombe en protégeant la ligne face au boss " + boss.getName()
+                    + " | retour_estime_jour=" + std::to_string(readyDay),
+                1);
+            const std::string fallenName = targetAlly.name;
+            recruitedAllies.erase(recruitedAllies.begin() + static_cast<std::ptrdiff_t>(chosen));
+            callEmployerPlayerIntoOpenBossSlot(fallenName + " est tombé");
+        }
+        return finished;
+    };
+
     player1.beginChallengeCombatTracking();
 
     while (!player1.isDead() && !boss.isDead())
@@ -2832,18 +3440,143 @@ void BossPveMode::run(
 
         if (turn == 1)
         {
-            turnFinished = TurnManager::playHumanTurn(
-                player1,
-                boss,
-                random,
-                BOSS_POTION_HEAL_AMOUNT,
-                BOSS_POTION_DAMAGE_BONUS
-            );
+            bool playerSkippedThisPhase = false;
+            if (employerBossTeam && !employerLeaderActedThisPlayerPhase && !boss.isDead())
+            {
+                ++employerBossTeamRound;
+                std::vector<std::string> leaderLines;
+                bool playerRecalled = false;
+                bool rotated = false;
+
+                if (employerPlayerInReserve)
+                {
+                    playerRecalled = tryEmployerBossLeaderRecallPlayer(
+                        player1, recruitedAllies, reserveRecruitedAllies, random, employerBossTeamRound, leaderLines);
+                    if (playerRecalled)
+                    {
+                        employerPlayerInReserve = false;
+                        employerPlayerEntryDelayActive = true;
+                        consumeEmployerBossReserveAssignment();
+                    }
+                }
+
+                if (!playerRecalled)
+                {
+                    rotated = tryEmployerBossLeaderRotation(
+                        player1, recruitedAllies, reserveRecruitedAllies, random, leaderLines);
+                }
+                if (!playerRecalled && !rotated)
+                {
+                    playRecruitedAlliesAgainstBoss(
+                        player1, boss, recruitedAllies, random, leaderLines, RecruitedAllyBossTurnPhase::LeaderOnly);
+                }
+
+                employerLeaderActedThisPlayerPhase = true;
+                if (!leaderLines.empty())
+                {
+                    const std::string title = playerRecalled
+                        ? "RAPPEL DU JOUEUR"
+                        : (rotated ? "ROTATION DU CHEF" : "OUVERTURE DU CHEF");
+                    const std::string screenId = playerRecalled
+                        ? "boss.pve.employer_team.player_reserve.rotation_call"
+                        : (rotated ? "boss.pve.employer_team.leader_rotation" : "boss.pve.employer_team.leader_first");
+                    showBossPveLines(title, screenId, leaderLines, false);
+                }
+                if (boss.isDead()) break;
+            }
+
+            if (employerBossTeam && employerPlayerInReserve)
+            {
+                playerSkippedThisPhase = true;
+                turnFinished = true;
+            }
+            else if (employerBossTeam && employerPlayerEntryDelayActive)
+            {
+                playerSkippedThisPhase = true;
+                employerPlayerEntryDelayActive = false;
+                turnFinished = true;
+                showBossPveLines(
+                    "ENTRÉE SUR LA LIGNE",
+                    "boss.pve.employer_team.player_reserve.entry_delay",
+                    {
+                        "Tu viens d'être rappelé depuis la réserve.",
+                        "Le tour du chef a servi à la rotation : tu ne reçois donc pas une action gratuite dans cette même phase.",
+                        "Tu pourras agir à la prochaine phase normale de l'escouade si le combat continue."
+                    },
+                    false
+                );
+            }
+            else
+            {
+                bool playerLeaderRotationConsumedTurn = false;
+                if (!employerBossTeam && !recruitedAllies.empty() && !reserveRecruitedAllies.empty())
+                {
+                    MenuScreen leaderScreen("COMMANDE D'ÉQUIPE — BOSS", "boss.pve.player_team.command");
+                    leaderScreen.addLine("Tu commandes ton équipe personnelle. Une rotation réussie utilise ton tour mais ne déplace jamais le tour du boss.");
+                    leaderScreen.addOption(1, "Agir normalement", "Ouvre ton tour de combat habituel.", true, "boss.pve.player_team.command.act");
+                    leaderScreen.addOption(2, "Rotation du chef",
+                        playerBossRotationLockedForTurn
+                            ? "Une rotation a déjà été refusée pendant ce tour."
+                            : "Échange 1 ou 2 recrues actives avec la réserve en sacrifiant ton action.",
+                        !playerBossRotationLockedForTurn, "boss.pve.player_team.command.rotate");
+                    const int leaderChoice = TerminalInterface::askMenuChoiceFromOptions(leaderScreen, "Choisis ton action de commandement.");
+                    Console::clear();
+                    if (leaderChoice == 2)
+                    {
+                        playerLeaderRotationConsumedTurn = openPlayerBossLeaderRotationMenu(
+                            player1, recruitedAllies, reserveRecruitedAllies, random, playerBossRotationLockedForTurn);
+                    }
+                }
+
+                if (playerLeaderRotationConsumedTurn)
+                {
+                    playerSkippedThisPhase = true;
+                    turnFinished = true;
+                }
+                else
+                {
+                    turnFinished = TurnManager::playHumanTurn(
+                        player1,
+                        boss,
+                        random,
+                        BOSS_POTION_HEAL_AMOUNT,
+                        BOSS_POTION_DAMAGE_BONUS
+                    );
+                    if (turnFinished && employerPlayerStartsBossInReserve)
+                    {
+                        employerPlayerActedAfterReserveStart = true;
+                    }
+                }
+            }
 
             if (turnFinished)
             {
                 ++bossCombatTurnCount;
-                maybeTriggerFireFlightCheatPurgeAtSeventyFive(boss, player1, fireFlightCheatPurgeAt75Done);
+                if (!boss.isDead() && !recruitedAllies.empty())
+                {
+                    std::vector<std::string> allyTurnLines;
+                    playRecruitedAlliesAgainstBoss(
+                        player1,
+                        boss,
+                        recruitedAllies,
+                        random,
+                        allyTurnLines,
+                        employerBossTeam ? RecruitedAllyBossTurnPhase::NonLeaderOnly : RecruitedAllyBossTurnPhase::All
+                    );
+                    if (!allyTurnLines.empty())
+                    {
+                        showBossPveLines(
+                            "TOUR DES RECRUES",
+                            "boss.pve.recruited_allies.turn",
+                            allyTurnLines,
+                            false
+                        );
+                    }
+                }
+                if (!playerSkippedThisPhase)
+                {
+                    maybeTriggerFireFlightCheatPurgeAtSeventyFive(boss, player1, fireFlightCheatPurgeAt75Done);
+                }
                 maybeReviveHitogamiOnce(boss, hitogamiAlreadyRevived, difficulty);
                 TurnManager::checkBossDecryption(boss);
                 boss.reduceUltimateCooldown();
@@ -2852,16 +3585,21 @@ void BossPveMode::run(
         }
         else
         {
-            maybeStartFireFlightMortalRuleWindow(
-                boss,
-                random,
-                fireFlightMortalRuleBossTurnsRemaining,
-                fireFlightMortalRuleCooldown,
-                bossCombatTurnCount,
-                false,
-                player1.getName()
-            );
-            const bool fireFlightMortalRuleActiveForThisBossTurn = fireFlightMortalRuleBossTurnsRemaining > 0;
+            const bool playerIsPrimaryBossTarget = !(employerBossTeam && employerPlayerInReserve);
+            if (playerIsPrimaryBossTarget)
+            {
+                maybeStartFireFlightMortalRuleWindow(
+                    boss,
+                    random,
+                    fireFlightMortalRuleBossTurnsRemaining,
+                    fireFlightMortalRuleCooldown,
+                    bossCombatTurnCount,
+                    false,
+                    player1.getName()
+                );
+            }
+            const bool fireFlightMortalRuleActiveForThisBossTurn = playerIsPrimaryBossTarget
+                && fireFlightMortalRuleBossTurnsRemaining > 0;
             if (fireFlightMortalRuleActiveForThisBossTurn && boss.getBossId() == 27)
             {
                 showBossPveLines(
@@ -2875,11 +3613,26 @@ void BossPveMode::run(
                 );
             }
 
-            turnFinished = TurnManager::playBossTurn(
-                boss,
-                player1,
-                random
-            );
+            if (employerBossTeam && employerPlayerInReserve)
+            {
+                if (std::none_of(recruitedAllies.begin(), recruitedAllies.end(), [](const RecruitedAllyCombatSupport& ally) { return ally.currentHp > 0; }))
+                {
+                    callEmployerPlayerIntoOpenBossSlot("la ligne principale n'a plus de combattant opérationnel");
+                }
+            }
+
+            if (employerBossTeam && employerPlayerInReserve)
+            {
+                turnFinished = playBossTurnAgainstEmployerFrontline();
+            }
+            else
+            {
+                turnFinished = TurnManager::playBossTurn(
+                    boss,
+                    player1,
+                    random
+                );
+            }
 
             if (fireFlightMortalRuleActiveForThisBossTurn && player1.isDead())
             {
@@ -2889,12 +3642,42 @@ void BossPveMode::run(
             if (turnFinished)
             {
                 ++bossCombatTurnCount;
+                if (!player1.isDead() && !recruitedAllies.empty())
+                {
+                    std::vector<std::string> allyPressureLines;
+                    applyBossPressureToRecruitedAllies(player1, boss, recruitedAllies, reserveRecruitedAllies, random, allyPressureLines);
+                    if (!allyPressureLines.empty())
+                    {
+                        showBossPveLines(
+                            "PRESSION SUR LES RECRUES",
+                            "boss.pve.recruited_allies.pressure",
+                            allyPressureLines,
+                            false
+                        );
+                    }
+
+                    if (employerBossTeam)
+                    {
+                        const std::size_t beforeCleanup = recruitedAllies.size();
+                        recruitedAllies.erase(
+                            std::remove_if(recruitedAllies.begin(), recruitedAllies.end(), [](const RecruitedAllyCombatSupport& ally) {
+                                return ally.currentHp <= 0;
+                            }),
+                            recruitedAllies.end());
+                        if (beforeCleanup != recruitedAllies.size() && employerPlayerInReserve)
+                        {
+                            callEmployerPlayerIntoOpenBossSlot("un collègue est tombé sous la pression de zone du boss");
+                        }
+                    }
+                }
                 finishFireFlightMortalRuleBossTurn(
                     fireFlightMortalRuleBossTurnsRemaining,
                     fireFlightMortalRuleCooldown,
                     false
                 );
                 turn = 1;
+                employerLeaderActedThisPlayerPhase = false;
+                playerBossRotationLockedForTurn = false;
             }
         }
     }
@@ -2904,12 +3687,70 @@ void BossPveMode::run(
         boss.revealIdentity();
     }
 
+    if (boss.isDead()
+        && employerBossTeam
+        && employerPlayerStartsBossInReserve
+        && !employerPlayerActedAfterReserveStart)
+    {
+        consumeEmployerBossReserveAssignment();
+        player1.clearBossEquipmentSeal();
+        player1.finishChallengeCombatTracking(false, true, true, 0);
+        TeamEmploymentMissionSystem::progressServiceCombat(player1, 1);
+
+        auto persistEmployerParticipants = [&](std::vector<RecruitedAllyCombatSupport>& participants, const std::string& status) {
+            for (RecruitedAllyCombatSupport& ally : participants)
+            {
+                if (ally.turnsTaken > 0)
+                {
+                    const int activityScore = ally.damageDealt + ally.healingDone
+                        + ally.supportActions * 8 + ally.finishBlows * 15 + ally.turnsTaken * 3;
+                    EmployerTeamRosterSystem::recordMemberCombatProgress(
+                        player1, ally.persistentMemberId, std::max(1, activityScore / 12));
+                }
+            }
+            persistBossRecruitedAllyVitals(player1, participants, status);
+        };
+        persistEmployerParticipants(recruitedAllies, "boss_employeur_victoire_equipe");
+        persistEmployerParticipants(reserveRecruitedAllies, "reserve_boss_employeur");
+
+        player1.recordCanonicalEvent(
+            "boss_finie_par_equipe_employeuse_reserve",
+            std::to_string(boss.getBossId()) + ":jour_" + std::to_string(player1.getWorldDaysElapsed()),
+            "L'escouade employeuse termine " + boss.getName()
+                + " avant que le joueur, initialement en réserve, n'ait pu accomplir une action personnelle.",
+            1);
+        player1.recordCanonicalEvent(
+            "team_employer_reserve_boss_observations",
+            std::to_string(boss.getBossId()) + ":jour_" + std::to_string(player1.getWorldDaysElapsed()),
+            "Le joueur a assisté au boss " + boss.getName()
+                + " depuis la file d'attente sans entrer sur le terrain ; observation directe distincte d'une participation.",
+            1);
+        player1.recordCanonicalEvent(
+            "observations_combat",
+            "boss_reserve:" + std::to_string(boss.getBossId()) + ":jour_" + std::to_string(player1.getWorldDaysElapsed()),
+            "Observation directe de " + boss.getName() + " depuis la réserve ; aucun kill ni clear personnel associé.",
+            1);
+        showBossPveLines(
+            "VICTOIRE DE L'ESCOUADE — JOUEUR EN RÉSERVE",
+            "boss.pve.employer_team.player_reserve.team_victory",
+            {
+                "L'escouade employeuse abat " + boss.getName() + " avant ta première action personnelle.",
+                "Ton affectation de réserve est considérée comme effectuée et le combat de service progresse normalement.",
+                "En revanche, ce résultat n'est pas transformé artificiellement en victoire personnelle : aucun clear de boss, titre, XP, butin ou récompense de boss ne t'est accordé.",
+                "Le salaire de ton contrat reste géré séparément par l'organisation."
+            },
+            false
+        );
+        return;
+    }
+
     CombatDisplay::displayCombatResult(player1, boss);
 
     player1.clearBossEquipmentSeal();
 
     if (player1.isDead())
     {
+        persistBossRecruitedAllyVitals(player1, recruitedAllies, "boss_defaite");
         player1.finishChallengeCombatTracking(false, true, true, 0);
         player1.recordDefeat();
 
@@ -2920,6 +3761,14 @@ void BossPveMode::run(
             playerMaxHpBeforeBossFight,
             true
         );
+
+        const PlayerDeathImmediateResolution immediateDeath = PlayerDeathResolver::resolveImmediate(
+            player1, "boss_" + std::to_string(boss.getBossId()));
+        if (immediateDeath.handled)
+        {
+            showBossPveLines("SACRIFICE D'HESTIA", "boss.pve.hestia_sacrifice", immediateDeath.lines, false);
+            return;
+        }
 
         const bool fireFlightTemporaryMortalDeath = fireFlightMortalRuleKilledPlayer && boss.getBossId() == 27;
         if (fireFlightTemporaryMortalDeath)
@@ -2937,6 +3786,22 @@ void BossPveMode::run(
 
         if (fireFlightTemporaryMortalDeath || DifficultyRules::isPermanentDeath(difficulty, deathRule))
         {
+            const std::string lethalContext = fireFlightTemporaryMortalDeath
+                ? "fireflight_mortal_rule"
+                : "boss_" + std::to_string(boss.getBossId());
+            simulateBossTeamAfterPlayerDownWithSpecialRules(
+                player1, boss, recruitedAllies, reserveRecruitedAllies, random, difficulty, hitogamiAlreadyRevived,
+                lethalContext + "_lethal");
+
+            if (tryBossLethalRecruitedTeamRescue(
+                    player1, recruitedAllies, reserveRecruitedAllies, random, lethalContext))
+            {
+                return;
+            }
+            if (tryBossFirstLethalSpiritResistance(player1, random, lethalContext))
+            {
+                return;
+            }
             if (BlessingSystem::tryTriggerLethalSurvival(player1))
             {
                 DeathPenaltySystem::displayLethalSurvivalAnomaly();
@@ -2945,6 +3810,33 @@ void BossPveMode::run(
             player1.recordDeath();
             DeathPenaltySystem::displayLethalDeathCorruption();
             return;
+        }
+
+        RecruitedAllyBossPostKoOutcome teamOutcome = simulateBossTeamAfterPlayerDownWithSpecialRules(
+            player1, boss, recruitedAllies, reserveRecruitedAllies, random, difficulty, hitogamiAlreadyRevived,
+            "boss_" + std::to_string(boss.getBossId()));
+
+        int owedBossEconomyUnits = 0;
+        if (teamOutcome.bossDefeated && teamOutcome.playerRecovered)
+        {
+            CombatReward bossReward = CombatRewardSystem::calculateBossReward(
+                boss, difficulty, std::max(0, playerHpBeforeBossFight - player1.getHp()), bossCombatTurnCount + teamOutcome.simulatedRounds);
+            std::vector<std::string> hiddenRewardLines;
+            const CombatReward playerShare = splitBossRewardWithRecruitedAllies(
+                player1, bossReward, teamOutcome.participants, hiddenRewardLines);
+            owedBossEconomyUnits = playerShare.getEconomyUnits();
+            player1.recordCanonicalEvent(
+                "boss_finie_par_recrues",
+                std::to_string(boss.getBossId()) + ":jour_" + std::to_string(player1.getWorldDaysElapsed()),
+                "Le groupe termine " + boss.getName() + " après la chute du joueur ; aucun titre/clear personnel n'est accordé.",
+                1
+            );
+            player1.recordCanonicalEvent(
+                "team_victories_without_personal_clear",
+                "boss_" + std::to_string(boss.getBossId()) + ":jour_" + std::to_string(player1.getWorldDaysElapsed()),
+                "Victoire de l'équipe contre " + boss.getName() + " pendant l'inconscience du joueur ; aucun clear personnel gratuit.",
+                1
+            );
         }
 
         player1.recordDeath();
@@ -2960,15 +3852,88 @@ void BossPveMode::run(
             DifficultyRules::getNonLethalRespawnHealthPercentage(difficulty)
         );
 
+        std::vector<std::string> wakeLines;
+        if (teamOutcome.playerRecovered)
+        {
+            const RecruitedAllyAftermathDecision aftermath = RecruitedAllyAftermathSystem::decide(
+                player1, teamOutcome.participants, random, "boss_" + std::to_string(boss.getBossId()));
+            const int delivered = RecruitedAllyAftermathSystem::deliverPlayerEconomyShare(
+                player1, owedBossEconomyUnits, aftermath, "boss_" + std::to_string(boss.getBossId()));
+
+            if (!aftermath.memberName.empty() && aftermath.givesDetailedReport)
+            {
+                const RecruitedAllyAftermathKnowledgeReport knowledge = RecruitedAllyAftermathSystem::buildKnowledgeReport(
+                    aftermath,
+                    teamOutcome.participants,
+                    teamOutcome.simulatedRounds,
+                    teamOutcome.bossDefeated,
+                    teamOutcome.bossDefeated ? 1 : 0,
+                    teamOutcome.bossDefeated ? 0 : 1
+                );
+                wakeLines.push_back(aftermath.memberName + " te raconte ce qu'il/elle peut réellement établir après ta chute.");
+                wakeLines.insert(wakeLines.end(), knowledge.lines.begin(), knowledge.lines.end());
+                player1.recordCanonicalEvent(
+                    "rapports_combat_boss_recrues_racontes",
+                    "boss_" + std::to_string(boss.getBossId()) + ":jour_" + std::to_string(player1.getWorldDaysElapsed()),
+                    aftermath.memberName
+                        + " | direct=" + std::to_string(knowledge.directFirstRound) + "-" + std::to_string(knowledge.directLastRound)
+                        + " | source_seconde_main=" + (knowledge.secondHandSourceName.empty() ? std::string("aucune") : knowledge.secondHandSourceName)
+                        + " | lacune=" + std::string(knowledge.hasUnknownGap ? "oui" : "non"),
+                    1
+                );
+            }
+            else if (!aftermath.memberName.empty())
+            {
+                wakeLines.push_back(aftermath.memberName + " ne souhaite pas détailler la suite du combat. " + aftermath.refusalReason);
+            }
+            if (owedBossEconomyUnits > 0)
+            {
+                wakeLines.push_back(aftermath.stealsPlayerShare
+                    ? "Part économique : " + aftermath.memberName + " est parti avec ta part du boss : " + Money::formatEconomyUnits(owedBossEconomyUnits) + "."
+                    : "Part économique : la somme sécurisée par l'équipe t'est remise : " + Money::formatEconomyUnits(delivered) + ".");
+            }
+        }
+
+        const RecruitedAllyLootTransportPlan postKoBossLootPlan = (teamOutcome.bossDefeated && teamOutcome.playerRecovered)
+            ? RecruitedAllyAftermathSystem::buildLootTransportPlan(teamOutcome.participants, 1, true)
+            : RecruitedAllyLootTransportPlan{};
+        int postKoBossRemainingCarryUnits = postKoBossLootPlan.availableLootCarryUnits;
+
+        std::vector<std::string> reviveLines = {
+            player1.getName() + " revient à lui avec " + std::to_string(player1.getHp()) + "/" + std::to_string(player1.getMaxHp()) + " PV.",
+            "Même vaincu, tu n'es pas encore sorti du registre des vivants."
+        };
+        reviveLines.insert(reviveLines.end(), wakeLines.begin(), wakeLines.end());
+        if (boss.getBossId() == 27 && teamOutcome.playerRecovered)
+        {
+            reviveLines.push_back("FireFlight n'est pas validé : tes alliés ont pu te sortir de là, pas réussir ton test personnel à ta place.");
+        }
+        else if (teamOutcome.bossDefeated)
+        {
+            reviveLines.push_back("Victoire de l'équipe après ta chute : elle est historisée, mais ce n'est pas un clear personnel pour les titres et le registre.");
+        }
+
         MessageScreen::show(
             "RETOUR À LA VIE",
             "combat.boss.revive",
-            {
-                player1.getName() + " revient à lui avec " + std::to_string(player1.getHp()) + "/" + std::to_string(player1.getMaxHp()) + " PV.",
-                "Même vaincu, tu n'es pas encore sorti du registre des vivants."
-            },
+            reviveLines,
             false
         );
+
+        if (teamOutcome.bossDefeated && teamOutcome.playerRecovered)
+        {
+            if (boss.getBossId() == 5 && player1.hasGrinkaBossTheftPresent())
+            {
+                const GrinkaPostKoRecoveryResult grinkaRecovery = recoverGrinkaStashAfterTeamVictory(
+                    player1, postKoBossRemainingCarryUnits);
+                postKoBossRemainingCarryUnits = grinkaRecovery.remainingCarryUnits;
+            }
+
+            LootGenerator::givePostKoRecoveredBossLoot(
+                player1, boss, random, difficulty,
+                postKoBossRemainingCarryUnits,
+                "boss_" + std::to_string(boss.getBossId()));
+        }
 
         return;
     }
@@ -2977,6 +3942,7 @@ void BossPveMode::run(
     {
         if (boss.getBossId() == 27 && !runFireFlightFinalTest(player1, random))
         {
+            persistBossRecruitedAllyVitals(player1, recruitedAllies, "fireflight_test_final_echoue");
             player1.finishChallengeCombatTracking(false, true, true, 0);
             player1.recordDefeat();
 
@@ -2995,6 +3961,17 @@ void BossPveMode::run(
 
             if (fireFlightTemporaryMortalDeath || DifficultyRules::isPermanentDeath(difficulty, deathRule))
             {
+                if (tryBossLethalRecruitedTeamRescue(
+                        player1, recruitedAllies, reserveRecruitedAllies, random,
+                        fireFlightTemporaryMortalDeath ? "fireflight_final_test" : "boss_final_test_" + std::to_string(boss.getBossId())))
+                {
+                    return;
+                }
+                if (tryBossFirstLethalSpiritResistance(
+                        player1, random, fireFlightTemporaryMortalDeath ? "fireflight_final_test" : "boss_final_test_" + std::to_string(boss.getBossId())))
+                {
+                    return;
+                }
                 if (BlessingSystem::tryTriggerLethalSurvival(player1))
                 {
                     DeathPenaltySystem::displayLethalSurvivalAnomaly();
@@ -3130,8 +4107,25 @@ void BossPveMode::run(
             std::max(0, playerHpBeforeBossFight - player1.getHp()),
             bossCombatTurnCount
         );
-        CombatRewardSystem::displayReward(bossReward);
-        CombatRewardSystem::giveRewardToPlayer(player1, bossReward);
+        std::vector<std::string> recruitRewardLines;
+        CombatReward playerBossReward = splitBossRewardWithRecruitedAllies(
+            player1,
+            bossReward,
+            recruitedAllies,
+            recruitRewardLines
+        );
+        if (!recruitRewardLines.empty())
+        {
+            showBossPveLines(
+                "PARTAGE AVEC RECRUES",
+                "boss.pve.recruited_allies.reward",
+                recruitRewardLines,
+                false
+            );
+        }
+        persistBossRecruitedAllyVitals(player1, recruitedAllies, "boss_victoire");
+        CombatRewardSystem::displayReward(playerBossReward);
+        CombatRewardSystem::giveRewardToPlayer(player1, playerBossReward);
 
         LootGenerator::giveDefeatedBossLoot(player1, boss, random, difficulty);
     }
@@ -3144,6 +4138,10 @@ void BossPveMode::runTeam(
     DeathRuleMode deathRule
 )
 {
+    for (Player* member : party)
+    {
+        if (member != nullptr) member->resetEscapeOpeningProgress();
+    }
     if (party.empty() || party[0] == nullptr)
     {
         return;
@@ -3655,7 +4653,7 @@ void BossPveMode::runTeam(
                 }
                 if (fireFlightTemporaryMortalDeath || DifficultyRules::isPermanentDeath(difficulty, deathRule))
                 {
-                    resolveBossLethalGroupDeathSave(*player, random);
+                    resolveBossLethalGroupDeathSave(*player, party, random, "boss_coop_defaite");
                 }
                 else
                 {
@@ -3722,7 +4720,7 @@ void BossPveMode::runTeam(
             }
             if (fireFlightTemporaryMortalDeath || DifficultyRules::isPermanentDeath(difficulty, deathRule))
             {
-                resolveBossLethalGroupDeathSave(*player, random);
+                resolveBossLethalGroupDeathSave(*player, party, random, "boss_coop_victoire");
                 if (player->isDead())
                 {
                     showBossPveLines(

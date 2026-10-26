@@ -121,7 +121,48 @@ namespace
         }
 
         file << content;
-        return true;
+        file.flush();
+        return file.good();
+    }
+
+    struct SaveFileRollbackState
+    {
+        std::string path;
+        bool existed = false;
+        std::string content;
+    };
+
+    SaveFileRollbackState captureSaveFileState(const std::string& path)
+    {
+        SaveFileRollbackState state;
+        state.path = path;
+        state.existed = std::filesystem::exists(path);
+        if (state.existed)
+        {
+            state.content = readFileContent(path);
+        }
+        return state;
+    }
+
+    bool restoreSaveFileState(const SaveFileRollbackState& state)
+    {
+        try
+        {
+            if (state.existed)
+            {
+                return writeFileContent(state.path, state.content);
+            }
+
+            if (std::filesystem::exists(state.path))
+            {
+                std::filesystem::remove(state.path);
+            }
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
     }
 
     std::string withJsonBooleanField(
@@ -361,6 +402,20 @@ namespace
     }
 
 
+    std::string recoveryMetadataJson(const Item& item)
+    {
+        return ", \"recoveryTraits\": \"" + escapeJson(item.getRecoveryTraitsSaveText())
+            + "\", \"recoveryPriority\": " + std::to_string(item.getRecoveryPriority());
+    }
+
+    void loadRecoveryMetadata(Item& item, const std::string& object)
+    {
+        item.loadRecoveryMetadataFromSaveText(
+            extractStringValue(object, "recoveryTraits", ""),
+            extractIntValue(object, "recoveryPriority", 0));
+    }
+
+
     long long extractLongLongValue(
         const std::string& content,
         const std::string& key,
@@ -513,6 +568,105 @@ namespace
         }
 
         return objects;
+    }
+
+    std::vector<std::string> extractNamedStringObjectsFromArray(
+        const std::string& content,
+        const std::string& key
+    )
+    {
+        std::vector<std::string> values;
+        for (const std::string& object : extractObjectsFromArray(content, key))
+        {
+            const std::string value = extractStringValue(object, "name", "");
+            if (!value.empty() && std::find(values.begin(), values.end(), value) == values.end())
+            {
+                values.push_back(value);
+            }
+        }
+        return values;
+    }
+
+    std::vector<AccountUnlockedTitleInfo> extractAccountTitleObjects(const std::string& content)
+    {
+        std::vector<AccountUnlockedTitleInfo> values;
+        for (const std::string& object : extractObjectsFromArray(content, "accountUnlockedTitles"))
+        {
+            AccountUnlockedTitleInfo info;
+            info.name = extractStringValue(object, "name", "");
+            info.unlockedAt = extractStringValue(object, "unlockedAt", "");
+            info.characterName = extractStringValue(object, "characterName", "");
+            if (info.name.empty()) continue;
+
+            const auto existing = std::find_if(values.begin(), values.end(), [&](const AccountUnlockedTitleInfo& value) {
+                return value.name == info.name;
+            });
+            if (existing == values.end()) values.push_back(info);
+        }
+        return values;
+    }
+
+    std::string withJsonAccountTitleArrayField(
+        const std::string& content,
+        const std::vector<AccountUnlockedTitleInfo>& values)
+    {
+        std::ostringstream replacement;
+        replacement << "\"accountUnlockedTitles\": [";
+        if (!values.empty()) replacement << "\n";
+        for (std::size_t i = 0; i < values.size(); ++i)
+        {
+            replacement << "    {\"name\": \"" << escapeJson(values[i].name) << "\"";
+            if (!values[i].unlockedAt.empty())
+            {
+                replacement << ", \"unlockedAt\": \"" << escapeJson(values[i].unlockedAt) << "\"";
+            }
+            if (!values[i].characterName.empty())
+            {
+                replacement << ", \"characterName\": \"" << escapeJson(values[i].characterName) << "\"";
+            }
+            replacement << "}";
+            if (i + 1 < values.size()) replacement << ",";
+            replacement << "\n";
+        }
+        replacement << "  ]";
+
+        const std::string key = "accountUnlockedTitles";
+        const std::string pattern = "\"" + key + "\"";
+        const std::size_t keyPosition = content.find(pattern);
+        if (keyPosition != std::string::npos)
+        {
+            const std::size_t arrayStart = content.find('[', keyPosition);
+            if (arrayStart == std::string::npos) return content;
+
+            int depth = 0;
+            std::size_t arrayEnd = std::string::npos;
+            for (std::size_t i = arrayStart; i < content.size(); ++i)
+            {
+                if (content[i] == '[') ++depth;
+                else if (content[i] == ']')
+                {
+                    --depth;
+                    if (depth == 0)
+                    {
+                        arrayEnd = i;
+                        break;
+                    }
+                }
+            }
+            if (arrayEnd == std::string::npos) return content;
+
+            std::string updated = content;
+            updated.replace(keyPosition, arrayEnd - keyPosition + 1, replacement.str());
+            return updated;
+        }
+
+        const std::string insertionMarker = "  \"saveFolders\": {";
+        const std::size_t insertionPosition = content.find(insertionMarker);
+        if (insertionPosition == std::string::npos) return content;
+
+        std::string updated = content;
+        updated.insert(insertionPosition, "  " + replacement.str() + ",\n");
+        return updated;
     }
 
     std::string weaponTypeToSaveText(WeaponType type)
@@ -725,6 +879,7 @@ namespace
 
         if (normalized == normalizeText("Petite potion de soin")) return ConsumableCatalog::createMinorHealingPotion();
         if (normalized == normalizeText("Potion de soin")) return ConsumableCatalog::createBasicHealingPotion();
+        if (normalized == normalizeText("Potion de mana")) return ConsumableCatalog::createManaPotion();
         if (normalized == normalizeText("Potion de soin renforcée")) return ConsumableCatalog::createReinforcedHealingPotion();
         if (normalized == normalizeText("Potion de soin supérieure")) return ConsumableCatalog::createGreaterHealingPotion();
         if (normalized == normalizeText("Potion de soin majeure")) return ConsumableCatalog::createMajorHealingPotion();
@@ -973,6 +1128,8 @@ namespace
         summary.createdAt = extractStringValue(content, "createdAt", "Inconnue");
         summary.realPlayTimeSeconds = extractLongLongValue(content, "realPlayTimeSeconds", 0);
         summary.totalCopperCurrency = extractLongLongValue(content, "totalCopperCurrency", 0);
+        summary.worldDaysElapsed = std::max(0, extractIntValue(content, "worldDaysElapsed", 0));
+        summary.worldDayProgressUnits = std::clamp(extractIntValue(content, "worldDayProgressUnits", 0), 0, 4);
         summary.lastSavedAt = extractStringValue(content, "lastSavedAt", "");
         summary.createdForVersion = extractStringValue(content, "createdForVersion", summary.gameVersion);
         summary.lastAdaptedVersion = extractStringValue(content, "lastAdaptedVersion", summary.createdForVersion);
@@ -1063,6 +1220,11 @@ bool SaveManager::saveAccountSnapshot(
     }
 
     std::string savePath = getAccountSavePath(accountName);
+    const std::string previousAccountContent = readFileContent(savePath);
+    const long long preservedAccountPlaySeconds = extractLongLongValue(
+        previousAccountContent, "totalRealPlayTimeSeconds", 0
+    );
+    const std::vector<AccountUnlockedTitleInfo> preservedUnlockedTitles = extractAccountTitleObjects(previousAccountContent);
     createBackupIfSaveExists(savePath);
 
     std::ofstream file(savePath);
@@ -1079,6 +1241,24 @@ bool SaveManager::saveAccountSnapshot(
     file << "  \"backupPolicy\": \"previous_save_written_to_bak_when_possible\",\n";
     file << "  \"accountName\": \"" << escapeJson(accountName) << "\",\n";
     file << "  \"status\": \"active\",\n";
+    file << "  \"totalRealPlayTimeSeconds\": " << std::max(0LL, preservedAccountPlaySeconds) << ",\n";
+    file << "  \"accountUnlockedTitles\": [\n";
+    for (std::size_t i = 0; i < preservedUnlockedTitles.size(); ++i)
+    {
+        file << "    {\"name\": \"" << escapeJson(preservedUnlockedTitles[i].name) << "\"";
+        if (!preservedUnlockedTitles[i].unlockedAt.empty())
+        {
+            file << ", \"unlockedAt\": \"" << escapeJson(preservedUnlockedTitles[i].unlockedAt) << "\"";
+        }
+        if (!preservedUnlockedTitles[i].characterName.empty())
+        {
+            file << ", \"characterName\": \"" << escapeJson(preservedUnlockedTitles[i].characterName) << "\"";
+        }
+        file << "}";
+        if (i + 1 < preservedUnlockedTitles.size()) file << ",";
+        file << "\n";
+    }
+    file << "  ],\n";
     file << "  \"saveFolders\": {\n";
     file << "    \"playableCharacters\": \"assets/saves/characters/playable\",\n";
     file << "    \"deadCharacters\": \"assets/saves/characters/dead\",\n";
@@ -1094,6 +1274,69 @@ bool SaveManager::saveAccountSnapshot(
     file << "}\n";
 
     return true;
+}
+
+std::vector<std::string> SaveManager::getAccountUnlockedTitles(const std::string& accountName)
+{
+    std::vector<std::string> names;
+    for (const AccountUnlockedTitleInfo& info : getAccountUnlockedTitleDetails(accountName))
+    {
+        if (!info.name.empty()) names.push_back(info.name);
+    }
+    return names;
+}
+
+std::vector<AccountUnlockedTitleInfo> SaveManager::getAccountUnlockedTitleDetails(const std::string& accountName)
+{
+    return extractAccountTitleObjects(readFileContent(getAccountSavePath(accountName)));
+}
+
+bool SaveManager::mergeAccountUnlockedTitles(
+    const std::string& accountName,
+    const std::vector<std::string>& titles,
+    const std::string& characterName)
+{
+    if (accountName.empty() || !ensureSaveDirectories())
+    {
+        return false;
+    }
+
+    const std::string accountPath = getAccountSavePath(accountName);
+    if (!std::filesystem::exists(accountPath) && !saveAccountSnapshot(accountName))
+    {
+        return false;
+    }
+
+    std::string content = readFileContent(accountPath);
+    std::vector<AccountUnlockedTitleInfo> merged = extractAccountTitleObjects(content);
+    bool changed = false;
+
+    for (const std::string& title : titles)
+    {
+        if (title.empty()) continue;
+        const auto found = std::find_if(merged.begin(), merged.end(), [&](const AccountUnlockedTitleInfo& info) {
+            return info.name == title;
+        });
+        if (found != merged.end()) continue;
+
+        AccountUnlockedTitleInfo info;
+        info.name = title;
+        info.unlockedAt = VersionInfo::currentDateTimeText();
+        info.characterName = characterName;
+        merged.push_back(info);
+        changed = true;
+    }
+
+    if (!changed)
+    {
+        return true;
+    }
+
+    std::sort(merged.begin(), merged.end(), [](const AccountUnlockedTitleInfo& a, const AccountUnlockedTitleInfo& b) {
+        return a.name < b.name;
+    });
+    content = withJsonAccountTitleArrayField(content, merged);
+    return writeFileContent(accountPath, content);
 }
 
 bool SaveManager::savePlayerSnapshot(
@@ -1119,6 +1362,9 @@ bool SaveManager::savePlayerSnapshot(
     }
 
     std::string savePath = getCharacterSavePath(accountName, player.getName());
+    const long long previousCharacterPlaySeconds = extractLongLongValue(
+        readFileContent(savePath), "realPlayTimeSeconds", 0
+    );
     createBackupIfSaveExists(savePath);
 
     std::ofstream file(savePath);
@@ -1157,12 +1403,19 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"characterAge\": " << player.getCharacterAge() << ",\n";
     file << "    \"visualPresentation\": \"" << escapeJson(player.getVisualPresentation()) << "\",\n";
     file << "    \"visualVariant\": \"" << escapeJson(player.getVisualVariant()) << "\",\n";
+    file << "    \"bodyMorphology\": \"" << escapeJson(player.getBodyMorphology()) << "\",\n";
+    file << "    \"morphologyProgramTarget\": \"" << escapeJson(player.getMorphologyProgramTarget()) << "\",\n";
+    file << "    \"morphologyProgramSessions\": " << player.getMorphologyProgramSessions() << ",\n";
+    file << "    \"morphologyProgramStartedDay\": " << player.getMorphologyProgramStartedDay() << ",\n";
+    file << "    \"morphologyProgramLastSessionDay\": " << player.getMorphologyProgramLastSessionDay() << ",\n";
     file << "    \"class\": \"" << escapeJson(player.getType()) << "\",\n";
     file << "    \"clone\": " << (player.isClone() ? "true" : "false") << ",\n";
     file << "    \"level\": " << player.getLevel() << ",\n";
     file << "    \"experience\": " << player.getExperience() << ",\n";
     file << "    \"hp\": " << player.getHp() << ",\n";
     file << "    \"maxHp\": " << player.getMaxHp() << ",\n";
+    file << "    \"mana\": " << player.getMana() << ",\n";
+    file << "    \"manaExhaustionTurns\": " << player.getManaExhaustionTurns() << ",\n";
     file << "    \"minDamage\": " << player.getMinDamage() << ",\n";
     file << "    \"maxDamage\": " << player.getMaxDamage() << ",\n";
     file << "    \"criticalDamage\": " << player.getCriticalDamage() << ",\n";
@@ -1188,12 +1441,105 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"equippedArmorIndex\": " << player.getEquippedArmorIndex() << ",\n";
     file << "    \"equippedArmorName\": \"" << escapeJson(armor.getName()) << "\",\n";
     file << "    \"interfaceHintFrequency\": \"" << escapeJson(player.getInterfaceHintFrequency()) << "\",\n";
+    file << "    \"revealHiddenTitles\": " << (player.areHiddenTitlesRevealed() ? "true" : "false") << ",\n";
     file << "    \"graphicalImagesEnabled\": " << (player.areGraphicalImagesEnabled() ? "true" : "false") << ",\n";
     file << "    \"imagePolicy\": \"images_supplementary_no_hidden_information_terminal_disabled\",\n";
     file << "    \"storyModeStarted\": " << (player.hasStoryModeStarted() ? "true" : "false") << ",\n";
     file << "    \"storyChapter\": " << player.getStoryChapter() << ",\n";
     file << "    \"storyStep\": " << player.getStoryStep() << ",\n";
-    file << "    \"storyCityDevelopmentLevel\": " << player.getStoryCityDevelopmentLevel() << "\n";
+    file << "    \"storyCityDevelopmentLevel\": " << player.getStoryCityDevelopmentLevel() << ",\n";
+    const PlayerHomeState& homeState = player.getHomeState();
+    file << "    \"homeOwned\": " << (homeState.owned ? "true" : "false") << ",\n";
+    file << "    \"homeCityId\": \"" << escapeJson(homeState.cityId) << "\",\n";
+    file << "    \"homeFullyPurchased\": " << (homeState.fullyPurchased ? "true" : "false") << ",\n";
+    file << "    \"homeRentAmount\": " << homeState.rentAmount << ",\n";
+    file << "    \"homeNextRentDueDay\": " << homeState.nextRentDueDay << ",\n";
+    file << "    \"homeNpcSpouseName\": \"" << escapeJson(homeState.npcSpouseName) << "\",\n";
+    file << "    \"homePlayerSpouseId\": \"" << escapeJson(homeState.playerSpouseId) << "\",\n";
+    file << "    \"homePlayerMarriageSlotUsed\": " << (homeState.playerMarriageSlotUsed ? "true" : "false") << ",\n";
+    const PlayerHestiaStoryState& hestiaState = player.getHestiaStoryState();
+    file << "    \"hestiaRescued\": " << (hestiaState.rescued ? "true" : "false") << ",\n";
+    file << "    \"hestiaMaterialized\": " << (hestiaState.materialized ? "true" : "false") << ",\n";
+    file << "    \"hestiaResidence\": \"" << escapeJson(hestiaState.residence) << "\",\n";
+    file << "    \"hestiaTrust\": " << hestiaState.trust << ",\n";
+    file << "    \"hestiaAwakeningStage\": " << hestiaState.awakeningStage << ",\n";
+    file << "    \"hestiaLastVisitDay\": " << hestiaState.lastVisitDay << ",\n";
+    file << "    \"hestiaNextSmallFindDay\": " << hestiaState.nextSmallFindDay << ",\n";
+    file << "    \"hestiaSacrificeConsumed\": " << (hestiaState.sacrificeConsumed ? "true" : "false") << ",\n";
+    const PlayerHestiaArtifactState& hestiaArtifact = player.getHestiaArtifactState();
+    file << "    \"hestiaArtifactGranted\": " << (hestiaArtifact.granted ? "true" : "false") << ",\n";
+    file << "    \"hestiaArtifactLevel\": " << hestiaArtifact.level << ",\n";
+    file << "    \"hestiaArtifactKillsTowardNextLevel\": " << hestiaArtifact.killsTowardNextLevel << ",\n";
+    file << "    \"hestiaArtifactPrimaryForm\": \"" << escapeJson(hestiaArtifact.primaryForm) << "\",\n";
+    file << "    \"hestiaArtifactSecondaryForm\": \"" << escapeJson(hestiaArtifact.secondaryForm) << "\",\n";
+    file << "    \"hestiaArtifactActiveForm\": \"" << escapeJson(hestiaArtifact.activeForm) << "\",\n";
+    file << "    \"hestiaArtifactSecondFormUnlocked\": " << (hestiaArtifact.secondFormUnlocked ? "true" : "false") << ",\n";
+    file << "    \"hestiaArtifactEssences\": [";
+    for (std::size_t i = 0; i < hestiaArtifact.absorbedEssences.size(); ++i)
+    {
+        const HestiaArtifactEssenceRecord& essence = hestiaArtifact.absorbedEssences[i];
+        file << "{\"familyId\":\"" << escapeJson(essence.familyId)
+             << "\",\"acceptedKills\":" << essence.acceptedKills << "}";
+        if (i + 1 < hestiaArtifact.absorbedEssences.size()) file << ", ";
+    }
+    file << "]\n";
+    file << "  },\n";
+
+    file << "  \"selectionPreferences\": {\n";
+    file << "    \"ammunitionSelectionPolicy\": \"" << escapeJson(player.getAmmunitionSelectionPolicy()) << "\",\n";
+    file << "    \"magicMaterialSelectionPolicy\": \"" << escapeJson(player.getMagicMaterialSelectionPolicy()) << "\",\n";
+    file << "    \"lootPickupPolicy\": \"" << escapeJson(player.getLootPickupPolicy()) << "\",\n";
+    file << "    \"ignoredLootCategoryIds\": [";
+    const std::vector<std::string>& ignoredLootCategoryIds = player.getIgnoredLootCategoryIds();
+    for (std::size_t i = 0; i < ignoredLootCategoryIds.size(); ++i)
+    {
+        file << "{\"id\": \"" << escapeJson(ignoredLootCategoryIds[i]) << "\"}";
+        if (i + 1 < ignoredLootCategoryIds.size()) file << ", ";
+    }
+    file << "],\n";
+    file << "    \"ignoredLootMaterialIds\": [";
+    const std::vector<std::string>& ignoredLootMaterialIds = player.getIgnoredLootMaterialIds();
+    for (std::size_t i = 0; i < ignoredLootMaterialIds.size(); ++i)
+    {
+        file << "{\"id\": \"" << escapeJson(ignoredLootMaterialIds[i]) << "\"}";
+        if (i + 1 < ignoredLootMaterialIds.size()) file << ", ";
+    }
+    file << "]\n";
+    file << "  },\n";
+
+    file << "  \"inventoryPreferences\": {\n";
+    file << "    \"pinnedItemKeys\": [";
+    const std::vector<std::string>& pinnedItemKeys = player.getInventory().getPinnedItemKeys();
+    for (std::size_t i = 0; i < pinnedItemKeys.size(); ++i)
+    {
+        file << "{\"key\": \"" << escapeJson(pinnedItemKeys[i]) << "\"}";
+        if (i + 1 < pinnedItemKeys.size()) file << ", ";
+    }
+    file << "],\n";
+    file << "    \"favoriteAmmunitionIds\": [";
+    const std::vector<std::string>& favoriteAmmunitionIds = player.getInventory().getFavoriteAmmunitionIds();
+    for (std::size_t i = 0; i < favoriteAmmunitionIds.size(); ++i)
+    {
+        file << "{\"id\": \"" << escapeJson(favoriteAmmunitionIds[i]) << "\"}";
+        if (i + 1 < favoriteAmmunitionIds.size()) file << ", ";
+    }
+    file << "],\n";
+    file << "    \"lockedItemKeys\": [";
+    const std::vector<std::string>& lockedItemKeys = player.getInventory().getLockedItemKeys();
+    for (std::size_t i = 0; i < lockedItemKeys.size(); ++i)
+    {
+        file << "{\"key\": \"" << escapeJson(lockedItemKeys[i]) << "\"}";
+        if (i + 1 < lockedItemKeys.size()) file << ", ";
+    }
+    file << "],\n";
+    file << "    \"trackedMaterialIds\": [";
+    const std::vector<std::string>& trackedMaterialIds = player.getInventory().getTrackedMaterialIds();
+    for (std::size_t i = 0; i < trackedMaterialIds.size(); ++i)
+    {
+        file << "{\"id\": \"" << escapeJson(trackedMaterialIds[i]) << "\"}";
+        if (i + 1 < trackedMaterialIds.size()) file << ", ";
+    }
+    file << "]\n";
     file << "  },\n";
 
     file << "  \"titleSnapshot\": {\n";
@@ -1563,7 +1909,12 @@ bool SaveManager::savePlayerSnapshot(
              << ",\"notoriety\":" << rival.notoriety
              << ",\"firstSeenDay\":" << rival.firstSeenDay
              << ",\"lastSeenDay\":" << rival.lastSeenDay
-             << ",\"alive\":" << (rival.alive ? "true" : "false") << "}";
+             << ",\"alive\":" << (rival.alive ? "true" : "false")
+             << ",\"stolenCopper\":" << rival.stolenCopper
+             << ",\"stolenMaterialId\":\"" << escapeJson(rival.stolenMaterialId)
+             << "\",\"stolenMaterialName\":\"" << escapeJson(rival.stolenMaterialName)
+             << "\",\"stolenMaterialQuality\":\"" << escapeJson(rival.stolenMaterialQuality)
+             << "\",\"stolenMaterialQuantity\":" << rival.stolenMaterialQuantity << "}";
         if (i + 1 < rivals.size()) file << ", ";
     }
     file << "]\n";
@@ -1654,7 +2005,7 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"criticalBonus\": " << stolenWeapon.getCriticalBonus()
              << ", \"durability\": " << stolenWeapon.getDurability()
              << ", \"maxDurability\": " << stolenWeapon.getMaxDurability()
-             << ", \"enchantments\": \"" << escapeJson(stolenWeapon.getEnchantmentsSaveText()) << "\"}";
+             << ", \"enchantments\": \"" << escapeJson(stolenWeapon.getEnchantmentsSaveText()) << "\", \"ownershipBinding\": \"" << stolenWeapon.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(stolenWeapon) << "}";
     }
     file << "],\n";
     file << "    \"grinkaStolenArmors\": [";
@@ -1669,7 +2020,7 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"damageReduction\": " << stolenArmor.getDamageReduction()
              << ", \"durability\": " << stolenArmor.getDurability()
              << ", \"maxDurability\": " << stolenArmor.getMaxDurability()
-             << ", \"enchantments\": \"" << escapeJson(stolenArmor.getEnchantmentsSaveText()) << "\"}";
+             << ", \"enchantments\": \"" << escapeJson(stolenArmor.getEnchantmentsSaveText()) << "\", \"ownershipBinding\": \"" << stolenArmor.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(stolenArmor) << "}";
     }
     file << "]\n";
     file << "  },\n";
@@ -1691,7 +2042,7 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"criticalBonus\": " << weapons[i].getCriticalBonus()
              << ", \"durability\": " << weapons[i].getDurability()
              << ", \"maxDurability\": " << weapons[i].getMaxDurability()
-             << ", \"enchantments\": \"" << escapeJson(weapons[i].getEnchantmentsSaveText()) << "\"}";
+             << ", \"enchantments\": \"" << escapeJson(weapons[i].getEnchantmentsSaveText()) << "\", \"ownershipBinding\": \"" << weapons[i].getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(weapons[i]) << "}";
 
         if (i + 1 < weapons.size())
         {
@@ -1716,7 +2067,7 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"damageReduction\": " << armors[i].getDamageReduction()
              << ", \"durability\": " << armors[i].getDurability()
              << ", \"maxDurability\": " << armors[i].getMaxDurability()
-             << ", \"enchantments\": \"" << escapeJson(armors[i].getEnchantmentsSaveText()) << "\"}";
+             << ", \"enchantments\": \"" << escapeJson(armors[i].getEnchantmentsSaveText()) << "\", \"ownershipBinding\": \"" << armors[i].getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(armors[i]) << "}";
 
         if (i + 1 < armors.size())
         {
@@ -1734,7 +2085,8 @@ bool SaveManager::savePlayerSnapshot(
     for (std::size_t i = 0; i < consumables.size(); i++)
     {
         file << "      {\"name\": \"" << escapeJson(consumables[i].getName()) << "\", \"power\": "
-             << consumables[i].getPower() << "}";
+             << consumables[i].getPower() << ", \"ownershipBinding\": \""
+             << consumables[i].getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(consumables[i]) << "}";
 
         if (i + 1 < consumables.size())
         {
@@ -1755,7 +2107,8 @@ bool SaveManager::savePlayerSnapshot(
              << escapeJson(materials[i].getName()) << "\", \"category\": \""
              << escapeJson(materials[i].getCategory()) << "\", \"quality\": \""
              << escapeJson(materials[i].getQuality()) << "\", \"quantity\": "
-             << materials[i].getQuantity() << "}";
+             << materials[i].getQuantity() << ", \"ownershipBinding\": \""
+             << materials[i].getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(materials[i]) << "}";
 
         if (i + 1 < materials.size())
         {
@@ -1782,6 +2135,12 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"vaultLevel\": " << player.getCityVaultLevel() << ",\n";
     file << "    \"vaultCapacity\": " << player.getCityVaultCapacity() << ",\n";
     file << "    \"vaultUsedSlots\": " << player.getCityVaultUsedSlots() << ",\n";
+    file << "    \"vaultPlaceOptimized\": " << (player.hasCityVaultPlaceOptimization() ? "true" : "false") << ",\n";
+    file << "    \"vaultPreparedStorage\": " << (player.hasCityVaultPreparedStorage() ? "true" : "false") << ",\n";
+    file << "    \"backpackTier\": " << player.getBackpackTier() << ",\n";
+    file << "    \"vaultRecallMessengerStamp\": " << player.getCityVaultLastRecallMessengerStamp() << ",\n";
+    file << "    \"vaultRecallMessengerSourceCityId\": \"" << escapeJson(player.getCityVaultLastRecallMessengerSourceCityId()) << "\",\n";
+    file << "    \"vaultRecallMessengerDestinationCityId\": \"" << escapeJson(player.getCityVaultLastRecallMessengerDestinationCityId()) << "\",\n";
     file << "    \"vaultWeapons\": [\n";
     const std::vector<Weapon>& vaultWeapons = player.getCityVault().getWeapons();
     for (std::size_t i = 0; i < vaultWeapons.size(); ++i)
@@ -1795,7 +2154,7 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"criticalBonus\": " << vaultWeapons[i].getCriticalBonus()
              << ", \"durability\": " << vaultWeapons[i].getDurability()
              << ", \"maxDurability\": " << vaultWeapons[i].getMaxDurability()
-             << ", \"enchantments\": \"" << escapeJson(vaultWeapons[i].getEnchantmentsSaveText()) << "\"}";
+             << ", \"enchantments\": \"" << escapeJson(vaultWeapons[i].getEnchantmentsSaveText()) << "\", \"ownershipBinding\": \"" << vaultWeapons[i].getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(vaultWeapons[i]) << "}";
         if (i + 1 < vaultWeapons.size()) file << ",";
         file << "\n";
     }
@@ -1812,7 +2171,7 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"damageReduction\": " << vaultArmors[i].getDamageReduction()
              << ", \"durability\": " << vaultArmors[i].getDurability()
              << ", \"maxDurability\": " << vaultArmors[i].getMaxDurability()
-             << ", \"enchantments\": \"" << escapeJson(vaultArmors[i].getEnchantmentsSaveText()) << "\"}";
+             << ", \"enchantments\": \"" << escapeJson(vaultArmors[i].getEnchantmentsSaveText()) << "\", \"ownershipBinding\": \"" << vaultArmors[i].getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(vaultArmors[i]) << "}";
         if (i + 1 < vaultArmors.size()) file << ",";
         file << "\n";
     }
@@ -1822,7 +2181,8 @@ bool SaveManager::savePlayerSnapshot(
     for (std::size_t i = 0; i < vaultConsumables.size(); ++i)
     {
         file << "      {\"name\": \"" << escapeJson(vaultConsumables[i].getName())
-             << "\", \"power\": " << vaultConsumables[i].getPower() << "}";
+             << "\", \"power\": " << vaultConsumables[i].getPower()
+             << ", \"ownershipBinding\": \"" << vaultConsumables[i].getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(vaultConsumables[i]) << "}";
         if (i + 1 < vaultConsumables.size()) file << ",";
         file << "\n";
     }
@@ -1835,7 +2195,8 @@ bool SaveManager::savePlayerSnapshot(
              << "\", \"name\": \"" << escapeJson(vaultMaterials[i].getName())
              << "\", \"category\": \"" << escapeJson(vaultMaterials[i].getCategory())
              << "\", \"quality\": \"" << escapeJson(vaultMaterials[i].getQuality())
-             << "\", \"quantity\": " << vaultMaterials[i].getQuantity() << "}";
+             << "\", \"quantity\": " << vaultMaterials[i].getQuantity()
+             << ", \"ownershipBinding\": \"" << vaultMaterials[i].getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(vaultMaterials[i]) << "}";
         if (i + 1 < vaultMaterials.size()) file << ",";
         file << "\n";
     }
@@ -1858,6 +2219,11 @@ bool SaveManager::savePlayerSnapshot(
         currentRecord.inventory = player.getCityVault();
         currentRecord.purchased = player.hasCityVault();
         currentRecord.level = player.getCityVaultLevel();
+        currentRecord.placeOptimized = player.hasCityVaultPlaceOptimization();
+        currentRecord.preparedStorage = player.hasCityVaultPreparedStorage();
+        currentRecord.securityDaysRemaining = player.getCityVaultSecurityDaysRemainingForCity(player.getCurrentCityId());
+        currentRecord.raidPending = player.hasCityVaultRaidPendingForCity(player.getCurrentCityId());
+        currentRecord.raidDeadlineDay = player.getCityVaultRaidDeadlineDayForCity(player.getCurrentCityId());
         allVaultRecords.push_back(currentRecord);
     }
 
@@ -1870,6 +2236,18 @@ bool SaveManager::savePlayerSnapshot(
              << ",\"level\":" << record.level
              << ",\"capacity\":" << player.getCityVaultCapacityForCity(record.cityId)
              << ",\"usedSlots\":" << player.getCityVaultUsedSlotsForCity(record.cityId)
+             << ",\"placeOptimized\":" << (record.placeOptimized ? "true" : "false")
+             << ",\"preparedStorage\":" << (record.preparedStorage ? "true" : "false")
+             << ",\"storageReductionPercent\":" << ((record.placeOptimized ? 10 : 0) + (record.preparedStorage ? 15 : 0))
+             << ",\"securityDaysRemaining\":" << std::max(0, record.securityDaysRemaining)
+             << ",\"raidPending\":" << (record.raidPending ? "true" : "false")
+             << ",\"raidDeadlineDay\":" << (record.raidPending ? record.raidDeadlineDay : -1)
+             << ",\"lastRaidCheckDay\":" << record.lastRaidCheckDay
+             << ",\"platinumCoins\":" << record.inventory.getCoinStacks().platinum
+             << ",\"goldCoins\":" << record.inventory.getCoinStacks().gold
+             << ",\"electrumCoins\":" << record.inventory.getCoinStacks().electrum
+             << ",\"ironCoins\":" << record.inventory.getCoinStacks().iron
+             << ",\"copperCoins\":" << record.inventory.getCoinStacks().copper
              << ",\"remoteWithdrawalAllowed\":false"
              << ",\"remoteViewOnly\":true}";
         if (i + 1 < allVaultRecords.size()) file << ", ";
@@ -1895,7 +2273,7 @@ bool SaveManager::savePlayerSnapshot(
                  << ",\"criticalBonus\":" << weaponEntry.getCriticalBonus()
                  << ",\"durability\":" << weaponEntry.getDurability()
                  << ",\"maxDurability\":" << weaponEntry.getMaxDurability()
-                 << ",\"enchantments\":\"" << escapeJson(weaponEntry.getEnchantmentsSaveText()) << "\"}";
+                 << ",\"enchantments\":\"" << escapeJson(weaponEntry.getEnchantmentsSaveText()) << "\",\"ownershipBinding\":\"" << weaponEntry.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(weaponEntry) << "}";
             wroteCityVaultWeapon = true;
         }
     }
@@ -1919,7 +2297,7 @@ bool SaveManager::savePlayerSnapshot(
                  << ",\"damageReduction\":" << armorEntry.getDamageReduction()
                  << ",\"durability\":" << armorEntry.getDurability()
                  << ",\"maxDurability\":" << armorEntry.getMaxDurability()
-                 << ",\"enchantments\":\"" << escapeJson(armorEntry.getEnchantmentsSaveText()) << "\"}";
+                 << ",\"enchantments\":\"" << escapeJson(armorEntry.getEnchantmentsSaveText()) << "\",\"ownershipBinding\":\"" << armorEntry.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(armorEntry) << "}";
             wroteCityVaultArmor = true;
         }
     }
@@ -1935,7 +2313,8 @@ bool SaveManager::savePlayerSnapshot(
             if (wroteCityVaultConsumable) file << ", ";
             file << "{\"cityId\":\"" << escapeJson(record.cityId)
                  << "\",\"name\":\"" << escapeJson(consumableEntry.getName())
-                 << "\",\"power\":" << consumableEntry.getPower() << "}";
+                 << "\",\"power\":" << consumableEntry.getPower()
+                 << ",\"ownershipBinding\":\"" << consumableEntry.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(consumableEntry) << "}";
             wroteCityVaultConsumable = true;
         }
     }
@@ -1954,9 +2333,251 @@ bool SaveManager::savePlayerSnapshot(
                  << "\",\"name\":\"" << escapeJson(materialEntry.getName())
                  << "\",\"category\":\"" << escapeJson(materialEntry.getCategory())
                  << "\",\"quality\":\"" << escapeJson(materialEntry.getQuality())
-                 << "\",\"quantity\":" << materialEntry.getQuantity() << "}";
+                 << "\",\"quantity\":" << materialEntry.getQuantity()
+                 << ",\"ownershipBinding\":\"" << materialEntry.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(materialEntry) << "}";
             wroteCityVaultMaterial = true;
         }
+    }
+    file << "],\n";
+
+    file << "    \"battlefieldRecoveryCaches\": [";
+    const auto& battlefieldCaches = player.getBattlefieldRecoveryCaches();
+    for (std::size_t i = 0; i < battlefieldCaches.size(); ++i)
+    {
+        const PlayerBattlefieldRecoveryCache& cache = battlefieldCaches[i];
+        const CoinBreakdown coins = cache.inventory.getCoinStacks();
+        file << "{\"cacheId\":\"" << escapeJson(cache.cacheId)
+             << "\",\"cityId\":\"" << escapeJson(cache.cityId)
+             << "\",\"contextId\":\"" << escapeJson(cache.contextId)
+             << "\",\"locationLabel\":\"" << escapeJson(cache.locationLabel)
+             << "\",\"createdDay\":" << cache.createdDay
+             << ",\"lastAttemptDay\":" << cache.lastAttemptDay
+             << ",\"searchAttempts\":" << cache.searchAttempts
+             << ",\"disturbanceLevel\":" << cache.disturbanceLevel
+             << ",\"custodyState\":\"" << escapeJson(cache.custodyState)
+             << "\",\"custodyLabel\":\"" << escapeJson(cache.custodyLabel)
+             << "\",\"lastMovementDay\":" << cache.lastMovementDay
+             << ",\"movementCount\":" << cache.movementCount
+             << ",\"locationKnown\":" << (cache.locationKnown ? "true" : "false")
+             << ",\"resolved\":" << (cache.resolved ? "true" : "false")
+             << ",\"platinumCoins\":" << coins.platinum
+             << ",\"goldCoins\":" << coins.gold
+             << ",\"electrumCoins\":" << coins.electrum
+             << ",\"ironCoins\":" << coins.iron
+             << ",\"copperCoins\":" << coins.copper << "}";
+        if (i + 1 < battlefieldCaches.size()) file << ", ";
+    }
+    file << "],\n";
+
+    file << "    \"battlefieldRecoveryWeapons\": [";
+    bool wroteBattlefieldWeapon = false;
+    for (const PlayerBattlefieldRecoveryCache& cache : battlefieldCaches)
+    {
+        for (const Weapon& w : cache.inventory.getWeapons())
+        {
+            if (wroteBattlefieldWeapon) file << ", ";
+            file << "{\"cacheId\":\"" << escapeJson(cache.cacheId)
+                 << "\",\"persistentId\":\"" << escapeJson(w.getPersistentId())
+                 << "\",\"name\":\"" << escapeJson(w.getName())
+                 << "\",\"description\":\"" << escapeJson(w.getDescription())
+                 << "\",\"value\":" << w.getValue()
+                 << ",\"type\":\"" << weaponTypeToSaveText(w.getType())
+                 << "\",\"minDamageBonus\":" << w.getMinDamageBonus()
+                 << ",\"maxDamageBonus\":" << w.getMaxDamageBonus()
+                 << ",\"criticalBonus\":" << w.getCriticalBonus()
+                 << ",\"durability\":" << w.getDurability()
+                 << ",\"maxDurability\":" << w.getMaxDurability()
+                 << ",\"enchantments\":\"" << escapeJson(w.getEnchantmentsSaveText())
+                 << "\",\"ownershipBinding\":\"" << w.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(w) << "}";
+            wroteBattlefieldWeapon = true;
+        }
+    }
+    file << "],\n";
+
+    file << "    \"battlefieldRecoveryArmors\": [";
+    bool wroteBattlefieldArmor = false;
+    for (const PlayerBattlefieldRecoveryCache& cache : battlefieldCaches)
+    {
+        for (const Armor& a : cache.inventory.getArmors())
+        {
+            if (wroteBattlefieldArmor) file << ", ";
+            file << "{\"cacheId\":\"" << escapeJson(cache.cacheId)
+                 << "\",\"persistentId\":\"" << escapeJson(a.getPersistentId())
+                 << "\",\"name\":\"" << escapeJson(a.getName())
+                 << "\",\"description\":\"" << escapeJson(a.getDescription())
+                 << "\",\"value\":" << a.getValue()
+                 << ",\"type\":\"" << armorTypeToSaveText(a.getType())
+                 << "\",\"maxHpBonus\":" << a.getMaxHpBonus()
+                 << ",\"damageReduction\":" << a.getDamageReduction()
+                 << ",\"durability\":" << a.getDurability()
+                 << ",\"maxDurability\":" << a.getMaxDurability()
+                 << ",\"enchantments\":\"" << escapeJson(a.getEnchantmentsSaveText())
+                 << "\",\"ownershipBinding\":\"" << a.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(a) << "}";
+            wroteBattlefieldArmor = true;
+        }
+    }
+    file << "],\n";
+
+    file << "    \"battlefieldRecoveryConsumables\": [";
+    bool wroteBattlefieldConsumable = false;
+    for (const PlayerBattlefieldRecoveryCache& cache : battlefieldCaches)
+    {
+        for (const Consumable& c : cache.inventory.getConsumables())
+        {
+            if (wroteBattlefieldConsumable) file << ", ";
+            file << "{\"cacheId\":\"" << escapeJson(cache.cacheId)
+                 << "\",\"name\":\"" << escapeJson(c.getName())
+                 << "\",\"power\":" << c.getPower()
+                 << ",\"ownershipBinding\":\"" << c.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(c) << "}";
+            wroteBattlefieldConsumable = true;
+        }
+    }
+    file << "],\n";
+
+    file << "    \"battlefieldRecoveryMaterials\": [";
+    bool wroteBattlefieldMaterial = false;
+    for (const PlayerBattlefieldRecoveryCache& cache : battlefieldCaches)
+    {
+        for (const Material& m : cache.inventory.getMaterials())
+        {
+            if (wroteBattlefieldMaterial) file << ", ";
+            file << "{\"cacheId\":\"" << escapeJson(cache.cacheId)
+                 << "\",\"id\":\"" << escapeJson(m.getId())
+                 << "\",\"name\":\"" << escapeJson(m.getName())
+                 << "\",\"category\":\"" << escapeJson(m.getCategory())
+                 << "\",\"quality\":\"" << escapeJson(m.getQuality())
+                 << "\",\"quantity\":" << m.getQuantity()
+                 << ",\"ownershipBinding\":\"" << m.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(m) << "}";
+            wroteBattlefieldMaterial = true;
+        }
+    }
+    file << "],\n";
+
+    file << "    \"crimeContactStates\": [";
+    const auto& crimeContacts = player.getCrimeContactStates();
+    for (std::size_t i = 0; i < crimeContacts.size(); ++i)
+    {
+        const PlayerCrimeContactState& c = crimeContacts[i];
+        file << "{\"contactId\":\"" << escapeJson(c.contactId)
+             << "\",\"displayName\":\"" << escapeJson(c.displayName)
+             << "\",\"firstSeenDay\":" << c.firstSeenDay
+             << ",\"lastInteractionDay\":" << c.lastInteractionDay
+             << ",\"encounters\":" << c.encounters
+             << ",\"observations\":" << c.observations
+             << ",\"negotiations\":" << c.negotiations
+             << ",\"guardConfrontations\":" << c.guardConfrontations
+             << ",\"pressure\":" << c.pressure
+             << ",\"cooperation\":" << c.cooperation
+             << ",\"fledUntilDay\":" << c.fledUntilDay
+             << ",\"detainedUntilDay\":" << c.detainedUntilDay
+             << ",\"provisionalDetentions\":" << c.provisionalDetentions
+             << ",\"releases\":" << c.releases
+             << ",\"returnsAfterFlight\":" << c.returnsAfterFlight
+             << ",\"lastReleaseDay\":" << c.lastReleaseDay
+             << ",\"lastReturnDay\":" << c.lastReturnDay
+             << ",\"knownRole\":\"" << escapeJson(c.knownRole) << "\""
+             << ",\"homeCityId\":\"" << escapeJson(c.homeCityId) << "\""
+             << ",\"networkId\":\"" << escapeJson(c.networkId) << "\""
+             << ",\"networkWarnings\":" << c.networkWarnings
+             << ",\"lastNetworkWarningDay\":" << c.lastNetworkWarningDay
+             << ",\"lastWarningSourceId\":\"" << escapeJson(c.lastWarningSourceId) << "\""
+             << ",\"reliability\":" << c.reliability
+             << ",\"favorBalance\":" << c.favorBalance
+             << ",\"rivalry\":" << c.rivalry
+             << ",\"fulfilledDeals\":" << c.fulfilledDeals
+             << ",\"brokenDeals\":" << c.brokenDeals
+             << ",\"ruptureUntilDay\":" << c.ruptureUntilDay
+             << ",\"reportedToGuard\":" << (c.reportedToGuard ? "true" : "false")
+             << ",\"arrested\":" << (c.arrested ? "true" : "false") << "}";
+        if (i + 1 < crimeContacts.size()) file << ", ";
+    }
+    file << "],\n";
+
+    file << "    \"vaultTheftCases\": [";
+    const auto& theftCases = player.getVaultTheftCases();
+    for (std::size_t i = 0; i < theftCases.size(); ++i)
+    {
+        const PlayerVaultTheftCase& c = theftCases[i];
+        file << "{\"caseId\":\"" << escapeJson(c.caseId)
+             << "\",\"cityId\":\"" << escapeJson(c.cityId)
+             << "\",\"createdDay\":" << c.createdDay
+             << ",\"lastLeadDay\":" << c.lastLeadDay
+             << ",\"clues\":" << c.clues
+             << ",\"culpritIdentified\":" << (c.culpritIdentified ? "true" : "false")
+             << ",\"identifiedRivalId\":\"" << escapeJson(c.identifiedRivalId)
+             << "\",\"holderType\":\"" << escapeJson(c.holderType)
+             << "\",\"holderLabel\":\"" << escapeJson(c.holderLabel)
+             << "\",\"holderWorldContactId\":\"" << escapeJson(c.holderWorldContactId)
+             << "\",\"holderLocationId\":\"" << escapeJson(c.holderLocationId)
+             << "\",\"holderLocationLabel\":\"" << escapeJson(c.holderLocationLabel)
+             << "\",\"holderExplorationBiome\":\"" << escapeJson(c.holderExplorationBiome)
+             << "\",\"handoffCount\":" << c.handoffCount
+             << ",\"holderObservationCount\":" << c.holderObservationCount
+             << ",\"negotiationAttempts\":" << c.negotiationAttempts
+             << ",\"confrontationAttempts\":" << c.confrontationAttempts
+             << ",\"holderPressure\":" << c.holderPressure
+             << ",\"holderCooperation\":" << c.holderCooperation
+             << ",\"holderClosedUntilDay\":" << c.holderClosedUntilDay
+             << ",\"holderReportedToGuard\":" << (c.holderReportedToGuard ? "true" : "false")
+             << ",\"lastHolderInteractionDay\":" << c.lastHolderInteractionDay
+             << ",\"holderAlerted\":" << (c.holderAlerted ? "true" : "false")
+             << ",\"resolved\":" << (c.resolved ? "true" : "false")
+             << ",\"stolenCopper\":" << c.stolenCopper
+             << ",\"hasWeapon\":" << (c.hasWeapon ? "true" : "false")
+             << ",\"hasArmor\":" << (c.hasArmor ? "true" : "false")
+             << ",\"hasConsumable\":" << (c.hasConsumable ? "true" : "false")
+             << ",\"stolenConsumableName\":\"" << escapeJson(c.hasConsumable ? c.stolenConsumable.getName() : "")
+             << "\",\"stolenConsumableOwnershipBinding\":\"" << (c.hasConsumable ? c.stolenConsumable.getOwnershipBindingSaveText() : "none")
+             << "\",\"stolenMaterialId\":\"" << escapeJson(c.stolenMaterialId)
+             << "\",\"stolenMaterialName\":\"" << escapeJson(c.stolenMaterialName)
+             << "\",\"stolenMaterialQuality\":\"" << escapeJson(c.stolenMaterialQuality)
+             << "\",\"stolenMaterialQuantity\":" << c.stolenMaterialQuantity << "}";
+        if (i + 1 < theftCases.size()) file << ", ";
+    }
+    file << "],\n";
+
+    file << "    \"vaultTheftCaseWeapons\": [";
+    bool wroteTheftWeapon = false;
+    for (const PlayerVaultTheftCase& c : theftCases)
+    {
+        if (!c.hasWeapon) continue;
+        const Weapon& w = c.stolenWeapon;
+        if (wroteTheftWeapon) file << ", ";
+        file << "{\"caseId\":\"" << escapeJson(c.caseId)
+             << "\",\"persistentId\":\"" << escapeJson(w.getPersistentId())
+             << "\",\"name\":\"" << escapeJson(w.getName())
+             << "\",\"description\":\"" << escapeJson(w.getDescription())
+             << "\",\"value\":" << w.getValue()
+             << ",\"type\":\"" << weaponTypeToSaveText(w.getType())
+             << "\",\"minDamageBonus\":" << w.getMinDamageBonus()
+             << ",\"maxDamageBonus\":" << w.getMaxDamageBonus()
+             << ",\"criticalBonus\":" << w.getCriticalBonus()
+             << ",\"durability\":" << w.getDurability()
+             << ",\"maxDurability\":" << w.getMaxDurability()
+             << ",\"enchantments\":\"" << escapeJson(w.getEnchantmentsSaveText()) << "\",\"ownershipBinding\":\"" << w.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(w) << "}";
+        wroteTheftWeapon = true;
+    }
+    file << "],\n";
+
+    file << "    \"vaultTheftCaseArmors\": [";
+    bool wroteTheftArmor = false;
+    for (const PlayerVaultTheftCase& c : theftCases)
+    {
+        if (!c.hasArmor) continue;
+        const Armor& a = c.stolenArmor;
+        if (wroteTheftArmor) file << ", ";
+        file << "{\"caseId\":\"" << escapeJson(c.caseId)
+             << "\",\"persistentId\":\"" << escapeJson(a.getPersistentId())
+             << "\",\"name\":\"" << escapeJson(a.getName())
+             << "\",\"description\":\"" << escapeJson(a.getDescription())
+             << "\",\"value\":" << a.getValue()
+             << ",\"type\":\"" << armorTypeToSaveText(a.getType())
+             << "\",\"maxHpBonus\":" << a.getMaxHpBonus()
+             << ",\"damageReduction\":" << a.getDamageReduction()
+             << ",\"durability\":" << a.getDurability()
+             << ",\"maxDurability\":" << a.getMaxDurability()
+             << ",\"enchantments\":\"" << escapeJson(a.getEnchantmentsSaveText()) << "\",\"ownershipBinding\":\"" << a.getOwnershipBindingSaveText() << "\"" << recoveryMetadataJson(a) << "}";
+        wroteTheftArmor = true;
     }
     file << "]\n";
     file << "  },\n";
@@ -2057,6 +2678,99 @@ bool SaveManager::savePlayerSnapshot(
              << ", \"linkedQuestRequiredState\": \"" << escapeJson(quest.linkedQuestRequiredState) << "\""
              << ", \"retroactiveProgress\": " << (quest.retroactiveProgress ? "true" : "false")
              << ", \"hideFutureSteps\": " << (quest.hideFutureSteps ? "true" : "false")
+             << ", \"phaseTwoChecked\": " << (quest.phaseTwoChecked ? "true" : "false")
+             << ", \"phaseTwoOffered\": " << (quest.phaseTwoOffered ? "true" : "false")
+             << ", \"phaseTwoActive\": " << (quest.phaseTwoActive ? "true" : "false")
+             << ", \"phaseTwoMandatory\": " << (quest.phaseTwoMandatory ? "true" : "false")
+             << ", \"phaseTwoCompleted\": " << (quest.phaseTwoCompleted ? "true" : "false")
+             << ", \"phaseTwoDeclined\": " << (quest.phaseTwoDeclined ? "true" : "false")
+             << ", \"phaseTwoTitle\": \"" << escapeJson(quest.phaseTwoTitle) << "\""
+             << ", \"phaseTwoPreviousSummary\": \"" << escapeJson(quest.phaseTwoPreviousSummary) << "\""
+             << ", \"phaseTwoReason\": \"" << escapeJson(quest.phaseTwoReason) << "\""
+             << ", \"phaseTwoObjective\": \"" << escapeJson(quest.phaseTwoObjective) << "\""
+             << ", \"phaseTwoProgress\": " << quest.phaseTwoProgress
+             << ", \"phaseTwoTarget\": " << quest.phaseTwoTarget
+             << ", \"phaseTwoAttempts\": " << quest.phaseTwoAttempts
+             << ", \"phaseTwoRewardExperience\": " << quest.phaseTwoRewardExperience
+             << ", \"phaseTwoRewardGold\": " << quest.phaseTwoRewardGold
+             << ", \"phaseTwoRewardKind\": \"" << escapeJson(quest.phaseTwoRewardKind) << "\""
+             << ", \"phaseTwoRewardDetail\": \"" << escapeJson(quest.phaseTwoRewardDetail) << "\""
+             << ", \"phaseTwoTravelRequired\": " << (quest.phaseTwoTravelRequired ? "true" : "false")
+             << ", \"phaseTwoTravelSourceCityId\": \"" << escapeJson(quest.phaseTwoTravelSourceCityId) << "\""
+             << ", \"phaseTwoTravelDestinationCityId\": \"" << escapeJson(quest.phaseTwoTravelDestinationCityId) << "\""
+             << ", \"phaseTwoTravelDistanceKm\": " << quest.phaseTwoTravelDistanceKm
+             << ", \"intercityMission\": " << (quest.intercityMission ? "true" : "false")
+             << ", \"intercityKind\": \"" << escapeJson(quest.intercityKind) << "\""
+             << ", \"intercitySourceCityId\": \"" << escapeJson(quest.intercitySourceCityId) << "\""
+             << ", \"intercityRouteCityIds\": \"" << escapeJson(quest.intercityRouteCityIds) << "\""
+             << ", \"intercityPayloadName\": \"" << escapeJson(quest.intercityPayloadName) << "\""
+             << ", \"intercityStopIndex\": " << quest.intercityStopIndex
+             << ", \"intercityTotalDistanceKm\": " << quest.intercityTotalDistanceKm
+             << ", \"intercityTravelRewardGold\": " << quest.intercityTravelRewardGold
+             << ", \"intercityTravelRewardExperience\": " << quest.intercityTravelRewardExperience
+             << ", \"tradeIncidentMission\": " << (quest.tradeIncidentMission ? "true" : "false")
+             << ", \"tradeIncidentId\": \"" << escapeJson(quest.tradeIncidentId) << "\""
+             << ", \"tradeIncidentKind\": \"" << escapeJson(quest.tradeIncidentKind) << "\""
+             << ", \"tradeIncidentSourceCityId\": \"" << escapeJson(quest.tradeIncidentSourceCityId) << "\""
+             << ", \"tradeIncidentDestinationCityId\": \"" << escapeJson(quest.tradeIncidentDestinationCityId) << "\""
+             << ", \"tradeIncidentGoodsType\": " << quest.tradeIncidentGoodsType
+             << ", \"tradeIncidentSeverity\": " << quest.tradeIncidentSeverity
+             << ", \"tradeIncidentStage\": \"" << escapeJson(quest.tradeIncidentStage) << "\""
+             << ", \"tradeIncidentAttempts\": " << quest.tradeIncidentAttempts
+             << ", \"tradeIncidentCreatesBountyLead\": " << (quest.tradeIncidentCreatesBountyLead ? "true" : "false")
+             << ", \"tradeIncidentBountyPublished\": " << (quest.tradeIncidentBountyPublished ? "true" : "false")
+             << ", \"bountyMission\": " << (quest.bountyMission ? "true" : "false")
+             << ", \"bountyTargetId\": \"" << escapeJson(quest.bountyTargetId) << "\""
+             << ", \"bountyTargetName\": \"" << escapeJson(quest.bountyTargetName) << "\""
+             << ", \"bountyTargetTemperament\": \"" << escapeJson(quest.bountyTargetTemperament) << "\""
+             << ", \"bountyTargetHomeCityId\": \"" << escapeJson(quest.bountyTargetHomeCityId) << "\""
+             << ", \"bountyTargetNetworkId\": \"" << escapeJson(quest.bountyTargetNetworkId) << "\""
+             << ", \"bountyIssuerId\": \"" << escapeJson(quest.bountyIssuerId) << "\""
+             << ", \"bountyIssuerName\": \"" << escapeJson(quest.bountyIssuerName) << "\""
+             << ", \"bountyIssuerOrganizationId\": \"" << escapeJson(quest.bountyIssuerOrganizationId) << "\""
+             << ", \"bountyIssuerOrganizationName\": \"" << escapeJson(quest.bountyIssuerOrganizationName) << "\""
+             << ", \"bountyIssuerPrefersLiveCapture\": " << (quest.bountyIssuerPrefersLiveCapture ? "true" : "false")
+             << ", \"bountyCloseRelationId\": \"" << escapeJson(quest.bountyCloseRelationId) << "\""
+             << ", \"bountyCloseRelationName\": \"" << escapeJson(quest.bountyCloseRelationName) << "\""
+             << ", \"bountyCloseRelationType\": \"" << escapeJson(quest.bountyCloseRelationType) << "\""
+             << ", \"bountyStage\": \"" << escapeJson(quest.bountyStage) << "\""
+             << ", \"bountyClues\": " << quest.bountyClues
+             << ", \"bountyInvestigationNoise\": " << quest.bountyInvestigationNoise
+             << ", \"bountyInformantExposure\": " << quest.bountyInformantExposure
+             << ", \"bountyTargetAwareness\": " << quest.bountyTargetAwareness
+             << ", \"bountyTargetSuspectsHunt\": " << (quest.bountyTargetSuspectsHunt ? "true" : "false")
+             << ", \"bountyTargetKnowsHunt\": " << (quest.bountyTargetKnowsHunt ? "true" : "false")
+             << ", \"bountyTargetResources\": " << quest.bountyTargetResources
+             << ", \"bountyTargetLocalSupport\": " << quest.bountyTargetLocalSupport
+             << ", \"bountyTargetMobility\": " << quest.bountyTargetMobility
+             << ", \"bountyTargetEscapeAttempts\": " << quest.bountyTargetEscapeAttempts
+             << ", \"bountyTargetKnowsTerrain\": " << (quest.bountyTargetKnowsTerrain ? "true" : "false")
+             << ", \"bountyTargetInjured\": " << (quest.bountyTargetInjured ? "true" : "false")
+             << ", \"bountyExitRecon\": " << quest.bountyExitRecon
+             << ", \"bountyInformantNetwork\": " << quest.bountyInformantNetwork
+             << ", \"bountyAmbushPreparation\": " << quest.bountyAmbushPreparation
+             << ", \"bountyShadowingPreparation\": " << quest.bountyShadowingPreparation
+             << ", \"bountyRouteVariation\": " << quest.bountyRouteVariation
+             << ", \"bountyDecoyQuality\": " << quest.bountyDecoyQuality
+             << ", \"bountyCounterSurveillance\": " << quest.bountyCounterSurveillance
+             << ", \"bountyRefugeConcealment\": " << quest.bountyRefugeConcealment
+             << ", \"bountyDangerRating\": " << quest.bountyDangerRating
+             << ", \"bountyNotorietyRating\": " << quest.bountyNotorietyRating
+             << ", \"bountyDaysAtLarge\": " << quest.bountyDaysAtLarge
+             << ", \"bountyBaseRewardGold\": " << quest.bountyBaseRewardGold
+             << ", \"bountyRewardProfileApplied\": " << (quest.bountyRewardProfileApplied ? "true" : "false")
+             << ", \"bountyRegionalProfileApplied\": " << (quest.bountyRegionalProfileApplied ? "true" : "false")
+             << ", \"bountyCurrentCityId\": \"" << escapeJson(quest.bountyCurrentCityId) << "\""
+             << ", \"bountyCurrentBiome\": \"" << escapeJson(quest.bountyCurrentBiome) << "\""
+             << ", \"bountyVisitedCityIds\": \"" << escapeJson(quest.bountyVisitedCityIds) << "\""
+             << ", \"bountyRelocationCount\": " << quest.bountyRelocationCount
+             << ", \"bountyTransitTrailKind\": \"" << escapeJson(quest.bountyTransitTrailKind) << "\""
+             << ", \"bountyTransitTrailFromCityId\": \"" << escapeJson(quest.bountyTransitTrailFromCityId) << "\""
+             << ", \"bountyTransitTrailReliability\": " << quest.bountyTransitTrailReliability
+             << ", \"bountyTransitTrailAvailable\": " << (quest.bountyTransitTrailAvailable ? "true" : "false")
+             << ", \"bountyRegionalProfileCityId\": \"" << escapeJson(quest.bountyRegionalProfileCityId) << "\""
+             << ", \"bountyRegionalConsequencesApplied\": " << (quest.bountyRegionalConsequencesApplied ? "true" : "false")
+             << ", \"bountyResolution\": \"" << escapeJson(quest.bountyResolution) << "\""
              << "}";
     };
 
@@ -2124,8 +2838,135 @@ bool SaveManager::savePlayerSnapshot(
     file << "    \"blessings\": \"prepared\"\n";
     file << "  }\n";
     file << "}\n";
+    file.flush();
+    const bool snapshotWriteOk = file.good();
+    file.close();
+    if (!snapshotWriteOk)
+    {
+        return false;
+    }
+
+    const long long currentCharacterPlaySeconds = std::max(0LL, player.getRealPlayTimeSeconds());
+    const long long playDelta = std::max(0LL, currentCharacterPlaySeconds - std::max(0LL, previousCharacterPlaySeconds));
+    if (playDelta > 0)
+    {
+        const std::string accountPath = getAccountSavePath(accountName);
+        if (!std::filesystem::exists(accountPath))
+        {
+            saveAccountSnapshot(accountName);
+        }
+        std::string accountContent = readFileContent(accountPath);
+        const long long oldAccountTotal = extractLongLongValue(accountContent, "totalRealPlayTimeSeconds", 0);
+        const long long newAccountTotal = oldAccountTotal + playDelta;
+        const std::string key = "\"totalRealPlayTimeSeconds\"";
+        const std::size_t keyPos = accountContent.find(key);
+        if (keyPos != std::string::npos)
+        {
+            const std::size_t colon = accountContent.find(':', keyPos);
+            if (colon != std::string::npos)
+            {
+                std::size_t start = colon + 1;
+                while (start < accountContent.size() && std::isspace(static_cast<unsigned char>(accountContent[start]))) ++start;
+                std::size_t end = start;
+                while (end < accountContent.size() && std::isdigit(static_cast<unsigned char>(accountContent[end]))) ++end;
+                accountContent.replace(start, end - start, std::to_string(newAccountTotal));
+                writeFileContent(accountPath, accountContent);
+            }
+        }
+        else
+        {
+            const std::string statusLine = "  \"status\": \"active\",\n";
+            const std::size_t statusPos = accountContent.find(statusLine);
+            if (statusPos != std::string::npos)
+            {
+                accountContent.insert(statusPos + statusLine.size(),
+                    "  \"totalRealPlayTimeSeconds\": " + std::to_string(newAccountTotal) + ",\n");
+                writeFileContent(accountPath, accountContent);
+            }
+        }
+    }
+
+    // Legitimate characters advance the normal account trophy collection.
+    // Altered characters may only synchronize the single explicit cheat trophy.
+    if (!player.isAlteredByCheats())
+    {
+        if (!mergeAccountUnlockedTitles(accountName, player.getTitles(), player.getName()))
+        {
+            return false;
+        }
+    }
+    else if (player.hasTitle("On ne dira rien..."))
+    {
+        if (!mergeAccountUnlockedTitles(accountName, {"On ne dira rien..."}, player.getName()))
+        {
+            return false;
+        }
+    }
 
     return true;
+}
+
+bool SaveManager::savePlayerExchangePair(
+    const Player& firstPlayer,
+    const std::string& firstAccountName,
+    DifficultyMode firstDifficulty,
+    DeathRuleMode firstDeathRule,
+    const Player& secondPlayer,
+    const std::string& secondAccountName,
+    DifficultyMode secondDifficulty,
+    DeathRuleMode secondDeathRule
+)
+{
+    const std::string firstCharacterPath = getCharacterSavePath(firstAccountName, firstPlayer.getName());
+    const std::string secondCharacterPath = getCharacterSavePath(secondAccountName, secondPlayer.getName());
+    const std::string firstAccountPath = getAccountSavePath(firstAccountName);
+    const std::string secondAccountPath = getAccountSavePath(secondAccountName);
+
+    std::vector<SaveFileRollbackState> rollbackStates;
+    auto captureUnique = [&](const std::string& path) {
+        for (const SaveFileRollbackState& state : rollbackStates)
+        {
+            if (state.path == path)
+            {
+                return;
+            }
+        }
+        rollbackStates.push_back(captureSaveFileState(path));
+    };
+
+    captureUnique(firstCharacterPath);
+    captureUnique(secondCharacterPath);
+    captureUnique(firstAccountPath);
+    captureUnique(secondAccountPath);
+
+    auto rollback = [&]() {
+        bool restored = true;
+        for (auto it = rollbackStates.rbegin(); it != rollbackStates.rend(); ++it)
+        {
+            restored = restoreSaveFileState(*it) && restored;
+        }
+        return restored;
+    };
+
+    try
+    {
+        if (!savePlayerSnapshot(firstPlayer, firstAccountName, firstDifficulty, firstDeathRule))
+        {
+            rollback();
+            return false;
+        }
+        if (!savePlayerSnapshot(secondPlayer, secondAccountName, secondDifficulty, secondDeathRule))
+        {
+            rollback();
+            return false;
+        }
+        return true;
+    }
+    catch (...)
+    {
+        rollback();
+        return false;
+    }
 }
 
 std::vector<AccountSaveSummary> SaveManager::listAccounts()
@@ -2151,6 +2992,8 @@ std::vector<AccountSaveSummary> SaveManager::listAccounts()
             summary.path = path;
             summary.accountName = extractStringValue(content, "accountName", entry.path().stem().string());
             summary.savedForVersion = extractStringValue(content, "gameVersion", "inconnue");
+            summary.totalRealPlayTimeSeconds = extractLongLongValue(content, "totalRealPlayTimeSeconds", 0);
+            summary.unlockedTitleCount = static_cast<int>(extractNamedStringObjectsFromArray(content, "accountUnlockedTitles").size());
             std::filesystem::file_time_type latestActivity = entry.last_write_time();
             summary.lastActivityText = formatLastActivityText(latestActivity);
             summary.playableCharacterCount = 0;
@@ -2262,6 +3105,11 @@ bool SaveManager::loadPlayerSnapshot(
     int characterAge = extractIntValue(content, "characterAge", summary.characterAge);
     std::string visualPresentation = extractStringValue(content, "visualPresentation", summary.visualPresentation);
     std::string visualVariant = extractStringValue(content, "visualVariant", summary.visualVariant);
+    std::string bodyMorphology = extractStringValue(content, "bodyMorphology", "");
+    std::string morphologyProgramTarget = extractStringValue(content, "morphologyProgramTarget", "");
+    int morphologyProgramSessions = extractIntValue(content, "morphologyProgramSessions", 0);
+    int morphologyProgramStartedDay = extractIntValue(content, "morphologyProgramStartedDay", -1);
+    int morphologyProgramLastSessionDay = extractIntValue(content, "morphologyProgramLastSessionDay", -1);
     std::string createdAt = extractStringValue(content, "createdAt", "Inconnue");
     long long realPlayTimeSeconds = extractLongLongValue(content, "realPlayTimeSeconds", 0);
     std::string gameVersion = extractStringValue(content, "gameVersion", "inconnue");
@@ -2275,6 +3123,8 @@ bool SaveManager::loadPlayerSnapshot(
     int experience = extractIntValue(content, "experience", 0);
     int hp = extractIntValue(content, "hp", 1);
     int loadedMaxHp = extractIntValue(content, "maxHp", 100);
+    int loadedMana = extractIntValue(content, "mana", -1);
+    int loadedManaExhaustionTurns = extractIntValue(content, "manaExhaustionTurns", 0);
     int loadedMinDamage = extractIntValue(content, "minDamage", 1);
     int loadedMaxDamage = extractIntValue(content, "maxDamage", 5);
     int loadedCriticalDamage = extractIntValue(content, "criticalDamage", 10);
@@ -2295,11 +3145,48 @@ bool SaveManager::loadPlayerSnapshot(
     int equippedWeaponIndex = extractIntValue(content, "equippedWeaponIndex", -1);
     int equippedArmorIndex = extractIntValue(content, "equippedArmorIndex", -1);
     std::string interfaceHintFrequency = extractStringValue(content, "interfaceHintFrequency", "faible");
+    bool revealHiddenTitles = extractBoolValue(content, "revealHiddenTitles", false);
+    std::string ammunitionSelectionPolicy = extractStringValue(content, "ammunitionSelectionPolicy", "ask");
+    std::string magicMaterialSelectionPolicy = extractStringValue(content, "magicMaterialSelectionPolicy", "ask");
+    std::string lootPickupPolicy = extractStringValue(content, "lootPickupPolicy", "all");
     bool graphicalImagesEnabled = extractBoolValue(content, "graphicalImagesEnabled", false);
     bool storyModeStarted = extractBoolValue(content, "storyModeStarted", false);
     int storyChapter = extractIntValue(content, "storyChapter", 0);
     int storyStep = extractIntValue(content, "storyStep", 0);
     int storyCityDevelopmentLevel = extractIntValue(content, "storyCityDevelopmentLevel", 0);
+    PlayerHomeState loadedHomeState;
+    loadedHomeState.owned = extractBoolValue(content, "homeOwned", false);
+    loadedHomeState.cityId = extractStringValue(content, "homeCityId", "");
+    loadedHomeState.fullyPurchased = extractBoolValue(content, "homeFullyPurchased", false);
+    loadedHomeState.rentAmount = std::max(0, extractIntValue(content, "homeRentAmount", 0));
+    loadedHomeState.nextRentDueDay = extractIntValue(content, "homeNextRentDueDay", -1);
+    loadedHomeState.npcSpouseName = extractStringValue(content, "homeNpcSpouseName", "");
+    loadedHomeState.playerSpouseId = extractStringValue(content, "homePlayerSpouseId", "");
+    loadedHomeState.playerMarriageSlotUsed = extractBoolValue(content, "homePlayerMarriageSlotUsed", false);
+    PlayerHestiaStoryState loadedHestiaState;
+    loadedHestiaState.rescued = extractBoolValue(content, "hestiaRescued", false);
+    loadedHestiaState.materialized = extractBoolValue(content, "hestiaMaterialized", false);
+    loadedHestiaState.residence = extractStringValue(content, "hestiaResidence", "unknown");
+    loadedHestiaState.trust = extractIntValue(content, "hestiaTrust", 0);
+    loadedHestiaState.awakeningStage = extractIntValue(content, "hestiaAwakeningStage", 0);
+    loadedHestiaState.lastVisitDay = extractIntValue(content, "hestiaLastVisitDay", -1);
+    loadedHestiaState.nextSmallFindDay = extractIntValue(content, "hestiaNextSmallFindDay", -1);
+    loadedHestiaState.sacrificeConsumed = extractBoolValue(content, "hestiaSacrificeConsumed", false);
+    PlayerHestiaArtifactState loadedHestiaArtifact;
+    loadedHestiaArtifact.granted = extractBoolValue(content, "hestiaArtifactGranted", false);
+    loadedHestiaArtifact.level = std::max(1, extractIntValue(content, "hestiaArtifactLevel", 1));
+    loadedHestiaArtifact.killsTowardNextLevel = std::max(0, extractIntValue(content, "hestiaArtifactKillsTowardNextLevel", 0));
+    loadedHestiaArtifact.primaryForm = extractStringValue(content, "hestiaArtifactPrimaryForm", "adaptive");
+    loadedHestiaArtifact.secondaryForm = extractStringValue(content, "hestiaArtifactSecondaryForm", "");
+    loadedHestiaArtifact.activeForm = extractStringValue(content, "hestiaArtifactActiveForm", "primary");
+    loadedHestiaArtifact.secondFormUnlocked = extractBoolValue(content, "hestiaArtifactSecondFormUnlocked", loadedHestiaArtifact.level >= 16);
+    for (const std::string& object : extractObjectsFromArray(content, "hestiaArtifactEssences"))
+    {
+        HestiaArtifactEssenceRecord essence;
+        essence.familyId = extractStringValue(object, "familyId", "");
+        essence.acceptedKills = std::max(0, extractIntValue(object, "acceptedKills", 0));
+        if (!essence.familyId.empty()) loadedHestiaArtifact.absorbedEssences.push_back(essence);
+    }
     int combatsStarted = extractIntValue(content, "combatsStarted", 0);
     int worldDaysElapsed = extractIntValue(content, "worldDaysElapsed", combatsStarted);
     int worldDayProgressUnits = extractIntValue(content, "worldDayProgressUnits", 0);
@@ -2326,16 +3213,30 @@ bool SaveManager::loadPlayerSnapshot(
     player.setOwnershipMetadata(creatorAccountName, currentOwnerAccountName);
     player.setRace(raceFromText(raceName));
     player.setAppearanceProfile(characterAge, visualPresentation, visualVariant);
+    player.setLoadedMorphologyProgramState(bodyMorphology, morphologyProgramTarget, morphologyProgramSessions, morphologyProgramStartedDay, morphologyProgramLastSessionDay);
     player.initializeStarterInventory(difficulty);
     player.setClone(extractBoolValue(content, "clone", false));
     player.setInterfaceHintFrequency(interfaceHintFrequency);
+    player.setRevealHiddenTitles(revealHiddenTitles);
+    player.setAmmunitionSelectionPolicy(ammunitionSelectionPolicy);
+    player.setMagicMaterialSelectionPolicy(magicMaterialSelectionPolicy);
     player.setGraphicalImagesEnabled(graphicalImagesEnabled);
     player.setLoadedStoryProgress(storyChapter, storyStep, storyCityDevelopmentLevel, storyModeStarted);
+    player.setLoadedHomeState(loadedHomeState);
+    player.setLoadedHestiaStoryState(loadedHestiaState);
+    player.setLoadedHestiaArtifactState(loadedHestiaArtifact);
 
     std::vector<std::string> weaponObjects = extractObjectsFromArray(content, "weapons");
     std::vector<std::string> armorObjects = extractObjectsFromArray(content, "armors");
     std::vector<std::string> consumableObjects = extractObjectsFromArray(content, "consumables");
     std::vector<std::string> materialObjects = extractObjectsFromArray(content, "materials");
+    std::vector<std::string> pinnedItemKeyObjects = extractObjectsFromArray(content, "pinnedItemKeys");
+    std::vector<std::string> favoriteAmmunitionIdObjects = extractObjectsFromArray(content, "favoriteAmmunitionIds");
+    std::vector<std::string> legacyFavoriteItemKeyObjects = extractObjectsFromArray(content, "favoriteItemKeys");
+    std::vector<std::string> lockedItemKeyObjects = extractObjectsFromArray(content, "lockedItemKeys");
+    std::vector<std::string> trackedMaterialIdObjects = extractObjectsFromArray(content, "trackedMaterialIds");
+    std::vector<std::string> ignoredLootCategoryObjects = extractObjectsFromArray(content, "ignoredLootCategoryIds");
+    std::vector<std::string> ignoredLootMaterialObjects = extractObjectsFromArray(content, "ignoredLootMaterialIds");
     std::vector<std::string> materialKnowledgeObjects = extractObjectsFromArray(content, "materialKnowledgeSnapshot");
     std::vector<std::string> vaultWeaponObjects = extractObjectsFromArray(content, "vaultWeapons");
     std::vector<std::string> vaultArmorObjects = extractObjectsFromArray(content, "vaultArmors");
@@ -2346,6 +3247,15 @@ bool SaveManager::loadPlayerSnapshot(
     std::vector<std::string> cityVaultArmorObjects = extractObjectsFromArray(content, "cityVaultArmors");
     std::vector<std::string> cityVaultConsumableObjects = extractObjectsFromArray(content, "cityVaultConsumables");
     std::vector<std::string> cityVaultMaterialObjects = extractObjectsFromArray(content, "cityVaultMaterials");
+    std::vector<std::string> battlefieldRecoveryCacheObjects = extractObjectsFromArray(content, "battlefieldRecoveryCaches");
+    std::vector<std::string> battlefieldRecoveryWeaponObjects = extractObjectsFromArray(content, "battlefieldRecoveryWeapons");
+    std::vector<std::string> battlefieldRecoveryArmorObjects = extractObjectsFromArray(content, "battlefieldRecoveryArmors");
+    std::vector<std::string> battlefieldRecoveryConsumableObjects = extractObjectsFromArray(content, "battlefieldRecoveryConsumables");
+    std::vector<std::string> battlefieldRecoveryMaterialObjects = extractObjectsFromArray(content, "battlefieldRecoveryMaterials");
+    std::vector<std::string> crimeContactStateObjects = extractObjectsFromArray(content, "crimeContactStates");
+    std::vector<std::string> vaultTheftCaseObjects = extractObjectsFromArray(content, "vaultTheftCases");
+    std::vector<std::string> vaultTheftCaseWeaponObjects = extractObjectsFromArray(content, "vaultTheftCaseWeapons");
+    std::vector<std::string> vaultTheftCaseArmorObjects = extractObjectsFromArray(content, "vaultTheftCaseArmors");
     std::vector<std::string> registeredGuildCityObjects = extractObjectsFromArray(content, "registeredGuildCityIds");
     std::vector<std::string> bestiaryObjects = extractObjectsFromArray(content, "bestiaryRuntimeSnapshot");
     std::vector<std::string> questObjects = extractObjectsFromArray(content, "questLogSnapshot");
@@ -2432,6 +3342,9 @@ bool SaveManager::loadPlayerSnapshot(
     {
         player.unequipWeapon();
         player.unequipArmor();
+        // Loading reconstructs existing possessions; it must never look like fresh tracked loot.
+        // Clear any in-memory preferences first, then restore the saved preference block below.
+        player.getInventory().setLoadedInventoryPreferences({}, {}, {}, {});
         player.getInventory().clearAll();
 
         for (const std::string& object : weaponObjects)
@@ -2452,6 +3365,8 @@ bool SaveManager::loadPlayerSnapshot(
 
             applySavedWeaponDurability(weapon, extractIntValue(object, "durability", weapon.getDurability()));
             weapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        weapon.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(weapon, object);
             weapon.setPersistentId(extractStringValue(object, "persistentId", ""));
             player.getInventory().addWeapon(weapon);
         }
@@ -2473,15 +3388,18 @@ bool SaveManager::loadPlayerSnapshot(
 
             applySavedArmorDurability(armor, extractIntValue(object, "durability", armor.getDurability()));
             armor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        armor.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(armor, object);
             armor.setPersistentId(extractStringValue(object, "persistentId", ""));
             player.getInventory().addArmor(armor);
         }
 
         for (const std::string& object : consumableObjects)
         {
-            player.getInventory().addConsumable(
-                consumableFromName(extractStringValue(object, "name", "Potion de soin"))
-            );
+            Consumable consumable = consumableFromName(extractStringValue(object, "name", "Potion de soin"));
+            consumable.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(consumable, object);
+            player.getInventory().addConsumable(consumable);
         }
 
         for (const std::string& object : materialObjects)
@@ -2489,9 +3407,70 @@ bool SaveManager::loadPlayerSnapshot(
             std::string id = extractStringValue(object, "id", "unknown_material");
             int quantity = extractIntValue(object, "quantity", 1);
             std::string quality = extractStringValue(object, "quality", "normal");
-            player.getInventory().addMaterial(MaterialCatalog::createById(id, quantity, quality));
+            Material material = MaterialCatalog::createById(id, quantity, quality);
+            material.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(material, object);
+            player.getInventory().addMaterial(material);
         }
     }
+
+    std::vector<std::string> loadedPinnedItemKeys;
+    for (const std::string& object : pinnedItemKeyObjects)
+    {
+        const std::string key = extractStringValue(object, "key", "");
+        if (!key.empty()) loadedPinnedItemKeys.push_back(key);
+    }
+    std::vector<std::string> loadedFavoriteAmmunitionIds;
+    for (const std::string& object : favoriteAmmunitionIdObjects)
+    {
+        const std::string id = extractStringValue(object, "id", "");
+        if (Inventory::isAmmunitionMaterialId(id)) loadedFavoriteAmmunitionIds.push_back(id);
+    }
+
+    // V3.51.16 compatibility: generic favorites meant both sorting and automatic choices.
+    // Preserve their visible intent as pins, and only migrate real ammunition to ammunition favorites.
+    if (content.find("\"pinnedItemKeys\"") == std::string::npos)
+    {
+        for (const std::string& object : legacyFavoriteItemKeyObjects)
+        {
+            const std::string key = extractStringValue(object, "key", "");
+            if (key.empty()) continue;
+            loadedPinnedItemKeys.push_back(key);
+            const std::string materialPrefix = "material:";
+            if (key.rfind(materialPrefix, 0) == 0)
+            {
+                const std::string id = key.substr(materialPrefix.size());
+                if (Inventory::isAmmunitionMaterialId(id)) loadedFavoriteAmmunitionIds.push_back(id);
+            }
+        }
+    }
+    std::vector<std::string> loadedLockedItemKeys;
+    for (const std::string& object : lockedItemKeyObjects)
+    {
+        const std::string key = extractStringValue(object, "key", "");
+        if (!key.empty()) loadedLockedItemKeys.push_back(key);
+    }
+    std::vector<std::string> loadedTrackedMaterialIds;
+    for (const std::string& object : trackedMaterialIdObjects)
+    {
+        const std::string id = extractStringValue(object, "id", "");
+        if (!id.empty()) loadedTrackedMaterialIds.push_back(id);
+    }
+    player.getInventory().setLoadedInventoryPreferences(loadedPinnedItemKeys, loadedLockedItemKeys, loadedTrackedMaterialIds, loadedFavoriteAmmunitionIds);
+
+    std::vector<std::string> loadedIgnoredLootCategoryIds;
+    for (const std::string& object : ignoredLootCategoryObjects)
+    {
+        const std::string id = extractStringValue(object, "id", "");
+        if (!id.empty()) loadedIgnoredLootCategoryIds.push_back(id);
+    }
+    std::vector<std::string> loadedIgnoredLootMaterialIds;
+    for (const std::string& object : ignoredLootMaterialObjects)
+    {
+        const std::string id = extractStringValue(object, "id", "");
+        if (!id.empty()) loadedIgnoredLootMaterialIds.push_back(id);
+    }
+    player.setLoadedLootPreferences(lootPickupPolicy, loadedIgnoredLootCategoryIds, loadedIgnoredLootMaterialIds);
 
     std::vector<std::string> loadedStarterKitLog;
     for (const std::string& object : starterKitObjects)
@@ -2538,6 +3517,8 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedWeaponDurability(weapon, extractIntValue(object, "durability", weapon.getDurability()));
         weapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        weapon.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(weapon, object);
         weapon.setPersistentId(extractStringValue(object, "persistentId", ""));
         loadedCityVault.addWeapon(weapon);
     }
@@ -2556,20 +3537,28 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedArmorDurability(armor, extractIntValue(object, "durability", armor.getDurability()));
         armor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        armor.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(armor, object);
         armor.setPersistentId(extractStringValue(object, "persistentId", ""));
         loadedCityVault.addArmor(armor);
     }
     for (const std::string& object : vaultConsumableObjects)
     {
-        loadedCityVault.addConsumable(consumableFromName(extractStringValue(object, "name", "Potion de soin")));
+        Consumable consumable = consumableFromName(extractStringValue(object, "name", "Potion de soin"));
+        consumable.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(consumable, object);
+        loadedCityVault.addConsumable(consumable);
     }
     for (const std::string& object : vaultMaterialObjects)
     {
-        loadedCityVault.addMaterial(MaterialCatalog::createById(
+        Material material = MaterialCatalog::createById(
             extractStringValue(object, "id", "unknown_material"),
             extractIntValue(object, "quantity", 1),
             extractStringValue(object, "quality", "normal")
-        ));
+        );
+        material.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(material, object);
+        loadedCityVault.addMaterial(material);
     }
     std::vector<PlayerCityVault> loadedCityVaults;
     auto findOrCreateLoadedCityVault = [&](const std::string& rawCityId) -> PlayerCityVault&
@@ -2585,7 +3574,6 @@ bool SaveManager::loadPlayerSnapshot(
 
         PlayerCityVault record;
         record.cityId = cityId;
-        record.inventory.setTotalCopper(0);
         record.purchased = false;
         record.level = 0;
         loadedCityVaults.push_back(record);
@@ -2602,6 +3590,19 @@ bool SaveManager::loadPlayerSnapshot(
         PlayerCityVault& record = findOrCreateLoadedCityVault(cityId);
         record.purchased = extractBoolValue(object, "purchased", false);
         record.level = record.purchased ? std::max(1, std::min(5, extractIntValue(object, "level", 1))) : 0;
+        record.placeOptimized = record.purchased && extractBoolValue(object, "placeOptimized", false);
+        record.preparedStorage = record.purchased && record.level >= 5 && extractBoolValue(object, "preparedStorage", false);
+        record.securityDaysRemaining = record.purchased ? std::max(0, extractIntValue(object, "securityDaysRemaining", 0)) : 0;
+        record.raidPending = record.purchased && extractBoolValue(object, "raidPending", false);
+        record.raidDeadlineDay = record.raidPending ? extractIntValue(object, "raidDeadlineDay", -1) : -1;
+        record.lastRaidCheckDay = extractIntValue(object, "lastRaidCheckDay", -1);
+        CoinBreakdown storedCoins;
+        storedCoins.platinum = std::max<long long>(0, extractLongLongValue(object, "platinumCoins", 0));
+        storedCoins.gold = std::max<long long>(0, extractLongLongValue(object, "goldCoins", 0));
+        storedCoins.electrum = std::max<long long>(0, extractLongLongValue(object, "electrumCoins", 0));
+        storedCoins.iron = std::max<long long>(0, extractLongLongValue(object, "ironCoins", 0));
+        storedCoins.copper = std::max<long long>(0, extractLongLongValue(object, "copperCoins", 0));
+        record.inventory.setCoinStacks(storedCoins);
     }
 
     for (const std::string& object : cityVaultWeaponObjects)
@@ -2625,6 +3626,8 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedWeaponDurability(weapon, extractIntValue(object, "durability", weapon.getDurability()));
         weapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        weapon.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(weapon, object);
         weapon.setPersistentId(extractStringValue(object, "persistentId", ""));
         record.inventory.addWeapon(weapon);
     }
@@ -2649,6 +3652,8 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedArmorDurability(armor, extractIntValue(object, "durability", armor.getDurability()));
         armor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        armor.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(armor, object);
         armor.setPersistentId(extractStringValue(object, "persistentId", ""));
         record.inventory.addArmor(armor);
     }
@@ -2660,7 +3665,10 @@ bool SaveManager::loadPlayerSnapshot(
         PlayerCityVault& record = findOrCreateLoadedCityVault(cityId);
         record.purchased = true;
         if (record.level <= 0) record.level = 1;
-        record.inventory.addConsumable(consumableFromName(extractStringValue(object, "name", "Potion de soin")));
+        Consumable consumable = consumableFromName(extractStringValue(object, "name", "Potion de soin"));
+        consumable.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(consumable, object);
+        record.inventory.addConsumable(consumable);
     }
 
     for (const std::string& object : cityVaultMaterialObjects)
@@ -2670,11 +3678,228 @@ bool SaveManager::loadPlayerSnapshot(
         PlayerCityVault& record = findOrCreateLoadedCityVault(cityId);
         record.purchased = true;
         if (record.level <= 0) record.level = 1;
-        record.inventory.addMaterial(MaterialCatalog::createById(
+        Material material = MaterialCatalog::createById(
             extractStringValue(object, "id", "unknown_material"),
             extractIntValue(object, "quantity", 1),
             extractStringValue(object, "quality", "normal")
-        ));
+        );
+        material.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(material, object);
+        record.inventory.addMaterial(material);
+    }
+
+    std::vector<PlayerBattlefieldRecoveryCache> loadedBattlefieldCaches;
+    auto findOrCreateBattlefieldCache = [&](const std::string& cacheId) -> PlayerBattlefieldRecoveryCache&
+    {
+        for (PlayerBattlefieldRecoveryCache& cache : loadedBattlefieldCaches) if (cache.cacheId == cacheId) return cache;
+        PlayerBattlefieldRecoveryCache cache; cache.cacheId = cacheId; loadedBattlefieldCaches.push_back(cache); return loadedBattlefieldCaches.back();
+    };
+    for (const std::string& object : battlefieldRecoveryCacheObjects)
+    {
+        const std::string cacheId = extractStringValue(object, "cacheId", "");
+        if (cacheId.empty()) continue;
+        PlayerBattlefieldRecoveryCache& cache = findOrCreateBattlefieldCache(cacheId);
+        cache.cityId = extractStringValue(object, "cityId", "");
+        cache.contextId = extractStringValue(object, "contextId", "");
+        cache.locationLabel = extractStringValue(object, "locationLabel", "zone du combat");
+        cache.createdDay = std::max(0, extractIntValue(object, "createdDay", 0));
+        cache.lastAttemptDay = extractIntValue(object, "lastAttemptDay", -1);
+        cache.searchAttempts = std::max(0, extractIntValue(object, "searchAttempts", 0));
+        cache.disturbanceLevel = std::clamp(extractIntValue(object, "disturbanceLevel", 0), 0, 3);
+        cache.custodyState = extractStringValue(object, "custodyState", "field");
+        cache.custodyLabel = extractStringValue(object, "custodyLabel", "");
+        cache.lastMovementDay = extractIntValue(object, "lastMovementDay", -1);
+        cache.movementCount = std::max(0, extractIntValue(object, "movementCount", 0));
+        cache.locationKnown = extractBoolValue(object, "locationKnown", true);
+        cache.resolved = extractBoolValue(object, "resolved", false);
+        CoinBreakdown coins;
+        coins.platinum = std::max<long long>(0, extractLongLongValue(object, "platinumCoins", 0));
+        coins.gold = std::max<long long>(0, extractLongLongValue(object, "goldCoins", 0));
+        coins.electrum = std::max<long long>(0, extractLongLongValue(object, "electrumCoins", 0));
+        coins.iron = std::max<long long>(0, extractLongLongValue(object, "ironCoins", 0));
+        coins.copper = std::max<long long>(0, extractLongLongValue(object, "copperCoins", 0));
+        cache.inventory.setCoinStacks(coins);
+    }
+    for (const std::string& object : battlefieldRecoveryWeaponObjects)
+    {
+        const std::string cacheId = extractStringValue(object, "cacheId", "");
+        if (cacheId.empty()) continue;
+        PlayerBattlefieldRecoveryCache& cache = findOrCreateBattlefieldCache(cacheId);
+        const std::string name = extractStringValue(object, "name", "Épée rouillée");
+        Weapon fallback = weaponFromName(name);
+        Weapon w(name, extractStringValue(object, "description", fallback.getDescription()), extractIntValue(object, "value", fallback.getValue()),
+            weaponTypeFromSaveText(extractStringValue(object, "type", weaponTypeToSaveText(fallback.getType()))),
+            extractIntValue(object, "minDamageBonus", fallback.getMinDamageBonus()), extractIntValue(object, "maxDamageBonus", fallback.getMaxDamageBonus()),
+            extractIntValue(object, "criticalBonus", fallback.getCriticalBonus()), extractIntValue(object, "maxDurability", fallback.getMaxDurability()));
+        applySavedWeaponDurability(w, extractIntValue(object, "durability", w.getDurability()));
+        w.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        w.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(w, object);
+        w.setPersistentId(extractStringValue(object, "persistentId", ""));
+        cache.inventory.addWeapon(w);
+    }
+    for (const std::string& object : battlefieldRecoveryArmorObjects)
+    {
+        const std::string cacheId = extractStringValue(object, "cacheId", "");
+        if (cacheId.empty()) continue;
+        PlayerBattlefieldRecoveryCache& cache = findOrCreateBattlefieldCache(cacheId);
+        const std::string name = extractStringValue(object, "name", "Tenue simple");
+        Armor fallback = armorFromName(name);
+        Armor a(name, extractStringValue(object, "description", fallback.getDescription()), extractIntValue(object, "value", fallback.getValue()),
+            armorTypeFromSaveText(extractStringValue(object, "type", armorTypeToSaveText(fallback.getType()))),
+            extractIntValue(object, "maxHpBonus", fallback.getMaxHpBonus()), extractIntValue(object, "damageReduction", fallback.getDamageReduction()),
+            extractIntValue(object, "maxDurability", fallback.getMaxDurability()));
+        applySavedArmorDurability(a, extractIntValue(object, "durability", a.getDurability()));
+        a.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        a.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(a, object);
+        a.setPersistentId(extractStringValue(object, "persistentId", ""));
+        cache.inventory.addArmor(a);
+    }
+    for (const std::string& object : battlefieldRecoveryConsumableObjects)
+    {
+        const std::string cacheId = extractStringValue(object, "cacheId", "");
+        if (cacheId.empty()) continue;
+        PlayerBattlefieldRecoveryCache& cache = findOrCreateBattlefieldCache(cacheId);
+        Consumable c = consumableFromName(extractStringValue(object, "name", "Potion de soin"));
+        c.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(c, object);
+        cache.inventory.addConsumable(c);
+    }
+    for (const std::string& object : battlefieldRecoveryMaterialObjects)
+    {
+        const std::string cacheId = extractStringValue(object, "cacheId", "");
+        if (cacheId.empty()) continue;
+        PlayerBattlefieldRecoveryCache& cache = findOrCreateBattlefieldCache(cacheId);
+        Material m = MaterialCatalog::createById(extractStringValue(object, "id", "unknown_material"),
+            std::max(1, extractIntValue(object, "quantity", 1)), extractStringValue(object, "quality", "normal"));
+        m.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(m, object);
+        cache.inventory.addMaterial(m);
+    }
+
+    std::vector<PlayerCrimeContactState> loadedCrimeContacts;
+    for (const std::string& object : crimeContactStateObjects)
+    {
+        PlayerCrimeContactState state;
+        state.contactId = extractStringValue(object, "contactId", "");
+        if (state.contactId.empty()) continue;
+        state.displayName = extractStringValue(object, "displayName", state.contactId);
+        state.firstSeenDay = std::max(0, extractIntValue(object, "firstSeenDay", 0));
+        state.lastInteractionDay = extractIntValue(object, "lastInteractionDay", -1);
+        state.encounters = std::max(0, extractIntValue(object, "encounters", 0));
+        state.observations = std::max(0, extractIntValue(object, "observations", 0));
+        state.negotiations = std::max(0, extractIntValue(object, "negotiations", 0));
+        state.guardConfrontations = std::max(0, extractIntValue(object, "guardConfrontations", 0));
+        state.pressure = std::clamp(extractIntValue(object, "pressure", 0), 0, 100);
+        state.cooperation = std::clamp(extractIntValue(object, "cooperation", 0), -100, 100);
+        state.fledUntilDay = extractIntValue(object, "fledUntilDay", -1);
+        state.detainedUntilDay = extractIntValue(object, "detainedUntilDay", -1);
+        state.provisionalDetentions = std::max(0, extractIntValue(object, "provisionalDetentions", 0));
+        state.releases = std::max(0, extractIntValue(object, "releases", 0));
+        state.returnsAfterFlight = std::max(0, extractIntValue(object, "returnsAfterFlight", 0));
+        state.lastReleaseDay = extractIntValue(object, "lastReleaseDay", -1);
+        state.lastReturnDay = extractIntValue(object, "lastReturnDay", -1);
+        state.knownRole = extractStringValue(object, "knownRole", "");
+        state.homeCityId = extractStringValue(object, "homeCityId", "");
+        state.networkId = extractStringValue(object, "networkId", "");
+        state.networkWarnings = std::max(0, extractIntValue(object, "networkWarnings", 0));
+        state.lastNetworkWarningDay = extractIntValue(object, "lastNetworkWarningDay", -1);
+        state.lastWarningSourceId = extractStringValue(object, "lastWarningSourceId", "");
+        state.reliability = std::clamp(extractIntValue(object, "reliability", 50), 0, 100);
+        state.favorBalance = std::clamp(extractIntValue(object, "favorBalance", 0), -100, 100);
+        state.rivalry = std::clamp(extractIntValue(object, "rivalry", 0), 0, 100);
+        state.fulfilledDeals = std::max(0, extractIntValue(object, "fulfilledDeals", 0));
+        state.brokenDeals = std::max(0, extractIntValue(object, "brokenDeals", 0));
+        state.ruptureUntilDay = extractIntValue(object, "ruptureUntilDay", -1);
+        state.reportedToGuard = extractBoolValue(object, "reportedToGuard", false);
+        state.arrested = extractBoolValue(object, "arrested", false);
+        loadedCrimeContacts.push_back(state);
+    }
+
+    std::vector<PlayerVaultTheftCase> loadedVaultTheftCases;
+    auto findOrCreateTheftCase = [&](const std::string& caseId) -> PlayerVaultTheftCase&
+    {
+        for (PlayerVaultTheftCase& c : loadedVaultTheftCases) if (c.caseId == caseId) return c;
+        PlayerVaultTheftCase c; c.caseId = caseId; loadedVaultTheftCases.push_back(c); return loadedVaultTheftCases.back();
+    };
+    for (const std::string& object : vaultTheftCaseObjects)
+    {
+        const std::string caseId = extractStringValue(object, "caseId", "");
+        if (caseId.empty()) continue;
+        PlayerVaultTheftCase& c = findOrCreateTheftCase(caseId);
+        c.cityId = extractStringValue(object, "cityId", "");
+        c.createdDay = extractIntValue(object, "createdDay", 0);
+        c.lastLeadDay = extractIntValue(object, "lastLeadDay", c.createdDay);
+        c.clues = extractIntValue(object, "clues", 0);
+        c.culpritIdentified = extractBoolValue(object, "culpritIdentified", false);
+        c.identifiedRivalId = extractStringValue(object, "identifiedRivalId", "");
+        c.holderType = extractStringValue(object, "holderType", "unknown");
+        c.holderLabel = extractStringValue(object, "holderLabel", "auteur inconnu");
+        c.holderWorldContactId = extractStringValue(object, "holderWorldContactId", "");
+        c.holderLocationId = extractStringValue(object, "holderLocationId", "");
+        c.holderLocationLabel = extractStringValue(object, "holderLocationLabel", "");
+        c.holderExplorationBiome = extractStringValue(object, "holderExplorationBiome", "");
+        c.handoffCount = extractIntValue(object, "handoffCount", 0);
+        c.holderObservationCount = extractIntValue(object, "holderObservationCount", 0);
+        c.negotiationAttempts = extractIntValue(object, "negotiationAttempts", 0);
+        c.confrontationAttempts = extractIntValue(object, "confrontationAttempts", 0);
+        c.holderPressure = extractIntValue(object, "holderPressure", 0);
+        c.holderCooperation = extractIntValue(object, "holderCooperation", 0);
+        c.holderClosedUntilDay = extractIntValue(object, "holderClosedUntilDay", -1);
+        c.holderReportedToGuard = extractBoolValue(object, "holderReportedToGuard", false);
+        c.lastHolderInteractionDay = extractIntValue(object, "lastHolderInteractionDay", -1);
+        c.holderAlerted = extractBoolValue(object, "holderAlerted", false);
+        c.resolved = extractBoolValue(object, "resolved", false);
+        c.stolenCopper = std::max<long long>(0, extractLongLongValue(object, "stolenCopper", 0));
+        c.hasWeapon = extractBoolValue(object, "hasWeapon", false);
+        c.hasArmor = extractBoolValue(object, "hasArmor", false);
+        c.hasConsumable = extractBoolValue(object, "hasConsumable", false);
+        if (c.hasConsumable)
+        {
+            c.stolenConsumable = consumableFromName(extractStringValue(object, "stolenConsumableName", "Potion de soin"));
+            c.stolenConsumable.loadOwnershipBindingFromSaveText(extractStringValue(object, "stolenConsumableOwnershipBinding", "none"));
+        }
+        c.stolenMaterialId = extractStringValue(object, "stolenMaterialId", "");
+        c.stolenMaterialName = extractStringValue(object, "stolenMaterialName", "");
+        c.stolenMaterialQuality = extractStringValue(object, "stolenMaterialQuality", "normal");
+        c.stolenMaterialQuantity = std::max(0, extractIntValue(object, "stolenMaterialQuantity", 0));
+    }
+    for (const std::string& object : vaultTheftCaseWeaponObjects)
+    {
+        const std::string caseId = extractStringValue(object, "caseId", "");
+        if (caseId.empty()) continue;
+        PlayerVaultTheftCase& c = findOrCreateTheftCase(caseId);
+        const std::string name = extractStringValue(object, "name", "Épée rouillée");
+        Weapon fallback = weaponFromName(name);
+        Weapon w(name, extractStringValue(object, "description", fallback.getDescription()), extractIntValue(object, "value", fallback.getValue()),
+            weaponTypeFromSaveText(extractStringValue(object, "type", weaponTypeToSaveText(fallback.getType()))),
+            extractIntValue(object, "minDamageBonus", fallback.getMinDamageBonus()), extractIntValue(object, "maxDamageBonus", fallback.getMaxDamageBonus()),
+            extractIntValue(object, "criticalBonus", fallback.getCriticalBonus()), extractIntValue(object, "maxDurability", fallback.getMaxDurability()));
+        applySavedWeaponDurability(w, extractIntValue(object, "durability", w.getDurability()));
+        w.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        w.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(w, object);
+        w.setPersistentId(extractStringValue(object, "persistentId", ""));
+        c.stolenWeapon = w; c.hasWeapon = true;
+    }
+    for (const std::string& object : vaultTheftCaseArmorObjects)
+    {
+        const std::string caseId = extractStringValue(object, "caseId", "");
+        if (caseId.empty()) continue;
+        PlayerVaultTheftCase& c = findOrCreateTheftCase(caseId);
+        const std::string name = extractStringValue(object, "name", "Tenue simple");
+        Armor fallback = armorFromName(name);
+        Armor a(name, extractStringValue(object, "description", fallback.getDescription()), extractIntValue(object, "value", fallback.getValue()),
+            armorTypeFromSaveText(extractStringValue(object, "type", armorTypeToSaveText(fallback.getType()))),
+            extractIntValue(object, "maxHpBonus", fallback.getMaxHpBonus()), extractIntValue(object, "damageReduction", fallback.getDamageReduction()),
+            extractIntValue(object, "maxDurability", fallback.getMaxDurability()));
+        applySavedArmorDurability(a, extractIntValue(object, "durability", a.getDurability()));
+        a.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        a.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(a, object);
+        a.setPersistentId(extractStringValue(object, "persistentId", ""));
+        c.stolenArmor = a; c.hasArmor = true;
     }
 
     std::vector<std::string> loadedRegisteredGuildCityIds;
@@ -2689,7 +3914,18 @@ bool SaveManager::loadPlayerSnapshot(
         extractStringValue(content, "currentCityId", "valebrume"),
         loadedCityVault,
         loadedRegisteredGuildCityIds,
-        loadedCityVaults
+        loadedCityVaults,
+        extractBoolValue(content, "vaultPlaceOptimized", false),
+        extractBoolValue(content, "vaultPreparedStorage", false)
+    );
+    player.setLoadedVaultTheftCases(loadedVaultTheftCases);
+    player.setLoadedBattlefieldRecoveryCaches(loadedBattlefieldCaches);
+    player.setLoadedCrimeContactStates(loadedCrimeContacts);
+    player.setLoadedBackpackTier(extractIntValue(content, "backpackTier", 0));
+    player.setLoadedCityVaultRecallMessengerState(
+        extractIntValue(content, "vaultRecallMessengerStamp", -1000000),
+        extractStringValue(content, "vaultRecallMessengerSourceCityId", ""),
+        extractStringValue(content, "vaultRecallMessengerDestinationCityId", "")
     );
 
     // V3.50.19 / schema 25: historical economy numbers were authored as small price points
@@ -2743,6 +3979,7 @@ bool SaveManager::loadPlayerSnapshot(
     DndAttributes loadedAttributes;
     loadedAttributes.setValues(strength, dexterity, constitution, intelligence, wisdom, charisma);
     player.setLoadedAttributes(loadedAttributes, unspentAttributePoints);
+    player.setLoadedManaState(loadedMana < 0 ? player.getMaxMana() : loadedMana, loadedManaExhaustionTurns);
     player.setLoadedStatistics(
         combatsStarted,
         worldDaysElapsed,
@@ -3043,6 +4280,11 @@ bool SaveManager::loadPlayerSnapshot(
         rival.firstSeenDay = extractIntValue(object, "firstSeenDay", 0);
         rival.lastSeenDay = extractIntValue(object, "lastSeenDay", 0);
         rival.alive = extractBoolValue(object, "alive", true);
+        rival.stolenCopper = std::max<long long>(0, extractLongLongValue(object, "stolenCopper", 0));
+        rival.stolenMaterialId = extractStringValue(object, "stolenMaterialId", "");
+        rival.stolenMaterialName = extractStringValue(object, "stolenMaterialName", "");
+        rival.stolenMaterialQuality = extractStringValue(object, "stolenMaterialQuality", "normal");
+        rival.stolenMaterialQuantity = std::max(0, extractIntValue(object, "stolenMaterialQuantity", 0));
         if (!rival.enemyName.empty()) loadedRivals.push_back(rival);
     }
     player.setLoadedRivalRecords(loadedRivals);
@@ -3067,6 +4309,8 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedWeaponDurability(loadedGrinkaWeapon, extractIntValue(object, "durability", loadedGrinkaWeapon.getDurability()));
         loadedGrinkaWeapon.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        loadedGrinkaWeapon.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(loadedGrinkaWeapon, object);
         loadedGrinkaWeapon.setPersistentId(extractStringValue(object, "persistentId", ""));
         hasLoadedGrinkaWeapon = true;
     }
@@ -3089,6 +4333,8 @@ bool SaveManager::loadPlayerSnapshot(
         );
         applySavedArmorDurability(loadedGrinkaArmor, extractIntValue(object, "durability", loadedGrinkaArmor.getDurability()));
         loadedGrinkaArmor.loadEnchantmentsFromSaveText(extractStringValue(object, "enchantments", ""));
+        loadedGrinkaArmor.loadOwnershipBindingFromSaveText(extractStringValue(object, "ownershipBinding", "none"));
+        loadRecoveryMetadata(loadedGrinkaArmor, object);
         loadedGrinkaArmor.setPersistentId(extractStringValue(object, "persistentId", ""));
         hasLoadedGrinkaArmor = true;
     }
@@ -3270,6 +4516,99 @@ bool SaveManager::loadPlayerSnapshot(
         quest.linkedQuestRequiredState = extractStringValue(object, "linkedQuestRequiredState", "turned_in");
         quest.retroactiveProgress = extractBoolValue(object, "retroactiveProgress", false);
         quest.hideFutureSteps = extractBoolValue(object, "hideFutureSteps", false);
+        quest.phaseTwoChecked = extractBoolValue(object, "phaseTwoChecked", false);
+        quest.phaseTwoOffered = extractBoolValue(object, "phaseTwoOffered", false);
+        quest.phaseTwoActive = extractBoolValue(object, "phaseTwoActive", false);
+        quest.phaseTwoMandatory = extractBoolValue(object, "phaseTwoMandatory", false);
+        quest.phaseTwoCompleted = extractBoolValue(object, "phaseTwoCompleted", false);
+        quest.phaseTwoDeclined = extractBoolValue(object, "phaseTwoDeclined", false);
+        quest.phaseTwoTitle = extractStringValue(object, "phaseTwoTitle", "");
+        quest.phaseTwoPreviousSummary = extractStringValue(object, "phaseTwoPreviousSummary", "");
+        quest.phaseTwoReason = extractStringValue(object, "phaseTwoReason", "");
+        quest.phaseTwoObjective = extractStringValue(object, "phaseTwoObjective", "");
+        quest.phaseTwoProgress = extractIntValue(object, "phaseTwoProgress", 0);
+        quest.phaseTwoTarget = extractIntValue(object, "phaseTwoTarget", 0);
+        quest.phaseTwoAttempts = extractIntValue(object, "phaseTwoAttempts", 0);
+        quest.phaseTwoRewardExperience = extractIntValue(object, "phaseTwoRewardExperience", 0);
+        quest.phaseTwoRewardGold = extractIntValue(object, "phaseTwoRewardGold", 0);
+        quest.phaseTwoRewardKind = extractStringValue(object, "phaseTwoRewardKind", "");
+        quest.phaseTwoRewardDetail = extractStringValue(object, "phaseTwoRewardDetail", "");
+        quest.phaseTwoTravelRequired = extractBoolValue(object, "phaseTwoTravelRequired", false);
+        quest.phaseTwoTravelSourceCityId = extractStringValue(object, "phaseTwoTravelSourceCityId", "");
+        quest.phaseTwoTravelDestinationCityId = extractStringValue(object, "phaseTwoTravelDestinationCityId", "");
+        quest.phaseTwoTravelDistanceKm = extractIntValue(object, "phaseTwoTravelDistanceKm", 0);
+        quest.intercityMission = extractBoolValue(object, "intercityMission", false);
+        quest.intercityKind = extractStringValue(object, "intercityKind", "");
+        quest.intercitySourceCityId = extractStringValue(object, "intercitySourceCityId", "");
+        quest.intercityRouteCityIds = extractStringValue(object, "intercityRouteCityIds", "");
+        quest.intercityPayloadName = extractStringValue(object, "intercityPayloadName", "");
+        quest.intercityStopIndex = extractIntValue(object, "intercityStopIndex", 0);
+        quest.intercityTotalDistanceKm = extractIntValue(object, "intercityTotalDistanceKm", 0);
+        quest.intercityTravelRewardGold = extractIntValue(object, "intercityTravelRewardGold", 0);
+        quest.intercityTravelRewardExperience = extractIntValue(object, "intercityTravelRewardExperience", 0);
+        quest.tradeIncidentMission = extractBoolValue(object, "tradeIncidentMission", false);
+        quest.tradeIncidentId = extractStringValue(object, "tradeIncidentId", "");
+        quest.tradeIncidentKind = extractStringValue(object, "tradeIncidentKind", "");
+        quest.tradeIncidentSourceCityId = extractStringValue(object, "tradeIncidentSourceCityId", "");
+        quest.tradeIncidentDestinationCityId = extractStringValue(object, "tradeIncidentDestinationCityId", "");
+        quest.tradeIncidentGoodsType = extractIntValue(object, "tradeIncidentGoodsType", -1);
+        quest.tradeIncidentSeverity = extractIntValue(object, "tradeIncidentSeverity", 0);
+        quest.tradeIncidentStage = extractStringValue(object, "tradeIncidentStage", "");
+        quest.tradeIncidentAttempts = extractIntValue(object, "tradeIncidentAttempts", 0);
+        quest.tradeIncidentCreatesBountyLead = extractBoolValue(object, "tradeIncidentCreatesBountyLead", false);
+        quest.tradeIncidentBountyPublished = extractBoolValue(object, "tradeIncidentBountyPublished", false);
+        quest.bountyMission = extractBoolValue(object, "bountyMission", false);
+        quest.bountyTargetId = extractStringValue(object, "bountyTargetId", "");
+        quest.bountyTargetName = extractStringValue(object, "bountyTargetName", "");
+        quest.bountyTargetTemperament = extractStringValue(object, "bountyTargetTemperament", "");
+        quest.bountyTargetHomeCityId = extractStringValue(object, "bountyTargetHomeCityId", "");
+        quest.bountyTargetNetworkId = extractStringValue(object, "bountyTargetNetworkId", "");
+        quest.bountyIssuerId = extractStringValue(object, "bountyIssuerId", "");
+        quest.bountyIssuerName = extractStringValue(object, "bountyIssuerName", "");
+        quest.bountyIssuerOrganizationId = extractStringValue(object, "bountyIssuerOrganizationId", "");
+        quest.bountyIssuerOrganizationName = extractStringValue(object, "bountyIssuerOrganizationName", "");
+        quest.bountyIssuerPrefersLiveCapture = extractBoolValue(object, "bountyIssuerPrefersLiveCapture", true);
+        quest.bountyCloseRelationId = extractStringValue(object, "bountyCloseRelationId", "");
+        quest.bountyCloseRelationName = extractStringValue(object, "bountyCloseRelationName", "");
+        quest.bountyCloseRelationType = extractStringValue(object, "bountyCloseRelationType", "");
+        quest.bountyStage = extractStringValue(object, "bountyStage", quest.bountyMission ? "investigation" : "");
+        quest.bountyClues = extractIntValue(object, "bountyClues", 0);
+        quest.bountyInvestigationNoise = extractIntValue(object, "bountyInvestigationNoise", 0);
+        quest.bountyInformantExposure = extractIntValue(object, "bountyInformantExposure", 0);
+        quest.bountyTargetAwareness = extractIntValue(object, "bountyTargetAwareness", 45);
+        quest.bountyTargetSuspectsHunt = extractBoolValue(object, "bountyTargetSuspectsHunt", false);
+        quest.bountyTargetKnowsHunt = extractBoolValue(object, "bountyTargetKnowsHunt", false);
+        quest.bountyTargetResources = extractIntValue(object, "bountyTargetResources", 45);
+        quest.bountyTargetLocalSupport = extractIntValue(object, "bountyTargetLocalSupport", 20);
+        quest.bountyTargetMobility = extractIntValue(object, "bountyTargetMobility", 50);
+        quest.bountyTargetEscapeAttempts = extractIntValue(object, "bountyTargetEscapeAttempts", 0);
+        quest.bountyTargetKnowsTerrain = extractBoolValue(object, "bountyTargetKnowsTerrain", false);
+        quest.bountyTargetInjured = extractBoolValue(object, "bountyTargetInjured", false);
+        quest.bountyExitRecon = extractIntValue(object, "bountyExitRecon", 0);
+        quest.bountyInformantNetwork = extractIntValue(object, "bountyInformantNetwork", 0);
+        quest.bountyAmbushPreparation = extractIntValue(object, "bountyAmbushPreparation", 0);
+        quest.bountyShadowingPreparation = extractIntValue(object, "bountyShadowingPreparation", 0);
+        quest.bountyRouteVariation = extractIntValue(object, "bountyRouteVariation", 0);
+        quest.bountyDecoyQuality = extractIntValue(object, "bountyDecoyQuality", 0);
+        quest.bountyCounterSurveillance = extractIntValue(object, "bountyCounterSurveillance", 0);
+        quest.bountyRefugeConcealment = extractIntValue(object, "bountyRefugeConcealment", 0);
+        quest.bountyDangerRating = extractIntValue(object, "bountyDangerRating", 1);
+        quest.bountyNotorietyRating = extractIntValue(object, "bountyNotorietyRating", 1);
+        quest.bountyDaysAtLarge = extractIntValue(object, "bountyDaysAtLarge", 0);
+        quest.bountyBaseRewardGold = extractIntValue(object, "bountyBaseRewardGold", 0);
+        quest.bountyRewardProfileApplied = extractBoolValue(object, "bountyRewardProfileApplied", false);
+        quest.bountyRegionalProfileApplied = extractBoolValue(object, "bountyRegionalProfileApplied", false);
+        quest.bountyCurrentCityId = extractStringValue(object, "bountyCurrentCityId", "");
+        quest.bountyCurrentBiome = extractStringValue(object, "bountyCurrentBiome", "");
+        quest.bountyVisitedCityIds = extractStringValue(object, "bountyVisitedCityIds", "");
+        quest.bountyRelocationCount = extractIntValue(object, "bountyRelocationCount", 0);
+        quest.bountyTransitTrailKind = extractStringValue(object, "bountyTransitTrailKind", "");
+        quest.bountyTransitTrailFromCityId = extractStringValue(object, "bountyTransitTrailFromCityId", "");
+        quest.bountyTransitTrailReliability = extractIntValue(object, "bountyTransitTrailReliability", 0);
+        quest.bountyTransitTrailAvailable = extractBoolValue(object, "bountyTransitTrailAvailable", false);
+        quest.bountyRegionalProfileCityId = extractStringValue(object, "bountyRegionalProfileCityId", "");
+        quest.bountyRegionalConsequencesApplied = extractBoolValue(object, "bountyRegionalConsequencesApplied", false);
+        quest.bountyResolution = extractStringValue(object, "bountyResolution", "");
         if (quest.failed && quest.failureReason.empty())
         {
             quest.failureReason = "Délai dépassé ou demande archivée sans validation.";

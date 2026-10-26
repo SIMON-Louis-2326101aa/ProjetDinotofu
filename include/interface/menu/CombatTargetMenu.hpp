@@ -10,13 +10,18 @@
 #include "combat/EnemyCombatQueue.hpp"
 #include "core/Random.hpp"
 
+#include <string>
+
 class CombatTargetMenu
 {
 public:
     static bool openForAttack(
         Player& player,
         EnemyCombatQueue& wave,
-        Random& random
+        Random& random,
+        std::string* resolvedTargetName = nullptr,
+        std::string* resolvedTargetId = nullptr,
+        bool* targetForcedByCombatRules = nullptr
     );
 
     static bool openForDamagePotion(
@@ -36,7 +41,9 @@ public:
     static bool openForClassSkill(
         Player& player,
         EnemyCombatQueue& wave,
-        Random& random
+        Random& random,
+        std::string* resolvedTargetName = nullptr,
+        std::string* resolvedTargetId = nullptr
     );
 
 private:
@@ -49,7 +56,10 @@ private:
         EnemyCombatQueue& wave,
         Random& random,
         bool boostedAttack,
-        int damageBonus
+        int damageBonus,
+        std::string* resolvedTargetName = nullptr,
+        std::string* resolvedTargetId = nullptr,
+        bool* targetForcedByCombatRules = nullptr
     );
 };
 

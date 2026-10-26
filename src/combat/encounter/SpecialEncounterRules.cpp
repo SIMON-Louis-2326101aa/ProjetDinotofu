@@ -14,7 +14,6 @@ CombatIntent SpecialEncounterRules::getIntentForSpecialGroup(const std::vector<s
 {
     bool hasHazak = containsName(names, "Hazak");
     bool hasSkuro = containsName(names, "Skuro");
-    bool hasHestia = containsName(names, "Hestia");
     bool hasFail = containsName(names, "Fail");
     bool hasFireFlight = containsName(names, "Fire Flight");
     bool hasMattPro = containsName(names, "Matt (PRO)");
@@ -29,11 +28,6 @@ CombatIntent SpecialEncounterRules::getIntentForSpecialGroup(const std::vector<s
     if (hasLesBrasCasses)
     {
         return CombatIntent::Training;
-    }
-
-    if (hasHazak && hasHestia)
-    {
-        return CombatIntent::SeriousFight;
     }
 
     if (hasHazak && hasFail)
@@ -76,7 +70,6 @@ std::string SpecialEncounterRules::getIntentText(
 {
     bool hasHazak = containsName(names, "Hazak");
     bool hasSkuro = containsName(names, "Skuro");
-    bool hasHestia = containsName(names, "Hestia");
     bool hasFail = containsName(names, "Fail");
     bool hasFireFlight = containsName(names, "Fire Flight");
     bool hasMattPro = containsName(names, "Matt (PRO)");
@@ -94,11 +87,6 @@ std::string SpecialEncounterRules::getIntentText(
         return "Intention : rencontre PvE héroïque. Les bras cassés testent ton niveau en groupe complet, sans chercher la mort par défaut, mais avec beaucoup trop d'ego pour promettre un combat propre.";
     }
 
-    if (hasHazak && hasHestia && hasSanctus)
-    {
-        return "Intention : protection sacrée. Hazak refuse le massacre, Sanctus absorbe la menace, Hestia ne doit pas revivre son pire souvenir.";
-    }
-
     if (hasFail && hasAoi && hasKanade)
     {
         return "Intention : laboratoire magique. Fail teste, Kanadé surcharge, Aoi stabilise juste assez pour éviter la catastrophe totale.";
@@ -112,11 +100,6 @@ std::string SpecialEncounterRules::getIntentText(
     if (hasHenrique && hasMattzelda && hasSkuro)
     {
         return "Intention : charge instable. Henrique tient debout, Mattzelda attire l'attention, Skuro rend chaque erreur dangereuse.";
-    }
-
-    if (hasHazak && hasHestia)
-    {
-        return "Intention : combat sérieux, mais pas à mort. Hazak refuse de traumatiser Hestia avec un assassinat.";
     }
 
     if (hasHazak && hasFail)
@@ -174,7 +157,6 @@ bool SpecialEncounterRules::canBecomeDeathMatch(const std::vector<std::string>& 
 {
     bool hasHazak = containsName(names, "Hazak");
     bool hasSkuro = containsName(names, "Skuro");
-    bool hasHestia = containsName(names, "Hestia");
     bool hasLesBrasCasses = hasHazak
         && containsName(names, "Fail")
         && containsName(names, "Aoi")
@@ -182,11 +164,6 @@ bool SpecialEncounterRules::canBecomeDeathMatch(const std::vector<std::string>& 
         && containsName(names, "Sanctus");
 
     if (hasLesBrasCasses)
-    {
-        return false;
-    }
-
-    if (hasHazak && hasHestia)
     {
         return false;
     }

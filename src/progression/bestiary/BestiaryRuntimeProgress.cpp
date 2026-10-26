@@ -596,7 +596,7 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
         unlockEntry(
             "Groupes spéciaux",
             "Entités passives / alliées",
-            "Notes achetées : certains groupes ne cherchent pas forcément la mort du joueur. Hazak protège Hestia, Fail respecte un contrat avec Hazak, et Skuro rend souvent le combat plus dangereux."
+            "Notes achetées : certains groupes ne cherchent pas forcément la mort du joueur. Fail respecte un contrat avec Hazak, les Bras cassés ont leur propre cohésion, et Skuro rend souvent le combat plus dangereux."
         );
         unlockEntry(
             "Mattzelda / Louis / Trexof",
@@ -659,9 +659,9 @@ void BestiaryRuntimeProgress::unlockCommonInformation(const std::string& informa
             "Dossier lu : une rumeur de groupe confirme Mattzelda, Louis et Trexof comme traces possibles, sans révéler tous leurs calculs ni leurs liens exacts."
         );
         unlockEntry(
-            "Rumeur de la mage qu'on ne laisse pas seule",
+            "Rumeur de la fille revenue de nulle part",
             "Légendes / contes",
-            "Dossier lu : Hestia semble protégée par des profils plus durs qu'elle, surtout quand l'arène devient trop violente."
+            "Dossier lu : Hestia aurait été sauvée dans un état critique et resterait longtemps très silencieuse ; son origine reste inconnue."
         );
         unlockEntry(
             "Rumeur du commandant qui ne comprend pas l'hostilité",

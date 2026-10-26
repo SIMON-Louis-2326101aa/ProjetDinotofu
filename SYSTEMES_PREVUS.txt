@@ -1,140 +1,405 @@
-DINOTOFU — SYSTÈMES PRÉVUS ET TÂCHES RESTANTES
+- V3.51.67 : primes ciblées jouables — `BountyQuestSystem` relie maintenant panneau de guilde, enquête, préparation, conscience réelle de la traque, interception, fuite, reddition/combat et persistance. Une cible peut être recherchée sans savoir qu'elle est chassée ; aucune contre-mesure anti-chasseur ne naît sans détection crédible.
+- V3.51.66 : recrues — première aspiration légère dérivée de leur motivation/métier/trait déjà écrits et de leur vécu réel avec le joueur ; elle module modestement le moral et apparaît dans l'équipe. Aucune personnalité secrète n'est inventée.
+- V3.51.66 : réseaux criminels — les relais inter-ville deviennent faillibles : détention/fuite, coopération, pression, saturation d'alertes et historique du contact peuvent bloquer un avertissement. Un contact inconnu reste inconnu.
+- V3.51.66 : folklore général élargi aux guildes, Marché gris, chasseurs de primes et premiers boss déjà visibles (Fitoria, Zelef, Atlas). Ces récits restent des rumeurs séparées de la vérité.
+
+- V3.51.64 : système générique `BountyPursuitSystem` pour toute chasse de prime : pistage, contrôle des routes, discrétion, mobilité et sorties préparées modifient de façon bornée la fuite. REAPERS-13 utilise ce système avec un profil d’expert : chasseurs de primes de l’ombre, puissants et efficaces, particulièrement orientés vers l’empêchement de fuite, sans anti-fuite magique.
+- V3.51.64 : recrues — refus contextuel possible uniquement pour un ordre offensif forcé réellement quasi-suicidaire ; le refus conserve le tour et laisse l’IA commune choisir une action de survie. RESTE : généraliser aux futurs ordres individuels/boss quand les mêmes données de contexte sont disponibles, sans rendre les compagnons capricieux.
+- V3.51.64 : réseau criminel — une intervention de garde sur un contact connu propage désormais une pression légère aux autres contacts déjà connus de la même ville. RESTE : relations directes entre contacts, déplacements inter-ville et conséquences de réseau plus riches sans omniscience.
+
+- V3.51.63 : corpus Discord REAPERS-13 intégré sous forme de **légendes séparées des faits** via `ReaperDoctrineSystem`. Une légende peut être plausible, folklorique, contradictoire ou proche d'une doctrine connue ; elle reste une rumeur tant que le joueur n'a pas de preuve. Les récits d'origine incompatibles ne sont pas réconciliés artificiellement.
+- V3.51.63 -> V3.51.68 : doctrine de chasse Reaper affinée : aucune décision basée sur le montant d'une prime ; preuves, danger, récidive, menace active et innocents priment. Une erreur isolée corrigée peut ne pas devenir une chasse. Lorsqu'un dossier franchit réellement le seuil d'exécution, les Reapers assument en revanche leur rôle d'exécuteurs.
+- V3.51.63 : recrues personnelles — premier stress de blessure persistant léger et borné, distinct de la fatigue. KO/très bas PV peuvent laisser une trace qui récupère plus lentement et module légèrement moral/préparation. RESTE : vraies blessures nommées, soins/diagnostic, dialogues contextuels et traumatismes narratifs seulement lorsqu'ils sont justifiés par des événements réellement vécus.
+DINOTOFU — SYSTÈMES PRÉVUS ET TÂCHES RÉELLEMENT RESTANTES
 
 Règle de ce fichier
 -------------------
-Ce fichier n'est pas un historique de versions. Il conserve seulement les travaux réels encore nécessaires. Les détails terminés appartiennent aux patchnotes.
+Ce fichier ne sert PAS d'historique de versions.
+Il contient uniquement les travaux encore réellement ouverts après la stabilisation V3.51.18.
+Les fonctionnalités déjà terminées appartiennent à CHANGELOG.md / CHANGELOG_FR.md et ne doivent pas revenir ici comme faux TODO.
 
-Priorité actuelle
------------------
-1. Garder V3.49.08 stable et jouable en terminal comme en interface graphique.
-2. Construire la troisième phase du chapitre 4 et le combat de l’Intendant de la Date Vide.
-3. Remplacer progressivement les dernières déductions textuelles de l’IG par des champs structurés du moteur.
-4. Préparer les contenus visuels avant de générer ou d’intégrer des sprites.
+ÉTAT ACTUEL
+-----------
+- Terminal : mode jouable et référence fonctionnelle.
+- Interface graphique : toujours en reconstruction ; elle ne doit jamais masquer une information indispensable disponible dans le terminal.
+- Version de consolidation actuelle : V3.56.00.
+- Schéma de sauvegarde : 26.
+- V3.56.00 : les offres de quête distinguent désormais lieu accessible / chance réduite de trouvaille / lieu exact inaccessible, avec confirmation ou blocage selon le cas. Les contrats inter-ville versent seulement une prime logistique unique et plafonnée : aucun voyage gratuit illimité, détour ou retour remboursé.
+- Checkpoint important : V3.51.15.
+- Les systèmes de monnaie physique, mana, trois voies magiques, matériaux élémentaires, Sacrifice matériel, grimoires/parchemins à prérequis, mémoire/rumeurs sourcées, rivaux persistants, réputation locale, serments persistants, objets identifiés/mémoire, techniques combinées de base et progression 1-255 possèdent déjà un moteur actif.
+- V3.51.62 : `WorldRumorSystem` fournit une couche générique de rumeurs/légendes pour n’importe quel sujet (faction, ville, monstre, personnage) avec source, crédibilité, niveau de preuve, confirmations et contradictions. Une rumeur reste distincte d’un fait confirmé ; la fiche historique expose « Rumeurs & légendes » sans omniscience.
+- L'inventaire possède maintenant Épinglé / Verrouillé / Suivi. Favori est réservé aux munitions utilisées par le mode automatique dédié. Munitions et matériaux restent réglés sur « Toujours demander » par défaut ; les automatismes restent optionnels.
+- La régénération naturelle de mana en combat est plafonnée à 5 par tour pour éviter qu'une réserve niveau 255 transforme les sorts à coût fixe en source nette de mana.
 
-Histoire et villes
-------------------
-- Terminer la préparation puis le codage des chapitres 4 et 5, avec PNJ, quêtes, attentes, conséquences et boss obligatoires.
-- Rendre Rocheveille, Port-Lanterne et Lys-de-Givre réellement accessibles seulement quand leurs routes, PNJ, ressources, stocks, quêtes et guildes locales sont prêts.
-- Une nouvelle guilde locale demande seulement une mise à niveau courte ; l’inscription principale n’est jamais recommencée.
-- Ajouter plus tard un transfert municipal limité, coûteux et différé entre coffres ; la consultation distante en lecture seule existe déjà.
+PRIORITÉ 1 — HISTOIRE ET MONDE JOUABLE (EN ATTENTE UTILISATEUR)
+------------------------------------------------------------------
+- Ne pas poursuivre l'écriture narrative sans nouvelle demande explicite de l'utilisateur.
+- Objectif minimal avant pause narrative : chapitres 1, 2 et 3 jouables, puis message clair indiquant que la suite est en cours de développement.
+- Les anciens plans chapitre 4 / Intendant de la Date Vide / chapitre 5 restent conservés comme pistes, mais ne sont plus une priorité active.
+- Ne rendre Rocheveille, Port-Lanterne et Lys-de-Givre pleinement accessibles que lorsque routes, PNJ, ressources, stocks, quêtes et guildes locales sont suffisamment prêts, au moment où l'histoire reprendra.
+- Une nouvelle guilde locale ne doit jamais refaire l'inscription principale : seulement une mise à niveau / reconnaissance locale courte.
 
-Économie, inventaire et commerce
---------------------------------
-- Recalculer prix, récompenses, XP, or, loot, réparations et crafts depuis une économie centrale commune.
-- Finaliser les pénalités de durabilité et les risques de casse lors d’une mort non définitive.
-- Ajouter au moteur les règles optionnelles de ramassage : elles doivent contrôler seulement l’automatisation. Les butins ignorés restent visibles dans le récapitulatif pour pouvoir être pris manuellement, vendus ou laissés.
-- Fournir au moteur un historique canonique des achats, ventes, destructions, équipements et provenances importantes.
+PRIORITÉ 2 — ÉQUILIBRAGE À PARTIR DE VRAIS PLAYTESTS
+----------------------------------------------------
+Les nombres ci-dessous ne doivent pas être modifiés uniquement parce qu'ils « semblent » hauts ou bas sur une fiche.
+- Mesurer Écho / Résonance canalisée : bases 18 / 28 / 40 mana avant adaptation de voie.
+- Mesurer les trois voies : matériaux, catalyseur et incantation pure, y compris vitesse de récupération et fallback.
+- Vérifier en playtest si le plafond de 5 mana régénéré par tour reste agréable à haut niveau sans rendre les longues batailles trop sèches.
+- Mesurer Sacrifice matériel : gros burst volontairement moins rentable à long terme que la canalisation normale.
+- Vérifier l'impact réel de qualité + rareté sur mana, stabilité et puissance des matériaux.
+- Vérifier le ressenti du risque d'épuisement à 0 mana (~75 % actuellement, jamais 100 % automatiquement sans nouvelle décision).
+- Comparer dégâts à distance, coût des munitions, effets spéciaux, durabilité, PV/protection et gestion de distance.
+- Vérifier prix, récompenses, XP, loot, réparations et crafts en situation réelle avant toute nouvelle passe de chiffres globale.
+- Vérifier compréhension des carnets d'auberge et de la monnaie physique pendant une vraie partie.
+- Faire un run complet du prologue pour contrôler rythme, trous de mémoire, après-combat, apparition de la Brume et réveil.
 
-Combat, équipe et données structurées
--------------------------------------
-- Exposer directement à l’IG les chances, dégâts estimés, coûts, portées, cibles valides, réactions, contraintes de défi et alertes de casse.
-- Ajouter uniquement des effets autorisés de modification d’initiative alliée : jamais les ennemis, jamais avant l’initiative minimale ni avant le délai minimal.
-- Continuer les boss particuliers, la coopération et les règles de mort de groupe sans modifier l’impossibilité de fuir un boss.
-- Définir une vraie route narrative d’obtention pour la bénédiction de survie léthale ; son moteur existe déjà.
-- Brancher la suite du système de clan : menu rapide Équipe, ordre d'équipe, inspection rapide/détaillée, équiper/déséquiper, renvoi, test de groupe à la guilde, choix du nom de clan et quêtes de groupe.
-- Connecter les PNJ recrutés au combat actif joueur + 2 alliés, à l'XP selon participation, aux parts d'or/XP, au salaire hebdomadaire et aux achats autonomes de potions/armes.
-- Étudier plus tard le multi en ligne comme gros chantier séparé : commencer par un host/client coop limité aux combats et menus partagés, avant une couche persistante plus lourde.
+PRIORITÉ 3 — ÉCONOMIE, INVENTAIRE ET TRAÇABILITÉ
+------------------------------------------------
+- V3.51.19 : ramassage configurable ajouté. Défaut = tout récupérer ; modes manuel et filtrage disponibles. Continuer seulement si le playtest révèle un besoin de règles plus fines.
+- V3.51.51 : encombrement joueur complet mais volontairement simple en unités abstraites. Sacs 40/50/60/70/80 ; avertissement à 85 % ; malus 101–125 % puis 126–199 % ; à 200 %+ aucun voyage/changement volontaire de zone/exploration tant que le sac n'est pas allégé. Voyage/exploration consomment aussi plus de temps en surcharge.
+- V3.51.51 : coffre municipal unifié avec la même unité de charge : 250/300/350/400/500. Place optimisée N2 = -10 % de la charge de base ; Rangement anticipé N5 = -15 points supplémentaires sur la base, soit -25 % exact au total. Monnaie physique stockable et comptée à 100 pièces réelles = 1 unité.
+- V3.51.53 : achat coffre = 2 PP pour le premier, puis incréments CUMULATIFS +2/+3/+4/+5 PO... (2 PP ; 2 PP 2 PO ; 2 PP 5 PO ; 2 PP 9 PO...). Ristourne du maire uniquement sur le premier coffre, après au moins 1 PP de liquidités totales réellement détenues et un vrai historique local : ~15 missions/services ordinaires OU ~4 missions d'un personnage important, plus réputation suffisante.
+- V3.51.53 : sécurité/entretien par coffre, 7 jours de couverture consommés uniquement loin de la ville ; risque non protégé porté à 1,5 % par jour éloigné (~1 alerte / 67 jours en moyenne), toujours avec messager + 7 jours. Défense municipale = ~40 % récompense/loot légal ; garde temporaire = légère baisse XP supplémentaire, jamais de part matérielle. Les pillards privilégient monnaie et grosses piles communes ; rare/artefact reste extrêmement protégé. RESTE À PLAYTESTER : fréquence 1,5 %, coûts 30–70 PF/7 jours et sévérité des pertes.
+- V3.51.55 : défense de coffre reliée à la vraie difficulté et à la vraie règle de mort de la partie active. Le fallback Normal / mort non définitive est supprimé sur ce chemin ; les accès directs et via le hub de ville propagent le même contexte.
+- V3.51.56 : métadonnée générique persistante transférable / lié à l’âme sur `Item`. Un objet lié ne peut pas changer de propriétaire via échange, cambriolage, vol de fuite, Grinka ou JcJ, mais peut circuler entre les propres coffres du personnage. Piles liées/non liées séparées ; anciennes saves compatibles sans changement de schéma.
+- V3.51.59 : métadonnées persistantes de récupération **Unique / Quête / Personnel + priorité 0–100**, distinctes de la propriété. Quête/Personnel sont protégés du cambriolage générique ; Unique devient extrêmement improbable. Les piles aux métadonnées différentes restent séparées. Les fragments principaux de boss sont Unique/priorité 100.
+- V3.51.57 : un dossier de cambriolage local non identifié peut désormais produire une piste fortuite pendant une vraie exploration : trace, échange suspect ou reconnaissance d’un équipement exact. Les indices s’ajoutent au même dossier ; aucun rival n’est créé avant preuves suffisantes. Une cache secondaire peut être localisée sans fabriquer de personne. Cooldown par dossier pour éviter le farm.
+- V3.51.58 : première couche de réseau criminel réellement ancrée au monde : receleurs/complices/caches possèdent désormais contact, bâtiment/lieu et biome cohérents par ville, persistés dans le dossier. Une reconnaissance d’objet exact ne peut plus se produire dans un biome incompatible.
+- V3.51.59 : ces détenteurs sont maintenant interactifs depuis « Suivre la piste locale » : observation sourcée, restitution négociée receleur/complice et fouille de cache, avec temps, preuves, méfiance et état persistant. Une restitution ne prouve jamais automatiquement que le détenteur est l’auteur.
+- V3.51.60 : un receleur/complice humain suffisamment documenté peut maintenant être confronté par la garde. Pression, coopération, tentatives, signalement et fermeture temporaire sont persistants ; une confrontation peut fournir des indices ou une restitution sans transformer automatiquement le détenteur en coupable. RESTE : transformer progressivement ces contacts en PNJ persistants complets avec dialogues relationnels/capture réelle et conséquences locales plus riches.
+- V3.51.61 : les contacts criminels possèdent maintenant une mémoire persistante globale au-delà d’un seul dossier : rencontres, observations, négociations, pression, coopération, fuite, signalement et détention provisoire. Une simple confrontation de garde ne crée plus une arrestation permanente automatique ; la détention est bornée dans le temps. RESTE : dialogues relationnels complets, condamnation/arrestation durable uniquement sur vraies preuves, réactions de réseau et conséquences locales plus riches.
+- V3.51.62 : le cycle de vie global des contacts criminels est approfondi : rôle connu receleur/complice, détentions provisoires comptées, libérations et retours après fuite deviennent des événements persistants au lieu de simples timers silencieux. Une libération réduit légèrement la pression et peut modifier la coopération ; un retour après fuite garde la mémoire du passé. RESTE : identité PNJ complète, relations/dialogues riches, condamnation durable sur preuves, réactions de réseau et conséquences locales.
+- V3.51.53 : transport inter-ville bidirectionnel Envoyer/Rappeler pour armes, armures, consommables, matériaux et monnaie physique. Coût selon distance + encombrement ; rappel plus cher/long à cause du messager. Plusieurs rappels sur le même trajet dans une fenêtre <~ demi-journée peuvent mutualiser le messager initial avec petit surcoût seulement ; état persisté. Aperçu source/destination avant→après, identité équipement et dénominations conservées. RESTE : playtester coûts/durées et envisager de vrais convois multi-objets/commandes groupées.
+- V3.51.51 : race/gabarit naturel + morphologie Fine/Standard/Robuste sont deux couches distinctes pour capacité, hitbox et mobilité.
+- V3.51.58 : changement de morphologie EN PARTIE actif via programme volontaire à l’auberge : uniquement palier adjacent Fine ↔ Standard ↔ Robuste, 8 séances + 14 jours minimum, une séance/jour, entraînement + alimentation suivie, annulation sans transformation et état persistant. Les valeurs 35 PC / 2 unités de temps par séance restent à playtester. RESTE : enrichir les performances/titres avancés liés au vécu corporel plutôt que rendre la transformation automatique.
+- V3.51.50 : un brigand/voleur capable de s'enfuir peut rarement voler un petit bien ordinaire pendant une fuite réussie. S'il le fait, il devient automatiquement rival persistant et conserve la trace du bien jusqu'à récupération. Ne jamais voler silencieusement objets de quête/uniques/informations/clés via cette couche générique.
+- V3.51.19 : les provenances de butin remarquable sont désormais enregistrées.
+- V3.51.20 : les pertes d’équipement réellement provoquées par une mort non définitive (vol, destruction irréparable, casse forcée effective) sont historisées avec l’identité persistante de l’objet.
+- V3.51.21 à V3.51.24 : l’audit des autres transferts/pertes réels d’équipement est terminé pour les chemins actuellement trouvés : enchanteur, Grinka, JcJ, échanges volontaires, boutique/revente/rachat, cycle de destruction d’équipement et coffre municipal. Les armes/armures gardent leur ID persistant quand le modèle le permet ; les matériaux sont distingués par ID + qualité. Ne rouvrir ce chantier que si un nouveau chemin réel apparaît ou si un playtest révèle une perte non tracée.
+- Les échanges volontaires sont maintenant transactionnels en mémoire (retrait avant ajout) et utilisent une sauvegarde couplée avec rollback des fichiers sur échec d’écriture normal. Une coupure brutale du processus/matériel n’est pas prétendue atomique.
+- Finaliser les conséquences de durabilité/casse lors d'une mort non définitive après playtest des pénalités de mort.
+- Étudier une économie centrale encore plus unifiée si les playtests révèlent des divergences entre boutiques, quêtes, loot, réparations et craft.
 
-Quêtes, registres et statistiques
----------------------------------
-- Structurer les étapes de quête, décisions, types de mission, difficulté estimée et risques connus sans révéler les informations inconnues.
-- Ajouter l’historique personnel par créature, les variantes, les silhouettes progressives et les notes persistantes côté sauvegarde.
-- Ajouter cartes à couches, épingles personnelles et journal de voyage canonique lorsque plusieurs régions jouables existent.
-- Déplacer les Top 3 et l’historique récent depuis les seules observations locales de l’IG vers les sauvegardes du moteur.
-- Ajouter plus tard comparaison de sauvegardes, détails complets des statistiques, titres et galerie de souvenirs.
+SYSTÈME FINANCIER DE GUILDE — ACTIF / NOUVEAU DÉVELOPPEMENT EN PAUSE
+--------------------------------------------------------------------
+- V3.51.41 / clarification V3.51.42 — PAUSE UTILISATEUR : conserver tout le système financier de guilde existant stable, mais suspendre pour l'instant les nouveaux développements liés aux prêts, dettes, découvert, négociation de retard, garanties, recouvrement et refinancement. Ne reprendre ce chantier que sur demande explicite.
+- IMPORTANT : cette pause ne concerne PAS l'équilibrage monétaire général. Prix, récompenses, salaires, loot, réparations, craft, coûts de service, valeur PC/PF/PE/PO/PP, inflation et exploits économiques restent à surveiller dans chaque nouveau système.
+- V3.51.37 : option unique « Gestion de l'argent » active dans la guilde. Elle regroupe bourse, conversion, dépôts/retraits de guilde et adhésion.
+- V3.51.38 : compte de guilde volontairement plafonné pour ne pas remplacer le coffre personnel : 2 PO pour un Aventurier non adhérent, 5 PO pour un adhérent actif. Une ancienne save au-dessus du plafond garde tout son argent mais ne peut plus déposer jusqu'à repasser sous la limite. Valeurs à recalibrer après playtest.
+- V3.51.38 : vrai découvert de guilde actif comme crédit réseau séparé de la bourse et du solde déposé. Il ne peut jamais être retiré en espèces ; un service affilié prélève d'abord la bourse puis inscrit uniquement le manque comme dette, après accord explicite du joueur.
+- V3.51.38 : première intégration partenaire sur la chambre sûre de l'auberge. Remboursement du découvert possible depuis la bourse ou depuis le solde déjà déposé à la guilde. Une adhésion expirée bloque tout nouveau crédit mais ne supprime jamais la dette et n'empêche pas son remboursement.
+- V3.51.39 : prêts de guilde réels. Un seul prêt actif à la fois ; capital versé physiquement ; plafond selon confiance jusqu'à 5 PO ; save/reload via événements canoniques protégés.
+- V3.51.39 : taux de base 1/2/3/4/6/8 semaines = 12/14/16/18/21/24 %, avec majoration longue durée dès la signature : 3 sem. +2 %, 4 sem. +2 %, 6 sem. +3 %, 8 sem. +4 %. Coûts effectifs de départ : 12/14/18/20/24/28 %.
+- V3.51.39 : seuils de confiance par durée 55/60/65/70/80/90. Remboursement anticipé autorisé sans réduction du coût signé ; automatique possible uniquement depuis les fonds déjà déposés à l'échéance.
+- V3.51.39 : prolongations préventives +1/+2/+3 semaines pour +3/+5/+7 %, toujours calculées sur le capital initial et plafonnées à 30 % de coût total. Retard sans composition automatique.
+- V3.51.39 : coexistence prêt+découvert gérée par remboursement global avec priorité explicite (découvert d'abord recommandé, prêt d'abord ou répartition), depuis bourse ou compte de guilde.
+- V3.51.39 : `whatdebt` connecté ; effacement artificiel des dettes sans prélèvement physique, toujours Altérant et sans bonus d'historique de bon payeur.
+- V3.51.37 : réutiliser la `Cotisation aventurier standard` existante comme adhésion financière de référence (7 jours) au lieu de créer un abonnement concurrent ; anciennes saves compatibles, anciens avantages conservés. La cotisation de guilde n'est plus proposée dans les menus d'abonnements de l'auberge/ville.
+- V3.51.37 : compte de guilde réel par événements canoniques protégés. Déposer retire réellement de la bourse ; retirer rend physiquement l'argent ; save/reload testé sans changement du schéma 26.
+- V3.51.37 : première confiance financière calculée depuis le dossier réel et première estimation de plafond futur membre. Ne pas confondre cette estimation avec un crédit actif.
+- Sans adhésion, seules les fonctions réellement accessibles aux non-membres sont utilisables ; les fonctions de membre restent visibles comme verrouillées pour expliquer l'intérêt de l'adhésion.
+- La bourse physique ne devient JAMAIS négative. Le découvert est une dette/crédit auprès de la guilde, séparé des pièces réellement transportées.
+- Affichage non ambigu : « Découvert utilisé », « Plafond de découvert », « Marge restante » ; ne pas employer « découvert disponible » seul.
+- L'adhésion ouvre progressivement la ligne de crédit selon confiance financière/rang/ancienneté ; plafond théorique de découvert ~1 PO.
+- Le découvert sert surtout dans le réseau de guilde/partenaires : la guilde paie le partenaire et inscrit la somme comme dette du joueur.
+- Un non-adhérent ne peut pas créer un nouveau découvert de guilde. Si l'adhésion expire avec une dette existante, la dette reste payable mais aucun nouveau crédit n'est accordé.
+- Les prêts sont distincts : vraie monnaie physique avancée, plafond théorique ~5 PO selon dossier, confiance, réputation et antécédents.
+- Intérêt simple actif : base par durée 1 semaine 12 %, 2 = 14 %, 3 = 16 %, 4 = 18 %, 6 = 21 %, 8 = 24 %. Les longues durées ajoutent dès la signature +2/+2/+3/+4 % pour 3/4/6/8 semaines. Valeurs à calibrer en playtest sans changer le principe.
+- La durée choisie est une échéance maximale : remboursement anticipé autorisé, mais le coût/taux signé reste celui du contrat.
+- Mode de remboursement sélectionnable : manuel par dépôt à la guilde, ou automatique depuis un solde réellement déposé auprès de la guilde. Ne jamais téléporter automatiquement les pièces de la bourse physique distante.
+- Automatique V3.51.39 : à l'échéance, prélever autant que possible depuis le solde réellement déposé. Des variantes à montant fixe/accéléré pourront être ajoutées plus tard si elles apportent un vrai choix.
+- Si prêt + découvert coexistent, priorité de remboursement active : découvert d'abord [recommandé], prêt d'abord ou répartition.
+- Report demandé avant échéance : coût supplémentaire limité (ex. +1 semaine +3 %, +2 +5 %, +3 +7 %). Un retard non déclaré peut coûter davantage et/ou créer un avertissement.
+- Plafond global des intérêts/frais autour de 25–30 % du capital initial : au-delà, arrêter d'empiler les pourcentages et passer à négociation/recouvrement.
+- Retard : rappel -> restriction de nouveau crédit -> négociation/mission de remboursement -> retenue partielle sur certaines récompenses de la guilde -> recouvrement tardif.
+- Une dette doit modifier la manière de jouer, jamais rendre une sauvegarde injouable. Toujours conserver une route réaliste de remboursement.
+- Saisie seulement tardive, annoncée et prioritairement sur garanties/biens non essentiels. Équipement principal, objets de quête et souvenirs uniques doivent être fortement protégés contre une saisie arbitraire.
+- Prison uniquement pour mauvaise foi grave, fraude, fuite/refus répétés ou violence, pas pour la simple pauvreté ; prévoir toujours une sortie jouable.
+- Interdire l'empilement « nouveau prêt pour rembourser l'ancien » hors refinancement explicite remplaçant le contrat précédent.
 
-Personnalisation et pixel-art
------------------------------
-- Prévoir plus tard une vraie image de ville avec bâtiments cliquables : guilde, boutiques, coffre, bibliothèque, arène urbaine pour les combats uniques et grande porte des remparts pour partir en exploration.
-- Prévoir une grande carte d’exploration avec biomes et lieux cliquables ; les lieux inconnus restent grisés, enfumés ou masqués.
-- Prévoir de petites animations d’exploration dont la durée dépend de la longueur choisie, ainsi que des illustrations pour certaines quêtes et certains événements.
-- Écrire la bible visuelle pixel-art et le catalogue exhaustif des objets, monstres, PNJ, boss et variantes génériques.
-- Concevoir l’arbre final de sélection par race, classe, âge exact, tranche d’âge, présentation et variante.
-- Générer puis intégrer les assets seulement après validation de cette bible.
-- Le terminal garde une description courte ; l’IG affichera ensuite l’image correspondante et la même description.
+TITRES — CATALOGUE V3.51.51 / MODE SPOILERS
+----------------------------------------------
+- Le catalogue de titres possède désormais sa propre version, indépendante de la version générale : V3.51.51. Elle ne doit changer que lorsqu'on ajoute, retire ou modifie réellement des titres.
+- Le catalogue contient désormais environ 371 définitions, dont la nouvelle branche stockage/encombrement/sacs/morphologie : Conservateur, Réseau de stockage, Minimaliste, parcours Fine/Robuste, collections, charge extrême et optimisation des coffres.
+- Les titres incompatibles entre styles de jeu ne sont pas requis pour la complétion ultime. V3.51.58 branche désormais les premiers titres morphologiques sur de vraies transformations volontaires ; les titres de performances avancées restent dormants jusqu’à disposer de faits fiables.
+- V3.51.58 branche aussi `Je garde tout`, `Grand ménage`, `Ça respire enfin` et `Déménageur` sur de vraies sessions de retour/rangement/logistique plutôt que sur de simples snapshots.
+- Reaper-13 n'est pas un titre joueur normal tant que le chef existe ; tuer le chef mènerait plutôt à une conséquence du type « Cible prioritaire ».
+- Certains titres sont déjà reliés à des événements actuels ; ceux dépendant de systèmes encore futurs restent dormants jusqu'à leur véritable branchement et ne doivent jamais être simulés artificiellement.
+- Par défaut les titres secrets restent sous ????. Paramètres > Titres cachés peut révéler noms + conditions après confirmation explicite « SPOILER ».
+- L'avertissement doit annoncer clairement le risque de spoiler histoire, boss, factions, systèmes, résultats et secrets. Option réversible, jamais active par défaut.
+- V3.51.50 : la condition de « Rends-moi ça. » inclut maintenant la récupération d’un bien réellement volé par un rival voleur retrouvé plus tard, en plus de Grinka.
+- Continuer à proposer de nouveaux titres lorsque de nouveaux systèmes importants apparaissent et mettre à jour la version du catalogue à chaque vraie passe de titres.
 
-Interface graphique
--------------------
+TITRES DE COMPTE / PERSONNAGES ALTÉRÉS — ACTIF V3.51.36
+--------------------------------------------------------
+- Le compte possède désormais une collection persistante de titres légitimement débloqués, conservée même après suppression du personnage d'origine.
+- Un personnage Altéré garde ses titres déjà acquis mais ne débloque plus de nouveaux titres normaux et ne peut plus enrichir la collection légitime du compte.
+- Au premier cheat altérant, « On ne dira rien... » est ajouté au personnage et au compte. C'est volontairement le seul trophée de compte obtenable par triche et il n'est pas requis pour le titre ultime.
+- Un futur cheat de type skip/unlock de titres doit attribuer ces titres uniquement au personnage courant, jamais au compte.
+- Les titres légitimes obtenus juste avant la première altération sont figés dans la collection du compte avant application du cheat.
+
+CHEATS / SYSTEM CALL / INTÉGRITÉ DES SAUVEGARDES — À POURSUIVRE
+---------------------------------------------------------------
+- Les codes normaux sont destinés à être insensibles à la casse.
+- Presque tous les cheats sont altérants ; seules des exceptions diégétiques explicitement définies peuvent rester non altérantes.
+- V3.51.36 : `system_call` ouvre réellement un écran minimal affichant uniquement « SYSTEM CALL » puis une invite, sans liste ni autocomplétion. Les generate_* restent à connecter.
+- Les futures commandes generate_* sont toujours altérantes et ne doivent jamais servir de voie « propre » pour restaurer un objet : duplication, revente et réparation artificielle seraient trop faciles.
+- Conserver helpmerefundmyaction (3 utilisations max) comme mécanisme séparé de tentative de récupération/annulation existant.
+- V3.51.36 : la fiche/statistiques du personnage liste désormais les codes/protocoles utilisés avec nombre d'utilisations et état actif/inactif/ponctuel/consommé lorsqu'il est déterminable. Continuer à enrichir les statuts lors de l'ajout des nouveaux cheats.
+- Protéger plus tard les saves contre l'édition manuelle : données non trivialement lisibles + signature d'intégrité/anti-tamper + backups valides. Un cheat officiel doit produire une save techniquement valide mais marquée Altérée ; une édition externe doit être détectée séparément.
+- Ne jamais prétendre rendre une save locale impossible à modifier par un attaquant déterminé ; l'objectif est d'empêcher l'édition JSON triviale et de détecter l'altération ordinaire.
+
+REAPERS-13 UNIT PROTOCOL — MONDE / FACTION À DÉVELOPPER
+--------------------------------------------------------
+- REAPERS-13 UNIT PROTOCOL est une vraie organisation opérationnelle classifiée du monde, pas une équipe créée par un cheat.
+- Doctrine : chasseurs de primes de l’ombre avant tout ; traquer, identifier, verrouiller les voies de fuite et neutraliser pirates/criminalité/menaces actives ; précision, discipline, efficacité, puissance maîtrisée et élimination ciblée sans chaos inutile.
+- Devise source : « We don’t hunt for glory. We hunt because it's necessary. »
+- Hiérarchie : niveau 5 Reaper-13 ; niveau 4 Reapers Warden ; niveau 3 Operational Reaper ; niveau 2 Echo Unit ; niveau 1 13th Line.
+- Echo Unit et 13th Line sont aussi des branches/filières affiliées ; l'unité principale du chef doit avoir son propre nom. Candidat favori actuel : Black Flag ; Black Pearl reste une alternative.
+- Recrutement : activité, comportement, implication, observation, évaluation, validation. Même un débutant peut être choisi pour son potentiel. Le joueur ne s'auto-inscrit pas : les Reapers sélectionnent.
+- Règles internes à préserver : agir avec raison ; terminer les missions ; observer avant d'agir ; discrétion ; représenter l'unité ; aider les recrues si disponible ; responsabilité du parrain haut gradé ; ordres exécutés sauf conflit avec code personnel ou absurdité, alors escalade vers un supérieur.
+- RÈGLE DE DESIGN clarifiée V3.51.62 : REAPERS-13 fait partie des **grosses factions/clans importants du monde**, avec une vraie influence et une identité forte, mais reste **indépendante et optionnelle par rapport à l’histoire principale**. Ce n’est ni le casting principal, ni la faction secrètement au centre de tout, ni une condition de progression normale. Depuis l’extérieur, ses membres peuvent être pris pour des clandestins, mercenaires occultes ou sortes de justiciers masqués ; eux suivent avant tout leurs propres principes, codes et chaîne de responsabilité déjà définis. Leur importance autorise des rumeurs, légendes et histoires autour de l’unité et de Reaper-13, sans transformer automatiquement ces récits populaires en vérité canonique ni donner une visibilité disproportionnée en jeu.
+- V3.51.67 : certaines cibles peuvent être traquées sans même savoir qu’une chasse est en cours. Être recherché != avoir détecté son chasseur ; changement de route, leurres, contre-surveillance ou changement de refuge exigent désormais une raison crédible côté cible.
+- V3.51.60 : première présence réelle dans le monde : traces naturelles très rares d’opérations inconnues en exploration + réponse physique différée d’un relais Echo Unit après un Protocol 13 légitime. Aucune scène ne donne recrutement, grade, roster ou équipe gratuite.
+- V3.51.61 : les traces naturelles sont volontairement raréfiées à ~2 %, uniquement dans des biomes dangereux cohérents, avec au moins 12 jours entre deux observations naturelles. Le Protocol 13 volontaire garde sa réponse contextuelle séparée. RESTE éventuellement : roster réel, lieux/branches persistants, missions, réputation/observation et sélection, mais **pas comme priorité centrale** tant que les systèmes généraux du jeu ont davantage besoin d’avancer.
+- V3.51.62 : la présence Reaper utilise désormais le système générique de rumeurs/légendes du monde : une observation directe peut confirmer le noyau factuel « ils existent et opèrent », sans confirmer automatiquement les récits sur leur chef, leurs exploits ou leurs méthodes. Les futures légendes fournies par l’utilisateur pourront donc coexister comme rumeurs distinctes (vraies, exagérées, contradictoires ou fausses) et être adaptées au médiéval-fantastique sans faire des Reapers le centre du moteur de rumeurs.
+- Le code d'identification 13-02313 est réel dans le lore. `DINOTOFU:13-02313` ouvre le canal interdit Protocol 13 une seule fois par personnage. Il reste non altérant si le personnage possédait déjà au moins une connaissance crédible des Reapers (rumeur/PNJ/rencontre) ; sans aucune connaissance préalable, l'usage métagame rend le personnage Altéré. Une tentative interdite en mort définitive consomme également cette unique ouverture afin d'empêcher le spam.
+- Ce protocole ne doit donner ni équipe gratuite, ni recrutement automatique, ni victoire. Le monde doit répondre de façon cohérente : observation, contact Echo/Operational, mission, interrogation sur l'origine du code, ou absence de réponse immédiate selon contexte.
+- Toutes les branches et l'unité principale doivent être rencontrables sans connaître le code.
+
+LANGUES — FUTUR CHANTIER D'ENTRÉE DE JEU
+----------------------------------------
+- Au premier lancement, détecter la langue du système : français -> FR, anglais -> EN, toute autre langue -> anglais par défaut.
+- Afficher malgré tout un choix FR/EN avant même la sélection/création des comptes.
+- Permettre de modifier la langue depuis le menu principal avant la sélection des comptes.
+- Ne pas lier le choix de langue à un personnage spécifique par défaut ; prévoir une préférence globale locale, avec éventuelle surcharge ultérieure si nécessaire.
+
+PRIORITÉ 4 — COMBAT, CLAN ET COMPAGNONS
+---------------------------------------
+- Exposer à l'interface graphique des champs structurés pour chances, dégâts estimés, coûts, portées, cibles valides, réactions, contraintes de défi et alertes de casse ; éviter de parser du texte terminal.
+- Ajouter uniquement des effets autorisés de modification d'initiative alliée : jamais les ennemis, jamais avant l'initiative minimale ni avant le délai minimal prévu.
+- Continuer les boss particuliers, la coopération et les règles de mort de groupe ; un boss ne doit toujours pas devenir fuyable par accident.
+- Donner une vraie route narrative d'obtention à la bénédiction de survie léthale ; le moteur de survie existe déjà.
+- Approfondir le clan : menu rapide Équipe, ordre d'équipe, inspection rapide/détaillée, équiper/déséquiper, renvoi, test de groupe à la guilde, nom de clan et quêtes de groupe.
+- [PARTIEL V3.56.00] QG de clan unique réellement constructible et extensible : niveaux 1 à 3 jouables, lits ajoutés séparément, tableau II, missions autonomes avec 15–25 % de l'XP active, caisse plafonnée, bar/salle commune, confort/fêtes, forge I et premier forgeron progressif avec spécialisations/prix d'ami. Le plafond structurel prévu reste niveau 5. RESTE : prérequis et chantiers QG 4–5, tableaux/rangs supérieurs, caisse/bar/confort de niveaux supérieurs, Bar II personnalisable, plusieurs postes/artisans, mentorat du forgeron, alchimiste et autres métiers, modules spécialisés (infirmerie/bibliothèque/entraînement/stockage/logistique), spécialisation globale du clan et rivalités/guerres de clans rares et télégraphiées.
+- Taille d'équipe solo : 6 personnes maximum au total, soit le joueur + jusqu'à 5 recrues réellement engagées. Les profils seulement retenus chez Torvald sont des candidats et ne prennent aucune place dans l'équipe.
+- Formation visible : 3 places principales partagées entre joueurs humains, alliés PNJ et invocations, avec priorité joueurs > alliés PNJ > invocations ; puis 2 places bonus réservées aux invocations. Une invocation peut donc utiliser une place principale restée libre, puis les deux emplacements bonus. Au-delà des 5 unités visibles, le reste attend en réserve/file.
+- Tant que le joueur est présent et conscient dans son équipe solo, seules 2 recrues maximum occupent la ligne active hors invocations : avec le joueur cela remplit les 3 places principales. Si le joueur tombe en mort non définitive, sa place se libère et jusqu'à 3 recrues peuvent alors être actives simultanément ; les autres recrues engagées restent en réserve. Une ancienne sauvegarde avec trop de recrues équipées est bornée par le roster sans supprimer l'historique.
+- Le chef d'équipe contrôle l'ordre volontaire de passage de ses coéquipiers et, règle dure, **le chef opérationnel joue toujours en premier**. Cette priorité ne crée aucun tour supplémentaire et un chef KO/indisponible n'obtient jamais de tour fantôme. Le joueur est normalement chef de sa propre équipe ; s'il travaille pour une équipe/organisation dirigée par un PNJ, il devient membre dépendant du chef, reçoit les missions et le salaire liés à cette équipe et n'en paie pas la masse salariale. Ne pas lui laisser artificiellement les commandes du groupe dans ce contexte.
+- V3.51.30 : cette hiérarchie possède désormais une première route jouable complète de contrat externe. `TeamEmploymentSystem` persiste chef/organisation/rôle/dates/salaire et règle uniquement les périodes réellement acquises ; `TeamEmploymentMissionSystem` crée des ordres de mission du vrai chef dans le journal, distincts du salaire ; `TeamEmploymentOfferSystem` fournit une première offre locale temporaire depuis une ville. Le groupe personnel est conservé séparément et reprend automatiquement sa hiérarchie après fin/démission.
+- V3.51.31 : `EmployerTeamRosterSystem` crée une escouade persistante séparée des recrues personnelles.
+- V3.51.32 : une équipe externe possède désormais **3 à 5 PNJ avant de recruter le joueur**, soit 4 à 6 membres avec lui. `EmployerTeamDisciplineSystem` ajoute confiance professionnelle, avertissements, missions/ordres réussis ou ignorés, mise temporaire en liste d'attente et licenciement disciplinaire. Une faute isolée ne vire pas le joueur : les sanctions montent progressivement. Un licenciement grave peut retenir 50 à 75 % du salaire encore dû, jamais l'argent déjà versé. Une offre locale acceptée attribue immédiatement un premier ordre de mission pour éviter le contrat/salaire gratuit. Pendant une vraie affectation de réserve, le joueur observe les premiers rounds sans agir ; si une place se libère ou si le combat dure trop, le chef peut le rappeler. Si l'escouade gagne avant son entrée, aucune XP/loot personnel n'est inventé. Le roster employeur est aussi branché aux boss pendant une mission active, avec chef opérationnel toujours premier et persistance des collègues.
+- V3.51.33 : `CombatLeaderRotationSystem` transforme la rotation de ligne en vraie action de chef. Tant qu’un chef opérationnel est présent, il peut échanger 1 ou 2 membres entre les trois places principales et la réserve ; une rotation réussie consomme le tour du chef. Un membre très mal en point peut rarement refuser le changement : le chef garde alors son tour, mais l’action Rotation est verrouillée jusqu’à son prochain tour. Le joueur chef dispose de cette action manuelle, le chef PNJ employeur peut réorganiser sa ligne ou rappeler le joueur placé en réserve sans attendre un KO, et les groupes ennemis possédant un vrai meneur peuvent faire de même seulement si leur intelligence/cohésion/solidarité le rendent crédible. Les groupes qui abandonnent facilement leurs blessés ont nettement moins tendance à protéger une ligne en difficulté. L’ancien switch ennemi gratuit est supprimé.
+- V3.51.33 : `EmployerTacticalOrderSystem` donne aussi au chef employeur une première couche d’ordres tactiques réels (protéger le soutien, concentrer une cible, tenir la ligne, extraire les blessés, percée contrôlée). Les collègues PNJ appliquent ces ordres via l’IA alliée commune ; le joueur conserve le contrôle de son propre personnage.
+- V3.51.41 : l’évaluation bornée/observable de l’obéissance est réellement branchée au PvE standard et exploration. Les actions consommées sont classées seulement si le moteur dispose de faits suffisants ; absence de témoin = aucune sanction, collègue témoin = rapport possible, action ambiguë = inconclusive. Les écarts de survie peuvent être justifiés. La discipline n’est appliquée qu’une fois au bilan du combat et le chef peut faire un retour RP.
+- V3.51.34 : `CombatIndividualSwitchSystem` distingue désormais la rotation décidée par le chef du switch demandé par un membre. Un membre demande normalement l’autorisation du chef ; peur, survie, instinct ou jugement immédiat peuvent rarement déclencher un switch sans attendre l’accord. Le refus du chef ne consomme pas l’action normale du membre. Alliés, collègues employeurs et ennemis non-chefs utilisent cette logique, avec intelligence/cohésion/discipline adaptées.
+- V3.51.34 : `CombatReserveSpilloverSystem` borne à 5-15 % les vrais débordements de zone vers la réserve. Portée bord/large/massive = maximum 1/2/3 cibles en attente. Le soin de groupe allié devient une vraie impulsion de zone avec faible soin de réserve ; les soigneurs ennemis peuvent faire de même ; Bombe d’atelier et grosses pressions de boss commencent à appliquer la contrepartie dégâts. Continuer à classer les autres anciens effets de zone au cas par cas, jamais globalement.
+- V3.51.34 : le chef employeur peut maintenant sacrifier son tour pour une rotation face à un boss.
+- V3.51.42 : un joueur salarié placé en liste d'attente peut désormais commencer un boss de service sur le banc. Le chef peut le rappeler volontairement sans KO en sacrifiant son tour ; une place libérée par la chute d'un collègue permet aussi son entrée. Aucune entrée de réserve ne donne de tour gratuit dans la phase courante. Tant que le joueur attend, le boss cible réellement la ligne employeuse. Si l'équipe tue le boss avant la première action personnelle du joueur, le résultat est une victoire d'équipe sans clear/XP/loot/titre/récompense de boss artificiels. RESTE : rotation manuelle du joueur-chef en interface boss et ordres/rotations compatibles avec chaque mécanique spéciale de boss.
+- V3.51.43 : `Focus Fire` conserve une cible de combat exacte grâce à un identifiant d'instance temporaire distinct du nom affiché ; deux ennemis homonymes ne sont plus confondus. Les actions du joueur remontent leur cible exacte quand elle est réellement connue et signalent le ciblage forcé par les règles de combat afin de ne pas sanctionner une provocation/contrainte. Une cible disparue fait expirer l'ordre et une cible inconnue reste inconclusive. Les switchs sans autorisation des collègues employeurs PNJ sont aussi relus contextuellement selon témoins, PV, peur, survie et opportunité tactique, sans sanction automatique. RESTE : brancher le futur switch volontaire du joueur sur cette même évaluation avant de considérer le chantier switch disciplinaire terminé.
+- V3.51.44 : la règle « aucune entrée depuis la réserve avec tour gratuit » est centralisée et couvre désormais les rotations manuelles du joueur-chef, les rotations du chef employeur en PvE standard et les boss. Le marqueur d'entrée est transitoire et ne consomme qu'une seule fenêtre d'action ; les switchs individuels qui consomment déjà leur propre tour ne subissent pas un second délai artificiel. Les techniques combinées disposent aussi d'une récupération minimale explicite : après une tentative réelle, la riposte immédiate puis un round intermédiaire doivent passer avant une nouvelle tentative, sans déplacer l'initiative ennemie.
+- V3.51.45 : les comptes rendus après KO ne sont plus omniscients. Chaque participant conserve uniquement pendant le combat sa fenêtre d'observation post-KO (premier/dernier round vus, ennemis vus tomber, résultat final réellement constaté, disponibilité au débrief). Un reporter entré tard ne peut plus raconter les rounds précédents comme s'il les avait vus ; il peut seulement citer un survivant ayant réellement observé cette partie comme source de seconde main, sinon la lacune reste inconnue. Le rapport, la remise de part économique et la victoire d'équipe sont enregistrés séparément. Une nouvelle trace `team_victories_without_personal_clear` identifie les combats terminés par l'équipe pendant l'inconscience du joueur sans créer de clear personnel gratuit.
+- V3.51.46 : la réserve/file d’attente est un état de **participation**, pas automatiquement un état de visibilité. Dans les contextes actuels où elle reste physiquement proche (PvE standard, exploration, arène/boss employeur), un membre peut observer directement la scène sans entrer sur la ligne ; une future réserve éloignée/masquée devra au contraire perdre cette visibilité. Les fenêtres post-KO distinguent les rounds observés depuis la réserve. Un observateur à 0 tour actif peut donc connaître le combat sans recevoir de part de récompense, clear ou kill personnel. Le joueur salarié resté tout un boss sur le banc peut enregistrer une rencontre/observation de bestiaire crédible sans participation artificielle.
+- V3.51.46 : la difficulté de fuite par **pression du nombre d’opposants** s’applique symétriquement au joueur et aux monstres. Plus il reste d’adversaires vivants capables de fermer les issues, plus plusieurs ouvertures successives sont nécessaires. Pour la fuite d’un monstre dans les modes actuels, le joueur vivant, les recrues actives, les recrues en réserve proches et les invocations actives peuvent compter comme bloqueurs ; environ 5 opposants imposent actuellement 2 ouvertures successives. Les boss restent non-fuyables sauf règle spéciale explicite.
+- V3.51.47 : la fuite des monstres devient progressive sur plusieurs tours. Une ouverture réussie mais insuffisante reste acquise comme distance réellement créée et apporte actuellement +18 % à la tentative suivante, borné à +36 %. Petite taille/agilité/mobilité avantagent le décrochage ; profils massifs/lourds/tanks le pénalisent. Toute tentative consomme le tour, même bloquée ou seulement partielle : aucun échec de fuite ne donne une attaque gratuite. Continuer à rapprocher les règles joueur/PNJ/monstre lorsque les mêmes faits physiques s’appliquent, sans forcer une fausse symétrie quand leurs capacités diffèrent.
+- V3.51.48 : la fuite du joueur utilise elle aussi une progression d’ouvertures transitoire sur plusieurs tours, avec le même bonus de reprise +18 % par ouverture (max +36 %), la même pression du nombre et un modificateur léger de gabarit/race en plus de la classe/équipement. La progression est remise à zéro au début du combat suivant et n’est pas sauvegardée. RESTE : brancher cette logique sur de futurs PNJ autonomes qui posséderont réellement une action de fuite.
+- RESTE pour les équipes employeuses : brancher le futur switch volontaire du joueur sur la relecture contextuelle V3.51.43, couvrir les contextes d’initiative précis, étendre la liste d’attente aux autres groupes spéciaux, humeur/loyauté/relations/besoins évolutifs, inventaires/équipements complets, missions patrouille/escorte/défense/reconnaissance, réputation/renouvellement/licenciement plus narratif, et offres issues de PNJ/organisations spécifiques plutôt que seulement l’escouade locale générique.
+- Après chute non définitive du joueur en PvE standard/exploration ou contre un boss compatible, le combat des recrues et de la réserve continue en simulation sans afficher les tours que le personnage inconscient ne peut pas voir. À son réveil, la base visée est d'environ 85 % de comptes rendus, modulée par relation, humeur, besoins et personnalité. Depuis V3.51.45 et la correction V3.51.46, ce débrief est borné par la connaissance réelle du reporter : observation directe sur la ligne **ou depuis une réserve ayant réellement une vue sur la scène**, information de seconde main avec source identifiable, ou lacune explicitement inconnue. Un allié peut abréger/refuser le débrief ; la remise de la part économique reste une opération distincte. Un profil réellement douteux dans une mauvaise relation peut exceptionnellement partir avec cette part, avec une trace RP explicite. Les boss gardent leurs mécaniques uniques et FireFlight reste un défi personnel.
+- V3.51.47 : le loot gagné pendant une continuation post-KO devient lui aussi physique. Les survivants réellement capables disposent d’une capacité de transport ; ramener le joueur inconscient en consomme une partie, les lots compacts et monnaies sont plus faciles à rapporter que des armes/armures lourdes, et le surplus doit être abandonné. Pour les vagues, la récupération privilégie actuellement élites/évolutions/niveaux élevés. Les boss post-KO exigent au moins un survivant capable de transporter le lot. Observer un boss depuis le banc sans participation reste sans loot personnel.
+- V3.51.48 : la capacité de transport post-KO dépend désormais de chaque survivant (PV restants + profil/gabarit) et forme un budget commun. Après le coût d’extraction du joueur, un lot compact coûte 1 unité et un équipement récupéré consomme 1/2/3 unités selon son poids léger/moyen/lourd. Plus de réserve lourde séparée pouvant contourner le portage réel.
+- V3.51.59 : un sélecteur générique d’objets exacts post-KO privilégie désormais Quête/Personnel/Unique puis la priorité explicite et le coût de transport. Grinka l’utilise pour les biens personnels exacts et les fragments principaux de boss portent une vraie priorité Unique.
+- V3.51.60 : les vagues ordinaires génèrent désormais le loot exact de chaque ennemi AVANT la sélection de transport : matériaux, monnaie physique, arme/armure exactes puis sélection commune selon protection/priorité/coût.
+- V3.51.61 : les objets exacts Quête/Personnel/Unique laissés faute de capacité peuvent créer une **piste de récupération de champ de bataille persistante** : ville/lieu/contexte, même objet exact, recherche différée, perturbation et save/reload. Le surplus ordinaire reste volontairement abandonné.
+- V3.51.62 : les pistes de récupération peuvent maintenant changer de **garde/localisation crédible** après plusieurs recherches : cache proche, garde municipale, civil ayant ramassé le lot ou récupérateur encore inconnu. Une garde qui a physiquement sécurisé le lot garantit sa récupération ; aucun voleur/rival nommé n’est fabriqué sans preuve. Les mouvements sont persistants et historisés. RESTE : relier progressivement les civils/récupérateurs anonymes à de vrais PNJ lorsque le monde dispose d’identités locales suffisantes et playtester les chances/temps.
+- V3.51.59 : rotation manuelle joueur-chef active contre les boss pour l’équipe personnelle, 1 ou 2 échanges atomiques, tour du chef consommé en cas de succès, refus critique rare sans perte du tour mais sans spam, et délai anti-tour-gratuit pour les entrants.
+- V3.51.60 : initiative alliée minimale formalisée pour les recrues en PvE standard et boss. Les profils rapides/agiles passent avant les lourds/lents dans la fenêtre alliée, mais le chef opérationnel reste prioritaire et aucune riposte ennemie n’est déplacée. RESTE : vérifier les mécaniques boss spéciales au cas par cas et n’ajouter de futurs bonus d’initiative qu’après cette base.
+- V3.51.62 : les recrues personnelles possèdent maintenant un **état de préparation persistant léger** fondé sur fatigue de combat, PV, moral/relations et jours de repos. La fatigue influence modestement initiative, humeur et préparation sans créer une microgestion punitive ; elle récupère naturellement avec les jours. L’état est visible dans le menu d’équipe. Les collègues d’une équipe employeuse gardent leur modèle séparé pour ne pas fusionner artificiellement deux systèmes différents. RESTE : relier progressivement blessures/traumatismes, besoins et dialogues à cet état avec des effets bornés.
+- V3.51.25 : `BossPveMode::run` utilise désormais le roster partagé pour faire réellement participer jusqu'à 2 recrues aux boss solo, avec PV persistants, soutien, dégâts, pression de boss, XP et parts économiques. FireFlight conserve ses règles propres et son test final. Ne pas supposer que le JcJ doit autoriser les recrues sans décision de design dédiée.
+- V3.51.27 : après KO non définitif du joueur, jusqu'à 3 recrues peuvent reprendre les places principales, la réserve remplace les alliés tombés et les boss compatibles continuent hors écran sans révéler au joueur ce qu'il ne peut pas voir. Le compte rendu et la remise de part restent RP et dépendent du compagnon.
+- V3.51.28 : `RecruitedAllyActionPlanner` centralise la décision tactique des recrues (survie personnelle, soin du chef, soin d'un allié, garde, technique, attaque) pour le PvE visible, les boss et les simulations hors écran. L'exécution reste spécifique au contexte afin de respecter les cibles et mécaniques propres au mode, mais la décision ne doit plus être recopiée dans chaque mode.
+- Mort définitive en équipe : un personnage au sol peut encore être sauvé seulement par les alliés réellement encore debout APRÈS la résolution de la fin du combat/de l'extraction. Un soigneur mort ou KO avant cette résolution ne fournit aucun bonus. Un allié possédant de vraies compétences de soin/réanimation donne une chance bornée d'environ 33 à 66 % selon son niveau, sa compétence, son rang, sa maturité et son matériel ; un allié incapable de réanimer ne fournit qu'environ 15 % de survie par stabilisation/transport d'urgence. Un bon kit seul ne transforme jamais un guerrier sans formation médicale en réanimateur. Si personne n'est encore debout, le sauvetage d'équipe est impossible.
+- Première résistance spirituelle en mort définitive : après échec du secours normal, un personnage dispose une seule fois dans toute sa vie d'une séquence de 3 pastilles de volonté contre 3 échecs. Chaque jet est un d20, réussite sur 13+, soit environ 31,7 % de chance globale de refuser de lâcher prise. La tentative est consommée qu'elle réussisse ou échoue et ne revient jamais à la seconde mort. Une réussite ramène à 1 PV sans créer de clear personnel. La bénédiction de survie léthale reste un recours séparé et encore plus exceptionnel après l'échec de cette résistance.
+- V3.51.18 : amitié/motivation des recrues ajoutée. L'amitié vient de faits vécus ; objectif commun ou amitié forte peuvent exceptionnellement supprimer le salaire. Continuer à relier cette relation aux dialogues sans en faire une statistique farmable facilement.
+- V3.51.26 : les techniques combinées commencent à utiliser une expérience commune réellement vécue : journées de combat partagées et ordres coordonnés uniques par jour, relation réelle, réussite/échec/raté partiel et maîtrise. Les deux tours sont consommés même en cas d'échec. Continuer avec davantage de signatures de duo et adaptation aux boss après stabilisation.
+- Approfondir certains mini-boss rivaux : cicatrices, contre-jeu appris et retours crédibles, toujours avec une source logique de mémoire/rumeur.
+- Ajouter l'apprentissage adaptatif seulement à certains boss et sur des comportements précis ; ne jamais donner une omniscience générale aux boss.
+- Approfondir le combat psychologique : peur, hésitation, reddition, attaque désespérée, loyauté, pression de groupe et négociation.
+- Développer les classes évolutives selon la façon de jouer comme un vrai système central, sans multiplier des évolutions gratuites.
+- Règle d’accès croisé : un personnage non-mage / sans mana ne peut pas lancer de magie tant qu’il n’a pas éveillé son mana via une quête difficile dédiée.
+- Règle d’accès croisé : un mage pur ne devient pas convenable au corps-à-corps par simple changement d’arme ; il doit passer par de vrais entraînements importants et persistants.
+- La voie distance reste volontairement plus mixte : profils physiques et magiques peuvent y progresser avec une difficulté globalement unifiée.
+- Ces accès doivent être prouvés par des faits de jeu (quête/entraînement), jamais accordés gratuitement depuis un menu de classe.
+
+PRIORITÉ 5 — MORT, HÉRITAGE ET CONSÉQUENCES LONGUES
+---------------------------------------------------
+- Enrichir la « mort racontée », surtout en Mortel/Léthal : cause, lieu, adversaire, traces et souvenir final crédible.
+- Ajouter un DeathRecord persistant quand cette narration sera branchée à la vraie mort du personnage.
+- Développer l'héritage uniquement en Mortel/Léthal : tombe, arme transmise, lettre, rumeur, trace de boss, objet avec mémoire.
+- Continuer les cicatrices / traumatismes avec effets réels mesurés selon gravité, sans encourager le joueur à se blesser pour farmer un bonus.
+- Continuer le Destin instable uniquement à partir de traces réellement vécues ; pas de bonus ni de connaissance magique omnisciente.
+
+PRIORITÉ 6 — SERMENTS À APPROFONDIR
+-----------------------------------
+Le moteur de serments persistants et la rupture à l'église existent déjà. Restent surtout leurs effets/contreparties propres.
+- Flamme gardée : feu/protection avec prix réel.
+- Ombres franches : ruse/morale, jamais camouflage gratuit universel.
+- Pèlerin : voyage/villages avec contraintes de route.
+- Mémoire : interactions avec mémoire du monde sans omniscience.
+- Silence : anti-panique/anti-illusion partiel, jamais immunité générale.
+- Ciel ouvert, Racines, Miroir brisé : contre-jeux partiels à Vol/Entrave/Illusions, jamais immunités gratuites.
+- Témoin, Cicatrices, Héritage, Forge liée, Liens, Rivaux, Destin instable : approfondir leurs effets et contradictions.
+- Donner à chaque rupture un prix cohérent : don, confession, réparation, témoin, perte temporaire, quête ou conséquence sociale selon le serment.
+- Surveiller les contradictions : Sang/Bouclier, Ombres/Silence, Héritage/Mémoire, etc.
+
+PRIORITÉ 7 — QUÊTES, REGISTRES ET STATISTIQUES
+----------------------------------------------
+- V3.56.00 : les offres passent par une politique de lieu commune. Un lieu exact inaccessible/inconnu bloque l'acceptation ; une cible/ressource pouvant plausiblement exister ailleurs affiche « chance réduite de trouvaille » et exige une seconde confirmation. Les contrats inter-ville gardent un forfait logistique plafonné, jamais un remboursement illimité des voyages.
+- Continuer à relier l'accessibilité à quelques surfaces spéciales qui créeraient une quête sans passer par l'écran d'offre partagé, et playtester les faux positifs sur les lieux génériques.
+- Structurer davantage les étapes de quête, décisions, types de mission, difficulté estimée et risques connus sans révéler les informations inconnues.
+- Ajouter un historique personnel plus fin par créature : variantes, silhouettes progressives et notes persistantes.
+- Ajouter cartes à couches, épingles personnelles et journal de voyage canonique quand plusieurs régions jouables le justifieront réellement.
+- Ajouter plus tard comparaison de sauvegardes, galerie de souvenirs et vues historiques supplémentaires si les données persistantes correspondantes existent.
+- KnowledgeEntryMenu / DeathStatisticsMenu restent des points d'extension. CharacterHistoryMenu est désormais actif pour les événements durables et les transactions canoniques ; ne pas dupliquer son contenu ailleurs.
+
+PRIORITÉ 8 — INTERFACE GRAPHIQUE / PIXEL-ART (PIXEL-ART EN DERNIER)
+-------------------------------------------------------------------
+- L'interface graphique générale est actuellement prise en charge avec l'aide d'une amie de l'utilisateur ; ne pas en faire notre priorité de développement.
+- Préparer seulement les contrats/données moteur utiles à cette interface quand nécessaire.
+- Préparer plus tard une vraie ville pixel-art cliquable : guilde, boutiques, coffre, bibliothèque, arène urbaine et grande porte d'exploration.
+- Préparer une grande carte d'exploration avec biomes/lieux cliquables ; lieux inconnus grisés, enfumés ou masqués.
+- Préparer des animations d'exploration séparant trajet et activité locale, avec durée liée au voyage choisi.
+- Prévoir des illustrations ponctuelles pour certaines quêtes, boss, événements et découvertes importantes.
+- Finaliser la bible visuelle pixel-art et le catalogue des objets, monstres, PNJ, boss et variantes avant une génération massive d'assets.
+- Concevoir l'arbre final de sélection par race, classe, âge exact, tranche d'âge, présentation et variante.
 - Conserver les numéros de choix visibles et le terminal comme secours.
-- Ne pas lancer, masquer ou quitter l’IG avant la vérification et l’installation des mises à jour.
-- Garder les panneaux avancés optionnels pour éviter de surcharger l’écran.
-- Étendre les champs structurés plutôt que multiplier les heuristiques de lecture de texte.
+- Ne jamais lancer/masquer/quitter l'IG avant la vérification et l'installation des mises à jour.
+- Garder les panneaux avancés optionnels et préférer les données structurées aux heuristiques de lecture de texte.
 
-Documentation propre
---------------------
-- README.md et READMEFR.md restent courts et décrivent seulement l’état actuel.
-- Les historiques de version restent uniquement dans CHANGELOG.md et CHANGELOG_FR.md.
-- Aucun nouveau README de version ne doit être créé.
+CHANTIER SÉPARÉ — MULTI EN LIGNE
+--------------------------------
+- Ne pas mélanger le réseau aux petites passes de gameplay.
+- Si ce chantier démarre : commencer par host/client coop limité aux combats et menus partagés, puis seulement envisager une persistance plus lourde.
 
-[V3.30.00 - socle validé / futur IG pixel-art]
-- Les villes doivent être placées sur une carte avec des distances entre elles et des distances distinctes vers les biomes proches.
-- Certaines villes peuvent refuser l'entrée selon le niveau, la réputation, une quête, une recommandation ou un boss vaincu. Cette condition doit être affichée clairement sans spoiler les exigences inconnues.
-- L'exploration future doit utiliser une grande carte à biomes avec lieux cliquables. Les lieux inconnus restent grisés, enfumés ou masqués.
-- L'animation d'exploration se découpe en deux temps : trajet entre le lieu de départ et la destination, puis animation locale dans le lieu choisi.
-- Chaque animation doit utiliser un fond cohérent avec le chemin, le biome ou le lieu, et non un arrière-plan générique répété partout.
-- Les villes pixel-art futures doivent afficher une vraie image de ville cliquable : bâtiments interactifs, grande porte des remparts pour partir explorer, arène urbaine pour les combats uniques.
-- Certaines quêtes, événements, boss, découvertes ou dialogues importants pourront afficher une illustration ponctuelle sans bloquer inutilement le joueur.
-- Les armes et armures utilisent des catégories légère, moyenne et lourde avec avantages et contreparties modérés : léger = plus précis/mobile, moins puissant/résistant ; lourd = plus puissant/résistant, moins précis/mobile.
+SQUELETTES TECHNIQUES ENCORE PRÉSENTS — PAS DES BUGS ACTUELS
+------------------------------------------------------------
+Ces modules existent surtout comme points d'architecture. Ils ne doivent pas être « remplis » artificiellement tant qu'un système actif ne les exige pas.
+- Cheat : CheatMenu, CheatState, CheatCatalog, CheatCode, CheatWarning, CreatorSecretEvent, CheatInputBuffer, ActionRefundSystem, CheatEffect.
+- Personnages : SpecialCharacterIdentityStatus, SpecialCharacterSpawnRules, CharacterRole, SemiHumanRace ; certaines règles de transformation doivent encore être reliées aux très gros impacts si ce système est retenu.
+- Monde : WorldLocation, Dungeon, PantheonLink possèdent encore des zones prévues pour une version plus structurée du monde.
+- Combat : CombatIntent doit encore influencer pleinement récompenses/mort/dialogues/létalité ; SpecialEncounterRules doit encore être relié à toutes les issues réelles. CombatUnit/CombatSide restent surtout des briques pour une architecture future plus générique ; CombatSlotRules est désormais actif et fait foi pour les places 3+2.
+- Loot/évasion : LootTable, LootReward, EscapeRewardRules gardent des extensions prévues malgré les moteurs actuels déjà jouables.
+- Lore : LoreEntry, LoreClue, PantheonDatabase gardent des extensions prévues.
+- Sauvegarde modulaire : JsonValue/Reader/Writer/registries sont des pistes de découpage ; SaveManager reste actuellement la référence fonctionnelle.
+- Statistiques : SurvivalTimer, DeathRecord, KillCounter, AccountStatisticsTracker, RunStatistics, CharacterStatistics pourront être approfondis quand les données correspondantes seront réellement exposées.
+- Bestiaire : EntityKnowledgeProgress, BestiaryFilter/Database/KillLog/UnlockRules/BossIdentityProgress peuvent encore gagner des fonctions, mais un bestiaire actif existe déjà.
+- Adventure : EncounterTrigger, ExplorationState, AdventureMode sont des points d'évolution, pas des fonctionnalités à inventer sans besoin concret.
 
-=== VALIDÉ — FUTURS SYSTÈMES MAJEURS (V3.49.83) ===
-- Mémoire du monde : les actions ne doivent pas être connues magiquement. Un témoin, une rumeur, une trace, une guilde, un survivant ou un registre doit expliquer pourquoi le monde sait.
-- Cicatrices / traumatismes : peuvent donner de vrais effets légers ou forts selon gravité, pas seulement du texte.
-- Rivalités ennemies : un ennemi qui fuit ou survit peut revenir plus tard comme mini-boss avec cicatrice, rancune et contre-jeu appris.
-- Destin instable : fils de destin selon les actions, à gérer sans omniscience ni bonus gratuits.
-- Boss qui apprennent : seulement certains boss, et sur certains points précis. Les boss non adaptatifs restent cohérents avec leur identité.
-- Serments : à gérer via l’église, avec conditions d’acceptation, statut/contrat visible, et rupture possible à l’église.
-- Mort racontée : donner une vraie scène de souvenir, surtout en Mortel/Léthal.
-- Héritage : seulement dans les parties Mortel/Léthal, via trace, tombe, arme, lettre, rumeur ou souvenir.
-- Bestiaire trompeur : faux ajouts/trolls supplémentaires possibles, mais ne doivent pas remplacer définitivement les vraies infos.
-- Combat psychologique : peur, menus, loyauté, hésitation, précision et pression de groupe.
-- Classes évolutives selon la façon de jouer : très important, à développer comme système central.
-- Réputation locale par ville : influence stocks, qualité, prix, services, réactions et confiance.
-- Ennemis capables de peur : fuite, reddition, attaque désespérée, renfort ou négociation.
-- Techniques combinées alliées : demandées et validées, liées à maturité, loyauté, rang et expérience commune.
-- Objets avec mémoire : armes/armures pouvant garder exploits, boss vaincus, réparations, vols, cicatrices et noms.
+RÈGLES DE DÉVELOPPEMENT À CONSERVER
+----------------------------------
+- Petites passes stables ; compiler/tester entre changements risqués.
+- Aucun .inc ; vrais modules .cpp/.hpp.
+- README courts ; historique uniquement CHANGELOG.md / CHANGELOG_FR.md.
+- PATCHNOTE_DINOTOFU* interdits.
+- bump_version.py toujours avec --no-commit par ChatGPT.
+- Aucun nouveau schéma de sauvegarde sans nouveau champ persistant réellement incompatible.
+- Le checkpoint important V3.51.15 reste la référence tant qu'une future migration importante ne justifie pas son remplacement.
+- Mémoire/rumeur : toujours témoin, source, trace ou propagation crédible.
+- Monnaie physique : aucune conversion automatique hors action volontaire au bureau de change.
+- Les choix automatiques de munitions/matériaux doivent rester optionnels ; « Toujours demander » est la valeur par défaut.
+- Un objet verrouillé doit être protégé contre les ventes/usages accidentels dans les chemins joueur pris en charge.
 
-=== V3.49.85 - SERMENTS D'EGLISE A DEVELOPPER ===
-- Nouveaux serments posés dans l'église : Flamme gardée, Ombres franches, Pèlerin, Mémoire et Silence.
-- Ces serments doivent recevoir plus tard de vrais effets et contraintes : feu/protection, ruse morale, voyage/villages, mémoire du monde, anti-panique/anti-illusion.
-- La rupture doit rester à l'église avec prix, témoin, réparation, confession ou trace persistante selon le serment.
-- Les serments ne doivent pas devenir des bonus gratuits cumulables sans conséquence : certains pourront se contrarier selon les actions du joueur.
+======================================================================
+IDÉES À VENIR POSSIBLES — À CONSERVER DANS LA REPRISE
+======================================================================
 
-=== V3.49.86 - SERMENTS ET CONTRE-JEUX A DEVELOPPER ===
-- Nouveaux serments posés : Ciel ouvert, Racines et Miroir brisé.
-- Ces serments servent de contre-jeu partiel à Vol, Entrave et Illusions, mais ne doivent jamais devenir des immunités gratuites.
-- La rupture est maintenant une vraie action d'église : elle désactive le serment choisi, inscrit une trace et pourra nourrir réputation, PNJ, boss ou héritage.
-- La suite devra donner à chaque serment un prix propre : don, confession, réparation, témoin, perte temporaire, quête ou conséquence sociale.
-- Les rivaux potentiels commencent par les ennemis qui fuient/paniquent : plus tard, un survivant devra pouvoir revenir comme mini-boss avec cicatrice, rumeur ou contre-stratégie.
+MULTIJOUEUR PAR SESSIONS
+------------------------
+- Projet futur souhaité par l'utilisateur, à concevoir ensemble lorsqu'il ressortira ses idées précises.
+- Priorité probable : sessions privées/coop avec hôte autoritaire, inventaires et personnages séparés, monde/session partagée.
+- Ne pas figer l'architecture réseau avant la discussion dédiée avec l'utilisateur.
+- Prévoir aussi un deuxième usage réseau distinct : l'arène peut proposer une file/liste de combattants volontaires en recherche de duel afin d'affronter n'importe quel joueur disponible.
+- Coop par sessions et matchmaking d'arène sont donc deux usages complémentaires du futur online.
+- Limite validée pour les joueurs humains : 3 joueurs maximum dans une même équipe. Les 3 places principales utilisent la même priorité joueur > allié PNJ > invocation ; les 2 places bonus restent invocation uniquement. Ne pas encore figer la politique réseau de réserve/compagnons d'une session avant la conception dédiée.
 
-=== V3.49.87 - AXE 8 : TRACES LONGUES ET CONSEQUENCES ===
-- Nouveaux serments posés : Témoin, Cicatrices et Héritage.
-- Le Serment du Témoin doit toujours dépendre d'une source logique : témoin, trace, rumeur, registre, bestiaire ou observation réelle.
-- Le Serment des Cicatrices doit donner de vrais effets sous pression, mais ne doit jamais encourager à se blesser gratuitement.
-- Le Serment de l'Héritage prépare les systèmes Mortel/Léthal : tombe, arme transmise, lettre, rumeur, trace de boss, objet avec mémoire.
-- La rupture de serment coûte désormais un rite ou de l'or, et garde une trace utilisable par prêtres, villes, boss, compagnons et héritages futurs.
-- Les contradictions entre serments doivent rester surveillées : Sang/Bouclier, Ombres/Silence, Héritage/Mémoire, etc.
+IA DINOTOFU
+-----------
+- Idée appréciée : ajouter une section « Parler avec Dinotofu » en plus des conseils pré-écrits.
+- L'IA doit rester strictement en RP et enfermée dans l'univers du jeu : aucune référence à ChatGPT, API, modèle, développeur, fichiers ou monde réel.
+- Lui transmettre uniquement les informations que le personnage peut réellement connaître : lieu, jour, quêtes connues, bestiaire découvert, personnes rencontrées, journal, historique pertinent.
+- Ne jamais lui donner tout le lore caché afin d'empêcher les spoilers par construction.
+- L'IA ne doit jamais modifier directement combat, économie, inventaire, quêtes ou sauvegarde. Le moteur reste autoritaire.
+- Prévoir une architecture serveur/intermédiaire si une API distante est utilisée ; ne jamais embarquer une clé API secrète directement dans l'exécutable distribué.
+- Une IA locale pourra être étudiée beaucoup plus tard, mais ce n'est pas la voie prioritaire.
+
+FIREFLIGHT + IA — PEU PROBABLE / EXPÉRIMENTAL
+-----------------------------------------------
+- Possibilité évoquée mais considérée peu probable pour l'instant.
+- Si elle est retenue un jour, l'IA ne doit PAS contrôler librement le boss final.
+- Le moteur garde PV, phases, dégâts, actions légales, coûts, cooldowns et résultats.
+- Au maximum, l'IA pourrait produire du dialogue RP contextualisé ou choisir parmi une liste fermée d'actions légalement proposées par le moteur.
+- FireFlight ne doit jamais acquérir une omniscience artificielle sur le joueur ou les secrets du monde.
+
+INTERFACE GRAPHIQUE
+-------------------
+- L'utilisateur ne développe plus lui-même l'interface graphique actuellement ; une amie l'aide et il se place plutôt comme client sur cette partie.
+- Ne pas prioriser notre développement de GUI sauf besoins de données/contrats d'interface nécessaires au moteur.
+- Images, illustrations et pixel-art restent possibles si demandés.
+- Le pixel-art doit passer EN DERNIER parmi les chantiers de développement actuels.
+
+HISTOIRE
+--------
+- Ne pas continuer l'écriture de l'histoire sans nouvelle demande explicite de l'utilisateur.
+- Objectif minimal de contenu avant pause narrative : chapitres 1, 2 et 3 jouables.
+- Après le chapitre 3, afficher proprement un message indiquant que la suite de l'histoire est encore en cours de développement.
+- Les chapitres 4+ restent donc volontairement en attente jusqu'à ce que l'utilisateur ait envie de reprendre l'histoire.
+
+V3.51.54 — CAMBRIOLAGE / ENQUÊTE / BIENS VOLÉS
+------------------------------------------------
+- [FAIT] Cambriolage ignoré = dossier persistant à auteur inconnu, jamais rival identifié instantanément.
+- [FAIT] Enquête locale par indices ; cible/rival seulement après preuves crédibles.
+- [FAIT] Biens volés persistants pouvant inclure monnaie, matériau, consommable et équipement exact.
+- [FAIT] Le butin peut changer de main/cache avec le temps sans disparaître.
+- [FAIT] Récupération du dossier lorsque la cible reliée est vaincue.
+- [FAIT V3.51.56] Métadonnée générique persistante liée à l'âme / non transférable sur tous les objets `Item`, avec garde réelle de changement de propriétaire et compatibilité anciennes saves.
+- [FAIT V3.51.57] Rencontre fortuite en exploration reliée au dossier local : trace / échange suspect / bien exact reconnu, indices réels, cooldown anti-farm et identification uniquement après preuves suffisantes. Une cache ne crée jamais artificiellement une cible humaine.
+- [PARTIEL V3.51.59] Receleurs/complices/caches reliés au monde et maintenant interactifs : observation, négociation de restitution et fouille de cache sont actives avec persistance. RESTE : PNJ persistants complets, dialogues relationnels, capture/interrogatoire, conséquences locales et autres routes de restitution crédibles.
 
 
-=== V3.49.88 - FORGE LIEE, LIENS ET TRACES LOGIQUES ===
+V3.51.65 — POURSUITE / RÉSEAU CRIMINEL / RÉCUPÉRATION / RUMEURS
+---------------------------------------------------------------
+- [FAIT] BountyPursuitSystem possède désormais préparation du chasseur + contre-mesures de cible, toutes bornées et sans no-escape absolu.
+- [FAIT] Repérage de sorties, informateurs, embuscade, filature ; changement de route, leurres, contre-surveillance et se cacher / changer de refuge peuvent être combinés et seront branchés progressivement aux vraies quêtes de primes.
+- [FAIT] CrimeNetworkSystem propage une alerte seulement entre contacts déjà connus d'un même réseau plausible ; aucun contact inconnu n'est révélé par le système.
+- [FAIT] Mémoire criminelle enrichie : ville/réseau/avertissements inter-ville persistent sans changement de schéma.
+- [FAIT] L'infirmerie peut maintenant réduire la fatigue/stress de blessure d'une recrue avec coût + temps, séparément des PV.
+- [FAIT] Premier WorldRumorCatalog hors Reapers et première apparition rare de rumeurs de villes/biomes en exploration.
+- [FAIT V3.51.67] Préparation du chasseur + conscience/soupçon de la cible + décision autonome sont branchés dans de vraies missions de primes persistantes et jouables, jusqu'à interception, reddition ou combat.
+- [PARTIEL V3.56.00] Les conséquences capture vivante / mortelle restent persistantes par région ; dangerosité + notoriété + durée de cavale valorisent les primes. Les cibles peuvent désormais changer réellement de ville, laisser des pistes inter-ville et exploiter de vrais convois/incidents commerciaux. RESTE : relier davantage de fugitifs à des PNJ/réseaux précis, enrichir les commanditaires, réactions des proches/organisations et conséquences longues après capture/mort.
+- [PARTIEL V3.56.00] `CityProfileSystem` rend sécurité, richesse et spécialisation indépendantes ; prix/revente, auberge, stocks spécialisés, besoins temporaires, richesse dynamique, flux commerciaux et incidents de convois sont branchés. RESTE : étendre la qualité locale aux forgerons/alchimistes/enchanteurs/transports, gouvernance/corruption/investissements/guerre-siège, davantage de villes/profils selon leur lore et playtest des écarts.
+- [PARTIEL V3.51.66] Les relais criminels inter-ville sont désormais faillibles et peuvent être coupés temporairement par détention/fuite/pression/saturation. RESTE : fiabilité explicite, dettes, concurrence, rivalités, ruptures longues et relais alternatifs sans omniscience.
+- [RESTE] Soins/diagnostic plus riches des recrues, blessures nommées seulement lorsque les faits de combat les justifient ; traumatismes lourds uniquement après événements graves.
+- [PARTIEL V3.51.66] WorldRumorCatalog couvre maintenant aussi guildes, réseaux criminels, chasseurs de primes et premiers boss visibles. RESTE : autres grandes factions, héros, créatures célèbres et événements historiques ; toujours séparer récit entendu, preuve et vérité.
+- [PARTIEL V3.51.66] Aspirations légères des recrues dérivées de leur contenu déjà écrit et de leur vécu réel. RESTE : aspirations plus individualisées, dialogues/réactions contextuels et relations PNJ<->PNJ sans microgestion punitive.
 
-- Serment de la Forge liée : relie une arme cohérente avec la classe aux futurs objets avec mémoire.
-- Serment des Liens : prépare les techniques combinées alliées via ordres, recrues, groupe et pression commune.
-- Les traces ne doivent apparaître que si elles ont un porteur logique : témoin, rumeur, registre, arme, armure, recrue, boss, ville ou tombe.
-- Les rivaux ennemis ne doivent pas naître d'une omniscience : il faut une fuite vue, une survie réelle ou une rumeur possible.
-- Les combos alliés futurs doivent dépendre de maturité, loyauté, rang, expérience et actions réellement partagées.
+- V3.51.66 : le document `LORE_REAPERS_LEGENDES.txt` conserve dans le projet les 18 adaptations médiéval-fantastiques du corpus Discord. Il s’agit de légendes/rumeurs, pas de vérités automatiques.
 
-
-=== V3.49.89 - Rivaux et destin instable ===
-- Serment des Rivaux : base plus claire pour transformer des survivants/fuyards en futurs mini-boss récurrents.
-- Serment du Destin instable : base légère pour conséquences longues, classes évolutives et oscillations liées aux traces réellement vécues.
-- Règle rappelée : pas d'omniscience, une conséquence doit venir d'un témoin, d'un survivant, d'un objet, d'un registre, d'une cicatrice ou d'une rumeur logique.
-
-
-=== V3.49.92 — consolidation persistante ===
-- Serments hors loadout : vrais contrats avec rupture persistante.
-- Journal local protégé contre les migrations de ville ; réputation locale centralisée.
-- Vrais rivaux persistants, mémoire historique distincte et équipements identifiés individuellement.
-- Première vraie technique combinée de recrues consommant leurs deux tours.
-- Histoire volontairement arrêtée après l’introduction du chapitre 3 pendant la refonte.
-- make test léger ajouté.
-- Prochaine priorité : approfondir mini-boss rivaux, mémoire d’objets, combos, classes évolutives, contenu/variété des entités et découpage de QuestMenu uniquement en .cpp/.hpp.
+V3.51.68 — HESTIA / LOGEMENT / PERSONNAGES SPÉCIAUX / REAPERS
+--------------------------------------------------------------
+- [FAIT] Fondation persistante de l'arc Hestia : sauvetage principal, résidence active/guilde chez Diane/maison, confiance, visites, petites trouvailles domestiques, trois éveils lumière/divin et départ aux cieux au troisième.
+- [FAIT] Hestia commence réellement mauvaise même en magie ; aucune identité divine n'est révélée par son profil ou ses bonus natifs. Sa spécialisation divine/lumineuse n'émerge qu'avec les éveils.
+- [FAIT] Règle de sacrifice branchée au résolveur de mort PvE/exploration/boss standard : après au moins le premier éveil et uniquement si Hestia est réellement active dans l'équipe, elle sacrifie sa matérialisation pour sauver/téléporter le joueur avant les autres protections. RESTE : auditer les modes spéciaux/méta séparément.
+- [FAIT] Logement jouable : une maison principale maximum dans une seule ville, coût initial réellement payé, formule avec loyer sans dette cumulative/expulsion ou achat définitif coûteux, repos gratuit quand les services sont actifs, Hestia compatible avec la présence d'un conjoint.
+- [PARTIEL] Mariage PNJ/joueur : états persistants et limite d'un mariage joueur-joueur posés. Inspiration souhaitée en partie Skyrim, mais sans transformer le conjoint en usine à bonus. RESTE : quête de la bague spéciale, relation préalable, revenus/cuisine/entretien/coffre du conjoint et bonus coop/échange joueur-joueur.
+- [DESIGN, PAS ENCORE CODÉ V3.51.77] Foyer/collocation borné : au maximum l'allié le plus proche du personnage, Hestia et le conjoint PNJ comme résidents principaux ; un joueur invité seulement après au moins 3 missions partagées. Les bénéfices devront rester liés aux capacités/équipements du foyer et ne pas s'empiler gratuitement par nombre de résidents.
+- [FAIT] Artefact d'Hestia : gant au repos, forme principale adaptée, dégâts 3 x niveau, progression uniquement sur coups fatals de l'artefact, anti-farm par famille d'âme, seconde forme choisie au niveau 16 et switch libre entre les deux formes. État entièrement sauvegardé.
+- [FAIT] Arone Aster ajouté au catalogue des personnages spéciaux avec date 13/02/1313 et profil public sans spoiler familial.
+- [FAIT] Sanctus et Skuro sont explicitement deux états de la même personne et ne peuvent jamais apparaître ensemble.
+- [FAIT] Secret Reaper : le nom enterré ne peut être révélé que par reconnaissance personnelle d'Arone lors d'une vraie rencontre face-à-face ; aucune enquête générique ne peut le sortir.
+- [FAIT] Doctrine Reaper corrigée : faction de chasseurs de primes exécuteurs ; le jugement se fait avant l'acceptation, une dette de sang vérifiée peut mener à « une vie pour une vie », les exécutions de primes légitimes valorisent le dossier et une reddition n'efface pas automatiquement une condamnation déjà établie.
+- [FAIT] Ancienne interprétation Hazak -> Hestia supprimée : dans Dinotofu, le sauveur d'Hestia est le joueur. Les Bras Cassés restent Hazak, Aoi, Kanadé, Sanctus et Fail.
+- [FAIT] Quête « Une personne disparue » ajoutée après 20 quêtes validées : piste de Diane sans spoiler, infiltration difficile ou combat gobelins/ninja ou squelettes/suicidaire. Hestia rejoint ensuite le cercle disponible, mais peut rester indéfiniment chez Diane/à la maison sans entretien.
+- [FAIT V3.51.70] Hestia est désormais une vraie combattante optionnelle : elle occupe un emplacement d’allié actif, possède une classe/style/protection choisis par le joueur sans recommandation magique automatique, progresse par entraînement/combat et peut provoquer des maladresses/friendly-fire bornés au début.
+- [PARTIEL V3.51.70] Les trois éveils lumineux/divins sont reliés à de vraies actions magiques de combat et au troisième départ aux cieux. RESTE : écrire/brancher leurs sorts uniques, noms, effets visuels et fragments de souvenirs détaillés sans spoiler prématuré.
+- [FAIT V3.51.70] Artefact d’Hestia relié au véritable équipement et au véritable coup fatal : arme indestructible/liée/unique/personnelle, 3 x niveau, aucune munition ordinaire pour ses formes matérialisées arc/arbalète, âme créditée uniquement sur impact direct létal, interface équipement et seconde forme permanente niveau 16.
+- [PARTIEL V3.56.00] `MonsterAnatomySystem` couvre désormais squelette/piège, slime, constructions, dragons/draconides, plantes, insectoïdes, bêtes cuirassées, élémentaires, esprits et anomalies avec réactions positives/négatives. RESTE seulement à enrichir progressivement les créatures futures ayant une anatomie particulière, sans remplir artificiellement tous les monstres.
+- [RESTE] Si utile après playtest, faire évoluer le loadout Hestia de simples choix persistants vers un véritable inventaire d’équipement transférable, sans transformer sa gestion en entretien obligatoire.

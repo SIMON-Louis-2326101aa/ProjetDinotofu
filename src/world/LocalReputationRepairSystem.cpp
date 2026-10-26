@@ -110,7 +110,7 @@ std::vector<std::string> LocalReputationRepairSystem::performCommunityService(Pl
     player.recordHistoricalEvent("local_reputation_repair", cityId, "Service communautaire accompli à " + cityId, true);
     const int after = LocalReputationSystem::score(player, cityId);
     return {
-        "Tu consacres deux segments de journée à un travail visible : manutention, réparation légère, registre ou nettoyage d'un espace public.",
+        "Tu consacres deux moments de la journée à un travail visible : manutention, réparation légère, registre ou nettoyage d'un espace public.",
         "Le service vaut +3 de réputation locale parce qu'il est réellement accompli et prend du temps.",
         "Réputation : " + std::to_string(before) + " -> " + std::to_string(after) + ".",
         "Limite : un service de réhabilitation par jour et par ville. Une mauvaise réputation ne se gomme pas en spammant un menu."

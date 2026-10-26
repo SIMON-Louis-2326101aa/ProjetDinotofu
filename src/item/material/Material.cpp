@@ -348,11 +348,14 @@ std::vector<std::string> Material::toDisplayLines() const
     }
 
     lines.push_back("Description : " + description);
+    lines.push_back("Propriété : " + getOwnershipBindingDisplayText());
+    lines.push_back("Récupération : " + getRecoveryMetadataDisplayText());
     lines.push_back(valueLine);
 
     if (category == "Matériau de monstre")
     {
         lines.push_back("Utilité connue : revente, artisanat, trophées et recettes liées aux monstres.");
+        lines.push_back("Conseil : la guilde ou un comptoir spécialisé en matériaux de monstres paie généralement mieux.");
     }
     else if (category == "Matériau")
     {

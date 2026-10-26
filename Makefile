@@ -24,6 +24,7 @@
 #   make bump-patch      Increase patch version / Augmenter la version patch
 #   make release-push    Bump patch, commit and push / Publier un patch
 #   make release-check   Verify source tree before sharing / Vérifier le projet avant ZIP
+#   make pre-push        Full source validation before Git push / Validation complète avant push Git
 #   make gui-preview     Build, launch the game and serve the GUI debug preview / Lancer aperçu IG
 #
 #
@@ -46,12 +47,50 @@ ifeq ($(filter -j%,$(MAKEFLAGS)),)
   MAKEFLAGS += -j$(NPROCS)
 endif
 
-CXX         ?= g++
+# Sélection automatique du compilateur le plus performant (clang++ > g++)
+ifneq ($(filter undefined default,$(origin CXX)),)
+  ifneq ($(shell command -v clang++ 2>/dev/null),)
+    CXX := clang++
+  else
+    CXX := g++
+  endif
+endif
+
+AR          ?= ar
 TARGET_ARCH ?= native
-OPT_LEVEL   ?= -O3
+OPT_LEVEL   ?= -Og
+
+# Détection et intégration automatique de ccache
+ifneq ($(shell command -v ccache 2>/dev/null),)
+  ifeq ($(findstring ccache,$(CXX)),)
+    override CXX := ccache $(CXX)
+  endif
+endif
+
+# Sélection automatique du linker le plus rapide (mold > lld > ld)
+ifeq ($(filter -fuse-ld=%,$(LDFLAGS)),)
+  ifneq ($(shell command -v mold 2>/dev/null),)
+    LDFLAGS += -fuse-ld=mold
+  else ifneq ($(shell command -v lld 2>/dev/null),)
+    LDFLAGS += -fuse-ld=lld
+  endif
+endif
+
+# Détection des paquets optionnels recommandés pour l'accélération
+MISSING_SPEED_TOOLS :=
+ifeq ($(shell command -v ccache 2>/dev/null),)
+  MISSING_SPEED_TOOLS += ccache
+endif
+ifeq ($(shell command -v mold 2>/dev/null),)
+  ifeq ($(shell command -v lld 2>/dev/null),)
+    MISSING_SPEED_TOOLS += mold
+  endif
+endif
+
 CXX_STD_FLAG ?= $(shell bash ./scripts/detect_cpp23_flag.sh "$(CXX)")
-CXXFLAGS    := $(CXX_STD_FLAG) $(OPT_LEVEL) -march=$(TARGET_ARCH) -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
-LDFLAGS     ?=
+COMMON_FLAGS := $(CXX_STD_FLAG) -march=$(TARGET_ARCH) -pipe -Wall -Wextra -Iinclude -MMD -MP -finput-charset=UTF-8 -fexec-charset=UTF-8
+CXXFLAGS      = $(COMMON_FLAGS) $(OPT_LEVEL)
+LDFLAGS      ?=
 
 SRC_DIR  := src
 OBJ_DIR  := build
@@ -59,6 +98,7 @@ BIN_DIR  := output
 
 APP_NAME := Dinotofu
 TARGET   := $(BIN_DIR)/$(APP_NAME)
+STATIC_LIB := $(OBJ_DIR)/libdinotofu.a
 
 
 # =========================================================
@@ -69,6 +109,7 @@ TARGET   := $(BIN_DIR)/$(APP_NAME)
 SRCS := $(shell find $(SRC_DIR) -type f -name "*.cpp")
 OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRCS))
 DEPS := $(OBJS:.o=.d)
+LIB_OBJS := $(filter-out $(OBJ_DIR)/main.o,$(OBJS))
 
 
 # =========================================================
@@ -76,17 +117,41 @@ DEPS := $(OBJS:.o=.d)
 # RÈGLES PRINCIPALES
 # =========================================================
 
-all: $(TARGET)
+all: show-speed-hints $(TARGET) $(STATIC_LIB)
 	@echo ""
 	@echo "Build terminé avec succès."
 	@echo "Exécutable : $(TARGET)"
 	@echo "Pour lancer : make run"
 	@echo ""
 
+dev: all
+
+opt: OPT_LEVEL := -O3
+opt: all
+
+release: OPT_LEVEL := -O3
+release: all
+
+show-speed-hints:
+ifneq ($(strip $(MISSING_SPEED_TOOLS)),)
+	@echo "---------------------------------------------------------"
+	@echo " [ASTUCE] Des outils d'accélération ne sont pas installés : $(MISSING_SPEED_TOOLS)"
+	@echo "          Pour accélérer la compilation x10 sur votre système :"
+	@echo "            Arch / CachyOS : sudo pacman -S ccache mold"
+	@echo "            Debian / Ubuntu: sudo apt install ccache mold"
+	@echo "            Fedora         : sudo dnf install ccache mold"
+	@echo "---------------------------------------------------------"
+	@echo ""
+endif
+
 $(TARGET): $(OBJS)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 	@chmod u+x $@
+
+$(STATIC_LIB): $(LIB_OBJS)
+	@mkdir -p $(dir $@)
+	@$(AR) rcs $@ $^
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	@mkdir -p $(dir $@)
@@ -101,8 +166,8 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 # =========================================================
 
 
-test: all
-	@bash ./scripts/test_project.sh
+test: all $(STATIC_LIB)
+	@CXX="$(CXX)" LDFLAGS="$(LDFLAGS)" bash ./scripts/test_project.sh
 
 check: clean
 	@echo "=== [1/3] Validation de l'arborescence et des conventions ==="
@@ -126,17 +191,21 @@ help:
 	@echo "========================================================="
 	@echo ""
 	@echo " Compilation & Exécution locale :"
-	@echo "   make                     Compiler le projet en parallèle (output/$(APP_NAME))"
+	@echo "   make                     Compiler rapidement (-Og) en parallèle (output/$(APP_NAME))"
+	@echo "   make dev                 Alias de make (compilation dev rapide -Og)"
+	@echo "   make release / opt       Compiler avec optimisation maximale (-O3) pour le jeu"
 	@echo "   make run [ARGS=...]      Compiler puis lancer le jeu dans le terminal"
 	@echo "   make launch [ARGS=...]   Compiler, effacer l'écran puis lancer"
 	@echo "   make clean               Supprimer les objets, binaires et dossiers de debug"
 	@echo "   make rebuild             Nettoyer puis recompiler de zéro"
 	@echo "   make strip               Retirer les symboles de débogage du binaire"
+	@echo "   make CXX=clang++ / g++   Forcer un compilateur (auto-détecté : clang++ puis g++)"
 	@echo ""
 	@echo " Tests & Qualité de code :"
 	@echo "   make test                Exécuter la suite de tests du projet"
 	@echo "   make check               Nettoyer, valider l'arborescence, branding et tests"
 	@echo "   make release-check       Vérifier l'arborescence avant création d'archive"
+	@echo "   make pre-push            Nettoyer, auditer, valider les JSON, compiler et exécuter tous les tests avant Git"
 	@echo ""
 	@echo " Interface Graphique Expérimentale :"
 	@echo "   make gui-preview         Lancer le jeu avec le serveur d'aperçu web IG"
@@ -250,8 +319,12 @@ release-check: clean
 	@chmod +x ./scripts/validate_release_tree.sh
 	@./scripts/validate_release_tree.sh
 
+pre-push:
+	@chmod +x ./scripts/pre_push_check.sh
+	@./scripts/pre_push_check.sh
+
 gui-preview: all
 	@chmod +x ./tools/gui/run_gui_debug.sh
 	@./tools/gui/run_gui_debug.sh
 
-.PHONY: all test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check gui-preview
+.PHONY: all dev opt release show-speed-hints test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check pre-push gui-preview

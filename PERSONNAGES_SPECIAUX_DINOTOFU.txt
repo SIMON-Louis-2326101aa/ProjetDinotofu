@@ -23,16 +23,17 @@ Dates spéciales :
 - Willow : 15/12/2025
 - Dwarf : 15/12/2025
 - Badr : 15/12/2025
+- Arone Aster : 13/02/1313
 - Matt (PRO) : non jouable.
 
 Personnages spéciaux :
-- Hazak : assassin elfe noir, sombre, efficace, direct, meilleur ami d'Henrique, a sauvé Hestia, contrat de non-agression avec Fail.
+- Hazak : assassin elfe noir, sombre, efficace, direct, meilleur ami d'Henrique, membre des Bras Cassés, contrat de non-agression avec Fail.
 - Skuro : tank violent à épée lourde, forme sombre liée à Sanctus.
 - Sanctus : tank/semi-mage protecteur, lumière, provocation, posture défensive, lien direct avec Skuro.
 - Kanadé : mage semi-dragonne, magie liée aux signes du zodiaque, rageuse, déteste être assimilée aux lézards/semi-lézards car beaucoup la prennent déjà pour ça.
 - Aoi : kitsune, mage flame/invocatrice avec katana, timide, protège ses incantations.
 - Fail : mage fou, fée, expérimente pour éliminer la menace.
-- Hestia : ancienne divinité amnésique, humaine actuelle, peureuse, magie très forte, dôme protecteur unique.
+- Hestia : jeune fille amnésique sauvée par le joueur, muette longtemps après son sauvetage et très maladroite au départ, magie comprise. Sa véritable nature reste inconnue tant que ses éveils divins/lumineux ne lui rendent pas ses souvenirs.
 - FireFlight : dev/commandant/créateur, sous 50% PV il esquive mieux et critique presque toujours. Non incarnable : boss/test final, pas personnage joueur.
 - Louis : artificier précis, projectiles multiples, naïf, cherche des amis.
 - Mattzelda : colosse humain, blagueur.
@@ -42,12 +43,12 @@ Personnages spéciaux :
 - Dwarf : nain, 24 ans, guerrier. Gros blagueur et provocateur ; certaines vannes peuvent être sexistes ou racistes et les autres personnages peuvent les désapprouver au lieu de les valider.
 - Badr : semi-humain, 48 ans, clerc croyant au corps proche d’un mort-vivant. Sympathique mais inquiétant le jour ; la nuit, son humeur devient très dépressive, il n’aime plus grand-chose et retrouve paradoxalement beaucoup plus de lucidité. Un ver nommé Second vit dans son corps et peut sortir par sa main. La compétence « En avant Second » est prévue plus tard.
 - Matt (PRO) : adversaire spécial très fort, respectueux, silencieux.
+- Arone Aster : humain, guerrier protecteur et très anti-autorité absolue. Son histoire familiale et ses ronces ne doivent pas servir à révéler gratuitement les secrets de Reaper-13.
 
 Relations et groupes :
 - Hazak / Henrique.
 - Mattzelda / Louis / Trexof.
 - Aoi / Kanadé / Sanctus.
-- Hazak / Hestia.
 - Fail / Hazak.
 - Skuro avec personnages compatibles.
 - FireFlight / Matt (PRO).
@@ -56,13 +57,11 @@ Relations et groupes :
 - Dwarf / Badr.
 
 Règles spéciales de groupe :
-- Hazak protège davantage Hestia et peut punir une attaque contre elle.
 - Hazak et Henrique ont une coordination offensive.
 - Aoi et Kanadé se renforcent, Sanctus stabilise et protège.
 - Mattzelda, Louis et Trexof ont des synergies de trio.
 - Fail profite de son contrat de non-agression avec Hazak pour mieux viser.
 - Si Hazak ou Skuro est présent, un combat peut devenir très dangereux selon le contexte.
-- Si Hazak est avec Hestia, il évite normalement de transformer le combat en massacre pour ne pas la traumatiser.
 - Willow profite des alliés qui attirent l’attention pour garder ses angles de tir.
 - Dwarf prend volontiers la ligne de front et supporte mal qu’un combat reste trop calme.
 - Badr stabilise le trio par son rôle de clerc ; Second reste un compagnon organique distinct dont la vraie compétence spéciale sera ajoutée plus tard.
@@ -74,7 +73,7 @@ Effets spéciaux en combat :
 - Aoi : cercle des flammes kitsune et protection d'incantation.
 - Sanctus : provocation, posture défensive, rempart de croyance.
 - Fail : prototype interdit et expériences instables.
-- Hestia : dôme protecteur unique, magie croissante.
+- Hestia : très faible au début, y compris en magie ; sa magie divine/lumineuse devient exceptionnelle seulement au fil de ses éveils et souvenirs retrouvés.
 - FireFlight : comportement de boss/dev, esquive/critique sous seuil critique.
 - Louis : salves et projectiles secondaires.
 - Henrique : retour unique à la vie.
@@ -107,4 +106,3 @@ BOB ET MAURICE
 - Quête de protection : les deux rejoignent le combat comme alliés IA, infligent exactement 1 dégât chacun et appliquent parfois un effet utile, inutile ou défavorable.
 - Enchaînements : leurs rendus peuvent immédiatement provoquer une mise à jour de quête ou une nouvelle demande absurde.
 - Lore : les rumeurs se moquent de leurs plans, de leurs traductions et de leur incapacité totale à voyager séparément.
-

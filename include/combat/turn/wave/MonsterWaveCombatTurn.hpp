@@ -20,14 +20,16 @@ public:
     static void playMonsterTurns(
         Player& player,
         EnemyCombatQueue& wave,
-        Random& random
+        Random& random,
+        int opposingCombatantCount = 1
     );
 
     static void playMonsterTurns(
         Player& player,
         EnemyCombatQueue& wave,
         std::vector<Summon>& playerSummons,
-        Random& random
+        Random& random,
+        int opposingCombatantCount = 1
     );
 };
 

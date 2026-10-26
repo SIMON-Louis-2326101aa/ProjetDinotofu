@@ -1,0 +1,61 @@
+HESTIA — ADAPTATION DINOTOFU
+============================
+
+STATUT
+------
+Hestia fait partie de l'histoire principale par sa découverte et son sauvetage, mais cette piste n'apparaît qu'assez tard : environ 20 quêtes validées avant que Diane ne ressorte un simple dossier de personne disparue. Terminer tout son arc personnel reste optionnel : le joueur peut la laisser à la guilde, chez lui ou simplement ne pas l'équiper régulièrement.
+
+DÉCOUVERTE
+----------
+Hestia est retrouvée ligotée et enchaînée dans un sous-sol abandonné, inconsciente et au bord de la mort. Personne, pas même elle, ne sait qu'elle est une divinité.
+
+La zone peut être occupée par :
+- des gobelins avec un gobelin ninja expérimenté ;
+- ou des squelettes avec un squelette suicidaire explosif dont le crâne piégé peut déclencher hallucination, poison et brûlure.
+Une infiltration est possible mais difficile.
+
+DÉBUT DE L'ARC
+--------------
+Après son sauvetage Hestia reste muette pendant un long moment. Elle commence à parler seulement lorsque sa confiance devient suffisante.
+
+Elle veut presque toujours aider son sauveur mais commence mauvaise dans pratiquement tous les domaines, magie comprise, le temps de sa réadaptation. Le joueur choisit librement sa classe actuelle et son équipement ; le jeu ne révèle pas immédiatement qu'elle possède un potentiel exceptionnel en magie divine et lumineuse.
+
+Ses maladresses peuvent même être dangereuses en combat au début. L'entraînement et l'accompagnement comptent réellement.
+
+ÉVEILS
+------
+Hestia possède trois grands éveils de magie divine/lumineuse.
+- Éveil 1 : première manifestation réellement anormale, premiers fragments de mémoire et de traumatisme.
+- Éveil 2 : magie beaucoup plus puissante, souvenirs plus précis et difficiles.
+- Éveil 3 : mémoire complète ; Hestia comprend qu'elle est une divinité et retourne dans les cieux.
+
+À partir du premier éveil, si Hestia est réellement présente dans l'équipe lorsque le joueur meurt, son instinct peut la pousser à sacrifier sa vie et sa matérialisation afin de téléporter le joueur en sécurité. Elle ne comprend pas consciemment pourquoi elle sait le faire.
+
+RÉSIDENCE ET LIEN AU JOUEUR
+---------------------------
+Si elle n'est pas active dans l'équipe, Hestia peut rester auprès de Diane à l'accueil de la guilde ou vivre dans la maison du joueur. Elle peut cohabiter sans problème avec un conjoint PNJ ou joueur.
+
+Elle n'est pas une romance du joueur. Leur lien peut devenir extrêmement proche, fraternel et intime émotionnellement : confiance absolue, présence rassurante, confidences et sentiment de famille choisie.
+
+Hestia n'exige aucun entretien : le joueur peut la laisser auprès de Diane ou à la maison aussi longtemps qu'il le souhaite, sans baisse de relation ni pénalité. Les visites restent de simples moments facultatifs. Lorsqu'elle vit à la maison, elle peut parfois rapporter de petits objets ou quelques pièces totalement ordinaires, surtout parce qu'elle est fière d'avoir essayé d'aider.
+
+PAMMES
+-------
+Après avoir passé un peu de temps à découvrir le monde avec le joueur, Hestia peut goûter les pammes si le joueur lui en fait essayer. Elle les adore et finit petit à petit par en devenir presque « accro » de manière comique et affectueuse : elle est particulièrement heureuse d'en voir ou d'en manger, mais il n'existe aucune dépendance, jauge d'entretien, pénalité, manque ou obligation de lui en fournir.
+
+Les pammes sont un aliment propre à l'univers de Dinotofu. Leur économie conserve aussi la règle voulue : achetées en lot, elles reviennent légèrement moins cher à l'unité.
+
+BELL CRANOUL
+------------
+Bell Cranoul considère Hestia comme une amie très proche mais ne l'a jamais aimée romantiquement comme Hestia l'aimait. Cet amour est à l'origine de sa première matérialisation. Plus tard, le joueur peut devenir son nouvel ancrage émotionnel sans que cette relation devienne romantique.
+
+ARTEFACT OFFERT
+---------------
+À la conclusion prévue de son arc, Hestia peut offrir un artefact évolutif.
+- Au repos : gant fixé à la peau du porteur.
+- En combat : prend automatiquement une forme d'arme adaptée au porteur.
+- Niveau N : 3 x N dégâts de base.
+- Pour atteindre le niveau suivant, l'artefact doit lui-même porter les coups fatals et absorber les âmes correspondantes.
+- Le compteur visible indique les âmes restantes avant l'évolution.
+- Une même famille de victimes finit par devenir trop familière et ne nourrit plus l'artefact, empêchant le farm trivial.
+- Au niveau 16, le porteur choisit une seconde forme d'arme permanente. Les deux formes deviennent ensuite interchangeables à volonté.

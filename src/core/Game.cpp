@@ -8,6 +8,7 @@
 #include "core/Console.hpp"
 #include "core/Random.hpp"
 #include "core/VersionInfo.hpp"
+#include "core/ExchangeTransferSystem.hpp"
 #include "class_system/ClassCatalog.hpp"
 #include "combat/Combat.hpp"
 #include "combat/system/CombatClassSystem.hpp"
@@ -29,6 +30,7 @@
 #include "interface/menu/quest/QuestDeadlineSupport.hpp"
 #include "interface/menu/InventoryMenu.hpp"
 #include "interface/menu/inventory/InventorySelection.hpp"
+#include "interface/menu/inventory/InventoryProtection.hpp"
 #include "interface/menu/PostCombatMenu.hpp"
 #include "interface/menu/training/TrainingGroundMenu.hpp"
 #include "interface/TerminalInterface.hpp"
@@ -38,6 +40,7 @@
 #include "cheat/CheatManager.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "progression/DeathRuleRules.hpp"
+#include "progression/magic/MagicStudyRules.hpp"
 #include "progression/death/DeathPenaltySystem.hpp"
 #include "item/weapon/Weapon.hpp"
 #include "item/armor/Armor.hpp"
@@ -874,6 +877,7 @@ namespace
             {
                 const Weapon& weapon = weapons[i];
                 const bool equipped = static_cast<int>(i) == giver.getEquippedWeaponIndex();
+                const bool ownerBound = !weapon.canChangeOwner();
                 std::ostringstream hint;
                 hint << "Dégâts +" << weapon.getMinDamageBonus() << "/+" << weapon.getMaxDamageBonus()
                      << " | Critique +" << weapon.getCriticalBonus();
@@ -891,12 +895,16 @@ namespace
                 {
                     hint << " | équipée";
                 }
+                if (ownerBound)
+                {
+                    hint << " | liée à l'âme";
+                }
 
                 screen.addOption(
                     static_cast<int>(i - first + 1),
                     weapon.getName(),
                     hint.str(),
-                    !equipped,
+                    !equipped && !ownerBound,
                     "exchange.weapon.select",
                     makeExchangeItemData(
                         giver,
@@ -905,13 +913,13 @@ namespace
                         "select_weapon",
                         weapon.getName(),
                         hint.str(),
-                        equipped ? "Équipée - non transférable" : "Transférable",
+                        equipped ? "Équipée - non transférable" : (ownerBound ? "Liée à l'âme - non transférable" : "Transférable"),
                         "Valeur estimée " + Money::formatEconomyUnits(estimateWeaponTradeValue(weapon)),
                         "",
                         estimateWeaponTradeValue(weapon),
                         1,
                         1,
-                        equipped
+                        equipped || ownerBound
                     )
                 );
             }
@@ -977,6 +985,7 @@ namespace
             {
                 const Armor& armor = armors[i];
                 const bool equipped = static_cast<int>(i) == giver.getEquippedArmorIndex();
+                const bool ownerBound = !armor.canChangeOwner();
                 std::ostringstream hint;
                 hint << "PV +" << armor.getMaxHpBonus() << " | Réduction " << armor.getDamageReduction();
 
@@ -993,12 +1002,16 @@ namespace
                 {
                     hint << " | portée";
                 }
+                if (ownerBound)
+                {
+                    hint << " | liée à l'âme";
+                }
 
                 screen.addOption(
                     static_cast<int>(i - first + 1),
                     armor.getName(),
                     hint.str(),
-                    !equipped,
+                    !equipped && !ownerBound,
                     "exchange.armor.select",
                     makeExchangeItemData(
                         giver,
@@ -1007,13 +1020,13 @@ namespace
                         "select_armor",
                         armor.getName(),
                         hint.str(),
-                        equipped ? "Portée - non transférable" : "Transférable",
+                        equipped ? "Portée - non transférable" : (ownerBound ? "Liée à l'âme - non transférable" : "Transférable"),
                         "Valeur estimée " + Money::formatEconomyUnits(estimateArmorTradeValue(armor)),
                         "",
                         estimateArmorTradeValue(armor),
                         1,
                         1,
-                        equipped
+                        equipped || ownerBound
                     )
                 );
             }
@@ -1078,11 +1091,12 @@ namespace
             for (std::size_t i = first; i < last; ++i)
             {
                 const Consumable& consumable = consumables[i];
+                const bool ownerBound = !consumable.canChangeOwner();
                 screen.addOption(
                     static_cast<int>(i - first + 1),
                     consumable.getName(),
                     "Puissance " + consumable.getPowerDisplayText() + " | Valeur " + Money::formatEconomyUnits(consumable.getValue()),
-                    true,
+                    !ownerBound,
                     "exchange.consumable.select",
                     makeExchangeItemData(
                         giver,
@@ -1091,7 +1105,7 @@ namespace
                         "select_consumable",
                         consumable.getName(),
                         "Puissance " + consumable.getPowerDisplayText(),
-                        "Transférable",
+                        ownerBound ? "Lié à l'âme - non transférable" : "Transférable",
                         "Valeur " + Money::formatEconomyUnits(consumable.getValue()),
                         "",
                         consumable.getValue(),
@@ -1161,11 +1175,12 @@ namespace
             for (std::size_t i = first; i < last; ++i)
             {
                 const Material& material = materials[i];
+                const bool ownerBound = !material.canChangeOwner();
                 screen.addOption(
                     static_cast<int>(i - first + 1),
                     material.getName() + " x" + std::to_string(material.getQuantity()),
                     material.getCategory() + " | Qualité " + material.getQualityLabel() + " | Valeur " + Money::formatEconomyUnits(material.getValue()),
-                    true,
+                    !ownerBound,
                     "exchange.material.select",
                     makeExchangeItemData(
                         giver,
@@ -1174,7 +1189,7 @@ namespace
                         "select_material",
                         material.getName(),
                         material.getCategory() + " | Qualité " + material.getQualityLabel(),
-                        "Transférable",
+                        ownerBound ? "Lié à l'âme - non transférable" : "Transférable",
                         "Valeur unitaire " + Money::formatEconomyUnits(material.getValue()),
                         "",
                         material.getValue(),
@@ -1229,7 +1244,7 @@ Game::Game()
     selectedRace = CharacterRace::Human;
     selectedAge = 18;
     selectedVisualPresentation = "Non précisé";
-    selectedVisualVariant = "Variante A";
+    selectedVisualVariant = "Morphologie standard";
     characterLoaded = false;
     specialIdentityValidated = false;
     ephemeralSandboxSession = false;
@@ -1626,6 +1641,7 @@ Game::CombatRecapSnapshot Game::captureCombatRecapSnapshot() const
     snapshot.hp = mainPlayer.getHp();
     snapshot.maxHp = mainPlayer.getMaxHp();
     snapshot.totalCopper = mainPlayer.getInventory().getTotalCopper();
+    snapshot.coinStacks = mainPlayer.getInventory().getCoinStacks();
     snapshot.victories = mainPlayer.getVictories();
     snapshot.defeats = mainPlayer.getDefeats();
     snapshot.escapes = mainPlayer.getEscapes();
@@ -1671,18 +1687,21 @@ void Game::displayLastCombatRecap() const
             "Avant : niveau " + std::to_string(before.level)
                 + " | XP " + std::to_string(before.experience)
                 + " | PV " + std::to_string(before.hp) + "/" + std::to_string(before.maxHp)
-                + " | Argent " + Money::formatCopper(before.totalCopper),
+                + " | Pièces " + Money::formatCoinStacks(before.coinStacks, false)
+                + " | Total " + Money::formatWalletTotalFromCopper(before.totalCopper),
             "Après : niveau " + std::to_string(after.level)
                 + " | XP " + std::to_string(after.experience)
                 + " | PV " + std::to_string(after.hp) + "/" + std::to_string(after.maxHp)
-                + " | Argent " + Money::formatCopper(after.totalCopper),
+                + " | Pièces " + Money::formatCoinStacks(after.coinStacks, false)
+                + " | Total " + Money::formatWalletTotalFromCopper(after.totalCopper),
             "",
             "Variations :",
             "- Niveau : " + std::to_string(after.level - before.level),
             "- Expérience : " + std::to_string(after.experience - before.experience),
             "- PV actuels : " + std::to_string(after.hp - before.hp),
             "- PV max : " + std::to_string(after.maxHp - before.maxHp),
-            "- Argent : " + Money::formatCopper(after.totalCopper >= before.totalCopper ? after.totalCopper - before.totalCopper : before.totalCopper - after.totalCopper) + (after.totalCopper < before.totalCopper ? " perdus" : " gagnés"),
+            "- Pièces physiques : " + Money::formatCoinStackDelta(before.coinStacks, after.coinStacks),
+            "- Valeur totale : " + Money::formatWalletTotalFromCopper(before.totalCopper) + " -> " + Money::formatWalletTotalFromCopper(after.totalCopper),
             "- Victoires : " + std::to_string(after.victories - before.victories),
             "- Défaites : " + std::to_string(after.defeats - before.defeats),
             "- Fuites : " + std::to_string(after.escapes - before.escapes),
@@ -1941,7 +1960,7 @@ void Game::launchSelectedMode()
     }
     else if (selectedMode == GameMode::Locations)
     {
-        QuestMenu::openLocations(mainPlayer);
+        QuestMenu::openLocations(mainPlayer, selectedDifficulty, selectedDeathRule);
         saveCurrentProgress("Lieux notables");
     }
     else if (selectedMode == GameMode::NotableNpcs)
@@ -2205,6 +2224,14 @@ void Game::openQuickCharacterMenu(bool inventoryAvailable)
             "utility.character.craft",
             makeUtilityItemData(mainPlayer, "create", "Artisanat / craft", "Fabrication à partir des recettes dont les composants sont connus.", inventoryAvailable ? "Disponible" : "Indisponible")
         );
+        screen.addOption(
+            11,
+            "Stats",
+            "Fiche courte : identité, temps de jeu, argent, PV/mana, dégâts et protection.",
+            true,
+            "utility.character.stats_compact",
+            makeUtilityItemData(mainPlayer, "inspect", "Stats", "Fiche compacte immédiatement lisible.")
+        );
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une option personnage.");
         Console::clear();
@@ -2286,6 +2313,44 @@ void Game::openQuickCharacterMenu(bool inventoryAvailable)
             InventorySelection::openCraft(mainPlayer);
             saveCurrentProgress("Artisanat depuis Personnage");
             Console::clear();
+            continue;
+        }
+        if (choice == 11)
+        {
+            const long long seconds = std::max(0LL, mainPlayer.getRealPlayTimeSeconds());
+            const long long hours = seconds / 3600;
+            const long long minutes = (seconds % 3600) / 60;
+            const long long remainingSeconds = seconds % 60;
+            std::ostringstream playTime;
+            playTime << hours << " h " << minutes << " min " << remainingSeconds << " s";
+
+            const int protection = mainPlayer.hasEquippedArmor()
+                ? mainPlayer.getEquippedArmor().getDamageReduction()
+                : 0;
+
+            MessageScreen::show(
+                "STATS",
+                "utility.character.stats_compact.detail",
+                {
+                    "Nom : " + mainPlayer.getName(),
+                    "Race : " + mainPlayer.getRaceText() + " | Classe : " + mainPlayer.getType() + " | Niveau : " + std::to_string(mainPlayer.getLevel()),
+                    "Date actuelle : " + mainPlayer.formatWorldDateLine(),
+                    "Moment actuel : " + mainPlayer.formatWorldDayPartLine(),
+                    "Argent réel : " + mainPlayer.getInventory().getWalletLine(),
+                    "Valeur totale exacte : " + std::to_string(mainPlayer.getInventory().getTotalCopper()) + " PC",
+                    "Temps réel joué : " + playTime.str(),
+                    "PV : " + std::to_string(mainPlayer.getHp()) + "/" + std::to_string(mainPlayer.getMaxHp()),
+                    "Mana : " + std::to_string(mainPlayer.getMana()) + "/" + std::to_string(mainPlayer.getMaxMana())
+                        + " | Voie magique : " + mainPlayer.getMagicChannelingStyleLabel()
+                        + " | Rythme : " + mainPlayer.getMagicRecoveryLabel(),
+                    "Connaissances magiques : " + std::to_string(MagicStudyRules::magicKnowledgeScore(mainPlayer))
+                        + " (" + MagicStudyRules::magicKnowledgeLabel(MagicStudyRules::magicKnowledgeScore(mainPlayer)) + ")",
+                    mainPlayer.getMagicSupportStatusLine(),
+                    "Dégâts de base : " + std::to_string(mainPlayer.getMinDamage()) + " à " + std::to_string(mainPlayer.getMaxDamage()) + " | Critique : " + std::to_string(mainPlayer.getCriticalDamage()),
+                    "Protection équipée : " + std::to_string(protection)
+                },
+                false
+            );
             continue;
         }
     }
@@ -2379,7 +2444,7 @@ void Game::openQuickWorldMenu()
         }
         if (choice == 2)
         {
-            QuestMenu::openLocations(mainPlayer);
+            QuestMenu::openLocations(mainPlayer, selectedDifficulty, selectedDeathRule);
             saveCurrentProgress("Lieux et services depuis Monde / ville");
             continue;
         }
@@ -2623,8 +2688,15 @@ void Game::openInterfaceSettingsMenu()
         screen.addOption(3, "Fréquence : normal", "Affiche davantage d'indices contextuels.", true, "settings.hints.normal");
         screen.addOption(4, "Fréquence : forte", "Affiche beaucoup plus d'indications et rappels.", true, "settings.hints.high");
         screen.addOption(5, "Images IG : désactivées", "Verrouillé en terminal : les images ne servent qu'à l'IG et ne remplacent jamais les informations textuelles.", false, "settings.images.terminal_locked");
+        screen.addOption(6,
+            std::string("Titres cachés : ") + (mainPlayer.areHiddenTitlesRevealed() ? "affichés" : "masqués"),
+            mainPlayer.areHiddenTitlesRevealed()
+                ? "Affiche volontairement le nom et la condition des titres normalement cachés. Peut révéler histoire, boss, factions et systèmes rares."
+                : "Par défaut les titres secrets restent en ????. L'activation peut spoiler l'histoire et le contenu général du jeu.",
+            true,
+            "settings.titles.spoilers");
 
-        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une fréquence d'indications.");
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis un réglage.");
         Console::clear();
 
         if (choice == 0)
@@ -2650,6 +2722,46 @@ void Game::openInterfaceSettingsMenu()
                     "Toutes les informations importantes restent toujours écrites dans les textes, menus, cartes et descriptions."
                 }
             );
+            continue;
+        }
+
+        if (choice == 6)
+        {
+            if (mainPlayer.areHiddenTitlesRevealed())
+            {
+                mainPlayer.setRevealHiddenTitles(false);
+                saveCurrentProgress("Masquage des titres secrets");
+                MessageScreen::show(
+                    "TITRES SECRETS",
+                    "utility.settings.titles.hidden",
+                    {"Les titres cachés sont de nouveau masqués par défaut.", "Les noms, conditions et récompenses secrètes reviennent en ????."}
+                );
+            }
+            else
+            {
+                const bool confirmed = MessageScreen::askKeywordConfirmation(
+                    "ATTENTION — SPOILERS",
+                    "utility.settings.titles.spoiler_warning",
+                    {
+                        "Cette action comporte des risques de spoil sur l'histoire et le contenu général du jeu.",
+                        "Les noms et conditions de titres normalement cachés pourront révéler des boss, factions, systèmes, issues de combat et secrets.",
+                        "Ce réglage est destiné surtout aux joueurs curieux et aux chasseurs de complétion qui acceptent volontairement ces révélations.",
+                        "Il est désactivé par défaut et peut être remis sur masqué à tout moment.",
+                        "Tape SPOILER pour confirmer que tu acceptes de voir ces informations."
+                    },
+                    "SPOILER"
+                );
+                if (confirmed)
+                {
+                    mainPlayer.setRevealHiddenTitles(true);
+                    saveCurrentProgress("Affichage volontaire des titres secrets");
+                    MessageScreen::show(
+                        "TITRES SECRETS",
+                        "utility.settings.titles.revealed",
+                        {"Affichage volontaire activé.", "Les titres cachés apparaîtront maintenant normalement dans le catalogue des titres."}
+                    );
+                }
+            }
             continue;
         }
 
@@ -2797,7 +2909,6 @@ bool Game::openPostCombatMenu()
             const CombatRecapSnapshot& before = lastCombatRecap.before;
             const CombatRecapSnapshot& after = lastCombatRecap.after;
             const int xpDelta = after.experience - before.experience;
-            const long long copperDelta = after.totalCopper - before.totalCopper;
             const int hpDelta = after.hp - before.hp;
             const int victoryDelta = after.victories - before.victories;
             const int defeatDelta = after.defeats - before.defeats;
@@ -2809,7 +2920,8 @@ bool Game::openPostCombatMenu()
             screen.addLine("Résumé de la sortie : " + lastCombatRecap.modeName + " | " + lastCombatRecap.difficultyName + ".");
             screen.addLine(
                 "Bilan : XP " + std::to_string(xpDelta)
-                + " | Argent " + Money::formatCopper(copperDelta >= 0 ? copperDelta : -copperDelta) + (copperDelta < 0 ? " perdus" : " gagnés")
+                + " | Pièces " + Money::formatCoinStackDelta(before.coinStacks, after.coinStacks)
+                + " | Total PC " + std::to_string(before.totalCopper) + " -> " + std::to_string(after.totalCopper)
                 + " | PV " + std::to_string(hpDelta)
                 + " | Ennemis " + std::to_string(enemyDelta)
                 + " | Boss " + std::to_string(bossDelta)
@@ -3083,6 +3195,9 @@ void Game::openExchangeMenu()
 
         Console::clear();
         displayExchangeValueEstimation(*giver, *receiver);
+        const Player giverBeforeTransfer = *giver;
+        const Player receiverBeforeTransfer = *receiver;
+        bool transferPerformed = false;
 
         if (choice == 1)
         {
@@ -3098,10 +3213,9 @@ void Game::openExchangeMenu()
                 "Montant invalide."
             );
 
-            if (amount > 0 && giver->getInventory().spendEconomyUnits(amount))
+            if (ExchangeTransferSystem::transferEconomyUnits(*giver, *receiver, amount))
             {
-                receiver->getInventory().earnEconomyUnits(amount);
-                receiver->refreshCurrencyTitles();
+                transferPerformed = true;
                 MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.gold.success", {Money::formatEconomyUnits(amount) + " transféré."}, false);
             }
             else
@@ -3116,9 +3230,21 @@ void Game::openExchangeMenu()
             if (index >= 0)
             {
                 Weapon weapon = giver->getInventory().getWeapon(index);
-                receiver->getInventory().addWeapon(weapon);
-                giver->getInventory().removeWeapon(index);
-                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.weapon.success", {"Arme transférée : " + weapon.getName() + "."}, false);
+                const std::string key = Inventory::weaponItemKey(weapon);
+                if (!InventoryProtection::confirmLockedItemUse(*giver, key, weapon.getName(), "transférer à " + receiver->getName(), "exchange.weapon.locked_confirm"))
+                {
+                    MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.weapon.locked_cancel", {"L'arme verrouillée reste dans l'inventaire."}, false);
+                    continue;
+                }
+                if (ExchangeTransferSystem::transferWeapon(*giver, *receiver, index))
+                {
+                    transferPerformed = true;
+                    MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.weapon.success", {"Arme transférée : " + weapon.getName() + "."}, false);
+                }
+                else
+                {
+                    MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.weapon.transfer_failed", {"Le transfert réel de l'arme a échoué ; aucun duplicata n'a été créé."}, false);
+                }
             }
             else
             {
@@ -3132,9 +3258,21 @@ void Game::openExchangeMenu()
             if (index >= 0)
             {
                 Armor armor = giver->getInventory().getArmor(index);
-                receiver->getInventory().addArmor(armor);
-                giver->getInventory().removeArmor(index);
-                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.armor.success", {"Armure transférée : " + armor.getName() + "."}, false);
+                const std::string key = Inventory::armorItemKey(armor);
+                if (!InventoryProtection::confirmLockedItemUse(*giver, key, armor.getName(), "transférer à " + receiver->getName(), "exchange.armor.locked_confirm"))
+                {
+                    MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.armor.locked_cancel", {"L'armure verrouillée reste dans l'inventaire."}, false);
+                    continue;
+                }
+                if (ExchangeTransferSystem::transferArmor(*giver, *receiver, index))
+                {
+                    transferPerformed = true;
+                    MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.armor.success", {"Armure transférée : " + armor.getName() + "."}, false);
+                }
+                else
+                {
+                    MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.armor.transfer_failed", {"Le transfert réel de l'armure a échoué ; aucun duplicata n'a été créé."}, false);
+                }
             }
             else
             {
@@ -3148,9 +3286,21 @@ void Game::openExchangeMenu()
             if (index >= 0)
             {
                 Consumable consumable = giver->getInventory().getConsumable(index);
-                receiver->getInventory().addConsumable(consumable);
-                giver->getInventory().removeConsumable(index);
-                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.consumable.success", {"Consommable transféré : " + consumable.getName() + "."}, false);
+                const std::string key = Inventory::consumableItemKey(consumable);
+                if (!InventoryProtection::confirmLockedItemUse(*giver, key, consumable.getName(), "transférer à " + receiver->getName(), "exchange.consumable.locked_confirm"))
+                {
+                    MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.consumable.locked_cancel", {"Le consommable verrouillé reste dans l'inventaire."}, false);
+                    continue;
+                }
+                if (ExchangeTransferSystem::transferConsumable(*giver, *receiver, index))
+                {
+                    transferPerformed = true;
+                    MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.consumable.success", {"Consommable transféré : " + consumable.getName() + "."}, false);
+                }
+                else
+                {
+                    MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.consumable.transfer_failed", {"Le transfert réel du consommable a échoué ; aucun duplicata n'a été créé."}, false);
+                }
             }
             else
             {
@@ -3164,6 +3314,11 @@ void Game::openExchangeMenu()
             if (index >= 0)
             {
                 Material material = giver->getInventory().getMaterial(index);
+                if (!InventoryProtection::confirmLockedMaterialUse(*giver, material.getId(), material.getName(), "transférer à " + receiver->getName(), "exchange.material.locked_confirm"))
+                {
+                    MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.material.locked_cancel", {"Le matériau verrouillé reste dans l'inventaire."}, false);
+                    continue;
+                }
                 int amount = MessageScreen::askQuantity(
                     "QUANTITÉ À TRANSFÉRER",
                     "exchange.material.quantity",
@@ -3175,10 +3330,15 @@ void Game::openExchangeMenu()
                     material.getQuantity(),
                     "Quantité invalide."
                 );
-                material.setQuantity(amount);
-                receiver->getInventory().addMaterial(material);
-                giver->getInventory().removeMaterialQuantity(index, amount);
-                MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.material.success", {"Matériau transféré : " + material.getName() + " x" + std::to_string(amount) + "."}, false);
+                if (ExchangeTransferSystem::transferMaterial(*giver, *receiver, index, amount))
+                {
+                    transferPerformed = true;
+                    MessageScreen::show("ÉCHANGE EFFECTUÉ", "exchange.material.success", {"Matériau transféré : " + material.getName() + " x" + std::to_string(amount) + "."}, false);
+                }
+                else
+                {
+                    MessageScreen::show("ÉCHANGE ANNULÉ", "exchange.material.transfer_failed", {"Le transfert réel du matériau a échoué ; aucun duplicata n'a été créé."}, false);
+                }
             }
             else
             {
@@ -3186,8 +3346,34 @@ void Game::openExchangeMenu()
             }
         }
 
-        SaveManager::savePlayerSnapshot(mainPlayer, accountName, selectedDifficulty, selectedDeathRule);
-        SaveManager::savePlayerSnapshot(targetPlayer, targetAccount, targetDifficulty, targetDeathRule);
+        if (!transferPerformed)
+        {
+            continue;
+        }
+
+        if (!SaveManager::savePlayerExchangePair(
+            mainPlayer,
+            accountName,
+            selectedDifficulty,
+            selectedDeathRule,
+            targetPlayer,
+            targetAccount,
+            targetDifficulty,
+            targetDeathRule
+        ))
+        {
+            *giver = giverBeforeTransfer;
+            *receiver = receiverBeforeTransfer;
+            MessageScreen::show(
+                "ÉCHANGE ANNULÉ",
+                "exchange.save_pair_failed",
+                {
+                    "La sauvegarde complète des deux personnages a échoué.",
+                    "Les fichiers précédents ont été restaurés et le transfert a été annulé en mémoire."
+                }
+            );
+            continue;
+        }
 
         MessageScreen::show(
             "ÉCHANGE SAUVEGARDÉ",

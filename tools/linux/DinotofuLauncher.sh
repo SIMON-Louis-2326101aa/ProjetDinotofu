@@ -114,13 +114,236 @@ installed_runnable_exists() {
     return 1
 }
 
+stop_dinotofu_background_processes() {
+    unset DINOTOFU_GUI_INPUT_MODE || true
+    unset DINOTOFU_GUI_INPUT_FILE || true
+    unset DINOTOFU_GUI_INPUT_QUEUE_DIR || true
+    local target_dir="${1:-$INSTALL_DIR}"
+    target_dir="${target_dir%/}"
+    local debug_dir="${target_dir}/gui_debug"
+    if [[ -f "${debug_dir}/server.pid" ]]; then
+        local spid
+        spid="$(cat "${debug_dir}/server.pid" 2>/dev/null || true)"
+        if [[ -n "$spid" && "$spid" =~ ^[0-9]+$ && "$spid" != "$$" && "$spid" != "$PPID" ]]; then
+            kill -TERM "$spid" 2>/dev/null || true
+        fi
+        rm -f "${debug_dir}/server.pid"
+    fi
+    if [[ -f "${debug_dir}/game.pid" ]]; then
+        local gpid
+        gpid="$(cat "${debug_dir}/game.pid" 2>/dev/null || true)"
+        if [[ -n "$gpid" && "$gpid" =~ ^[0-9]+$ && "$gpid" != "$$" && "$gpid" != "$PPID" ]]; then
+            kill -TERM "$gpid" 2>/dev/null || true
+        fi
+        rm -f "${debug_dir}/game.pid"
+    fi
+
+    # Arret des serveurs preview associes au repertoire cible
+    local pids
+    pids="$(pgrep -f "serve_gui_preview.py.*${target_dir}" 2>/dev/null || true)"
+    for pid in $pids; do
+        if [[ "$pid" != "$$" && "$pid" != "$PPID" ]]; then
+            kill -TERM "$pid" 2>/dev/null || true
+        fi
+    done
+
+    # Arret des binaires de jeu Dinotofu / DinotofuGUI (en excluant strictement le launcher et les scripts shell)
+    pids="$(pgrep -f "${target_dir}/(output/)?(Dinotofu|DinotofuGUI)($|[[:space:]])" 2>/dev/null || true)"
+    for pid in $pids; do
+        if [[ "$pid" != "$$" && "$pid" != "$PPID" ]]; then
+            local cmd
+            cmd="$(ps -p "$pid" -o args= 2>/dev/null || true)"
+            if [[ "$cmd" != *DinotofuLauncher* && "$cmd" != *Lancer-Dinotofu* && "$cmd" != *Installer-Dinotofu* && "$cmd" != *bump_version* && "$cmd" != *make* && "$cmd" != *g++* ]]; then
+                kill -TERM "$pid" 2>/dev/null || true
+            fi
+        fi
+    done
+}
+
+extract_archive() {
+    local archive="$1"
+    local dest="$2"
+    mkdir -p "$dest"
+    if [[ "$archive" == *.7z ]]; then
+        if command -v 7z >/dev/null 2>&1; then
+            7z x -y -o"$dest" "$archive" >/dev/null
+        elif command -v bsdtar >/dev/null 2>&1; then
+            bsdtar -xf "$archive" -C "$dest"
+        elif command -v tar >/dev/null 2>&1; then
+            tar -xf "$archive" -C "$dest"
+        else
+            echo "Erreur : outil introuvable pour extraire le fichier .7z (7z, bsdtar ou tar)." >&2
+            return 1
+        fi
+    else
+        if command -v unzip >/dev/null 2>&1; then
+            unzip -q "$archive" -d "$dest"
+        elif command -v 7z >/dev/null 2>&1; then
+            7z x -y -o"$dest" "$archive" >/dev/null
+        elif command -v bsdtar >/dev/null 2>&1; then
+            bsdtar -xf "$archive" -C "$dest"
+        else
+            tar -xf "$archive" -C "$dest"
+        fi
+    fi
+}
+
+apply_launcher_update() {
+    local release_json="$1"
+    local target_dir="$2"
+    local target_version="$3"
+
+    local asset_info
+    mapfile -t asset_info < <(python3 - "$release_json" "$ASSET_PATTERN" <<'PY_ASSET' 2>/dev/null || true
+import fnmatch, json, sys
+with open(sys.argv[1], encoding='utf-8') as f:
+    data = json.load(f)
+pattern = sys.argv[2]
+patterns = [pattern]
+if pattern.endswith('.7z'): patterns.append(pattern[:-3] + '.zip')
+elif pattern.endswith('.zip'): patterns.append(pattern[:-4] + '.7z')
+patterns.extend(['Dinotofu-Linux-v*.7z', 'Dinotofu-Linux-v*.zip', 'Dinotofu-Linux*.7z', 'Dinotofu-Linux*.zip'])
+
+for p in patterns:
+    for asset in data.get('assets', []):
+        if fnmatch.fnmatch(asset.get('name', ''), p):
+            print(asset.get('name', ''))
+            print(asset.get('browser_download_url', ''))
+            sys.exit(0)
+for asset in data.get('assets', []):
+    name = asset.get('name', '')
+    if 'Linux' in name and 'Installer' not in name and (name.endswith('.7z') or name.endswith('.zip')):
+        print(name)
+        print(asset.get('browser_download_url', ''))
+        sys.exit(0)
+sys.exit(1)
+PY_ASSET
+)
+
+    local asset_name="${asset_info[0]:-}"
+    local asset_url="${asset_info[1]:-}"
+
+    if [[ -z "$asset_url" ]]; then
+        echo "Avertissement : aucun fichier de release Linux compatible trouve pour ${ASSET_PATTERN}." >&2
+        return 1
+    fi
+
+    echo "==> Fichier de mise a jour trouve : ${asset_name}"
+    local worker_script
+    worker_script="$(mktemp /tmp/dinotofu_updater.XXXXXX.sh)"
+    cat <<'WORKER_EOF' > "$worker_script"
+#!/usr/bin/env bash
+set -euo pipefail
+
+target_dir="$1"
+asset_name="$2"
+asset_url="$3"
+target_version="$4"
+launch_mode="$5"
+
+update_tmp="$(mktemp -d /tmp/dinotofu_update_pkg.XXXXXX)"
+archive_file="${update_tmp}/${asset_name}"
+extract_dir="${update_tmp}/extract"
+backup_dir="${update_tmp}/save_backup"
+mkdir -p "$extract_dir" "$backup_dir"
+
+extract_archive() {
+    local archive="$1"
+    local dest="$2"
+    mkdir -p "$dest"
+    if [[ "$archive" == *.7z ]]; then
+        if command -v 7z >/dev/null 2>&1; then
+            7z x -y -o"$dest" "$archive" >/dev/null
+        elif command -v bsdtar >/dev/null 2>&1; then
+            bsdtar -xf "$archive" -C "$dest"
+        elif command -v tar >/dev/null 2>&1; then
+            tar -xf "$archive" -C "$dest"
+        else
+            echo "Erreur : outil d'extraction .7z introuvable (7z, bsdtar ou tar)." >&2
+            exit 1
+        fi
+    else
+        if command -v unzip >/dev/null 2>&1; then
+            unzip -q "$archive" -d "$dest"
+        elif command -v 7z >/dev/null 2>&1; then
+            7z x -y -o"$dest" "$archive" >/dev/null
+        elif command -v bsdtar >/dev/null 2>&1; then
+            bsdtar -xf "$archive" -C "$dest"
+        else
+            tar -xf "$archive" -C "$dest"
+        fi
+    fi
+}
+
+if [[ -d "$target_dir" ]]; then
+    echo "==> Sauvegarde des donnees joueur"
+    for p in assets/saves data/assets/saves saves accounts characters exported_accounts import_accounts; do
+        if [[ -e "${target_dir}/${p}" ]]; then
+            mkdir -p "${backup_dir}/$(dirname "$p")"
+            cp -a "${target_dir}/${p}" "${backup_dir}/${p}"
+        fi
+    done
+fi
+
+echo "==> Telechargement de la mise a jour (${target_version})..."
+if ! curl -L --progress-bar -H "User-Agent: DinotofuLauncher" "$asset_url" -o "$archive_file"; then
+    echo "Erreur : echec du telechargement de la mise a jour." >&2
+    rm -rf "$update_tmp"
+    exit 1
+fi
+
+echo "==> Extraction de la mise a jour..."
+extract_archive "$archive_file" "$extract_dir"
+
+source_dir="$extract_dir"
+sub_cand="$(find "$extract_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
+if [[ -n "$sub_cand" && ( -f "${sub_cand}/Dinotofu" || -f "${sub_cand}/output/Dinotofu" || -d "${sub_cand}/assets" || -d "${sub_cand}/data/assets" ) ]]; then
+    source_dir="$sub_cand"
+fi
+
+echo "==> Application de la mise a jour dans ${target_dir}..."
+mkdir -p "$target_dir"
+cp -a "${source_dir}/." "$target_dir/"
+
+if [[ -d "$backup_dir" ]]; then
+    echo "==> Restauration des donnees joueur"
+    cp -a "${backup_dir}/." "$target_dir/" 2>/dev/null || true
+fi
+
+echo "$target_version" > "${target_dir}/version.txt"
+chmod +x "${target_dir}/Dinotofu" "${target_dir}/output/Dinotofu" \
+         "${target_dir}/DinotofuLauncher.sh" "${target_dir}/Lancer-Dinotofu.sh" \
+         "${target_dir}/Lancer-Dinotofu-Terminal.sh" "${target_dir}/Installer-Dinotofu.sh" 2>/dev/null || true
+
+rm -rf "$update_tmp"
+rm -f "$0" 2>/dev/null || true
+
+echo ""
+echo "================================================="
+echo " Mise a jour terminee avec succes !"
+echo "================================================="
+echo ""
+if [[ -t 0 ]]; then
+    read -r -s -n 1 -p "Appuie sur une touche pour lancer Dinotofu..." _ || true
+    echo ""
+fi
+clear 2>/dev/null || tput clear 2>/dev/null || true
+
+exec "${target_dir}/DinotofuLauncher.sh" --no-update "--mode=${launch_mode}"
+WORKER_EOF
+
+    chmod +x "$worker_script"
+    stop_dinotofu_background_processes "$target_dir" 2>/dev/null || true
+    exec "$worker_script" "$target_dir" "$asset_name" "$asset_url" "$target_version" "$LAUNCH_MODE"
+}
+
 run_installer_repair() {
     if [[ -x "${INSTALL_DIR}/Installer-Dinotofu.sh" ]]; then
-        "${INSTALL_DIR}/Installer-Dinotofu.sh" --skip-launch --no-prompt
+        "${INSTALL_DIR}/Installer-Dinotofu.sh" --update --install-dir="${INSTALL_DIR}" --skip-launch --no-prompt
         return 0
     fi
     if [[ -x "${INSTALL_DIR}/DinotofuInstaller.sh" ]]; then
-        "${INSTALL_DIR}/DinotofuInstaller.sh" --skip-launch --no-prompt
+        "${INSTALL_DIR}/DinotofuInstaller.sh" --update --install-dir="${INSTALL_DIR}" --skip-launch --no-prompt
         return 0
     fi
     return 1
@@ -244,12 +467,16 @@ PY
         remote_version="$(normalize_version "$remote_tag")"
         if [[ -n "$remote_version" ]] && version_is_older "$local_version" "$remote_version"; then
             echo "Mise a jour obligatoire disponible : ${local_version} -> ${remote_version}"
-            if run_installer_repair; then
+            if apply_launcher_update "$tmp_json" "$INSTALL_DIR" "$remote_version"; then
+                UPDATE_APPLIED="true"
+            elif run_installer_repair; then
                 UPDATE_APPLIED="true"
             fi
         elif [[ -n "$remote_version" ]] && ! installed_runnable_exists; then
             echo "Installation incomplete : aucun executable local trouve malgre une version a jour. Reparation depuis la release GitHub."
-            if run_installer_repair; then
+            if apply_launcher_update "$tmp_json" "$INSTALL_DIR" "$remote_version"; then
+                UPDATE_APPLIED="true"
+            elif run_installer_repair; then
                 UPDATE_APPLIED="true"
             fi
         fi
@@ -333,52 +560,6 @@ open_url_or_file() {
     else
         echo "Ouvre manuellement : $target"
     fi
-}
-
-stop_dinotofu_background_processes() {
-    unset DINOTOFU_GUI_INPUT_MODE || true
-    unset DINOTOFU_GUI_INPUT_FILE || true
-    unset DINOTOFU_GUI_INPUT_QUEUE_DIR || true
-    local target_dir="${1:-$INSTALL_DIR}"
-    target_dir="${target_dir%/}"
-    local debug_dir="${target_dir}/gui_debug"
-    if [[ -f "${debug_dir}/server.pid" ]]; then
-        local spid
-        spid="$(cat "${debug_dir}/server.pid" 2>/dev/null || true)"
-        if [[ -n "$spid" && "$spid" =~ ^[0-9]+$ && "$spid" != "$$" && "$spid" != "$PPID" ]]; then
-            kill -TERM "$spid" 2>/dev/null || true
-        fi
-        rm -f "${debug_dir}/server.pid"
-    fi
-    if [[ -f "${debug_dir}/game.pid" ]]; then
-        local gpid
-        gpid="$(cat "${debug_dir}/game.pid" 2>/dev/null || true)"
-        if [[ -n "$gpid" && "$gpid" =~ ^[0-9]+$ && "$gpid" != "$$" && "$gpid" != "$PPID" ]]; then
-            kill -TERM "$gpid" 2>/dev/null || true
-        fi
-        rm -f "${debug_dir}/game.pid"
-    fi
-
-    # Arret des serveurs preview associes au repertoire cible
-    local pids
-    pids="$(pgrep -f "serve_gui_preview.py.*${target_dir}" 2>/dev/null || true)"
-    for pid in $pids; do
-        if [[ "$pid" != "$$" && "$pid" != "$PPID" ]]; then
-            kill -TERM "$pid" 2>/dev/null || true
-        fi
-    done
-
-    # Arret des binaires de jeu Dinotofu / DinotofuGUI (en excluant strictement le launcher et les scripts shell)
-    pids="$(pgrep -f "${target_dir}/(output/)?(Dinotofu|DinotofuGUI)($|[[:space:]])" 2>/dev/null || true)"
-    for pid in $pids; do
-        if [[ "$pid" != "$$" && "$pid" != "$PPID" ]]; then
-            local cmd
-            cmd="$(ps -p "$pid" -o args= 2>/dev/null || true)"
-            if [[ "$cmd" != *DinotofuLauncher* && "$cmd" != *Lancer-Dinotofu* && "$cmd" != *Installer-Dinotofu* && "$cmd" != *bump_version* && "$cmd" != *make* && "$cmd" != *g++* ]]; then
-                kill -TERM "$pid" 2>/dev/null || true
-            fi
-        fi
-    done
 }
 
 start_gui_preview() {

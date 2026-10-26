@@ -87,7 +87,7 @@ namespace
 
         if (name == "hestia")
         {
-            return {"Hestia recule d'un pas, puis son dôme apparaît par réflexe.", "Hestia : Je ne sais même pas encore tout ce que je suis...", "Hestia : Alors ne prends pas mon nom pour te cacher dedans."};
+            return {"Hestia recule d'un pas et serre ses mains contre elle.", "Hestia : Je ne sais déjà pas très bien qui je suis...", "Hestia : Alors ne prends pas mon nom pour te cacher dedans."};
         }
 
         if (name == "louis")
@@ -171,7 +171,7 @@ namespace
 
         if (name == "hestia")
         {
-            return {"Le dôme d'Hestia disparaît lentement.", "Hestia : C'est... vraiment reconnu ?", "Hestia : Alors bienvenue. Reste près du dôme si le monde devient trop bruyant."};
+            return {"Hestia hésite longtemps avant de sourire.", "Hestia : C'est... vraiment reconnu ?", "Hestia : Alors bienvenue. Je crois que ça va aller."};
         }
 
         if (name == "louis")

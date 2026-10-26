@@ -146,7 +146,7 @@ int main()
                 {
                     types.push_back(offer.objectiveType);
                 }
-                if (offer.objectiveType == "combat" || offer.objectiveType == "exploration") actionCount++;
+                if (offer.objectiveType == "combat" || offer.objectiveType == "exploration" || offer.objectiveType == "bounty") actionCount++;
             }
             if (offers.size() >= 3) assert(types.size() >= 3);
             const int desiredActionMinimum = level >= 7 ? 3 : 2;

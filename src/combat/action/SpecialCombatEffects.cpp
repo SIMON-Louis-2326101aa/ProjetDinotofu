@@ -269,16 +269,6 @@ bool SpecialCombatEffects::specialCharacterDodgesBeforeDamage(
         }
     }
 
-    if (isName(defender, "Hestia") && random.between(1, 100) <= 18)
-    {
-        showSpecialCombatMessage(
-            "ESQUIVE SPÉCIALE",
-            "combat.special.hestia.dodge",
-            {"Hestia ferme les yeux de peur... et esquive presque par accident."}
-        );
-        return true;
-    }
-
     if (isName(defender, "Aoi") && random.between(1, 100) <= 16)
     {
         showSpecialCombatMessage(
@@ -366,7 +356,6 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
     bool& critical
 )
 {
-    static std::map<std::string, int> hestiaSpellCounter;
     std::map<std::string, int>& attackCounters = specialAttackCounters();
     attackCounters[attacker.getName()]++;
 
@@ -415,36 +404,8 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         );
     }
 
-    if (isName(attacker, "Hestia"))
-    {
-        hestiaSpellCounter[attacker.getName()]++;
-        int bonus = hestiaSpellCounter[attacker.getName()] * 4;
-
-        if (shouldTriggerSpecialUltimate(attacker))
-        {
-            markSpecialUltimateUsed(attacker);
-            bonus += 30;
-            showSpecialCombatMessage(
-                "ULTIME SPÉCIAL",
-                "combat.special.hestia.ultimate",
-                {
-                    "Ultime spécial - Hestia : Dôme d'étoile oubliée.",
-                    "Elle tremble, mais le sort ne tremble pas avec elle."
-                }
-            );
-        }
-
-        rawDamage += bonus;
-
-        showSpecialCombatMessage(
-            "EFFET SPÉCIAL - HESTIA",
-            "combat.special.hestia.spell_growth",
-            {
-                "La magie d'Hestia résonne malgré sa peur.",
-                "Chaque incantation, ratée ou non, renforce la suivante : +" + std::to_string(bonus) + " dégâts bruts."
-            }
-        );
-    }
+    // Hestia n'obtient plus de croissance magique automatique par son seul nom.
+    // Sa vraie progression lumière/divin dépend désormais de HestiaArcSystem et de ses éveils.
 
     if (isName(attacker, "Kanadé"))
     {
@@ -636,12 +597,6 @@ void SpecialCombatEffects::applySpecialCharacterAttackBonus(
         showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.henrique_hazak", {"Hazak couvre l'angle mort d'Henrique : +5 dégâts bruts."});
     }
 
-    if (isName(attacker, "Hazak") && isGroupedWith(attacker, "Hestia"))
-    {
-        rawDamage += 8;
-        showSpecialCombatMessage("SYNERGIE SPÉCIALE", "combat.special.synergy.hazak_hestia", {"Hazak frappe plus froidement tant qu'Hestia est dans l'arène : +8 dégâts bruts."});
-    }
-
     if (isName(attacker, "Aoi") && isGroupedWith(attacker, "Kanadé"))
     {
         rawDamage += 5;
@@ -725,21 +680,6 @@ void SpecialCombatEffects::applySpecialCharacterAfterDamage(
         );
     }
 
-    if (isName(defender, "Hestia") && isGroupedWith(defender, "Hazak") && random.between(1, 100) <= 35)
-    {
-        int counterDamage = random.between(5, 12);
-        attacker.takeDamage(counterDamage);
-
-        showSpecialCombatMessage(
-            "RIPOSTE SILENCIEUSE",
-            "combat.special.hazak.hestia_counter",
-            {
-                "Hazak ne laisse pas l'impact sur Hestia devenir gratuit.",
-                attacker.getName() + " subit " + std::to_string(counterDamage) + " dégâts de riposte silencieuse."
-            }
-        );
-    }
-
     if (isName(attacker, "Kanadé") && isGroupedWith(attacker, "Aoi") && random.between(1, 100) <= 22)
     {
         int extraDamage = random.between(5, 10);
@@ -805,27 +745,6 @@ void SpecialCombatEffects::applySpecialCharacterAfterReceivingDamage(
 )
 {
     static std::set<std::string> henriqueReviveUsed;
-    static std::set<std::string> hestiaDomeUsed;
-
-    if (isName(defender, "Hestia") && defender.isDead())
-    {
-        if (hestiaDomeUsed.find(defender.getName()) == hestiaDomeUsed.end())
-        {
-            hestiaDomeUsed.insert(defender.getName());
-            defender.reviveWithHealthPercentage(35);
-
-            showSpecialCombatMessage(
-                "DÔME D'HESTIA",
-                "combat.special.hestia.revive",
-                {
-                    "Hestia disparaît presque derrière la peur...",
-                    "Puis un dôme ancien se rallume tout seul, comme si quelque chose refusait de la laisser tomber.",
-                    "Protection spéciale : retour unique à " + std::to_string(defender.getHp()) + "/" + std::to_string(defender.getMaxHp()) + " PV."
-                }
-            );
-        }
-    }
-
     if (isName(defender, "Henrique") && defender.isDead())
     {
         if (henriqueReviveUsed.find(defender.getName()) == henriqueReviveUsed.end())
@@ -899,12 +818,6 @@ void SpecialCombatEffects::applySpecialCharacterAfterReceivingDamage(
     {
         defender.heal(5);
         showSpecialCombatMessage("SOUTIEN DE SANCTUS", "combat.special.sanctus.kanade_support", {"Sanctus encaisse juste assez pour que Kanadé garde sa colère utile : +5 PV."});
-    }
-
-    if (isName(defender, "Hestia") && isGroupedWith(defender, "Hazak") && random.between(1, 100) <= 25)
-    {
-        defender.startDefensePosture(22, 6, "Protection de Hazak autour d'Hestia");
-        showSpecialCombatMessage("PROTECTION DE HAZAK", "combat.special.hazak.hestia_guard", {"Hazak déplace le combat autour d'Hestia. Sa prochaine garde devient plus sûre."});
     }
 
     if (isName(defender, "Louis") && isGroupedWith(defender, "Mattzelda") && random.between(1, 100) <= 18)

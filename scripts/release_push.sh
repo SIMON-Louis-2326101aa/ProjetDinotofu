@@ -5,9 +5,12 @@ set -euo pipefail
 # GitHub Actions créera ensuite le tag et la release automatiquement.
 #
 # Exemples :
+#   ./scripts/release_push.sh current "Dinotofu V3.57.08 - premier push"
 #   ./scripts/release_push.sh patch
 #   ./scripts/release_push.sh minor "Nouveau système de magie"
 #   ./scripts/release_push.sh 1.33.00 "Début interface graphique"
+#
+# Le mode "current" pousse exactement la version déjà validée sans rebump.
 
 BUMP_MODE="${1:-patch}"
 COMMIT_MESSAGE="${2:-}"
@@ -20,12 +23,22 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     exit 1
 fi
 
-python3 scripts/bump_version.py "${BUMP_MODE}" --no-commit
-VERSION="$(bash ./scripts/get_version.sh)"
+if [[ "${BUMP_MODE}" == "current" || "${BUMP_MODE}" == "--no-bump" ]]; then
+    VERSION="$(bash ./scripts/get_version.sh)"
+else
+    python3 scripts/bump_version.py "${BUMP_MODE}" --no-commit
+    VERSION="$(bash ./scripts/get_version.sh)"
+fi
 
 if [[ -z "${COMMIT_MESSAGE}" ]]; then
-    COMMIT_MESSAGE="Patch Dinotofu ${VERSION}"
+    if [[ "${BUMP_MODE}" == "current" || "${BUMP_MODE}" == "--no-bump" ]]; then
+        COMMIT_MESSAGE="Dinotofu ${VERSION}"
+    else
+        COMMIT_MESSAGE="Patch Dinotofu ${VERSION}"
+    fi
 fi
+
+bash ./scripts/pre_push_check.sh
 
 git add .
 if git diff --cached --quiet; then

@@ -11,6 +11,8 @@
 #include "progression/DifficultyMode.hpp"
 #include "progression/death/DeathPenaltyResult.hpp"
 
+struct LethalSpiritResistanceResult;
+
 class DeathPenaltySystem
 {
 public:
@@ -31,6 +33,7 @@ public:
     // EN: displayLethalCurrentDeathStatistic declares or implements a focused behavior used by this module.
     // FR: displayLethalCurrentDeathStatistic déclare ou implémente un comportement précis utilisé par ce module.
     static void displayLethalCurrentDeathStatistic();
+    static void displayLethalSpiritResistance(const LethalSpiritResistanceResult& result);
     // EN: displayLethalSurvivalAnomaly declares or implements a focused behavior used by this module.
     // FR: displayLethalSurvivalAnomaly déclare ou implémente un comportement précis utilisé par ce module.
     static void displayLethalSurvivalAnomaly();

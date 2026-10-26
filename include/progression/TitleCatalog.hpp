@@ -19,9 +19,11 @@ namespace TitleCatalog
         std::string effect;
         bool visibleBeforeUnlock = false;
         bool requiredForUltimate = true;
+        std::string ultimateAlternativeGroup;
     };
 
     const std::vector<TitleDefinition>& availableTitleDefinitions();
+    std::string catalogVersion();
     const TitleDefinition* findTitleDefinition(const std::string& titleName);
     std::string unlockHintFor(const std::string& titleName);
     std::string effectFor(const std::string& titleName);

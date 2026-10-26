@@ -18,6 +18,25 @@
 
 #include <iostream>
 
+
+namespace
+{
+    bool confirmLockedCombatConsumable(Player& player, const Consumable& potion)
+    {
+        const std::string key = Inventory::consumableItemKey(potion);
+        if (!player.getInventory().isLockedItemKey(key)) return true;
+
+        MenuScreen screen("CONSOMMABLE VERROUILLÉ", "combat.potion.lock_confirm");
+        screen.addLine("Objet : " + potion.getName());
+        screen.addLine("Ce consommable est verrouillé dans ton inventaire.");
+        screen.addOption(1, "Utiliser exceptionnellement", "Le verrou restera actif après cette utilisation.", true, "combat.potion.lock_confirm_once");
+        screen.addOption(2, "Annuler", "Conserver le consommable.", true, "combat.potion.lock_cancel");
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis 1 ou 2.");
+        Console::clear();
+        return choice == 1;
+    }
+}
+
 // EN: openQuickHealing declares or implements a focused behavior used by this module.
 // FR: openQuickHealing déclare ou implémente un comportement précis utilisé par ce module.
 bool CombatPotionMenu::openQuickHealing(Player& player)
@@ -115,6 +134,7 @@ bool CombatPotionMenu::openQuickHealing(Player& player)
 
         if (action == 2)
         {
+            if (!confirmLockedCombatConsumable(player, potion)) continue;
             return CombatPotionUse::useHealingPotion(
                 player,
                 consumableIndex,
@@ -454,6 +474,7 @@ bool CombatPotionMenu::openPotionSelection(
 
         if (action == 2)
         {
+            if (!confirmLockedCombatConsumable(player, potion)) continue;
             return CombatPotionUse::useSelectedPotion(
                 player,
                 consumableIndex,

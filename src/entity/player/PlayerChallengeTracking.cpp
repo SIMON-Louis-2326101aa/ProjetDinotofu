@@ -359,4 +359,3 @@ void Player::finishChallengeCombatTracking(bool victory, bool bossFight, bool el
         PlayerUiSupport::showPlayerScreen("VALIDATION IMPOSSIBLE À EXPLIQUER", "challenge.hero.auto_turn_in", lines, false);
     }
 }
-

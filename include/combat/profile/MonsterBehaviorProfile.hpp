@@ -31,6 +31,7 @@ struct MonsterBehaviorProfile
     std::string durabilityLine;
     bool moraleSensitive = false;
     bool canFlee = false;
+    bool canStealOnEscape = false;
     bool rivalEligible = false;
     std::string rivalTemperament = "survivant prudent";
     std::string groupRole = "isolé";

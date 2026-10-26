@@ -9,6 +9,12 @@
 #include <string>
 #include <vector>
 
+enum class ItemOwnershipBinding
+{
+    None,
+    SoulBound
+};
+
 class Item
 {
 protected:
@@ -16,6 +22,11 @@ protected:
     std::string description;
     int value;
     std::string persistentId;
+    ItemOwnershipBinding ownershipBinding;
+    bool uniqueRecoveryItem;
+    bool questRecoveryItem;
+    bool personalRecoveryItem;
+    int recoveryPriority;
 
 public:
     // EN: Item declares or implements a focused behavior used by this module.
@@ -39,6 +50,30 @@ public:
     const std::string& getPersistentId() const;
     void setPersistentId(const std::string& id);
     void ensurePersistentId(const std::string& prefix = "item");
+
+    ItemOwnershipBinding getOwnershipBinding() const;
+    void setOwnershipBinding(ItemOwnershipBinding binding);
+    void setSoulBound(bool soulBound = true);
+    bool isSoulBound() const;
+    bool canChangeOwner() const;
+    std::string getOwnershipBindingSaveText() const;
+    void loadOwnershipBindingFromSaveText(const std::string& saveText);
+    std::string getOwnershipBindingDisplayText() const;
+
+    void setUniqueRecoveryItem(bool unique = true);
+    void setQuestRecoveryItem(bool quest = true);
+    void setPersonalRecoveryItem(bool personal = true);
+    bool isUniqueRecoveryItem() const;
+    bool isQuestRecoveryItem() const;
+    bool isPersonalRecoveryItem() const;
+    void setRecoveryPriority(int priority);
+    int getRecoveryPriority() const;
+    int getAutomaticRecoveryPriorityScore() const;
+    bool isProtectedFromAutomaticAbandon() const;
+    bool hasSameRecoveryMetadata(const Item& other) const;
+    std::string getRecoveryTraitsSaveText() const;
+    void loadRecoveryMetadataFromSaveText(const std::string& traitsText, int priority);
+    std::string getRecoveryMetadataDisplayText() const;
 
     virtual std::vector<std::string> toDisplayLines() const;
 

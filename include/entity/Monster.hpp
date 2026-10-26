@@ -38,6 +38,10 @@ private:
     bool spawnedByReinforcementCall;
     bool weakenedReinforcementCaller;
     std::string rivalId;
+    std::string combatInstanceId;
+    // Transient combat-only escape progress. It is intentionally not serialized.
+    int escapeOpeningProgress;
+    int successfulEscapeOpenings;
     bool preparedSignatureActive;
     int preparedSignatureHpSnapshot;
     int preparedSignatureTier;
@@ -86,6 +90,12 @@ public:
     bool isPersistentRival() const;
     const std::string& getRivalId() const;
     void setRivalId(const std::string& id);
+    const std::string& getCombatInstanceId() const;
+    void setCombatInstanceId(const std::string& id);
+    int getEscapeOpeningProgress() const;
+    int getSuccessfulEscapeOpenings() const;
+    void recordSuccessfulEscapeOpening();
+    void resetEscapeOpeningProgress();
 
     bool doesSplitOnDeath() const;
     int getSplitMinCount() const;

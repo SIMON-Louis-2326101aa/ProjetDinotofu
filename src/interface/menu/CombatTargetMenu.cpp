@@ -11,6 +11,7 @@
 #include "combat/system/ObservationSystem.hpp"
 #include "combat/system/ElementalAffinitySystem.hpp"
 #include "combat/threat/ThreatSystem.hpp"
+#include "progression/TechniqueProgressionRules.hpp"
 
 #include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
@@ -127,15 +128,24 @@ namespace
 bool CombatTargetMenu::openForAttack(
     Player& player,
     EnemyCombatQueue& wave,
-    Random& random
+    Random& random,
+    std::string* resolvedTargetName,
+    std::string* resolvedTargetId,
+    bool* targetForcedByCombatRules
 )
 {
+    if (resolvedTargetName != nullptr) resolvedTargetName->clear();
+    if (resolvedTargetId != nullptr) resolvedTargetId->clear();
+    if (targetForcedByCombatRules != nullptr) *targetForcedByCombatRules = false;
     return openTargetMenu(
         player,
         wave,
         random,
         false,
-        0
+        0,
+        resolvedTargetName,
+        resolvedTargetId,
+        targetForcedByCombatRules
     );
 }
 
@@ -173,9 +183,13 @@ bool CombatTargetMenu::openForBoostedAttack(
 bool CombatTargetMenu::openForClassSkill(
     Player& player,
     EnemyCombatQueue& wave,
-    Random& random
+    Random& random,
+    std::string* resolvedTargetName,
+    std::string* resolvedTargetId
 )
 {
+    if (resolvedTargetName != nullptr) resolvedTargetName->clear();
+    if (resolvedTargetId != nullptr) resolvedTargetId->clear();
     if (!wave.hasActiveEnemies())
     {
         MessageScreen::show(
@@ -201,23 +215,70 @@ bool CombatTargetMenu::openForClassSkill(
         return false;
     }
 
+    const int level = player.getLevel();
+    const bool rangedWeapon = player.hasEquippedWeapon() && player.getEquippedWeapon().getType() == WeaponType::Bow;
+    const bool magicProfile = player.getMagicChannelingStyleLabel() != "Réserve mineure";
+    const bool rangedAmmunitionAvailable = !rangedWeapon || CombatActions::hasCompatibleAmmunition(player);
+    const int chainUnlockLevel = TechniqueProgressionRules::chainUnlockLevel(magicProfile);
+    const int tripleChainLevel = TechniqueProgressionRules::tripleChainUnlockLevel();
+    const int quadrupleChainLevel = TechniqueProgressionRules::quadrupleChainUnlockLevel();
+    const int battlefieldMasteryLevel = TechniqueProgressionRules::genericMasteryUnlockLevel("battlefield_mastery");
+    const int veteranRallyLevel = TechniqueProgressionRules::genericMasteryUnlockLevel("veteran_rally");
+    const int masterExecutionLevel = TechniqueProgressionRules::genericMasteryUnlockLevel("master_execution");
+    const int perfectGuardBreakLevel = TechniqueProgressionRules::genericMasteryUnlockLevel("perfect_guard_break");
+    const int firstTechniqueLevel = TechniqueProgressionRules::genericTechniqueUnlockLevel("safe_rally");
+    const std::string chainName = rangedWeapon
+        ? (level >= quadrupleChainLevel ? "Quadruple tir" : (level >= tripleChainLevel ? "Triple tir" : "Double tir"))
+        : (magicProfile
+            ? (level >= quadrupleChainLevel ? "Résonance canalisée" : "Écho canalisé")
+            : (level >= quadrupleChainLevel ? "Quadruple coup" : (level >= tripleChainLevel ? "Triple coup" : "Double coup")));
+
+    if (level < firstTechniqueLevel)
+    {
+        MessageScreen::show(
+            "TECHNIQUES À APPRENDRE",
+            "combat.wave.class_skill.none_unlocked",
+            {
+                player.getName() + " n'a pas encore assez de pratique pour une technique active fiable.",
+                "Ralliement prudent, geste simple de survie, devient accessible au niveau " + std::to_string(firstTechniqueLevel) + ".",
+                "Le niveau maximal est 255 : les techniques fortes sont désormais étalées sur une vraie progression au lieu d'être concentrées au début."
+            },
+            false
+        );
+        return false;
+    }
+
     MenuScreen screen("COMPÉTENCE ACTIVE", "combat.wave.class_skill.selector");
-    screen.addSubtitle("Compétences de vague de " + player.getName());
-    screen.addLine("Certaines compétences choisissent une cible, d'autres frappent plusieurs ennemis ou des cibles aléatoires.");
+    screen.addSubtitle("Techniques réellement maîtrisées par " + player.getName());
+    screen.addLine("Les techniques se débloquent progressivement. Une technique absente de cette liste n'est pas encore maîtrisée.");
     screen.addLine("Toutes consomment le tour et déclenchent un cooldown.");
+    if (level >= quadrupleChainLevel)
+    {
+        screen.addLine("Maîtrise tardive : les enchaînements universels ont atteint leur quatrième impulsion.");
+    }
+    if (level >= perfectGuardBreakLevel)
+    {
+        screen.addLine("Maîtrise de niveau 240 : les techniques de rupture les plus anciennes ont atteint leur forme experte.");
+    }
     screen.addBackOption("Retour", "combat.wave.class_skill.back");
-    screen.addOption(1, "Enchaînement ciblé", "Choisis une cible : 2 frappes, parfois 3 si l'ouverture tient. Recharge 3 tours.", true, "combat.wave.skill.chain_target");
-    screen.addOption(2, "Balayage de ligne", "Frappe tous les ennemis actifs, dégâts plus faibles par cible. Recharge 4 tours.", true, "combat.wave.skill.line_sweep");
-    screen.addOption(3, "Ricochets imprévisibles", "3 frappes sur des ennemis actifs aléatoires. Peut retomber sur la même cible. Recharge 4 tours.", true, "combat.wave.skill.random_ricochet");
-    screen.addOption(4, "Brise-garde", "Choisis une cible : dégâts moyens, affaiblissement et vulnérabilité. Recharge 3 tours.", true, "combat.wave.skill.guard_break");
-    screen.addOption(5, "Ralliement prudent", "Ne cible personne : récupère un peu, passe en garde et prépare l'équipe. Recharge 4 tours.", true, "combat.wave.skill.safe_rally");
-    screen.addOption(6, "Manœuvre d'environnement", "Utilise le terrain/la torche/la poussière : contrôle léger sur une cible ou sur la ligne. Recharge 4 tours.", true, "combat.wave.skill.environment_move");
-    screen.addOption(7, "Coup d'arrêt", "Choisis une cible : faible dégâts, choc/givre et affaiblissement pour casser son prochain rythme. Recharge 3 tours.", true, "combat.wave.skill.stop_hit");
-    screen.addOption(8, "Exécution opportuniste", "Choisis une cible : très forte si elle est blessée ou déjà altérée, sinon pose une ouverture. Recharge 4 tours.", true, "combat.wave.skill.opportunist_execute");
-    screen.addOption(9, "Mélange instable", "Lance deux fioles improvisées sur des cibles aléatoires : poison, choc, brûlure ou saignement. Recharge 5 tours.", true, "combat.wave.skill.unstable_mix");
-    screen.addOption(10, "Rupture de ligne", "Choisis une cible : frappe principale puis impact secondaire sur une autre cible si possible. Recharge 4 tours.", true, "combat.wave.skill.line_break");
-    screen.addOption(11, "Suture de fortune", "Ne cible personne : soin immédiat modéré + régénération courte, jamais un full heal. Recharge 5 tours.", true, "combat.wave.skill.field_suture");
-    screen.addOption(12, "Signal de focus", "Choisis une cible : peu de dégâts, mais grosse ouverture pour les alliés et prochaines frappes. Recharge 2 tours.", true, "combat.wave.skill.focus_signal");
+    if (level >= chainUnlockLevel) screen.addOption(1, chainName, rangedWeapon
+        ? "2 tirs, 3 au niveau " + std::to_string(tripleChainLevel) + ", puis 4 au niveau " + std::to_string(quadrupleChainLevel) + ". Chaque tir consomme sa propre munition ; la salve s'arrête si les projectiles manquent. Recharge 3 tours." + (rangedAmmunitionAvailable ? "" : " Aucune munition compatible disponible.")
+        : (magicProfile
+            ? "Deux impulsions, trois au niveau " + std::to_string(tripleChainLevel) + ", puis quatre au niveau " + std::to_string(quadrupleChainLevel) + " : coût, support et risque suivent toujours ta voie magique. Recharge 3 tours."
+            : "2 coups, 3 au niveau " + std::to_string(tripleChainLevel) + ", puis 4 au niveau " + std::to_string(quadrupleChainLevel) + ". Recharge 3 tours."),
+        rangedAmmunitionAvailable, "combat.wave.skill.chain_target");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("line_sweep")) screen.addOption(2,
+        level >= battlefieldMasteryLevel ? (rangedWeapon ? "Balayage de tirs maîtrisé" : "Balayage de ligne maîtrisé") : (rangedWeapon ? "Balayage de tirs" : "Balayage de ligne"), "Frappe tous les ennemis actifs, dégâts plus faibles par cible." + std::string(rangedWeapon ? " Chaque cible demande une munition ; le balayage s'arrête si le carquois se vide." : "") + " Recharge 4 tours." + (rangedAmmunitionAvailable ? "" : " Aucune munition compatible disponible."), rangedAmmunitionAvailable, "combat.wave.skill.line_sweep");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("random_ricochet")) screen.addOption(3, rangedWeapon ? "Salve imprévisible" : "Ricochets imprévisibles", "3 frappes sur des ennemis actifs aléatoires. Peut retomber sur la même cible." + std::string(rangedWeapon ? " Chaque projectile est réel et la salve s'arrête si les munitions manquent." : "") + " Recharge 4 tours." + (rangedAmmunitionAvailable ? "" : " Aucune munition compatible disponible."), rangedAmmunitionAvailable, "combat.wave.skill.random_ricochet");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("guard_break")) screen.addOption(4, level >= perfectGuardBreakLevel ? "Brise-garde parfait" : "Brise-garde", "Choisis une cible : dégâts moyens, affaiblissement et vulnérabilité. Recharge 3 tours.", true, "combat.wave.skill.guard_break");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("safe_rally")) screen.addOption(5, level >= veteranRallyLevel ? "Ralliement vétéran" : "Ralliement prudent", "Ne cible personne : récupère un peu, passe en garde et prépare l'équipe. Recharge 4 tours.", true, "combat.wave.skill.safe_rally");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("environment_move")) screen.addOption(6, "Manœuvre d'environnement", "Utilise le terrain/la torche/la poussière : contrôle léger sur une cible ou sur la ligne. Recharge 4 tours.", true, "combat.wave.skill.environment_move");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("stop_hit")) screen.addOption(7, rangedWeapon ? "Tir d'arrêt" : "Coup d'arrêt", "Choisis une cible : faibles dégâts et affaiblissement pour casser son prochain rythme. Recharge 3 tours.", true, "combat.wave.skill.stop_hit");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("opportunist_execute")) screen.addOption(8, level >= masterExecutionLevel ? "Exécution maîtresse" : "Exécution opportuniste", "Choisis une cible : très forte si elle est blessée ou déjà altérée, sinon pose une ouverture. Recharge 4 tours.", true, "combat.wave.skill.opportunist_execute");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("unstable_mix")) screen.addOption(9, "Mélange instable", "Lance deux fioles improvisées sur des cibles aléatoires : poison, choc, brûlure ou saignement. Recharge 5 tours.", true, "combat.wave.skill.unstable_mix");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("line_break")) screen.addOption(10, "Rupture de ligne", "Choisis une cible : frappe principale puis impact secondaire sur une autre cible si possible. Recharge 4 tours.", true, "combat.wave.skill.line_break");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("field_suture")) screen.addOption(11, "Suture de fortune", "Ne cible personne : soin immédiat modéré + régénération courte, jamais un full heal. Recharge 5 tours.", true, "combat.wave.skill.field_suture");
+    if (level >= TechniqueProgressionRules::genericTechniqueUnlockLevel("focus_signal")) screen.addOption(12, "Signal de focus", "Choisis une cible : peu de dégâts, mais grosse ouverture pour les alliés et prochaines frappes. Recharge 2 tours.", true, "combat.wave.skill.focus_signal");
 
     int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
     Console::clear();
@@ -249,24 +310,54 @@ bool CombatTargetMenu::openForClassSkill(
             return false;
         }
 
+        if (resolvedTargetName != nullptr) *resolvedTargetName = wave.getActiveEnemy(targetIndex).getName();
+        if (resolvedTargetId != nullptr) *resolvedTargetId = wave.getActiveEnemy(targetIndex).getCombatInstanceId();
+
         MessageScreen::show(
-            "ENCHAÎNEMENT CIBLÉ",
+            chainName,
             "combat.wave.class_skill.chain_target.start",
             {
-                player.getName() + " verrouille une cible et prépare plusieurs frappes courtes.",
-                "Cette compétence illustre les attaques actives à plusieurs coups avec cooldown."
+                player.getName() + (rangedWeapon ? " verrouille sa ligne de tir et prépare plusieurs projectiles." : (magicProfile ? " retient son souffle et force plusieurs impulsions dans la même canalisation." : " verrouille une cible et prépare plusieurs frappes courtes.")),
+                rangedWeapon ? "Chaque impact demande une munition réelle." : (magicProfile ? "La répétition magique dépense du mana : elle n'est pas l'équivalent gratuit d'un Triple coup." : "L'enchaînement devient triple seulement avec assez de maîtrise.")
             },
             false
         );
 
-        int strikes = 2;
-        if (player.getLevel() >= 8 || random.between(1, 100) <= 35)
+        int strikes = player.getLevel() >= quadrupleChainLevel ? 4 : (player.getLevel() >= tripleChainLevel ? 3 : 2);
+        if (magicProfile)
         {
-            strikes = 3;
+            // A magical chain is a real spell sequence, not a renamed martial multi-hit.
+            // The base pressure is intentionally high, then each casting path applies its own
+            // material/catalyst/incantation discount or surcharge through CombatActions.
+            const int baseManaCost = strikes >= 4 ? 40 : (strikes == 3 ? 28 : 18);
+            if (!CombatActions::prepareMagicTechniqueInteractive(player, "Écho canalisé", random, baseManaCost))
+            {
+                MessageScreen::show(
+                    "ÉCHO INTERROMPU",
+                    "combat.wave.class_skill.chain_target.interrupted",
+                    {
+                        "L'enchaînement magique n'a pas réussi à former toutes ses impulsions.",
+                        "La tentative a tout de même cassé le rythme de canalisation."
+                    },
+                    false
+                );
+                finishCooldown(std::max(2, 2 + player.getMagicRecoveryAdjustment()));
+                return true;
+            }
         }
 
         for (int strike = 1; strike <= strikes; ++strike)
         {
+            if (rangedWeapon && !CombatActions::hasCompatibleAmmunition(player))
+            {
+                MessageScreen::show(
+                    "SALVE INTERROMPUE",
+                    "combat.wave.class_skill.chain_target.no_ammo",
+                    {"Plus aucune munition compatible : les projectiles restants ne sont pas remplacés par des coups de crosse."},
+                    false
+                );
+                break;
+            }
             if (!wave.isActiveIndexValid(targetIndex))
             {
                 break;
@@ -289,7 +380,9 @@ bool CombatTargetMenu::openForClassSkill(
             wave.removeDeadAndReplace();
         }
 
-        finishCooldown(3);
+        finishCooldown(magicProfile
+            ? std::max(2, 3 + player.getMagicRecoveryAdjustment())
+            : 3);
         return true;
     }
 
@@ -308,17 +401,23 @@ bool CombatTargetMenu::openForClassSkill(
 
         for (int i = 0; i < originalActiveCount && i < wave.getActiveEnemyCount(); ++i)
         {
+            if (rangedWeapon && !CombatActions::hasCompatibleAmmunition(player))
+            {
+                MessageScreen::show("BALAYAGE INTERROMPU", "combat.wave.class_skill.line_sweep.no_ammo", {"Le carquois ne contient plus de projectile compatible : le balayage s'arrête proprement."}, false);
+                break;
+            }
             Monster& target = wave.getActiveEnemy(i);
             if (target.isDead())
             {
                 continue;
             }
-            CombatActions::executeBoostedAttack(player, target, random, -6 + player.getLevel() / 18);
+            const int masteryBonus = player.getLevel() >= battlefieldMasteryLevel ? 4 : 0;
+            CombatActions::executeBoostedAttack(player, target, random, -6 + masteryBonus + player.getLevel() / 18);
             ThreatSystem::consumeForcedTargetIfNeeded(target);
             wave.removeDeadAndReplace();
         }
 
-        finishCooldown(4);
+        finishCooldown(player.getLevel() >= battlefieldMasteryLevel ? 3 : 4);
         return true;
     }
 
@@ -336,6 +435,11 @@ bool CombatTargetMenu::openForClassSkill(
 
         for (int strike = 1; strike <= 3 && wave.hasActiveEnemies(); ++strike)
         {
+            if (rangedWeapon && !CombatActions::hasCompatibleAmmunition(player))
+            {
+                MessageScreen::show("SALVE INTERROMPUE", "combat.wave.class_skill.random_ricochet.no_ammo", {"Plus aucune munition compatible : la salve s'arrête au lieu de transformer les tirs restants en coups de crosse."}, false);
+                break;
+            }
             const int targetIndex = random.between(0, wave.getActiveEnemyCount() - 1);
             Monster& target = wave.getActiveEnemy(targetIndex);
             MessageScreen::show(
@@ -365,6 +469,8 @@ bool CombatTargetMenu::openForClassSkill(
 
         Monster& target = wave.getActiveEnemy(targetIndex);
         const std::string targetName = target.getName();
+        if (resolvedTargetName != nullptr) *resolvedTargetName = targetName;
+        if (resolvedTargetId != nullptr) *resolvedTargetId = target.getCombatInstanceId();
         MessageScreen::show(
             "BRISE-GARDE",
             "combat.wave.class_skill.guard_break.start",
@@ -374,13 +480,14 @@ bool CombatTargetMenu::openForClassSkill(
             },
             false
         );
-        target.applyWeakening(2, 10 + player.getLevel() / 10);
-        target.applyVulnerability(2, 12 + player.getLevel() / 12);
+        const int ruptureDuration = player.getLevel() >= perfectGuardBreakLevel ? 3 : 2;
+        target.applyWeakening(ruptureDuration, 10 + player.getLevel() / 10);
+        target.applyVulnerability(ruptureDuration, 12 + player.getLevel() / 12);
         CombatActions::executeBoostedAttack(player, target, random, -3 + player.getLevel() / 18);
         ThreatSystem::consumeForcedTargetIfNeeded(target);
         wave.removeDeadAndReplace();
         player.recordCanonicalEvent("competences_actives_utilisees", "Brise-garde", "Affaiblissement/vulnérabilité posés sur " + targetName, 1);
-        finishCooldown(3);
+        finishCooldown(player.getLevel() >= perfectGuardBreakLevel ? 2 : 3);
         return true;
     }
 
@@ -392,14 +499,21 @@ bool CombatTargetMenu::openForClassSkill(
         {
             player.heal(healAmount);
         }
-        player.startDefensePosture(14, 5, "Ralliement prudent");
+        const bool veteranRally = player.getLevel() >= veteranRallyLevel;
+        player.startDefensePosture(veteranRally ? 18 : 14, veteranRally ? 7 : 5, veteranRally ? "Ralliement vétéran" : "Ralliement prudent");
+        if (veteranRally)
+        {
+            player.applyRegeneration(2, std::max(2, player.getMaxHp() / 40));
+        }
         MessageScreen::show(
-            "RALLIEMENT PRUDENT",
+            veteranRally ? "RALLIEMENT VÉTÉRAN" : "RALLIEMENT PRUDENT",
             "combat.wave.class_skill.safe_rally.start",
             {
                 player.getName() + " recule d'un pas, reprend son souffle et donne un signal clair.",
                 "PV récupérés : " + std::to_string(std::max(0, player.getHp() - hpBefore)) + ".",
-                "Garde courte active : dégâts subis réduits et petite chance de contre."
+                veteranRally
+                    ? "Maîtrise vétéran : garde renforcée et courte régénération pendant 2 tours."
+                    : "Garde courte active : dégâts subis réduits et petite chance de contre."
             },
             false
         );
@@ -419,6 +533,8 @@ bool CombatTargetMenu::openForClassSkill(
 
         Monster& target = wave.getActiveEnemy(targetIndex);
         const std::string targetName = target.getName();
+        if (resolvedTargetName != nullptr) *resolvedTargetName = targetName;
+        if (resolvedTargetId != nullptr) *resolvedTargetId = target.getCombatInstanceId();
         const int controlRoll = random.between(1, 3);
         std::vector<std::string> lines;
         lines.push_back(player.getName() + " exploite ce qu'il a sous la main au lieu d'attaquer bêtement.");
@@ -463,6 +579,8 @@ bool CombatTargetMenu::openForClassSkill(
 
         Monster& target = wave.getActiveEnemy(targetIndex);
         const std::string targetName = target.getName();
+        if (resolvedTargetName != nullptr) *resolvedTargetName = targetName;
+        if (resolvedTargetId != nullptr) *resolvedTargetId = target.getCombatInstanceId();
         MessageScreen::show(
             "COUP D'ARRÊT",
             "combat.wave.class_skill.stop_hit.start",
@@ -500,14 +618,20 @@ bool CombatTargetMenu::openForClassSkill(
 
         Monster& target = wave.getActiveEnemy(targetIndex);
         const std::string targetName = target.getName();
-        const bool weakenedTarget = target.getMaxHp() > 0 && target.getHp() * 100 <= target.getMaxHp() * 40;
+        if (resolvedTargetName != nullptr) *resolvedTargetName = targetName;
+        if (resolvedTargetId != nullptr) *resolvedTargetId = target.getCombatInstanceId();
+        const int executionThreshold = player.getLevel() >= masterExecutionLevel ? 50 : 40;
+        const bool weakenedTarget = target.getMaxHp() > 0 && target.getHp() * 100 <= target.getMaxHp() * executionThreshold;
         const bool alteredTarget = target.hasPoison() || target.hasBleeding() || target.hasBurning() || target.hasFrost() || target.hasShock() || target.hasWeakening() || target.hasVulnerability();
-        const int bonus = (weakenedTarget || alteredTarget) ? 8 + player.getLevel() / 10 : -4 + player.getLevel() / 30;
+        const int masteryExecutionBonus = player.getLevel() >= masterExecutionLevel ? 4 : 0;
+        const int bonus = (weakenedTarget || alteredTarget) ? 8 + masteryExecutionBonus + player.getLevel() / 10 : -4 + player.getLevel() / 30;
         std::vector<std::string> lines;
         lines.push_back(player.getName() + " cherche une finition, pas une attaque neutre.");
         if (weakenedTarget || alteredTarget)
         {
-            lines.push_back("La cible est déjà blessée ou altérée : l'exécution opportuniste frappe fort.");
+            lines.push_back(player.getLevel() >= masterExecutionLevel
+                ? "La cible est déjà blessée ou altérée : l'exécution maîtresse exploite une fenêtre plus large et frappe plus fort."
+                : "La cible est déjà blessée ou altérée : l'exécution opportuniste frappe fort.");
         }
         else
         {
@@ -591,6 +715,8 @@ bool CombatTargetMenu::openForClassSkill(
 
         Monster& target = wave.getActiveEnemy(targetIndex);
         const std::string targetName = target.getName();
+        if (resolvedTargetName != nullptr) *resolvedTargetName = targetName;
+        if (resolvedTargetId != nullptr) *resolvedTargetId = target.getCombatInstanceId();
         MessageScreen::show(
             "RUPTURE DE LIGNE",
             "combat.wave.class_skill.line_break.start",
@@ -672,6 +798,8 @@ bool CombatTargetMenu::openForClassSkill(
 
         Monster& target = wave.getActiveEnemy(targetIndex);
         const std::string targetName = target.getName();
+        if (resolvedTargetName != nullptr) *resolvedTargetName = targetName;
+        if (resolvedTargetId != nullptr) *resolvedTargetId = target.getCombatInstanceId();
         target.applyVulnerability(3, 18 + player.getLevel() / 12);
         target.applyWeakening(1, 6 + player.getLevel() / 24);
         MessageScreen::show(
@@ -766,7 +894,10 @@ bool CombatTargetMenu::openTargetMenu(
     EnemyCombatQueue& wave,
     Random& random,
     bool boostedAttack,
-    int damageBonus
+    int damageBonus,
+    std::string* resolvedTargetName,
+    std::string* resolvedTargetId,
+    bool* targetForcedByCombatRules
 )
 {
     while (wave.hasEnemiesLeft())
@@ -941,6 +1072,13 @@ bool CombatTargetMenu::openTargetMenu(
 
             if (choice == 1)
             {
+                if (resolvedTargetName != nullptr) *resolvedTargetName = target.getName();
+                if (resolvedTargetId != nullptr) *resolvedTargetId = target.getCombatInstanceId();
+                if (targetForcedByCombatRules != nullptr)
+                {
+                    const int forcedIndex = findForcedTargetIndex(wave);
+                    *targetForcedByCombatRules = forcedIndex >= 0 && forcedIndex == targetIndex;
+                }
                 if (boostedAttack)
                 {
                     CombatAttack::executeBoostedAttack(

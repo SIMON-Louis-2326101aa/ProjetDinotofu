@@ -5,6 +5,7 @@
 
 #include "quest/QuestCatalog.hpp"
 #include "quest/language/QuestLanguageSystem.hpp"
+#include "world/bounty/BountyQuestSystem.hpp"
 
 #include <algorithm>
 #include <array>
@@ -243,6 +244,14 @@ namespace
         {
             balanced = originalExperience * 42 / 100;
         }
+        else if (objectiveType == "intercity_information")
+        {
+            balanced = originalExperience * 68 / 100;
+        }
+        else if (objectiveType == "intercity_material")
+        {
+            balanced = originalExperience * 74 / 100;
+        }
         else if (objectiveType == "bestiaire")
         {
             balanced = originalExperience * 40 / 100;
@@ -274,6 +283,8 @@ namespace
         int value = questGold(rank, playerLevel, target);
 
         if (objectiveType == "livraison") value = value * 52 / 100;
+        if (objectiveType == "intercity_information") value = value * 78 / 100;
+        if (objectiveType == "intercity_material") value = value * 88 / 100;
         if (objectiveType == "bestiaire") value = value * 45 / 100;
         if (objectiveType == "service") value = value * 22 / 100;
         if (givesObjectReward) value = value * 60 / 100;
@@ -281,6 +292,8 @@ namespace
         int cap = 45 + playerLevel * 7 + rankPower(rank) * 18 + target * 2;
         if (objectiveType == "service") cap = cap * 42 / 100;
         if (objectiveType == "livraison") cap = cap * 65 / 100;
+        if (objectiveType == "intercity_information") cap = cap * 88 / 100;
+        if (objectiveType == "intercity_material") cap = cap * 96 / 100;
         if (objectiveType == "bestiaire") cap = cap * 58 / 100;
         if (objectiveType == "material") cap = cap * 70 / 100;
         if (objectiveType == "exploration") cap = cap * 85 / 100;
@@ -294,6 +307,8 @@ namespace
         int hardCap = 38 + playerLevel * 5 + rankPower(rank) * 12 + target * 3;
         if (objectiveType == "service") hardCap = 10 + playerLevel * 2 + rankPower(rank) * 4 + target;
         if (objectiveType == "livraison") hardCap = 24 + playerLevel * 3 + rankPower(rank) * 6 + target * 2;
+        if (objectiveType == "intercity_information") hardCap = 36 + playerLevel * 4 + rankPower(rank) * 8 + target * 4;
+        if (objectiveType == "intercity_material") hardCap = 42 + playerLevel * 5 + rankPower(rank) * 9 + target * 5;
         if (objectiveType == "bestiaire") hardCap = 22 + playerLevel * 3 + rankPower(rank) * 6 + target * 2;
         if (objectiveType == "material") hardCap = 30 + playerLevel * 4 + rankPower(rank) * 8 + target * 2;
         if (objectiveType == "exploration") hardCap = 42 + playerLevel * 5 + rankPower(rank) * 10 + target * 3;
@@ -698,6 +713,11 @@ namespace
             return "Comptoir de guilde / ville";
         }
 
+        if (questTemplate.type == "bounty")
+        {
+            return "Route commerciale";
+        }
+
         const std::string explicitBiome = explicitGuildBiomeInTemplate(questTemplate);
         if (!explicitBiome.empty())
         {
@@ -815,6 +835,12 @@ namespace
             "", "", 0,
             extraReward.materialId, extraReward.materialName, extraReward.materialQuantity, extraReward.note
         );
+        if (questTemplate.type == "bounty")
+        {
+            BountyQuestSystem::initializeBounty(quest, playerLevel);
+            quest.objective = "Retrouver " + quest.bountyTargetName + ", confirmer la cible, préparer l'interception puis la capturer ou la neutraliser. La cible peut ne pas savoir qu'elle est chassée tant qu'elle ne détecte aucun signe crédible.";
+            quest.targetFamily = "Humain recherché / prime ciblée";
+        }
         QuestLanguageSystem::assignOptionalForeignLanguage(quest);
         return quest;
     }
@@ -854,7 +880,7 @@ namespace
 
     bool isActionQuestType(const std::string& objectiveType)
     {
-        return objectiveType == "combat" || objectiveType == "exploration";
+        return objectiveType == "combat" || objectiveType == "exploration" || objectiveType == "bounty";
     }
 
     int actionQuestCount(const std::vector<Quest>& board)
@@ -1247,6 +1273,7 @@ std::vector<Quest> QuestCatalog::createGuildBoard(int playerLevel)
     registerTemplates(fTemplates);
 
     const std::vector<GuildTemplate> eTemplates = {
+        {"E", "Prime ciblée : voleur de relais", "Retrouver un fugitif signalé sur les routes proches sans supposer qu’il sait déjà être chassé.", "bounty", "Humain recherché / route", 1, 3},
         {"E", "Nettoyer une petite route infestée", "Écarter quelques monstres faibles d'une route locale.", "combat", "Créatures faibles", 2, 2},
         {"E", "Cartographier un détour douteux", "Explorer une zone simple et revenir avec assez de détails pour corriger la carte de la guilde.", "exploration", "Route / exploration", 2, 2},
         {"E", "Surveiller une caisse suspecte", "Vérifier une livraison abandonnée et survivre à ce qui pourrait se cacher dedans.", "exploration", "Route commerciale", 2, 2},
@@ -1282,6 +1309,9 @@ std::vector<Quest> QuestCatalog::createGuildBoard(int playerLevel)
     registerTemplates(eTemplates);
 
     const std::vector<GuildTemplate> dTemplates = {
+        {"D", "Transmission officielle vers une autre ville", "Remettre en mains propres un dossier de guilde à un comptoir d'une autre ville. La distance et le trajet sont payés.", "intercity_information", "Inter-ville / information", 1, 5},
+        {"D", "Transport de matériaux entre comptoirs", "Acheminer une petite cargaison de matériaux scellés vers une autre ville accessible sans la confondre avec ton propre inventaire.", "intercity_material", "Inter-ville / matériaux", 1, 5},
+        {"D", "Prime ciblée : passeur récidiviste", "Identifier et intercepter un passeur recherché qui connaît plusieurs chemins secondaires.", "bounty", "Humain recherché / contrebande", 1, 5},
         {"D", "Récupérer des matériaux près d'une zone instable", "Revenir avec des matériaux exploitables après plusieurs affrontements ou fouilles.", "exploration", "Matériaux / fouille", 3, 4},
         {"D", "Traquer une meute locale", "Réduire la pression d'un groupe de créatures qui rôde trop près des voyageurs.", "combat", "Créatures locales", 3, 4},
         {"D", "Observer un monstre évolué", "Confirmer les signes d'évolution d'une créature sans mourir pour la science.", "bestiaire", "Créature évoluée", 3, 4},
@@ -1319,6 +1349,9 @@ std::vector<Quest> QuestCatalog::createGuildBoard(int playerLevel)
     registerTemplates(dTemplates);
 
     const std::vector<GuildTemplate> cTemplates = {
+        {"C", "Relais d'informations entre villes", "Faire suivre un dossier officiel par deux comptoirs successifs : chaque remise doit être confirmée avant la suivante.", "intercity_information", "Inter-ville / information / relais", 2, 8},
+        {"C", "Ravitaillement inter-ville en deux relais", "Transporter des matériaux de guilde sur une route à deux remises successives, avec paiement adapté à la distance.", "intercity_material", "Inter-ville / matériaux / relais", 2, 8},
+        {"C", "Prime ciblée : chef de bande mobile", "Traquer un chef de bande qui dispose de relais locaux et peut réagir s’il comprend qu’on le suit.", "bounty", "Humain recherché / chef de bande", 1, 8},
         {"C", "Escorter un apprenti marchand nerveux", "Protéger un civil assez longtemps pour qu'il arrête de trembler.", "combat", "Humanoïdes / embuscades", 3, 7},
         {"C", "Fouille de ruines encadrée", "Explorer une ruine instable et revenir avec des notes utilisables par la guilde.", "exploration", "Ruines effondrées", 3, 7},
         {"C", "Contrat anti-embuscade", "Affronter plusieurs menaces intelligentes qui testent les routes commerciales.", "combat", "Humanoïdes / embuscades", 4, 7},
@@ -1355,6 +1388,7 @@ std::vector<Quest> QuestCatalog::createGuildBoard(int playerLevel)
     registerTemplates(cTemplates);
 
     const std::vector<GuildTemplate> bTemplates = {
+        {"B", "Prime ciblée : fugitif expérimenté", "Monter une vraie chasse contre une cible prudente capable de changer de route, vérifier une filature ou se cacher dans un nouveau refuge.", "bounty", "Humain recherché / fugitif expérimenté", 1, 12},
         {"B", "Traquer une menace signalée par la guilde", "Identifier puis vaincre une menace plus sérieuse.", "combat", "Élite / menace", 4, 11},
         {"B", "Mini-boss régional", "Forcer une menace locale à se montrer et survivre au rapport de mission.", "combat", "Mini-boss / menace évoluée", 4, 11},
         {"B", "Zone dangereuse sous surveillance", "Revenir d'un lieu dangereux avec assez d'informations pour éviter un massacre de novices.", "exploration", "Menace avancée", 4, 11},

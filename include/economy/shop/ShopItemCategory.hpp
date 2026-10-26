@@ -18,6 +18,7 @@ enum class ShopItemCategory
     Plant,
     Book,
     Spell,
+    Voucher,
     Information,
     Unknown
 };

@@ -69,6 +69,9 @@ public:
     // EN: getWaitingEnemy declares or implements a focused behavior used by this module.
     // FR: getWaitingEnemy déclare ou implémente un comportement précis utilisé par ce module.
     const Monster& getWaitingEnemy(int index) const;
+    // Effets de zone qui débordent sur la file sans faire entrer la cible sur la ligne.
+    int damageWaitingEnemy(int index, int damage);
+    int healWaitingEnemy(int index, int healing);
 
     // EN: getDefeatedEnemy declares or implements a focused behavior used by this module.
     // FR: getDefeatedEnemy déclare ou implémente un comportement précis utilisé par ce module.
@@ -91,6 +94,9 @@ public:
     // EN: switchActiveEnemyWithWaiting rotates one active enemy with one waiting enemy without defeat/escape.
     // FR: switchActiveEnemyWithWaiting échange un ennemi actif avec un ennemi en réserve sans défaite/fuite.
     bool switchActiveEnemyWithWaiting(int activeIndex, int waitingIndex = 0);
+    // EN: moveActiveEnemyToFront reorders the active line without adding/removing turns.
+    // FR: moveActiveEnemyToFront place un ennemi actif en tête sans ajouter/retirer de tour.
+    bool moveActiveEnemyToFront(int activeIndex);
 
     // EN: removeDeadAndReplace declares or implements a focused behavior used by this module.
     // FR: removeDeadAndReplace déclare ou implémente un comportement précis utilisé par ce module.
@@ -112,6 +118,7 @@ private:
     std::vector<Monster> escapedEnemies;
     std::vector<Monster> surrenderedEnemies;
     bool frontLineInitialized;
+    int nextCombatInstanceId;
 
     // EN: canAddActiveEnemy declares or implements a focused behavior used by this module.
     // FR: canAddActiveEnemy déclare ou implémente un comportement précis utilisé par ce module.
@@ -123,6 +130,7 @@ private:
     // EN: isDamagedAndAlive declares or implements a focused behavior used by this module.
     // FR: isDamagedAndAlive déclare ou implémente un comportement précis utilisé par ce module.
     bool isDamagedAndAlive(const Monster& monster) const;
+    void assignCombatInstanceId(Monster& monster);
 };
 
 #endif

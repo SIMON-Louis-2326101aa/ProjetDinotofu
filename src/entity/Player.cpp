@@ -9,6 +9,7 @@
 #include "economy/EconomyBalance.hpp"
 #include "core/VersionInfo.hpp"
 #include "economy/Money.hpp"
+#include "economy/GuildFinanceSystem.hpp"
 
 #include "item/weapon/WeaponCatalog.hpp"
 #include "item/armor/ArmorCatalog.hpp"
@@ -17,6 +18,8 @@
 #include "progression/DifficultyRules.hpp"
 #include "progression/Level.hpp"
 #include "progression/TitleCatalog.hpp"
+#include "progression/TitleProgressSystem.hpp"
+#include "save/SaveManager.hpp"
 #include "character/RaceCatalog.hpp"
 #include "combat/system/CombatClassSystem.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
@@ -40,9 +43,12 @@ namespace
             "pnj_servis", "types_quetes_completees", "lieux_visites", "coffres",
             "reputation_locale_positive", "reputation_locale_negative",
             "services_locaux_reussis", "services_locaux_echoues", "avertissements_locaux", "rehabilitations_locales",
-            "quetes_reussies", "quetes_echouees",
+            "quetes_reussies", "quetes_echouees", "quetes_personnage_important",
             "consultations_comptoir_mercenaire", "participation_recrues",
-            "fuites_ennemies", "fugitifs_signales", "rivaux_confirmes", "rumeurs_rivaux"
+            "fuites_ennemies", "fugitifs_signales", "rivaux_confirmes", "rumeurs_rivaux",
+            "primes_capturees_vivantes", "primes_resolutions_mortelles", "primes_traques_bruyantes",
+            "primes_evasions_cibles", "reactions_reseaux_primes",
+            "securite_coffres", "alertes_pillage_coffres", "defenses_coffres_reussies", "defenses_coffres_echouees", "pillages_coffres_non_defendus"
         };
         return std::find(localCategories.begin(), localCategories.end(), category) != localCategories.end();
     }
@@ -52,7 +58,39 @@ namespace
         static const std::vector<std::string> protectedCategories = {
             "rivaux_potentiels", "rivaux_confirmes", "rumeurs_rivaux", "destin_instable", "serments_eglise", "serments_rompus",
             "objets_avec_memoire", "cicatrices", "traumatismes", "heritage", "tombes",
-            "techniques_combinees_alliees", "serments_fragilises"
+            "techniques_combinees_alliees", "serments_fragilises",
+            "resistance_spirituelle_lethale", "survies_lethales_esprit",
+            "team_leadership_state", "team_membership_history",
+            "team_employment_state", "team_employment_history", "team_employment_payments",
+            "team_employment_missions_assigned", "team_employment_missions_completed", "team_employment_missions_failed",
+            "team_employer_roster_state", "team_employer_roster_vitals", "team_employer_roster_progress", "team_employer_roster_history",
+            "team_employer_member_mood", "team_employer_after_action_reports",
+            "team_employer_share_thefts", "team_employer_share_deliveries",
+            "team_employer_post_ko_victories", "team_employer_post_ko_extractions",
+            "parts_joueur_a_remettre_equipe_employeuse",
+            "cheat_code_usage", "secret_code_usage", "cheat_effects", "protocoles_secrets", "reapers13_knowledge",
+            "guild_finance_deposits", "guild_finance_withdrawals", "guild_finance_membership",
+            "guild_finance_overdraft_draws", "guild_finance_overdraft_repayments", "guild_finance_credit_services",
+            "guild_finance_loan_principals", "guild_finance_loan_initial_totals", "guild_finance_loan_term_weeks",
+            "guild_finance_loan_base_rates", "guild_finance_loan_long_surcharges", "guild_finance_loan_auto",
+            "guild_finance_loan_repayments", "guild_finance_loan_extension_weeks", "guild_finance_loan_extension_rates",
+            "guild_finance_loan_extension_fees", "guild_finance_loan_overdue", "guild_finance_loan_closed",
+            "guild_finance_loan_closed_on_time",
+            "hestia_companion_config", "hestia_companion_training", "hestia_companion_choices", "hestia_artefact_state",
+            "hestia_residence", "hestia_visites",
+            "logement_principal", "loyers_logement_payes", "repos_maison", "mariage_pnj", "mariage_joueur",
+            "clan_hq_construction", "clan_hq_state", "clan_hq_investment", "clan_hq_modules",
+            "clan_hq_building_expansions", "clan_hq_extra_beds", "clan_hq_quest_board_upgrades",
+            "clan_hq_mission_chest_upgrades", "clan_hq_mission_chest_deposits", "clan_hq_mission_chest_withdrawals",
+            "clan_hq_common_room_bar_upgrades", "clan_hq_bar_visits", "clan_hq_social_moments",
+            "clan_hq_comfort_decor_upgrades", "clan_hq_furnishings", "clan_hq_festivals",
+            "clan_hq_festival_participants", "clan_hq_festive_morale", "clan_hq_festive_morale_consumed",
+            "clan_hq_forge_workshop_upgrades", "clan_hq_blacksmith_hires", "clan_hq_artisans_joined",
+            "clan_hq_blacksmith_contracts", "clan_hq_blacksmith_xp", "clan_hq_blacksmith_jobs",
+            "clan_hq_blacksmith_payments", "clan_hq_blacksmith_milestones", "clan_hq_blacksmith_specializations",
+            "clan_hq_blacksmith_friend_discounts",
+            "clan_hq_upgrade_jobs_started", "clan_hq_upgrade_jobs_completed",
+            "clan_hq_members_joined", "clan_hq_members_left", "clan_hq_passive_clock", "clan_hq_missions_completed"
         };
         return std::find(protectedCategories.begin(), protectedCategories.end(), category) != protectedCategories.end();
     }
@@ -216,10 +254,19 @@ Player::Player() : Entity()
 {
     level = 1;
     experience = 0;
+    currentMana = 0;
+    manaExhaustionTurns = 0;
     equippedWeaponIndex = -1;
     equippedArmorIndex = -1;
     cityVaultPurchased = false;
     cityVaultLevel = 0;
+    cityVaultPlaceOptimized = false;
+    cityVaultPreparedStorage = false;
+    cityVaultSecurityDaysRemaining = 0;
+    cityVaultRaidPending = false;
+    cityVaultRaidDeadlineDay = -1;
+    cityVaultLastRaidCheckDay = -1;
+    backpackTier = 0;
     currentCityId = "valebrume";
     registeredGuildCityIds.clear();
     race = CharacterRace::Human;
@@ -243,6 +290,8 @@ Player::Player() : Entity()
     victories = 0;
     defeats = 0;
     escapes = 0;
+    escapeOpeningProgress = 0;
+    successfulEscapeOpenings = 0;
     deaths = 0;
     enemiesKilled = 0;
     bossesKilled = 0;
@@ -319,6 +368,7 @@ Player::Player() : Entity()
     activeTitle = "";
     activeTitles.clear();
     interfaceHintFrequency = "faible";
+    revealHiddenTitles = false;
     graphicalImagesEnabled = false;
     storyChapter = 0;
     storyStep = 0;
@@ -326,6 +376,12 @@ Player::Player() : Entity()
     storyModeStarted = false;
     nextAmmunitionChoiceId = "";
     lastConsumedAmmunitionId = "";
+    ammunitionSelectionPolicy = "ask";
+    magicMaterialSelectionPolicy = "ask";
+    lootPickupPolicy = "all";
+    ignoredLootCategoryIds.clear();
+    ignoredLootMaterialIds.clear();
+    currentMana = getMaxMana();
 }
 
 Player::Player(
@@ -346,10 +402,19 @@ Player::Player(
 {
     level = 1;
     experience = 0;
+    currentMana = 0;
+    manaExhaustionTurns = 0;
     equippedWeaponIndex = -1;
     equippedArmorIndex = -1;
     cityVaultPurchased = false;
     cityVaultLevel = 0;
+    cityVaultPlaceOptimized = false;
+    cityVaultPreparedStorage = false;
+    cityVaultSecurityDaysRemaining = 0;
+    cityVaultRaidPending = false;
+    cityVaultRaidDeadlineDay = -1;
+    cityVaultLastRaidCheckDay = -1;
+    backpackTier = 0;
     currentCityId = "valebrume";
     registeredGuildCityIds.clear();
     race = CharacterRace::Human;
@@ -373,6 +438,8 @@ Player::Player(
     victories = 0;
     defeats = 0;
     escapes = 0;
+    escapeOpeningProgress = 0;
+    successfulEscapeOpenings = 0;
     deaths = 0;
     enemiesKilled = 0;
     bossesKilled = 0;
@@ -449,6 +516,7 @@ Player::Player(
     activeTitle = "";
     activeTitles.clear();
     interfaceHintFrequency = "faible";
+    revealHiddenTitles = false;
     graphicalImagesEnabled = false;
     storyChapter = 0;
     storyStep = 0;
@@ -456,6 +524,12 @@ Player::Player(
     storyModeStarted = false;
     nextAmmunitionChoiceId = "";
     lastConsumedAmmunitionId = "";
+    ammunitionSelectionPolicy = "ask";
+    magicMaterialSelectionPolicy = "ask";
+    lootPickupPolicy = "all";
+    ignoredLootCategoryIds.clear();
+    ignoredLootMaterialIds.clear();
+    currentMana = getMaxMana();
 }
 
 
@@ -487,6 +561,77 @@ std::string Player::getLastConsumedAmmunition() const
 void Player::clearLastConsumedAmmunition()
 {
     lastConsumedAmmunitionId.clear();
+}
+
+void Player::setAmmunitionSelectionPolicy(const std::string& policy)
+{
+    ammunitionSelectionPolicy = (policy == "favorite" || policy == "auto") ? policy : "ask";
+}
+
+std::string Player::getAmmunitionSelectionPolicy() const
+{
+    return ammunitionSelectionPolicy.empty() ? "ask" : ammunitionSelectionPolicy;
+}
+
+void Player::setMagicMaterialSelectionPolicy(const std::string& policy)
+{
+    magicMaterialSelectionPolicy = (policy == "auto") ? policy : "ask";
+}
+
+std::string Player::getMagicMaterialSelectionPolicy() const
+{
+    return magicMaterialSelectionPolicy.empty() ? "ask" : magicMaterialSelectionPolicy;
+}
+
+void Player::setLootPickupPolicy(const std::string& policy)
+{
+    lootPickupPolicy = (policy == "manual" || policy == "filter") ? policy : "all";
+}
+
+std::string Player::getLootPickupPolicy() const
+{
+    return lootPickupPolicy.empty() ? "all" : lootPickupPolicy;
+}
+
+bool Player::isLootCategoryIgnored(const std::string& categoryId) const
+{
+    return std::find(ignoredLootCategoryIds.begin(), ignoredLootCategoryIds.end(), categoryId) != ignoredLootCategoryIds.end();
+}
+
+void Player::setLootCategoryIgnored(const std::string& categoryId, bool ignored)
+{
+    const auto it = std::find(ignoredLootCategoryIds.begin(), ignoredLootCategoryIds.end(), categoryId);
+    if (ignored && it == ignoredLootCategoryIds.end()) ignoredLootCategoryIds.push_back(categoryId);
+    if (!ignored && it != ignoredLootCategoryIds.end()) ignoredLootCategoryIds.erase(it);
+}
+
+const std::vector<std::string>& Player::getIgnoredLootCategoryIds() const
+{
+    return ignoredLootCategoryIds;
+}
+
+bool Player::isLootMaterialIgnored(const std::string& materialId) const
+{
+    return std::find(ignoredLootMaterialIds.begin(), ignoredLootMaterialIds.end(), materialId) != ignoredLootMaterialIds.end();
+}
+
+void Player::setLootMaterialIgnored(const std::string& materialId, bool ignored)
+{
+    const auto it = std::find(ignoredLootMaterialIds.begin(), ignoredLootMaterialIds.end(), materialId);
+    if (ignored && it == ignoredLootMaterialIds.end()) ignoredLootMaterialIds.push_back(materialId);
+    if (!ignored && it != ignoredLootMaterialIds.end()) ignoredLootMaterialIds.erase(it);
+}
+
+const std::vector<std::string>& Player::getIgnoredLootMaterialIds() const
+{
+    return ignoredLootMaterialIds;
+}
+
+void Player::setLoadedLootPreferences(const std::string& policy, const std::vector<std::string>& categoryIds, const std::vector<std::string>& materialIds)
+{
+    setLootPickupPolicy(policy);
+    ignoredLootCategoryIds = categoryIds;
+    ignoredLootMaterialIds = materialIds;
 }
 
 const std::string& Player::getCreatedAtText() const
@@ -609,6 +754,16 @@ void Player::setInterfaceHintFrequency(const std::string& frequency)
     interfaceHintFrequency = "faible";
 }
 
+bool Player::areHiddenTitlesRevealed() const
+{
+    return revealHiddenTitles;
+}
+
+void Player::setRevealHiddenTitles(bool enabled)
+{
+    revealHiddenTitles = enabled;
+}
+
 bool Player::areInterfaceHintsDisabled() const
 {
     return interfaceHintFrequency == "null";
@@ -683,6 +838,63 @@ void Player::setLoadedStoryProgress(int chapter, int step, int cityDevelopment, 
     storyStep = step < 0 ? 0 : step;
     storyCityDevelopmentLevel = cityDevelopment < 0 ? 0 : cityDevelopment;
     storyModeStarted = started || storyChapter > 0 || storyStep > 0 || storyCityDevelopmentLevel > 0;
+}
+
+const PlayerHomeState& Player::getHomeState() const
+{
+    return homeState;
+}
+
+PlayerHomeState& Player::getMutableHomeState()
+{
+    return homeState;
+}
+
+void Player::setLoadedHomeState(const PlayerHomeState& state)
+{
+    homeState = state;
+}
+
+const PlayerHestiaStoryState& Player::getHestiaStoryState() const
+{
+    return hestiaStoryState;
+}
+
+PlayerHestiaStoryState& Player::getMutableHestiaStoryState()
+{
+    return hestiaStoryState;
+}
+
+void Player::setLoadedHestiaStoryState(const PlayerHestiaStoryState& state)
+{
+    hestiaStoryState = state;
+    hestiaStoryState.trust = std::clamp(hestiaStoryState.trust, 0, 100);
+    hestiaStoryState.awakeningStage = std::clamp(hestiaStoryState.awakeningStage, 0, 3);
+}
+
+const PlayerHestiaArtifactState& Player::getHestiaArtifactState() const
+{
+    return hestiaArtifactState;
+}
+
+PlayerHestiaArtifactState& Player::getMutableHestiaArtifactState()
+{
+    return hestiaArtifactState;
+}
+
+void Player::setLoadedHestiaArtifactState(const PlayerHestiaArtifactState& state)
+{
+    hestiaArtifactState = state;
+    hestiaArtifactState.level = std::max(1, hestiaArtifactState.level);
+    hestiaArtifactState.killsTowardNextLevel = std::clamp(
+        hestiaArtifactState.killsTowardNextLevel, 0, std::max(0, hestiaArtifactState.level - 1));
+    if (hestiaArtifactState.level >= 16) hestiaArtifactState.secondFormUnlocked = true;
+    if (hestiaArtifactState.primaryForm.empty()) hestiaArtifactState.primaryForm = "adaptive";
+    if (hestiaArtifactState.activeForm != "secondary") hestiaArtifactState.activeForm = "primary";
+    if (hestiaArtifactState.secondaryForm.empty() && hestiaArtifactState.activeForm == "secondary")
+        hestiaArtifactState.activeForm = "primary";
+    for (HestiaArtifactEssenceRecord& essence : hestiaArtifactState.absorbedEssences)
+        essence.acceptedKills = std::max(0, essence.acceptedKills);
 }
 
 bool Player::startStoryMode()
@@ -760,42 +972,75 @@ bool Player::hasTitle(const std::string& title) const
     return std::find(titles.begin(), titles.end(), normalizedTitle) != titles.end();
 }
 
-bool Player::grantTitle(const std::string& title)
+bool Player::grantTitleInternal(const std::string& title, bool allowWhenAltered, bool allowAutomaticMetaTitles)
 {
     const std::string normalizedTitle = normalizeLegacyTitleName(title);
-    if (normalizedTitle.empty() || hasTitle(normalizedTitle))
+    if (normalizedTitle.empty() || (alteredByCheats && !allowWhenAltered))
     {
         return false;
     }
 
+    const bool alreadyOwned = hasTitle(normalizedTitle);
     const std::string firstTitle = "Une sorte de titre ?";
-    const bool shouldGrantFirstTitle = normalizedTitle != firstTitle && !hasTitle(firstTitle);
+    const bool shouldGrantFirstTitle = allowAutomaticMetaTitles
+        && !alreadyOwned
+        && normalizedTitle != firstTitle
+        && !hasTitle(firstTitle);
 
-    titles.push_back(normalizedTitle);
-    if (shouldGrantFirstTitle)
+    if (!alreadyOwned)
     {
-        titles.push_back(firstTitle);
+        titles.push_back(normalizedTitle);
+        if (shouldGrantFirstTitle)
+        {
+            titles.push_back(firstTitle);
+        }
+
+        if (activeTitles.empty())
+        {
+            activeTitles.push_back(normalizedTitle);
+            activeTitle = normalizedTitle;
+        }
+        else if (activeTitle.empty())
+        {
+            activeTitle = activeTitles.front();
+        }
     }
 
-    if (activeTitles.empty())
-    {
-        activeTitles.push_back(normalizedTitle);
-        activeTitle = normalizedTitle;
-    }
-    else if (activeTitle.empty())
-    {
-        activeTitle = activeTitles.front();
-    }
-
+    // Ultimate completion is account-aware. Tutorial/account trophies are legitimate progress
+    // even though Jean-Michel Test is never persisted as a playable character.
     const std::string ultimateTitle = "Complétionniste de l'impossible";
-    if (normalizedTitle != ultimateTitle
-        && !hasTitle(ultimateTitle)
-        && TitleCatalog::hasAllUltimatePrerequisites(titles))
+    if (allowAutomaticMetaTitles
+        && normalizedTitle != ultimateTitle
+        && !hasTitle(ultimateTitle))
     {
-        titles.push_back(ultimateTitle);
+        std::vector<std::string> completionTitles = titles;
+        if (!currentOwnerAccountName.empty())
+        {
+            const std::vector<std::string> accountTitles = SaveManager::getAccountUnlockedTitles(currentOwnerAccountName);
+            for (const std::string& accountTitle : accountTitles)
+            {
+                if (std::find(completionTitles.begin(), completionTitles.end(), accountTitle) == completionTitles.end())
+                    completionTitles.push_back(accountTitle);
+            }
+        }
+
+        if (TitleCatalog::hasAllUltimatePrerequisites(completionTitles))
+        {
+            titles.push_back(ultimateTitle);
+        }
     }
 
-    return true;
+    return !alreadyOwned;
+}
+
+bool Player::grantTitle(const std::string& title)
+{
+    return grantTitleInternal(title, false, true);
+}
+
+bool Player::grantCharacterOnlyTitleFromCheat(const std::string& title)
+{
+    return grantTitleInternal(title, true, false);
 }
 
 bool Player::setActiveTitle(const std::string& title)
@@ -946,6 +1191,13 @@ void Player::setLoadedTitles(const std::vector<std::string>& loadedTitles, const
         activeTitles.push_back(titles.front());
     }
 
+    // Old altered saves predate the dedicated visible marker. Add it locally without
+    // triggering the normal first-title/completion chain and without involving account trophies.
+    if (alteredByCheats && !hasTitle("On ne dira rien..."))
+    {
+        grantCharacterOnlyTitleFromCheat("On ne dira rien...");
+    }
+
     activeTitle = activeTitles.empty() ? std::string() : activeTitles.front();
 }
 
@@ -1085,6 +1337,107 @@ const std::string& Player::getVisualVariant() const
     return visualVariant;
 }
 
+std::string Player::getBodyMorphology() const
+{
+    if (!bodyMorphology.empty()) return bodyMorphology;
+    std::string v = visualVariant;
+    std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    if (v.find("fine") != std::string::npos || v.find("dynamique") != std::string::npos || v.find("variante a") != std::string::npos) return "Fine";
+    if (v.find("robuste") != std::string::npos || v.find("imposante") != std::string::npos || v.find("variante b") != std::string::npos) return "Robuste";
+    return "Standard";
+}
+
+bool Player::hasActiveMorphologyProgram() const { return !morphologyProgramTarget.empty(); }
+const std::string& Player::getMorphologyProgramTarget() const { return morphologyProgramTarget; }
+int Player::getMorphologyProgramSessions() const { return morphologyProgramSessions; }
+int Player::getMorphologyProgramStartedDay() const { return morphologyProgramStartedDay; }
+int Player::getMorphologyProgramLastSessionDay() const { return morphologyProgramLastSessionDay; }
+
+bool Player::canStartMorphologyProgram(const std::string& target) const
+{
+    if (hasActiveMorphologyProgram()) return false;
+    const std::string current = getBodyMorphology();
+    if (target == current) return false;
+    if (current == "Fine") return target == "Standard";
+    if (current == "Robuste") return target == "Standard";
+    return target == "Fine" || target == "Robuste";
+}
+
+bool Player::startMorphologyProgram(const std::string& target)
+{
+    if (!canStartMorphologyProgram(target)) return false;
+    morphologyProgramTarget = target;
+    morphologyProgramSessions = 0;
+    morphologyProgramStartedDay = worldDaysElapsed;
+    morphologyProgramLastSessionDay = -1;
+    recordCanonicalEvent("programme_morphologie", getBodyMorphology() + "->" + target, "Programme morphologique volontaire commencé", 1);
+    return true;
+}
+
+bool Player::canPerformMorphologySession() const
+{
+    return hasActiveMorphologyProgram() && morphologyProgramLastSessionDay != worldDaysElapsed;
+}
+
+bool Player::performMorphologySession()
+{
+    if (!canPerformMorphologySession()) return false;
+    morphologyProgramLastSessionDay = worldDaysElapsed;
+    ++morphologyProgramSessions;
+    recordCanonicalEvent("sessions_morphologie", morphologyProgramTarget, "Entraînement + alimentation suivis pour le programme morphologique", 1);
+    return true;
+}
+
+bool Player::cancelMorphologyProgram()
+{
+    if (!hasActiveMorphologyProgram()) return false;
+    recordCanonicalEvent("programme_morphologie_annule", morphologyProgramTarget, "Programme morphologique annulé sans changement corporel automatique", 1);
+    morphologyProgramTarget.clear();
+    morphologyProgramSessions = 0;
+    morphologyProgramStartedDay = -1;
+    morphologyProgramLastSessionDay = -1;
+    return true;
+}
+
+bool Player::tryCompleteMorphologyProgram()
+{
+    if (!hasActiveMorphologyProgram()) return false;
+    if (morphologyProgramSessions < 8) return false;
+    if (morphologyProgramStartedDay < 0 || worldDaysElapsed - morphologyProgramStartedDay < 14) return false;
+
+    const std::string before = getBodyMorphology();
+    const std::string target = morphologyProgramTarget;
+    bodyMorphology = target;
+    morphologyProgramTarget.clear();
+    morphologyProgramSessions = 0;
+    morphologyProgramStartedDay = -1;
+    morphologyProgramLastSessionDay = -1;
+
+    recordCanonicalEvent("changements_morphologie", before + "->" + target, "Morphologie modifiée après programme long volontaire", 1);
+    recordHistoricalEvent("morphology_change", before + "->" + target, "Le corps du personnage évolue volontairement de " + before + " vers " + target + " après entraînement, alimentation et temps.", true);
+    grantTitle("Un corps façonné");
+    if (target == "Robuste") { grantTitle("Plus solide qu'avant"); grantTitle("Taillé pour porter"); }
+    if (target == "Fine") { grantTitle("Plus léger qu'avant"); grantTitle("Affûté"); }
+    if (getCanonicalJournalCategoryTotal("changements_morphologie") >= 2) grantTitle("Silhouette travaillée");
+    refreshCarryAndStorageTitles();
+    return true;
+}
+
+void Player::setLoadedMorphologyProgramState(const std::string& morphology, const std::string& target, int sessions, int startedDay, int lastSessionDay)
+{
+    bodyMorphology = (morphology == "Fine" || morphology == "Standard" || morphology == "Robuste") ? morphology : "";
+    morphologyProgramTarget = (target == "Fine" || target == "Standard" || target == "Robuste") ? target : "";
+    morphologyProgramSessions = std::max(0, sessions);
+    morphologyProgramStartedDay = startedDay;
+    morphologyProgramLastSessionDay = lastSessionDay;
+    if (morphologyProgramTarget.empty())
+    {
+        morphologyProgramSessions = 0;
+        morphologyProgramStartedDay = -1;
+        morphologyProgramLastSessionDay = -1;
+    }
+}
+
 std::string Player::getAgeBandText() const
 {
     return RaceCatalog::getAgeBand(race, characterAge);
@@ -1104,7 +1457,7 @@ void Player::setAppearanceProfile(int age, const std::string& presentation, cons
 {
     characterAge = std::max(15, std::min(age, RaceCatalog::getMaximumAge(race)));
     visualPresentation = presentation.empty() ? "Non précisé" : presentation;
-    visualVariant = variant.empty() ? "Variante A" : variant;
+    visualVariant = variant.empty() ? "Morphologie standard" : variant;
 }
 
 // EN: setRace declares or implements a focused behavior used by this module.
@@ -1378,6 +1731,7 @@ void Player::recordCanonicalEvent(const std::string& category, const std::string
                 record.locationId = currentCityId;
             }
             record.lastDay = worldDaysElapsed;
+            TitleProgressSystem::onCanonicalEvent(*this, category, key, cleanLabel);
             return;
         }
     }
@@ -1390,6 +1744,7 @@ void Player::recordCanonicalEvent(const std::string& category, const std::string
     record.count = amount;
     record.lastDay = worldDaysElapsed;
     canonicalJournalRecords.push_back(record);
+    TitleProgressSystem::onCanonicalEvent(*this, category, key, cleanLabel);
 
     if (canonicalJournalRecords.size() > 260)
     {
@@ -1562,7 +1917,7 @@ std::string Player::formatWorldDateLine() const
 std::string Player::formatWorldDayPartLine() const
 {
     const int part = std::max(0, std::min(worldDayProgressUnits, getWorldDayUnitsPerDay() - 1)) + 1;
-    return getCurrentDayPartName() + " " + std::to_string(part) + "/" + std::to_string(getWorldDayUnitsPerDay());
+    return getCurrentDayPartName() + " (" + std::to_string(part) + "/" + std::to_string(getWorldDayUnitsPerDay()) + ")";
 }
 
 std::string Player::formatWorldDateTimeLine() const
@@ -1589,7 +1944,7 @@ std::string Player::formatWorldTimeChange(int beforeDay, int beforeProgress) con
     const std::string beforeMoment = moments[static_cast<std::size_t>(beforeMomentIndex)];
 
     return "Date : Jour " + std::to_string(beforeDayNumber) + " (" + names[static_cast<std::size_t>(beforeWeekdayIndex)] + ") -> " + formatWorldDateLine()
-        + " | Moment : " + beforeMoment + " " + std::to_string(beforeMomentIndex + 1) + "/" + std::to_string(unitsPerDay)
+        + " | Moment : " + beforeMoment + " (" + std::to_string(beforeMomentIndex + 1) + "/" + std::to_string(unitsPerDay) + ")"
         + " -> " + formatWorldDayPartLine() + ".";
 }
 
@@ -1646,6 +2001,11 @@ void Player::processEndOfWorldDay()
             );
         }
     }
+
+    const GuildLoanDayResult loanDayResult = GuildFinanceSystem::processEndOfWorldDayLoan(*this);
+    dayLines.insert(dayLines.end(), loanDayResult.reportLines.begin(), loanDayResult.reportLines.end());
+
+    processCityVaultSecurityEndOfDay(dayLines);
 
     const int sleepPressure = getCursePressureForCategory("sleep");
     const int equipmentPressure = getCursePressureForCategory("equipment");
@@ -2940,6 +3300,27 @@ int Player::getEscapes() const
     return escapes;
 }
 
+int Player::getEscapeOpeningProgress() const
+{
+    return escapeOpeningProgress;
+}
+
+int Player::getSuccessfulEscapeOpenings() const
+{
+    return successfulEscapeOpenings;
+}
+
+void Player::recordSuccessfulEscapeOpening()
+{
+    ++escapeOpeningProgress;
+    ++successfulEscapeOpenings;
+}
+
+void Player::resetEscapeOpeningProgress()
+{
+    escapeOpeningProgress = 0;
+}
+
 // EN: getDeaths declares or implements a focused behavior used by this module.
 // FR: getDeaths déclare ou implémente un comportement précis utilisé par ce module.
 int Player::getDeaths() const
@@ -3666,6 +4047,8 @@ void Player::recordGrinkaStolenWeapon(const Weapon& weapon)
     grinkaBossTheftPresent = true;
     grinkaHasStolenWeapon = true;
     grinkaStolenWeapon = weapon;
+    grinkaStolenWeapon.setPersonalRecoveryItem(true);
+    grinkaStolenWeapon.setRecoveryPriority(100);
 }
 
 // EN: recordGrinkaStolenArmor declares or implements a focused behavior used by this module.
@@ -3675,6 +4058,51 @@ void Player::recordGrinkaStolenArmor(const Armor& armor)
     grinkaBossTheftPresent = true;
     grinkaHasStolenArmor = true;
     grinkaStolenArmor = armor;
+    grinkaStolenArmor.setPersonalRecoveryItem(true);
+    grinkaStolenArmor.setRecoveryPriority(100);
+}
+
+int Player::recoverGrinkaStolenGold()
+{
+    if (grinkaStolenGold <= 0)
+    {
+        return 0;
+    }
+
+    const int recovered = grinkaStolenGold;
+    inventory.earnEconomyUnits(recovered);
+    refreshCurrencyTitles();
+    grinkaStolenGold = 0;
+    grinkaBossTheftPresent = grinkaHasStolenWeapon || grinkaHasStolenArmor;
+    return recovered;
+}
+
+bool Player::recoverGrinkaStolenWeapon()
+{
+    if (!grinkaHasStolenWeapon)
+    {
+        return false;
+    }
+
+    inventory.addWeapon(grinkaStolenWeapon);
+    grinkaStolenWeapon = Weapon();
+    grinkaHasStolenWeapon = false;
+    grinkaBossTheftPresent = grinkaStolenGold > 0 || grinkaHasStolenArmor;
+    return true;
+}
+
+bool Player::recoverGrinkaStolenArmor()
+{
+    if (!grinkaHasStolenArmor)
+    {
+        return false;
+    }
+
+    inventory.addArmor(grinkaStolenArmor);
+    grinkaStolenArmor = Armor();
+    grinkaHasStolenArmor = false;
+    grinkaBossTheftPresent = grinkaStolenGold > 0 || grinkaHasStolenWeapon;
+    return true;
 }
 
 // EN: restoreGrinkaBossTheft declares or implements a focused behavior used by this module.
@@ -3686,26 +4114,11 @@ void Player::restoreGrinkaBossTheft()
         return;
     }
 
-    if (grinkaStolenGold > 0)
-    {
-        inventory.earnEconomyUnits(grinkaStolenGold);
-        refreshCurrencyTitles();
-    }
-
-    if (grinkaHasStolenWeapon)
-    {
-        inventory.addWeapon(grinkaStolenWeapon);
-    }
-
-    if (grinkaHasStolenArmor)
-    {
-        inventory.addArmor(grinkaStolenArmor);
-    }
+    recoverGrinkaStolenWeapon();
+    recoverGrinkaStolenArmor();
+    recoverGrinkaStolenGold();
 
     grinkaBossTheftPresent = false;
-    grinkaStolenGold = 0;
-    grinkaHasStolenWeapon = false;
-    grinkaHasStolenArmor = false;
 }
 
 void Player::setLoadedBossConsequences(
@@ -4252,6 +4665,8 @@ void Player::displayStats() const
         lines.push_back(titleLine);
     }
     lines.push_back("Niveau : " + std::to_string(level));
+    lines.push_back("Date actuelle : " + formatWorldDateLine());
+    lines.push_back("Moment actuel : " + formatWorldDayPartLine());
 
     int nextLevelExperience = Level::getExperienceRequiredForNextLevel(level);
     if (nextLevelExperience > 0)
@@ -4272,6 +4687,14 @@ void Player::displayStats() const
         lines.push_back("");
         lines.push_back("Statut : Altéré");
         lines.push_back("Les souvenirs de ce personnage portent déjà une trace anormale.");
+    }
+
+    const std::vector<std::string> codeHistory = describeCheatAndProtocolHistory();
+    if (!codeHistory.empty())
+    {
+        lines.push_back("");
+        lines.push_back("Codes / protocoles utilisés :");
+        lines.insert(lines.end(), codeHistory.begin(), codeHistory.end());
     }
 
     if (hasWorldGazePenalty())
@@ -4524,4 +4947,3 @@ void Player::displayDetailedEquipment() const
     lines.push_back("Argent total : " + inventory.getWalletTotalLine());
     PlayerUiSupport::showPlayerScreen("ÉQUIPEMENT DÉTAILLÉ", "player.equipment.detailed", lines, false);
 }
-

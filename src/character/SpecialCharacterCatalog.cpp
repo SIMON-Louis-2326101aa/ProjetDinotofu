@@ -152,11 +152,24 @@ std::vector<SpecialCharacter> SpecialCharacterCatalog::getAllSpecialCharacters()
             4
         ),
         SpecialCharacter(
+            "Arone Aster",
+            CharacterRace::Human,
+            "Guerrier",
+            "Guerrier humain protecteur, pratique et méfiant envers l'autorité absolue.",
+            "Arone porte une ronce marquée par les morts dont il refuse d'effacer l'humanité. Il aide facilement les autres, mais une couronne, une foi ou un ordre sans raison peuvent réveiller une colère beaucoup plus froide.",
+            true,
+            false,
+            "13/02/1313",
+            3,
+            24,
+            "Homme"
+        ),
+        SpecialCharacter(
             "Hestia",
             CharacterRace::Human,
             "Mage",
-            "Stats presque nulles sauf magie, sorts renforcés à chaque utilisation, dôme de protection max dès le début.",
-            "Hestia semble fragile jusqu'au moment où la magie commence à apprendre à travers elle.",
+            "Très mauvaise presque partout au début, magie comprise pendant sa réadaptation ; potentiel exceptionnel en magie divine et lumineuse à mesure que ses souvenirs reviennent.",
+            "Hestia ne sait pas qu'elle est une divinité. Sauvée au bord de la mort, elle parle peu au début et veut aider malgré une maladresse presque légendaire.",
             true,
             false,
             "11/11/1111",

@@ -32,9 +32,38 @@ bool PlayerWaveCombatTurn::play(
     bool& escapeSucceeded,
     DifficultyMode difficulty,
     bool teamOrdersAvailable,
-    const std::function<bool()>& openTeamOrders
+    const std::function<bool()>& openTeamOrders,
+    const std::function<void(const PlayerWaveObservedAction&)>& actionObserver
 )
 {
+    auto reportAction = [&](const std::string& kind, const std::string& targetName = std::string(), const std::string& targetId = std::string(), bool targetForced = false) {
+        if (!actionObserver) return;
+        PlayerWaveObservedAction observed;
+        observed.actionKind = kind;
+        observed.targetName = targetName;
+        observed.targetId = targetId;
+        observed.targetKnown = !targetId.empty();
+        observed.targetForcedByCombatRules = targetForced;
+        actionObserver(observed);
+    };
+
+    player.regenerateManaForCombatTurn();
+    if (player.consumeManaExhaustionTurn())
+    {
+        MessageScreen::show(
+            "ÉPUISEMENT DE MANA",
+            "wave.combat.player.mana_exhaustion_skip",
+            {
+                player.getName() + " essaie de se relever, mais le monde tangue encore.",
+                "Le corps refuse l'effort magique et ce tour est perdu.",
+                "Mana : " + std::to_string(player.getMana()) + "/" + std::to_string(player.getMaxMana())
+            },
+            false
+        );
+        reportAction("forced_skip");
+        return true;
+    }
+
     if (player.hasEntanglement() && player.hasPassiveSkill("church_oath_roots"))
     {
         const int rootChance = std::clamp(30 + player.getLevel() / 6 + player.getActiveSkillMasteryLevel("retrait_controle") * 3, 30, 58);
@@ -64,6 +93,7 @@ bool PlayerWaveCombatTurn::play(
             },
             false
         );
+        reportAction("forced_skip");
         return true;
     }
 
@@ -85,7 +115,9 @@ bool PlayerWaveCombatTurn::play(
 
     if (choice == 0)
     {
-        return openWaveInterface(player, wave, difficulty, teamOrdersAvailable, openTeamOrders);
+        const bool used = openWaveInterface(player, wave, difficulty, teamOrdersAvailable, openTeamOrders);
+        if (used) reportAction("interface_action");
+        return used;
     }
 
     if (choice == 1)
@@ -112,26 +144,38 @@ bool PlayerWaveCombatTurn::play(
         bool used = false;
         if (attackChoice == 1)
         {
+            std::string resolvedTargetName;
+            std::string resolvedTargetId;
+            bool targetForcedByCombatRules = false;
             used = CombatTargetMenu::openForAttack(
                 player,
                 wave,
-                random
+                random,
+                &resolvedTargetName,
+                &resolvedTargetId,
+                &targetForcedByCombatRules
             );
             if (used)
             {
                 player.recordChallengeCombatAction("basic_attack");
+                reportAction("basic_attack", resolvedTargetName, resolvedTargetId, targetForcedByCombatRules);
             }
         }
         else if (attackChoice == 2)
         {
+            std::string resolvedTargetName;
+            std::string resolvedTargetId;
             used = CombatTargetMenu::openForClassSkill(
                 player,
                 wave,
-                random
+                random,
+                &resolvedTargetName,
+                &resolvedTargetId
             );
             if (used)
             {
                 player.recordChallengeCombatAction("skill");
+                reportAction("skill", resolvedTargetName, resolvedTargetId, false);
             }
         }
 
@@ -144,6 +188,7 @@ bool PlayerWaveCombatTurn::play(
         if (used)
         {
             player.recordChallengeCombatAction("consumable");
+            reportAction("consumable");
         }
         return used;
     }
@@ -159,6 +204,7 @@ bool PlayerWaveCombatTurn::play(
         if (used)
         {
             player.recordChallengeCombatAction("consumable");
+            reportAction("consumable");
         }
         return used;
     }
@@ -171,13 +217,16 @@ bool PlayerWaveCombatTurn::play(
 
     if (choice == 5)
     {
-        return InventoryMenu::open(player);
+        const bool used = InventoryMenu::open(player);
+        if (used) reportAction("inventory_action");
+        return used;
     }
 
     if (choice == 6)
     {
         DefensePostureSystem::enterDefensePosture(player);
         player.recordChallengeCombatAction("defense");
+        reportAction("defense");
         return true;
     }
 
@@ -194,6 +243,7 @@ bool PlayerWaveCombatTurn::play(
         );
 
         player.recordChallengeCombatAction("wait");
+        reportAction("wait");
         return true;
     }
 
@@ -206,6 +256,7 @@ bool PlayerWaveCombatTurn::play(
             wave.getTotalRemainingEnemyCount()
         );
         player.recordChallengeCombatAction("escape");
+        reportAction("escape");
         return true;
     }
 
@@ -213,8 +264,9 @@ bool PlayerWaveCombatTurn::play(
     {
         if (teamOrdersAvailable && openTeamOrders)
         {
-            openTeamOrders();
-            return false;
+            const bool used = openTeamOrders();
+            if (used) reportAction("team_order");
+            return used;
         }
 
         MessageScreen::show(
@@ -232,6 +284,7 @@ bool PlayerWaveCombatTurn::play(
         if (used)
         {
             player.recordChallengeCombatAction("tactical_action");
+            reportAction("tactical_action");
         }
         return used;
     }
@@ -348,8 +401,7 @@ bool PlayerWaveCombatTurn::openWaveInterface(
     {
         if (teamOrdersAvailable && openTeamOrders)
         {
-            openTeamOrders();
-            return false;
+            return openTeamOrders();
         }
 
         MessageScreen::show(

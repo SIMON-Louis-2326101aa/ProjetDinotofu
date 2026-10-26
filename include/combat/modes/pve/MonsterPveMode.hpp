@@ -38,7 +38,10 @@ public:
         DeathRuleMode deathRule,
         const std::vector<Monster>& monsters,
         const std::string& title,
-        bool friendlyTrial = false
+        bool friendlyTrial = false,
+        bool municipalGuardSupport = false,
+        int authorityRewardPercent = 100,
+        int authorizedLootPercent = 100
     );
 };
 

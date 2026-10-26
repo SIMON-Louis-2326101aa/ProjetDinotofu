@@ -18,12 +18,10 @@ std::vector<std::string> SpecialCharacterGroupCatalog::getRoadmapLines()
         "Hazak / Henrique : meilleurs amis.",
         "Mattzelda / Louis / Trexof : meilleurs potes.",
         "Aoi / Kanadé / Sanctus : groupe proche.",
-        "Hazak / Hestia : Hazak l'a sauvée et évite les combats à mort avec elle.",
         "Fail / Hazak : contrat de non-agression.",
         "Skuro / personnage spécial compatible : Hazak, Henrique, Aoi, Fail ou Kanadé uniquement.",
         "Skuro / deux personnages spéciaux compatibles : même liste, sans doublon.",
         "Fire Flight / Matt (PRO) : duo de commandement et de pression.",
-        "Hestia / Sanctus / Hazak : protection sacrée, aucun massacre accepté.",
         "Fail / Aoi / Kanadé : laboratoire magique, instable mais puissant.",
         "Louis / Fire Flight / Trexof : duel d'improvisation entre amis, projectiles et failles utiles.",
         "Henrique / Mattzelda / Skuro : charge instable, humour, endurance et violence lourde.",
@@ -32,7 +30,7 @@ std::vector<std::string> SpecialCharacterGroupCatalog::getRoadmapLines()
         "Dwarf / Badr : humour provocateur face à un clerc beaucoup plus patient qu'il en a l'air.",
         "Matt (PRO) peut aussi apparaître seul en Combat IA ou via un tirage spécial d'arène.",
         "Groupe aléatoire normal : aventuriers random sans personnage spécial.",
-        "Sanctus et Skuro sont liés : même âme, deux réponses possibles face à la violence."
+        "Sanctus et Skuro sont la même personne dans deux états exclusifs : jamais présents ensemble au même moment."
     };
 }
 

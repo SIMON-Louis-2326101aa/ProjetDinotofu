@@ -35,6 +35,7 @@
 #include "interface/model/MenuScreen.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "story/StoryCampaign.hpp"
+#include "story/HestiaMissingPersonQuestSystem.hpp"
 #include "world/City.hpp"
 #include "world/CityTravelRules.hpp"
 #include "world/npc/NpcKnowledgeSystem.hpp"
@@ -63,6 +64,11 @@ void QuestMenu::syncMainStoryQuests(Player& player)
     {
         return;
     }
+
+    // Hestia is a late main-story encounter, but never a maintenance gate.
+    // Once the player has validated roughly twenty quests, Diane's old missing-person
+    // report appears independently from the current chapter and may remain pending forever.
+    HestiaMissingPersonQuestSystem::syncQuestIfAvailable(player);
 
     if (player.getStoryChapter() == 1)
     {
@@ -277,6 +283,13 @@ void QuestMenu::openMainQuestSection(Player& player)
         MenuScreen screen("QUÊTE PRINCIPALE", "quest.main_story");
         screen.addSubtitle("Objectifs d'histoire non refusables");
         screen.addLine("Les quêtes principales ne sont pas des contrats à accepter ou refuser : elles suivent la route de l'histoire.");
+
+        if (HestiaMissingPersonQuestSystem::questExists(player))
+        {
+            screen.addLine("Histoire annexe principale : Une personne disparue — "
+                + storyQuestStatusForId(player, HestiaMissingPersonQuestSystem::QuestId)
+                + ". Cette piste ne bloque jamais les autres chapitres.");
+        }
 
         if (!player.hasStoryModeStarted())
         {
@@ -552,4 +565,3 @@ void QuestMenu::openMainQuestSection(Player& player)
         }
     }
 }
-

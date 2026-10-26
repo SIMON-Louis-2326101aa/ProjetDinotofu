@@ -11,16 +11,42 @@ ASSET_PATTERN="${DINOTOFU_ASSET_PATTERN:-Dinotofu-Linux-v*.7z}"
 INSTALL_DIR="${DINOTOFU_INSTALL_DIR:-}"
 SKIP_LAUNCH="false"
 NO_PROMPT="false"
+FORCE_UPDATE="false"
 
 for arg in "$@"; do
     case "$arg" in
         --skip-launch) SKIP_LAUNCH="true" ;;
         --no-prompt) NO_PROMPT="true" ;;
+        --update) FORCE_UPDATE="true" ;;
         --repo=*) REPO="${arg#--repo=}" ;;
         --install-dir=*) INSTALL_DIR="${arg#--install-dir=}" ;;
         --asset-pattern=*) ASSET_PATTERN="${arg#--asset-pattern=}" ;;
     esac
 done
+
+normalize_version() {
+    echo "${1#v}" | tr -d '[:space:]'
+}
+
+version_is_older() {
+    local local_version_text="$1"
+    local remote_version_text="$2"
+    python3 - "$local_version_text" "$remote_version_text" <<'PY_VERSION_COMPARE' >/dev/null 2>&1
+import re
+import sys
+
+def parse(value):
+    value = value.strip().lstrip('vV')
+    if not re.fullmatch(r'\d+(?:\.\d+){0,2}', value):
+        return (0, 0, 0)
+    parts = [int(part) for part in value.split('.')]
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts[:3])
+
+sys.exit(0 if parse(sys.argv[1]) < parse(sys.argv[2]) else 1)
+PY_VERSION_COMPARE
+}
 
 read_config_value() {
     local key="$1"
@@ -199,6 +225,31 @@ fi
 local_game_found="false"
 if [[ -f "${SCRIPT_DIR}/output/Dinotofu" || -f "${SCRIPT_DIR}/Dinotofu" ]] && [[ -d "${SCRIPT_DIR}/assets" || -d "${SCRIPT_DIR}/data/assets" ]]; then
     local_game_found="true"
+fi
+
+if [[ "$FORCE_UPDATE" == "true" ]]; then
+    local_game_found="false"
+elif [[ "$local_game_found" == "true" && -n "$REPO" && "$REPO" == */* ]] && command -v curl >/dev/null 2>&1; then
+    local_pkg_version="0.00.00"
+    if [[ -f "${SCRIPT_DIR}/version.txt" ]]; then
+        local_pkg_version="$(normalize_version "$(cat "${SCRIPT_DIR}/version.txt")")"
+    elif [[ -f "${SCRIPT_DIR}/scripts/get_version.sh" ]]; then
+        local_pkg_version="$(normalize_version "$(bash "${SCRIPT_DIR}/scripts/get_version.sh" 2>/dev/null || echo "0.00.00")")"
+    fi
+    if curl -fsSL -H "User-Agent: DinotofuInstaller" "https://api.github.com/repos/${REPO}/releases/latest" -o "$RELEASE_JSON" 2>/dev/null; then
+        remote_tag="$(python3 - "$RELEASE_JSON" <<'PY' 2>/dev/null || true
+import json, sys
+with open(sys.argv[1], encoding='utf-8') as f:
+    print(json.load(f).get('tag_name',''))
+PY
+)"
+        remote_ver="$(normalize_version "$remote_tag")"
+        if [[ -n "$remote_ver" ]] && version_is_older "$local_pkg_version" "$remote_ver"; then
+            echo "Version locale (${local_pkg_version}) plus ancienne que la release GitHub (${remote_ver})."
+            echo "==> Telechargement automatique de la derniere version depuis GitHub..."
+            local_game_found="false"
+        fi
+    fi
 fi
 
 if [[ "$local_game_found" == "true" && "$SCRIPT_DIR" == "$INSTALL_DIR" ]]; then

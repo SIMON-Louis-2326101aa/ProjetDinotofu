@@ -439,6 +439,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             }
             shop.addItem(ShopItem("minor_healing_potion", "Petite potion de soin", "Restaure peu de PV, mais coûte peu.", ShopItemCategory::Consumable, 12, 4, 4 + rotation % 3));
             shop.addItem(ShopItem("basic_healing_potion", "Potion de soin", "Restaure une quantité simple de PV.", ShopItemCategory::Consumable, 25, 8, 3 + rotation % 3));
+            shop.addItem(ShopItem("mana_potion", "Potion de mana", "Rend 30 mana. Utile après une canalisation lourde ou avant l'épuisement.", ShopItemCategory::Consumable, 24, 8, 2 + rotation % 2));
             shop.addItem(ShopItem("basic_damage_potion", "Potion de rage", "Renforce une attaque offensive.", ShopItemCategory::Consumable, 30, 10, 2 + rotation % 2));
             if (rotation % 3 == 1)
             {
@@ -718,6 +719,7 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
         case ShopType::Alchemist:
             shop.addItem(ShopItem("minor_healing_potion", "Petite potion de soin", "Petit soin courant préparé sur place.", ShopItemCategory::Consumable, 13, 4, 5));
             shop.addItem(ShopItem("basic_healing_potion", "Potion de soin", "Restaure une quantité simple de PV.", ShopItemCategory::Consumable, 28, 8, 3));
+            shop.addItem(ShopItem("mana_potion", "Potion de mana", "Rend 30 mana sans effacer instantanément la fatigue déjà subie.", ShopItemCategory::Consumable, 27, 8, 2));
             shop.addItem(ShopItem("basic_damage_potion", "Potion de rage", "Boost offensif simple, vendu par alchimiste prudent.", ShopItemCategory::Consumable, 34, 10, 2));
             shop.addItem(ShopItem("antidote_potion", "Antidote simple", "Réponse classique aux poisons faibles.", ShopItemCategory::Consumable, 42, 12, 3));
             shop.addItem(ShopItem("burn_salve_potion", "Baume anti-brûlure", "Le minimum vital quand un slime rouge ou une flèche de cendre passe par là.", ShopItemCategory::Consumable, 44, 12, 2));
@@ -849,8 +851,8 @@ ShopInventory ShopCatalog::createPreviewShop(ShopType type)
             {
                 shop.addItem(ShopItem("night_survival_kit", "Kit de survie nocturne", "Matériel utile pour limiter les mauvaises surprises quand la route finit dans le noir.", ShopItemCategory::Material, 85, 34, 1));
             }
-            shop.addItem(ShopItem("warm_meal_voucher", "Bon de repas chaud", "Repas simple, pratique pour remplacer les micro-primes ridicules et les excuses de comptoir.", ShopItemCategory::Information, 12, 6, 4 + rotation % 3));
-            shop.addItem(ShopItem("lodging_bed_token", "Bon de lit d'auberge", "Une nuit simple à l'auberge. Pas luxueuse, mais mieux qu'un fossé narratif.", ShopItemCategory::Information, 24, 8, 2 + rotation % 2));
+            shop.addItem(ShopItem("warm_meal_voucher", "Carnet de 5 bons de repas chaud", "Achat prépayé : ajoute 5 bons à l'inventaire. Il ne sert PAS le repas immédiatement. Chaque bon remplace ensuite un paiement dans « Utiliser l'auberge ». Le carnet est légèrement moins cher que cinq repas payés séparément.", ShopItemCategory::Voucher, 22, 4, 4 + rotation % 3));
+            shop.addItem(ShopItem("lodging_bed_token", "Carnet de 5 bons de lit commun", "Achat prépayé : ajoute 5 bons à l'inventaire. Il ne fait PAS dormir immédiatement. Chaque bon remplace ensuite un paiement dans « Utiliser l'auberge ». Le carnet est légèrement moins cher que cinq nuits payées séparément.", ShopItemCategory::Voucher, 46, 7, 2 + rotation % 2));
             shop.addItem(ShopItem("stable_stall_ticket", "Ticket d'écurie", "Réservation de place d'écurie ou de stockage court. Utile avec les relais et caravanes.", ShopItemCategory::Information, 28, 10, 1 + rotation % 2));
             shop.addItem(ShopItem("prepared_saddlebags", "Sacoches préparées", "Sacoches vérifiées pour éviter de perdre du temps sur une sortie éloignée.", ShopItemCategory::Information, 32, 12, 1));
             shop.addItem(ShopItem("stable_box_reservation", "Réservation de box sécurisé", "Box réservé : utile pour garder monture, sacs ou charge avant une sortie ou une quête de relais.", ShopItemCategory::Information, 46, 22, 1));

@@ -167,19 +167,23 @@ if 'cat > "${STAGING_DIR}/dinotofu-installer.config.json" <<JSON' in package_win
 if 'r"%USERPROFILE%\\ProjetDinotofu"' not in package_windows:
     errors.append('scripts/package_windows_release.sh doit conserver le chemin Windows en raw string Python valide.')
 
-workflow = Path('.github/workflows/release-dinotofu.yml').read_text(encoding='utf-8')
-if 'package-source:' in workflow or ('no_' + 'exe') in workflow:
-    errors.append('Le workflow GitHub ne doit plus publier de ZIP source dans les releases.')
-for expected_asset in (
-    'INSTALLER-DINOTOFU-WINDOWS-v${VERSION}.zip',
-    'INSTALLER-DINOTOFU-LINUX-v${VERSION}.7z',
-    'Dinotofu-Windows-v${VERSION}-TECHNICAL-PAYLOAD.zip',
-    'Dinotofu-Linux-v${VERSION}-TECHNICAL-PAYLOAD.7z',
-):
-    if expected_asset not in workflow:
-        errors.append(f'Le workflow GitHub doit publier {expected_asset}.')
-if '--target "${GITHUB_SHA}"' not in workflow:
-    errors.append('La release GitHub doit créer le tag seulement après les builds en ciblant GITHUB_SHA.')
+workflow_path = Path('.github/workflows/release-dinotofu.yml')
+if workflow_path.exists():
+    workflow = workflow_path.read_text(encoding='utf-8')
+    if 'package-source:' in workflow or ('no_' + 'exe') in workflow:
+        errors.append('Le workflow GitHub ne doit plus publier de ZIP source dans les releases.')
+    for expected_asset in (
+        'INSTALLER-DINOTOFU-WINDOWS-v${VERSION}.zip',
+        'INSTALLER-DINOTOFU-LINUX-v${VERSION}.7z',
+        'Dinotofu-Windows-v${VERSION}-TECHNICAL-PAYLOAD.zip',
+        'Dinotofu-Linux-v${VERSION}-TECHNICAL-PAYLOAD.7z',
+    ):
+        if expected_asset not in workflow:
+            errors.append(f'Le workflow GitHub doit publier {expected_asset}.')
+    if '--target "${GITHUB_SHA}"' not in workflow:
+        errors.append('La release GitHub doit créer le tag seulement après les builds en ciblant GITHUB_SHA.')
+else:
+    print('[INFO] Workflow GitHub absent du backup essentiel : contrôles GitHub ignorés.')
 
 for package_script, installer_name, payload_name, installer_archive in [
     ('scripts/package_windows_release.sh', 'INSTALLER-DINOTOFU.cmd', 'Dinotofu-Windows-v${VERSION}-TECHNICAL-PAYLOAD.zip', 'INSTALLER-DINOTOFU-WINDOWS-v${VERSION}.zip'),
@@ -201,6 +205,16 @@ then
 fi
 warn "Configs installateurs/release OK."
 warn "Launchers/installateurs OK."
+
+[[ -x scripts/pre_push_check.sh ]] || fail "scripts/pre_push_check.sh est absent ou non exécutable."
+grep -q 'make test' scripts/pre_push_check.sh || fail "le contrôle pre-push ne lance plus la suite complète."
+grep -q 'validate_release_tree.sh --skip-branding' scripts/pre_push_check.sh || fail "le contrôle pre-push ne gère plus explicitement le backup essentiel sans branding."
+grep -q 'BUMP_MODE.*current' scripts/release_push.sh || fail "release_push.sh ne permet plus le push de la version courante sans rebump."
+if [[ -f .github/workflows/ci.yml ]]; then
+    grep -q 'validate_release_tree.sh --skip-branding' .github/workflows/ci.yml || fail "la CI GitHub ne valide plus l'arborescence source."
+    grep -q 'make -j2 test' .github/workflows/ci.yml || fail "la CI GitHub ne lance plus la suite de tests."
+fi
+warn "Pré-push source et CI minimale OK."
 
 if [[ ${SKIP_BRANDING} -eq 1 ]]; then
     warn "Branding ignoré explicitement : validation adaptée au backup essentiel sans images."

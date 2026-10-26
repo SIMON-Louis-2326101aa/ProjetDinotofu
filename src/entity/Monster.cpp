@@ -35,6 +35,9 @@ Monster::Monster()
       spawnedByReinforcementCall(false),
       weakenedReinforcementCaller(false),
       rivalId(""),
+      combatInstanceId(""),
+      escapeOpeningProgress(0),
+      successfulEscapeOpenings(0),
       preparedSignatureActive(false),
       preparedSignatureHpSnapshot(0),
       preparedSignatureTier(0),
@@ -90,6 +93,9 @@ Monster::Monster(
       spawnedByReinforcementCall(false),
       weakenedReinforcementCaller(false),
       rivalId(""),
+      combatInstanceId(""),
+      escapeOpeningProgress(0),
+      successfulEscapeOpenings(0),
       preparedSignatureActive(false),
       preparedSignatureHpSnapshot(0),
       preparedSignatureTier(0),
@@ -150,6 +156,37 @@ const std::string& Monster::getRivalId() const
 void Monster::setRivalId(const std::string& id)
 {
     rivalId = id;
+}
+
+const std::string& Monster::getCombatInstanceId() const
+{
+    return combatInstanceId;
+}
+
+void Monster::setCombatInstanceId(const std::string& id)
+{
+    combatInstanceId = id;
+}
+
+int Monster::getEscapeOpeningProgress() const
+{
+    return escapeOpeningProgress;
+}
+
+int Monster::getSuccessfulEscapeOpenings() const
+{
+    return successfulEscapeOpenings;
+}
+
+void Monster::recordSuccessfulEscapeOpening()
+{
+    ++escapeOpeningProgress;
+    ++successfulEscapeOpenings;
+}
+
+void Monster::resetEscapeOpeningProgress()
+{
+    escapeOpeningProgress = 0;
 }
 
 bool Monster::doesSplitOnDeath() const

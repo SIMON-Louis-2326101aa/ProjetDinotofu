@@ -41,6 +41,14 @@ bool SpecialCharacterTransformationRules::canTransformIntoSkuro(const std::strin
     return normalize(characterName) == "sanctus";
 }
 
+bool SpecialCharacterTransformationRules::canAppearTogether(const std::string& firstName, const std::string& secondName)
+{
+    const std::string first = normalize(firstName);
+    const std::string second = normalize(secondName);
+    const bool sanctusSkuro = (first == "sanctus" && second == "skuro") || (first == "skuro" && second == "sanctus");
+    return !sanctusSkuro;
+}
+
 bool SpecialCharacterTransformationRules::shouldSanctusTransformAfterDamageTaken(
     int damageTaken,
     int maxHp
@@ -76,8 +84,8 @@ void SpecialCharacterTransformationRules::displaySanctusToSkuroForeshadowing()
         "character.transformation.sanctus_skuro",
         {
             "Quelque chose se fissure derrière la lumière de Sanctus.",
-            "Ce n'est pas une deuxième personne. C'est la même histoire, après la première tête coupée.",
-            "Si la protection se brise trop fort, Skuro pourrait répondre à sa place."
+            "Ce n'est pas une deuxième personne : Sanctus et Skuro partagent le même corps et ne peuvent jamais être présents au même moment.",
+            "Quand l'un prend la place, l'autre disparaît de la scène jusqu'au prochain basculement."
         },
         false
     );

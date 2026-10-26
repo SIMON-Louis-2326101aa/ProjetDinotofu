@@ -6,6 +6,7 @@
 #include "economy/Money.hpp"
 #include "world/WorldMap.hpp"
 #include "world/LocalReputationSystem.hpp"
+#include "world/CityProfileSystem.hpp"
 
 #include "boss/BossCatalog.hpp"
 
@@ -202,7 +203,7 @@ std::vector<std::string> CityTravelRules::buildTravelPreviewLines(const Player& 
     lines.push_back("Départ : " + origin->getName() + ".");
     lines.push_back("Arrivée : " + destination.getName() + ".");
     lines.push_back("Distance ville ↔ ville : " + std::to_string(distance) + " km environ.");
-    lines.push_back("Temps de voyage : " + std::to_string(EconomyBalance::travelTimeUnitsForDistance(distance)) + " segment(s).");
+    lines.push_back("Temps de voyage : " + std::to_string(EconomyBalance::travelTimeUnitsForDistance(distance)) + " moment(s) de la journée.");
     const int normalTax = EconomyBalance::cityChangeTaxCopper(destination.getId(), distance);
     const int actualTax = getTravelTaxCopper(player, destination, distance);
     lines.push_back("Taxe de changement de ville : " + std::to_string(actualTax) + " cuivre, prélevée seulement si tu changes réellement de ville.");
@@ -322,6 +323,7 @@ std::vector<std::string> CityTravelRules::buildLocalCityDifferentiationLines(con
     }
 
     lines.push_back("Profil local : " + city->getName() + ".");
+    lines.push_back(CityProfileSystem::profileSummary(city->getId()));
     lines.push_back("Guilde locale : " + city->getGuildName() + ".");
     lines.push_back("Inscription locale : " + std::string(player.isRegisteredAtCityGuild(city->getId()) ? "validée" : "mise à niveau disponible") + ".");
     const LocalReputationResult reputation = LocalReputationSystem::evaluate(player, city->getId());

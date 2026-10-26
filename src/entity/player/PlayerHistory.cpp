@@ -1,4 +1,5 @@
 #include "entity/Player.hpp"
+#include "item/material/MaterialCatalog.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -213,6 +214,84 @@ void Player::recordRivalWound(const std::string& rivalId, int amount)
     recordHistoricalEvent("rival_wound", rivalId, rival->enemyName + " conserve une blessure de la rencontre.");
 }
 
+bool Player::rivalHasStolenProperty(const std::string& rivalId) const
+{
+    const PlayerRivalRecord* rival = findRival(rivalId);
+    if (!rival) return false;
+    return rival->stolenCopper > 0 || rival->stolenMaterialQuantity > 0;
+}
+
+void Player::recordRivalStolenCopper(const std::string& rivalId, long long copperAmount)
+{
+    PlayerRivalRecord* rival = findMutableRival(rivalId);
+    if (!rival || !rival->alive || copperAmount <= 0) return;
+    rival->stolenCopper += copperAmount;
+    rival->lastOutcome = "fuite avec bien volé";
+    rival->notoriety = std::min(100, rival->notoriety + 4);
+    recordCanonicalEvent("vols_rivaux", rivalId, rival->enemyName + " s'est enfui avec une partie de ta bourse", 1);
+    recordHistoricalEvent("rival_theft", rivalId, rival->enemyName + " s'enfuit avec un bien réellement volé.");
+}
+
+void Player::recordRivalStolenMaterial(const std::string& rivalId, const Material& material, int quantity)
+{
+    PlayerRivalRecord* rival = findMutableRival(rivalId);
+    if (!rival || !rival->alive || quantity <= 0) return;
+
+    // One compact material stack per rival is enough for the first real theft layer. If the rival
+    // already carries another material type, keep the existing stash instead of overwriting it.
+    if (rival->stolenMaterialQuantity > 0 && rival->stolenMaterialId != material.getId()) return;
+
+    rival->stolenMaterialId = material.getId();
+    rival->stolenMaterialName = material.getName();
+    rival->stolenMaterialQuality = material.getQuality();
+    rival->stolenMaterialQuantity += quantity;
+    rival->lastOutcome = "fuite avec bien volé";
+    rival->notoriety = std::min(100, rival->notoriety + 4);
+    recordCanonicalEvent("vols_rivaux", rivalId, rival->enemyName + " s'est enfui avec " + material.getName(), quantity);
+    recordHistoricalEvent("rival_theft", rivalId, rival->enemyName + " s'enfuit avec " + material.getName() + ".");
+}
+
+bool Player::recoverRivalStolenProperty(const std::string& rivalId)
+{
+    PlayerRivalRecord* rival = findMutableRival(rivalId);
+    if (!rival) return false;
+
+    bool recovered = false;
+    if (rival->stolenCopper > 0)
+    {
+        inventory.earnCopper(rival->stolenCopper);
+        recordCanonicalEvent("biens_voles_recuperes", rivalId, rival->enemyName + " rend la partie de bourse volée", 1);
+        rival->stolenCopper = 0;
+        recovered = true;
+    }
+
+    if (rival->stolenMaterialQuantity > 0 && !rival->stolenMaterialId.empty())
+    {
+        inventory.addMaterial(MaterialCatalog::createById(
+            rival->stolenMaterialId,
+            rival->stolenMaterialQuantity,
+            rival->stolenMaterialQuality.empty() ? "normal" : rival->stolenMaterialQuality));
+        recordCanonicalEvent(
+            "biens_voles_recuperes",
+            rivalId,
+            rival->enemyName + " rend " + (rival->stolenMaterialName.empty() ? rival->stolenMaterialId : rival->stolenMaterialName),
+            rival->stolenMaterialQuantity);
+        rival->stolenMaterialId.clear();
+        rival->stolenMaterialName.clear();
+        rival->stolenMaterialQuality = "normal";
+        rival->stolenMaterialQuantity = 0;
+        recovered = true;
+    }
+
+    if (recovered)
+    {
+        rival->lastOutcome = "bien volé récupéré";
+        recordHistoricalEvent("rival_theft_recovered", rivalId, "Le bien volé par " + rival->enemyName + " a été récupéré.", true);
+        grantTitle("Rends-moi ça.");
+    }
+    return recovered;
+}
+
 void Player::markRivalDefeated(const std::string& rivalId, const std::string& locationId)
 {
     PlayerRivalRecord* rival = findMutableRival(rivalId);
@@ -223,6 +302,15 @@ void Player::markRivalDefeated(const std::string& rivalId, const std::string& lo
     rival->lastSeenDay = worldDaysElapsed;
     if (!locationId.empty()) rival->lastKnownLocationId = locationId;
     recordHistoricalEvent("rival_defeated", rivalId, rival->enemyName + " est définitivement vaincu.", true);
+    recoverRivalStolenProperty(rivalId);
+    for (const PlayerVaultTheftCase& theftCase : getVaultTheftCases())
+    {
+        if (!theftCase.resolved && theftCase.identifiedRivalId == rivalId)
+        {
+            recoverVaultTheftCaseProperty(theftCase.caseId);
+            break;
+        }
+    }
 }
 
 void Player::setLoadedRivalRecords(const std::vector<PlayerRivalRecord>& rivals)
@@ -239,6 +327,15 @@ void Player::setLoadedRivalRecords(const std::vector<PlayerRivalRecord>& rivals)
         if (rival.temperament.empty()) rival.temperament = "survivant prudent";
         rival.emergenceScore = std::clamp(rival.emergenceScore, 0, 100);
         rival.notoriety = std::clamp(rival.notoriety, 0, 100);
+        rival.stolenCopper = std::max<long long>(0, rival.stolenCopper);
+        rival.stolenMaterialQuantity = std::max(0, rival.stolenMaterialQuantity);
+        if (rival.stolenMaterialId.empty())
+        {
+            rival.stolenMaterialQuantity = 0;
+            rival.stolenMaterialName.clear();
+            rival.stolenMaterialQuality = "normal";
+        }
+        if (rival.stolenMaterialQuality.empty()) rival.stolenMaterialQuality = "normal";
         rivalRecords.push_back(rival);
     }
 }

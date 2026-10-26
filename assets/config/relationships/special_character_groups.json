@@ -49,16 +49,6 @@
             "notes": "Aoi protects her incantations, Kanadé complains but keeps going, Sanctus protects the group."
         },
         {
-            "id": "hazak_hestia",
-            "members": [
-                "Hazak",
-                "Hestia"
-            ],
-            "relationship": "rescuer_and_protected",
-            "defaultCombatIntent": "serious_fight_not_death_match",
-            "notes": "Hestia was once a divinity but lost her memories. Hazak saved her and avoids death matches when she is present."
-        },
-        {
             "id": "fail_hazak",
             "members": [
                 "Fail",

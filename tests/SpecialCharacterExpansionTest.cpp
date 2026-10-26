@@ -22,6 +22,15 @@ namespace
 
 int main()
 {
+
+    const SpecialCharacter arone = requireCharacter("Arone Aster");
+    assert(arone.getRace() == CharacterRace::Human);
+    assert(arone.getNativeClass() == "Guerrier");
+    assert(arone.getAge() == 24);
+    assert(arone.getGender() == "Homme");
+    assert(SpecialCharacterDateRule::validate(arone, "13/02/1313"));
+    assert(SpecialCharacterDialogueCatalog::hasDialogueFor("Arone Aster"));
+
     const SpecialCharacter willow = requireCharacter("Willow");
     assert(willow.getRace() == CharacterRace::Human);
     assert(willow.getNativeClass() == "Archer");

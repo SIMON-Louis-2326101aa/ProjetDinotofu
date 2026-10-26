@@ -10,12 +10,14 @@
 
 #include "core/Random.hpp"
 
+#include <algorithm>
 #include <sstream>
 
 // EN: EnemyCombatQueue declares or implements a focused behavior used by this module.
 // FR: EnemyCombatQueue déclare ou implémente un comportement précis utilisé par ce module.
 EnemyCombatQueue::EnemyCombatQueue()
-    : frontLineInitialized(false)
+    : frontLineInitialized(false),
+      nextCombatInstanceId(1)
 {
 }
 
@@ -24,6 +26,7 @@ EnemyCombatQueue::EnemyCombatQueue()
 void EnemyCombatQueue::addWaitingEnemy(const Monster& monster)
 {
     Monster queued = monster;
+    assignCombatInstanceId(queued);
     if (queued.wasSpawnedByReinforcementCall())
     {
         queued.setReinforcementSpawnGroupSize(getActiveEnemyCount() + getWaitingEnemyCount() + 1);
@@ -148,6 +151,38 @@ const Monster& EnemyCombatQueue::getWaitingEnemy(int index) const
     return waitingEnemies[index];
 }
 
+int EnemyCombatQueue::damageWaitingEnemy(int index, int damage)
+{
+    if (index < 0 || index >= static_cast<int>(waitingEnemies.size()) || damage <= 0)
+    {
+        return 0;
+    }
+
+    Monster& target = waitingEnemies[static_cast<std::size_t>(index)];
+    const int before = target.getHp();
+    target.takeDamage(damage);
+    const int effective = std::max(0, before - target.getHp());
+    if (target.isDead())
+    {
+        defeatedEnemies.push_back(target);
+        waitingEnemies.erase(waitingEnemies.begin() + index);
+    }
+    return effective;
+}
+
+int EnemyCombatQueue::healWaitingEnemy(int index, int healing)
+{
+    if (index < 0 || index >= static_cast<int>(waitingEnemies.size()) || healing <= 0)
+    {
+        return 0;
+    }
+
+    Monster& target = waitingEnemies[static_cast<std::size_t>(index)];
+    const int before = target.getHp();
+    target.heal(healing);
+    return std::max(0, target.getHp() - before);
+}
+
 // EN: getDefeatedEnemy declares or implements a focused behavior used by this module.
 // FR: getDefeatedEnemy déclare ou implémente un comportement précis utilisé par ce module.
 const Monster& EnemyCombatQueue::getDefeatedEnemy(int index) const
@@ -220,7 +255,9 @@ void EnemyCombatQueue::removeActiveEnemy(int index)
         children.reserve(static_cast<std::size_t>(childCount));
         for (int childIndex = 1; childIndex <= childCount; ++childIndex)
         {
-            children.push_back(removedEnemy.createSplitChild(childIndex));
+            Monster child = removedEnemy.createSplitChild(childIndex);
+            assignCombatInstanceId(child);
+            children.push_back(child);
         }
 
         waitingEnemies.insert(waitingEnemies.begin(), children.begin(), children.end());
@@ -292,6 +329,23 @@ bool EnemyCombatQueue::switchActiveEnemyWithWaiting(int activeIndex, int waiting
     }
 
     std::swap(activeEnemies[static_cast<std::size_t>(activeIndex)], waitingEnemies[static_cast<std::size_t>(waitingIndex)]);
+    return true;
+}
+
+bool EnemyCombatQueue::moveActiveEnemyToFront(int activeIndex)
+{
+    if (!isActiveIndexValid(activeIndex))
+    {
+        return false;
+    }
+    if (activeIndex == 0)
+    {
+        return true;
+    }
+
+    Monster selected = activeEnemies[static_cast<std::size_t>(activeIndex)];
+    activeEnemies.erase(activeEnemies.begin() + activeIndex);
+    activeEnemies.insert(activeEnemies.begin(), selected);
     return true;
 }
 
@@ -482,6 +536,11 @@ void EnemyCombatQueue::bringNextEnemyIn(bool delayedEntry)
 
 // EN: isDamagedAndAlive declares or implements a focused behavior used by this module.
 // FR: isDamagedAndAlive déclare ou implémente un comportement précis utilisé par ce module.
+void EnemyCombatQueue::assignCombatInstanceId(Monster& monster)
+{
+    monster.setCombatInstanceId("enemy_" + std::to_string(nextCombatInstanceId++));
+}
+
 bool EnemyCombatQueue::isDamagedAndAlive(const Monster& monster) const
 {
     return !monster.isDead() && monster.getHp() < monster.getMaxHp();

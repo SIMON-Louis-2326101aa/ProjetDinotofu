@@ -51,6 +51,15 @@ std::string questKindText(const Quest& quest)
     }
 std::string questProgressMethodText(const Quest& quest)
     {
+        if (quest.objectiveType == "intercity_information")
+        {
+            return "Voyage jusqu'au prochain comptoir indiqué et remets l'information en mains propres ; chaque relais est payé et validé à l'arrivée.";
+        }
+        if (quest.objectiveType == "intercity_material")
+        {
+            return "Voyage jusqu'au prochain comptoir indiqué avec la cargaison contractuelle ; chaque remise de matériaux est payée et validée à l'arrivée.";
+        }
+
         if (quest.objectiveType == "service")
         {
             if (questDialogueContainsAny(quest, {"tri de sac", "inventaire trop", "sac trop"}))

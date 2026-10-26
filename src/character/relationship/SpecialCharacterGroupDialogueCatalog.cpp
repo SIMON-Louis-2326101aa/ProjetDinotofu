@@ -50,7 +50,6 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getEntranceLines(
     bool hasAoi = containsName(names, "Aoi");
     bool hasKanade = containsName(names, "Kanadé");
     bool hasSanctus = containsName(names, "Sanctus");
-    bool hasHestia = containsName(names, "Hestia");
     bool hasFail = containsName(names, "Fail");
     bool hasSkuro = containsName(names, "Skuro");
     bool hasFireFlight = containsName(names, "Fire Flight");
@@ -89,19 +88,9 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getEntranceLines(
         return {"Sanctus se place devant les deux mages comme un rempart vivant.", "Kanadé : Génial. Encore une arène. Encore du bruit. Encore quelqu'un à exploser.", "Aoi : Je... je prépare les incantations. Ne les laissez pas approcher."};
     }
 
-    if (hasHazak && hasHestia)
-    {
-        return {"Hestia reste légèrement derrière Hazak, les mains crispées autour d'une magie qu'elle ne comprend pas entièrement.", "Hazak : Reste derrière moi. Ce combat ne deviendra pas un massacre.", "Hestia : Je ne veux juste pas revoir ça..."};
-    }
-
     if (hasHazak && hasFail)
     {
         return {"Fail sourit à l'arène. Hazak, lui, ne sourit pas.", "Fail : Promis, je respecte le contrat. Je n'explose pas Hazak.", "Hazak : Essaie déjà de ne pas exploser tout le reste."};
-    }
-
-    if (hasHestia && hasSanctus && hasHazak)
-    {
-        return {"Sanctus se place devant Hestia. Hazak se place à l'endroit où personne ne devrait passer.", "Hestia : Je... je vais essayer de ne pas fermer les yeux.", "Hazak : Si tu les fermes, on combattra quand même.", "Sanctus : Alors personne ne l'atteindra."};
     }
 
     if (hasFail && hasAoi && hasKanade)
@@ -171,11 +160,6 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getVictoryLines(c
         };
     }
 
-    if (containsName(names, "Hazak") && containsName(names, "Hestia"))
-    {
-        return {"Hazak nettoie sa lame sans regarder Hestia.", "Hazak : C'est terminé. Tu n'as pas besoin de retenir cette image.", "Hestia : Merci... je crois."};
-    }
-
     if (containsName(names, "Mattzelda") && containsName(names, "Louis") && containsName(names, "Trexof"))
     {
         return {"Mattzelda : Victoire des potes, let's gooo.", "Louis : On a gagné ET personne n'est trop fâché ?", "Trexof : Statistiquement, c'est le meilleur résultat."};
@@ -237,11 +221,6 @@ std::vector<std::string> SpecialCharacterGroupDialogueCatalog::getDefeatLines(co
     if (containsName(names, "Hazak") && containsName(names, "Henrique"))
     {
         return {"Henrique tend la main à Hazak avant même de vérifier ses propres blessures.", "Hazak : Ne m'aide pas.", "Henrique : Trop tard."};
-    }
-
-    if (containsName(names, "Hazak") && containsName(names, "Hestia"))
-    {
-        return {"Hazak reste entre toi et Hestia même au sol.", "Hazak : Le combat est terminé. Pas un pas de plus.", "Hestia : Je... je ne veux pas qu'il recommence."};
     }
 
     if (containsName(names, "Mattzelda") && containsName(names, "Louis") && containsName(names, "Trexof"))

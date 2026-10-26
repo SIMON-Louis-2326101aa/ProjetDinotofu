@@ -4,6 +4,7 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "combat/modes/pvp/PvpMode.hpp"
+#include "combat/modes/pvp/PvpEquipmentHistory.hpp"
 
 #include "combat/TurnManager.hpp"
 
@@ -19,6 +20,7 @@
 #include "progression/DeathRuleRules.hpp"
 #include "progression/blessing/BlessingSystem.hpp"
 #include "progression/death/DeathPenaltySystem.hpp"
+#include "combat/death/LethalSpiritResistanceSystem.hpp"
 #include "save/SaveManager.hpp"
 #include "save/menu/AccountMenu.hpp"
 #include "save/menu/CharacterMenu.hpp"
@@ -646,13 +648,18 @@ namespace
 
             Weapon weapon = loser.getInventory().getWeapon(i);
 
-            if (isProtectedStarterWeapon(weapon))
+            if (isProtectedStarterWeapon(weapon) || !weapon.canChangeOwner())
             {
                 continue;
             }
 
+            if (!loser.getInventory().removeWeapon(i))
+            {
+                return false;
+            }
+
             winner.getInventory().addWeapon(weapon);
-            loser.getInventory().removeWeapon(i);
+            PvpEquipmentHistory::recordWeaponTransfer(winner, loser, weapon, true, false);
             lootLines.push_back(winner.getName() + " récupère l'arme : " + weapon.getName() + ".");
             return true;
         }
@@ -678,13 +685,18 @@ namespace
 
             Armor armor = loser.getInventory().getArmor(i);
 
-            if (isProtectedStarterArmor(armor))
+            if (isProtectedStarterArmor(armor) || !armor.canChangeOwner())
             {
                 continue;
             }
 
+            if (!loser.getInventory().removeArmor(i))
+            {
+                return false;
+            }
+
             winner.getInventory().addArmor(armor);
-            loser.getInventory().removeArmor(i);
+            PvpEquipmentHistory::recordArmorTransfer(winner, loser, armor, true, false);
             lootLines.push_back(winner.getName() + " récupère l'armure : " + armor.getName() + ".");
             return true;
         }
@@ -707,7 +719,7 @@ namespace
 
         Weapon weapon = loser.getInventory().getWeapon(index);
 
-        if (isProtectedStarterWeapon(weapon))
+        if (isProtectedStarterWeapon(weapon) || !weapon.canChangeOwner())
         {
             return false;
         }
@@ -729,9 +741,13 @@ namespace
         }
 
         loser.unequipWeapon();
-        winner.getInventory().addWeapon(weapon);
-        loser.getInventory().removeWeapon(index);
+        if (!loser.getInventory().removeWeapon(index))
+        {
+            return false;
+        }
 
+        winner.getInventory().addWeapon(weapon);
+        PvpEquipmentHistory::recordWeaponTransfer(winner, loser, weapon, true, true);
         lootLines.push_back(winner.getName() + " récupère l'arme portée par le défunt : " + weapon.getName() + ".");
         return true;
     }
@@ -749,7 +765,7 @@ namespace
 
         Armor armor = loser.getInventory().getArmor(index);
 
-        if (isProtectedStarterArmor(armor))
+        if (isProtectedStarterArmor(armor) || !armor.canChangeOwner())
         {
             return false;
         }
@@ -771,9 +787,13 @@ namespace
         }
 
         loser.unequipArmor();
-        winner.getInventory().addArmor(armor);
-        loser.getInventory().removeArmor(index);
+        if (!loser.getInventory().removeArmor(index))
+        {
+            return false;
+        }
 
+        winner.getInventory().addArmor(armor);
+        PvpEquipmentHistory::recordArmorTransfer(winner, loser, armor, true, true);
         lootLines.push_back(winner.getName() + " récupère l'armure portée par le défunt : " + armor.getName() + ".");
         return true;
     }
@@ -926,7 +946,7 @@ namespace
 
             Weapon weapon = loser.getInventory().getWeapon(i);
 
-            if (isProtectedStarterWeapon(weapon))
+            if (isProtectedStarterWeapon(weapon) || !weapon.canChangeOwner())
             {
                 continue;
             }
@@ -937,8 +957,13 @@ namespace
                 continue;
             }
 
+            if (!loser.getInventory().removeWeapon(i))
+            {
+                return false;
+            }
+
             winner.getInventory().addWeapon(weapon);
-            loser.getInventory().removeWeapon(i);
+            PvpEquipmentHistory::recordWeaponTransfer(winner, loser, weapon, false, false);
             stolenValue += value;
             lootLines.push_back(winner.getName() + " récupère l'arme : " + weapon.getName() + " (valeur estimée " + std::to_string(value) + ").");
             return true;
@@ -965,7 +990,7 @@ namespace
 
             Armor armor = loser.getInventory().getArmor(i);
 
-            if (isProtectedStarterArmor(armor))
+            if (isProtectedStarterArmor(armor) || !armor.canChangeOwner())
             {
                 continue;
             }
@@ -976,8 +1001,13 @@ namespace
                 continue;
             }
 
+            if (!loser.getInventory().removeArmor(i))
+            {
+                return false;
+            }
+
             winner.getInventory().addArmor(armor);
-            loser.getInventory().removeArmor(i);
+            PvpEquipmentHistory::recordArmorTransfer(winner, loser, armor, false, false);
             stolenValue += value;
             lootLines.push_back(winner.getName() + " récupère l'armure : " + armor.getName() + " (valeur estimée " + std::to_string(value) + ").");
             return true;
@@ -988,7 +1018,13 @@ namespace
 
     // EN: applyDeadlyDuelReward declares or implements a focused behavior used by this module.
     // FR: applyDeadlyDuelReward déclare ou implémente un comportement précis utilisé par ce module.
-    void applyDeadlyDuelReward(Player& winner, Player& loser, Random& random, bool lethalDuel, int winnerPreFightValue)
+    void applyDeadlyDuelReward(
+        Player& winner,
+        Player& loser,
+        Random& random,
+        bool lethalDuel,
+        int winnerPreFightValue,
+        bool loserSurvivedLethal = false)
     {
         std::vector<std::string> lootLines;
         lootLines.push_back("Vainqueur : " + winner.getName() + ".");
@@ -1026,10 +1062,14 @@ namespace
 
         bool itemStolen = false;
 
-        if (lethalDuel)
+        if (lethalDuel && !loserSurvivedLethal)
         {
             itemStolen = stealEquippedWeaponOnLethalDeath(winner, loser, random, lootLines) || itemStolen;
             itemStolen = stealEquippedArmorOnLethalDeath(winner, loser, random, lootLines) || itemStolen;
+        }
+        else if (lethalDuel && loserSurvivedLethal)
+        {
+            lootLines.push_back("Le perdant respire encore : son équipement porté n'est pas traité comme celui d'un cadavre.");
         }
 
         for (int i = 0; i < attempts; ++i)
@@ -1057,7 +1097,15 @@ namespace
 
         if (lethalDuel)
         {
-            lootLines.push_back("Duel à mort définitive : le perdant est considéré comme mort définitivement.");
+            if (loserSurvivedLethal)
+            {
+                lootLines.push_back("Duel à mort définitive : le perdant a été vaincu, mais sa résistance spirituelle l'a maintenu en vie à 1 PV.");
+                lootLines.push_back("La victoire et le butin de défaite restent réels, mais le personnage n'entre pas au registre des morts.");
+            }
+            else
+            {
+                lootLines.push_back("Duel à mort définitive : le perdant est considéré comme mort définitivement.");
+            }
             lootLines.push_back("Les objets liés à l'âme ou au corps restent protégés.");
             lootLines.push_back("Les reliques et objets rares ont une forte chance d'être récupérés, mais pas une garantie absolue.");
         }
@@ -1301,13 +1349,31 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
     Player* winner = player1.isDead() ? &player2 : &player1;
     Player* loser = player1.isDead() ? &player1 : &player2;
     bool lethalSurvivalTriggered = false;
+    bool lethalSpiritSurvivalTriggered = false;
+    bool lethalBlessingSurvivalTriggered = false;
 
     showLocalPvpResultScreen(*winner, *loser, deadlyDuel, lethalDeadlyDuel);
 
-    if (lethalDeadlyDuel && BlessingSystem::tryTriggerLethalSurvival(*loser))
+    if (lethalDeadlyDuel)
     {
-        lethalSurvivalTriggered = true;
-        DeathPenaltySystem::displayLethalSurvivalAnomaly();
+        const LethalSpiritResistanceResult spirit = LethalSpiritResistanceSystem::tryFirstLethalResistance(
+            *loser, random, "pvp_deadly_duel");
+        if (spirit.consumed)
+        {
+            DeathPenaltySystem::displayLethalSpiritResistance(spirit);
+            if (spirit.survived)
+            {
+                lethalSurvivalTriggered = true;
+                lethalSpiritSurvivalTriggered = true;
+            }
+        }
+
+        if (!lethalSurvivalTriggered && BlessingSystem::tryTriggerLethalSurvival(*loser))
+        {
+            lethalSurvivalTriggered = true;
+            lethalBlessingSurvivalTriggered = true;
+            DeathPenaltySystem::displayLethalSurvivalAnomaly();
+        }
     }
 
     winner->recordPvpVictory();
@@ -1325,7 +1391,7 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
         }
 
         int winnerPreFightValue = (winner == &player1) ? player1PreFightValue : player2PreFightValue;
-        if (lethalSurvivalTriggered)
+        if (lethalBlessingSurvivalTriggered)
         {
             winner->gainExperience(160);
             MessageScreen::show(
@@ -1342,7 +1408,8 @@ void PvpMode::run(Player& player1, Random& random, const std::string& account1, 
         }
         else
         {
-            applyDeadlyDuelReward(*winner, *loser, random, lethalDeadlyDuel, winnerPreFightValue);
+            applyDeadlyDuelReward(
+                *winner, *loser, random, lethalDeadlyDuel, winnerPreFightValue, lethalSpiritSurvivalTriggered);
         }
     }
     else

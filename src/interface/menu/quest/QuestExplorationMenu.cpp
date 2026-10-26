@@ -24,12 +24,23 @@
 #include "entity/MonsterCatalog.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/inventory/InventoryProtection.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "item/material/MaterialCatalog.hpp"
+#include "item/equipment/EquipmentWeightRules.hpp"
+#include "item/inventory/CarryLoadSystem.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "quest/QuestCatalog.hpp"
 #include "story/StoryCampaign.hpp"
+#include "story/HestiaMissingPersonQuestSystem.hpp"
 #include "world/City.hpp"
+#include "world/CityProfileSystem.hpp"
+#include "world/bounty/BountyQuestSystem.hpp"
+#include "world/bounty/BountyRelocationSystem.hpp"
+#include "world/bounty/BountyRegionalConsequenceSystem.hpp"
+#include "world/reapers/ReaperWorldSystem.hpp"
+#include "world/rumor/WorldRumorCatalog.hpp"
+#include "world/rumor/WorldRumorSystem.hpp"
 #include "world/CityTravelRules.hpp"
 
 #include <algorithm>
@@ -61,6 +72,35 @@ namespace
     using namespace QuestStorySupport;
     using namespace QuestPresentationSupport;
 
+    enum class ExplorationMaterialUseResult
+    {
+        Unavailable,
+        Refused,
+        Consumed
+    };
+
+    ExplorationMaterialUseResult consumeExplorationMaterialWithLock(
+        Player& player,
+        const std::string& materialId,
+        const std::string& materialLabel,
+        const std::string& actionLabel,
+        const std::string& screenId
+    )
+    {
+        if (player.getInventory().countMaterialById(materialId) <= 0)
+        {
+            return ExplorationMaterialUseResult::Unavailable;
+        }
+        if (!InventoryProtection::confirmLockedMaterialUse(
+                player, materialId, materialLabel, actionLabel, screenId))
+        {
+            return ExplorationMaterialUseResult::Refused;
+        }
+        return player.getInventory().removeMaterialQuantityById(materialId, 1)
+            ? ExplorationMaterialUseResult::Consumed
+            : ExplorationMaterialUseResult::Unavailable;
+    }
+
     int countReadyToTurnInQuests(const Player& player)
     {
         int count = 0;
@@ -85,6 +125,11 @@ namespace
         std::string commonMonsters;
         std::string rareMonsters;
     };
+
+    std::string explorationMaterialDisplayName(const std::string& materialId)
+    {
+        return MaterialCatalog::createById(materialId, 1).getName();
+    }
 
     struct ExplorationIntensity
     {
@@ -138,12 +183,23 @@ namespace
         return 1;
     }
 
+    std::string explorationMomentCountLabel(int units)
+    {
+        const int safeUnits = std::max(0, units);
+        return std::to_string(safeUnits) + (safeUnits == 1 ? " moment de la journée" : " moments de la journée");
+    }
+
+    std::string explorationDayMomentLegend()
+    {
+        return "Matin (1/5) · Midi (2/5) · Après-midi (3/5) · Soir (4/5) · Nuit (5/5)";
+    }
+
     std::string explorationDistanceLabel(int travelUnits)
     {
         if (travelUnits <= 0) return "à côté / déplacement négligeable";
-        if (travelUnits == 1) return "trajet proche ou moyen (+1 segment)";
-        if (travelUnits == 2) return "trajet éloigné (+2 segments)";
-        return "trajet très éloigné (+3 segments)";
+        if (travelUnits == 1) return "trajet proche ou moyen (+" + explorationMomentCountLabel(1) + ")";
+        if (travelUnits == 2) return "trajet éloigné (+" + explorationMomentCountLabel(2) + ")";
+        return "trajet très éloigné (+" + explorationMomentCountLabel(3) + ")";
     }
 
     int explorationBiomeSizeUnits(const ExplorationBiome& biome)
@@ -184,9 +240,9 @@ namespace
 
     std::string explorationBiomeSizeLabel(int sizeUnits)
     {
-        if (sizeUnits <= 0) return "petit / abords faciles (+0 segment)";
-        if (sizeUnits == 1) return "zone moyenne ou terrain pénible (+1 segment)";
-        return "biome vaste, vertical ou difficile (+2 segments)";
+        if (sizeUnits <= 0) return "petit / abords faciles (aucun moment supplémentaire)";
+        if (sizeUnits == 1) return "zone moyenne ou terrain pénible (+" + explorationMomentCountLabel(1) + ")";
+        return "biome vaste, vertical ou difficile (+" + explorationMomentCountLabel(2) + ")";
     }
 
     std::string explorationTemperatureHazard(const ExplorationBiome& biome)
@@ -406,15 +462,35 @@ namespace
         {
             const std::string backupId = hazard == "froid" ? "thermal_survival_blanket" : "cooling_survival_wrap";
             const std::string backupName = hazard == "froid" ? "Couverture de survie thermique" : "Voile anti-chaleur";
-            if (player.getInventory().removeMaterialQuantityById(backupId, 1))
+            const ExplorationMaterialUseResult backupResult = consumeExplorationMaterialWithLock(
+                player, backupId, backupName, "consommer cette protection de secours pendant l'expédition",
+                "exploration.temperature.locked_backup"
+            );
+            if (backupResult == ExplorationMaterialUseResult::Consumed)
             {
                 score += 2;
                 lines.push_back(backupName + " consommé(e) : protection de secours utilisée pour cette sortie.");
             }
-            else if (player.getInventory().removeMaterialQuantityById("temperature_survival_kit", 1))
+            else if (backupResult != ExplorationMaterialUseResult::Refused)
             {
-                score += 2;
-                lines.push_back("Kit de survie thermique consommé : de quoi tenir cette température sans transformer l'exploration en suicide lent.");
+                const ExplorationMaterialUseResult kitResult = consumeExplorationMaterialWithLock(
+                    player, "temperature_survival_kit", "Kit de survie thermique",
+                    "consommer ce kit de secours pendant l'expédition",
+                    "exploration.temperature.locked_kit"
+                );
+                if (kitResult == ExplorationMaterialUseResult::Consumed)
+                {
+                    score += 2;
+                    lines.push_back("Kit de survie thermique consommé : de quoi tenir cette température sans transformer l'exploration en suicide lent.");
+                }
+                else if (kitResult == ExplorationMaterialUseResult::Refused)
+                {
+                    lines.push_back("Kit thermique verrouillé conservé : la protection de secours n'est pas utilisée.");
+                }
+            }
+            else
+            {
+                lines.push_back(backupName + " verrouillé(e) conservé(e) : aucune autre protection jetable n'est consommée automatiquement.");
             }
         }
 
@@ -436,14 +512,14 @@ namespace
         rollShift += deficit * 3;
         if (extreme) rollShift += 4;
 
-        int percentPerSegment = hazard == "feu" ? 5 : 3;
-        if (hazard == "chaleur") percentPerSegment = 4;
-        if (extreme) percentPerSegment += 2;
-        percentPerSegment += std::max(0, deficit - 1);
+        int percentPerMoment = hazard == "feu" ? 5 : 3;
+        if (hazard == "chaleur") percentPerMoment = 4;
+        if (extreme) percentPerMoment += 2;
+        percentPerMoment += std::max(0, deficit - 1);
 
         const int safeExposureUnits = std::max(1, exposureUnits);
-        int damagePerSegment = std::max(1, player.getMaxHp() * percentPerSegment / 100);
-        int totalDamage = damagePerSegment * safeExposureUnits;
+        int damagePerMoment = std::max(1, player.getMaxHp() * percentPerMoment / 100);
+        int totalDamage = damagePerMoment * safeExposureUnits;
         if (player.getHp() > 1)
         {
             totalDamage = std::min(totalDamage, player.getHp() - 1);
@@ -451,9 +527,9 @@ namespace
             {
                 player.takeDamage(totalDamage);
                 lines.push_back(
-                    "Température : dégâts d'exposition " + std::to_string(damagePerSegment)
-                    + " x " + std::to_string(safeExposureUnits)
-                    + " segment(s) = " + std::to_string(totalDamage)
+                    "Température : dégâts d'exposition " + std::to_string(damagePerMoment)
+                    + " x " + explorationMomentCountLabel(safeExposureUnits)
+                    + " = " + std::to_string(totalDamage)
                     + " PV. PV restants : " + std::to_string(player.getHp())
                     + "/" + std::to_string(player.getMaxHp()) + "."
                 );
@@ -462,7 +538,7 @@ namespace
 
         if (hazard == "feu")
         {
-            ElementalAffinitySystem::applyBurning(player, 2 + deficit, std::max(1, damagePerSegment / 2));
+            ElementalAffinitySystem::applyBurning(player, 2 + deficit, std::max(1, damagePerMoment / 2));
             lines.push_back("Combat : la chaleur laisse une brûlure persistante qui peut agir au début des tours si un combat démarre.");
         }
         else if (hazard == "froid")
@@ -484,7 +560,7 @@ namespace
     {
         if (travelUnits <= 0)
         {
-            lines.push_back("Distance : zone proche, aucun segment de déplacement ajouté.");
+            lines.push_back("Distance : zone proche, aucun moment de déplacement ajouté.");
             return 0;
         }
 
@@ -549,7 +625,7 @@ namespace
                     }
                     else
                     {
-                        lines.push_back("Mémoire de route : la monture reconnaît quelques repères, mais pas assez pour gagner un segment entier.");
+                        lines.push_back("Mémoire de route : la monture reconnaît quelques repères, mais pas assez pour gagner un moment entier.");
                     }
                 }
                 reduced = std::max(0, reduced - reduction);
@@ -563,7 +639,7 @@ namespace
                 else
                 {
                     player.getInventory().addMaterial(MaterialCatalog::createById("mount_fatigue_marker", 1));
-                    lines.push_back("Écurie : monture personnelle utilisée, le trajet est réduit (-" + std::to_string(reduction) + " segment(s)). Fatigue +1/" + std::to_string(fatigueLimit) + ".");
+                    lines.push_back("Écurie : monture personnelle utilisée, le trajet est réduit (-" + explorationMomentCountLabel(reduction) + "). Fatigue +1/" + std::to_string(fatigueLimit) + ".");
                     if (travelUnits >= 4 && fatigue + 1 >= fatigueLimit && !hasComfortBridle && !hasPackHarness && !hasRoadShoes && surefoot <= 0)
                     {
                         player.getInventory().addMaterial(MaterialCatalog::createById("mount_minor_injury_marker", 1));
@@ -577,62 +653,75 @@ namespace
             }
         }
 
-        if (reduced == travelUnits && player.getInventory().removeMaterialQuantityById("rental_mount_voucher", 1))
+        ExplorationMaterialUseResult preparationResult = ExplorationMaterialUseResult::Unavailable;
+        if (reduced == travelUnits)
         {
-            const int reduction = travelUnits >= 3 ? 2 : 1;
-            reduced = std::max(0, reduced - reduction);
-            lines.push_back("Écurie : Bon de monture consommé, le trajet long devient nettement plus rapide (-" + std::to_string(reduction) + " segment(s) de déplacement).");
+            preparationResult = consumeExplorationMaterialWithLock(
+                player, "rental_mount_voucher", "Bon de monture",
+                "utiliser ce bon pour accélérer le trajet",
+                "exploration.travel.locked_mount_voucher"
+            );
+            if (preparationResult == ExplorationMaterialUseResult::Consumed)
+            {
+                const int reduction = travelUnits >= 3 ? 2 : 1;
+                reduced = std::max(0, reduced - reduction);
+                lines.push_back("Écurie : Bon de monture consommé, le trajet long devient nettement plus rapide (-" + explorationMomentCountLabel(reduction) + ").");
+            }
         }
-        else if (reduced == travelUnits && (player.hasActiveLocalSubscription("stable_relay_weekly") || player.hasActiveLocalSubscription("trade_route_weekly")))
+
+        if (reduced == travelUnits && (player.hasActiveLocalSubscription("stable_relay_weekly") || player.hasActiveLocalSubscription("trade_route_weekly")))
         {
             reduced = std::max(0, reduced - 1);
-            lines.push_back("Écurie/relais : abonnement actif, le trajet est mieux préparé (-1 segment de déplacement). ");
+            lines.push_back("Écurie/relais : abonnement actif, le trajet est mieux préparé (-1 moment de déplacement). ");
         }
-        else if (player.getInventory().removeMaterialQuantityById("route_scout_note", 1))
+        else if (reduced == travelUnits && preparationResult != ExplorationMaterialUseResult::Refused)
         {
-            reduced = std::max(0, reduced - 1);
-            lines.push_back("Relais : Note d'éclaireur de route consommée, le chemin évite un vrai détour (-1 segment de déplacement).");
+            struct TravelConsumable
+            {
+                const char* id;
+                const char* label;
+                const char* line;
+            };
+            const std::vector<TravelConsumable> travelConsumables = {
+                {"route_scout_note", "Note d'éclaireur de route", "Relais : Note d'éclaireur de route consommée, le chemin évite un vrai détour (-1 moment de déplacement)."},
+                {"loaded_pack_saddle", "Selle de bât chargée", "Écurie : Selle de bât chargée consommée, le départ long évite les réglages de dernière minute (-1 moment de déplacement)."},
+                {"prepared_saddlebags", "Sacoches préparées", "Écurie : Sacoches préparées consommées, la charge ne ralentit pas le départ (-1 moment de déplacement)."},
+                {"relay_route_badge", "Badge de route", "Relais : Badge de route consommé, un contrôle ou détour est évité (-1 moment de déplacement)."},
+                {"stable_box_reservation", "Réservation de box", "Écurie : Réservation de box consommée, la charge encombrante ne suit pas tout le trajet (-1 moment de déplacement)."},
+                {"travel_distance_mark", "Marque de distance de trajet", "Écurie/relais : Marque de distance de trajet consommée (-1 moment de déplacement)."},
+                {"stable_stall_ticket", "Ticket d'écurie", "Écurie : Ticket d'écurie consommé pour préparer monture, sacoches ou relais (-1 moment de déplacement)."},
+                {"route_toll_receipt", "Reçu de péage", "Relais : Reçu de péage utilisé pour éviter un détour administratif (-1 moment de déplacement)."}
+            };
+
+            for (const TravelConsumable& consumable : travelConsumables)
+            {
+                preparationResult = consumeExplorationMaterialWithLock(
+                    player, consumable.id, consumable.label,
+                    "consommer ce préparatif pour réduire le trajet",
+                    "exploration.travel.locked_preparation"
+                );
+                if (preparationResult == ExplorationMaterialUseResult::Consumed)
+                {
+                    reduced = std::max(0, reduced - 1);
+                    lines.push_back(consumable.line);
+                    break;
+                }
+                if (preparationResult == ExplorationMaterialUseResult::Refused)
+                {
+                    lines.push_back(std::string(consumable.label) + " verrouillé(e) conservé(e) : aucun autre préparatif jetable n'est consommé automatiquement.");
+                    break;
+                }
+            }
         }
-        else if (player.getInventory().removeMaterialQuantityById("loaded_pack_saddle", 1))
+        else if (preparationResult == ExplorationMaterialUseResult::Refused)
         {
-            reduced = std::max(0, reduced - 1);
-            lines.push_back("Écurie : Selle de bât chargée consommée, le départ long évite les réglages de dernière minute (-1 segment de déplacement).");
-        }
-        else if (player.getInventory().removeMaterialQuantityById("prepared_saddlebags", 1))
-        {
-            reduced = std::max(0, reduced - 1);
-            lines.push_back("Écurie : Sacoches préparées consommées, la charge ne ralentit pas le départ (-1 segment de déplacement).");
-        }
-        else if (player.getInventory().removeMaterialQuantityById("relay_route_badge", 1))
-        {
-            reduced = std::max(0, reduced - 1);
-            lines.push_back("Relais : Badge de route consommé, un contrôle ou détour est évité (-1 segment de déplacement).");
-        }
-        else if (player.getInventory().removeMaterialQuantityById("stable_box_reservation", 1))
-        {
-            reduced = std::max(0, reduced - 1);
-            lines.push_back("Écurie : Réservation de box consommée, la charge encombrante ne suit pas tout le trajet (-1 segment de déplacement).");
-        }
-        else if (player.getInventory().removeMaterialQuantityById("travel_distance_mark", 1))
-        {
-            reduced = std::max(0, reduced - 1);
-            lines.push_back("Écurie/relais : Marque de distance de trajet consommée (-1 segment de déplacement).");
-        }
-        else if (player.getInventory().removeMaterialQuantityById("stable_stall_ticket", 1))
-        {
-            reduced = std::max(0, reduced - 1);
-            lines.push_back("Écurie : Ticket d'écurie consommé pour préparer monture, sacoches ou relais (-1 segment de déplacement).");
-        }
-        else if (player.getInventory().removeMaterialQuantityById("route_toll_receipt", 1))
-        {
-            reduced = std::max(0, reduced - 1);
-            lines.push_back("Relais : Reçu de péage utilisé pour éviter un détour administratif (-1 segment de déplacement).");
+            lines.push_back("Préparatif verrouillé conservé : le trajet continue sans consommer un autre objet à sa place.");
         }
 
         if (reduced > 0 && (playerHasExplorationPassive(player, "orcish_forced_march") || playerHasExplorationPassive(player, "dragon_weather_blood")) && travelUnits >= 2)
         {
             reduced = std::max(0, reduced - 1);
-            lines.push_back("Passif racial : endurance naturelle sur longue distance (-1 segment de déplacement). ");
+            lines.push_back("Passif racial : endurance naturelle sur longue distance (-1 moment de déplacement). ");
         }
 
         if (reduced == travelUnits)
@@ -684,9 +773,13 @@ namespace
             lines.push_back("Sens magique : les lumières et courants étranges sont repérés avant de devenir un piège.");
         }
 
-        if (player.getInventory().countMaterialById("night_survival_kit") > 0)
+        const ExplorationMaterialUseResult nightKitResult = consumeExplorationMaterialWithLock(
+            player, "night_survival_kit", "Kit de survie nocturne",
+            "consommer ce kit pour sécuriser l'expédition de nuit",
+            "exploration.night.locked_survival_kit"
+        );
+        if (nightKitResult == ExplorationMaterialUseResult::Consumed)
         {
-            player.getInventory().removeMaterialQuantityById("night_survival_kit", 1);
             rollShift = std::max(0, rollShift - 9);
             extraFightChance = std::max(0, extraFightChance - 12);
             lines.push_back("Kit de survie nocturne consommé : trajet balisé, feu couvert et risque nocturne fortement réduit.");
@@ -3227,7 +3320,8 @@ namespace
         itemData.name = biome.name;
         itemData.detail = biome.style;
         itemData.status = evolvedBiomeRangeText(player, biome);
-        itemData.reward = "Commun : " + biome.commonMaterialId + " | Rare : " + biome.rareMaterialId;
+        itemData.reward = "Commun : " + explorationMaterialDisplayName(biome.commonMaterialId)
+            + " | Rare : " + explorationMaterialDisplayName(biome.rareMaterialId);
         itemData.progress = questLikely ? "Objectif de quête probable" : "Aucun objectif actif évident";
         itemData.owner = "Monstres : " + biome.commonMonsters;
         itemData.important = questLikely || isBiomeEvolvedForPlayer(player, biome);
@@ -3243,13 +3337,307 @@ namespace
         itemData.actionType = "select";
         itemData.name = intensity.name;
         itemData.detail = intensity.description;
-        itemData.status = "Danger : " + std::to_string(intensity.eventShift) + "% | Durée : +" + std::to_string(intensity.durationUnits) + " segment(s)";
+        itemData.status = "Danger : " + std::to_string(intensity.eventShift) + "% | Durée : +" + explorationMomentCountLabel(intensity.durationUnits);
         itemData.reward = "Bonus de pièces directes : " + std::to_string(intensity.goldPercent) + "%";
         itemData.progress = "Événements garantis : " + std::to_string(intensity.guaranteedEvents)
             + " | Chance événement bonus : " + std::to_string(intensity.extraEventChance) + "%"
             + " | Trouvailles : " + std::to_string(intensity.quantityBonus);
         itemData.important = intensity.eventShift > 0 || intensity.quantityBonus > 0 || intensity.goldPercent > 100;
         return itemData;
+    }
+
+    Quest* activeBountyQuestForBiome(Player& player, const ExplorationBiome& biome)
+    {
+        for (Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (!BountyQuestSystem::isActiveBounty(quest)) continue;
+            BountyRelocationSystem::ensureLocalPosition(quest, player.getCurrentCityId());
+            if (!BountyRelocationSystem::isTargetCurrentlyInCity(quest, player.getCurrentCityId())) continue;
+            if (questTextMentionsBiome(quest, biome.name)) return &quest;
+        }
+        return nullptr;
+    }
+
+    BountyPursuitHunterProfile bountyHunterProfileForPlayer(const Player& player)
+    {
+        int completedBounties = 0;
+        for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+        {
+            if (record.category == "primes_ciblees_terminees") completedBounties += std::max(0, record.count);
+        }
+
+        BountyPursuitHunterProfile hunter;
+        const int experienceBonus = std::min(18, completedBounties * 2);
+        hunter.trackingSkill = std::clamp(42 + player.getLevel() / 2 + experienceBonus, 20, 95);
+        hunter.routeControl = std::clamp(38 + player.getLevel() / 2 + experienceBonus, 20, 94);
+        hunter.stealthSkill = std::clamp(40 + player.getLevel() / 3 + experienceBonus, 20, 92);
+        hunter.coordination = std::clamp(38 + player.getLevel() / 3 + experienceBonus, 20, 90);
+        hunter.shadowHunter = false;
+        hunter.capturePreferred = true;
+        return hunter;
+    }
+
+    bool runActiveBountyQuestStep(
+        Player& player,
+        Random& random,
+        const ExplorationBiome& biome,
+        DifficultyMode difficulty,
+        DeathRuleMode deathRule)
+    {
+        Quest* quest = activeBountyQuestForBiome(player, biome);
+        if (quest == nullptr) return false;
+
+        BountyQuestSystem::initializeBounty(*quest, player.getLevel());
+        const BountyRegionalAdaptationResult regionalAdaptation = BountyRegionalConsequenceSystem::adaptTargetToRegion(player, *quest);
+        const BountyPursuitHunterProfile hunter = bountyHunterProfileForPlayer(player);
+
+        std::vector<std::string> lines = {
+            "Prime ciblée : " + quest->title + ".",
+            "Cible : " + quest->bountyTargetName + ".",
+            BountyQuestSystem::contractValueSummary(*quest),
+            "Prime actuelle : " + Money::formatEconomyUnits(quest->rewardGold) + ".",
+            "Position connue de la cible : " + BountyRelocationSystem::locationSummary(*quest) + ".",
+            "Ville / alentours : " + CityProfileSystem::profileSummary(player.getCurrentCityId()),
+            "Étape : " + BountyQuestSystem::stageLabel(*quest) + ".",
+            "Piste : " + std::to_string(quest->bountyClues) + "/3 minimum avant une interception sérieuse.",
+            "Lecture actuelle : " + BountyQuestSystem::awarenessLabel(*quest) + ".",
+            "Important : être recherché ne signifie pas savoir qu'un chasseur est déjà sur sa piste."
+        };
+        if (!quest->bountyIssuerName.empty())
+        {
+            std::string issuerLine = "Commanditaire : " + quest->bountyIssuerName;
+            if (!quest->bountyIssuerOrganizationName.empty())
+                issuerLine += " — " + quest->bountyIssuerOrganizationName;
+            issuerLine += quest->bountyIssuerPrefersLiveCapture
+                ? " (capture vivante privilégiée)."
+                : " (issue létale acceptée si nécessaire).";
+            lines.push_back(issuerLine);
+        }
+        const std::string transitTrail = BountyRelocationSystem::transitTrailSummary(*quest);
+        if (!transitTrail.empty())
+        {
+            lines.push_back("Piste inter-ville encore exploitable : " + transitTrail + ".");
+        }
+        if (!regionalAdaptation.lines.empty())
+        {
+            lines.push_back("Mémoire régionale :");
+            lines.insert(lines.end(), regionalAdaptation.lines.begin(), regionalAdaptation.lines.end());
+        }
+
+        if (quest->bountyStage == "confrontation")
+        {
+            int confrontationChoice = askChoiceScreen(
+                "PRIME CIBLÉE — CONFRONTATION",
+                "exploration.bounty.confrontation",
+                lines,
+                {
+                    {0, "Reporter la confrontation"},
+                    {1, "Exiger la reddition sans attaquer"},
+                    {2, "Engager la cible en privilégiant une capture vivante"},
+                    {3, "Engager sans retenir les coups — issue potentiellement mortelle"}
+                },
+                0,
+                3
+            );
+            Console::clear();
+            if (confrontationChoice == 0) return false;
+
+            BountyPursuitPreparation prep = BountyQuestSystem::readPreparation(*quest);
+            BountyPursuitTargetProfile targetProfile;
+            targetProfile.mobility = quest->bountyTargetMobility;
+            targetProfile.knownEscapeAttempts = quest->bountyTargetEscapeAttempts;
+            targetProfile.knowsItIsHunted = quest->bountyTargetKnowsHunt;
+            targetProfile.terrainKnownToHunter = quest->bountyExitRecon > 0;
+            targetProfile.hasPreparedEscapeRoute = prep.routeVariation > 0 || prep.refugeConcealment > 0;
+            const BountyPursuitPlan plan = BountyPursuitSystem::plan(hunter, targetProfile, prep);
+
+            if (confrontationChoice == 1)
+            {
+                std::string temperament = toLowerChoiceText(quest->bountyTargetTemperament);
+                int surrenderChance = 22 + plan.containmentPercent / 2 + quest->bountyClues * 3
+                    - quest->bountyTargetResources / 6 + (quest->bountyTargetInjured ? 12 : 0);
+                if (temperament.find("impuls") != std::string::npos) surrenderChance -= 15;
+                if (temperament.find("prudent") != std::string::npos || temperament.find("surviv") != std::string::npos) surrenderChance += 8;
+                surrenderChance = std::clamp(surrenderChance, 8, 88);
+                if (random.between(1, 100) <= surrenderChance)
+                {
+                    quest->progress = quest->target;
+                    quest->completed = true;
+                    quest->bountyStage = "resolved";
+                    player.recordCanonicalEvent("primes_ciblees_terminees", quest->id, quest->bountyTargetName + " capturé(e) après reddition", 1);
+                    const BountyRegionalConsequenceResult consequence = BountyRegionalConsequenceSystem::applyResolution(
+                        player, *quest, BountyResolutionKind::CapturedBySurrender);
+                    std::vector<std::string> resolutionLines = {
+                        quest->bountyTargetName + " comprend que les issues sont trop mauvaises et se rend.",
+                        "Le contrat est terminé sans combat. La guilde devra encore valider la remise de la cible.",
+                        "Ce résultat vient de la préparation et de l'interception, pas d'une reddition automatique des cibles recherchées."
+                    };
+                    resolutionLines.insert(resolutionLines.end(), consequence.lines.begin(), consequence.lines.end());
+                    showExplorationNotice(
+                        "REDDITION",
+                        "exploration.bounty.surrender.success",
+                        resolutionLines
+                    );
+                    return true;
+                }
+
+                showExplorationNotice(
+                    "REDDITION REFUSÉE",
+                    "exploration.bounty.surrender.refused",
+                    {quest->bountyTargetName + " refuse de se rendre et cherche une nouvelle ouverture. La confrontation devient hostile."}
+                );
+                // Refuser la reddition ne transforme pas automatiquement le joueur en exécuteur :
+                // sans nouveau choix explicite, la suite reste une tentative de capture vivante.
+                confrontationChoice = 2;
+            }
+
+            const bool lethalIntent = confrontationChoice == 3;
+            const int targetLevel = std::clamp(player.getLevel() + std::min(3, quest->bountyTargetEscapeAttempts), 2, 255);
+            Monster target(
+                quest->bountyTargetName,
+                "Humain recherché",
+                Race::Humain,
+                targetLevel,
+                72 + targetLevel * 9,
+                7 + targetLevel * 2,
+                14 + targetLevel * 3,
+                18 + targetLevel * 4,
+                targetLevel >= 8 ? 1 : 0,
+                targetLevel >= 16 ? 1 : 0,
+                false,
+                targetLevel >= 20,
+                false,
+                false
+            );
+            const bool victory = runTrackedExplorationWave(
+                player,
+                random,
+                difficulty,
+                deathRule,
+                {target},
+                "Prime ciblée — " + quest->bountyTargetName + (lethalIntent ? " — force létale" : " — capture")
+            );
+            if (victory)
+            {
+                quest->progress = quest->target;
+                quest->completed = true;
+                quest->bountyStage = "resolved";
+                const BountyResolutionKind resolution = lethalIntent
+                    ? BountyResolutionKind::KilledInCombat
+                    : BountyResolutionKind::CapturedAfterCombat;
+                player.recordCanonicalEvent(
+                    "primes_ciblees_terminees",
+                    quest->id,
+                    lethalIntent
+                        ? quest->bountyTargetName + " tué(e) pendant la confrontation"
+                        : quest->bountyTargetName + " capturé(e) vivant(e) après confrontation",
+                    1);
+                const BountyRegionalConsequenceResult consequence = BountyRegionalConsequenceSystem::applyResolution(player, *quest, resolution);
+                std::vector<std::string> resolutionLines = {
+                    lethalIntent
+                        ? "La cible meurt pendant la confrontation. Le contrat peut être rendu, mais cette issue laissera une trace différente dans la région."
+                        : "La cible est maîtrisée vivante et ne peut plus poursuivre sa fuite. Le contrat est prêt à être rendu à la guilde."
+                };
+                resolutionLines.insert(resolutionLines.end(), consequence.lines.begin(), consequence.lines.end());
+                showExplorationNotice(
+                    lethalIntent ? "CIBLE ÉLIMINÉE" : "CIBLE CAPTURÉE",
+                    lethalIntent ? "exploration.bounty.combat.lethal_success" : "exploration.bounty.combat.capture_success",
+                    resolutionLines
+                );
+            }
+            else
+            {
+                quest->bountyTargetEscapeAttempts++;
+                quest->bountyTargetKnowsHunt = true;
+                quest->bountyTargetSuspectsHunt = true;
+                quest->bountyClues = std::max(1, quest->bountyClues - 2);
+                quest->bountyStage = "investigation";
+            }
+            return true;
+        }
+
+        std::vector<std::pair<int, std::string>> options = {
+            {0, "Ignorer la piste pour cette sortie"},
+            {1, "Observer discrètement — lent mais peu visible"},
+            {2, "Poser des questions — plus rapide mais plus bruyant"},
+            {3, "Repérer les sorties et chemins secondaires"}
+        };
+        if (quest->bountyClues >= 2)
+        {
+            options.push_back({4, "Préparer un point d'interception sur une route crédible"});
+        }
+        if (quest->bountyClues >= 3)
+        {
+            options.push_back({5, "Tenter l'interception maintenant"});
+        }
+
+        const int choice = askChoiceScreen(
+            "PISTE DE PRIME CIBLÉE",
+            "exploration.bounty.track",
+            lines,
+            options,
+            0,
+            5
+        );
+        Console::clear();
+        if (choice == 0) return false;
+
+        if (choice >= 1 && choice <= 4)
+        {
+            BountyInvestigationAction action = BountyInvestigationAction::ObserveQuietly;
+            if (choice == 2) action = BountyInvestigationAction::AskAround;
+            else if (choice == 3) action = BountyInvestigationAction::CheckExits;
+            else if (choice == 4) action = BountyInvestigationAction::PrepareInterception;
+
+            BountyQuestStepResult result = BountyQuestSystem::investigate(
+                *quest,
+                action,
+                hunter.stealthSkill,
+                random.between(1, 100)
+            );
+            if (result.cluesGained > 0)
+            {
+                player.recordCanonicalEvent(
+                    "primes_enquetes", quest->id,
+                    "Progression réelle de l'enquête sur " + quest->bountyTargetName,
+                    result.cluesGained
+                );
+            }
+            if (result.transitTrailUseful)
+            {
+                player.recordCanonicalEvent(
+                    "primes_pistes_interville_exploitees", quest->id,
+                    "Piste inter-ville exploitée avec succès contre " + quest->bountyTargetName,
+                    1
+                );
+            }
+            result.lines.insert(result.lines.begin(), "Action : " + BountyQuestSystem::investigationActionLabel(action) + ".");
+            result.lines.push_back("État après l'action : " + BountyQuestSystem::awarenessLabel(*quest) + ".");
+            showExplorationNotice("TRAQUE — ENQUÊTE", "exploration.bounty.investigation.result", result.lines);
+            return false;
+        }
+
+        BountyQuestStepResult pursuit = BountyQuestSystem::attemptPursuit(*quest, hunter, random.between(1, 100));
+        pursuit.lines.push_back("Chance de fuite calculée pour cette tentative : " + std::to_string(pursuit.escapeChancePercent) + " %.");
+        if (pursuit.escaped)
+        {
+            const BountyRelocationResult relocation = BountyRelocationSystem::tryRelocateAfterEscape(
+                player, *quest, random.between(1, 100));
+            if (relocation.evaluated)
+            {
+                pursuit.lines.push_back("Chance de quitter réellement la région après cette fuite : "
+                    + std::to_string(relocation.relocationChancePercent) + " %.");
+                pursuit.lines.insert(pursuit.lines.end(), relocation.lines.begin(), relocation.lines.end());
+            }
+        }
+        pursuit.lines.push_back("État de la cible : " + BountyQuestSystem::awarenessLabel(*quest) + ".");
+        pursuit.lines.push_back("Position connue après la tentative : " + BountyRelocationSystem::locationSummary(*quest) + ".");
+        showExplorationNotice(
+            pursuit.intercepted ? "INTERCEPTION RÉUSSIE" : "POURSUITE",
+            pursuit.intercepted ? "exploration.bounty.pursuit.intercepted" : "exploration.bounty.pursuit.escape",
+            pursuit.lines
+        );
+        return true;
     }
 
     // EN: progressExplorationQuests declares or implements a focused behavior used by this module.
@@ -3626,37 +4014,63 @@ namespace
         return std::clamp(adjusted, 1, 100);
     }
 
+    int countHeavySpareEquipment(const Player& player)
+    {
+        int count = 0;
+        const auto& weapons = player.getInventory().getWeapons();
+        for (std::size_t i = 0; i < weapons.size(); ++i)
+        {
+            if (static_cast<int>(i) == player.getEquippedWeaponIndex()) continue;
+            if (EquipmentWeightRules::getWeaponWeightClass(weapons[i]) == EquipmentWeightClass::Heavy) ++count;
+        }
+        const auto& armors = player.getInventory().getArmors();
+        for (std::size_t i = 0; i < armors.size(); ++i)
+        {
+            if (static_cast<int>(i) == player.getEquippedArmorIndex()) continue;
+            if (EquipmentWeightRules::getArmorWeightClass(armors[i]) == EquipmentWeightClass::Heavy) ++count;
+        }
+        return count;
+    }
+
     void showExplorationRunSummary(
-        const Player& player,
+        Player& player,
         const ExplorationBiome& biome,
         const ExplorationIntensity& intensity,
         const std::string& eventLabel,
         int hpBefore,
-        long long copperBeforeExploration,
+        const CoinBreakdown& coinStacksBeforeExploration,
         int readyBefore,
         int dayBeforeExploration,
         int unitBeforeExploration,
-        int timeUnitsSpent
+        int timeUnitsSpent,
+        int carriedLoadBefore,
+        int carryCapacityBefore,
+        int maxCarryPercentDuringRun
     )
     {
         const int hpAfter = player.getHp();
-        const long long copperAfter = player.getInventory().getTotalCopper();
+        const CoinBreakdown coinStacksAfterExploration = player.getInventory().getCoinStacks();
+        const long long copperBeforeExploration = Money::coinStacksValueInCopper(coinStacksBeforeExploration);
+        const long long copperAfter = Money::coinStacksValueInCopper(coinStacksAfterExploration);
         const long long copperDelta = copperAfter - copperBeforeExploration;
-        const std::string moneyDelta = copperDelta > 0
-            ? "+" + Money::formatCopper(copperDelta)
-            : (copperDelta < 0 ? "-" + Money::formatCopper(-copperDelta) : "0 cuivre");
+        const std::string totalCopperDelta = std::string(copperDelta > 0 ? "+" : "")
+            + Money::formatSeparatedNumber(copperDelta) + " PC";
         const int readyAfter = countReadyToTurnInQuests(player);
 
         std::vector<std::string> lines = {
             "Zone : " + biome.name + ".",
             "Approche : " + intensity.name + ".",
-            "Temps écoulé : +" + std::to_string(timeUnitsSpent) + " segment(s) de journée.",
+            "Temps écoulé : +" + explorationMomentCountLabel(timeUnitsSpent) + ".",
             player.formatWorldTimeChange(dayBeforeExploration, unitBeforeExploration),
             "Événement principal : " + eventLabel + ".",
             "PV : " + std::to_string(hpBefore) + " -> " + std::to_string(hpAfter)
                 + " / " + std::to_string(player.getMaxHp()) + ".",
-            "Argent : " + Money::formatCopper(copperBeforeExploration) + " -> " + Money::formatCopper(copperAfter)
-                + " (écart : " + moneyDelta + ").",
+            "Pièces réelles : " + Money::formatCoinStacks(coinStacksBeforeExploration, false)
+                + " -> " + Money::formatCoinStacks(coinStacksAfterExploration, false) + ".",
+            "Variation réelle des piles : " + Money::formatCoinStackDelta(coinStacksBeforeExploration, coinStacksAfterExploration) + ".",
+            "Valeur totale exacte : " + Money::formatWalletTotalFromCopper(copperBeforeExploration)
+                + " -> " + Money::formatWalletTotalFromCopper(copperAfter)
+                + " (écart : " + totalCopperDelta + ").",
             "Demandes prêtes à rendre : " + std::to_string(readyBefore)
                 + " -> " + std::to_string(readyAfter) + "."
         };
@@ -3669,6 +4083,29 @@ namespace
         {
             lines.push_back("Tu as toujours au moins une demande prête à rendre.");
         }
+
+        const CarryLoadSummary loadAfter = CarryLoadSystem::evaluate(player);
+        const int beforePercent = carryCapacityBefore <= 0 ? 0 : (carriedLoadBefore * 100) / carryCapacityBefore;
+        lines.push_back("Encombrement : " + std::to_string(carriedLoadBefore) + "/" + std::to_string(carryCapacityBefore)
+            + " (" + std::to_string(beforePercent) + " %) → " + std::to_string(loadAfter.used) + "/" + std::to_string(loadAfter.capacity)
+            + " (" + std::to_string(loadAfter.percent) + " %) — " + loadAfter.label + ".");
+
+        if (loadAfter.percent >= 150) player.grantTitle("Mule de compétition");
+        if (maxCarryPercentDuringRun < 50)
+        {
+            player.recordCanonicalEvent("explorations_charge_legere", "under50", "Exploration restée sous 50 %");
+            player.grantTitle("Voyageur organisé");
+            if (beforePercent < 10) player.grantTitle("L'essentiel seulement");
+            if (player.getCanonicalJournalCategoryTotal("explorations_charge_legere") >= 3) player.grantTitle("Je voyage léger");
+            if (CarryLoadSystem::morphologyLabel(player) == "Fine" && player.getCanonicalJournalCategoryTotal("explorations_charge_legere") >= 5) player.grantTitle("L'art du minimum");
+        }
+        if (maxCarryPercentDuringRun < 85)
+        {
+            player.recordCanonicalEvent("explorations_charge_maitrisee", "under85", "Exploration restée sous 85 %");
+            if (player.getCanonicalJournalCategoryTotal("explorations_charge_maitrisee") >= 5) player.grantTitle("Préparation impeccable");
+        }
+        lines.push_back("Pic d'encombrement observé pendant la sortie : " + std::to_string(maxCarryPercentDuringRun) + " %.");
+        player.refreshCarryAndStorageTitles();
 
         if (hpAfter < hpBefore)
         {
@@ -3776,10 +4213,22 @@ namespace
     std::string consumeImprovisedChestToolIfNeeded(Player& player)
     {
         Inventory& inventory = player.getInventory();
-        if (inventory.countMaterialById("rusted_metal_fragment") > 0
-            && inventory.removeMaterialQuantityById("rusted_metal_fragment", 1))
+        if (inventory.countMaterialById("rusted_metal_fragment") > 0)
         {
-            return "Outil improvisé consommé : fragment métallique rouillé x1.";
+            if (!InventoryProtection::confirmLockedMaterialUse(
+                    player,
+                    "rusted_metal_fragment",
+                    "Fragment de métal rouillé",
+                    "consommer ce fragment comme outil improvisé pour le coffre",
+                    "exploration.chest.locked_improvised_tool"
+                ))
+            {
+                return "Outil improvisé verrouillé conservé : la tentative continue sans le consommer.";
+            }
+            if (inventory.removeMaterialQuantityById("rusted_metal_fragment", 1))
+            {
+                return "Outil improvisé consommé : fragment métallique rouillé x1.";
+            }
         }
         return "Aucun outil consommé : la classe ou le matériel déjà adapté suffit pour cette tentative.";
     }
@@ -5706,6 +6155,263 @@ namespace
         offerExplorationNpcQuest(player, random, biome);
     }
 
+    bool maybeTriggerVaultTheftExplorationEncounter(
+        Player& player,
+        Random& random,
+        const std::string& biomeName
+    )
+    {
+        const PlayerVaultTheftCase* theftCase = player.getOpenVaultTheftCaseForCity(player.getCurrentCityId());
+        if (theftCase == nullptr || theftCase->culpritIdentified || theftCase->resolved) return false;
+
+        const std::string cooldownKey = "vault_theft_field:" + theftCase->caseId;
+        if (player.isExplorationSceneOnCooldown(cooldownKey)) return false;
+
+        const bool traveledArea = biomeName.find("Route") != std::string::npos
+            || biomeName.find("Plaine") != std::string::npos
+            || biomeName.find("Marché") != std::string::npos
+            || biomeName.find("Quartier") != std::string::npos
+            || biomeName.find("Ruines") != std::string::npos;
+        const int encounterChance = traveledArea ? 28 : 14;
+        if (random.between(1, 100) > encounterChance) return false;
+
+        VaultTheftExplorationObservation observation = VaultTheftExplorationObservation::SuspiciousTrail;
+        const int observationRoll = random.between(1, 100);
+        const bool distinctiveEquipmentMissing = theftCase->hasWeapon || theftCase->hasArmor;
+        if (distinctiveEquipmentMissing && observationRoll <= 35)
+        {
+            observation = VaultTheftExplorationObservation::RecognizedProperty;
+        }
+        else if (observationRoll <= (traveledArea ? 72 : 55))
+        {
+            observation = VaultTheftExplorationObservation::SuspiciousExchange;
+        }
+
+        VaultTheftExplorationObservationResult result = player.observeVaultTheftCaseDuringExploration(
+            player.getCurrentCityId(), biomeName, observation);
+        if (!result.occurred) return false;
+
+        std::vector<std::string> lines = result.lines;
+        lines.insert(lines.begin(),
+            "Tu n'as pas lancé une enquête depuis un menu : cette piste apparaît parce que ta sortie croise réellement quelque chose lié au dossier ouvert de la ville.");
+        if (result.targetIdentifiedNow)
+        {
+            lines.push_back("La cible devient traçable seulement maintenant, parce que les observations cumulées suffisent à relier une personne au bien. Ce n'est pas une révélation omnisciente.");
+        }
+        else
+        {
+            lines.push_back("Tu conserves la piste sans transformer un soupçon en identité certaine.");
+        }
+
+        showExplorationNotice(
+            result.recognizedStolenProperty ? "UN BIEN VOLÉ SUR LE TERRAIN" : "UNE PISTE SUR LE TERRAIN",
+            "exploration.vault_theft.field_lead",
+            lines,
+            false
+        );
+        player.startExplorationSceneCooldown(cooldownKey, 1);
+        player.recordExplorationEventKey("vault_theft_field_lead");
+        return true;
+    }
+
+    bool maybeTriggerReaper13ExplorationEncounter(
+        Player& player,
+        Random& random,
+        const std::string& biomeName)
+    {
+        const std::string cooldownKey = "reapers13_field_scene";
+        if (player.isExplorationSceneOnCooldown(cooldownKey)) return false;
+
+        ReaperWorldEncounterResult result = ReaperWorldSystem::tryExplorationEncounter(player, random, biomeName);
+        if (!result.occurred) return false;
+
+        if (result.firstCredibleKnowledge)
+            result.lines.push_back("Cette observation devient ta première raison crédible, en jeu, de connaître l'existence des Reapers.");
+        result.lines.push_back("Statut : observation uniquement. Aucun titre de grade ni appartenance de faction n'est accordé.");
+        showExplorationNotice(
+            result.respondedToProtocol13 ? "LE CANAL A RÉPONDU" : "OPÉRATION INCONNUE",
+            result.respondedToProtocol13 ? "exploration.reapers13.protocol_response" : "exploration.reapers13.natural_trace",
+            result.lines,
+            false);
+        player.startExplorationSceneCooldown(cooldownKey, result.respondedToProtocol13 ? 5 : 12);
+        player.recordExplorationEventKey(result.encounterId);
+        return true;
+    }
+
+    bool maybeTriggerAmbientWorldRumor(
+        Player& player,
+        Random& random,
+        const std::string& biomeName)
+    {
+        // Ambient folklore is intentionally broader than REAPERS-13 and remains uncommon.
+        if (random.between(1, 100) > 12) return false;
+        const WorldRumorDefinition* rumor = WorldRumorCatalog::pickAmbient(
+            player.getCurrentCityId(), biomeName, player.getLevel(), random.between(0, 999));
+        if (rumor == nullptr) return false;
+
+        const std::string cooldownKey = "ambient_world_rumor:" + rumor->id;
+        if (player.isExplorationSceneOnCooldown(cooldownKey)) return false;
+
+        WorldRumorSystem::recordRumor(
+            player,
+            rumor->id,
+            rumor->subjectId,
+            rumor->text,
+            rumor->sourceType,
+            rumor->baseCredibility,
+            0);
+
+        std::vector<std::string> lines;
+        lines.push_back("Au détour de la sortie, tu entends une histoire qui concerne ce lieu ou ceux qui le fréquentent.");
+        lines.push_back(rumor->text);
+        lines.push_back("Statut : rumeur enregistrée. L'entendre ne suffit pas à la confirmer ; une observation directe ou une source solide pourra la renforcer ou la contredire plus tard.");
+        showExplorationNotice("RUMEUR DU MONDE", "exploration.world_rumor.ambient", lines, false);
+        player.startExplorationSceneCooldown(cooldownKey, 3);
+        player.recordExplorationEventKey("world_rumor:" + rumor->id);
+        return true;
+    }
+
+
+    std::string chooseHestiaResidenceAfterRescue(Player& player)
+    {
+        MenuScreen screen("PERSONNE RETROUVÉE", "exploration.hestia.residence");
+        screen.addSubtitle("Où la mettre en sécurité ?");
+        screen.addLine("La jeune fille est vivante, mais extrêmement faible. Elle ne répond presque pas et rien n'indique encore ce qu'elle est réellement.");
+        screen.addLine("Ce choix n'est pas définitif : elle pourra plus tard rester avec toi, chez Diane ou dans ta maison.");
+        screen.addOption(1, "La confier à Diane", "Diane la garde en sécurité à l'accueil de la guilde. Aucune visite obligatoire, aucune pénalité d'absence.", true, "exploration.hestia.residence.diane");
+        screen.addOption(2, "La garder avec moi", "Elle reste dans ton groupe de proches et peut voyager avec toi.", true, "exploration.hestia.residence.party");
+        screen.addOption(3, "La conduire à ma maison", player.getHomeState().owned ? "Elle y sera en sécurité et pourra cohabiter avec un conjoint." : "Tu ne possèdes pas encore de maison principale.", player.getHomeState().owned, "exploration.hestia.residence.home");
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+        Console::clear();
+        if (choice == 2) return "active_party";
+        if (choice == 3 && player.getHomeState().owned) return "player_home";
+        return "guild_diane";
+    }
+
+    void finishHestiaMissingPersonRescue(Player& player)
+    {
+        const std::string residence = chooseHestiaResidenceAfterRescue(player);
+        if (!HestiaMissingPersonQuestSystem::completeRescue(player, residence, player.getHomeState().owned))
+        {
+            showExplorationNotice(
+                "SAUVETAGE DÉJÀ RÉSOLU",
+                "exploration.hestia.already_resolved",
+                {"Cette disparition a déjà été résolue pour ce personnage."},
+                false
+            );
+            return;
+        }
+
+        std::vector<std::string> lines = {
+            "Au fond du sous-sol, tu trouves une jeune fille ligotée et enchaînée, inconsciente et au bord de la mort.",
+            "Aucun signe ne permet de deviner qu'elle est liée à une divinité. Pour l'instant, c'est simplement une personne qu'il fallait sortir de là.",
+            "Après les premiers soins, elle reste muette. Elle observe davantage qu'elle ne répond et ne semble pas comprendre elle-même ce qui lui est arrivé.",
+            "Quête principale terminée : Une personne disparue.",
+            "Son histoire personnelle n'est pas obligatoire : la confier à Diane ou la laisser vivre tranquillement chez toi ne bloque aucune progression."
+        };
+        if (residence == "guild_diane") lines.push_back("Résidence actuelle : auprès de Diane à la guilde.");
+        else if (residence == "player_home") lines.push_back("Résidence actuelle : ta maison principale.");
+        else lines.push_back("Résidence actuelle : elle voyage avec toi.");
+
+        showExplorationNotice("PERSONNE RETROUVÉE", "exploration.hestia.rescued", lines, false);
+    }
+
+    void runHestiaMissingPersonOperation(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule)
+    {
+        if (!HestiaMissingPersonQuestSystem::questActive(player))
+        {
+            showExplorationNotice(
+                "PISTE INDISPONIBLE",
+                "exploration.hestia.unavailable",
+                {"Aucune disparition liée à cette piste n'est actuellement active dans le journal."},
+                false
+            );
+            return;
+        }
+
+        std::vector<std::string> intro = HestiaMissingPersonQuestSystem::introLines(player);
+        std::vector<std::string> approach = HestiaMissingPersonQuestSystem::approachLines(player);
+        intro.insert(intro.end(), approach.begin(), approach.end());
+
+        MenuScreen screen("UNE PERSONNE DISPARUE", "exploration.hestia.approach");
+        screen.addSubtitle("Sous-sol abandonné — piste spéciale");
+        for (const std::string& line : intro) screen.addLine(line);
+        screen.addBackOption("Revenir plus tard", "exploration.hestia.back");
+        screen.addOption(1, "Tenter l'infiltration", "Éviter le gros de la garde et atteindre directement la pièce fermée. Difficile, mais le combat peut être évité.", true, "exploration.hestia.stealth");
+        screen.addOption(2, "Entrer de force", "Affronter les occupants du sous-sol et ouvrir ensuite la pièce où la disparue est retenue.", true, "exploration.hestia.frontal");
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+        Console::clear();
+        if (choice == 0) return;
+
+        const int beforeDay = player.getWorldDaysElapsed();
+        const int beforeUnit = player.getWorldDayProgressUnits();
+        player.advanceWorldDayUnits(2);
+
+        Random random;
+        bool mustFight = choice == 2;
+        if (choice == 1)
+        {
+            HestiaStealthAttempt attempt = HestiaMissingPersonQuestSystem::attemptStealth(player, random);
+            attempt.lines.push_back(player.formatWorldTimeChange(beforeDay, beforeUnit));
+            showExplorationNotice(
+                attempt.success ? "INFILTRATION RÉUSSIE" : "INFILTRATION REPÉRÉE",
+                attempt.success ? "exploration.hestia.stealth.success" : "exploration.hestia.stealth.failed",
+                attempt.lines,
+                false
+            );
+            if (attempt.success)
+            {
+                finishHestiaMissingPersonRescue(player);
+                return;
+            }
+            mustFight = true;
+        }
+
+        if (!mustFight) return;
+
+        const bool skeletons = HestiaMissingPersonQuestSystem::usesSkeletonVariant(player);
+        std::vector<std::string> warningLines = HestiaMissingPersonQuestSystem::approachLines(player);
+        warningLines.push_back(player.formatWorldTimeChange(beforeDay, beforeUnit));
+        if (skeletons)
+        {
+            warningLines.push_back("Le crâne du squelette suicidaire est piégé : tant que tu n'as pas une ouverture propre, mieux vaut éviter d'y porter un coup direct.");
+        }
+        showExplorationNotice(
+            skeletons ? "SOUS-SOL DES SQUELETTES" : "SOUS-SOL DES GOBELINS",
+            skeletons ? "exploration.hestia.skeleton_warning" : "exploration.hestia.goblin_warning",
+            warningLines,
+            false
+        );
+
+        std::vector<Monster> defenders = HestiaMissingPersonQuestSystem::buildDefenderWave(player);
+        const bool victory = runTrackedExplorationWave(
+            player,
+            random,
+            difficulty,
+            deathRule,
+            defenders,
+            "Sous-sol abandonné — personne disparue"
+        );
+
+        if (!victory || player.isDead())
+        {
+            showExplorationNotice(
+                "RETRAIT DU SOUS-SOL",
+                "exploration.hestia.rescue_failed",
+                {
+                    "La personne disparue n'est pas encore sortie du sous-sol.",
+                    "La quête reste active : tu pourras revenir plus tard sans pénalité de délai ni perte de relation."
+                },
+                false
+            );
+            return;
+        }
+
+        finishHestiaMissingPersonRescue(player);
+    }
+
 }
 
 namespace QuestExplorationSupport
@@ -5912,6 +6618,19 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
 
         screen.addOption(0, "Retour", "", true, "exploration.back");
 
+        constexpr int HestiaMissingPersonChoice = 90;
+        const bool hestiaMissingPersonActive = HestiaMissingPersonQuestSystem::questActive(player);
+        if (hestiaMissingPersonActive)
+        {
+            screen.addOption(
+                HestiaMissingPersonChoice,
+                "Piste principale — Une personne disparue",
+                "Reprendre la piste transmise par Diane vers un sous-sol abandonné. Combat ou infiltration difficile possibles.",
+                true,
+                "exploration.hestia.missing_person"
+            );
+        }
+
         int visibleChoice = 1;
         int rumorIndex = 1;
         for (int biomeIndex : visibleBiomeIndexes)
@@ -5969,6 +6688,12 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             return;
         }
 
+        if (hestiaMissingPersonActive && choice == HestiaMissingPersonChoice)
+        {
+            runHestiaMissingPersonOperation(player, difficulty, deathRule);
+            continue;
+        }
+
         if (choice < 1 || choice > static_cast<int>(visibleBiomeIndexes.size()))
         {
             continue;
@@ -5980,19 +6705,23 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
         int expeditionElapsedUnits = 0;
         int expeditionFoodUnitsRemaining = player.getWorldDayUnitsPerDay();
         bool firstExplorationAtThisBiome = true;
+        int expeditionPeakCarryPercent = CarryLoadSystem::evaluate(player).percent;
+        int expeditionPeakHeavyEquipment = countHeavySpareEquipment(player);
 
         while (true)
         {
         MenuScreen intensityScreen("INTENSITÉ", "exploration.intensity");
         intensityScreen.addLine("Choisis comment tu veux explorer " + selectedBiomeDisplayName + ".");
+        intensityScreen.addLine("Moment actuel : " + player.formatWorldDayPartLine() + ".");
+        intensityScreen.addLine("Repères d'une journée : " + explorationDayMomentLegend() + ".");
         intensityScreen.addLine(
-            "Autonomie de sortie restante : " + std::to_string(expeditionFoodUnitsRemaining)
-            + "/" + std::to_string(player.getWorldDayUnitsPerDay()) + " segment(s). Rations : "
-            + std::to_string(player.getInventory().countMaterialById("survival_ration")) + "."
+            "Autonomie de sortie restante : " + explorationMomentCountLabel(expeditionFoodUnitsRemaining)
+            + ". Rations : " + std::to_string(player.getInventory().countMaterialById("survival_ration")) + "."
         );
         intensityScreen.addLine(
-            "Chaque Ration de survie ajoute " + std::to_string(player.getWorldDayUnitsPerDay())
-            + " segment(s) d'autonomie et sera consommée avant un départ qui dépasserait la réserve."
+            "Chaque Ration de survie ajoute une journée complète d'autonomie ("
+            + explorationMomentCountLabel(player.getWorldDayUnitsPerDay())
+            + ") et sera consommée avant un départ qui dépasserait la réserve."
         );
         intensityScreen.addOption(0, "Retour aux biomes", "", true, "exploration.intensity.back");
 
@@ -6003,8 +6732,8 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
                 intensities[i].name + " — " + intensities[i].description,
                 "Risque " + std::to_string(intensities[i].eventShift)
                     + "% | Pièces " + std::to_string(intensities[i].goldPercent)
-                    + "% | Temps +" + std::to_string(intensities[i].durationUnits)
-                    + " segment(s) | Événements " + std::to_string(intensities[i].guaranteedEvents)
+                    + "% | Temps +" + explorationMomentCountLabel(intensities[i].durationUnits)
+                    + " | Événements " + std::to_string(intensities[i].guaranteedEvents)
                     + (intensities[i].extraEventChance > 0 ? " + chance bonus" : ""),
                 true,
                 "exploration.intensity." + std::to_string(i + 1),
@@ -6021,6 +6750,30 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
         }
 
         const ExplorationIntensity& intensity = intensities[intensityChoice - 1];
+        const CarryLoadSummary loadBeforeRun = CarryLoadSystem::evaluate(player);
+        int maxCarryPercentDuringRun = loadBeforeRun.percent;
+        auto refreshPeakCarry = [&]() {
+            const int currentPercent = CarryLoadSystem::evaluate(player).percent;
+            maxCarryPercentDuringRun = std::max(maxCarryPercentDuringRun, currentPercent);
+            expeditionPeakCarryPercent = std::max(expeditionPeakCarryPercent, currentPercent);
+            expeditionPeakHeavyEquipment = std::max(expeditionPeakHeavyEquipment, countHeavySpareEquipment(player));
+        };
+        if (loadBeforeRun.movementBlocked)
+        {
+            showExplorationNotice(
+                "TROP CHARGÉ POUR EXPLORER",
+                "exploration.before_run.carry_blocked",
+                {
+                    "Encombrement : " + std::to_string(loadBeforeRun.used) + "/" + std::to_string(loadBeforeRun.capacity) + " — " + std::to_string(loadBeforeRun.percent) + " %.",
+                    "À 200 % ou plus, impossible de repartir ou de s'enfoncer dans une nouvelle exploration.",
+                    "Allège le sac avant le départ ; l'inventaire reste accessible pour éviter tout softlock."
+                },
+                false
+            );
+            continue;
+        }
+        if (loadBeforeRun.percent < 10) player.grantTitle("Minimaliste");
+        player.refreshCarryAndStorageTitles();
         if (wasUnknownBiome)
         {
             recordBiomeDiscoveryForPlayer(biome);
@@ -6043,7 +6796,12 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             travelLines.push_back("Continuité : tu es déjà sur place, retourner au même lieu ne coûte pas un nouveau trajet.");
             travelLines.push_back("Taille du biome : le terrain reste compté, parce que fouiller un grand lieu prend encore du temps même sans refaire la route.");
         }
-        const int totalTimeUnits = std::max(1, intensity.durationUnits + travelUnits + biomeSizeUnits);
+        const int rawTotalTimeUnits = std::max(1, intensity.durationUnits + travelUnits + biomeSizeUnits);
+        const int totalTimeUnits = CarryLoadSystem::adjustedActionTimeUnits(player, rawTotalTimeUnits);
+        if (totalTimeUnits > rawTotalTimeUnits)
+        {
+            travelLines.push_back("Surcharge : durée de la sortie " + explorationMomentCountLabel(rawTotalTimeUnits) + " → " + explorationMomentCountLabel(totalTimeUnits) + " (+" + std::to_string(loadBeforeRun.explorationTimeModifierPercent) + " %)." );
+        }
         const int foodUnitsPerRation = std::max(1, player.getWorldDayUnitsPerDay());
         const int missingFoodUnits = std::max(0, totalTimeUnits - expeditionFoodUnitsRemaining);
         const int rationsNeeded = missingFoodUnits <= 0
@@ -6057,11 +6815,30 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
                 "AUTONOMIE INSUFFISANTE",
                 "exploration.before_run.ration_missing",
                 {
-                    "Cette sortie demanderait " + std::to_string(totalTimeUnits) + " segment(s) avec le trajet et la taille du lieu.",
-                    "Autonomie encore disponible : " + std::to_string(expeditionFoodUnitsRemaining) + " segment(s).",
+                    "Cette sortie demanderait " + explorationMomentCountLabel(totalTimeUnits) + " avec le trajet et la taille du lieu.",
+                    "Autonomie encore disponible : " + explorationMomentCountLabel(expeditionFoodUnitsRemaining) + ".",
                     "Rations nécessaires pour partir : " + std::to_string(rationsNeeded) + " ; dans le sac : " + std::to_string(rationsAvailable) + ".",
                     "La sortie n'est pas lancée. Choisis une exploration plus courte, rentre, ou prépare davantage de Rations de survie."
                 },
+                false
+            );
+            Console::clear();
+            continue;
+        }
+
+        if (rationsNeeded > 0
+            && !InventoryProtection::confirmLockedMaterialUse(
+                player,
+                "survival_ration",
+                "Ration de survie",
+                "préparer les rations nécessaires au départ",
+                "exploration.before_run.locked_ration"
+            ))
+        {
+            showExplorationNotice(
+                "DÉPART ANNULÉ",
+                "exploration.before_run.locked_ration.cancel",
+                {"Les Rations de survie sont verrouillées et restent dans l'inventaire. L'expédition n'est pas lancée."},
                 false
             );
             Console::clear();
@@ -6079,7 +6856,7 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
         {
             travelLines.push_back(
                 "Vivres : " + std::to_string(rationsNeeded) + " Ration(s) de survie préparée(s) avant le départ (+"
-                + std::to_string(rationsNeeded * foodUnitsPerRation) + " segment(s) d'autonomie)."
+                + explorationMomentCountLabel(rationsNeeded * foodUnitsPerRation) + " d'autonomie)."
             );
         }
         expeditionFoodUnitsRemaining = std::max(0, expeditionFoodUnitsRemaining - totalTimeUnits);
@@ -6091,7 +6868,7 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
         expeditionElapsedUnits += totalTimeUnits;
         expireOverdueQuestDeadlines(player, "exploration.run", true);
         const int hpBeforeExploration = player.getHp();
-        const long long copperBeforeExploration = player.getInventory().getTotalCopper();
+        const CoinBreakdown coinStacksBeforeExploration = player.getInventory().getCoinStacks();
         const int readyBeforeExploration = countReadyToTurnInQuests(player);
 
         QuestSearchHint questHint = getQuestSearchHintForBiome(player, biome);
@@ -6227,11 +7004,11 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             "Monstres surtout présents : " + biome.commonMonsters + ".",
             "Rares / élites typiques : " + biome.rareMonsters + ".",
             "Approche : " + intensity.name + ".",
-            "Distance : " + explorationDistanceLabel(rawTravelUnits) + " | coût final du déplacement : +" + std::to_string(travelUnits) + " segment(s).",
+            "Distance : " + explorationDistanceLabel(rawTravelUnits) + " | coût final du déplacement : +" + explorationMomentCountLabel(travelUnits) + ".",
             "Taille/terrain du biome : " + explorationBiomeSizeLabel(biomeSizeUnits) + ".",
-            "Temps écoulé : +" + std::to_string(totalTimeUnits) + " segment(s) de journée.",
+            "Temps écoulé : +" + explorationMomentCountLabel(totalTimeUnits) + ".",
             player.formatWorldTimeChange(dayBeforeExploration, unitBeforeExploration),
-            "Rappel temps : une journée vaut maintenant 5 moments : matin, midi, après-midi, soir, nuit."
+            "Repères d'une journée : " + explorationDayMomentLegend() + "."
         };
         entryLines.insert(entryLines.end(), travelLines.begin(), travelLines.end());
         const std::vector<std::string> livingBiomeLines = BiomeLivingContentCatalog::buildCurrentObservationLines(
@@ -6416,8 +7193,24 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             }
         }
         showExplorationNotice("ROUTE CHOISIE", "exploration.route_choice.result", routeResult.lines);
+        refreshPeakCarry();
 
-        maybeTriggerLegendaryMerchantEncounter(player, random, biome.name);
+        const bool bountyMajorStep = runActiveBountyQuestStep(player, random, biome, difficulty, deathRule);
+        if (bountyMajorStep)
+        {
+            roll = std::clamp(roll + 8, 1, 100);
+        }
+
+        const bool vaultTheftLeadTriggered = !bountyMajorStep && maybeTriggerVaultTheftExplorationEncounter(player, random, biome.name);
+        const bool reaperEncounterTriggered = !bountyMajorStep && !vaultTheftLeadTriggered
+            && maybeTriggerReaper13ExplorationEncounter(player, random, biome.name);
+        const bool ambientRumorTriggered = !bountyMajorStep && !vaultTheftLeadTriggered && !reaperEncounterTriggered
+            && maybeTriggerAmbientWorldRumor(player, random, biome.name);
+        if (!bountyMajorStep && !vaultTheftLeadTriggered && !reaperEncounterTriggered && !ambientRumorTriggered)
+        {
+            maybeTriggerLegendaryMerchantEncounter(player, random, biome.name);
+        }
+        refreshPeakCarry();
 
         MicroChallengeResult microChallenge = runExplorationMicroChallenge(player, biome, intensity, random);
         if (microChallenge.success)
@@ -6439,6 +7232,7 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             microChallenge.success ? "exploration.micro_challenge.success" : "exploration.micro_challenge.failure",
             microChallenge.lines
         );
+        refreshPeakCarry();
 
         std::vector<std::string> eventLabels;
         std::set<std::string> currentRunEventKeys;
@@ -6642,6 +7436,7 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
                 currentRunEventKeys
             );
             runExplorationEvent(eventRoll, eventIndex);
+            refreshPeakCarry();
         }
 
         std::string eventLabel = "aucun événement noté";
@@ -6662,19 +7457,23 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
             intensity,
             eventLabel,
             hpBeforeExploration,
-            copperBeforeExploration,
+            coinStacksBeforeExploration,
             readyBeforeExploration,
             dayBeforeExploration,
             unitBeforeExploration,
-            totalTimeUnits
+            totalTimeUnits,
+            loadBeforeRun.used,
+            loadBeforeRun.capacity,
+            maxCarryPercentDuringRun
         );
 
         std::vector<std::string> continuationLines = {
             "Zone actuelle : " + biome.name + ".",
-            "Temps passé dehors depuis le départ : " + std::to_string(expeditionElapsedUnits)
-                + " segment(s) (" + std::to_string(player.getWorldDayUnitsPerDay()) + " segment(s) = 1 journée complète).",
-            "Autonomie de sortie restante : " + std::to_string(expeditionFoodUnitsRemaining)
-                + " segment(s) ; Rations restantes : " + std::to_string(player.getInventory().countMaterialById("survival_ration")) + ".",
+            "Temps passé dehors depuis le départ : " + explorationMomentCountLabel(expeditionElapsedUnits)
+                + " (" + explorationMomentCountLabel(player.getWorldDayUnitsPerDay()) + " = 1 journée complète).",
+            "Moment actuel : " + player.formatWorldDayPartLine() + ".",
+            "Autonomie de sortie restante : " + explorationMomentCountLabel(expeditionFoodUnitsRemaining)
+                + " ; Rations restantes : " + std::to_string(player.getInventory().countMaterialById("survival_ration")) + ".",
             "Continuer ici ne repaie pas le trajet : tu es déjà sur place.",
             "La taille du biome reste comptée à chaque nouvelle fouille : seul le trajet d'arrivée disparaît.",
             "Une ration sera demandée avant la prochaine sortie si sa durée dépasse l'autonomie encore disponible."
@@ -6695,6 +7494,7 @@ void QuestMenu::openExplorationMenu(Player& player, DifficultyMode difficulty, D
 
         if (continuationChoice != 1)
         {
+            player.evaluateExplorationReturnTitles(expeditionPeakCarryPercent, expeditionPeakHeavyEquipment);
             showExplorationNotice(
                 "RETOUR",
                 "exploration.after_run.return",

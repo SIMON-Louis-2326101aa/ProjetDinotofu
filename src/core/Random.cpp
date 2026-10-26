@@ -11,6 +11,10 @@ Random::Random() : generator(rd())
 {
 }
 
+Random::Random(unsigned int seed) : generator(seed)
+{
+}
+
 // EN: between declares or implements a focused behavior used by this module.
 // FR: between déclare ou implémente un comportement précis utilisé par ce module.
 int Random::between(int min, int max)

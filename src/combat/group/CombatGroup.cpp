@@ -5,6 +5,7 @@
 // Description: Stores a visible combat group made of active entity and summon slots.
 
 #include "combat/group/CombatGroup.hpp"
+#include "combat/unit/CombatSlotRules.hpp"
 
 #include <algorithm>
 
@@ -43,16 +44,25 @@ bool CombatGroup::addSlot(const CombatUnitSlot& slot)
         }
     }
 
-    if (slot.getKind() == CombatUnitKind::Summon)
+    if (!slot.isEmpty())
     {
-        if (summonSlotCount >= maxSummonSlots)
+        // The active formation has three shared places plus two summon-only bonus places.
+        // A summon may occupy a free shared place only after regular fighters have had priority.
+        const int sharedLimit = std::max(0, maxMainSlots);
+        const int summonBonus = std::max(0, maxSummonSlots);
+        const int freeSharedForSummons = std::max(0, sharedLimit - mainSlotCount);
+        const int maxSummons = freeSharedForSummons + summonBonus;
+
+        if (slot.getKind() == CombatUnitKind::Summon)
         {
-            return false;
+            if (summonSlotCount >= maxSummons
+                || mainSlotCount + summonSlotCount >= sharedLimit + summonBonus)
+            {
+                return false;
+            }
         }
-    }
-    else if (!slot.isEmpty())
-    {
-        if (mainSlotCount >= maxMainSlots)
+        else if (mainSlotCount >= sharedLimit
+            || mainSlotCount + summonSlotCount >= sharedLimit + summonBonus)
         {
             return false;
         }

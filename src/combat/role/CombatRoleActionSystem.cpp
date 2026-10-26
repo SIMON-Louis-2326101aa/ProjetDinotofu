@@ -107,9 +107,8 @@ bool CombatRoleActionSystem::tryActivateAllyProtection(
 )
 {
     bool isProtectiveTank = CombatRoleSystem::isTank(protector);
-    bool isHazakProtectingHestia = nameIs(protector, "Hazak") && nameIs(endangeredAlly, "Hestia");
 
-    if (!isProtectiveTank && !isHazakProtectingHestia)
+    if (!isProtectiveTank)
     {
         return false;
     }
@@ -138,11 +137,6 @@ bool CombatRoleActionSystem::tryActivateAllyProtection(
         chance += 10;
     }
 
-    if (isHazakProtectingHestia)
-    {
-        chance = 92;
-    }
-
     if (random.between(1, 100) > chance)
     {
         return false;
@@ -152,15 +146,7 @@ bool CombatRoleActionSystem::tryActivateAllyProtection(
     DefensePostureSystem::enterDefensePosture(protector);
 
     std::vector<std::string> lines;
-    if (isHazakProtectingHestia)
-    {
-        lines.push_back("Hazak n'aime pas jouer les boucliers, mais Hestia ne doit pas voir ça.");
-        lines.push_back("Il coupe la trajectoire ennemie avant que le coup ne l'atteigne.");
-    }
-    else
-    {
-        lines.push_back(protector.getName() + " se place devant " + endangeredAlly.getName() + " pour absorber la pression.");
-    }
+    lines.push_back(protector.getName() + " se place devant " + endangeredAlly.getName() + " pour absorber la pression.");
 
     lines.push_back("Provocation : le groupe devient plus dur à contourner.");
 
@@ -193,7 +179,6 @@ bool CombatRoleActionSystem::tryActivateSupportRecovery(
     int allyHpPercent = ally.getHp() * 100 / ally.getMaxHp();
 
     int chance = CombatRoleSystem::isHealer(support) ? 55 : 35;
-    if (nameIs(support, "Hestia")) chance = 75;
     if (nameIs(support, "Sanctus")) chance += 10;
     if (nameIs(ally, "Aoi") && nameIs(support, "Sanctus")) chance += 10;
 
@@ -209,10 +194,6 @@ bool CombatRoleActionSystem::tryActivateSupportRecovery(
         healAmount += random.between(6, 12);
     }
 
-    if (nameIs(support, "Hestia"))
-    {
-        healAmount += random.between(8, 16);
-    }
     const int beforeHp = ally.getHp();
     ally.heal(healAmount);
     support.markHealingThreat();
@@ -247,10 +228,6 @@ void CombatRoleActionSystem::displayRoleIdentity(const Entity& entity)
     {
         lines.push_back(entity.getName() + " possède un profil de soigneur.");
         lines.push_back("Soigner un allié attirera l'attention ennemie.");
-        if (nameIs(entity, "Hestia"))
-        {
-            lines.push_back("Particularité : Hestia soigne/protège plus fort que ses stats ne le laissent croire.");
-        }
     }
     else if (CombatRoleSystem::isSummoner(entity))
     {

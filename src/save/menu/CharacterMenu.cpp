@@ -18,6 +18,7 @@
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "save/SaveManager.hpp"
+#include "tutorial/TutorialSystem.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -33,6 +34,7 @@ namespace
         CharacterMenuResult result;
         result.characterLoaded = false;
         result.specialIdentityValidated = false;
+        result.tutorialRequested = false;
         result.playerName = "";
         result.difficulty = DifficultyMode::Normal;
         result.deathRule = DeathRuleRules::defaultForDifficulty(result.difficulty);
@@ -91,6 +93,23 @@ namespace
             + " · étape " + std::to_string(std::max(0, character.storyStep));
     }
 
+    std::string characterWorldTimeLabel(const CharacterSaveSummary& character)
+    {
+        static const std::vector<std::string> weekdays = {
+            "dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"
+        };
+        static const std::vector<std::string> moments = {
+            "Matin", "Midi", "Après-midi", "Soir", "Nuit"
+        };
+
+        const int dayNumber = std::max(0, character.worldDaysElapsed) + 1;
+        const int weekdayIndex = (dayNumber - 1) % static_cast<int>(weekdays.size());
+        const int momentIndex = std::clamp(character.worldDayProgressUnits, 0, 4);
+
+        return "Jour " + std::to_string(dayNumber) + " (" + weekdays[static_cast<std::size_t>(weekdayIndex)] + ") — "
+            + moments[static_cast<std::size_t>(momentIndex)] + " (" + std::to_string(momentIndex + 1) + "/5)";
+    }
+
     MenuOptionItemData makeCharacterMenuItem(
         const std::string& actionType,
         const std::string& name,
@@ -146,8 +165,8 @@ namespace
                 + " | Créé V" + character.createdForVersion
                 + " | Adapté V" + character.lastAdaptedVersion,
             status,
-            "Niveau " + std::to_string(character.level) + " | " + characterStoryLabel(character)
-                + " | Jeu " + formatRealPlayTime(character.realPlayTimeSeconds)
+            "Niveau " + std::to_string(character.level) + " | " + characterWorldTimeLabel(character)
+                + " | " + characterStoryLabel(character) + " | Jeu " + formatRealPlayTime(character.realPlayTimeSeconds)
                 + " | " + Money::formatWalletTotalFromCopper(character.totalCopperCurrency),
             "Dernière activité : " + (character.lastActivityText.empty() ? std::string("Inconnue") : character.lastActivityText),
             impact != VersionCompatibilityImpact::None || character.clone
@@ -181,6 +200,7 @@ namespace
         if (importantCheckpoint)
         {
             screen.addLine("Avant toute modification, Dinotofu créera une copie pré-mise-à-jour séparée de cette sauvegarde.");
+            screen.addLine("Motif du jalon : " + VersionInfo::importantSaveUpdateReason());
             screen.addLine("La reprise normale est bloquée tant que le rituel d'adaptation de cette grosse mise à jour n'a pas été effectué.");
             screen.addLine("Le backup de point de sauvegarde ne sera jamais écrasé par les sauvegardes ordinaires .bak.");
         }
@@ -219,6 +239,8 @@ namespace
                 checkpointScreen.addLine("Cette sauvegarde est très ancienne ou sa version est inconnue : le rituel est quand même imposé avant toute reprise.");
             }
             checkpointScreen.addLine("Pour éviter une reprise silencieuse avec d'anciennes règles, l'adaptation doit être lancée manuellement une fois.");
+            checkpointScreen.addLine("Motif : " + VersionInfo::importantSaveUpdateReason());
+            checkpointScreen.addLine("Les piles, quantités et qualités de matériaux existantes seront conservées : aucune conversion automatique de bourse ou d'inventaire n'est effectuée.");
             checkpointScreen.addLine("Étape 1 : copie intégrale du personnage avant mise à jour dans assets/saves/update_backups/.");
             checkpointScreen.addLine("Étape 2 : chargement de la sauvegarde puis application des sécurités de compatibilité.");
             checkpointScreen.addLine("Étape 3 : sauvegarde immédiate avec la nouvelle marque de version.");
@@ -396,6 +418,8 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
                 + " | " + characters[i].raceName
                 + " / " + characters[i].className
                 + " | Niveau " + std::to_string(characters[i].level)
+                + " | Jeu " + formatRealPlayTime(characters[i].realPlayTimeSeconds)
+                + " | " + Money::formatWalletTotalFromCopper(characters[i].totalCopperCurrency)
                 + " | " + DeathRuleRules::displayName(characters[i].deathRule)
                 + (characters[i].clone ? " | CLONE" : "");
 
@@ -414,12 +438,45 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
             );
         }
 
+        const int tutorialChoice = static_cast<int>(characters.size()) + 1;
+        const std::vector<std::string> accountTitles = SaveManager::getAccountUnlockedTitles(accountName);
+        const bool tutorialCompleted = std::find(accountTitles.begin(), accountTitles.end(), TutorialSystem::completedTitle()) != accountTitles.end();
+        const std::string tutorialStatus = tutorialCompleted
+            ? "REJOUABLE"
+            : (characters.empty() ? "RECOMMANDÉ" : "DISPONIBLE");
+        characterListScreen.addOption(
+            tutorialChoice,
+            "TUTORIEL | " + TutorialSystem::dummyName() + " | Profession : Cobaye | " + tutorialStatus,
+            tutorialCompleted
+                ? "Refaire le tutoriel isolé. Aucune progression réelle ne sera modifiée."
+                : "Découvrir la ville, les contrats, l'exploration et le combat en moins de dix minutes.",
+            true,
+            "save.characters.tutorial",
+            makeCharacterMenuItem(
+                "tutorial",
+                TutorialSystem::dummyName(),
+                "Personnage factice du tutoriel : aucune sauvegarde de progression.",
+                tutorialCompleted ? "Tutoriel terminé — rejouable" : (characters.empty() ? "Recommandé pour commencer" : "Disponible"),
+                "Ville + quête + exploration + combat",
+                "Profession : Cobaye",
+                !tutorialCompleted
+            )
+        );
+
         int choice = TerminalInterface::askMenuChoice(
             characterListScreen,
             0,
-            static_cast<int>(characters.size()),
-            "Veuillez choisir un personnage affiché, ou 0 pour en créer un."
+            tutorialChoice,
+            "Veuillez choisir un personnage affiché, 0 pour en créer un, ou le tutoriel Jean-Michel Test."
         );
+
+        if (choice == tutorialChoice)
+        {
+            CharacterMenuResult result = createEmptyResult();
+            result.tutorialRequested = true;
+            result.playerName = TutorialSystem::dummyName();
+            return result;
+        }
 
         if (choice == 0)
         {
@@ -474,6 +531,7 @@ CharacterMenuResult CharacterMenu::open(const std::string& accountName, Player& 
         selectedCharacterScreen.addLine("Race / classe : " + selectedCharacter.raceName + " / " + selectedCharacter.className);
         selectedCharacterScreen.addLine("Apparence : " + std::to_string(selectedCharacter.characterAge) + " ans | " + selectedCharacter.visualPresentation + " | " + selectedCharacter.visualVariant);
         selectedCharacterScreen.addLine("Niveau : " + std::to_string(selectedCharacter.level));
+        selectedCharacterScreen.addLine("Jour actuel : " + characterWorldTimeLabel(selectedCharacter));
         selectedCharacterScreen.addLine("Règle de mort : " + DeathRuleRules::displayName(selectedCharacter.deathRule));
         selectedCharacterScreen.addLine("Créateur : " + selectedCharacter.creatorAccountName);
         selectedCharacterScreen.addLine("Joueur / maître actuel : " + selectedCharacter.currentOwnerAccountName);

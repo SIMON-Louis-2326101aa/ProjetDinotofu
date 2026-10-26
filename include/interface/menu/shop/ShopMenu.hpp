@@ -11,6 +11,8 @@
 #include "entity/Player.hpp"
 #include "economy/shop/ShopInventory.hpp"
 
+#include <string>
+
 class ShopMenu
 {
 public:
@@ -23,6 +25,8 @@ public:
     // EN: Opens one concrete shop type directly from a town building.
     // FR: Ouvre directement un type de boutique concret depuis un bâtiment de ville.
     static void openShopOfType(Player& player, ShopType type);
+    // Sell-only desk used by places such as the adventurer guild collection counter.
+    static void openSellOnly(Player& player, ShopType type, const std::string& deskName);
 };
 
 #endif

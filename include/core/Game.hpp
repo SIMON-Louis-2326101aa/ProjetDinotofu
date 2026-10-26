@@ -26,6 +26,7 @@ private:
         int hp = 0;
         int maxHp = 0;
         long long totalCopper = 0;
+        CoinBreakdown coinStacks;
         int victories = 0;
         int defeats = 0;
         int escapes = 0;

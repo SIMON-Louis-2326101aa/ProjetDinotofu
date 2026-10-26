@@ -14,6 +14,7 @@ public:
     // EN: createBasicHealingPotion declares or implements a focused behavior used by this module.
     // FR: createBasicHealingPotion déclare ou implémente un comportement précis utilisé par ce module.
     static Consumable createBasicHealingPotion();
+    static Consumable createManaPotion();
     // EN: createBasicDamagePotion declares or implements a focused behavior used by this module.
     // FR: createBasicDamagePotion déclare ou implémente un comportement précis utilisé par ce module.
     static Consumable createBasicDamagePotion();

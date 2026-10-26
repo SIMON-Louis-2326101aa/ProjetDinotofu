@@ -46,6 +46,19 @@ int main()
     assert(inventory.getWalletTotalLine() == "65 PC");
     assert(Money::socialStandingLabel(starterStacks) == "Monnaie courante");
 
+    // Physical recap formatting must never silently compact the wallet into larger denominations.
+    CoinBreakdown recapBefore;
+    recapBefore.iron = 5;
+    recapBefore.copper = 15;
+    CoinBreakdown recapAfter = recapBefore;
+    recapAfter.electrum = 1;
+    recapAfter.copper = 11;
+    assert(Money::formatCoinStacks(recapBefore, false).find("5 fer") != std::string::npos);
+    assert(Money::formatCoinStacks(recapBefore, false).find("15 cuivres") != std::string::npos);
+    assert(Money::formatCoinStackDelta(recapBefore, recapAfter) == "+1 PE | -4 PC");
+    assert(Money::coinStacksValueInCopper(recapBefore) == 65);
+    assert(Money::coinStacksValueInCopper(recapAfter) == 161);
+
     CoinBreakdown copperOnly;
     copperOnly.copper = 65;
     assert(Money::socialStandingLabel(copperOnly).find("Petite monnaie") != std::string::npos);
@@ -174,14 +187,27 @@ int main()
 
     // Economy API semantics are explicit before the V3.50.30 checkpoint audit:
     // vault purchase/upgrade values are PF economy units, while travel/inn/logistics values below are exact PC.
-    assert(EconomyBalance::cityVaultPurchaseCost("valebrume") == 350);
-    assert(Money::copperFromEconomyUnits(EconomyBalance::cityVaultPurchaseCost("valebrume")) == 3500);
-    assert(EconomyBalance::innCommonBedCostCopper("valebrume", 1) == 100);
-    assert(EconomyBalance::innSafeRoomCostCopper("valebrume", 1) == 192);
-    assert(EconomyBalance::innWarmMealCostCopper("valebrume", 1) == 50);
+    assert(EconomyBalance::cityVaultPurchaseCost("valebrume") == 2000); // 2 PP base
+    assert(EconomyBalance::cityVaultPurchaseCost("valebrume", 1, 0) == 2200); // second vault: +2 PO
+    assert(EconomyBalance::cityVaultPurchaseCost("valebrume", 2, 0) == 2500); // third: +2 +3 PO
+    assert(EconomyBalance::cityVaultPurchaseCost("valebrume", 3, 0) == 2900); // fourth: +2 +3 +4 PO
+    assert(EconomyBalance::cityVaultPurchaseCost("valebrume", 4, 0) == 3400); // fifth: +2 +3 +4 +5 PO
+    assert(EconomyBalance::cityVaultPurchaseCost("valebrume", 0, 1) == 1500);
+    assert(EconomyBalance::cityVaultPurchaseCost("valebrume", 0, 2) == 1250);
+    assert(Money::copperFromEconomyUnits(EconomyBalance::cityVaultPurchaseCost("valebrume")) == 20000);
+    assert(EconomyBalance::cityVaultUpgradeCost("valebrume", 1) == 1000);
+    assert(EconomyBalance::cityVaultUpgradeCost("valebrume", 2) == 1500);
+    assert(EconomyBalance::cityVaultUpgradeCost("valebrume", 3) == 2250);
+    assert(EconomyBalance::cityVaultUpgradeCost("valebrume", 4) == 3500);
+    assert(EconomyBalance::cityVaultSecuritySubscriptionCost(1) == 30);
+    assert(EconomyBalance::cityVaultSecuritySubscriptionCost(5) == 70);
+    assert(EconomyBalance::innCommonBedCostCopper("valebrume", 1) == 93);
+    assert(EconomyBalance::innSafeRoomCostCopper("valebrume", 1) == 178);
+    assert(EconomyBalance::innWarmMealCostCopper("valebrume", 1) == 46);
     assert(EconomyBalance::estimatedTravelCopperCost(20) == 100);
     assert(EconomyBalance::cityChangeTaxCopper("valebrume", 20) > 0);
     assert(EconomyBalance::cityVaultMaterialTransferCostCopper("valebrume", "port_lanterne", 20, 5) > 0);
+    assert(EconomyBalance::cityVaultCargoTransferCostCopper("valebrume", "port_lanterne", 20, 8) > EconomyBalance::cityVaultCargoTransferCostCopper("valebrume", "port_lanterne", 20, 1));
     assert(EconomyBalance::routeRewardBudgetCopperForDistance(20, 2) > 0);
     // A beginner with 65 PC can still buy a warm meal, but an inn bed already requires
     // earning money: the opening purse is deliberately modest rather than a comfort buffer.
@@ -207,6 +233,8 @@ int main()
     bool sawWornLeatherArmor = false;
     bool sawMinorHealingPotion = false;
     bool sawSurvivalRation = false;
+    int mealVoucherEconomyPrice = -1;
+    int bedVoucherEconomyPrice = -1;
     const std::vector<std::string> races = {"", "Humain", "Démon", "Kitsune"};
     const std::vector<std::string> classes = {"", "Forgeron", "Alchimiste", "Artificier"};
     for (const ShopInventory& shop : ShopCatalog::createAllPreviewShops())
@@ -243,6 +271,14 @@ int main()
                 sawSurvivalRation = true;
                 assert(item.getBuyPrice() <= 20);
             }
+            else if (item.getId() == "warm_meal_voucher")
+            {
+                mealVoucherEconomyPrice = item.getBuyPrice();
+            }
+            else if (item.getId() == "lodging_bed_token")
+            {
+                bedVoucherEconomyPrice = item.getBuyPrice();
+            }
 
             for (const std::string& race : races)
             {
@@ -265,6 +301,19 @@ int main()
     assert(sawWornLeatherArmor);
     assert(sawMinorHealingPotion);
     assert(sawSurvivalRation);
+
+    // Inn voucher booklets are five real uses: slightly cheaper than buying five services
+    // separately, but never so discounted that prepaying becomes mandatory or abusable.
+    assert(mealVoucherEconomyPrice > 0);
+    assert(bedVoucherEconomyPrice > 0);
+    const long long fiveMealsDirect = EconomyBalance::innWarmMealCostCopper("valebrume", 1) * 5LL;
+    const long long fiveBedsDirect = EconomyBalance::innCommonBedCostCopper("valebrume", 1) * 5LL;
+    const long long mealVoucherCopper = Money::copperFromEconomyUnits(mealVoucherEconomyPrice);
+    const long long bedVoucherCopper = Money::copperFromEconomyUnits(bedVoucherEconomyPrice);
+    assert(mealVoucherCopper < fiveMealsDirect);
+    assert(bedVoucherCopper < fiveBedsDirect);
+    assert(mealVoucherCopper * 100 >= fiveMealsDirect * 90);
+    assert(bedVoucherCopper * 100 >= fiveBedsDirect * 90);
 
     // Beginner contracts must stay pocket-money scale: no early rat hunt or local errand should
     // suddenly pay literal PO/PP amounts. Values here are authored PF economy units.
@@ -377,11 +426,12 @@ int main()
         previousAffordableListings = affordableListings;
     }
 
-    // The municipal vault stays a medium-term target: not a trivial early purchase, but reachable later.
+    // V3.51.52: the municipal vault is deliberately a patrimonial purchase (2 PP base), not a routine
+    // level-50 shop expense. The mayor can later discount the first one through local reputation.
     const int vaultCost = EconomyBalance::cityVaultPurchaseCost("valebrume");
     const long long vaultCostCopper = Money::copperFromEconomyUnits(vaultCost);
     assert(vaultCostCopper > level10RepresentativeBudget);
-    assert(vaultCostCopper <= level50RepresentativeBudget);
+    assert(vaultCostCopper > level50RepresentativeBudget);
 
     // Combat income follows the same scale: a normal humanoid is useful pocket money,
     // while a benchmark boss is meaningful without instantly buying the whole economy.

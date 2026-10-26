@@ -8,6 +8,7 @@
 #include "interface/menu/training/TrainingGroundMenu.hpp"
 #include "interface/menu/LocalReputationRepairMenu.hpp"
 #include "core/Console.hpp"
+#include "core/Random.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/TerminalInterface.hpp"
@@ -22,6 +23,67 @@
 #include <utility>
 #include <vector>
 
+namespace
+{
+    int battlefieldCacheObjectCount(const PlayerBattlefieldRecoveryCache& cache)
+    {
+        int count = cache.inventory.getWeaponCount() + cache.inventory.getArmorCount()
+            + cache.inventory.getConsumableCount() + cache.inventory.getMaterialCount();
+        const CoinBreakdown coins = cache.inventory.getCoinStacks();
+        if (coins.copper + coins.iron + coins.electrum + coins.gold + coins.platinum > 0) ++count;
+        return count;
+    }
+
+    void openBattlefieldRecoveryMenu(Player& player)
+    {
+        std::vector<const PlayerBattlefieldRecoveryCache*> openCaches;
+        for (const PlayerBattlefieldRecoveryCache& cache : player.getBattlefieldRecoveryCaches())
+        {
+            if (!cache.resolved && cache.cityId == player.getCurrentCityId() && battlefieldCacheObjectCount(cache) > 0)
+                openCaches.push_back(&cache);
+        }
+
+        if (openCaches.empty())
+        {
+            MessageScreen::show("PISTES DE RÉCUPÉRATION", "quest.battlefield_recovery.none",
+                {"Aucun objet important n'est actuellement enregistré comme laissé sur un champ de bataille lié à cette ville."}, false);
+            return;
+        }
+
+        MenuScreen screen("PISTES DE RÉCUPÉRATION", "quest.battlefield_recovery");
+        screen.addLine("Ces pistes existent uniquement quand un objet Quête/Personnel/Unique a réellement été généré mais n'a pas pu être transporté après ton KO.");
+        screen.addLine("Revenir sur place consomme du temps. Plus tu attends, plus les traces peuvent être déplacées ou perturbées.");
+        screen.addBackOption("Retour", "quest.battlefield_recovery.back");
+        for (std::size_t i = 0; i < openCaches.size(); ++i)
+        {
+            const PlayerBattlefieldRecoveryCache& cache = *openCaches[i];
+            const int age = std::max(0, player.getWorldDaysElapsed() - cache.createdDay);
+            std::string state = cache.disturbanceLevel <= 0 ? "trace stable"
+                : cache.disturbanceLevel == 1 ? "zone remuée"
+                : cache.disturbanceLevel == 2 ? "lot probablement déplacé"
+                : "piste froide";
+            screen.addOption(static_cast<int>(i + 1), cache.locationLabel,
+                std::to_string(battlefieldCacheObjectCount(cache)) + " lot(s) important(s) | "
+                + std::to_string(age) + " jour(s) | " + state + ".", true,
+                "quest.battlefield_recovery.select." + std::to_string(i + 1));
+        }
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une piste de récupération.");
+        Console::clear();
+        if (choice <= 0 || static_cast<std::size_t>(choice) > openCaches.size()) return;
+
+        const std::string cacheId = openCaches[static_cast<std::size_t>(choice - 1)]->cacheId;
+        Random random;
+        const BattlefieldRecoveryAttemptResult result = player.attemptBattlefieldRecovery(cacheId, random);
+        std::vector<std::string> lines = result.lines;
+        if (result.available)
+            lines.push_back("Chance contextuelle de retrouver le lot sur cette tentative : " + std::to_string(result.chancePercent) + " %.");
+        if (lines.empty()) lines.push_back("Aucun résultat exploitable.");
+        MessageScreen::show(result.recoveredProperty ? "OBJETS RETROUVÉS" : "RECHERCHE DE TERRAIN",
+            "quest.battlefield_recovery.result", lines, false);
+    }
+}
+
 using QuestClientNavigationSupport::ClientQuestCounts;
 using QuestClientNavigationSupport::collectRecommendedClients;
 using QuestClientNavigationSupport::countQuestsForClient;
@@ -34,7 +96,7 @@ using QuestDeadlineSupport::expireOverdueQuestDeadlines;
 
 // EN: openLocations declares or implements a focused behavior used by this module.
 // FR: openLocations déclare ou implémente un comportement précis utilisé par ce module.
-void QuestMenu::openLocations(Player& player)
+void QuestMenu::openLocations(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule)
 {
     expireOverdueQuestDeadlines(player, "quest.locations");
     maybeShowTorvaldRankDIntro(player);
@@ -61,6 +123,7 @@ void QuestMenu::openLocations(Player& player)
         bool guildTrainer = false;
         bool infirmary = false;
         bool rehabilitation = false;
+        bool battlefieldRecovery = false;
     };
 
     std::vector<LocationEntry> entries = {
@@ -98,6 +161,18 @@ void QuestMenu::openLocations(Player& player)
         {"Bibliothèque", "Notes, savoirs, renseignements et pistes de recherche.", "Bibliothécaire", LocationCategory::Shop},
         {"Laboratoire de Maëra", "Alchimie, dosages, étiquettes de potions et sécurité [objectif de quête probable].", "Maëra l'alchimiste", LocationCategory::Shop}
     };
+
+    if (player.hasOpenBattlefieldRecoveryCacheForCity(player.getCurrentCityId()))
+    {
+        LocationEntry recoveryEntry{
+            "Pistes de récupération",
+            "Retourner vers un champ de bataille où des objets importants sont restés faute de capacité de transport.",
+            "Veilleur des récupérations",
+            LocationCategory::City
+        };
+        recoveryEntry.battlefieldRecovery = true;
+        entries.push_back(recoveryEntry);
+    }
 
     if (guildRequestRankDUnlocked(player))
     {
@@ -148,7 +223,7 @@ void QuestMenu::openLocations(Player& player)
         const int step = player.getStoryStep();
         const auto storyLocationUnlocked = [&](const LocationEntry& entry)
         {
-            if (entry.guild || entry.vault || entry.training || entry.observation || entry.mercenary || entry.guildTrainer || entry.infirmary || entry.rehabilitation)
+            if (entry.guild || entry.vault || entry.training || entry.observation || entry.mercenary || entry.guildTrainer || entry.infirmary || entry.rehabilitation || entry.battlefieldRecovery)
             {
                 return true;
             }
@@ -376,7 +451,7 @@ void QuestMenu::openLocations(Player& player)
                 );
                 itemData.kind = "location";
                 itemData.section = entrySection;
-                itemData.actionType = entry.guild ? "quest" : (entry.vault ? "storage" : (entry.travel ? "travel" : (entry.training ? "train" : (entry.observation ? "inspect" : (entry.mercenary ? "quest" : (entry.guildTrainer ? "train" : (entry.infirmary ? "heal" : "talk")))))));
+                itemData.actionType = entry.battlefieldRecovery ? "recover" : (entry.guild ? "quest" : (entry.vault ? "storage" : (entry.travel ? "travel" : (entry.training ? "train" : (entry.observation ? "inspect" : (entry.mercenary ? "quest" : (entry.guildTrainer ? "train" : (entry.infirmary ? "heal" : "talk"))))))));
                 itemData.name = entry.label;
                 itemData.owner = entry.client;
                 itemData.progress = "Lieu " + std::to_string(i + 1) + "/" + std::to_string(selectedEntries.size());
@@ -431,11 +506,11 @@ void QuestMenu::openLocations(Player& player)
             }
             else if (selected.vault)
             {
-                openCityVault(player);
+                openCityVault(player, difficulty, deathRule);
             }
             else if (selected.travel)
             {
-                openCityTravelMenu(player);
+                openCityTravelMenu(player, difficulty, deathRule);
             }
             else if (selected.training)
             {
@@ -460,6 +535,10 @@ void QuestMenu::openLocations(Player& player)
             else if (selected.rehabilitation)
             {
                 LocalReputationRepairMenu::open(player);
+            }
+            else if (selected.battlefieldRecovery)
+            {
+                openBattlefieldRecoveryMenu(player);
             }
             else
             {
@@ -811,6 +890,3 @@ void QuestMenu::openNotableNpcMenu(Player& player)
         }
     }
 }
-
-
-

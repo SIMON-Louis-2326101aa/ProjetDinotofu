@@ -14,6 +14,29 @@
 #include "entity/Boss.hpp"
 #include "progression/DifficultyMode.hpp"
 
+
+enum class MonsterEscapeAttemptState
+{
+    NotEligible,
+    Blocked,
+    Progressed,
+    Escaped
+};
+
+struct MonsterEscapeAttemptResult
+{
+    MonsterEscapeAttemptState state = MonsterEscapeAttemptState::NotEligible;
+    int requiredOpenings = 1;
+    int progressBefore = 0;
+    int progressAfter = 0;
+    int baseChancePercent = 0;
+    int mobilityModifierPercent = 0;
+    int carryLoadModifierPercent = 0;
+    int retryBonusPercent = 0;
+    int effectiveChancePercent = 0;
+    int roll = 0;
+};
+
 class EscapeSystem
 {
 public:
@@ -22,6 +45,30 @@ public:
     static bool playerAttemptsEscape(Player& player, Random& random);
     static bool playerAttemptsEscape(Player& player, Random& random, DifficultyMode difficulty);
     static bool playerAttemptsEscape(Player& player, Random& random, DifficultyMode difficulty, int enemyCount);
+    static int playerEscapeMobilityModifier(const Player& player);
+    static MonsterEscapeAttemptResult attemptPlayerEscapeStep(
+        Player& player,
+        Random& random,
+        DifficultyMode difficulty,
+        int opponentCount
+    );
+
+    // Shared escape pressure for every camp: more living opponents able to intercept means more
+    // successive openings are required. Waiting/reserve opponents can count when physically nearby.
+    static int escapeOpeningsRequired(int opponentCount);
+    static bool rollEscapeAgainstOpposition(Random& random, int perOpeningChancePercent, int opponentCount);
+
+    // Monster escape uses the same opposition pressure as the player, but resolves one opening per
+    // committed escape action. A successful opening is remembered for the current monster instance,
+    // making a follow-up attempt easier instead of restarting from zero every turn.
+    static int monsterEscapeMobilityModifier(const Monster& monster);
+    static MonsterEscapeAttemptResult attemptMonsterEscapeStep(
+        Monster& monster,
+        Random& random,
+        int opponentCount,
+        int baseChancePercent,
+        bool requireLowHpEligibility
+    );
     // EN: playerAttemptsBossEscape declares or implements a focused behavior used by this module.
     // FR: playerAttemptsBossEscape déclare ou implémente un comportement précis utilisé par ce module.
     static bool playerAttemptsBossEscape(const Player& player, const Boss& boss);
@@ -38,6 +85,7 @@ public:
     // EN: monsterAttemptsEscape declares or implements a focused behavior used by this module.
     // FR: monsterAttemptsEscape déclare ou implémente un comportement précis utilisé par ce module.
     static bool monsterAttemptsEscape(Monster& monster, Random& random);
+    static bool monsterAttemptsEscape(Monster& monster, Random& random, int opponentCount);
 
 private:
     static constexpr int LOW_MONSTER_ESCAPE_CHANCE = 20;

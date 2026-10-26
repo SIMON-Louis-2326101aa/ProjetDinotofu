@@ -273,6 +273,52 @@ std::string Money::formatCoinStacks(const CoinBreakdown& stacks, bool includeZer
     return formatBreakdown(stacks, includeZeroCoins);
 }
 
+std::string Money::formatCoinStackDelta(const CoinBreakdown& before, const CoinBreakdown& after)
+{
+    struct Entry
+    {
+        CoinType type;
+        long long beforeValue;
+        long long afterValue;
+    };
+
+    const Entry entries[] = {
+        {CoinType::Platinum, before.platinum, after.platinum},
+        {CoinType::Gold, before.gold, after.gold},
+        {CoinType::Electrum, before.electrum, after.electrum},
+        {CoinType::Iron, before.iron, after.iron},
+        {CoinType::Copper, before.copper, after.copper}
+    };
+
+    std::vector<std::string> parts;
+    for (const Entry& entry : entries)
+    {
+        const long long delta = entry.afterValue - entry.beforeValue;
+        if (delta == 0)
+        {
+            continue;
+        }
+        parts.push_back(std::string(delta > 0 ? "+" : "")
+            + formatSeparatedNumber(delta) + " " + coinAbbreviation(entry.type));
+    }
+
+    if (parts.empty())
+    {
+        return "aucune variation de pièces";
+    }
+
+    std::ostringstream out;
+    for (std::size_t i = 0; i < parts.size(); ++i)
+    {
+        if (i > 0)
+        {
+            out << " | ";
+        }
+        out << parts[i];
+    }
+    return out.str();
+}
+
 std::string Money::formatWalletTotalFromCopper(long long copperAmount)
 {
     if (copperAmount < 0)

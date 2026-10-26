@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
-CXX_BIN="${1:-${CXX:-g++}}"
+if [[ $# -gt 0 ]]; then
+    CXX_BIN="$*"
+else
+    if [[ -z "${CXX:-}" ]]; then
+        if command -v clang++ >/dev/null 2>&1; then
+            CXX_BIN="clang++"
+        else
+            CXX_BIN="g++"
+        fi
+    else
+        CXX_BIN="$CXX"
+    fi
+fi
 probe() {
-    printf 'int main(){return 0;}\n' | "$CXX_BIN" -x c++ "$1" -fsyntax-only - >/dev/null 2>&1
+    printf 'int main(){return 0;}\n' | $CXX_BIN -x c++ "$1" -fsyntax-only - >/dev/null 2>&1
 }
 if probe -std=c++23; then
     printf '%s\n' '-std=c++23'

@@ -19,8 +19,17 @@ struct AccountSaveSummary
     std::string accountName;
     std::string path;
     int playableCharacterCount = 0;
+    int unlockedTitleCount = 0;
+    long long totalRealPlayTimeSeconds = 0;
     std::string lastActivityText;
     std::string savedForVersion;
+};
+
+struct AccountUnlockedTitleInfo
+{
+    std::string name;
+    std::string unlockedAt;
+    std::string characterName;
 };
 
 struct CharacterSaveSummary
@@ -42,6 +51,8 @@ struct CharacterSaveSummary
     std::string createdAt;
     long long realPlayTimeSeconds = 0;
     long long totalCopperCurrency = 0;
+    int worldDaysElapsed = 0;
+    int worldDayProgressUnits = 0;
     std::string lastSavedAt;
     std::string createdForVersion;
     std::string lastAdaptedVersion;
@@ -68,6 +79,15 @@ public:
         const std::string& accountName
     );
 
+    // Account trophy history: only legitimate (non-altered) character progression is merged here.
+    static std::vector<std::string> getAccountUnlockedTitles(const std::string& accountName);
+    static std::vector<AccountUnlockedTitleInfo> getAccountUnlockedTitleDetails(const std::string& accountName);
+    static bool mergeAccountUnlockedTitles(
+        const std::string& accountName,
+        const std::vector<std::string>& titles,
+        const std::string& characterName = ""
+    );
+
     static bool savePlayerSnapshot(
         const Player& player,
         const std::string& accountName,
@@ -79,6 +99,17 @@ public:
         const std::string& accountName,
         DifficultyMode difficulty,
         DeathRuleMode deathRule
+    );
+
+    static bool savePlayerExchangePair(
+        const Player& firstPlayer,
+        const std::string& firstAccountName,
+        DifficultyMode firstDifficulty,
+        DeathRuleMode firstDeathRule,
+        const Player& secondPlayer,
+        const std::string& secondAccountName,
+        DifficultyMode secondDifficulty,
+        DeathRuleMode secondDeathRule
     );
 
     // EN: listAccounts declares or implements a focused behavior used by this module.

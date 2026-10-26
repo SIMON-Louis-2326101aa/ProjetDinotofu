@@ -16,6 +16,7 @@
 #include "combat/system/CombatClassSystem.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "item/equipment/EquipmentWeightRules.hpp"
+#include "story/HestiaSoulArtifactSystem.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -118,21 +119,39 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         criticalBonus += 1;
     }
 
+    const bool hestiaArtifactEquipped = HestiaSoulArtifactSystem::isEquipped(*this);
+    Weapon hestiaArtifactWeapon;
     Weapon* equippedWeapon = inventory.getMutableWeapon(equippedWeaponIndex);
+    if (hestiaArtifactEquipped)
+    {
+        hestiaArtifactWeapon = HestiaSoulArtifactSystem::buildWeapon(*this);
+        equippedWeapon = &hestiaArtifactWeapon;
+    }
     clearLastConsumedAmmunition();
 
     bool bowWithoutAmmo = false;
 
     if (equippedWeapon != nullptr && !equippedWeapon->isBroken() && !bossEquipmentSealActive)
     {
-        bonusMin = equippedWeapon->getMinDamageBonus();
-        bonusMax = equippedWeapon->getMaxDamageBonus();
-        criticalBonus = equippedWeapon->getCriticalBonus();
+        if (hestiaArtifactEquipped)
+        {
+            const int artifactDamage = HestiaSoulArtifactSystem::damage(*this);
+            bonusMin = artifactDamage - minDamage;
+            bonusMax = artifactDamage - maxDamage;
+            const int artifactCriticalDamage = std::max(artifactDamage + 1, artifactDamage * 3 / 2);
+            criticalBonus = artifactCriticalDamage - criticalDamage;
+        }
+        else
+        {
+            bonusMin = equippedWeapon->getMinDamageBonus();
+            bonusMax = equippedWeapon->getMaxDamageBonus();
+            criticalBonus = equippedWeapon->getCriticalBonus();
+        }
         dodgeThreshold = std::max(1, dodgeThreshold + EquipmentWeightRules::getWeaponDodgeThresholdAdjustment(*equippedWeapon));
         normalHitThreshold = std::max(dodgeThreshold + 8, std::min(18, normalHitThreshold + EquipmentWeightRules::getWeaponNormalHitThresholdAdjustment(*equippedWeapon)));
         weaponWeightDamagePercent = EquipmentWeightRules::getWeaponDamagePercent(*equippedWeapon);
 
-        if (equippedWeapon->getType() == WeaponType::Bow)
+        if (equippedWeapon->getType() == WeaponType::Bow && !hestiaArtifactEquipped)
         {
             if (hasPassiveSkill("ranger_eye"))
             {
@@ -251,6 +270,23 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
         MessageScreen::show("SCEAU DE BOSS", "player.attack.boss_equipment_seal", sealLines, false);
     }
 
+    bool letMeCookActiveToday = false;
+    for (const PlayerJournalRecord& record : getCanonicalJournalRecords())
+    {
+        if (record.category == "cheat_effects"
+            && record.key == "letmecook_critical"
+            && record.lastDay == getWorldDaysElapsed()
+            && record.count > 0)
+        {
+            letMeCookActiveToday = true;
+            break;
+        }
+    }
+    if (letMeCookActiveToday)
+    {
+        normalHitThreshold = std::max(dodgeThreshold + 8, normalHitThreshold - 2);
+    }
+
     if (resultat <= dodgeThreshold)
     {
         dodged = true;
@@ -259,7 +295,17 @@ int Player::attack(Random& random, bool& dodged, bool& critical, int damageBonus
 
     if (equippedWeapon != nullptr && !indestructibleEquipmentEnabled)
     {
-        equippedWeapon->loseDurability(1);
+        // A bow/crossbow used as an improvised club suffers far more than a normal shot.
+        equippedWeapon->loseDurability(bowWithoutAmmo ? 5 : 1);
+        if (bowWithoutAmmo)
+        {
+            MessageScreen::show(
+                "ARME MALMENÉE",
+                "player.attack.no_ammo.durability",
+                {equippedWeapon->getName() + " perd 5 points de durabilité : une arme de tir n'est pas faite pour encaisser ce choc."},
+                false
+            );
+        }
     }
 
     if (equippedWeapon != nullptr && equippedWeapon->isBroken())

@@ -7,6 +7,8 @@
 
 #include "interface/menu/progression/BestiaryMenu.hpp"
 
+#include "combat/MagicMaterialRules.hpp"
+
 #include "core/Console.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
@@ -301,13 +303,14 @@ namespace
             // EN: Special characters are not all revealed from the start.
             // FR: Les personnages spéciaux ne sont pas tous révélés dès le départ.
             {"Personnages spéciaux", "Les bras cassés", "Groupe d'aventuriers déjà connu.", "Hazak, Fail, Aoi, Kanadé et Sanctus forment un groupe de cinq héros chaotiques. Ils ont libéré plusieurs villages et habitants, mais leur ego et leur rapport très libre aux règles ne plaisent pas à tout le monde.", "Groupe connu", 0, 0},
-            {"Personnages spéciaux", "Hazak", "Assassin elfe noir, sombre et efficace.", "Hazak prend les gens de haut, cherche la victoire et protège Hestia d'une violence trop traumatisante. Il fait partie des Bras cassés.", "Fiche connue", 0, 0},
+            {"Personnages spéciaux", "Hazak", "Assassin elfe noir, sombre et efficace.", "Hazak prend les gens de haut, cherche la victoire et fait partie des Bras cassés, groupe réputé pour avoir gagné un tournoi et repoussé une menace majeure.", "Fiche connue", 0, 0},
             {"Personnages spéciaux", "Fail", "Mage fou de race fée, imprévisible et dangereux.", "Fail expérimente, dérègle les situations et possède parfois des sorts uniques. Son contrat de non-agression avec Hazak n'empêche pas tout le monde de le craindre.", "Fiche connue", 0, 0},
             {"Personnages spéciaux", "Aoi", "Kitsune timide, mage de flammes et invocatrice de flammes.", "Aoi protège ses incantations et devient très dangereuse si on lui laisse le temps de préparer sa magie. Elle fait partie des Bras cassés.", "Fiche connue", 0, 0},
             {"Personnages spéciaux", "Kanadé", "Semi-dragonne rageuse aux sorts zodiacaux.", "Kanadé râle souvent, mais elle avance quand même. Ses sorts les plus étranges tournent autour des treize signes du zodiaque.", "Fiche connue", 0, 0},
             {"Personnages spéciaux", "Sanctus", "Protecteur semi-mage lié à la lumière.", "Sanctus protège, entrave et s'appuie sur une croyance lumineuse. Il fait partie des Bras cassés et sert souvent de point d'ancrage au groupe.", "Fiche connue", 0, 0},
             {"Personnages spéciaux", "Matt (PRO)", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué par rencontre, rumeur fiable, arène ou progression. Tant que ton personnage ne le connaît pas, le bestiaire garde volontairement ses détails cachés.", "Identité verrouillée", 0, 0},
             {"Personnages spéciaux", "Skuro", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué progressivement. Le registre sait qu'une silhouette lourde existe, mais pas encore pourquoi elle compte.", "Identité verrouillée", 0, 0},
+            {"Personnages spéciaux", "Arone Aster", "Guerrier humain protecteur et méfiant envers l'autorité absolue.", "Arone porte ses morts dans une ronce rituelle et distingue l'autorité de la domination. Son histoire familiale reste personnelle et ne révèle aucun secret d'un autre personnage.", "Fiche connue", 0, 0},
             {"Personnages spéciaux", "Hestia", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué par l'histoire, une rencontre ou une information crédible. Le bestiaire ne révèle pas ses origines à l'avance.", "Identité verrouillée", 0, 0},
             {"Personnages spéciaux", "Henrique", "Identité spéciale non confirmée.", "Ce personnage spécial doit être découvert en jeu. Le registre garde ses liens et capacités cachés tant que le joueur ne les a pas vus.", "Identité verrouillée", 0, 0},
             {"Personnages spéciaux", "Louis", "Identité spéciale non confirmée.", "Ce personnage spécial doit être débloqué progressivement. Le bestiaire évite de spoiler son rôle, ses amis et son style de combat.", "Identité verrouillée", 0, 0},
@@ -846,7 +849,7 @@ namespace
             {"Sanctus", "Sanctus", "Protecteur lumineux", "Bras cassés", "Connu de base avec le groupe, puis complété par rencontre, victoire ou rumeur fiable.", true},
             {"Matt (PRO)", "Matt (PRO)", "Champion d'arène non confirmé", "Arène spéciale", "Rencontre d'arène, défi spécial ou rumeur fiable avant affichage complet du nom.", false},
             {"Skuro", "Skuro", "Silhouette lourde non confirmée", "Arène spéciale", "Rencontre, transformation crédible ou information de registre avant dévoilement.", false},
-            {"Hestia", "Hestia", "Mage protégée non confirmée", "Liens spéciaux", "Rencontre, rumeur de groupe ou trace liée à une protection magique.", false},
+            {"Hestia", "Hestia", "Jeune fille amnésique non confirmée", "Histoire principale", "Sauvetage, passage à la guilde ou information crédible ; aucune origine divine n’est révélée d’avance.", false},
             {"Henrique", "Henrique", "Nom non confirmé", "Liens spéciaux", "Rencontre ou information crédible avant de révéler ses liens.", false},
             {"Louis", "Louis", "Artificier non confirmé", "Trio d'arène", "Rencontre, défi ou rumeur fiable avant de révéler son rôle.", false},
             {"Trexof", "Trexof", "Analyste non confirmé", "Trio d'arène", "Rencontre, défi ou rumeur fiable avant de révéler son style.", false},
@@ -1241,6 +1244,32 @@ namespace
                     + " [" + quality + "] x" + std::to_string(record.discoveredQuantity)
                     + " | " + record.category
                     + " | " + state);
+
+                if (MagicMaterialRules::isKnownMagicMaterialId(record.id))
+                {
+                    const MagicMaterialRules::MaterialChannelingProfile profile =
+                        MagicMaterialRules::channelingProfileForQuality(record.id, quality, false);
+                    std::string magicLine = "  > Canalisation : mana " + std::to_string(profile.manaPercent)
+                        + "% | stabilité +" + std::to_string(profile.stabilityBonus)
+                        + " | puissance +" + std::to_string(profile.powerBoostPercent) + "%";
+                    if (MagicMaterialRules::isMineralFuelId(record.id))
+                    {
+                        magicLine += " | carburant minéral : perd un palier de qualité au lieu d'être consommé immédiatement";
+                    }
+                    lines.push_back(magicLine + ".");
+
+                    const std::vector<std::string> elements = MagicMaterialRules::materialElementLabels(record.id);
+                    if (!elements.empty())
+                    {
+                        std::string affinities = "  > Affinités : ";
+                        for (std::size_t i = 0; i < elements.size(); ++i)
+                        {
+                            if (i > 0) affinities += ", ";
+                            affinities += elements[i];
+                        }
+                        lines.push_back(affinities + ".");
+                    }
+                }
                 ++shown;
 
                 if (shown >= 10)
@@ -1249,6 +1278,41 @@ namespace
                     break;
                 }
             }
+        }
+
+        lines.push_back("");
+        lines.push_back("Formules matérielles comprises par observation :");
+        bool knownRecipeShown = false;
+        for (const MagicMaterialRules::SpellMaterialRecipe& recipe : MagicMaterialRules::spellMaterialRecipes())
+        {
+            bool ingredientsKnown = true;
+            for (const MagicMaterialRules::SpellMaterialRequirement& requirement : recipe.requirements)
+            {
+                if (!MaterialKnowledgeProgress::knowsMaterialId(requirement.materialId))
+                {
+                    ingredientsKnown = false;
+                    break;
+                }
+            }
+            if (!ingredientsKnown)
+            {
+                continue;
+            }
+
+            knownRecipeShown = true;
+            lines.push_back("- " + recipe.spellName + " :");
+            for (const MagicMaterialRules::SpellMaterialRequirement& requirement : recipe.requirements)
+            {
+                lines.push_back(
+                    "  > " + MagicMaterialRules::displayName(requirement.materialId)
+                    + " x" + std::to_string(requirement.quantity)
+                    + (requirement.degradeInsteadOfConsume ? " — dégradé" : " — sacrifié")
+                );
+            }
+        }
+        if (!knownRecipeShown)
+        {
+            lines.push_back("- Aucune recette complète comprise : découvrir les ingrédients permet d'en recouper les usages.");
         }
 
         lines.push_back("");

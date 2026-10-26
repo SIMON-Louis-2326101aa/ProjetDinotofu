@@ -14,14 +14,19 @@
 #include "combat/role/CombatRoleSystem.hpp"
 #include "combat/system/DefensePostureSystem.hpp"
 #include "combat/profile/MonsterBehaviorProfile.hpp"
+#include "combat/group/CombatLeaderRotationSystem.hpp"
+#include "combat/group/CombatIndividualSwitchSystem.hpp"
+#include "combat/group/CombatReserveSpilloverSystem.hpp"
 #include "combat/system/MonsterPreparedActionSystem.hpp"
 #include "combat/rival/RivalEmergenceSystem.hpp"
 #include "combat/flavor/MonsterFlavorCatalog.hpp"
+#include "item/inventory/CarryLoadSystem.hpp"
 
 #include "core/Console.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 
 #include "entity/Monster.hpp"
+#include "economy/Money.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -40,6 +45,121 @@ namespace
         }
 
         return entity.getHp() * 100 / entity.getMaxHp();
+    }
+
+    struct EscapeTheftBundle
+    {
+        long long copper = 0;
+        Material material;
+        int materialQuantity = 0;
+
+        bool empty() const { return copper <= 0 && materialQuantity <= 0; }
+    };
+
+    std::string lowerTheftText(std::string value)
+    {
+        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
+        return value;
+    }
+
+    bool canStealMaterialOnEscape(const Material& material)
+    {
+        if (material.getQuantity() <= 0 || !material.canChangeOwner()) return false;
+        const std::string text = lowerTheftText(material.getCategory() + " " + material.getName() + " " + material.getId());
+        // Hard protection: a fleeing thief never silently breaks quests, keys or information chains.
+        return text.find("quête") == std::string::npos
+            && text.find("quete") == std::string::npos
+            && text.find("renseignement") == std::string::npos
+            && text.find("information") == std::string::npos
+            && text.find("notice") == std::string::npos
+            && text.find("clé") == std::string::npos
+            && text.find("clef") == std::string::npos;
+    }
+
+    bool isRareEscapeTheftMaterial(const Material& material)
+    {
+        const std::string text = lowerTheftText(material.getCategory() + " " + material.getName() + " " + material.getId());
+        return material.hasSpecialQuality()
+            || text.find("unique") != std::string::npos
+            || text.find("boss") != std::string::npos
+            || text.find("artefact") != std::string::npos
+            || text.find("artifact") != std::string::npos
+            || text.find("mythique") != std::string::npos
+            || text.find("légendaire") != std::string::npos
+            || text.find("legendaire") != std::string::npos;
+    }
+
+    EscapeTheftBundle stealCompactPropertyOnEscape(Player& player, Random& random)
+    {
+        EscapeTheftBundle bundle;
+        Inventory& inventory = player.getInventory();
+
+        std::vector<int> commonMaterialCandidates;
+        std::vector<int> rareMaterialCandidates;
+        for (int i = 0; i < inventory.getMaterialCount(); ++i)
+        {
+            const Material material = inventory.getMaterial(i);
+            if (!canStealMaterialOnEscape(material)) continue;
+            if (isRareEscapeTheftMaterial(material)) rareMaterialCandidates.push_back(i);
+            else commonMaterialCandidates.push_back(i);
+        }
+
+        auto bestMaterialIndex = [&](const std::vector<int>& candidates) {
+            int best = -1;
+            int bestScore = -1000000000;
+            for (int index : candidates)
+            {
+                const Material material = inventory.getMaterial(index);
+                const int score = material.getQuantity() * 100 - std::min(500, std::max(0, material.getValue()));
+                if (score > bestScore)
+                {
+                    best = index;
+                    bestScore = score;
+                }
+            }
+            return best;
+        };
+
+        int preferredMaterialIndex = bestMaterialIndex(commonMaterialCandidates);
+        if (preferredMaterialIndex < 0 && !rareMaterialCandidates.empty() && random.between(1, 1000) <= 8)
+        {
+            // Rare/artefact-like goods are assumed to be hidden better and are therefore exceptionally stolen.
+            preferredMaterialIndex = bestMaterialIndex(rareMaterialCandidates);
+        }
+
+        const bool canTakeMaterial = preferredMaterialIndex >= 0;
+        const bool canTakeCopper = inventory.getTotalCopper() >= 8;
+        if (!canTakeCopper && !canTakeMaterial) return bundle;
+
+        const bool preferMaterial = canTakeMaterial
+            && (!canTakeCopper || random.between(1, 100) <= 64);
+
+        if (preferMaterial)
+        {
+            const int pick = preferredMaterialIndex;
+            bundle.material = inventory.getMaterial(pick);
+            bundle.materialQuantity = std::min(bundle.material.getQuantity(), random.between(1, 3));
+            if (!inventory.removeMaterialQuantity(pick, bundle.materialQuantity))
+            {
+                bundle.materialQuantity = 0;
+            }
+
+            // Very occasionally the thief also grabs a few loose coins while already breaking away.
+            if (canTakeCopper && random.between(1, 100) <= 24)
+            {
+                bundle.copper = std::min<long long>(inventory.getTotalCopper(), random.between(4, 18));
+                if (bundle.copper > 0 && !inventory.spendCopper(bundle.copper)) bundle.copper = 0;
+            }
+        }
+        else if (canTakeCopper)
+        {
+            bundle.copper = std::min<long long>(inventory.getTotalCopper(), random.between(6, 24));
+            if (bundle.copper > 0 && !inventory.spendCopper(bundle.copper)) bundle.copper = 0;
+        }
+
+        return bundle;
     }
 
     // EN: findMostInjuredAllyIndex declares or implements a focused behavior used by this module.
@@ -101,6 +221,61 @@ namespace
         if (allyIndex < 0)
         {
             return false;
+        }
+
+        int injuredActive = 0;
+        for (int index = 0; index < wave.getActiveEnemyCount(); ++index)
+        {
+            const Monster& candidate = wave.getActiveEnemy(index);
+            if (!candidate.isDead() && candidate.getHp() < candidate.getMaxHp()) ++injuredActive;
+        }
+
+        // Les soigneurs compétents peuvent parfois lancer un vrai soin de groupe. La réserve n'en reçoit
+        // qu'un écho de 5-15 %, selon la portée : être hors ligne protège aussi des avantages.
+        const int groupHealChance = std::clamp(10 + healer.getLevel() / 4 + (injuredActive >= 2 ? 14 : 0), 10, 42);
+        if (injuredActive >= 2 && random.between(1, 100) <= groupHealChance)
+        {
+            const int healAmount = random.between(16, 28) + std::min(10, healer.getLevel() / 12);
+            int activeTouched = 0;
+            int effectiveTotal = 0;
+            for (int index = 0; index < wave.getActiveEnemyCount(); ++index)
+            {
+                Monster& target = wave.getActiveEnemy(index);
+                if (target.isDead() || target.getHp() >= target.getMaxHp()) continue;
+                const int before = target.getHp();
+                target.heal(healAmount);
+                const int effective = std::max(0, target.getHp() - before);
+                if (effective <= 0) continue;
+                ++activeTouched;
+                effectiveTotal += effective;
+                if (index != healerIndex) ThreatSystem::markAllyHealingAction(healer, target);
+            }
+
+            CombatReserveEffectReach reach = healer.getLevel() >= 65
+                ? CombatReserveEffectReach::Wide
+                : CombatReserveEffectReach::Edge;
+            const CombatReserveSpillover spill = CombatReserveSpilloverSystem::roll(healAmount, reach, random);
+            int reserveTouched = 0;
+            const int maxReserve = std::min(wave.getWaitingEnemyCount(), CombatReserveSpilloverSystem::maxAffectedReserveTargets(reach));
+            for (int index = 0; index < maxReserve; ++index)
+            {
+                const Monster& waiting = wave.getWaitingEnemy(index);
+                if (waiting.isDead() || waiting.getHp() >= waiting.getMaxHp()) continue;
+                if (wave.healWaitingEnemy(index, spill.amount) > 0) ++reserveTouched;
+            }
+
+            std::vector<std::string> lines = {
+                healer.getName() + " ouvre un soin de groupe au lieu de viser une seule blessure.",
+                "Ligne active : " + std::to_string(activeTouched) + " cible(s) soignée(s), puissance de base +" + std::to_string(healAmount) + " PV."
+            };
+            if (reserveTouched > 0)
+            {
+                lines.push_back("Réserve : " + std::to_string(reserveTouched) + " cible(s) reçoivent seulement "
+                    + std::to_string(spill.percent) + "% de l'effet (" + CombatReserveSpilloverSystem::reachLabel(reach) + ").");
+            }
+            lines.push_back("Soin effectif cumulé sur la ligne : " + std::to_string(effectiveTotal) + " PV.");
+            showWaveTurnNotice("SOIN DE GROUPE ENNEMI", "wave.monster.support.group_heal", lines);
+            return true;
         }
 
         Monster& ally = wave.getActiveEnemy(allyIndex);
@@ -804,6 +979,279 @@ namespace
         return false;
     }
 
+
+    int monsterLeaderIntelligenceScore(const Monster& leader, const MonsterBehaviorProfile& profile)
+    {
+        int score = 34 + std::min(36, std::max(1, leader.getLevel()) / 2);
+        if (profile.groupLeader) score += 14;
+        if (profile.cooperativeGroup) score += 8;
+        if (monsterProfileContainsAny(leader, {"humain", "mercenaire", "soldat", "capitaine", "sergent", "mage", "sorcier", "chaman", "oracle", "elfe"})) score += 12;
+        if (monsterProfileContainsAny(leader, {"loup", "alpha", "meute", "gobelin", "hobgobelin", "orc"})) score += 5;
+        if (monsterProfileContainsAny(leader, {"slime", "gelée", "gelee", "rat", "nuisible"})) score -= 18;
+        return std::clamp(score, 10, 95);
+    }
+
+    int monsterGroupSolidarityScore(const Monster& leader, const MonsterBehaviorProfile& profile)
+    {
+        int score = profile.cooperativeGroup ? 58 : 28;
+        if (profile.protectsLeader) score += 8;
+        if (profile.coversRetreat) score += 8;
+        if (profile.abandonsWounded) score -= 28;
+        if (monsterProfileContainsAny(leader, {"meute", "alpha", "soldat", "garde", "chevalier", "escouade", "patrouille"})) score += 12;
+        return std::clamp(score, 5, 95);
+    }
+
+    int findActiveMonsterLeaderIndex(EnemyCombatQueue& wave)
+    {
+        for (int index = 0; index < wave.getActiveEnemyCount(); ++index)
+        {
+            const Monster& candidate = wave.getActiveEnemy(index);
+            if (candidate.isDead()) continue;
+            if (MonsterBehaviorProfileCatalog::build(candidate).groupLeader)
+            {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    void ensureMonsterLeaderActsFirst(EnemyCombatQueue& wave)
+    {
+        const int leaderIndex = findActiveMonsterLeaderIndex(wave);
+        if (leaderIndex > 0)
+        {
+            wave.moveActiveEnemyToFront(leaderIndex);
+        }
+    }
+
+    int bestWaitingMonsterForIndividualSwitch(const Monster& member, EnemyCombatQueue& wave)
+    {
+        int best = -1;
+        int bestHp = -1;
+        for (int index = 0; index < wave.getWaitingEnemyCount(); ++index)
+        {
+            const Monster& waiting = wave.getWaitingEnemy(index);
+            if (waiting.isDead() || !monsterCanLeadCompatibleAlly(member, waiting)) continue;
+            const int hp = waiting.getMaxHp() > 0 ? std::clamp(waiting.getHp() * 100 / waiting.getMaxHp(), 0, 100) : 100;
+            if (hp > bestHp)
+            {
+                best = index;
+                bestHp = hp;
+            }
+        }
+        return best;
+    }
+
+    bool tryMonsterIndividualSwitchAction(
+        Monster& monster,
+        EnemyCombatQueue& wave,
+        int monsterIndex,
+        Player& player,
+        Random& random)
+    {
+        if (monster.isDead() || wave.getWaitingEnemyCount() <= 0) return false;
+        const MonsterBehaviorProfile memberProfile = MonsterBehaviorProfileCatalog::build(monster);
+        if (memberProfile.groupLeader) return false;
+
+        const int waitingIndex = bestWaitingMonsterForIndividualSwitch(monster, wave);
+        if (waitingIndex < 0) return false;
+
+        const int leaderIndex = findActiveMonsterLeaderIndex(wave);
+        const bool leaderPresent = leaderIndex >= 0 && leaderIndex != monsterIndex;
+        const int hp = monster.getMaxHp() > 0 ? std::clamp(monster.getHp() * 100 / monster.getMaxHp(), 0, 100) : 100;
+        int fear = std::max(0, 58 - hp);
+        if (memberProfile.moraleSensitive) fear += 16;
+        if (memberProfile.canFlee) fear += 8;
+        if (memberProfile.abandonsWounded) fear += 5;
+        if (memberProfile.cooperativeGroup) fear -= 5;
+        fear = std::clamp(fear, 0, 100);
+
+        CombatIndividualSwitchContext context;
+        context.reserveAvailable = true;
+        context.leaderPresent = leaderPresent;
+        context.memberIsLeader = false;
+        context.hpPercent = hp;
+        context.fearPercent = fear;
+        context.dangerPercent = std::clamp(35 + std::max(0, 45 - hp) + (monster.isElite() ? 8 : 0), 0, 100);
+        context.intelligence = monsterLeaderIntelligenceScore(monster, memberProfile);
+        context.discipline = std::clamp((memberProfile.cooperativeGroup ? 68 : 38) + monster.getLevel() / 4, 15, 90);
+        context.loyaltyOrCohesion = monsterGroupSolidarityScore(monster, memberProfile);
+        context.stubborn = monsterProfileContainsAny(monster, {"berserker", "fanatique", "orgueilleux", "solitaire"});
+        context.survivalUrgent = hp <= 14;
+        const Monster& waiting = wave.getWaitingEnemy(waitingIndex);
+        const int waitingHp = waiting.getMaxHp() > 0 ? std::clamp(waiting.getHp() * 100 / waiting.getMaxHp(), 0, 100) : 100;
+        context.tacticalOpportunity = waitingHp >= hp + 22 && context.intelligence >= 55;
+
+        const CombatIndividualSwitchDecision decision = CombatIndividualSwitchSystem::decide(context, random);
+        if (!decision.wantsSwitch) return false;
+
+        bool authorized = decision.actsWithoutPermission || !leaderPresent;
+        bool bypassed = decision.actsWithoutPermission && leaderPresent;
+        std::string leaderName;
+        if (decision.asksPermission && leaderPresent)
+        {
+            const Monster& leader = wave.getActiveEnemy(leaderIndex);
+            const MonsterBehaviorProfile leaderProfile = MonsterBehaviorProfileCatalog::build(leader);
+            leaderName = leader.getName();
+            CombatSwitchAuthorizationContext auth;
+            auth.leaderIntelligence = monsterLeaderIntelligenceScore(leader, leaderProfile);
+            auth.leaderSolidarity = monsterGroupSolidarityScore(leader, leaderProfile);
+            auth.outgoingHpPercent = hp;
+            auth.incomingHpPercent = waitingHp;
+            auth.tacticalNeedPercent = context.dangerPercent;
+            auth.outgoingCritical = hp <= 20;
+            auth.incomingFresher = waitingHp >= hp + 15;
+            authorized = CombatIndividualSwitchSystem::leaderAuthorizes(auth, random);
+            if (!authorized)
+            {
+                showWaveTurnNotice(
+                    "SWITCH REFUSÉ",
+                    "wave.monster.individual_switch.denied",
+                    {
+                        monster.getName() + " cherche à quitter la ligne et demande l'accord de " + leaderName + ".",
+                        leaderName + " refuse : la formation reste en place et " + monster.getName() + " conserve son action normale."
+                    });
+                return false;
+            }
+        }
+
+        if (!authorized) return false;
+        const std::string outgoingName = monster.getName();
+        const std::string incomingName = waiting.getName();
+        if (!wave.switchActiveEnemyWithWaiting(monsterIndex, waitingIndex)) return false;
+
+        std::vector<std::string> lines;
+        if (bypassed)
+        {
+            lines.push_back(outgoingName + " quitte la ligne sans attendre l'autorisation du chef.");
+            lines.push_back("Motif dominant : " + decision.reason + ".");
+        }
+        else if (leaderPresent)
+        {
+            lines.push_back(outgoingName + " demande à sortir ; " + leaderName + " autorise le changement.");
+        }
+        else
+        {
+            lines.push_back(outgoingName + " juge seul qu'il doit quitter la ligne.");
+        }
+        lines.push_back(incomingName + " prend sa place. Le switch consomme le tour individuel de " + outgoingName + ".");
+        player.recordCanonicalEvent(
+            bypassed ? "switchs_individuels_ennemis_sans_ordre" : "switchs_individuels_ennemis",
+            outgoingName + "->" + incomingName,
+            bypassed ? "Un ennemi a changé de ligne sans attendre son chef" : "Un ennemi a effectué un switch individuel",
+            1);
+        showWaveTurnNotice("SWITCH INDIVIDUEL ENNEMI", "wave.monster.individual_switch", lines);
+        return true;
+    }
+
+    bool tryMonsterLeaderRotationAction(
+        Monster& leader,
+        EnemyCombatQueue& wave,
+        int leaderIndex,
+        Player& player,
+        Random& random)
+    {
+        if (leader.isDead() || wave.getWaitingEnemyCount() <= 0) return false;
+        const MonsterBehaviorProfile profile = MonsterBehaviorProfileCatalog::build(leader);
+        if (!profile.groupLeader) return false;
+
+        std::vector<int> candidates;
+        int lowHp = 0;
+        int criticalHp = 0;
+        for (int index = 0; index < wave.getActiveEnemyCount(); ++index)
+        {
+            if (index == leaderIndex) continue;
+            const Monster& ally = wave.getActiveEnemy(index);
+            if (ally.isDead() || !monsterCanLeadCompatibleAlly(leader, ally)) continue;
+            const int hpPercent = ally.getMaxHp() > 0 ? std::clamp(ally.getHp() * 100 / ally.getMaxHp(), 0, 100) : 100;
+            if (hpPercent <= 45)
+            {
+                candidates.push_back(index);
+                ++lowHp;
+                if (hpPercent <= 24) ++criticalHp;
+            }
+        }
+
+        if (candidates.empty()) return false;
+        std::sort(candidates.begin(), candidates.end(), [&](int a, int b) {
+            const Monster& ma = wave.getActiveEnemy(a);
+            const Monster& mb = wave.getActiveEnemy(b);
+            return static_cast<long long>(ma.getHp()) * std::max(1, mb.getMaxHp())
+                < static_cast<long long>(mb.getHp()) * std::max(1, ma.getMaxHp());
+        });
+
+        CombatLeaderRotationContext context;
+        context.leaderPresent = true;
+        context.activeCount = wave.getActiveEnemyCount();
+        context.reserveCount = wave.getWaitingEnemyCount();
+        context.lowHpActiveCount = lowHp;
+        context.criticalHpActiveCount = criticalHp;
+        context.leaderIntelligence = monsterLeaderIntelligenceScore(leader, profile);
+        context.groupSolidarity = monsterGroupSolidarityScore(leader, profile);
+        context.abandonsWounded = profile.abandonsWounded;
+        const CombatLeaderRotationDecision decision = CombatLeaderRotationSystem::decide(context, random);
+        if (!decision.attempt) return false;
+
+        const int wanted = std::min({decision.swapCount, static_cast<int>(candidates.size()), wave.getWaitingEnemyCount()});
+        if (wanted <= 0) return false;
+
+        // Un membre très blessé rappelé depuis la réserve peut rarement refuser. Le chef garde alors son tour,
+        // mais aucune seconde tentative de rotation n'est faite pendant ce même tour.
+        for (int step = 0; step < wanted; ++step)
+        {
+            const Monster& incoming = wave.getWaitingEnemy(step);
+            const int hpPercent = incoming.getMaxHp() > 0 ? std::clamp(incoming.getHp() * 100 / incoming.getMaxHp(), 0, 100) : 100;
+            const bool stubborn = monsterProfileContainsAny(incoming, {"berserker", "fanatique", "solitaire", "orgueilleux"});
+            if (CombatLeaderRotationSystem::refusesRotation(
+                    hpPercent,
+                    monsterGroupSolidarityScore(leader, profile),
+                    stubborn,
+                    random))
+            {
+                showWaveTurnNotice(
+                    "ROTATION REFUSÉE",
+                    "wave.monster.leader_rotation.refused",
+                    {
+                        leader.getName() + " ordonne un changement de ligne, mais " + incoming.getName() + " refuse de prendre la place dans son état actuel.",
+                        "Le chef ne perd pas son tour, mais il ne peut pas retenter une rotation immédiatement.",
+                        "Ce refus reste rare et dépend surtout d'un membre déjà très mal en point."
+                    }
+                );
+                return false;
+            }
+        }
+
+        std::vector<std::string> lines;
+        lines.push_back(leader.getName() + " sacrifie son action pour réorganiser sa ligne.");
+        int completed = 0;
+        for (int step = 0; step < wanted; ++step)
+        {
+            const int activeIndex = candidates[static_cast<std::size_t>(step)];
+            if (!wave.isActiveIndexValid(activeIndex) || step >= wave.getWaitingEnemyCount()) break;
+            const std::string outgoing = wave.getActiveEnemy(activeIndex).getName();
+            const std::string incoming = wave.getWaitingEnemy(step).getName();
+            if (wave.switchActiveEnemyWithWaiting(activeIndex, step))
+            {
+                lines.push_back("- " + outgoing + " recule ; " + incoming + " prend sa place.");
+                ++completed;
+            }
+        }
+        if (completed <= 0) return false;
+
+        lines.push_back("Rotation : " + std::to_string(completed) + " échange(s). Le tour du chef est consommé.");
+        lines.push_back(profile.abandonsWounded
+            ? "Ce groupe protège peu ses blessés : cette rotation reste exceptionnelle malgré le danger."
+            : "La décision vient d'une vraie lecture de groupe ; elle n'est jamais automatique à chaque blessure.");
+        player.recordCanonicalEvent(
+            "rotations_tactiques_ennemies",
+            leader.getName(),
+            leader.getName() + " a consommé son tour pour " + std::to_string(completed) + " rotation(s) tactique(s).",
+            completed
+        );
+        showWaveTurnNotice("ROTATION DU CHEF ENNEMI", "wave.monster.leader_rotation", lines);
+        return true;
+    }
+
     int countCompatibleFormationAllies(EnemyCombatQueue& wave, int monsterIndex, const Monster& leader)
     {
         int count = 0;
@@ -1114,9 +1562,23 @@ namespace
         return false;
     }
 
-    bool tryMonsterMoraleReaction(Monster& monster, EnemyCombatQueue& wave, int monsterIndex, Player& player, Random& random)
+    bool tryMonsterMoraleReaction(Monster& monster, EnemyCombatQueue& wave, int monsterIndex, Player& player, Random& random, int opposingCombatantCount)
     {
-        if (monster.getMaxHp() <= 0 || monster.getHp() * 100 > monster.getMaxHp() * 18)
+        bool goblinFearCheat = false;
+        if (monsterProfileContainsAny(monster, {"gobelin", "goblin"}))
+        {
+            for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+            {
+                if (record.category == "cheat_effects" && record.key == "goblin_fear" && record.count > 0)
+                {
+                    goblinFearCheat = true;
+                    break;
+                }
+            }
+        }
+
+        const int moraleHpThreshold = goblinFearCheat ? 35 : 18;
+        if (monster.getMaxHp() <= 0 || monster.getHp() * 100 > monster.getMaxHp() * moraleHpThreshold)
         {
             return false;
         }
@@ -1134,7 +1596,8 @@ namespace
         if (player.hasPassiveSkill("church_oath_king")) chance += 2;
         if (player.hasPassiveSkill("church_oath_rivals")) chance += 3;
         if (wave.getActiveEnemyCount() <= 1) chance += 4;
-        chance = std::clamp(chance, 0, 32);
+        if (goblinFearCheat) chance += 18;
+        chance = std::clamp(chance, 0, goblinFearCheat ? 55 : 32);
 
         if (random.between(1, 100) > chance)
         {
@@ -1159,9 +1622,16 @@ namespace
             return true;
         }
 
-        if (behavior.canFlee && random.between(1, 100) <= 45)
+        const int escapeBlockers = std::max(1, opposingCombatantCount);
+        const int escapeOpenings = EscapeSystem::escapeOpeningsRequired(escapeBlockers);
+        const MonsterEscapeAttemptResult moraleEscape = behavior.canFlee
+            ? EscapeSystem::attemptMonsterEscapeStep(monster, random, escapeBlockers, 45, false)
+            : MonsterEscapeAttemptResult{};
+        if (behavior.canFlee && moraleEscape.state == MonsterEscapeAttemptState::Escaped)
         {
             lines.push_back("Réaction : fuite courte. L'ennemi préfère survivre plutôt que mourir proprement.");
+            lines.push_back("Adversaires encore capables de fermer sa sortie : " + std::to_string(escapeBlockers)
+                + " | ouvertures successives nécessaires : " + std::to_string(escapeOpenings) + ".");
             lines.push_back(MonsterFlavorCatalog::buildFleeLine(monster));
             tryApplyRetreatCoverReaction(monster, wave, monsterIndex, player, random, lines);
             lines.push_back("Logique : tous les ennemis ne sont pas des suicidaires ; morts-vivants, anomalies ou serments brisés réagissent autrement.");
@@ -1191,12 +1661,14 @@ namespace
             }
             lines.push_back("Mémoire du monde : survivre ne suffit pas. La plupart des fuyards restent de simples survivants et peuvent ne jamais revenir.");
 
+            std::string escapedRivalId;
             if (monster.isPersistentRival())
             {
-                player.recordRivalEscape(monster.getRivalId(), player.getCurrentCityId());
+                escapedRivalId = monster.getRivalId();
+                player.recordRivalEscape(escapedRivalId, player.getCurrentCityId());
                 if (calculateHpPercentage(monster) <= 10)
                 {
-                    player.recordRivalWound(monster.getRivalId());
+                    player.recordRivalWound(escapedRivalId);
                 }
                 lines.push_back("Rival connu : cette fuite appartient au même individu. Sa trace reste attachée à son identité.");
             }
@@ -1236,6 +1708,7 @@ namespace
                         decision.chancePercent
                     );
                     monster.setRivalId(rivalId);
+                    escapedRivalId = rivalId;
                     player.recordRivalEscape(rivalId, player.getCurrentCityId());
                     if (calculateHpPercentage(monster) <= 10)
                     {
@@ -1251,11 +1724,79 @@ namespace
                 }
             }
 
+            if (behavior.canStealOnEscape
+                && (escapedRivalId.empty() || !player.rivalHasStolenProperty(escapedRivalId))
+                && random.between(1, 100) <= 9)
+            {
+                const int carryPercentBeforeTheft = CarryLoadSystem::evaluate(player).percent;
+                EscapeTheftBundle theft = stealCompactPropertyOnEscape(player, random);
+                if (!theft.empty())
+                {
+                    if (carryPercentBeforeTheft >= 150) player.grantTitle("Il m'a rendu service ?");
+                    if (escapedRivalId.empty())
+                    {
+                        escapedRivalId = player.createRivalFromEnemy(
+                            monster.getName(),
+                            monster.getType(),
+                            monster.getLevel(),
+                            monster.getMaxHp(),
+                            std::max(1, monster.getMaxDamage()),
+                            "Vol commis pendant une fuite réussie",
+                            behavior.rivalTemperament.empty() ? "voleur opportuniste" : behavior.rivalTemperament,
+                            100
+                        );
+                        monster.setRivalId(escapedRivalId);
+                        player.recordRivalEscape(escapedRivalId, player.getCurrentCityId());
+                        player.recordCanonicalEvent("rivaux_confirmes", escapedRivalId, monster.getName() + " devient un rival après avoir fui avec un bien volé", 1);
+                    }
+
+                    if (theft.copper > 0)
+                    {
+                        player.recordRivalStolenCopper(escapedRivalId, theft.copper);
+                    }
+                    if (theft.materialQuantity > 0)
+                    {
+                        player.recordRivalStolenMaterial(escapedRivalId, theft.material, theft.materialQuantity);
+                    }
+
+                    lines.push_back("Vol opportuniste : dans sa fuite, " + monster.getName() + " réussit à emporter un petit bien accessible.");
+                    if (theft.materialQuantity > 0)
+                    {
+                        lines.push_back("Bien volé : " + theft.material.getName() + " x" + std::to_string(theft.materialQuantity) + ".");
+                    }
+                    if (theft.copper > 0)
+                    {
+                        lines.push_back("Bourse volée : " + Money::formatCopper(theft.copper) + ".");
+                    }
+                    lines.push_back("Rivalité forcée : un voleur qui repart avec ton bien conserve une identité persistante afin de pouvoir être retrouvé et te rendre exactement ce qui reste enregistré.");
+                }
+            }
+
             showWaveTurnNotice("MORALE ENNEMIE", "wave.monster.morale.flee", lines);
             wave.removeActiveEnemyAsEscaped(monsterIndex);
             return true;
         }
 
+        if (behavior.canFlee && moraleEscape.state == MonsterEscapeAttemptState::Progressed)
+        {
+            lines.push_back("Réaction : décrochage partiel. L'ennemi crée une vraie ouverture mais n'est pas encore hors d'atteinte.");
+            lines.push_back("Progression : " + std::to_string(moraleEscape.progressAfter) + "/" + std::to_string(moraleEscape.requiredOpenings)
+                + " | prochaine tentative : +" + std::to_string(std::min(36, moraleEscape.progressAfter * 18)) + "% grâce à la distance déjà créée.");
+            lines.push_back("Son tour est consommé par ce mouvement : il ne fuit pas ET n'attaque pas dans la même seconde.");
+            player.recordCanonicalEvent("morale_ennemie", "decrochage_progressif", monster.getName() + " a créé une ouverture de fuite sans quitter encore le combat", 1);
+            showWaveTurnNotice("DÉCROCHAGE ENNEMI", "wave.monster.morale.escape_progress", lines);
+            return true;
+        }
+
+        if (behavior.canFlee && moraleEscape.state == MonsterEscapeAttemptState::Blocked)
+        {
+            lines.push_back("La fuite n'aboutit pas : les adversaires encore vivants referment la trajectoire.");
+            lines.push_back("La tentative a consommé le tour ; la panique ne donne pas une attaque gratuite après un échec de fuite.");
+        }
+        else if (behavior.canFlee && escapeOpenings > 1)
+        {
+            lines.push_back("La pression numérique impose plusieurs ouvertures successives avant une vraie sortie.");
+        }
         monster.applyWeakening(1, 10 + monster.getLevel() / 20);
         monster.applyPrecisionBoost(1, 1);
         lines.push_back("Réaction : panique contrôlée. Il ne fuit pas, mais son prochain geste devient nerveux et moins propre.");
@@ -1852,9 +2393,11 @@ namespace
 void MonsterWaveCombatTurn::playMonsterTurns(
     Player& player,
     EnemyCombatQueue& wave,
-    Random& random
+    Random& random,
+    int opposingCombatantCount
 )
 {
+    ensureMonsterLeaderActsFirst(wave);
     int i = 0;
 
     while (i < wave.getActiveEnemyCount())
@@ -1899,9 +2442,40 @@ void MonsterWaveCombatTurn::playMonsterTurns(
             continue;
         }
 
-        if (EscapeSystem::monsterAttemptsEscape(monster, random))
+        const MonsterEscapeAttemptResult lowHpEscape = EscapeSystem::attemptMonsterEscapeStep(
+            monster, random, opposingCombatantCount, 20, true);
+        if (lowHpEscape.state != MonsterEscapeAttemptState::NotEligible)
         {
-            wave.removeActiveEnemyAsEscaped(i);
+            std::vector<std::string> escapeLines = {
+                monster.getName() + " consacre réellement son tour à décrocher.",
+                "Opposants capables d'intercepter : " + std::to_string(std::max(1, opposingCombatantCount)) + ".",
+                "Ouvertures : " + std::to_string(lowHpEscape.progressBefore) + "/" + std::to_string(lowHpEscape.requiredOpenings)
+                    + " avant la tentative ; chance actuelle " + std::to_string(lowHpEscape.effectiveChancePercent) + "%.",
+                "Mobilité : " + std::string(lowHpEscape.mobilityModifierPercent >= 0 ? "+" : "")
+                    + std::to_string(lowHpEscape.mobilityModifierPercent) + "% | avance déjà acquise : +"
+                    + std::to_string(lowHpEscape.retryBonusPercent) + "%."
+            };
+
+            if (lowHpEscape.state == MonsterEscapeAttemptState::Escaped)
+            {
+                escapeLines.push_back("La dernière ouverture suffit : la créature quitte réellement l'affrontement.");
+                showWaveTurnNotice("ENNEMI EN FUITE", "wave.monster.escape.success", escapeLines);
+                wave.removeActiveEnemyAsEscaped(i);
+                continue;
+            }
+
+            if (lowHpEscape.state == MonsterEscapeAttemptState::Progressed)
+            {
+                escapeLines.push_back("Décrochage réussi : elle crée de la distance, mais reste encore atteignable.");
+                escapeLines.push_back("La prochaine tentative sera plus favorable car cette ouverture reste acquise.");
+                showWaveTurnNotice("DÉCROCHAGE ENNEMI", "wave.monster.escape.progress", escapeLines);
+            }
+            else
+            {
+                escapeLines.push_back("La trajectoire est fermée : aucun progrès, et la tentative consomme quand même le tour.");
+                showWaveTurnNotice("FUITE ENNEMIE BLOQUÉE", "wave.monster.escape.blocked", escapeLines);
+            }
+            ++i;
             continue;
         }
 
@@ -1918,6 +2492,20 @@ void MonsterWaveCombatTurn::playMonsterTurns(
         Console::pauseSeconds(1);
 
         CombatRoleActionSystem::tryActivateAutomaticRoleReaction(player, random);
+
+        if (i == 0 && tryMonsterLeaderRotationAction(monster, wave, i, player, random))
+        {
+            Console::pauseSeconds(1);
+            ++i;
+            continue;
+        }
+
+        if (tryMonsterIndividualSwitchAction(monster, wave, i, player, random))
+        {
+            Console::pauseSeconds(1);
+            ++i;
+            continue;
+        }
 
         if (tryMonsterReinforcementCall(monster, wave, i, player, random))
         {
@@ -1943,7 +2531,7 @@ void MonsterWaveCombatTurn::playMonsterTurns(
         if (!tryProtectPreparedAlly(monster, wave, i, player, random)
             && !tryMonsterLeaderProtectionReaction(monster, wave, i, player, random)
             && !tryMonsterGroupShockReaction(monster, wave, i, player, random)
-            && !tryMonsterMoraleReaction(monster, wave, i, player, random)
+            && !tryMonsterMoraleReaction(monster, wave, i, player, random, opposingCombatantCount)
             && !tryMonsterSignatureSkill(monster, wave, i, player, random)
             && !tryMonsterFormationAction(monster, wave, i, player, random)
             && !tryMonsterTacticalAction(monster, player, random))
@@ -1973,9 +2561,11 @@ void MonsterWaveCombatTurn::playMonsterTurns(
     Player& player,
     EnemyCombatQueue& wave,
     std::vector<Summon>& playerSummons,
-    Random& random
+    Random& random,
+    int opposingCombatantCount
 )
 {
+    ensureMonsterLeaderActsFirst(wave);
     int i = 0;
 
     while (i < wave.getActiveEnemyCount())
@@ -2020,9 +2610,40 @@ void MonsterWaveCombatTurn::playMonsterTurns(
             continue;
         }
 
-        if (EscapeSystem::monsterAttemptsEscape(monster, random))
+        const MonsterEscapeAttemptResult lowHpEscape = EscapeSystem::attemptMonsterEscapeStep(
+            monster, random, opposingCombatantCount, 20, true);
+        if (lowHpEscape.state != MonsterEscapeAttemptState::NotEligible)
         {
-            wave.removeActiveEnemyAsEscaped(i);
+            std::vector<std::string> escapeLines = {
+                monster.getName() + " consacre réellement son tour à décrocher.",
+                "Opposants capables d'intercepter : " + std::to_string(std::max(1, opposingCombatantCount)) + ".",
+                "Ouvertures : " + std::to_string(lowHpEscape.progressBefore) + "/" + std::to_string(lowHpEscape.requiredOpenings)
+                    + " avant la tentative ; chance actuelle " + std::to_string(lowHpEscape.effectiveChancePercent) + "%.",
+                "Mobilité : " + std::string(lowHpEscape.mobilityModifierPercent >= 0 ? "+" : "")
+                    + std::to_string(lowHpEscape.mobilityModifierPercent) + "% | avance déjà acquise : +"
+                    + std::to_string(lowHpEscape.retryBonusPercent) + "%."
+            };
+
+            if (lowHpEscape.state == MonsterEscapeAttemptState::Escaped)
+            {
+                escapeLines.push_back("La dernière ouverture suffit : la créature quitte réellement l'affrontement.");
+                showWaveTurnNotice("ENNEMI EN FUITE", "wave.monster.escape.success", escapeLines);
+                wave.removeActiveEnemyAsEscaped(i);
+                continue;
+            }
+
+            if (lowHpEscape.state == MonsterEscapeAttemptState::Progressed)
+            {
+                escapeLines.push_back("Décrochage réussi : elle crée de la distance, mais reste encore atteignable.");
+                escapeLines.push_back("La prochaine tentative sera plus favorable car cette ouverture reste acquise.");
+                showWaveTurnNotice("DÉCROCHAGE ENNEMI", "wave.monster.escape.progress", escapeLines);
+            }
+            else
+            {
+                escapeLines.push_back("La trajectoire est fermée : aucun progrès, et la tentative consomme quand même le tour.");
+                showWaveTurnNotice("FUITE ENNEMIE BLOQUÉE", "wave.monster.escape.blocked", escapeLines);
+            }
+            ++i;
             continue;
         }
 
@@ -2039,6 +2660,20 @@ void MonsterWaveCombatTurn::playMonsterTurns(
         Console::pauseSeconds(1);
 
         CombatRoleActionSystem::tryActivateAutomaticRoleReaction(player, random);
+
+        if (i == 0 && tryMonsterLeaderRotationAction(monster, wave, i, player, random))
+        {
+            Console::pauseSeconds(1);
+            ++i;
+            continue;
+        }
+
+        if (tryMonsterIndividualSwitchAction(monster, wave, i, player, random))
+        {
+            Console::pauseSeconds(1);
+            ++i;
+            continue;
+        }
 
         if (tryMonsterReinforcementCall(monster, wave, i, player, random))
         {
@@ -2103,7 +2738,7 @@ void MonsterWaveCombatTurn::playMonsterTurns(
             if (!tryProtectPreparedAlly(monster, wave, i, player, random)
                 && !tryMonsterLeaderProtectionReaction(monster, wave, i, player, random)
                 && !tryMonsterGroupShockReaction(monster, wave, i, player, random)
-                && !tryMonsterMoraleReaction(monster, wave, i, player, random)
+                && !tryMonsterMoraleReaction(monster, wave, i, player, random, opposingCombatantCount)
                 && !tryMonsterSignatureSkill(monster, wave, i, player, random)
                 && !tryMonsterFormationAction(monster, wave, i, player, random)
                 && !tryMonsterTacticalAction(monster, player, random))

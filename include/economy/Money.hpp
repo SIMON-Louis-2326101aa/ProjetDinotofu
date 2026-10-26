@@ -58,6 +58,7 @@ public:
     static std::string formatCopper(long long copperAmount);
     static std::string formatWalletFromCopper(long long copperAmount);
     static std::string formatCoinStacks(const CoinBreakdown& stacks, bool includeZeroCoins = true);
+    static std::string formatCoinStackDelta(const CoinBreakdown& before, const CoinBreakdown& after);
     static std::string formatWalletTotalFromCopper(long long copperAmount);
     static std::string formatCurrencyOverviewFromCopper(long long copperAmount);
     static std::string socialStandingLabel(const CoinBreakdown& stacks);

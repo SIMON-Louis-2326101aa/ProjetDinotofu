@@ -25,7 +25,29 @@ public:
         Player& player,
         const EnemyCombatQueue& wave,
         Random& random,
-        DifficultyMode difficulty
+        DifficultyMode difficulty,
+        int authorizedLootPercent = 100
+    );
+
+    // Physical post-KO recovery: all compact salvage and recovered equipment share the same
+    // bounded transport capacity. Equipment consumes 1/2/3 units according to real weight class.
+    static void givePostKoRecoveredWaveLoot(
+        Player& player,
+        const EnemyCombatQueue& wave,
+        Random& random,
+        DifficultyMode difficulty,
+        int transportCapacityUnits,
+        const std::string& contextId,
+        const std::string& battlefieldLabel = ""
+    );
+
+    static void givePostKoRecoveredBossLoot(
+        Player& player,
+        const Boss& boss,
+        Random& random,
+        DifficultyMode difficulty,
+        int transportCapacityUnits,
+        const std::string& contextId
     );
 
     static void giveDefeatedBossLoot(

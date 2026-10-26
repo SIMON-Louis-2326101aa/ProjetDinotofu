@@ -944,7 +944,7 @@ namespace QuestContractorMenu
             screen.addLine("Réputation souterraine : " + std::to_string(undergroundReputationScore(player)) + " — utile aux contacts louches, mauvaise pour les guildes sérieuses.");
             screen.addBackOption("Retour", "quest.guild_mediation.back");
             screen.addOption(1, "Payer une amende officielle", "Réduit la suspension locale d'un jour. Coût : " + Money::formatCopper(fineCopper) + ".", true, "quest.guild_mediation.fine");
-            screen.addOption(2, "Présenter des excuses et aider le comptoir", "Réduit d'un jour, prend 1 segment, améliore légèrement le dossier officiel.", true, "quest.guild_mediation.service");
+            screen.addOption(2, "Présenter des excuses et aider le comptoir", "Réduit d'un jour, prend 1 moment de la journée, améliore légèrement le dossier officiel.", true, "quest.guild_mediation.service");
 
             const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
             Console::clear();
@@ -992,7 +992,7 @@ namespace QuestContractorMenu
             screen.addBackOption("Retour", "quest.guild_tribunal.back");
             screen.addOption(1, "Consulter le dossier", "Voir ce que la guilde retient sans ouvrir de nouveau choix risqué.", true, "quest.guild_tribunal.file");
             screen.addOption(2, "Demander un pardon progressif", "Coût : " + Money::formatCopper(pardonCost) + ". N'efface pas l'historique, mais améliore le dossier officiel.", !banned && (probation || underground > 0), "quest.guild_tribunal.pardon");
-            screen.addOption(3, "Rendre un service de réparation", "Prend 1 segment, note une réparation propre et baisse la méfiance officielle du registre.", !banned, "quest.guild_tribunal.service");
+            screen.addOption(3, "Rendre un service de réparation", "Prend 1 moment de la journée, note une réparation propre et baisse la méfiance officielle du registre.", !banned, "quest.guild_tribunal.service");
             screen.addOption(4, "Parler au médiateur", "Disponible pendant une suspension active.", banned, "quest.guild_tribunal.mediation");
 
             const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
@@ -2242,7 +2242,7 @@ namespace QuestContractorMenu
             confirm.addLine(selected.detail);
             confirm.addLine("Profil : " + profile.name + " — " + profileFitLabel(selected, profile) + ".");
             confirm.addLine("Coût : " + Money::formatCopper(finalCost) + ".");
-            confirm.addLine("Durée : " + std::to_string(selected.durationDays) + " jour(s), pas segment(s).");
+            confirm.addLine("Durée : " + std::to_string(selected.durationDays) + " jour(s), pas moment(s) de la journée.");
             confirm.addLine("Chance que le profil accepte : " + std::to_string(finalAcceptance) + "%.");
             confirm.addLine("Taux de réussite si accepté : " + std::to_string(finalSuccess) + "%.");
             confirm.addLine("Dialogue : " + contractorDialogueLine(profile, selected, true));
@@ -2267,7 +2267,7 @@ namespace QuestContractorMenu
                     MessageScreen::show("LES BRAS CASSÉS SE VEXENT", "quest.delegated_missions.bras_casses.rebellion", {
                         "Tu as dit exactement le genre de phrase qu'il ne fallait pas dire.",
                         "Réaction rare : ils ne te tuent pas, même en règles définitives. Ils te mettent en coma narratif / au sol pour te calmer.",
-                        "PV perdus : " + std::to_string(damage) + ". Temps perdu : 2 segments.",
+                        "PV perdus : " + std::to_string(damage) + ". Temps perdu : 2 moments de la journée.",
                         "Illégal, anecdotique, et clairement pas une bonne stratégie."
                     }, false);
                 }

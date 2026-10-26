@@ -37,6 +37,9 @@ const char* shopItemCategoryToText(ShopItemCategory category)
         case ShopItemCategory::Spell:
             return "Magie";
 
+        case ShopItemCategory::Voucher:
+            return "Bon prépayé";
+
         case ShopItemCategory::Information:
             return "Renseignement";
 
