@@ -16,6 +16,7 @@
 #include "combat/system/CombatClassSystem.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "item/equipment/EquipmentWeightRules.hpp"
+#include "story/HestiaSoulArtifactSystem.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -98,14 +99,18 @@ int Player::getEquippedWeaponIndex() const
 // FR: hasEquippedWeapon déclare ou implémente un comportement précis utilisé par ce module.
 bool Player::hasEquippedWeapon() const
 {
-    return inventory.hasWeapon(equippedWeaponIndex);
+    return HestiaSoulArtifactSystem::isEquipped(*this) || inventory.hasWeapon(equippedWeaponIndex);
 }
 
 // EN: getEquippedWeapon declares or implements a focused behavior used by this module.
 // FR: getEquippedWeapon déclare ou implémente un comportement précis utilisé par ce module.
 Weapon Player::getEquippedWeapon() const
 {
-    if (!hasEquippedWeapon())
+    if (HestiaSoulArtifactSystem::isEquipped(*this))
+    {
+        return HestiaSoulArtifactSystem::buildWeapon(*this);
+    }
+    if (!inventory.hasWeapon(equippedWeaponIndex))
     {
         return Weapon();
     }
@@ -122,7 +127,10 @@ bool Player::equipWeapon(int index)
         return false;
     }
 
+    HestiaSoulArtifactSystem::unequip(*this);
     equippedWeaponIndex = index;
+    const Weapon equipped = inventory.getWeapon(index);
+    recordCanonicalEvent("equipements_portes", equipped.getPersistentId().empty() ? equipped.getName() : equipped.getPersistentId(), equipped.getName(), 1);
     return true;
 }
 
@@ -131,6 +139,7 @@ bool Player::equipWeapon(int index)
 void Player::unequipWeapon()
 {
     equippedWeaponIndex = -1;
+    HestiaSoulArtifactSystem::unequip(*this);
 }
 
 // EN: getEquippedArmorIndex declares or implements a focused behavior used by this module.
@@ -205,6 +214,8 @@ bool Player::equipArmor(int index)
         hp = maxHp;
     }
 
+    const Armor equipped = inventory.getArmor(index);
+    recordCanonicalEvent("equipements_portes", equipped.getPersistentId().empty() ? equipped.getName() : equipped.getPersistentId(), equipped.getName(), 1);
     return true;
 }
 
@@ -359,79 +370,97 @@ std::vector<std::string> Player::applyHeavyVersionAdaptation(DifficultyMode diff
     (void)difficulty;
 
     std::vector<std::string> changes;
+    const std::string previousVersion = getLastAdaptedVersion();
+    const bool needsLegacyStarterRepairs = VersionInfo::compare(previousVersion, "3.50.33") < 0;
+    const bool needsMaterialMagicTransition = VersionInfo::compare(VersionInfo::currentVersion(), "3.51.15") >= 0
+        && VersionInfo::compare(previousVersion, "3.51.15") < 0;
 
-    if (starterKitLog.empty())
+    // Historical starter-kit repairs belong to the old V3.50.33 transition only.
+    // A modern character crossing V3.51.15 must not receive free replacement gear or potions
+    // simply because the material-magic rules changed.
+    if (needsLegacyStarterRepairs)
     {
-        starterKitLog.push_back("Kit de départ original inconnu : sauvegarde créée avant le journal de départ.");
-        changes.push_back("Journal du kit de départ initialisé en mode sauvegarde ancienne.");
-    }
-
-    if (!inventoryHasWeaponNamed(inventory, "Mains nues"))
-    {
-        inventory.addWeapon(WeaponCatalog::createBareHands());
-        changes.push_back("Mains nues restaurées comme base de secours.");
-    }
-
-    if (isDistanceStarterClass(type) && !inventoryHasWeaponNamed(inventory, "Couteau de bois d'urgence"))
-    {
-        inventory.addWeapon(WeaponCatalog::createEmergencyWoodKnife());
-        changes.push_back("Couteau de bois d'urgence ajouté pour classe à distance.");
-    }
-
-    if (usesStarterAmmunition(type))
-    {
-        if ((type.find("Arbal") != std::string::npos || type.find("arbal") != std::string::npos)
-            && !inventoryHasMaterialId(inventory, "training_bolts"))
+        if (starterKitLog.empty())
         {
-            inventory.addMaterial(MaterialCatalog::createById("training_bolts", 8));
-            changes.push_back("Carreaux d'entraînement x8 ajoutés pour adaptation.");
+            starterKitLog.push_back("Kit de départ original inconnu : sauvegarde créée avant le journal de départ.");
+            changes.push_back("Journal du kit de départ initialisé en mode sauvegarde ancienne.");
         }
-        else if ((type.find("dagues") != std::string::npos || type.find("Dagues") != std::string::npos)
-            && !inventoryHasMaterialId(inventory, "training_throwing_knives"))
+
+        if (!inventoryHasWeaponNamed(inventory, "Mains nues"))
         {
-            inventory.addMaterial(MaterialCatalog::createById("training_throwing_knives", 6));
-            changes.push_back("Couteaux de lancer émoussés x6 ajoutés pour adaptation.");
+            inventory.addWeapon(WeaponCatalog::createBareHands());
+            changes.push_back("Mains nues restaurées comme base de secours.");
         }
-        else if (!inventoryHasMaterialId(inventory, "training_arrows"))
+
+        if (isDistanceStarterClass(type) && !inventoryHasWeaponNamed(inventory, "Couteau de bois d'urgence"))
         {
-            inventory.addMaterial(MaterialCatalog::createById("training_arrows", 10));
-            changes.push_back("Flèches d'entraînement x10 ajoutées pour adaptation.");
+            inventory.addWeapon(WeaponCatalog::createEmergencyWoodKnife());
+            changes.push_back("Couteau de bois d'urgence ajouté pour classe à distance.");
+        }
+
+        if (usesStarterAmmunition(type))
+        {
+            if ((type.find("Arbal") != std::string::npos || type.find("arbal") != std::string::npos)
+                && !inventoryHasMaterialId(inventory, "training_bolts"))
+            {
+                inventory.addMaterial(MaterialCatalog::createById("training_bolts", 8));
+                changes.push_back("Carreaux d'entraînement x8 ajoutés pour adaptation.");
+            }
+            else if ((type.find("dagues") != std::string::npos || type.find("Dagues") != std::string::npos)
+                && !inventoryHasMaterialId(inventory, "training_throwing_knives"))
+            {
+                inventory.addMaterial(MaterialCatalog::createById("training_throwing_knives", 6));
+                changes.push_back("Couteaux de lancer émoussés x6 ajoutés pour adaptation.");
+            }
+            else if (!inventoryHasMaterialId(inventory, "training_arrows"))
+            {
+                inventory.addMaterial(MaterialCatalog::createById("training_arrows", 10));
+                changes.push_back("Flèches d'entraînement x10 ajoutées pour adaptation.");
+            }
+        }
+
+        Armor expectedArmor = ArmorCatalog::createStarterArmorForClass(type);
+        if (inventory.getArmorCount() == 0)
+        {
+            inventory.addArmor(ArmorCatalog::createSimpleOutfit());
+            inventory.addArmor(expectedArmor);
+            equipArmor(1);
+            changes.push_back("Protection de classe ajoutée car aucune armure n'était présente.");
+        }
+        else if (equippedArmorIndex < 0 && !inventoryHasArmorNamed(inventory, expectedArmor.getName()))
+        {
+            inventory.addArmor(expectedArmor);
+            changes.push_back("Protection de classe ajoutée sans remplacer l'équipement existant.");
+        }
+
+        if (inventory.getWeaponCount() <= 1)
+        {
+            Weapon expectedWeapon = WeaponCatalog::createStarterWeaponForClass(type);
+            if (!inventoryHasWeaponNamed(inventory, expectedWeapon.getName()))
+            {
+                inventory.addWeapon(expectedWeapon);
+                changes.push_back("Arme de classe basique ajoutée car l'arsenal était presque vide.");
+            }
+        }
+
+        if (inventory.countConsumables(ConsumableType::Healing) == 0)
+        {
+            inventory.addConsumable(ConsumableCatalog::createBasicHealingPotion());
+            changes.push_back("Potion de soin ajoutée pour éviter une ancienne sauvegarde sans sécurité.");
         }
     }
 
-    Armor expectedArmor = ArmorCatalog::createStarterArmorForClass(type);
-    if (inventory.getArmorCount() == 0)
+    if (needsMaterialMagicTransition)
     {
-        inventory.addArmor(ArmorCatalog::createSimpleOutfit());
-        inventory.addArmor(expectedArmor);
-        equipArmor(1);
-        changes.push_back("Protection de classe ajoutée car aucune armure n'était présente.");
-    }
-    else if (equippedArmorIndex < 0 && !inventoryHasArmorNamed(inventory, expectedArmor.getName()))
-    {
-        inventory.addArmor(expectedArmor);
-        changes.push_back("Protection de classe ajoutée sans remplacer l'équipement existant.");
-    }
-
-    if (inventory.getWeaponCount() <= 1)
-    {
-        Weapon expectedWeapon = WeaponCatalog::createStarterWeaponForClass(type);
-        if (!inventoryHasWeaponNamed(inventory, expectedWeapon.getName()))
-        {
-            inventory.addWeapon(expectedWeapon);
-            changes.push_back("Arme de classe basique ajoutée car l'arsenal était presque vide.");
-        }
-    }
-
-    if (inventory.countConsumables(ConsumableType::Healing) == 0)
-    {
-        inventory.addConsumable(ConsumableCatalog::createBasicHealingPotion());
-        changes.push_back("Potion de soin ajoutée pour éviter une ancienne sauvegarde sans sécurité.");
+        changes.push_back("Transition magie matérielle : toutes les piles, quantités et qualités de matériaux existantes sont conservées sans conversion.");
+        changes.push_back("Les minerais déjà possédés utilisent désormais leur qualité comme durée de canalisation ; aucune unité n'est dissoute pendant la migration.");
+        changes.push_back("Grimoires et parchemins conservés : leurs nouveaux prérequis de niveau, mana, connaissances et langue seront vérifiés seulement lors de l'étude ou de l'utilisation.");
+        changes.push_back("Recettes matérielles et Sacrifice matériel sont activés par les nouvelles règles sans modifier rétroactivement l'inventaire.");
     }
 
     if (changes.empty())
     {
-        changes.push_back("Aucun objet ajouté : l'équipement actuel semblait déjà compatible.");
+        changes.push_back("Aucune conversion nécessaire : cette sauvegarde respecte déjà les règles de compatibilité actuelles.");
     }
 
     for (const std::string& change : changes)

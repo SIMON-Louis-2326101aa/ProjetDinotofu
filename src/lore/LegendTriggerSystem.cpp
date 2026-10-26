@@ -170,19 +170,19 @@ namespace
         };
     }
 
-    LegendArchiveEntry makeProtectedHestiaRumor()
+    LegendArchiveEntry makeSilentHestiaRumor()
     {
         return LegendArchiveEntry{
-            "special_hestia_protected_rumor",
-            "Rumeur de la mage qu'on ne laisse pas seule",
+            "special_hestia_silent_rumor",
+            "Rumeur de la fille revenue de nulle part",
             "Groupes et héros",
-            "Taverne / table trop silencieuse",
-            "Une rumeur lie Hestia à Hazak et Sanctus sans dévoiler toute son histoire.",
+            "Guilde / conversations à voix basse",
+            "Une rumeur parle d'une jeune fille appelée Hestia, sauvée dans un état critique et longtemps presque muette.",
             {
-                "Les gens qui connaissent Hestia baissent la voix quand ils parlent d'elle.",
-                "Ils disent qu'elle pourrait éviter presque tous les combats si la peur ne la poussait pas parfois en avant les yeux fermés.",
-                "Hazak ne parle pas de compassion. Sanctus ne parle pas de peur. Pourtant, quand elle apparaît, il y a souvent quelqu'un entre elle et la violence.",
-                "Le registre note cette protection comme une rumeur de groupe, pas comme une faiblesse tactique."
+                "À la guilde, certains disent qu'une jeune fille appelée Hestia reste parfois près de Diane sans beaucoup parler.",
+                "Elle essaierait d'aider dès qu'elle le peut, avec plus de bonne volonté que d'adresse.",
+                "Personne ne semble savoir d'où elle vient réellement, et les rumeurs sérieuses évitent de lui inventer une origine.",
+                "Le registre ne révèle ni nature cachée ni pouvoir futur : ce que Hestia ignore encore ne devient pas une information publique."
             }
         };
     }
@@ -525,7 +525,7 @@ std::vector<LegendArchiveEntry> LegendTriggerSystem::getArchiveEntries()
         makeChildTale(),
         makeSpecialArenaRumor(),
         makeFriendlyTrioRumor(),
-        makeProtectedHestiaRumor(),
+        makeSilentHestiaRumor(),
         makeFireFlightCommandRumor(),
         makeHeroVillagerRoadLegend(),
         makeBobMauriceCounterLegend(),
@@ -871,12 +871,12 @@ void LegendTriggerSystem::maybeDisplaySpecialGroupLegend(const std::vector<std::
         return;
     }
 
-    if (containsName(names, "Hazak") && containsName(names, "Hestia") && random.between(1, 100) <= 24)
+    if (containsName(names, "Hestia") && random.between(1, 100) <= 24)
     {
-        LegendArchiveEntry entry = makeProtectedHestiaRumor();
+        LegendArchiveEntry entry = makeSilentHestiaRumor();
         if (reserveAutomaticLegendDisplay("hestia." + entry.id, entry))
         {
-            showLegend(entry, "legend.trigger.group.protected_hestia", false);
+            showLegend(entry, "legend.trigger.hestia.silent_rescue", false);
         }
         return;
     }
@@ -948,4 +948,3 @@ void LegendTriggerSystem::maybeDisplayLibraryLoreWhisper(Random& random)
 
     showLegend(entry, "legend.trigger.library.whisper", true);
 }
-

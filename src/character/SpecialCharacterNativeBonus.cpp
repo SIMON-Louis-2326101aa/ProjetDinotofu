@@ -83,7 +83,8 @@ bool SpecialCharacterNativeBonus::applyForSpecialCharacter(
     }
     else if (normalizedName == normalize("Hestia"))
     {
-        player.applyFlatStatBonus(-20, 0, 6, 15);
+        // Hestia commence en réadaptation : son identité spéciale ne révèle ni ne donne sa future puissance divine.
+        player.applyFlatStatBonus(-20, 0, 0, 0);
     }
     else if (normalizedName == normalize("Fire Flight"))
     {

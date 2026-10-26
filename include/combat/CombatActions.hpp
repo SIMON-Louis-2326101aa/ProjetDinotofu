@@ -9,6 +9,10 @@
 #include "core/Random.hpp"
 #include "entity/Entity.hpp"
 
+#include <string>
+
+class Player;
+
 class CombatActions
 {
 public:
@@ -24,6 +28,27 @@ public:
         Random& random,
         int damageBonus
     );
+
+    // Uses the same material/catalyst/incantation rules as arcane class skills.
+    // Returns false when the channeling cannot be formed or collapses.
+    static bool prepareMagicTechnique(
+        Player& player,
+        const std::string& techniqueName,
+        Random& random,
+        int baseManaCost
+    );
+
+    // Player-facing variant: material casters can choose/confirm the physical support.
+    // The non-interactive overload above remains deterministic for tests/technical paths.
+    static bool prepareMagicTechniqueInteractive(
+        Player& player,
+        const std::string& techniqueName,
+        Random& random,
+        int baseManaCost
+    );
+
+    // Ranged multi-hit techniques must stop when no physical projectile remains.
+    static bool hasCompatibleAmmunition(const Player& player);
 
     static void executeWeaponTechnique(
         Entity& attacker,

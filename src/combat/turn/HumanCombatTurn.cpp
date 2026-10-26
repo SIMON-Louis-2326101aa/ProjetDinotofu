@@ -279,6 +279,25 @@ bool HumanCombatTurn::play(
 {
     (void)potionHealAmount;
 
+    if (Player* player = dynamic_cast<Player*>(&attacker))
+    {
+        player->regenerateManaForCombatTurn();
+        if (player->consumeManaExhaustionTurn())
+        {
+            MessageScreen::show(
+                "ÉPUISEMENT DE MANA",
+                "combat.human.mana_exhaustion_skip",
+                {
+                    player->getName() + " vacille encore après avoir vidé ses réserves.",
+                    "Impossible de reprendre correctement ses appuis : ce tour est perdu.",
+                    "Mana : " + std::to_string(player->getMana()) + "/" + std::to_string(player->getMaxMana())
+                },
+                false
+            );
+            return true;
+        }
+    }
+
     maybeShowInterfaceCursePulse(attacker, defender, random, false);
 
     const MenuScreen turnScreen = CombatMenu::buildTurnScreen(attacker);

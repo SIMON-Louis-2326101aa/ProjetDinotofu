@@ -1,8 +1,33 @@
-// EN: PlayerDeathResolver.cpp briefly defines this Dinotofu module and its responsibilities.
-// FR: PlayerDeathResolver.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future resolver connecting death penalty, saves and lethal mode.
-// TODO: Implement this future system when its feature block becomes active.
-
 #include "combat/death/PlayerDeathResolver.hpp"
+
+#include "entity/Player.hpp"
+#include "story/HestiaArcSystem.hpp"
+
+PlayerDeathImmediateResolution PlayerDeathResolver::resolveImmediate(Player& player, const std::string& context)
+{
+    PlayerDeathImmediateResolution out;
+    if (!player.isDead()) return out;
+
+    const bool hestiaActuallyPresent = player.getHestiaStoryState().residence == "active_party";
+    if (!HestiaArcSystem::consumeSacrificeForPlayer(player, hestiaActuallyPresent))
+        return out;
+
+    // Hestia extrait le joueur du combat. Elle sauve sa vie, mais ne transforme pas la défaite en victoire.
+    player.reviveWithHealthPercentage(20);
+    player.recordCanonicalEvent(
+        "hestia_arc",
+        "sacrifice_context:" + context,
+        "Hestia a extrait le joueur d'une mort certaine et sa matérialisation a disparu",
+        1);
+
+    out.handled = true;
+    out.hestiaSacrifice = true;
+    out.lines = {
+        "Au moment où tout s'arrête, Hestia agit avant même de comprendre ce qu'elle fait.",
+        "Une lumière immense engloutit le combat et t'arrache au danger.",
+        "Tu reprends conscience en sécurité avec une partie de tes forces.",
+        "Hestia, elle, n'est plus matérialisée : elle a donné sa présence actuelle pour sauver ta vie.",
+        "Cette intervention n'est possible que lorsqu'elle voyage réellement avec toi."
+    };
+    return out;
+}

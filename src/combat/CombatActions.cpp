@@ -4,11 +4,13 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "combat/CombatActions.hpp"
+#include "combat/MagicMaterialRules.hpp"
 
 #include "combat/action/CombatAttack.hpp"
 #include "combat/action/CombatPotion.hpp"
 #include "combat/system/CombatClassSystem.hpp"
 #include "combat/system/ElementalAffinitySystem.hpp"
+#include "progression/TechniqueProgressionRules.hpp"
 #include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
@@ -18,6 +20,8 @@
 #include "entity/Monster.hpp"
 #include "entity/Boss.hpp"
 #include "item/weapon/WeaponType.hpp"
+#include "item/consumable/Consumable.hpp"
+#include "item/consumable/ConsumableType.hpp"
 
 #include <iostream>
 #include <vector>
@@ -84,6 +88,61 @@ namespace
             },
             false
         );
+    }
+
+    int canonicalRecordCount(const Player& player, const std::string& category, const std::string& key)
+    {
+        int total = 0;
+        for (const PlayerJournalRecord& record : player.getCanonicalJournalRecords())
+        {
+            if (record.category == category && record.key == key)
+            {
+                total += record.count;
+            }
+        }
+        return total;
+    }
+
+    bool consumePendingDivineExecution(Entity& attacker, Entity& defender)
+    {
+        Player* player = dynamic_cast<Player*>(&attacker);
+        if (player == nullptr || dynamic_cast<Boss*>(&defender) != nullptr)
+        {
+            return false;
+        }
+
+        const int armed = canonicalRecordCount(*player, "cheat_effects", "divine_sequence_pending_execution");
+        const int consumed = canonicalRecordCount(*player, "cheat_effects", "divine_sequence_execution_consumed");
+        if (armed <= consumed || defender.isDead())
+        {
+            return false;
+        }
+
+        const int remainingHp = std::max(1, defender.getHp());
+        defender.takeDamage(remainingHp);
+        player->recordCanonicalEvent(
+            "cheat_effects",
+            "divine_sequence_execution_consumed",
+            "Exécution divine consommée sur une cible hostile réelle",
+            1
+        );
+        player->recordHistoricalEvent(
+            "cheat_divine_execution",
+            defender.getName(),
+            "La séquence 13-02313-1302313 a exécuté une cible hostile ordinaire lors d'un vrai combat.",
+            true
+        );
+        showCombatActionMessage(
+            "SÉQUENCE DIVINE",
+            "cheat.divine_sequence.execution",
+            {
+                "La séquence en attente reconnaît " + defender.getName() + ".",
+                "La cible est abattue immédiatement.",
+                "L'exécution a été consommée."
+            },
+            false
+        );
+        return true;
     }
 
     void showClassSkillResult(
@@ -174,6 +233,48 @@ namespace
         return choices;
     }
 
+    bool confirmLockedCombatMaterialUse(Player& player, const std::string& materialId, const std::string& label, const std::string& actionLabel)
+    {
+        const std::string key = Inventory::materialItemKeyById(materialId);
+        if (!player.getInventory().isLockedItemKey(key)) return true;
+        const int choice = askStructuredCombatChoice(
+            "RESSOURCE VERROUILLÉE",
+            "combat.inventory_lock.confirm",
+            {
+                "Ressource : " + label + ".",
+                "Action : " + actionLabel + ".",
+                "Cette ressource est verrouillée dans l'inventaire : une confirmation supplémentaire est obligatoire."
+            },
+            {
+                {1, "Confirmer exceptionnellement", "Le verrou reste actif après cette utilisation.", true, "confirm_once"},
+                {2, "Annuler", "Conserver la ressource verrouillée.", true, "cancel"}
+            },
+            "Choisis 1 ou 2."
+        );
+        return choice == 1;
+    }
+
+    bool confirmLockedCombatConsumableUse(Player& player, const Consumable& consumable, const std::string& actionLabel)
+    {
+        const std::string key = Inventory::consumableItemKey(consumable);
+        if (!player.getInventory().isLockedItemKey(key)) return true;
+        const int choice = askStructuredCombatChoice(
+            "OBJET VERROUILLÉ",
+            "combat.inventory_lock.consumable_confirm",
+            {
+                "Objet : " + consumable.getName() + ".",
+                "Action : " + actionLabel + ".",
+                "Cet objet est verrouillé : cette utilisation exige une confirmation supplémentaire."
+            },
+            {
+                {1, "Confirmer exceptionnellement", "Le verrou restera actif après cette utilisation.", true, "confirm_once"},
+                {2, "Annuler", "Conserver l'objet verrouillé.", true, "cancel"}
+            },
+            "Choisis 1 ou 2."
+        );
+        return choice == 1;
+    }
+
     int magicCatalystSuccessChance(const Player& player)
     {
         if (!player.hasEquippedWeapon())
@@ -253,63 +354,718 @@ namespace
         return bonus;
     }
 
-    bool resolveMagicCatalystAttempt(Player* player, const std::string& spellName, Random& random)
+    int baseManaCostForSpell(const std::string& spellName)
+    {
+        if (spellName == "Marque élémentaire") return 9;
+        if (spellName == "Entrave arcanique") return 12;
+        if (spellName == "Voile élémentaire") return 13;
+        if (spellName == "Surcharge contrôlée") return 19;
+        if (spellName == "Faille de résistance") return 18;
+        if (spellName == "Aiguille de givre") return 12;
+        if (spellName == "Suture de mana") return 15;
+        if (spellName == "Ronces occultes") return 14;
+        return 12;
+    }
+
+    std::string magicTechniqueElementForPlayer(const Player& player)
+    {
+        const std::string className = normalizeCombatActionText(player.getType());
+        if (className.find("pyrom") != std::string::npos || className.find("feu") != std::string::npos) return "feu";
+        if (className.find("cryom") != std::string::npos || className.find("glace") != std::string::npos || className.find("givre") != std::string::npos) return "froid";
+        if (className.find("electrom") != std::string::npos || className.find("électrom") != std::string::npos || className.find("foudre") != std::string::npos) return "foudre";
+        if (className.find("hydrom") != std::string::npos || className.find("eau") != std::string::npos) return "eau";
+        if (className.find("géom") != std::string::npos || className.find("geom") != std::string::npos || className.find("terre") != std::string::npos) return "terre";
+        if (className.find("aérom") != std::string::npos || className.find("aerom") != std::string::npos || className.find("vent") != std::string::npos) return "vent";
+        return "arcanique";
+    }
+
+    struct MaterialChannelingSelection
+    {
+        std::string materialId;
+        std::string materialQuality;
+        bool useRecipe = false;
+        bool sacrificeMaterial = false;
+        bool forcePureIncantation = false;
+        std::vector<MagicMaterialRules::SpellMaterialSelectedRequirement> recipeSelection;
+    };
+
+    struct MaterialMenuChoice
+    {
+        std::string materialId;
+        std::string materialQuality;
+        bool sacrificeMaterial = false;
+    };
+
+    bool askSpellMaterialRecipeQualities(
+        Player& player,
+        const std::string& spellName,
+        std::vector<MagicMaterialRules::SpellMaterialSelectedRequirement>& selection
+    )
+    {
+        selection.clear();
+        const MagicMaterialRules::SpellMaterialRecipe* recipe = MagicMaterialRules::findSpellMaterialRecipe(spellName);
+        if (recipe == nullptr)
+        {
+            return false;
+        }
+
+        for (const MagicMaterialRules::SpellMaterialRequirement& requirement : recipe->requirements)
+        {
+            std::vector<std::string> qualities;
+            for (const std::string& quality : MagicMaterialRules::availableQualityVariants(player.getInventory(), requirement.materialId))
+            {
+                if (player.getInventory().countMaterialByIdAndQuality(requirement.materialId, quality) >= requirement.quantity)
+                {
+                    qualities.push_back(quality);
+                }
+            }
+            if (qualities.empty())
+            {
+                selection.clear();
+                return false;
+            }
+
+            std::string chosenQuality;
+            if (qualities.size() == 1)
+            {
+                chosenQuality = qualities.front();
+            }
+            else
+            {
+                std::vector<CombatOptionSpec> options;
+                int optionNumber = 1;
+                for (const std::string& quality : qualities)
+                {
+                    const int stock = player.getInventory().countMaterialByIdAndQuality(requirement.materialId, quality);
+                    std::string hint = "Stock : x" + std::to_string(stock)
+                        + " | " + MagicMaterialRules::formatChannelingProfilePreviewForQuality(requirement.materialId, quality, false);
+                    hint += requirement.degradeInsteadOfConsume
+                        ? " | cette qualité perdra un palier"
+                        : " | cette qualité sera sacrifiée";
+                    options.push_back({
+                        optionNumber++,
+                        MagicMaterialRules::qualityLabel(requirement.materialId, quality),
+                        hint,
+                        true,
+                        "magic_recipe_quality"
+                    });
+                }
+                const int cancelOption = optionNumber;
+                options.push_back({
+                    cancelOption,
+                    "Revenir aux supports",
+                    "Annule la préparation de la recette sans rien consommer.",
+                    true,
+                    "magic_recipe_quality_cancel"
+                });
+
+                const int choice = askStructuredCombatChoice(
+                    "QUALITÉ D'INGRÉDIENT",
+                    "combat.magic.recipe.quality",
+                    {
+                        "Recette : " + spellName + ".",
+                        "Ingrédient : " + MagicMaterialRules::displayName(requirement.materialId)
+                            + " x" + std::to_string(requirement.quantity) + ".",
+                        requirement.degradeInsteadOfConsume
+                            ? "Cet ingrédient sera dégradé, pas détruit immédiatement."
+                            : "Cet ingrédient sera réellement sacrifié si le sort démarre."
+                    },
+                    options,
+                    "Choisis une qualité disponible."
+                );
+                if (choice == cancelOption)
+                {
+                    selection.clear();
+                    return false;
+                }
+                const int index = choice - 1;
+                if (index < 0 || index >= static_cast<int>(qualities.size()))
+                {
+                    selection.clear();
+                    return false;
+                }
+                chosenQuality = qualities[static_cast<std::size_t>(index)];
+            }
+
+            selection.push_back({
+                requirement.materialId,
+                chosenQuality,
+                requirement.quantity,
+                requirement.degradeInsteadOfConsume
+            });
+        }
+        return MagicMaterialRules::canConsumeSpellMaterialRecipeSelection(player.getInventory(), selection);
+    }
+
+    MaterialChannelingSelection askMaterialChannelingSelection(
+        Player& player,
+        const std::string& spellName,
+        const std::string& elementKey
+    )
+    {
+        const std::vector<std::string> availableIds = MagicMaterialRules::availableMaterialIds(player.getInventory(), elementKey);
+        const bool recipeDefined = MagicMaterialRules::findSpellMaterialRecipe(spellName) != nullptr;
+        const bool recipeAvailable = MagicMaterialRules::hasSpellMaterialRecipeIngredients(player.getInventory(), spellName);
+        const std::vector<std::string> missingRecipeMaterials = MagicMaterialRules::missingSpellMaterialIngredients(player.getInventory(), spellName);
+        const int sacrificeUnlockLevel = TechniqueProgressionRules::genericTechniqueUnlockLevel("material_sacrifice");
+        const bool sacrificeUnlocked = player.getLevel() >= sacrificeUnlockLevel;
+
+        if (availableIds.empty() && !recipeDefined)
+        {
+            return {"", "", false, false, true, {}};
+        }
+
+        while (true)
+        {
+            std::vector<std::string> lines = {
+                "Sort préparé : " + spellName + ".",
+                "Affinité recherchée : " + MagicMaterialRules::elementDisplayName(elementKey) + ".",
+                "Qualité et rareté modifient maintenant le coût, la stabilité et la puissance.",
+                sacrificeUnlocked
+                    ? "Technique : Sacrifice matériel disponible — détruit une unité entière pour un gros burst, mais reste moins rentable."
+                    : "Technique : Sacrifice matériel verrouillée jusqu'au niveau " + std::to_string(sacrificeUnlockLevel) + ".",
+                "La sélection ci-dessous ne consomme encore rien. Une confirmation séparée sera demandée."
+            };
+            std::vector<CombatOptionSpec> options;
+            std::vector<MaterialMenuChoice> materialChoices;
+            int optionNumber = 1;
+            int recipeOption = -1;
+
+            if (recipeDefined)
+            {
+                recipeOption = optionNumber;
+                std::string recipeHint = "Plusieurs ingrédients : certains sont sacrifiés, d'autres seulement dégradés.";
+                if (recipeAvailable)
+                {
+                    const MagicMaterialRules::MaterialChannelingProfile profile = MagicMaterialRules::recipeChannelingProfile(player.getInventory(), spellName);
+                    recipeHint += " | mana : " + std::to_string(profile.manaPercent) + "%"
+                        + " | stabilité : +" + std::to_string(profile.stabilityBonus)
+                        + " | puissance : +" + std::to_string(profile.powerBoostPercent) + "%";
+                }
+                else
+                {
+                    recipeHint = "Incomplète — manque : ";
+                    for (std::size_t i = 0; i < missingRecipeMaterials.size(); ++i)
+                    {
+                        if (i > 0) recipeHint += ", ";
+                        recipeHint += missingRecipeMaterials[i];
+                    }
+                    recipeHint += ".";
+                }
+                options.push_back({
+                    optionNumber++,
+                    recipeAvailable ? "Recette dédiée" : "Recette dédiée (incomplète)",
+                    recipeHint,
+                    recipeAvailable,
+                    "magic_material_recipe"
+                });
+            }
+
+            const int firstMaterialOption = optionNumber;
+            for (const std::string& id : availableIds)
+            {
+                const bool mineralFuel = MagicMaterialRules::isMineralFuelId(id);
+                for (const std::string& quality : MagicMaterialRules::availableQualityVariants(player.getInventory(), id))
+                {
+                    std::string hint = MagicMaterialRules::formatMaterialUsePreviewForQuality(player.getInventory(), id, quality, mineralFuel);
+                    hint += " | " + MagicMaterialRules::formatChannelingProfilePreviewForQuality(id, quality, false);
+                    if (!elementKey.empty() && MagicMaterialRules::materialSupportsElement(id, elementKey))
+                    {
+                        hint += " | accord élémentaire";
+                    }
+                    else
+                    {
+                        hint += " | support générique";
+                    }
+                    options.push_back({
+                        optionNumber++,
+                        MagicMaterialRules::displayName(id) + " [" + MagicMaterialRules::qualityLabel(id, quality) + "]",
+                        hint,
+                        true,
+                        "magic_material_single_quality"
+                    });
+                    materialChoices.push_back({id, quality, false});
+
+                    if (mineralFuel && sacrificeUnlocked)
+                    {
+                        const int qualityCount = player.getInventory().countMaterialByIdAndQuality(id, quality);
+                        std::string sacrificeHint = "Stock : x" + std::to_string(qualityCount);
+                        sacrificeHint += " | " + MagicMaterialRules::formatChannelingProfilePreviewForQuality(id, quality, true);
+                        sacrificeHint += " | toute la qualité restante de cette unité est convertie en puissance immédiate";
+                        options.push_back({
+                            optionNumber++,
+                            "Sacrifice matériel — " + MagicMaterialRules::displayName(id) + " [" + MagicMaterialRules::qualityLabel(id, quality) + "]",
+                            sacrificeHint,
+                            true,
+                            "magic_material_sacrifice"
+                        });
+                        materialChoices.push_back({id, quality, true});
+                    }
+                }
+            }
+
+            const int pureOption = optionNumber;
+            options.push_back({
+                pureOption,
+                "Forcer sans matériau",
+                "Préserve l'inventaire, mais bascule sur l'incantation pure de secours, plus coûteuse et moins stable.",
+                true,
+                "magic_material_fallback"
+            });
+
+            const int choice = askStructuredCombatChoice(
+                "SUPPORT DE CANALISATION",
+                "combat.magic.material.select",
+                lines,
+                options,
+                "Choisis un support affiché."
+            );
+
+            if (choice == pureOption)
+            {
+                return {"", "", false, false, true, {}};
+            }
+
+            const bool selectedRecipe = recipeOption > 0 && choice == recipeOption;
+            std::string selectedMaterial;
+            std::string selectedMaterialQuality;
+            bool selectedSacrifice = false;
+            std::vector<MagicMaterialRules::SpellMaterialSelectedRequirement> selectedRecipeMaterials;
+            std::vector<std::string> confirmLines;
+            if (selectedRecipe)
+            {
+                if (!askSpellMaterialRecipeQualities(player, spellName, selectedRecipeMaterials))
+                {
+                    continue;
+                }
+                confirmLines = MagicMaterialRules::formatSpellMaterialRecipeSelection(selectedRecipeMaterials, spellName);
+                const MagicMaterialRules::MaterialChannelingProfile profile = MagicMaterialRules::recipeChannelingProfileForSelection(selectedRecipeMaterials);
+                confirmLines.insert(confirmLines.begin(),
+                    "Profil : mana " + std::to_string(profile.manaPercent) + "% | stabilité +"
+                    + std::to_string(profile.stabilityBonus) + " | puissance +" + std::to_string(profile.powerBoostPercent) + "%.");
+                confirmLines.insert(confirmLines.begin(), "Cette recette sera engagée seulement si tu confirmes.");
+            }
+            else
+            {
+                const int materialIndex = choice - firstMaterialOption;
+                if (materialIndex < 0 || materialIndex >= static_cast<int>(materialChoices.size()))
+                {
+                    continue;
+                }
+                const MaterialMenuChoice& selected = materialChoices[static_cast<std::size_t>(materialIndex)];
+                selectedMaterial = selected.materialId;
+                selectedMaterialQuality = selected.materialQuality;
+                selectedSacrifice = selected.sacrificeMaterial;
+                const bool mineralFuel = MagicMaterialRules::isMineralFuelId(selectedMaterial);
+                confirmLines = {
+                    selectedSacrifice
+                        ? "Technique : Sacrifice matériel — " + MagicMaterialRules::qualityLabel(selectedMaterial, selectedMaterialQuality) + "."
+                        : "Support choisi : " + MagicMaterialRules::displayName(selectedMaterial) + ".",
+                    selectedSacrifice
+                        ? "Stock de cette qualité : x" + std::to_string(player.getInventory().countMaterialByIdAndQuality(selectedMaterial, selectedMaterialQuality))
+                        : MagicMaterialRules::formatMaterialUsePreviewForQuality(player.getInventory(), selectedMaterial, selectedMaterialQuality, mineralFuel),
+                    selectedSacrifice
+                        ? MagicMaterialRules::formatChannelingProfilePreviewForQuality(selectedMaterial, selectedMaterialQuality, true)
+                        : MagicMaterialRules::formatChannelingProfilePreviewForQuality(selectedMaterial, selectedMaterialQuality, false),
+                    selectedSacrifice
+                        ? "Cette unité précise sera détruite immédiatement après engagement du mana, même si la stabilité échoue ensuite."
+                        : (mineralFuel
+                            ? "Ce minerai perdra seulement un palier de qualité lors d'une canalisation normale."
+                            : "Une unité physique sera réellement consommée si la canalisation démarre.")
+                };
+            }
+
+            const int confirmation = askStructuredCombatChoice(
+                selectedSacrifice ? "CONFIRMER LE SACRIFICE" : "CONFIRMER LE SUPPORT",
+                selectedSacrifice ? "combat.magic.material.sacrifice_confirm" : "combat.magic.material.confirm",
+                confirmLines,
+                {
+                    {1, "Confirmer", "Le mana puis les ressources seront engagés au démarrage réel de la canalisation.", true, "confirm"},
+                    {2, "Choisir autre chose", "Retourner à la liste sans rien consommer.", true, "change"},
+                    {3, "Préserver les matériaux", "Forcer l'incantation pure de secours à la place.", true, "fallback"}
+                },
+                "Choisis 1, 2 ou 3."
+            );
+
+            if (confirmation == 2)
+            {
+                continue;
+            }
+            if (confirmation == 3)
+            {
+                return {"", "", false, false, true, {}};
+            }
+
+            if (selectedRecipe)
+            {
+                bool lockedIngredientRefused = false;
+                for (const MagicMaterialRules::SpellMaterialSelectedRequirement& requirement : selectedRecipeMaterials)
+                {
+                    if (player.getInventory().isLockedItemKey(Inventory::materialItemKeyById(requirement.materialId))
+                        && !confirmLockedCombatMaterialUse(player, requirement.materialId, MagicMaterialRules::displayName(requirement.materialId), "engager dans la recette de " + spellName))
+                    {
+                        lockedIngredientRefused = true;
+                        break;
+                    }
+                }
+                if (lockedIngredientRefused)
+                {
+                    continue;
+                }
+            }
+            else if (!selectedMaterial.empty()
+                && !confirmLockedCombatMaterialUse(player, selectedMaterial, MagicMaterialRules::displayName(selectedMaterial), selectedSacrifice ? "sacrifier" : "canaliser"))
+            {
+                continue;
+            }
+
+            if (selectedRecipe)
+            {
+                MaterialChannelingSelection result;
+                result.useRecipe = true;
+                result.recipeSelection = selectedRecipeMaterials;
+                return result;
+            }
+            return {selectedMaterial, selectedMaterialQuality, false, selectedSacrifice, false, {}};
+        }
+    }
+
+    bool resolveMagicCatalystAttempt(
+        Player* player,
+        const std::string& spellName,
+        Random& random,
+        int baseManaOverride = -1,
+        const std::string& elementKey = "",
+        bool interactiveMaterialChoice = true
+    )
     {
         if (player == nullptr)
         {
             return true;
         }
 
+        const std::string preferredStyle = player->getMagicChannelingStyleLabel();
+        std::string activeStyle = preferredStyle;
+        const int baseMana = baseManaOverride > 0 ? baseManaOverride : baseManaCostForSpell(spellName);
+        int manaCost = baseMana;
         int successChance = magicCatalystSuccessChance(*player);
-        const int manaCursePressure = player->getCursePressureForCategory("mana");
+        int pendingPowerBoostPercent = 0;
+        std::string materialToUse;
+        std::string materialQualityToUse;
+        bool materialUsesQualityFuel = false;
+        bool sacrificeMaterial = false;
+        bool useMaterialRecipe = false;
+        std::vector<MagicMaterialRules::SpellMaterialSelectedRequirement> selectedRecipeMaterials;
+        Weapon* catalystToWear = nullptr;
         std::vector<std::string> lines;
         lines.push_back("Sort : " + spellName);
-        if (manaCursePressure > 0 && random.between(1, 100) <= 10 + manaCursePressure * 4)
+
+        if (preferredStyle == "Minerais / matériaux")
         {
-            const int penalty = std::min(18, 4 + manaCursePressure * 2);
-            successChance = std::max(25, successChance - penalty);
-            if (player->getKnownCursePressureForCategory("mana") > 0)
+            MaterialChannelingSelection selection;
+            if (interactiveMaterialChoice)
             {
-                lines.push_back("La catégorie mana/magie déjà soupçonnée rend la canalisation plus capricieuse.");
+                const std::string materialPolicy = player->getMagicMaterialSelectionPolicy();
+                if (materialPolicy == "auto")
+                {
+                    const std::vector<std::string> availableIds = MagicMaterialRules::availableMaterialIds(player->getInventory(), elementKey);
+                    std::string automaticId;
+                    int bestRarity = 999;
+                    for (const std::string& id : availableIds)
+                    {
+                        const bool locked = player->getInventory().isLockedItemKey(Inventory::materialItemKeyById(id));
+                        if (!locked)
+                        {
+                            const int rarity = MagicMaterialRules::materialRarityTier(id);
+                            if (automaticId.empty() || rarity < bestRarity)
+                            {
+                                automaticId = id;
+                                bestRarity = rarity;
+                            }
+                        }
+                    }
+                    if (!automaticId.empty())
+                    {
+                        const std::string automaticQuality = MagicMaterialRules::nextMaterialQuality(player->getInventory(), automaticId);
+                        if (confirmLockedCombatMaterialUse(*player, automaticId, MagicMaterialRules::displayName(automaticId), "canaliser le sort " + spellName))
+                        {
+                            selection.materialId = automaticId;
+                            selection.materialQuality = automaticQuality;
+                        }
+                        else
+                        {
+                            selection = askMaterialChannelingSelection(*player, spellName, elementKey);
+                        }
+                    }
+                    else
+                    {
+                        selection = askMaterialChannelingSelection(*player, spellName, elementKey);
+                    }
+                }
+                else
+                {
+                    selection = askMaterialChannelingSelection(*player, spellName, elementKey);
+                }
             }
             else
             {
-                lines.push_back("Quelque chose tire dans le flux magique sans se nommer clairement.");
+                selection.materialId = MagicMaterialRules::findFirstAvailableMaterialId(player->getInventory(), elementKey);
+                selection.materialQuality = selection.materialId.empty() ? "" : MagicMaterialRules::nextMaterialQuality(player->getInventory(), selection.materialId);
+                selection.forcePureIncantation = selection.materialId.empty();
+            }
+
+            if (selection.forcePureIncantation)
+            {
+                activeStyle = "Incantation pure (secours)";
+                manaCost = std::max(1, baseMana * 125 / 100);
+                successChance = std::max(30, successChance - 8);
+                lines.push_back("Aucun matériau n'est engagé : la formule est forcée par incantation pure.");
+            }
+            else if (selection.useRecipe)
+            {
+                selectedRecipeMaterials = selection.recipeSelection;
+                const MagicMaterialRules::MaterialChannelingProfile profile = MagicMaterialRules::recipeChannelingProfileForSelection(selectedRecipeMaterials);
+                manaCost = std::max(2, baseMana * profile.manaPercent / 100);
+                useMaterialRecipe = true;
+                successChance = std::min(97, successChance + profile.stabilityBonus);
+                pendingPowerBoostPercent = profile.powerBoostPercent;
+                lines.push_back("Voie : minerais / matériaux. La recette physique dédiée est préparée.");
+                lines.push_back("Qualité combinée : mana " + std::to_string(profile.manaPercent) + "% | stabilité +"
+                    + std::to_string(profile.stabilityBonus) + " | puissance +" + std::to_string(profile.powerBoostPercent) + "%.");
+                const std::vector<std::string> recipeLines = MagicMaterialRules::formatSpellMaterialRecipeSelection(selectedRecipeMaterials, spellName);
+                lines.insert(lines.end(), recipeLines.begin(), recipeLines.end());
+            }
+            else if (!selection.materialId.empty())
+            {
+                materialToUse = selection.materialId;
+                materialQualityToUse = selection.materialQuality;
+                sacrificeMaterial = selection.sacrificeMaterial;
+                materialUsesQualityFuel = MagicMaterialRules::isMineralFuelId(materialToUse);
+                const MagicMaterialRules::MaterialChannelingProfile profile = !materialQualityToUse.empty()
+                    ? MagicMaterialRules::channelingProfileForQuality(materialToUse, materialQualityToUse, sacrificeMaterial)
+                    : MagicMaterialRules::channelingProfile(player->getInventory(), materialToUse, sacrificeMaterial);
+                manaCost = std::max(2, baseMana * profile.manaPercent / 100);
+                successChance = std::min(97, successChance + profile.stabilityBonus);
+                pendingPowerBoostPercent = profile.powerBoostPercent;
+
+                if (sacrificeMaterial)
+                {
+                    activeStyle = "Sacrifice matériel";
+                    lines.push_back("Technique : Sacrifice matériel. Toute la qualité restante d'une unité est convertie en puissance immédiate.");
+                    lines.push_back("Le coût en mana reste volontairement bien supérieur à une canalisation matérielle normale.");
+                }
+                else
+                {
+                    lines.push_back("Voie : minerais / matériaux. Un support physique réel allège fortement la dépense de mana.");
+                }
+
+                lines.push_back("Profil du support : rareté " + MagicMaterialRules::materialRarityLabel(materialToUse)
+                    + " | mana " + std::to_string(profile.manaPercent) + "% | stabilité +"
+                    + std::to_string(profile.stabilityBonus) + " | puissance +" + std::to_string(profile.powerBoostPercent) + "%.");
+
+                if (!elementKey.empty() && MagicMaterialRules::materialSupportsElement(materialToUse, elementKey))
+                {
+                    lines.push_back("Accord élémentaire : " + MagicMaterialRules::elementDisplayName(elementKey) + ".");
+                }
+                if (sacrificeMaterial)
+                {
+                    lines.push_back("Support sacrifié : " + MagicMaterialRules::displayName(materialToUse)
+                        + " [" + MagicMaterialRules::qualityLabel(materialToUse, materialQualityToUse)
+                        + "]. L'unité entière sera détruite si la canalisation démarre.");
+                }
+                else if (materialUsesQualityFuel)
+                {
+                    lines.push_back("Carburant minéral préparé : " + MagicMaterialRules::displayName(materialToUse) + ". Sa qualité sera dégradée d'un palier au lieu de disparaître immédiatement.");
+                }
+                else
+                {
+                    lines.push_back("Composant préparé : " + MagicMaterialRules::displayName(materialToUse) + ".");
+                }
+            }
+            else
+            {
+                activeStyle = "Incantation pure (secours)";
+                manaCost = std::max(1, baseMana * 125 / 100);
+                successChance = std::max(30, successChance - 8);
+                lines.push_back("Aucun matériau magique adapté : la formule doit être forcée par incantation pure.");
             }
         }
-        lines.push_back("Stabilité du catalyseur : " + std::to_string(successChance) + "%.");
-
-        if (player->hasEquippedWeapon())
+        else if (preferredStyle == "Baguette / catalyseur")
         {
-            Weapon weapon = player->getEquippedWeapon();
-            if (weapon.getType() != WeaponType::Staff)
+            if (player->hasEquippedWeapon() && player->getEquippedWeapon().getType() == WeaponType::Staff)
             {
-                lines.push_back("L'arme équipée n'est pas un vrai catalyseur : la formule répond moins bien.");
-            }
-            else if (weapon.isBroken())
-            {
-                lines.push_back("Le catalyseur est brisé : la magie passe par des fissures dangereuses.");
-            }
-            else if (!weapon.isIndestructible() && weapon.getMaxDurability() > 0 && weapon.getDurability() * 100 / weapon.getMaxDurability() <= 30)
-            {
-                lines.push_back("Le catalyseur est presque épuisé : la réussite devient moins sûre.");
+                Weapon* catalyst = player->getInventory().getMutableWeapon(player->getEquippedWeaponIndex());
+                if (catalyst != nullptr && !catalyst->isBroken())
+                {
+                    manaCost = std::max(2, baseMana * 75 / 100);
+                    successChance = std::min(97, successChance + 5);
+                    catalystToWear = catalyst;
+                    lines.push_back("Voie : baguette / catalyseur. L'incantation part plus vite et coûte moins de mana.");
+                }
+                else
+                {
+                    activeStyle = "Incantation pure (catalyseur brisé)";
+                    manaCost = std::max(1, baseMana * 120 / 100);
+                    successChance = std::max(25, successChance - 25);
+                    lines.push_back("Le catalyseur est brisé : aucune réduction de mana ne s'applique et la formule doit être forcée directement.");
+                }
             }
             else
             {
-                lines.push_back("Le catalyseur répond correctement.");
+                activeStyle = "Incantation pure (sans catalyseur)";
+                manaCost = std::max(1, baseMana * 120 / 100);
+                successChance = std::max(30, successChance - 10);
+                lines.push_back("Aucun vrai catalyseur équipé : la formule est récitée directement, plus lentement et plus coûteusement.");
             }
         }
         else
         {
-            lines.push_back("Aucun catalyseur équipé : le sort est forcé à mains nues.");
+            activeStyle = "Incantation pure";
+            manaCost = std::max(2, baseMana * 120 / 100);
+            successChance = std::min(96, successChance + 2);
+            lines.push_back("Voie : incantation pure. Aucun support n'est requis, mais la formule est plus longue et plus gourmande.");
+            lines.push_back("La puissance brute est légèrement supérieure si le sort se stabilise.");
         }
 
+        const int manaCursePressure = player->getCursePressureForCategory("mana");
+        if (manaCursePressure > 0 && random.between(1, 100) <= 10 + manaCursePressure * 4)
+        {
+            const int penalty = std::min(18, 4 + manaCursePressure * 2);
+            successChance = std::max(25, successChance - penalty);
+            lines.push_back(player->getKnownCursePressureForCategory("mana") > 0
+                ? "La perturbation de mana déjà soupçonnée rend la canalisation plus capricieuse."
+                : "Quelque chose tire dans le flux magique sans se nommer clairement.");
+        }
+
+        lines.push_back("Canalisation : " + activeStyle + ".");
+        lines.push_back("Coût : " + std::to_string(manaCost) + " mana | Réserve avant sort : "
+            + std::to_string(player->getMana()) + "/" + std::to_string(player->getMaxMana()) + ".");
+
+        if (!player->spendMana(manaCost))
+        {
+            lines.push_back("La réserve est insuffisante : le sort ne peut pas être formé.");
+            lines.push_back("Aucun composant ni point de durabilité n'est consommé tant que la canalisation ne démarre pas.");
+            showCombatActionMessage("MANA INSUFFISANT", "combat.magic.mana.insufficient", lines, false);
+            return false;
+        }
+
+        if (useMaterialRecipe && !player->hasInfiniteConsumables())
+        {
+            std::vector<std::string> recipeResultLines;
+            if (!MagicMaterialRules::consumeSpellMaterialRecipeSelection(player->getInventory(), selectedRecipeMaterials, recipeResultLines))
+            {
+                // The confirmation path checks this before mana is spent. Reaching this case means the
+                // inventory changed unexpectedly between selection and channeling, so refund the mana.
+                player->restoreMana(manaCost);
+                lines.push_back("La recette n'est plus complète au moment de la canalisation : le mana engagé est rendu et rien n'est lancé.");
+                showCombatActionMessage("RECETTE INCOMPLÈTE", "combat.magic.material.recipe_missing", lines, false);
+                return false;
+            }
+            lines.insert(lines.end(), recipeResultLines.begin(), recipeResultLines.end());
+        }
+
+        if (!materialToUse.empty() && !player->hasInfiniteConsumables())
+        {
+            if (sacrificeMaterial)
+            {
+                if (!player->getInventory().removeMaterialQuantityByIdAndQuality(materialToUse, materialQualityToUse, 1))
+                {
+                    player->restoreMana(manaCost);
+                    lines.push_back("Le matériau de la qualité choisie n'est plus disponible : le mana engagé est rendu.");
+                    showCombatActionMessage("SACRIFICE ANNULÉ", "combat.magic.material.sacrifice_missing", lines, false);
+                    return false;
+                }
+                lines.push_back(
+                    "Sacrifice matériel : " + MagicMaterialRules::displayName(materialToUse)
+                    + " [" + MagicMaterialRules::qualityLabel(materialToUse, materialQualityToUse)
+                    + "] est entièrement dissous en une seule poussée."
+                );
+            }
+            else if (materialUsesQualityFuel)
+            {
+                std::string previousQuality;
+                std::string resultingQuality;
+                bool dissolved = false;
+                const bool degraded = !materialQualityToUse.empty()
+                    ? player->getInventory().degradeMaterialQualityByIdAndQuality(materialToUse, materialQualityToUse, previousQuality, resultingQuality, dissolved)
+                    : player->getInventory().degradeMaterialQualityById(materialToUse, previousQuality, resultingQuality, dissolved);
+                if (degraded)
+                {
+                    if (dissolved)
+                    {
+                        lines.push_back(
+                            MagicMaterialRules::displayName(materialToUse)
+                            + " était déjà à sa qualité minimale : le minerai se dissout complètement dans la canalisation."
+                        );
+                    }
+                    else
+                    {
+                        lines.push_back(
+                            MagicMaterialRules::displayName(materialToUse)
+                            + " perd un palier de qualité : "
+                            + MagicMaterialRules::qualityLabel(materialToUse, previousQuality)
+                            + " -> "
+                            + MagicMaterialRules::qualityLabel(materialToUse, resultingQuality)
+                            + "."
+                        );
+                    }
+                }
+            }
+            else
+            {
+                const bool consumed = !materialQualityToUse.empty()
+                    ? player->getInventory().removeMaterialQuantityByIdAndQuality(materialToUse, materialQualityToUse, 1)
+                    : player->getInventory().removeMaterialQuantityById(materialToUse, 1);
+                if (consumed)
+                {
+                    lines.push_back("Le composant de qualité " + MagicMaterialRules::qualityLabel(materialToUse, materialQualityToUse) + " est consommé par la canalisation.");
+                }
+            }
+        }
+
+        if (catalystToWear != nullptr
+            && !player->hasIndestructibleEquipment()
+            && !catalystToWear->isIndestructible())
+        {
+            catalystToWear->loseDurability(1);
+            lines.push_back("Le catalyseur perd 1 point de durabilité.");
+        }
+
+        lines.push_back("Stabilité : " + std::to_string(successChance) + "%.");
         const bool success = random.between(1, 100) <= successChance;
-        lines.push_back(success ? "Le flux se stabilise." : "Le flux se casse avant de former le sort. Rien ne se stabilise.");
+        lines.push_back(success ? "Le flux se stabilise." : "Le flux se casse avant de former le sort.");
+
+        if (success)
+        {
+            if (activeStyle.find("Incantation pure") != std::string::npos)
+            {
+                player->applyPowerBoost(1, 10);
+            }
+            else if (pendingPowerBoostPercent > 0)
+            {
+                player->applyPowerBoost(1, pendingPowerBoostPercent);
+                lines.push_back("Puissance canalisée : prochain impact magique +" + std::to_string(pendingPowerBoostPercent) + "%.");
+            }
+        }
+
+        if (player->getMana() == 0)
+        {
+            const int faintRoll = random.between(1, 100);
+            if (faintRoll <= 75)
+            {
+                const int faintTurns = random.between(1, 100) <= 22 ? 2 : 1;
+                player->applyManaExhaustion(faintTurns);
+                lines.push_back("La dernière goutte de mana disparaît. Les jambes lâchent : malaise pendant " + std::to_string(faintTurns) + " tour(s).");
+            }
+            else
+            {
+                lines.push_back("La réserve tombe exactement à zéro. Le corps vacille, mais tient encore debout cette fois.");
+            }
+        }
 
         showCombatActionMessage(
             success ? "CANALISATION RÉUSSIE" : "CANALISATION INSTABLE",
-            success ? "combat.magic.catalyst.success" : "combat.magic.catalyst.failure",
+            success ? "combat.magic.channel.success" : "combat.magic.channel.failure",
             lines,
             false
         );
@@ -376,13 +1132,64 @@ namespace
             return;
         }
 
+        const std::string ammunitionPolicy = player->getAmmunitionSelectionPolicy();
+        if (ammunitionPolicy == "favorite" || ammunitionPolicy == "auto")
+        {
+            int automaticIndex = -1;
+            for (std::size_t i = 0; i < choices.size(); ++i)
+            {
+                const AmmunitionChoice& candidate = choices[i];
+                if (candidate.count <= 0) continue;
+                const bool favorite = player->getInventory().isFavoriteAmmunitionId(candidate.id);
+                const bool locked = player->getInventory().isLockedItemKey(Inventory::materialItemKeyById(candidate.id));
+                if (ammunitionPolicy == "favorite")
+                {
+                    if (favorite) { automaticIndex = static_cast<int>(i); break; }
+                }
+                else if (!locked)
+                {
+                    // Choices are ordered with the basic/standard ammunition first.
+                    automaticIndex = static_cast<int>(i);
+                    break;
+                }
+            }
+
+            if (automaticIndex >= 0)
+            {
+                const AmmunitionChoice& selected = choices[static_cast<std::size_t>(automaticIndex)];
+                if (confirmLockedCombatMaterialUse(*player, selected.id, selected.label, "utiliser comme munition"))
+                {
+                    player->setNextAmmunitionChoice(selected.id);
+                    showCombatActionMessage(
+                        ammunitionPolicy == "favorite" ? "MUNITION FAVORITE" : "MUNITION AUTOMATIQUE",
+                        ammunitionPolicy == "favorite" ? "combat.ammunition.favorite" : "combat.ammunition.auto",
+                        {
+                            "Munition : " + selected.label,
+                            "Quantité en réserve : " + std::to_string(selected.count),
+                            ammunitionPolicy == "favorite"
+                                ? "Préférence : favori disponible. Tu peux remettre Toujours demander dans l'inventaire."
+                                : "Préférence : automatique prudent. Les munitions standard sont prioritaires."
+                        },
+                        false
+                    );
+                    return;
+                }
+            }
+            // No valid favourite, or a protected automatic choice was refused: fall back to explicit asking.
+        }
+
         std::vector<CombatOptionSpec> optionSpecs;
         optionSpecs.push_back({0, "Annuler", "Ne dépense aucune munition.", true, "cancel"});
         for (std::size_t i = 0; i < choices.size(); ++i)
         {
             const AmmunitionChoice& choice = choices[i];
-            std::string label = choice.label + " x" + std::to_string(choice.count);
+            const std::string choiceKey = Inventory::materialItemKeyById(choice.id);
+            const bool favorite = player->getInventory().isFavoriteAmmunitionId(choice.id);
+            const bool locked = player->getInventory().isLockedItemKey(choiceKey);
+            std::string label = (favorite ? "[FAVORI] " : "") + std::string(locked ? "[VERROUILLÉ] " : "") + choice.label + " x" + std::to_string(choice.count);
             std::string hint = choice.special ? "Munition spéciale." : "Munition standard.";
+            if (favorite) hint += " Favori.";
+            if (locked) hint += " Confirmation supplémentaire obligatoire.";
             if (choice.count <= 0)
             {
                 hint += " Indisponible.";
@@ -427,6 +1234,13 @@ namespace
             return;
         }
 
+        if (!confirmLockedCombatMaterialUse(*player, selected.id, selected.label, "utiliser comme munition"))
+        {
+            player->setNextAmmunitionChoice("__cancel_attack__");
+            showCombatActionMessage("TIR ANNULÉ", "combat.ammunition.lock_cancelled", {"La munition verrouillée est conservée.", "Le tir est annulé."}, false);
+            return;
+        }
+
         player->setNextAmmunitionChoice(selected.id);
         showCombatActionMessage(
             "MUNITION CHOISIE",
@@ -462,6 +1276,11 @@ void CombatActions::executeBoostedAttack(
     int damageBonus
 )
 {
+    if (consumePendingDivineExecution(attacker, defender))
+    {
+        return;
+    }
+
     askAmmunitionChoiceIfNeeded(attacker);
 
     CombatAttack::executeBoostedAttack(
@@ -470,6 +1289,56 @@ void CombatActions::executeBoostedAttack(
         random,
         damageBonus
     );
+}
+
+
+bool CombatActions::prepareMagicTechnique(
+    Player& player,
+    const std::string& techniqueName,
+    Random& random,
+    int baseManaCost
+)
+{
+    return resolveMagicCatalystAttempt(
+        &player,
+        techniqueName,
+        random,
+        std::max(1, baseManaCost),
+        "",
+        false
+    );
+}
+
+
+bool CombatActions::prepareMagicTechniqueInteractive(
+    Player& player,
+    const std::string& techniqueName,
+    Random& random,
+    int baseManaCost
+)
+{
+    return resolveMagicCatalystAttempt(
+        &player,
+        techniqueName,
+        random,
+        std::max(1, baseManaCost),
+        magicTechniqueElementForPlayer(player),
+        true
+    );
+}
+
+
+bool CombatActions::hasCompatibleAmmunition(const Player& player)
+{
+    if (!playerUsesChoiceBasedAmmunition(player))
+    {
+        return true;
+    }
+
+    const std::vector<AmmunitionChoice> choices = buildAmmunitionChoices(player);
+    return std::any_of(choices.begin(), choices.end(), [](const AmmunitionChoice& choice) {
+        return choice.count > 0;
+    });
 }
 
 
@@ -930,16 +1799,16 @@ bool CombatActions::executeClassSkill(
         }
     }
 
-    if (hasAny({"voleur", "roublard", "brigand"}) && level >= 5)
+    if (hasAny({"voleur", "roublard", "brigand"}) && level >= TechniqueProgressionRules::classTechniqueUnlockLevel("opportunist_hit"))
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE VOLEUR",
             "combat.class_skill.thief",
             {attacker.getName() + " cherche une ouverture sale, pratique ou simplement rentable."},
             {
-                {1, "Coup opportuniste", "Niv. 5, recharge 3 tours. Vulnérabilité courte.", true, "opportunist_hit"},
-                {2, "Poudre d'échappée", "Niv. 10, recharge 4 tours. Défense + affaiblissement.", level >= 10, "escape_powder"},
-                {3, "Frappe aux poches", "Niv. 15, recharge 5 tours. Blessure + gêne durable.", level >= 15, "pocket_strike"},
+                {1, "Coup opportuniste", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("opportunist_hit")) + ", recharge 3 tours. Vulnérabilité courte.", true, "opportunist_hit"},
+                {2, "Poudre d'échappée", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("escape_powder")) + ", recharge 4 tours. Défense + affaiblissement.", level >= TechniqueProgressionRules::classTechniqueUnlockLevel("escape_powder"), "escape_powder"},
+                {3, "Frappe aux poches", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("pocket_strike")) + ", recharge 5 tours. Blessure + gêne durable.", level >= TechniqueProgressionRules::classTechniqueUnlockLevel("pocket_strike"), "pocket_strike"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -993,15 +1862,15 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"assassin", "ombrelame", "lanceur de dagues"}) && level >= 5)
+    if (hasAny({"assassin", "ombrelame", "lanceur de dagues"}) && level >= TechniqueProgressionRules::classTechniqueUnlockLevel("shadow_step"))
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE ASSASSIN",
             "combat.class_skill.assassin",
             {attacker.getName() + " cherche une ouverture d'assassin."},
             {
-                {1, "Pas dans l'angle mort", "Niv. 5, recharge 3 tours. Saignement préparé.", true, "shadow_step"},
-                {2, "Disparition basse", "Niv. 12, recharge 4 tours. Défense + blessure longue.", level >= 12, "low_disappearance"},
+                {1, "Pas dans l'angle mort", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("shadow_step")) + ", recharge 3 tours. Saignement préparé.", true, "shadow_step"},
+                {2, "Disparition basse", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("low_disappearance")) + ", recharge 4 tours. Défense + blessure longue.", level >= TechniqueProgressionRules::classTechniqueUnlockLevel("low_disappearance"), "low_disappearance"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1031,15 +1900,15 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"gardien", "tank", "colosse"}) && level >= 5)
+    if (hasAny({"gardien", "tank", "colosse"}) && level >= TechniqueProgressionRules::classTechniqueUnlockLevel("taunting_wall"))
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE DÉFENSIVE",
             "combat.class_skill.defense",
             {attacker.getName() + " choisit une posture de protection."},
             {
-                {1, "Rempart provoquant", "Niv. 5, recharge 3 tours. Défense et menace.", true, "taunting_wall"},
-                {2, "Ancrage total", "Niv. 12, recharge 4 tours. Défense très forte.", level >= 12, "total_anchor"},
+                {1, "Rempart provoquant", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("taunting_wall")) + ", recharge 3 tours. Défense et menace.", true, "taunting_wall"},
+                {2, "Ancrage total", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("total_anchor")) + ", recharge 4 tours. Défense très forte.", level >= TechniqueProgressionRules::classTechniqueUnlockLevel("total_anchor"), "total_anchor"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1068,15 +1937,15 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"clerc", "prêtre", "pretre", "paladin"}) && level >= 5)
+    if (hasAny({"clerc", "prêtre", "pretre", "paladin"}) && level >= TechniqueProgressionRules::classTechniqueUnlockLevel("survival_oath"))
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE SACRÉE",
             "combat.class_skill.sacred",
             {attacker.getName() + " rassemble une énergie protectrice."},
             {
-                {1, "Serment de survie", "Niv. 5, recharge 3 tours. Soin personnel + garde légère.", true, "survival_oath"},
-                {2, "Prière purificatrice", "Niv. 10, recharge 5 tours. Soin + purification.", level >= 10, "purifying_prayer"},
+                {1, "Serment de survie", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("survival_oath")) + ", recharge 3 tours. Soin personnel + garde légère.", true, "survival_oath"},
+                {2, "Prière purificatrice", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("purifying_prayer")) + ", recharge 5 tours. Soin + purification.", level >= TechniqueProgressionRules::classTechniqueUnlockLevel("purifying_prayer"), "purifying_prayer"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1130,23 +1999,34 @@ bool CombatActions::executeClassSkill(
     }
 
     if (hasAny({"mage", "magicien", "ensorceleur", "sorcier", "arcaniste", "pyromancien", "cryomancien", "occultiste", "invocateur", "nécromancien", "necromancien", "pactisant", "clerc", "prêtre", "pretre", "paladin", "druide", "shaman", "templier", "mage-lame", "chevalier runique"})
-        && (level >= 5
-            || (player != nullptr && (player->hasActiveSkill("learned_arcane_mark")
-                || player->hasActiveSkill("learned_arcane_binding")
-                || player->hasActiveSkill("learned_elemental_ward")
-                || player->hasActiveSkill("learned_resistance_rift")
-                || player->hasActiveSkill("learned_frost_needle")
-                || player->hasActiveSkill("learned_mana_suture")
-                || player->hasActiveSkill("learned_occult_bramble")))))
+        && (level >= TechniqueProgressionRules::classTechniqueUnlockLevel("arcane_mark")
+            || (player != nullptr && ((player->hasActiveSkill("learned_arcane_mark") && level >= TechniqueProgressionRules::magicStudyUnlockLevel("learned_arcane_mark"))
+                || (player->hasActiveSkill("learned_arcane_binding") && level >= TechniqueProgressionRules::magicStudyUnlockLevel("learned_arcane_binding"))
+                || (player->hasActiveSkill("learned_elemental_ward") && level >= TechniqueProgressionRules::magicStudyUnlockLevel("learned_elemental_ward"))
+                || (player->hasActiveSkill("learned_resistance_rift") && level >= TechniqueProgressionRules::magicStudyUnlockLevel("learned_resistance_rift"))
+                || (player->hasActiveSkill("learned_frost_needle") && level >= TechniqueProgressionRules::magicStudyUnlockLevel("learned_frost_needle"))
+                || (player->hasActiveSkill("learned_mana_suture") && level >= TechniqueProgressionRules::magicStudyUnlockLevel("learned_mana_suture"))
+                || (player->hasActiveSkill("learned_occult_bramble") && level >= TechniqueProgressionRules::magicStudyUnlockLevel("learned_occult_bramble"))))))
     {
-        bool canArcaneMark = level >= 5 || (player != nullptr && player->hasActiveSkill("learned_arcane_mark"));
-        bool canArcaneBinding = level >= 8 || (player != nullptr && player->hasActiveSkill("learned_arcane_binding"));
-        bool canElementalWard = level >= 11 || (player != nullptr && player->hasActiveSkill("learned_elemental_ward"));
-        bool canControlledOverload = level >= 14;
-        bool canResistanceRift = level >= 17 || (player != nullptr && player->hasActiveSkill("learned_resistance_rift"));
-        bool canFrostNeedle = player != nullptr && player->hasActiveSkill("learned_frost_needle");
-        bool canManaSuture = player != nullptr && player->hasActiveSkill("learned_mana_suture");
-        bool canOccultBramble = player != nullptr && player->hasActiveSkill("learned_occult_bramble");
+        auto startMagicCooldown = [&](int baseTurns) {
+            const int adjustment = player != nullptr ? player->getMagicRecoveryAdjustment() : 0;
+            startCooldown(std::max(2, baseTurns + adjustment));
+        };
+
+        auto learnedAtRequiredLevel = [&](const std::string& skillId) {
+            return player != nullptr
+                && player->hasActiveSkill(skillId)
+                && level >= TechniqueProgressionRules::magicStudyUnlockLevel(skillId);
+        };
+
+        bool canArcaneMark = level >= TechniqueProgressionRules::classTechniqueUnlockLevel("arcane_mark") || learnedAtRequiredLevel("learned_arcane_mark");
+        bool canArcaneBinding = level >= TechniqueProgressionRules::classTechniqueUnlockLevel("arcane_binding") || learnedAtRequiredLevel("learned_arcane_binding");
+        bool canElementalWard = level >= TechniqueProgressionRules::classTechniqueUnlockLevel("elemental_ward") || learnedAtRequiredLevel("learned_elemental_ward");
+        bool canControlledOverload = level >= TechniqueProgressionRules::classTechniqueUnlockLevel("controlled_overload");
+        bool canResistanceRift = level >= TechniqueProgressionRules::classTechniqueUnlockLevel("resistance_rift") || learnedAtRequiredLevel("learned_resistance_rift");
+        bool canFrostNeedle = learnedAtRequiredLevel("learned_frost_needle");
+        bool canManaSuture = learnedAtRequiredLevel("learned_mana_suture");
+        bool canOccultBramble = learnedAtRequiredLevel("learned_occult_bramble");
 
         int skillChoice = askStructuredCombatChoice(
             "COMPÉTENCE ARCANIQUE",
@@ -1156,14 +2036,14 @@ bool CombatActions::executeClassSkill(
                 "Les sorts non compris restent visibles mais verrouillés."
             },
             {
-                {1, "Marque élémentaire", "Niv. 5 ou grimoire, recharge 3 tours.", canArcaneMark, "arcane_mark"},
-                {2, "Entrave arcanique", "Niv. 8 ou grimoire, recharge 4 tours.", canArcaneBinding, "arcane_binding"},
-                {3, "Voile élémentaire", "Niv. 11 ou grimoire, recharge 4 tours.", canElementalWard, "elemental_ward"},
-                {4, "Surcharge contrôlée", "Niv. 14, recharge 5 tours.", canControlledOverload, "controlled_overload"},
-                {5, "Faille de résistance", "Niv. 17 ou grimoire, recharge 5 tours.", canResistanceRift, "resistance_rift"},
-                {6, "Aiguille de givre étudiée", "Grimoire, recharge 4 tours.", canFrostNeedle, "frost_needle"},
-                {7, "Suture de mana étudiée", "Grimoire, recharge 5 tours.", canManaSuture, "mana_suture"},
-                {8, "Ronces occultes étudiées", "Grimoire, recharge 4 tours.", canOccultBramble, "occult_bramble"},
+                {1, "Marque élémentaire", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("arcane_mark")) + " ou grimoire dès niv. " + std::to_string(TechniqueProgressionRules::magicStudyUnlockLevel("learned_arcane_mark")) + ", recharge 3 tours.", canArcaneMark, "arcane_mark"},
+                {2, "Entrave arcanique", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("arcane_binding")) + " ou grimoire dès niv. " + std::to_string(TechniqueProgressionRules::magicStudyUnlockLevel("learned_arcane_binding")) + ", recharge 4 tours.", canArcaneBinding, "arcane_binding"},
+                {3, "Voile élémentaire", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("elemental_ward")) + " ou grimoire dès niv. " + std::to_string(TechniqueProgressionRules::magicStudyUnlockLevel("learned_elemental_ward")) + ", recharge 4 tours.", canElementalWard, "elemental_ward"},
+                {4, "Surcharge contrôlée", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("controlled_overload")) + ", recharge 5 tours.", canControlledOverload, "controlled_overload"},
+                {5, "Faille de résistance", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("resistance_rift")) + " ou grimoire dès niv. " + std::to_string(TechniqueProgressionRules::magicStudyUnlockLevel("learned_resistance_rift")) + ", recharge 5 tours.", canResistanceRift, "resistance_rift"},
+                {6, "Aiguille de givre étudiée", "Grimoire, niv. " + std::to_string(TechniqueProgressionRules::magicStudyUnlockLevel("learned_frost_needle")) + ", recharge 4 tours.", canFrostNeedle, "frost_needle"},
+                {7, "Suture de mana étudiée", "Grimoire, niv. " + std::to_string(TechniqueProgressionRules::magicStudyUnlockLevel("learned_mana_suture")) + ", recharge 5 tours.", canManaSuture, "mana_suture"},
+                {8, "Ronces occultes étudiées", "Grimoire, niv. " + std::to_string(TechniqueProgressionRules::magicStudyUnlockLevel("learned_occult_bramble")) + ", recharge 4 tours.", canOccultBramble, "occult_bramble"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1176,9 +2056,9 @@ bool CombatActions::executeClassSkill(
                 "combat.class_skill.arcane.dark_roots.result",
                 {"Ce grimoire ne lance pas une boule d'énergie : il force des liens sombres à sortir du sol autour de la cible."}
             );
-            if (!resolveMagicCatalystAttempt(player, "Ronces occultes", random))
+            if (!resolveMagicCatalystAttempt(player, "Ronces occultes", random, -1, "terre"))
             {
-                startCooldown(2);
+                startMagicCooldown(2);
                 return true;
             }
             defender.applyWeakening(3, 12 + level / 10);
@@ -1194,7 +2074,7 @@ bool CombatActions::executeClassSkill(
                 );
             }
             executeBoostedAttack(attacker, defender, random, 1 + level / 28);
-            startCooldown(4);
+            startMagicCooldown(4);
             return true;
         }
 
@@ -1205,9 +2085,9 @@ bool CombatActions::executeClassSkill(
                 "combat.class_skill.arcane.mana_suture.result",
                 {"Ce sort vient d'un grimoire : il ne soigne pas d'un coup, il referme lentement les blessures."}
             );
-            if (!resolveMagicCatalystAttempt(player, "Suture de mana", random))
+            if (!resolveMagicCatalystAttempt(player, "Suture de mana", random, -1, "arcanique"))
             {
-                startCooldown(2);
+                startMagicCooldown(2);
                 return true;
             }
             int healPerTurn = std::max(4, attacker.getMaxHp() / 18 + level / 8);
@@ -1219,7 +2099,7 @@ bool CombatActions::executeClassSkill(
                 {"La suture commence à se refermer autour des plaies."},
                 false
             );
-            startCooldown(5);
+            startMagicCooldown(5);
             return true;
         }
 
@@ -1230,9 +2110,9 @@ bool CombatActions::executeClassSkill(
                 "combat.class_skill.arcane.frost_needle.result",
                 {"Ce sort vient d'un grimoire précis : il n'a pas encore de parchemin courant fiable."}
             );
-            if (!resolveMagicCatalystAttempt(player, "Aiguille de givre", random))
+            if (!resolveMagicCatalystAttempt(player, "Aiguille de givre", random, -1, "froid"))
             {
-                startCooldown(2);
+                startMagicCooldown(2);
                 return true;
             }
             ElementalAffinitySystem::applyFrost(defender, 3);
@@ -1247,7 +2127,7 @@ bool CombatActions::executeClassSkill(
                 );
             }
             executeBoostedAttack(attacker, defender, random, 2 + level / 26);
-            startCooldown(4);
+            startMagicCooldown(4);
             return true;
         }
 
@@ -1266,9 +2146,10 @@ bool CombatActions::executeClassSkill(
                     {3, "Faille conductrice", "Brèche vulnérable au choc.", true, "shock_rift"}
                 }
             );
-            if (!resolveMagicCatalystAttempt(player, "Faille de résistance", random))
+            const std::string riftElement = choice == 1 ? "feu" : (choice == 2 ? "froid" : "foudre");
+            if (!resolveMagicCatalystAttempt(player, "Faille de résistance", random, -1, riftElement))
             {
-                startCooldown(2);
+                startMagicCooldown(2);
                 return true;
             }
             defender.applyVulnerability(3, 16 + level / 10);
@@ -1276,7 +2157,7 @@ bool CombatActions::executeClassSkill(
             else if (choice == 2) ElementalAffinitySystem::applyFrost(defender, 3);
             else ElementalAffinitySystem::applyShock(defender, 2);
             executeBoostedAttack(attacker, defender, random, 3 + level / 24);
-            startCooldown(5);
+            startMagicCooldown(5);
             return true;
         }
 
@@ -1293,9 +2174,10 @@ bool CombatActions::executeClassSkill(
                     {4, "Poison concentré", "Venin arcanique.", true, "poison_overload"}
                 }
             );
-            if (!resolveMagicCatalystAttempt(player, "Surcharge contrôlée", random))
+            const std::string overloadElement = choice == 1 ? "feu" : (choice == 2 ? "froid" : (choice == 3 ? "foudre" : "arcanique"));
+            if (!resolveMagicCatalystAttempt(player, "Surcharge contrôlée", random, -1, overloadElement))
             {
-                startCooldown(2);
+                startMagicCooldown(2);
                 return true;
             }
             if (choice == 1) ElementalAffinitySystem::applyBurning(defender, 4, 3 + level / 16);
@@ -1303,7 +2185,7 @@ bool CombatActions::executeClassSkill(
             else if (choice == 3) ElementalAffinitySystem::applyShock(defender, 3);
             else ElementalAffinitySystem::applyPoison(defender, 4, 3 + level / 18);
             executeBoostedAttack(attacker, defender, random, 4 + level / 22);
-            startCooldown(5);
+            startMagicCooldown(5);
             return true;
         }
 
@@ -1314,14 +2196,14 @@ bool CombatActions::executeClassSkill(
                 "combat.class_skill.arcane.elemental_veil.result",
                 {"Tu replies la magie contre toi plutôt que de la projeter : les altérations élémentaires auront plus de mal à s'accrocher."}
             );
-            if (!resolveMagicCatalystAttempt(player, "Voile élémentaire", random))
+            if (!resolveMagicCatalystAttempt(player, "Voile élémentaire", random, -1, "arcanique"))
             {
-                startCooldown(2);
+                startMagicCooldown(2);
                 return true;
             }
             attacker.applyElementalWard(4, 18 + level / 8);
             attacker.startDefensePosture(8, 3, "Voile élémentaire");
-            startCooldown(4);
+            startMagicCooldown(4);
             return true;
         }
 
@@ -1332,9 +2214,9 @@ bool CombatActions::executeClassSkill(
                 "combat.class_skill.arcane.arcane_shackle.result",
                 {"La magie ne cherche pas seulement à brûler ou choquer : elle tire directement sur le souffle de la cible."}
             );
-            if (!resolveMagicCatalystAttempt(player, "Entrave arcanique", random))
+            if (!resolveMagicCatalystAttempt(player, "Entrave arcanique", random, -1, "arcanique"))
             {
-                startCooldown(2);
+                startMagicCooldown(2);
                 return true;
             }
             defender.applyWeakening(3, 14 + level / 8);
@@ -1350,7 +2232,7 @@ bool CombatActions::executeClassSkill(
             }
             /* Écran structuré déjà affiché. */
             executeBoostedAttack(attacker, defender, random, 2 + level / 28);
-            startCooldown(4);
+            startMagicCooldown(4);
             return true;
         }
 
@@ -1367,9 +2249,10 @@ bool CombatActions::executeClassSkill(
             }
         );
         if (choice == 0) return false;
-        if (!resolveMagicCatalystAttempt(player, "Marque élémentaire", random))
+        const std::string markElement = choice == 1 ? "feu" : (choice == 2 ? "froid" : (choice == 3 ? "foudre" : "arcanique"));
+        if (!resolveMagicCatalystAttempt(player, "Marque élémentaire", random, -1, markElement))
         {
-            startCooldown(2);
+            startMagicCooldown(2);
             return true;
         }
         std::string markNote;
@@ -1379,11 +2262,11 @@ bool CombatActions::executeClassSkill(
         else { ElementalAffinitySystem::applyPoison(defender, 3, 2 + level / 22); markNote = "Un venin arcanique faible entre dans la blessure."; }
         showCombatActionMessage("MARQUE ÉLÉMENTAIRE", "combat.class_skill.arcane.elemental_mark.result", {markNote}, false);
         executeBoostedAttack(attacker, defender, random, 1 + level / 30);
-        startCooldown(3);
+        startMagicCooldown(3);
         return true;
     }
 
-    if (hasAny({"archer", "rôdeur", "rodeur", "tireur"}) && level >= 5)
+    if (hasAny({"archer", "rôdeur", "rodeur", "tireur"}) && level >= TechniqueProgressionRules::classTechniqueUnlockLevel("cover_shot"))
     {
         if (!hasRangedWeapon())
         {
@@ -1401,8 +2284,8 @@ bool CombatActions::executeClassSkill(
             "combat.class_skill.ranged",
             {attacker.getName() + " prépare une technique à distance."},
             {
-                {1, "Tir de couverture", "Niv. 5, recharge 3 tours. Contrôle la cible.", true, "cover_shot"},
-                {2, "Tir d'arrêt", "Niv. 10, recharge 4 tours. Casse l'élan.", level >= 10, "stopping_shot"},
+                {1, "Tir de couverture", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("cover_shot")) + ", recharge 3 tours. Contrôle la cible.", true, "cover_shot"},
+                {2, "Tir d'arrêt", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("stopping_shot")) + ", recharge 4 tours. Casse l'élan.", level >= TechniqueProgressionRules::classTechniqueUnlockLevel("stopping_shot"), "stopping_shot"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1432,15 +2315,15 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"berserker", "barbare", "briseur"}) && level >= 5)
+    if (hasAny({"berserker", "barbare", "briseur"}) && level >= TechniqueProgressionRules::classTechniqueUnlockLevel("assumed_rage"))
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE BRUTALE",
             "combat.class_skill.brutal",
             {attacker.getName() + " canalise une violence directe."},
             {
-                {1, "Rage assumée", "Niv. 5, recharge 3 tours. Bonus de dégâts avec contrecoup.", true, "assumed_rage"},
-                {2, "Coup de rupture", "Niv. 10, recharge 4 tours. Frappe plus lourde et saignement.", level >= 10, "rupture_blow"},
+                {1, "Rage assumée", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("assumed_rage")) + ", recharge 3 tours. Bonus de dégâts avec contrecoup.", true, "assumed_rage"},
+                {2, "Coup de rupture", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("rupture_blow")) + ", recharge 4 tours. Frappe plus lourde et saignement.", level >= TechniqueProgressionRules::classTechniqueUnlockLevel("rupture_blow"), "rupture_blow"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1490,16 +2373,16 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"alchim", "artific", "bricoleur"}) && level >= 5)
+    if (hasAny({"alchim", "artific", "bricoleur"}) && level >= TechniqueProgressionRules::classTechniqueUnlockLevel("improvised_mix"))
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE EXPÉRIMENTALE",
             "combat.class_skill.experimental",
             {attacker.getName() + " choisit un procédé instable."},
             {
-                {1, "Mélange improvisé", "Niv. 5, recharge 3 tours. Effet aléatoire.", true, "improvised_mix"},
-                {2, "Fiole tactique", "Niv. 9, recharge 4 tours. Choix d'effet.", level >= 9, "tactical_vial"},
-                {3, "Poudre de fragilisation", "Niv. 13, recharge 5 tours. Vulnérabilité.", level >= 13, "fragility_powder"},
+                {1, "Mélange improvisé", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("improvised_mix")) + ", recharge 3 tours. Effet aléatoire.", true, "improvised_mix"},
+                {2, "Fiole tactique", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("tactical_vial")) + ", recharge 4 tours. Choix d'effet.", level >= TechniqueProgressionRules::classTechniqueUnlockLevel("tactical_vial"), "tactical_vial"},
+                {3, "Poudre de fragilisation", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("fragility_powder")) + ", recharge 5 tours. Vulnérabilité.", level >= TechniqueProgressionRules::classTechniqueUnlockLevel("fragility_powder"), "fragility_powder"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1554,15 +2437,15 @@ bool CombatActions::executeClassSkill(
         return true;
     }
 
-    if (hasAny({"invoc", "dresseur", "nécro", "necro"}) && level >= 6)
+    if (hasAny({"invoc", "dresseur", "nécro", "necro"}) && level >= TechniqueProgressionRules::classTechniqueUnlockLevel("spectral_order"))
     {
         int choice = askStructuredCombatChoice(
             "COMPÉTENCE D'APPEL",
             "combat.class_skill.call",
             {attacker.getName() + " appelle une pression de groupe."},
             {
-                {1, "Ordre spectral", "Niv. 6, recharge 3 tours. Appui invisible et froid.", true, "spectral_order"},
-                {2, "Lien de meute / ombre", "Niv. 12, recharge 4 tours. Pression renforcée.", level >= 12, "pack_shadow_link"},
+                {1, "Ordre spectral", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("spectral_order")) + ", recharge 3 tours. Appui invisible et froid.", true, "spectral_order"},
+                {2, "Lien de meute / ombre", "Niv. " + std::to_string(TechniqueProgressionRules::classTechniqueUnlockLevel("pack_shadow_link")) + ", recharge 4 tours. Pression renforcée.", level >= TechniqueProgressionRules::classTechniqueUnlockLevel("pack_shadow_link"), "pack_shadow_link"},
                 {0, "Retour", "Ne consomme pas le tour.", true, "back"}
             }
         );
@@ -1599,7 +2482,7 @@ bool CombatActions::executeClassSkill(
         "combat.class_skill.unavailable.fallback",
         {
             "Aucune technique de classe stable ne répond pour ce profil.",
-            "Les maîtres de guilde disent que les premières techniques fiables apparaissent souvent entre les niveaux 3 et 5.",
+            "Les maîtres de guilde disent que les premières techniques fiables apparaissent plutôt vers les niveaux 8 à 12, selon la classe et la simplicité du geste.",
             "Tu improvises donc une attaque simple."
         },
         false
@@ -1956,6 +2839,19 @@ bool CombatActions::executeHealingPotion(
     int potionHealAmount
 )
 {
+    if (Player* player = dynamic_cast<Player*>(&entity))
+    {
+        const int potionIndex = player->getInventory().findFirstConsumable(ConsumableType::Healing);
+        if (potionIndex >= 0)
+        {
+            const Consumable potion = player->getInventory().getConsumable(potionIndex);
+            if (!confirmLockedCombatConsumableUse(*player, potion, "boire cette potion de soin"))
+            {
+                return false;
+            }
+        }
+    }
+
     return CombatPotion::executeHealingPotion(
         entity,
         potionHealAmount
@@ -1969,6 +2865,19 @@ bool CombatActions::executeDamagePotion(
     int potionDamageBonus
 )
 {
+    if (Player* player = dynamic_cast<Player*>(&attacker))
+    {
+        const int potionIndex = player->getInventory().findFirstConsumable(ConsumableType::Damage);
+        if (potionIndex >= 0)
+        {
+            const Consumable potion = player->getInventory().getConsumable(potionIndex);
+            if (!confirmLockedCombatConsumableUse(*player, potion, "utiliser cette potion offensive"))
+            {
+                return false;
+            }
+        }
+    }
+
     return CombatPotion::executeDamagePotion(
         attacker,
         defender,

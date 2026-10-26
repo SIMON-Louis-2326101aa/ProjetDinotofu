@@ -63,7 +63,7 @@ public:
     static void openExploration(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule);
     // EN: openLocations declares or implements a focused behavior used by this module.
     // FR: openLocations déclare ou implémente un comportement précis utilisé par ce module.
-    static void openLocations(Player& player);
+    static void openLocations(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule);
     // EN: openNotableNpcMenu declares or implements a focused behavior used by this module.
     // FR: openNotableNpcMenu déclare ou implémente un comportement précis utilisé par ce module.
     static void openNotableNpcMenu(Player& player);

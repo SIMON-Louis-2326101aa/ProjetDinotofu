@@ -35,6 +35,7 @@ public:
     static std::vector<Monster> createPackHunt(DifficultyMode difficulty = DifficultyMode::Normal);
     static std::string obscuredCompanionLabel(bool firstCompanion, int phase);
 
+    static std::vector<std::string> buildOrdinaryRoutineLines(const Player& memoryPlayer);
     static std::vector<std::string> buildMissionFragmentLines(const Player& memoryPlayer);
     static std::vector<std::string> buildTravelLines(const Player& memoryPlayer, int approachChoice);
     static std::vector<std::string> buildFogTransitionLines(

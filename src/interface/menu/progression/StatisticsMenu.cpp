@@ -4,15 +4,18 @@
 // Français : Ce fichier fait partie de Dinotofu. Les identifiants du code sont en anglais, tandis que les textes affichés au joueur peuvent rester en français.
 
 #include "interface/menu/progression/StatisticsMenu.hpp"
+#include "interface/menu/progression/CharacterHistoryMenu.hpp"
 
 #include "core/Console.hpp"
 #include "entity/Player.hpp"
+#include "economy/Money.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "item/Inventory.hpp"
 #include "item/durability/DurabilityRules.hpp"
 #include "progression/Level.hpp"
 #include "progression/language/LanguageSystem.hpp"
+#include "progression/magic/MagicStudyRules.hpp"
 #include "progression/TitleCatalog.hpp"
 
 #include <algorithm>
@@ -93,7 +96,7 @@ namespace
 
     bool titleIsRevealed(const Player& player, const TitleCatalog::TitleDefinition& title)
     {
-        return title.visibleBeforeUnlock || player.hasTitle(title.name);
+        return player.areHiddenTitlesRevealed() || title.visibleBeforeUnlock || player.hasTitle(title.name);
     }
 
     std::string secretTitleLine()
@@ -498,9 +501,10 @@ MenuScreen StatisticsMenu::buildHubScreen(bool allowSkillLoadoutManagement)
     screen.addOption(7, "Affichage complet historique", "Afficher les statistiques longues du personnage.", true, "statistics.full_history", makeStatisticsItemData("inspect", "Historique complet", "Afficher les statistiques longues du personnage."));
     screen.addOption(8, "Top 3 du personnage", "Ennemis, boss, matériaux, consommables, armes, lieux, PNJ et quêtes avec total complet de chaque catégorie.", true, "statistics.top3", makeStatisticsItemData("inspect", "Top 3", "Compteurs persistants du journal moteur."));
     screen.addOption(9, "Mémoire du monde / Rivaux", "Souvenirs persistants et adversaires réellement rencontrés, sans prédiction de leurs actions futures.", true, "statistics.world_memory", makeStatisticsItemData("inspect", "Mémoire du monde / Rivaux", "Traces historiques persistantes connues du personnage."));
+    screen.addOption(10, "Historique du personnage", "Achats, ventes, rachats, équipements portés et événements durables réellement enregistrés.", true, "statistics.character_history", makeStatisticsItemData("inspect", "Historique du personnage", "Registre canonique persistant des actions réellement vécues."));
     if (allowSkillLoadoutManagement)
     {
-        screen.addOption(10, "Gérer actifs / passifs", "Équiper ou déséquiper des actifs, activer ou désactiver des passifs. Les serments d'église sont gérés séparément comme contrats.", true, "statistics.skills.loadout", makeStatisticsItemData("equip", "Gérer actifs / passifs", "Limite : 10 actifs équipés et 10 passifs activés ; serments hors loadout."));
+        screen.addOption(11, "Gérer actifs / passifs", "Équiper ou déséquiper des actifs, activer ou désactiver des passifs. Les serments d'église sont gérés séparément comme contrats.", true, "statistics.skills.loadout", makeStatisticsItemData("equip", "Gérer actifs / passifs", "Limite : 10 actifs équipés et 10 passifs activés ; serments hors loadout."));
     }
     screen.addBackOption("Retour", "statistics.back");
     return screen;
@@ -569,7 +573,11 @@ void StatisticsMenu::open(Player& player, DifficultyMode difficulty, bool allowS
         {
             displayWorldMemory(player);
         }
-        else if (choice == 10 && allowSkillLoadoutManagement)
+        else if (choice == 10)
+        {
+            CharacterHistoryMenu::open(player);
+        }
+        else if (choice == 11 && allowSkillLoadoutManagement)
         {
             displaySkillLoadoutMenu(player);
         }
@@ -642,7 +650,11 @@ void StatisticsMenu::open(Player& player, bool allowSkillLoadoutManagement)
         {
             displayWorldMemory(player);
         }
-        else if (choice == 10 && allowSkillLoadoutManagement)
+        else if (choice == 10)
+        {
+            CharacterHistoryMenu::open(player);
+        }
+        else if (choice == 11 && allowSkillLoadoutManagement)
         {
             displaySkillLoadoutMenu(player);
         }
@@ -701,6 +713,25 @@ void StatisticsMenu::displayWorldMemory(const Player& player)
             }
             lines.push_back("  Tempérament observé : " + (rival.temperament.empty() ? std::string("survivant prudent") : rival.temperament) + ".");
             if (!rival.visibleMark.empty()) lines.push_back("  Marque visible : " + rival.visibleMark + ".");
+            if (rival.stolenCopper > 0 || rival.stolenMaterialQuantity > 0)
+            {
+                std::ostringstream stolen;
+                stolen << "  Bien volé à récupérer : ";
+                bool wrote = false;
+                if (rival.stolenMaterialQuantity > 0)
+                {
+                    stolen << (rival.stolenMaterialName.empty() ? rival.stolenMaterialId : rival.stolenMaterialName)
+                           << " x" << rival.stolenMaterialQuantity;
+                    wrote = true;
+                }
+                if (rival.stolenCopper > 0)
+                {
+                    if (wrote) stolen << " + ";
+                    stolen << Money::formatCopper(rival.stolenCopper);
+                }
+                stolen << ".";
+                lines.push_back(stolen.str());
+            }
             if (!rival.lastOutcome.empty()) lines.push_back("  Dernier fait connu : " + rival.lastOutcome + ".");
         }
     }
@@ -718,7 +749,7 @@ void StatisticsMenu::displayWorldMemory(const Player& player)
         for (auto it = events.rbegin(); it != events.rend() && shown < 14; ++it, ++shown)
         {
             std::ostringstream line;
-            line << "- Jour " << it->day << " | " << it->label;
+            line << "- Jour " << (it->day + 1) << " | " << it->label;
             if (!it->locationId.empty()) line << " | " << it->locationId;
             if (it->resolved) line << " | résolu";
             lines.push_back(line.str());
@@ -766,7 +797,7 @@ void StatisticsMenu::displayTopThreeStats(const Player& player)
         }
         for (std::size_t i = 0; i < top.size(); ++i)
         {
-            lines.push_back(std::to_string(i + 1) + ". " + top[i].label + " — " + std::to_string(top[i].count) + " | dernier jour " + std::to_string(top[i].lastDay) + ".");
+            lines.push_back(std::to_string(i + 1) + ". " + top[i].label + " — " + std::to_string(top[i].count) + " | dernier jour " + std::to_string(top[i].lastDay + 1) + ".");
         }
     }
 
@@ -778,10 +809,21 @@ void StatisticsMenu::displaySummary(const Player& player)
     std::vector<std::string> lines;
     lines.push_back("Nom : " + player.getName());
     lines.push_back("Race : " + player.getRaceText());
+    lines.push_back("Morphologie : " + player.getBodyMorphology());
+    if (player.hasActiveMorphologyProgram())
+    {
+        lines.push_back(
+            "Programme morphologique : vers " + player.getMorphologyProgramTarget()
+            + " | séances " + std::to_string(player.getMorphologyProgramSessions()) + "/8"
+            + " | changement seulement après la durée minimale et validation finale."
+        );
+    }
     lines.push_back("Classe : " + player.getType());
     lines.push_back("Titres équipés : " + player.getActiveTitleSummary());
     lines.push_back("Titres possédés : " + std::to_string(player.getTitles().size()));
     lines.push_back("Niveau : " + std::to_string(player.getLevel()));
+    lines.push_back("Date actuelle : " + player.formatWorldDateLine());
+    lines.push_back("Moment actuel : " + player.formatWorldDayPartLine());
 
     int nextLevelExperience = Level::getExperienceRequiredForNextLevel(player.getLevel());
     if (nextLevelExperience > 0)
@@ -794,6 +836,11 @@ void StatisticsMenu::displaySummary(const Player& player)
     }
 
     lines.push_back("PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()));
+    lines.push_back("Mana : " + std::to_string(player.getMana()) + "/" + std::to_string(player.getMaxMana())
+        + " | Voie : " + player.getMagicChannelingStyleLabel() + " | Rythme : " + player.getMagicRecoveryLabel());
+    const int magicKnowledge = MagicStudyRules::magicKnowledgeScore(player);
+    lines.push_back("Connaissances magiques : " + std::to_string(magicKnowledge) + " (" + MagicStudyRules::magicKnowledgeLabel(magicKnowledge) + ").");
+    lines.push_back(player.getMagicSupportStatusLine());
     lines.push_back("Argent : " + player.getInventory().getWalletLine());
     lines.push_back("État : " + std::string(player.isAlteredByCheats() ? "Altéré" : "Normal"));
     lines.push_back("Clone : " + std::string(player.isClone() ? "oui" : "non"));
@@ -1102,10 +1149,17 @@ void StatisticsMenu::displayTitleCatalog(Player& player)
         MenuScreen screen("TITRES", "statistics.titles.hub");
         screen.addLine("Titres équipés : " + player.getActiveTitleSummary());
         screen.addLine("Titres possédés : " + std::to_string(player.getTitles().size()));
-        screen.addLine("Les titres cachés restent en ???? tant qu'ils ne sont pas obtenus.");
+        screen.addLine("Catalogue des titres : " + TitleCatalog::catalogVersion() + " (dernière mise à jour du catalogue).");
+        screen.addLine(player.areHiddenTitlesRevealed()
+            ? "Mode spoilers titres : ACTIVÉ — les titres cachés sont volontairement révélés."
+            : "Les titres cachés restent en ???? tant qu'ils ne sont pas obtenus. Le mode spoilers est désactivé par défaut.");
         screen.addOption(1, "Titres obtenus — liste simple", "Nom des titres possédés, avec marque des titres équipés.", true, "statistics.titles.owned.simple");
         screen.addOption(2, "Titres obtenus — liste détaillée", "Nom, obtention et effet de chaque titre possédé.", true, "statistics.titles.owned.detail");
-        screen.addOption(3, "Titres disponibles — semi-détaillé", "Titres visibles avec condition d'obtention ; titres secrets masqués en ????", true, "statistics.titles.available.visible");
+        screen.addOption(3, "Titres disponibles — semi-détaillé",
+            player.areHiddenTitlesRevealed()
+                ? "Tous les titres sont volontairement révélés avec leur condition d'obtention."
+                : "Titres visibles avec condition d'obtention ; titres secrets masqués en ????.",
+            true, "statistics.titles.available.visible");
         screen.addOption(4, "Équiper / changer les titres", "Choisir jusqu'à 3 titres équipés, surtout pour le style et le lore.", true, "statistics.titles.equip");
         screen.addBackOption("Retour", "statistics.titles.back");
 
@@ -1164,7 +1218,10 @@ void StatisticsMenu::displayTitleCatalog(Player& player)
         else if (choice == 3)
         {
             lines.push_back("Titres disponibles — semi-détaillé :");
-            lines.push_back("Les titres visibles affichent seulement comment les obtenir. Les titres secrets restent volontairement cachés.");
+            lines.push_back("Version du catalogue : " + TitleCatalog::catalogVersion() + ".");
+            lines.push_back(player.areHiddenTitlesRevealed()
+                ? "Mode spoilers volontaire actif : tous les titres cachés sont révélés avec leur condition."
+                : "Les titres visibles affichent seulement comment les obtenir. Les titres secrets restent volontairement cachés.");
             std::string currentCategory;
             int hiddenCount = 0;
             for (const TitleCatalog::TitleDefinition& title : TitleCatalog::availableTitleDefinitions())
@@ -1198,7 +1255,15 @@ void StatisticsMenu::displayTitleCatalog(Player& player)
             }
 
             lines.push_back("");
-            lines.push_back("Note : cacher les titres rares évite de pousser le joueur à changer son gameplay juste pour cocher une condition.");
+            if (!player.areHiddenTitlesRevealed())
+            {
+                lines.push_back("Note : cacher les titres rares protège la découverte et évite de révéler boss, factions, issues et systèmes secrets.");
+                lines.push_back("Le réglage de révélation volontaire se trouve dans Paramètres et affiche un avertissement avant activation.");
+            }
+            else
+            {
+                lines.push_back("Attention : ce catalogue révèle volontairement des informations normalement cachées.");
+            }
             showStatisticsScreen("TITRES DISPONIBLES", "statistics.titles.available.detail", lines);
         }
         else if (choice == 4)

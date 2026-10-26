@@ -57,5 +57,17 @@ int main()
     assert(queue.getEscapedEnemyCount() == 1);
     assert(queue.getSurrenderedEnemyCount() == 1);
     assert(queue.getDefeatedEnemyCount() == 0);
+
+    // Deux ennemis portant exactement le même nom doivent rester distinguables
+    // pendant le combat (Focus Fire, observation tactique, etc.).
+    EnemyCombatQueue duplicateNames;
+    duplicateNames.addWaitingEnemy(make("Gobelin éclaireur", Race::Gobelin));
+    duplicateNames.addWaitingEnemy(make("Gobelin éclaireur", Race::Gobelin));
+    duplicateNames.initializeFrontLine();
+    assert(duplicateNames.getActiveEnemyCount() == 2);
+    assert(!duplicateNames.getActiveEnemy(0).getCombatInstanceId().empty());
+    assert(!duplicateNames.getActiveEnemy(1).getCombatInstanceId().empty());
+    assert(duplicateNames.getActiveEnemy(0).getCombatInstanceId() !=
+           duplicateNames.getActiveEnemy(1).getCombatInstanceId());
     return 0;
 }

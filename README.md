@@ -4,9 +4,9 @@ Dinotofu is a C++23 RPG / arena game. The terminal version remains the stable fo
 
 ## Current version   
 
-- Current version: **V3.50.36**   
-- Important save checkpoint: **V3.50.33**. Characters last adapted before this checkpoint must complete the explicit transition ritual before normal loading.   
-- Before that transition, Dinotofu creates a dedicated non-overwriting pre-update backup. Very old or unversioned characters keep the stronger legacy warning, but they can no longer bypass the mandatory V3.50.33 backup + transition ritual.   
+- Current version: **V3.57.08**   
+- Important save checkpoint: **V3.57.00**. Characters last adapted before this checkpoint must complete the explicit transition ritual before normal loading.    This checkpoint protects the onboarding consolidation, isolated tutorial and account/title progression introduced around V3.57.   
+- Before that transition, Dinotofu creates a dedicated non-overwriting pre-update backup. Very old or unversioned characters keep the stronger legacy warning, but they can no longer bypass the mandatory V3.57.00 backup + transition ritual.   
 
 ## What is already in the game   
 
@@ -14,14 +14,15 @@ The game already lets players:
 
 - create, load, and save accounts and characters;   
 - choose a race, an exact race-compatible age, visual presentation, final variant, class, difficulty, death rule, and certain protected special identities;   
-- fight in AI PvP, two-player PvP, monster PvE, solo boss fights, and cooperative boss fights, with recruited allies, two-ally techniques that gain persistent duo mastery, ordinary enemy escapes, rarer persistent rivals that may logically return, and conscious encounter speakers whose language can affect what the player understands;   
+- fight in AI PvP, two-player PvP, monster PvE, solo boss fights, and cooperative boss fights, with a solo travel team capped at six people (player + up to five real recruits), two active recruits at a time while the player is conscious, two-ally techniques that gain persistent lived duo mastery, ordinary enemy escapes, rarer persistent rivals that may logically return, and conscious encounter speakers whose language can affect what the player understands;   
 - manage inventory, weapons, armor, consumables, materials, durability, repairs, and item quality; weapons and armor have persistent individual identities so a specific copy can accumulate memories, reputation and an emergent nickname;   
-- buy, sell and barter through one unified **Boutiques et comptoirs** menu with quick categories or complete list, visit locations, use the guild, library, field observation post, mercenary counter, training stand, and purchase/upgrade independent municipal vaults per town;   
+- buy, sell and barter through one unified **Boutiques et comptoirs** menu with quick categories or complete list, with city economic profiles, specialties, temporary needs, real stock pressure/surpluses and now **inter-city import/export convoys**, whose real routes can now also influence escapes and clues for some mobile bounty targets; visit locations, use the guild, library, field observation post, mercenary counter, training stand, and purchase/upgrade independent municipal vaults per town;   
 - explore a broader catalog of biomes containing resources, chests, traps, tracks, events, dangerous locations, biome-specific observations, fused slimes, and a four-stage dividing slime mini-boss;   
-- follow guild, client, exploration, combat, delivery, service, bestiary, and main-story quests;   
+- follow guild, client, exploration, combat, delivery, service, bestiary, and main-story quests; some quests may reveal a phase 2 after their initial objective, while rank-D+ guild contracts can now pay for real inter-city information or material relay travel;   
 - accept up to three daily guild challenges, earn Challenge Marks, and unlock titles tied to real combat restrictions;   
 - consult three special permanent registers: Bestiary for beings, Encyclopedia for systems/items/areas, and Discovery Notebook for lore, legends, and rumours;   
 - use hidden systems such as cheat codes, altered data, special characters, legendary merchants, and selected lore events;   
+- in a team, attempt permanent-death rescue from allies who are actually still able to act (15% without a qualified healer, up to 66% with a real specialist still standing), then once in the character's lifetime gain a first-death spirit-resistance attempt before any separate rare survival blessing fallback;   
 - launch a story mode built as a progressively restricted guided sandbox; the current playable development scope intentionally ends after the Chapter 3 introduction, followed by a temporary development-end message while world content and systems are expanded.   
 
 ## Story mode   
@@ -61,6 +62,24 @@ The **ProjetDinotofu Launcher** currently starts Terminal mode by default. Graph
 - `release/`: release manifest and publication data;   
 - `assets/saves/`: local save folders, without private data in release ZIP files.   
 - `logs/dinotofu_session_latest.txt`: local beta session log, safe to delete and useful to send to the developer after bugs or strange fights.   
+
+## Development and pre-push checks   
+
+Local build:   
+
+```bash   
+make   
+```   
+
+Full validation before a commit/push:   
+
+```bash   
+make pre-push   
+```   
+
+`make pre-push` removes generated artifacts, validates the source tree, checks every JSON file, builds the project and runs the complete test suite. When the checkout comes from an **essential backup**, official branding images may intentionally be absent: a source push can still be validated with that limitation clearly reported, but a complete installable release must restore `assets/branding/`.   
+
+The minimal `.github/workflows/ci.yml` workflow repeats the source validation and test suite on GitHub for every push and pull request.   
 
 ## Special developer note   
 

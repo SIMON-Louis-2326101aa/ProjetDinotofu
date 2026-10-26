@@ -24,6 +24,7 @@
 #   make bump-patch      Increase patch version / Augmenter la version patch
 #   make release-push    Bump patch, commit and push / Publier un patch
 #   make release-check   Verify source tree before sharing / Vérifier le projet avant ZIP
+#   make pre-push        Full source validation before Git push / Validation complète avant push Git
 #   make gui-preview     Build, launch the game and serve the GUI debug preview / Lancer aperçu IG
 #
 #
@@ -204,6 +205,7 @@ help:
 	@echo "   make test                Exécuter la suite de tests du projet"
 	@echo "   make check               Nettoyer, valider l'arborescence, branding et tests"
 	@echo "   make release-check       Vérifier l'arborescence avant création d'archive"
+	@echo "   make pre-push            Nettoyer, auditer, valider les JSON, compiler et exécuter tous les tests avant Git"
 	@echo ""
 	@echo " Interface Graphique Expérimentale :"
 	@echo "   make gui-preview         Lancer le jeu avec le serveur d'aperçu web IG"
@@ -317,8 +319,12 @@ release-check: clean
 	@chmod +x ./scripts/validate_release_tree.sh
 	@./scripts/validate_release_tree.sh
 
+pre-push:
+	@chmod +x ./scripts/pre_push_check.sh
+	@./scripts/pre_push_check.sh
+
 gui-preview: all
 	@chmod +x ./tools/gui/run_gui_debug.sh
 	@./tools/gui/run_gui_debug.sh
 
-.PHONY: all dev opt release show-speed-hints test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check gui-preview
+.PHONY: all dev opt release show-speed-hints test check run launch clean rebuild strip help install-desktop desktop remove-desktop package-source package-linux-release package-windows-release bump-patch bump-minor bump-major release-push release-trigger release-check pre-push gui-preview

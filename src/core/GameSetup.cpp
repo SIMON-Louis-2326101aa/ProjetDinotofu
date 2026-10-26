@@ -39,6 +39,7 @@
 #include "item/consumable/Consumable.hpp"
 #include "item/material/Material.hpp"
 #include "story/StoryCampaign.hpp"
+#include "tutorial/TutorialSystem.hpp"
 #include <algorithm>
 #include <cctype>
 #include <iostream>
@@ -432,23 +433,35 @@ void Game::askAccountName()
 
 void Game::askPlayerName()
 {
-    CharacterMenuResult result = CharacterMenu::open(accountName, mainPlayer);
-
-    characterLoaded = result.characterLoaded;
-    specialIdentityValidated = result.specialIdentityValidated;
-    playerName = result.playerName;
-
-    if (result.specialIdentityValidated)
+    while (true)
     {
-        selectedRace = result.forcedRace;
-    }
+        CharacterMenuResult result = CharacterMenu::open(accountName, mainPlayer);
 
-    if (characterLoaded)
-    {
-        selectedDifficulty = result.difficulty;
-        selectedDeathRule = result.deathRule;
-        selectedRace = mainPlayer.getRace();
-        mainPlayer.forceTerminalImagePolicy();
+        if (result.tutorialRequested)
+        {
+            TutorialSystem::run(accountName);
+            Console::clear();
+            continue;
+        }
+
+        characterLoaded = result.characterLoaded;
+        specialIdentityValidated = result.specialIdentityValidated;
+        playerName = result.playerName;
+
+        if (result.specialIdentityValidated)
+        {
+            selectedRace = result.forcedRace;
+        }
+
+        if (characterLoaded)
+        {
+            selectedDifficulty = result.difficulty;
+            selectedDeathRule = result.deathRule;
+            selectedRace = mainPlayer.getRace();
+            mainPlayer.forceTerminalImagePolicy();
+        }
+
+        return;
     }
 }
 
@@ -815,13 +828,14 @@ void Game::choosePlayerAppearance()
     selectedVisualPresentation = presentationChoice == 1 ? "Femme" : presentationChoice == 2 ? "Homme" : presentationChoice == 3 ? "Non-binaire / autre" : "Non précisé";
     Console::clear();
 
-    MenuScreen variantScreen("VARIANTE VISUELLE", "character.creation.appearance.variant");
-    variantScreen.addSubtitle("Choisis la variante visuelle qui correspond le mieux au personnage.");
-    variantScreen.addLine("La variante choisie est conservée dans la description du personnage.");
-    variantScreen.addOption(1, "Variante A — dynamique", "Silhouette plus légère, posture mobile, équipement présenté de façon vive.", true, "character.appearance.variant.a");
-    variantScreen.addOption(2, "Variante B — imposante", "Silhouette plus posée, posture robuste, équipement présenté de façon lourde.", true, "character.appearance.variant.b");
-    const int variantChoice = TerminalInterface::askMenuChoiceFromOptions(variantScreen, "Choisis la variante finale.");
-    selectedVisualVariant = variantChoice == 2 ? "Variante B — imposante" : "Variante A — dynamique";
+    MenuScreen variantScreen("MORPHOLOGIE", "character.creation.appearance.variant");
+    variantScreen.addSubtitle("La race fixe le gabarit naturel ; cette morphologie ajoute une variation légère à l'intérieur de la race.");
+    variantScreen.addLine("Ce choix influence modestement capacité, hitbox et mobilité, sans remplacer les caractéristiques raciales.");
+    variantScreen.addOption(1, "Morphologie fine", "Moins de capacité de portage, silhouette plus difficile à toucher et légèrement plus mobile.", true, "character.appearance.variant.fine");
+    variantScreen.addOption(2, "Morphologie standard", "Équilibre naturel de la race, sans modificateur supplémentaire.", true, "character.appearance.variant.standard");
+    variantScreen.addOption(3, "Morphologie robuste", "Plus de capacité de portage et un peu plus de résistance physique, mais une hitbox légèrement plus large.", true, "character.appearance.variant.robust");
+    const int variantChoice = TerminalInterface::askMenuChoiceFromOptions(variantScreen, "Choisis la morphologie de départ.");
+    selectedVisualVariant = variantChoice == 1 ? "Morphologie fine" : variantChoice == 3 ? "Morphologie robuste" : "Morphologie standard";
     Console::clear();
 
     MessageScreen::show(
@@ -1463,4 +1477,3 @@ void Game::configurePartyMode()
     Console::waitForEnter();
     Console::clear();
 }
-

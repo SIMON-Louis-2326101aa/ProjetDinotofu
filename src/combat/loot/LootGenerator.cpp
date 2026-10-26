@@ -6,6 +6,7 @@
 // Français : Implémente une génération simple de loots de monstres pour la première version jouable des récompenses.
 
 #include "combat/loot/LootGenerator.hpp"
+#include "combat/ally/RecruitedAllyAftermathSystem.hpp"
 
 #include "economy/Money.hpp"
 
@@ -15,8 +16,11 @@
 #include "item/weapon/Weapon.hpp"
 #include "item/armor/Armor.hpp"
 #include "item/armor/ArmorType.hpp"
+#include "item/equipment/EquipmentWeightRules.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/TerminalInterface.hpp"
+#include "interface/model/MenuScreen.hpp"
 
 #include <string>
 #include <algorithm>
@@ -719,18 +723,75 @@ namespace
     }
 
 
-    void addMaterialLootToPlayer(Player& player, const Material& material)
+    bool askManualLootPickup(const std::string& name, const std::string& detail, const std::string& screenId)
     {
+        MenuScreen screen("BUTIN TROUVÉ", screenId);
+        screen.addLine(name);
+        if (!detail.empty()) screen.addLine(detail);
+        screen.addOption(1, "Récupérer", "Ajouter ce butin à l'inventaire.", true, screenId + ".take");
+        screen.addOption(2, "Laisser sur place", "Ne pas récupérer cet objet.", true, screenId + ".leave");
+        return TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis quoi faire de ce butin.") == 1;
+    }
+
+    bool shouldPickupLoot(Player& player, const std::string& categoryId, const std::string& stableId, const std::string& name, const std::string& detail)
+    {
+        const std::string policy = player.getLootPickupPolicy();
+        if (policy == "manual")
+        {
+            return askManualLootPickup(name, detail, "combat.loot.manual_pickup");
+        }
+        if (policy == "filter")
+        {
+            if (player.isLootCategoryIgnored(categoryId)) return false;
+            if (categoryId == "material" && !stableId.empty() && player.isLootMaterialIgnored(stableId)) return false;
+        }
+        return true;
+    }
+
+    bool isNotableMaterialLoot(const Material& material)
+    {
+        return material.getQuality() == "exceptional"
+            || material.getQuality() == "pure"
+            || material.getQuality() == "high"
+            || material.getCategory() == "Fragment de boss"
+            || material.getCategory() == "Matériau rare"
+            || material.getCategory() == "Matériau magique";
+    }
+
+    bool addMaterialLootToPlayer(Player& player, const Material& material, std::vector<std::string>* lines = nullptr, const std::string& reason = "")
+    {
+        const std::string detail = formatLootMaterialLine(material);
+        if (!shouldPickupLoot(player, "material", material.getId(), material.getName(), detail))
+        {
+            if (lines != nullptr)
+            {
+                lines->push_back((reason.empty() ? material.getName() : reason) + " : laissé sur place selon les préférences de butin.");
+            }
+            return false;
+        }
         player.getInventory().addMaterial(material);
         player.recordMaterialCollected(material.getId(), material.getName(), material.getQuantity());
+        if (isNotableMaterialLoot(material))
+        {
+            const std::string source = reason.empty() ? "Butin remarquable" : reason;
+            player.recordCanonicalEvent(
+                "butin_notable",
+                "material:" + material.getId() + ":" + material.getQuality(),
+                source + " — " + formatLootMaterialLine(material),
+                material.getQuantity()
+            );
+        }
+        return true;
     }
 
     // EN: giveExtraLoot declares or implements a focused behavior used by this module.
     // FR: giveExtraLoot déclare ou implémente un comportement précis utilisé par ce module.
     void giveExtraLoot(Player& player, Material material, const std::string& reason, std::vector<std::string>& lines)
     {
-        addMaterialLootToPlayer(player, material);
-        addLootLine(lines, reason, material);
+        if (addMaterialLootToPlayer(player, material, &lines, reason))
+        {
+            addLootLine(lines, reason, material);
+        }
     }
 
     bool defeatedEnemyCanCarryEquipment(const Monster& monster)
@@ -874,7 +935,35 @@ namespace
         return armor;
     }
 
-    void tryGiveRecoveredEquipmentLoot(Player& player, const Monster& monster, Random& random, DifficultyMode difficulty, std::vector<std::string>& lines)
+    int weaponTransportUnitCost(const Weapon& weapon)
+    {
+        switch (EquipmentWeightRules::getWeaponWeightClass(weapon))
+        {
+            case EquipmentWeightClass::Light: return 1;
+            case EquipmentWeightClass::Heavy: return 3;
+            case EquipmentWeightClass::Medium:
+            default: return 2;
+        }
+    }
+
+    int armorTransportUnitCost(const Armor& armor)
+    {
+        switch (EquipmentWeightRules::getArmorWeightClass(armor))
+        {
+            case EquipmentWeightClass::Light: return 1;
+            case EquipmentWeightClass::Heavy: return 3;
+            case EquipmentWeightClass::Medium:
+            default: return 2;
+        }
+    }
+
+    void tryGiveRecoveredEquipmentLoot(
+        Player& player,
+        const Monster& monster,
+        Random& random,
+        DifficultyMode difficulty,
+        std::vector<std::string>& lines,
+        int* remainingTransportUnits = nullptr)
     {
         if (!defeatedEnemyCanCarryEquipment(monster))
         {
@@ -913,29 +1002,165 @@ namespace
         weaponChance = std::clamp(weaponChance, 2, 14);
         armorChance = std::clamp(armorChance, 1, 11);
 
-        if (random.between(1, 100) <= weaponChance)
+        if ((remainingTransportUnits == nullptr || *remainingTransportUnits > 0)
+            && random.between(1, 100) <= weaponChance)
         {
             Weapon weapon = createRecoveredWeaponFromMonster(monster, random);
+            const int transportCost = weaponTransportUnitCost(weapon);
             const std::string dur = weapon.isIndestructible()
                 ? "indestructible"
                 : std::to_string(weapon.getDurability()) + "/" + std::to_string(weapon.getMaxDurability());
-            player.getInventory().addWeapon(weapon);
-            lines.push_back("Équipement récupéré : " + weapon.getName() + " | Durabilité : " + dur + ".");
+            if (remainingTransportUnits != nullptr && *remainingTransportUnits < transportCost)
+            {
+                lines.push_back("Arme laissée sur place faute de capacité de transport ("
+                    + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getWeaponWeightClass(weapon))
+                    + ", coût " + std::to_string(transportCost) + " unité(s)) : " + weapon.getName() + ".");
+            }
+            else if (shouldPickupLoot(player, "weapon", "", weapon.getName(), "Durabilité : " + dur + "."))
+            {
+                player.getInventory().addWeapon(weapon);
+                if (remainingTransportUnits != nullptr)
+                {
+                    *remainingTransportUnits = std::max(0, *remainingTransportUnits - transportCost);
+                }
+                lines.push_back("Équipement récupéré : " + weapon.getName() + " | "
+                    + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getWeaponWeightClass(weapon))
+                    + " | Durabilité : " + dur + ".");
+                player.recordCanonicalEvent("butin_notable", "weapon:" + weapon.getName(), weapon.getName() + " récupérée sur " + monster.getName(), 1);
+            }
+            else
+            {
+                lines.push_back("Arme laissée sur place selon les préférences de butin : " + weapon.getName() + ".");
+            }
         }
 
-        if (random.between(1, 100) <= armorChance)
+        if ((remainingTransportUnits == nullptr || *remainingTransportUnits > 0)
+            && random.between(1, 100) <= armorChance)
         {
             Armor armor = createRecoveredArmorFromMonster(player, monster, random);
+            const int transportCost = armorTransportUnitCost(armor);
             const std::string dur = armor.isIndestructible()
                 ? "indestructible"
                 : std::to_string(armor.getDurability()) + "/" + std::to_string(armor.getMaxDurability());
-            player.getInventory().addArmor(armor);
-            lines.push_back("Équipement récupéré : " + armor.getName() + " | Durabilité : " + dur + ".");
-            if (armor.getDescription().find("non ajustée") != std::string::npos)
+            const bool enoughCapacity = remainingTransportUnits == nullptr || *remainingTransportUnits >= transportCost;
+            const bool armorCollected = enoughCapacity
+                && shouldPickupLoot(player, "armor", "", armor.getName(), "Durabilité : " + dur + ".");
+            if (!enoughCapacity)
+            {
+                lines.push_back("Armure laissée sur place faute de capacité de transport ("
+                    + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getArmorWeightClass(armor))
+                    + ", coût " + std::to_string(transportCost) + " unité(s)) : " + armor.getName() + ".");
+            }
+            else if (armorCollected)
+            {
+                player.getInventory().addArmor(armor);
+                if (remainingTransportUnits != nullptr)
+                {
+                    *remainingTransportUnits = std::max(0, *remainingTransportUnits - transportCost);
+                }
+                lines.push_back("Équipement récupéré : " + armor.getName() + " | "
+                    + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getArmorWeightClass(armor))
+                    + " | Durabilité : " + dur + ".");
+                player.recordCanonicalEvent("butin_notable", "armor:" + armor.getName(), armor.getName() + " récupérée sur " + monster.getName(), 1);
+            }
+            else
+            {
+                lines.push_back("Armure laissée sur place selon les préférences de butin : " + armor.getName() + ".");
+            }
+            if (armorCollected && armor.getDescription().find("non ajustée") != std::string::npos)
             {
                 lines.push_back("Note : cette armure n'est pas à ta taille. Elle ne peut pas être équipée sans retouche ultérieure, mais garde une valeur de revente/démontage.");
             }
         }
+    }
+
+    enum class ExactPostKoLootKind
+    {
+        Material,
+        Weapon,
+        Armor,
+        Coins
+    };
+
+    struct ExactPostKoLootCandidate
+    {
+        std::string id;
+        std::string sourceMonster;
+        std::string displayLabel;
+        ExactPostKoLootKind kind = ExactPostKoLootKind::Material;
+        int transportCost = 1;
+        int priorityScore = 0;
+        bool protectedFromAutomaticAbandon = false;
+        Material material;
+        Weapon weapon;
+        Armor armor;
+        CoinBreakdown coins;
+    };
+
+    int visibleMonsterRecoveryPriority(const Monster& monster)
+    {
+        return (monster.isElite() ? 30 : 0)
+            + (monster.isEvolved() ? 18 : 0)
+            + std::min(20, std::max(0, monster.getLevel()));
+    }
+
+    template <typename T>
+    void applyExactItemRecoveryMetadata(
+        ExactPostKoLootCandidate& candidate,
+        const T& item,
+        const Monster& monster)
+    {
+        candidate.priorityScore = item.getAutomaticRecoveryPriorityScore()
+            + visibleMonsterRecoveryPriority(monster);
+        candidate.protectedFromAutomaticAbandon = item.isProtectedFromAutomaticAbandon();
+    }
+
+    void addExactPostKoLootCandidateToInventory(
+        Inventory& inventory,
+        const ExactPostKoLootCandidate& candidate)
+    {
+        switch (candidate.kind)
+        {
+            case ExactPostKoLootKind::Material:
+                inventory.addMaterial(candidate.material);
+                break;
+            case ExactPostKoLootKind::Weapon:
+                inventory.addWeapon(candidate.weapon);
+                break;
+            case ExactPostKoLootKind::Armor:
+                inventory.addArmor(candidate.armor);
+                break;
+            case ExactPostKoLootKind::Coins:
+                inventory.earnCoinStacks(candidate.coins);
+                break;
+        }
+    }
+
+    void grantExactPostKoLootCandidate(
+        Player& player,
+        const ExactPostKoLootCandidate& candidate,
+        std::vector<std::string>& lines)
+    {
+        switch (candidate.kind)
+        {
+            case ExactPostKoLootKind::Material:
+                player.getInventory().addMaterial(candidate.material);
+                break;
+            case ExactPostKoLootKind::Weapon:
+                player.getInventory().addWeapon(candidate.weapon);
+                break;
+            case ExactPostKoLootKind::Armor:
+                player.getInventory().addArmor(candidate.armor);
+                break;
+            case ExactPostKoLootKind::Coins:
+                player.getInventory().earnCoinStacks(candidate.coins);
+                break;
+        }
+
+        std::string metadata;
+        if (candidate.protectedFromAutomaticAbandon) metadata += " [priorité protégée]";
+        lines.push_back("Ramené depuis " + candidate.sourceMonster + " : " + candidate.displayLabel
+            + " | coût transport " + std::to_string(candidate.transportCost) + metadata + ".");
     }
 }
 
@@ -943,7 +1168,8 @@ void LootGenerator::giveDefeatedWaveLoot(
     Player& player,
     const EnemyCombatQueue& wave,
     Random& random,
-    DifficultyMode difficulty
+    DifficultyMode difficulty,
+    int authorizedLootPercent
 )
 {
     if (wave.getDefeatedEnemyCount() <= 0)
@@ -954,10 +1180,15 @@ void LootGenerator::giveDefeatedWaveLoot(
     std::vector<std::string> lines;
     int lootChance = getLootChance(difficulty);
     bool atLeastOneLoot = false;
+    authorizedLootPercent = std::clamp(authorizedLootPercent, 0, 100);
 
     for (int i = 0; i < wave.getDefeatedEnemyCount(); ++i)
     {
         const Monster& monster = wave.getDefeatedEnemy(i);
+        if (authorizedLootPercent < 100 && random.between(1, 100) > authorizedLootPercent)
+        {
+            continue;
+        }
         if (tryGiveMonsterLoot(player, monster, random, difficulty, lootChance, lines))
         {
             atLeastOneLoot = true;
@@ -984,6 +1215,10 @@ void LootGenerator::giveDefeatedWaveLoot(
         lines.push_back("Journal de quêtes mis à jour.");
     }
 
+    if (authorizedLootPercent < 100)
+    {
+        lines.push_back("Part autorisée récupérable : environ " + std::to_string(authorizedLootPercent) + " %. Le reste est remis aux autorités ou laissé sous scellés.");
+    }
     if (!atLeastOneLoot)
     {
         lines.push_back("Aucun matériau intéressant récupéré cette fois.");
@@ -993,6 +1228,225 @@ void LootGenerator::giveDefeatedWaveLoot(
 }
 
 
+
+void LootGenerator::givePostKoRecoveredWaveLoot(
+    Player& player,
+    const EnemyCombatQueue& wave,
+    Random& random,
+    DifficultyMode difficulty,
+    int transportCapacityUnits,
+    const std::string& contextId,
+    const std::string& battlefieldLabel)
+{
+    const int defeatedCount = std::max(0, wave.getDefeatedEnemyCount());
+    transportCapacityUnits = std::max(0, transportCapacityUnits);
+
+    std::vector<std::string> lines;
+    lines.push_back("Le butin n'est pas téléporté dans ton inventaire : les objets sont d'abord générés exactement, puis l'équipe choisit ce qu'elle peut réellement transporter.");
+    const std::string capacityLabel = transportCapacityUnits <= 0 ? "aucune"
+        : transportCapacityUnits <= 2 ? "très limitée"
+        : transportCapacityUnits <= 4 ? "limitée"
+        : transportCapacityUnits <= 7 ? "correcte"
+        : "confortable";
+    lines.push_back("Capacité de récupération du groupe après ton extraction : " + capacityLabel + ".");
+    lines.push_back("Les objets Quête/Personnel/Unique et les priorités explicites passent avant le loot ordinaire ; à priorité égale, le groupe favorise ce qui tient réellement dans la capacité restante.");
+
+    if (transportCapacityUnits <= 0 || defeatedCount <= 0)
+    {
+        if (defeatedCount > 0)
+        {
+            lines.push_back("Personne n'avait assez de capacité restante pour ramener du butin en plus du joueur blessé.");
+            player.recordCanonicalEvent(
+                "butin_post_ko_transport",
+                contextId + ":aucun_transport",
+                "Butin physique abandonné faute de capacité de transport après le KO du joueur.",
+                defeatedCount);
+        }
+        showLootScreen("BUTIN POST-KO", "combat.loot.post_ko.none", lines);
+        return;
+    }
+
+    const int lootChance = getLootChance(difficulty);
+    std::vector<ExactPostKoLootCandidate> exactCandidates;
+    int exactCandidateSerial = 0;
+    for (int enemyIndex = 0; enemyIndex < wave.getDefeatedEnemyCount(); ++enemyIndex)
+    {
+        const Monster& monster = wave.getDefeatedEnemy(enemyIndex);
+
+        // Generate the actual loot first in an isolated copy. This preserves the normal loot
+        // RNG/pickup rules without granting anything to the unconscious player's real inventory.
+        Player staging = player;
+        staging.getInventory().clearAll();
+        std::vector<std::string> ignoredLines;
+        tryGiveMonsterLoot(staging, monster, random, difficulty, lootChance, ignoredLines);
+        tryGiveRecoveredEquipmentLoot(staging, monster, random, difficulty, ignoredLines);
+
+        const Inventory& stagedInventory = staging.getInventory();
+        for (const Material& material : stagedInventory.getMaterials())
+        {
+            ExactPostKoLootCandidate candidate;
+            candidate.id = "material:" + std::to_string(enemyIndex) + ":" + std::to_string(exactCandidateSerial++);
+            candidate.sourceMonster = monster.getName();
+            candidate.displayLabel = material.getName() + " x" + std::to_string(material.getQuantity());
+            candidate.kind = ExactPostKoLootKind::Material;
+            candidate.transportCost = 1;
+            candidate.material = material;
+            applyExactItemRecoveryMetadata(candidate, material, monster);
+            exactCandidates.push_back(candidate);
+        }
+        for (const Weapon& weapon : stagedInventory.getWeapons())
+        {
+            ExactPostKoLootCandidate candidate;
+            candidate.id = "weapon:" + std::to_string(enemyIndex) + ":" + weapon.getPersistentId() + ":" + std::to_string(exactCandidateSerial++);
+            candidate.sourceMonster = monster.getName();
+            candidate.displayLabel = weapon.getName();
+            candidate.kind = ExactPostKoLootKind::Weapon;
+            candidate.transportCost = weaponTransportUnitCost(weapon);
+            candidate.weapon = weapon;
+            applyExactItemRecoveryMetadata(candidate, weapon, monster);
+            exactCandidates.push_back(candidate);
+        }
+        for (const Armor& armor : stagedInventory.getArmors())
+        {
+            ExactPostKoLootCandidate candidate;
+            candidate.id = "armor:" + std::to_string(enemyIndex) + ":" + armor.getPersistentId() + ":" + std::to_string(exactCandidateSerial++);
+            candidate.sourceMonster = monster.getName();
+            candidate.displayLabel = armor.getName();
+            candidate.kind = ExactPostKoLootKind::Armor;
+            candidate.transportCost = armorTransportUnitCost(armor);
+            candidate.armor = armor;
+            applyExactItemRecoveryMetadata(candidate, armor, monster);
+            exactCandidates.push_back(candidate);
+        }
+
+        const CoinBreakdown coins = stagedInventory.getCoinStacks();
+        const long long totalCoinCount = coins.copper + coins.iron + coins.electrum + coins.gold + coins.platinum;
+        if (totalCoinCount > 0)
+        {
+            ExactPostKoLootCandidate candidate;
+            candidate.id = "coins:" + std::to_string(enemyIndex) + ":" + std::to_string(exactCandidateSerial++);
+            candidate.sourceMonster = monster.getName();
+            candidate.displayLabel = Money::formatCoinStacks(coins, true);
+            candidate.kind = ExactPostKoLootKind::Coins;
+            candidate.transportCost = 1;
+            candidate.priorityScore = visibleMonsterRecoveryPriority(monster);
+            candidate.coins = coins;
+            exactCandidates.push_back(candidate);
+        }
+    }
+
+    std::vector<PostKoRecoveryCandidate> recoveryCandidates;
+    recoveryCandidates.reserve(exactCandidates.size());
+    for (const ExactPostKoLootCandidate& candidate : exactCandidates)
+    {
+        recoveryCandidates.push_back({
+            candidate.id,
+            candidate.transportCost,
+            candidate.priorityScore,
+            candidate.protectedFromAutomaticAbandon
+        });
+    }
+
+    const PostKoRecoverySelection selection = RecruitedAllyAftermathSystem::selectPostKoRecoveryCandidates(
+        recoveryCandidates, transportCapacityUnits);
+
+    auto isRecovered = [&](const std::string& id) {
+        return std::find(selection.recoveredIds.begin(), selection.recoveredIds.end(), id) != selection.recoveredIds.end();
+    };
+
+    int recoveredExactObjects = 0;
+    int deferredProtectedObjects = 0;
+    Inventory deferredProtectedInventory;
+    for (const ExactPostKoLootCandidate& candidate : exactCandidates)
+    {
+        if (isRecovered(candidate.id))
+        {
+            grantExactPostKoLootCandidate(player, candidate, lines);
+            ++recoveredExactObjects;
+        }
+        else
+        {
+            if (candidate.protectedFromAutomaticAbandon)
+            {
+                ++deferredProtectedObjects;
+                addExactPostKoLootCandidateToInventory(deferredProtectedInventory, candidate);
+            }
+            lines.push_back("Laissé sur place faute de capacité : " + candidate.displayLabel
+                + " (" + candidate.sourceMonster + ", coût " + std::to_string(candidate.transportCost) + ")"
+                + (candidate.protectedFromAutomaticAbandon ? " — objet protégé mais physiquement impossible à emporter maintenant." : "."));
+        }
+    }
+
+    if (exactCandidates.empty())
+    {
+        lines.push_back("Les dépouilles fouillées ne contenaient finalement aucun bien récupérable selon les règles de loot actuelles.");
+    }
+    else if (selection.remainingCarryUnits <= 0)
+    {
+        lines.push_back("Le groupe repart chargé au maximum raisonnable pour cette extraction.");
+    }
+    else
+    {
+        lines.push_back("Le groupe conserve encore " + std::to_string(selection.remainingCarryUnits) + " unité(s) de marge après le tri exact.");
+    }
+    if (deferredProtectedObjects > 0)
+    {
+        const std::string cacheId = player.createBattlefieldRecoveryCache(
+            contextId,
+            battlefieldLabel.empty() ? "zone du combat" : battlefieldLabel,
+            deferredProtectedInventory);
+        lines.push_back(std::to_string(deferredProtectedObjects) + " objet(s) protégé(s) restent physiquement sur le terrain dans une piste de récupération persistante.");
+        if (!cacheId.empty())
+            lines.push_back("Piste enregistrée : " + cacheId + ". Tu pourras tenter d'y retourner depuis les lieux de la ville concernée.");
+    }
+
+    player.recordCanonicalEvent(
+        "butin_post_ko_transport",
+        contextId + ":jour_" + std::to_string(player.getWorldDaysElapsed()),
+        "Butin exact physiquement ramené après KO | objets=" + std::to_string(recoveredExactObjects)
+            + "/" + std::to_string(exactCandidates.size())
+            + " | capacite=" + std::to_string(selection.usedCarryUnits)
+            + "/" + std::to_string(transportCapacityUnits),
+        recoveredExactObjects);
+
+    showLootScreen("BUTIN RAPPORTÉ PAR L'ÉQUIPE", "combat.loot.post_ko.wave", lines);
+}
+
+void LootGenerator::givePostKoRecoveredBossLoot(
+    Player& player,
+    const Boss& boss,
+    Random& random,
+    DifficultyMode difficulty,
+    int transportCapacityUnits,
+    const std::string& contextId)
+{
+    transportCapacityUnits = std::max(0, transportCapacityUnits);
+    if (transportCapacityUnits <= 0)
+    {
+        player.recordCanonicalEvent(
+            "butin_post_ko_transport",
+            contextId + ":boss_abandonne",
+            "Le boss est tombé pendant l'inconscience du joueur, mais aucun survivant ne pouvait ramener son fragment en plus de l'extraction.",
+            1);
+        return;
+    }
+
+    player.recordCanonicalEvent(
+        "butin_post_ko_transport",
+        contextId + ":boss_fragment",
+        "Le groupe a priorisé le fragment portable de " + boss.getName() + " pendant l'extraction du joueur.",
+        1);
+    MessageScreen::show(
+        "BUTIN DE BOSS TRANSPORTÉ",
+        "combat.loot.post_ko.boss_transport",
+        {
+            "Le fragment de boss ne rejoint pas magiquement ton sac.",
+            "Un survivant l'a physiquement récupéré puis transporté avec le groupe jusqu'à ton réveil.",
+            "La place disponible après ton extraction suffisait encore pour ce lot portable de boss."
+        },
+        false);
+    giveDefeatedBossLoot(player, boss, random, difficulty);
+}
 
 void LootGenerator::giveDefeatedBossLoot(
     Player& player,
@@ -1246,6 +1700,11 @@ void LootGenerator::giveDefeatedBossLoot(
         lines.push_back("Trois résidus de variation tombent comme des lignes supprimées.");
     }
 
+    // Les fragments principaux de boss sont de vrais objets uniques pour la logique de
+    // récupération : ils ne doivent pas être traités comme un lot banal si l'équipe doit
+    // choisir quoi transporter après un KO. Cela reste distinct d'une liaison à l'âme.
+    bossFragment.setUniqueRecoveryItem(true);
+    bossFragment.setRecoveryPriority(100);
     bossFragment.setQuality("pure");
 
     if (random.between(1, 100) <= 12)
@@ -1518,16 +1977,14 @@ bool LootGenerator::tryGiveMonsterLoot(
     giveCoinsIfLogical(player, monster, random, lines);
 
     loot = applyLootQuality(loot, monster, player, random, foundGoodLoot, lines);
-    addMaterialLootToPlayer(player, loot);
-
-    if (!foundGoodLoot)
+    const std::string lootReason = !foundGoodLoot
+        ? "Butin minimal récupéré sur " + monster.getName()
+        : monster.getName() + " laisse quelque chose derrière lui";
+    const bool collected = addMaterialLootToPlayer(player, loot, &lines, lootReason);
+    if (collected)
     {
-        addLootLine(lines, "Butin minimal récupéré sur " + monster.getName(), loot);
-    }
-    else
-    {
-        addLootLine(lines, monster.getName() + " laisse quelque chose derrière lui", loot);
+        addLootLine(lines, lootReason, loot);
     }
 
-    return true;
+    return collected;
 }

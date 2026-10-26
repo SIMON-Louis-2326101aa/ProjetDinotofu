@@ -21,6 +21,8 @@
 #include "progression/DifficultyRules.hpp"
 #include "progression/death/DeathPenaltySystem.hpp"
 #include "progression/blessing/BlessingSystem.hpp"
+#include "combat/death/LethalTeamRescueSystem.hpp"
+#include "combat/death/LethalSpiritResistanceSystem.hpp"
 #include "combat/reward/CombatReward.hpp"
 #include "combat/reward/CombatRewardSystem.hpp"
 #include "combat/loot/LootGenerator.hpp"
@@ -689,72 +691,99 @@ namespace
         return true;
     }
 
-    void resolveLethalGroupDeathSaves(Player& player, Random& random)
+    bool resolveLethalGroupDeathOutcome(
+        Player& player,
+        const std::vector<Player*>& rescuersAtOutcome,
+        Random& random,
+        const std::string& contextId
+    )
     {
         if (!player.isDead())
         {
-            return;
+            return true;
         }
 
-        int green = 0;
-        int red = 0;
-        std::vector<std::string> lines;
-        lines.push_back("Mort définitive coop : " + player.getName() + " est au sol.");
-        lines.push_back("Les dés de survie commencent : 3 pastilles vertes pour revenir, 3 rouges pour disparaître.");
+        const auto rescue = LethalTeamRescueSystem::tryHumanPartyRescue(
+            player,
+            rescuersAtOutcome,
+            random,
+            contextId
+        );
 
-        while (green < 3 && red < 3)
+        if (rescue.teamPresent)
         {
-            int roll = random.between(1, 20);
-            lines.push_back("Dé de survie : " + std::to_string(roll) + ".");
-
-            if (roll == 20)
+            std::vector<std::string> lines;
+            lines.push_back("Mort définitive coop : " + player.getName() + " est au sol.");
+            if (rescue.hasCapableRescuer)
             {
-                player.reviveWithHealthPercentage(1);
-                if (player.getHp() <= 0) player.heal(1);
-                lines.push_back("20 naturel : " + player.getName() + " se relève immédiatement à 1 PV et pourra rejouer.");
-                MessageScreen::show("SURVIE EN MORT DÉFINITIVE COOP", "pve.coop.lethal_death_save.success_natural", lines, false);
-                return;
-            }
-
-            if (roll == 1)
-            {
-                red += 2;
-                lines.push_back("1 naturel : deux pastilles rouges apparaissent d'un coup.");
-            }
-            else if (roll >= 11)
-            {
-                ++green;
-                lines.push_back("Pastille verte : " + std::to_string(green) + "/3.");
+                lines.push_back(rescue.rescuerName + " possède réellement les compétences nécessaires pour tenter de le/la ramener.");
             }
             else
             {
-                ++red;
-                lines.push_back("Pastille rouge : " + std::to_string(red) + "/3.");
+                lines.push_back("Aucun allié encore debout n'est un véritable soigneur : le groupe ne peut tenter qu'une stabilisation et un transport d'urgence.");
+            }
+            lines.push_back("Chance de survie : " + std::to_string(rescue.survivalChancePercent) + "%.");
+            lines.push_back("Jet : " + std::to_string(rescue.roll) + "/100.");
+
+            if (rescue.survived)
+            {
+                lines.push_back(player.getName() + " survit grâce à l'intervention de l'équipe. La mort définitive n'est pas comptée.");
+                lines.push_back("État au réveil : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + " PV.");
+                MessageScreen::show(
+                    "SAUVETAGE LÉTAL D'ÉQUIPE",
+                    "pve.coop.lethal_team_rescue.success." + contextId,
+                    lines,
+                    false
+                );
+                return true;
             }
 
-            if (green >= 3)
-            {
-                player.reviveWithHealthPercentage(1);
-                if (player.getHp() <= 0) player.heal(1);
-                lines.push_back(player.getName() + " revient à 1 PV. La mort n'est pas comptée.");
-                MessageScreen::show("SURVIE EN MORT DÉFINITIVE COOP", "pve.coop.lethal_death_save.success", lines, false);
-                return;
-            }
+            lines.push_back("La tentative échoue. Le groupe n'a pas réussi à stabiliser " + player.getName() + ".");
+            MessageScreen::show(
+                "SAUVETAGE LÉTAL D'ÉQUIPE",
+                "pve.coop.lethal_team_rescue.failure." + contextId,
+                lines,
+                false
+            );
+        }
+
+        const LethalSpiritResistanceResult spirit = LethalSpiritResistanceSystem::tryFirstLethalResistance(
+            player, random, contextId.c_str());
+        if (spirit.consumed)
+        {
+            DeathPenaltySystem::displayLethalSpiritResistance(spirit);
+            if (spirit.survived) return true;
         }
 
         if (BlessingSystem::tryTriggerLethalSurvival(player))
         {
-            lines.push_back(player.getName() + " reçoit trois pastilles rouges, mais toutes ses bénédictions se consument avant l'effacement.");
-            lines.push_back("Le personnage revient à 1 PV, sans inventaire ni équipement, avec une marque irréversible.");
-            MessageScreen::show("INTERVENTION DIVINE", "pve.coop.lethal_death_save.blessing", lines, false);
+            MessageScreen::show(
+                "INTERVENTION DIVINE",
+                "pve.coop.lethal_team_rescue.blessing." + contextId,
+                {
+                    "Le sauvetage mortel de l'équipe n'a pas suffi.",
+                    "Une bénédiction se consume avant l'effacement définitif de " + player.getName() + ".",
+                    "Le personnage revient à 1 PV, sans inventaire ni équipement, avec une marque irréversible."
+                },
+                false
+            );
             DeathPenaltySystem::displayLethalSurvivalAnomaly();
-            return;
+            return true;
         }
 
         player.recordDeath();
-        lines.push_back(player.getName() + " reçoit trois pastilles rouges : mort définitive. Aucune bénédiction capable de briser le verdict n'a répondu.");
-        MessageScreen::show("SURVIE EN MORT DÉFINITIVE COOP", "pve.coop.lethal_death_save.failure", lines, false);
+        MessageScreen::show(
+            "MORT DÉFINITIVE COOP",
+            "pve.coop.lethal_team_rescue.death." + contextId,
+            {
+                player.getName() + " n'a pas pu être sauvé.",
+                "Aucun secours restant n'a empêché la mort définitive."
+            },
+            false
+        );
+        return false;
     }
+
 }
 void MonsterPveMode::runTeam(
     std::vector<Player*>& party,
@@ -1050,6 +1079,7 @@ void MonsterPveMode::runTeam(
             false
         );
 
+        const std::vector<Player*> noLivingRescuers;
         for (Player* player : party)
         {
             if (player == nullptr) continue;
@@ -1057,7 +1087,7 @@ void MonsterPveMode::runTeam(
             player->recordDefeat();
             if (DifficultyRules::isPermanentDeath(difficulty, deathRule))
             {
-                resolveLethalGroupDeathSaves(*player, random);
+                resolveLethalGroupDeathOutcome(*player, noLivingRescuers, random, "party_defeat");
             }
             else
             {
@@ -1083,12 +1113,32 @@ void MonsterPveMode::runTeam(
         false
     );
 
+    std::vector<Player*> livingRescuersAtOutcome;
+    livingRescuersAtOutcome.reserve(party.size());
+    for (Player* member : party)
+    {
+        if (member != nullptr && !member->isDead())
+        {
+            livingRescuersAtOutcome.push_back(member);
+        }
+    }
+
     for (std::size_t i = 0; i < party.size(); ++i)
     {
         Player* player = party[i];
         if (player == nullptr)
         {
             continue;
+        }
+
+        if (player->isDead() && DifficultyRules::isPermanentDeath(difficulty, deathRule))
+        {
+            resolveLethalGroupDeathOutcome(
+                *player,
+                livingRescuersAtOutcome,
+                random,
+                "combat_end_" + std::to_string(i + 1)
+            );
         }
 
         if (player->isDead() && !DifficultyRules::isPermanentDeath(difficulty, deathRule))

@@ -673,7 +673,7 @@ Material MaterialCatalog::createTravelPassNote(int quantity)
 
 Material MaterialCatalog::createWarmMealVoucher(int quantity)
 {
-    return Material("warm_meal_voucher", "Bon de repas chaud", "Bon remis par une auberge ou un relais. Il sert surtout de petite faveur locale quand une prime en pièces serait trop ridicule.", "Renseignement", 6, quantity);
+    return Material("warm_meal_voucher", "Bon de repas chaud", "Bon prépayé valable pour un repas chaud. Ne déclenche aucun service tout seul : à présenter dans « Utiliser l'auberge ».", "Bon d'auberge", 4, quantity);
 }
 
 Material MaterialCatalog::createCityServiceStamp(int quantity)
@@ -688,7 +688,7 @@ Material MaterialCatalog::createMunicipalProofLetter(int quantity)
 
 Material MaterialCatalog::createLodgingBedToken(int quantity)
 {
-    return Material("lodging_bed_token", "Bon de lit d'auberge", "Jeton d'auberge pour une nuit simple, sans promesse contre les ronflements, les punaises ou les bardes trop motivés.", "Auberge", 8, quantity);
+    return Material("lodging_bed_token", "Bon de lit commun", "Bon prépayé valable pour une nuit simple. Ne déclenche aucun service tout seul : à présenter dans « Utiliser l'auberge ».", "Bon d'auberge", 7, quantity);
 }
 
 Material MaterialCatalog::createStableStallTicket(int quantity)

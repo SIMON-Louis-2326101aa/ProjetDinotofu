@@ -13,6 +13,17 @@
 #include "progression/DifficultyMode.hpp"
 
 #include <functional>
+#include <string>
+
+
+struct PlayerWaveObservedAction
+{
+    std::string actionKind;
+    std::string targetName;
+    std::string targetId;
+    bool targetKnown = false;
+    bool targetForcedByCombatRules = false;
+};
 
 class PlayerWaveCombatTurn
 {
@@ -24,7 +35,8 @@ public:
         bool& escapeSucceeded,
         DifficultyMode difficulty,
         bool teamOrdersAvailable = false,
-        const std::function<bool()>& openTeamOrders = nullptr
+        const std::function<bool()>& openTeamOrders = nullptr,
+        const std::function<void(const PlayerWaveObservedAction&)>& actionObserver = nullptr
     );
 
 private:

@@ -27,6 +27,7 @@
 #include "economy/Money.hpp"
 #include "interface/menu/quest/QuestMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/inventory/InventoryProtection.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
@@ -37,6 +38,9 @@
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "story/StoryCampaign.hpp"
 #include "world/LocalReputationSystem.hpp"
+#include "world/CityProfileSystem.hpp"
+#include "world/CityEconomyDynamicsSystem.hpp"
+#include "world/CityStockDynamicsSystem.hpp"
 #include "world/npc/NpcKnowledgeSystem.hpp"
 #include "world/npc/NpcInformationPropagationSystem.hpp"
 
@@ -60,6 +64,21 @@ using ShopCityServiceMenu::kCityEconomyDiscountCapPercent;
 namespace
 {
     std::string getVendorNameForShop(ShopType type);
+
+    void applyLocalStockDynamics(const Player& player, std::vector<ShopInventory>& shops)
+    {
+        const int repairDays = player.getInventory().countMaterialById("city_repair_days_marker");
+        const int recentEventDays = player.getInventory().countMaterialById("city_event_recent_days_marker");
+        for (ShopInventory& shop : shops)
+        {
+            CityStockDynamicsSystem::applyToShop(
+                player.getCurrentCityId(),
+                player.getWorldDaysElapsed(),
+                repairDays,
+                recentEventDays,
+                shop);
+        }
+    }
 
     std::uint32_t stableShopHash(const std::string& value)
     {
@@ -814,6 +833,20 @@ namespace
         for (const BarterRequirement& requirement : requirements)
         {
             if (player.getInventory().countMaterialById(requirement.materialId) < requirement.quantity * quantity)
+            {
+                return false;
+            }
+        }
+
+        for (const BarterRequirement& requirement : requirements)
+        {
+            if (!InventoryProtection::confirmLockedMaterialUse(
+                    player,
+                    requirement.materialId,
+                    requirement.label,
+                    "échanger ce matériau au marché noir",
+                    "shop.black_market.locked_barter"
+                ))
             {
                 return false;
             }
@@ -1771,6 +1804,23 @@ namespace
             player.getType()
         );
 
+        const CityShopContext cityProfileContext = CityProfileSystem::shopContextFor(player.getCurrentCityId(), shop.getType());
+        if (cityProfileContext.buyPriceModifierPercent != 0)
+        {
+            price = std::max(1, price * (100 + cityProfileContext.buyPriceModifierPercent) / 100);
+        }
+
+        const CityEconomicPulse economicPulse = CityEconomyDynamicsSystem::stateFor(
+            player.getCurrentCityId(),
+            player.getWorldDaysElapsed(),
+            player.getInventory().countMaterialById("city_repair_days_marker"),
+            player.getInventory().countMaterialById("city_event_recent_days_marker")
+        );
+        if (economicPulse.generalBuyModifierPercent != 0)
+        {
+            price = std::max(1, price * (100 + economicPulse.generalBuyModifierPercent) / 100);
+        }
+
         const int cityEconomyModifier = cityEconomyBuyModifierPercent(player, shop.getType());
         if (cityEconomyModifier != 0)
         {
@@ -2266,6 +2316,12 @@ namespace
         {
             screen.addLine(capLine);
         }
+        screen.addLine(CityStockDynamicsSystem::availabilityLine(
+            player.getCurrentCityId(),
+            player.getWorldDaysElapsed(),
+            player.getInventory().countMaterialById("city_repair_days_marker"),
+            player.getInventory().countMaterialById("city_event_recent_days_marker"),
+            shop.getType()));
 
         const ShopPromotionOffer promotion = promotionForShop(shop, player);
         if (promotion.active)
@@ -2438,6 +2494,19 @@ namespace
     }
 
 
+    std::string inventoryEntryPreferenceKey(const Player& player, ShopType shopType, int index)
+    {
+        if (shopType == ShopType::Weapon && player.getInventory().hasWeapon(index))
+            return Inventory::weaponItemKey(player.getInventory().getWeapon(index));
+        if (shopType == ShopType::Armor && player.getInventory().hasArmor(index))
+            return Inventory::armorItemKey(player.getInventory().getArmor(index));
+        if (shopType == ShopType::Consumable && player.getInventory().hasConsumable(index))
+            return Inventory::consumableItemKey(player.getInventory().getConsumable(index));
+        if (player.getInventory().hasMaterial(index))
+            return Inventory::materialItemKey(player.getInventory().getMaterial(index));
+        return "";
+    }
+
     SellableEntryUiInfo getSellableEntryUiInfo(const Player& player, ShopType shopType, int index)
     {
         SellableEntryUiInfo info;
@@ -2491,6 +2560,19 @@ namespace
             info.name = "Entrée inconnue";
             info.status = "Invalide";
             info.detail = "Cette entrée ne peut pas être résolue dans l'inventaire.";
+        }
+
+        const std::string preferenceKey = inventoryEntryPreferenceKey(player, shopType, index);
+        const bool inventoryLocked = !preferenceKey.empty() && player.getInventory().isLockedItemKey(preferenceKey);
+        const bool inventoryPinned = !preferenceKey.empty() && player.getInventory().isPinnedItemKey(preferenceKey);
+        if (inventoryPinned)
+        {
+            info.name = "[ÉPINGLÉ] " + info.name;
+        }
+        if (inventoryLocked)
+        {
+            info.status = info.status.empty() ? "VERROUILLÉ" : (info.status + " | VERROUILLÉ");
+            info.detail += " Une confirmation supplémentaire sera exigée avant la vente.";
         }
 
         info.sellable = ShopTransactionSystem::canShopBuyInventoryEntry(player, shopType, index);
@@ -2558,6 +2640,11 @@ namespace
             player.getRaceText(),
             player.getType()
         );
+        const CityShopContext cityProfileContext = CityProfileSystem::shopContextFor(player.getCurrentCityId(), shop.getType());
+        if (cityProfileContext.sellPriceModifierPercent != 0)
+        {
+            finalSellPrice = std::max(1, finalSellPrice * (100 + cityProfileContext.sellPriceModifierPercent) / 100);
+        }
 
         MenuScreen screen("ARTICLE", "shop.item");
         screen.addLine("Nom : " + item.getName());
@@ -2569,6 +2656,26 @@ namespace
             screen.addLine(classCompatibilityLine);
         }
         screen.addLine("Prix d'achat : " + Money::formatEconomyUnits(finalBuyPrice));
+        const CityGameplayProfile cityGameplayProfile = CityProfileSystem::profileFor(player.getCurrentCityId());
+        const CityEconomicPulse cityEconomicPulse = CityEconomyDynamicsSystem::stateFor(
+            player.getCurrentCityId(),
+            player.getWorldDaysElapsed(),
+            player.getInventory().countMaterialById("city_repair_days_marker"),
+            player.getInventory().countMaterialById("city_event_recent_days_marker")
+        );
+        screen.addLine("Profil de ville : richesse structurelle " + CityProfileSystem::wealthLabel(cityGameplayProfile.wealth)
+            + " | richesse actuelle " + CityProfileSystem::wealthLabel(cityEconomicPulse.effectiveWealth)
+            + " | sécurité " + CityProfileSystem::securityLabel(cityGameplayProfile.security) + ".");
+        if (cityEconomicPulse.temporary)
+        {
+            screen.addLine("Conjoncture locale : " + cityEconomicPulse.headline + ".");
+        }
+        if (cityProfileContext.specializationStrength > 0)
+        {
+            screen.addLine("Spécialité locale : " + cityProfileContext.specializationLabel
+                + " (niveau " + std::to_string(cityProfileContext.specializationStrength) + "/3)"
+                + " | qualité " + std::to_string(cityProfileContext.serviceQualityScore) + "/100.");
+        }
         screen.addLine(ShopPriceRules::buyQuoteStyleText(shop.getType()));
         const ShopPromotionOffer promotion = promotionForShop(shop, player);
         if (promotion.active && promotion.itemId == item.getId())
@@ -2758,6 +2865,10 @@ namespace
             sellScreen.addLine("Argent actuel : " + player.getInventory().getWalletLine());
             sellScreen.addLine("Les entrées protégées ou incompatibles restent visibles, mais ne peuvent pas être vendues.");
             sellScreen.addLine("Prix : la durabilité baisse la valeur, les enchantements l'augmentent, et un bon acheteur paie mieux.");
+            if (shop.getType() == ShopType::MonsterMaterial)
+            {
+                sellScreen.addLine("Ce comptoir est spécialisé dans les composants de monstres : la guilde et les collecteurs spécialisés constituent leur filière de référence.");
+            }
 
             if (maxChoice <= 0)
             {
@@ -2938,6 +3049,28 @@ namespace
                     }
                 );
                 continue;
+            }
+
+            const std::string salePreferenceKey = inventoryEntryPreferenceKey(player, shop.getType(), index);
+            if (!salePreferenceKey.empty() && player.getInventory().isLockedItemKey(salePreferenceKey))
+            {
+                const bool confirmLockedSale = askShopConfirmation(
+                    "OBJET VERROUILLÉ",
+                    "shop.sell.locked_confirm",
+                    {
+                        "Objet : " + selectedEntryLabel,
+                        "Cet objet est verrouillé dans ton inventaire.",
+                        "Le verrou restera actif si tu retrouves un objet empilable du même type."
+                    },
+                    "Vendre malgré le verrou",
+                    "Conserver l'objet",
+                    "shop.sell.locked"
+                );
+                if (!confirmLockedSale)
+                {
+                    showShopResult("VENTE ANNULÉE", "shop.sell.locked_cancelled", {"Le verrou a protégé l'objet.", "Aucun objet n'a été vendu."});
+                    continue;
+                }
             }
 
             ShopTransactionSystem::clearLastTransactionNotes();
@@ -3953,6 +4086,7 @@ void ShopMenu::openShopOfType(Player& player, ShopType type)
     std::vector<ShopInventory> shops;
     shops.push_back(shop);
     applyChapterThreeShopConsequences(player, shops);
+    applyLocalStockDynamics(player, shops);
     if (shops.empty())
     {
         MessageScreen::show(
@@ -3971,6 +4105,12 @@ void ShopMenu::openShopOfType(Player& player, ShopType type)
 
 // EN: displayPreview declares or implements a focused behavior used by this module.
 // FR: displayPreview déclare ou implémente un comportement précis utilisé par ce module.
+void ShopMenu::openSellOnly(Player& player, ShopType type, const std::string& deskName)
+{
+    ShopInventory desk(type, deskName.empty() ? std::string(shopTypeToText(type)) : deskName);
+    openSellMenu(player, desk);
+}
+
 void ShopMenu::displayPreview()
 {
     std::vector<ShopInventory> shops = ShopCatalog::createAllPreviewShops();
@@ -3996,6 +4136,7 @@ void ShopMenu::open(Player& player)
     }
 
     appendTemporaryRecommendedShops(player, shops);
+    applyLocalStockDynamics(player, shops);
 
     if (ShopRotationSystem::shouldRefreshShops())
     {
@@ -4075,4 +4216,3 @@ void ShopMenu::open(Player& player)
         else if (choice == 15) ShopMenu::openShopOfType(player, ShopType::MonsterMaterial);
     }
 }
-

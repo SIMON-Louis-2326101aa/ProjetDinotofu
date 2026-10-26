@@ -13,12 +13,23 @@
 #include "interface/model/MenuScreen.hpp"
 #include "save/SaveManager.hpp"
 #include "core/VersionInfo.hpp"
+#include "progression/TitleCatalog.hpp"
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
 namespace
 {
+
+    std::string formatAccountPlayTime(long long totalSeconds)
+    {
+        const long long safe = totalSeconds < 0 ? 0 : totalSeconds;
+        const long long hours = safe / 3600;
+        const long long minutes = (safe % 3600) / 60;
+        if (hours > 0) return std::to_string(hours) + " h " + std::to_string(minutes) + " min";
+        return std::to_string(minutes) + " min";
+    }
     MenuOptionItemData makeAccountMenuItem(
         const std::string& actionType,
         const std::string& name,
@@ -60,10 +71,64 @@ namespace
             account.accountName,
             "Version de sauvegarde : V" + version + " | Dernière activité : " + activity,
             compatibility,
-            "Personnages jouables : " + std::to_string(account.playableCharacterCount),
+            "Personnages jouables : " + std::to_string(account.playableCharacterCount)
+                + " | Titres compte : " + std::to_string(account.unlockedTitleCount)
+                + " | Temps total : " + formatAccountPlayTime(account.totalRealPlayTimeSeconds),
             "Jeu actuel : V" + VersionInfo::currentVersion(),
             impact != VersionCompatibilityImpact::None
         );
+    }
+
+    void showAccountTitleArchive(const std::string& accountName)
+    {
+        const std::vector<AccountUnlockedTitleInfo> unlockedDetails = SaveManager::getAccountUnlockedTitleDetails(accountName);
+        std::vector<std::string> unlocked;
+        unlocked.reserve(unlockedDetails.size());
+        for (const AccountUnlockedTitleInfo& info : unlockedDetails) unlocked.push_back(info.name);
+        std::vector<std::string> lines;
+        lines.push_back("Compte : " + accountName);
+        lines.push_back("Titres de compte débloqués et conservés : " + std::to_string(unlocked.size()) + ".");
+        lines.push_back("Catalogue des titres : " + TitleCatalog::catalogVersion() + " (dernière mise à jour du catalogue).");
+        lines.push_back("Un personnage supprimé ne retire jamais un titre déjà validé sur ce compte.");
+        lines.push_back("Un personnage Altéré ne peut plus enrichir la progression normale du compte ; seule la marque spéciale « On ne dira rien... » fait exception.");
+        lines.push_back("");
+        lines.push_back("TITRES DÉBLOQUÉS");
+
+        if (unlocked.empty())
+        {
+            lines.push_back("- Aucun titre de compte débloqué pour l'instant.");
+        }
+        else
+        {
+            for (const AccountUnlockedTitleInfo& info : unlockedDetails)
+            {
+                const std::string date = info.unlockedAt.empty() ? "date historique inconnue" : info.unlockedAt;
+                const std::string character = info.characterName.empty() ? "personnage historique inconnu" : info.characterName;
+                lines.push_back("- [obtenu] " + info.name + " | " + date + " | avec " + character);
+            }
+        }
+
+        lines.push_back("");
+        lines.push_back("TITRES RESTANTS");
+        for (const TitleCatalog::TitleDefinition& definition : TitleCatalog::availableTitleDefinitions())
+        {
+            if (std::find(unlocked.begin(), unlocked.end(), definition.name) != unlocked.end())
+            {
+                continue;
+            }
+
+            if (definition.visibleBeforeUnlock)
+            {
+                lines.push_back("- [à obtenir] " + definition.name);
+                lines.push_back("  " + definition.unlockHint);
+            }
+            else
+            {
+                lines.push_back("- ????");
+            }
+        }
+
+        MessageScreen::show("TITRES DÉBLOQUÉS — COMPTE", "save.accounts.titles", lines);
     }
 }
 
@@ -99,8 +164,8 @@ std::string AccountMenu::open()
         {
             accountListScreen.addOption(
                 i + 1,
-                accounts[i].accountName,
-                "Compte local disponible.",
+                accounts[i].accountName + " | Temps total " + formatAccountPlayTime(accounts[i].totalRealPlayTimeSeconds),
+                "Compte local disponible. Le temps reste cumulé même si des personnages sont morts ou supprimés.",
                 true,
                 "save.accounts.select." + std::to_string(i + 1),
                 makeAccountSummaryItem(accounts[i])
@@ -193,6 +258,8 @@ std::string AccountMenu::open()
         accountActionScreen.addLine("Compte : " + selectedAccount.accountName);
         accountActionScreen.addLine("Dossier : " + selectedAccount.path);
         accountActionScreen.addLine("Personnages jouables liés : " + std::to_string(selectedAccount.playableCharacterCount) + ".");
+        accountActionScreen.addLine("Titres légitimes conservés : " + std::to_string(selectedAccount.unlockedTitleCount) + ".");
+        accountActionScreen.addLine("Temps total historique du compte : " + formatAccountPlayTime(selectedAccount.totalRealPlayTimeSeconds) + ".");
         accountActionScreen.addLine("Version de sauvegarde : V" + (selectedAccount.savedForVersion.empty() ? std::string("inconnue") : selectedAccount.savedForVersion));
         accountActionScreen.addLine("Dernière activité connue : " + (selectedAccount.lastActivityText.empty() ? std::string("Inconnue") : selectedAccount.lastActivityText));
         accountActionScreen.addOption(0, "Retour", "", true, "save.accounts.actions.back");
@@ -220,12 +287,20 @@ std::string AccountMenu::open()
             "save.accounts.actions.delete",
             makeAccountMenuItem("delete", "Supprimer", "Compte : " + selectedAccount.accountName, "Irréversible", "Supprime aussi les personnages liés", "Confirmation : SUPPRIMER", true)
         );
+        accountActionScreen.addOption(
+            4,
+            "Titres débloqués",
+            "Consulter l'historique permanent des titres légitimement obtenus sur ce compte.",
+            true,
+            "save.accounts.actions.titles",
+            makeAccountMenuItem("inspect", "Titres débloqués", "Collection permanente du compte.", "Progression légitime", std::to_string(selectedAccount.unlockedTitleCount) + " titre(s)")
+        );
 
         int accountAction = TerminalInterface::askMenuChoice(
             accountActionScreen,
             0,
-            3,
-            "Veuillez choisir 0, 1, 2 ou 3."
+            4,
+            "Veuillez choisir une option de 0 à 4."
         );
 
         if (accountAction == 0)
@@ -295,6 +370,13 @@ std::string AccountMenu::open()
                 );
             }
 
+            continue;
+        }
+
+        if (accountAction == 4)
+        {
+            Console::clear();
+            showAccountTitleArchive(selectedAccount.accountName);
             continue;
         }
 

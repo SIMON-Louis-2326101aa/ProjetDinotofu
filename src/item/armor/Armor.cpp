@@ -321,6 +321,8 @@ std::vector<std::string> Armor::toDisplayLines() const
         "Nom : " + name,
         "Description : " + description,
         "Valeur : " + Money::formatEconomyUnits(value),
+        "Propriété : " + getOwnershipBindingDisplayText(),
+        "Récupération : " + getRecoveryMetadataDisplayText(),
         "Type : " + armorTypeLabel(type),
         "Catégorie de poids : " + EquipmentWeightRules::getWeightLabel(EquipmentWeightRules::getArmorWeightClass(*this)),
         "Contrepartie : " + EquipmentWeightRules::getArmorTradeoffText(*this),

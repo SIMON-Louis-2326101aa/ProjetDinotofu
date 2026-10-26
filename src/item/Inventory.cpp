@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <iterator>
+#include <cctype>
 
 
 namespace
@@ -168,6 +169,184 @@ namespace
             + std::to_string(maxRepairKitInventoryDurability(material.getId()));
     }
 
+}
+
+
+namespace
+{
+    bool containsInventoryPreferenceKey(const std::vector<std::string>& keys, const std::string& key)
+    {
+        return std::find(keys.begin(), keys.end(), key) != keys.end();
+    }
+
+    void setInventoryPreferenceKey(std::vector<std::string>& keys, const std::string& key, bool enabled)
+    {
+        if (key.empty()) return;
+        const auto it = std::find(keys.begin(), keys.end(), key);
+        if (enabled)
+        {
+            if (it == keys.end()) keys.push_back(key);
+        }
+        else if (it != keys.end())
+        {
+            keys.erase(it);
+        }
+    }
+
+    std::string upperTrackedText(std::string value)
+    {
+        const std::pair<const char*, const char*> accentedUppercase[] = {
+            {"é", "É"}, {"è", "È"}, {"ê", "Ê"}, {"ë", "Ë"},
+            {"à", "À"}, {"â", "Â"}, {"ä", "Ä"}, {"ù", "Ù"},
+            {"û", "Û"}, {"ü", "Ü"}, {"ô", "Ô"}, {"ö", "Ö"},
+            {"î", "Î"}, {"ï", "Ï"}, {"ç", "Ç"}
+        };
+
+        for (const auto& [lowercase, uppercase] : accentedUppercase)
+        {
+            std::size_t position = 0;
+            while ((position = value.find(lowercase, position)) != std::string::npos)
+            {
+                value.replace(position, std::char_traits<char>::length(lowercase), uppercase);
+                position += std::char_traits<char>::length(uppercase);
+            }
+        }
+
+        for (char& character : value)
+        {
+            const unsigned char c = static_cast<unsigned char>(character);
+            if (c < 128) character = static_cast<char>(std::toupper(c));
+        }
+        return value;
+    }
+}
+
+std::string Inventory::weaponItemKey(const Weapon& weapon)
+{
+    return "weapon:" + (weapon.getPersistentId().empty() ? weapon.getName() : weapon.getPersistentId());
+}
+
+std::string Inventory::armorItemKey(const Armor& armor)
+{
+    return "armor:" + (armor.getPersistentId().empty() ? armor.getName() : armor.getPersistentId());
+}
+
+std::string Inventory::consumableItemKey(const Consumable& consumable)
+{
+    return "consumable:" + consumable.getName();
+}
+
+std::string Inventory::materialItemKey(const Material& material)
+{
+    return materialItemKeyById(material.getId());
+}
+
+std::string Inventory::materialItemKeyById(const std::string& materialId)
+{
+    return "material:" + materialId;
+}
+
+bool Inventory::isPinnedItemKey(const std::string& key) const
+{
+    return containsInventoryPreferenceKey(pinnedItemKeys_, key);
+}
+
+bool Inventory::isFavoriteAmmunitionId(const std::string& materialId) const
+{
+    return containsInventoryPreferenceKey(favoriteAmmunitionIds_, materialId);
+}
+
+std::string Inventory::ammunitionFamilyForMaterialId(const std::string& materialId)
+{
+    if (materialId == "training_arrows" || materialId == "barbed_arrows" || materialId == "ash_arrows" || materialId == "venom_arrows") return "arrows";
+    if (materialId == "training_bolts" || materialId == "piercing_bolts" || materialId == "frozen_bolts" || materialId == "shock_bolts") return "bolts";
+    if (materialId == "training_throwing_knives" || materialId == "balanced_throwing_knives" || materialId == "conductive_knives" || materialId == "smoke_knives") return "throwing_knives";
+    return "";
+}
+
+bool Inventory::isAmmunitionMaterialId(const std::string& materialId)
+{
+    return !ammunitionFamilyForMaterialId(materialId).empty();
+}
+
+bool Inventory::isLockedItemKey(const std::string& key) const
+{
+    return containsInventoryPreferenceKey(lockedItemKeys_, key);
+}
+
+bool Inventory::isTrackedMaterialId(const std::string& materialId) const
+{
+    return containsInventoryPreferenceKey(trackedMaterialIds_, materialId);
+}
+
+void Inventory::setPinnedItemKey(const std::string& key, bool enabled)
+{
+    setInventoryPreferenceKey(pinnedItemKeys_, key, enabled);
+}
+
+void Inventory::setFavoriteAmmunitionId(const std::string& materialId, bool enabled)
+{
+    const std::string family = ammunitionFamilyForMaterialId(materialId);
+    if (family.empty()) return;
+
+    if (enabled)
+    {
+        favoriteAmmunitionIds_.erase(
+            std::remove_if(favoriteAmmunitionIds_.begin(), favoriteAmmunitionIds_.end(), [&](const std::string& existingId) {
+                return ammunitionFamilyForMaterialId(existingId) == family && existingId != materialId;
+            }),
+            favoriteAmmunitionIds_.end()
+        );
+    }
+    setInventoryPreferenceKey(favoriteAmmunitionIds_, materialId, enabled);
+}
+
+void Inventory::setLockedItemKey(const std::string& key, bool enabled)
+{
+    setInventoryPreferenceKey(lockedItemKeys_, key, enabled);
+}
+
+void Inventory::setTrackedMaterialId(const std::string& materialId, bool enabled)
+{
+    setInventoryPreferenceKey(trackedMaterialIds_, materialId, enabled);
+}
+
+void Inventory::togglePinnedItemKey(const std::string& key)
+{
+    setPinnedItemKey(key, !isPinnedItemKey(key));
+}
+
+void Inventory::toggleFavoriteAmmunitionId(const std::string& materialId)
+{
+    setFavoriteAmmunitionId(materialId, !isFavoriteAmmunitionId(materialId));
+}
+
+void Inventory::toggleLockedItemKey(const std::string& key)
+{
+    setLockedItemKey(key, !isLockedItemKey(key));
+}
+
+void Inventory::toggleTrackedMaterialId(const std::string& materialId)
+{
+    setTrackedMaterialId(materialId, !isTrackedMaterialId(materialId));
+}
+
+const std::vector<std::string>& Inventory::getPinnedItemKeys() const { return pinnedItemKeys_; }
+const std::vector<std::string>& Inventory::getFavoriteAmmunitionIds() const { return favoriteAmmunitionIds_; }
+const std::vector<std::string>& Inventory::getLockedItemKeys() const { return lockedItemKeys_; }
+const std::vector<std::string>& Inventory::getTrackedMaterialIds() const { return trackedMaterialIds_; }
+
+void Inventory::setLoadedInventoryPreferences(
+    const std::vector<std::string>& pinnedKeys,
+    const std::vector<std::string>& lockedKeys,
+    const std::vector<std::string>& trackedMaterialIds,
+    const std::vector<std::string>& favoriteAmmunitionIds)
+{
+    pinnedItemKeys_ = pinnedKeys;
+    lockedItemKeys_ = lockedKeys;
+    trackedMaterialIds_ = trackedMaterialIds;
+    favoriteAmmunitionIds_.clear();
+    for (const std::string& id : favoriteAmmunitionIds) setFavoriteAmmunitionId(id, true);
 }
 
 // EN: Inventory declares or implements a focused behavior used by this module.
@@ -601,6 +780,19 @@ int Inventory::countMaterialById(const std::string& id) const
     return total;
 }
 
+int Inventory::countMaterialByIdAndQuality(const std::string& id, const std::string& quality) const
+{
+    int total = 0;
+    for (const Material& material : materials)
+    {
+        if (material.getId() == id && material.getQuality() == quality)
+        {
+            total += material.getQuantity();
+        }
+    }
+    return total;
+}
+
 // EN: countMaterialQualityPointsById declares or implements a focused behavior used by this module.
 // FR: countMaterialQualityPointsById déclare ou implémente un comportement précis utilisé par ce module.
 int Inventory::countMaterialQualityPointsById(const std::string& id) const
@@ -668,24 +860,49 @@ void Inventory::addArmor(const Armor& armor)
 // FR: addConsumable déclare ou implémente un comportement précis utilisé par ce module.
 void Inventory::addConsumable(const Consumable& consumable)
 {
-    consumables.push_back(consumable);
+    Consumable stored = consumable;
+    stored.ensurePersistentId("consumable");
+    consumables.push_back(stored);
 }
 
 // EN: addMaterial declares or implements a focused behavior used by this module.
 // FR: addMaterial déclare ou implémente un comportement précis utilisé par ce module.
-void Inventory::addMaterial(const Material& material)
+void Inventory::addMaterialInternal(const Material& material, bool announceTrackedAcquisition, bool recordDiscovery)
 {
     if (material.getQuantity() <= 0)
     {
         return;
     }
 
-    MaterialKnowledgeProgress::recordDiscovery(material);
+    if (announceTrackedAcquisition && isTrackedMaterialId(material.getId()))
+    {
+        std::vector<std::string> acquisitionLines = {
+            "OBJET SUIVI OBTENU : " + upperTrackedText(material.getName())
+                + " X" + std::to_string(material.getQuantity())
+        };
+        if (material.hasSpecialQuality())
+        {
+            acquisitionLines.push_back("QUALITE : " + upperTrackedText(material.getQualityLabel()));
+        }
+        MessageScreen::show(
+            "OBJET SUIVI OBTENU",
+            "inventory.tracked_material.acquired",
+            acquisitionLines,
+            false
+        );
+    }
+
+    if (recordDiscovery)
+    {
+        MaterialKnowledgeProgress::recordDiscovery(material);
+    }
 
     for (Material& existingMaterial : materials)
     {
         if (existingMaterial.getId() == material.getId()
-            && existingMaterial.getQuality() == material.getQuality())
+            && existingMaterial.getQuality() == material.getQuality()
+            && existingMaterial.getOwnershipBinding() == material.getOwnershipBinding()
+            && existingMaterial.hasSameRecoveryMetadata(material))
         {
             existingMaterial.addQuantity(material.getQuantity());
             return;
@@ -693,6 +910,11 @@ void Inventory::addMaterial(const Material& material)
     }
 
     materials.push_back(material);
+}
+
+void Inventory::addMaterial(const Material& material)
+{
+    addMaterialInternal(material, true, true);
 }
 
 // EN: hasWeapon declares or implements a focused behavior used by this module.
@@ -900,6 +1122,133 @@ bool Inventory::removeMaterialQuantity(int index, int quantity)
     return true;
 }
 
+// EN: degradeMaterialQualityById consumes magical/workshop quality before consuming the physical unit itself.
+// FR: degradeMaterialQualityById use d'abord la qualité d'un matériau avant de dissoudre l'unité physique.
+bool Inventory::degradeMaterialQualityById(const std::string& id, std::string& previousQuality, std::string& resultingQuality, bool& dissolved)
+{
+    previousQuality.clear();
+    resultingQuality.clear();
+    dissolved = false;
+
+    int selectedIndex = -1;
+    int selectedWeight = 999;
+    for (int i = 0; i < static_cast<int>(materials.size()); ++i)
+    {
+        if (materials[i].getId() != id || materials[i].getQuantity() <= 0)
+        {
+            continue;
+        }
+
+        const int weight = materials[i].getQualityCraftWeight();
+        if (weight < selectedWeight)
+        {
+            selectedWeight = weight;
+            selectedIndex = i;
+        }
+    }
+
+    if (selectedIndex < 0)
+    {
+        return false;
+    }
+
+    Material source = materials[selectedIndex];
+    previousQuality = source.getQuality();
+
+    if (previousQuality == "impure" || previousQuality == "low")
+    {
+        resultingQuality = "dissolved";
+        dissolved = true;
+    }
+    else if (previousQuality == "normal")
+    {
+        resultingQuality = "impure";
+    }
+    else if (previousQuality == "exceptional")
+    {
+        resultingQuality = "pure";
+    }
+    else
+    {
+        // pure / high and any future high-grade synonym fall back to normal before becoming impure.
+        resultingQuality = "normal";
+    }
+
+    materials[selectedIndex].removeQuantity(1);
+    if (materials[selectedIndex].getQuantity() <= 0)
+    {
+        materials.erase(materials.begin() + selectedIndex);
+    }
+
+    if (!dissolved)
+    {
+        source.setQuantity(1);
+        source.setQuality(resultingQuality);
+        // This is the same physical unit losing quality, not a new acquisition.
+        // A tracked-material banner here would falsely announce an item the player already owned.
+        addMaterialInternal(source, false, false);
+    }
+
+    return true;
+}
+
+// EN: degrades one physical unit from the exact quality stack selected by the player.
+// FR: dégrade une unité physique de la qualité exacte choisie par le joueur.
+bool Inventory::degradeMaterialQualityByIdAndQuality(const std::string& id, const std::string& quality, std::string& previousQuality, std::string& resultingQuality, bool& dissolved)
+{
+    previousQuality.clear();
+    resultingQuality.clear();
+    dissolved = false;
+
+    int selectedIndex = -1;
+    for (int i = 0; i < static_cast<int>(materials.size()); ++i)
+    {
+        if (materials[i].getId() == id && materials[i].getQuality() == quality && materials[i].getQuantity() > 0)
+        {
+            selectedIndex = i;
+            break;
+        }
+    }
+    if (selectedIndex < 0)
+    {
+        return false;
+    }
+
+    Material source = materials[selectedIndex];
+    previousQuality = source.getQuality();
+    if (previousQuality == "impure" || previousQuality == "low")
+    {
+        resultingQuality = "dissolved";
+        dissolved = true;
+    }
+    else if (previousQuality == "normal")
+    {
+        resultingQuality = "impure";
+    }
+    else if (previousQuality == "exceptional")
+    {
+        resultingQuality = "pure";
+    }
+    else
+    {
+        resultingQuality = "normal";
+    }
+
+    materials[selectedIndex].removeQuantity(1);
+    if (materials[selectedIndex].getQuantity() <= 0)
+    {
+        materials.erase(materials.begin() + selectedIndex);
+    }
+    if (!dissolved)
+    {
+        source.setQuantity(1);
+        source.setQuality(resultingQuality);
+        // Quality degradation must not trigger the tracked-acquisition banner.
+        addMaterialInternal(source, false, false);
+    }
+    return true;
+}
+
 // EN: removeMaterialQuantityById declares or implements a focused behavior used by this module.
 // FR: removeMaterialQuantityById déclare ou implémente un comportement précis utilisé par ce module.
 bool Inventory::removeMaterialQuantityById(const std::string& id, int quantity)
@@ -948,6 +1297,42 @@ bool Inventory::removeMaterialQuantityById(const std::string& id, int quantity)
     }
 
     return remaining <= 0;
+}
+
+// EN: removes only from a material stack with the exact selected quality.
+// FR: retire uniquement une pile de matériau de la qualité exacte choisie.
+bool Inventory::removeMaterialQuantityByIdAndQuality(const std::string& id, const std::string& quality, int quantity)
+{
+    if (quantity <= 0)
+    {
+        return true;
+    }
+    if (countMaterialByIdAndQuality(id, quality) < quantity)
+    {
+        return false;
+    }
+
+    int remaining = quantity;
+    for (int i = 0; i < static_cast<int>(materials.size()) && remaining > 0;)
+    {
+        if (materials[i].getId() != id || materials[i].getQuality() != quality)
+        {
+            ++i;
+            continue;
+        }
+        const int take = std::min(remaining, materials[i].getQuantity());
+        materials[i].removeQuantity(take);
+        remaining -= take;
+        if (materials[i].getQuantity() <= 0)
+        {
+            materials.erase(materials.begin() + i);
+        }
+        else
+        {
+            ++i;
+        }
+    }
+    return remaining == 0;
 }
 
 // EN: removeMaterialQuantityByIdFlexible declares or implements a focused behavior used by this module.
@@ -1029,16 +1414,28 @@ void Inventory::displayWeaponList() const
         return;
     }
 
-    for (int i = 0; i < static_cast<int>(weapons.size()); i++)
-    {
-        std::string line = "[" + std::to_string(i) + "] " + weapons[i].getName();
+    std::vector<int> orderedWeaponIndices;
+    for (int i = 0; i < static_cast<int>(weapons.size()); ++i) orderedWeaponIndices.push_back(i);
+    std::stable_sort(orderedWeaponIndices.begin(), orderedWeaponIndices.end(), [&](int left, int right) {
+        return isPinnedItemKey(weaponItemKey(weapons[static_cast<std::size_t>(left)]))
+            && !isPinnedItemKey(weaponItemKey(weapons[static_cast<std::size_t>(right)]));
+    });
 
-        if (!weapons[i].isIndestructible())
+    for (int i : orderedWeaponIndices)
+    {
+        const Weapon& weapon = weapons[static_cast<std::size_t>(i)];
+        const std::string key = weaponItemKey(weapon);
+        std::string line = "[" + std::to_string(i) + "] ";
+        if (isPinnedItemKey(key)) line += "[ÉPINGLÉ] ";
+        if (isLockedItemKey(key)) line += "[VERROUILLÉ] ";
+        line += weapon.getName();
+
+        if (!weapon.isIndestructible())
         {
-            line += " (" + std::to_string(weapons[i].getDurability()) + "/" + std::to_string(weapons[i].getMaxDurability()) + ")";
+            line += " (" + std::to_string(weapon.getDurability()) + "/" + std::to_string(weapon.getMaxDurability()) + ")";
         }
 
-        if (weapons[i].isBroken())
+        if (weapon.isBroken())
         {
             line += " - Cassée";
         }
@@ -1063,16 +1460,28 @@ void Inventory::displayArmorList() const
         return;
     }
 
-    for (int i = 0; i < static_cast<int>(armors.size()); i++)
-    {
-        std::string line = "[" + std::to_string(i) + "] " + armors[i].getName();
+    std::vector<int> orderedArmorIndices;
+    for (int i = 0; i < static_cast<int>(armors.size()); ++i) orderedArmorIndices.push_back(i);
+    std::stable_sort(orderedArmorIndices.begin(), orderedArmorIndices.end(), [&](int left, int right) {
+        return isPinnedItemKey(armorItemKey(armors[static_cast<std::size_t>(left)]))
+            && !isPinnedItemKey(armorItemKey(armors[static_cast<std::size_t>(right)]));
+    });
 
-        if (!armors[i].isIndestructible())
+    for (int i : orderedArmorIndices)
+    {
+        const Armor& armor = armors[static_cast<std::size_t>(i)];
+        const std::string key = armorItemKey(armor);
+        std::string line = "[" + std::to_string(i) + "] ";
+        if (isPinnedItemKey(key)) line += "[ÉPINGLÉ] ";
+        if (isLockedItemKey(key)) line += "[VERROUILLÉ] ";
+        line += armor.getName();
+
+        if (!armor.isIndestructible())
         {
-            line += " (" + std::to_string(armors[i].getDurability()) + "/" + std::to_string(armors[i].getMaxDurability()) + ")";
+            line += " (" + std::to_string(armor.getDurability()) + "/" + std::to_string(armor.getMaxDurability()) + ")";
         }
 
-        if (armors[i].isBroken())
+        if (armor.isBroken())
         {
             line += " - Cassée";
         }
@@ -1108,12 +1517,21 @@ void Inventory::displayConsumableList() const
     }
 
     std::vector<ConsumableInventoryStack> consumableGroups = groupConsumablesForInventory(consumables);
+    std::stable_sort(consumableGroups.begin(), consumableGroups.end(), [&](const ConsumableInventoryStack& left, const ConsumableInventoryStack& right) {
+        const bool leftFavorite = isPinnedItemKey(consumableItemKey(consumables[static_cast<std::size_t>(left.firstIndex)]));
+        const bool rightFavorite = isPinnedItemKey(consumableItemKey(consumables[static_cast<std::size_t>(right.firstIndex)]));
+        return leftFavorite && !rightFavorite;
+    });
 
     for (int i = 0; i < static_cast<int>(consumableGroups.size()); i++)
     {
         const ConsumableInventoryStack& group = consumableGroups[i];
+        const std::string key = consumableItemKey(consumables[static_cast<std::size_t>(group.firstIndex)]);
+        std::string prefix;
+        if (isPinnedItemKey(key)) prefix += "[ÉPINGLÉ] ";
+        if (isLockedItemKey(key)) prefix += "[VERROUILLÉ] ";
         lines.push_back(
-            "[" + std::to_string(group.firstIndex) + "] "
+            "[" + std::to_string(group.firstIndex) + "] " + prefix
             + formatConsumableInventoryStackLabel(group.name, group.amount)
             + " | Puissance : " + std::to_string(group.power)
         );
@@ -1158,24 +1576,37 @@ void Inventory::displayMaterialList() const
         return;
     }
 
-    for (int i = 0; i < static_cast<int>(materials.size()); i++)
-    {
-        std::string line = "[" + std::to_string(i) + "] " + materials[i].getName();
+    std::vector<int> orderedMaterialIndices;
+    for (int i = 0; i < static_cast<int>(materials.size()); ++i) orderedMaterialIndices.push_back(i);
+    std::stable_sort(orderedMaterialIndices.begin(), orderedMaterialIndices.end(), [&](int left, int right) {
+        return isPinnedItemKey(materialItemKey(materials[static_cast<std::size_t>(left)]))
+            && !isPinnedItemKey(materialItemKey(materials[static_cast<std::size_t>(right)]));
+    });
 
-        if (materials[i].getCategory() == "Outil" && isRepairKitInventoryId(materials[i].getId()))
+    for (int i : orderedMaterialIndices)
+    {
+        const Material& material = materials[static_cast<std::size_t>(i)];
+        const std::string key = materialItemKey(material);
+        std::string line = "[" + std::to_string(i) + "] ";
+        if (isPinnedItemKey(key)) line += "[ÉPINGLÉ] ";
+        if (isLockedItemKey(key)) line += "[VERROUILLÉ] ";
+        if (isTrackedMaterialId(material.getId())) line += "[SUIVI] ";
+        line += material.getName();
+
+        if (material.getCategory() == "Outil" && isRepairKitInventoryId(material.getId()))
         {
-            line += formatRepairKitInventoryStatus(materials[i]);
+            line += formatRepairKitInventoryStatus(material);
         }
         else
         {
-            line += " x" + std::to_string(materials[i].getQuantity());
-            if (materials[i].hasSpecialQuality())
+            line += " x" + std::to_string(material.getQuantity());
+            if (material.hasSpecialQuality())
             {
-                line += " | " + materials[i].getQualityLabel();
+                line += " | " + material.getQualityLabel();
             }
         }
 
-        line += " | " + materials[i].getCategory();
+        line += " | " + material.getCategory();
         lines.push_back(line);
     }
 

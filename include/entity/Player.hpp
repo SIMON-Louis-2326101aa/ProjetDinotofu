@@ -22,6 +22,8 @@
 #include <string>
 #include <vector>
 
+class Random;
+
 struct PlayerLocalSubscription
 {
     std::string id;
@@ -59,6 +61,221 @@ struct PlayerCityVault
     Inventory inventory;
     bool purchased = false;
     int level = 0;
+    bool placeOptimized = false;
+    bool preparedStorage = false;
+    // V3.51.52: paid protection counts only days spent away from this city.
+    int securityDaysRemaining = 0;
+    bool raidPending = false;
+    int raidDeadlineDay = -1;
+    int lastRaidCheckDay = -1;
+};
+
+struct PlayerVaultTheftCase
+{
+    std::string caseId;
+    std::string cityId;
+    int createdDay = 0;
+    int lastLeadDay = 0;
+    int clues = 0;
+    bool culpritIdentified = false;
+    std::string identifiedRivalId;
+    std::string holderType = "unknown";
+    std::string holderLabel = "auteur inconnu";
+    std::string holderWorldContactId;
+    std::string holderLocationId;
+    std::string holderLocationLabel;
+    std::string holderExplorationBiome;
+    int handoffCount = 0;
+    int holderObservationCount = 0;
+    int negotiationAttempts = 0;
+    int confrontationAttempts = 0;
+    int holderPressure = 0;
+    int holderCooperation = 0;
+    int holderClosedUntilDay = -1;
+    bool holderReportedToGuard = false;
+    int lastHolderInteractionDay = -1;
+    bool holderAlerted = false;
+    bool resolved = false;
+
+    long long stolenCopper = 0;
+    bool hasWeapon = false;
+    Weapon stolenWeapon;
+    bool hasArmor = false;
+    Armor stolenArmor;
+    bool hasConsumable = false;
+    Consumable stolenConsumable;
+    std::string stolenMaterialId;
+    std::string stolenMaterialName;
+    std::string stolenMaterialQuality = "normal";
+    int stolenMaterialQuantity = 0;
+};
+
+enum class VaultTheftExplorationObservation
+{
+    SuspiciousTrail,
+    SuspiciousExchange,
+    RecognizedProperty
+};
+
+struct VaultTheftExplorationObservationResult
+{
+    bool occurred = false;
+    std::string caseId;
+    int cluesBefore = 0;
+    int cluesGained = 0;
+    int cluesAfter = 0;
+    bool recognizedStolenProperty = false;
+    bool targetIdentifiedNow = false;
+    std::string targetLabel;
+    std::vector<std::string> lines;
+};
+
+enum class VaultTheftContactAction
+{
+    Observe,
+    NegotiateReturn,
+    RequestGuardIntervention,
+    SearchCache
+};
+
+struct VaultTheftContactInteractionResult
+{
+    bool available = false;
+    bool success = false;
+    bool propertyRecovered = false;
+    bool guardInvolved = false;
+    bool contactCooperated = false;
+    bool contactTemporarilyClosed = false;
+    int economyCost = 0;
+    int cluesBefore = 0;
+    int cluesAfter = 0;
+    std::string caseId;
+    std::string contactLabel;
+    std::string locationLabel;
+    std::vector<std::string> lines;
+};
+
+
+
+struct PlayerBattlefieldRecoveryCache
+{
+    std::string cacheId;
+    std::string cityId;
+    std::string contextId;
+    std::string locationLabel;
+    int createdDay = 0;
+    int lastAttemptDay = -1;
+    int searchAttempts = 0;
+    int disturbanceLevel = 0;
+    // V3.51.62: an unresolved important-loot cache can physically move through the world.
+    // Values stay generic (field / nearby_cache / guard / civilian / unknown_holder) so the
+    // recovery system does not invent a named culprit without evidence.
+    std::string custodyState = "field";
+    std::string custodyLabel;
+    int lastMovementDay = -1;
+    int movementCount = 0;
+    bool locationKnown = true;
+    bool resolved = false;
+    Inventory inventory;
+};
+
+struct BattlefieldRecoveryAttemptResult
+{
+    bool available = false;
+    bool success = false;
+    bool recoveredProperty = false;
+    bool relocated = false;
+    bool custodyChanged = false;
+    bool securedByGuard = false;
+    bool foundByCivilian = false;
+    int chancePercent = 0;
+    int ageDays = 0;
+    std::string cacheId;
+    std::string locationLabel;
+    std::string custodyState;
+    std::string custodyLabel;
+    std::vector<std::string> lines;
+};
+
+struct PlayerCrimeContactState
+{
+    std::string contactId;
+    std::string displayName;
+    int firstSeenDay = 0;
+    int lastInteractionDay = -1;
+    int encounters = 0;
+    int observations = 0;
+    int negotiations = 0;
+    int guardConfrontations = 0;
+    int pressure = 0;
+    int cooperation = 0;
+    int fledUntilDay = -1;
+    int detainedUntilDay = -1;
+    int provisionalDetentions = 0;
+    int releases = 0;
+    int returnsAfterFlight = 0;
+    int lastReleaseDay = -1;
+    int lastReturnDay = -1;
+    std::string knownRole;
+    // V3.51.65: known inter-city affiliation. This is a warning channel, not omniscience.
+    std::string homeCityId;
+    std::string networkId;
+    int networkWarnings = 0;
+    int lastNetworkWarningDay = -1;
+    std::string lastWarningSourceId;
+    // Persistent social memory for known criminal contacts. Positive favorBalance means the contact
+    // owes the player; negative means the player owes the contact. These fields are optional in saves.
+    int reliability = 50;
+    int favorBalance = 0;
+    int rivalry = 0;
+    int fulfilledDeals = 0;
+    int brokenDeals = 0;
+    int ruptureUntilDay = -1;
+    bool reportedToGuard = false;
+    bool arrested = false; // Reserved for a future proven/long-term arrest, not provisional detention.
+};
+
+struct PlayerHomeState
+{
+    bool owned = false;
+    std::string cityId;
+    bool fullyPurchased = false;
+    int rentAmount = 0;
+    int nextRentDueDay = -1;
+    std::string npcSpouseName;
+    std::string playerSpouseId;
+    bool playerMarriageSlotUsed = false;
+};
+
+struct PlayerHestiaStoryState
+{
+    bool rescued = false;
+    bool materialized = false;
+    std::string residence = "unknown"; // active_party / guild_diane / player_home / unavailable
+    int trust = 0;
+    int awakeningStage = 0; // 0..3 large divine/light awakenings
+    int lastVisitDay = -1;
+    int nextSmallFindDay = -1;
+    bool sacrificeConsumed = false;
+};
+
+
+struct HestiaArtifactEssenceRecord
+{
+    std::string familyId;
+    int acceptedKills = 0;
+};
+
+struct PlayerHestiaArtifactState
+{
+    bool granted = false;
+    int level = 1;
+    int killsTowardNextLevel = 0;
+    std::string primaryForm = "adaptive";
+    std::string secondaryForm;
+    std::string activeForm = "primary";
+    bool secondFormUnlocked = false;
+    std::vector<HestiaArtifactEssenceRecord> absorbedEssences;
 };
 
 struct PlayerCurse
@@ -100,12 +317,28 @@ public:
 private:
     int level;
     int experience;
+    int currentMana;
+    int manaExhaustionTurns;
 
     Inventory inventory;
     Inventory cityVault;
     bool cityVaultPurchased;
     int cityVaultLevel;
+    bool cityVaultPlaceOptimized;
+    bool cityVaultPreparedStorage;
+    int cityVaultSecurityDaysRemaining;
+    bool cityVaultRaidPending;
+    int cityVaultRaidDeadlineDay;
+    int cityVaultLastRaidCheckDay;
+    // V3.51.53: short batching window for recall messenger fees. Optional save fields keep reloads honest.
+    int cityVaultLastRecallMessengerStamp = -1000000;
+    std::string cityVaultLastRecallMessengerSourceCityId;
+    std::string cityVaultLastRecallMessengerDestinationCityId;
     std::vector<PlayerCityVault> cityVaults;
+    std::vector<PlayerVaultTheftCase> vaultTheftCases;
+    std::vector<PlayerBattlefieldRecoveryCache> battlefieldRecoveryCaches;
+    std::vector<PlayerCrimeContactState> crimeContactStates;
+    int backpackTier;
     std::string currentCityId;
     std::vector<std::string> registeredGuildCityIds;
     int equippedWeaponIndex;
@@ -114,7 +347,13 @@ private:
     std::vector<PlayerLanguageKnowledge> languageKnowledge;
     int characterAge = 18;
     std::string visualPresentation = "Non précisé";
-    std::string visualVariant = "Variante A";
+    std::string visualVariant = "Morphologie standard";
+    // V3.51.58: morphology can evolve in-play without rewriting the creation-time visual variant.
+    std::string bodyMorphology;
+    std::string morphologyProgramTarget;
+    int morphologyProgramSessions = 0;
+    int morphologyProgramStartedDay = -1;
+    int morphologyProgramLastSessionDay = -1;
     DndAttributes attributes;
     QuestLog questLog;
     int unspentAttributePoints;
@@ -143,6 +382,9 @@ private:
     int victories;
     int defeats;
     int escapes;
+    // Transient combat-only escape progress. Never serialized: it is reset when a new combat starts.
+    int escapeOpeningProgress;
+    int successfulEscapeOpenings;
     int deaths;
     int enemiesKilled;
     int bossesKilled;
@@ -207,6 +449,11 @@ private:
 
     std::string nextAmmunitionChoiceId;
     std::string lastConsumedAmmunitionId;
+    std::string ammunitionSelectionPolicy;
+    std::string magicMaterialSelectionPolicy;
+    std::string lootPickupPolicy;
+    std::vector<std::string> ignoredLootCategoryIds;
+    std::vector<std::string> ignoredLootMaterialIds;
 
     int goldCheatUseCount;
     int levelCheatUseCount;
@@ -232,11 +479,15 @@ private:
     std::string activeTitle;
     std::vector<std::string> activeTitles;
     std::string interfaceHintFrequency;
+    bool revealHiddenTitles;
     bool graphicalImagesEnabled;
     int storyChapter;
     int storyStep;
     int storyCityDevelopmentLevel;
     bool storyModeStarted;
+    PlayerHomeState homeState;
+    PlayerHestiaStoryState hestiaStoryState;
+    PlayerHestiaArtifactState hestiaArtifactState;
     // EN: reduceWorldGazeDurationAfterCombat declares or implements a focused behavior used by this module.
     // FR: reduceWorldGazeDurationAfterCombat déclare ou implémente un comportement précis utilisé par ce module.
 
@@ -245,7 +496,7 @@ private:
     const PlayerCityVault* findCityVaultRecord(const std::string& cityId) const;
     PlayerCityVault* findCityVaultRecord(const std::string& cityId);
     static int calculateVaultCapacity(bool purchased, int level);
-    static int calculateVaultUsedSlots(const Inventory& vault);
+    static int calculateVaultUsedSlots(const Inventory& vault, bool placeOptimized = false, bool preparedStorage = false);
 
     void reduceWorldGazeDurationAfterCombat();
     void normalizeSkillLoadout();
@@ -259,6 +510,7 @@ private:
     void processEndOfWorldDay();
     void maybeAppendCurseMalaiseLine(int salt);
     void appendWeeklyRenewalSummaryIfNeeded();
+    bool grantTitleInternal(const std::string& title, bool allowWhenAltered, bool allowAutomaticMetaTitles);
 
 public:
     // EN: Player declares or implements a focused behavior used by this module.
@@ -276,6 +528,20 @@ public:
     // EN: getExperience declares or implements a focused behavior used by this module.
     // FR: getExperience déclare ou implémente un comportement précis utilisé par ce module.
     int getExperience() const;
+    int getMaxMana() const;
+    int getMana() const;
+    int getManaExhaustionTurns() const;
+    bool spendMana(int amount);
+    void restoreMana(int amount);
+    void restoreManaToFull();
+    void regenerateManaForCombatTurn();
+    void applyManaExhaustion(int turns);
+    bool consumeManaExhaustionTurn();
+    void setLoadedManaState(int mana, int exhaustionTurns);
+    std::string getMagicChannelingStyleLabel() const;
+    std::string getMagicRecoveryLabel() const;
+    std::string getMagicSupportStatusLine() const;
+    int getMagicRecoveryAdjustment() const;
     // EN: getUnspentAttributePoints declares or implements a focused behavior used by this module.
     // FR: getUnspentAttributePoints déclare ou implémente un comportement précis utilisé par ce module.
     int getUnspentAttributePoints() const;
@@ -297,6 +563,19 @@ public:
     int getCharacterAge() const;
     const std::string& getVisualPresentation() const;
     const std::string& getVisualVariant() const;
+    std::string getBodyMorphology() const;
+    bool hasActiveMorphologyProgram() const;
+    const std::string& getMorphologyProgramTarget() const;
+    int getMorphologyProgramSessions() const;
+    int getMorphologyProgramStartedDay() const;
+    int getMorphologyProgramLastSessionDay() const;
+    bool canStartMorphologyProgram(const std::string& target) const;
+    bool startMorphologyProgram(const std::string& target);
+    bool canPerformMorphologySession() const;
+    bool performMorphologySession();
+    bool cancelMorphologyProgram();
+    bool tryCompleteMorphologyProgram();
+    void setLoadedMorphologyProgramState(const std::string& morphology, const std::string& target, int sessions, int startedDay, int lastSessionDay);
     std::string getAgeBandText() const;
     std::string getAppearanceDescription() const;
     void setAppearanceProfile(int age, const std::string& presentation, const std::string& variant);
@@ -315,6 +594,8 @@ public:
     const std::string& getInterfaceHintFrequency() const;
     std::string getInterfaceHintFrequencyLabel() const;
     void setInterfaceHintFrequency(const std::string& frequency);
+    bool areHiddenTitlesRevealed() const;
+    void setRevealHiddenTitles(bool enabled);
     bool areInterfaceHintsDisabled() const;
     bool areInterfaceHintsFrequent() const;
     bool areGraphicalImagesEnabled() const;
@@ -327,10 +608,22 @@ public:
     bool hasStoryModeStarted() const;
     std::string getStoryProgressLabel() const;
     void setLoadedStoryProgress(int chapter, int step, int cityDevelopment, bool started);
+    const PlayerHomeState& getHomeState() const;
+    PlayerHomeState& getMutableHomeState();
+    void setLoadedHomeState(const PlayerHomeState& state);
+    const PlayerHestiaStoryState& getHestiaStoryState() const;
+    PlayerHestiaStoryState& getMutableHestiaStoryState();
+    void setLoadedHestiaStoryState(const PlayerHestiaStoryState& state);
+    const PlayerHestiaArtifactState& getHestiaArtifactState() const;
+    PlayerHestiaArtifactState& getMutableHestiaArtifactState();
+    void setLoadedHestiaArtifactState(const PlayerHestiaArtifactState& state);
     bool startStoryMode();
     bool setStoryProgress(int chapter, int step, int cityDevelopment);
     bool hasTitle(const std::string& title) const;
     bool grantTitle(const std::string& title);
+    // EN: Explicit cheat-only title grant. It can affect this character but must never be treated as legitimate account progression.
+    // FR: Attribution explicite réservée aux cheats. Elle peut toucher ce personnage mais ne doit jamais valider la progression légitime du compte.
+    bool grantCharacterOnlyTitleFromCheat(const std::string& title);
     bool setActiveTitle(const std::string& title);
     bool setActiveTitleSlot(int slotIndex, const std::string& title);
     bool unequipActiveTitleSlot(int slotIndex);
@@ -514,6 +807,10 @@ public:
     void recordRivalEscape(const std::string& rivalId, const std::string& locationId = "");
     void recordRivalReturn(const std::string& rivalId, const std::string& locationId = "");
     void recordRivalWound(const std::string& rivalId, int amount = 1);
+    bool rivalHasStolenProperty(const std::string& rivalId) const;
+    void recordRivalStolenCopper(const std::string& rivalId, long long copperAmount);
+    void recordRivalStolenMaterial(const std::string& rivalId, const Material& material, int quantity);
+    bool recoverRivalStolenProperty(const std::string& rivalId);
     void markRivalDefeated(const std::string& rivalId, const std::string& locationId = "");
     void setLoadedRivalRecords(const std::vector<PlayerRivalRecord>& rivals);
 
@@ -542,6 +839,22 @@ public:
     bool requestLocalSubscriptionCancellation(const std::string& subscriptionId);
     void removeExpiredLocalSubscriptions();
     void setLoadedLocalSubscriptions(const std::vector<PlayerLocalSubscription>& subscriptions);
+
+    const std::vector<PlayerBattlefieldRecoveryCache>& getBattlefieldRecoveryCaches() const;
+    bool hasOpenBattlefieldRecoveryCacheForCity(const std::string& cityId) const;
+    std::string createBattlefieldRecoveryCache(
+        const std::string& contextId,
+        const std::string& locationLabel,
+        const Inventory& inventory
+    );
+    BattlefieldRecoveryAttemptResult attemptBattlefieldRecovery(const std::string& cacheId, Random& random);
+    void setLoadedBattlefieldRecoveryCaches(const std::vector<PlayerBattlefieldRecoveryCache>& caches);
+
+    std::vector<PlayerCrimeContactState>& getCrimeContactStates();
+    const std::vector<PlayerCrimeContactState>& getCrimeContactStates() const;
+    const PlayerCrimeContactState* findCrimeContactState(const std::string& contactId) const;
+    PlayerCrimeContactState& getOrCreateCrimeContactState(const std::string& contactId, const std::string& displayName);
+    void setLoadedCrimeContactStates(const std::vector<PlayerCrimeContactState>& states);
 
     const std::vector<PlayerCurse>& getActiveCurses() const;
     int getActiveCurseCount() const;
@@ -588,6 +901,10 @@ public:
     // EN: getEscapes declares or implements a focused behavior used by this module.
     // FR: getEscapes déclare ou implémente un comportement précis utilisé par ce module.
     int getEscapes() const;
+    int getEscapeOpeningProgress() const;
+    int getSuccessfulEscapeOpenings() const;
+    void recordSuccessfulEscapeOpening();
+    void resetEscapeOpeningProgress();
     // EN: getDeaths declares or implements a focused behavior used by this module.
     // FR: getDeaths déclare ou implémente un comportement précis utilisé par ce module.
     int getDeaths() const;
@@ -709,6 +1026,11 @@ public:
     // EN: recordGrinkaStolenArmor declares or implements a focused behavior used by this module.
     // FR: recordGrinkaStolenArmor déclare ou implémente un comportement précis utilisé par ce module.
     void recordGrinkaStolenArmor(const Armor& armor);
+    // Selective recovery is used when allies defeat Grinka while the player is unconscious:
+    // only what they can physically carry is returned; unrecovered property stays registered.
+    int recoverGrinkaStolenGold();
+    bool recoverGrinkaStolenWeapon();
+    bool recoverGrinkaStolenArmor();
     // EN: restoreGrinkaBossTheft declares or implements a focused behavior used by this module.
     // FR: restoreGrinkaBossTheft déclare ou implémente un comportement précis utilisé par ce module.
     void restoreGrinkaBossTheft();
@@ -784,6 +1106,7 @@ public:
     // EN: isAlteredByCheats declares or implements a focused behavior used by this module.
     // FR: isAlteredByCheats déclare ou implémente un comportement précis utilisé par ce module.
     bool isAlteredByCheats() const;
+    std::vector<std::string> describeCheatAndProtocolHistory() const;
     // EN: isGodModeEnabled declares or implements a focused behavior used by this module.
     // FR: isGodModeEnabled déclare ou implémente un comportement précis utilisé par ce module.
     bool isGodModeEnabled() const;
@@ -1001,10 +1324,38 @@ public:
     int getCityVaultLevelForCity(const std::string& cityId) const;
     int getCityVaultCapacityForCity(const std::string& cityId) const;
     int getCityVaultUsedSlotsForCity(const std::string& cityId) const;
+    bool hasCityVaultPlaceOptimizationForCity(const std::string& cityId) const;
+    bool hasCityVaultPreparedStorageForCity(const std::string& cityId) const;
+    int getOwnedCityVaultCount() const;
+    int getCityVaultSecurityDaysRemainingForCity(const std::string& cityId) const;
+    bool hasCityVaultRaidPendingForCity(const std::string& cityId) const;
+    int getCityVaultRaidDeadlineDayForCity(const std::string& cityId) const;
+    int getCityVaultSecuritySubscriptionCost() const;
+    bool buyCityVaultSecuritySubscription();
+    bool canReuseRecentCityVaultRecallMessenger(const std::string& sourceCityId, const std::string& destinationCityId) const;
+    int getCityVaultRecallMessengerSurchargeCopper(const std::string& sourceCityId, const std::string& destinationCityId, int distanceKm) const;
+    void markCityVaultRecallMessengerSent(const std::string& sourceCityId, const std::string& destinationCityId);
+    int getCityVaultLastRecallMessengerStamp() const;
+    const std::string& getCityVaultLastRecallMessengerSourceCityId() const;
+    const std::string& getCityVaultLastRecallMessengerDestinationCityId() const;
+    void setLoadedCityVaultRecallMessengerState(int absoluteStamp, const std::string& sourceCityId, const std::string& destinationCityId);
+    bool resolveCurrentCityVaultRaid(bool defendedSuccessfully);
+    bool triggerCityVaultRaidAlertForCity(const std::string& cityId, int deadlineDays = 7);
+    int getCurrentCityVaultPurchaseDiscountTier() const;
+    std::string getCurrentCityVaultPurchaseDiscountLabel() const;
     bool hasCityVault() const;
     int getCityVaultLevel() const;
     int getCityVaultCapacity() const;
     int getCityVaultUsedSlots() const;
+    bool hasCityVaultPlaceOptimization() const;
+    bool hasCityVaultPreparedStorage() const;
+    int getCityVaultStorageReductionPercent() const;
+    int getCityVaultPlaceOptimizationCost() const;
+    int getCityVaultPreparedStorageCost() const;
+    bool canBuyCityVaultPlaceOptimization() const;
+    bool canBuyCityVaultPreparedStorage() const;
+    bool buyCityVaultPlaceOptimization();
+    bool buyCityVaultPreparedStorage();
     int getCityVaultPurchaseCost() const;
     int getCityVaultUpgradeCost() const;
     bool canUpgradeCityVault() const;
@@ -1014,24 +1365,62 @@ public:
     bool depositArmorInCityVault(int index);
     bool depositConsumableInCityVault(int index);
     bool depositMaterialInCityVault(int index, int quantity = 0);
+    bool depositAllCoinsInCityVault();
+    bool withdrawAllCoinsFromCityVault();
     bool withdrawWeaponFromCityVault(int index);
     bool withdrawArmorFromCityVault(int index);
     bool withdrawConsumableFromCityVault(int index);
     bool withdrawMaterialFromCityVault(int index, int quantity = 0);
     bool transferMaterialBetweenCityVaults(const std::string& destinationCityId, int materialIndex, int quantity, int costCopper);
+    bool transferMaterialBetweenOwnedCityVaults(const std::string& sourceCityId, const std::string& destinationCityId, int materialIndex, int quantity, int costCopper);
+    bool transferWeaponBetweenOwnedCityVaults(const std::string& sourceCityId, const std::string& destinationCityId, int weaponIndex, int costCopper);
+    bool transferArmorBetweenOwnedCityVaults(const std::string& sourceCityId, const std::string& destinationCityId, int armorIndex, int costCopper);
+    bool transferConsumableBetweenOwnedCityVaults(const std::string& sourceCityId, const std::string& destinationCityId, int consumableIndex, int costCopper);
+    bool transferAllCoinsBetweenOwnedCityVaults(const std::string& sourceCityId, const std::string& destinationCityId, int costCopper);
+
+    int getBackpackTier() const;
+    int getBackpackBaseCapacity() const;
+    int getNextBackpackUpgradeCost() const;
+    bool canUpgradeBackpack() const;
+    bool upgradeBackpack();
+    void setLoadedBackpackTier(int tier);
+    void refreshCarryAndStorageTitles();
+    void evaluateStorageSessionTitles(int carriedLoadBefore, int capacityBefore);
+    void evaluateExplorationReturnTitles(int expeditionPeakCarryPercent, int expeditionPeakHeavyEquipment);
+
     const std::string& getCurrentCityId() const;
     void setCurrentCityId(const std::string& cityId);
     const std::vector<std::string>& getRegisteredGuildCityIds() const;
     bool isRegisteredAtCityGuild(const std::string& cityId) const;
     bool isRegisteredAtCurrentCityGuild() const;
     bool registerAtCurrentCityGuild();
+    void processCityVaultSecurityEndOfDay(std::vector<std::string>& dayLines);
+    const std::vector<PlayerVaultTheftCase>& getVaultTheftCases() const;
+    bool hasOpenVaultTheftCaseForCity(const std::string& cityId) const;
+    const PlayerVaultTheftCase* getOpenVaultTheftCaseForCity(const std::string& cityId) const;
+    std::string investigateVaultTheftCase(const std::string& cityId);
+    VaultTheftExplorationObservationResult observeVaultTheftCaseDuringExploration(
+        const std::string& cityId,
+        const std::string& biomeName,
+        VaultTheftExplorationObservation observation
+    );
+    bool recoverVaultTheftCaseProperty(const std::string& caseId);
+    VaultTheftContactInteractionResult interactWithVaultTheftHolder(
+        const std::string& cityId,
+        VaultTheftContactAction action,
+        Random& random
+    );
+    void setLoadedVaultTheftCases(const std::vector<PlayerVaultTheftCase>& cases);
+
     void setLoadedCityState(
         bool vaultPurchased,
         int vaultLevel,
         const std::string& loadedCurrentCityId,
         const Inventory& loadedVault,
         const std::vector<std::string>& loadedRegisteredGuildCityIds,
-        const std::vector<PlayerCityVault>& loadedCityVaults = std::vector<PlayerCityVault>()
+        const std::vector<PlayerCityVault>& loadedCityVaults = std::vector<PlayerCityVault>(),
+        bool loadedVaultPlaceOptimized = false,
+        bool loadedVaultPreparedStorage = false
     );
 
     // EN: getQuestLog declares or implements a focused behavior used by this module.
@@ -1055,6 +1444,19 @@ public:
     void setLastConsumedAmmunition(const std::string& ammunitionId);
     std::string getLastConsumedAmmunition() const;
     void clearLastConsumedAmmunition();
+    void setAmmunitionSelectionPolicy(const std::string& policy);
+    std::string getAmmunitionSelectionPolicy() const;
+    void setMagicMaterialSelectionPolicy(const std::string& policy);
+    std::string getMagicMaterialSelectionPolicy() const;
+    void setLootPickupPolicy(const std::string& policy);
+    std::string getLootPickupPolicy() const;
+    bool isLootCategoryIgnored(const std::string& categoryId) const;
+    void setLootCategoryIgnored(const std::string& categoryId, bool ignored);
+    const std::vector<std::string>& getIgnoredLootCategoryIds() const;
+    bool isLootMaterialIgnored(const std::string& materialId) const;
+    void setLootMaterialIgnored(const std::string& materialId, bool ignored);
+    const std::vector<std::string>& getIgnoredLootMaterialIds() const;
+    void setLoadedLootPreferences(const std::string& policy, const std::vector<std::string>& categoryIds, const std::vector<std::string>& materialIds);
     // EN: equipWeapon declares or implements a focused behavior used by this module.
     // FR: equipWeapon déclare ou implémente un comportement précis utilisé par ce module.
     bool equipWeapon(int index);

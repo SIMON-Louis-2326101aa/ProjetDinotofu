@@ -20,6 +20,7 @@
 #include "economy/Money.hpp"
 #include "interface/menu/quest/QuestMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/inventory/InventoryProtection.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
@@ -1000,6 +1001,20 @@ namespace
             return;
         }
 
+        if (!proof.materialId.empty()
+            && !InventoryProtection::confirmLockedMaterialUse(
+                player,
+                proof.materialId,
+                proof.materialName,
+                "remettre cette preuve pour accomplir le rite",
+                "shop.church.special.locked_proof"
+            ))
+        {
+            lines.push_back("Preuve verrouillée conservée : le rite n'est pas lancé.");
+            showShopResult("SOLUTION ANNULÉE", "shop.church.special.locked_proof.cancel", lines);
+            return;
+        }
+
         if (!payServiceWithVoucherOrGold(player, voucherId, voucherName, cost, lines))
         {
             showShopResult("SOLUTION REFUSÉE", "shop.church.special.failed_cost", lines);
@@ -1318,7 +1333,7 @@ void ChurchServiceMenu::open(Player& player)
         screen.addOption(5, "Diagnostic total", "Niveau 3/3 : révèle la lecture complète si le niveau 2 est déjà atteint.", player.getActiveCurseCount() > 0, "shop.church.diagnosis.total");
         screen.addOption(6, "Exorcisme complet", "Tente un passage sur toutes les traces connues niveau 1 et retirable par l'église.", player.getActiveCurseCount() > 0, "shop.church.full_exorcism");
         screen.addOption(7, "Bénédiction de route", "Père Orwan prépare une note de bénédiction. Ne retire pas une vraie malédiction.", true, "shop.church.route_blessing");
-        screen.addOption(8, "Rite d'apaisement court", "Rite léger : donne une preuve sacrée locale, consomme 1 segment.", true, "shop.church.blessing");
+        screen.addOption(8, "Rite d'apaisement court", "Rite léger : donne une preuve sacrée locale, consomme 1 moment de la journée.", true, "shop.church.blessing");
         screen.addOption(9, "Prières et demandes inquiétantes", "Prendre une demande d'église liée à un habitant, un serment ou un cauchemar partagé.", true, "shop.church.troubled_requests");
         screen.addOption(10, "Solutions spéciales", "Objet à détruire, serment à briser, contre-légende, source à sceller.", player.getActiveCurseCount() > 0, "shop.church.special_solution");
         screen.addOption(11, "Lire les légendes de malédiction", "Bibliothèque/archives : donne du contexte sans révéler de chiffres.", true, "shop.church.curse_legends");

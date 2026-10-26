@@ -4,9 +4,9 @@ Dinotofu est un RPG / jeu d'arène en C++23. La version terminal reste le socle 
 
 ## Version actuelle   
 
-- Version actuelle : **V3.50.36**   
-- Point de sauvegarde important : **V3.50.33**. Tout personnage dont la dernière adaptation est antérieure à ce jalon doit effectuer explicitement le rituel de transition avant un chargement normal.   
-- Avant cette transition, Dinotofu crée une copie de sécurité pré-mise-à-jour dédiée qui n'est jamais écrasée. Les très anciennes sauvegardes — y compris celles sans métadonnée de version — conservent l’alerte historique forte, mais ne peuvent plus contourner le backup + rituel obligatoire du jalon V3.50.33.   
+- Version actuelle : **V3.57.08**   
+- Point de sauvegarde important : **V3.57.00**. Tout personnage dont la dernière adaptation est antérieure à ce jalon doit effectuer explicitement le rituel de transition avant un chargement normal.    Ce jalon protège la consolidation de l'entrée de jeu, du tutoriel isolé et de la progression de compte/titres introduite autour de V3.57.   
+- Avant cette transition, Dinotofu crée une copie de sécurité pré-mise-à-jour dédiée qui n'est jamais écrasée. Les très anciennes sauvegardes — y compris celles sans métadonnée de version — conservent l’alerte historique forte, mais ne peuvent plus contourner le backup + rituel obligatoire du jalon V3.57.00.   
 
 ## Ce qu'il y a déjà dans le jeu   
 
@@ -14,15 +14,15 @@ Le jeu permet déjà de :
 
 - créer, charger et sauvegarder des comptes/personnages ;   
 - choisir race, âge exact compatible avec la race, présentation visuelle, variante finale, classe, difficulté et certaines identités spéciales protégées ;   
-- combattre en PvP IA, PvP deux joueurs, PvE monstres, boss solo et boss coop, avec compétences actives, consignes d’équipe, recrues de soutien, techniques combinées gagnant une maîtrise de duo, fuites ennemies ordinaires et rivaux persistants plus rares capables de revenir logiquement ;   
+- combattre en PvP IA, PvP deux joueurs, PvE monstres, boss solo et boss coop, avec une équipe de voyage solo limitée à six personnes (joueur + jusqu’à cinq vraies recrues), deux recrues actives à la fois tant que le joueur est conscient, consignes d’équipe, rotations/switchs avec autorité de chef et réserve réellement exposée aux grands soins/zones à puissance réduite, ainsi que des techniques combinées gagnant une maîtrise de duo persistante et vécue, fuites ennemies ordinaires et rivaux persistants plus rares capables de revenir logiquement ;   
 - gérer inventaire, armes, armures, consommables, matériaux, durabilité, réparation et qualités ; les armes et armures possèdent une identité individuelle persistante permettant à un exemplaire précis de gagner souvenirs, renommée et surnom émergent ;   
-- acheter, vendre et troquer via un menu unifié **Boutiques et comptoirs** proposant catégories rapides ou liste complète, visiter des lieux, consulter la guilde, la bibliothèque, le poste d’observation, le comptoir mercenaire, Torvald au rang D, louer le stand d’entraînement, et acheter/améliorer des coffres municipaux indépendants selon la ville ;   
+- acheter, vendre et troquer via un menu unifié **Boutiques et comptoirs** proposant catégories rapides ou liste complète, avec profils économiques de ville, spécialités, besoins temporaires, stocks réellement tendus/renforcés et désormais **convois d’import/export inter-villes**, dont les routes réelles peuvent désormais aussi influencer les fuites et indices de certaines primes mobiles ; des incidents commerciaux rares (escorte, vol, convoi introuvable, arrivée endommagée, route obstruée) peuvent aussi affecter réellement les stocks ; visiter des lieux, consulter la guilde, la bibliothèque, le poste d’observation, le comptoir mercenaire, Torvald au rang D, louer le stand d’entraînement, et acheter/améliorer des coffres municipaux indépendants selon la ville ;   
 - explorer des biomes avec ressources, coffres, pièges, traces, événements, lieux dangereux, rencontres, slimes fusionnés et un mini-boss gélatineux à quatre étages de division ;   
-- suivre des quêtes de guilde, de clients, d'exploration, de combat, de livraison, de service, de bestiaire et de quête principale ;   
+- suivre des quêtes de guilde, de clients, d'exploration, de combat, de livraison, de service, de bestiaire et de quête principale ; certaines quêtes peuvent révéler une phase 2 après leur objectif initial, et les contrats de rang D+ peuvent désormais payer de vrais relais inter-ville pour transmettre des informations ou transporter des matériaux ;   
 - accepter jusqu’à trois défis quotidiens de guilde, gagner des Marques de défi et obtenir des titres liés à de véritables contraintes de combat ;   
 - consulter trois registres spéciaux impossibles à perdre : Bestiaire pour les êtres, Encyclopédie pour les systèmes/objets/zones et Carnet de découvertes pour le lore, les légendes et les rumeurs ;   
 - utiliser des systèmes cachés comme les codes, les données altérées, les personnages spéciaux, les marchands légendaires et certains événements de lore ;   
-- survivre exceptionnellement à une mort définitive grâce à une bénédiction compatible, au prix de toutes les bénédictions, de l’inventaire transporté, de l’équipement, de l’or et d’une marque irréversible réduisant légèrement les soins ;   
+- en équipe, tenter un sauvetage de mort définitive selon les survivants réellement capables d'intervenir (15 % sans soigneur compétent, jusqu'à 66 % avec un vrai spécialiste encore debout), puis disposer une seule fois dans toute la vie du personnage d'une résistance spirituelle de première mort avant l'éventuel recours rare à une bénédiction de survie ;   
 - lancer un mode histoire construit comme un bac à sable guidé et progressivement bridé ; la version actuelle est volontairement jouable jusqu’à l’introduction du chapitre 3, puis affiche une fin temporaire de développement pendant que le contenu, les entités et les systèmes sont approfondis.   
 
 ## Mode histoire   
@@ -65,6 +65,24 @@ Le raccourci **ProjetDinotofu Launcher** lance actuellement le Terminal par déf
 - `release/` : manifeste et données de publication ;   
 - `assets/saves/` : dossiers de sauvegarde locaux, sans données privées dans les archives de release.   
 - `logs/dinotofu_session_latest.txt` : journal local de session bêta, supprimable sans risque, utile à envoyer au dev en cas de bug ou combat étrange.   
+
+## Développement et contrôle avant push   
+
+Compilation locale :   
+
+```bash   
+make   
+```   
+
+Validation complète avant un commit/push :   
+
+```bash   
+make pre-push   
+```   
+
+`make pre-push` nettoie les artefacts générés, valide l'arborescence, contrôle tous les JSON, compile le projet et exécute toute la suite de tests. Si la copie provient d'un **backup essentiel**, les images officielles de branding peuvent être absentes volontairement : le push des sources peut alors être validé avec ce manque clairement signalé, mais une release installable complète doit restaurer `assets/branding/`.   
+
+La CI minimale de `.github/workflows/ci.yml` répète sur GitHub les contrôles source et la suite de tests à chaque push et pull request.   
 
 ## Note spéciale du développeur   
 

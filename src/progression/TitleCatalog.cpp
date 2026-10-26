@@ -52,7 +52,8 @@ namespace
         const std::string& unlockHint,
         bool visibleBeforeUnlock,
         const std::string& effect = "",
-        bool requiredForUltimate = true
+        bool requiredForUltimate = true,
+        const std::string& ultimateAlternativeGroup = ""
     )
     {
         TitleDefinition definition;
@@ -62,6 +63,7 @@ namespace
         definition.effect = effect.empty() ? genericEffectForCategory(category) : effect;
         definition.visibleBeforeUnlock = visibleBeforeUnlock;
         definition.requiredForUltimate = requiredForUltimate;
+        definition.ultimateAlternativeGroup = ultimateAlternativeGroup;
         return definition;
     }
 
@@ -79,13 +81,18 @@ namespace TitleCatalog
             // Titres visibles : repères simples que le joueur peut comprendre sans spoiler un secret.
             title("Bienvenue dans Dinotofu", "Système", "Lancer le jeu avec un personnage chargé ou créé.", true, "Titre de session : prouve que le personnage a ouvert le registre du jeu. Effet très faible : peut déclencher de petites lignes d'accueil."),
             title("Voix du terminal", "Système", "Lancer le jeu depuis la version terminal.", true, "Titre de session : identité terminal/console assumée. Effet très faible : peut modifier certaines répliques d'interface ou de registre."),
+            title("Rencontre avec notre cobaye", "Système / tutoriel", "Lancer le tutoriel avec Jean-Michel Test au moins une fois.", true, "Trophée de compte : prouve que tu as rencontré le cobaye officiel. Aucun bonus de combat ; Jean-Michel a déjà assez de problèmes comme ça."),
+            title("J'ai lu le manuel", "Système / tutoriel", "Terminer le tutoriel de Jean-Michel Test.", true, "Trophée de compte : confirme que les bases de la ville, des contrats, de l'exploration et du combat ont été vues."),
+            title("Ami du petit Dinotofu", "Système / compagnon", "Consulter le compagnon Dinotofu au moins une fois.", true, "Titre de confort : le petit Dinotofu sait désormais que tu viens parfois demander conseil. Aucun bonus de combat direct.", false),
+            title("Œil de serrure", "Combat / observation", "Avec un profil discret, répéter l'observation tactique jusqu'à apprendre à lire serrures, pièges et failles.", false, "Titre d'apprentissage : marque l'acquisition de la lecture des serrures et failles. Il reste hors complétion ultime car son accès dépend du profil joué.", false),
             title("Une sorte de titre ?", "Système", "Obtenir son premier titre, quel qu'il soit.", true, "Et une sorte de description..."),
+            title("On ne dira rien...", "Système / altération", "Altérer volontairement au moins un personnage du compte avec un code de triche officiel.", false, "Trophée spécial de compte : le registre a parfaitement vu ce qui s'est passé. Il reste le seul trophée de compte accordé par la triche et ne compte jamais pour la complétion ultime.", false),
             title("Aventurier", "Guilde", "Réussir l'inscription officielle de la guilde.", true),
             title("Aventurier rang F", "Guilde", "Valider des contrats officiels après inscription.", true),
             title("Aventurier rang E", "Guilde", "Monter le dossier de guilde avec assez de contrats et de niveau.", true),
             title("Aventurier rang D", "Guilde", "Atteindre le rang D de guilde.", true),
             title("Un bon entraînement", "Guilde / entraînement", "Battre Torvald dans un 1v1 amical de guilde.", true, "Reconnaissance d'entraînement : Torvald sait que tu tiens un duel propre et peut réagir autrement aux bases d'équipe."),
-            title("On recrute !", "Guilde / clan", "Battre Torvald puis accepter d'ouvrir légalement ton équipe aux candidats.", true, "Titre actif de recrutement : augmente les occasions de croiser des PNJ recrutables jusqu'au groupe complet de 5 personnes joueur compris."),
+            title("On recrute !", "Guilde / clan", "Battre Torvald puis accepter d'ouvrir légalement ton équipe aux candidats.", true, "Titre actif de recrutement : augmente les occasions de croiser des PNJ recrutables jusqu'au groupe solo complet de 6 personnes (joueur + 5 recrues)."),
             title("Anti clan", "Guilde / clan", "Battre Torvald puis choisir une posture de groupe fermé.", true, "Titre actif de fermeture : bloque volontairement les rencontres de PNJ recrutables tant qu'il est équipé."),
             title("Aventurier rang C", "Guilde", "Atteindre le rang C de guilde.", true),
             title("Aventurier rang B", "Guilde", "Atteindre le rang B de guilde.", true),
@@ -253,6 +260,270 @@ namespace TitleCatalog
             title("Une invitation ?", "Boss", "Obtenir la preuve qu'il ne reste plus que le dernier boss actuel.", false, "Titre de seuil final : peut servir à ouvrir des dialogues, invitations ou avertissements de fin."),
             title("Celui qui a tout vaincu", "Boss", "Battre le boss final actuel après avoir vaincu les autres boss.", false),
 
+            // Titres ajoutés lors de l’audit rétrospectif V3.51.40.
+            // Les titres de parcours général restent visibles lorsqu’ils n’annoncent pas une découverte majeure.
+            title("Bon pour accord", "Économie / guilde", "Obtenir son premier prêt de guilde.", true),
+            title("La confiance se mérite", "Économie / guilde", "Atteindre un niveau très élevé de confiance financière auprès de la guilde.", true),
+            title("Bon payeur", "Économie / guilde", "Rembourser plusieurs prêts intégralement sans retard.", true),
+            title("Avant l'échéance", "Économie / guilde", "Solder intégralement un prêt avant sa date limite.", true),
+            title("Jusqu'au dernier cuivre", "Économie / guilde", "Rembourser une dette importante malgré une bourse presque vide.", false),
+            title("Dans le rouge", "Économie / guilde", "Approcher son plafond de découvert puis revenir à zéro légitimement.", true),
+            title("Dette réglée", "Économie / guilde", "Sortir d'une situation avec prêt et découvert actifs en même temps.", true),
+            title("On peut s'arranger", "Économie / guilde", "Négocier une prolongation avant échéance puis rembourser entièrement.", true),
+            title("La parole vaut de l'or", "Économie / guilde", "Respecter plusieurs contrats financiers consécutifs.", true),
+            title("Sous clé", "Économie / coffre", "Acheter et utiliser le coffre-fort personnel.", true),
+            title("Capital confiance", "Économie / guilde", "Atteindre le plafond maximal de prêt sans défaut de paiement.", false),
+            title("Toute ma fortune sur moi", "Économie / drôle", "Transporter une fortune importante sans la sécuriser dans le coffre-fort.", false, "Titre surtout roleplay : les marchands et voleurs ont de bonnes raisons de te regarder.", false),
+            title("Chaque pièce compte", "Économie", "Avancer longtemps avec très peu d'argent sans dette ni triche.", false),
+
+            title("Personne derrière", "Compagnons", "Ramener une recrue mise KO jusqu'aux soins au lieu de l'abandonner.", true),
+            title("Ce n'était pas qu'un contrat", "Compagnons", "Terminer la quête personnelle d'une recrue engagée.", false),
+            title("Vieille équipe", "Compagnons", "Conserver longtemps le même noyau de compagnons.", true),
+            title("On te ramènera", "Compagnons", "Faire soigner ou récupérer plusieurs compagnons tombés au lieu de les remplacer.", true),
+            title("La facture est réglée", "Compagnons / économie", "Rembourser intégralement une dette importante liée aux soins d'un compagnon.", false),
+            title("À vos ordres", "Commandement", "Mener plusieurs combats avec une équipe sous son commandement.", true),
+            title("Chef de terrain", "Commandement", "Réussir plusieurs rotations tactiques comme chef.", true),
+            title("Tout le monde rentre", "Commandement / compagnons", "Gagner un combat difficile sans perte définitive de compagnon.", false),
+            title("Je couvre tes arrières", "Compagnons", "Sauver plusieurs fois un compagnon qui aurait dû tomber.", false),
+            title("Pas besoin de le répéter", "Commandement / loyauté", "Atteindre une obéissance et une loyauté très élevées avec un compagnon.", false),
+            title("Tu avais raison", "Commandement", "Désobéir à un ordre puis être reconnu comme ayant évité une mauvaise décision.", false, "Titre contextuel : récompense un jugement réellement justifié, pas la désobéissance gratuite.", false),
+            title("Mauvais ordre", "Commandement", "Survivre après avoir refusé un ordre objectivement catastrophique.", false, "Titre contextuel rare : dépend d'un ordre réellement mauvais et de ses conséquences.", false),
+            title("Dernier rempart", "Commandement / survie", "Rester seul actif pendant que l'équipe est hors combat et tenir assez longtemps.", false),
+            title("Relève assurée", "Commandement / réserve", "Gagner grâce à un membre entré depuis la réserve.", true),
+            title("Le chef tombe, l'équipe reste", "Commandement / survie", "Gagner après le KO du chef de l'équipe.", false),
+            title("Je prends la suite", "Commandement", "Assumer temporairement le commandement après la chute du chef.", false),
+
+            title("Comme un seul homme", "Duo / relations", "Réussir plusieurs techniques duo.", true),
+            title("Sans un mot", "Duo / relations", "Réussir une technique duo avec une maîtrise très élevée.", false),
+            title("Je savais que tu serais là", "Duo / relations", "Être sauvé plusieurs fois par le même compagnon.", false),
+            title("Jusqu'au bout", "Duo / relations", "Voir un compagnon rester à tes côtés malgré une situation très défavorable.", false),
+            title("Confiance aveugle", "Duo / relations", "Atteindre une relation et une loyauté exceptionnelles.", false),
+            title("Mieux à deux", "Duo / relations", "Battre une cible importante grâce à une technique combinée.", false),
+            title("Parfaitement synchronisés", "Duo / relations", "Réussir une technique duo à une fiabilité proche du maximum.", false),
+
+            title("Tout est une arme", "Combat tactique", "Exploiter plusieurs types de matériaux, pièges ou enduits tactiques distincts.", false),
+            title("J'avais prévu le coup", "Combat tactique", "Interrompre plusieurs familles de techniques ennemies préparées.", false),
+            title("Casseur de rythme", "Combat tactique", "Interrompre plusieurs types de charges, rituels ou attaques lourdes.", false),
+            title("Maître de sa voie", "Combat / maîtrise", "Pousser une vraie technique jusqu'à sa maîtrise maximale.", true),
+            title("Pas besoin de force brute", "Combat tactique", "Gagner un combat difficile surtout grâce au contrôle, aux ouvertures et à la préparation.", false),
+
+            title("Pas encore.", "Mort / survie", "Réussir l'unique résistance spirituelle d'une première mort létale.", false),
+            title("Trois fois non", "Mort / survie", "Obtenir les trois réussites spirituelles avant les trois échecs.", false),
+            title("Deuxième souffle", "Mort / survie", "Revenir d'une situation létale grâce à un allié survivant.", false),
+            title("Ils m'ont ramené", "Mort / survie", "Être sauvé après que l'équipe a continué le combat sans toi.", false),
+            title("Le dernier témoin", "Mort / survie", "Être le seul survivant d'un combat majeur.", false),
+            title("Revenu de loin", "Mort / survie", "Survivre à une résolution létale avec une faible probabilité de sauvetage.", false),
+            title("Pas aujourd'hui", "Mort / survie", "Survivre légitimement à plusieurs situations où la mort définitive était réellement possible.", false),
+            title("On me croyait mort", "Mort / survie", "Revenir après une disparition ou un KO prolongé puis poursuivre l'aventure.", false),
+            title("Je leur dois la vie", "Mort / relations", "Être sauvé d'une issue létale grâce à un compagnon précis.", false),
+
+            title("Je le sens...", "Mana / progression", "Éveiller son mana légitimement après une vraie quête dédiée.", true),
+            title("Premier écho", "Mana / progression", "Atteindre la première étape réelle de maîtrise du mana.", true),
+            title("Résonance", "Mana / progression", "Atteindre une maîtrise avancée du système Écho / Résonance.", false),
+            title("À sec", "Mana / survie", "Gagner un combat après être tombé à zéro mana.", false),
+            title("Plus rien dans les veines", "Mana / survie", "Survivre à un épuisement de mana sévère.", false),
+            title("Pas né pour ça", "Progression / hybride", "Devenir compétent en mêlée avec un personnage initialement pur mage.", false),
+            title("Finalement, peut-être", "Progression / hybride", "Devenir réellement compétent dans une discipline initialement faible.", false),
+            title("Deux voies, un seul combattant", "Progression / hybride", "Construire un véritable style hybride plutôt que simplement changer d'équipement.", false),
+
+            title("Je crois avoir compris...", "Langues", "Réussir une interaction importante avec une compréhension intermédiaire d'une langue étrangère.", true),
+            title("Sans traducteur", "Langues", "Comprendre complètement une rencontre étrangère grâce à une langue apprise.", true),
+            title("Les mots ouvrent des portes", "Langues", "Résoudre ou débloquer une situation grâce à une langue apprise.", true),
+            title("Polyglotte", "Langues", "Atteindre un niveau conversationnel ou courant dans plusieurs langues étrangères.", true),
+            title("Ça ressemblait à du gobelin", "Langues / drôle", "Comprendre pour la première fois une partie seulement d'un texte étranger.", false),
+
+            title("De bouche à oreille", "Rumeurs / mémoire", "Voir un fait lié au personnage voyager réellement jusqu'à une autre ville.", false),
+            title("On raconte que...", "Rumeurs / mémoire", "Devenir le sujet d'une rumeur locale crédible.", false),
+            title("J'ai entendu autre chose", "Rumeurs / mémoire", "Découvrir deux versions contradictoires du même événement.", false),
+            title("La vérité voyage lentement", "Rumeurs / mémoire", "Faire corriger progressivement une rumeur par des preuves crédibles.", false),
+            title("Tout se sait", "Rumeurs / mémoire", "Voir une action importante devenir connue dans plusieurs villes sans omniscience artificielle.", false),
+
+            title("Curieux de nature", "Biomes / exploration", "Déclencher des interactions propres à plusieurs biomes différents.", true),
+            title("Rien n'est décoratif", "Biomes / exploration", "Interagir avec de nombreux éléments environnementaux uniques.", false),
+            title("Là où personne ne regarde", "Biomes / exploration", "Découvrir un micro-événement particulièrement rare.", false),
+            title("J'ai laissé des traces", "Biomes / exploration", "Accumuler des événements d'exploration réellement mémorisés.", false),
+            title("Plus loin encore", "Biomes / exploration", "Découvrir de nombreux biomes avancés.", false),
+
+            title("On se connaît, non ?", "Rivaux", "Recroiser pour la première fois un rival vivant déjà rencontré.", false),
+            title("Cicatrices partagées", "Rivaux", "Retrouver un rival portant une marque issue d'un ancien affrontement.", false),
+            title("Il revient encore...", "Rivaux", "Voir le même rival revenir plusieurs fois.", false),
+            title("Cette fois, c'est fini", "Rivaux", "Éliminer définitivement un rival ayant survécu à plusieurs rencontres.", false),
+            title("Maintenant je te connais", "Boss / rivaux", "Vaincre un adversaire adaptatif après plusieurs rencontres où il a appris de toi.", false),
+            title("Tu m'avais oublié ?", "Boss / rivaux", "Revenir vaincre une cible qui t'avait auparavant mis KO.", false),
+            title("J'avais dit qu'il tomberait", "Boss / rivaux", "Vaincre une cible majeure après plusieurs défaites face à elle.", false),
+            title("Plus gros que prévu", "Boss / chasse", "Vaincre un boss significativement au-dessus de l'estimation initiale.", false),
+            title("Mission accomplie, techniquement", "Boss / drôle", "Voir son équipe achever le boss après son propre KO, sans clear personnel.", false),
+            title("À mon tour", "Boss / réserve", "Entrer depuis la réserve contre un boss et jouer un rôle décisif.", false),
+            title("Chasseur de chasseurs", "Boss / chasse", "Éliminer un ennemi spécialisé dans la traque du joueur.", false),
+            title("Une vieille affaire", "Rivaux", "Mettre fin à une rivalité persistante après une longue histoire commune.", false),
+
+            title("Cette lame a une histoire", "Équipement / mémoire", "Accumuler plusieurs souvenirs sur le même exemplaire précis d'une arme.", false),
+            title("Pas qu'un bout de métal", "Équipement / mémoire", "Voir un équipement recevoir un surnom émergent lié à son histoire.", false),
+            title("Je ne la remplacerai pas", "Équipement / mémoire", "Conserver et utiliser le même équipement pendant une très longue période.", false),
+            title("Lié à l'acier", "Équipement / mémoire", "Construire une vraie histoire persistante autour d'un objet lié.", false),
+            title("C'est bien la mienne", "Équipement / mémoire", "Perdre puis récupérer exactement le même équipement grâce à son identité persistante.", false),
+            title("Rends-moi ça.", "Équipement / mémoire", "Récupérer un bien réellement volé par Grinka ou par un rival voleur retrouvé plus tard.", false),
+            title("Ça valait le coup ?", "Équipement / enchantement", "Perdre réellement un équipement lors d'un échec critique d'enchantement.", false),
+            title("Pas cette fois", "Équipement / enchantement", "Voir un sceau anti-casse sauver un équipement qui aurait dû être détruit.", false),
+            title("Trophée de guerre", "Équipement / JcJ", "Obtenir en JcJ dangereux l'équipement exact d'un adversaire.", false),
+            title("Marché conclu", "Équipement / échange", "Effectuer un vrai échange transactionnel entre personnages.", true),
+
+            // V3.57.01 — consolidation des systèmes apparus depuis la dernière grande passe titres.
+            title("On a un QG !", "Clan / QG", "Achever la construction du premier QG de clan.", true),
+            title("Ce n'est plus une cabane", "Clan / QG", "Agrandir le QG jusqu'au niveau 2.", true),
+            title("Ça devient sérieux", "Clan / QG", "Atteindre le QG niveau 3 avec ses vrais prérequis.", false),
+            title("Il reste une chambre ?", "Clan / QG", "Porter la capacité du QG à au moins cinq lits.", false),
+            title("Le tableau travaille aussi", "Clan / QG", "Installer le tableau de quêtes du clan niveau 2.", true),
+            title("La caisse du patron", "Clan / QG", "Retirer pour la première fois un vrai versement de la caisse de missions.", false),
+            title("Une tournée pour le clan !", "Clan / QG", "Profiter pour la première fois du bar / de la salle commune du QG.", false),
+            title("On avait dit petite fête", "Clan / QG", "Organiser une première fête réelle au QG.", false),
+            title("Comme à la maison", "Clan / QG", "Installer le premier niveau de confort et décoration du QG.", false),
+            title("Ça va forger.", "Clan / artisanat", "Construire l'atelier de forge niveau 1 du QG.", true),
+            title("Forgeron maison", "Clan / artisanat", "Recruter le premier forgeron permanent du clan.", true),
+            title("C'est en forgeant...", "Clan / artisanat", "Faire progresser le forgeron du clan jusqu'au niveau d'artisan 5 par de vraies commandes.", false),
+            title("Chacun sa spécialité", "Clan / artisanat", "Faire choisir au forgeron du clan sa première spécialisation permanente.", false),
+            title("Prix d'ami", "Clan / artisanat", "Payer une vraie réparation bénéficiant de la remise du forgeron du clan.", false),
+
+            title("Enfin chez moi", "Foyer", "Obtenir son premier logement principal.", true),
+            title("Le loyer, cette quête hebdomadaire", "Foyer", "Payer trois loyers réels de son logement principal.", false, "Trophée de foyer : valide le parcours locatif régulier.", true, "home_financing_route"),
+            title("Plus de propriétaire", "Foyer", "Acheter définitivement son logement principal.", false, "Trophée de foyer : valide le parcours d'achat direct.", true, "home_financing_route"),
+            title("Mon lit, mes règles", "Foyer", "Dormir au moins une fois dans son propre logement.", true),
+            title("J'ai dit oui", "Foyer / mariage", "Valider un mariage réel après les prérequis prévus.", false, "Titre de relation : la mécanique complète de mariage doit être jouable avant qu'il ne devienne un prérequis ultime.", false),
+            title("Une place pour deux", "Foyer / mariage", "Installer réellement son conjoint PNJ au foyer.", false, "Titre de foyer vivant : gardé hors complétion ultime tant que la route mariage complète n'est pas ouverte.", false),
+            title("Jusqu'à ce que la sauvegarde nous sépare", "Foyer / mariage", "Valider un mariage avec un conjoint PNJ.", false, "Titre de mariage PNJ : il pourra compter pour l'ultime lorsque toute la route mariage/divorce sera honnêtement jouable.", false),
+            title("Jusqu'à ce que le ping nous sépare", "Foyer / mariage / coop", "Valider un mariage joueur-joueur.", false, "Titre coopératif : volontairement hors complétion ultime car il dépend d'un autre joueur humain.", false),
+
+            title("Dossier : retrouvée", "Histoire / Hestia", "Terminer réellement le sauvetage de la personne disparue et ramener Hestia.", false),
+            title("Une colocataire de plus", "Histoire / Hestia", "Proposer à Hestia de vivre dans le logement du joueur.", false, "Titre de relation : hors complétion ultime tant qu'une mort définitive d'alliée peut couper cette route sans alternative équivalente.", false),
+            title("Elle apprend... doucement", "Histoire / Hestia", "Faire participer Hestia à au moins cinq vrais entraînements ou combats.", false, "Titre de progression de compagne : non requis tant que la mort définitive peut interrompre ce parcours.", false),
+            title("Un gant un peu trop attachant", "Histoire / Hestia", "Recevoir l'artefact d'âme lié à Hestia.", false, "Titre d'artefact : non requis tant que la route Hestia peut être interrompue définitivement.", false),
+            title("Deux formes valent mieux qu'une", "Histoire / Hestia", "Débloquer puis choisir la seconde forme de l'artefact d'Hestia.", false, "Titre d'artefact avancé : non requis tant que la route Hestia peut être interrompue définitivement.", false),
+            title("Elle ne m'a pas laissé mourir", "Histoire / Hestia", "Être réellement sauvé par le sacrifice d'Hestia.", false, "Titre secret de sacrifice : événement exceptionnel et potentiellement incompatible avec d'autres destins d'Hestia.", false),
+            title("C'était ma première vraie amie", "Histoire / Hestia", "Construire avec Hestia une confiance réelle à travers plusieurs visites et moments vécus.", false, "Titre secret de relation : une trace émotionnelle, pas un simple seuil affiché. Non requis tant qu'une alternative de mémoire n'existe pas en cas de mort définitive.", false),
+
+            title("Sur la piste", "Primes / traque", "Faire réellement progresser l'enquête d'une prime ciblée.", true),
+            title("Viens sans faire d'histoire", "Primes / capture", "Obtenir la reddition d'une cible et la capturer vivante.", false),
+            title("Il fallait vraiment en arriver là ?", "Primes / capture", "Capturer vivante une cible après confrontation.", false),
+            title("Pas assez loin", "Primes / traque", "Capturer une cible après qu'elle a réellement changé de ville.", false),
+            title("Tu peux courir...", "Primes / traque", "Voir une même cible accumuler au moins trois tentatives d'évasion avant résolution.", false),
+            title("J'avais gardé la piste", "Primes / traque", "Exploiter avec succès une piste inter-ville persistante laissée par une cible.", false),
+
+            title("Évidemment, ce n'était pas fini.", "Quêtes / suites", "Terminer sa première phase 2 obligatoire.", true),
+            title("Puisqu'on y est...", "Quêtes / suites", "Accepter puis terminer une phase 2 facultative.", true),
+            title("Facteur officiel", "Quêtes / inter-ville", "Terminer un premier contrat rémunéré de transmission d'informations inter-ville.", true),
+            title("Ce n'est pas une lettre, ça.", "Quêtes / inter-ville", "Terminer un premier transport rémunéré de matériaux inter-ville.", true),
+            title("Avec correspondance", "Quêtes / inter-ville", "Terminer un contrat inter-ville comportant plusieurs relais réels.", false),
+
+            title("J'ai touché de l'herbe", "Ville / événements", "Participer activement à la fête des moissons.", false),
+            title("On barricade d'abord", "Ville / événements", "Participer aux préparatifs d'une mobilisation contre un raid annoncé.", false),
+            title("Le convoi est arrivé... à peu près", "Économie / convois", "Résoudre puis clôturer un premier incident commercial jouable.", false),
+            title("Il manquait quelque chose au chargement", "Économie / convois", "Faire déboucher l'enquête d'un incident commercial sur une vraie prime séparée.", false),
+
+            // V3.51.51 — stockage, encombrement, sacs et morphologies.
+            // Ces titres décrivent des styles de jeu parfois incompatibles entre eux : aucun n'est requis pour la complétion ultime.
+            title("Enfin de la place", "Économie / stockage", "Acheter son premier coffre municipal.", true, "Trophée logistique : marque l'accès au stockage municipal local.", false),
+            title("On pousse les murs", "Économie / stockage", "Améliorer un coffre municipal pour la première fois.", true, "Trophée logistique : marque le premier agrandissement d'un coffre.", false),
+            title("Chaque chose à sa place", "Économie / stockage", "Installer l'amélioration Place optimisée sur un coffre de niveau 2 ou plus.", true, "Trophée logistique : récompense l'optimisation physique du rangement.", false),
+            title("Optimisation maximale", "Économie / stockage", "Cumuler Place optimisée et Rangement anticipé sur un coffre niveau 5.", false, "Trophée logistique : le coffre utilise exactement 25 % de place en moins qu'à rangement brut.", false),
+            title("Plein à craquer", "Inventaire / encombrement", "Atteindre au moins 100 % de la capacité portée.", true, "Trophée d'encombrement, sans bonus direct.", false),
+            title("Ça rentre encore.", "Inventaire / encombrement", "Atteindre au moins 200 % de la capacité portée.", false, "Trophée drôle : le personnage doit s'alléger avant de pouvoir repartir.", false),
+            title("Mule de compétition", "Inventaire / encombrement", "Terminer une exploration avec plus de 150 % de charge.", false, "Trophée de transport extrême.", false),
+            title("Je garde tout", "Inventaire / encombrement", "Revenir en ville presque immobilisé sans avoir abandonné son butin en chemin.", false, "Trophée de collection obstinée.", false),
+            title("Grand ménage", "Inventaire / stockage", "Décharger d'un coup la grande majorité d'un inventaire très rempli.", false, "Trophée de rangement.", false),
+            title("Ça respire enfin", "Inventaire / stockage", "Passer d'une charge supérieure à 150 % à moins de 50 % grâce à une vente ou un stockage réel.", false, "Trophée de rangement radical.", false),
+            title("Pas un espace de perdu", "Économie / stockage", "Remplir réellement un coffre municipal à 100 % de sa capacité effective.", false, "Trophée de stockage compact.", false),
+            title("Conservateur", "Économie / stockage", "Remplir à 100 % un coffre municipal de niveau 5.", false, "Trophée prestigieux de collection et de conservation.", false),
+            title("Réseau de stockage", "Économie / stockage", "Posséder des coffres municipaux dans au moins trois villes différentes.", false, "Trophée logistique multi-ville.", false),
+            title("Empire logistique", "Économie / stockage", "Posséder des coffres municipaux dans au moins cinq villes différentes.", false, "Trophée logistique avancé.", false),
+            title("Partout chez moi", "Économie / stockage", "Posséder un coffre dans un grand nombre de villes principales.", false, "Trophée de réseau de stockage étendu.", false),
+            title("Collectionneur itinérant", "Économie / stockage", "Posséder plusieurs coffres municipaux de niveau 5 dans des villes différentes.", false, "Trophée de collection multi-ville.", false),
+            title("Armurier malgré moi", "Équipement / collection", "Stocker au moins 100 armes différentes ou exemplaires conservés dans ses coffres.", false, "Trophée de collection d'armes.", false),
+            title("Une pour chaque occasion", "Équipement / collection", "Stocker au moins 50 armures dans ses coffres.", false, "Trophée de collection d'armures.", false),
+            title("Ça peut toujours servir", "Bestiaire / matériaux", "Accumuler une très grande réserve de matériaux dans ses coffres.", false, "Trophée de collection de matériaux.", false),
+            title("Réserve stratégique", "Bestiaire / matériaux", "Stocker une grande diversité de familles de matériaux.", false, "Trophée de préparation matérielle.", false),
+            title("Sous le matelas", "Économie / stockage", "Stocker une très grosse fortune en monnaie physique dans un coffre.", false, "Trophée futur de monnaie physique stockée ; le coffre doit réellement contenir les pièces.", false),
+            title("Je préfère le tangible", "Économie / monnaie", "Conserver une très grande fortune sous forme de pièces physiques plutôt que de soldes abstraits.", false, "Trophée de monnaie physique.", false),
+            title("Ça pèse moins comme ça", "Économie / monnaie", "Réduire fortement le nombre de pièces physiques transportées par un change vers de grosses dénominations.", false, "Trophée de change et de logistique monétaire.", false),
+            title("Prêt pour le long voyage", "Inventaire / sacs", "Acheter le sac à dos de capacité maximale actuelle.", true, "Trophée de progression du sac.", false),
+            title("Même ça, j'ai rempli", "Inventaire / sacs", "Atteindre 100 % de capacité avec le plus grand sac disponible.", false, "Trophée d'encombrement avancé.", false),
+            title("Collection de sacs", "Inventaire / sacs", "Acheter successivement tous les paliers de sacs disponibles.", false, "Trophée de progression logistique.", false),
+            title("Voyageur organisé", "Biomes / exploration", "Réaliser une exploration en restant sous 50 % d'encombrement malgré les trouvailles.", false, "Trophée de préparation légère.", false),
+            title("Préparation impeccable", "Biomes / exploration", "Enchaîner plusieurs explorations sans jamais dépasser 85 % de capacité.", false, "Trophée de discipline logistique.", false),
+            title("Minimaliste", "Biomes / exploration", "Partir en exploration avec moins de 10 % de la capacité d'inventaire utilisée.", true, "Trophée de départ volontairement léger.", false),
+            title("L'essentiel seulement", "Biomes / exploration", "Partir sous 10 % et terminer la sortie sans dépasser 50 % de charge.", false, "Trophée de minimalisme tenu pendant toute une sortie.", false),
+            title("Je voyage léger", "Biomes / exploration", "Enchaîner plusieurs sorties en restant sous 50 % de charge.", false, "Trophée de constance légère.", false),
+            title("Un corps façonné", "Morphologie / progression", "Achever volontairement une transformation durable de morphologie par un parcours long et cohérent.", false, "Trophée de transformation corporelle volontaire.", false),
+            title("Plus solide qu'avant", "Morphologie / progression", "Passer volontairement d'une morphologie Fine à Standard.", false, "Trophée de transformation vers une carrure plus solide.", false),
+            title("Taillé pour porter", "Morphologie / progression", "Passer volontairement d'une morphologie Standard à Robuste.", false, "Trophée de transformation robuste.", false),
+            title("Plus léger qu'avant", "Morphologie / progression", "Passer volontairement de Robuste à Standard.", false, "Trophée de transformation vers une carrure plus légère.", false),
+            title("Affûté", "Morphologie / progression", "Passer volontairement de Standard à Fine.", false, "Trophée de transformation fine.", false),
+            title("Silhouette travaillée", "Morphologie / progression", "Atteindre volontairement une morphologie Fine après un entraînement et une alimentation suivis.", false, "Trophée de transformation longue et volontaire.", false),
+            title("Plume au vent", "Morphologie / mobilité", "Conserver une morphologie Fine et démontrer durablement une excellente mobilité.", false, "Trophée de mobilité légère.", false),
+            title("Affûté comme une lame", "Morphologie / mobilité", "Devenir volontairement Fin puis atteindre un haut niveau de mobilité en situation réelle.", false, "Trophée de mobilité travaillée.", false),
+            title("Ça flotte presque", "Morphologie / inventaire", "Être naturellement de petit gabarit, de morphologie Fine et voyager sous 25 % de charge.", false, "Trophée de légèreté extrême.", false),
+            title("Bête de somme", "Morphologie / inventaire", "Combiner une morphologie Robuste avec le plus grand sac disponible.", false, "Trophée de capacité de portage.", false),
+            title("Tout sur le dos", "Morphologie / inventaire", "Être Robuste et porter plus de 150 % de capacité sans atteindre 200 %.", false, "Trophée de portage extrême.", false),
+            title("Déménageur", "Inventaire / équipement", "Transporter une très grosse quantité d'équipement lourd en une seule sortie sans atteindre 200 %.", false, "Trophée de logistique lourde.", false),
+            title("L'art du minimum", "Morphologie / exploration", "Avec une morphologie Fine, enchaîner des sorties avec une charge très faible.", false, "Trophée de minimalisme durable.", false),
+            title("Il m'a rendu service ?", "Drôle / rivaux", "Se faire voler par un fuyard alors qu'on était déjà extrêmement surchargé.", false, "Trophée ironique : le vol a techniquement allégé le sac.", false),
+
+            title("Ma parole me lie", "Serments", "Prononcer son premier vrai serment.", true),
+            title("Parole tenue", "Serments", "Respecter longtemps un serment alors que le rompre aurait été avantageux.", false),
+            title("Parjure", "Serments", "Rompre volontairement un serment.", false, "Trace sociale négative : certains personnages pourront réagir à un serment volontairement brisé.", false),
+            title("Deux serments, un choix", "Serments", "Être réellement forcé de sacrifier un serment pour en respecter un autre.", false, "Titre de dilemme : volontairement non requis pour la complétion car les serments peuvent être exclusifs.", false),
+
+            title("Enfant du pays", "Ville / réputation", "Atteindre une réputation locale exceptionnelle dans une ville.", true),
+            title("Persona non grata", "Ville / réputation", "Subir un vrai refus de service à cause d'une réputation locale très mauvaise.", false, "Trace négative de réputation : non requise pour la complétion.", false),
+            title("Racheter ses erreurs", "Ville / réputation", "Revenir d'une réputation très négative par des réparations légitimes.", false),
+            title("Deux villes, deux visages", "Ville / réputation", "Être très apprécié dans une ville et franchement mal vu dans une autre.", false),
+            title("Tout le monde me connaît", "Monde / réputation", "Atteindre une très haute réputation générale ou multi-locale.", false),
+            title("Pas partout en bien", "Monde / réputation", "Être célèbre avec des réputations très différentes selon les groupes et les villes.", false),
+            title("Une histoire à raconter", "Monde / mémoire", "Accumuler de nombreux événements historiques uniques sur le même personnage.", true),
+            title("On parle de toi", "Monde / rumeurs", "Devenir le sujet de plusieurs rumeurs indépendantes.", false),
+            title("Je connais quelqu'un", "Monde / relations", "Disposer de contacts crédibles dans plusieurs organisations.", false),
+            title("Aucun camp", "Monde / factions", "Rester indépendant malgré plusieurs propositions sérieuses de recrutement.", false, "Titre de parcours alternatif : non requis pour la complétion.", false),
+            title("Plusieurs vies", "Monde / progression", "Traverser de nombreux systèmes majeurs sur le même personnage.", false),
+
+            title("Le prix de la puissance", "Magie / matériaux", "Sacrifier volontairement un matériau exceptionnel dans une vraie canalisation.", false),
+            title("À la bonne qualité", "Magie / matériaux", "Réussir une recette avancée avec des qualités de matériaux choisies précisément.", true),
+            title("Ça devait marcher...", "Magie / drôle", "Perdre légitimement un support lors d'un échec de stabilité.", false),
+            title("Le bâton est mort, pas moi", "Magie / catalyseurs", "Réussir une incantation de secours avec un catalyseur brisé.", false),
+            title("Sans catalyseur", "Magie / maîtrise", "Réussir plusieurs incantations pures difficiles sans catalyseur.", false),
+            title("Je l'ai enfin compris", "Magie / grimoires", "Étudier jusqu'au bout un grimoire exigeant langue, niveau et temps.", false),
+            title("Trois voies, une seule magie", "Magie / maîtrise", "Expérimenter légitimement les trois approches magiques accessibles au personnage.", false),
+
+            title("Sous contrat", "Emploi / équipes", "Signer son premier contrat avec une équipe externe.", true),
+            title("Employé modèle", "Emploi / équipes", "Réussir plusieurs missions employeur sans avertissement disciplinaire.", true),
+            title("Mise à pied", "Emploi / équipes", "Être réellement placé sur le banc pour raisons disciplinaires.", false, "Trace disciplinaire négative : non requise pour la complétion.", false),
+            title("Vous êtes viré.", "Emploi / drôle", "Se faire réellement licencier d'une organisation.", false, "Titre négatif/humoristique : non requis pour la complétion.", false),
+            title("Sans rancune", "Emploi / équipes", "Terminer proprement plusieurs contrats auprès d'organisations différentes.", false),
+
+            title("La marque n'a pas suffi", "FireFlight", "Survivre jusqu'au bout à une marque mortelle de FireFlight.", false),
+            title("Toujours debout", "FireFlight", "Survivre à une phase où FireFlight impose réellement des règles mortelles.", false),
+            title("Tout le monde respire", "FireFlight", "Faire traverser à tout le groupe une marque collective sans mort définitive.", false),
+
+            title("Canal interdit", "REAPERS-13", "Utiliser légitimement le Protocol 13 après avoir obtenu une connaissance crédible des Reapers.", false, "Titre secret lié à un canal classifié. Son existence reste cachée par défaut.", false),
+            title("Signal reçu", "REAPERS-13", "Recevoir une vraie réponse à une balise Protocol 13.", false, "Titre secret Reaper : non requis pour la complétion générale.", false),
+            title("Sous observation", "REAPERS-13", "Attirer officiellement l'attention des Reapers sans être encore recruté.", false, "Titre secret Reaper : non requis pour la complétion générale.", false),
+            title("Ils t'ont choisi", "REAPERS-13", "Être sélectionné officiellement par les Reapers.", false, "Titre secret Reaper : non requis pour la complétion générale.", false),
+            title("La treizième ligne", "REAPERS-13", "Intégrer officiellement la 13th-Line.", false, "Grade/faction Reaper : non requis pour la complétion générale.", false),
+            title("Echo dans l'ombre", "REAPERS-13", "Être accepté dans l'Echo Unit.", false, "Grade/faction Reaper : non requis pour la complétion générale.", false),
+            title("Operational-Reaper", "REAPERS-13", "Obtenir officiellement le grade Operational Reaper.", false, "Grade officiel Reaper, jamais accordé par simple puissance brute.", false),
+            title("Reaper-Warden", "REAPERS-13", "Obtenir officiellement le grade Reapers Warden.", false, "Grade officiel extrêmement élevé, non requis pour la complétion générale.", false),
+            title("Black Flag", "REAPERS-13", "Intégrer l'unité principale du Reaper-13 si elle conserve ce nom officiel.", false, "Titre d'unité classifié et non requis pour la complétion générale.", false),
+            title("La fuite est terminée", "REAPERS-13", "Capturer une cible majeure après une longue traque Reaper.", false),
+            title("Pas pour la gloire", "REAPERS-13", "Terminer plusieurs opérations Reaper en privilégiant l'objectif à la récompense personnelle.", false),
+            title("Observer avant d'agir", "REAPERS-13", "Réussir une mission dangereuse après une vraie phase de renseignement.", false),
+            title("Aucune erreur", "REAPERS-13", "Terminer une opération Reaper difficile sans perte, fuite de cible ni victime collatérale.", false),
+            title("Cible prioritaire", "REAPERS-13 / secret", "Devenir une cible prioritaire du clan après un acte exceptionnellement hostile envers sa hiérarchie.", false, "Titre extrêmement secret ; il ne remplace jamais le grade Reaper-13.", false),
+
+            title("Luck is a skill", "Chance / secret", "Prouver légitimement, sur plusieurs situations réellement improbables, que la chance n'était peut-être pas qu'un accident.", false),
+            title("Je savais que ça marcherait", "Chance / secret", "Réussir une action significative avec une probabilité réellement très faible.", false),
+            title("C'était prévu.", "Chance / secret", "Accumuler plusieurs événements favorables très improbables au cours d'une même aventure.", false),
+            title("Pourquoi ça marche ?", "Système / secret", "Déclencher légitimement une combinaison très improbable de plusieurs systèmes.", false),
+            title("Rien à signaler", "Système / intégrité", "Atteindre une très longue progression sans jamais altérer le personnage.", false),
+            title("Pur jusqu'au bout", "Système / intégrité", "Atteindre une étape majeure de fin de progression sans aucune triche altérante.", false),
+
             title("Compagnon de revanche", "Coop", "Participer à une victoire de boss qui libère une trace d'un allié.", false),
             title("Partage de prime propre", "Coop", "Recevoir une récompense de groupe avec vraie participation.", false),
             title("Dernier debout du groupe", "Coop", "Survivre à une victoire de groupe quand le combat a vraiment coûté cher.", false),
@@ -273,6 +544,11 @@ namespace TitleCatalog
         };
 
         return titles;
+    }
+
+    std::string catalogVersion()
+    {
+        return "V3.57.02";
     }
 
     const TitleDefinition* findTitleDefinition(const std::string& titleName)
@@ -308,6 +584,7 @@ namespace TitleCatalog
 
     bool hasAllUltimatePrerequisites(const std::vector<std::string>& ownedTitles)
     {
+        std::vector<std::string> validatedAlternativeGroups;
         for (const TitleDefinition& definition : availableTitleDefinitions())
         {
             if (!definition.requiredForUltimate)
@@ -315,10 +592,31 @@ namespace TitleCatalog
                 continue;
             }
 
-            if (!containsTitle(ownedTitles, definition.name))
+            if (definition.ultimateAlternativeGroup.empty())
             {
-                return false;
+                if (!containsTitle(ownedTitles, definition.name)) return false;
+                continue;
             }
+
+            if (std::find(validatedAlternativeGroups.begin(), validatedAlternativeGroups.end(), definition.ultimateAlternativeGroup)
+                != validatedAlternativeGroups.end())
+            {
+                continue;
+            }
+
+            bool oneAlternativeOwned = false;
+            for (const TitleDefinition& alternative : availableTitleDefinitions())
+            {
+                if (alternative.requiredForUltimate
+                    && alternative.ultimateAlternativeGroup == definition.ultimateAlternativeGroup
+                    && containsTitle(ownedTitles, alternative.name))
+                {
+                    oneAlternativeOwned = true;
+                    break;
+                }
+            }
+            if (!oneAlternativeOwned) return false;
+            validatedAlternativeGroups.push_back(definition.ultimateAlternativeGroup);
         }
         return true;
     }

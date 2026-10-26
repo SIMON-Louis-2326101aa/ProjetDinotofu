@@ -5,12 +5,14 @@
 
 #include "combat/system/CombatClassSystem.hpp"
 #include "combat/profile/MonsterBehaviorProfile.hpp"
+#include "combat/anatomy/MonsterAnatomySystem.hpp"
 #include "combat/system/ElementalAffinitySystem.hpp"
 #include "combat/threat/ThreatSystem.hpp"
 #include "core/Console.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/inventory/InventoryProtection.hpp"
 #include "item/armor/Armor.hpp"
 
 #include <algorithm>
@@ -21,6 +23,36 @@
 namespace PlayerWaveTacticalSupport
 {
 
+    enum class TacticalMaterialConsumeResult
+    {
+        Unavailable,
+        Refused,
+        Consumed
+    };
+
+    TacticalMaterialConsumeResult consumeTacticalMaterialWithLock(
+        Player& player,
+        const std::string& materialId,
+        const std::string& materialLabel,
+        const std::string& actionLabel,
+        const std::string& screenId
+    )
+    {
+        if (player.getInventory().countMaterialById(materialId) <= 0)
+        {
+            return TacticalMaterialConsumeResult::Unavailable;
+        }
+
+        if (!InventoryProtection::confirmLockedMaterialUse(
+                player, materialId, materialLabel, actionLabel, screenId))
+        {
+            return TacticalMaterialConsumeResult::Refused;
+        }
+
+        return player.getInventory().removeMaterialQuantityById(materialId, 1)
+            ? TacticalMaterialConsumeResult::Consumed
+            : TacticalMaterialConsumeResult::Unavailable;
+    }
 
     std::string normalizeTacticalText(std::string value)
     {
@@ -461,17 +493,33 @@ namespace PlayerWaveTacticalSupport
 
     bool consumeTacticalLantern(Player& player, TacticalLantern& lantern)
     {
-        if (player.getInventory().countMaterialById("fire_lantern") > 0
-            && player.getInventory().removeMaterialQuantityById("fire_lantern", 1))
+        TacticalMaterialConsumeResult result = consumeTacticalMaterialWithLock(
+            player,
+            "fire_lantern",
+            "Lanterne de feu",
+            "consommer cette lanterne pour l'action tactique",
+            "combat.tactical.locked_fire_lantern"
+        );
+        if (result == TacticalMaterialConsumeResult::Consumed)
         {
             lantern.id = "fire_lantern";
             lantern.name = "lanterne de feu";
             lantern.mycelium = false;
             return true;
         }
+        if (result == TacticalMaterialConsumeResult::Refused)
+        {
+            return false;
+        }
 
-        if (player.getInventory().countMaterialById("mycelium_lantern") > 0
-            && player.getInventory().removeMaterialQuantityById("mycelium_lantern", 1))
+        result = consumeTacticalMaterialWithLock(
+            player,
+            "mycelium_lantern",
+            "Lanterne de mycélium",
+            "consommer cette lanterne pour l'action tactique",
+            "combat.tactical.locked_mycelium_lantern"
+        );
+        if (result == TacticalMaterialConsumeResult::Consumed)
         {
             lantern.id = "mycelium_lantern";
             lantern.name = "lanterne de mycélium";
@@ -1032,10 +1080,20 @@ namespace PlayerWaveTacticalSupport
 
         for (const CoatingChoice& choice : choices)
         {
-            if (player.getInventory().countMaterialById(choice.id) > 0
-                && player.getInventory().removeMaterialQuantityById(choice.id, 1))
+            const TacticalMaterialConsumeResult result = consumeTacticalMaterialWithLock(
+                player,
+                choice.id,
+                choice.name,
+                "consommer ce matériau comme enduit tactique",
+                "combat.tactical.locked_weapon_coating"
+            );
+            if (result == TacticalMaterialConsumeResult::Consumed)
             {
                 return {choice.id, choice.name, choice.label};
+            }
+            if (result == TacticalMaterialConsumeResult::Refused)
+            {
+                return {"", "", ""};
             }
         }
 
@@ -1069,10 +1127,20 @@ namespace PlayerWaveTacticalSupport
 
         for (const MaterialChoice& choice : choices)
         {
-            if (player.getInventory().countMaterialById(choice.id) > 0
-                && player.getInventory().removeMaterialQuantityById(choice.id, 1))
+            const TacticalMaterialConsumeResult result = consumeTacticalMaterialWithLock(
+                player,
+                choice.id,
+                choice.label,
+                "consommer ce matériau pour fabriquer le piège improvisé",
+                "combat.tactical.locked_trap_material"
+            );
+            if (result == TacticalMaterialConsumeResult::Consumed)
             {
                 return choice.label;
+            }
+            if (result == TacticalMaterialConsumeResult::Refused)
+            {
+                return "";
             }
         }
 
@@ -1412,6 +1480,11 @@ namespace PlayerWaveTacticalSupport
         if (!profile.durabilityLine.empty())
         {
             hint += " " + profile.durabilityLine;
+        }
+        const MonsterWeakPointProfile anatomy = MonsterAnatomySystem::weakPointProfile(monster);
+        if (!anatomy.hint.empty())
+        {
+            hint += " " + anatomy.hint;
         }
         return hint;
     }

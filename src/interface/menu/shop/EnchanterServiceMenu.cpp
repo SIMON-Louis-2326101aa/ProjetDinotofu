@@ -8,6 +8,7 @@
 #include "combat/system/CombatClassSystem.hpp"
 #include "entity/Monster.hpp"
 #include "interface/menu/EquipmentMenu.hpp"
+#include "interface/menu/inventory/InventoryProtection.hpp"
 #include "interface/menu/progression/LanguagePracticeMenu.hpp"
 #include "item/weapon/WeaponCatalog.hpp"
 #include "item/armor/ArmorCatalog.hpp"
@@ -217,6 +218,14 @@ namespace
             return false;
         }
 
+        if (!InventoryProtection::confirmLockedMaterialUse(
+                player, offer.materialId, offer.materialName, "consommer ce composant pour graver une rune",
+                "shop.enchanter.locked_enchantment_material"))
+        {
+            lines.push_back("Enchantement annulé : le composant verrouillé a été conservé.");
+            return false;
+        }
+
         if (!player.getInventory().spendEconomyUnits(offer.price))
         {
             lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(offer.price) + ".");
@@ -262,6 +271,14 @@ namespace
 
     bool consumeRunicSafetySeal(Player& player, const std::string& itemName, std::vector<std::string>& lines)
     {
+        if (!InventoryProtection::confirmLockedMaterialUse(
+                player, "runic_safety_seal", "Sceau anti-casse runique",
+                "laisser le sceau se sacrifier pour sauver " + itemName,
+                "shop.enchanter.locked_safety_seal"))
+        {
+            lines.push_back("Le sceau verrouillé n'est pas sacrifié : la protection anti-casse est refusée pour cette tentative.");
+            return false;
+        }
         if (!player.getInventory().removeMaterialQuantityById("runic_safety_seal", 1))
         {
             return false;
@@ -326,6 +343,8 @@ namespace
         }
 
         const std::string weaponName = weapon->getName();
+        const std::string weaponHistoryId = weapon->getPersistentId().empty()
+            ? "weapon:" + weaponName : weapon->getPersistentId();
         const int weaponValue = weapon->getValue();
         const int weaponEnchantments = weapon->getEnchantmentCount();
         if (rollEnchantmentBreak(risk))
@@ -341,6 +360,10 @@ namespace
                 player.unequipWeapon();
             }
             player.getInventory().removeWeapon(weaponIndex);
+            player.recordHistoricalEvent(
+                "equipment_destroyed", weaponHistoryId,
+                "Équipement détruit : " + weaponName + " lors d’un échec critique d’enchantement.", true
+            );
             lines.push_back("Arme brisée définitivement : " + weaponName + ".");
             lines.push_back("Réparation impossible : la structure de l'arme est détruite.");
             grantEnchantmentBreakSalvage(player, false, weaponValue, weaponEnchantments, lines);
@@ -407,6 +430,8 @@ namespace
         }
 
         const std::string armorName = armor->getName();
+        const std::string armorHistoryId = armor->getPersistentId().empty()
+            ? "armor:" + armorName : armor->getPersistentId();
         const int armorValue = armor->getValue();
         const int armorEnchantments = armor->getEnchantmentCount();
         if (rollEnchantmentBreak(risk))
@@ -422,6 +447,10 @@ namespace
                 player.unequipArmor();
             }
             player.getInventory().removeArmor(armorIndex);
+            player.recordHistoricalEvent(
+                "equipment_destroyed", armorHistoryId,
+                "Équipement détruit : " + armorName + " lors d’un échec critique d’enchantement.", true
+            );
             lines.push_back("Armure détruite définitivement : " + armorName + ".");
             lines.push_back("Réparation impossible : l'enchantement a brûlé les attaches et les coutures internes.");
             grantEnchantmentBreakSalvage(player, true, armorValue, armorEnchantments, lines);
@@ -513,6 +542,14 @@ namespace
         if (player.getInventory().countMaterialById("arcane_dust") < dustCost)
         {
             lines.push_back("Composant manquant : Poussière arcanique x" + std::to_string(dustCost) + " requis.");
+            return false;
+        }
+        if (!InventoryProtection::confirmLockedMaterialUse(
+                player, "arcane_dust", "Poussière arcanique",
+                "consommer cette poussière pour un désenchantement",
+                "shop.enchanter.locked_disenchant_dust"))
+        {
+            lines.push_back("Désenchantement annulé : la Poussière arcanique verrouillée est conservée.");
             return false;
         }
         if (!player.getInventory().spendEconomyUnits(price))
@@ -640,6 +677,22 @@ namespace
             lines.push_back("Composant manquant : Poussière arcanique x" + std::to_string(dustCost) + " requis.");
             return false;
         }
+        if (!InventoryProtection::confirmLockedMaterialUse(
+                player, "runic_stabilizer", "Stabilisateur runique",
+                "consommer ce stabilisateur pour préparer un sceau anti-casse",
+                "shop.enchanter.locked_stabilizer"))
+        {
+            lines.push_back("Préparation annulée : le Stabilisateur runique verrouillé est conservé.");
+            return false;
+        }
+        if (!InventoryProtection::confirmLockedMaterialUse(
+                player, "arcane_dust", "Poussière arcanique",
+                "consommer cette poussière pour préparer un sceau anti-casse",
+                "shop.enchanter.locked_safety_dust"))
+        {
+            lines.push_back("Préparation annulée : la Poussière arcanique verrouillée est conservée.");
+            return false;
+        }
         if (!player.getInventory().spendEconomyUnits(price))
         {
             lines.push_back("Paiement refusé : il faut " + Money::formatEconomyUnits(price) + ".");
@@ -686,6 +739,22 @@ namespace
         if (player.getInventory().countMaterialById("arcane_dust") < dustCost)
         {
             lines.push_back("Composant manquant : Poussière arcanique x" + std::to_string(dustCost) + " requis.");
+            return false;
+        }
+        if (!InventoryProtection::confirmLockedMaterialUse(
+                player, "runic_extraction_note", "Note d'extraction runique",
+                "consommer cette note pour transférer une rune",
+                "shop.enchanter.locked_extraction_note"))
+        {
+            lines.push_back("Transfert annulé : la Note d'extraction runique verrouillée est conservée.");
+            return false;
+        }
+        if (!InventoryProtection::confirmLockedMaterialUse(
+                player, "arcane_dust", "Poussière arcanique",
+                "consommer cette poussière pour transférer une rune",
+                "shop.enchanter.locked_transfer_dust"))
+        {
+            lines.push_back("Transfert annulé : la Poussière arcanique verrouillée est conservée.");
             return false;
         }
         if (!player.getInventory().spendEconomyUnits(price))

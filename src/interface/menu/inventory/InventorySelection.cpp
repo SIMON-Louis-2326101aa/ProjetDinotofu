@@ -22,6 +22,7 @@
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "progression/material/MaterialExperimentLog.hpp"
 #include "progression/material/MaterialKnowledgeProgress.hpp"
+#include "progression/magic/MagicStudyRules.hpp"
 
 #include "item/Inventory.hpp"
 #include "item/weapon/Weapon.hpp"
@@ -78,6 +79,29 @@ namespace
     void showInventoryNotice(const std::string& title, const std::string& screenId, const std::vector<std::string>& lines)
     {
         MessageScreen::show(title, screenId, lines);
+    }
+
+    std::string inventoryPreferencePrefix(const Inventory& inventory, const std::string& key, bool tracked = false)
+    {
+        std::string prefix;
+        if (inventory.isPinnedItemKey(key)) prefix += "[ÉPINGLÉ] ";
+        if (inventory.isLockedItemKey(key)) prefix += "[VERROUILLÉ] ";
+        if (tracked) prefix += "[SUIVI] ";
+        return prefix;
+    }
+
+    bool confirmLockedInventoryAction(Player& player, const std::string& key, const std::string& itemName, const std::string& actionLabel)
+    {
+        if (!player.getInventory().isLockedItemKey(key)) return true;
+        MenuScreen screen("OBJET VERROUILLÉ", "inventory.lock.confirm");
+        screen.addLine("Objet : " + itemName);
+        screen.addLine("Action demandée : " + actionLabel + ".");
+        screen.addLine("Tu as volontairement verrouillé cet objet. Une confirmation supplémentaire est obligatoire.");
+        screen.addOption(1, "Confirmer exceptionnellement", "Autoriser cette action sans retirer le verrou.", true, "inventory.lock.confirm_once");
+        screen.addOption(2, "Annuler", "Conserver l'objet et son verrou.", true, "inventory.lock.cancel");
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis 1 ou 2.");
+        Console::clear();
+        return choice == 1;
     }
 
 
@@ -1083,7 +1107,7 @@ namespace
 
     // EN: displayMaterialUtility declares or implements a focused behavior used by this module.
     // FR: displayMaterialUtility déclare ou implémente un comportement précis utilisé par ce module.
-    void displayMaterialUtility(const Material& material)
+    void displayMaterialUtility(const Player& player, const Material& material)
     {
         std::vector<std::string> lines;
         lines.push_back(material.getName() + " | " + material.getCategory());
@@ -1092,6 +1116,12 @@ namespace
         {
             lines.push_back("Qualité : " + material.getQualityLabel());
             lines.push_back("Craft : faible/impur compte moins, pur/haute qualité compte plus.");
+        }
+
+        if (MagicStudyRules::isMagicStudyItem(material.getId()))
+        {
+            const std::vector<std::string> requirementLines = MagicStudyRules::studyRequirementLines(player, material.getId());
+            lines.insert(lines.end(), requirementLines.begin(), requirementLines.end());
         }
 
         if (isRepairKitId(material.getId()))
@@ -1200,7 +1230,7 @@ namespace
 
     // EN: readMaterialIfPossible declares or implements a focused behavior used by this module.
     // FR: readMaterialIfPossible déclare ou implémente un comportement précis utilisé par ce module.
-    bool readMaterialIfPossible(const Material& material)
+    bool readMaterialIfPossible(Player& player, const Material& material)
     {
         if (material.getCategory() != "Livre" && material.getCategory() != "Renseignement")
         {
@@ -1213,13 +1243,26 @@ namespace
         BestiaryRuntimeProgress::unlockCommonInformation(material.getId());
 
         inventoryNotice << "Tu prends le temps de lire : " << material.getName() << "." << std::endl;
+
+        if (MagicStudyRules::isMagicStudyItem(material.getId()))
+        {
+            std::vector<std::string> studyNotes;
+            const MagicStudyOutcome outcome = MagicStudyRules::attemptStudy(player, material.getId(), studyNotes);
+            for (const std::string& note : studyNotes)
+            {
+                inventoryNotice << note << std::endl;
+            }
+            inventoryNotice << std::endl;
+            return outcome == MagicStudyOutcome::Learned || outcome == MagicStudyOutcome::AlreadyKnown;
+        }
+
         if (material.getId() == "clean_harvest_manual" || material.getId() == "monster_dissection_guide")
         {
             inventoryNotice << "Technique passive comprise : ses effets restent actifs tant que l'apprentissage est conservé dans l'inventaire." << std::endl;
         }
         inventoryNotice << "Les informations compatibles rejoignent les notes déjà connues du bestiaire de session." << std::endl;
         inventoryNotice << std::endl;
-        return false;
+        return true;
     }
 
 
@@ -2789,11 +2832,21 @@ namespace
     {
         if (material.getCategory() == "Livre" || material.getCategory() == "Renseignement")
         {
-            bool read = false;
+            if (MagicStudyRules::isMagicStudyItem(material.getId()))
             {
-                read = readMaterialIfPossible(material);
+                BestiaryRuntimeProgress::unlockCommonInformation(material.getId());
+                std::vector<std::string> studyNotes;
+                const MagicStudyOutcome outcome = MagicStudyRules::attemptStudy(player, material.getId(), studyNotes);
+                studyNotes.insert(studyNotes.begin(), "Entrée : " + material.getName());
+                MessageScreen::show(
+                    outcome == MagicStudyOutcome::Blocked ? "ÉTUDE INCOMPLÈTE" : "ÉTUDE MAGIQUE",
+                    outcome == MagicStudyOutcome::Blocked ? "inventory.material.magic_study.blocked" : "inventory.material.magic_study.result",
+                    studyNotes
+                );
+                return outcome == MagicStudyOutcome::Learned || outcome == MagicStudyOutcome::AlreadyKnown;
             }
 
+            const bool read = readMaterialIfPossible(player, material);
             MessageScreen::show(
                 "LECTURE",
                 "inventory.material.read.result",
@@ -2973,7 +3026,13 @@ bool InventorySelection::openWeapons(Player& player)
 
     while (true)
     {
-        const std::size_t totalItems = static_cast<std::size_t>(player.getInventory().getWeaponCount());
+        std::vector<int> orderedIndices;
+        for (int i = 0; i < player.getInventory().getWeaponCount(); ++i) orderedIndices.push_back(i);
+        std::stable_sort(orderedIndices.begin(), orderedIndices.end(), [&](int left, int right) {
+            return player.getInventory().isPinnedItemKey(Inventory::weaponItemKey(player.getInventory().getWeapon(left)))
+                && !player.getInventory().isPinnedItemKey(Inventory::weaponItemKey(player.getInventory().getWeapon(right)));
+        });
+        const std::size_t totalItems = orderedIndices.size();
         const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
 
         if (pageIndex >= totalPages)
@@ -2989,9 +3048,11 @@ bool InventorySelection::openWeapons(Player& player)
         screen.addLine("Affichage : " + PagedMenu::rangeText(first, last, totalItems));
         for (std::size_t i = first; i < last; ++i)
         {
-            Weapon weapon = player.getInventory().getWeapon(static_cast<int>(i));
+            const int inventoryIndex = orderedIndices[i];
+            Weapon weapon = player.getInventory().getWeapon(inventoryIndex);
+            const std::string itemKey = Inventory::weaponItemKey(weapon);
             std::ostringstream label;
-            label << weapon.getName() << weaponClassCompatibilityTagForInventory(player, weapon)
+            label << inventoryPreferencePrefix(player.getInventory(), itemKey) << weapon.getName() << weaponClassCompatibilityTagForInventory(player, weapon)
                   << " | Durabilité : " << InventoryUtils::weaponDurabilityText(weapon);
 
             if (weapon.isBroken())
@@ -3064,7 +3125,7 @@ bool InventorySelection::openWeapons(Player& player)
             continue;
         }
 
-        int index = static_cast<int>(first) + choice - 1;
+        int index = orderedIndices[first + static_cast<std::size_t>(choice - 1)];
 
         if (!player.getInventory().hasWeapon(index))
         {
@@ -3073,7 +3134,12 @@ bool InventorySelection::openWeapons(Player& player)
         }
 
         Weapon weapon = player.getInventory().getWeapon(index);
-        MenuScreen selectedWeaponScreen = InventoryDisplay::buildSelectedWeaponScreen(weapon);
+        const std::string weaponKey = Inventory::weaponItemKey(weapon);
+        MenuScreen selectedWeaponScreen = InventoryDisplay::buildSelectedWeaponScreen(
+            weapon,
+            player.getInventory().isPinnedItemKey(weaponKey),
+            player.getInventory().isLockedItemKey(weaponKey)
+        );
         int action = TerminalInterface::askMenuChoiceFromOptions(
             selectedWeaponScreen,
             "Choix invalide. Choisis une action visible pour cette arme."
@@ -3099,8 +3165,21 @@ bool InventorySelection::openWeapons(Player& player)
             continue;
         }
 
+        if (action == 5)
+        {
+            player.getInventory().togglePinnedItemKey(weaponKey);
+            continue;
+        }
+
+        if (action == 6)
+        {
+            player.getInventory().toggleLockedItemKey(weaponKey);
+            continue;
+        }
+
         if (action == 2)
         {
+            if (!confirmLockedInventoryAction(player, weaponKey, weapon.getName(), "équiper")) continue;
             bool equipped = player.equipWeapon(index);
             Weapon equippedWeapon = equipped ? player.getEquippedWeapon() : weapon;
             showEquipWeaponResultScreen(player, equippedWeapon, equipped);
@@ -3130,7 +3209,13 @@ bool InventorySelection::openArmors(Player& player)
 
     while (true)
     {
-        const std::size_t totalItems = static_cast<std::size_t>(player.getInventory().getArmorCount());
+        std::vector<int> orderedIndices;
+        for (int i = 0; i < player.getInventory().getArmorCount(); ++i) orderedIndices.push_back(i);
+        std::stable_sort(orderedIndices.begin(), orderedIndices.end(), [&](int left, int right) {
+            return player.getInventory().isPinnedItemKey(Inventory::armorItemKey(player.getInventory().getArmor(left)))
+                && !player.getInventory().isPinnedItemKey(Inventory::armorItemKey(player.getInventory().getArmor(right)));
+        });
+        const std::size_t totalItems = orderedIndices.size();
         const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
 
         if (pageIndex >= totalPages)
@@ -3147,9 +3232,11 @@ bool InventorySelection::openArmors(Player& player)
 
         for (std::size_t i = first; i < last; ++i)
         {
-            Armor armor = player.getInventory().getArmor(static_cast<int>(i));
+            const int inventoryIndex = orderedIndices[i];
+            Armor armor = player.getInventory().getArmor(inventoryIndex);
+            const std::string itemKey = Inventory::armorItemKey(armor);
             std::ostringstream label;
-            label << armor.getName()
+            label << inventoryPreferencePrefix(player.getInventory(), itemKey) << armor.getName()
                   << " | Durabilité : " << InventoryUtils::armorDurabilityText(armor);
 
             if (armor.isBroken())
@@ -3212,7 +3299,7 @@ bool InventorySelection::openArmors(Player& player)
             continue;
         }
 
-        int index = static_cast<int>(first) + choice - 1;
+        int index = orderedIndices[first + static_cast<std::size_t>(choice - 1)];
 
         if (!player.getInventory().hasArmor(index))
         {
@@ -3221,7 +3308,12 @@ bool InventorySelection::openArmors(Player& player)
         }
 
         Armor armor = player.getInventory().getArmor(index);
-        MenuScreen selectedArmorScreen = InventoryDisplay::buildSelectedArmorScreen(armor);
+        const std::string armorKey = Inventory::armorItemKey(armor);
+        MenuScreen selectedArmorScreen = InventoryDisplay::buildSelectedArmorScreen(
+            armor,
+            player.getInventory().isPinnedItemKey(armorKey),
+            player.getInventory().isLockedItemKey(armorKey)
+        );
         int action = TerminalInterface::askMenuChoiceFromOptions(
             selectedArmorScreen,
             "Choix invalide. Choisis une action visible pour cette armure."
@@ -3247,8 +3339,21 @@ bool InventorySelection::openArmors(Player& player)
             continue;
         }
 
+        if (action == 5)
+        {
+            player.getInventory().togglePinnedItemKey(armorKey);
+            continue;
+        }
+
+        if (action == 6)
+        {
+            player.getInventory().toggleLockedItemKey(armorKey);
+            continue;
+        }
+
         if (action == 2)
         {
+            if (!confirmLockedInventoryAction(player, armorKey, armor.getName(), "équiper")) continue;
             bool equipped = player.equipArmor(index);
             Armor equippedArmor = equipped ? player.getEquippedArmor() : armor;
             showEquipArmorResultScreen(player, equippedArmor, equipped);
@@ -3282,6 +3387,11 @@ bool InventorySelection::openConsumables(Player& player)
     while (true)
     {
         std::vector<ConsumableGroup> groups = InventoryUtils::groupConsumables(player);
+        std::stable_sort(groups.begin(), groups.end(), [&](const ConsumableGroup& left, const ConsumableGroup& right) {
+            const bool leftPinned = player.getInventory().isPinnedItemKey(Inventory::consumableItemKey(player.getInventory().getConsumable(left.firstIndex)));
+            const bool rightPinned = player.getInventory().isPinnedItemKey(Inventory::consumableItemKey(player.getInventory().getConsumable(right.firstIndex)));
+            return leftPinned && !rightPinned;
+        });
         hasRepairKits = hasAnyRepairKit(player);
         const std::size_t totalItems = groups.size();
         const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
@@ -3301,8 +3411,10 @@ bool InventorySelection::openConsumables(Player& player)
         for (std::size_t i = first; i < last; ++i)
         {
             const ConsumableGroup& group = groups[i];
+            const Consumable groupItem = player.getInventory().getConsumable(group.firstIndex);
+            const std::string groupKey = Inventory::consumableItemKey(groupItem);
             std::ostringstream label;
-            label << InventoryUtils::stackLabel(group.name, group.amount)
+            label << inventoryPreferencePrefix(player.getInventory(), groupKey) << InventoryUtils::stackLabel(group.name, group.amount)
                   << " | " << InventoryUtils::consumableTypeToText(group.type)
                   << " | Puissance : " << group.power;
 
@@ -3387,8 +3499,13 @@ bool InventorySelection::openConsumables(Player& player)
         }
 
         Consumable consumable = player.getInventory().getConsumable(index);
+        const std::string consumableKey = Inventory::consumableItemKey(consumable);
 
-        MenuScreen selectedConsumableScreen = InventoryDisplay::buildSelectedConsumableScreen(consumable, selectedGroup.amount);
+        MenuScreen selectedConsumableScreen = InventoryDisplay::buildSelectedConsumableScreen(
+            consumable, selectedGroup.amount,
+            player.getInventory().isPinnedItemKey(consumableKey),
+            player.getInventory().isLockedItemKey(consumableKey)
+        );
         int action = TerminalInterface::askMenuChoiceFromOptions(
             selectedConsumableScreen,
             "Choix invalide. Choisis une action visible pour ce consommable."
@@ -3408,6 +3525,18 @@ bool InventorySelection::openConsumables(Player& player)
             continue;
         }
 
+        if (action == 4)
+        {
+            player.getInventory().togglePinnedItemKey(consumableKey);
+            continue;
+        }
+
+        if (action == 5)
+        {
+            player.getInventory().toggleLockedItemKey(consumableKey);
+            continue;
+        }
+
         if (action == 2)
         {
             if (consumable.getType() != ConsumableType::Healing)
@@ -3419,6 +3548,8 @@ bool InventorySelection::openConsumables(Player& player)
                 );
                 continue;
             }
+
+            if (!confirmLockedInventoryAction(player, consumableKey, consumable.getName(), "utiliser")) continue;
 
             int hpBefore = player.getHp();
             player.heal(consumable.getHealingAmountForMaxHp(player.getMaxHp()));
@@ -3457,7 +3588,13 @@ bool InventorySelection::openMaterials(Player& player)
     while (true)
     {
         const std::vector<Material>& materials = player.getInventory().getMaterials();
-        const std::size_t totalItems = materials.size();
+        std::vector<int> orderedIndices;
+        for (int i = 0; i < static_cast<int>(materials.size()); ++i) orderedIndices.push_back(i);
+        std::stable_sort(orderedIndices.begin(), orderedIndices.end(), [&](int left, int right) {
+            return player.getInventory().isPinnedItemKey(Inventory::materialItemKey(materials[static_cast<std::size_t>(left)]))
+                && !player.getInventory().isPinnedItemKey(Inventory::materialItemKey(materials[static_cast<std::size_t>(right)]));
+        });
+        const std::size_t totalItems = orderedIndices.size();
         const std::size_t totalPages = PagedMenu::pageCount(totalItems, itemsPerPage);
 
         if (pageIndex >= totalPages)
@@ -3474,8 +3611,12 @@ bool InventorySelection::openMaterials(Player& player)
 
         for (std::size_t i = first; i < last; ++i)
         {
-            Material material = player.getInventory().getMaterial(static_cast<int>(i));
+            const int inventoryIndex = orderedIndices[i];
+            Material material = player.getInventory().getMaterial(inventoryIndex);
+            const std::string materialKey = Inventory::materialItemKey(material);
             std::ostringstream label;
+            label << inventoryPreferencePrefix(player.getInventory(), materialKey, player.getInventory().isTrackedMaterialId(material.getId()));
+            if (player.getInventory().isFavoriteAmmunitionId(material.getId())) label << "[MUNITION FAVORITE] ";
             label << material.getName();
 
             const bool readableMaterial = material.getCategory() == "Livre" || material.getCategory() == "Renseignement";
@@ -3574,7 +3715,7 @@ bool InventorySelection::openMaterials(Player& player)
             continue;
         }
 
-        int index = static_cast<int>(first) + choice - 1;
+        int index = orderedIndices[first + static_cast<std::size_t>(choice - 1)];
 
         if (!player.getInventory().hasMaterial(index))
         {
@@ -3583,7 +3724,14 @@ bool InventorySelection::openMaterials(Player& player)
         }
 
         Material material = player.getInventory().getMaterial(index);
-        MenuScreen selectedMaterialScreen = InventoryDisplay::buildSelectedMaterialScreen(material);
+        const std::string materialKey = Inventory::materialItemKey(material);
+        MenuScreen selectedMaterialScreen = InventoryDisplay::buildSelectedMaterialScreen(
+            material,
+            player.getInventory().isPinnedItemKey(materialKey),
+            player.getInventory().isLockedItemKey(materialKey),
+            player.getInventory().isTrackedMaterialId(material.getId()),
+            player.getInventory().isFavoriteAmmunitionId(material.getId())
+        );
         int action = TerminalInterface::askMenuChoiceFromOptions(
             selectedMaterialScreen,
             "Choix invalide. Choisis une action visible pour cette entrée."
@@ -3605,12 +3753,37 @@ bool InventorySelection::openMaterials(Player& player)
 
         if (action == 3)
         {
-            displayMaterialUtility(material);
+            displayMaterialUtility(player, material);
+            continue;
+        }
+
+        if (action == 5)
+        {
+            player.getInventory().togglePinnedItemKey(materialKey);
+            continue;
+        }
+
+        if (action == 6)
+        {
+            player.getInventory().toggleLockedItemKey(materialKey);
+            continue;
+        }
+
+        if (action == 7)
+        {
+            player.getInventory().toggleTrackedMaterialId(material.getId());
+            continue;
+        }
+
+        if (action == 8 && Inventory::isAmmunitionMaterialId(material.getId()))
+        {
+            player.getInventory().toggleFavoriteAmmunitionId(material.getId());
             continue;
         }
 
         if (action == 4)
         {
+            if (!confirmLockedInventoryAction(player, materialKey, material.getName(), "lire / utiliser")) continue;
             useMaterialIfPossible(player, material);
             continue;
         }
@@ -3846,6 +4019,28 @@ bool InventorySelection::openCraft(Player& player)
             continue;
         }
 
+        bool lockedIngredientRefused = false;
+        std::vector<std::string> confirmedLockedIds;
+        for (const RecipeIngredient& ingredient : recipe.ingredients)
+        {
+            if (std::find(confirmedLockedIds.begin(), confirmedLockedIds.end(), ingredient.id) != confirmedLockedIds.end()) continue;
+            const std::string ingredientKey = Inventory::materialItemKeyById(ingredient.id);
+            if (player.getInventory().isLockedItemKey(ingredientKey))
+            {
+                confirmedLockedIds.push_back(ingredient.id);
+                if (!confirmLockedInventoryAction(player, ingredientKey, materialNameById(ingredient.id), "consommer pour le craft " + recipe.name))
+                {
+                    lockedIngredientRefused = true;
+                    break;
+                }
+            }
+        }
+        if (lockedIngredientRefused)
+        {
+            showInventoryNotice("CRAFT ANNULÉ", "inventory.craft.locked_cancelled", {"Un composant verrouillé a été préservé.", "Aucune fabrication n'a été lancée."});
+            continue;
+        }
+
         int crafted = 0;
 
         for (int i = 0; i < quantityToCraft; ++i)
@@ -3871,4 +4066,3 @@ bool InventorySelection::openCraft(Player& player)
         showCraftResultScreen(recipe.name, crafted, quantityToCraft);
     }
 }
-

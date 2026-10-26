@@ -11,19 +11,21 @@ Interactive usage (recommended):
 
 The interactive mode also asks whether to:
 - change the internal save schema version (`saveVersion`);
-- make the new game version a mandatory important-save checkpoint (`importantSaveUpdateVersion`).
+- make the new game version a mandatory important-save checkpoint (`importantSaveUpdateVersion`);
+- mark the title catalogue as added/modified and synchronize its catalogue version.
 
 Automation flags:
   --save-schema keep|next|N
   --checkpoint keep|current|X.Y.Z
+  --titles keep|current|X.Y.Z
   --commit / --no-commit
   --edit-changelog / --no-edit-changelog
   --custom-message / --no-custom-message
   --non-interactive
 
 Examples:
-  python3 scripts/bump_version.py patch --save-schema keep --checkpoint keep --non-interactive
-  python3 scripts/bump_version.py minor --save-schema next --checkpoint current --non-interactive
+  python3 scripts/bump_version.py patch --save-schema keep --checkpoint keep --titles keep --non-interactive
+  python3 scripts/bump_version.py minor --save-schema next --checkpoint current --titles current --non-interactive
 """
 from __future__ import annotations
 
@@ -39,6 +41,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 VERSION_FILE = ROOT / "src" / "core" / "VersionInfo.cpp"
 SAVE_SCHEMA_FILE = ROOT / "include" / "save" / "SaveSchemaVersion.hpp"
+TITLE_CATALOG_FILE = ROOT / "src" / "progression" / "TitleCatalog.cpp"
+TITLE_CATALOG_DOC = ROOT / "TITRES_DINOTOFU.txt"
+TITLE_CATALOG_TEST = ROOT / "tests" / "TitleCatalogUpdateTest.cpp"
 VERSION_RE = re.compile(
     r'(std::string\s+VersionInfo::currentVersion\(\)\s*\{\s*return\s+")([0-9]+\.[0-9]+\.[0-9]+)("\s*;\s*\})',
     re.S,
@@ -48,6 +53,12 @@ CHECKPOINT_RE = re.compile(
     re.S,
 )
 SAVE_SCHEMA_RE = re.compile(r'(inline\s+constexpr\s+int\s+Current\s*=\s*)([0-9]+)(\s*;)')
+TITLE_CATALOG_RE = re.compile(
+    r'(std::string\s+catalogVersion\(\)\s*\{\s*return\s+"V)([0-9]+\.[0-9]+\.[0-9]+)("\s*;\s*\})',
+    re.S,
+)
+TITLE_CATALOG_DOC_RE = re.compile(r'(- Dernière révision du catalogue : V)([0-9]+\.[0-9]+\.[0-9]+)(\.)')
+TITLE_CATALOG_TEST_RE = re.compile(r'(TitleCatalog::catalogVersion\(\)\s*==\s*"V)([0-9]+\.[0-9]+\.[0-9]+)(")')
 
 
 def parse_version(text: str) -> tuple[int, int, int]:
@@ -78,7 +89,7 @@ def ask_yes_no(question: str, default: bool = False) -> bool:
         print("Réponds par o/oui ou n/non.")
 
 
-def read_current_state() -> tuple[str, int, str, str]:
+def read_current_state() -> tuple[str, int, str, str, str]:
     version_source = VERSION_FILE.read_text(encoding="utf-8")
     version_match = VERSION_RE.search(version_source)
     checkpoint_match = CHECKPOINT_RE.search(version_source)
@@ -92,7 +103,18 @@ def read_current_state() -> tuple[str, int, str, str]:
     if not schema_match:
         raise RuntimeError("Impossible de trouver SaveSchemaVersion::Current")
 
-    return version_match.group(2), int(schema_match.group(2)), checkpoint_match.group(2), version_source
+    title_source = TITLE_CATALOG_FILE.read_text(encoding="utf-8")
+    title_match = TITLE_CATALOG_RE.search(title_source)
+    if not title_match:
+        raise RuntimeError("Impossible de trouver TitleCatalog::catalogVersion()")
+
+    return (
+        version_match.group(2),
+        int(schema_match.group(2)),
+        checkpoint_match.group(2),
+        title_match.group(2),
+        version_source,
+    )
 
 
 def compute_new_game_version(current: str, mode: str) -> str:
@@ -156,6 +178,56 @@ def resolve_checkpoint(current: str, new_game_version: str, option: str | None, 
     if ask_yes_no(f"Faire de V{new_game_version} un NOUVEAU checkpoint obligatoire ?", default=False):
         return new_game_version
     return current
+
+
+def resolve_title_catalog(current: str, new_game_version: str, option: str | None, interactive: bool) -> str:
+    if option is not None:
+        normalized = option.strip().lower()
+        if normalized == "keep":
+            return current
+        if normalized == "current":
+            return new_game_version
+        return format_version(parse_version(normalized))
+
+    if not interactive:
+        return current
+
+    print(f"\nCatalogue de titres actuel : V{current}")
+    if ask_yes_no("Des titres ont-ils été ajoutés ou modifiés ?", default=False):
+        return new_game_version
+    return current
+
+
+def update_title_catalog(old_catalog: str, new_catalog: str) -> list[Path]:
+    if old_catalog == new_catalog:
+        return []
+
+    changed: list[Path] = []
+
+    source = TITLE_CATALOG_FILE.read_text(encoding="utf-8")
+    source, count = TITLE_CATALOG_RE.subn(rf'\g<1>{new_catalog}\g<3>', source, count=1)
+    if count != 1:
+        raise RuntimeError("Impossible de mettre à jour TitleCatalog::catalogVersion()")
+    TITLE_CATALOG_FILE.write_text(source, encoding="utf-8")
+    changed.append(TITLE_CATALOG_FILE)
+
+    if TITLE_CATALOG_DOC.exists():
+        content = TITLE_CATALOG_DOC.read_text(encoding="utf-8")
+        content, count = TITLE_CATALOG_DOC_RE.subn(rf'\g<1>{new_catalog}\g<3>', content, count=1)
+        if count != 1:
+            raise RuntimeError("Impossible de synchroniser la version dans TITRES_DINOTOFU.txt")
+        TITLE_CATALOG_DOC.write_text(content, encoding="utf-8")
+        changed.append(TITLE_CATALOG_DOC)
+
+    if TITLE_CATALOG_TEST.exists():
+        content = TITLE_CATALOG_TEST.read_text(encoding="utf-8")
+        content, count = TITLE_CATALOG_TEST_RE.subn(rf'\g<1>{new_catalog}\g<3>', content, count=1)
+        if count != 1:
+            raise RuntimeError("Impossible de synchroniser TitleCatalogUpdateTest.cpp")
+        TITLE_CATALOG_TEST.write_text(content, encoding="utf-8")
+        changed.append(TITLE_CATALOG_TEST)
+
+    return changed
 
 
 def update_sync_files(new_ver: str) -> list[Path]:
@@ -248,15 +320,53 @@ def update_checkpoint_docs(old_checkpoint: str, new_checkpoint: str) -> list[Pat
 
     test_cpp = ROOT / "tests" / "ImportantSaveCheckpointTest.cpp"
     if test_cpp.exists():
-        content = test_cpp.read_text(encoding="utf-8").replace(old_checkpoint, new_checkpoint)
+        content = test_cpp.read_text(encoding="utf-8")
+        content, count = re.subn(
+            r'(assert\(checkpointVersion\s*==\s*")[0-9]+\.[0-9]+\.[0-9]+("\);)',
+            rf'\g<1>{new_checkpoint}\g<2>',
+            content,
+            count=1,
+        )
+        if count != 1:
+            raise RuntimeError("Impossible de synchroniser le checkpoint attendu dans ImportantSaveCheckpointTest.cpp")
         test_cpp.write_text(content, encoding="utf-8")
         changed.append(test_cpp)
 
+    # Keep only the runner checks that describe the *current* checkpoint in sync.
+    # Historical version references elsewhere in the runner must remain untouched.
     test_sh = ROOT / "scripts" / "test_project.sh"
     if test_sh.exists():
-        content = test_sh.read_text(encoding="utf-8").replace(old_checkpoint, new_checkpoint)
-        test_sh.write_text(content, encoding="utf-8")
-        changed.append(test_sh)
+        content = test_sh.read_text(encoding="utf-8")
+        checkpoint_rules = [
+            (
+                r'(wait_bg_test "checkpoint" "point de sauvegarde important V)[0-9]+\.[0-9]+\.[0-9]+( invalide")',
+                rf'\g<1>{new_checkpoint}\g<2>',
+            ),
+            (
+                r'(grep -q \'return ")[0-9]+\.[0-9]+\.[0-9]+(";\' src/core/VersionInfo\.cpp \|\| fail "jalon de sauvegarde important V)[0-9]+\.[0-9]+\.[0-9]+( absent")',
+                rf'\g<1>{new_checkpoint}\g<2>{new_checkpoint}\g<3>',
+            ),
+            (
+                r'(grep -Fq \'Important save checkpoint: \*\*V)[0-9]+\.[0-9]+\.[0-9]+(\*\*\' README\.md \|\| fail "README anglais désynchronisé du checkpoint important")',
+                rf'\g<1>{new_checkpoint}\g<2>',
+            ),
+            (
+                r'(grep -Fq \'Point de sauvegarde important : \*\*V)[0-9]+\.[0-9]+\.[0-9]+(\*\*\' READMEFR\.md \|\| fail "README français désynchronisé du checkpoint important")',
+                rf'\g<1>{new_checkpoint}\g<2>',
+            ),
+            (
+                r'(pass "anciennes sauvegardes versionnées ou non forcées vers la migration V)[0-9]+\.[0-9]+\.[0-9]+(")',
+                rf'\g<1>{new_checkpoint}\g<2>',
+            ),
+        ]
+        changed_runner = False
+        for pattern, replacement in checkpoint_rules:
+            content, count = re.subn(pattern, replacement, content, count=1)
+            if count == 1:
+                changed_runner = True
+        if changed_runner:
+            test_sh.write_text(content, encoding="utf-8")
+            changed.append(test_sh)
 
     return changed
 
@@ -337,6 +447,8 @@ def commit_changes(
     new_schema: int,
     current_checkpoint: str,
     new_checkpoint: str,
+    current_title_catalog: str,
+    new_title_catalog: str,
     custom_message: bool = False,
 ) -> bool:
     if not stage_files(files):
@@ -359,6 +471,8 @@ def commit_changes(
         commit_body_lines.append(f"- Schéma de sauvegarde : {current_schema} -> {new_schema}")
     if new_checkpoint != current_checkpoint:
         commit_body_lines.append(f"- Checkpoint important : V{current_checkpoint} -> V{new_checkpoint}")
+    if new_title_catalog != current_title_catalog:
+        commit_body_lines.append(f"- Catalogue des titres : V{current_title_catalog} -> V{new_title_catalog}")
 
     commit_args = ["git", "commit", "-m", commit_title]
     if commit_body_lines:
@@ -381,6 +495,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("mode", nargs="?", default="patch", help="patch, minor, major ou version explicite X.Y.Z")
     parser.add_argument("--save-schema", dest="save_schema", help="keep, next ou entier explicite")
     parser.add_argument("--checkpoint", help="keep, current ou version explicite X.Y.Z")
+    parser.add_argument("--titles", help="keep, current ou version explicite X.Y.Z pour le catalogue des titres")
     parser.add_argument("--commit", action=argparse.BooleanOptionalAction, default=None, help="ajoute les fichiers modifiés et crée le commit Git (défaut: demande en interactif, désactivé en non-interactif)")
     parser.add_argument("--edit-changelog", action=argparse.BooleanOptionalAction, default=None, help="ouvre CHANGELOG.md dans l'éditeur (défaut: demande en mode interactif)")
     parser.add_argument("--custom-message", action=argparse.BooleanOptionalAction, default=None, help="ouvre l'éditeur Git pour saisir un message personnalisé (défaut: demande en mode interactif)")
@@ -391,11 +506,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     try:
-        current, current_schema, current_checkpoint, version_source = read_current_state()
+        current, current_schema, current_checkpoint, current_title_catalog, version_source = read_current_state()
         new_version = compute_new_game_version(current, args.mode.strip().lower())
         interactive = (not args.non_interactive) and sys.stdin.isatty()
         new_schema = resolve_save_schema(current_schema, args.save_schema, interactive)
         new_checkpoint = resolve_checkpoint(current_checkpoint, new_version, args.checkpoint, interactive)
+        new_title_catalog = resolve_title_catalog(current_title_catalog, new_version, args.titles, interactive)
     except (ValueError, RuntimeError) as exc:
         print(exc, file=sys.stderr)
         return 2
@@ -404,6 +520,7 @@ def main() -> int:
     print(f"  Version du jeu       : {current} -> {new_version}")
     print(f"  Schéma de sauvegarde : {current_schema} -> {new_schema}")
     print(f"  Checkpoint important : V{current_checkpoint} -> V{new_checkpoint}")
+    print(f"  Catalogue des titres : V{current_title_catalog} -> V{new_title_catalog}")
 
     if interactive and not ask_yes_no("Appliquer ces changements ?", default=True):
         print("Annulé. Aucun fichier modifié.")
@@ -418,6 +535,7 @@ def main() -> int:
 
     modified_files.update(update_save_schema(current_schema, new_schema))
     modified_files.update(update_checkpoint_docs(current_checkpoint, new_checkpoint))
+    modified_files.update(update_title_catalog(current_title_catalog, new_title_catalog))
     modified_files.update(update_sync_files(new_version))
 
     print("\nDinotofu mis à jour.")
@@ -425,6 +543,8 @@ def main() -> int:
         print(f"ATTENTION : saveVersion est passé de {current_schema} à {new_schema}. Vérifie/ajoute la migration correspondante.")
     if new_checkpoint != current_checkpoint:
         print(f"ATTENTION : V{new_checkpoint} devient un nouveau checkpoint obligatoire de sauvegarde.")
+    if new_title_catalog != current_title_catalog:
+        print(f"Catalogue des titres synchronisé sur V{new_title_catalog}.")
 
     if interactive:
         should_edit_changelog = args.edit_changelog
@@ -470,6 +590,8 @@ def main() -> int:
         new_schema=new_schema,
         current_checkpoint=current_checkpoint,
         new_checkpoint=new_checkpoint,
+        current_title_catalog=current_title_catalog,
+        new_title_catalog=new_title_catalog,
         custom_message=custom_msg,
     )
 

@@ -150,6 +150,8 @@ std::vector<std::string> Consumable::toDisplayLines() const
         "Nom : " + name,
         "Description : " + description,
         "Valeur : " + Money::formatEconomyUnits(value),
+        "Propriété : " + getOwnershipBindingDisplayText(),
+        "Récupération : " + getRecoveryMetadataDisplayText(),
         "Type : " + consumableTypeLabel(type),
         "Puissance : " + getPowerDisplayText(),
         "======================="

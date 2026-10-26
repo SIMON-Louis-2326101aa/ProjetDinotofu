@@ -19,6 +19,7 @@ struct CharacterMenuResult
 {
     bool characterLoaded;
     bool specialIdentityValidated;
+    bool tutorialRequested;
     std::string playerName;
     DifficultyMode difficulty;
     DeathRuleMode deathRule;

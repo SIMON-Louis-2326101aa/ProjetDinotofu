@@ -7,6 +7,8 @@
 
 #include "economy/shop/ShopTransactionSystem.hpp"
 #include "progression/language/LanguageSystem.hpp"
+#include "progression/TechniqueProgressionRules.hpp"
+#include "progression/magic/MagicStudyRules.hpp"
 
 #include "economy/shop/ShopPriceRules.hpp"
 #include "economy/Money.hpp"
@@ -16,6 +18,9 @@
 #include "item/material/Material.hpp"
 #include "item/weapon/WeaponCatalog.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
+#include "world/CityProfileSystem.hpp"
+#include "world/CityEconomyDynamicsSystem.hpp"
+#include "world/crime/CrimeLocalImpactSystem.hpp"
 
 #include <random>
 #include <algorithm>
@@ -257,6 +262,77 @@ namespace
             || type == ShopType::BlackMarket;
     }
 
+    ShopType goodsTypeForMaterial(const Material& material)
+    {
+        const std::string category = material.getCategory();
+        if (category == "Matériau de monstre") return ShopType::MonsterMaterial;
+        if (category == "Plante") return ShopType::Plant;
+        if (category == "Renseignement" || category == "Livre") return ShopType::Library;
+        if (category == "Outil") return ShopType::Blacksmith;
+        if (category == "Ville" || category == "Document") return ShopType::CityService;
+        return ShopType::Material;
+    }
+
+    int materialBuyerModifierPercent(const Material& material, ShopType buyerType)
+    {
+        const ShopType goodsType = goodsTypeForMaterial(material);
+
+        if (goodsType == ShopType::MonsterMaterial)
+        {
+            // La guilde et la boutique spécialisée utilisent le même type de comptoir de collecte :
+            // elles sont la filière de référence pour les composants de créatures.
+            if (buyerType == ShopType::MonsterMaterial) return 18;
+            if (buyerType == ShopType::Material) return 0;
+            if (buyerType == ShopType::Alchemist || buyerType == ShopType::Blacksmith || buyerType == ShopType::Enchanter) return -3;
+            return -8;
+        }
+
+        if (goodsType == ShopType::Plant)
+        {
+            if (buyerType == ShopType::Plant) return 14;
+            if (buyerType == ShopType::Alchemist) return 10;
+            if (buyerType == ShopType::Material) return 0;
+            return -7;
+        }
+
+        if (goodsType == ShopType::Library)
+        {
+            if (buyerType == ShopType::Library) return 14;
+            if (buyerType == ShopType::CityService) return 3;
+            return -8;
+        }
+
+        if (goodsType == ShopType::Blacksmith)
+        {
+            if (buyerType == ShopType::Blacksmith) return 12;
+            if (buyerType == ShopType::Material) return 4;
+            return -5;
+        }
+
+        if (goodsType == ShopType::CityService)
+        {
+            if (buyerType == ShopType::CityService) return 10;
+            if (buyerType == ShopType::Library) return 3;
+            return -6;
+        }
+
+        if (buyerType == ShopType::Material) return 10;
+        if (buyerType == ShopType::Blacksmith) return 6;
+        return -5;
+    }
+
+    CityEconomicPulse cityEconomicPulseFor(const Player& player)
+    {
+        CityEconomicPulse pulse = CityEconomyDynamicsSystem::stateFor(
+            player.getCurrentCityId(),
+            player.getWorldDaysElapsed(),
+            player.getInventory().countMaterialById("city_repair_days_marker"),
+            player.getInventory().countMaterialById("city_event_recent_days_marker")
+        );
+        CrimeLocalImpactSystem::applyEconomicPressure(player, player.getCurrentCityId(), pulse);
+        return pulse;
+    }
+
     // EN: rollShopPercent declares or implements a focused behavior used by this module.
     // FR: rollShopPercent déclare ou implémente un comportement précis utilisé par ce module.
     bool rollShopPercent(int percent)
@@ -358,142 +434,23 @@ namespace
             || name.find("expérimental") != std::string::npos;
     }
 
-    std::string normalizeShopLearningText(std::string value)
-    {
-        std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
-            return static_cast<char>(std::tolower(c));
-        });
-        return value;
-    }
-
-    bool isMagicStudyCompatible(const Player& player)
-    {
-        const std::string className = normalizeShopLearningText(player.getType());
-        return className.find("mage") != std::string::npos
-            || className.find("magicien") != std::string::npos
-            || className.find("ensorc") != std::string::npos
-            || className.find("sorc") != std::string::npos
-            || className.find("arcan") != std::string::npos
-            || className.find("pyrom") != std::string::npos
-            || className.find("cryo") != std::string::npos
-            || className.find("occult") != std::string::npos
-            || className.find("invoc") != std::string::npos
-            || className.find("nécro") != std::string::npos
-            || className.find("necro") != std::string::npos
-            || className.find("pact") != std::string::npos
-            || className.find("clerc") != std::string::npos
-            || className.find("prêtre") != std::string::npos
-            || className.find("pretre") != std::string::npos
-            || className.find("paladin") != std::string::npos
-            || className.find("druide") != std::string::npos
-            || className.find("shaman") != std::string::npos
-            || className.find("templier") != std::string::npos;
-    }
-
     void applyMagicLearningEffect(Player& player, const ShopItem& item)
     {
-        const std::string id = item.getId();
-
-        if (id != "basic_magic_manual"
-            && id != "arcane_binding_grimoire"
-            && id != "elemental_ward_grimoire"
-            && id != "resistance_rift_grimoire"
-            && id != "frost_needle_grimoire"
-            && id != "mana_suture_grimoire"
-            && id != "occult_bramble_grimoire")
+        if (!MagicStudyRules::isMagicStudyItem(item.getId()))
         {
             return;
         }
 
-        if (!isMagicStudyCompatible(player))
+        std::vector<std::string> studyNotes;
+        const MagicStudyOutcome outcome = MagicStudyRules::attemptStudy(player, item.getId(), studyNotes);
+        for (const std::string& note : studyNotes)
         {
-            addTransactionNote("Étude : le texte est conservé, mais il ne suffit pas à transformer un non-mage en lanceur de sorts.");
-            addTransactionNote("Conseil : pour utiliser une magie hors classe, il faudra plutôt compter sur des parchemins à usage unique.");
-            return;
+            addTransactionNote(note);
         }
 
-        if (id == "basic_magic_manual")
+        if (outcome == MagicStudyOutcome::Blocked)
         {
-            if (player.getLevel() < 3)
-            {
-                addTransactionNote("Étude partielle : niveau 3 requis pour stabiliser la première marque.");
-                return;
-            }
-            player.unlockActiveSkill("learned_arcane_mark", "Marque élémentaire étudiée");
-            addTransactionNote("Compétence étudiée : Marque élémentaire étudiée.");
-            return;
-        }
-
-        if (id == "arcane_binding_grimoire")
-        {
-            if (player.getLevel() < 5)
-            {
-                addTransactionNote("Étude partielle : niveau 5 requis pour former les chaînes arcaniques.");
-                return;
-            }
-            player.unlockActiveSkill("learned_arcane_binding", "Entrave arcanique étudiée");
-            addTransactionNote("Compétence étudiée : Entrave arcanique étudiée.");
-            return;
-        }
-
-        if (id == "elemental_ward_grimoire")
-        {
-            if (player.getLevel() < 6)
-            {
-                addTransactionNote("Étude partielle : niveau 6 requis pour tenir le voile élémentaire en combat.");
-                return;
-            }
-            player.unlockActiveSkill("learned_elemental_ward", "Voile élémentaire étudié");
-            addTransactionNote("Compétence étudiée : Voile élémentaire étudié.");
-            return;
-        }
-
-        if (id == "resistance_rift_grimoire")
-        {
-            if (player.getLevel() < 9)
-            {
-                addTransactionNote("Étude partielle : niveau 9 requis pour supporter la faille décrite dans le grimoire.");
-                return;
-            }
-            player.unlockActiveSkill("learned_resistance_rift", "Faille de résistance étudiée");
-            addTransactionNote("Compétence étudiée : Faille de résistance étudiée.");
-            return;
-        }
-
-        if (id == "frost_needle_grimoire")
-        {
-            if (player.getLevel() < 4)
-            {
-                addTransactionNote("Étude partielle : niveau 4 requis pour former les aiguilles de givre proprement.");
-                return;
-            }
-            player.unlockActiveSkill("learned_frost_needle", "Aiguille de givre étudiée");
-            addTransactionNote("Compétence étudiée : Aiguille de givre étudiée.");
-            return;
-        }
-
-        if (id == "mana_suture_grimoire")
-        {
-            if (player.getLevel() < 7)
-            {
-                addTransactionNote("Étude partielle : niveau 7 requis pour étudier la suture de mana sans danger.");
-                return;
-            }
-            player.unlockActiveSkill("learned_mana_suture", "Suture de mana étudiée");
-            addTransactionNote("Compétence étudiée : Suture de mana étudiée.");
-            return;
-        }
-
-        if (id == "occult_bramble_grimoire")
-        {
-            if (player.getLevel() < 5)
-            {
-                addTransactionNote("Étude partielle : niveau 5 requis pour stabiliser les ronces occultes.");
-                return;
-            }
-            player.unlockActiveSkill("learned_occult_bramble", "Ronces occultes étudiées");
-            addTransactionNote("Compétence étudiée : Ronces occultes étudiées.");
-            return;
+            addTransactionNote("Le grimoire acheté reste dans l'inventaire : relis-le plus tard depuis Matériaux / plantes / infos.");
         }
     }
 
@@ -536,6 +493,7 @@ bool ShopTransactionSystem::canBeBoughtNow(const ShopItem& item)
 
     return id == "minor_healing_potion"
         || id == "basic_healing_potion"
+        || id == "mana_potion"
         || id == "reinforced_healing_potion"
         || id == "greater_healing_potion"
         || id == "major_healing_potion"
@@ -779,6 +737,10 @@ bool ShopTransactionSystem::buyItem(
     else if (item.getId() == "basic_healing_potion")
     {
         player.getInventory().addConsumable(ConsumableCatalog::createBasicHealingPotion());
+    }
+    else if (item.getId() == "mana_potion")
+    {
+        player.getInventory().addConsumable(ConsumableCatalog::createManaPotion());
     }
     else if (item.getId() == "reinforced_healing_potion")
     {
@@ -1175,6 +1137,11 @@ bool ShopTransactionSystem::buyItem(
     else
     {
         Material boughtMaterial = createShopMaterialWithPossibleRareQuality(item);
+        if (item.getId() == "warm_meal_voucher" || item.getId() == "lodging_bed_token")
+        {
+            boughtMaterial.setQuantity(5);
+            addTransactionNote("Carnet prépayé : 5 bons ont été ajoutés à l'inventaire. Le service s'utilise ensuite via « Utiliser l'auberge ».");
+        }
         player.getInventory().addMaterial(boughtMaterial);
 
         if (boughtMaterial.hasSpecialQuality())
@@ -1207,6 +1174,7 @@ bool ShopTransactionSystem::buyItem(
 
     applyMagicLearningEffect(player, item);
 
+    player.recordCanonicalEvent("achats_boutique", item.getId(), item.getName(), 1);
     return true;
 }
 
@@ -1314,6 +1282,8 @@ int ShopTransactionSystem::getSellPriceForEntry(
     {
         const Material& material = player.getInventory().getMaterial(index);
         basePrice = material.getValue() * material.getQualityPricePercent() / 100;
+        const int buyerModifier = materialBuyerModifierPercent(material, shopType);
+        basePrice = std::max(1, (basePrice * (100 + buyerModifier) + 50) / 100);
     }
 
     if (basePrice < 1)
@@ -1321,7 +1291,31 @@ int ShopTransactionSystem::getSellPriceForEntry(
         basePrice = 1;
     }
 
-    return ShopPriceRules::applySellModifier(basePrice, player.getRaceText(), player.getType());
+    int finalPrice = ShopPriceRules::applySellModifier(basePrice, player.getRaceText(), player.getType());
+    const CityShopContext cityContext = CityProfileSystem::shopContextFor(player.getCurrentCityId(), shopType);
+    if (cityContext.sellPriceModifierPercent != 0)
+    {
+        finalPrice = std::max(1, (finalPrice * (100 + cityContext.sellPriceModifierPercent) + 50) / 100);
+    }
+
+    const CityEconomicPulse pulse = cityEconomicPulseFor(player);
+    if (pulse.generalSellModifierPercent != 0)
+    {
+        finalPrice = std::max(1, (finalPrice * (100 + pulse.generalSellModifierPercent) + 50) / 100);
+    }
+
+    ShopType goodsType = shopType;
+    if (isMaterialShop(shopType) && player.getInventory().hasMaterial(index))
+    {
+        goodsType = goodsTypeForMaterial(player.getInventory().getMaterial(index));
+    }
+    const int demandBonus = CityEconomyDynamicsSystem::demandSellBonusPercent(pulse, goodsType);
+    if (demandBonus > 0)
+    {
+        finalPrice = std::max(1, (finalPrice * (100 + demandBonus) + 50) / 100);
+    }
+
+    return finalPrice;
 }
 
 bool ShopTransactionSystem::sellInventoryEntryQuantity(
@@ -1374,6 +1368,7 @@ bool ShopTransactionSystem::sellInventoryEntryQuantity(
     rememberSoldMaterial(shopType, soldMaterial, quantity, totalSellPrice);
     player.getInventory().earnEconomyUnits(totalSellPrice);
     player.refreshCurrencyTitles();
+    player.recordCanonicalEvent("ventes_boutique", soldMaterial.getId(), soldName, quantity);
 
     return true;
 }
@@ -1479,6 +1474,7 @@ bool ShopTransactionSystem::sellInventoryEntry(
 
     player.getInventory().earnEconomyUnits(finalSellPrice);
     player.refreshCurrencyTitles();
+    player.recordCanonicalEvent("ventes_boutique", soldName, soldName, 1);
 
     return true;
 }
@@ -1618,6 +1614,7 @@ bool ShopTransactionSystem::buyBackEntry(
         player.getInventory().addMaterial(entry.material);
     }
 
+    player.recordCanonicalEvent("rachats_boutique", entry.label, entry.label, std::max(1, entry.quantity));
     buybackLedger().erase(buybackLedger().begin() + ledgerIndex);
 
     return true;

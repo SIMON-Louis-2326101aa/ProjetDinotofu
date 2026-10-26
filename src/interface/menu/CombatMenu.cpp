@@ -7,6 +7,7 @@
 
 #include "interface/TerminalInterface.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "entity/Player.hpp"
 
 #include <sstream>
 #include <string>
@@ -76,6 +77,19 @@ MenuScreen CombatMenu::buildTurnScreen(const Entity& entity, bool teamOrdersAvai
 {
     MenuScreen screen("COMBAT", "combat.turn");
     screen.addSubtitle("Tour de " + entity.getName());
+    if (const Player* player = dynamic_cast<const Player*>(&entity))
+    {
+        screen.addLine("Mana : " + std::to_string(player->getMana()) + "/" + std::to_string(player->getMaxMana())
+            + " | Voie : " + player->getMagicChannelingStyleLabel() + " | Rythme : " + player->getMagicRecoveryLabel());
+        if (player->getMagicChannelingStyleLabel() != "Réserve mineure")
+        {
+            screen.addLine(player->getMagicSupportStatusLine());
+        }
+        if (player->getManaExhaustionTurns() > 0)
+        {
+            screen.addLine("Épuisement magique : " + std::to_string(player->getManaExhaustionTurns()) + " tour(s) de malaise restant(s).");
+        }
+    }
     screen.addLine(activeCombatStatusSummary(entity));
     if (entity.isInDefensePosture())
     {

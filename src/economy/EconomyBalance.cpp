@@ -1,6 +1,8 @@
 // EN: Centralized economy numbers keep related systems from drifting apart.
 // FR: Les nombres économiques centralisés évitent que les systèmes se contredisent.
 #include "economy/EconomyBalance.hpp"
+#include "world/CityProfileSystem.hpp"
+#include "economy/shop/ShopType.hpp"
 
 #include <algorithm>
 
@@ -15,9 +17,41 @@ namespace
     }
 }
 
-int EconomyBalance::cityVaultPurchaseCost(const std::string& cityId)
+int EconomyBalance::cityVaultPurchaseCost(const std::string& cityId, int ownedVaultCount, int mayorDiscountTier)
 {
-    return 350 * cityVaultMultiplier(cityId) / 100;
+    (void)cityId;
+    const int safeOwned = std::max(0, ownedVaultCount);
+
+    // V3.51.53: a municipal vault is a major investment. Base price is 2 PP = 2000 PF.
+    // Each additional local vault becomes progressively more expensive: +2 PO, then +3 PO, +4 PO, +5 PO...
+    // With safeOwned already purchased vaults, cumulative added PO = 2 + 3 + ... + (safeOwned + 1).
+    const int cumulativeExtraGoldCoins = safeOwned * (safeOwned + 3) / 2;
+    int baseCost = 2000 + cumulativeExtraGoldCoins * 100;
+
+    // Mayor discount applies only to the very first vault, based on real local reputation/services.
+    if (safeOwned == 0)
+    {
+        if (mayorDiscountTier >= 2) return 1250; // exceptional civic recognition
+        if (mayorDiscountTier >= 1) return 1500; // strong local trust
+    }
+    return baseCost;
+}
+
+int EconomyBalance::cityVaultSecuritySubscriptionCost(int vaultLevel)
+{
+    const int safeLevel = std::max(1, std::min(5, vaultLevel));
+    // Seven protected days actually spent away from the city. The timer pauses locally.
+    static const int weeklyCosts[] = {30, 40, 50, 60, 70};
+    return weeklyCosts[safeLevel - 1];
+}
+
+int EconomyBalance::cityVaultRecallMessengerSurchargeCopper(const std::string& fromCityId, const std::string& toCityId, int distanceKm)
+{
+    (void)fromCityId;
+    (void)toCityId;
+    const int safeDistance = std::max(1, distanceKm);
+    // A recall first pays a messenger to carry the request, then the normal transport comes back.
+    return std::max(15, 12 + safeDistance * 2);
 }
 
 int EconomyBalance::cityVaultUpgradeCost(const std::string& cityId, int currentLevel)
@@ -27,27 +61,26 @@ int EconomyBalance::cityVaultUpgradeCost(const std::string& cityId, int currentL
         return 0;
     }
 
-    int cost = 650 * cityVaultMultiplier(cityId) / 100;
-    for (int level = 1; level < currentLevel; ++level)
-    {
-        cost *= 2;
-    }
-    return cost;
+    static const int baseCosts[] = {1000, 1500, 2250, 3500};
+    return baseCosts[currentLevel - 1] * cityVaultMultiplier(cityId) / 100;
 }
 
 int EconomyBalance::cityVaultCapacityForLevel(int level)
 {
-    if (level <= 0)
+    switch (std::max(0, std::min(5, level)))
     {
-        return 0;
+        case 1: return 250;
+        case 2: return 300;
+        case 3: return 350;
+        case 4: return 400;
+        case 5: return 500;
+        default: return 0;
     }
-    const int clampedLevel = std::max(1, std::min(5, level));
-    return 12 + (clampedLevel - 1) * cityVaultExtraSlotsPerUpgrade();
 }
 
 int EconomyBalance::cityVaultExtraSlotsPerUpgrade()
 {
-    return 8;
+    return 50;
 }
 
 int EconomyBalance::travelTimeUnitsForDistance(int distanceKm)
@@ -102,17 +135,20 @@ int EconomyBalance::routeRewardBudgetCopperForDistance(int distanceKm, int dange
 
 int EconomyBalance::innCommonBedCostCopper(const std::string& cityId, int playerLevel)
 {
-    return (96 + std::max(1, playerLevel) * 4) * cityVaultMultiplier(cityId) / 100;
+    const CityShopContext context = CityProfileSystem::shopContextFor(cityId, ShopType::Lodging);
+    return std::max(1, (96 + std::max(1, playerLevel) * 4) * (100 + context.buyPriceModifierPercent) / 100);
 }
 
 int EconomyBalance::innSafeRoomCostCopper(const std::string& cityId, int playerLevel)
 {
-    return (185 + std::max(1, playerLevel) * 7) * cityVaultMultiplier(cityId) / 100;
+    const CityShopContext context = CityProfileSystem::shopContextFor(cityId, ShopType::Lodging);
+    return std::max(1, (185 + std::max(1, playerLevel) * 7) * (100 + context.buyPriceModifierPercent) / 100);
 }
 
 int EconomyBalance::innWarmMealCostCopper(const std::string& cityId, int playerLevel)
 {
-    return std::max(12, (48 + std::max(1, playerLevel) * 2) * cityVaultMultiplier(cityId) / 100);
+    const CityShopContext context = CityProfileSystem::shopContextFor(cityId, ShopType::Lodging);
+    return std::max(12, (48 + std::max(1, playerLevel) * 2) * (100 + context.buyPriceModifierPercent) / 100);
 }
 
 int EconomyBalance::cityVaultMaterialTransferCostCopper(const std::string& fromCityId, const std::string& toCityId, int distanceKm, int quantity)
@@ -120,6 +156,16 @@ int EconomyBalance::cityVaultMaterialTransferCostCopper(const std::string& fromC
     const int safeDistance = std::max(1, distanceKm);
     const int safeQuantity = std::max(1, quantity);
     int cost = 45 + estimatedTravelCopperCost(safeDistance) / 2 + safeQuantity * 3;
+    cost = cost * std::max(cityVaultMultiplier(fromCityId), cityVaultMultiplier(toCityId)) / 100;
+    return std::max(35, cost);
+}
+
+int EconomyBalance::cityVaultCargoTransferCostCopper(const std::string& fromCityId, const std::string& toCityId, int distanceKm, int loadUnits)
+{
+    const int safeDistance = std::max(1, distanceKm);
+    const int safeLoad = std::max(1, loadUnits);
+    // Shared convoy pricing: route cost dominates, bulky cargo adds a readable supplement.
+    int cost = 45 + estimatedTravelCopperCost(safeDistance) / 2 + safeLoad * 12;
     cost = cost * std::max(cityVaultMultiplier(fromCityId), cityVaultMultiplier(toCityId)) / 100;
     return std::max(35, cost);
 }

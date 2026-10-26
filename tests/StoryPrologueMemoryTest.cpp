@@ -56,6 +56,8 @@ int main()
 
     Player invocateur = memoryForClass("Invocateur");
     assert(invocateur.getEquippedWeapon().getType() == WeaponType::Staff);
+    assert(invocateur.getMana() == invocateur.getMaxMana());
+    assert(invocateur.getMagicChannelingStyleLabel() != "Réserve mineure");
 
     Player colosse = memoryForClass("Colosse");
     assert(colosse.getEquippedWeapon().getType() == WeaponType::Hammer);
@@ -89,19 +91,33 @@ int main()
         assert(second.find("Lorenzo") == std::string::npos);
     }
 
+    const std::vector<std::string> routine = StoryPrologueMemory::buildOrdinaryRoutineLines(memory);
+    assert(routine.size() >= 8);
+    bool hasOrdinaryRoutine = false;
+    for (const std::string& line : routine)
+    {
+        hasOrdinaryRoutine = hasOrdinaryRoutine || line.find("rations") != std::string::npos || line.find("auberge") != std::string::npos;
+        assert(line.find("souvenir") == std::string::npos);
+        assert(line.find("build") == std::string::npos);
+        assert(line.find("XP") == std::string::npos);
+    }
+    assert(hasOrdinaryRoutine);
+
     const std::vector<std::string> mission = StoryPrologueMemory::buildMissionFragmentLines(memory);
     assert(!mission.empty());
     bool hasZone = false;
-    bool hasMemoryContract = false;
+    bool hasMissingContractFragment = false;
     for (const std::string& line : mission)
     {
         hasZone = hasZone || line.find("Glacier des Serments froids") != std::string::npos;
-        hasMemoryContract = hasMemoryContract || line.find("fragment mémoriel") != std::string::npos;
+        hasMissingContractFragment = hasMissingContractFragment || line.find("[---]") != std::string::npos || line.find("effacée") != std::string::npos;
         assert(line.find("Scarlett") == std::string::npos);
         assert(line.find("Lorenzo") == std::string::npos);
+        assert(line.find("souvenir jouable") == std::string::npos);
+        assert(line.find("fragment mémoriel") == std::string::npos);
     }
     assert(hasZone);
-    assert(hasMemoryContract);
+    assert(hasMissingContractFragment);
 
     StoryPrologueCombatResult victory;
     victory.outcome = StoryPrologueOutcome::Victory;

@@ -12,6 +12,7 @@
 #include "item/material/MaterialCatalog.hpp"
 #include "progression/DifficultyRules.hpp"
 #include "progression/Level.hpp"
+#include "progression/TechniqueProgressionRules.hpp"
 #include "progression/TitleCatalog.hpp"
 #include "character/RaceCatalog.hpp"
 #include "combat/system/CombatClassSystem.hpp"
@@ -1108,7 +1109,7 @@ void Player::recordGameplaySkillProgressForKills(int amount)
     if (weapon.getType() == WeaponType::Dagger)
     {
         daggerKillProgress += amount;
-        if (daggerKillProgress >= 5)
+        if (daggerKillProgress >= 5 && getLevel() >= TechniqueProgressionRules::weaponPracticeUnlockLevel("chain_execution"))
         {
             unlockActiveSkill("chain_execution", "Enchaînement");
         }
@@ -1116,7 +1117,7 @@ void Player::recordGameplaySkillProgressForKills(int amount)
     else if (weapon.getType() == WeaponType::Bow)
     {
         bowKillProgress += amount;
-        if (bowKillProgress >= 8)
+        if (bowKillProgress >= 8 && getLevel() >= TechniqueProgressionRules::weaponPracticeUnlockLevel("ranger_eye"))
         {
             unlockPassiveSkill("ranger_eye", "Œil de rôdeur");
         }
@@ -1124,7 +1125,7 @@ void Player::recordGameplaySkillProgressForKills(int amount)
     else if (weapon.getType() == WeaponType::BareHands)
     {
         bareHandKillProgress += amount;
-        if (bareHandKillProgress >= 10)
+        if (bareHandKillProgress >= 10 && getLevel() >= TechniqueProgressionRules::weaponPracticeUnlockLevel("reflex_counter"))
         {
             unlockActiveSkill("reflex_counter", "Contre réflexe");
         }
@@ -1132,7 +1133,7 @@ void Player::recordGameplaySkillProgressForKills(int amount)
     else if (weapon.getType() == WeaponType::Staff)
     {
         staffKillProgress += amount;
-        if (staffKillProgress >= 6)
+        if (staffKillProgress >= 6 && getLevel() >= TechniqueProgressionRules::weaponPracticeUnlockLevel("cautious_channeling"))
         {
             unlockActiveSkill("cautious_channeling", "Canalisation prudente");
         }
@@ -1140,7 +1141,7 @@ void Player::recordGameplaySkillProgressForKills(int amount)
     else if (weapon.getType() == WeaponType::Sword)
     {
         swordKillProgress += amount;
-        if (swordKillProgress >= 7)
+        if (swordKillProgress >= 7 && getLevel() >= TechniqueProgressionRules::weaponPracticeUnlockLevel("blade_discipline"))
         {
             unlockPassiveSkill("blade_discipline", "Discipline de lame");
         }
@@ -1148,7 +1149,7 @@ void Player::recordGameplaySkillProgressForKills(int amount)
     else if (weapon.getType() == WeaponType::Axe)
     {
         axeKillProgress += amount;
-        if (axeKillProgress >= 7)
+        if (axeKillProgress >= 7 && getLevel() >= TechniqueProgressionRules::weaponPracticeUnlockLevel("splitting_blow"))
         {
             unlockActiveSkill("splitting_blow", "Frappe fendue");
         }
@@ -1156,7 +1157,7 @@ void Player::recordGameplaySkillProgressForKills(int amount)
     else if (weapon.getType() == WeaponType::Hammer)
     {
         hammerKillProgress += amount;
-        if (hammerKillProgress >= 7)
+        if (hammerKillProgress >= 7 && getLevel() >= TechniqueProgressionRules::weaponPracticeUnlockLevel("armor_crack"))
         {
             unlockActiveSkill("armor_crack", "Fracasse-garde");
         }
@@ -1164,7 +1165,7 @@ void Player::recordGameplaySkillProgressForKills(int amount)
     else if (weapon.getType() == WeaponType::Spear)
     {
         spearKillProgress += amount;
-        if (spearKillProgress >= 7)
+        if (spearKillProgress >= 7 && getLevel() >= TechniqueProgressionRules::weaponPracticeUnlockLevel("reach_control"))
         {
             unlockPassiveSkill("reach_control", "Contrôle d'allonge");
         }
@@ -1264,35 +1265,36 @@ void Player::refreshLevelAndIdentitySkills(bool silent)
 
     std::string className = getType();
 
-    if (level >= 5 && className == "Assassin")
+    const int classIdentityLevel = TechniqueProgressionRules::classIdentityUnlockLevel(className);
+    if (level >= classIdentityLevel && className == "Assassin")
     {
         unlockActiveSkill("shadow_step", "Pas de l'ombre", silent);
     }
-    else if (level >= 5 && className == "Chevalier")
+    else if (level >= classIdentityLevel && className == "Chevalier")
     {
         unlockPassiveSkill("steady_guard", "Garde stable", silent);
     }
-    else if (level >= 5 && className == "Colosse")
+    else if (level >= classIdentityLevel && className == "Colosse")
     {
         unlockPassiveSkill("living_rampart", "Rempart vivant", silent);
     }
-    else if (level >= 5 && className == "Mage")
+    else if (level >= classIdentityLevel && className == "Mage")
     {
         unlockActiveSkill("arcane_impulse", "Élan arcanique", silent);
     }
-    else if (level >= 5 && className == "Forgeron")
+    else if (level >= classIdentityLevel && className == "Forgeron")
     {
         unlockPassiveSkill("sure_hand", "Main sûre", silent);
     }
-    else if (level >= 5 && className == "Alchimiste")
+    else if (level >= classIdentityLevel && className == "Alchimiste")
     {
         unlockPassiveSkill("careful_dosage", "Dosage prudent", silent);
     }
-    else if (level >= 5 && className == "Rôdeur")
+    else if (level >= classIdentityLevel && className == "Rôdeur")
     {
         unlockActiveSkill("tracking_mark", "Marque de pisteur", silent);
     }
-    else if (level >= 5 && className == "Artificier")
+    else if (level >= classIdentityLevel && className == "Artificier")
     {
         unlockActiveSkill("prepared_volley", "Salve préparée", silent);
     }

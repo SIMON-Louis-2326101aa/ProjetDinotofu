@@ -142,6 +142,14 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getEntranceLines(const
         };
     }
 
+    if (normalizedName == "arone aster")
+    {
+        return {
+            "Arone vérifie d'abord qui se trouve derrière lui avant de lever son arme.",
+            "Un ordre mérite une raison. Si tu n'en as pas, ne t'attends pas à ce que je m'agenouille."
+        };
+    }
+
     if (normalizedName == "hestia")
     {
         return {
@@ -277,6 +285,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getLowHealthLines(cons
     if (normalizedName == "willow") return {"Willow serre les dents et recule d'un pas.", "Willow : Génial. Maintenant je saigne ET je dois continuer à parler."};
     if (normalizedName == "dwarf") return {"Dwarf souffle plus fort, mais garde son arme haute.", "Dwarf : J'ai connu des gueules de bois plus propres. Pas forcément moins dangereuses."};
     if (normalizedName == "badr") return {"Badr regarde ses blessures comme si elles appartenaient déjà à un cadavre.", "Badr : La nuit serait presque jalouse de mon humeur actuelle. Second, reste dedans encore une seconde."};
+    if (normalizedName == "arone aster") return {"Arone serre les dents mais garde sa position entre le danger et les autres.", "Je peux tomber. Pas question de laisser quelqu'un décider que ça lui donne tous les droits."};
 
     return {};
 }
@@ -313,6 +322,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getCombatActionLines(
         if (normalizedName == "willow") return {"Willow décoche sans commentaire, déjà en train de chercher son prochain angle."};
         if (normalizedName == "dwarf") return {"Dwarf attaque en riant un peu trop fort pour quelqu'un censé surveiller sa garde."};
         if (normalizedName == "badr") return {"Badr avance avec une prudence presque sacerdotale. Sous sa main, Second semble beaucoup moins patient."};
+        if (normalizedName == "arone aster") return {"Arone frappe sans chercher à rendre le geste glorieux. L'objectif est d'arrêter la menace, pas d'impressionner la salle."};
     }
 
     return {};
@@ -347,6 +357,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getVictoryLines(const 
     if (normalizedName == "willow") return {"Willow récupère une flèche encore utilisable.", "Willow : Voilà. Maintenant on peut recommencer à ne pas se parler."};
     if (normalizedName == "dwarf") return {"Dwarf pose son arme sur l'épaule.", "Dwarf : Tu vois ? Technique ancestrale naine : frapper jusqu'à ce que le problème arrête d'avoir un avis."};
     if (normalizedName == "badr") return {"Badr souffle lentement et remercie à voix basse quelqu'un que personne d'autre ne voit.", "Badr : C'est terminé. Second, non. On ne mange rien."};
+    if (normalizedName == "arone aster") return {"Arone nettoie son arme avant toute célébration.", "Une victoire ne rend pas automatiquement ce qu'on a fait juste."};
 
     return {};
 }
@@ -380,6 +391,7 @@ std::vector<std::string> SpecialCharacterDialogueCatalog::getDefeatLines(const s
     if (normalizedName == "willow") return {"Willow lâche un long soupir avant même de toucher le sol.", "Willow : Parfait. Exactement la raison pour laquelle je préfère voyager seule."};
     if (normalizedName == "dwarf") return {"Dwarf s'effondre avec beaucoup moins d'élégance que prévu.", "Dwarf : Personne ne raconte cette partie. Surtout pas toi."};
     if (normalizedName == "badr") return {"Badr reste silencieux un moment, presque paisible malgré la défaite.", "Badr : J'ai connu des nuits pires. Ce n'est pas vraiment rassurant."};
+    if (normalizedName == "arone aster") return {"Arone baisse son arme sans demander de faveur.", "Si tu as gagné, décide maintenant ce que ta victoire dit de toi."};
 
     return {};
 }

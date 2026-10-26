@@ -1,0 +1,322 @@
+{
+  "version": "3.49.10",
+  "sources": [],
+  "logos": {
+    "banniere_app.png": {
+      "file": "assets/logo/banniere_app.png",
+      "size": [
+        1672,
+        941
+      ]
+    },
+    "logo_app.png": {
+      "file": "assets/logo/logo_app.png",
+      "size": [
+        500,
+        500
+      ]
+    },
+    "logo_ig_version.png": {
+      "file": "assets/logo/logo_ig_version.png",
+      "size": [
+        1144,
+        1125
+      ]
+    },
+    "logo_terminal_version.png": {
+      "file": "assets/logo/logo_terminal_version.png",
+      "size": [
+        1070,
+        1049
+      ]
+    }
+  },
+  "backgrounds": {
+    "biomes": [
+      {
+        "file": "assets/visuals/biomes/biome_autumn-highlands_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_crystal-depth-caverns_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_desert-oasis-road_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_enchanted-moonlit-forest_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_gloommarsh-marshlands_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_gloommire-marsh_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_ironspine-quarry_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_moonfrost-expanse_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_moonlit-ruins_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_saltwake-docks_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_starvein-cavern_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_sunmeadow-crossroads_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_sunmeadow-plains_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_sunscar-dunes_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_volcanic-badlands_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_whispering-woods_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/biomes/biome_windy-mountain-pass_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      }
+    ],
+    "cities": [
+      {
+        "file": "assets/visuals/cities/city_lys-de-givre_hub.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/cities/city_port-lanterne_hub.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/cities/city_rocheveille_hub.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/cities/city_valebrume_hub.png",
+        "size": [
+          1280,
+          720
+        ]
+      }
+    ],
+    "interiors": [
+      {
+        "file": "assets/visuals/interiors/interior_alchemy-laboratory_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_apothecary-alchemist_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_archives-library_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_arena-lobby_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_barracks_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_blacksmith-workshop-v2_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_blacksmith-workshop_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_general-goods-shop_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_grand-library-v2_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_guildhall_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_herbalist-shop_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_inn_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_market-hall_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_municipal-chest-vault_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_private-inn-room_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_stable-v1_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_stable-v2_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_throne-room_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      },
+      {
+        "file": "assets/visuals/interiors/interior_townhall-council_background.png",
+        "size": [
+          1280,
+          720
+        ]
+      }
+    ]
+  }
+}

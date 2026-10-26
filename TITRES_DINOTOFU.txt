@@ -4,9 +4,327 @@ But du document : référence développeur/source pour les titres, leurs conditi
 Côté joueur, les titres secrets restent cachés en ???? tant qu'ils ne sont pas obtenus.
 Un personnage peut équiper jusqu'à 3 titres ; les bonus doivent rester très faibles et surtout lore/dialogues/réputation.
 
-Total : 170 titres
-Visibles avant obtention : 25
-Cachés avant obtention : 145
+VERSION DU CATALOGUE DE TITRES
+------------------------------
+- Dernière révision du catalogue : V3.57.02.
+- Cette version est indépendante de la version générale du jeu : elle ne change que lorsqu'un titre est ajouté, retiré ou modifié de façon significative.
+- Les mises à jour futures doivent conserver ce repère afin de savoir depuis quand la liste des titres n'a pas été revue.
+
+RÈGLES COMPTE / ALTÉRATION
+--------------------------
+- Le compte possède une collection persistante « Titres débloqués », comparable à des trophées : un titre légitimement acquis reste enregistré même si le personnage qui l'a gagné est supprimé.
+- Un personnage Altéré conserve ses anciens titres mais ne peut plus débloquer de nouveaux titres normaux ni enrichir la collection légitime du compte.
+- Un futur cheat qui force un titre de base ne doit l'accorder qu'au personnage courant ; jamais au compte.
+- Exception volontaire : « On ne dira rien... » est accordé au personnage ET au compte au premier cheat altérant. C'est le seul trophée de compte obtenable par triche et il reste hors prérequis du titre ultime.
+- « Luck is a skill » reste un accomplissement légitime ; luckytofu ne le débloque jamais.
+- Reaper-13 n'est pas un titre de progression du joueur tant que le chef Reaper-13 existe.
+
+MODE SPOILERS DES TITRES
+-------------------------
+- Par défaut, les titres secrets restent masqués sous ???? avec leurs conditions cachées.
+- Paramètres > Titres cachés permet volontairement de révéler les noms ET conditions, après confirmation explicite par le mot SPOILER.
+- L'avertissement précise que cette action peut révéler histoire, boss, factions, systèmes, résultats et secrets du jeu.
+- L'option est réversible et sauvegardée avec le personnage. La désactiver restaure immédiatement le comportement normal.
+- Ce mode est destiné aux curieux et complétionnistes ; il ne doit jamais être activé par défaut.
+
+Total moteur actuel : 419 titres
+Visibles avant obtention : 80
+Cachés avant obtention : 339
+
+============================================================
+AJOUTS V3.57.01 — CONSOLIDATION DES SYSTÈMES
+============================================================
+Cette passe audite les systèmes apparus depuis la dernière grande révision V3.51.51.
+Les titres de compte du tutoriel peuvent désormais participer à la complétion ultime via le registre de compte.
+Les routes mutuellement exclusives peuvent partager un groupe alternatif : une seule route valide suffit alors pour l’ultime.
+Les titres Hestia post-sauvetage restent hors ultime tant qu’une mort définitive de l’alliée peut fermer leur route sans alternative mémorielle équivalente.
+
+- On a un QG !
+  Catégorie : Clan / QG
+  Affichage avant obtention : visible
+  Obtention : Achever la construction du premier QG de clan.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Ce n'est plus une cabane
+  Catégorie : Clan / QG
+  Affichage avant obtention : visible
+  Obtention : Agrandir le QG jusqu'au niveau 2.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Ça devient sérieux
+  Catégorie : Clan / QG
+  Affichage avant obtention : cache
+  Obtention : Atteindre le QG niveau 3 avec ses vrais prérequis.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Il reste une chambre ?
+  Catégorie : Clan / QG
+  Affichage avant obtention : cache
+  Obtention : Porter la capacité du QG à au moins cinq lits.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Le tableau travaille aussi
+  Catégorie : Clan / QG
+  Affichage avant obtention : visible
+  Obtention : Installer le tableau de quêtes du clan niveau 2.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- La caisse du patron
+  Catégorie : Clan / QG
+  Affichage avant obtention : cache
+  Obtention : Retirer pour la première fois un vrai versement de la caisse de missions.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Une tournée pour le clan !
+  Catégorie : Clan / QG
+  Affichage avant obtention : cache
+  Obtention : Profiter pour la première fois du bar / de la salle commune du QG.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- On avait dit petite fête
+  Catégorie : Clan / QG
+  Affichage avant obtention : cache
+  Obtention : Organiser une première fête réelle au QG.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Comme à la maison
+  Catégorie : Clan / QG
+  Affichage avant obtention : cache
+  Obtention : Installer le premier niveau de confort et décoration du QG.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Ça va forger.
+  Catégorie : Clan / artisanat
+  Affichage avant obtention : visible
+  Obtention : Construire l'atelier de forge niveau 1 du QG.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Forgeron maison
+  Catégorie : Clan / artisanat
+  Affichage avant obtention : visible
+  Obtention : Recruter le premier forgeron permanent du clan.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- C'est en forgeant...
+  Catégorie : Clan / artisanat
+  Affichage avant obtention : cache
+  Obtention : Faire progresser le forgeron du clan jusqu'au niveau d'artisan 5 par de vraies commandes.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Chacun sa spécialité
+  Catégorie : Clan / artisanat
+  Affichage avant obtention : cache
+  Obtention : Faire choisir au forgeron du clan sa première spécialisation permanente.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Prix d'ami
+  Catégorie : Clan / artisanat
+  Affichage avant obtention : cache
+  Obtention : Payer une vraie réparation bénéficiant de la remise du forgeron du clan.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Enfin chez moi
+  Catégorie : Foyer
+  Affichage avant obtention : visible
+  Obtention : Obtenir son premier logement principal.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Le loyer, cette quête hebdomadaire
+  Catégorie : Foyer
+  Affichage avant obtention : cache
+  Obtention : Payer trois loyers réels de son logement principal.
+  Effet : Trophée de foyer : valide le parcours locatif régulier.
+  Requis pour le titre ultime : oui
+  Groupe alternatif ultime : home_financing_route
+- Plus de propriétaire
+  Catégorie : Foyer
+  Affichage avant obtention : cache
+  Obtention : Acheter définitivement son logement principal.
+  Effet : Trophée de foyer : valide le parcours d'achat direct.
+  Requis pour le titre ultime : oui
+  Groupe alternatif ultime : home_financing_route
+- Mon lit, mes règles
+  Catégorie : Foyer
+  Affichage avant obtention : visible
+  Obtention : Dormir au moins une fois dans son propre logement.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- J'ai dit oui
+  Catégorie : Foyer / mariage
+  Affichage avant obtention : cache
+  Obtention : Valider un mariage réel après les prérequis prévus.
+  Effet : Titre de relation : la mécanique complète de mariage doit être jouable avant qu'il ne devienne un prérequis ultime.
+  Requis pour le titre ultime : non
+- Une place pour deux
+  Catégorie : Foyer / mariage
+  Affichage avant obtention : cache
+  Obtention : Installer réellement son conjoint PNJ au foyer.
+  Effet : Titre de foyer vivant : gardé hors complétion ultime tant que la route mariage complète n'est pas ouverte.
+  Requis pour le titre ultime : non
+- Jusqu'à ce que la sauvegarde nous sépare
+  Catégorie : Foyer / mariage
+  Affichage avant obtention : cache
+  Obtention : Valider un mariage avec un conjoint PNJ.
+  Effet : Titre de mariage PNJ : il pourra compter pour l'ultime lorsque toute la route mariage/divorce sera honnêtement jouable.
+  Requis pour le titre ultime : non
+- Jusqu'à ce que le ping nous sépare
+  Catégorie : Foyer / mariage / coop
+  Affichage avant obtention : cache
+  Obtention : Valider un mariage joueur-joueur.
+  Effet : Titre coopératif : volontairement hors complétion ultime car il dépend d'un autre joueur humain.
+  Requis pour le titre ultime : non
+- Dossier : retrouvée
+  Catégorie : Histoire / Hestia
+  Affichage avant obtention : cache
+  Obtention : Terminer réellement le sauvetage de la personne disparue et ramener Hestia.
+  Effet : Trace d'histoire : marque une étape narrative majeure sans forcément donner un bonus de combat brut.
+  Requis pour le titre ultime : oui
+- Une colocataire de plus
+  Catégorie : Histoire / Hestia
+  Affichage avant obtention : cache
+  Obtention : Proposer à Hestia de vivre dans le logement du joueur.
+  Effet : Titre de relation : hors complétion ultime tant qu'une mort définitive d'alliée peut couper cette route sans alternative équivalente.
+  Requis pour le titre ultime : non
+- Elle apprend... doucement
+  Catégorie : Histoire / Hestia
+  Affichage avant obtention : cache
+  Obtention : Faire participer Hestia à au moins cinq vrais entraînements ou combats.
+  Effet : Titre de progression de compagne : non requis tant que la mort définitive peut interrompre ce parcours.
+  Requis pour le titre ultime : non
+- Un gant un peu trop attachant
+  Catégorie : Histoire / Hestia
+  Affichage avant obtention : cache
+  Obtention : Recevoir l'artefact d'âme lié à Hestia.
+  Effet : Titre d'artefact : non requis tant que la route Hestia peut être interrompue définitivement.
+  Requis pour le titre ultime : non
+- Deux formes valent mieux qu'une
+  Catégorie : Histoire / Hestia
+  Affichage avant obtention : cache
+  Obtention : Débloquer puis choisir la seconde forme de l'artefact d'Hestia.
+  Effet : Titre d'artefact avancé : non requis tant que la route Hestia peut être interrompue définitivement.
+  Requis pour le titre ultime : non
+- Elle ne m'a pas laissé mourir
+  Catégorie : Histoire / Hestia
+  Affichage avant obtention : cache
+  Obtention : Être réellement sauvé par le sacrifice d'Hestia.
+  Effet : Titre secret de sacrifice : événement exceptionnel et potentiellement incompatible avec d'autres destins d'Hestia.
+  Requis pour le titre ultime : non
+- C'était ma première vraie amie
+  Catégorie : Histoire / Hestia
+  Affichage avant obtention : cache
+  Obtention : Construire avec Hestia une confiance réelle à travers plusieurs visites et moments vécus.
+  Effet : Titre secret de relation : une trace émotionnelle, pas un simple seuil affiché. Non requis tant qu'une alternative de mémoire n'existe pas en cas de mort définitive.
+  Requis pour le titre ultime : non
+- Sur la piste
+  Catégorie : Primes / traque
+  Affichage avant obtention : visible
+  Obtention : Faire réellement progresser l'enquête d'une prime ciblée.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Viens sans faire d'histoire
+  Catégorie : Primes / capture
+  Affichage avant obtention : cache
+  Obtention : Obtenir la reddition d'une cible et la capturer vivante.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Il fallait vraiment en arriver là ?
+  Catégorie : Primes / capture
+  Affichage avant obtention : cache
+  Obtention : Capturer vivante une cible après confrontation.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Pas assez loin
+  Catégorie : Primes / traque
+  Affichage avant obtention : cache
+  Obtention : Capturer une cible après qu'elle a réellement changé de ville.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Tu peux courir...
+  Catégorie : Primes / traque
+  Affichage avant obtention : cache
+  Obtention : Voir une même cible accumuler au moins trois tentatives d'évasion avant résolution.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- J'avais gardé la piste
+  Catégorie : Primes / traque
+  Affichage avant obtention : cache
+  Obtention : Exploiter avec succès une piste inter-ville persistante laissée par une cible.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Évidemment, ce n'était pas fini.
+  Catégorie : Quêtes / suites
+  Affichage avant obtention : visible
+  Obtention : Terminer sa première phase 2 obligatoire.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Puisqu'on y est...
+  Catégorie : Quêtes / suites
+  Affichage avant obtention : visible
+  Obtention : Accepter puis terminer une phase 2 facultative.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Facteur officiel
+  Catégorie : Quêtes / inter-ville
+  Affichage avant obtention : visible
+  Obtention : Terminer un premier contrat rémunéré de transmission d'informations inter-ville.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Ce n'est pas une lettre, ça.
+  Catégorie : Quêtes / inter-ville
+  Affichage avant obtention : visible
+  Obtention : Terminer un premier transport rémunéré de matériaux inter-ville.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Avec correspondance
+  Catégorie : Quêtes / inter-ville
+  Affichage avant obtention : cache
+  Obtention : Terminer un contrat inter-ville comportant plusieurs relais réels.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- J'ai touché de l'herbe
+  Catégorie : Ville / événements
+  Affichage avant obtention : cache
+  Obtention : Participer activement à la fête des moissons.
+  Effet : Réputation locale : peut changer certaines réactions de ville, rumeurs et demandes de guilde.
+  Requis pour le titre ultime : oui
+- On barricade d'abord
+  Catégorie : Ville / événements
+  Affichage avant obtention : cache
+  Obtention : Participer aux préparatifs d'une mobilisation contre un raid annoncé.
+  Effet : Réputation locale : peut changer certaines réactions de ville, rumeurs et demandes de guilde.
+  Requis pour le titre ultime : oui
+- Le convoi est arrivé... à peu près
+  Catégorie : Économie / convois
+  Affichage avant obtention : cache
+  Obtention : Résoudre puis clôturer un premier incident commercial jouable.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+- Il manquait quelque chose au chargement
+  Catégorie : Économie / convois
+  Affichage avant obtention : cache
+  Obtention : Faire déboucher l'enquête d'un incident commercial sur une vraie prime séparée.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+
+============================================================
+AJOUT / MODIFICATION V3.57.02 — MARIAGES
+============================================================
+- Jusqu'à ce que la sauvegarde nous sépare
+  Modification : ce titre concerne désormais explicitement le mariage avec un conjoint PNJ.
+  Requis pour le titre ultime : non tant que la route mariage/divorce complète n'est pas jouable et auditée.
+- Jusqu'à ce que le ping nous sépare
+  Catégorie : Foyer / mariage / coop
+  Affichage avant obtention : cache
+  Obtention : Valider un mariage joueur-joueur.
+  Effet : Titre coopératif distinct du mariage PNJ.
+  Requis pour le titre ultime : non, car il dépend d'un autre joueur humain.
+
+TITRES EXISTANTS REBRANCHÉS / ÉTENDUS V3.57.01
+-------------------------------------------------
+- Livreur sous tension : un incident commercial réellement résolu peut désormais constituer un déclencheur cohérent supplémentaire.
+- Commis de crise : le système central de progression des titres accepte désormais les événements canoniques d’aide pendant une tension économique, en complément des déclencheurs déjà présents dans les quêtes.
+- Rencontre avec notre cobaye : désormais requis pour l’ultime, avec lecture du trophée depuis le compte.
+- J'ai lu le manuel : désormais requis pour l’ultime, avec lecture du trophée depuis le compte.
 
 
 ============================================================
@@ -29,82 +347,123 @@ SYSTÈME
   Requis pour le titre ultime : oui
 
 ============================================================
+SYSTÈME / TUTORIEL
+============================================================
+- Rencontre avec notre cobaye
+  Affichage avant obtention : visible
+  Obtention : Lancer le tutoriel avec Jean-Michel Test au moins une fois.
+  Effet : Trophée de compte : prouve que tu as rencontré le cobaye officiel. Aucun bonus de combat ; Jean-Michel a déjà assez de problèmes comme ça.
+  Requis pour le titre ultime : oui
+- J'ai lu le manuel
+  Affichage avant obtention : visible
+  Obtention : Terminer le tutoriel de Jean-Michel Test.
+  Effet : Trophée de compte : confirme que les bases de la ville, des contrats, de l'exploration et du combat ont été vues.
+  Requis pour le titre ultime : oui
+
+============================================================
+SYSTÈME / COMPAGNON
+============================================================
+- Ami du petit Dinotofu
+  Affichage avant obtention : visible
+  Obtention : Consulter le compagnon Dinotofu au moins une fois.
+  Effet : Titre de confort : le petit Dinotofu sait désormais que tu viens parfois demander conseil. Aucun bonus de combat direct.
+  Requis pour le titre ultime : non
+
+============================================================
+COMBAT / OBSERVATION
+============================================================
+- Œil de serrure
+  Affichage avant obtention : secret / ????
+  Obtention : Avec un profil discret, répéter l'observation tactique jusqu'à apprendre à lire serrures, pièges et failles.
+  Effet : Titre d'apprentissage : marque l'acquisition de la lecture des serrures et failles. Il reste hors complétion ultime car son accès dépend du profil joué.
+  Requis pour le titre ultime : non
+
+============================================================
+SYSTÈME / ALTÉRATION
+============================================================
+- On ne dira rien...
+  Affichage avant obtention : secret / ????
+  Obtention : Altérer volontairement au moins un personnage du compte avec un code de triche officiel.
+  Effet : Trophée spécial de compte : le registre a parfaitement vu ce qui s'est passé. Il reste le seul trophée de compte accordé par la triche et ne compte jamais pour la complétion ultime.
+  Requis pour le titre ultime : non
+
+============================================================
 GUILDE
 ============================================================
 - Aventurier
   Affichage avant obtention : visible
   Obtention : Réussir l'inscription officielle de la guilde.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier rang F
   Affichage avant obtention : visible
   Obtention : Valider des contrats officiels après inscription.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier rang E
   Affichage avant obtention : visible
   Obtention : Monter le dossier de guilde avec assez de contrats et de niveau.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier rang D
   Affichage avant obtention : visible
   Obtention : Atteindre le rang D de guilde.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier rang C
   Affichage avant obtention : visible
   Obtention : Atteindre le rang C de guilde.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier rang B
   Affichage avant obtention : visible
   Obtention : Atteindre le rang B de guilde.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier rang A
   Affichage avant obtention : visible
   Obtention : Atteindre le rang A de guilde.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Main fiable de la guilde
   Affichage avant obtention : visible
   Obtention : Valider plusieurs contrats simples sans être un poids pour le panneau.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier rang S
   Affichage avant obtention : secret / ????
   Obtention : Atteindre le rang S de guilde.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier rang SS
   Affichage avant obtention : secret / ????
   Obtention : Atteindre le rang SS de guilde.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier rang SSS
   Affichage avant obtention : secret / ????
   Obtention : Atteindre le rang SSS de guilde.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier - Héros mondial
   Affichage avant obtention : secret / ????
   Obtention : Atteindre le rang Héros mondial.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier - Légende
   Affichage avant obtention : secret / ????
   Obtention : Atteindre le rang Légende.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Aventurier - Rang divin
   Affichage avant obtention : secret / ????
   Obtention : Atteindre le rang Dieu.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Le registre n'a plus de rang
   Affichage avant obtention : secret / ????
   Obtention : Atteindre le rang maximum actuel de guilde.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Niveau maximum, problème minimum
   Affichage avant obtention : secret / ????
@@ -114,27 +473,50 @@ GUILDE
 - Nom scellé par la guilde
   Affichage avant obtention : secret / ????
   Obtention : Valider une mission que le panneau préfère ne pas expliquer.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Sang-froid de rang S
   Affichage avant obtention : secret / ????
   Obtention : Terminer un contrat de rang S ou supérieur sans que la guilde le banalise.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Vétéran des contrats scellés
   Affichage avant obtention : secret / ????
   Obtention : Accumuler des contrats très dangereux ou confidentiels.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Mandataire des rois
   Affichage avant obtention : secret / ????
   Obtention : Réussir une mission de portée royale ou mondiale.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
   Requis pour le titre ultime : oui
 - Ligne vivante du registre
   Affichage avant obtention : secret / ????
   Obtention : Approcher les contrats que les registres modifient eux-mêmes.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de guilde : peut influencer certains dialogues, contrôles de rang et réactions de comptoir.
+  Requis pour le titre ultime : oui
+
+============================================================
+GUILDE / ENTRAÎNEMENT
+============================================================
+- Un bon entraînement
+  Affichage avant obtention : visible
+  Obtention : Battre Torvald dans un 1v1 amical de guilde.
+  Effet : Reconnaissance d'entraînement : Torvald sait que tu tiens un duel propre et peut réagir autrement aux bases d'équipe.
+  Requis pour le titre ultime : oui
+
+============================================================
+GUILDE / CLAN
+============================================================
+- On recrute !
+  Affichage avant obtention : visible
+  Obtention : Battre Torvald puis accepter d'ouvrir légalement ton équipe aux candidats.
+  Effet : Titre actif de recrutement : augmente les occasions de croiser des PNJ recrutables jusqu'au groupe solo complet de 6 personnes (joueur + 5 recrues).
+  Requis pour le titre ultime : oui
+- Anti clan
+  Affichage avant obtention : visible
+  Obtention : Battre Torvald puis choisir une posture de groupe fermé.
+  Effet : Titre actif de fermeture : bloque volontairement les rencontres de PNJ recrutables tant qu'il est équipé.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -143,22 +525,22 @@ VILLE / GUILDE
 - Aide de quartier
   Affichage avant obtention : visible
   Obtention : Rendre service aux habitants par des contrats sobres.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation locale : peut changer certaines réactions de ville, rumeurs et demandes de guilde.
   Requis pour le titre ultime : oui
 - Négociateur de crise
   Affichage avant obtention : secret / ????
   Obtention : Résoudre une mission sociale ou politique sans transformer le problème en bagarre.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation locale : peut changer certaines réactions de ville, rumeurs et demandes de guilde.
   Requis pour le titre ultime : oui
 - Main des réparations
   Affichage avant obtention : secret / ????
   Obtention : Aider une ville abîmée avec des actions concrètes et modestes.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation locale : peut changer certaines réactions de ville, rumeurs et demandes de guilde.
   Requis pour le titre ultime : oui
 - Rumeur calmée
   Affichage avant obtention : secret / ????
   Obtention : Empêcher un panneau, une rumeur ou un témoin de déclencher une panique inutile.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation locale : peut changer certaines réactions de ville, rumeurs et demandes de guilde.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -169,6 +551,11 @@ QUÊTES / INVENTAIRE
   Obtention : Réussir une quête de tri de sac ou d'inventaire trop chargé sans perdre l'objet important.
   Effet : Influence faible : les intendants et marchands font davantage confiance à ton sens du tri.
   Requis pour le titre ultime : oui
+- Intendant de terrain
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir une mission de préparation d'inventaire, équipement ou durabilité.
+  Effet : Influence faible : la guilde te voit comme quelqu'un qui prépare son sac avant de mourir bêtement.
+  Requis pour le titre ultime : oui
 
 ============================================================
 QUÊTES / ÉQUIPEMENT
@@ -178,59 +565,121 @@ QUÊTES / ÉQUIPEMENT
   Obtention : Réussir une quête d'armure mal ajustée en respectant la morphologie d'une race ou sous-race.
   Effet : Influence faible : forgerons et semi-humains réagissent mieux à tes conseils d'ajustement.
   Requis pour le titre ultime : oui
-- Intendant de terrain
-  Affichage avant obtention : secret / ????
-  Obtention : Réussir une mission de préparation d'inventaire, équipement ou durabilité.
-  Effet : Influence faible : la guilde te voit comme quelqu'un qui prépare son sac avant de mourir bêtement.
-  Requis pour le titre ultime : oui
+
+============================================================
+QUÊTES DE GUILDE
+============================================================
 - Chaîne tenue
   Affichage avant obtention : secret / ????
   Obtention : Terminer une suite de demandes, délais ou priorités sans casser le fil de mission.
   Effet : Influence faible : le comptoir fait davantage confiance à ta gestion des priorités.
   Requis pour le titre ultime : oui
+
+============================================================
+COOP
+============================================================
 - Partenaire fiable
   Affichage avant obtention : secret / ????
   Obtention : Valider une mission liée à la participation ou aux récompenses de groupe.
   Effet : Influence faible : les alliés et la guilde remarquent que tu ne triches pas sur la participation.
   Requis pour le titre ultime : oui
+- Compagnon de revanche
+  Affichage avant obtention : secret / ????
+  Obtention : Participer à une victoire de boss qui libère une trace d'un allié.
+  Effet : Réputation de groupe : peut influencer les dialogues coop, partages de primes et réactions d'alliés.
+  Requis pour le titre ultime : oui
+- Partage de prime propre
+  Affichage avant obtention : secret / ????
+  Obtention : Recevoir une récompense de groupe avec vraie participation.
+  Effet : Réputation de groupe : peut influencer les dialogues coop, partages de primes et réactions d'alliés.
+  Requis pour le titre ultime : oui
+- Dernier debout du groupe
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre à une victoire de groupe quand le combat a vraiment coûté cher.
+  Effet : Réputation de groupe : peut influencer les dialogues coop, partages de primes et réactions d'alliés.
+  Requis pour le titre ultime : oui
+
+============================================================
+ÉQUIPEMENT / DURABILITÉ
+============================================================
+- Arme entretenue
+  Affichage avant obtention : secret / ????
+  Obtention : Débloquer ou utiliser une habitude de soin d'arme avant une sortie risquée.
+  Effet : Influence faible : forgerons et guildes remarquent que tu prépares ton arme avant qu'elle ne casse.
+  Requis pour le titre ultime : oui
+- Armure qui respire
+  Affichage avant obtention : secret / ????
+  Obtention : Respecter assez souvent l'ajustement d'une armure, surtout avec races ou sous-races.
+  Effet : Influence faible : les artisans réagissent mieux à tes remarques d'ajustement.
+  Requis pour le titre ultime : oui
 
 ============================================================
 BIOMES / EXPLORATION
 ============================================================
+- Retour par le bon chemin
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler assez de routes, fuites ou explorations pour apprendre à revenir proprement.
+  Effet : Influence faible : améliore surtout les dialogues de route et d'exploration.
+  Requis pour le titre ultime : oui
 - Éclaireur de route
   Affichage avant obtention : visible
   Obtention : Valider des missions de route, de piste ou d'exploration lisible.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
   Requis pour le titre ultime : oui
 - Cartographe de biome
   Affichage avant obtention : secret / ????
   Obtention : Corriger ou explorer une mission où le terrain compte vraiment.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
   Requis pour le titre ultime : oui
 - Marcheur de frontières
   Affichage avant obtention : secret / ????
   Obtention : Explorer une limite de biome ou de carte instable.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
   Requis pour le titre ultime : oui
 - Pied sûr des ruines
   Affichage avant obtention : secret / ????
   Obtention : Revenir de ruines, carrières, caveaux ou ateliers dangereux.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
   Requis pour le titre ultime : oui
 - Respiration de brume
   Affichage avant obtention : secret / ????
   Obtention : Survivre à une mission où la brume, l'eau ou les canaux troublent la route.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
   Requis pour le titre ultime : oui
 - Corniche tenue
   Affichage avant obtention : secret / ????
   Obtention : Revenir d'une falaise, montagne ou route draconique sans y laisser le dossier.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
   Requis pour le titre ultime : oui
 - Frontière refusée
   Affichage avant obtention : secret / ????
   Obtention : Stabiliser une région que les cartes refusent de garder.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
+  Requis pour le titre ultime : oui
+- Curieux de nature
+  Affichage avant obtention : visible
+  Obtention : Déclencher des interactions propres à plusieurs biomes différents.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
+  Requis pour le titre ultime : oui
+- Rien n'est décoratif
+  Affichage avant obtention : secret / ????
+  Obtention : Interagir avec de nombreux éléments environnementaux uniques.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
+  Requis pour le titre ultime : oui
+- Là où personne ne regarde
+  Affichage avant obtention : secret / ????
+  Obtention : Découvrir un micro-événement particulièrement rare.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
+  Requis pour le titre ultime : oui
+- J'ai laissé des traces
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler des événements d'exploration réellement mémorisés.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
+  Requis pour le titre ultime : oui
+- Plus loin encore
+  Affichage avant obtention : secret / ????
+  Obtention : Découvrir de nombreux biomes avancés.
+  Effet : Mémoire d'exploration : peut influencer des dialogues de route, biomes et rapports de terrain.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -239,37 +688,37 @@ BESTIAIRE / MATÉRIAUX
 - Archiviste de terrain
   Affichage avant obtention : visible
   Obtention : Rapporter des observations utiles au registre.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire de registre : peut enrichir les dialogues de bestiaire, matériaux et dossiers de découverte.
   Requis pour le titre ultime : oui
 - Trieur de matériaux
   Affichage avant obtention : visible
   Obtention : Aider la guilde à classer des composants ou lots douteux.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire de registre : peut enrichir les dialogues de bestiaire, matériaux et dossiers de découverte.
   Requis pour le titre ultime : oui
 - Inspecteur de reliques
   Affichage avant obtention : secret / ????
   Obtention : Classer une ressource rare, ancienne ou liée à un boss.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire de registre : peut enrichir les dialogues de bestiaire, matériaux et dossiers de découverte.
   Requis pour le titre ultime : oui
 - Lecteur de traces
   Affichage avant obtention : secret / ????
   Obtention : Compléter un dossier de terrain sans révéler une faiblesse gratuite.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire de registre : peut enrichir les dialogues de bestiaire, matériaux et dossiers de découverte.
   Requis pour le titre ultime : oui
 - Catalogue vivant
   Affichage avant obtention : secret / ????
   Obtention : Étudier une archive ou un bestiaire qui semble te lire en retour.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire de registre : peut enrichir les dialogues de bestiaire, matériaux et dossiers de découverte.
   Requis pour le titre ultime : oui
 - Main qui ne vend pas tout
   Affichage avant obtention : secret / ????
   Obtention : Conserver assez de logique dans les matériaux rares pour ne pas les brader.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire de registre : peut enrichir les dialogues de bestiaire, matériaux et dossiers de découverte.
   Requis pour le titre ultime : oui
 - Œil des composants maudits
   Affichage avant obtention : secret / ????
   Obtention : Identifier un lot dont la qualité ou la rareté ment.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Mémoire de registre : peut enrichir les dialogues de bestiaire, matériaux et dossiers de découverte.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -278,102 +727,102 @@ CHASSE
 - Chasseur de guilde
   Affichage avant obtention : visible
   Obtention : Valider une première chasse chiffrée officielle.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Chasseur confirmé
   Affichage avant obtention : visible
   Obtention : Valider une chasse chiffrée de rang B ou plus.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Nettoyeur de nuisibles
   Affichage avant obtention : visible
   Obtention : Valider une chasse contre rats, slimes, gobelins ou insectoïdes mineurs.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Pisteur de bêtes
   Affichage avant obtention : visible
   Obtention : Valider une chasse contre loups, ours ou bêtes lourdes.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Gardien des tombes
   Affichage avant obtention : visible
   Obtention : Valider une chasse de squelettes, goules, revenants ou morts-vivants.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Briseur d'automates
   Affichage avant obtention : visible
   Obtention : Valider une chasse de golems, automates, armures vivantes, statues ou pantins animés.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Grand chasseur de guilde
   Affichage avant obtention : secret / ????
   Obtention : Valider une chasse chiffrée de rang S ou plus.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Ratier des caves
   Affichage avant obtention : secret / ????
   Obtention : Nettoyer assez de nuisibles pour que les caves respirent.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Gobelinophobe administratif
   Affichage avant obtention : secret / ????
   Obtention : Valider des contrats gobelins avec preuves de guilde.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Fléau des slimes
   Affichage avant obtention : secret / ????
   Obtention : Faire assez de nettoyage gélatineux pour marquer le registre.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Morsure rendue
   Affichage avant obtention : secret / ????
   Obtention : Valider des chasses de loups ou bêtes à crocs.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Tisseur coupé
   Affichage avant obtention : secret / ????
   Obtention : Nettoyer des nids ou fils insectoïdes sans y laisser la mission.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Os remis au silence
   Affichage avant obtention : secret / ????
   Obtention : Accumuler des contrats morts-vivants ou funéraires.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Traqueur de draconides
   Affichage avant obtention : secret / ????
   Obtention : Valider une chasse de draconides ou drakes.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Tueur de dragon
   Affichage avant obtention : secret / ????
   Obtention : Valider une chasse officielle visant des dragons.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Fléau infernal
   Affichage avant obtention : secret / ????
   Obtention : Valider une chasse visant des démons ou présences infernales.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Bourreau des nids impossibles
   Affichage avant obtention : secret / ????
   Obtention : Éteindre une source de monstres qui refuse les rapports normaux.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Ça compte comme entraînement
   Affichage avant obtention : secret / ????
   Obtention : Tuer au moins 10 monstres.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Nettoyeur professionnel
   Affichage avant obtention : secret / ????
   Obtention : Tuer au moins 100 monstres.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Le compteur a abandonné
   Affichage avant obtention : secret / ????
   Obtention : Tuer au moins 1 000 monstres.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de chasse : peut influencer des dialogues de guilde, pistes de bestiaire et contrats liés aux monstres.
   Requis pour le titre ultime : oui
 - Pourquoi ils étaient autant ?
   Affichage avant obtention : secret / ????
@@ -392,7 +841,7 @@ DRÔLE / SURVIE
 - Survivant administratif
   Affichage avant obtention : visible
   Obtention : Revenir après une mort que le registre a dû noter.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -401,17 +850,17 @@ DRÔLE / SURVIE
 - Premier éclat de platine
   Affichage avant obtention : secret / ????
   Obtention : Obtenir et posséder au moins une pièce de platine pour la première fois.
-  Effet : Le platine marque un vrai seuil social ; certains marchands, notables ou aventuriers peuvent te regarder autrement.
+  Effet : Titre de seuil monétaire : le platine attire immédiatement l’attention et peut colorer les réactions de marchands, notables ou aventuriers.
   Requis pour le titre ultime : oui
 - Millionnaire qui recompte
   Affichage avant obtention : secret / ????
   Obtention : Posséder au moins 1 000 000 de pièces.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
   Requis pour le titre ultime : oui
 - Banquier de l'impossible
   Affichage avant obtention : secret / ????
   Obtention : Posséder au moins 10 000 000 de pièces.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
   Requis pour le titre ultime : oui
 - Le coffre a peur de toi
   Affichage avant obtention : secret / ????
@@ -421,42 +870,51 @@ DRÔLE / SURVIE
 - Contrôleur de prix
   Affichage avant obtention : secret / ????
   Obtention : Corriger ou vérifier une mission liée aux prix, taxes, stocks ou monnaies.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
   Requis pour le titre ultime : oui
 - Commis de crise
   Affichage avant obtention : secret / ????
   Obtention : Aider une ville ou un comptoir pendant une tension économique réelle.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
   Requis pour le titre ultime : oui
 - Livreur sous tension
   Affichage avant obtention : secret / ????
   Obtention : Mener un convoi ou une livraison fragile malgré les routes et les coûts.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
   Requis pour le titre ultime : oui
 - Marchand qui recompte
   Affichage avant obtention : secret / ????
   Obtention : Démêler une facture, une monnaie ou un registre qui ne tombe pas juste.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
   Requis pour le titre ultime : oui
+- Chaque pièce compte
+  Affichage avant obtention : secret / ????
+  Obtention : Avancer longtemps avec très peu d'argent sans dette ni triche.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+
+============================================================
+ÉCONOMIE / COMMERCE
+============================================================
 - Aide de comptoir
   Affichage avant obtention : visible
   Obtention : Rendre un premier service propre à Prunigil.
-  Effet : Confiance marchande légère ; Prunigil et certains vendeurs reconnaissent une aide déjà formée.
+  Effet : Confiance marchande légère : Prunigil et certains vendeurs reconnaissent une aide déjà formée.
   Requis pour le titre ultime : oui
 - Apprenti de Prunigil
   Affichage avant obtention : visible
   Obtention : Accumuler plusieurs services réussis au comptoir de Prunigil.
-  Effet : Peut ouvrir les premières recommandations et quelques vendeurs temporaires.
+  Effet : Confiance marchande : peut ouvrir des recommandations et quelques vendeurs temporaires.
   Requis pour le titre ultime : oui
 - Vérificateur de registre
   Affichage avant obtention : secret / ????
   Obtention : Traiter assez de contrats, comptes et documents sensibles pour être reconnu comme vérificateur.
-  Effet : Davantage de vendeurs temporaires et de suites de dossiers peuvent apparaître.
+  Effet : Confiance marchande avancée : davantage de vendeurs temporaires et de suites de dossiers peuvent apparaître.
   Requis pour le titre ultime : oui
 - Mandataire du comptoir
   Affichage avant obtention : secret / ????
   Obtention : Atteindre le plus haut palier actuel de confiance de Prunigil.
-  Effet : Les vendeurs itinérants les plus prudents acceptent les recommandations de Prunigil.
+  Effet : Confiance marchande élevée : les vendeurs itinérants les plus prudents acceptent les recommandations de Prunigil.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -465,12 +923,12 @@ SEMI-HUMAINS / SOUS-RACES
 - Médiateur semi-humain
   Affichage avant obtention : secret / ????
   Obtention : Désamorcer une mission liée aux races, sous-races ou malentendus sociaux.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
   Requis pour le titre ultime : oui
 - Parole sans morsure
   Affichage avant obtention : secret / ????
   Obtention : Faire respecter une différence raciale sans en faire un pouvoir gratuit.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -479,7 +937,7 @@ DRÔLE / CHASSE
 - Encore un slime ?
   Affichage avant obtention : secret / ????
   Obtention : Accumuler une réputation liée aux slimes ou aux nuisibles répétitifs.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -488,27 +946,27 @@ ANOMALIE
 - Lecteur d'anomalies
   Affichage avant obtention : secret / ????
   Obtention : Valider un contrat de guilde lié aux interfaces fausses, hallucinations ou anomalies.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Affinité d'anomalie : peut modifier certains dialogues liés aux interfaces, hallucinations et erreurs.
   Requis pour le titre ultime : oui
 - Œil fissuré
   Affichage avant obtention : secret / ????
   Obtention : Subir ou résoudre assez d'affichages impossibles pour apprendre à douter proprement.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Affinité d'anomalie : peut modifier certains dialogues liés aux interfaces, hallucinations et erreurs.
   Requis pour le titre ultime : oui
 - Celui qui recompte les cibles
   Affichage avant obtention : secret / ????
   Obtention : Survivre à des missions où le nombre d'ennemis ment.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Affinité d'anomalie : peut modifier certains dialogues liés aux interfaces, hallucinations et erreurs.
   Requis pour le titre ultime : oui
 - Erreur impossible
   Affichage avant obtention : secret / ????
   Obtention : Vaincre une source d'interface corrompue.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Affinité d'anomalie : peut modifier certains dialogues liés aux interfaces, hallucinations et erreurs.
   Requis pour le titre ultime : oui
 - Erreur de surface
   Affichage avant obtention : secret / ????
   Obtention : Vaincre la première émanation de l'Anomalie.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Affinité d'anomalie : peut modifier certains dialogues liés aux interfaces, hallucinations et erreurs.
   Requis pour le titre ultime : oui
 - Source dissipée
   Affichage avant obtention : secret / ????
@@ -518,17 +976,17 @@ ANOMALIE
 - Texture qui respire
   Affichage avant obtention : secret / ????
   Obtention : Voir la Source de l'Anomalie se dissiper dans les textures.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Affinité d'anomalie : peut modifier certains dialogues liés aux interfaces, hallucinations et erreurs.
   Requis pour le titre ultime : oui
 - Menu qui répond
   Affichage avant obtention : secret / ????
   Obtention : Être reconnu par une anomalie qui n'aurait pas dû lire le joueur.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Affinité d'anomalie : peut modifier certains dialogues liés aux interfaces, hallucinations et erreurs.
   Requis pour le titre ultime : oui
 - Débogueur de cauchemar
   Affichage avant obtention : secret / ????
   Obtention : Faire face à une corruption d'interface sans suivre ses provocations.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Affinité d'anomalie : peut modifier certains dialogues liés aux interfaces, hallucinations et erreurs.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -537,7 +995,7 @@ DRÔLE / ANOMALIE
 - Je lis les menus maintenant
   Affichage avant obtention : secret / ????
   Obtention : Survivre à une situation où l'interface mentait assez pour devenir traumatisante.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -546,32 +1004,186 @@ MALÉDICTIONS
 - Exorcisé par revanche
   Affichage avant obtention : secret / ????
   Obtention : Briser une malédiction de boss en rebattant sa source.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Trace de malédiction : peut influencer l'église, les diagnostics, les réactions de boss et les états spéciaux.
   Requis pour le titre ultime : oui
 - Porteur de trace
   Affichage avant obtention : secret / ????
   Obtention : Continuer malgré une trace de boss ancrée hors combat.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Trace de malédiction : peut influencer l'église, les diagnostics, les réactions de boss et les états spéciaux.
   Requis pour le titre ultime : oui
 - Ancre brisée
   Affichage avant obtention : secret / ????
   Obtention : Retirer une trace que l'église ne pouvait pas exorciser seule.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Trace de malédiction : peut influencer l'église, les diagnostics, les réactions de boss et les états spéciaux.
   Requis pour le titre ultime : oui
 - Sang noir rendu
   Affichage avant obtention : secret / ????
   Obtention : Reprendre ce que Zelef avait marqué.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Trace de malédiction : peut influencer l'église, les diagnostics, les réactions de boss et les états spéciaux.
   Requis pour le titre ultime : oui
 - Proie qui mord
   Affichage avant obtention : secret / ????
   Obtention : Revenir face à Lyknir avec la marque encore fraîche.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Trace de malédiction : peut influencer l'église, les diagnostics, les réactions de boss et les états spéciaux.
   Requis pour le titre ultime : oui
 - Rancune éteinte
   Affichage avant obtention : secret / ????
   Obtention : Faire taire une rancune abyssale à sa source.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Trace de malédiction : peut influencer l'église, les diagnostics, les réactions de boss et les états spéciaux.
+  Requis pour le titre ultime : oui
+
+============================================================
+MALÉDICTIONS / DÉFI
+============================================================
+- Triplement maudit
+  Affichage avant obtention : secret / ????
+  Obtention : Porter au moins trois malédictions actives en même temps.
+  Effet : Titre de défi maudit : les exorcistes, la guilde et certains vendeurs remarquent que trois problèmes surnaturels cohabitent déjà sur toi.
+  Requis pour le titre ultime : oui
+- Le quatrième problème
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat en portant au moins trois malédictions actives.
+  Effet : Titre de défi : tu étais déjà triplement maudit, mais l'adversaire a quand même réussi à devenir le problème supplémentaire.
+  Requis pour le titre ultime : oui
+
+============================================================
+DÉFIS DE GUILDE
+============================================================
+- Pas une égratignure
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat sans subir le moindre dégât.
+  Effet : Marque d'exploit : peut provoquer des réactions de guilde, sans bonus de combat direct.
+  Requis pour le titre ultime : oui
+- À l'ancienne
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat uniquement avec des attaques simples, sans compétence ni consommable.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Trois victoires, zéro gorgée
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter trois combats propres sans utiliser de consommable.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Le mur qui répond
+  Affichage avant obtention : secret / ????
+  Obtention : Défendre plusieurs fois puis remporter le combat.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Six problèmes de moins
+  Affichage avant obtention : secret / ????
+  Obtention : Éliminer six créatures dans le cadre d'un même défi.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Porte-marque de la guilde
+  Affichage avant obtention : secret / ????
+  Obtention : Échanger assez de Marques de défi pour recevoir la reconnaissance officielle du panneau.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+DÉFIS DE GUILDE / BOSS
+============================================================
+- Boss sans réserve
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre un boss sans utiliser de consommable.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Seulement toi et le boss
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre un boss sans consommable, compétence de classe ni technique d'arme.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+DÉFIS DE GUILDE / DRÔLE
+============================================================
+- Encore debout, malheureusement
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat avec au plus un quart de ses PV maximum.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Ça devait être rapide
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat ayant duré au moins six tours d'action.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+DÉFIS DE GUILDE / MALÉDICTIONS
+============================================================
+- Victoire sous mauvaise influence
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter plusieurs combats en portant au moins une malédiction.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+DÉFIS DE GUILDE / ÉLITE
+============================================================
+- Élite sans fiole
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre une créature élite ou un mini-boss sans consommable.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+DÉFIS MARCHANDS
+============================================================
+- Survivant des caisses
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter le défi amical de Bob et Maurice avec uniquement le contenu des caisses.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+LÉGENDES / MARCHANDS
+============================================================
+- Témoin du marchand bleu
+  Affichage avant obtention : secret / ????
+  Obtention : Rencontrer le vendeur héroïque dont les rumeurs paraissaient trop absurdes.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MARCHANDS / DRÔLE
+============================================================
+- Les deux du même comptoir
+  Affichage avant obtention : secret / ????
+  Obtention : Rencontrer Bob et Maurice et comprendre qu'ils ne voyageront jamais séparément.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Le troisième avis n'était pas demandé
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer la première longue suite commerciale de Bob et Maurice.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+DÉFIS DE GROUPE
+============================================================
+- Personne ne reste derrière
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat collectif avec tous les aventuriers encore debout.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Escouade à l'ancienne
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat collectif uniquement avec des attaques simples et de la défense.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Groupe sans réserve
+  Affichage avant obtention : secret / ????
+  Obtention : Remporter un combat collectif sans aucun consommable utilisé par l'équipe.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+DÉFIS DE GROUPE / INVOCATIONS
+============================================================
+- Le groupe compte aussi les invoqués
+  Affichage avant obtention : secret / ????
+  Obtention : Gagner un combat où une invocation alliée a réellement participé aux dégâts.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -580,172 +1192,172 @@ BOSS
 - Tombeur de boss
   Affichage avant obtention : secret / ????
   Obtention : Vaincre un boss officiel.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Briseur de chaînes célestes
   Affichage avant obtention : secret / ????
   Obtention : Vaincre Fitoria.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Survivant du sang noir
   Affichage avant obtention : secret / ????
   Obtention : Vaincre Zelef.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Fissure du dernier rempart
   Affichage avant obtention : secret / ????
   Obtention : Vaincre Atlas.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Voleur de reine
   Affichage avant obtention : secret / ????
   Obtention : Vaincre Grinka.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Couronne brisée
   Affichage avant obtention : secret / ????
   Obtention : Vaincre l'Avatar d'Azelanos.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Écaille de tempête
   Affichage avant obtention : secret / ????
   Obtention : Vaincre le Fragment de Thamarys.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Ami des forêts furieuses
   Affichage avant obtention : secret / ????
   Obtention : Vaincre Mojo.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Renard du vrai reflet
   Affichage avant obtention : secret / ????
   Obtention : Vaincre le Reflet d'Inakari.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Acquitté du silence
   Affichage avant obtention : secret / ????
   Obtention : Vaincre le Jugement Silencieux.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Minute volée
   Affichage avant obtention : secret / ????
   Obtention : Vaincre l'Horloge des Chuchotements.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Nom sous les os
   Affichage avant obtention : secret / ????
   Obtention : Vaincre l'Enfant des Os Enfouis.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Survivant de la guerre
   Affichage avant obtention : secret / ????
   Obtention : Vaincre l'Avatar de Boros.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Cœur non soumis
   Affichage avant obtention : secret / ????
   Obtention : Vaincre l'Avatar d'Anastasia.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Justiciable debout
   Affichage avant obtention : secret / ????
   Obtention : Vaincre l'Avatar de Lexior.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Éveillé du cauchemar
   Affichage avant obtention : secret / ????
   Obtention : Vaincre le Fragment de Luna / Onyrae.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Main des quatre éléments
   Affichage avant obtention : secret / ????
   Obtention : Vaincre le Fragment de Syvaranelya.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Humain hors du registre
   Affichage avant obtention : secret / ????
   Obtention : Vaincre l'Écho d'Hitogami.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Chance retournée
   Affichage avant obtention : secret / ????
   Obtention : Vaincre l'Écho de Sérendys.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Passe-seuil
   Affichage avant obtention : secret / ????
   Obtention : Vaincre le Gardien du Seuil.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Sujet sans royaume
   Affichage avant obtention : secret / ????
   Obtention : Vaincre le Roi Sans Salle.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Nom donné à l'inconnu
   Affichage avant obtention : secret / ????
   Obtention : Vaincre la Bête qui n'avait pas de nom.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Entre création et ruine
   Affichage avant obtention : secret / ????
   Obtention : Vaincre Asterion et Nihilon.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Écho d'univers
   Affichage avant obtention : secret / ????
   Obtention : Vaincre l'Écho fragmenté d'Obérion.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Regard du créateur
   Affichage avant obtention : secret / ????
   Obtention : Vaincre l'Avatar affaibli de FireFlight, considéré comme boss final actuel.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Respiration volée
   Affichage avant obtention : secret / ????
   Obtention : Vaincre le Souffle sans Visage.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Clou retiré
   Affichage avant obtention : secret / ????
   Obtention : Vaincre la Marionnette aux Mille Clous.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Destin écarté
   Affichage avant obtention : secret / ????
   Obtention : Vaincre la Manifestation de Moiran.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Berger des âmes
   Affichage avant obtention : secret / ????
   Obtention : Vaincre le Cerf des Âmes Égarées.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Briseur de horde
   Affichage avant obtention : secret / ????
   Obtention : Vaincre Gorvald.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Sang royal refusé
   Affichage avant obtention : secret / ????
   Obtention : Vaincre Serana.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Filet arraché
   Affichage avant obtention : secret / ????
   Obtention : Vaincre Draiite.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Vérité sans miroir
   Affichage avant obtention : secret / ????
   Obtention : Vaincre les Jumelles du Miroir Fendu.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Avant la dernière porte
   Affichage avant obtention : secret / ????
   Obtention : Vaincre tous les boss disponibles sauf le boss final actuel.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 - Une invitation ?
   Affichage avant obtention : secret / ????
@@ -755,26 +1367,1049 @@ BOSS
 - Celui qui a tout vaincu
   Affichage avant obtention : secret / ????
   Obtention : Battre le boss final actuel après avoir vaincu les autres boss.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
   Requis pour le titre ultime : oui
 
 ============================================================
-COOP
+ÉCONOMIE / GUILDE
 ============================================================
-- Compagnon de revanche
-  Affichage avant obtention : secret / ????
-  Obtention : Participer à une victoire de boss qui libère une trace d'un allié.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+- Bon pour accord
+  Affichage avant obtention : visible
+  Obtention : Obtenir son premier prêt de guilde.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
   Requis pour le titre ultime : oui
-- Partage de prime propre
-  Affichage avant obtention : secret / ????
-  Obtention : Recevoir une récompense de groupe avec vraie participation.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+- La confiance se mérite
+  Affichage avant obtention : visible
+  Obtention : Atteindre un niveau très élevé de confiance financière auprès de la guilde.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
   Requis pour le titre ultime : oui
-- Dernier debout du groupe
+- Bon payeur
+  Affichage avant obtention : visible
+  Obtention : Rembourser plusieurs prêts intégralement sans retard.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+- Avant l'échéance
+  Affichage avant obtention : visible
+  Obtention : Solder intégralement un prêt avant sa date limite.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+- Jusqu'au dernier cuivre
   Affichage avant obtention : secret / ????
-  Obtention : Survivre à une victoire de groupe quand le combat a vraiment coûté cher.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Obtention : Rembourser une dette importante malgré une bourse presque vide.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+- Dans le rouge
+  Affichage avant obtention : visible
+  Obtention : Approcher son plafond de découvert puis revenir à zéro légitimement.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+- Dette réglée
+  Affichage avant obtention : visible
+  Obtention : Sortir d'une situation avec prêt et découvert actifs en même temps.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+- On peut s'arranger
+  Affichage avant obtention : visible
+  Obtention : Négocier une prolongation avant échéance puis rembourser entièrement.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+- La parole vaut de l'or
+  Affichage avant obtention : visible
+  Obtention : Respecter plusieurs contrats financiers consécutifs.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+- Capital confiance
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre le plafond maximal de prêt sans défaut de paiement.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+
+============================================================
+ÉCONOMIE / COFFRE
+============================================================
+- Sous clé
+  Affichage avant obtention : visible
+  Obtention : Acheter et utiliser le coffre-fort personnel.
+  Effet : Réputation économique : peut influencer des dialogues de marchands, registres, taxes ou missions de comptoir.
+  Requis pour le titre ultime : oui
+
+============================================================
+ÉCONOMIE / DRÔLE
+============================================================
+- Toute ma fortune sur moi
+  Affichage avant obtention : secret / ????
+  Obtention : Transporter une fortune importante sans la sécuriser dans le coffre-fort.
+  Effet : Titre surtout roleplay : les marchands et voleurs ont de bonnes raisons de te regarder.
+  Requis pour le titre ultime : non
+
+============================================================
+COMPAGNONS
+============================================================
+- Personne derrière
+  Affichage avant obtention : visible
+  Obtention : Ramener une recrue mise KO jusqu'aux soins au lieu de l'abandonner.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Ce n'était pas qu'un contrat
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer la quête personnelle d'une recrue engagée.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Vieille équipe
+  Affichage avant obtention : visible
+  Obtention : Conserver longtemps le même noyau de compagnons.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- On te ramènera
+  Affichage avant obtention : visible
+  Obtention : Faire soigner ou récupérer plusieurs compagnons tombés au lieu de les remplacer.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Je couvre tes arrières
+  Affichage avant obtention : secret / ????
+  Obtention : Sauver plusieurs fois un compagnon qui aurait dû tomber.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+COMPAGNONS / ÉCONOMIE
+============================================================
+- La facture est réglée
+  Affichage avant obtention : secret / ????
+  Obtention : Rembourser intégralement une dette importante liée aux soins d'un compagnon.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+COMMANDEMENT
+============================================================
+- À vos ordres
+  Affichage avant obtention : visible
+  Obtention : Mener plusieurs combats avec une équipe sous son commandement.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Chef de terrain
+  Affichage avant obtention : visible
+  Obtention : Réussir plusieurs rotations tactiques comme chef.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Tu avais raison
+  Affichage avant obtention : secret / ????
+  Obtention : Désobéir à un ordre puis être reconnu comme ayant évité une mauvaise décision.
+  Effet : Titre contextuel : récompense un jugement réellement justifié, pas la désobéissance gratuite.
+  Requis pour le titre ultime : non
+- Mauvais ordre
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre après avoir refusé un ordre objectivement catastrophique.
+  Effet : Titre contextuel rare : dépend d'un ordre réellement mauvais et de ses conséquences.
+  Requis pour le titre ultime : non
+- Je prends la suite
+  Affichage avant obtention : secret / ????
+  Obtention : Assumer temporairement le commandement après la chute du chef.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+COMMANDEMENT / COMPAGNONS
+============================================================
+- Tout le monde rentre
+  Affichage avant obtention : secret / ????
+  Obtention : Gagner un combat difficile sans perte définitive de compagnon.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+COMMANDEMENT / LOYAUTÉ
+============================================================
+- Pas besoin de le répéter
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre une obéissance et une loyauté très élevées avec un compagnon.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+COMMANDEMENT / SURVIE
+============================================================
+- Dernier rempart
+  Affichage avant obtention : secret / ????
+  Obtention : Rester seul actif pendant que l'équipe est hors combat et tenir assez longtemps.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Le chef tombe, l'équipe reste
+  Affichage avant obtention : secret / ????
+  Obtention : Gagner après le KO du chef de l'équipe.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+COMMANDEMENT / RÉSERVE
+============================================================
+- Relève assurée
+  Affichage avant obtention : visible
+  Obtention : Gagner grâce à un membre entré depuis la réserve.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+DUO / RELATIONS
+============================================================
+- Comme un seul homme
+  Affichage avant obtention : visible
+  Obtention : Réussir plusieurs techniques duo.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Sans un mot
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir une technique duo avec une maîtrise très élevée.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Je savais que tu serais là
+  Affichage avant obtention : secret / ????
+  Obtention : Être sauvé plusieurs fois par le même compagnon.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Jusqu'au bout
+  Affichage avant obtention : secret / ????
+  Obtention : Voir un compagnon rester à tes côtés malgré une situation très défavorable.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Confiance aveugle
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre une relation et une loyauté exceptionnelles.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Mieux à deux
+  Affichage avant obtention : secret / ????
+  Obtention : Battre une cible importante grâce à une technique combinée.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Parfaitement synchronisés
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir une technique duo à une fiabilité proche du maximum.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+COMBAT TACTIQUE
+============================================================
+- Tout est une arme
+  Affichage avant obtention : secret / ????
+  Obtention : Exploiter plusieurs types de matériaux, pièges ou enduits tactiques distincts.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- J'avais prévu le coup
+  Affichage avant obtention : secret / ????
+  Obtention : Interrompre plusieurs familles de techniques ennemies préparées.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Casseur de rythme
+  Affichage avant obtention : secret / ????
+  Obtention : Interrompre plusieurs types de charges, rituels ou attaques lourdes.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Pas besoin de force brute
+  Affichage avant obtention : secret / ????
+  Obtention : Gagner un combat difficile surtout grâce au contrôle, aux ouvertures et à la préparation.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+COMBAT / MAÎTRISE
+============================================================
+- Maître de sa voie
+  Affichage avant obtention : visible
+  Obtention : Pousser une vraie technique jusqu'à sa maîtrise maximale.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MORT / SURVIE
+============================================================
+- Pas encore.
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir l'unique résistance spirituelle d'une première mort létale.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Trois fois non
+  Affichage avant obtention : secret / ????
+  Obtention : Obtenir les trois réussites spirituelles avant les trois échecs.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Deuxième souffle
+  Affichage avant obtention : secret / ????
+  Obtention : Revenir d'une situation létale grâce à un allié survivant.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Ils m'ont ramené
+  Affichage avant obtention : secret / ????
+  Obtention : Être sauvé après que l'équipe a continué le combat sans toi.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Le dernier témoin
+  Affichage avant obtention : secret / ????
+  Obtention : Être le seul survivant d'un combat majeur.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Revenu de loin
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre à une résolution létale avec une faible probabilité de sauvetage.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Pas aujourd'hui
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre légitimement à plusieurs situations où la mort définitive était réellement possible.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- On me croyait mort
+  Affichage avant obtention : secret / ????
+  Obtention : Revenir après une disparition ou un KO prolongé puis poursuivre l'aventure.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MORT / RELATIONS
+============================================================
+- Je leur dois la vie
+  Affichage avant obtention : secret / ????
+  Obtention : Être sauvé d'une issue létale grâce à un compagnon précis.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MANA / PROGRESSION
+============================================================
+- Je le sens...
+  Affichage avant obtention : visible
+  Obtention : Éveiller son mana légitimement après une vraie quête dédiée.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Premier écho
+  Affichage avant obtention : visible
+  Obtention : Atteindre la première étape réelle de maîtrise du mana.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Résonance
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre une maîtrise avancée du système Écho / Résonance.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MANA / SURVIE
+============================================================
+- À sec
+  Affichage avant obtention : secret / ????
+  Obtention : Gagner un combat après être tombé à zéro mana.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Plus rien dans les veines
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre à un épuisement de mana sévère.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+PROGRESSION / HYBRIDE
+============================================================
+- Pas né pour ça
+  Affichage avant obtention : secret / ????
+  Obtention : Devenir compétent en mêlée avec un personnage initialement pur mage.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Finalement, peut-être
+  Affichage avant obtention : secret / ????
+  Obtention : Devenir réellement compétent dans une discipline initialement faible.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Deux voies, un seul combattant
+  Affichage avant obtention : secret / ????
+  Obtention : Construire un véritable style hybride plutôt que simplement changer d'équipement.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+LANGUES
+============================================================
+- Je crois avoir compris...
+  Affichage avant obtention : visible
+  Obtention : Réussir une interaction importante avec une compréhension intermédiaire d'une langue étrangère.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Sans traducteur
+  Affichage avant obtention : visible
+  Obtention : Comprendre complètement une rencontre étrangère grâce à une langue apprise.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Les mots ouvrent des portes
+  Affichage avant obtention : visible
+  Obtention : Résoudre ou débloquer une situation grâce à une langue apprise.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Polyglotte
+  Affichage avant obtention : visible
+  Obtention : Atteindre un niveau conversationnel ou courant dans plusieurs langues étrangères.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+LANGUES / DRÔLE
+============================================================
+- Ça ressemblait à du gobelin
+  Affichage avant obtention : secret / ????
+  Obtention : Comprendre pour la première fois une partie seulement d'un texte étranger.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+RUMEURS / MÉMOIRE
+============================================================
+- De bouche à oreille
+  Affichage avant obtention : secret / ????
+  Obtention : Voir un fait lié au personnage voyager réellement jusqu'à une autre ville.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- On raconte que...
+  Affichage avant obtention : secret / ????
+  Obtention : Devenir le sujet d'une rumeur locale crédible.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- J'ai entendu autre chose
+  Affichage avant obtention : secret / ????
+  Obtention : Découvrir deux versions contradictoires du même événement.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- La vérité voyage lentement
+  Affichage avant obtention : secret / ????
+  Obtention : Faire corriger progressivement une rumeur par des preuves crédibles.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Tout se sait
+  Affichage avant obtention : secret / ????
+  Obtention : Voir une action importante devenir connue dans plusieurs villes sans omniscience artificielle.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+RIVAUX
+============================================================
+- On se connaît, non ?
+  Affichage avant obtention : secret / ????
+  Obtention : Recroiser pour la première fois un rival vivant déjà rencontré.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Cicatrices partagées
+  Affichage avant obtention : secret / ????
+  Obtention : Retrouver un rival portant une marque issue d'un ancien affrontement.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Il revient encore...
+  Affichage avant obtention : secret / ????
+  Obtention : Voir le même rival revenir plusieurs fois.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Cette fois, c'est fini
+  Affichage avant obtention : secret / ????
+  Obtention : Éliminer définitivement un rival ayant survécu à plusieurs rencontres.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Une vieille affaire
+  Affichage avant obtention : secret / ????
+  Obtention : Mettre fin à une rivalité persistante après une longue histoire commune.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+BOSS / RIVAUX
+============================================================
+- Maintenant je te connais
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre un adversaire adaptatif après plusieurs rencontres où il a appris de toi.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
+  Requis pour le titre ultime : oui
+- Tu m'avais oublié ?
+  Affichage avant obtention : secret / ????
+  Obtention : Revenir vaincre une cible qui t'avait auparavant mis KO.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
+  Requis pour le titre ultime : oui
+- J'avais dit qu'il tomberait
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre une cible majeure après plusieurs défaites face à elle.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
+  Requis pour le titre ultime : oui
+
+============================================================
+BOSS / CHASSE
+============================================================
+- Plus gros que prévu
+  Affichage avant obtention : secret / ????
+  Obtention : Vaincre un boss significativement au-dessus de l'estimation initiale.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
+  Requis pour le titre ultime : oui
+- Chasseur de chasseurs
+  Affichage avant obtention : secret / ????
+  Obtention : Éliminer un ennemi spécialisé dans la traque du joueur.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
+  Requis pour le titre ultime : oui
+
+============================================================
+BOSS / DRÔLE
+============================================================
+- Mission accomplie, techniquement
+  Affichage avant obtention : secret / ????
+  Obtention : Voir son équipe achever le boss après son propre KO, sans clear personnel.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
+  Requis pour le titre ultime : oui
+
+============================================================
+BOSS / RÉSERVE
+============================================================
+- À mon tour
+  Affichage avant obtention : secret / ????
+  Obtention : Entrer depuis la réserve contre un boss et jouer un rôle décisif.
+  Effet : Réputation de boss : prouve un exploit majeur, peut ouvrir des dialogues rares et réactions de PNJ.
+  Requis pour le titre ultime : oui
+
+============================================================
+ÉQUIPEMENT / MÉMOIRE
+============================================================
+- Cette lame a une histoire
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler plusieurs souvenirs sur le même exemplaire précis d'une arme.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Pas qu'un bout de métal
+  Affichage avant obtention : secret / ????
+  Obtention : Voir un équipement recevoir un surnom émergent lié à son histoire.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Je ne la remplacerai pas
+  Affichage avant obtention : secret / ????
+  Obtention : Conserver et utiliser le même équipement pendant une très longue période.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Lié à l'acier
+  Affichage avant obtention : secret / ????
+  Obtention : Construire une vraie histoire persistante autour d'un objet lié.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- C'est bien la mienne
+  Affichage avant obtention : secret / ????
+  Obtention : Perdre puis récupérer exactement le même équipement grâce à son identité persistante.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Rends-moi ça.
+  Affichage avant obtention : secret / ????
+  Obtention : Récupérer un bien réellement volé par Grinka ou par un rival voleur retrouvé plus tard.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+ÉQUIPEMENT / ENCHANTEMENT
+============================================================
+- Ça valait le coup ?
+  Affichage avant obtention : secret / ????
+  Obtention : Perdre réellement un équipement lors d'un échec critique d'enchantement.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Pas cette fois
+  Affichage avant obtention : secret / ????
+  Obtention : Voir un sceau anti-casse sauver un équipement qui aurait dû être détruit.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+ÉQUIPEMENT / JCJ
+============================================================
+- Trophée de guerre
+  Affichage avant obtention : secret / ????
+  Obtention : Obtenir en JcJ dangereux l'équipement exact d'un adversaire.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+ÉQUIPEMENT / ÉCHANGE
+============================================================
+- Marché conclu
+  Affichage avant obtention : visible
+  Obtention : Effectuer un vrai échange transactionnel entre personnages.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+STOCKAGE / ENCOMBREMENT / SACS / MORPHOLOGIE — V3.51.51
+============================================================
+Cette branche contient volontairement des styles de jeu incompatibles entre eux.
+Tous les titres ci-dessous restent hors prérequis du titre ultime.
+Les titres de changement de morphologie sont catalogués mais restent dormants tant que la transformation longue et volontaire en partie n'est pas codée.
+
+- Enfin de la place
+  Affichage avant obtention : visible
+  Obtention : Acheter son premier coffre municipal.
+- On pousse les murs
+  Affichage avant obtention : visible
+  Obtention : Améliorer un coffre municipal pour la première fois.
+- Chaque chose à sa place
+  Affichage avant obtention : visible
+  Obtention : Installer Place optimisée sur un coffre N2 ou plus.
+- Optimisation maximale
+  Affichage avant obtention : secret / ????
+  Obtention : Cumuler Place optimisée et Rangement anticipé sur un coffre N5.
+- Plein à craquer
+  Affichage avant obtention : visible
+  Obtention : Atteindre au moins 100 % de capacité portée.
+- Ça rentre encore.
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre au moins 200 % de capacité portée.
+- Mule de compétition
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer une exploration à plus de 150 % de charge.
+- Je garde tout
+  Affichage avant obtention : secret / ????
+  Obtention : Revenir en ville presque immobilisé sans abandonner son butin en chemin.
+- Grand ménage
+  Affichage avant obtention : secret / ????
+  Obtention : Décharger d'un coup la grande majorité d'un inventaire très rempli.
+- Ça respire enfin
+  Affichage avant obtention : secret / ????
+  Obtention : Passer de plus de 150 % à moins de 50 % grâce à une vente ou un stockage réel.
+- Pas un espace de perdu
+  Affichage avant obtention : secret / ????
+  Obtention : Remplir réellement un coffre à 100 % de sa capacité effective.
+- Conservateur
+  Affichage avant obtention : secret / ????
+  Obtention : Remplir réellement à 100 % un coffre municipal N5.
+- Réseau de stockage
+  Affichage avant obtention : secret / ????
+  Obtention : Posséder des coffres dans au moins trois villes.
+- Empire logistique
+  Affichage avant obtention : secret / ????
+  Obtention : Posséder des coffres dans au moins cinq villes.
+- Partout chez moi
+  Affichage avant obtention : secret / ????
+  Obtention : Étendre son réseau de coffres à un grand nombre de villes principales.
+- Collectionneur itinérant
+  Affichage avant obtention : secret / ????
+  Obtention : Posséder plusieurs coffres N5 dans des villes différentes.
+- Armurier malgré moi
+  Affichage avant obtention : secret / ????
+  Obtention : Stocker au moins 100 armes dans ses coffres.
+- Une pour chaque occasion
+  Affichage avant obtention : secret / ????
+  Obtention : Stocker au moins 50 armures dans ses coffres.
+- Ça peut toujours servir
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler une très grande réserve de matériaux dans ses coffres.
+- Réserve stratégique
+  Affichage avant obtention : secret / ????
+  Obtention : Stocker une grande diversité de matériaux.
+- Sous le matelas
+  Affichage avant obtention : secret / ????
+  Obtention : Stocker une très grosse fortune sous forme de pièces physiques.
+- Je préfère le tangible
+  Affichage avant obtention : secret / ????
+  Obtention : Porter une très grosse fortune sous forme de pièces physiques.
+- Ça pèse moins comme ça
+  Affichage avant obtention : secret / ????
+  Obtention : Réduire fortement l'encombrement des pièces par un change volontaire vers de grosses dénominations.
+- Prêt pour le long voyage
+  Affichage avant obtention : visible
+  Obtention : Acheter le sac à dos maximal actuel.
+- Même ça, j'ai rempli
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre 100 % avec le plus grand sac disponible.
+- Collection de sacs
+  Affichage avant obtention : secret / ????
+  Obtention : Acheter successivement tous les paliers de sacs.
+- Voyageur organisé
+  Affichage avant obtention : secret / ????
+  Obtention : Réaliser une exploration dont le pic d'encombrement reste sous 50 %.
+- Préparation impeccable
+  Affichage avant obtention : secret / ????
+  Obtention : Enchaîner plusieurs explorations dont le pic reste sous 85 %.
+- Minimaliste
+  Affichage avant obtention : visible
+  Obtention : Partir en exploration avec moins de 10 % de l'inventaire utilisé.
+- L'essentiel seulement
+  Affichage avant obtention : secret / ????
+  Obtention : Partir sous 10 % et ne jamais dépasser 50 % pendant la sortie.
+- Je voyage léger
+  Affichage avant obtention : secret / ????
+  Obtention : Enchaîner plusieurs sorties restant sous 50 %.
+- Un corps façonné
+  Affichage avant obtention : secret / ????
+  Obtention : Achever volontairement une transformation durable de morphologie.
+- Plus solide qu'avant
+  Affichage avant obtention : secret / ????
+  Obtention : Passer volontairement de Fine à Standard.
+- Taillé pour porter
+  Affichage avant obtention : secret / ????
+  Obtention : Passer volontairement de Standard à Robuste.
+- Plus léger qu'avant
+  Affichage avant obtention : secret / ????
+  Obtention : Passer volontairement de Robuste à Standard.
+- Affûté
+  Affichage avant obtention : secret / ????
+  Obtention : Passer volontairement de Standard à Fine.
+- Silhouette travaillée
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre volontairement Fine après entraînement et alimentation suivis.
+- Plume au vent
+  Affichage avant obtention : secret / ????
+  Obtention : Conserver Fine et démontrer durablement une excellente mobilité.
+- Affûté comme une lame
+  Affichage avant obtention : secret / ????
+  Obtention : Devenir volontairement Fin puis atteindre une grande mobilité réelle.
+- Ça flotte presque
+  Affichage avant obtention : secret / ????
+  Obtention : Petit gabarit racial + Fine + charge sous 25 %.
+- Bête de somme
+  Affichage avant obtention : secret / ????
+  Obtention : Robuste + sac maximal.
+- Tout sur le dos
+  Affichage avant obtention : secret / ????
+  Obtention : Robuste + plus de 150 % sans atteindre 200 %.
+- Déménageur
+  Affichage avant obtention : secret / ????
+  Obtention : Transporter une très grosse quantité d'équipement lourd dans une sortie sans atteindre 200 %.
+- L'art du minimum
+  Affichage avant obtention : secret / ????
+  Obtention : Avec Fine, enchaîner plusieurs sorties restant très légères.
+- Il m'a rendu service ?
+  Affichage avant obtention : secret / ????
+  Obtention : Se faire voler par un fuyard alors qu'on était déjà extrêmement surchargé.
+
+============================================================
+SERMENTS
+============================================================
+- Ma parole me lie
+  Affichage avant obtention : visible
+  Obtention : Prononcer son premier vrai serment.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Parole tenue
+  Affichage avant obtention : secret / ????
+  Obtention : Respecter longtemps un serment alors que le rompre aurait été avantageux.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Parjure
+  Affichage avant obtention : secret / ????
+  Obtention : Rompre volontairement un serment.
+  Effet : Trace sociale négative : certains personnages pourront réagir à un serment volontairement brisé.
+  Requis pour le titre ultime : non
+- Deux serments, un choix
+  Affichage avant obtention : secret / ????
+  Obtention : Être réellement forcé de sacrifier un serment pour en respecter un autre.
+  Effet : Titre de dilemme : volontairement non requis pour la complétion car les serments peuvent être exclusifs.
+  Requis pour le titre ultime : non
+
+============================================================
+VILLE / RÉPUTATION
+============================================================
+- Enfant du pays
+  Affichage avant obtention : visible
+  Obtention : Atteindre une réputation locale exceptionnelle dans une ville.
+  Effet : Réputation locale : peut changer certaines réactions de ville, rumeurs et demandes de guilde.
+  Requis pour le titre ultime : oui
+- Persona non grata
+  Affichage avant obtention : secret / ????
+  Obtention : Subir un vrai refus de service à cause d'une réputation locale très mauvaise.
+  Effet : Trace négative de réputation : non requise pour la complétion.
+  Requis pour le titre ultime : non
+- Racheter ses erreurs
+  Affichage avant obtention : secret / ????
+  Obtention : Revenir d'une réputation très négative par des réparations légitimes.
+  Effet : Réputation locale : peut changer certaines réactions de ville, rumeurs et demandes de guilde.
+  Requis pour le titre ultime : oui
+- Deux villes, deux visages
+  Affichage avant obtention : secret / ????
+  Obtention : Être très apprécié dans une ville et franchement mal vu dans une autre.
+  Effet : Réputation locale : peut changer certaines réactions de ville, rumeurs et demandes de guilde.
+  Requis pour le titre ultime : oui
+
+============================================================
+MONDE / RÉPUTATION
+============================================================
+- Tout le monde me connaît
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre une très haute réputation générale ou multi-locale.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Pas partout en bien
+  Affichage avant obtention : secret / ????
+  Obtention : Être célèbre avec des réputations très différentes selon les groupes et les villes.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MONDE / MÉMOIRE
+============================================================
+- Une histoire à raconter
+  Affichage avant obtention : visible
+  Obtention : Accumuler de nombreux événements historiques uniques sur le même personnage.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MONDE / RUMEURS
+============================================================
+- On parle de toi
+  Affichage avant obtention : secret / ????
+  Obtention : Devenir le sujet de plusieurs rumeurs indépendantes.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MONDE / RELATIONS
+============================================================
+- Je connais quelqu'un
+  Affichage avant obtention : secret / ????
+  Obtention : Disposer de contacts crédibles dans plusieurs organisations.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MONDE / FACTIONS
+============================================================
+- Aucun camp
+  Affichage avant obtention : secret / ????
+  Obtention : Rester indépendant malgré plusieurs propositions sérieuses de recrutement.
+  Effet : Titre de parcours alternatif : non requis pour la complétion.
+  Requis pour le titre ultime : non
+
+============================================================
+MONDE / PROGRESSION
+============================================================
+- Plusieurs vies
+  Affichage avant obtention : secret / ????
+  Obtention : Traverser de nombreux systèmes majeurs sur le même personnage.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MAGIE / MATÉRIAUX
+============================================================
+- Le prix de la puissance
+  Affichage avant obtention : secret / ????
+  Obtention : Sacrifier volontairement un matériau exceptionnel dans une vraie canalisation.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- À la bonne qualité
+  Affichage avant obtention : visible
+  Obtention : Réussir une recette avancée avec des qualités de matériaux choisies précisément.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MAGIE / DRÔLE
+============================================================
+- Ça devait marcher...
+  Affichage avant obtention : secret / ????
+  Obtention : Perdre légitimement un support lors d'un échec de stabilité.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MAGIE / CATALYSEURS
+============================================================
+- Le bâton est mort, pas moi
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir une incantation de secours avec un catalyseur brisé.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MAGIE / MAÎTRISE
+============================================================
+- Sans catalyseur
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir plusieurs incantations pures difficiles sans catalyseur.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Trois voies, une seule magie
+  Affichage avant obtention : secret / ????
+  Obtention : Expérimenter légitimement les trois approches magiques accessibles au personnage.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+MAGIE / GRIMOIRES
+============================================================
+- Je l'ai enfin compris
+  Affichage avant obtention : secret / ????
+  Obtention : Étudier jusqu'au bout un grimoire exigeant langue, niveau et temps.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+EMPLOI / ÉQUIPES
+============================================================
+- Sous contrat
+  Affichage avant obtention : visible
+  Obtention : Signer son premier contrat avec une équipe externe.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Employé modèle
+  Affichage avant obtention : visible
+  Obtention : Réussir plusieurs missions employeur sans avertissement disciplinaire.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Mise à pied
+  Affichage avant obtention : secret / ????
+  Obtention : Être réellement placé sur le banc pour raisons disciplinaires.
+  Effet : Trace disciplinaire négative : non requise pour la complétion.
+  Requis pour le titre ultime : non
+- Sans rancune
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer proprement plusieurs contrats auprès d'organisations différentes.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+EMPLOI / DRÔLE
+============================================================
+- Vous êtes viré.
+  Affichage avant obtention : secret / ????
+  Obtention : Se faire réellement licencier d'une organisation.
+  Effet : Titre négatif/humoristique : non requis pour la complétion.
+  Requis pour le titre ultime : non
+
+============================================================
+FIREFLIGHT
+============================================================
+- La marque n'a pas suffi
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre jusqu'au bout à une marque mortelle de FireFlight.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Toujours debout
+  Affichage avant obtention : secret / ????
+  Obtention : Survivre à une phase où FireFlight impose réellement des règles mortelles.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Tout le monde respire
+  Affichage avant obtention : secret / ????
+  Obtention : Faire traverser à tout le groupe une marque collective sans mort définitive.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+REAPERS-13
+============================================================
+- Canal interdit
+  Affichage avant obtention : secret / ????
+  Obtention : Utiliser légitimement le Protocol 13 après avoir obtenu une connaissance crédible des Reapers.
+  Effet : Titre secret lié à un canal classifié. Son existence reste cachée par défaut.
+  Requis pour le titre ultime : non
+- Signal reçu
+  Affichage avant obtention : secret / ????
+  Obtention : Recevoir une vraie réponse à une balise Protocol 13.
+  Effet : Titre secret Reaper : non requis pour la complétion générale.
+  Requis pour le titre ultime : non
+- Sous observation
+  Affichage avant obtention : secret / ????
+  Obtention : Attirer officiellement l'attention des Reapers sans être encore recruté.
+  Effet : Titre secret Reaper : non requis pour la complétion générale.
+  Requis pour le titre ultime : non
+- Ils t'ont choisi
+  Affichage avant obtention : secret / ????
+  Obtention : Être sélectionné officiellement par les Reapers.
+  Effet : Titre secret Reaper : non requis pour la complétion générale.
+  Requis pour le titre ultime : non
+- La treizième ligne
+  Affichage avant obtention : secret / ????
+  Obtention : Intégrer officiellement la 13th-Line.
+  Effet : Grade/faction Reaper : non requis pour la complétion générale.
+  Requis pour le titre ultime : non
+- Echo dans l'ombre
+  Affichage avant obtention : secret / ????
+  Obtention : Être accepté dans l'Echo Unit.
+  Effet : Grade/faction Reaper : non requis pour la complétion générale.
+  Requis pour le titre ultime : non
+- Operational-Reaper
+  Affichage avant obtention : secret / ????
+  Obtention : Obtenir officiellement le grade Operational Reaper.
+  Effet : Grade officiel Reaper, jamais accordé par simple puissance brute.
+  Requis pour le titre ultime : non
+- Reaper-Warden
+  Affichage avant obtention : secret / ????
+  Obtention : Obtenir officiellement le grade Reapers Warden.
+  Effet : Grade officiel extrêmement élevé, non requis pour la complétion générale.
+  Requis pour le titre ultime : non
+- Black Flag
+  Affichage avant obtention : secret / ????
+  Obtention : Intégrer l'unité principale du Reaper-13 si elle conserve ce nom officiel.
+  Effet : Titre d'unité classifié et non requis pour la complétion générale.
+  Requis pour le titre ultime : non
+- La fuite est terminée
+  Affichage avant obtention : secret / ????
+  Obtention : Capturer une cible majeure après une longue traque Reaper.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Pas pour la gloire
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer plusieurs opérations Reaper en privilégiant l'objectif à la récompense personnelle.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Observer avant d'agir
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir une mission dangereuse après une vraie phase de renseignement.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Aucune erreur
+  Affichage avant obtention : secret / ????
+  Obtention : Terminer une opération Reaper difficile sans perte, fuite de cible ni victime collatérale.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+REAPERS-13 / SECRET
+============================================================
+- Cible prioritaire
+  Affichage avant obtention : secret / ????
+  Obtention : Devenir une cible prioritaire du clan après un acte exceptionnellement hostile envers sa hiérarchie.
+  Effet : Titre extrêmement secret ; il ne remplace jamais le grade Reaper-13.
+  Requis pour le titre ultime : non
+
+============================================================
+CHANCE / SECRET
+============================================================
+- Luck is a skill
+  Affichage avant obtention : secret / ????
+  Obtention : Prouver légitimement, sur plusieurs situations réellement improbables, que la chance n'était peut-être pas qu'un accident.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- Je savais que ça marcherait
+  Affichage avant obtention : secret / ????
+  Obtention : Réussir une action significative avec une probabilité réellement très faible.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+- C'était prévu.
+  Affichage avant obtention : secret / ????
+  Obtention : Accumuler plusieurs événements favorables très improbables au cours d'une même aventure.
+  Effet : Titre de réputation : effet principalement narratif, social ou contextuel.
+  Requis pour le titre ultime : oui
+
+============================================================
+SYSTÈME / SECRET
+============================================================
+- Pourquoi ça marche ?
+  Affichage avant obtention : secret / ????
+  Obtention : Déclencher légitimement une combinaison très improbable de plusieurs systèmes.
+  Effet : Titre de système : marque une action méta du personnage, avec effet très faible surtout interface/lore.
+  Requis pour le titre ultime : oui
+
+============================================================
+SYSTÈME / INTÉGRITÉ
+============================================================
+- Rien à signaler
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre une très longue progression sans jamais altérer le personnage.
+  Effet : Titre de système : marque une action méta du personnage, avec effet très faible surtout interface/lore.
+  Requis pour le titre ultime : oui
+- Pur jusqu'au bout
+  Affichage avant obtention : secret / ????
+  Obtention : Atteindre une étape majeure de fin de progression sans aucune triche altérante.
+  Effet : Titre de système : marque une action méta du personnage, avec effet très faible surtout interface/lore.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -783,12 +2418,12 @@ HISTOIRE
 - Fin de chapitre
   Affichage avant obtention : secret / ????
   Obtention : Terminer le mode histoire principal lorsqu'il sera branché.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Trace d'histoire : marque une étape narrative majeure sans forcément donner un bonus de combat brut.
   Requis pour le titre ultime : oui
 - Et ce n'était que le début...
   Affichage avant obtention : secret / ????
   Obtention : Terminer le mode histoire et révéler que la suite commence seulement.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Trace d'histoire : marque une étape narrative majeure sans forcément donner un bonus de combat brut.
   Requis pour le titre ultime : oui
 
 ============================================================
@@ -811,193 +2446,40 @@ DRÔLE
 - J'ai glissé chef
   Affichage avant obtention : secret / ????
   Obtention : Tomber ou mourir d'une façon assez ridicule pour que le registre ait honte.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui
 - Promis c'était calculé
   Affichage avant obtention : secret / ????
   Obtention : Survivre à une situation qui ressemble beaucoup trop à une erreur.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui
 - Le plan était de survivre
   Affichage avant obtention : secret / ????
   Obtention : Gagner ou revenir d'un combat alors que le plan stratégique était flou.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui
 - Pas payé assez cher pour ça
   Affichage avant obtention : secret / ????
   Obtention : Accepter ou terminer une mission dont la récompense semblait trop petite pour le chaos.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui
 - Désolé la guilde
   Affichage avant obtention : secret / ????
   Obtention : Accumuler assez d'échecs, de dégâts ou d'anomalies pour embarrasser le comptoir.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui
 - Potion avant réflexion
   Affichage avant obtention : secret / ????
   Obtention : Abuser des consommables ou survivre grâce à une potion prise au dernier moment.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui
 - Inventaire trop lourd
   Affichage avant obtention : secret / ????
   Obtention : Accumuler assez d'objets ou matériaux pour que le sac devienne une menace.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui
 - Presque héroïque
   Affichage avant obtention : secret / ????
   Obtention : Faire quelque chose d'utile, mais pas assez propre pour que la guilde appelle ça héroïque.
-  Effet : effet générique de catégorie, surtout narratif/contextuel.
-  Requis pour le titre ultime : oui
-
-- Arme entretenue
-  Catégorie : Équipement / durabilité
-  Visibilité avant obtention : caché
-  Obtention : Débloquer ou utiliser une habitude de soin d'arme avant une sortie risquée.
-  Effet : Influence faible : forgerons et guildes remarquent que tu prépares ton arme avant qu'elle ne casse.
-  Compte pour le titre ultime : oui
-
-- Armure qui respire
-  Catégorie : Équipement / durabilité
-  Visibilité avant obtention : caché
-  Obtention : Respecter assez souvent l'ajustement d'une armure, surtout avec races ou sous-races.
-  Effet : Influence faible : les artisans réagissent mieux à tes remarques d'ajustement.
-  Compte pour le titre ultime : oui
-
-- Retour par le bon chemin
-  Catégorie : Biomes / exploration
-  Visibilité avant obtention : caché
-  Obtention : Accumuler assez de routes, fuites ou explorations pour apprendre à revenir proprement.
-  Effet : Influence faible : améliore surtout les dialogues de route et d'exploration.
-  Compte pour le titre ultime : oui
-
-============================================================
-DÉFIS, MALÉDICTIONS ET MARCHANDS LÉGENDAIRES
-============================================================
-- Triplement maudit
-  Affichage avant obtention : secret / ????
-  Obtention : Porter au moins trois malédictions actives en même temps.
-  Effet : Les exorcistes, la guilde et certains vendeurs remarquent que trois problèmes surnaturels cohabitent déjà sur le personnage.
-  Requis pour le titre ultime : oui
-- Le quatrième problème
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter un combat en portant au moins trois malédictions actives.
-  Effet : Titre de défi maudit, surtout narratif.
-  Requis pour le titre ultime : oui
-- Pas une égratignure
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter un combat sans subir le moindre dégât.
-  Effet : Marque d’exploit sans bonus de combat direct.
-  Requis pour le titre ultime : oui
-- À l'ancienne
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter un combat uniquement avec des attaques simples, sans compétence, technique d’arme ni consommable.
-  Effet : Réactions de guilde liées aux méthodes simples.
-  Requis pour le titre ultime : oui
-- Boss sans réserve
-  Affichage avant obtention : secret / ????
-  Obtention : Vaincre un boss sans utiliser de consommable.
-  Effet : Réputation de défi face aux boss.
-  Requis pour le titre ultime : oui
-- Seulement toi et le boss
-  Affichage avant obtention : secret / ????
-  Obtention : Vaincre un boss sans consommable, compétence de classe ni technique d’arme.
-  Effet : Réputation de duel extrêmement contraint.
-  Requis pour le titre ultime : oui
-- Encore debout, malheureusement
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter un combat avec au plus un quart de ses PV maximum.
-  Effet : Titre drôle de survie critique.
-  Requis pour le titre ultime : oui
-- Trois victoires, zéro gorgée
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter trois combats de défi sans utiliser de consommable.
-  Effet : Réputation de régularité auprès de la guilde.
-  Requis pour le titre ultime : oui
-- Le mur qui répond
-  Affichage avant obtention : secret / ????
-  Obtention : Défendre plusieurs fois puis remporter le combat.
-  Effet : Réputation de combattant patient et résistant.
-  Requis pour le titre ultime : oui
-- Victoire sous mauvaise influence
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter plusieurs combats en portant au moins une malédiction.
-  Effet : Réactions liées aux malédictions et à la guilde.
-  Requis pour le titre ultime : oui
-- Élite sans fiole
-  Affichage avant obtention : secret / ????
-  Obtention : Vaincre une créature élite ou un mini-boss sans consommable.
-  Effet : Réputation de chasse sous contrainte.
-  Requis pour le titre ultime : oui
-- Ça devait être rapide
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter un combat ayant duré au moins six tours d’action.
-  Effet : Titre drôle de combat beaucoup trop long.
-  Requis pour le titre ultime : oui
-- Six problèmes de moins
-  Affichage avant obtention : secret / ????
-  Obtention : Éliminer six créatures dans le cadre d’un même défi.
-  Effet : Réputation de nettoyage de groupe.
-  Requis pour le titre ultime : oui
-- Survivant des caisses
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter l’épreuve amicale de Bob et Maurice avec uniquement le contenu des caisses.
-  Effet : Réactions particulières du duo et de certains marchands.
-  Requis pour le titre ultime : oui
-- Témoin du marchand bleu
-  Affichage avant obtention : secret / ????
-  Obtention : Rencontrer le marchand héroïque dont les rumeurs paraissaient trop absurdes.
-  Effet : Débloque des rumeurs, scènes et passages de boutique liés au Hero Villager.
-  Requis pour le titre ultime : oui
-- Les deux du même comptoir
-  Affichage avant obtention : secret / ????
-  Obtention : Rencontrer Bob et Maurice et constater qu’ils refusent de voyager séparément.
-  Effet : Débloque leurs rumeurs, quêtes et apparitions temporaires.
-  Requis pour le titre ultime : oui
-
-
-- Personne ne reste derrière
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter un combat collectif avec tous les aventuriers encore debout.
-  Effet : Réactions de guilde liées à la protection du groupe.
-  Requis pour le titre ultime : oui
-- Escouade à l'ancienne
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter un combat collectif sans compétence, technique d’arme ni consommable.
-  Effet : Titre de défi collectif sans bonus de combat.
-  Requis pour le titre ultime : oui
-- Le groupe compte aussi les invoqués
-  Affichage avant obtention : secret / ????
-  Obtention : Gagner un combat où une invocation alliée a réellement infligé des dégâts.
-  Effet : Reconnaissance des invocations comme membres actifs du groupe.
-  Requis pour le titre ultime : oui
-- Groupe sans réserve
-  Affichage avant obtention : secret / ????
-  Obtention : Remporter un combat collectif sans consommable utilisé par l’équipe.
-  Effet : Réputation de coordination collective.
-  Requis pour le titre ultime : oui
-- Porte-marque de la guilde
-  Affichage avant obtention : secret / ????
-  Obtention : Échanger six Marques de défi au comptoir de la guilde.
-  Effet : Réactions sociales uniquement, sans remise ni bonus statistique.
-  Requis pour le titre ultime : oui
-- Le troisième avis n'était pas demandé
-  Affichage avant obtention : secret / ????
-  Obtention : Terminer la première longue chaîne de Bob et Maurice.
-  Effet : Réactions particulières du duo et de certains vendeurs.
-  Requis pour le titre ultime : oui
-
-- Un bon entraînement
-  Affichage avant obtention : visible
-  Obtention : Battre Torvald dans un 1v1 amical de guilde à partir du rang D.
-  Effet : Reconnaissance d'entraînement, surtout utilisée par les dialogues de guilde et les bases d'équipe.
-  Requis pour le titre ultime : oui
-- On recrute !
-  Affichage avant obtention : visible
-  Obtention : Battre Torvald puis ouvrir légalement son équipe aux candidats.
-  Effet : Si équipé, augmente les occasions de croiser des PNJ recrutables jusqu'au groupe complet de 5 personnes joueur compris.
-  Requis pour le titre ultime : oui
-- Anti clan
-  Affichage avant obtention : visible
-  Obtention : Battre Torvald puis choisir une posture de groupe fermé.
-  Effet : Si équipé, bloque volontairement les rencontres de PNJ recrutables.
+  Effet : Titre surtout roleplay : peut déclencher des répliques drôles ou humiliantes, sans bonus direct prévu.
   Requis pour le titre ultime : oui

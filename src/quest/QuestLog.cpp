@@ -5,6 +5,7 @@
 
 #include "quest/QuestLog.hpp"
 #include "quest/QuestCatalog.hpp"
+#include "quest/QuestSecondPhaseSystem.hpp"
 #include "world/City.hpp"
 
 #include <algorithm>
@@ -15,6 +16,12 @@
 
 namespace
 {
+    void finalizePrimaryQuestObjective(Quest& quest)
+    {
+        quest.completed = true;
+        QuestSecondPhaseSystem::revealAfterPrimaryCompletion(quest);
+    }
+
     std::string normalizeQuestText(std::string value)
     {
         std::transform(value.begin(), value.end(), value.begin(), [](unsigned char c) {
@@ -443,7 +450,7 @@ bool QuestLog::progressQuest(const std::string& questId, int amount)
             if (quest.progress >= quest.target)
             {
                 quest.progress = quest.target;
-                quest.completed = true;
+                finalizePrimaryQuestObjective(quest);
             }
 
             refreshLinkedQuestProgress();
@@ -463,7 +470,7 @@ bool QuestLog::completeQuest(const std::string& questId)
         if (quest.id == questId && quest.accepted && !quest.turnedIn && !quest.failed)
         {
             quest.progress = quest.target;
-            quest.completed = true;
+            finalizePrimaryQuestObjective(quest);
             refreshLinkedQuestProgress();
             return true;
         }
@@ -568,7 +575,7 @@ int QuestLog::progressCombatQuestsByFamily(int defeatedEnemyCount, const std::st
         if (quest.progress >= quest.target)
         {
             quest.progress = quest.target;
-            quest.completed = true;
+            finalizePrimaryQuestObjective(quest);
         }
 
         updated++;
@@ -626,7 +633,7 @@ int QuestLog::progressCombatQuestsForMonster(const Monster& monster, int amount)
         if (quest.progress >= quest.target)
         {
             quest.progress = quest.target;
-            quest.completed = true;
+            finalizePrimaryQuestObjective(quest);
         }
 
         updated++;
@@ -658,7 +665,7 @@ int QuestLog::refreshMaterialDeliveryQuests(const Inventory& inventory)
         if (inventory.countMaterialQualityPointsById(quest.requiredMaterialId) >= requiredQualityPoints)
         {
             quest.progress = quest.target;
-            quest.completed = true;
+            finalizePrimaryQuestObjective(quest);
             updated++;
         }
     }

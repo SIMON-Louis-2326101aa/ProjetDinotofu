@@ -9,7 +9,9 @@ class EconomyBalance
 {
 public:
     // Purchase/upgrade values below are authored economy units (1 unit = 1 PF).
-    static int cityVaultPurchaseCost(const std::string& cityId);
+    static int cityVaultPurchaseCost(const std::string& cityId, int ownedVaultCount = 0, int mayorDiscountTier = 0);
+    static int cityVaultSecuritySubscriptionCost(int vaultLevel);
+    static int cityVaultRecallMessengerSurchargeCopper(const std::string& fromCityId, const std::string& toCityId, int distanceKm);
     static int cityVaultUpgradeCost(const std::string& cityId, int currentLevel);
     static int cityVaultCapacityForLevel(int level);
     static int cityVaultExtraSlotsPerUpgrade();
@@ -25,6 +27,7 @@ public:
     static int innSafeRoomCostCopper(const std::string& cityId, int playerLevel);
     static int innWarmMealCostCopper(const std::string& cityId, int playerLevel);
     static int cityVaultMaterialTransferCostCopper(const std::string& fromCityId, const std::string& toCityId, int distanceKm, int quantity);
+    static int cityVaultCargoTransferCostCopper(const std::string& fromCityId, const std::string& toCityId, int distanceKm, int loadUnits);
 };
 
 #endif

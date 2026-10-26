@@ -18,6 +18,7 @@ public:
     // EN: Random declares or implements a focused behavior used by this module.
     // FR: Random déclare ou implémente un comportement précis utilisé par ce module.
     Random();
+    explicit Random(unsigned int seed);
 
     // EN: between declares or implements a focused behavior used by this module.
     // FR: between déclare ou implémente un comportement précis utilisé par ce module.

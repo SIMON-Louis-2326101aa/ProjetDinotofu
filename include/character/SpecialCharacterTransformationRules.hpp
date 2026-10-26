@@ -16,6 +16,7 @@ public:
     // EN: canTransformIntoSkuro declares or implements a focused behavior used by this module.
     // FR: canTransformIntoSkuro déclare ou implémente un comportement précis utilisé par ce module.
     static bool canTransformIntoSkuro(const std::string& characterName);
+    static bool canAppearTogether(const std::string& firstName, const std::string& secondName);
     // EN: shouldSanctusTransformAfterDamageTaken declares or implements a focused behavior used by this module.
     // FR: shouldSanctusTransformAfterDamageTaken déclare ou implémente un comportement précis utilisé par ce module.
     static bool shouldSanctusTransformAfterDamageTaken(int damageTaken, int maxHp);

@@ -260,7 +260,7 @@ EnemyCombatQueue AdventurerGroupEncounter::createSpecialGroup(
             break;
 
         case 5:
-            names = {"Hazak", "Hestia"};
+            names = {"Arone Aster"};
             break;
 
         case 6:
@@ -283,7 +283,7 @@ EnemyCombatQueue AdventurerGroupEncounter::createSpecialGroup(
             break;
 
         case 10:
-            names = {"Hestia", "Sanctus", "Hazak"};
+            names = {"Arone Aster"};
             break;
 
         case 11:
@@ -390,7 +390,6 @@ void AdventurerGroupEncounter::applyRelationshipBonus(
 )
 {
     bool hasHazak = containsName(groupNames, "Hazak");
-    bool hasHestia = containsName(groupNames, "Hestia");
     bool hasHenrique = containsName(groupNames, "Henrique");
     bool hasMattzelda = containsName(groupNames, "Mattzelda");
     bool hasLouis = containsName(groupNames, "Louis");
@@ -410,12 +409,6 @@ void AdventurerGroupEncounter::applyRelationshipBonus(
         if (characterName == "Kanadé") opponent.applyFlatStatBonus(12, 2, 7, 8);
         if (characterName == "Sanctus") opponent.applyFlatStatBonus(40, 0, 3, 1);
         return;
-    }
-
-    if (hasHazak && hasHestia)
-    {
-        if (characterName == "Hazak") opponent.applyFlatStatBonus(24, 2, 4, 6);
-        if (characterName == "Hestia") opponent.applyFlatStatBonus(14, 0, 2, 4);
     }
 
     if (hasHazak && hasHenrique)
@@ -443,13 +436,6 @@ void AdventurerGroupEncounter::applyRelationshipBonus(
         if (characterName == "Fail") opponent.applyFlatStatBonus(8, 1, 8, 9);
         if (characterName == "Aoi") opponent.applyFlatStatBonus(8, 1, 5, 5);
         if (characterName == "Kanadé") opponent.applyFlatStatBonus(8, 2, 7, 8);
-    }
-
-    if (hasHazak && hasHestia && hasSanctus)
-    {
-        if (characterName == "Hazak") opponent.applyFlatStatBonus(18, 2, 5, 6);
-        if (characterName == "Hestia") opponent.applyFlatStatBonus(24, 0, 3, 8);
-        if (characterName == "Sanctus") opponent.applyFlatStatBonus(42, 0, 2, 2);
     }
 
     if (hasHazak && hasFail)
@@ -483,12 +469,6 @@ void AdventurerGroupEncounter::announceRelationshipBonus(
         lines.push_back("Leur nom vient d'une vieille histoire de bras coupé, d'orc, de régénération et de catastrophes qui finissent quand même en réussite.");
         lines.push_back("Ils jouent aux héros, mais leur ego rend l'arène beaucoup moins prévisible.");
     }
-    else if (containsName(groupNames, "Hazak") && containsName(groupNames, "Hestia"))
-    {
-        lines.push_back("Relation active : Hazak protège Hestia");
-        lines.push_back("Danger : combat sérieux non-massacre");
-        lines.push_back("Ses attaques deviennent plus précises, mais le combat reste non-massacre.");
-    }
     else if (containsName(groupNames, "Aoi") && containsName(groupNames, "Kanadé") && containsName(groupNames, "Sanctus"))
     {
         lines.push_back("Relation active : Sanctus tient la ligne pendant qu'Aoi et Kanadé préparent leurs sorts.");
@@ -503,11 +483,6 @@ void AdventurerGroupEncounter::announceRelationshipBonus(
         lines.push_back("Relation active : Skuro présent");
         lines.push_back("Danger : très élevé et instable");
         lines.push_back("Skuro rend le groupe plus dangereux, mais aussi plus instable.");
-    }
-    else if (containsName(groupNames, "Hestia") && containsName(groupNames, "Sanctus") && containsName(groupNames, "Hazak"))
-    {
-        lines.push_back("Relation active : protection sacrée.");
-        lines.push_back("Sanctus tient la ligne, Hazak refuse le massacre, Hestia survit par réflexe divin.");
     }
     else if (containsName(groupNames, "Fail") && containsName(groupNames, "Aoi") && containsName(groupNames, "Kanadé"))
     {

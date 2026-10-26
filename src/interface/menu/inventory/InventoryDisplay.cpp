@@ -12,6 +12,7 @@
 #include "interface/TerminalInterface.hpp"
 
 #include "item/Inventory.hpp"
+#include "item/inventory/CarryLoadSystem.hpp"
 #include "item/consumable/Consumable.hpp"
 
 #include <algorithm>
@@ -229,6 +230,14 @@ MenuScreen InventoryDisplay::buildMainScreen()
         "inventory.quests",
         makeInventoryRouteItemData("quest", "quest", "Journal de quêtes", "Voir les quêtes suivies, terminées ou à rendre.", "Progression")
     );
+    screen.addOption(
+        11,
+        "Préférences de sélection",
+        "Choix des munitions et supports magiques : toujours demander par défaut.",
+        true,
+        "inventory.preferences",
+        makeInventoryRouteItemData("inventory_preferences", "configure", "Préférences de sélection", "Règle le comportement des choix répétitifs sans sacrifier le contrôle du joueur.", "Toujours demander par défaut")
+    );
     screen.addBackOption("Retour", "inventory.back");
     return screen;
 }
@@ -246,17 +255,38 @@ MenuScreen InventoryDisplay::buildSimpleFullInventoryScreen(const Player& player
 
     MenuScreen screen("INVENTAIRE - RÉSUMÉ SIMPLE", "inventory.full_simple.summary");
     screen.setContinueInput("Valide pour revenir à l'inventaire.");
-    screen.addSubtitle("Affichage volontairement court : noms, quantités et états importants.");
+    screen.addSubtitle("Affichage volontairement court : noms, quantités et états importants. Les objets épinglés sont placés en premier.");
     screen.addLine("Argent séparé : " + inventory.getWalletLine());
     screen.addLine("Argent total : " + inventory.getWalletTotalLine());
     screen.addLine("Perception sociale de la bourse : " + Money::socialStandingLabel(inventory.getCoinStacks()));
+    const CarryLoadSummary load = CarryLoadSystem::evaluate(player);
+    screen.addLine("Encombrement : " + std::to_string(load.used) + "/" + std::to_string(load.capacity) + " — " + std::to_string(load.percent) + " % — " + load.label + ".");
+    screen.addLine("Sac : palier " + std::to_string(player.getBackpackTier()) + " — base " + std::to_string(player.getBackpackBaseCapacity()) + " unités | Morphologie : " + CarryLoadSystem::morphologyLabel(player) + ".");
+    if (load.percent >= 85 && load.percent <= 100)
+        screen.addLine("Alerte : le sac dépasse 85 %. Aucun malus avant 100 %, mais il approche de la surcharge.");
+    else if (load.percent > 100 && load.percent < 200)
+        screen.addLine("Surcharge : fuite et précision de mêlée réduites, exploration/voyage ralentis ; petite protection physique supplémentaire.");
+    else if (load.movementBlocked)
+        screen.addLine("Charge critique >= 200 % : impossible de voyager ou de repartir en exploration avant d'alléger le sac.");
     screen.addLine("Objets spéciaux : Bestiaire + Encyclopédie + Carnet de découvertes (impossibles à perdre)");
     screen.addLine("Armes : " + std::to_string(inventory.getWeaponCount()));
 
-    for (int i = 0; i < inventory.getWeaponCount(); ++i)
+    std::vector<int> orderedWeaponIndices;
+    for (int i = 0; i < inventory.getWeaponCount(); ++i) orderedWeaponIndices.push_back(i);
+    std::stable_sort(orderedWeaponIndices.begin(), orderedWeaponIndices.end(), [&](int left, int right) {
+        const bool leftPinned = inventory.isPinnedItemKey(Inventory::weaponItemKey(inventory.getWeapon(left)));
+        const bool rightPinned = inventory.isPinnedItemKey(Inventory::weaponItemKey(inventory.getWeapon(right)));
+        return leftPinned && !rightPinned;
+    });
+
+    for (int index : orderedWeaponIndices)
     {
-        Weapon weapon = inventory.getWeapon(i);
-        std::string line = "[" + std::to_string(i) + "] " + weapon.getName() + inventoryWeaponClassCompatibilityTag(player, weapon)
+        Weapon weapon = inventory.getWeapon(index);
+        const std::string key = Inventory::weaponItemKey(weapon);
+        std::string prefix;
+        if (inventory.isPinnedItemKey(key)) prefix += "[ÉPINGLÉ] ";
+        if (inventory.isLockedItemKey(key)) prefix += "[VERROUILLÉ] ";
+        std::string line = "[" + std::to_string(index) + "] " + prefix + weapon.getName() + inventoryWeaponClassCompatibilityTag(player, weapon)
             + " | Durabilité : " + InventoryUtils::weaponDurabilityText(weapon);
 
         if (weapon.isBroken())
@@ -270,10 +300,22 @@ MenuScreen InventoryDisplay::buildSimpleFullInventoryScreen(const Player& player
     screen.addLine("");
     screen.addLine("Armures : " + std::to_string(inventory.getArmorCount()));
 
-    for (int i = 0; i < inventory.getArmorCount(); ++i)
+    std::vector<int> orderedArmorIndices;
+    for (int i = 0; i < inventory.getArmorCount(); ++i) orderedArmorIndices.push_back(i);
+    std::stable_sort(orderedArmorIndices.begin(), orderedArmorIndices.end(), [&](int left, int right) {
+        const bool leftPinned = inventory.isPinnedItemKey(Inventory::armorItemKey(inventory.getArmor(left)));
+        const bool rightPinned = inventory.isPinnedItemKey(Inventory::armorItemKey(inventory.getArmor(right)));
+        return leftPinned && !rightPinned;
+    });
+
+    for (int index : orderedArmorIndices)
     {
-        Armor armor = inventory.getArmor(i);
-        std::string line = "[" + std::to_string(i) + "] " + armor.getName() + inventoryArmorClassCompatibilityTag(player, armor)
+        Armor armor = inventory.getArmor(index);
+        const std::string key = Inventory::armorItemKey(armor);
+        std::string prefix;
+        if (inventory.isPinnedItemKey(key)) prefix += "[ÉPINGLÉ] ";
+        if (inventory.isLockedItemKey(key)) prefix += "[VERROUILLÉ] ";
+        std::string line = "[" + std::to_string(index) + "] " + prefix + armor.getName() + inventoryArmorClassCompatibilityTag(player, armor)
             + " | Durabilité : " + InventoryUtils::armorDurabilityText(armor);
 
         if (armor.isBroken())
@@ -288,12 +330,22 @@ MenuScreen InventoryDisplay::buildSimpleFullInventoryScreen(const Player& player
     screen.addLine("Consommables : " + std::to_string(inventory.getConsumableCount()));
 
     std::vector<ConsumableGroup> groups = InventoryUtils::groupConsumables(player);
+    std::stable_sort(groups.begin(), groups.end(), [&](const ConsumableGroup& left, const ConsumableGroup& right) {
+        const bool leftPinned = inventory.isPinnedItemKey(Inventory::consumableItemKey(inventory.getConsumable(left.firstIndex)));
+        const bool rightPinned = inventory.isPinnedItemKey(Inventory::consumableItemKey(inventory.getConsumable(right.firstIndex)));
+        return leftPinned && !rightPinned;
+    });
 
     for (int i = 0; i < static_cast<int>(groups.size()); ++i)
     {
         const ConsumableGroup& group = groups[i];
+        const Consumable& sample = inventory.getConsumable(group.firstIndex);
+        const std::string key = Inventory::consumableItemKey(sample);
+        std::string prefix;
+        if (inventory.isPinnedItemKey(key)) prefix += "[ÉPINGLÉ] ";
+        if (inventory.isLockedItemKey(key)) prefix += "[VERROUILLÉ] ";
         screen.addLine(
-            "[" + std::to_string(i) + "] " + InventoryUtils::stackLabel(group.name, group.amount)
+            "[" + std::to_string(i) + "] " + prefix + InventoryUtils::stackLabel(group.name, group.amount)
             + " | " + InventoryUtils::consumableTypeToText(group.type)
             + " | Puissance : " + std::to_string(group.power)
         );
@@ -302,10 +354,24 @@ MenuScreen InventoryDisplay::buildSimpleFullInventoryScreen(const Player& player
     screen.addLine("");
     screen.addLine("Matériaux / plantes / infos : " + std::to_string(inventory.getMaterialCount()));
 
-    for (int i = 0; i < static_cast<int>(inventory.getMaterials().size()); ++i)
+    std::vector<int> orderedMaterialIndices;
+    for (int i = 0; i < static_cast<int>(inventory.getMaterials().size()); ++i) orderedMaterialIndices.push_back(i);
+    std::stable_sort(orderedMaterialIndices.begin(), orderedMaterialIndices.end(), [&](int left, int right) {
+        const bool leftPinned = inventory.isPinnedItemKey(Inventory::materialItemKey(inventory.getMaterial(left)));
+        const bool rightPinned = inventory.isPinnedItemKey(Inventory::materialItemKey(inventory.getMaterial(right)));
+        return leftPinned && !rightPinned;
+    });
+
+    for (int index : orderedMaterialIndices)
     {
-        Material material = inventory.getMaterial(i);
-        std::string line = "[" + std::to_string(i) + "] " + material.getName()
+        Material material = inventory.getMaterial(index);
+        const std::string key = Inventory::materialItemKey(material);
+        std::string prefix;
+        if (inventory.isPinnedItemKey(key)) prefix += "[ÉPINGLÉ] ";
+        if (inventory.isFavoriteAmmunitionId(material.getId())) prefix += "[MUNITION FAVORITE] ";
+        if (inventory.isLockedItemKey(key)) prefix += "[VERROUILLÉ] ";
+        if (inventory.isTrackedMaterialId(material.getId())) prefix += "[SUIVI] ";
+        std::string line = "[" + std::to_string(index) + "] " + prefix + material.getName()
             + " x" + std::to_string(material.getQuantity())
             + " | " + material.getCategory();
 
@@ -330,7 +396,7 @@ void InventoryDisplay::displaySimpleFullInventory(const Player& player)
     Console::clear();
 }
 
-MenuScreen InventoryDisplay::buildSelectedWeaponScreen(const Weapon& weapon)
+MenuScreen InventoryDisplay::buildSelectedWeaponScreen(const Weapon& weapon, bool pinned, bool locked)
 {
     MenuScreen screen("ARME SÉLECTIONNÉE", "inventory.weapon.selected");
     screen.addLine("Arme : " + weapon.getName());
@@ -339,6 +405,8 @@ MenuScreen InventoryDisplay::buildSelectedWeaponScreen(const Weapon& weapon)
     screen.addOption(2, "Équiper", "Équiper cette arme maintenant.", true, "inventory.weapon.equip", makeInventoryWeaponItemData(weapon, "equip"));
     screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.weapon.bestiary", makeInventoryWeaponItemData(weapon, "inspect"));
     screen.addOption(4, "Réparer", "Utiliser un kit ou des matériaux compatibles.", true, "inventory.weapon.repair", makeInventoryWeaponItemData(weapon, "repair"));
+    screen.addOption(5, pinned ? "Désépingler" : "Épingler", pinned ? "L'arme reprendra sa place normale dans la liste." : "L'arme sera affichée en haut de l'inventaire.", true, "inventory.weapon.pin");
+    screen.addOption(6, locked ? "Déverrouiller" : "Verrouiller", locked ? "Retirer la protection supplémentaire avant vente/utilisation." : "Demander une confirmation supplémentaire avant toute vente ou utilisation sensible.", true, "inventory.weapon.lock");
     return screen;
 }
 
@@ -347,7 +415,7 @@ void InventoryDisplay::displaySelectedWeapon(const Weapon& weapon)
     TerminalInterface::renderMenuScreen(buildSelectedWeaponScreen(weapon));
 }
 
-MenuScreen InventoryDisplay::buildSelectedArmorScreen(const Armor& armor)
+MenuScreen InventoryDisplay::buildSelectedArmorScreen(const Armor& armor, bool pinned, bool locked)
 {
     MenuScreen screen("ARMURE SÉLECTIONNÉE", "inventory.armor.selected");
     screen.addLine("Armure : " + armor.getName());
@@ -356,6 +424,8 @@ MenuScreen InventoryDisplay::buildSelectedArmorScreen(const Armor& armor)
     screen.addOption(2, "Équiper", "Équiper cette protection maintenant.", true, "inventory.armor.equip", makeInventoryArmorItemData(armor, "equip"));
     screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.armor.bestiary", makeInventoryArmorItemData(armor, "inspect"));
     screen.addOption(4, "Réparer", "Utiliser un kit ou des matériaux compatibles.", true, "inventory.armor.repair", makeInventoryArmorItemData(armor, "repair"));
+    screen.addOption(5, pinned ? "Désépingler" : "Épingler", pinned ? "L'armure reprendra sa place normale dans la liste." : "L'armure sera affichée en haut de l'inventaire.", true, "inventory.armor.pin");
+    screen.addOption(6, locked ? "Déverrouiller" : "Verrouiller", locked ? "Retirer la protection supplémentaire avant vente/utilisation." : "Demander une confirmation supplémentaire avant toute vente ou utilisation sensible.", true, "inventory.armor.lock");
     return screen;
 }
 
@@ -364,7 +434,7 @@ void InventoryDisplay::displaySelectedArmor(const Armor& armor)
     TerminalInterface::renderMenuScreen(buildSelectedArmorScreen(armor));
 }
 
-MenuScreen InventoryDisplay::buildSelectedConsumableScreen(const Consumable& consumable, int amount)
+MenuScreen InventoryDisplay::buildSelectedConsumableScreen(const Consumable& consumable, int amount, bool pinned, bool locked)
 {
     amount = std::max(1, amount);
 
@@ -386,6 +456,8 @@ MenuScreen InventoryDisplay::buildSelectedConsumableScreen(const Consumable& con
     }
 
     screen.addOption(3, "Voir dans le bestiaire", "Consulter les informations connues liées à cette entrée.", true, "inventory.consumable.bestiary", makeInventoryConsumableItemData(consumable, "inspect", "", amount));
+    screen.addOption(4, pinned ? "Désépingler" : "Épingler", pinned ? "Ce consommable reprendra sa place normale." : "Ce consommable sera affiché en haut de l'inventaire.", true, "inventory.consumable.pin");
+    screen.addOption(5, locked ? "Déverrouiller" : "Verrouiller", locked ? "Retirer la protection supplémentaire." : "Demander une confirmation supplémentaire avant utilisation ou vente.", true, "inventory.consumable.lock");
     return screen;
 }
 
@@ -394,7 +466,7 @@ void InventoryDisplay::displaySelectedConsumable(const Consumable& consumable)
     TerminalInterface::renderMenuScreen(buildSelectedConsumableScreen(consumable));
 }
 
-MenuScreen InventoryDisplay::buildSelectedMaterialScreen(const Material& material)
+MenuScreen InventoryDisplay::buildSelectedMaterialScreen(const Material& material, bool pinned, bool locked, bool tracked, bool favoriteAmmunition)
 {
     MenuScreen screen("ENTRÉE SÉLECTIONNÉE", "inventory.material.selected");
     screen.addLine("Nom : " + material.getName());
@@ -405,6 +477,17 @@ MenuScreen InventoryDisplay::buildSelectedMaterialScreen(const Material& materia
     screen.addOption(2, "Voir dans le bestiaire", "Consulter la connaissance liée à cette ressource.", true, "inventory.material.bestiary", makeInventoryMaterialItemData(material, "inspect"));
     screen.addOption(3, "Voir les usages connus", "Recettes, réparations ou pistes déjà découvertes.", true, "inventory.material.uses", makeInventoryMaterialItemData(material, "inspect"));
     screen.addOption(4, "Lire / utiliser", "Exploiter cette entrée si elle contient une note ou un usage direct.", true, "inventory.material.use", makeInventoryMaterialItemData(material, "use"));
+    screen.addOption(5, pinned ? "Désépingler" : "Épingler", pinned ? "Ce matériau reprendra sa place normale." : "Ce matériau sera affiché tout en haut de la liste.", true, "inventory.material.pin");
+    screen.addOption(6, locked ? "Déverrouiller" : "Verrouiller", locked ? "Retirer la protection supplémentaire." : "Demander une confirmation supplémentaire avant vente ou consommation.", true, "inventory.material.lock");
+    screen.addOption(7, tracked ? "Arrêter le suivi" : "Suivre ce matériau", tracked ? "Les prochaines obtentions ne seront plus mises en évidence." : "Chaque prochaine obtention sera affichée immédiatement en évidence.", true, "inventory.material.track");
+    if (Inventory::isAmmunitionMaterialId(material.getId()))
+    {
+        screen.addOption(8, favoriteAmmunition ? "Retirer comme munition favorite" : "Définir comme munition favorite",
+            favoriteAmmunition
+                ? "Cette munition ne sera plus choisie automatiquement par le mode Favori."
+                : "Le mode Munitions — Favori pourra choisir automatiquement cette munition quand elle est compatible.",
+            true, "inventory.material.ammunition_favorite");
+    }
     return screen;
 }
 

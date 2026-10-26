@@ -265,10 +265,10 @@ function Select-ReleaseAsset {
     if ($asset) { return $asset }
 
     # 3. Bascule automatique entre .zip et .7z
-    $fallbackPattern = if ($cleanPattern -like "*.7z") { 
-        ($cleanPattern -replace '\.7z$', '.zip') 
-    } else { 
-        ($cleanPattern -replace '\.zip$', '.7z') 
+    $fallbackPattern = if ($cleanPattern -like "*.7z") {
+        ($cleanPattern -replace '\.7z$', '.zip')
+    } else {
+        ($cleanPattern -replace '\.zip$', '.7z')
     }
     $asset = $Release.assets | Where-Object { $_.name -like $fallbackPattern } | Select-Object -First 1
     if ($asset) { return $asset }

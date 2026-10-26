@@ -16,6 +16,7 @@
 #include "interface/menu/common/MessageScreen.hpp"
 
 #include "item/Inventory.hpp"
+#include "progression/magic/MagicStudyRules.hpp"
 
 #include "entity/Monster.hpp"
 
@@ -91,7 +92,12 @@ namespace
             successChance -= 8;
         }
 
+        const int knowledge = MagicStudyRules::magicKnowledgeScore(player);
+        successChance += std::clamp((knowledge - 10) / 2, 0, 7);
+        successChance = std::clamp(successChance, 35, 97);
+
         lines.push_back(player.getName() + " déchire " + potion.getName() + ".");
+        lines.push_back("Connaissances magiques : " + std::to_string(knowledge) + " (" + MagicStudyRules::magicKnowledgeLabel(knowledge) + ").");
         lines.push_back("Stabilité du parchemin : " + std::to_string(successChance) + "%.");
 
         if (random.between(1, 100) <= successChance)
@@ -621,10 +627,51 @@ bool CombatPotionUse::useSelectedPotion(
 
     if (type == ConsumableType::Special)
     {
+        if (potionNameContains(potion, "mana"))
+        {
+            if (player.getMana() >= player.getMaxMana())
+            {
+                showPotionNotice("MANA DÉJÀ PLEIN", "combat.potion.mana.full", {"La réserve magique est déjà pleine. Garde la potion pour plus tard."});
+                return false;
+            }
+
+            const int before = player.getMana();
+            player.restoreMana(std::max(1, potion.getPower()));
+            if (!player.hasInfiniteConsumables())
+            {
+                removeConsumedPotion(player, consumableIndex, potion);
+            }
+            showPotionNotice(
+                "POTION DE MANA",
+                "combat.potion.mana.result",
+                {
+                    player.getName() + " boit " + potion.getName() + ".",
+                    "Mana : " + std::to_string(before) + " -> " + std::to_string(player.getMana()) + "/" + std::to_string(player.getMaxMana()) + ".",
+                    "La potion rend la réserve, mais un malaise magique déjà subi ne disparaît pas instantanément."
+                }
+            );
+            return true;
+        }
+
         bool isScroll = potionNameContains(potion, "parchemin");
 
         if (isScroll)
         {
+            const std::vector<std::string> scrollBlockers = MagicStudyRules::scrollUseBlockers(player, potion.getName());
+            if (!scrollBlockers.empty())
+            {
+                std::vector<std::string> blockedLines = {
+                    "Le parchemin est bien dans tes mains, mais le tracé dépasse encore ce que tu peux stabiliser.",
+                    "Il n'est pas consommé."
+                };
+                for (const std::string& blocker : scrollBlockers)
+                {
+                    blockedLines.push_back("- " + blocker + ".");
+                }
+                showPotionNotice("PARCHEMIN INUTILISABLE", "combat.potion.scroll.requirements", blockedLines);
+                return false;
+            }
+
             Entity* spellTarget = target;
             if (spellTarget == nullptr && wave != nullptr && wave->hasActiveEnemies())
             {

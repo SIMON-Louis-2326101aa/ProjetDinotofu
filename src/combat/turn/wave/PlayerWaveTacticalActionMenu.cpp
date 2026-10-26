@@ -10,9 +10,12 @@
 #include "combat/system/DefensePostureSystem.hpp"
 #include "combat/system/CombatClassSystem.hpp"
 #include "combat/profile/MonsterBehaviorProfile.hpp"
+#include "combat/anatomy/MonsterAnatomySystem.hpp"
 #include "combat/system/ElementalAffinitySystem.hpp"
 #include "combat/role/CombatRoleActionSystem.hpp"
+#include "combat/group/CombatReserveSpilloverSystem.hpp"
 #include "combat/threat/ThreatSystem.hpp"
+#include "progression/TechniqueProgressionRules.hpp"
 
 #include "core/Console.hpp"
 
@@ -42,6 +45,41 @@
 namespace
 {
     using namespace PlayerWaveTacticalSupport;
+
+    bool tacticalLevelUnlocked(const Player& player, const std::string& actionKey)
+    {
+        return player.getLevel() >= TechniqueProgressionRules::tacticalActionUnlockLevel(actionKey);
+    }
+
+    std::string tacticalLevelRequirementHint(const Player& player, const std::string& actionKey)
+    {
+        const int requiredLevel = TechniqueProgressionRules::tacticalActionUnlockLevel(actionKey);
+        if (requiredLevel <= 1 || player.getLevel() >= requiredLevel)
+        {
+            return "";
+        }
+        return " Niveau requis : " + std::to_string(requiredLevel) + ".";
+    }
+
+    const std::string& tacticalActionKeyForChoice(int choice)
+    {
+        static const std::vector<std::string> keys = {
+            "",
+            "lanterne_cible", "lanterne_sol", "coup_de_pied", "poussiere", "observation_active",
+            "exploitation_ouverture", "piege_artisan", "preparation_arme", "brise_garde", "posture_soutien",
+            "rupture_formation", "coupe_signal", "lecture_corps", "chaine_etats", "marque_proie",
+            "retrait_controle", "lecture_menace", "balayage_bas", "rupture_concentration", "rupture_allonge",
+            "perce_rempart", "rupture_ancrage", "souffle_ralliement", "frappe_elan", "voile_urgence",
+            "etincelle_instable", "cri_guerre", "pas_ombre", "coup_arc", "signe_vigueur",
+            "feinte_sournoise", "suture_bataille", "canalisation_arcanique", "serment_rempart", "tir_arret",
+            "rage_maitrisee", "ordre_bataille", "totem_souffle", "bombe_atelier", "priere_acier",
+            "mantra_interieur", "image_trompeuse", "lien_invocation", "pacte_sanguin", "remede_fortune",
+            "lame_elementaire", "cercle_protecteur", "fleche_entravante", "chant_revigorant", "instinct_bete",
+            "danse_lame"
+        };
+        static const std::string empty;
+        return choice > 0 && choice < static_cast<int>(keys.size()) ? keys[choice] : empty;
+    }
 
     bool openTacticalActionMenuInternal(Player& player, EnemyCombatQueue& wave, Random& random)
     {
@@ -89,63 +127,80 @@ namespace
         screen.addLine("Les actifs restent choisis. Les usages réussis montent leur maîtrise, et certains passifs naissent après 3 essais.");
         screen.addLine("Les paliers donnent surtout fiabilité, précision, souffle ou petit rythme : pas de bonus absurde trop tôt.");
         screen.addBackOption("Retour", "wave.combat.tactical_actions.back");
-        screen.addOption(1, "Lancer une lanterne sur une cible", "Consomme une lanterne. Dégâts légers et effet de zone selon le type." + tacticalMasteryMenuHint(player, "lanterne_cible"), hasLantern && hasEnemy, "wave.combat.tactical_actions.lantern_target");
-        screen.addOption(2, "Jeter une lanterne au sol", "Consomme une lanterne. Gêne plusieurs ennemis actifs et prépare le terrain." + tacticalMasteryMenuHint(player, "lanterne_sol"), hasLantern && hasEnemy, "wave.combat.tactical_actions.lantern_floor");
-        screen.addOption(3, "Coup de pied / repousser", "Petit dégât, affaiblit brièvement une cible et force un mauvais appui." + tacticalMasteryMenuHint(player, "coup_de_pied"), hasEnemy, "wave.combat.tactical_actions.kick");
-        screen.addOption(4, "Poussière / objet au sol", "Gêne une cible sans consommer de ressource spéciale." + tacticalMasteryMenuHint(player, "poussiere"), hasEnemy, "wave.combat.tactical_actions.dust");
-        screen.addOption(5, "Observer activement", "Révèle la cible et applique une petite vulnérabilité tactique." + tacticalMasteryMenuHint(player, "observation_active"), hasEnemy, "wave.combat.tactical_actions.observe");
-        screen.addOption(6, "Exploiter une ouverture", "Transforme blessure/statut/vulnérabilité en réaction tactique. Disponible si une cible est ouverte." + tacticalMasteryMenuHint(player, "exploitation_ouverture"), hasOpening, "wave.combat.tactical_actions.exploit_opening");
-        screen.addOption(7, "Piège improvisé de terrain", "Consomme un petit matériau et gêne la ligne ennemie avec un bricolage rapide, distinct d'une vraie bombe d'atelier." + tacticalMasteryMenuHint(player, "piege_artisan"), hasEnemy && hasTrapMaterial, "wave.combat.tactical_actions.craft_trap");
-        screen.addOption(8, "Enduire / fusionner vite l'arme", "Consomme un composant pour préparer l'arme et appliquer un effet de terrain sur une cible." + tacticalMasteryMenuHint(player, "preparation_arme"), hasEnemy && hasWeaponPreparation, "wave.combat.tactical_actions.weapon_coating");
-        screen.addOption(9, "Brise-garde", "Contrôle court : dégâts faibles, vulnérabilité et affaiblissement. Plus utile contre les cibles déjà solides." + tacticalMasteryMenuHint(player, "brise_garde"), hasEnemy, "wave.combat.tactical_actions.guard_break");
-        screen.addOption(10, "Tenir la ligne / couvrir", "Action de soutien : garde, provocation courte et bonus défensif sans taper plus fort." + tacticalMasteryMenuHint(player, "posture_soutien"), true, "wave.combat.tactical_actions.support_stance");
-        screen.addOption(11, "Casser la formation", "Perturbe plusieurs ennemis, retire certaines postures et prépare une vraie reprise de tempo." + tacticalMasteryMenuHint(player, "rupture_formation"), hasFormation, "wave.combat.tactical_actions.break_formation");
-        screen.addOption(12, "Couper le signal", "Bouscule un appelant ou une race de bande avant que l'appel ne parte vraiment." + tacticalMasteryMenuHint(player, "coupe_signal"), hasSignal, "wave.combat.tactical_actions.cut_signal");
-        screen.addOption(13, "Viser une faille de corps", "Cherche une jointure, un noyau, un ventre mou ou une zone fragile selon la matière." + tacticalMasteryMenuHint(player, "lecture_corps"), hasEnemy, "wave.combat.tactical_actions.body_weakpoint");
-        screen.addOption(14, "Forcer une chaîne d'états", "Fait réagir plusieurs blessures, venins, brûlures ou failles déjà présents sur une cible." + tacticalMasteryMenuHint(player, "chaine_etats"), hasStatusCombo, "wave.combat.tactical_actions.status_chain");
-        screen.addOption(15, "Marquer une proie", "Désigne une cible, révèle sa lecture et prépare le prochain vrai impact contre elle." + tacticalMasteryMenuHint(player, "marque_proie"), hasEnemy, "wave.combat.tactical_actions.mark_prey");
-        screen.addOption(16, "Sens du retrait", "Recule proprement : garde courte, souffle repris et ligne moins facile à punir." + tacticalMasteryMenuHint(player, "retrait_controle"), true, "wave.combat.tactical_actions.controlled_retreat");
-        screen.addOption(17, "Lire la menace", "Repère le rôle dangereux d'une cible et prépare la réponse adaptée." + tacticalMasteryMenuHint(player, "lecture_menace"), hasEnemy, "wave.combat.tactical_actions.threat_read");
-        screen.addOption(18, "Lecture du balayage bas", "Geste large contre les petites cibles, ailes basses, pattes ou appuis nerveux." + tacticalMasteryMenuHint(player, "balayage_bas"), hasMobileTarget, "wave.combat.tactical_actions.low_sweep");
-        screen.addOption(19, "Étouffer la concentration", "Bouscule un soigneur, lanceur, porteur d'effet ou profil instable avant son prochain geste." + tacticalMasteryMenuHint(player, "rupture_concentration"), hasFocusTarget, "wave.combat.tactical_actions.focus_break");
-        screen.addOption(20, "Rompre l'allonge", "Casse la distance d'un tireur, lancier, duelliste ou lanceur trop bien placé." + tacticalMasteryMenuHint(player, "rupture_allonge"), hasReachTarget, "wave.combat.tactical_actions.reach_break");
-        screen.addOption(21, "Percer le rempart", "Cherche un angle contre bouclier, carapace, armure lourde ou corps verrouillé." + tacticalMasteryMenuHint(player, "perce_rempart"), hasShieldTarget, "wave.combat.tactical_actions.shield_pierce");
-        screen.addOption(22, "Rompre l'ancrage occulte", "Perturbe une marque, une aura, un mort-vivant, un spectre ou une énergie instable." + tacticalMasteryMenuHint(player, "rupture_ancrage"), hasOccultTarget, "wave.combat.tactical_actions.anchor_break");
-        screen.addOption(23, "Souffle rallié", "Resserre ton rythme : garde, précision et moral sans chercher un dégât immédiat." + tacticalMasteryMenuHint(player, "souffle_ralliement"), true, "wave.combat.tactical_actions.rally_breath");
-        screen.addOption(24, "Élan canalisé", "Attaque vive : dégâts directs puis souffle offensif si le mouvement traverse vraiment." + tacticalMasteryMenuHint(player, "frappe_elan"), hasEnemy, "wave.combat.tactical_actions.momentum_strike");
-        screen.addOption(25, "Réflexe de voile", "Protection courte : garde, résistance élémentaire et petite régénération de survie." + tacticalMasteryMenuHint(player, "voile_urgence"), true, "wave.combat.tactical_actions.emergency_ward");
-        screen.addOption(26, "Instabilité apprivoisée", "Geste magique ou alchimique : petit impact et effet élémentaire imprévisible." + tacticalMasteryMenuHint(player, "etincelle_instable"), hasEnemy, "wave.combat.tactical_actions.wild_spark");
-        screen.addOption(27, "Voix de guerre", "Buff de tempo : puissance, précision et garde courte avant la prochaine mêlée." + tacticalMasteryMenuHint(player, "cri_guerre"), true, "wave.combat.tactical_actions.war_cry");
-        screen.addOption(28, "Pas de l'ombre", "Technique agile : voleur, assassin, roublard, rôdeur, duelliste ou appuis naturellement félins/renards." + tacticalMasteryMenuHint(player, "pas_ombre"), canShadowStep, "wave.combat.tactical_actions.shadow_step");
-        screen.addOption(29, "Coup en arc", "Attaque large : touche jusqu'à deux ennemis actifs avec moins de précision mais plus de présence." + tacticalMasteryMenuHint(player, "coup_arc"), hasEnemy, "wave.combat.tactical_actions.arc_sweep");
-        screen.addOption(30, "Signe de vigueur", "Soutien personnel : souffle, soin lent et purge légère d'un mauvais état." + tacticalMasteryMenuHint(player, "signe_vigueur"), true, "wave.combat.tactical_actions.vigor_sign");
-        screen.addOption(31, "Feinte sournoise", "Technique de lames basses : faux angle, petite entaille et ouverture discrète." + tacticalMasteryMenuHint(player, "feinte_sournoise"), hasEnemy && canRogueFeint, "wave.combat.tactical_actions.rogue_feint");
-        screen.addOption(32, "Suture de bataille", "Technique de soutien : referme un peu, stabilise et retire parfois un mauvais état." + tacticalMasteryMenuHint(player, "suture_bataille"), canBattleSuture, "wave.combat.tactical_actions.battle_suture");
-        screen.addOption(33, "Canalisation arcanique", "Technique de canalisateur : prépare le prochain geste magique ou alchimique sans frapper tout de suite." + tacticalMasteryMenuHint(player, "canalisation_arcanique"), canArcaneChannel, "wave.combat.tactical_actions.arcane_channel");
-        screen.addOption(34, "Serment du rempart", "Technique de front : attire les regards, durcit la garde et tient la ligne." + tacticalMasteryMenuHint(player, "serment_rempart"), canGuardianOath, "wave.combat.tactical_actions.rampart_oath");
-        screen.addOption(35, "Tir d'arrêt", "Technique de pisteur : projectile ou geste précis pour stopper une avance." + tacticalMasteryMenuHint(player, "tir_arret"), hasEnemy && canStoppingShot, "wave.combat.tactical_actions.stopping_shot");
-        screen.addOption(36, "Rage maîtrisée", "Technique de front : frappe dure puis canalise l'élan au lieu de le laisser déborder." + tacticalMasteryMenuHint(player, "rage_maitrisee"), hasEnemy && canMasteredRage, "wave.combat.tactical_actions.mastered_rage");
-        screen.addOption(37, "Ordre de bataille", "Technique de commandement : rythme, précision et tenue de ligne sans frapper directement." + tacticalMasteryMenuHint(player, "ordre_bataille"), canBattleOrder, "wave.combat.tactical_actions.battle_order");
-        screen.addOption(38, "Totem de souffle", "Technique de nature : ancre courte, souffle lent et protection vivante." + tacticalMasteryMenuHint(player, "totem_souffle"), canBreathTotem, "wave.combat.tactical_actions.breath_totem");
-        screen.addOption(39, "Bombe d'atelier", "Technique d'artisan : projectile bricolé, effet instable et vrai impact de terrain." + tacticalMasteryMenuHint(player, "bombe_atelier"), hasEnemy && canWorkshopBomb, "wave.combat.tactical_actions.workshop_bomb");
-        screen.addOption(40, "Prière d'acier", "Technique sacrée : protection, souffle et purification courte sous pression." + tacticalMasteryMenuHint(player, "priere_acier"), canSteelPrayer, "wave.combat.tactical_actions.steel_prayer");
-        screen.addOption(41, "Mantra intérieur", "Technique martiale : souffle, précision, garde et purge d'un mauvais rythme." + tacticalMasteryMenuHint(player, "mantra_interieur"), canInnerMantra, "wave.combat.tactical_actions.inner_mantra");
-        screen.addOption(42, "Image trompeuse", "Technique d'illusion : laisse une fausse ouverture et revient par un angle plus sûr." + tacticalMasteryMenuHint(player, "image_trompeuse"), hasEnemy && canTrickImage, "wave.combat.tactical_actions.trick_image");
-        screen.addOption(43, "Lien d'invocation", "Technique de lien : ancre une présence alliée ou spectrale autour de la ligne." + tacticalMasteryMenuHint(player, "lien_invocation"), canSummoningLink, "wave.combat.tactical_actions.summoning_link");
-        screen.addOption(44, "Pacte sanguin", "Technique risquée : paie un peu de chair pour obtenir élan, morsure et souffle noir." + tacticalMasteryMenuHint(player, "pacte_sanguin"), hasEnemy && canBloodPact, "wave.combat.tactical_actions.blood_pact");
-        screen.addOption(45, "Remède de fortune", "Technique de terrain : stabilise le corps avec soin, dosage et gestes rapides." + tacticalMasteryMenuHint(player, "remede_fortune"), canFieldRemedy, "wave.combat.tactical_actions.field_remedy");
-        screen.addOption(46, "Lame élémentaire", "Technique élémentaire : charge l'arme ou la main puis frappe avec une couleur instable." + tacticalMasteryMenuHint(player, "lame_elementaire"), hasEnemy && canElementalBlade, "wave.combat.tactical_actions.elemental_blade");
-        screen.addOption(47, "Cercle protecteur", "Technique de garde : trace un cercle court qui protège le corps et calme la ligne." + tacticalMasteryMenuHint(player, "cercle_protecteur"), canProtectiveCircle, "wave.combat.tactical_actions.protective_circle");
-        screen.addOption(48, "Flèche entravante", "Technique de tireur : cloue un appui, une aile ou une fuite avec un tir précis." + tacticalMasteryMenuHint(player, "fleche_entravante"), hasEnemy && canBindingShot, "wave.combat.tactical_actions.binding_shot");
-        screen.addOption(49, "Chant revigorant", "Technique de présence : relève le souffle, nettoie la peur et remet du rythme." + tacticalMasteryMenuHint(player, "chant_revigorant"), canInspiringChant, "wave.combat.tactical_actions.inspiring_chant");
-        screen.addOption(50, "Instinct de bête", "Technique sauvage : laisse parler les réflexes, gagne l'élan et mord une ouverture." + tacticalMasteryMenuHint(player, "instinct_bete"), hasEnemy && canBeastInstinct, "wave.combat.tactical_actions.beast_instinct");
-        screen.addOption(51, "Danse de lame", "Technique de duel : 2 coups avec une arme légère, 3 coups si deux armes légères sont prêtes." + tacticalMasteryMenuHint(player, "danse_lame"), hasEnemy && canBladeDance, "wave.combat.tactical_actions.blade_dance");
+        screen.addOption(1, "Lancer une lanterne sur une cible", "Consomme une lanterne. Dégâts légers et effet de zone selon le type." + tacticalMasteryMenuHint(player, "lanterne_cible") + tacticalLevelRequirementHint(player, "lanterne_cible"), (hasLantern && hasEnemy) && tacticalLevelUnlocked(player, "lanterne_cible"), "wave.combat.tactical_actions.lantern_target");
+        screen.addOption(2, "Jeter une lanterne au sol", "Consomme une lanterne. Gêne plusieurs ennemis actifs et prépare le terrain." + tacticalMasteryMenuHint(player, "lanterne_sol") + tacticalLevelRequirementHint(player, "lanterne_sol"), (hasLantern && hasEnemy) && tacticalLevelUnlocked(player, "lanterne_sol"), "wave.combat.tactical_actions.lantern_floor");
+        screen.addOption(3, "Coup de pied / repousser", "Petit dégât, affaiblit brièvement une cible et force un mauvais appui." + tacticalMasteryMenuHint(player, "coup_de_pied") + tacticalLevelRequirementHint(player, "coup_de_pied"), (hasEnemy) && tacticalLevelUnlocked(player, "coup_de_pied"), "wave.combat.tactical_actions.kick");
+        screen.addOption(4, "Poussière / objet au sol", "Gêne une cible sans consommer de ressource spéciale." + tacticalMasteryMenuHint(player, "poussiere") + tacticalLevelRequirementHint(player, "poussiere"), (hasEnemy) && tacticalLevelUnlocked(player, "poussiere"), "wave.combat.tactical_actions.dust");
+        screen.addOption(5, "Observer activement", "Révèle la cible et applique une petite vulnérabilité tactique." + tacticalMasteryMenuHint(player, "observation_active") + tacticalLevelRequirementHint(player, "observation_active"), (hasEnemy) && tacticalLevelUnlocked(player, "observation_active"), "wave.combat.tactical_actions.observe");
+        screen.addOption(6, "Exploiter une ouverture", "Transforme blessure/statut/vulnérabilité en réaction tactique. Disponible si une cible est ouverte." + tacticalMasteryMenuHint(player, "exploitation_ouverture") + tacticalLevelRequirementHint(player, "exploitation_ouverture"), (hasOpening) && tacticalLevelUnlocked(player, "exploitation_ouverture"), "wave.combat.tactical_actions.exploit_opening");
+        screen.addOption(7, "Piège improvisé de terrain", "Consomme un petit matériau et gêne la ligne ennemie avec un bricolage rapide, distinct d'une vraie bombe d'atelier." + tacticalMasteryMenuHint(player, "piege_artisan") + tacticalLevelRequirementHint(player, "piege_artisan"), (hasEnemy && hasTrapMaterial) && tacticalLevelUnlocked(player, "piege_artisan"), "wave.combat.tactical_actions.craft_trap");
+        screen.addOption(8, "Enduire / fusionner vite l'arme", "Consomme un composant pour préparer l'arme et appliquer un effet de terrain sur une cible." + tacticalMasteryMenuHint(player, "preparation_arme") + tacticalLevelRequirementHint(player, "preparation_arme"), (hasEnemy && hasWeaponPreparation) && tacticalLevelUnlocked(player, "preparation_arme"), "wave.combat.tactical_actions.weapon_coating");
+        screen.addOption(9, "Brise-garde", "Contrôle court : dégâts faibles, vulnérabilité et affaiblissement. Plus utile contre les cibles déjà solides." + tacticalMasteryMenuHint(player, "brise_garde") + tacticalLevelRequirementHint(player, "brise_garde"), (hasEnemy) && tacticalLevelUnlocked(player, "brise_garde"), "wave.combat.tactical_actions.guard_break");
+        screen.addOption(10, "Tenir la ligne / couvrir", "Action de soutien : garde, provocation courte et bonus défensif sans taper plus fort." + tacticalMasteryMenuHint(player, "posture_soutien") + tacticalLevelRequirementHint(player, "posture_soutien"), (true) && tacticalLevelUnlocked(player, "posture_soutien"), "wave.combat.tactical_actions.support_stance");
+        screen.addOption(11, "Casser la formation", "Perturbe plusieurs ennemis, retire certaines postures et prépare une vraie reprise de tempo." + tacticalMasteryMenuHint(player, "rupture_formation") + tacticalLevelRequirementHint(player, "rupture_formation"), (hasFormation) && tacticalLevelUnlocked(player, "rupture_formation"), "wave.combat.tactical_actions.break_formation");
+        screen.addOption(12, "Couper le signal", "Bouscule un appelant ou une race de bande avant que l'appel ne parte vraiment." + tacticalMasteryMenuHint(player, "coupe_signal") + tacticalLevelRequirementHint(player, "coupe_signal"), (hasSignal) && tacticalLevelUnlocked(player, "coupe_signal"), "wave.combat.tactical_actions.cut_signal");
+        screen.addOption(13, "Viser une faille de corps", "Cherche une jointure, un noyau, un ventre mou ou une zone fragile selon la matière." + tacticalMasteryMenuHint(player, "lecture_corps") + tacticalLevelRequirementHint(player, "lecture_corps"), (hasEnemy) && tacticalLevelUnlocked(player, "lecture_corps"), "wave.combat.tactical_actions.body_weakpoint");
+        screen.addOption(14, "Forcer une chaîne d'états", "Fait réagir plusieurs blessures, venins, brûlures ou failles déjà présents sur une cible." + tacticalMasteryMenuHint(player, "chaine_etats") + tacticalLevelRequirementHint(player, "chaine_etats"), (hasStatusCombo) && tacticalLevelUnlocked(player, "chaine_etats"), "wave.combat.tactical_actions.status_chain");
+        screen.addOption(15, "Marquer une proie", "Désigne une cible, révèle sa lecture et prépare le prochain vrai impact contre elle." + tacticalMasteryMenuHint(player, "marque_proie") + tacticalLevelRequirementHint(player, "marque_proie"), (hasEnemy) && tacticalLevelUnlocked(player, "marque_proie"), "wave.combat.tactical_actions.mark_prey");
+        screen.addOption(16, "Sens du retrait", "Recule proprement : garde courte, souffle repris et ligne moins facile à punir." + tacticalMasteryMenuHint(player, "retrait_controle") + tacticalLevelRequirementHint(player, "retrait_controle"), (true) && tacticalLevelUnlocked(player, "retrait_controle"), "wave.combat.tactical_actions.controlled_retreat");
+        screen.addOption(17, "Lire la menace", "Repère le rôle dangereux d'une cible et prépare la réponse adaptée." + tacticalMasteryMenuHint(player, "lecture_menace") + tacticalLevelRequirementHint(player, "lecture_menace"), (hasEnemy) && tacticalLevelUnlocked(player, "lecture_menace"), "wave.combat.tactical_actions.threat_read");
+        screen.addOption(18, "Lecture du balayage bas", "Geste large contre les petites cibles, ailes basses, pattes ou appuis nerveux." + tacticalMasteryMenuHint(player, "balayage_bas") + tacticalLevelRequirementHint(player, "balayage_bas"), (hasMobileTarget) && tacticalLevelUnlocked(player, "balayage_bas"), "wave.combat.tactical_actions.low_sweep");
+        screen.addOption(19, "Étouffer la concentration", "Bouscule un soigneur, lanceur, porteur d'effet ou profil instable avant son prochain geste." + tacticalMasteryMenuHint(player, "rupture_concentration") + tacticalLevelRequirementHint(player, "rupture_concentration"), (hasFocusTarget) && tacticalLevelUnlocked(player, "rupture_concentration"), "wave.combat.tactical_actions.focus_break");
+        screen.addOption(20, "Rompre l'allonge", "Casse la distance d'un tireur, lancier, duelliste ou lanceur trop bien placé." + tacticalMasteryMenuHint(player, "rupture_allonge") + tacticalLevelRequirementHint(player, "rupture_allonge"), (hasReachTarget) && tacticalLevelUnlocked(player, "rupture_allonge"), "wave.combat.tactical_actions.reach_break");
+        screen.addOption(21, "Percer le rempart", "Cherche un angle contre bouclier, carapace, armure lourde ou corps verrouillé." + tacticalMasteryMenuHint(player, "perce_rempart") + tacticalLevelRequirementHint(player, "perce_rempart"), (hasShieldTarget) && tacticalLevelUnlocked(player, "perce_rempart"), "wave.combat.tactical_actions.shield_pierce");
+        screen.addOption(22, "Rompre l'ancrage occulte", "Perturbe une marque, une aura, un mort-vivant, un spectre ou une énergie instable." + tacticalMasteryMenuHint(player, "rupture_ancrage") + tacticalLevelRequirementHint(player, "rupture_ancrage"), (hasOccultTarget) && tacticalLevelUnlocked(player, "rupture_ancrage"), "wave.combat.tactical_actions.anchor_break");
+        screen.addOption(23, "Souffle rallié", "Resserre ton rythme : garde, précision et moral sans chercher un dégât immédiat." + tacticalMasteryMenuHint(player, "souffle_ralliement") + tacticalLevelRequirementHint(player, "souffle_ralliement"), (true) && tacticalLevelUnlocked(player, "souffle_ralliement"), "wave.combat.tactical_actions.rally_breath");
+        screen.addOption(24, "Élan canalisé", "Attaque vive : dégâts directs puis souffle offensif si le mouvement traverse vraiment." + tacticalMasteryMenuHint(player, "frappe_elan") + tacticalLevelRequirementHint(player, "frappe_elan"), (hasEnemy) && tacticalLevelUnlocked(player, "frappe_elan"), "wave.combat.tactical_actions.momentum_strike");
+        screen.addOption(25, "Réflexe de voile", "Protection courte : garde, résistance élémentaire et petite régénération de survie." + tacticalMasteryMenuHint(player, "voile_urgence") + tacticalLevelRequirementHint(player, "voile_urgence"), (true) && tacticalLevelUnlocked(player, "voile_urgence"), "wave.combat.tactical_actions.emergency_ward");
+        screen.addOption(26, "Instabilité apprivoisée", "Geste magique ou alchimique : petit impact et effet élémentaire imprévisible." + tacticalMasteryMenuHint(player, "etincelle_instable") + tacticalLevelRequirementHint(player, "etincelle_instable"), (hasEnemy) && tacticalLevelUnlocked(player, "etincelle_instable"), "wave.combat.tactical_actions.wild_spark");
+        screen.addOption(27, "Voix de guerre", "Buff de tempo : puissance, précision et garde courte avant la prochaine mêlée." + tacticalMasteryMenuHint(player, "cri_guerre") + tacticalLevelRequirementHint(player, "cri_guerre"), (true) && tacticalLevelUnlocked(player, "cri_guerre"), "wave.combat.tactical_actions.war_cry");
+        screen.addOption(28, "Pas de l'ombre", "Technique agile : voleur, assassin, roublard, rôdeur, duelliste ou appuis naturellement félins/renards." + tacticalMasteryMenuHint(player, "pas_ombre") + tacticalLevelRequirementHint(player, "pas_ombre"), (canShadowStep) && tacticalLevelUnlocked(player, "pas_ombre"), "wave.combat.tactical_actions.shadow_step");
+        screen.addOption(29, "Coup en arc", "Attaque large : touche jusqu'à deux ennemis actifs avec moins de précision mais plus de présence." + tacticalMasteryMenuHint(player, "coup_arc") + tacticalLevelRequirementHint(player, "coup_arc"), (hasEnemy) && tacticalLevelUnlocked(player, "coup_arc"), "wave.combat.tactical_actions.arc_sweep");
+        screen.addOption(30, "Signe de vigueur", "Soutien personnel : souffle, soin lent et purge légère d'un mauvais état." + tacticalMasteryMenuHint(player, "signe_vigueur") + tacticalLevelRequirementHint(player, "signe_vigueur"), (true) && tacticalLevelUnlocked(player, "signe_vigueur"), "wave.combat.tactical_actions.vigor_sign");
+        screen.addOption(31, "Feinte sournoise", "Technique de lames basses : faux angle, petite entaille et ouverture discrète." + tacticalMasteryMenuHint(player, "feinte_sournoise") + tacticalLevelRequirementHint(player, "feinte_sournoise"), (hasEnemy && canRogueFeint) && tacticalLevelUnlocked(player, "feinte_sournoise"), "wave.combat.tactical_actions.rogue_feint");
+        screen.addOption(32, "Suture de bataille", "Technique de soutien : referme un peu, stabilise et retire parfois un mauvais état." + tacticalMasteryMenuHint(player, "suture_bataille") + tacticalLevelRequirementHint(player, "suture_bataille"), (canBattleSuture) && tacticalLevelUnlocked(player, "suture_bataille"), "wave.combat.tactical_actions.battle_suture");
+        screen.addOption(33, "Canalisation arcanique", "Technique de canalisateur : prépare le prochain geste magique ou alchimique sans frapper tout de suite." + tacticalMasteryMenuHint(player, "canalisation_arcanique") + tacticalLevelRequirementHint(player, "canalisation_arcanique"), (canArcaneChannel) && tacticalLevelUnlocked(player, "canalisation_arcanique"), "wave.combat.tactical_actions.arcane_channel");
+        screen.addOption(34, "Serment du rempart", "Technique de front : attire les regards, durcit la garde et tient la ligne." + tacticalMasteryMenuHint(player, "serment_rempart") + tacticalLevelRequirementHint(player, "serment_rempart"), (canGuardianOath) && tacticalLevelUnlocked(player, "serment_rempart"), "wave.combat.tactical_actions.rampart_oath");
+        screen.addOption(35, "Tir d'arrêt", "Technique de pisteur : projectile ou geste précis pour stopper une avance." + tacticalMasteryMenuHint(player, "tir_arret") + tacticalLevelRequirementHint(player, "tir_arret"), (hasEnemy && canStoppingShot) && tacticalLevelUnlocked(player, "tir_arret"), "wave.combat.tactical_actions.stopping_shot");
+        screen.addOption(36, "Rage maîtrisée", "Technique de front : frappe dure puis canalise l'élan au lieu de le laisser déborder." + tacticalMasteryMenuHint(player, "rage_maitrisee") + tacticalLevelRequirementHint(player, "rage_maitrisee"), (hasEnemy && canMasteredRage) && tacticalLevelUnlocked(player, "rage_maitrisee"), "wave.combat.tactical_actions.mastered_rage");
+        screen.addOption(37, "Ordre de bataille", "Technique de commandement : rythme, précision et tenue de ligne sans frapper directement." + tacticalMasteryMenuHint(player, "ordre_bataille") + tacticalLevelRequirementHint(player, "ordre_bataille"), (canBattleOrder) && tacticalLevelUnlocked(player, "ordre_bataille"), "wave.combat.tactical_actions.battle_order");
+        screen.addOption(38, "Totem de souffle", "Technique de nature : ancre courte, souffle lent et protection vivante." + tacticalMasteryMenuHint(player, "totem_souffle") + tacticalLevelRequirementHint(player, "totem_souffle"), (canBreathTotem) && tacticalLevelUnlocked(player, "totem_souffle"), "wave.combat.tactical_actions.breath_totem");
+        screen.addOption(39, "Bombe d'atelier", "Technique d'artisan : projectile bricolé, effet instable et vrai impact de terrain." + tacticalMasteryMenuHint(player, "bombe_atelier") + tacticalLevelRequirementHint(player, "bombe_atelier"), (hasEnemy && canWorkshopBomb) && tacticalLevelUnlocked(player, "bombe_atelier"), "wave.combat.tactical_actions.workshop_bomb");
+        screen.addOption(40, "Prière d'acier", "Technique sacrée : protection, souffle et purification courte sous pression." + tacticalMasteryMenuHint(player, "priere_acier") + tacticalLevelRequirementHint(player, "priere_acier"), (canSteelPrayer) && tacticalLevelUnlocked(player, "priere_acier"), "wave.combat.tactical_actions.steel_prayer");
+        screen.addOption(41, "Mantra intérieur", "Technique martiale : souffle, précision, garde et purge d'un mauvais rythme." + tacticalMasteryMenuHint(player, "mantra_interieur") + tacticalLevelRequirementHint(player, "mantra_interieur"), (canInnerMantra) && tacticalLevelUnlocked(player, "mantra_interieur"), "wave.combat.tactical_actions.inner_mantra");
+        screen.addOption(42, "Image trompeuse", "Technique d'illusion : laisse une fausse ouverture et revient par un angle plus sûr." + tacticalMasteryMenuHint(player, "image_trompeuse") + tacticalLevelRequirementHint(player, "image_trompeuse"), (hasEnemy && canTrickImage) && tacticalLevelUnlocked(player, "image_trompeuse"), "wave.combat.tactical_actions.trick_image");
+        screen.addOption(43, "Lien d'invocation", "Technique de lien : ancre une présence alliée ou spectrale autour de la ligne." + tacticalMasteryMenuHint(player, "lien_invocation") + tacticalLevelRequirementHint(player, "lien_invocation"), (canSummoningLink) && tacticalLevelUnlocked(player, "lien_invocation"), "wave.combat.tactical_actions.summoning_link");
+        screen.addOption(44, "Pacte sanguin", "Technique risquée : paie un peu de chair pour obtenir élan, morsure et souffle noir." + tacticalMasteryMenuHint(player, "pacte_sanguin") + tacticalLevelRequirementHint(player, "pacte_sanguin"), (hasEnemy && canBloodPact) && tacticalLevelUnlocked(player, "pacte_sanguin"), "wave.combat.tactical_actions.blood_pact");
+        screen.addOption(45, "Remède de fortune", "Technique de terrain : stabilise le corps avec soin, dosage et gestes rapides." + tacticalMasteryMenuHint(player, "remede_fortune") + tacticalLevelRequirementHint(player, "remede_fortune"), (canFieldRemedy) && tacticalLevelUnlocked(player, "remede_fortune"), "wave.combat.tactical_actions.field_remedy");
+        screen.addOption(46, "Lame élémentaire", "Technique élémentaire : charge l'arme ou la main puis frappe avec une couleur instable." + tacticalMasteryMenuHint(player, "lame_elementaire") + tacticalLevelRequirementHint(player, "lame_elementaire"), (hasEnemy && canElementalBlade) && tacticalLevelUnlocked(player, "lame_elementaire"), "wave.combat.tactical_actions.elemental_blade");
+        screen.addOption(47, "Cercle protecteur", "Technique de garde : trace un cercle court qui protège le corps et calme la ligne." + tacticalMasteryMenuHint(player, "cercle_protecteur") + tacticalLevelRequirementHint(player, "cercle_protecteur"), (canProtectiveCircle) && tacticalLevelUnlocked(player, "cercle_protecteur"), "wave.combat.tactical_actions.protective_circle");
+        screen.addOption(48, "Flèche entravante", "Technique de tireur : cloue un appui, une aile ou une fuite avec un tir précis." + tacticalMasteryMenuHint(player, "fleche_entravante") + tacticalLevelRequirementHint(player, "fleche_entravante"), (hasEnemy && canBindingShot) && tacticalLevelUnlocked(player, "fleche_entravante"), "wave.combat.tactical_actions.binding_shot");
+        screen.addOption(49, "Chant revigorant", "Technique de présence : relève le souffle, nettoie la peur et remet du rythme." + tacticalMasteryMenuHint(player, "chant_revigorant") + tacticalLevelRequirementHint(player, "chant_revigorant"), (canInspiringChant) && tacticalLevelUnlocked(player, "chant_revigorant"), "wave.combat.tactical_actions.inspiring_chant");
+        screen.addOption(50, "Instinct de bête", "Technique sauvage : laisse parler les réflexes, gagne l'élan et mord une ouverture." + tacticalMasteryMenuHint(player, "instinct_bete") + tacticalLevelRequirementHint(player, "instinct_bete"), (hasEnemy && canBeastInstinct) && tacticalLevelUnlocked(player, "instinct_bete"), "wave.combat.tactical_actions.beast_instinct");
+        screen.addOption(51, "Danse de lame", "Technique de duel : 2 coups avec une arme légère, 3 coups si deux armes légères sont prêtes." + tacticalMasteryMenuHint(player, "danse_lame") + tacticalLevelRequirementHint(player, "danse_lame"), (hasEnemy && canBladeDance) && tacticalLevelUnlocked(player, "danse_lame"), "wave.combat.tactical_actions.blade_dance");
 
         const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
 
         if (choice == 0)
         {
+            return false;
+        }
+
+        const std::string& selectedActionKey = tacticalActionKeyForChoice(choice);
+        if (!selectedActionKey.empty() && !tacticalLevelUnlocked(player, selectedActionKey))
+        {
+            const int requiredLevel = TechniqueProgressionRules::tacticalActionUnlockLevel(selectedActionKey);
+            MessageScreen::show(
+                "TECHNIQUE TROP AVANCÉE",
+                "wave.combat.tactical_actions.level_locked",
+                {
+                    "Ton expérience actuelle ne suffit pas encore pour exécuter proprement ce geste.",
+                    "Niveau requis : " + std::to_string(requiredLevel) + ".",
+                    "Ton niveau actuel : " + std::to_string(player.getLevel()) + "."
+                },
+                false
+            );
             return false;
         }
 
@@ -1058,6 +1113,13 @@ namespace
                 }
                 target.takeDamage(damage);
                 lines.push_back("Impact précis : " + std::to_string(damage) + " dégâts.");
+
+                const MonsterWeakPointHitResult anatomyReaction = MonsterAnatomySystem::resolveWeakPointReaction(target, player, random);
+                if (anatomyReaction.triggered)
+                {
+                    lines.insert(lines.end(), anatomyReaction.lines.begin(), anatomyReaction.lines.end());
+                }
+
                 lines.push_back(trained
                     ? "Lecture des corps : ton regard trouve plus vite les jointures, noyaux et appuis faibles."
                     : "Lecture brute : l'angle existe, mais il demande encore de l'habitude.");
@@ -1777,7 +1839,7 @@ namespace
         if (choice == 25)
         {
             const bool trained = player.hasPassiveSkill("emergency_warder")
-                || player.hasPassiveSkill("learned_elemental_ward")
+                || player.hasActiveSkill("learned_elemental_ward")
                 || player.hasPassiveSkill("minor_fire_resistance")
                 || player.hasPassiveSkill("minor_cold_resistance")
                 || playerClassContainsAny(player, {"mage", "prêtre", "pretre", "paladin", "druide", "chaman", "soigneur", "protecteur"});
@@ -1821,7 +1883,7 @@ namespace
             const std::string targetName = target.getName();
             const bool trained = player.hasPassiveSkill("wild_spark")
                 || player.hasPassiveSkill("careful_dosage")
-                || player.hasPassiveSkill("learned_arcane_mark")
+                || player.hasActiveSkill("learned_arcane_mark")
                 || playerClassContainsAny(player, {"mage", "alchimiste", "artificier", "sorcier", "occultiste", "kitsune"});
             const int masteryBonus = tacticalMasterySoftBonus(player, "etincelle_instable");
             const int masteryDuration = tacticalMasteryDurationBonus(player, "etincelle_instable");
@@ -2009,7 +2071,7 @@ namespace
         {
             const bool trained = player.hasPassiveSkill("vigor_sign_mastery")
                 || player.hasPassiveSkill("emergency_warder")
-                || player.hasPassiveSkill("learned_mana_suture")
+                || player.hasActiveSkill("learned_mana_suture")
                 || playerClassContainsAny(player, {"prêtre", "pretre", "paladin", "druide", "soigneur", "chaman", "moine"});
 
             const int masteryBonus = tacticalMasterySoftBonus(player, "signe_vigueur");
@@ -2426,6 +2488,46 @@ namespace
             }
             target.takeDamage(damage);
             ThreatSystem::consumeForcedTargetIfNeeded(target);
+
+            std::vector<std::string> bombLines = {
+                player.getName() + " lance un bricolage instable qui éclate au ras de la ligne.",
+                targetName + " reçoit " + std::to_string(damage) + " dégâts.",
+                effectLine
+            };
+
+            // Une vraie explosion assez large peut lécher la file d'attente, mais jamais à pleine puissance.
+            CombatReserveEffectReach blastReach = trained ? CombatReserveEffectReach::Wide : CombatReserveEffectReach::Edge;
+            if (trained && masteryBonus >= 4) blastReach = CombatReserveEffectReach::Massive;
+            if (wave.getWaitingEnemyCount() > 0)
+            {
+                const CombatReserveSpillover spill = CombatReserveSpilloverSystem::roll(damage, blastReach, random);
+                const int maxTargets = std::min(
+                    wave.getWaitingEnemyCount(),
+                    CombatReserveSpilloverSystem::maxAffectedReserveTargets(blastReach));
+                int touched = 0;
+                int totalSpill = 0;
+                for (int index = 0; index < maxTargets && index < wave.getWaitingEnemyCount();)
+                {
+                    const std::string waitingName = wave.getWaitingEnemy(index).getName();
+                    const int beforeCount = wave.getWaitingEnemyCount();
+                    const int effective = wave.damageWaitingEnemy(index, spill.amount);
+                    if (effective > 0)
+                    {
+                        ++touched;
+                        totalSpill += effective;
+                        bombLines.push_back("Réserve touchée : " + waitingName + " subit " + std::to_string(effective) + " dégâts indirects.");
+                    }
+                    if (wave.getWaitingEnemyCount() == beforeCount) ++index;
+                }
+                if (touched > 0)
+                {
+                    bombLines.push_back("Débordement de zone : " + std::to_string(spill.percent)
+                        + "% de la puissance atteint " + std::to_string(touched) + " cible(s) en attente ("
+                        + CombatReserveSpilloverSystem::reachLabel(blastReach) + ", "
+                        + std::to_string(totalSpill) + " dégâts cumulés).");
+                }
+            }
+
             wave.removeDeadAndReplace();
 
             player.recordCanonicalEvent("actions_tactiques_combat", "bombe_atelier", "Bombe d'atelier", 1);
@@ -2435,11 +2537,7 @@ namespace
             MessageScreen::show(
                 "BOMBE D'ATELIER",
                 "wave.combat.tactical_actions.workshop_bomb.result",
-                {
-                    player.getName() + " lance un bricolage instable qui éclate au ras de la ligne.",
-                    targetName + " reçoit " + std::to_string(damage) + " dégâts.",
-                    effectLine
-                },
+                bombLines,
                 false
             );
             return true;

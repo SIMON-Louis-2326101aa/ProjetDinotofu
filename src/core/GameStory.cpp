@@ -189,7 +189,7 @@ void Game::launchStoryModePlaceholder()
         screen.addOption(
             2,
             "Nouvelle histoire",
-            "Repartir au vrai début : fumée blanche, niveau 1, aucun confort de bac à sable.",
+            "Repartir au tout début de cette route avec ce personnage.",
             true,
             "story.new"
         );
@@ -629,7 +629,7 @@ void Game::openStoryAccessMenu()
         }
         if (choice == 3)
         {
-            QuestMenu::openLocations(mainPlayer);
+            QuestMenu::openLocations(mainPlayer, selectedDifficulty, selectedDeathRule);
             saveCurrentProgress("Histoire : lieux et services consultés");
             continue;
         }
@@ -744,13 +744,13 @@ void Game::resetMainPlayerForStoryStart()
     playerName = oldName;
 
     MessageScreen::show(
-        "HISTOIRE — RESET",
+        "DÉPART HISTOIRE PRÊT",
         "story.start.reset.done",
         {
-            "Le personnage est revenu au départ histoire.",
+            "Le personnage est revenu au départ de cette route histoire.",
             "Niveau : 1.",
-            "Inventaire : vidé avant le prologue.",
-            "La fumée blanche a mangé les souvenirs utiles, les routes connues et le confort du bac à sable."
+            "Inventaire : vidé comme annoncé lors de la confirmation.",
+            "Le prologue peut maintenant commencer."
         },
         false
     );
@@ -2830,12 +2830,18 @@ void Game::playStoryWhiteFogPrologue()
     Player memoryPlayer = StoryPrologueMemory::createTemporaryPlayer(mainPlayer, selectedDifficulty);
 
     MessageScreen::show(
-        "PROLOGUE — UN SOUVENIR AVANT LE DÉBUT",
+        "UNE JOURNÉE DE CHASSE",
         "story.white_fog.intro",
         StoryCampaign::buildWhiteFogPrologueLines(mainPlayer)
     );
     MessageScreen::show(
-        "CONTRAT — FRAGMENT MÉMORIEL",
+        "AVANT LA MONTÉE",
+        "story.white_fog.memory_routine",
+        StoryPrologueMemory::buildOrdinaryRoutineLines(memoryPlayer),
+        false
+    );
+    MessageScreen::show(
+        "CONTRAT — TEXTE INCOMPLET",
         "story.white_fog.memory_contract",
         StoryPrologueMemory::buildMissionFragmentLines(memoryPlayer),
         false
@@ -2848,7 +2854,7 @@ void Game::playStoryWhiteFogPrologue()
     approachChoice.addOption(1, "Formation serrée", "Avancer groupés et préparer une couverture défensive.", true, "story.white_fog.memory.approach.guard");
     approachChoice.addOption(2, "Chasse rapide", "Prendre l'initiative et mettre immédiatement la pression sur le chef.", true, "story.white_fog.memory.approach.pressure");
     approachChoice.addOption(3, "Comme d'habitude", "Laisser les automatismes du groupe retrouver leur propre rythme.", true, "story.white_fog.memory.approach.balance");
-    int approach = TerminalInterface::askMenuChoiceFromOptions(approachChoice, "Choisis comment votre ancien groupe aborde la chasse.");
+    int approach = TerminalInterface::askMenuChoiceFromOptions(approachChoice, "Choisis comment votre groupe aborde la chasse.");
     Console::clear();
 
     MessageScreen::show(
@@ -2866,34 +2872,16 @@ void Game::playStoryWhiteFogPrologue()
         approach
     );
 
-    std::vector<std::string> memoryOutcomeLines;
-    if (memoryResult.outcome == StoryPrologueOutcome::Victory)
-    {
-        memoryOutcomeLines.push_back("La meute est tombée. Le contrat aurait dû être terminé ici.");
-    }
-    else if (memoryResult.outcome == StoryPrologueOutcome::Retreat)
-    {
-        memoryOutcomeLines.push_back("Tu as donné le signal de décrocher. Le groupe quitte la chasse vivant, mais pas intact.");
-    }
-    else
-    {
-        memoryOutcomeLines.push_back("Ton corps cède avant la meute. Une voix ordonne la retraite pendant qu'une autre revient vers toi.");
-    }
-    memoryOutcomeLines.push_back("Tours vécus dans le souvenir : " + std::to_string(memoryResult.turns) + ".");
-    memoryOutcomeLines.push_back("Ennemis abattus dans le souvenir : " + std::to_string(memoryResult.defeatedEnemies) + "/3.");
-    memoryOutcomeLines.push_back("Cette bataille n'accorde ni expérience, ni butin, ni entrée de bestiaire au personnage du présent.");
-    MessageScreen::show("FIN DE LA CHASSE", "story.white_fog.memory.outcome", memoryOutcomeLines, false);
-
     MessageScreen::show(
         "QUELQUE CHOSE REMONTE LE GLACIER",
         "story.white_fog.memory.fog_transition",
         StoryPrologueMemory::buildFogTransitionLines(mainPlayer, memoryResult),
         false
     );
-    MessageScreen::show("LA BRUME MANGE LES NOMS", "story.white_fog.memory_loss", StoryCampaign::buildWhiteFogMemoryLossLines(mainPlayer), false);
+    MessageScreen::show("DES MOTS QUI NE REVIENNENT PAS", "story.white_fog.memory_loss", StoryCampaign::buildWhiteFogMemoryLossLines(mainPlayer), false);
 
     MenuScreen firstChoice("FORÊT BLANCHE", "story.white_fog.choice_1");
-    firstChoice.addSubtitle("Aucun équipement. Aucun souvenir fiable.");
+    firstChoice.addSubtitle("Mains vides. Aucun repère sûr.");
     firstChoice.addLine("La brume mange les troncs. Elle ne cache pas la forêt : elle la remplace.");
     firstChoice.addLine("Tes mains sont vides. Même ton nom paraît venir de quelqu’un d’autre.");
     firstChoice.addOption(1, "Avancer lentement vers les arbres moins blancs", "Garder une direction sans courir dans la brume.", true, "story.white_fog.slow");
@@ -2924,9 +2912,9 @@ void Game::playStoryWhiteFogPrologue()
     MessageScreen::show("RENCONTRE", "story.white_fog.encounter_1", report, false);
 
     MenuScreen encounter("RENCONTRE SANS ARME", "story.white_fog.encounter_choice");
-    encounter.addSubtitle("Combat impossible : seulement parade ou fuite.");
+    encounter.addSubtitle("Mains nues face à quelque chose qui chasse.");
     encounter.addLine("Tu n’as ni arme, ni armure, ni potion fiable.");
-    encounter.addLine("L’objectif n’est pas de gagner. L’objectif est de sortir vivant.");
+    encounter.addLine("Ton corps ne te demande pas de vaincre : il cherche déjà l'angle qui te laissera vivant dans dix secondes.");
     encounter.addOption(1, "Parer avec les avant-bras et reculer", "Réduire le choc et chercher une ouverture.", true, "story.white_fog.block");
     encounter.addOption(2, "Fuir vers les arbres moins serrés", "Tenter de casser la ligne d’attaque.", true, "story.white_fog.escape");
     int second = TerminalInterface::askMenuChoiceFromOptions(encounter, "Choisis : parer ou fuir.");
@@ -2986,8 +2974,8 @@ void Game::playStoryWhiteFogPrologue()
         const std::vector<std::string> specialLines = StoryCampaign::buildWhiteFogKitReactionLines(mainPlayer, third);
         endLines.insert(endLines.end(), specialLines.begin(), specialLines.end());
     }
-    endLines.push_back("Kit de départ récupéré. La vraie histoire peut commencer.");
-    endLines.push_back("Au loin, une ville tient à peine debout. Ce sera ton premier refuge, pas encore ta maison.");
+    endLines.push_back("Dans le paquet : juste assez pour ne plus avancer les mains vides.");
+    endLines.push_back("Au loin, une ville tient à peine debout. Pour l'instant, c'est simplement le seul endroit qui ressemble à un refuge.");
     MessageScreen::show("PROLOGUE TERMINÉ", "story.white_fog.completed", endLines, false);
 }
 

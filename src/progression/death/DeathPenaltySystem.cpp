@@ -4,6 +4,7 @@
 // Français : Ce fichier prépare les futures pénalités de mort pour les parties non létales.
 
 #include "progression/death/DeathPenaltySystem.hpp"
+#include "combat/death/LethalSpiritResistanceSystem.hpp"
 #include "economy/Money.hpp"
 
 #include "item/Inventory.hpp"
@@ -61,6 +62,22 @@ namespace
     bool isBaseArmor(const Armor& armor)
     {
         return armor.getName() == "Tenue simple";
+    }
+
+    std::string weaponHistorySubjectId(const Weapon& weapon)
+    {
+        return weapon.getPersistentId().empty() ? "weapon:" + weapon.getName() : weapon.getPersistentId();
+    }
+
+    std::string armorHistorySubjectId(const Armor& armor)
+    {
+        return armor.getPersistentId().empty() ? "armor:" + armor.getName() : armor.getPersistentId();
+    }
+
+    void recordEquipmentLoss(Player& player, const std::string& category, const std::string& subjectId, const std::string& label)
+    {
+        if (subjectId.empty() || label.empty()) return;
+        player.recordHistoricalEvent(category, subjectId, label, true);
     }
 }
 
@@ -124,6 +141,12 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
                 if (player.destroyEquippedWeapon())
                 {
                     result.markWeaponStolen();
+                    recordEquipmentLoss(
+                        player,
+                        "equipment_lost",
+                        weaponHistorySubjectId(weaponSnapshot),
+                        "Équipement perdu : " + weaponSnapshot.getName() + " a été volé après une défaite non définitive."
+                    );
                 }
             }
             else
@@ -139,12 +162,15 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
                     result.addWeaponDurabilityLost(durabilityLoss);
                 }
 
-                if (rollChance(random, DifficultyRules::getDeathEquipmentForcedBreakChance(difficulty)))
+                bool weaponForcedBreak = false;
+                if (weapon->getDurability() > 0
+                    && rollChance(random, DifficultyRules::getDeathEquipmentForcedBreakChance(difficulty)))
                 {
                     if (!player.hasIndestructibleEquipment())
                     {
                         weapon->loseDurability(weapon->getDurability());
                         result.markWeaponBroken();
+                        weaponForcedBreak = true;
                     }
                 }
 
@@ -157,7 +183,22 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
                     {
                         result.markWeaponIrreparable();
                         result.addRecoveredMaterialFragments(1);
+                        recordEquipmentLoss(
+                            player,
+                            "equipment_destroyed",
+                            weaponHistorySubjectId(weaponSnapshot),
+                            "Équipement détruit : " + weaponSnapshot.getName() + " est devenu irréparable après une défaite non définitive."
+                        );
                     }
+                }
+                else if (weaponForcedBreak)
+                {
+                    recordEquipmentLoss(
+                        player,
+                        "equipment_forced_break",
+                        weaponHistorySubjectId(weaponSnapshot),
+                        "Casse forcée : " + weaponSnapshot.getName() + " a été brisé par les conséquences d'une défaite non définitive."
+                    );
                 }
             }
         }
@@ -169,6 +210,7 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
 
     if (player.hasEquippedArmor() && !player.hasEquipmentProtection())
     {
+        Armor armorSnapshot = player.getEquippedArmor();
         Armor* armor = player.getInventory().getMutableArmor(player.getEquippedArmorIndex());
 
         if (armor != nullptr && !armor->isIndestructible() && !isBaseArmor(*armor))
@@ -181,6 +223,12 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
                 if (player.destroyEquippedArmor())
                 {
                     result.markArmorStolen();
+                    recordEquipmentLoss(
+                        player,
+                        "equipment_lost",
+                        armorHistorySubjectId(armorSnapshot),
+                        "Équipement perdu : " + armorSnapshot.getName() + " a été volé après une défaite non définitive."
+                    );
                 }
             }
             else
@@ -196,12 +244,15 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
                     result.addArmorDurabilityLost(durabilityLoss);
                 }
 
-                if (rollChance(random, DifficultyRules::getDeathEquipmentForcedBreakChance(difficulty)))
+                bool armorForcedBreak = false;
+                if (armor->getDurability() > 0
+                    && rollChance(random, DifficultyRules::getDeathEquipmentForcedBreakChance(difficulty)))
                 {
                     if (!player.hasIndestructibleEquipment())
                     {
                         armor->loseDurability(armor->getDurability());
                         result.markArmorBroken();
+                        armorForcedBreak = true;
                     }
                 }
 
@@ -214,7 +265,22 @@ DeathPenaltyResult DeathPenaltySystem::applyNonLethalDeathPenalty(
                     {
                         result.markArmorIrreparable();
                         result.addRecoveredMaterialFragments(1);
+                        recordEquipmentLoss(
+                            player,
+                            "equipment_destroyed",
+                            armorHistorySubjectId(armorSnapshot),
+                            "Équipement détruit : " + armorSnapshot.getName() + " est devenu irréparable après une défaite non définitive."
+                        );
                     }
+                }
+                else if (armorForcedBreak)
+                {
+                    recordEquipmentLoss(
+                        player,
+                        "equipment_forced_break",
+                        armorHistorySubjectId(armorSnapshot),
+                        "Casse forcée : " + armorSnapshot.getName() + " a été brisé par les conséquences d'une défaite non définitive."
+                    );
                 }
             }
         }
@@ -297,6 +363,53 @@ void DeathPenaltySystem::displayLethalCurrentDeathStatistic()
     screen.addLine("Morts du personnage : [STATISTIQUE CORROMPUE]");
     screen.addLine("But de mission : survivre.");
     screen.setDisplayOnlyInput("Statistique corrompue affichée sans choix joueur.");
+    TerminalInterface::renderMenuScreen(screen, false);
+}
+
+void DeathPenaltySystem::displayLethalSpiritResistance(const LethalSpiritResistanceResult& result)
+{
+    MenuScreen screen(
+        result.survived ? "L'ESPRIT REFUSE DE CÉDER" : "L'ESPRIT S'ÉTEINT",
+        result.survived ? "death.lethal.spirit_resistance.success" : "death.lethal.spirit_resistance.failure"
+    );
+    screen.addLine("Cette résistance n'existe qu'une seule fois dans la vie du personnage.");
+    screen.addLine("Aucun allié ne réussit à t'arracher à la mort. Il ne reste que ta propre volonté.");
+    screen.addLine("");
+
+    int successes = 0;
+    int failures = 0;
+    for (std::size_t i = 0; i < result.rolls.size(); ++i)
+    {
+        const int roll = result.rolls[i];
+        const bool success = roll >= LethalSpiritResistanceSystem::D20SuccessThreshold;
+        if (success) ++successes; else ++failures;
+        screen.addLine(
+            "Pastille de volonté " + std::to_string(i + 1) + " — d20 : " + std::to_string(roll)
+            + (success ? " → l'esprit tient." : " → la prise se relâche.")
+        );
+        if (successes >= LethalSpiritResistanceSystem::RequiredSuccesses
+            || failures >= LethalSpiritResistanceSystem::RequiredFailures)
+        {
+            break;
+        }
+    }
+
+    screen.addLine("");
+    screen.addLine(
+        "Résultat des pastilles : " + std::to_string(result.successes) + "/3 tenues, "
+        + std::to_string(result.failures) + "/3 perdues."
+    );
+    if (result.survived)
+    {
+        screen.addLine("Quelque chose en toi refuse de lâcher prise. Tu reviens à 1 PV.");
+        screen.addLine("Cette résistance spirituelle est désormais consumée pour toujours.");
+    }
+    else
+    {
+        screen.addLine("La volonté seule ne suffit pas cette fois.");
+        screen.addLine("Cette unique résistance spirituelle est tout de même consumée : elle ne reviendra pas lors d'une future mort.");
+    }
+    screen.setDisplayOnlyInput("Résistance spirituelle létale résolue automatiquement.");
     TerminalInterface::renderMenuScreen(screen, false);
 }
 

@@ -174,4 +174,3 @@ void EquipmentComparison::displayArmorComparison(
 
     MessageScreen::show("COMPARAISON D'ARMURE", "equipment.armor.compare.result", lines);
 }
-

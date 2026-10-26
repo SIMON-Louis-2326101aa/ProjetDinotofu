@@ -4,6 +4,7 @@
 // Description: Implements quest hub and read-only quest journal for Dinotofu.
 
 #include "interface/menu/quest/QuestMenu.hpp"
+#include "interface/menu/quest/GuildFinanceMenu.hpp"
 #include "interface/menu/quest/QuestMenuInternalSupport.hpp"
 #include "interface/menu/quest/QuestExplorationSupport.hpp"
 #include "interface/menu/quest/QuestContractorMenu.hpp"
@@ -24,6 +25,10 @@
 #include "core/Console.hpp"
 #include "core/Random.hpp"
 #include "quest/QuestCatalog.hpp"
+#include "quest/GuildQuestAccessPolicy.hpp"
+#include "quest/QuestSecondPhaseSystem.hpp"
+#include "quest/IntercityQuestSystem.hpp"
+#include "quest/QuestLocationAccessSystem.hpp"
 #include "quest/language/QuestLanguageSystem.hpp"
 #include "item/material/MaterialCatalog.hpp"
 #include "entity/MonsterCatalog.hpp"
@@ -33,7 +38,9 @@
 #include "economy/EconomyBalance.hpp"
 #include "economy/shop/ShopTransactionSystem.hpp"
 #include "economy/Money.hpp"
+#include "economy/GuildFinanceSystem.hpp"
 #include "interface/menu/InventoryMenu.hpp"
+#include "interface/menu/inventory/InventoryProtection.hpp"
 #include "interface/menu/shop/ShopMenu.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
@@ -41,8 +48,16 @@
 #include "interface/model/MenuScreen.hpp"
 #include "progression/bestiary/BestiaryRuntimeProgress.hpp"
 #include "story/StoryCampaign.hpp"
+#include "story/HestiaArcSystem.hpp"
+#include "story/HestiaCompanionSystem.hpp"
 #include "world/City.hpp"
 #include "world/CityTravelRules.hpp"
+#include "world/bounty/BountyRelocationSystem.hpp"
+#include "world/bounty/BountyAftermathSystem.hpp"
+#include "world/bounty/BountyCustodySystem.hpp"
+#include "world/crime/CrimeLocalImpactSystem.hpp"
+#include "world/crime/CrimeLocalOpportunitySystem.hpp"
+#include "world/crime/CrimeLocalStabilizationSystem.hpp"
 #include "world/npc/NpcKnowledgeSystem.hpp"
 #include "world/npc/NpcInformationPropagationSystem.hpp"
 
@@ -55,6 +70,7 @@
 #include <utility>
 #include <sstream>
 #include <map>
+#include <limits>
 
 using QuestWorldMenuSupport::currentCityName;
 using QuestWorldMenuSupport::guildRequestRankDUnlocked;
@@ -102,6 +118,16 @@ namespace
         if (quest.turnedIn)
         {
             return "Validée";
+        }
+
+        if (quest.phaseTwoActive)
+        {
+            return quest.phaseTwoMandatory ? "Phase 2 obligatoire en cours" : "Phase 2 facultative en cours";
+        }
+
+        if (quest.phaseTwoOffered && !quest.phaseTwoDeclined)
+        {
+            return "Phase 1 terminée - suite facultative disponible";
         }
 
         if (quest.completed)
@@ -193,7 +219,9 @@ namespace
 
     int guildMaxAllowedRankPower(const std::string& rank, const std::string& pellet)
     {
-        int maxPower = rankPowerForQuestReward(rank) + 1;
+        // Solo baseline: never above the player's actual guild rank.
+        // The +1 group exception is handled explicitly by GuildQuestAccessPolicy.
+        int maxPower = rankPowerForQuestReward(rank);
 
         if (pellet == "orange")
         {
@@ -330,14 +358,9 @@ namespace
         return "guild_reliability_green_pellet";
     }
 
-    bool isGuildQuestRankAllowedForStanding(const Quest& quest, const GuildStanding& standing)
+    bool isGuildQuestRankAllowedForStanding(const Player& player, const Quest& quest, const GuildStanding& standing)
     {
-        if (!quest.guildQuest)
-        {
-            return true;
-        }
-
-        return rankPowerForQuestReward(quest.rank) <= standing.maxAllowedRankPower;
+        return GuildQuestAccessPolicy::canAccept(player, quest, standing.rank, standing.pellet);
     }
 
     int guildActiveQuestLimitForStanding(const GuildStanding& standing)
@@ -387,9 +410,9 @@ namespace
         {
             lines.push_back("Pour améliorer la pastille : réussir plusieurs petits contrats officiels propres avant de reprendre trop haut.");
         }
-        lines.push_back("Accès conseillé : contrats jusqu'à rang "
-            + (standing.pellet == "rouge" ? std::string("D") : (standing.pellet == "orange" ? std::string("B") : std::string("un rang au-dessus du dossier")))
-            + ".");
+        const int maxRankIndex = GuildQuestAccessPolicy::maximumQuestRankIndex(player, standing.rank, standing.pellet);
+        lines.push_back("Accès actuel : contrats jusqu'au rang " + GuildQuestAccessPolicy::rankName(maxRankIndex)
+            + (GuildQuestAccessPolicy::hasActiveGroup(player) ? " (groupe actif : jusqu'à 4 membres, limite du plus faible +1 ; dès 5 membres, plafond par moyenne)" : " (solo : rang du dossier maximum)") + ".");
         return lines;
     }
 
@@ -456,7 +479,9 @@ namespace
     {
         if (quest.rewardExperience <= 0)
         {
-            return 0;
+            // A revealed phase 2 always represents extra work. Even a contract that
+            // had no authored base XP still pays the explicit follow-up XP bonus.
+            return quest.phaseTwoCompleted ? std::max(0, quest.phaseTwoRewardExperience) : 0;
         }
 
         const int power = rankPowerForQuestReward(quest.rank);
@@ -471,6 +496,14 @@ namespace
         {
             balanced = quest.rewardExperience * 50 / 100;
         }
+        else if (quest.objectiveType == "intercity_information")
+        {
+            balanced = quest.rewardExperience * 72 / 100;
+        }
+        else if (quest.objectiveType == "intercity_material")
+        {
+            balanced = quest.rewardExperience * 78 / 100;
+        }
         else if (quest.objectiveType == "bestiaire")
         {
             balanced = quest.rewardExperience * 48 / 100;
@@ -484,6 +517,10 @@ namespace
             balanced = quest.rewardExperience * 55 / 100;
         }
 
+        if (quest.phaseTwoCompleted && quest.phaseTwoRewardExperience > 0)
+        {
+            balanced += quest.phaseTwoRewardExperience;
+        }
         return std::max(1, balanced);
     }
 
@@ -515,6 +552,14 @@ namespace
         {
             balanced = quest.rewardGold * 60 / 100;
         }
+        else if (quest.objectiveType == "intercity_information")
+        {
+            balanced = quest.rewardGold * 82 / 100;
+        }
+        else if (quest.objectiveType == "intercity_material")
+        {
+            balanced = quest.rewardGold * 90 / 100;
+        }
         else if (quest.objectiveType == "bestiaire")
         {
             balanced = quest.rewardGold * 55 / 100;
@@ -536,11 +581,17 @@ namespace
         int displayCap = 60 + power * 18 + target * 4;
         if (quest.objectiveType == "service") displayCap = 10 + power * 5 + target;
         else if (quest.objectiveType == "livraison") displayCap = 28 + power * 8 + target * 3;
+        else if (quest.objectiveType == "intercity_information") displayCap = 45 + power * 12 + target * 6;
+        else if (quest.objectiveType == "intercity_material") displayCap = 52 + power * 14 + target * 7;
         else if (quest.objectiveType == "bestiaire") displayCap = 26 + power * 7 + target * 3;
         else if (quest.objectiveType == "material") displayCap = 34 + power * 10 + target * 3;
         else if (quest.objectiveType == "exploration") displayCap = 52 + power * 14 + target * 4;
 
         balanced = std::min(balanced, displayCap);
+        if (quest.phaseTwoCompleted && quest.phaseTwoRewardGold > 0)
+        {
+            balanced += quest.phaseTwoRewardGold;
+        }
         return std::max(0, balanced);
     }
 
@@ -894,6 +945,7 @@ namespace
             "inspection", "sangle", "durabilité", "durabilite", "biome", "tanière", "taniere", "piste"
         });
         const bool fieldQuest = quest.objectiveType == "combat"
+            || quest.objectiveType == "bounty"
             || quest.objectiveType == "exploration"
             || quest.objectiveType == "bestiaire";
 
@@ -1118,7 +1170,7 @@ namespace
         const bool economyQuest = questDialogueContainsAny(quest, {"prix", "taxe", "stock", "monnaie", "facture", "économie", "economie", "prime", "récompense", "recompense", "crise"});
         const bool materialQuest = questDialogueContainsAny(quest, {"matériau", "materiau", "matériaux", "materiaux", "composant", "cuir", "forge", "rare", "rareté", "rarete"});
         const bool anomalyQuest = questDialogueContainsAny(quest, {"anomalie", "interface", "hallucination", "cible", "faux pve", "caractères", "caracteres"});
-        const bool huntQuest = isCountedHuntQuest(quest) || quest.objectiveType == "combat";
+        const bool huntQuest = isCountedHuntQuest(quest) || quest.objectiveType == "combat" || quest.objectiveType == "bounty";
         const bool socialQuest = questDialogueContainsAny(quest, {"client", "noble", "semi-humain", "semi-humains", "sous-race", "dialogue", "dispute", "ville", "guilde"});
         const bool biomeQuest = questDialogueContainsAny(quest, {"biome", "frontière", "frontiere", "forêt", "foret", "marais", "montagne", "désert", "desert", "brume", "corniche", "route"});
 
@@ -1173,7 +1225,7 @@ namespace
             return lines;
         }
 
-        const bool combatQuest = quest.objectiveType == "combat";
+        const bool combatQuest = quest.objectiveType == "combat" || quest.objectiveType == "bounty";
         const bool explorationQuest = quest.objectiveType == "exploration" || quest.objectiveType == "bestiaire";
         const bool materialQuest = questDialogueContainsAny(quest, {"matériau", "materiau", "composant", "réparation", "reparation", "forge", "cuir", "métal", "metal", "armure", "arme"});
         const bool routeQuest = questDialogueContainsAny(quest, {"route", "sentier", "convoi", "caravane", "piste", "frontière", "frontiere", "carte", "zone morte"});
@@ -1754,7 +1806,7 @@ namespace
         const int dayBefore = player.getWorldDaysElapsed();
         const int unitBefore = player.getWorldDayProgressUnits();
         player.advanceWorldDayUnits(1);
-        lines.push_back("Temps perdu : +1 segment de journée pour recompter, corriger ou faire tamponner à nouveau.");
+        lines.push_back("Temps perdu : +1 moment de la journée pour recompter, corriger ou faire tamponner à nouveau.");
         lines.push_back(player.formatWorldTimeChange(dayBefore, unitBefore));
         std::vector<std::string> timeReportLines = player.consumeWorldTimeReportLines();
         lines.insert(lines.end(), timeReportLines.begin(), timeReportLines.end());
@@ -1814,6 +1866,12 @@ namespace
             if (questContainsText(quest, "mort") || questContainsText(quest, "ombre") || questContainsText(quest, "os")) return "Cimetière oublié / Ruines effondrées";
             if (questContainsText(quest, "mini-boss") || questContainsText(quest, "menace") || questContainsText(quest, "élite") || questContainsText(quest, "elite")) return "Exploration audacieuse ou combat adapté au niveau";
             return "Combats PvE classiques contre la famille indiquée";
+        }
+
+        if (quest.intercityMission || quest.objectiveType == "intercity_information" || quest.objectiveType == "intercity_material")
+        {
+            const std::string next = IntercityQuestSystem::nextDestinationName(quest);
+            return next.empty() ? "Guilde > contrat inter-ville (destination fixée à l'acceptation)" : "Voyage inter-ville > " + next;
         }
 
         if (quest.objectiveType == "livraison" && !quest.requiredMaterialId.empty())
@@ -2001,7 +2059,7 @@ namespace
         return label.str();
     }
 
-    std::string questBoardOfferLabel(const Quest& quest, bool samePlayableLocation)
+    std::string questBoardOfferLabel(const Player& player, const Quest& quest, bool samePlayableLocation)
     {
         std::ostringstream label;
         label << quest.title;
@@ -2009,7 +2067,8 @@ namespace
         {
             label << " | Rang : " << quest.rank;
         }
-        label << " | Lieu cible : " << questPlayableLocationHint(quest)
+        const QuestLocationAccessReport access = QuestLocationAccessSystem::evaluate(player, quest);
+        label << " | Lieu cible : " << QuestLocationAccessSystem::decorateLocation(questPlayableLocationHint(quest), access)
               << " | Récompenses potentielles : " << questPotentialRewardText(quest)
               << " | Objectif : 0/" << std::max(1, quest.target)
               << " (Proposée";
@@ -2026,6 +2085,14 @@ namespace
         if (quest.turnedIn)
         {
             return "Quête archivée : aucune action supplémentaire n'est nécessaire.";
+        }
+        if (quest.phaseTwoActive)
+        {
+            return "Résous la phase 2 depuis Quêtes > Suites de quêtes. " + quest.phaseTwoObjective;
+        }
+        if (QuestSecondPhaseSystem::canOfferOptional(quest))
+        {
+            return "La phase 1 est terminée : tu peux rendre la quête maintenant ou poursuivre la phase 2 facultative pour augmenter la récompense.";
         }
         if (quest.completed)
         {
@@ -2072,11 +2139,16 @@ namespace
             }
         }
         lines.push_back("Comment faire : " + questProgressMethodText(quest));
+        for (const std::string& routeLine : IntercityQuestSystem::journalLines(quest)) lines.push_back(routeLine);
         lines.push_back("Prochaine action : " + questNextActionText(quest));
         lines.push_back("Progression : " + std::to_string(quest.progress) + "/" + std::to_string(quest.target));
         for (const std::string& stepLine : questStepProgressLines(quest))
         {
             lines.push_back(stepLine);
+        }
+        for (const std::string& phaseLine : QuestSecondPhaseSystem::journalLines(quest))
+        {
+            lines.push_back(phaseLine);
         }
         lines.push_back("État : " + questStateText(quest));
         appendDeadlineLine(lines, quest, currentDay);
@@ -2108,6 +2180,10 @@ namespace
         for (const std::string& stepLine : questStepProgressLines(quest))
         {
             lines.push_back(stepLine);
+        }
+        for (const std::string& phaseLine : QuestSecondPhaseSystem::journalLines(quest))
+        {
+            lines.push_back(phaseLine);
         }
         lines.push_back("État : " + questStateText(quest));
         appendDeadlineLine(lines, quest, currentDay);
@@ -2326,7 +2402,7 @@ namespace
             case QuestJournalFilter::Personal:
                 return !quest.turnedIn && !quest.failed && isPersonalNpcQuest(quest);
             case QuestJournalFilter::Combat:
-                return !quest.turnedIn && !quest.failed && quest.objectiveType == "combat";
+                return !quest.turnedIn && !quest.failed && (quest.objectiveType == "combat" || quest.objectiveType == "bounty");
             case QuestJournalFilter::Exploration:
                 return !quest.turnedIn && !quest.failed && (quest.objectiveType == "exploration" || quest.objectiveType == "bestiaire" || (quest.objectiveType == "livraison" && !isMaterialDeliveryQuest(quest)));
             case QuestJournalFilter::Delivery:
@@ -2892,8 +2968,13 @@ std::vector<std::string> clientAmbientDialogueLines(
             summaryScreen.addLine(line);
         }
 
+        const QuestLocationAccessReport locationAccess = QuestLocationAccessSystem::evaluate(player, quest);
         summaryScreen.addLine("Titre : " + quest.title);
-        summaryScreen.addLine("Lieu cible : " + questPlayableLocationHint(quest));
+        summaryScreen.addLine("Lieu cible : " + QuestLocationAccessSystem::decorateLocation(questPlayableLocationHint(quest), locationAccess));
+        if (locationAccess.state != QuestLocationAccessState::Accessible)
+        {
+            summaryScreen.addLine("État du lieu : " + QuestLocationAccessSystem::statusLabel(locationAccess) + ".");
+        }
         summaryScreen.addLine("Récompenses potentielles : " + questPotentialRewardText(quest));
         summaryScreen.addLine("Avancement : " + std::to_string(quest.progress) + "/" + std::to_string(quest.target) + " (non acceptée)");
 
@@ -2938,7 +3019,12 @@ std::vector<std::string> clientAmbientDialogueLines(
         detailScreen.addLine("Nature : " + questKindText(quest));
         detailScreen.addLine((quest.guildQuest ? "Contrat proposé : [Rang " : "Demande proposée : [Rang estimé ") + quest.rank + "] " + quest.title);
         detailScreen.addLine((quest.guildQuest ? "Client officiel : " : "Contact : ") + quest.client);
-        detailScreen.addLine((quest.guildQuest ? "Zone/action jouable : " : "Zone/action probable : ") + questPlayableLocationHint(quest));
+        detailScreen.addLine((quest.guildQuest ? "Zone/action jouable : " : "Zone/action probable : ")
+            + QuestLocationAccessSystem::decorateLocation(questPlayableLocationHint(quest), locationAccess));
+        for (const std::string& accessLine : locationAccess.lines)
+        {
+            detailScreen.addLine(accessLine);
+        }
         detailScreen.addLine((quest.guildQuest ? "Objectif : " : "Objectif raconté : ") + quest.objective);
         for (const std::string& trialLine : guildServiceTrialLines(quest))
         {
@@ -2967,7 +3053,11 @@ std::vector<std::string> clientAmbientDialogueLines(
         acceptData.section = quest.guildQuest ? "Contrat officiel" : "Demande informelle";
         acceptData.actionType = "accept";
         acceptData.name = quest.title;
-        acceptData.status = quest.guildQuest ? "Disponible" : "Disponible - informations estimées";
+        acceptData.status = locationAccess.blocksAcceptance()
+            ? QuestLocationAccessSystem::statusLabel(locationAccess)
+            : (locationAccess.needsWarningConfirmation()
+                ? "Disponible - chance réduite de trouvaille"
+                : (quest.guildQuest ? "Disponible" : "Disponible - informations estimées"));
         acceptData.reward = questPotentialRewardText(quest);
         acceptData.progress = "0/" + std::to_string(quest.target);
         acceptData.owner = quest.client;
@@ -2975,9 +3065,15 @@ std::vector<std::string> clientAmbientDialogueLines(
 
         detailScreen.addOption(
             1,
-            quest.guildQuest ? "Accepter le contrat" : "Accepter la demande",
-            "Ajouter cette entrée au journal.",
-            true,
+            locationAccess.blocksAcceptance()
+                ? (quest.guildQuest ? "Contrat actuellement inaccessible" : "Demande actuellement inaccessible")
+                : (quest.guildQuest ? "Accepter le contrat" : "Accepter la demande"),
+            locationAccess.blocksAcceptance()
+                ? "Le lieu exact demandé n'est pas encore accessible : Diane conseille de revenir plus tard."
+                : (locationAccess.needsWarningConfirmation()
+                    ? "Accepter malgré une chance réduite de trouvaille hors du lieu conseillé."
+                    : "Ajouter cette entrée au journal."),
+            !locationAccess.blocksAcceptance(),
             screenId + ".accept",
             acceptData
         );
@@ -2989,7 +3085,19 @@ std::vector<std::string> clientAmbientDialogueLines(
             screenId + ".decline_after_information"
         );
 
-        return TerminalInterface::askMenuChoiceFromOptions(detailScreen, "Choix invalide.");
+        const int decision = TerminalInterface::askMenuChoiceFromOptions(detailScreen, "Choix invalide.");
+        if (decision != 1 || !locationAccess.needsWarningConfirmation())
+        {
+            return decision;
+        }
+
+        MenuScreen warningScreen("CONFIRMATION — CHANCE RÉDUITE", screenId + ".reduced_location_confirmation");
+        warningScreen.addSubtitle("Le lieu conseillé n'est pas exploitable normalement avec ta progression actuelle");
+        for (const std::string& accessLine : locationAccess.lines) warningScreen.addLine(accessLine);
+        warningScreen.addLine("La quête reste faisable parce que la cible ou la ressource peut exceptionnellement être trouvée ailleurs, mais ce sera moins fiable.");
+        warningScreen.addOption(1, "Accepter quand même", "Prendre le contrat en connaissance de cette difficulté supplémentaire.", true, screenId + ".reduced_location_accept");
+        warningScreen.addOption(0, "Renoncer pour l'instant", "Laisser la demande disponible et revenir plus tard.", true, screenId + ".reduced_location_decline");
+        return TerminalInterface::askMenuChoiceFromOptions(warningScreen, "Choix invalide.") == 1 ? 1 : 0;
     }
 
 
@@ -3086,6 +3194,299 @@ std::vector<std::string> clientAmbientDialogueLines(
             {
                 showQuestDetail(player, quest);
             }
+        }
+    }
+
+
+    bool hestiaCanBePreparedAtGuild(const Player& player)
+    {
+        const PlayerHestiaStoryState& h = player.getHestiaStoryState();
+        return h.rescued && h.materialized && (h.residence == "guild_diane" || h.residence == "active_party");
+    }
+
+    void chooseHestiaClassAtGuild(Player& player)
+    {
+        const std::vector<std::string> choices = HestiaCompanionSystem::classChoices();
+        constexpr std::size_t perPage = 10;
+        std::size_t page = 0;
+        while (!choices.empty())
+        {
+            const std::size_t pages = PagedMenu::pageCount(choices.size(), perPage);
+            if (page >= pages) page = pages - 1;
+            const std::size_t first = PagedMenu::firstIndex(page, perPage);
+            const std::size_t last = PagedMenu::lastIndexExclusive(choices.size(), page, perPage);
+            MenuScreen screen("CLASSE D'HESTIA", "quest.guild.hestia.class");
+            screen.addLine("Tu choisis ce qu'elle essaie d'apprendre. Aucune classe recommandée n'est révélée automatiquement.");
+            screen.addLine(PagedMenu::pageInfoText(page, pages, choices.size()));
+            screen.addBackOption("Retour", "quest.guild.hestia.class.back");
+            for (std::size_t i = first; i < last; ++i)
+                screen.addOption(static_cast<int>(i - first + 1), choices[i], "Essayer cette classe avec Hestia.", true, "quest.guild.hestia.class." + std::to_string(i));
+            PagedMenu::addNavigationOptions(screen, page, pages);
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+            Console::clear();
+            if (choice == 0) return;
+            if (choice == 98 && page > 0) { --page; continue; }
+            if (choice == 99 && page + 1 < pages) { ++page; continue; }
+            const int visible = static_cast<int>(last - first);
+            if (choice >= 1 && choice <= visible)
+            {
+                const std::string selected = choices[first + static_cast<std::size_t>(choice - 1)];
+                if (HestiaCompanionSystem::chooseClass(player, selected))
+                    MessageScreen::show("HESTIA", "quest.guild.hestia.class.done", {"Classe actuelle choisie : " + selected + ".", "Ce choix décrit son entraînement actuel, pas une vérité cachée sur ses aptitudes."}, false);
+                return;
+            }
+        }
+    }
+
+    void chooseHestiaWeaponStyleAtGuild(Player& player)
+    {
+        const std::vector<std::string> choices = HestiaCompanionSystem::weaponStyleChoices();
+        MenuScreen screen("ARME D'ENTRAÎNEMENT D'HESTIA", "quest.guild.hestia.weapon");
+        screen.addLine("Aucune option n'est présentée comme optimale. Il faut observer ce qui lui convient réellement.");
+        screen.addBackOption("Retour", "quest.guild.hestia.weapon.back");
+        for (std::size_t i = 0; i < choices.size(); ++i)
+            screen.addOption(static_cast<int>(i + 1), choices[i], "Lui faire pratiquer ce style d'arme.", true, "quest.guild.hestia.weapon." + std::to_string(i));
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+        Console::clear();
+        if (choice > 0 && choice <= static_cast<int>(choices.size()))
+            HestiaCompanionSystem::chooseWeaponStyle(player, choices[static_cast<std::size_t>(choice - 1)]);
+    }
+
+    void chooseHestiaArmorStyleAtGuild(Player& player)
+    {
+        const std::vector<std::string> choices = HestiaCompanionSystem::armorStyleChoices();
+        MenuScreen screen("PROTECTION D'HESTIA", "quest.guild.hestia.armor");
+        screen.addBackOption("Retour", "quest.guild.hestia.armor.back");
+        for (std::size_t i = 0; i < choices.size(); ++i)
+            screen.addOption(static_cast<int>(i + 1), choices[i], "Lui faire essayer ce niveau de protection.", true, "quest.guild.hestia.armor." + std::to_string(i));
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+        Console::clear();
+        if (choice > 0 && choice <= static_cast<int>(choices.size()))
+            HestiaCompanionSystem::chooseArmorStyle(player, choices[static_cast<std::size_t>(choice - 1)]);
+    }
+
+    void openHestiaPreparationAtGuild(Player& player)
+    {
+        if (!hestiaCanBePreparedAtGuild(player)) return;
+        while (hestiaCanBePreparedAtGuild(player))
+        {
+            MenuScreen screen("HESTIA — APPRENTISSAGE", "quest.guild.hestia.preparation");
+            for (const std::string& line : HestiaCompanionSystem::statusLines(player)) screen.addLine(line);
+            screen.addBackOption("Retour", "quest.guild.hestia.preparation.back");
+            screen.addOption(1, "Choisir sa classe actuelle", "Définit la voie qu'elle essaie d'apprendre, sans conseil automatique.", true, "quest.guild.hestia.preparation.class");
+            screen.addOption(2, "Choisir son style d'arme", "Changer ce qu'elle essaie de manier.", true, "quest.guild.hestia.preparation.weapon");
+            screen.addOption(3, "Choisir sa protection", "Changer le type de protection qu'elle essaie de porter.", true, "quest.guild.hestia.preparation.armor");
+            screen.addOption(4, "Faire une séance d'apprentissage", "Prend une unité de temps. Elle progresse surtout par essais, erreurs et accompagnement.", true, "quest.guild.hestia.preparation.practice");
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+            Console::clear();
+            if (choice == 0) return;
+            if (choice == 1) chooseHestiaClassAtGuild(player);
+            else if (choice == 2) chooseHestiaWeaponStyleAtGuild(player);
+            else if (choice == 3) chooseHestiaArmorStyleAtGuild(player);
+            else if (choice == 4)
+            {
+                if (HestiaCompanionSystem::practice(player))
+                {
+                    player.advanceWorldDayUnits(1);
+                    MessageScreen::show("APPRENTISSAGE", "quest.guild.hestia.preparation.practice.done", {"Hestia s'entraîne réellement pendant un moment.", "Rien ne garantit que la voie choisie soit celle où elle progressera le mieux."}, false);
+                }
+            }
+        }
+    }
+
+    void openBountyCustodyMenu(Player& player)
+    {
+        while (true)
+        {
+            const std::vector<BountyCustodyEntry> entries = BountyCustodySystem::pending(player);
+            if (entries.empty())
+            {
+                MessageScreen::show(
+                    "ENTRETIENS DE GARDE",
+                    "quest.guild.bounty_custody.empty",
+                    {"Aucune cible capturée n'attend d'entretien facultatif."},
+                    false);
+                return;
+            }
+
+            MenuScreen screen("ENTRETIENS DE GARDE", "quest.guild.bounty_custody");
+            screen.addLine("Une capture vivante peut laisser un dernier entretien facultatif. Les déclarations obtenues restent des témoignages à recouper.");
+            screen.addLine("Aucun entretien ne révèle automatiquement un contact criminel que tu n'as jamais découvert.");
+            screen.addBackOption("Retour", "quest.guild.bounty_custody.back");
+            const std::size_t shown = std::min<std::size_t>(entries.size(), 9);
+            for (std::size_t i = 0; i < shown; ++i)
+            {
+                const BountyCustodyEntry& entry = entries[i];
+                screen.addOption(
+                    static_cast<int>(i + 1),
+                    entry.targetName,
+                    "Capture : " + entry.resolutionId + " | jour " + std::to_string(entry.captureDay),
+                    true,
+                    "quest.guild.bounty_custody.entry." + std::to_string(i));
+            }
+
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une cible capturée.");
+            Console::clear();
+            if (choice == 0) return;
+            if (choice < 1 || choice > static_cast<int>(shown)) continue;
+
+            const BountyCustodyEntry entry = entries[static_cast<std::size_t>(choice - 1)];
+            MenuScreen detail("ENTRETIEN — " + entry.targetName, "quest.guild.bounty_custody.detail");
+            for (const std::string& line : entry.lines) detail.addLine(line);
+            detail.addLine("Tempérament observé : " + entry.temperament + ".");
+            detail.addBackOption("Reporter l'entretien", "quest.guild.bounty_custody.detail.back");
+            const std::vector<BountyCustodyOption> choices = BountyCustodySystem::options(entry);
+            for (std::size_t i = 0; i < choices.size(); ++i)
+            {
+                detail.addOption(
+                    static_cast<int>(i + 1),
+                    choices[i].label,
+                    choices[i].hint,
+                    true,
+                    "quest.guild.bounty_custody.choice." + std::to_string(i));
+            }
+            const int action = TerminalInterface::askMenuChoiceFromOptions(detail, "Choisis une approche.");
+            Console::clear();
+            if (action == 0) continue;
+            if (action < 1 || action > static_cast<int>(choices.size())) continue;
+
+            const BountyCustodyResult result = BountyCustodySystem::resolve(
+                player, entry.eventId, choices[static_cast<std::size_t>(action - 1)].approach);
+            MessageScreen::show(
+                result.resolved ? "ENTRETIEN TERMINÉ" : "ENTRETIEN INCHANGÉ",
+                "quest.guild.bounty_custody.result",
+                result.lines.empty() ? std::vector<std::string>{"Aucun nouvel élément exploitable."} : result.lines,
+                false);
+        }
+    }
+
+    void openCrimeLocalOpportunitiesMenu(Player& player)
+    {
+        while (true)
+        {
+            const std::vector<CrimeLocalOpportunityEntry> entries = CrimeLocalOpportunitySystem::pending(player, player.getCurrentCityId());
+            if (entries.empty())
+            {
+                MessageScreen::show(
+                    "SUIVIS LOCAUX",
+                    "quest.guild.crime_local.empty",
+                    {"Aucune conséquence criminelle locale ne demande de petit suivi pour le moment."},
+                    false);
+                return;
+            }
+
+            MenuScreen screen("SUIVIS LOCAUX", "quest.guild.crime_local");
+            screen.addLine("Ces demandes existent parce qu'une perturbation réellement observée a laissé un travail local à faire.");
+            screen.addLine("Elles restent modestes : une arrestation ne transforme pas automatiquement la ville en zone de guerre.");
+            for (const std::string& line : CrimeLocalImpactSystem::informationLines(player, player.getCurrentCityId()))
+                screen.addLine(line);
+            screen.addBackOption("Retour", "quest.guild.crime_local.back");
+
+            const std::size_t shown = std::min<std::size_t>(entries.size(), 9);
+            for (std::size_t i = 0; i < shown; ++i)
+            {
+                const CrimeLocalOpportunityEntry& entry = entries[i];
+                screen.addOption(
+                    static_cast<int>(i + 1),
+                    entry.title,
+                    "Suite locale du jour " + std::to_string(entry.eventDay) + " | récompense modeste",
+                    true,
+                    "quest.guild.crime_local.entry." + std::to_string(i));
+            }
+
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis un suivi local.");
+            Console::clear();
+            if (choice == 0) return;
+            if (choice < 1 || choice > static_cast<int>(shown)) continue;
+
+            const CrimeLocalOpportunityEntry entry = entries[static_cast<std::size_t>(choice - 1)];
+            MenuScreen detail("SUIVI LOCAL — " + entry.title, "quest.guild.crime_local.detail");
+            for (const std::string& line : entry.lines) detail.addLine(line);
+            detail.addLine("Objectif proposé : " + entry.objective);
+            detail.addBackOption("Laisser le dossier", "quest.guild.crime_local.detail.back");
+            detail.addOption(1, "Accepter ce petit contrat", "Ajoute un service de guilde court, avec une récompense volontairement limitée.", true, "quest.guild.crime_local.accept");
+            const int action = TerminalInterface::askMenuChoiceFromOptions(detail, "Choix invalide.");
+            Console::clear();
+            if (action != 1) continue;
+
+            const CrimeLocalOpportunityAcceptResult accepted = CrimeLocalOpportunitySystem::accept(player, entry.eventId);
+            MessageScreen::show(
+                accepted.accepted ? "SUIVI ACCEPTÉ" : "SUIVI CONSERVÉ",
+                "quest.guild.crime_local.result",
+                accepted.lines.empty() ? std::vector<std::string>{"Aucun changement."} : accepted.lines,
+                false);
+        }
+    }
+
+    void openBountyAftermathMenu(Player& player)
+    {
+        while (true)
+        {
+            const std::vector<BountyAftermathEntry> entries = BountyAftermathSystem::pending(player);
+            if (entries.empty())
+            {
+                MessageScreen::show(
+                    "SUIVIS DE PRIMES",
+                    "quest.guild.bounty_aftermath.empty",
+                    {"Aucun suivi post-prime n'attend de réponse pour le moment."},
+                    false);
+                return;
+            }
+
+            MenuScreen screen("SUIVIS DE PRIMES", "quest.guild.bounty_aftermath");
+            screen.addLine("Ces échanges viennent de contrats déjà résolus. Ils peuvent modifier des relations ou ouvrir des opportunités, mais ne réécrivent jamais l'issue passée.");
+            screen.addLine("Un proche n'apparaît pas instantanément après une capture ou une mort : son message n'arrive qu'à partir du jour suivant.");
+            screen.addBackOption("Retour", "quest.guild.bounty_aftermath.back");
+
+            const std::size_t shown = std::min<std::size_t>(entries.size(), 9);
+            for (std::size_t i = 0; i < shown; ++i)
+            {
+                const BountyAftermathEntry& entry = entries[i];
+                screen.addOption(
+                    static_cast<int>(i + 1),
+                    entry.actorName + " — " + entry.targetName,
+                    BountyAftermathSystem::actorTypeLabel(entry.actorType)
+                        + " | dossier du jour " + std::to_string(entry.eventDay),
+                    true,
+                    "quest.guild.bounty_aftermath.entry." + std::to_string(i));
+            }
+
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis un suivi de prime.");
+            Console::clear();
+            if (choice == 0) return;
+            if (choice < 1 || choice > static_cast<int>(shown)) continue;
+
+            const BountyAftermathEntry entry = entries[static_cast<std::size_t>(choice - 1)];
+            MenuScreen detail("SUIVI — " + entry.actorName, "quest.guild.bounty_aftermath.detail");
+            for (const std::string& line : entry.lines) detail.addLine(line);
+            detail.addLine("Issue enregistrée : " + entry.resolutionId + ".");
+            detail.addBackOption("Revenir sans répondre", "quest.guild.bounty_aftermath.detail.back");
+
+            const std::vector<BountyAftermathResponseOption> options = BountyAftermathSystem::responseOptions(entry);
+            for (std::size_t i = 0; i < options.size(); ++i)
+            {
+                detail.addOption(
+                    static_cast<int>(i + 1),
+                    options[i].label,
+                    options[i].hint,
+                    true,
+                    "quest.guild.bounty_aftermath.response." + std::to_string(i));
+            }
+
+            const int responseChoice = TerminalInterface::askMenuChoiceFromOptions(detail, "Choisis une réponse.");
+            Console::clear();
+            if (responseChoice == 0) continue;
+            if (responseChoice < 1 || responseChoice > static_cast<int>(options.size())) continue;
+
+            const BountyAftermathResolutionResult resolution = BountyAftermathSystem::respond(
+                player,
+                entry.eventId,
+                options[static_cast<std::size_t>(responseChoice - 1)].response);
+            MessageScreen::show(
+                resolution.resolved ? "SUIVI CLASSÉ" : "SUIVI INCHANGÉ",
+                "quest.guild.bounty_aftermath.result",
+                resolution.lines.empty() ? std::vector<std::string>{"Aucune conséquence supplémentaire."} : resolution.lines,
+                false);
         }
     }
 
@@ -3277,6 +3678,105 @@ void QuestMenu::openCompletedMainQuestSection(const Player& player)
     }
 }
 
+
+static int countVisibleQuestSecondPhases(const Player& player)
+{
+    int count = 0;
+    for (const Quest& quest : player.getQuestLog().getQuests())
+    {
+        if (quest.phaseTwoActive || QuestSecondPhaseSystem::canOfferOptional(quest)) ++count;
+    }
+    return count;
+}
+
+static void openQuestSecondPhaseMenu(Player& player)
+{
+    while (true)
+    {
+        std::vector<Quest*> phases;
+        for (Quest& quest : player.getQuestLog().getQuests())
+        {
+            if (quest.phaseTwoActive || QuestSecondPhaseSystem::canOfferOptional(quest)) phases.push_back(&quest);
+        }
+
+        if (phases.empty())
+        {
+            MessageScreen::show("AUCUNE SUITE ACTIVE", "quest.phase2.empty", {"Aucune phase 2 n'attend actuellement une décision ou une intervention."});
+            return;
+        }
+
+        MenuScreen screen("SUITES DE QUÊTES", "quest.phase2");
+        screen.addLine("Certaines quêtes révèlent une complication seulement après la réussite de leur première phase.");
+        screen.addLine("Le journal conserve toujours ce qui a été accompli et ce qui a déclenché la suite.");
+        screen.addBackOption("Retour", "quest.phase2.back");
+        for (std::size_t i = 0; i < phases.size(); ++i)
+        {
+            const Quest& quest = *phases[i];
+            const std::string state = quest.phaseTwoActive
+                ? (quest.phaseTwoMandatory ? "obligatoire" : "facultative acceptée")
+                : "facultative à décider";
+            screen.addOption(static_cast<int>(10 + i), quest.title + " | " + quest.phaseTwoTitle,
+                "Phase 1 déjà terminée. Suite " + state + ".", true,
+                "quest.phase2.select." + std::to_string(i + 1));
+        }
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+        Console::clear();
+        if (choice == 0) return;
+        const int index = choice - 10;
+        if (index < 0 || static_cast<std::size_t>(index) >= phases.size()) continue;
+
+        Quest& quest = *phases[static_cast<std::size_t>(index)];
+        if (QuestSecondPhaseSystem::canOfferOptional(quest))
+        {
+            MenuScreen decision("PHASE 2 FACULTATIVE", "quest.phase2.optional");
+            for (const std::string& line : QuestSecondPhaseSystem::journalLines(quest)) decision.addLine(line);
+            decision.addBackOption("Retour", "quest.phase2.optional.back");
+            decision.addOption(1, "Poursuivre la suite", "La quête repasse en cours et la récompense augmente si la phase 2 est terminée.", true, "quest.phase2.optional.accept");
+            decision.addOption(2, "Laisser cette suite", "La phase 1 reste valable et la quête conserve sa récompense normale.", true, "quest.phase2.optional.decline");
+            const int optionalChoice = TerminalInterface::askMenuChoiceFromOptions(decision, "Choix invalide.");
+            Console::clear();
+            if (optionalChoice == 1)
+            {
+                QuestSecondPhaseSystem::activateOptional(quest);
+                MessageScreen::show("SUITE ACCEPTÉE", "quest.phase2.optional.accepted", QuestSecondPhaseSystem::journalLines(quest));
+            }
+            else if (optionalChoice == 2)
+            {
+                QuestSecondPhaseSystem::declineOptional(quest);
+                MessageScreen::show("SUITE LAISSÉE DE CÔTÉ", "quest.phase2.optional.declined", QuestSecondPhaseSystem::journalLines(quest));
+            }
+            continue;
+        }
+
+        if (!quest.phaseTwoActive) continue;
+        if (quest.phaseTwoTravelRequired)
+        {
+            std::vector<std::string> travelLines;
+            IntercityQuestSystem::prepareSecondPhaseTravel(player, quest, &travelLines);
+            std::vector<std::string> lines = QuestSecondPhaseSystem::journalLines(quest);
+            lines.insert(lines.end(), travelLines.begin(), travelLines.end());
+            if (!quest.phaseTwoTravelDestinationCityId.empty())
+            {
+                lines.push_back("Pour avancer : va dans Lieux > Voyage et rends-toi physiquement dans la ville indiquée.");
+            }
+            MessageScreen::show("SUITE INTER-VILLE", "quest.phase2.travel", lines);
+            continue;
+        }
+        MenuScreen action("INTERVENTION — PHASE 2", "quest.phase2.action");
+        for (const std::string& line : QuestSecondPhaseSystem::journalLines(quest)) action.addLine(line);
+        action.addBackOption("Retour", "quest.phase2.action.back");
+        action.addOption(1, "Approche prudente", "Prend davantage de temps mais augmente sensiblement la fiabilité.", true, "quest.phase2.action.careful");
+        action.addOption(2, "Approche rapide", "Consomme moins de temps mais augmente le risque de rater l'étape.", true, "quest.phase2.action.quick");
+        const int actionChoice = TerminalInterface::askMenuChoiceFromOptions(action, "Choix invalide.");
+        Console::clear();
+        if (actionChoice != 1 && actionChoice != 2) continue;
+        const QuestSecondPhaseResult result = QuestSecondPhaseSystem::resolve(player, quest, actionChoice == 1);
+        MessageScreen::show(result.completed ? "PHASE 2 TERMINÉE" : (result.success ? "PHASE 2 AVANCÉE" : "TENTATIVE INFRUCTUEUSE"),
+            result.completed ? "quest.phase2.completed" : (result.success ? "quest.phase2.progress" : "quest.phase2.failed"), result.lines);
+    }
+}
+
 // EN: openQuestHub declares or implements a focused behavior used by this module.
 // FR: openQuestHub déclare ou implémente un comportement précis utilisé par ce module.
 void QuestMenu::openQuestHub(Player& player)
@@ -3286,6 +3786,7 @@ void QuestMenu::openQuestHub(Player& player)
     {
         syncMainStoryQuests(player);
         const int readyCount = countQuestsForJournalFilter(player, QuestJournalFilter::ReadyToTurnIn);
+        const int secondPhaseCount = countVisibleQuestSecondPhases(player);
         MenuScreen screen("QUÊTES", "quest.hub");
         screen.addLine("Date actuelle : " + player.formatWorldDateLine());
         screen.addLine("Moment actuel : " + player.formatWorldDayPartLine());
@@ -3293,6 +3794,7 @@ void QuestMenu::openQuestHub(Player& player)
         screen.addLine("Quêtes principales : section séparée, non refusable quand l'histoire les ajoute.");
         screen.addLine("Quêtes de guilde actives : " + std::to_string(player.getQuestLog().getActiveGuildQuestCount()) + "/" + std::to_string(guildActiveQuestLimitForStanding(guildStandingForPlayer(player))) + ".");
         screen.addLine("Demandes prêtes à rendre : " + std::to_string(readyCount) + ".");
+        screen.addLine("Suites de quêtes révélées : " + std::to_string(secondPhaseCount) + ".");
         screen.addBackOption("Retour", "quest.hub.back");
 
         MenuOptionItemData mainQuestData = makeQuestNavigationItemData(
@@ -3354,6 +3856,9 @@ void QuestMenu::openQuestHub(Player& player)
         );
         screen.addOption(4, "Journal complet", "Voir les quêtes, filtres, estimations et archives.", true, "quest.hub.journal", journalData);
         screen.addOption(5, "Aller à la guilde", "Consulter le panneau officiel ou rendre un contrat de guilde.", true, "quest.hub.guild", guildData);
+        screen.addOption(6, "Suites de quêtes" + (secondPhaseCount > 0 ? " [" + std::to_string(secondPhaseCount) + "]" : ""),
+            secondPhaseCount > 0 ? "Décider ou résoudre les phases 2 révélées après une première réussite." : "Aucune suite révélée actuellement.",
+            secondPhaseCount > 0, "quest.hub.phase2");
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
@@ -3394,6 +3899,10 @@ void QuestMenu::openQuestHub(Player& player)
         else if (choice == 5)
         {
             openGuild(player);
+        }
+        else if (choice == 6)
+        {
+            openQuestSecondPhaseMenu(player);
         }
     }
 }
@@ -3794,179 +4303,6 @@ void QuestMenu::openGuildRegistration(Player& player)
     }
 }
 
-static void openGuildCurrencyExchange(Player& player)
-{
-    auto coinLabel = [](CoinType type) {
-        return Money::coinName(type) + " (" + Money::coinAbbreviation(type) + ")";
-    };
-    const std::vector<CoinType> allTypes = {
-        CoinType::Copper,
-        CoinType::Iron,
-        CoinType::Electrum,
-        CoinType::Gold,
-        CoinType::Platinum
-    };
-
-    auto conversionTerms = [](CoinType source, CoinType target) {
-        const long long sourceValue = Money::coinValueInCopper(source);
-        const long long targetValue = Money::coinValueInCopper(target);
-        const long long sourcePerLot = sourceValue < targetValue ? targetValue / sourceValue : 1;
-        const long long targetPerLot = sourceValue > targetValue ? sourceValue / targetValue : 1;
-        return std::pair<long long, long long>{sourcePerLot, targetPerLot};
-    };
-
-    while (true)
-    {
-        MenuScreen screen("BUREAU DE CHANGE DE LA GUILDE", "quest.guild.currency_exchange");
-        screen.addSubtitle("Organiser volontairement les cinq piles physiques de ta bourse");
-        screen.addLine("Bourse actuelle : " + player.getInventory().getWalletLine() + ".");
-        screen.addLine("Valeur totale exacte : " + player.getInventory().getWalletTotalLine() + ".");
-        screen.addLine(Money::coinScaleText() + ".");
-        screen.addLine("Le change ne crée ni ne détruit d'argent. Il modifie seulement les pièces physiques que tu portes.");
-        screen.addLine("La forme de la bourse peut aussi changer l'impression sociale qu'elle donne : beaucoup de cuivre et une pièce d'or ne racontent pas la même chose.");
-        screen.addBackOption("Retour à la guilde", "quest.guild.currency_exchange.back");
-        screen.addOption(1, "Conversion personnalisée", "Choisir la pièce de départ, la pièce d'arrivée, puis le nombre de conversions.", true, "quest.guild.currency_exchange.custom");
-        screen.addOption(2, "Tout vers les pièces les plus élevées", "Créer une bourse compacte : PP d'abord, puis PO, PE, PF et le reste exact en PC.", player.getInventory().getTotalCopper() > 0, "quest.guild.currency_exchange.compact");
-        screen.addOption(3, "Tout vers la pièce la plus faible", "Transformer toute la valeur en PC physiques. Très précis, très encombrant, et socialement assez modeste.", player.getInventory().getTotalCopper() > 0, "quest.guild.currency_exchange.copper_all");
-
-        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une opération de change.");
-        Console::clear();
-        if (choice == 0) return;
-
-        if (choice == 2 || choice == 3)
-        {
-            const long long before = player.getInventory().getTotalCopper();
-            const std::string oldWallet = player.getInventory().getWalletLine();
-            const bool success = choice == 2
-                ? player.getInventory().compactCoinsToHighest()
-                : player.getInventory().flattenCoinsToCopper();
-            if (success)
-            {
-                player.refreshCurrencyTitles();
-            }
-            const long long after = player.getInventory().getTotalCopper();
-
-            MessageScreen::show(
-                success && before == after ? "CHANGE EFFECTUÉ" : "ERREUR DE CHANGE",
-                choice == 2 ? "quest.guild.currency_exchange.compact.done" : "quest.guild.currency_exchange.copper_all.done",
-                {
-                    choice == 2
-                        ? "La guilde regroupe chaque tranche possible vers la pièce la plus élevée sans perdre le moindre PC."
-                        : "La guilde casse toute la bourse jusqu'au cuivre : chaque PC devient une pièce physique.",
-                    "Avant : " + oldWallet + ".",
-                    "Après : " + player.getInventory().getWalletLine() + ".",
-                    "Valeur exacte : " + player.getInventory().getWalletTotalLine() + ".",
-                    "Valeur conservée : " + std::string(before == after ? "oui" : "ERREUR") + "."
-                },
-                false
-            );
-            Console::clear();
-            continue;
-        }
-
-        if (choice != 1)
-        {
-            continue;
-        }
-
-        MenuScreen sourceScreen("CONVERSION PERSONNALISÉE — SOURCE", "quest.guild.currency_exchange.custom.source");
-        sourceScreen.addLine("Choisis la pile physique que tu veux donner au guichet.");
-        sourceScreen.addBackOption("Retour", "quest.guild.currency_exchange.custom.source.back");
-        for (std::size_t i = 0; i < allTypes.size(); ++i)
-        {
-            const CoinType type = allTypes[i];
-            const long long count = player.getInventory().getCoinCount(type);
-            sourceScreen.addOption(
-                static_cast<int>(i + 1),
-                coinLabel(type),
-                "En bourse : " + std::to_string(count) + " " + Money::coinAbbreviation(type) + ".",
-                count > 0,
-                "quest.guild.currency_exchange.custom.source." + Money::coinAbbreviation(type)
-            );
-        }
-
-        const int sourceChoice = TerminalInterface::askMenuChoiceFromOptions(sourceScreen, "Choisis une pile présente dans ta bourse.");
-        Console::clear();
-        if (sourceChoice <= 0 || static_cast<std::size_t>(sourceChoice) > allTypes.size()) continue;
-        const CoinType sourceType = allTypes[static_cast<std::size_t>(sourceChoice - 1)];
-        const long long sourceCount = player.getInventory().getCoinCount(sourceType);
-
-        MenuScreen targetScreen("CONVERSION PERSONNALISÉE — DESTINATION", "quest.guild.currency_exchange.custom.target");
-        targetScreen.addLine("Source : " + coinLabel(sourceType) + " | disponible : " + std::to_string(sourceCount) + " " + Money::coinAbbreviation(sourceType) + ".");
-        targetScreen.addLine("Choisis maintenant la pièce physique que tu veux recevoir.");
-        targetScreen.addBackOption("Retour", "quest.guild.currency_exchange.custom.target.back");
-
-        int targetOption = 1;
-        std::vector<CoinType> targetTypes;
-        for (CoinType targetType : allTypes)
-        {
-            if (targetType == sourceType)
-            {
-                continue;
-            }
-
-            const auto [sourcePerLot, targetPerLot] = conversionTerms(sourceType, targetType);
-            const long long maxLots = sourcePerLot > 0 ? sourceCount / sourcePerLot : 0;
-            targetTypes.push_back(targetType);
-            targetScreen.addOption(
-                targetOption++,
-                coinLabel(sourceType) + " -> " + coinLabel(targetType),
-                "1 conversion : " + std::to_string(sourcePerLot) + " " + Money::coinAbbreviation(sourceType)
-                    + " -> " + std::to_string(targetPerLot) + " " + Money::coinAbbreviation(targetType)
-                    + " | maximum possible : " + std::to_string(maxLots) + ".",
-                maxLots > 0,
-                "quest.guild.currency_exchange.custom.target." + Money::coinAbbreviation(targetType)
-            );
-        }
-
-        const int targetChoice = TerminalInterface::askMenuChoiceFromOptions(targetScreen, "Choisis une destination possible.");
-        Console::clear();
-        if (targetChoice <= 0 || static_cast<std::size_t>(targetChoice) > targetTypes.size()) continue;
-        const CoinType targetType = targetTypes[static_cast<std::size_t>(targetChoice - 1)];
-        const auto [sourcePerLot, targetPerLot] = conversionTerms(sourceType, targetType);
-        const long long maxLots = sourceCount / sourcePerLot;
-        const int maxQuantity = static_cast<int>(std::min(maxLots, 1000000LL));
-        if (maxQuantity <= 0) continue;
-
-        const int lotCount = MessageScreen::askQuantity(
-            "NOMBRE DE CONVERSIONS",
-            "quest.guild.currency_exchange.custom.quantity",
-            {
-                "Conversion choisie : " + std::to_string(sourcePerLot) + " " + Money::coinAbbreviation(sourceType)
-                    + " -> " + std::to_string(targetPerLot) + " " + Money::coinAbbreviation(targetType) + ".",
-                "Pièces source disponibles : " + std::to_string(sourceCount) + " " + Money::coinAbbreviation(sourceType) + ".",
-                "Maximum possible : " + std::to_string(maxLots) + " conversion(s).",
-                "Pour le maximum, le guichet utiliserait " + std::to_string(sourcePerLot * maxLots) + " " + Money::coinAbbreviation(sourceType)
-                    + " et remettrait " + std::to_string(targetPerLot * maxLots) + " " + Money::coinAbbreviation(targetType) + "."
-            },
-            1,
-            maxQuantity,
-            "Le nombre doit rester entre 1 et le maximum convertible affiché."
-        );
-        Console::clear();
-
-        const long long before = player.getInventory().getTotalCopper();
-        if (player.getInventory().convertCoinLots(sourceType, targetType, lotCount))
-        {
-            player.refreshCurrencyTitles();
-            const long long after = player.getInventory().getTotalCopper();
-            MessageScreen::show(
-                "CHANGE EFFECTUÉ",
-                "quest.guild.currency_exchange.custom.done",
-                {
-                    std::to_string(sourcePerLot * static_cast<long long>(lotCount)) + " " + Money::coinAbbreviation(sourceType)
-                        + " échangé(s) contre " + std::to_string(targetPerLot * static_cast<long long>(lotCount)) + " " + Money::coinAbbreviation(targetType) + ".",
-                    "Bourse : " + player.getInventory().getWalletLine() + ".",
-                    "Valeur exacte : " + player.getInventory().getWalletTotalLine() + ".",
-                    "Valeur conservée : " + std::string(before == after ? "oui" : "ERREUR") + "."
-                },
-                false
-            );
-            Console::clear();
-        }
-    }
-}
-
 // EN: openGuild declares or implements a focused behavior used by this module.
 // FR: openGuild déclare ou implémente un comportement précis utilisé par ce module.
 void QuestMenu::openGuild(Player& player)
@@ -3976,6 +4312,9 @@ void QuestMenu::openGuild(Player& player)
     {
         const ClientQuestCounts guildCounts = countQuestsForClient(player, "Maître de guilde");
         const int activeServiceCount = countActiveGuildServiceQuests(player);
+        const int bountyAftermathCount = BountyAftermathSystem::pendingCount(player);
+        const int bountyCustodyCount = BountyCustodySystem::pendingCount(player);
+        const int crimeLocalOpportunityCount = CrimeLocalOpportunitySystem::pendingCount(player, player.getCurrentCityId());
         const bool isAdventurer = player.hasTitle("Aventurier");
         const bool guildOpen = guildIsOpen(player);
         MenuScreen screen("GUILDE", "quest.guild");
@@ -4000,6 +4339,8 @@ void QuestMenu::openGuild(Player& player)
         screen.addLine("Défis actifs : " + std::to_string(player.getQuestLog().getActiveGuildChallengeCount()) + "/3.");
         screen.addLine("Contrats de guilde : " + clientQuestStatusText(guildCounts));
         screen.addLine("Services de guilde à traiter au comptoir : " + std::to_string(activeServiceCount) + ".");
+        if (bountyAftermathCount > 0)
+            screen.addLine("Suivis post-prime en attente : " + std::to_string(bountyAftermathCount) + ".");
         if (!player.hasTitle("Témoin du marchand bleu")
             && heroVillagerProgressGateIsOpen(player)
             && player.getWorldDaysElapsed() % 5 == 0)
@@ -4109,11 +4450,45 @@ void QuestMenu::openGuild(Player& player)
             guildOpen && isAdventurer,
             "quest.guild.challenges"
         );
-        screen.addOption(7, "Bureau de change",
-            !guildOpen ? guildClosedReason : "Répartir librement les mêmes fonds entre PC, PF, PE, PO et PP, sans frais.",
+        screen.addOption(7, "Gestion de l'argent",
+            !guildOpen ? guildClosedReason : "Bourse, conversions, dépôts, adhésion, découvert et prêts dans un même bureau.",
             guildOpen,
-            "quest.guild.currency_exchange"
+            "quest.guild.money"
         );
+        screen.addOption(9, "Vendre des matériaux de monstres",
+            !guildOpen ? guildClosedReason : "La guilde rachète les composants de créatures comme preuves, ressources d'étude et matériaux de contrats. C'est une filière de référence, comme une boutique spécialisée.",
+            guildOpen,
+            "quest.guild.monster_material_sale"
+        );
+        screen.addOption(10, "Suivis de primes" + (bountyAftermathCount > 0 ? " [" + std::to_string(bountyAftermathCount) + "]" : ""),
+            !guildOpen ? guildClosedReason : (bountyAftermathCount > 0
+                ? "Répondre aux commanditaires, organisations ou proches qui réagissent à d'anciennes primes."
+                : "Aucun suivi post-prime disponible pour le moment."),
+            guildOpen && bountyAftermathCount > 0,
+            "quest.guild.bounty_aftermath"
+        );
+        screen.addOption(11, "Entretiens de garde" + (bountyCustodyCount > 0 ? " [" + std::to_string(bountyCustodyCount) + "]" : ""),
+            !guildOpen ? guildClosedReason : (bountyCustodyCount > 0
+                ? "Interroger une cible capturée vivante sans transformer sa parole en vérité automatique."
+                : "Aucune cible capturée n'attend d'entretien facultatif."),
+            guildOpen && bountyCustodyCount > 0,
+            "quest.guild.bounty_custody"
+        );
+        screen.addOption(12, "Suivis locaux" + (crimeLocalOpportunityCount > 0 ? " [" + std::to_string(crimeLocalOpportunityCount) + "]" : ""),
+            !guildOpen ? guildClosedReason : (crimeLocalOpportunityCount > 0
+                ? "Transformer une conséquence criminelle observée en petit service local, sans créer une crise artificielle."
+                : "Aucun petit suivi local n'est disponible dans cette ville."),
+            guildOpen && crimeLocalOpportunityCount > 0,
+            "quest.guild.crime_local"
+        );
+        const PlayerHestiaStoryState& hestiaState = player.getHestiaStoryState();
+        if (hestiaState.rescued && hestiaState.materialized)
+        {
+            const std::string hestiaStatus = hestiaState.residence == "guild_diane"
+                ? "Hestia est actuellement en sécurité auprès de Diane."
+                : "Diane peut accueillir Hestia si tu préfères qu'elle ne voyage pas avec toi.";
+            screen.addOption(8, "Diane / Hestia", !guildOpen ? guildClosedReason : hestiaStatus, guildOpen, "quest.guild.hestia");
+        }
 
         int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
         Console::clear();
@@ -4160,7 +4535,74 @@ void QuestMenu::openGuild(Player& player)
         }
         else if (choice == 7)
         {
-            openGuildCurrencyExchange(player);
+            GuildFinanceMenu::openMoneyManagement(player);
+        }
+        else if (choice == 9)
+        {
+            ShopMenu::openSellOnly(player, ShopType::MonsterMaterial, "Comptoir de collecte de la guilde");
+        }
+        else if (choice == 10 && bountyAftermathCount > 0)
+        {
+            openBountyAftermathMenu(player);
+        }
+        else if (choice == 11 && bountyCustodyCount > 0)
+        {
+            openBountyCustodyMenu(player);
+        }
+        else if (choice == 12 && crimeLocalOpportunityCount > 0)
+        {
+            openCrimeLocalOpportunitiesMenu(player);
+        }
+        else if (choice == 8 && player.getHestiaStoryState().rescued && player.getHestiaStoryState().materialized)
+        {
+            while (true)
+            {
+                const PlayerHestiaStoryState& h = player.getHestiaStoryState();
+                MenuScreen hestiaScreen("DIANE / HESTIA", "quest.guild.hestia");
+                hestiaScreen.addLine("Diane peut garder Hestia aussi longtemps que nécessaire. Il n'existe aucune obligation de visite ni pénalité d'absence.");
+                hestiaScreen.addLine("Situation : " + HestiaArcSystem::wellbeingLabel(player, player.getWorldDaysElapsed()) + ".");
+                hestiaScreen.addBackOption("Retour", "quest.guild.hestia.back");
+                if (h.residence == "guild_diane")
+                {
+                    hestiaScreen.addOption(1, "Passer un moment avec Hestia", "Facultatif : augmente seulement la confiance si tu en as envie.", true, "quest.guild.hestia.visit");
+                    hestiaScreen.addOption(2, "Demander à Hestia de voyager avec toi", "Elle rejoint l'équipe disponible. Aucun changement irréversible.", true, "quest.guild.hestia.party");
+                    if (player.getHomeState().owned)
+                        hestiaScreen.addOption(3, "Laisser Hestia vivre à la maison", "Elle peut y cohabiter avec un conjoint sans entretien obligatoire.", true, "quest.guild.hestia.home");
+                }
+                else
+                {
+                    hestiaScreen.addOption(1, "Confier Hestia à Diane", "Elle restera en sécurité à la guilde aussi longtemps que tu le souhaites.", true, "quest.guild.hestia.leave");
+                }
+                if (hestiaCanBePreparedAtGuild(player))
+                    hestiaScreen.addOption(7, "Préparer / entraîner Hestia", "Choisir sa classe et son équipement d'essai, ou l'accompagner pendant une séance.", true, "quest.guild.hestia.preparation");
+
+                const int hChoice = TerminalInterface::askMenuChoiceFromOptions(hestiaScreen, "Choix invalide.");
+                Console::clear();
+                if (hChoice == 0) break;
+                if (hChoice == 7 && hestiaCanBePreparedAtGuild(player))
+                {
+                    openHestiaPreparationAtGuild(player);
+                }
+                else if (h.residence == "guild_diane" && hChoice == 1)
+                {
+                    Random random;
+                    std::vector<std::string> lines = HestiaArcSystem::visit(player, player.getWorldDaysElapsed(), random);
+                    lines.push_back("Tu peux repartir sans conséquence : Hestia ne possède aucune jauge d'entretien cachée.");
+                    MessageScreen::show("HESTIA", "quest.guild.hestia.visit.done", lines, false);
+                }
+                else if (h.residence == "guild_diane" && hChoice == 2)
+                {
+                    HestiaArcSystem::moveResidence(player, "active_party", player.getHomeState().owned);
+                }
+                else if (h.residence == "guild_diane" && hChoice == 3 && player.getHomeState().owned)
+                {
+                    HestiaArcSystem::moveResidence(player, "player_home", true);
+                }
+                else if (h.residence != "guild_diane" && hChoice == 1)
+                {
+                    HestiaArcSystem::moveResidence(player, "guild_diane", player.getHomeState().owned);
+                }
+            }
         }
     }
 }
@@ -4718,9 +5160,9 @@ void QuestMenu::acceptGuildQuest(Player& player)
         for (std::size_t i = first; i < last; ++i)
         {
             const bool alreadyTaken = questLog.hasQuest(board[i].id);
-            const bool rankAllowed = isGuildQuestRankAllowedForStanding(board[i], standing);
+            const bool rankAllowed = isGuildQuestRankAllowedForStanding(player, board[i], standing);
             const bool samePlayableLocation = !alreadyTaken && hasActiveGuildQuestAtSamePlayableLocation(questLog, board[i]);
-            const std::string label = questBoardOfferLabel(board[i], samePlayableLocation);
+            const std::string label = questBoardOfferLabel(player, board[i], samePlayableLocation);
 
             MenuOptionItemData itemData;
             itemData.structured = true;
@@ -4731,9 +5173,14 @@ void QuestMenu::acceptGuildQuest(Player& player)
             itemData.detail = samePlayableLocation
                 ? "Quête du même lieu qu'une autre quête active : ce n'est pas un contrat déjà en cours."
                 : "Contrat proposé par la guilde.";
+            const QuestLocationAccessReport boardLocationAccess = QuestLocationAccessSystem::evaluate(player, board[i]);
             itemData.status = alreadyTaken
                 ? "Déjà prise"
-                : (!rankAllowed ? "Rang/pastille insuffisant" : (samePlayableLocation ? "Quête du même lieu qu'une autre quête active" : "Disponible"));
+                : (!rankAllowed
+                    ? "Rang/pastille insuffisant"
+                    : (boardLocationAccess.state != QuestLocationAccessState::Accessible
+                        ? QuestLocationAccessSystem::statusLabel(boardLocationAccess)
+                        : (samePlayableLocation ? "Quête du même lieu qu'une autre quête active" : "Disponible")));
             itemData.reward = questRewardText(board[i]);
             itemData.progress = "Rang " + (board[i].rank.empty() ? std::string("?") : board[i].rank) + " | Offre proposée";
             itemData.owner = "Guilde";
@@ -4826,7 +5273,7 @@ void QuestMenu::acceptGuildQuest(Player& player)
         return;
     }
 
-    if (!isGuildQuestRankAllowedForStanding(selectedQuest, standing))
+    if (!isGuildQuestRankAllowedForStanding(player, selectedQuest, standing))
     {
         MessageScreen::show(
             "CARTE REFUSÉE",
@@ -4835,7 +5282,9 @@ void QuestMenu::acceptGuildQuest(Player& player)
                 "La carte magique refuse de tamponner ce contrat pour l'instant.",
                 "Rang du contrat : " + selectedQuest.rank + ".",
                 "Dossier actuel : rang " + standing.rank + ", pastille " + standing.pellet + ".",
-                "Valide des contrats plus simples pour faire monter le rang, ou stabilise ta pastille en évitant les échecs de délai."
+                GuildQuestAccessPolicy::hasActiveGroup(player)
+                    ? "En groupe, la limite dépend de la composition : jusqu'à 4 membres le plus faible fixe rang +1 ; dès 5 membres, le plafond vient de la moyenne. La pastille peut toujours imposer une limite plus basse."
+                    : "En solo, tu ne peux pas dépasser ton rang actuel. Pars avec au moins un allié actif pour tenter au maximum +1 rang, sauf restriction de pastille."
             }
         );
         return;
@@ -4882,6 +5331,24 @@ void QuestMenu::acceptGuildQuest(Player& player)
     }
 
     prepareQuestForAcceptance(selectedQuest, player.getWorldDaysElapsed());
+    std::vector<std::string> intercityPreparationLines;
+    if (IntercityQuestSystem::isIntercityTemplate(selectedQuest)
+        && !IntercityQuestSystem::initializeAtAcceptance(player, selectedQuest, &intercityPreparationLines))
+    {
+        MessageScreen::show(
+            "TRAJET INTER-VILLE IMPOSSIBLE",
+            "quest.guild.board.intercity_unavailable",
+            {
+                "Ce contrat nécessite au moins une autre ville actuellement accessible.",
+                "La fiche reste sur le panneau : reviens lorsque ton personnage pourra réellement effectuer le trajet."
+            }
+        );
+        return;
+    }
+    if (selectedQuest.bountyMission)
+    {
+        BountyRelocationSystem::ensureLocalPosition(selectedQuest, player.getCurrentCityId());
+    }
 
     if (questLog.addQuestWithGuildLimit(selectedQuest, activeQuestLimit))
     {
@@ -4893,6 +5360,7 @@ void QuestMenu::acceptGuildQuest(Player& player)
         std::vector<std::string> dialogue = guildQuestAcceptedDialogueLines(player, selectedQuest);
         lines.insert(lines.end(), dialogue.begin(), dialogue.end());
         lines.push_back("Objectif : " + selectedQuest.objective);
+        lines.insert(lines.end(), intercityPreparationLines.begin(), intercityPreparationLines.end());
         lines.push_back("Zone/action jouable : " + questPlayableLocationHint(selectedQuest));
         lines.push_back("Comment faire : " + questProgressMethodText(selectedQuest));
         lines.push_back("Récompenses : " + questRewardText(selectedQuest));
@@ -5989,6 +6457,17 @@ namespace
                 MessageScreen::show("MARQUES INSUFFISANTES", "quest.guild.challenge_marks.missing", {"Il te manque des Marques de défi."}, false);
                 continue;
             }
+            if (!InventoryProtection::confirmLockedMaterialUse(
+                    player,
+                    "guild_challenge_mark",
+                    "Marque de défi",
+                    "échanger ces marques contre la récompense choisie",
+                    "quest.guild.challenge_marks.locked"
+                ))
+            {
+                MessageScreen::show("ÉCHANGE ANNULÉ", "quest.guild.challenge_marks.locked.cancel", {"Les Marques de défi verrouillées restent dans l'inventaire."}, false);
+                continue;
+            }
             if (!player.getInventory().removeMaterialQuantityByIdFlexible("guild_challenge_mark", cost))
             {
                 MessageScreen::show("ÉCHANGE IMPOSSIBLE", "quest.guild.challenge_marks.remove_failed", {"Les marques n'ont pas pu être retirées proprement."}, false);
@@ -6232,6 +6711,38 @@ void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientN
 
         Quest& quest = quests[readyIndexes[first + static_cast<std::size_t>(localQuestIndex)]];
 
+        // Fallback for quest paths that mark completion directly instead of going through QuestLog.
+        // The reveal happens only once and is deterministic from the quest identity.
+        QuestSecondPhaseSystem::revealAfterPrimaryCompletion(quest);
+        if (quest.phaseTwoActive && quest.phaseTwoMandatory && !quest.phaseTwoCompleted)
+        {
+            MessageScreen::show(
+                "UNE SUITE EST APPARUE",
+                "quest.turn_in.phase2_mandatory",
+                QuestSecondPhaseSystem::journalLines(quest)
+            );
+            continue;
+        }
+
+        if (QuestSecondPhaseSystem::canOfferOptional(quest))
+        {
+            MenuScreen phaseDecision("SUITE FACULTATIVE DÉCOUVERTE", "quest.turn_in.phase2_optional");
+            for (const std::string& line : QuestSecondPhaseSystem::journalLines(quest)) phaseDecision.addLine(line);
+            phaseDecision.addBackOption("Annuler", "quest.turn_in.phase2_optional.back");
+            phaseDecision.addOption(1, "Poursuivre la phase 2", "La quête repasse en cours. Si tu réussis, la récompense finale augmente.", true, "quest.turn_in.phase2_optional.accept");
+            phaseDecision.addOption(2, "Rendre la quête maintenant", "Tu gardes la réussite de la phase 1 et la récompense normale.", true, "quest.turn_in.phase2_optional.decline");
+            const int phaseChoice = TerminalInterface::askMenuChoiceFromOptions(phaseDecision, "Choix invalide.");
+            Console::clear();
+            if (phaseChoice == 0) continue;
+            if (phaseChoice == 1)
+            {
+                QuestSecondPhaseSystem::activateOptional(quest);
+                MessageScreen::show("PHASE 2 ACCEPTÉE", "quest.turn_in.phase2_optional.accepted", QuestSecondPhaseSystem::journalLines(quest));
+                continue;
+            }
+            QuestSecondPhaseSystem::declineOptional(quest);
+        }
+
         if (!askQuestTurnInConfirmation(player, quest, clientName))
         {
             continue;
@@ -6273,6 +6784,21 @@ void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientN
                 continue;
             }
 
+            if (!InventoryProtection::confirmLockedMaterialUse(
+                    player,
+                    quest.requiredMaterialId,
+                    quest.requiredMaterialName,
+                    "remettre ce matériau pour valider la quête",
+                    "quest.turn_in.locked_material"))
+            {
+                MessageScreen::show(
+                    "LIVRAISON ANNULÉE",
+                    "quest.turn_in.locked_material.cancel",
+                    {"Le matériau verrouillé reste dans l'inventaire. La quête n'est pas rendue."}
+                );
+                continue;
+            }
+
             player.getInventory().removeMaterialQuantityByIdFlexible(quest.requiredMaterialId, quest.requiredMaterialQuantity);
             resultLines.push_back("Matériaux remis : " + quest.requiredMaterialName + " x" + std::to_string(quest.requiredMaterialQuantity));
         }
@@ -6293,6 +6819,30 @@ void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientN
         player.recordPnjServed(quest.client.empty() ? std::string("Contact inconnu") : quest.client);
         player.recordQuestTypeCompleted(questKindText(quest));
         player.recordCanonicalEvent("quetes_reussies", quest.id, quest.title);
+
+        const CrimeLocalStabilizationResult localStabilization = CrimeLocalStabilizationSystem::applyQuestTurnIn(player, quest);
+        if (localStabilization.applied)
+        {
+            resultLines.insert(resultLines.end(), localStabilization.lines.begin(), localStabilization.lines.end());
+        }
+
+        // V3.51.53: mayoral vault rebates may also be earned through a smaller number of quests
+        // from genuinely notable local figures. Generic merchants/villagers do not count here.
+        const bool importantLocalClient = quest.origin == "PNJ notable"
+            || quest.client == "Bram"
+            || quest.client == "Tavia"
+            || quest.client == "Prunigil"
+            || quest.client == "Archiviste Meron"
+            || quest.client == "Sœur Cléria"
+            || quest.client == "Batia des barques"
+            || quest.client == "Tarek le carrier"
+            || quest.client == "Niko sous le pont"
+            || quest.client == "Rosalie des statues";
+        if (importantLocalClient)
+        {
+            player.recordCanonicalEvent("quetes_personnage_important", quest.client.empty() ? quest.id : quest.client, quest.title, 1);
+        }
+
         player.gainExperience(balancedQuestExperience(quest));
         if (Money::coinStacksValueInCopper(quest.rewardCoins) > 0)
         {
@@ -6304,6 +6854,7 @@ void QuestMenu::completeQuestAtClient(Player& player, const std::string& clientN
             player.getInventory().earnEconomyUnits(balancedQuestGold(quest));
             player.refreshCurrencyTitles();
         }
+        QuestSecondPhaseSystem::applyNonMonetaryReward(player, quest, &resultLines);
         applyQuestExtraReward(player, quest);
         if (quest.guildQuest && !quest.guildChallenge)
         {

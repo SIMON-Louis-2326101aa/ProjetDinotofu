@@ -16,6 +16,8 @@
 #include "entity/Boss.hpp"
 #include "entity/Monster.hpp"
 #include "item/weapon/WeaponType.hpp"
+#include "item/inventory/CarryLoadSystem.hpp"
+#include "story/HestiaSoulArtifactSystem.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 
 #include <iostream>
@@ -510,6 +512,11 @@ void CombatAttack::executeBoostedAttack(
         ? MonsterBehaviorProfileCatalog::getIncomingAccuracyModifier(*defendingMonsterBeforeAccuracy)
         : 0;
 
+    Player* defendingPlayerBeforeAccuracy = dynamic_cast<Player*>(&defender);
+    const int playerTargetAccuracyModifier = defendingPlayerBeforeAccuracy != nullptr
+        ? CarryLoadSystem::incomingAccuracyModifierPercent(*defendingPlayerBeforeAccuracy)
+        : 0;
+
     Player* attackingPlayerBeforeDodge = dynamic_cast<Player*>(&attacker);
     if (dodged
         && attackingPlayerBeforeDodge != nullptr
@@ -561,6 +568,22 @@ void CombatAttack::executeBoostedAttack(
         );
     }
 
+    if (dodged
+        && defendingPlayerBeforeAccuracy != nullptr
+        && playerTargetAccuracyModifier > 0
+        && random.between(1, 100) <= std::min(35, playerTargetAccuracyModifier))
+    {
+        dodged = false;
+        critical = false;
+        rawDamage = random.between(attacker.getMinDamage(), attacker.getMaxDamage()) + damageBonus;
+        MessageScreen::show(
+            "GABARIT EXPOSÉ",
+            "combat.attack.player_large_target_recovered",
+            {defender.getName() + " esquive presque, mais son gabarit laisse une fenêtre plus large."},
+            false
+        );
+    }
+
     if (dodged)
     {
         MessageScreen::show(
@@ -569,6 +592,20 @@ void CombatAttack::executeBoostedAttack(
             {
                 attacker.getName() + " attaque, mais " + defender.getName() + " esquive au dernier moment."
             }
+        );
+        DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
+        return;
+    }
+
+    if (defendingPlayerBeforeAccuracy != nullptr
+        && playerTargetAccuracyModifier < 0
+        && random.between(1, 100) <= std::min(30, -playerTargetAccuracyModifier))
+    {
+        MessageScreen::show(
+            "SILHOUETTE ÉTROITE",
+            "combat.attack.player_small_target_slipped",
+            {defender.getName() + " profite de son gabarit plus fin pour sortir de la trajectoire."},
+            false
         );
         DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
         return;
@@ -605,6 +642,22 @@ void CombatAttack::executeBoostedAttack(
 
     if (attackingPlayerBeforeDodge != nullptr)
     {
+        bool meleeBasicAttack = true;
+        if (attackingPlayerBeforeDodge->hasEquippedWeapon())
+            meleeBasicAttack = attackingPlayerBeforeDodge->getEquippedWeapon().getType() != WeaponType::Bow;
+        const int loadAccuracyPenalty = meleeBasicAttack ? CarryLoadSystem::meleeAccuracyModifierPercent(*attackingPlayerBeforeDodge) : 0;
+        if (loadAccuracyPenalty < 0 && random.between(1, 100) <= -loadAccuracyPenalty)
+        {
+            MessageScreen::show(
+                "GESTE ENCOMBRÉ",
+                "combat.attack.carry_melee_miss",
+                {attacker.getName() + " est trop chargé pour fermer proprement la distance : le geste arrive en retard."},
+                false
+            );
+            DefensePostureSystem::tryCounterAfterMiss(defender, attacker, random);
+            return;
+        }
+
         const int precisionPressure = attackingPlayerBeforeDodge->getCursePressureForCategory("precision");
         if (precisionPressure > 0 && random.between(1, 100) <= std::min(34, 4 + precisionPressure * 4))
         {
@@ -1545,11 +1598,73 @@ void CombatAttack::executeBoostedAttack(
         }
     }
 
+    if (defendingPlayerCurseCheck != nullptr && rapport.receivedDamage > 0)
+    {
+        const int carriedProtection = CarryLoadSystem::physicalProtectionPercent(*defendingPlayerCurseCheck);
+        if (carriedProtection > 0)
+        {
+            const int beforeLoadProtection = rapport.receivedDamage;
+            rapport.receivedDamage = std::max(1, rapport.receivedDamage * (100 - carriedProtection) / 100);
+            if (rapport.receivedDamage < beforeLoadProtection)
+            {
+                MessageScreen::show(
+                    "CHARGE AMORTISSANTE",
+                    "combat.attack.carry_physical_protection",
+                    {"Une petite partie de l'impact est absorbée par ce que " + defender.getName() + " transporte."},
+                    false
+                );
+            }
+        }
+    }
+
+    const bool defenderAliveBeforeImpact = !defender.isDead();
     defender.takeDamage(rapport.receivedDamage);
+    const bool directImpactKilledDefender = defenderAliveBeforeImpact && defender.isDead();
 
     std::ostringstream followUpBuffer;
 
     Player* attackingPlayer = dynamic_cast<Player*>(&attacker);
+    if (attackingPlayer != nullptr
+        && directImpactKilledDefender
+        && HestiaSoulArtifactSystem::isEquipped(*attackingPlayer))
+    {
+        std::string familyId = "type:" + defender.getType();
+        if (Boss* killedBoss = dynamic_cast<Boss*>(&defender))
+        {
+            familyId = "boss:" + killedBoss->getType();
+        }
+        else if (Monster* killedMonster = dynamic_cast<Monster*>(&defender))
+        {
+            familyId = "race:" + killedMonster->getRaceText();
+        }
+        else if (Player* killedPlayer = dynamic_cast<Player*>(&defender))
+        {
+            familyId = "player:" + killedPlayer->getRaceText();
+        }
+
+        const HestiaArtifactKillResult soul = HestiaSoulArtifactSystem::recordKillingBlow(
+            *attackingPlayer, familyId, true);
+        if (soul.counted)
+        {
+            followUpBuffer << "L'artefact d'Hestia absorbe l'essence du coup fatal. ";
+            if (soul.levelUp)
+            {
+                followUpBuffer << "Il atteint le niveau " << soul.level
+                    << " (" << soul.damage << " dégâts de base).";
+                if (soul.secondFormJustUnlocked)
+                    followUpBuffer << " Une seconde forme peut maintenant être choisie.";
+            }
+            else
+            {
+                followUpBuffer << soul.killsRemaining << " âme(s) acceptée(s) restent avant la prochaine évolution.";
+            }
+            followUpBuffer << std::endl;
+        }
+        else if (!soul.reason.empty())
+        {
+            followUpBuffer << soul.reason << std::endl;
+        }
+    }
     if (attackingPlayer != nullptr)
     {
         applyAmmunitionStatusIfNeeded(*attackingPlayer, defender, rapport.receivedDamage, followUpBuffer);

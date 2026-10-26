@@ -9,7 +9,7 @@
 
 std::string VersionInfo::currentVersion()
 {
-    return "3.50.36";
+    return "3.57.08";
 }
 
 std::string VersionInfo::recreateRecommendedBeforeVersion()
@@ -19,7 +19,12 @@ std::string VersionInfo::recreateRecommendedBeforeVersion()
 
 std::string VersionInfo::importantSaveUpdateVersion()
 {
-    return "3.50.33";
+    return "3.57.00";
+}
+
+std::string VersionInfo::importantSaveUpdateReason()
+{
+    return "V3.57 consolide l'entrée de jeu, ajoute le tutoriel isolé de Jean-Michel Test et révise le catalogue des titres de compte. Le schéma reste compatible, mais ce checkpoint protège les sauvegardes antérieures avant l'adaptation de version et les nouvelles métadonnées de progression.";
 }
 
 

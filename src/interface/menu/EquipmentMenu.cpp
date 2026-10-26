@@ -16,6 +16,7 @@
 #include "combat/system/CombatClassSystem.hpp"
 #include "item/durability/DurabilityRules.hpp"
 #include "item/equipment/EquipmentWeightRules.hpp"
+#include "story/HestiaSoulArtifactSystem.hpp"
 
 #include <iostream>
 #include <algorithm>
@@ -327,6 +328,74 @@ namespace
     {
         MessageScreen::show(title, screenId, lines);
     }
+
+    void openHestiaArtifactMenu(Player& player)
+    {
+        while (player.getHestiaArtifactState().granted)
+        {
+            const PlayerHestiaArtifactState& state = player.getHestiaArtifactState();
+            MenuScreen screen("ARTEFACT D'HESTIA", "equipment.hestia_artifact");
+            for (const std::string& line : HestiaSoulArtifactSystem::statusLines(player))
+                screen.addLine(line);
+            screen.addLine(HestiaSoulArtifactSystem::isEquipped(player)
+                ? "État : matérialisé comme arme équipée."
+                : "État : au repos sous forme de gant fixé à la peau.");
+            screen.addBackOption("Retour", "equipment.hestia_artifact.back");
+            screen.addOption(1,
+                HestiaSoulArtifactSystem::isEquipped(player) ? "Remettre l'artefact au repos" : "Équiper l'artefact",
+                HestiaSoulArtifactSystem::isEquipped(player)
+                    ? "La forme d'arme disparaît et redevient le gant lié au porteur."
+                    : "Remplace l'arme actuellement équipée par la forme active de l'artefact.",
+                true,
+                "equipment.hestia_artifact.toggle");
+            screen.addOption(2, "Utiliser la forme principale", "Matérialise la forme adaptée au porteur.", state.activeForm != "primary", "equipment.hestia_artifact.primary");
+            screen.addOption(3, "Utiliser la seconde forme",
+                state.secondaryForm.empty() ? "Aucune seconde forme n'a encore été choisie." : "Passe à la seconde forme choisie.",
+                state.level >= 16 && !state.secondaryForm.empty() && state.activeForm != "secondary",
+                "equipment.hestia_artifact.secondary");
+            screen.addOption(4, "Choisir la seconde forme",
+                state.level < 16 ? "Débloquée au niveau 16." : (state.secondaryForm.empty() ? "Choix permanent : cette forme ne pourra pas être remplacée." : "La seconde forme est déjà fixée définitivement."),
+                state.level >= 16 && state.secondaryForm.empty(),
+                "equipment.hestia_artifact.choose_secondary");
+
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+            Console::clear();
+            if (choice == 0) return;
+            if (choice == 1)
+            {
+                if (HestiaSoulArtifactSystem::isEquipped(player)) HestiaSoulArtifactSystem::unequip(player);
+                else HestiaSoulArtifactSystem::equip(player);
+                continue;
+            }
+            if (choice == 2)
+            {
+                HestiaSoulArtifactSystem::switchToPrimary(player);
+                continue;
+            }
+            if (choice == 3)
+            {
+                HestiaSoulArtifactSystem::switchToSecondary(player);
+                continue;
+            }
+            if (choice == 4 && state.level >= 16 && state.secondaryForm.empty())
+            {
+                const std::vector<std::string> forms = HestiaSoulArtifactSystem::weaponFormChoices();
+                MenuScreen formScreen("SECONDE FORME", "equipment.hestia_artifact.secondary_form");
+                formScreen.addLine("Ce choix est définitif pour cet artefact.");
+                formScreen.addBackOption("Annuler", "equipment.hestia_artifact.secondary_form.back");
+                for (std::size_t i = 0; i < forms.size(); ++i)
+                    formScreen.addOption(static_cast<int>(i + 1), forms[i], "Fixer définitivement cette seconde forme.", true, "equipment.hestia_artifact.secondary_form." + std::to_string(i));
+                const int formChoice = TerminalInterface::askMenuChoiceFromOptions(formScreen, "Choix invalide.");
+                Console::clear();
+                if (formChoice > 0 && formChoice <= static_cast<int>(forms.size()))
+                {
+                    const std::string selected = forms[static_cast<std::size_t>(formChoice - 1)];
+                    if (HestiaSoulArtifactSystem::chooseSecondForm(player, selected))
+                        MessageScreen::show("FORME FIXÉE", "equipment.hestia_artifact.secondary_form.done", {"Seconde forme : " + selected + ".", "Elle peut désormais être alternée avec la forme principale à volonté."}, false);
+                }
+            }
+        }
+    }
 }
 
 // EN: open declares or implements a focused behavior used by this module.
@@ -336,6 +405,15 @@ bool EquipmentMenu::open(Player& player)
     while (true)
     {
         MenuScreen screen = EquipmentDisplay::buildMainScreen();
+        if (player.getHestiaArtifactState().granted)
+        {
+            screen.addOption(5, "Artefact d'Hestia",
+                HestiaSoulArtifactSystem::isEquipped(player)
+                    ? "Gérer l'artefact évolutif actuellement équipé."
+                    : "Gérer le gant lié et ses formes d'arme évolutives.",
+                true,
+                "equipment.hestia_artifact");
+        }
         int choice = TerminalInterface::askMenuChoiceFromOptions(
             screen,
             "Choix invalide. Choisis une option visible de l'équipement."
@@ -369,6 +447,12 @@ bool EquipmentMenu::open(Player& player)
         if (choice == 4)
         {
             equipArmorFromInventory(player);
+            continue;
+        }
+
+        if (choice == 5 && player.getHestiaArtifactState().granted)
+        {
+            openHestiaArtifactMenu(player);
             continue;
         }
     }

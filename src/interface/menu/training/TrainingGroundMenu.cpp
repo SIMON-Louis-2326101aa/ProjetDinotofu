@@ -5,6 +5,7 @@
 
 #include "interface/menu/training/TrainingGroundMenu.hpp"
 #include "economy/Money.hpp"
+#include "progression/TechniqueProgressionRules.hpp"
 
 #include "entity/Player.hpp"
 #include "interface/TerminalInterface.hpp"
@@ -26,6 +27,7 @@ namespace
         std::string id;
         std::string name;
         std::string explanation;
+        int minLevel;
     };
 
     std::string weaponTrainingLabel(WeaponType type)
@@ -48,30 +50,30 @@ namespace
     {
         if (!player.hasEquippedWeapon())
         {
-            return {false, "combat_observation", "Observation tactique", "Sans arme équipée, le maître d'armes travaille surtout la lecture du rythme adverse."};
+            return {false, "combat_observation", "Observation tactique", "Sans arme équipée, le maître d'armes travaille surtout la lecture du rythme adverse.", TechniqueProgressionRules::weaponPracticeUnlockLevel("combat_observation")};
         }
 
         const WeaponType type = player.getEquippedWeapon().getType();
         switch (type)
         {
             case WeaponType::Dagger:
-                return {true, "chain_execution", "Enchaînement", "La dague apprend à prolonger une ouverture déjà créée."};
+                return {true, "chain_execution", "Enchaînement", "La dague apprend à prolonger une ouverture déjà créée.", TechniqueProgressionRules::weaponPracticeUnlockLevel("chain_execution")};
             case WeaponType::Bow:
-                return {false, "ranger_eye", "Œil de rôdeur", "La séance apprend à lire les trajectoires, les distances et les respirations."};
+                return {false, "ranger_eye", "Œil de rôdeur", "La séance apprend à lire les trajectoires, les distances et les respirations.", TechniqueProgressionRules::weaponPracticeUnlockLevel("ranger_eye")};
             case WeaponType::Staff:
-                return {true, "cautious_channeling", "Canalisation prudente", "Le bâton sert de catalyseur stable plutôt que de simple bâton de combat."};
+                return {true, "cautious_channeling", "Canalisation prudente", "Le bâton sert de catalyseur stable plutôt que de simple bâton de combat.", TechniqueProgressionRules::weaponPracticeUnlockLevel("cautious_channeling")};
             case WeaponType::Sword:
-                return {false, "blade_discipline", "Discipline de lame", "La lame revient dans l'axe après chaque coup au lieu de flotter au hasard."};
+                return {false, "blade_discipline", "Discipline de lame", "La lame revient dans l'axe après chaque coup au lieu de flotter au hasard.", TechniqueProgressionRules::weaponPracticeUnlockLevel("blade_discipline")};
             case WeaponType::Axe:
-                return {true, "splitting_blow", "Frappe fendue", "La hache travaille les trajectoires larges qui ouvrent les défenses."};
+                return {true, "splitting_blow", "Frappe fendue", "La hache travaille les trajectoires larges qui ouvrent les défenses.", TechniqueProgressionRules::weaponPracticeUnlockLevel("splitting_blow")};
             case WeaponType::Hammer:
-                return {true, "armor_crack", "Fracasse-garde", "Le marteau cherche les points de rupture de la garde adverse."};
+                return {true, "armor_crack", "Fracasse-garde", "Le marteau cherche les points de rupture de la garde adverse.", TechniqueProgressionRules::weaponPracticeUnlockLevel("armor_crack")};
             case WeaponType::Spear:
-                return {false, "reach_control", "Contrôle d'allonge", "La lance impose une distance lisible au lieu de seulement piquer plus fort."};
+                return {false, "reach_control", "Contrôle d'allonge", "La lance impose une distance lisible au lieu de seulement piquer plus fort.", TechniqueProgressionRules::weaponPracticeUnlockLevel("reach_control")};
             case WeaponType::BareHands:
-                return {true, "reflex_counter", "Contre réflexe", "Le corps apprend à répondre quand l'ennemi rate son propre geste."};
+                return {true, "reflex_counter", "Contre réflexe", "Le corps apprend à répondre quand l'ennemi rate son propre geste.", TechniqueProgressionRules::weaponPracticeUnlockLevel("reflex_counter")};
             default:
-                return {false, "combat_observation", "Observation tactique", "La séance transforme une arme improvisée en lecture plus propre du combat."};
+                return {false, "combat_observation", "Observation tactique", "La séance transforme une arme improvisée en lecture plus propre du combat.", TechniqueProgressionRules::weaponPracticeUnlockLevel("combat_observation")};
         }
     }
 
@@ -151,6 +153,11 @@ bool TrainingGroundMenu::open(Player& player)
         const bool knowsTemperatureDrill = player.hasPassiveSkill("temperature_drill");
         const bool knowsTerrainDrill = player.hasPassiveSkill("terrain_drill");
         const bool knowsFootworkDrill = player.hasPassiveSkill("footwork_drill");
+        const bool weaponLevelReady = player.getLevel() >= weaponUnlock.minLevel;
+        const int observationMinLevel = TechniqueProgressionRules::weaponPracticeUnlockLevel("combat_observation");
+        const int temperatureMinLevel = TechniqueProgressionRules::weaponPracticeUnlockLevel("temperature_drill");
+        const int terrainMinLevel = TechniqueProgressionRules::weaponPracticeUnlockLevel("terrain_drill");
+        const int footworkMinLevel = TechniqueProgressionRules::weaponPracticeUnlockLevel("footwork_drill");
 
         MenuScreen screen("STAND D'ENTRAÎNEMENT", "training.ground.main");
         screen.addSubtitle("Louable entre deux combats");
@@ -170,42 +177,42 @@ bool TrainingGroundMenu::open(Player& player)
         screen.addOption(
             1,
             "Séance technique d'arme",
-            "Coût " + Money::formatEconomyUnits(weaponCost) + ". Débloque ou consolide : " + weaponUnlock.name + ".",
-            !hasWeaponUnlock,
+            "Coût " + Money::formatEconomyUnits(weaponCost) + ". Débloque ou consolide : " + weaponUnlock.name + ". Niveau requis : " + std::to_string(weaponUnlock.minLevel) + ".",
+            !hasWeaponUnlock && weaponLevelReady,
             "training.ground.weapon",
-            makeTrainingData(player, "Séance technique d'arme", weaponUnlock.explanation, hasWeaponUnlock ? "Déjà maîtrisé" : Money::formatEconomyUnits(weaponCost), !hasWeaponUnlock)
+            makeTrainingData(player, "Séance technique d'arme", weaponUnlock.explanation, hasWeaponUnlock ? "Déjà maîtrisé" : (weaponLevelReady ? Money::formatEconomyUnits(weaponCost) : "Niveau " + std::to_string(weaponUnlock.minLevel) + " requis"), !hasWeaponUnlock && weaponLevelReady)
         );
         screen.addOption(
             2,
             "Observation tactique",
-            "Coût " + Money::formatEconomyUnits(observationCost) + ". Compétence de combat : lire la cible, créer une faille courte.",
-            !knowsObservation,
+            "Coût " + Money::formatEconomyUnits(observationCost) + ". Compétence de combat : lire la cible, créer une faille courte. Niveau requis : " + std::to_string(observationMinLevel) + ".",
+            !knowsObservation && player.getLevel() >= observationMinLevel,
             "training.ground.observation",
-            makeTrainingData(player, "Observation tactique", "Débloque une compétence générale utilisable via Compétence de classe.", knowsObservation ? "Déjà appris" : Money::formatEconomyUnits(observationCost), !knowsObservation)
+            makeTrainingData(player, "Observation tactique", "Débloque une compétence générale utilisable via Compétence de classe.", knowsObservation ? "Déjà appris" : (player.getLevel() >= observationMinLevel ? Money::formatEconomyUnits(observationCost) : "Niveau " + std::to_string(observationMinLevel) + " requis"), !knowsObservation && player.getLevel() >= observationMinLevel)
         );
         screen.addOption(
             3,
             "Habitude chaleur / froid",
-            "Coût " + Money::formatEconomyUnits(environmentCost) + ". Ajoute un passif compatible Résilience environnementale.",
-            !knowsTemperatureDrill,
+            "Coût " + Money::formatEconomyUnits(environmentCost) + ". Ajoute un passif compatible Résilience environnementale. Niveau requis : " + std::to_string(temperatureMinLevel) + ".",
+            !knowsTemperatureDrill && player.getLevel() >= temperatureMinLevel,
             "training.ground.temperature",
-            makeTrainingData(player, "Habitude chaleur / froid", "Travaille les transitions de température sans donner une immunité gratuite.", knowsTemperatureDrill ? "Déjà appris" : Money::formatEconomyUnits(environmentCost))
+            makeTrainingData(player, "Habitude chaleur / froid", "Travaille les transitions de température sans donner une immunité gratuite.", knowsTemperatureDrill ? "Déjà appris" : (player.getLevel() >= temperatureMinLevel ? Money::formatEconomyUnits(environmentCost) : "Niveau " + std::to_string(temperatureMinLevel) + " requis"))
         );
         screen.addOption(
             4,
             "Habitude terrain difficile",
-            "Coût " + Money::formatEconomyUnits(environmentCost) + ". Ajoute un passif compatible Résilience environnementale.",
-            !knowsTerrainDrill,
+            "Coût " + Money::formatEconomyUnits(environmentCost) + ". Ajoute un passif compatible Résilience environnementale. Niveau requis : " + std::to_string(terrainMinLevel) + ".",
+            !knowsTerrainDrill && player.getLevel() >= terrainMinLevel,
             "training.ground.terrain",
-            makeTrainingData(player, "Habitude terrain difficile", "Travaille boue, pente, cailloux, souffle et appuis.", knowsTerrainDrill ? "Déjà appris" : Money::formatEconomyUnits(environmentCost))
+            makeTrainingData(player, "Habitude terrain difficile", "Travaille boue, pente, cailloux, souffle et appuis.", knowsTerrainDrill ? "Déjà appris" : (player.getLevel() >= terrainMinLevel ? Money::formatEconomyUnits(environmentCost) : "Niveau " + std::to_string(terrainMinLevel) + " requis"))
         );
         screen.addOption(
             5,
             "Appuis entraînés",
-            "Coût " + Money::formatEconomyUnits(sparringCost) + ". Améliore aussi l'action tactique Coup de pied / repousser.",
-            !knowsFootworkDrill,
+            "Coût " + Money::formatEconomyUnits(sparringCost) + ". Améliore aussi l'action tactique Coup de pied / repousser. Niveau requis : " + std::to_string(footworkMinLevel) + ".",
+            !knowsFootworkDrill && player.getLevel() >= footworkMinLevel,
             "training.ground.footwork",
-            makeTrainingData(player, "Appuis entraînés", "Apprend à replacer les pieds, attaquer moins mécaniquement et mieux repousser une cible.", knowsFootworkDrill ? "Déjà appris" : Money::formatEconomyUnits(sparringCost))
+            makeTrainingData(player, "Appuis entraînés", "Apprend à replacer les pieds, attaquer moins mécaniquement et mieux repousser une cible.", knowsFootworkDrill ? "Déjà appris" : (player.getLevel() >= footworkMinLevel ? Money::formatEconomyUnits(sparringCost) : "Niveau " + std::to_string(footworkMinLevel) + " requis"))
         );
         screen.addOption(
             6,
@@ -231,7 +238,7 @@ bool TrainingGroundMenu::open(Player& player)
 
         if (choice == 1)
         {
-            if (hasWeaponUnlock)
+            if (hasWeaponUnlock || !weaponLevelReady)
             {
                 continue;
             }
@@ -254,7 +261,7 @@ bool TrainingGroundMenu::open(Player& player)
         }
         else if (choice == 2)
         {
-            if (knowsObservation)
+            if (knowsObservation || player.getLevel() < observationMinLevel)
             {
                 continue;
             }
@@ -276,7 +283,7 @@ bool TrainingGroundMenu::open(Player& player)
         }
         else if (choice == 3)
         {
-            if (knowsTemperatureDrill)
+            if (knowsTemperatureDrill || player.getLevel() < temperatureMinLevel)
             {
                 continue;
             }
@@ -299,7 +306,7 @@ bool TrainingGroundMenu::open(Player& player)
         }
         else if (choice == 4)
         {
-            if (knowsTerrainDrill)
+            if (knowsTerrainDrill || player.getLevel() < terrainMinLevel)
             {
                 continue;
             }
@@ -322,7 +329,7 @@ bool TrainingGroundMenu::open(Player& player)
         }
         else if (choice == 5)
         {
-            if (knowsFootworkDrill)
+            if (knowsFootworkDrill || player.getLevel() < footworkMinLevel)
             {
                 continue;
             }

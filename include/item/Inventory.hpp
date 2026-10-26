@@ -24,6 +24,15 @@ private:
     std::vector<Consumable> consumables;
     std::vector<Material> materials;
 
+    // Persistent player-facing inventory preferences. Keys are stable across saves;
+    // materials/consumables use catalog identity while equipment uses persistent IDs.
+    std::vector<std::string> pinnedItemKeys_;
+    std::vector<std::string> favoriteAmmunitionIds_;
+    std::vector<std::string> lockedItemKeys_;
+    std::vector<std::string> trackedMaterialIds_;
+
+    void addMaterialInternal(const Material& material, bool announceTrackedAcquisition, bool recordDiscovery);
+
     // Physical coin stacks are preserved instead of auto-normalizing the wallet.
     // 51 PO can therefore remain 51 PO rather than silently becoming 5 PP + 1 PO.
     long long copperCoins_;
@@ -90,6 +99,7 @@ public:
     // EN: countMaterialById declares or implements a focused behavior used by this module.
     // FR: countMaterialById déclare ou implémente un comportement précis utilisé par ce module.
     int countMaterialById(const std::string& id) const;
+    int countMaterialByIdAndQuality(const std::string& id, const std::string& quality) const;
     // EN: countMaterialQualityPointsById declares or implements a focused behavior used by this module.
     // FR: countMaterialQualityPointsById déclare ou implémente un comportement précis utilisé par ce module.
     int countMaterialQualityPointsById(const std::string& id) const;
@@ -106,6 +116,39 @@ public:
     // EN: getMaterials declares or implements a focused behavior used by this module.
     // FR: getMaterials déclare ou implémente un comportement précis utilisé par ce module.
     const std::vector<Material>& getMaterials() const;
+
+
+    static std::string weaponItemKey(const Weapon& weapon);
+    static std::string armorItemKey(const Armor& armor);
+    static std::string consumableItemKey(const Consumable& consumable);
+    static std::string materialItemKey(const Material& material);
+    static std::string materialItemKeyById(const std::string& materialId);
+
+    bool isPinnedItemKey(const std::string& key) const;
+    bool isFavoriteAmmunitionId(const std::string& materialId) const;
+    static bool isAmmunitionMaterialId(const std::string& materialId);
+    static std::string ammunitionFamilyForMaterialId(const std::string& materialId);
+    bool isLockedItemKey(const std::string& key) const;
+    bool isTrackedMaterialId(const std::string& materialId) const;
+    void setPinnedItemKey(const std::string& key, bool enabled);
+    void setFavoriteAmmunitionId(const std::string& materialId, bool enabled);
+    void setLockedItemKey(const std::string& key, bool enabled);
+    void setTrackedMaterialId(const std::string& materialId, bool enabled);
+    void togglePinnedItemKey(const std::string& key);
+    void toggleFavoriteAmmunitionId(const std::string& materialId);
+    void toggleLockedItemKey(const std::string& key);
+    void toggleTrackedMaterialId(const std::string& materialId);
+
+    const std::vector<std::string>& getPinnedItemKeys() const;
+    const std::vector<std::string>& getFavoriteAmmunitionIds() const;
+    const std::vector<std::string>& getLockedItemKeys() const;
+    const std::vector<std::string>& getTrackedMaterialIds() const;
+    void setLoadedInventoryPreferences(
+        const std::vector<std::string>& pinnedKeys,
+        const std::vector<std::string>& lockedKeys,
+        const std::vector<std::string>& trackedMaterialIds,
+        const std::vector<std::string>& favoriteAmmunitionIds
+    );
 
     // EN: addWeapon declares or implements a focused behavior used by this module.
     // FR: addWeapon déclare ou implémente un comportement précis utilisé par ce module.
@@ -175,7 +218,11 @@ public:
     bool removeConsumable(int index);
     bool removeMaterialQuantity(int index, int quantity = 1);
     bool removeMaterialQuantityById(const std::string& id, int quantity = 1);
+    bool removeMaterialQuantityByIdAndQuality(const std::string& id, const std::string& quality, int quantity = 1);
     bool removeMaterialQuantityByIdFlexible(const std::string& id, int normalQualityQuantity = 1);
+    // Degrades one physical unit of the lowest-quality matching stack. Lowest quality dissolves.
+    bool degradeMaterialQualityById(const std::string& id, std::string& previousQuality, std::string& resultingQuality, bool& dissolved);
+    bool degradeMaterialQualityByIdAndQuality(const std::string& id, const std::string& quality, std::string& previousQuality, std::string& resultingQuality, bool& dissolved);
     // EN: clearAll declares or implements a focused behavior used by this module.
     // FR: clearAll déclare ou implémente un comportement précis utilisé par ce module.
     void clearAll();

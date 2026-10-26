@@ -35,7 +35,7 @@ void LocalReputationRepairMenu::open(Player& player)
             screen.addOption(
                 2,
                 "Effectuer un service communautaire",
-                "Prend 2 segments de journée | +3 réputation | limité à une fois par jour dans cette ville.",
+                "Prend 2 moments de la journée | +3 réputation | limité à une fois par jour dans cette ville.",
                 true,
                 "local_reputation.repair.service"
             );

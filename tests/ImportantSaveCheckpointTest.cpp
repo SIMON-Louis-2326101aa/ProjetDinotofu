@@ -26,7 +26,7 @@ int main()
     const std::string currentVersion = VersionInfo::currentVersion();
     const std::string checkpointVersion = VersionInfo::importantSaveUpdateVersion();
     assert(VersionInfo::compare(currentVersion, checkpointVersion) >= 0);
-    assert(checkpointVersion == "3.50.33");
+    assert(checkpointVersion == "3.57.00");
     assert(VersionInfo::requiresImportantSaveUpdate("3.50.08"));
     assert(VersionInfo::requiresImportantSaveUpdate("3.49.93"));
     assert(VersionInfo::requiresImportantSaveUpdate("2.99.99"));
@@ -37,9 +37,13 @@ int main()
     assert(VersionInfo::requiresImportantSaveUpdate("3.50.18"));
     assert(VersionInfo::requiresImportantSaveUpdate("3.50.30"));
     assert(VersionInfo::requiresImportantSaveUpdate("3.50.32"));
-    assert(!VersionInfo::requiresImportantSaveUpdate("3.50.33"));
+    assert(VersionInfo::requiresImportantSaveUpdate("3.51.15"));
     assert(!VersionInfo::requiresImportantSaveUpdate(currentVersion));
-    assert(!VersionInfo::requiresImportantSaveUpdate("3.51.00"));
+    assert(VersionInfo::requiresImportantSaveUpdate("3.51.00"));
+    assert(VersionInfo::requiresImportantSaveUpdate("3.51.14"));
+    assert(VersionInfo::requiresImportantSaveUpdate("3.51.15"));
+    assert(VersionInfo::requiresImportantSaveUpdate("3.56.00"));
+    assert(!VersionInfo::requiresImportantSaveUpdate("3.57.00"));
 
     fs::remove_all("assets/saves");
 
@@ -76,6 +80,31 @@ int main()
     assert(SaveManager::createImportantUpdateBackup(summaries.front(), secondDirectory));
     assert(secondDirectory == backupDirectory);
     assert(readText(expectedCharacterBackup) == firstBackupContent);
+
+    // A recent V3.51.14 character crossing the material-magic checkpoint must keep its inventory exactly as-is.
+    Player recentCharacter;
+    recentCharacter.setVersionMetadata("12/10/2026", "3.51.14", "3.51.14");
+    const int recentWeaponsBefore = recentCharacter.getInventory().getWeaponCount();
+    const int recentArmorsBefore = recentCharacter.getInventory().getArmorCount();
+    const int recentConsumablesBefore = recentCharacter.getInventory().getConsumableCount();
+    const int recentMaterialsBefore = recentCharacter.getInventory().getMaterialCount();
+    const std::vector<std::string> recentChanges = recentCharacter.applyHeavyVersionAdaptation(DifficultyMode::Normal);
+    assert(recentCharacter.getInventory().getWeaponCount() == recentWeaponsBefore);
+    assert(recentCharacter.getInventory().getArmorCount() == recentArmorsBefore);
+    assert(recentCharacter.getInventory().getConsumableCount() == recentConsumablesBefore);
+    assert(recentCharacter.getInventory().getMaterialCount() == recentMaterialsBefore);
+    bool foundMaterialTransition = false;
+    for (const std::string& line : recentChanges)
+    {
+        if (line.find("Transition magie matérielle") != std::string::npos)
+        {
+            foundMaterialTransition = true;
+        }
+        assert(line.find("ajouté") == std::string::npos);
+        assert(line.find("restaurées") == std::string::npos);
+    }
+    assert(foundMaterialTransition);
+    assert(recentCharacter.getLastAdaptedVersion() == VersionInfo::currentVersion());
 
     fs::remove_all("assets/saves");
     return 0;

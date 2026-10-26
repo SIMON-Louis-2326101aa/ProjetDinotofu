@@ -1,8 +1,34 @@
-// EN: CombatSlotRules.cpp briefly defines this Dinotofu module and its responsibilities.
-// FR: CombatSlotRules.cpp résume brièvement ce module de Dinotofu et ses responsabilités.
-// English: This file belongs to Dinotofu. Code identifiers are written in English; player-facing text can stay in French.
-// Français : Ce fichier appartient à Dinotofu. Les identifiants du code sont en anglais ; les textes affichés au joueur peuvent rester en français.
-// Description: Future active-slot rules for base units and summons.
-// TODO: Implement this future system when its feature block becomes active.
-
 #include "combat/unit/CombatSlotRules.hpp"
+
+#include <algorithm>
+
+int CombatSlotRules::maxSummonsForNonSummonCount(int nonSummonCount)
+{
+    const int occupiedShared = std::clamp(nonSummonCount, 0, SharedActiveSlots);
+    const int freeShared = SharedActiveSlots - occupiedShared;
+    return freeShared + SummonOnlyBonusSlots;
+}
+
+bool CombatSlotRules::canAddUnit(
+    CombatUnitKind kind,
+    int currentNonSummonCount,
+    int currentSummonCount
+)
+{
+    currentNonSummonCount = std::max(0, currentNonSummonCount);
+    currentSummonCount = std::max(0, currentSummonCount);
+
+    if (kind == CombatUnitKind::Empty)
+    {
+        return true;
+    }
+
+    if (kind == CombatUnitKind::Summon)
+    {
+        return currentSummonCount < maxSummonsForNonSummonCount(currentNonSummonCount)
+            && currentNonSummonCount + currentSummonCount < MaxVisibleActiveSlots;
+    }
+
+    return currentNonSummonCount < SharedActiveSlots
+        && currentNonSummonCount + currentSummonCount < MaxVisibleActiveSlots;
+}

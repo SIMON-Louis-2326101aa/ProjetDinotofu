@@ -12,6 +12,7 @@
 #include "economy/shop/ShopCatalog.hpp"
 #include "economy/shop/ShopTransactionSystem.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
+#include "interface/menu/inventory/InventoryProtection.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
@@ -19,7 +20,11 @@
 #include "item/material/Material.hpp"
 #include "quest/Quest.hpp"
 #include "world/City.hpp"
+#include "world/CityProfileSystem.hpp"
+#include "world/CityEconomyDynamicsSystem.hpp"
+#include "world/CityTradeIncidentMissionSystem.hpp"
 #include "world/LocalReputationSystem.hpp"
+#include "world/crime/CrimeLocalImpactSystem.hpp"
 #include "world/npc/NpcKnowledgeSystem.hpp"
 #include "world/npc/NpcInformationPropagationSystem.hpp"
 
@@ -45,6 +50,25 @@ namespace ShopCityServiceMenu
     std::string worldTimeLineForPlayer(const Player& player)
     {
         return player.formatWorldDateTimeLine();
+    }
+
+    bool confirmLockedCityMaterials(
+        Player& player,
+        const std::vector<std::string>& materialIds,
+        const std::string& actionLabel,
+        const std::string& screenId
+    )
+    {
+        for (const std::string& materialId : materialIds)
+        {
+            Material material = MaterialCatalog::createById(materialId, 1);
+            if (!InventoryProtection::confirmLockedMaterialUse(
+                    player, materialId, material.getName(), actionLabel, screenId))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     struct LocalSubscriptionOffer
@@ -113,7 +137,7 @@ namespace ShopCityServiceMenu
             return "Coût prévu : " + voucherName + " x1 déjà présent dans l'inventaire.";
         }
 
-        return "Coût prévu : " + Money::formatEconomyUnits(fallbackPrice) + " si aucun bon/ticket n'est présenté.";
+        return "Coût prévu : " + Money::formatCopper(fallbackPrice) + " si aucun bon/ticket n'est présenté.";
     }
 
     bool payServiceWithSubscriptionVoucherOrGold(
@@ -263,7 +287,7 @@ namespace ShopCityServiceMenu
 
     CityEventOfDay regularCityEventForWeekIndex(int weekIndex)
     {
-        const int eventIndex = std::max(0, weekIndex) % 8;
+        const int eventIndex = std::max(0, weekIndex) % 10;
         switch (eventIndex)
         {
             case 0:
@@ -280,8 +304,12 @@ namespace ShopCityServiceMenu
                 return {"honor_ceremony", "Cérémonie d'honneur", "Les gardes lisent les noms de ceux qui ont tenu une rue, une porte ou juste une promesse.", "Présenter ses services récents"};
             case 6:
                 return {"village_games", "Jeux du village", "Ce n'est pas un entraînement militaire, mais tout le monde regarde quand quelqu'un tombe dans la boue.", "Participer sans casser le mobilier"};
-            default:
+            case 7:
                 return {"harvest_festival", "Fête des moissons / solstice", "Les cuisines fument, les greniers s'ouvrent et les anciens surveillent qui aide vraiment.", "Porter, compter et distribuer"};
+            case 8:
+                return {"community_collection", "Collecte communautaire", "Habitants, artisans et guilde regroupent des fournitures ordinaires pour les foyers, petits travaux et besoins locaux.", "Trier, porter et répartir les dons utiles"};
+            default:
+                return {"raid_defense_mobilization", "Mobilisation contre un raid annoncé", "La menace n'est pas encore aux portes, mais la guilde et les gardes préparent barricades, armes, réserves et itinéraires d'évacuation.", "Aider aux préparatifs défensifs sans jouer au commandant"};
         }
     }
 
@@ -541,7 +569,7 @@ namespace ShopCityServiceMenu
                 break;
             case CharacterRace::SemiDog:
             case CharacterRace::SemiWolf:
-                if (event.id == "monster_hunt" || event.id == "royal_patrol_gratitude")
+                if (event.id == "monster_hunt" || event.id == "raid_defense_mobilization" || event.id == "royal_patrol_gratitude")
                 {
                     player.getInventory().addMaterial(MaterialCatalog::createById("advanced_monster_notes", 1));
                     lines.push_back("Atout racial : flair et rondes propres donnent une piste plus fiable. Notes avancées de monstres x1.");
@@ -557,7 +585,7 @@ namespace ShopCityServiceMenu
                 }
                 break;
             case CharacterRace::SemiLizard:
-                if (event.id == "harvest_festival" || event.id == "royal_supply_day")
+                if (event.id == "harvest_festival" || event.id == "community_collection" || event.id == "royal_supply_day")
                 {
                     player.getInventory().addMaterial(MaterialCatalog::createById("bitter_healing_leaf", 1));
                     lines.push_back("Atout racial : tu aides près des canaux et réserves humides sans glisser toutes les deux secondes. Feuille amère de soin x1.");
@@ -574,7 +602,7 @@ namespace ShopCityServiceMenu
                 break;
             case CharacterRace::Gnome:
             case CharacterRace::Dwarf:
-                if (event.id == "merchant_fair" || event.id == "knowledge_day")
+                if (event.id == "merchant_fair" || event.id == "knowledge_day" || event.id == "raid_defense_mobilization")
                 {
                     player.getInventory().addMaterial(MaterialCatalog::createById("municipal_proof_letter", 1));
                     lines.push_back("Atout racial : mesures, outils et détails propres convainquent le bureau. Attestation municipale x1.");
@@ -694,6 +722,20 @@ namespace ShopCityServiceMenu
             lines.push_back("Tu gagnes surtout de la boue, quelques rires, et assez de nourriture pour ne pas appeler ça une perte de temps.");
             lines.push_back("Récompense : " + Money::formatEconomyUnits(reward) + " + ration de survie x1.");
         }
+        else if (event.id == "community_collection")
+        {
+            player.getInventory().addMaterial(MaterialCatalog::createById("local_reputation_note", 1));
+            player.getInventory().addMaterial(MaterialCatalog::createById("local_service_letter", 1));
+            lines.push_back("Tu aides à trier les dons, repérer ce qui manque vraiment et éviter que trois caisses inutiles soient comptées comme une solution complète.");
+            lines.push_back("Reconnaissance : Note de réputation locale x1 + Lettre de service local x1.");
+        }
+        else if (event.id == "raid_defense_mobilization")
+        {
+            player.getInventory().addMaterial(MaterialCatalog::createById("guild_favor_token", 1));
+            player.getInventory().addMaterial(MaterialCatalog::createById("city_service_stamp", 1));
+            lines.push_back("Tu aides à vérifier barricades, réserves et équipements. La menace annoncée reste une préparation du monde, pas un raid gratuit déclenché par ce menu.");
+            lines.push_back("Reconnaissance : Jeton de faveur de guilde x1 + Tampon de service municipal x1.");
+        }
         else
         {
             player.getInventory().addMaterial(MaterialCatalog::createById("bitter_healing_leaf", random.between(1, 3)));
@@ -735,6 +777,12 @@ namespace ShopCityServiceMenu
         std::vector<std::string> raceLines = cityRaceReactionLines(player);
         lines.insert(lines.end(), raceLines.begin(), raceLines.end());
         appendCityEventReward(player, event, lines);
+        player.recordCanonicalEvent(
+            "evenements_ville_participation",
+            event.id,
+            "Participation active : " + event.name,
+            1
+        );
         markCityEventAsRecentlyHandled(player, isRoyalBonusCityEvent(event));
         lines.push_back(isRoyalBonusCityEvent(event)
             ? "Organisation : l'affiche royale occupe le bureau pendant quelques jours, ce qui rend un autre événement encore moins probable."
@@ -742,10 +790,137 @@ namespace ShopCityServiceMenu
         showLocalServiceResult("ÉVÉNEMENT DE VILLE", "shop.city.events.participate", player, lines, 1);
     }
 
+    void openTradeIncidentMissionMenu(Player& player)
+    {
+        while (true)
+        {
+            std::vector<Quest*> active;
+            for (Quest& quest : player.getQuestLog().getQuests())
+            {
+                if (quest.tradeIncidentMission && quest.accepted && !quest.turnedIn && !quest.failed)
+                {
+                    active.push_back(&quest);
+                }
+            }
+            const std::vector<CityTradeIncidentMissionOffer> offers = CityTradeIncidentMissionSystem::offersFor(player);
+
+            MenuScreen screen("INCIDENTS COMMERCIAUX", "shop.city.trade_incidents");
+            screen.addLine("Le bureau ne publie ici que les incidents liés à de vrais convois actifs ou perturbés du jour.");
+            screen.addLine("Une intervention demande d'abord des préparatifs locaux, puis une action réelle sur la route.");
+            screen.addBackOption("Retour", "shop.city.trade_incidents.back");
+
+            int next = 10;
+            for (std::size_t i = 0; i < active.size(); ++i)
+            {
+                const Quest& quest = *active[i];
+                std::string state = quest.completed ? "résolu - dossier à clôturer" : quest.tradeIncidentStage;
+                screen.addOption(next + static_cast<int>(i), quest.title + " | " + state,
+                    "Incident accepté : " + quest.location + ".", true,
+                    "shop.city.trade_incidents.active." + std::to_string(i + 1));
+            }
+
+            const int offerBase = 40;
+            for (std::size_t i = 0; i < offers.size(); ++i)
+            {
+                const auto& offer = offers[i];
+                screen.addOption(offerBase + static_cast<int>(i), "Nouvelle intervention : " + offer.headline,
+                    offer.sourceCityName + " -> " + offer.destinationCityName + " | gravité " + std::to_string(offer.severity) + ".",
+                    true, "shop.city.trade_incidents.offer." + std::to_string(i + 1));
+            }
+
+            if (active.empty() && offers.empty())
+            {
+                screen.addLine("Aucun incident commercial jouable n'est signalé ici aujourd'hui.");
+            }
+
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+            Console::clear();
+            if (choice == 0) return;
+
+            if (choice >= 10 && choice < 10 + static_cast<int>(active.size()))
+            {
+                Quest& quest = *active[static_cast<std::size_t>(choice - 10)];
+                if (quest.completed)
+                {
+                    std::vector<std::string> lines = {
+                        "Dossier clôturé : " + quest.title + ".",
+                        "XP gagnée : " + std::to_string(quest.rewardExperience) + ".",
+                        "Prime locale : " + Money::formatEconomyUnits(quest.rewardGold) + "."
+                    };
+                    player.gainExperience(std::max(0, quest.rewardExperience));
+                    if (quest.rewardGold > 0) player.getInventory().earnEconomyUnits(quest.rewardGold);
+                    quest.turnedIn = true;
+                    player.recordCanonicalEvent("incidents_commerciaux_resolus", quest.tradeIncidentId, quest.title, 1);
+                    MessageScreen::show("DOSSIER CLÔTURÉ", "shop.city.trade_incidents.closed", lines);
+                    continue;
+                }
+
+                if (quest.tradeIncidentStage == "preparation")
+                {
+                    if (CityTradeIncidentMissionSystem::prepare(player, quest))
+                    {
+                        MessageScreen::show("PRÉPARATIFS TERMINÉS", "shop.city.trade_incidents.prepared",
+                            {"Tu recoupes les horaires, les conducteurs, le trajet et les derniers relais connus.", "Le dossier passe maintenant à l'intervention sur route."});
+                    }
+                    continue;
+                }
+
+                if (quest.tradeIncidentStage == "action")
+                {
+                    MenuScreen action("INTERVENTION SUR ROUTE", "shop.city.trade_incidents.action");
+                    action.addLine(quest.title);
+                    action.addLine("Tentatives déjà effectuées : " + std::to_string(quest.tradeIncidentAttempts) + ".");
+                    action.addBackOption("Retour", "shop.city.trade_incidents.action.back");
+                    action.addOption(1, "Approche prudente", "Plus longue mais plus fiable.", true, "shop.city.trade_incidents.action.careful");
+                    action.addOption(2, "Approche rapide", "Moins de temps, plus de risque.", true, "shop.city.trade_incidents.action.quick");
+                    const int actionChoice = TerminalInterface::askMenuChoiceFromOptions(action, "Choix invalide.");
+                    Console::clear();
+                    if (actionChoice == 1 || actionChoice == 2)
+                    {
+                        const CityTradeIncidentMissionResult result = CityTradeIncidentMissionSystem::resolve(player, quest, actionChoice == 1);
+                        MessageScreen::show(result.completed ? "INCIDENT RÉSOLU" : (result.success ? "INTERVENTION AVANCÉE" : "INTERVENTION RATÉE"),
+                            result.completed ? "shop.city.trade_incidents.resolved" : (result.success ? "shop.city.trade_incidents.progress" : "shop.city.trade_incidents.failed"), result.lines);
+                    }
+                }
+                continue;
+            }
+
+            if (choice >= offerBase && choice < offerBase + static_cast<int>(offers.size()))
+            {
+                const auto& offer = offers[static_cast<std::size_t>(choice - offerBase)];
+                Quest quest = CityTradeIncidentMissionSystem::buildQuest(player, offer);
+                if (quest.id.empty()) continue;
+                if (player.getQuestLog().addQuest(quest))
+                {
+                    MessageScreen::show("INTERVENTION ACCEPTÉE", "shop.city.trade_incidents.accepted",
+                        {quest.title, "Première étape : revenir ici pour effectuer les préparatifs locaux.", "Délai : fin du jour " + std::to_string(quest.expiresAtDay) + "."});
+                }
+                else
+                {
+                    MessageScreen::show("DOSSIER NON AJOUTÉ", "shop.city.trade_incidents.accept_failed",
+                        {"Le journal ne peut pas ajouter cette intervention pour le moment : limite de demandes ou dossier déjà connu."});
+                }
+            }
+        }
+    }
+
     void showLocalEconomyReport(const Player& player)
     {
-        std::vector<std::string> lines;
         const int repairDays = cityRepairDaysRemaining(player);
+        const int recentEventDays = player.getInventory().countMaterialById("city_event_recent_days_marker");
+        std::vector<std::string> lines = CityEconomyDynamicsSystem::informationLines(
+            player.getCurrentCityId(),
+            player.getWorldDaysElapsed(),
+            repairDays,
+            recentEventDays
+        );
+        const std::vector<std::string> crimeLines = CrimeLocalImpactSystem::informationLines(player, player.getCurrentCityId());
+        if (!crimeLines.empty())
+        {
+            lines.push_back("--- Pression criminelle observée ---");
+            lines.insert(lines.end(), crimeLines.begin(), crimeLines.end());
+        }
+        lines.push_back("--- Informations opérationnelles ---");
         if (repairDays > 0)
         {
             lines.push_back("Économie locale : crise active, réparations restantes " + std::to_string(repairDays) + " jour(s).");
@@ -758,7 +933,6 @@ namespace ShopCityServiceMenu
             const CityEventOfDay event = cityEventForTodayOrNext(player);
             lines.push_back("Économie locale : stable pour l'instant.");
             const int gratitudeDays = player.getInventory().countMaterialById("city_defense_gratitude_days_marker");
-            const int recentEventDays = player.getInventory().countMaterialById("city_event_recent_days_marker");
             if (gratitudeDays > 0)
             {
                 lines.push_back("Reconnaissance de défense : petites remises d'achat encore actives pendant " + std::to_string(gratitudeDays) + " jour(s), sauf marché noir et exceptions louches.");
@@ -928,6 +1102,11 @@ namespace ShopCityServiceMenu
                     showShopResult("MATÉRIAUX MANQUANTS", "shop.city.repair.order.infirmary.failed", {"Il faut Feuille amère de soin x2 et Morceau de cuir abîmé x1.", "L'infirmerie ne demande pas une belle histoire : elle demande de quoi panser les gens."});
                     continue;
                 }
+                if (!confirmLockedCityMaterials(player, {"bitter_healing_leaf", "worn_leather_piece"}, "remettre ces matériaux pour réparer l'infirmerie", "shop.city.repair.locked_material"))
+                {
+                    showShopResult("MATÉRIAU VERROUILLÉ", "shop.city.repair.locked_material.cancel", {"La demande est annulée : les matériaux verrouillés restent dans l'inventaire."});
+                    continue;
+                }
                 consume("bitter_healing_leaf", 2);
                 consume("worn_leather_piece", 1);
                 reduceCityRepairDays(player, 1);
@@ -941,6 +1120,11 @@ namespace ShopCityServiceMenu
                 if (missing("rusted_metal_fragment", 4) || missing("worn_leather_piece", 1))
                 {
                     showShopResult("MATÉRIAUX MANQUANTS", "shop.city.repair.order.market.failed", {"Il faut Fragment de métal rouillé x4 et Morceau de cuir abîmé x1.", "Les étals peuvent être moches, mais ils doivent tenir debout."});
+                    continue;
+                }
+                if (!confirmLockedCityMaterials(player, {"rusted_metal_fragment", "worn_leather_piece"}, "remettre ces matériaux pour renforcer le marché", "shop.city.repair.locked_material"))
+                {
+                    showShopResult("MATÉRIAU VERROUILLÉ", "shop.city.repair.locked_material.cancel", {"La demande est annulée : les matériaux verrouillés restent dans l'inventaire."});
                     continue;
                 }
                 consume("rusted_metal_fragment", 4);
@@ -957,6 +1141,11 @@ namespace ShopCityServiceMenu
                     showShopResult("RATIONS MANQUANTES", "shop.city.repair.order.rations.failed", {"Il faut Ration de survie x2.", "Un chantier sans nourriture finit par réparer les disputes avant les murs."});
                     continue;
                 }
+                if (!confirmLockedCityMaterials(player, {"survival_ration"}, "remettre ces rations aux ouvriers", "shop.city.repair.locked_material"))
+                {
+                    showShopResult("MATÉRIAU VERROUILLÉ", "shop.city.repair.locked_material.cancel", {"La demande est annulée : les rations verrouillées restent dans l'inventaire."});
+                    continue;
+                }
                 consume("survival_ration", 2);
                 reduceCityRepairDays(player, 1);
                 player.getInventory().addMaterial(MaterialCatalog::createById("local_service_letter", 1));
@@ -968,6 +1157,11 @@ namespace ShopCityServiceMenu
                 if (missing("arcane_dust", 2))
                 {
                     showShopResult("COMPOSANTS MANQUANTS", "shop.city.repair.order.arcane.failed", {"Il faut Poussière arcanique x2.", "Le scribe refuse d'appeler ça de la magie noire. Il dit seulement que le mur grésille."});
+                    continue;
+                }
+                if (!confirmLockedCityMaterials(player, {"arcane_dust"}, "remettre cette poussière pour stabiliser la faille", "shop.city.repair.locked_material"))
+                {
+                    showShopResult("MATÉRIAU VERROUILLÉ", "shop.city.repair.locked_material.cancel", {"La demande est annulée : la Poussière arcanique verrouillée reste dans l'inventaire."});
                     continue;
                 }
                 consume("arcane_dust", 2);
@@ -1024,6 +1218,11 @@ namespace ShopCityServiceMenu
                     showShopResult("MATÉRIAUX MANQUANTS", "shop.city.repair.order.walls.failed", {"Il faut Argile rouge séchée x2 et Fragment de métal rouillé x2.", "Les murs fissurés n'ont pas besoin d'un héros légendaire : ils ont besoin de cales, d'argile et de métal."});
                     continue;
                 }
+                if (!confirmLockedCityMaterials(player, {"sun_dried_clay", "rusted_metal_fragment"}, "remettre ces matériaux pour consolider les murs", "shop.city.repair.locked_material"))
+                {
+                    showShopResult("MATÉRIAU VERROUILLÉ", "shop.city.repair.locked_material.cancel", {"La demande est annulée : les matériaux verrouillés restent dans l'inventaire."});
+                    continue;
+                }
                 consume("sun_dried_clay", 2);
                 consume("rusted_metal_fragment", 2);
                 reduceCityRepairDays(player, 2);
@@ -1061,6 +1260,11 @@ namespace ShopCityServiceMenu
                     showShopResult("MATÉRIAUX MANQUANTS", "shop.city.repair.order.relay_road.failed", {"Il faut Reçu de péage de route x1 et Fragment de métal rouillé x2.", "Le relais ne peut pas rouvrir proprement si la route devant lui ressemble à une mâchoire cassée."});
                     continue;
                 }
+                if (!confirmLockedCityMaterials(player, {"route_toll_receipt", "rusted_metal_fragment"}, "remettre ces matériaux pour réparer la route de relais", "shop.city.repair.locked_material"))
+                {
+                    showShopResult("MATÉRIAU VERROUILLÉ", "shop.city.repair.locked_material.cancel", {"La demande est annulée : les matériaux verrouillés restent dans l'inventaire."});
+                    continue;
+                }
                 consume("route_toll_receipt", 1);
                 consume("rusted_metal_fragment", 2);
                 reduceCityRepairDays(player, 1);
@@ -1076,6 +1280,11 @@ namespace ShopCityServiceMenu
                     showShopResult("RÉSERVE INCOMPLÈTE", "shop.city.repair.order.reserve.failed", {"Il faut Ration de survie x3 et Feuille amère de soin x1.", "Une réserve de secours vide rassure seulement les affiches, pas les gens."});
                     continue;
                 }
+                if (!confirmLockedCityMaterials(player, {"survival_ration", "bitter_healing_leaf"}, "remettre ces ressources à la réserve de secours", "shop.city.repair.locked_material"))
+                {
+                    showShopResult("MATÉRIAU VERROUILLÉ", "shop.city.repair.locked_material.cancel", {"La demande est annulée : les matériaux verrouillés restent dans l'inventaire."});
+                    continue;
+                }
                 consume("survival_ration", 3);
                 consume("bitter_healing_leaf", 1);
                 reduceCityRepairDays(player, 1);
@@ -1089,6 +1298,11 @@ namespace ShopCityServiceMenu
                 if (missing("local_service_letter", 1) || missing("city_service_stamp", 1))
                 {
                     showShopResult("DOSSIER INCOMPLET", "shop.city.repair.order.quest_board.failed", {"Il faut Lettre de service local x1 et Tampon de service municipal x1.", "Le panneau des quêtes ne repart pas avec juste un clou : il faut aussi des demandes vérifiées."});
+                    continue;
+                }
+                if (!confirmLockedCityMaterials(player, {"local_service_letter", "city_service_stamp"}, "remettre ces documents pour rouvrir le panneau des quêtes", "shop.city.repair.locked_material"))
+                {
+                    showShopResult("OBJET VERROUILLÉ", "shop.city.repair.locked_material.cancel", {"La demande est annulée : les documents verrouillés restent dans l'inventaire."});
                     continue;
                 }
                 consume("local_service_letter", 1);
@@ -1125,6 +1339,11 @@ namespace ShopCityServiceMenu
                 if (missing("weak_repair_kit", 1) || missing("rusted_metal_fragment", 1))
                 {
                     showShopResult("MATÉRIEL MANQUANT", "shop.city.repair.order.storage.failed", {"Il faut Kit de réparation faible x1 et Fragment de métal rouillé x1.", "L'entrepôt n'a pas besoin d'un miracle : il faut juste éviter que les stocks tombent sous la pluie ou les voleurs."});
+                    continue;
+                }
+                if (!confirmLockedCityMaterials(player, {"weak_repair_kit", "rusted_metal_fragment"}, "remettre ces matériaux pour sécuriser l'entrepôt", "shop.city.repair.locked_material"))
+                {
+                    showShopResult("MATÉRIAU VERROUILLÉ", "shop.city.repair.locked_material.cancel", {"La demande est annulée : les matériaux verrouillés restent dans l'inventaire."});
                     continue;
                 }
                 consume("weak_repair_kit", 1);
@@ -1170,6 +1389,11 @@ namespace ShopCityServiceMenu
                 if (missing("survival_ration", 2) || missing("weak_repair_kit", 1))
                 {
                     showShopResult("DÉPÔT NON PROTÉGÉ", "shop.city.repair.order.ration_depot.failed", {"Il faut Ration de survie x2 et Kit de réparation faible x1.", "Le dépôt n'a pas besoin d'un champion, juste de caisses qui ferment et de réserves qui ne disparaissent pas."});
+                    continue;
+                }
+                if (!confirmLockedCityMaterials(player, {"survival_ration", "weak_repair_kit"}, "remettre ces ressources pour protéger le dépôt de rations", "shop.city.repair.locked_material"))
+                {
+                    showShopResult("MATÉRIAU VERROUILLÉ", "shop.city.repair.locked_material.cancel", {"La demande est annulée : les matériaux verrouillés restent dans l'inventaire."});
                     continue;
                 }
                 consume("survival_ration", 2);
@@ -1267,9 +1491,10 @@ namespace ShopCityServiceMenu
                     hasAnyCityEventToday(player),
                     "shop.city.events.participate");
             }
-            screen.addOption(4, "Cotisations de ville", "Abonnements locaux : guilde, commerce, route. Conservé ici pour ne pas perdre l'ancien service.", true, "shop.city.subscriptions");
-            screen.addOption(6, "Lire l'économie locale", "Résumé des besoins actuels, crise éventuelle et réaction légère selon la race.", true, "shop.city.economy.report");
+            screen.addOption(4, "Cotisations de ville", "Abonnements locaux hors adhésion aventurier : commerce et route. L'adhésion de guilde se gère désormais au comptoir financier de la guilde.", true, "shop.city.subscriptions");
+            screen.addOption(6, "Bureau d'information locale", "Profil de la ville, sécurité, richesse actuelle, spécialités, besoins commerciaux et crise éventuelle.", true, "shop.city.economy.report");
             screen.addOption(7, "Lire le panneau ville / guilde", "Contexte local : prochaine affiche, tensions, pistes selon race. Aucun gain direct.", true, "shop.city.notice_board");
+            screen.addOption(8, "Incidents commerciaux temporaires", "Escorter, enquêter ou intervenir uniquement lorsqu'un vrai convoi du jour rencontre un problème.", true, "shop.city.trade_incidents");
 
             Console::clear();
             const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis une action de ville.");
@@ -1287,7 +1512,6 @@ namespace ShopCityServiceMenu
                     player,
                     "COTISATIONS DE VILLE",
                     {
-                        {"guild_adventurer_standard_weekly", "Cotisation aventurier standard", 160, "Petits services de guilde, salle commune et paperasse locale couverts pendant 7 jours."},
                         {"merchant_cotisation_weekly", "Cotisation de la confrérie du commerce", 210, "Meilleurs papiers marchands, contrôles plus propres et aide de guichet pendant 7 jours."},
                         {"trade_route_weekly", "Pass de commerce hebdomadaire", 240, "Préparatifs de routes, caravanes et contrôles marchands simples pendant 7 jours."}
                     }
@@ -1307,6 +1531,12 @@ namespace ShopCityServiceMenu
                 continue;
             }
 
+            if (choice == 8)
+            {
+                openTradeIncidentMissionMenu(player);
+                continue;
+            }
+
             if (repairDays > 0 && choice == 5)
             {
                 openCityRepairWorkOrderMenu(player);
@@ -1322,6 +1552,12 @@ namespace ShopCityServiceMenu
                     lines.push_back("Matériaux insuffisants : il faut Fragment de métal rouillé x3 et Morceau de cuir abîmé x2.");
                     lines.push_back("La ville ne demande pas de prix en or ici : elle veut des ressources utiles aux réparations.");
                     showShopResult("AIDE IMPOSSIBLE", "shop.city.repair.materials.failed", lines);
+                    continue;
+                }
+                if (!confirmLockedCityMaterials(player, {"rusted_metal_fragment", "worn_leather_piece"}, "remettre ces matériaux aux réparations de la ville", "shop.city.repair.locked_material"))
+                {
+                    lines.push_back("Aide annulée : au moins un matériau verrouillé a été conservé.");
+                    showShopResult("MATÉRIAU VERROUILLÉ", "shop.city.repair.materials.locked", lines);
                     continue;
                 }
                 player.getInventory().removeMaterialQuantityById("rusted_metal_fragment", 3);
@@ -1423,10 +1659,34 @@ namespace ShopCityServiceMenu
 
         while (stayInServices)
         {
+            const int warmMealCostCopper = EconomyBalance::innWarmMealCostCopper(player.getCurrentCityId(), player.getLevel());
+            const int commonBedCostCopper = EconomyBalance::innCommonBedCostCopper(player.getCurrentCityId(), player.getLevel());
+            CityShopContext lodgingContext = CityProfileSystem::shopContextFor(player.getCurrentCityId(), ShopType::Lodging);
+            const CityGameplayProfile cityProfile = CityProfileSystem::profileFor(player.getCurrentCityId());
+            CityEconomicPulse lodgingPulse = CityEconomyDynamicsSystem::stateFor(
+                player.getCurrentCityId(),
+                player.getWorldDaysElapsed(),
+                cityRepairDaysRemaining(player),
+                player.getInventory().countMaterialById("city_event_recent_days_marker")
+            );
+            CrimeLocalImpactSystem::applyEconomicPressure(player, player.getCurrentCityId(), lodgingPulse);
+            lodgingContext.serviceQualityScore = CityEconomyDynamicsSystem::adjustedServiceQuality(lodgingContext.serviceQualityScore, lodgingPulse);
+            const int mealVoucherCount = player.getInventory().countMaterialById("warm_meal_voucher");
+            const int bedVoucherCount = player.getInventory().countMaterialById("lodging_bed_token");
+
             MenuScreen screen("AUBERGE DU REPOS BRUYANT", "shop.lodging.services");
             screen.addLine("Tavia propose des services utiles, mais jamais gratuits en temps : manger ou dormir peut faire avancer les délais.");
+            screen.addLine("Les bons sont des prépaiements : acheter un carnet au comptoir ne sert PAS automatiquement le repas ou la nuit.");
             screen.addLine("PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()));
             screen.addLine("Temps : " + worldTimeLineForPlayer(player));
+            screen.addLine("Profil local : richesse structurelle " + CityProfileSystem::wealthLabel(cityProfile.wealth)
+                + " | richesse actuelle " + CityProfileSystem::wealthLabel(lodgingPulse.effectiveWealth)
+                + " | " + CityProfileSystem::securityLabel(cityProfile.security)
+                + " | qualité auberge " + std::to_string(lodgingContext.serviceQualityScore) + "/100.");
+            if (lodgingContext.specializationStrength > 0)
+            {
+                screen.addLine("Savoir-faire local : " + lodgingContext.specializationLabel + ".");
+            }
             if (subscriptionCoversService(player, "lodging"))
             {
                 screen.addLine("Abonnement : repas/chambre simple couverts par la période active.");
@@ -1435,8 +1695,8 @@ namespace ShopCityServiceMenu
             {
                 screen.addLine("Abonnement : écurie/relais couvert par la période active.");
             }
-            screen.addLine(serviceCostLine(player, "warm_meal_voucher", "Bon de repas chaud", 12));
-            screen.addLine(serviceCostLine(player, "lodging_bed_token", "Bon de lit d'auberge", 24));
+            screen.addLine("Repas chaud : " + Money::formatCopper(warmMealCostCopper) + " | Bons en possession : " + std::to_string(mealVoucherCount) + ".");
+            screen.addLine("Lit commun : " + Money::formatCopper(commonBedCostCopper) + " | Bons en possession : " + std::to_string(bedVoucherCount) + ".");
             screen.addLine(serviceCostLine(player, "stable_stall_ticket", "Ticket d'écurie", 30));
             screen.addLine(serviceCostLine(player, "rental_mount_voucher", "Bon de monture", 65));
             screen.addLine(serviceCostLine(player, "stable_box_reservation", "Réservation de box", 44));
@@ -1463,15 +1723,15 @@ namespace ShopCityServiceMenu
                 screen.addLine("Monture personnelle : aucune. Une monture durable coûte cher, mais évite de relouer à chaque long trajet.");
             }
             screen.addOption(0, "Retour", "Revenir au comptoir de l'auberge.", true, "shop.lodging.back");
-            screen.addOption(1, "Manger un repas chaud — 12 cuivre", "Soin léger, consomme 1 segment de journée. Prix affiché avant validation.", true, "shop.lodging.meal");
-            screen.addOption(2, "Dormir dans une chambre simple — 24 cuivre", "Une nuit simple aide, mais ne dépasse pas 50% PV. Prix affiché avant validation.", true, "shop.lodging.sleep");
-            screen.addOption(3, "Écouter les rumeurs de comptoir", "Indice de ville sans récompense directe, consomme 1 segment.", true, "shop.lodging.rumors");
+            screen.addOption(1, "Manger un repas chaud — " + Money::formatCopper(warmMealCostCopper), "Soin léger, consomme 1 moment de la journée. Un bon en possession est utilisé en priorité.", true, "shop.lodging.meal");
+            screen.addOption(2, "Dormir dans un lit commun — " + Money::formatCopper(commonBedCostCopper), "Une nuit simple aide, mais ne dépasse pas 50% PV. Un bon en possession est utilisé en priorité.", true, "shop.lodging.sleep");
+            screen.addOption(3, "Écouter les rumeurs de comptoir", "Indice de ville sans récompense directe, consomme 1 moment de la journée.", true, "shop.lodging.rumors");
             screen.addOption(4, "Préparer une place d'écurie — 30 cuivre", "Stabilise monture, sacoches ou stockage court pour les quêtes de relais.", true, "shop.lodging.stable");
             screen.addOption(5, "Préparer sacoches et charge — 32 cuivre", "Préparation utile pour réduire un déplacement de biome plus tard.", true, "shop.lodging.saddlebags");
             screen.addOption(6, "Déposer une charge à l'écurie — 18 cuivre", "Dépôt temporaire utile pour certains services de ville/relais.", true, "shop.lodging.storage");
-            screen.addOption(7, "Louer une monture de route — 65 cuivre", "Préparation plus forte pour les distances longues, consomme 1 segment.", true, "shop.lodging.mount");
+            screen.addOption(7, "Louer une monture de route — 65 cuivre", "Préparation plus forte pour les distances longues, consomme 1 moment de la journée.", true, "shop.lodging.mount");
             screen.addOption(8, "Réserver un box sécurisé — 44 cuivre", "Stockage/box plus sérieux, utile pour quêtes d'écurie et relais.", true, "shop.lodging.box");
-            screen.addOption(9, "Abonnements de l'auberge", "Forfaits de 7 jours : repas, lit simple, écurie ou cotisation de guilde.", true, "shop.lodging.subscriptions");
+            screen.addOption(9, "Abonnements de l'auberge", "Forfaits de 7 jours : repas, lit simple ou écurie. L'adhésion de guilde se gère à la guilde.", true, "shop.lodging.subscriptions");
             screen.addOption(10, "Enregistrer une monture personnelle — 420 cuivre", "Achat/acte durable : utile sur plusieurs trajets, mais la monture peut fatiguer.", true, "shop.lodging.owned_mount");
             screen.addOption(11, "Soin et repos de monture — 62 cuivre", "Retire la fatigue accumulée par une monture personnelle.", true, "shop.lodging.mount_rest");
             screen.addOption(12, "Examiner la monture personnelle", "Affiche son état, sa limite de fatigue et les conseils d'écurie sans consommer de temps.", player.getInventory().countMaterialById("owned_mount_registration") > 0, "shop.lodging.mount_check");
@@ -1495,40 +1755,56 @@ namespace ShopCityServiceMenu
             if (choice == 1)
             {
                 std::vector<std::string> lines;
-                if (!payServiceWithSubscriptionVoucherOrGold(player, "lodging", "warm_meal_voucher", "Bon de repas chaud", 12, lines))
+                if (!payServiceWithSubscriptionVoucherOrGold(player, "lodging", "warm_meal_voucher", "Bon de repas chaud", warmMealCostCopper, lines))
                 {
                     showShopResult("REPAS REFUSÉ", "shop.lodging.meal.failed", lines);
                     continue;
                 }
 
                 const int beforeHp = player.getHp();
-                const int healAmount = std::max(1, player.getMaxHp() / 5);
+                const int beforeMana = player.getMana();
+                const int mealHealPercent = std::clamp(14 + lodgingContext.serviceQualityScore / 8, 17, 26);
+                const int mealManaPercent = std::clamp(6 + lodgingContext.serviceQualityScore / 12, 8, 15);
+                const int healAmount = std::max(1, player.getMaxHp() * mealHealPercent / 100);
                 player.heal(healAmount);
+                player.restoreMana(std::max(4, player.getMaxMana() * mealManaPercent / 100));
+                lines.push_back("Qualité locale du service : " + std::to_string(lodgingContext.serviceQualityScore) + "/100.");
                 lines.push_back("Repas pris : soupe chaude, pain correct et aucune assiette maudite repérée.");
                 lines.push_back("PV récupérés : " + std::to_string(player.getHp() - beforeHp)
                     + " (" + std::to_string(beforeHp) + " -> " + std::to_string(player.getHp()) + ").");
+                lines.push_back("Mana récupéré : " + std::to_string(player.getMana() - beforeMana)
+                    + " (" + std::to_string(beforeMana) + " -> " + std::to_string(player.getMana()) + "/" + std::to_string(player.getMaxMana()) + ").");
+                player.recordCanonicalEvent("repas_auberge", player.getCurrentCityId(), "Repas chaud à l'auberge");
+                player.recordCanonicalEvent("fatigue_route_reduite", player.getCurrentCityId(), "Repas chaud : petite récupération sans dormir");
                 showLocalServiceResult("REPAS TERMINÉ", "shop.lodging.meal.success", player, lines, 1);
             }
             else if (choice == 2)
             {
                 std::vector<std::string> lines;
-                if (!payServiceWithSubscriptionVoucherOrGold(player, "lodging", "lodging_bed_token", "Bon de lit d'auberge", 24, lines))
+                if (!payServiceWithSubscriptionVoucherOrGold(player, "lodging", "lodging_bed_token", "Bon de lit commun", commonBedCostCopper, lines))
                 {
                     showShopResult("NUIT REFUSÉE", "shop.lodging.sleep.failed", lines);
                     continue;
                 }
 
                 const int beforeHp = player.getHp();
-                const int targetHp = std::max(1, player.getMaxHp() * 50 / 100);
+                const int beforeMana = player.getMana();
+                const int bedRecoveryCapPercent = std::clamp(42 + lodgingContext.serviceQualityScore / 4, 47, 65);
+                const int targetHp = std::max(1, player.getMaxHp() * bedRecoveryCapPercent / 100);
                 if (player.getHp() < targetHp)
                 {
                     player.heal(targetHp - player.getHp());
                 }
                 lines.push_back("Repos : chambre simple, couverture honnête et porte qui ferme presque bien.");
-                lines.push_back("Plafond : une nuit simple ne soigne pas au-delà de 50% des PV.");
+                lines.push_back("Plafond local : cette nuit simple soigne jusqu'à " + std::to_string(bedRecoveryCapPercent)
+                    + "% des PV selon la qualité réelle de l'auberge.");
                 lines.push_back("PV récupérés : " + std::to_string(player.getHp() - beforeHp)
                     + " (" + std::to_string(beforeHp) + " -> " + std::to_string(player.getHp()) + ").");
+                player.restoreManaToFull();
+                lines.push_back("Mana : repos complet " + std::to_string(beforeMana) + " -> " + std::to_string(player.getMana()) + "/" + std::to_string(player.getMaxMana()) + ".");
                 lines.push_back("Rappel : dormir peut faire échouer les quêtes urgentes si la date limite passe pendant la nuit.");
+                player.recordCanonicalEvent("repos_auberge", player.getCurrentCityId(), "Nuit en lit commun à l'auberge");
+                player.recordCanonicalEvent("fatigue_route_reduite", player.getCurrentCityId(), "Lit commun : fatigue de route réduite");
                 showLocalServiceResult("NUIT TERMINÉE", "shop.lodging.sleep.success", player, lines, 2);
             }
             else if (choice == 3)
@@ -1883,8 +2159,7 @@ namespace ShopCityServiceMenu
                     "ABONNEMENTS DE L'AUBERGE",
                     {
                         {"lodging_modest_weekly", "Forfait hebdo auberge modeste", 110, "Couvre les repas simples et la chambre simple pendant 7 jours."},
-                        {"stable_relay_weekly", "Forfait écurie et relais", 135, "Couvre les préparations d'écurie simples pendant 7 jours."},
-                        {"guild_adventurer_standard_weekly", "Cotisation aventurier standard", 160, "Cotisation de guilde adaptée : lit partagé, salle commune et petits services locaux pendant 7 jours."}
+                        {"stable_relay_weekly", "Forfait écurie et relais", 135, "Couvre les préparations d'écurie simples pendant 7 jours."}
                     }
                 );
             }
@@ -1908,11 +2183,11 @@ namespace ShopCityServiceMenu
             screen.addLine(serviceCostLine(player, "caravan_seat_ticket", "Place de caravane", 60));
             screen.addLine(serviceCostLine(player, "guarded_transport_pass", "Pass de transport gardé", 105));
             screen.addOption(0, "Retour", "Revenir au comptoir du relais.", true, "shop.transport.back");
-            screen.addOption(1, "Préparer monture et bagages", "Consomme 1 segment et produit une preuve de route simple.", true, "shop.transport.stable");
-            screen.addOption(2, "Préparer un départ de caravane", "Consomme 2 segments et produit un reçu de péage.", true, "shop.transport.caravan");
-            screen.addOption(3, "Organiser un convoi gardé", "Consomme 2 segments et produit une preuve locale solide.", true, "shop.transport.guarded");
+            screen.addOption(1, "Préparer monture et bagages", "Consomme 1 moment de la journée et produit une preuve de route simple.", true, "shop.transport.stable");
+            screen.addOption(2, "Préparer un départ de caravane", "Consomme 2 moments de la journée et produit un reçu de péage.", true, "shop.transport.caravan");
+            screen.addOption(3, "Organiser un convoi gardé", "Consomme 2 moments de la journée et produit une preuve locale solide.", true, "shop.transport.guarded");
             screen.addOption(4, "Faire relire l'itinéraire", "Produit une note d'éclaireur de route pour éviter un détour futur.", true, "shop.transport.scout");
-            screen.addOption(5, "Obtenir un badge de route du relais", "Preuve plus forte qu'un reçu simple, consomme 1 segment.", true, "shop.transport.badge");
+            screen.addOption(5, "Obtenir un badge de route du relais", "Preuve plus forte qu'un reçu simple, consomme 1 moment de la journée.", true, "shop.transport.badge");
             screen.addOption(6, "Abonnements de transport", "Pass de 7 jours : écurie, relais, commerce ou route gardée.", true, "shop.transport.subscriptions");
 
             Console::clear();

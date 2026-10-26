@@ -1,12 +1,25 @@
 CHEATS DINOTOFU — CODES, EFFETS ET RÈGLES
 
 Règles générales :
-- Les cheats restent cachés hors combat tant que le personnage n’est pas Altéré.
-- Au premier cheat accepté, le personnage devient Altéré définitivement.
+- Les codes normaux sont insensibles à la casse.
+- Presque tous les codes de triche rendent le personnage Altéré définitivement dès leur première utilisation acceptée.
+- Exceptions explicites : certains secrets/protocoles diégétiques peuvent être des codes valides du monde sans modifier artificiellement la progression. Ils doivent être marqués « Marque Altéré : non » dans ce fichier.
+- Un personnage Altéré conserve les titres déjà obtenus, mais ne peut plus débloquer de nouveaux titres normaux ni enrichir la collection légitime de titres du compte.
+- Au premier passage en Altéré, le personnage reçoit le titre spécial « On ne dira rien... » et le compte débloque aussi ce trophée. C'est volontairement le seul trophée de compte obtenable par triche, et il n'est jamais requis pour la complétion/titre ultime.
+- Un cheat qui attribuerait volontairement des titres de base doit les donner uniquement au personnage courant, jamais à la collection de compte.
+- Les titres légitimement obtenus AVANT la première altération sont conservés dans l'historique du compte.
 - Les altérations peuvent parfois être désactivées, mais le statut Altéré reste.
 - Un personnage Altéré ne peut pas agir en JcJ réel et ne peut pas échanger de vraies ressources.
-- En mort définitive, les cheats sont refusés et peuvent déclencher une punition temporaire.
+- En mort définitive, les cheats altérants sont refusés et peuvent déclencher une punition temporaire ; les protocoles diégétiques non altérants ne sont pas traités comme une triche de progression.
 - FireFlight, Lexior, Moiran, Obérion et l’Anomalie peuvent réagir à certaines altérations ou tentatives interdites.
+- Les futures commandes generate_* de SYSTEM CALL sont TOUJOURS altérantes, même pour « récupérer » un objet perdu : elles peuvent dupliquer, revendre ou contourner la casse.
+- helpmerefundmyaction reste la mécanique existante de récupération/annulation limitée à 3 utilisations ; elle est distincte des futures générations d'objets.
+
+
+AUDIT MOTEUR V3.51.39 :
+- Les anciens codes documentés sont désormais tous reconnus par CheatManager : 1302313, DINOTOFU:13-02313, 13023131302313, iamnotgoblinfood, letmecook, whereismyplotarmor, talktothedev, oopsallbosses, randomizemyfate, idontwanttodie, infinituseforeverything, bedrockequipment, myweaponandnotother, skipallstory, skipalllevels, givemesomegolds, givemealevel, helpmerefundmyaction, resetmycharacter, switchmyclassandweapon, fuckgrindinggimifight, whatdebt.
+- system_call possède maintenant son écran minimal fonctionnel : seul « SYSTEM CALL » est révélé, sans aide ni liste. Les sous-commandes generate_* restent à connecter progressivement.
+- La fiche/statistiques du personnage expose désormais le registre persistant des codes/protocoles utilisés, avec nombre d'utilisations et statut quand il est pertinent.
 
 CODES CONNUS :
 - idontwanttodie
@@ -44,9 +57,14 @@ CODES CONNUS :
   Effet : Message personnel du créateur.
   Réutilisable : non
   Marque Altéré : non
+- DINOTOFU:13-02313
+  Catégorie : protocole_diégétique / canal interdit
+  Effet : Ouvre le canal interdit Protocol 13 et transmet une balise d'identification aux REAPERS-13. Ne garantit ni apparition immédiate, ni recrutement, ni victoire.
+  Réutilisable : non, une seule tentative/utilisation par personnage
+  Marque Altéré : conditionnel — non si le personnage avait déjà entendu parler/croisé les Reapers via une source crédible ; oui si le joueur métagame le code sans aucune connaissance en jeu.
 - 13023131302313
   Catégorie : combat_sequence
-  Effet : Séquence divine : scène spéciale, ennemi abattu et soin complet si accepté.
+  Effet : Séquence divine : soin + mana complets, puis exécution armée sur la prochaine cible hostile ordinaire réellement attaquée. Les boss gardent leurs mécaniques propres.
   Réutilisable : non
   Marque Altéré : oui
 - iamnotgoblinfood
@@ -71,7 +89,7 @@ CODES CONNUS :
   Marque Altéré : non
 - oopsallbosses
   Catégorie : chaos
-  Effet : Mode chaotique orienté boss/vagues spéciales.
+  Effet : Révèle/débloque dans le registre tous les boss actuellement catalogués, y compris les rencontres tardives.
   Réutilisable : non
   Marque Altéré : oui
 - randomizemyfate
@@ -110,12 +128,45 @@ CODES CONNUS :
   Effet : Ouvre les combats spéciaux en arène, révèle les boss non finaux et marque le personnage Altéré.
   Réutilisable : non
   Marque Altéré : oui
+- whatdebt
+  Catégorie : finance_cheat
+  Effet : Efface artificiellement le découvert et le prêt de guilde actifs sans retirer de pièces. Ne donne aucun historique de bon payeur.
+  Réutilisable : oui
+  Marque Altéré : oui
 
 NOTES SPÉCIALES :
 - 1302313 : message personnel du créateur.
-- 13023131302313 : séquence divine de combat, scène spéciale, soin complet et ennemi abattu si accepté.
+- 13023131302313 : séquence divine ; soin/mana complets immédiatement puis prochaine cible hostile ordinaire réellement attaquée exécutée. Les boss restent protégés par leurs mécaniques propres.
 - fuckgrindinggimifight : raccourci anti-grind, révèle les boss non finaux mais ne débloque pas FireFlight.
-- oopsallbosses : chaos orienté boss/vagues spéciales.
+- oopsallbosses : révèle actuellement tous les boss du registre ; un vrai mode de vagues chaotiques séparé pourra être développé plus tard si souhaité.
 - randomizemyfate : réattribue classe, arme et inventaire.
 
 Ce fichier remplace la partie cheats de SPECIAL_CHARACTERS_AND_CHEATS.txt.
+
+
+CODES VALIDÉS ET ACTIFS DEPUIS V3.51.40 :
+- thatsalotofpower : amplifie de 25 % la puissance de combat déjà possédée ; ne donne ni éveil du mana ni maîtrise martiale. Altérant.
+- icanfeelit : enregistre un éveil artificiel du mana et restaure le mana ; sert de marqueur aux futurs contrôles d'accès magique. Altérant.
+- bornforit : accorde une base martiale artificielle, débloque/équipe Mantra intérieur et sa maîtrise. Altérant.
+- nottoday : restauration complète des PV/mana et retrait des principaux états négatifs de combat. Altérant.
+- fearmeinstead : marque une résistance artificielle à la peur/panique et débloque Garde stable. Altérant.
+- trustmebro : marque une loyauté/confiance artificiellement maximale ; déjà reconnue par les équipes employeuses, à étendre aux autres loyautés persistantes. Altérant.
+- fillmypocket : ajoute 1 à 5 unités de plusieurs matériaux non uniques couvrant les grandes familles (monstres, minerais, plantes, arcanes). Aucun objet unique/quête/boss. Altérant.
+- justanotherday : avance réellement le monde d'un jour avec les conséquences normales du temps. Altérant.
+- luckytofu : débloque/active Pas chanceux et marque la chance artificielle. NE débloque jamais le titre légitime « Luck is a skill ». Altérant.
+- onemorechance : réarme une tentative supplémentaire de résistance spirituelle létale ; chaque utilisation réarme une seule nouvelle tentative réelle. Altérant.
+- everybodylovesme : pousse artificiellement la réputation locale positive et laisse une trace canonique. Altérant.
+- whatdebt : déjà actif depuis V3.51.39 ; efface découvert + prêt actifs sans paiement physique ni mérite financier. Altérant.
+- Tous ces codes restent insensibles à la casse et sont inscrits dans l'historique des codes/protocoles du personnage.
+
+SYSTEM CALL — SQUELETTE ACTIF V3.51.36 / GÉNÉRATION À POURSUIVRE :
+- system_call ouvre maintenant réellement une section dont le seul retour automatique est le titre « SYSTEM CALL » et une invite ; aucune liste de sous-commandes, aide ou autocomplétion ne révèle les commandes cachées.
+- Les sous-commandes comme generate_weapon_element / generate_material_element / generate_armor_element / generate_consumable_element restent documentées uniquement dans le même type de fichier secret/externe que les autres cheats.
+- Une commande de catégorie connue peut ensuite afficher les éléments/IDs de cette catégorie, puis generate_idXXXXXXXXXX génère l'élément choisi.
+- Toute génération d'élément est altérante, y compris si le joueur affirme corriger une vente, une casse ou un bug.
+
+TITRES ET COMPTE :
+- Il n'existe actuellement PAS de code « débloquer tous les titres » dans le moteur. skipallstory ne débloque pas les titres ; skipalllevels modifie le niveau et pouvait seulement provoquer indirectement des titres via les règles normales.
+- Les règles normales de titre sont bloquées dès qu'un personnage est Altéré.
+- Si un futur code skip/unlock donne volontairement des titres, il doit appeler l'attribution locale au personnage et ne jamais alimenter les « Titres débloqués » du compte.
+- Exception volontaire : « On ne dira rien... » est ajouté au personnage ET aux trophées du compte lors de la première altération. Il reste exclu du titre ultime.

@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - '**'
+  workflow_dispatch: # Conservé de la version 1 pour autoriser les lancements manuels
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -101,3 +102,4 @@ jobs:
           test -s output/Dinotofu.exe
           x86_64-w64-mingw32-strip --strip-all output/Dinotofu.exe
           ls -lh output/Dinotofu.exe
+          

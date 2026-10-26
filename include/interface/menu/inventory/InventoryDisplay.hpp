@@ -18,10 +18,10 @@ class InventoryDisplay
 {
 public:
     static MenuScreen buildMainScreen();
-    static MenuScreen buildSelectedWeaponScreen(const Weapon& weapon);
-    static MenuScreen buildSelectedArmorScreen(const Armor& armor);
-    static MenuScreen buildSelectedConsumableScreen(const Consumable& consumable, int amount = 1);
-    static MenuScreen buildSelectedMaterialScreen(const Material& material);
+    static MenuScreen buildSelectedWeaponScreen(const Weapon& weapon, bool pinned = false, bool locked = false);
+    static MenuScreen buildSelectedArmorScreen(const Armor& armor, bool pinned = false, bool locked = false);
+    static MenuScreen buildSelectedConsumableScreen(const Consumable& consumable, int amount = 1, bool pinned = false, bool locked = false);
+    static MenuScreen buildSelectedMaterialScreen(const Material& material, bool pinned = false, bool locked = false, bool tracked = false, bool favoriteAmmunition = false);
     static MenuScreen buildUnavailableMaterialsScreen();
 
     static void displayMainMenu();

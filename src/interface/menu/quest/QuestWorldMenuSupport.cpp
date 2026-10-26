@@ -12,19 +12,34 @@
 #include "core/Console.hpp"
 #include "core/Random.hpp"
 #include "quest/QuestCatalog.hpp"
+#include "quest/IntercityQuestSystem.hpp"
 #include "item/material/MaterialCatalog.hpp"
+#include "item/inventory/CarryLoadSystem.hpp"
 #include "entity/MonsterCatalog.hpp"
+#include "combat/modes/pve/MonsterPveMode.hpp"
+#include "progression/DifficultyMode.hpp"
+#include "progression/DeathRuleMode.hpp"
 #include "economy/EconomyBalance.hpp"
+#include "economy/GuildFinanceSystem.hpp"
 #include "economy/shop/ShopTransactionSystem.hpp"
 #include "economy/Money.hpp"
 #include "interface/menu/InventoryMenu.hpp"
 #include "interface/menu/shop/ShopMenu.hpp"
+#include "interface/menu/shop/ShopCityServiceMenu.hpp"
 #include "interface/menu/common/PagedMenu.hpp"
 #include "interface/menu/common/MessageScreen.hpp"
 #include "interface/TerminalInterface.hpp"
 #include "interface/model/MenuScreen.hpp"
 #include "world/City.hpp"
 #include "world/CityTravelRules.hpp"
+#include "world/CityProfileSystem.hpp"
+#include "world/LodgingRestSystem.hpp"
+#include "world/crime/CrimeContactRelationshipSystem.hpp"
+#include "world/crime/CrimeContactDialogueSystem.hpp"
+#include "world/crime/CrimeJusticeSystem.hpp"
+#include "world/crime/CrimeNetworkCompetitionSystem.hpp"
+#include "world/home/PlayerHomeSystem.hpp"
+#include "story/HestiaArcSystem.hpp"
 #include "entity/Player.hpp"
 
 #include <algorithm>
@@ -39,9 +54,11 @@
 namespace QuestWorldMenuSupport
 {
     using QuestDeadlineSupport::expireOverdueQuestDeadlines;
-    void openCityVault(Player& player);
+    void openCityVault(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule);
     void openInnMenu(Player& player);
-    void openCityHubMenu(Player& player);
+    void openPlayerHomeMenu(Player& player);
+    void openMorphologyProgramMenu(Player& player);
+    void openCityHubMenu(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule);
     void openRouteMicroQuestBoard(Player& player);
     void showExplorationMapPreview(const Player& player);
 
@@ -319,7 +336,7 @@ namespace QuestWorldMenuSupport
             MenuScreen routeScreen("CHOIX DE ROUTE", "quest.city_travel.route_choice");
             routeScreen.addLine("Destination : " + destination.getName() + ".");
             routeScreen.addLine("Taxe de ville de base : " + Money::formatCopper(baseTaxCopper) + ". Les frais de route s'ajoutent selon le trajet choisi.");
-            routeScreen.addLine("Temps de base : " + std::to_string(baseTimeUnits) + " segment(s).");
+            routeScreen.addLine("Temps de base : " + std::to_string(baseTimeUnits) + " moment(s) de la journée.");
             if (CityTravelRules::isNightTravelClosed(player))
             {
                 routeScreen.addLine("Nuit : les routes normales sont fermées. Seul un convoi gardé payant peut partir sans casser l'auberge.");
@@ -330,8 +347,8 @@ namespace QuestWorldMenuSupport
             {
                 const TravelRouteOption& route = routes[i];
                 const int routeTax = std::max(0, baseTaxCopper + route.extraCopper);
-                const int routeTime = clampedTravelTimeWithRoute(baseTimeUnits, route);
-                std::string detail = route.detail + " | coût total " + Money::formatCopper(routeTax) + " | " + std::to_string(routeTime) + " segment(s).";
+                const int routeTime = CarryLoadSystem::adjustedActionTimeUnits(player, clampedTravelTimeWithRoute(baseTimeUnits, route));
+                std::string detail = route.detail + " | coût total " + Money::formatCopper(routeTax) + " | " + std::to_string(routeTime) + " moment(s) de la journée.";
                 if (!route.available) detail += " [indisponible]";
                 routeScreen.addOption(static_cast<int>(i + 1), route.label, detail, route.available, "quest.city_travel.route_choice." + route.id);
             }
@@ -431,8 +448,8 @@ namespace QuestWorldMenuSupport
     {
         std::vector<std::string> lines;
         lines.push_back("Ville de rattachement : " + cityNameFromId(cityId) + ".");
-        lines.push_back("Occupation : " + std::to_string(player.getCityVaultUsedSlotsForCity(cityId)) + "/" + std::to_string(player.getCityVaultCapacityForCity(cityId)) + " emplacements.");
-        lines.push_back("Coût par entrée : arme 3, armure 3, consommable 1, pile de matériau 1.");
+        lines.push_back("Occupation : " + std::to_string(player.getCityVaultUsedSlotsForCity(cityId)) + "/" + std::to_string(player.getCityVaultCapacityForCity(cityId)) + " unités d'encombrement.");
+        lines.push_back("Rangement optimisé : -" + std::to_string((player.hasCityVaultPlaceOptimizationForCity(cityId) ? 10 : 0) + (player.hasCityVaultPreparedStorageForCity(cityId) ? 15 : 0)) + " % de la valeur de base utilisée.");
         if (remoteReadOnly)
         {
             lines.push_back("Consultation distante : lecture seule. Aucun retrait n'est possible depuis une autre ville.");
@@ -440,6 +457,7 @@ namespace QuestWorldMenuSupport
         lines.push_back("");
 
         const Inventory& vault = player.getCityVaultForCity(cityId);
+        lines.push_back("Monnaie physique : " + vault.getWalletLine() + " — encombrement " + std::to_string(CarryLoadSystem::coinLoad(vault)) + ".");
         lines.push_back("Armes : " + std::to_string(vault.getWeaponCount()) + ".");
         for (const Weapon& weapon : vault.getWeapons())
         {
@@ -460,7 +478,7 @@ namespace QuestWorldMenuSupport
         {
             lines.push_back("- " + material.getName() + " x" + std::to_string(material.getQuantity()) + " [" + material.getQualityLabel() + "].");
         }
-        if (vault.getWeaponCount() + vault.getArmorCount() + vault.getConsumableCount() + vault.getMaterialCount() == 0)
+        if (vault.getWeaponCount() + vault.getArmorCount() + vault.getConsumableCount() + vault.getMaterialCount() == 0 && vault.getTotalCopper() <= 0)
         {
             lines.push_back("Le coffre est vide.");
         }
@@ -490,7 +508,7 @@ namespace QuestWorldMenuSupport
 
             const bool hasVault = player.hasCityVaultInCity(city.getId());
             const std::string detail = hasVault
-                ? "Lecture seule : " + std::to_string(player.getCityVaultUsedSlotsForCity(city.getId())) + "/" + std::to_string(player.getCityVaultCapacityForCity(city.getId())) + " emplacements."
+                ? "Lecture seule : " + std::to_string(player.getCityVaultUsedSlotsForCity(city.getId())) + "/" + std::to_string(player.getCityVaultCapacityForCity(city.getId())) + " unités."
                 : "Aucun coffre personnel acheté dans cette ville.";
             screen.addOption(option, city.getName(), detail, hasVault, "quest.city_vault.remote." + city.getId());
             cityIds.push_back(city.getId());
@@ -534,6 +552,7 @@ namespace QuestWorldMenuSupport
             const int distance = currentCity == nullptr ? -1 : City::calculateDistanceBetween(*currentCity, city);
             lines.push_back(city.getName() + " — " + city.getGuildName() + " [" + state + "]");
             lines.push_back("  " + city.getDescription());
+            lines.push_back("  " + CityProfileSystem::profileSummary(city.getId()));
             lines.push_back("  Distance depuis ici : " + (distance >= 0 ? std::to_string(distance) + " km." : std::string("inconnue.")));
             lines.push_back("  Entrée : " + city.getAccessRequirementText());
             lines.push_back("  Coffre : " + vaultState + ".");
@@ -586,7 +605,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             }
             for (std::size_t i = 0; i < top.size(); ++i)
             {
-                lines.push_back(std::to_string(i + 1) + ". " + top[i].label + " — " + std::to_string(top[i].count) + " fois | dernier jour " + std::to_string(top[i].lastDay) + ".");
+                lines.push_back(std::to_string(i + 1) + ". " + top[i].label + " — " + std::to_string(top[i].count) + " fois | dernier jour " + std::to_string(top[i].lastDay + 1) + ".");
             }
         }
 
@@ -630,7 +649,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             const std::vector<PlayerJournalRecord> top = player.getTopCanonicalJournalRecords(category.id, 3);
             for (std::size_t i = 0; i < top.size(); ++i)
             {
-                lines.push_back(std::to_string(i + 1) + ". " + top[i].label + " — " + std::to_string(top[i].count) + " fois | dernier jour " + std::to_string(top[i].lastDay) + ".");
+                lines.push_back(std::to_string(i + 1) + ". " + top[i].label + " — " + std::to_string(top[i].count) + " fois | dernier jour " + std::to_string(top[i].lastDay + 1) + ".");
             }
         }
         if (lines.size() <= 2)
@@ -667,7 +686,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             const std::size_t limit = std::min<std::size_t>(10, actions.size());
             for (std::size_t i = 0; i < limit; ++i)
             {
-                lines.push_back(std::to_string(i + 1) + ". " + actions[i].label + " — jour " + std::to_string(actions[i].lastDay) + ".");
+                lines.push_back(std::to_string(i + 1) + ". " + actions[i].label + " — jour " + std::to_string(actions[i].lastDay + 1) + ".");
             }
         }
         MessageScreen::show("REGISTRE — DERNIÈRES ACTIONS", "quest.canonical_journal.recent_actions", lines, false);
@@ -768,7 +787,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         ShopMenu::open(player);
     }
 
-    void openCityHubMenu(Player& player)
+    void openCityHubMenu(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule)
     {
         const City* city = City::findById(player.getCurrentCityId());
         if (city == nullptr)
@@ -821,7 +840,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             }
             else if (building.id == "vault")
             {
-                openCityVault(player);
+                openCityVault(player, difficulty, deathRule);
             }
             else if (building.id == "inn")
             {
@@ -905,56 +924,349 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         }
     }
 
+    void openMorphologyProgramMenu(Player& player)
+    {
+        constexpr int sessionCostCopper = 35;
+        constexpr int requiredSessions = 8;
+        constexpr int requiredDays = 14;
+
+        while (true)
+        {
+            const std::string current = player.getBodyMorphology();
+            MenuScreen screen("PROGRAMME MORPHOLOGIQUE", "quest.city_hub.inn.morphology");
+            screen.addLine("Morphologie actuelle : " + current + ".");
+            screen.addLine("Le changement est volontaire, progressif et bidirectionnel : aucun repas ou entraînement isolé ne transforme automatiquement le personnage.");
+            screen.addLine("Un palier demande " + std::to_string(requiredSessions) + " séances encadrées ET au moins " + std::to_string(requiredDays) + " jours depuis le début.");
+            screen.addLine("Chaque séance combine entraînement adapté + alimentation suivie, coûte " + Money::formatCopper(sessionCostCopper) + " et consomme 2 moments de journée.");
+            screen.addBackOption("Retour à l'auberge", "quest.city_hub.inn.morphology.back");
+
+            if (!player.hasActiveMorphologyProgram())
+            {
+                screen.addLine("Programme actif : aucun.");
+                if (current == "Standard")
+                {
+                    screen.addOption(1, "Viser Fine", "Travail de mobilité, endurance légère et alimentation contrôlée. Passage d'un seul palier.", true, "quest.city_hub.inn.morphology.start.fine");
+                    screen.addOption(2, "Viser Robuste", "Renforcement progressif, récupération et alimentation adaptée. Passage d'un seul palier.", true, "quest.city_hub.inn.morphology.start.robust");
+                }
+                else
+                {
+                    screen.addOption(1, "Revenir vers Standard", "Un changement extrême ne saute jamais directement Fine <-> Robuste.", true, "quest.city_hub.inn.morphology.start.standard");
+                }
+
+                const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+                Console::clear();
+                if (choice == 0) return;
+                std::string target;
+                if (current == "Standard") target = choice == 1 ? "Fine" : "Robuste";
+                else target = "Standard";
+                if (player.startMorphologyProgram(target))
+                {
+                    MessageScreen::show("PROGRAMME COMMENCÉ", "quest.city_hub.inn.morphology.started", {
+                        "Objectif : " + current + " → " + target + ".",
+                        "Aucun effet immédiat : la morphologie actuelle reste " + current + " tant que le programme n'est pas réellement terminé.",
+                        "Les séances sont limitées à une par journée du monde."
+                    }, false);
+                }
+                continue;
+            }
+
+            const int elapsedDays = std::max(0, player.getWorldDaysElapsed() - player.getMorphologyProgramStartedDay());
+            screen.addLine("Programme actif : " + current + " → " + player.getMorphologyProgramTarget() + ".");
+            screen.addLine("Séances : " + std::to_string(player.getMorphologyProgramSessions()) + "/" + std::to_string(requiredSessions) + ".");
+            screen.addLine("Temps écoulé : " + std::to_string(elapsedDays) + "/" + std::to_string(requiredDays) + " jour(s) minimum.");
+            screen.addOption(1, "Faire la séance du jour — " + Money::formatCopper(sessionCostCopper),
+                player.canPerformMorphologySession() ? "Entraînement + alimentation suivie, puis 2 moments de journée s'écoulent." : "Une séance a déjà été faite aujourd'hui.",
+                player.canPerformMorphologySession(), "quest.city_hub.inn.morphology.session");
+            screen.addOption(2, "Annuler le programme", "Aucun changement corporel n'est appliqué ; la progression de ce programme est abandonnée.", true, "quest.city_hub.inn.morphology.cancel");
+
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+            Console::clear();
+            if (choice == 0) return;
+            if (choice == 2)
+            {
+                player.cancelMorphologyProgram();
+                MessageScreen::show("PROGRAMME ANNULÉ", "quest.city_hub.inn.morphology.cancelled", {"La morphologie actuelle ne change pas."}, false);
+                continue;
+            }
+            if (choice == 1)
+            {
+                if (!player.getInventory().spendCopper(sessionCostCopper))
+                {
+                    MessageScreen::show("FONDS INSUFFISANTS", "quest.city_hub.inn.morphology.no_money", {"Coût de la séance : " + Money::formatCopper(sessionCostCopper) + ".", "Aucune séance n'est enregistrée."}, false);
+                    continue;
+                }
+                if (!player.performMorphologySession())
+                {
+                    player.getInventory().earnCopper(sessionCostCopper);
+                    continue;
+                }
+                const int beforeDay = player.getWorldDaysElapsed();
+                const int beforeUnit = player.getWorldDayProgressUnits();
+                player.advanceWorldDayUnits(2);
+                const bool completed = player.tryCompleteMorphologyProgram();
+                std::vector<std::string> lines = {
+                    "Séance validée : entraînement adapté + alimentation suivie.",
+                    "Progression : " + std::to_string(completed ? requiredSessions : player.getMorphologyProgramSessions()) + "/" + std::to_string(requiredSessions) + " séance(s).",
+                    player.formatWorldTimeChange(beforeDay, beforeUnit)
+                };
+                if (completed) lines.push_back("Transformation terminée : morphologie actuelle = " + player.getBodyMorphology() + ".");
+                else lines.push_back("Aucun changement brutal : le corps conserve encore sa morphologie actuelle pendant le programme.");
+                MessageScreen::show(completed ? "PROGRAMME TERMINÉ" : "SÉANCE TERMINÉE", completed ? "quest.city_hub.inn.morphology.complete" : "quest.city_hub.inn.morphology.session.done", lines, false);
+            }
+        }
+    }
+
+    void openPlayerHomeMenu(Player& player)
+    {
+        while (true)
+        {
+            const std::string cityId = player.getCurrentCityId();
+            const std::string cityName = currentCityName(player);
+            const PlayerHomeState& home = player.getHomeState();
+
+            if (!home.owned)
+            {
+                const PlayerHomePurchasePlan rentPlan = PlayerHomeSystem::planPurchase(player, cityId, false);
+                const PlayerHomePurchasePlan buyPlan = PlayerHomeSystem::planPurchase(player, cityId, true);
+                MenuScreen purchase("LOGEMENT PRINCIPAL — " + cityName, "quest.city_hub.home.purchase");
+                purchase.addLine("Tu ne peux posséder qu'une seule maison principale par personnage.");
+                purchase.addLine("La formule avec loyer est moins chère à l'entrée. Un loyer impayé suspend seulement les services gratuits : aucune dette automatique, aucune expulsion et aucun effet sur Hestia ou un conjoint.");
+                purchase.addLine("Argent : " + player.getInventory().getWalletLine() + ".");
+                purchase.addBackOption("Retour", "quest.city_hub.home.purchase.back");
+                purchase.addOption(1,
+                    "Prendre le logement avec loyer — " + Money::formatCopper(rentPlan.upfrontCost),
+                    "Loyer : " + Money::formatCopper(rentPlan.recurringRent) + " tous les 7 jours. Dormir chez soi devient gratuit tant que les services sont actifs.",
+                    rentPlan.valid,
+                    "quest.city_hub.home.purchase.rent");
+                purchase.addOption(2,
+                    "Acheter définitivement — " + Money::formatCopper(buyPlan.upfrontCost),
+                    "Beaucoup plus cher, mais aucun loyer récurrent.",
+                    buyPlan.valid,
+                    "quest.city_hub.home.purchase.outright");
+                const int buyChoice = TerminalInterface::askMenuChoiceFromOptions(purchase, "Choix invalide.");
+                Console::clear();
+                if (buyChoice == 0) return;
+
+                const bool outright = buyChoice == 2;
+                const PlayerHomePurchasePlan chosen = outright ? buyPlan : rentPlan;
+                if (!chosen.valid || !PlayerHomeSystem::registerPurchase(player, cityId, outright, player.getWorldDaysElapsed()))
+                {
+                    MessageScreen::show(
+                        "ACHAT IMPOSSIBLE",
+                        "quest.city_hub.home.purchase.failed",
+                        {"Coût : " + Money::formatCopper(chosen.upfrontCost) + ".", "Argent actuel : " + player.getInventory().getWalletLine() + ".", "Aucun crédit ni dette n'est créé pour acheter une maison."},
+                        false);
+                    continue;
+                }
+
+                MessageScreen::show(
+                    "MAISON PRINCIPALE",
+                    "quest.city_hub.home.purchase.done",
+                    {
+                        "Le logement de " + cityName + " devient ta seule maison principale.",
+                        outright ? "Achat définitif : aucun loyer." : "Premier loyer prévu au jour " + std::to_string(player.getHomeState().nextRentDueDay) + ".",
+                        "Dormir chez toi ne coûte rien lorsque les services du logement sont actifs."
+                    },
+                    false);
+                continue;
+            }
+
+            if (home.cityId != cityId)
+            {
+                MessageScreen::show(
+                    "MAISON PRINCIPALE",
+                    "quest.city_hub.home.other_city",
+                    {"Ta maison se trouve à " + home.cityId + ".", "Tu dois être dans cette ville pour y entrer ou utiliser ses services."},
+                    false);
+                return;
+            }
+
+            const bool rentDue = PlayerHomeSystem::isRentDue(player, player.getWorldDaysElapsed());
+            const bool active = PlayerHomeSystem::servicesActive(player, player.getWorldDaysElapsed());
+            MenuScreen screen("CHEZ TOI — " + cityName, "quest.city_hub.home");
+            screen.addLine(home.fullyPurchased ? "Maison achetée définitivement." : "Maison avec loyer.");
+            if (!home.fullyPurchased)
+            {
+                screen.addLine("Loyer : " + Money::formatCopper(home.rentAmount) + " | prochaine échéance : jour " + std::to_string(home.nextRentDueDay) + ".");
+                if (rentDue) screen.addLine("Services suspendus tant que le loyer actuel n'est pas payé. Aucun arriéré ne s'accumule.");
+            }
+            for (const std::string& line : PlayerHomeSystem::describeResidents(player)) screen.addLine(line);
+            screen.addBackOption("Retour", "quest.city_hub.home.back");
+            screen.addOption(1, "Dormir chez soi — gratuit", active ? "Une nuit complète, récupération jusqu'à 90% PV et mana complet." : "Indisponible tant que le loyer courant n'est pas payé.", active, "quest.city_hub.home.sleep");
+            if (rentDue)
+                screen.addOption(2, "Payer le loyer — " + Money::formatCopper(home.rentAmount), "Réactive immédiatement les services pour 7 jours. Aucun arriéré supplémentaire.", true, "quest.city_hub.home.rent");
+
+            const PlayerHestiaStoryState& h = player.getHestiaStoryState();
+            if (h.rescued && h.materialized)
+            {
+                if (h.residence != "player_home")
+                    screen.addOption(3, "Proposer à Hestia de rester ici", "Elle peut vivre ici avec toi et un éventuel conjoint, sans entretien obligatoire ni pénalité d'absence.", true, "quest.city_hub.home.hestia.move_in");
+                else
+                {
+                    screen.addOption(3, "Passer voir Hestia", "Moment facultatif : aucune relation ne baisse si tu ne le fais pas.", true, "quest.city_hub.home.hestia.visit");
+                    screen.addOption(4, "Demander à Hestia de voyager avec toi", "Elle redevient disponible dans l'équipe active.", true, "quest.city_hub.home.hestia.party");
+                    screen.addOption(5, "Confier Hestia à Diane", "Elle sera en sécurité à la guilde. Cela ne bloque rien et ne crée aucune obligation de visite.", true, "quest.city_hub.home.hestia.diane");
+                }
+            }
+
+            const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
+            Console::clear();
+            if (choice == 0) return;
+
+            if (choice == 1 && active)
+            {
+                player.advanceWorldDays(1);
+                const int targetHp = std::max(1, player.getMaxHp() * 90 / 100);
+                if (player.getHp() < targetHp) player.heal(targetHp - player.getHp());
+                player.restoreManaToFull();
+                player.recordCanonicalEvent("repos_maison", cityId, "Nuit gratuite dans la maison principale", 1);
+                MessageScreen::show("NUIT CHEZ TOI", "quest.city_hub.home.sleep.done", {"Tu dors dans ton propre logement.", "Coût : gratuit.", "PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".", "Mana restauré.", player.formatWorldDateTimeLine()}, false);
+                continue;
+            }
+            if (choice == 2 && rentDue)
+            {
+                if (!PlayerHomeSystem::payRent(player, player.getWorldDaysElapsed()))
+                {
+                    MessageScreen::show("LOYER NON PAYÉ", "quest.city_hub.home.rent.failed", {"Montant : " + Money::formatCopper(home.rentAmount) + ".", "Argent actuel : " + player.getInventory().getWalletLine() + ".", "Aucune dette n'est créée : les services restent simplement suspendus."}, false);
+                }
+                else
+                {
+                    MessageScreen::show("LOYER PAYÉ", "quest.city_hub.home.rent.done", {"Services réactivés.", "Nouvelle échéance : jour " + std::to_string(player.getHomeState().nextRentDueDay) + "."}, false);
+                }
+                continue;
+            }
+            if (choice == 3 && h.rescued && h.materialized)
+            {
+                if (h.residence != "player_home")
+                {
+                    HestiaArcSystem::moveResidence(player, "player_home", true);
+                    MessageScreen::show("HESTIA À LA MAISON", "quest.city_hub.home.hestia.move_in.done", {"Hestia peut rester ici autant qu'elle le souhaite.", "Tu n'as aucune jauge d'entretien à remplir et aucune absence ne fait baisser votre relation."}, false);
+                }
+                else
+                {
+                    Random random;
+                    std::vector<std::string> lines = HestiaArcSystem::visit(player, player.getWorldDaysElapsed(), random);
+                    HestiaSmallFind find = HestiaArcSystem::maybeBringSmallFind(player, player.getWorldDaysElapsed(), random);
+                    lines.insert(lines.end(), find.lines.begin(), find.lines.end());
+                    lines.push_back("Cette visite est entièrement facultative : ne pas revenir ne provoque aucune pénalité.");
+                    MessageScreen::show("HESTIA", "quest.city_hub.home.hestia.visit.done", lines, false);
+                }
+                continue;
+            }
+            if (choice == 4 && h.rescued && h.materialized && h.residence == "player_home")
+            {
+                HestiaArcSystem::moveResidence(player, "active_party", true);
+                continue;
+            }
+            if (choice == 5 && h.rescued && h.materialized && h.residence == "player_home")
+            {
+                HestiaArcSystem::moveResidence(player, "guild_diane", true);
+                continue;
+            }
+        }
+    }
+
     void openInnMenu(Player& player)
     {
         while (true)
         {
-            const int commonBedCost = EconomyBalance::innCommonBedCostCopper(player.getCurrentCityId(), player.getLevel());
             const int roomCost = EconomyBalance::innSafeRoomCostCopper(player.getCurrentCityId(), player.getLevel());
-            const int mealCost = EconomyBalance::innWarmMealCostCopper(player.getCurrentCityId(), player.getLevel());
+            const int mealVoucherCount = player.getInventory().countMaterialById("warm_meal_voucher");
+            const int bedVoucherCount = player.getInventory().countMaterialById("lodging_bed_token");
+
             MenuScreen screen("AUBERGE — " + currentCityName(player), "quest.city_hub.inn");
             screen.addLine("Repos réel : l'auberge existe pour éviter que les routes deviennent un lit gratuit.");
             screen.addLine("PV : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".");
             screen.addLine("Argent : " + player.getInventory().getWalletLine() + ".");
+            screen.addLine("Bons : repas chaud x" + std::to_string(mealVoucherCount) + " | lit commun x" + std::to_string(bedVoucherCount) + ".");
             screen.addLine("Fatigue de route estimée : " + std::to_string(std::max(0, player.getCanonicalJournalCategoryTotal("distance_route") / 60 - player.getCanonicalJournalCategoryTotal("repos_auberge") * 2 - player.getCanonicalJournalCategoryTotal("repas_auberge"))) + " cran(s) narratif(s).");
             screen.addBackOption("Retour", "quest.city_hub.inn.back");
-            screen.addOption(1, "Lit commun — " + Money::formatCopper(commonBedCost), "Avance jusqu'au lendemain, mais une nuit simple ne dépasse pas 50% PV.", true, "quest.city_hub.inn.common_bed");
-            screen.addOption(2, "Chambre sûre — " + Money::formatCopper(roomCost), "Lit cher et chambre fermée : repos plus profond, plafonné à 90% PV.", true, "quest.city_hub.inn.room");
-            screen.addOption(3, "Repas chaud — " + Money::formatCopper(mealCost), "Petit soin et baisse narrative de fatigue sans dormir. Jamais gratuit : le prix est affiché avant validation.", true, "quest.city_hub.inn.meal");
-            screen.addOption(4, "Comptoir de l'auberge", "Acheter, vendre, discuter avec l'aubergiste et utiliser les services détaillés de l'auberge.", true, "quest.city_hub.inn.shop");
-            screen.addOption(5, "Fond de l'écurie — gratuit", "Un coin de paille offert aux voyageurs sans le sou. Avance au lendemain, récupération très limitée (25% PV max).", true, "quest.city_hub.inn.stable_floor");
+            screen.addOption(1, "Utiliser l'auberge", "Repas chaud, lit commun, bons prépayés, abonnements et services d'écurie. Les bons présents sont utilisés avant un paiement direct.", true, "quest.city_hub.inn.services");
+            screen.addOption(2, "Chambre sûre — " + Money::formatCopper(roomCost), "Service premium sans bon générique : chambre fermée, nuit complète, récupération jusqu'à 90% PV.", true, "quest.city_hub.inn.room");
+            screen.addOption(3, "Comptoir de l'auberge", "Acheter ou vendre, discuter avec l'aubergiste et acheter des carnets de bons sans les consommer immédiatement.", true, "quest.city_hub.inn.shop");
+            const StableFloorAccess stableFloor = LodgingRestSystem::stableFloorAccess(player, player.getCurrentCityId());
+            std::string stableFloorHint = "Un coin de paille offert aux voyageurs sans le sou. Avance au lendemain, récupération très limitée (25% PV max).";
+            if (stableFloor.banned)
+            {
+                stableFloorHint = "Accès refusé encore " + std::to_string(stableFloor.banDaysRemaining) + " jour(s) après abus du couchage gratuit.";
+            }
+            else if (stableFloor.evictedForOveruse)
+            {
+                stableFloorHint = "Tu as déjà trop utilisé ce dépannage récemment : une nouvelle demande entraînera une interdiction temporaire.";
+            }
+            else if (stableFloor.recentFreeNights > 0)
+            {
+                stableFloorHint += " Utilisations récentes : " + std::to_string(stableFloor.recentFreeNights) + "/3 tolérées avant expulsion.";
+            }
+            screen.addOption(4, "Fond de l'écurie — gratuit", stableFloorHint, !stableFloor.banned, "quest.city_hub.inn.stable_floor");
+            screen.addOption(5, "Programme morphologique", "Changer Fine / Standard / Robuste uniquement par un programme volontaire, long et suivi.", true, "quest.city_hub.inn.morphology");
+            screen.addOption(6, player.getHomeState().owned ? "Maison principale" : "Chercher un logement principal", player.getHomeState().owned ? "Accéder à ton logement s'il se trouve dans cette ville." : "Acheter une seule maison principale : formule avec loyer ou achat définitif.", true, "quest.city_hub.inn.home");
+
             const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
             Console::clear();
             if (choice == 0) return;
 
             if (choice == 1)
             {
-                if (!player.getInventory().spendCopper(commonBedCost))
-                {
-                    MessageScreen::show("ARGENT INSUFFISANT", "quest.city_hub.inn.no_money", {"Coût : " + Money::formatCopper(commonBedCost) + ".", "Argent actuel : " + player.getInventory().getWalletLine() + "."}, false);
-                    continue;
-                }
-                player.advanceWorldDays(1);
-                const int targetHp = std::max(1, player.getMaxHp() * 50 / 100);
-                if (player.getHp() < targetHp)
-                {
-                    player.heal(targetHp - player.getHp());
-                }
-                player.recordCanonicalEvent("repos_auberge", player.getCurrentCityId(), "Lit commun à " + currentCityName(player));
-                if (stableMissionRoll("inn_common:" + player.getCurrentCityId() + ":" + std::to_string(player.getWorldDaysElapsed())) < 9)
-                {
-                    player.recordCanonicalEvent("evenements_nocturnes_auberge", player.getCurrentCityId(), "Bruit, voisin bizarre ou rumeur pendant la nuit d'auberge");
-                }
-                recordRecentAction(player, "inn_common_bed", "Repos en lit commun à " + currentCityName(player));
-                MessageScreen::show("REPOS À L'AUBERGE", "quest.city_hub.inn.common_bed.done", {"Tu dors dans un lit commun. Ce n'est pas luxueux, et une simple nuit ne répare pas tout.", "Plafond de récupération : 50% des PV maximum.", "Prix payé : " + Money::formatCopper(commonBedCost) + ".", "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".", player.formatWorldDateTimeLine()}, false);
-                return;
+                ShopCityServiceMenu::openLodgingServiceMenu(player);
+                continue;
             }
             if (choice == 2)
             {
-                if (!player.getInventory().spendCopper(roomCost))
+                GuildFinancePaymentResult payment = GuildFinanceSystem::payAffiliatedService(
+                    player,
+                    roomCost,
+                    "affiliated_inn_safe_room:" + player.getCurrentCityId(),
+                    "Chambre sûre à " + currentCityName(player),
+                    false
+                );
+
+                if (!payment.success)
                 {
-                    MessageScreen::show("ARGENT INSUFFISANT", "quest.city_hub.inn.no_money", {"Coût : " + Money::formatCopper(roomCost) + ".", "Argent actuel : " + player.getInventory().getWalletLine() + "."}, false);
-                    continue;
+                    const GuildFinanceOverview finance = GuildFinanceSystem::overview(player);
+                    const long long wallet = player.getInventory().getTotalCopper();
+                    const long long creditNeeded = std::max(0LL, static_cast<long long>(roomCost) - wallet);
+                    if (finance.member && creditNeeded > 0 && finance.overdraftRemainingCopper >= creditNeeded)
+                    {
+                        MenuScreen creditScreen("CRÉDIT DE GUILDE", "quest.city_hub.inn.room.credit");
+                        creditScreen.addLine("Coût de la chambre : " + Money::formatCopper(roomCost) + ".");
+                        creditScreen.addLine("Bourse disponible : " + Money::formatCopper(wallet) + ".");
+                        creditScreen.addLine("Crédit nécessaire : " + Money::formatCopper(creditNeeded) + ".");
+                        creditScreen.addLine("Découvert utilisé : " + Money::formatCopper(finance.overdraftUsedCopper) + ".");
+                        creditScreen.addLine("Marge restante avant paiement : " + Money::formatCopper(finance.overdraftRemainingCopper) + ".");
+                        creditScreen.addBackOption("Annuler", "quest.city_hub.inn.room.credit.cancel");
+                        creditScreen.addOption(1, "Utiliser le découvert", "La bourse est prélevée d'abord ; la guilde règle uniquement le manque au partenaire.", true, "quest.city_hub.inn.room.credit.confirm");
+                        const int creditChoice = TerminalInterface::askMenuChoiceFromOptions(creditScreen, "Choisis si tu veux utiliser le crédit de guilde.");
+                        Console::clear();
+                        if (creditChoice == 1)
+                        {
+                            payment = GuildFinanceSystem::payAffiliatedService(
+                                player,
+                                roomCost,
+                                "affiliated_inn_safe_room:" + player.getCurrentCityId(),
+                                "Chambre sûre à " + currentCityName(player),
+                                true
+                            );
+                        }
+                    }
+
+                    if (!payment.success)
+                    {
+                        const GuildFinanceOverview afterFailure = GuildFinanceSystem::overview(player);
+                        MessageScreen::show(
+                            "ARGENT INSUFFISANT",
+                            "quest.city_hub.inn.no_money",
+                            {
+                                "Coût : " + Money::formatCopper(roomCost) + ".",
+                                "Argent actuel : " + player.getInventory().getWalletLine() + ".",
+                                "Découvert utilisé : " + Money::formatCopper(afterFailure.overdraftUsedCopper) + ".",
+                                "Marge de découvert : " + Money::formatCopper(afterFailure.overdraftRemainingCopper) + ".",
+                                payment.failureReason.empty() ? "Aucun paiement n'a été effectué." : payment.failureReason
+                            },
+                            false
+                        );
+                        continue;
+                    }
                 }
                 player.advanceWorldDays(1);
                 const int targetHp = std::max(1, player.getMaxHp() * 90 / 100);
@@ -962,35 +1274,64 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 {
                     player.heal(targetHp - player.getHp());
                 }
+                player.restoreManaToFull();
                 player.recordCanonicalEvent("repos_auberge", player.getCurrentCityId(), "Chambre sûre à " + currentCityName(player));
                 player.recordCanonicalEvent("nuits_securisees", player.getCurrentCityId(), "Chambre sûre à " + currentCityName(player));
                 player.recordCanonicalEvent("fatigue_route_reduite", player.getCurrentCityId(), "Chambre sûre : fatigue de route calmée");
                 recordRecentAction(player, "inn_safe_room", "Chambre sûre à " + currentCityName(player));
-                MessageScreen::show("CHAMBRE SÛRE", "quest.city_hub.inn.room.done", {"Tu prends une vraie chambre. Les portes ferment, le lit tient debout, et personne ne fouille ton sac dans le couloir.", "Lit cher : récupération possible jusqu'à 90% des PV, pas une guérison parfaite gratuite.", "Prix payé : " + Money::formatCopper(roomCost) + ".", "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".", player.formatWorldDateTimeLine()}, false);
+                std::vector<std::string> roomLines = {
+                    "Tu prends une vraie chambre. Les portes ferment, le lit tient debout, et personne ne fouille ton sac dans le couloir.",
+                    "Lit cher : récupération possible jusqu'à 90% des PV, pas une guérison parfaite gratuite.",
+                    "Prix payé : " + Money::formatCopper(roomCost) + ".",
+                    "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".",
+                    "Mana : " + std::to_string(player.getMana()) + "/" + std::to_string(player.getMaxMana()) + "."
+                };
+                if (payment.overdraftDrawnCopper > 0)
+                {
+                    roomLines.push_back("Paiement : " + Money::formatCopper(payment.walletPaidCopper) + " depuis la bourse + " + Money::formatCopper(payment.overdraftDrawnCopper) + " de crédit réseau.");
+                    roomLines.push_back("Découvert utilisé après paiement : " + Money::formatCopper(GuildFinanceSystem::overdraftUsedCopper(player)) + ".");
+                }
+                roomLines.push_back(player.formatWorldDateTimeLine());
+                MessageScreen::show("CHAMBRE SÛRE", "quest.city_hub.inn.room.done", roomLines, false);
                 return;
             }
             if (choice == 3)
-            {
-                if (!player.getInventory().spendCopper(mealCost))
-                {
-                    MessageScreen::show("ARGENT INSUFFISANT", "quest.city_hub.inn.no_money", {"Coût : " + Money::formatCopper(mealCost) + ".", "Argent actuel : " + player.getInventory().getWalletLine() + "."}, false);
-                    continue;
-                }
-                player.advanceWorldDayUnits(1);
-                player.heal(std::max(2, player.getMaxHp() / 6));
-                player.recordCanonicalEvent("repas_auberge", player.getCurrentCityId(), "Repas chaud à " + currentCityName(player));
-                player.recordCanonicalEvent("fatigue_route_reduite", player.getCurrentCityId(), "Repas chaud : petite récupération sans dormir");
-                recordRecentAction(player, "inn_meal", "Repas chaud à " + currentCityName(player));
-                MessageScreen::show("REPAS CHAUD", "quest.city_hub.inn.meal.done", {"Tu prends un repas chaud. Ce n'est pas un sommeil complet, mais ça évite de traiter la fatigue comme une ligne invisible.", "Prix payé : " + Money::formatCopper(mealCost) + ".", "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".", player.formatWorldDateTimeLine()}, false);
-                continue;
-            }
-            if (choice == 4)
             {
                 ShopMenu::openShopOfType(player, ShopType::Lodging);
                 continue;
             }
             if (choice == 5)
             {
+                openMorphologyProgramMenu(player);
+                continue;
+            }
+            if (choice == 6)
+            {
+                openPlayerHomeMenu(player);
+                continue;
+            }
+            if (choice == 4)
+            {
+                const StableFloorAccess access = LodgingRestSystem::requestStableFloorRest(player, player.getCurrentCityId());
+                if (!access.allowed)
+                {
+                    std::vector<std::string> lines;
+                    if (access.evictedForOveruse)
+                    {
+                        lines.push_back("L'aubergiste te reconnaît avant même que tu montres la paille du doigt.");
+                        lines.push_back("Ce coin gratuit sert à dépanner les voyageurs sans le sou, pas à remplacer indéfiniment une chambre ou un logement.");
+                        lines.push_back("Tu es délogé avant de t'installer et interdit de couchage gratuit ici pendant 3 jours.");
+                    }
+                    else
+                    {
+                        lines.push_back("L'écurie refuse encore de te laisser reprendre le même coin gratuitement.");
+                        lines.push_back("Interdiction restante : " + std::to_string(access.banDaysRemaining) + " jour(s).");
+                    }
+                    lines.push_back("Les chambres payantes, ton propre logement et les autres solutions de repos restent disponibles normalement.");
+                    MessageScreen::show("ÉCURIE — ACCÈS REFUSÉ", "quest.city_hub.inn.stable_floor.denied", lines, false);
+                    continue;
+                }
+
                 player.advanceWorldDays(1);
                 const int targetHp = std::max(1, player.getMaxHp() * 25 / 100);
                 if (player.getHp() < targetHp)
@@ -1006,6 +1347,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                         "L'aubergiste te laisse un coin sec au fond de l'écurie. Ce n'est pas confortable, mais personne n'est obligé de rester bloqué dehors faute d'argent.",
                         "Prix payé : gratuit.",
                         "Récupération maximale : 25% des PV. Les lits payants restent nettement meilleurs.",
+                        "Utilisations gratuites récentes dans cette ville : " + std::to_string(access.recentFreeNights) + "/3 tolérées dans la fenêtre anti-abus.",
                         "PV actuels : " + std::to_string(player.getHp()) + "/" + std::to_string(player.getMaxHp()) + ".",
                         player.formatWorldDateTimeLine()
                     },
@@ -1021,7 +1363,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         return EconomyBalance::travelTimeUnitsForDistance(distanceKm);
     }
 
-    void openCityTravelMenu(Player& player)
+    void openCityTravelMenu(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule)
     {
         while (true)
         {
@@ -1056,7 +1398,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 itemData.detail = city.getDescription();
                 itemData.status = access.allowed ? "Accessible" : "Fermée";
                 itemData.stock = distance >= 0 ? std::to_string(distance) + " km" : "Distance inconnue";
-                itemData.progress = "Niveau requis " + std::to_string(city.getMinimumLevel()) + " | " + std::to_string(EconomyBalance::travelTimeUnitsForDistance(distance)) + " segment(s)";
+                itemData.progress = "Niveau requis " + std::to_string(city.getMinimumLevel()) + " | " + std::to_string(EconomyBalance::travelTimeUnitsForDistance(distance)) + " moment(s) de la journée";
                 itemData.reward = "Taxe changement de ville " + std::to_string(CityTravelRules::getTravelTaxCopper(player, city, distance)) + " cuivre";
                 itemData.owner = city.getGuildName();
                 itemData.important = !access.allowed;
@@ -1085,7 +1427,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             }
             if (choice == 89)
             {
-                openCityHubMenu(player);
+                openCityHubMenu(player, difficulty, deathRule);
                 continue;
             }
             if (choice == 90)
@@ -1164,14 +1506,27 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 continue;
             }
 
+            const CarryLoadSummary departureLoad = CarryLoadSystem::evaluate(player);
+            if (departureLoad.movementBlocked)
+            {
+                MessageScreen::show("TROP CHARGÉ POUR PARTIR", "quest.city_travel.carry_blocked", {
+                    "Encombrement : " + std::to_string(departureLoad.used) + "/" + std::to_string(departureLoad.capacity) + " — " + std::to_string(departureLoad.percent) + " %.",
+                    "À 200 % ou plus, le personnage ne peut pas commencer un voyage.",
+                    "Allège le sac : vendre, déposer, donner, consommer ou abandonner des objets reste possible."
+                }, false);
+                continue;
+            }
+
             const int travelTaxCopper = std::max(0, baseTravelTaxCopper + selectedRoute.extraCopper);
-            const int timeUnits = clampedTravelTimeWithRoute(baseTimeUnits, selectedRoute);
+            const int rawTimeUnits = clampedTravelTimeWithRoute(baseTimeUnits, selectedRoute);
+            const int timeUnits = CarryLoadSystem::adjustedActionTimeUnits(player, rawTimeUnits);
 
             MenuScreen confirm("VOYAGE VERS " + destination->getName(), "quest.city_travel.confirm");
             confirm.addLine("Le trajet sera validé maintenant dans la sauvegarde du personnage.");
             confirm.addLine("Route choisie : " + selectedRoute.label + ".");
             confirm.addLine("Coût total annoncé : " + Money::formatCopper(travelTaxCopper) + ".");
-            confirm.addLine("Temps annoncé : " + std::to_string(timeUnits) + " segment(s).");
+            confirm.addLine("Temps annoncé : " + std::to_string(timeUnits) + " moment(s) de la journée.");
+            if (timeUnits > rawTimeUnits) confirm.addLine("Surcharge : " + std::to_string(rawTimeUnits) + " → " + std::to_string(timeUnits) + " moment(s) (+" + std::to_string(departureLoad.explorationTimeModifierPercent) + " %)." );
             for (const std::string& line : previewLines)
             {
                 confirm.addLine(line);
@@ -1210,7 +1565,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 {
                     failedLines.push_back("Le trajet est quand même compté : aller jusqu'aux portes, refus/contrôle administratif, puis retour.");
                     failedLines.push_back("Aucune taxe n'est prélevée, et aucune deuxième taxe n'est ajoutée pour le retour.");
-                    failedLines.push_back("Temps écoulé : +" + std::to_string(timeUnits * 2) + " segment(s) (aller-retour).");
+                    failedLines.push_back("Temps écoulé : +" + std::to_string(timeUnits * 2) + " moment(s) de la journée (aller-retour).");
                     failedLines.push_back(player.formatWorldTimeChange(dayBefore, unitBefore));
                     failedLines.push_back("Rappel : cette taxe existe uniquement lors d'un vrai changement de ville, pas à chaque exploration.");
                     player.recordCanonicalEvent("voyages_rates", origin->getId() + "->" + destination->getId(), origin->getName() + " → " + destination->getName() + " puis retour");
@@ -1245,6 +1600,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             std::vector<std::string> discoveryLines = recordRoutePassageAndMaybeDiscovery(player, *origin, *destination, distance, 1);
             std::vector<std::string> routeEventLines = recordLimitedRouteEventAndRumor(player, *origin, *destination, distance, selectedRoute);
             std::vector<std::string> rareGroupLines = maybeCreateRareRouteAdventurerOffer(player, *origin, *destination, selectedRoute);
+            std::vector<std::string> intercityQuestLines = IntercityQuestSystem::onCityArrival(player, origin->getId(), destination->getId());
             expireOverdueQuestDeadlines(player, "quest.city_travel.done", true);
 
             std::vector<std::string> resultLines = {
@@ -1252,7 +1608,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 "Route utilisée : " + selectedRoute.label + ".",
                 "Distance parcourue : " + std::to_string(distance) + " km environ.",
                 "Taxe/frais de changement de ville payés : " + Money::formatCopper(travelTaxCopper) + ".",
-                "Temps écoulé : +" + std::to_string(timeUnits) + " segment(s).",
+                "Temps écoulé : +" + std::to_string(timeUnits) + " moment(s) de la journée.",
                 player.formatWorldTimeChange(dayBefore, unitBefore),
                 "Le trajet se termine devant les portes de " + destination->getName() + "."
             };
@@ -1263,6 +1619,7 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             resultLines.insert(resultLines.end(), discoveryLines.begin(), discoveryLines.end());
             resultLines.insert(resultLines.end(), routeEventLines.begin(), routeEventLines.end());
             resultLines.insert(resultLines.end(), rareGroupLines.begin(), rareGroupLines.end());
+            resultLines.insert(resultLines.end(), intercityQuestLines.begin(), intercityQuestLines.end());
             if (!player.isRegisteredAtCurrentCityGuild())
             {
                 resultLines.push_back("Guilde locale : tu peux demander une mise à niveau d'inscription ici, sans refaire l'inscription complète.");
@@ -1271,23 +1628,110 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
         }
     }
 
+    int previewVaultUsedForCity(const Player& player, const std::string& cityId, const Inventory& inventory)
+    {
+        const int raw = CarryLoadSystem::inventoryLoad(inventory);
+        int reduction = 0;
+        if (player.hasCityVaultPlaceOptimizationForCity(cityId)) reduction += 10;
+        if (player.hasCityVaultPreparedStorageForCity(cityId)) reduction += 15;
+        return std::max(0, (raw * (100 - reduction) + 99) / 100);
+    }
+
+    std::string vaultCityName(const std::string& cityId)
+    {
+        const City* city = City::findById(cityId);
+        return city == nullptr ? cityId : city->getName();
+    }
+
+    bool runCityVaultDefense(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule)
+    {
+        if (!player.hasCityVaultRaidPendingForCity(player.getCurrentCityId())) return false;
+
+        Random random;
+        const bool monsterRaid = random.between(1, 100) <= 8;
+        const int enemyCount = player.getLevel() >= 45 ? 3 : (player.getLevel() >= 12 ? 2 : 1);
+        std::vector<Monster> enemies;
+        for (int i = 0; i < enemyCount; ++i)
+        {
+            Monster scaled = MonsterCatalog::createRandomMonsterForLevel(std::max(1, player.getLevel() + random.between(-2, 2)), random);
+            if (monsterRaid)
+            {
+                enemies.push_back(scaled);
+            }
+            else
+            {
+                const std::string name = i == 0 ? "Pillard du coffre" : (i == 1 ? "Voleur de réserve" : "Brigand de soutien");
+                enemies.emplace_back(
+                    name,
+                    "Humain voleur organisé",
+                    Race::Humain,
+                    scaled.getLevel(),
+                    scaled.getMaxHp(),
+                    scaled.getMinDamage(),
+                    scaled.getMaxDamage(),
+                    scaled.getCriticalDamage(),
+                    scaled.getHealingPotionCount(),
+                    scaled.getDamagePotionCount(),
+                    false,
+                    i == enemyCount - 1 && enemyCount >= 3
+                );
+            }
+        }
+
+        const bool guardMayJoin = random.between(1, 100) <= 35;
+        std::vector<std::string> intro = {
+            monsterRaid
+                ? "Exceptionnellement, la menace n'est pas une bande de voleurs classique : des créatures ont profité de l'agitation autour du coffre."
+                : "Les assaillants sont principalement des voleurs et brigands venus pour le stockage, pas pour conquérir la ville.",
+            "La garde locale sécurise les rues ; ton combat se concentre sur ceux qui ont réellement atteint ton coffre."
+        };
+        if (guardMayJoin) intro.push_back("Un garde municipal est disponible : s'il reste une vraie place dans ton équipe, il rejoindra temporairement la défense sans demander de part du butin.");
+        MessageScreen::show("DÉFENSE DU COFFRE", "quest.city_vault.raid.intro", intro, false);
+
+        const bool victory = MonsterPveMode::runExplorationWave(
+            player, random, difficulty, deathRule, enemies,
+            "Défense du coffre municipal de " + currentCityName(player), false, guardMayJoin, 40, 40
+        );
+        player.resolveCurrentCityVaultRaid(victory);
+        if (victory)
+        {
+            player.recordCanonicalEvent("services_locaux_reussis", "defense_coffre:" + player.getCurrentCityId(), "Défense du coffre municipal", 1);
+            MessageScreen::show("COFFRE SAUVÉ", "quest.city_vault.raid.victory", {"La tentative de pillage est stoppée.", "Les autorités reprennent les assaillants et la majorité de leurs biens : seuls environ 40 % du butin ordinaire sont légalement récupérables.", "Tout bien qui t'appartenait déjà et qui est identifié comme volé est repris en priorité et ne compte pas dans cette limite.", "Le garde éventuel repart ensuite à son poste : il ne devient pas une recrue permanente et ne prend aucun équipement."}, false);
+        }
+        else
+        {
+            MessageScreen::show("DÉFENSE ÉCHOUÉE", "quest.city_vault.raid.defeat", {"Les assaillants réussissent à repartir avec une petite part de la monnaie physique accessible.", "Le système ne détruit pas silencieusement les objets uniques, de quête ou équipements irremplaçables."}, false);
+        }
+        return victory;
+    }
+
     void openVaultMaterialTransferMenu(Player& player)
     {
         if (!player.hasCityVault())
         {
-            MessageScreen::show("TRANSPORT IMPOSSIBLE", "quest.city_vault.transfer.no_current", {"Tu dois posséder le coffre de la ville actuelle pour envoyer une pile."}, false);
-            return;
-        }
-        if (player.getCityVault().getMaterialCount() <= 0)
-        {
-            MessageScreen::show("AUCUN MATÉRIAU", "quest.city_vault.transfer.no_material", {"Le coffre actuel ne contient aucune pile de matériaux à transporter."}, false);
+            MessageScreen::show("TRANSPORT IMPOSSIBLE", "quest.city_vault.transfer.no_current", {"Tu dois posséder le coffre de la ville actuelle pour utiliser le réseau logistique."}, false);
             return;
         }
 
-        std::vector<std::pair<int, const City*>> destinationChoices;
-        MenuScreen cityScreen("TRANSPORT DE COFFRE", "quest.city_vault.transfer.city");
-        cityScreen.addLine("Transport encadré : les piles de matériaux peuvent être expédiées avec un coût et un coffre de destination.");
-        cityScreen.addLine("Le retrait reste impossible à distance : tu envoies depuis le coffre actuel vers un autre coffre possédé.");
+        auto hasCargo = [](const Inventory& vault)
+        {
+            return vault.getWeaponCount() > 0 || vault.getArmorCount() > 0 || vault.getConsumableCount() > 0
+                || vault.getMaterialCount() > 0 || vault.getTotalCopper() > 0;
+        };
+
+        MenuScreen mode("TRANSPORT INTER-VILLE", "quest.city_vault.transfer.mode");
+        mode.addLine("Envoi : le coffre actuel expédie vers un autre coffre. Rappel : un messager porte d'abord ta demande, puis le convoi revient vers toi.");
+        mode.addLine("Le coût dépend de la distance et de l'encombrement réel du chargement. Un rappel coûte un peu plus cher et prend environ deux trajets au lieu d'un.");
+        mode.addBackOption("Retour", "quest.city_vault.transfer.mode.back");
+        mode.addOption(1, "Envoyer depuis ce coffre", "Un seul trajet logistique vers le coffre distant.", hasCargo(player.getCityVault()), "quest.city_vault.transfer.mode.send");
+        mode.addOption(2, "Rappeler depuis un autre coffre", "Messager aller + convoi retour : un peu plus cher et plus long.", player.getOwnedCityVaultCount() > 1, "quest.city_vault.transfer.mode.recall");
+        const int modeChoice = TerminalInterface::askMenuChoiceFromOptions(mode, "Choix invalide.");
+        Console::clear();
+        if (modeChoice == 0) return;
+        const bool recall = modeChoice == 2;
+
+        std::vector<std::pair<int, const City*>> cityChoices;
+        MenuScreen cityScreen(recall ? "RAPPELER DEPUIS QUEL COFFRE ?" : "ENVOYER VERS QUEL COFFRE ?", recall ? "quest.city_vault.transfer.recall.city" : "quest.city_vault.transfer.send.city");
         cityScreen.addBackOption("Retour", "quest.city_vault.transfer.city.back");
         int option = 1;
         for (const City& city : City::getCatalog())
@@ -1295,88 +1739,300 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             if (city.getId() == player.getCurrentCityId()) continue;
             const bool hasVault = player.hasCityVaultInCity(city.getId());
             const int currentOption = option++;
-            if (hasVault) destinationChoices.push_back({currentOption, &city});
+            if (hasVault) cityChoices.push_back({currentOption, &city});
             const int distance = CityTravelRules::getDistanceBetweenCities(player.getCurrentCityId(), city.getId());
-            cityScreen.addOption(currentOption, city.getName(), hasVault ? "Coffre possédé | distance " + std::to_string(distance) + " km." : "Aucun coffre possédé ici : transport impossible.", hasVault, "quest.city_vault.transfer.city." + city.getId());
+            const int used = hasVault ? player.getCityVaultUsedSlotsForCity(city.getId()) : 0;
+            const int capacity = hasVault ? player.getCityVaultCapacityForCity(city.getId()) : 0;
+            const std::string detail = hasVault
+                ? ("Coffre " + std::to_string(used) + "/" + std::to_string(capacity) + " | distance " + std::to_string(distance) + " km.")
+                : "Aucun coffre possédé ici.";
+            cityScreen.addOption(currentOption, city.getName(), detail, hasVault, "quest.city_vault.transfer.city." + city.getId());
         }
         const int cityChoice = TerminalInterface::askMenuChoiceFromOptions(cityScreen, "Choix invalide.");
         Console::clear();
-        const City* destination = nullptr;
-        for (const auto& destinationChoice : destinationChoices)
+        const City* remoteCity = nullptr;
+        for (const auto& entry : cityChoices)
         {
-            if (destinationChoice.first == cityChoice)
+            if (entry.first == cityChoice) { remoteCity = entry.second; break; }
+        }
+        if (remoteCity == nullptr) return;
+
+        const std::string sourceCityId = recall ? remoteCity->getId() : player.getCurrentCityId();
+        const std::string destinationCityId = recall ? player.getCurrentCityId() : remoteCity->getId();
+        const Inventory& sourceVault = player.getCityVaultForCity(sourceCityId);
+        if (!hasCargo(sourceVault))
+        {
+            MessageScreen::show("COFFRE SOURCE VIDE", "quest.city_vault.transfer.empty", {"Ce coffre ne contient actuellement rien à transporter."}, false);
+            return;
+        }
+
+        MenuScreen category("TYPE DE CHARGEMENT", recall ? "quest.city_vault.transfer.recall.category" : "quest.city_vault.transfer.send.category");
+        category.addLine("Les équipements gardent leur identité exacte pendant le transport. La monnaie conserve ses dénominations physiques.");
+        category.addBackOption("Retour", "quest.city_vault.transfer.category.back");
+        category.addOption(1, "Arme", std::to_string(sourceVault.getWeaponCount()) + " disponible(s).", sourceVault.getWeaponCount() > 0, "quest.city_vault.transfer.weapon");
+        category.addOption(2, "Armure", std::to_string(sourceVault.getArmorCount()) + " disponible(s).", sourceVault.getArmorCount() > 0, "quest.city_vault.transfer.armor");
+        category.addOption(3, "Consommable", std::to_string(sourceVault.getConsumableCount()) + " disponible(s).", sourceVault.getConsumableCount() > 0, "quest.city_vault.transfer.consumable");
+        category.addOption(4, "Pile de matériau", std::to_string(sourceVault.getMaterialCount()) + " pile(s).", sourceVault.getMaterialCount() > 0, "quest.city_vault.transfer.material");
+        category.addOption(5, "Toute la monnaie physique", sourceVault.getTotalCopper() > 0 ? sourceVault.getWalletLine() : "Aucune monnaie.", sourceVault.getTotalCopper() > 0, "quest.city_vault.transfer.coins");
+        const int categoryChoice = TerminalInterface::askMenuChoiceFromOptions(category, "Choix invalide.");
+        Console::clear();
+        if (categoryChoice == 0) return;
+
+        Inventory sourcePreview = sourceVault;
+        Inventory destinationPreview = player.getCityVaultForCity(destinationCityId);
+        int selectedIndex = -1;
+        int selectedQuantity = 1;
+        int cargoLoad = 1;
+        std::string cargoLabel;
+
+        if (categoryChoice == 1)
+        {
+            std::vector<std::string> labels;
+            for (int i = 0; i < sourceVault.getWeaponCount(); ++i)
             {
-                destination = destinationChoice.second;
-                break;
+                const Weapon w = sourceVault.getWeapon(i);
+                labels.push_back(w.getName() + " — encombrement " + std::to_string(CarryLoadSystem::weaponLoad(w)));
             }
+            selectedIndex = askVaultEntryChoice(recall ? "ARME À RAPPELER" : "ARME À ENVOYER", "quest.city_vault.transfer.weapon.pick", labels);
+            if (selectedIndex < 0) return;
+            const Weapon selected = sourceVault.getWeapon(selectedIndex);
+            cargoLabel = selected.getName();
+            cargoLoad = CarryLoadSystem::weaponLoad(selected);
+            sourcePreview.removeWeapon(selectedIndex);
+            destinationPreview.addWeapon(selected);
         }
-        if (destination == nullptr) return;
-
-        std::vector<std::string> labels;
-        for (const Material& material : player.getCityVault().getMaterials())
+        else if (categoryChoice == 2)
         {
-            const int distance = CityTravelRules::getDistanceBetweenCities(player.getCurrentCityId(), destination->getId());
-            const int cost = EconomyBalance::cityVaultMaterialTransferCostCopper(player.getCurrentCityId(), destination->getId(), distance, material.getQuantity());
-            labels.push_back(material.getName() + " x" + std::to_string(material.getQuantity()) + " [" + material.getQualityLabel() + "] — coût " + Money::formatCopper(cost));
+            std::vector<std::string> labels;
+            for (int i = 0; i < sourceVault.getArmorCount(); ++i)
+            {
+                const Armor a = sourceVault.getArmor(i);
+                labels.push_back(a.getName() + " — encombrement " + std::to_string(CarryLoadSystem::armorLoad(a)));
+            }
+            selectedIndex = askVaultEntryChoice(recall ? "ARMURE À RAPPELER" : "ARMURE À ENVOYER", "quest.city_vault.transfer.armor.pick", labels);
+            if (selectedIndex < 0) return;
+            const Armor selected = sourceVault.getArmor(selectedIndex);
+            cargoLabel = selected.getName();
+            cargoLoad = CarryLoadSystem::armorLoad(selected);
+            sourcePreview.removeArmor(selectedIndex);
+            destinationPreview.addArmor(selected);
         }
-        const int materialIndex = askVaultEntryChoice("CHOISIR UNE PILE À TRANSPORTER", "quest.city_vault.transfer.material", labels);
-        if (materialIndex < 0) return;
-        const Material selected = player.getCityVault().getMaterial(materialIndex);
-        const int distance = CityTravelRules::getDistanceBetweenCities(player.getCurrentCityId(), destination->getId());
-        const int cost = EconomyBalance::cityVaultMaterialTransferCostCopper(player.getCurrentCityId(), destination->getId(), distance, selected.getQuantity());
+        else if (categoryChoice == 3)
+        {
+            std::vector<std::string> labels;
+            for (int i = 0; i < sourceVault.getConsumableCount(); ++i)
+                labels.push_back(sourceVault.getConsumable(i).getName());
+            selectedIndex = askVaultEntryChoice(recall ? "CONSOMMABLE À RAPPELER" : "CONSOMMABLE À ENVOYER", "quest.city_vault.transfer.consumable.pick", labels);
+            if (selectedIndex < 0) return;
+            const Consumable selected = sourceVault.getConsumable(selectedIndex);
+            cargoLabel = selected.getName();
+            Inventory one; one.addConsumable(selected);
+            cargoLoad = std::max(1, CarryLoadSystem::inventoryLoad(one));
+            sourcePreview.removeConsumable(selectedIndex);
+            destinationPreview.addConsumable(selected);
+        }
+        else if (categoryChoice == 4)
+        {
+            std::vector<std::string> labels;
+            for (const Material& material : sourceVault.getMaterials())
+                labels.push_back(material.getName() + " x" + std::to_string(material.getQuantity()) + " [" + material.getQualityLabel() + "] — encombrement " + std::to_string(CarryLoadSystem::materialLoad(material)));
+            selectedIndex = askVaultEntryChoice(recall ? "PILE À RAPPELER" : "PILE À ENVOYER", "quest.city_vault.transfer.material.pick", labels);
+            if (selectedIndex < 0) return;
+            const Material selected = sourceVault.getMaterial(selectedIndex);
+            cargoLabel = selected.getName() + " x" + std::to_string(selected.getQuantity());
+            selectedQuantity = selected.getQuantity();
+            cargoLoad = CarryLoadSystem::materialLoad(selected);
+            sourcePreview.removeMaterialQuantity(selectedIndex, selectedQuantity);
+            destinationPreview.addMaterial(selected);
+        }
+        else if (categoryChoice == 5)
+        {
+            cargoLabel = sourceVault.getWalletLine();
+            cargoLoad = std::max(1, CarryLoadSystem::coinLoad(sourceVault));
+            const CoinBreakdown coins = sourceVault.getCoinStacks();
+            sourcePreview.setCoinStacks(CoinBreakdown{});
+            destinationPreview.earnCoinStacks(coins);
+        }
+        else return;
 
-        MenuScreen confirm("CONFIRMER LE TRANSPORT", "quest.city_vault.transfer.confirm");
-        confirm.addLine("Pile : " + selected.getName() + " x" + std::to_string(selected.getQuantity()) + ".");
-        confirm.addLine("Destination : " + destination->getName() + ".");
+        const int distance = CityTravelRules::getDistanceBetweenCities(sourceCityId, destinationCityId);
+        int cost = EconomyBalance::cityVaultCargoTransferCostCopper(sourceCityId, destinationCityId, distance, cargoLoad);
+        const bool reuseRecallMessenger = recall && player.canReuseRecentCityVaultRecallMessenger(sourceCityId, destinationCityId);
+        if (recall) cost += player.getCityVaultRecallMessengerSurchargeCopper(sourceCityId, destinationCityId, distance);
+        const int travelUnits = std::max(1, EconomyBalance::travelTimeUnitsForDistance(distance));
+        const int timeUnits = recall ? travelUnits * 2 : travelUnits;
+        const int sourceBefore = player.getCityVaultUsedSlotsForCity(sourceCityId);
+        const int sourceAfter = previewVaultUsedForCity(player, sourceCityId, sourcePreview);
+        const int destinationBefore = player.getCityVaultUsedSlotsForCity(destinationCityId);
+        const int destinationAfter = previewVaultUsedForCity(player, destinationCityId, destinationPreview);
+        const int destinationCapacity = player.getCityVaultCapacityForCity(destinationCityId);
+
+        MenuScreen confirm(recall ? "CONFIRMER LE RAPPEL" : "CONFIRMER L'ENVOI", recall ? "quest.city_vault.transfer.recall.confirm" : "quest.city_vault.transfer.send.confirm");
+        confirm.addLine("Chargement : " + cargoLabel + " — encombrement brut " + std::to_string(cargoLoad) + ".");
+        confirm.addLine("Source : " + vaultCityName(sourceCityId) + " — " + std::to_string(sourceBefore) + " → " + std::to_string(sourceAfter) + "/" + std::to_string(player.getCityVaultCapacityForCity(sourceCityId)) + ".");
+        confirm.addLine("Destination : " + vaultCityName(destinationCityId) + " — " + std::to_string(destinationBefore) + " → " + std::to_string(destinationAfter) + "/" + std::to_string(destinationCapacity) + ".");
         confirm.addLine("Coût : " + Money::formatCopper(cost) + ".");
-        confirm.addLine("Règle de comptoir : le transport concerne les matériaux déposés ici, pas les retraits à distance.");
+        confirm.addLine("Temps logistique : +" + std::to_string(timeUnits) + " moment(s) de journée." + std::string(recall ? " Le rappel inclut le messager qui porte d'abord la demande." : ""));
+        if (recall && reuseRecallMessenger) confirm.addLine("Messager mutualisé : une demande récente vers ce même coffre date de moins d'une demi-journée. Seul un petit supplément administratif est facturé.");
         confirm.addBackOption("Annuler", "quest.city_vault.transfer.confirm.back");
-        confirm.addOption(1, "Envoyer la pile", "Déplace réellement la pile vers le coffre municipal de destination si place disponible.", true, "quest.city_vault.transfer.confirm.send");
+        confirm.addOption(1, recall ? "Envoyer la demande de rappel" : "Expédier le chargement", destinationAfter <= destinationCapacity ? "La place de destination est suffisante." : "Destination trop pleine.", destinationAfter <= destinationCapacity, "quest.city_vault.transfer.confirm.go");
         const int confirmChoice = TerminalInterface::askMenuChoiceFromOptions(confirm, "Choix invalide.");
         Console::clear();
         if (confirmChoice != 1) return;
 
-        const bool moved = player.transferMaterialBetweenCityVaults(destination->getId(), materialIndex, selected.getQuantity(), cost);
+        const int dayBefore = player.getWorldDaysElapsed();
+        const int unitBefore = player.getWorldDayProgressUnits();
+        bool moved = false;
+        if (categoryChoice == 1) moved = player.transferWeaponBetweenOwnedCityVaults(sourceCityId, destinationCityId, selectedIndex, cost);
+        else if (categoryChoice == 2) moved = player.transferArmorBetweenOwnedCityVaults(sourceCityId, destinationCityId, selectedIndex, cost);
+        else if (categoryChoice == 3) moved = player.transferConsumableBetweenOwnedCityVaults(sourceCityId, destinationCityId, selectedIndex, cost);
+        else if (categoryChoice == 4) moved = player.transferMaterialBetweenOwnedCityVaults(sourceCityId, destinationCityId, selectedIndex, selectedQuantity, cost);
+        else if (categoryChoice == 5) moved = player.transferAllCoinsBetweenOwnedCityVaults(sourceCityId, destinationCityId, cost);
+
         if (moved)
         {
-            recordRecentAction(player, "vault_material_transfer", "Transport de coffre : " + selected.getName() + " vers " + destination->getName());
+            if (recall && !reuseRecallMessenger)
+            {
+                // Mark the messenger at dispatch time, before logistics time elapses. A second short-route
+                // order may still share the courier if less than roughly half a day has passed.
+                player.markCityVaultRecallMessengerSent(sourceCityId, destinationCityId);
+            }
+            player.advanceWorldDayUnits(timeUnits);
+            recordRecentAction(player, recall ? "vault_cargo_recall" : "vault_cargo_transfer", (recall ? "Rappel" : "Envoi") + std::string(" de coffre : ") + cargoLabel);
         }
-        MessageScreen::show(
-            moved ? "TRANSPORT LANCÉ" : "TRANSPORT REFUSÉ",
-            moved ? "quest.city_vault.transfer.done" : "quest.city_vault.transfer.failed",
-            moved
-                ? std::vector<std::string>{"Pile déplacée vers " + destination->getName() + ".", "Coût payé : " + Money::formatCopper(cost) + ".", "Le retrait devra se faire dans la ville de destination."}
-                : std::vector<std::string>{"Aucune pile n'a bougé.", "Cause possible : argent insuffisant, coffre de destination plein, coffre manquant ou pile invalide."},
-            false
-        );
+        std::vector<std::string> lines = moved
+            ? std::vector<std::string>{"Chargement déplacé sans duplication.", "Coût payé : " + Money::formatCopper(cost) + ".", "Source : " + std::to_string(sourceBefore) + " → " + std::to_string(sourceAfter) + ".", "Destination : " + std::to_string(destinationBefore) + " → " + std::to_string(destinationAfter) + ".", player.formatWorldTimeChange(dayBefore, unitBefore)}
+            : std::vector<std::string>{"Aucun chargement n'a bougé.", "Cause possible : argent insuffisant, coffre plein/manquant ou sélection devenue invalide."};
+        if (moved)
+        {
+            std::vector<std::string> timeLines = player.consumeWorldTimeReportLines();
+            lines.insert(lines.end(), timeLines.begin(), timeLines.end());
+        }
+        MessageScreen::show(moved ? (recall ? "RAPPEL EFFECTUÉ" : "ENVOI EFFECTUÉ") : "TRANSPORT REFUSÉ", recall ? "quest.city_vault.transfer.recall.done" : "quest.city_vault.transfer.send.done", lines, false);
     }
 
-    void openCityVault(Player& player)
+    void openVaultTheftContactMenu(Player& player)
     {
+        const PlayerVaultTheftCase* theftCase = player.getOpenVaultTheftCaseForCity(player.getCurrentCityId());
+        if (theftCase == nullptr)
+        {
+            MessageScreen::show("PISTE DU CAMBRIOLAGE", "quest.city_vault.theft_contact.none", {"Aucun dossier local non résolu."}, false);
+            return;
+        }
+
+        MenuScreen screen("PISTE LOCALE DU CAMBRIOLAGE", "quest.city_vault.theft_contact");
+        screen.addLine("Dossier : " + theftCase->caseId);
+        screen.addLine("Détenteur/piste : " + theftCase->holderLabel);
+        if (!theftCase->holderLocationLabel.empty()) screen.addLine("Lieu : " + theftCase->holderLocationLabel);
+        screen.addLine("Indices : " + std::to_string(theftCase->clues) + " | observations locales : " + std::to_string(theftCase->holderObservationCount));
+        if (theftCase->holderType == "receiver" || theftCase->holderType == "accomplice")
+        {
+            screen.addLine("Pression : " + std::to_string(theftCase->holderPressure) + "/100 | coopération : " + std::to_string(theftCase->holderCooperation) + "/100.");
+            if (!theftCase->holderWorldContactId.empty())
+            {
+                const CrimeContactRelationshipAssessment relation = CrimeContactRelationshipSystem::assess(player, theftCase->holderWorldContactId);
+                if (relation.known)
+                {
+                    screen.addLine("Relation persistante : " + relation.relationshipLabel
+                        + " | fiabilité : " + relation.reliabilityLabel
+                        + " | " + relation.debtLabel + ".");
+
+                    const CrimeContactDialogueSnapshot dialogue = CrimeContactDialogueSystem::build(player, theftCase->holderWorldContactId);
+                    for (const std::string& line : dialogue.lines)
+                        screen.addLine("Contact : " + line);
+
+                    const CrimeJusticeAssessment justice = CrimeJusticeSystem::assessVaultTheftContact(
+                        player, *theftCase, theftCase->holderWorldContactId);
+                    if (justice.knownContact)
+                    {
+                        screen.addLine("Dossier judiciaire : score de preuve " + std::to_string(justice.evidenceScore)
+                            + (justice.enoughEvidenceForDurableArrest
+                                ? " — seuil durable atteint."
+                                : " — arrestation durable non justifiée à ce stade."));
+                    }
+                }
+            }
+            if (theftCase->holderReportedToGuard) screen.addLine("La garde connaît désormais officiellement ce contact dans ce dossier.");
+            if (theftCase->holderClosedUntilDay > player.getWorldDaysElapsed()) screen.addLine("Contact fermé jusqu'au jour " + std::to_string(theftCase->holderClosedUntilDay) + ".");
+        }
+        if (theftCase->holderAlerted) screen.addLine("Attention : le contact semble déjà méfiant.");
+        const CrimeNetworkCompetitionAssessment competition = CrimeNetworkCompetitionSystem::assessKnownCity(
+            player, player.getCurrentCityId());
+        if (competition.observable)
+        {
+            screen.addLine("Concurrence criminelle connue : tension " + std::to_string(competition.tension) + "/100 entre "
+                + std::to_string(competition.knownNetworks) + " réseaux déjà identifiés localement.");
+        }
+        screen.addBackOption("Retour", "quest.city_vault.theft_contact.back");
+        screen.addOption(1, "Observer discrètement", "Consomme 1 unité de temps. Ajoute une piste locale réelle sans accusation automatique.", true, "quest.city_vault.theft_contact.observe");
+        const bool canNegotiate = (theftCase->holderType == "receiver" || theftCase->holderType == "accomplice") && theftCase->clues >= 3;
+        const bool canSearchCache = theftCase->holderType == "cache" && theftCase->clues >= 3;
+        screen.addOption(2, "Négocier une restitution", canNegotiate ? "Tenter de récupérer les biens sans combat. Aucun paiement si l'accord est refusé." : "Il faut une personne identifiée comme détenteur crédible et au moins 3 indices.", canNegotiate, "quest.city_vault.theft_contact.negotiate");
+        const bool canRequestGuard = (theftCase->holderType == "receiver" || theftCase->holderType == "accomplice") && theftCase->clues >= 4;
+        screen.addOption(3, "Demander une confrontation par la garde", canRequestGuard ? "Consomme 2 unités de temps. La garde confronte le contact sur les preuves ; coopération, fermeture ou restitution sont possibles." : "Il faut un contact humain et au moins 4 indices cohérents.", canRequestGuard, "quest.city_vault.theft_contact.guard_interrogation");
+        screen.addOption(4, "Fouiller la cache", canSearchCache ? "Consomme 2 unités de temps. Une cache peut rendre les biens sans inventer de coupable présent." : "Disponible uniquement lorsqu'une cache est localisée avec assez d'indices.", canSearchCache, "quest.city_vault.theft_contact.search_cache");
+
+        const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choisis comment exploiter cette piste.");
+        Console::clear();
+        if (choice <= 0) return;
+
+        Random random;
+        const VaultTheftContactAction action = choice == 2
+            ? VaultTheftContactAction::NegotiateReturn
+            : (choice == 3 ? VaultTheftContactAction::RequestGuardIntervention
+                : (choice == 4 ? VaultTheftContactAction::SearchCache : VaultTheftContactAction::Observe));
+        const std::string worldContactId = theftCase->holderWorldContactId;
+        const VaultTheftContactInteractionResult result = player.interactWithVaultTheftHolder(player.getCurrentCityId(), action, random);
+        std::vector<std::string> lines = result.lines;
+        if (!worldContactId.empty() && action == VaultTheftContactAction::NegotiateReturn && result.propertyRecovered)
+        {
+            const CrimeContactInteractionResult relationshipResult = CrimeContactRelationshipSystem::recordReliableDeal(
+                player, worldContactId, 0, "Restitution négociée respectée");
+            lines.insert(lines.end(), relationshipResult.lines.begin(), relationshipResult.lines.end());
+        }
+        if (lines.empty()) lines.push_back("Aucun résultat exploitable pour cette approche.");
+        if (result.economyCost > 0) lines.push_back("Montant de négociation : " + Money::formatEconomyUnits(result.economyCost) + ".");
+        if (result.cluesAfter > 0) lines.push_back("Indices du dossier : " + std::to_string(result.cluesBefore) + " → " + std::to_string(result.cluesAfter) + ".");
+        MessageScreen::show(result.propertyRecovered ? "BIENS RÉCUPÉRÉS" : "PISTE EXPLOITÉE", "quest.city_vault.theft_contact.result", lines, false);
+    }
+
+    void openCityVault(Player& player, DifficultyMode difficulty, DeathRuleMode deathRule)
+    {
+        const CarryLoadSummary storageSessionStart = CarryLoadSystem::evaluate(player);
+        auto finalizeStorageSessionTitles = [&]() {
+            player.evaluateStorageSessionTitles(storageSessionStart.used, storageSessionStart.capacity);
+        };
+
         while (true)
         {
             MenuScreen screen("COFFRE MUNICIPAL — " + currentCityName(player), "quest.city_vault");
             screen.addLine("Stockage personnel sécurisé : son contenu n'est pas accessible depuis l'inventaire normal.");
             screen.addLine("Une mort ou un vol d'inventaire n'atteint pas les objets déjà déposés ici.");
             screen.addLine("Argent transporté : " + player.getInventory().getWalletLine() + ".");
+            const CarryLoadSummary carryLoad = CarryLoadSystem::evaluate(player);
+            screen.addLine("Encombrement porté : " + carryLoad.label + " — " + std::to_string(carryLoad.used) + "/" + std::to_string(carryLoad.capacity) + " unités simples.");
+            screen.addLine("Déposer les doublons et réserves ici réduit l’encombrement sans transformer l’inventaire en gestion de kilos.");
             screen.addBackOption("Retour aux lieux", "quest.city_vault.back");
 
             if (!player.hasCityVault())
             {
-                screen.addLine("Statut : aucun coffre acheté.");
-                screen.addLine("Premier coffre : 12 emplacements.");
-                screen.addOption(1, "Acheter le coffre personnel", "Coût : " + Money::formatEconomyUnits(player.getCityVaultPurchaseCost()) + ".", true, "quest.city_vault.purchase");
+                screen.addLine("Statut : aucun coffre acheté dans cette ville.");
+                screen.addLine("Coffre N1 de cette ville : 250 unités d'encombrement sécurisé (plus de 6 fois le sac de départ).");
+                screen.addLine(player.getCurrentCityVaultPurchaseDiscountLabel());
+                screen.addLine("Chaque coffre supplémentaire coûte au minimum +2 PO par rapport au palier d'achat précédent.");
+                screen.addOption(1, "Acheter le coffre personnel", "Coût actuel : " + Money::formatEconomyUnits(player.getCityVaultPurchaseCost()) + ". Investissement patrimonial important.", true, "quest.city_vault.purchase");
                 screen.addOption(2, "Voir les villes et les règles distantes", "Consulter le réseau municipal sans inventer un voyage encore verrouillé.", true, "quest.city_vault.cities");
                 screen.addOption(3, "Consulter un autre coffre", "Lecture seule si un coffre existe ailleurs.", true, "quest.city_vault.remote_browser");
+                screen.addOption(4, "Améliorer le sac à dos", player.canUpgradeBackpack() ? ("Passer de " + std::to_string(player.getBackpackBaseCapacity()) + " à " + std::to_string(CarryLoadSystem::backpackBaseCapacity(player.getBackpackTier() + 1)) + " unités de base — " + Money::formatEconomyUnits(player.getNextBackpackUpgradeCost()) + ".") : "Sac maximal atteint : 80 unités de base.", player.canUpgradeBackpack(), "quest.city_vault.backpack.upgrade");
 
                 const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
                 Console::clear();
-                if (choice == 0) return;
+                if (choice == 0) { finalizeStorageSessionTitles(); return; }
                 if (choice == 1)
                 {
                     if (player.purchaseCityVault())
                     {
-                        MessageScreen::show("COFFRE ACHETÉ", "quest.city_vault.purchase.success", {"Niveau 1 débloqué : 12 emplacements sécurisés.", "Les améliorations coûteront progressivement plus cher."}, false);
+                        MessageScreen::show("COFFRE ACHETÉ", "quest.city_vault.purchase.success", {"Niveau 1 débloqué : 250 unités sécurisées.", "Les coffres sont locaux : en acheter dans plusieurs villes crée un vrai réseau de stockage.", "Les améliorations coûteront progressivement plus cher."}, false);
                     }
                     else
                     {
@@ -1391,37 +2047,71 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
                 {
                     showRemoteCityVaultBrowser(player);
                 }
+                else if (choice == 4)
+                {
+                    const int before = player.getBackpackBaseCapacity();
+                    if (player.upgradeBackpack())
+                        MessageScreen::show("NOUVEAU SAC", "quest.city_vault.backpack.success", {"Capacité de base : " + std::to_string(before) + " → " + std::to_string(player.getBackpackBaseCapacity()) + ".", "Race, morphologie, classe pure et Force ajustent ensuite légèrement cette valeur."}, false);
+                    else
+                        MessageScreen::show("ACHAT IMPOSSIBLE", "quest.city_vault.backpack.failed", {"Sac maximal ou fonds insuffisants."}, false);
+                }
                 continue;
             }
 
             screen.addLine("Niveau : " + std::to_string(player.getCityVaultLevel()) + "/5.");
-            screen.addLine("Occupation : " + std::to_string(player.getCityVaultUsedSlots()) + "/" + std::to_string(player.getCityVaultCapacity()) + " emplacements.");
-            screen.addLine("Coût par entrée : arme 3, armure 3, consommable 1, pile de matériau 1.");
+            screen.addLine("Occupation : " + std::to_string(player.getCityVaultUsedSlots()) + "/" + std::to_string(player.getCityVaultCapacity()) + " unités d'encombrement.");
+            screen.addLine("Optimisation du rangement : -" + std::to_string(player.getCityVaultStorageReductionPercent()) + " % de la place de base utilisée.");
+            screen.addLine("Même logique que le sac : armures/armes lourdes prennent plus de place, piles compactes et monnaie beaucoup moins.");
+            const int securityDays = player.getCityVaultSecurityDaysRemainingForCity(player.getCurrentCityId());
+            screen.addLine("Sécurité et entretien : " + std::string(securityDays > 0 ? (std::to_string(securityDays) + " jour(s) protégés restant(s), compteur en pause tant que tu restes dans cette ville/alentours.") : "aucune couverture payée ; tant que tu es ici, tu surveilles toi-même le coffre."));
+            if (player.hasCityVaultRaidPendingForCity(player.getCurrentCityId()))
+            {
+                screen.addLine("ALERTE : tentative de pillage active — délai jour " + std::to_string(player.getCityVaultRaidDeadlineDayForCity(player.getCurrentCityId()) + 1) + ".");
+            }
             const std::string upgradeHint = player.canUpgradeCityVault()
-                ? "Coût : " + Money::formatEconomyUnits(player.getCityVaultUpgradeCost()) + ". Ajoute 8 emplacements."
+                ? "Coût : " + Money::formatEconomyUnits(player.getCityVaultUpgradeCost()) + ". Prochaine capacité : " + std::to_string(EconomyBalance::cityVaultCapacityForLevel(player.getCityVaultLevel() + 1)) + "."
                 : "Niveau maximal atteint.";
             screen.addOption(1, "Améliorer le coffre", upgradeHint, player.canUpgradeCityVault(), "quest.city_vault.upgrade");
             screen.addOption(2, "Consulter le contenu", "Vue complète en lecture seule.", true, "quest.city_vault.contents");
-            screen.addOption(3, "Déposer une arme", "Impossible pour l'arme actuellement équipée. Coût : 3 emplacements.", player.getInventory().getWeaponCount() > 0, "quest.city_vault.deposit.weapon");
-            screen.addOption(4, "Déposer une armure", "Impossible pour l'armure équipée et la tenue simple. Coût : 3 emplacements.", player.getInventory().getArmorCount() > 0, "quest.city_vault.deposit.armor");
-            screen.addOption(5, "Déposer un consommable", "Coût : 1 emplacement.", player.getInventory().getConsumableCount() > 0, "quest.city_vault.deposit.consumable");
-            screen.addOption(6, "Déposer une pile de matériau", "Une pile compatible déjà présente n'utilise pas de nouvel emplacement.", player.getInventory().getMaterialCount() > 0, "quest.city_vault.deposit.material");
+            screen.addOption(3, "Déposer une arme", "Impossible pour l'arme actuellement équipée. L'encombrement dépend de sa classe de poids.", player.getInventory().getWeaponCount() > 0, "quest.city_vault.deposit.weapon");
+            screen.addOption(4, "Déposer une armure", "Impossible pour l'armure équipée et la tenue simple. L'encombrement dépend de sa classe de poids.", player.getInventory().getArmorCount() > 0, "quest.city_vault.deposit.armor");
+            screen.addOption(5, "Déposer un consommable", "Les consommables identiques sont compactés par petits lots.", player.getInventory().getConsumableCount() > 0, "quest.city_vault.deposit.consumable");
+            screen.addOption(6, "Déposer une pile de matériau", "La place dépend de la quantité et de la densité du matériau.", player.getInventory().getMaterialCount() > 0, "quest.city_vault.deposit.material");
             screen.addOption(7, "Retirer une arme", "Retourne l'objet dans l'inventaire transporté.", player.getCityVault().getWeaponCount() > 0, "quest.city_vault.withdraw.weapon");
             screen.addOption(8, "Retirer une armure", "Retourne l'objet dans l'inventaire transporté.", player.getCityVault().getArmorCount() > 0, "quest.city_vault.withdraw.armor");
             screen.addOption(9, "Retirer un consommable", "Retourne l'objet dans l'inventaire transporté.", player.getCityVault().getConsumableCount() > 0, "quest.city_vault.withdraw.consumable");
             screen.addOption(10, "Retirer une pile de matériau", "Retourne toute la pile dans l'inventaire transporté.", player.getCityVault().getMaterialCount() > 0, "quest.city_vault.withdraw.material");
             screen.addOption(11, "Voir les villes et les règles distantes", "Réseau municipal et spécialités prévues.", true, "quest.city_vault.cities");
             screen.addOption(12, "Consulter un autre coffre", "Lecture seule : aucun retrait à distance.", true, "quest.city_vault.remote_browser");
-            screen.addOption(13, "Transporter une pile vers un autre coffre", "Déplace réellement une pile de matériau vers un autre coffre possédé, avec coût de transport.", player.getCityVault().getMaterialCount() > 0, "quest.city_vault.transfer.material");
+            screen.addOption(13, "Transport inter-ville / rappel", "Armes, armures, consommables, matériaux et monnaie physique : coût et temps selon distance/encombrement.", player.getOwnedCityVaultCount() > 1, "quest.city_vault.transfer.cargo");
+            screen.addOption(14, "Améliorer le sac à dos", player.canUpgradeBackpack() ? ("Prochaine base : " + std::to_string(CarryLoadSystem::backpackBaseCapacity(player.getBackpackTier() + 1)) + " — " + Money::formatEconomyUnits(player.getNextBackpackUpgradeCost()) + ".") : "Sac maximal : 80 unités de base.", player.canUpgradeBackpack(), "quest.city_vault.backpack.upgrade");
+            screen.addOption(15, "Place optimisée", player.hasCityVaultPlaceOptimization() ? "Installée : -10 % de place utilisée par rapport à la valeur de base." : ("Disponible dès le niveau 2 — " + Money::formatEconomyUnits(player.getCityVaultPlaceOptimizationCost()) + "."), player.canBuyCityVaultPlaceOptimization(), "quest.city_vault.optimize.place");
+            screen.addOption(16, "Rangement anticipé", player.hasCityVaultPreparedStorage() ? "Installé : -15 % supplémentaires par rapport à la valeur de base (-25 % total)." : ("Disponible uniquement au niveau 5 après Place optimisée — " + Money::formatEconomyUnits(player.getCityVaultPreparedStorageCost()) + "."), player.canBuyCityVaultPreparedStorage(), "quest.city_vault.optimize.prepared");
+            screen.addOption(17, "Déposer toute la monnaie physique", "Transfère les piles exactes de pièces dans ce coffre. 100 pièces physiques = 1 unité de base.", player.getInventory().getTotalCopper() > 0, "quest.city_vault.deposit.coins");
+            screen.addOption(18, "Retirer toute la monnaie physique", "Rend les mêmes dénominations au portefeuille ; peut provoquer une surcharge du sac.", player.getCityVault().getTotalCopper() > 0, "quest.city_vault.withdraw.coins");
+            screen.addOption(19, "Sécurité et entretien", "7 jours réellement consommés seulement quand tu es loin — " + Money::formatEconomyUnits(player.getCityVaultSecuritySubscriptionCost()) + ". Cumul limité à 35 jours. Une alerte déjà active doit quand même être défendue.", true, "quest.city_vault.security");
+            screen.addOption(20, "Défendre le coffre", player.hasCityVaultRaidPendingForCity(player.getCurrentCityId()) ? "Affronter les pillards signalés par le messager. Un garde peut aider si l'équipe a une place." : "Aucune tentative de pillage active ici.", player.hasCityVaultRaidPendingForCity(player.getCurrentCityId()), "quest.city_vault.defend");
+            const PlayerVaultTheftCase* theftCase = player.getOpenVaultTheftCaseForCity(player.getCurrentCityId());
+            screen.addOption(21, "Enquêter sur un cambriolage", theftCase != nullptr
+                ? (theftCase->culpritIdentified
+                    ? ("Cible déjà identifiée : " + theftCase->holderLabel + ". Continuer l'enquête peut confirmer sa piste actuelle.")
+                    : ("Auteur inconnu — " + std::to_string(theftCase->clues) + "/3 indice(s) minimum avant identification crédible."))
+                : "Aucun dossier de cambriolage non résolu dans cette ville.", theftCase != nullptr, "quest.city_vault.investigate");
+            const bool theftContactAvailable = theftCase != nullptr
+                && (theftCase->holderType == "receiver" || theftCase->holderType == "accomplice" || theftCase->holderType == "cache")
+                && !theftCase->holderLocationLabel.empty();
+            screen.addOption(22, "Suivre la piste locale", theftContactAvailable
+                ? (theftCase->holderLabel + " — " + theftCase->holderLocationLabel + ". Observer, négocier ou fouiller selon la piste.")
+                : "Aucun contact/cache localisé à exploiter pour l'instant.", theftContactAvailable, "quest.city_vault.theft_contact");
 
             const int choice = TerminalInterface::askMenuChoiceFromOptions(screen, "Choix invalide.");
             Console::clear();
-            if (choice == 0) return;
+            if (choice == 0) { finalizeStorageSessionTitles(); return; }
             if (choice == 1)
             {
                 if (player.upgradeCityVault())
                 {
-                    MessageScreen::show("COFFRE AMÉLIORÉ", "quest.city_vault.upgrade.success", {"Niveau actuel : " + std::to_string(player.getCityVaultLevel()) + ".", "Capacité : " + std::to_string(player.getCityVaultCapacity()) + " emplacements."}, false);
+                    MessageScreen::show("COFFRE AMÉLIORÉ", "quest.city_vault.upgrade.success", {"Niveau actuel : " + std::to_string(player.getCityVaultLevel()) + ".", "Capacité : " + std::to_string(player.getCityVaultCapacity()) + " unités."}, false);
                 }
                 else
                 {
@@ -1433,6 +2123,63 @@ int total = player.getCanonicalJournalCategoryTotal(category.id);
             if (choice == 11) { showKnownCitiesAndVaultRules(player); continue; }
             if (choice == 12) { showRemoteCityVaultBrowser(player); continue; }
             if (choice == 13) { openVaultMaterialTransferMenu(player); continue; }
+            if (choice == 14)
+            {
+                const int before = player.getBackpackBaseCapacity();
+                if (player.upgradeBackpack()) MessageScreen::show("NOUVEAU SAC", "quest.city_vault.backpack.success", {"Capacité de base : " + std::to_string(before) + " → " + std::to_string(player.getBackpackBaseCapacity()) + "."}, false);
+                else MessageScreen::show("ACHAT IMPOSSIBLE", "quest.city_vault.backpack.failed", {"Sac maximal ou fonds insuffisants."}, false);
+                continue;
+            }
+            if (choice == 15)
+            {
+                const bool ok = player.buyCityVaultPlaceOptimization();
+                MessageScreen::show(ok ? "PLACE OPTIMISÉE" : "AMÉLIORATION IMPOSSIBLE", ok ? "quest.city_vault.optimize.place.success" : "quest.city_vault.optimize.place.failed", ok ? std::vector<std::string>{"Les objets stockés utilisent désormais exactement 10 % de place de base en moins."} : std::vector<std::string>{"Il faut un coffre niveau 2 minimum, ne pas déjà posséder l'amélioration et avoir les fonds."}, false);
+                continue;
+            }
+            if (choice == 16)
+            {
+                const bool ok = player.buyCityVaultPreparedStorage();
+                MessageScreen::show(ok ? "RANGEMENT ANTICIPÉ" : "AMÉLIORATION IMPOSSIBLE", ok ? "quest.city_vault.optimize.prepared.success" : "quest.city_vault.optimize.prepared.failed", ok ? std::vector<std::string>{"-15 % supplémentaires par rapport à la place de base.", "Avec Place optimisée : -25 % exact au total."} : std::vector<std::string>{"Il faut un coffre niveau 5, Place optimisée et les fonds nécessaires."}, false);
+                continue;
+            }
+
+            if (choice == 17)
+            {
+                const bool ok = player.depositAllCoinsInCityVault();
+                MessageScreen::show(ok ? "MONNAIE DÉPOSÉE" : "DÉPÔT IMPOSSIBLE", ok ? "quest.city_vault.deposit.coins.success" : "quest.city_vault.deposit.coins.failed", ok ? std::vector<std::string>{"Les dénominations physiques ont été conservées dans le coffre.", "Occupation : " + std::to_string(player.getCityVaultUsedSlots()) + "/" + std::to_string(player.getCityVaultCapacity()) + "."} : std::vector<std::string>{"Pas de monnaie à déposer ou capacité insuffisante."}, false);
+                continue;
+            }
+            if (choice == 18)
+            {
+                const bool ok = player.withdrawAllCoinsFromCityVault();
+                MessageScreen::show(ok ? "MONNAIE RETIRÉE" : "RETRAIT IMPOSSIBLE", ok ? "quest.city_vault.withdraw.coins.success" : "quest.city_vault.withdraw.coins.failed", ok ? std::vector<std::string>{"Les piles physiques ont rejoint le sac.", "Vérifie l'encombrement avant de repartir."} : std::vector<std::string>{"Ce coffre ne contient aucune monnaie physique."}, false);
+                continue;
+            }
+            if (choice == 19)
+            {
+                const int before = player.getCityVaultSecurityDaysRemainingForCity(player.getCurrentCityId());
+                const int cost = player.getCityVaultSecuritySubscriptionCost();
+                const bool ok = player.buyCityVaultSecuritySubscription();
+                MessageScreen::show(ok ? "SÉCURITÉ PROLONGÉE" : "ABONNEMENT IMPOSSIBLE", ok ? "quest.city_vault.security.success" : "quest.city_vault.security.failed", ok ? std::vector<std::string>{"Couverture : " + std::to_string(before) + " → " + std::to_string(player.getCityVaultSecurityDaysRemainingForCity(player.getCurrentCityId())) + " jours réellement passés loin de la ville.", "Coût : " + Money::formatEconomyUnits(cost) + ".", "Le compteur reste en pause ici et dans les explorations rattachées à cette ville."} : std::vector<std::string>{"Fonds insuffisants ou plafond de couverture déjà atteint."}, false);
+                continue;
+            }
+            if (choice == 20)
+            {
+                runCityVaultDefense(player, difficulty, deathRule);
+                continue;
+            }
+            if (choice == 21)
+            {
+                const std::string result = player.investigateVaultTheftCase(player.getCurrentCityId());
+                MessageScreen::show("ENQUÊTE DU COFFRE", "quest.city_vault.investigation", {result, "Une enquête consomme du temps local : témoins, garde, traces et éventuels receleurs sont recoupés. L'auteur n'est jamais révélé sans indices crédibles."}, false);
+                continue;
+            }
+
+            if (choice == 22)
+            {
+                openVaultTheftContactMenu(player);
+                continue;
+            }
 
             std::vector<std::string> labels;
             int index = -1;

@@ -66,124 +66,6 @@ namespace
         return character.getName() + " — " + character.getRaceText() + ", " + character.getNativeClass() + " : " + character.getCombatStyle();
     }
 
-    std::vector<std::string> specialStoryHookLines(const Player& player)
-    {
-        SpecialCharacter character;
-        if (!getPlayableStorySpecialIdentity(player, character))
-        {
-            return {};
-        }
-
-        const std::string key = normalizeStoryIdentityName(character.getName());
-
-        if (key == "hazak")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Hazak ne marchait pas comme un simple volontaire de guilde : il avançait en surveillant déjà les angles morts, les ombres et les sorties possibles.",
-                "La fumée blanche n'efface pas seulement une mission chez lui. Elle tente d'arracher une discipline d'assassin, des réflexes de survie et des noms qui devraient peser plus lourd que le silence.",
-                "Même sans souvenir fiable, Hazak garde une sensation froide : s'il a été séparé du groupe, ce n'est peut-être pas par hasard."
-            };
-        }
-        if (key == "mattzelda")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Mattzelda portait naturellement les charges que les autres trouvaient trop lourdes, comme si le monde testait toujours sa solidité.",
-                "Quand la brume le prive de son équipement, elle ne lui retire pas sa présence : même vide, son corps se souvient qu'il peut faire mur.",
-                "Le prologue de Mattzelda doit donc moins parler d'un héros perdu que d'un colosse obligé de survivre sans son poids habituel."
-            };
-        }
-        if (key == "aoi")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Aoi sentait déjà les odeurs de feuilles mouillées, de métal froid et de magie trop nerveuse pour être naturelle.",
-                "La brume avale son sac et sa lame, mais elle n'avale pas complètement la chaleur kitsune qui cherche à répondre sous la peau.",
-                "Dans son prologue, la forêt blanche n'est pas seulement froide : elle devient une cage qui refuse que la flamme trouve un nom."
-            };
-        }
-        if (key == "kanade")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Kanadé avançait avec cette impression désagréable que le ciel avait toujours un avis sur elle.",
-                "La fumée ne fait pas taire son sang semi-draconique. Elle brouille seulement les signes, les constellations et les colères qui auraient pu l'aider à comprendre.",
-                "Son prologue garde donc une tension particulière : même perdue, Kanadé n'est jamais totalement seule avec son propre ciel."
-            };
-        }
-        if (key == "fail")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Fail traitait déjà les plans comme des propositions approximatives, ce qui inquiétait énormément les gens sérieux.",
-                "La fumée blanche a beau essayer de tout ranger dans un silence parfait, elle tombe sur une magie de fée qui a rarement respecté les formes propres.",
-                "Son prologue doit donc garder un côté instable : peur réelle, danger réel, mais impression que la brume elle-même n'est pas sûre de savoir comment le classer."
-            };
-        }
-        if (key == "trexof")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Trexof observait déjà les limites du monde comme quelqu'un qui entend une fausse note dans une règle trop propre.",
-                "La brume tente de le réduire à un survivant ordinaire, mais il garde un réflexe dangereux : analyser la faille au lieu de seulement la subir.",
-                "Son prologue doit donner l'impression d'un survivant qui remarque les fausses notes avant les autres : pas invincible, mais immédiatement méfiant face à ce que le monde essaie de cacher."
-            };
-        }
-        if (key == "skuro")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Skuro n'avait pas besoin de beaucoup parler pour que les autres sachent où il se trouvait : là où l'impact risquait d'être le plus brutal.",
-                "Sans son arme lourde, il reste une menace incomplète, frustrée, presque silencieuse. La brume lui retire l'outil, pas l'envie de casser ce qui bloque la route.",
-                "Son prologue prend donc la forme d'une retenue forcée : survivre sans pouvoir simplement frapper plus fort que le problème."
-            };
-        }
-        if (key == "sanctus")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Sanctus portait déjà quelque chose de plus lourd qu'une armure : une croyance, une protection, une façon de juger le danger.",
-                "Quand le blanc efface la route, il ne peut plus dire clairement quelle lumière il suivait. Il sait seulement qu'abandonner les autres sonnerait faux.",
-                "Son prologue doit donc garder une blessure spirituelle : la foi existe encore, mais sa direction a été arrachée."
-            };
-        }
-        if (key == "hestia")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Hestia semblait presque trop fragile pour la route, jusqu'au moment où la magie autour d'elle commençait à apprendre plus vite que prévu.",
-                "La brume blanche ne sait pas quoi faire de cette fragilité étrange : elle retire les souvenirs, mais laisse une protection instinctive, comme un dôme sans nom.",
-                "Son prologue doit donc être plus doux et plus inquiétant : Hestia survit parce que quelque chose en elle refuse de la laisser disparaître."
-            };
-        }
-        if (key == "louis")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Louis vérifiait déjà trop de détails : la trajectoire d'un projectile, l'état d'un mécanisme, la place des alliés dans le chaos.",
-                "La brume lui vole ses outils et ses repères, mais pas ce besoin presque naïf de chercher les autres avant de penser à lui-même.",
-                "Son prologue garde donc une question centrale : qui devait-il protéger quand la fumée a séparé le groupe ?"
-            };
-        }
-        if (key == "henrique")
-        {
-            return {
-                "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-                "Avant la fumée, Henrique avançait comme quelqu'un qui considère tomber comme une formalité, pas comme une conclusion.",
-                "La forêt blanche peut lui prendre sa route et ses souvenirs ; elle a plus de mal à lui prendre l'idée simple qu'il faut se relever.",
-                "Son prologue doit donc insister sur l'obstination : Henrique ne sait plus pourquoi il était là, mais il refuse déjà que ce soit la fin."
-            };
-        }
-
-        return {
-            "Version personnalisée — personnage spécial jouable : " + specialStoryRoleLine(character),
-            character.getName() + " n'entre pas dans l'histoire comme un personnage neutre.",
-            "La fumée blanche efface les souvenirs, mais elle ne remplace pas complètement la race, la classe native, les réflexes et les cicatrices déjà inscrites dans cette identité.",
-            "Le prologue garde donc le même squelette histoire, avec des lignes adaptées à ce personnage spécial."
-        };
-    }
-
     std::vector<std::string> specialMemoryLossAnchorLines(const Player& player)
     {
         SpecialCharacter character;
@@ -945,84 +827,67 @@ StoryAccessSnapshot StoryCampaign::buildAccessSnapshot(const Player& player)
     return snapshot;
 }
 
-std::vector<std::string> StoryCampaign::buildLongIntroductionLines(const Player& player)
+std::vector<std::string> StoryCampaign::buildLongIntroductionLines(const Player&)
 {
-    std::vector<std::string> lines = {
-        "Avant la ville, avant le niveau 1, il y a un souvenir qui refuse de disparaître complètement.",
-        "Ce n'est pas un tutoriel déguisé ni une vision du futur : c'est un morceau de la dernière journée que ton personnage a réellement vécue avant la Brume blanche.",
-        "Dans ce morceau, tu étais déjà expérimenté. Ton corps connaissait sa classe, ton équipement était solide et deux compagnons savaient se placer autour de toi sans recevoir d'ordre.",
-        "Le contrat menait au Glacier des Serments froids, une zone que les débutants n'auraient aucune raison de traverser vivants.",
-        "La cible était un chef de meute accompagné de deux garde-crocs. Une vraie chasse, dangereuse, mais encore assez normale pour votre groupe.",
-        "Le problème est que le souvenir lui-même a été mangé. Les noms, certaines phrases et des morceaux du contrat sont déjà absents quand tu les revis."
+    return {
+        "Le jour commence comme beaucoup d'autres : un réveil trop tôt, du matériel à vérifier et un contrat froid entre les doigts.",
+        "Dehors, deux silhouettes t'attendent déjà. Tu connais leurs voix, leurs habitudes, la façon dont elles se placent autour de toi... pourtant leurs noms refusent de rester entiers dans ta tête.",
+        "L'une te lance quelque chose qui ressemble à « Sca--- » avant de resserrer une sangle. L'autre répond à un nom dont il ne reste qu'un morceau : « --ren-- ».",
+        "Personne ne semble inquiet. Pour vous trois, la chasse du jour ressemble à du travail ordinaire.",
+        "Le contrat porte le sceau de la guilde. Plusieurs lignes sont parfaitement lisibles, d'autres semblent perdre leurs lettres dès que tu détournes les yeux.",
+        "Destination : Glacier des Serments froids. Cible : chef de meute. Deux garde-crocs signalés. Prime : [chiffres partiellement effacés].",
+        "Tu ne te demandes pas pourquoi ton corps connaît déjà ses gestes. Tu ajustes simplement ton équipement et tu pars avec eux.",
+        "La route est longue, le froid mordant, mais les plaisanteries et les silences ont la facilité d'un groupe qui a déjà beaucoup voyagé ensemble.",
+        "Rien, ce matin-là, ne donne l'impression que cette chasse devrait être différente des autres."
     };
-
-    const std::vector<std::string> specialLines = specialStoryHookLines(player);
-    lines.insert(lines.end(), specialLines.begin(), specialLines.end());
-
-    const std::vector<std::string> endLines = {
-        "La chasse peut être gagnée ou perdue. Dans les deux cas, ce n'est pas le chef de meute qui décide de ton avenir.",
-        "Après le combat, la Brume blanche remonte le glacier contre le vent et commence par effacer les informations les plus faciles : l'heure, l'objectif, le chemin.",
-        "Puis elle attaque les deux personnes qui étaient avec toi. Leurs noms se cassent avant leurs voix, leurs visages avant le souvenir de leurs gestes.",
-        "Ton propre niveau, ton ancien équipement et tes techniques deviennent ensuite des sensations sans origine.",
-        "Quand le souvenir cède, le vrai départ reprend : seul, désarmé, dans une forêt blanche, avec un unique mot qui résiste encore — " + player.getName() + ".",
-        "Le personnage ne commence donc pas comme un héros inexpérimenté. Il commence comme quelqu'un qui a déjà été compétent et entouré, mais auquel on a retiré les raisons, les liens et les preuves.",
-        "Le cadavre et le paquet trouvés ensuite restent le kit de départ générique lié à la classe. Ce n'est pas l'ancienne arme du souvenir revenue par magie.",
-        "Au loin, une ville tient à peine debout. Ce sera le premier refuge de la progression réelle, niveau 1, avec une économie, des routes et des relations à reconstruire.",
-        "Le but final ne sera toujours pas expliqué gratuitement : le monde devra rendre ses réponses morceau par morceau."
-    };
-    lines.insert(lines.end(), endLines.begin(), endLines.end());
-    return lines;
 }
 
 std::vector<std::string> StoryCampaign::buildWhiteFogPrologueLines(const Player& player)
 {
-    std::vector<std::string> lines = {
-        "Prologue — Dernier souvenir avant le blanc",
-        "Tu ne te réveilles pas encore dans la forêt.",
-        "Pendant quelques minutes, tu redeviens la personne que tu étais juste avant de tout perdre.",
-        "Tu es plus fort, mieux équipé, et tes mains retrouvent des techniques que le personnage du présent ne sait plus expliquer.",
-        "Deux compagnons marchent avec toi. Tu sais qu'ils comptent. Le souvenir refuse déjà de te rendre leurs noms correctement.",
-        "La mission est lisible par fragments : Glacier des Serments froids. Chef de meute. Deux garde-crocs. Retour avant une heure que la Brume a arrachée.",
-        "Ce qui suit est jouable, mais rien de ce build temporaire ne sera offert au personnage niveau 1. C'est un passé, pas un raccourci de progression."
+    return {
+        "Le jour commence trop tôt, comme souvent quand la guilde promet une prime avant le coucher du soleil.",
+        "Un feu finit de mourir derrière vous. Trois sacs ouverts occupent la moitié du camp : vivres, fioles, corde, couvertures et trop de choses rangées au mauvais endroit.",
+        "« --arle-- » soulève un morceau de pain écrasé sous une trousse d'alchimie. « Sérieusement ? Encore ? »",
+        "« Lor--- » lève les mains. « Cette fois, c'est pas moi. Demande à " + player.getName() + ". »",
+        player.getName() + " : « J'ai rien vu. Donc juridiquement, j'ai rien fait. »",
+        "La réponse déclenche exactement le soupir attendu. La scène a la banalité confortable d'une dispute déjà répétée cent fois.",
+        "Le contrat froissé passe ensuite de main en main. Le sceau de la guilde est intact ; certaines lettres, elles, refusent de rester entières quand tu les relis.",
+        "« Glacier des Serments f---. Chef de meute. Deux garde-crocs. Route [---]. » La prime elle-même n'est plus qu'un mélange de chiffres et de blanc.",
+        "Tu fronces les sourcils une seconde, puis replies le papier. Les deux autres sont déjà en train de sangler leurs affaires.",
+        "La chasse n'a rien d'une mission légendaire. C'est le travail du jour : monter, tuer la meute, redescendre avant la nuit et trouver quelque chose de chaud à manger.",
+        "Tu ajustes ton équipement. Tes mains savent exactement quoi vérifier, dans quel ordre, sans que tu aies besoin d'y penser.",
+        "Vous partez à trois pendant que le ciel pâlit au-dessus des montagnes."
     };
-
-    const std::vector<std::string> specialLines = specialStoryHookLines(player);
-    lines.insert(lines.end(), specialLines.begin(), specialLines.end());
-
-    const std::vector<std::string> endLines = {
-        "Tu reconnais les automatismes du groupe avant de reconnaître les souvenirs qui les ont créés.",
-        "La chasse doit encore sembler réelle : le chef de meute peut tomber, ou vous forcer à décrocher.",
-        "Mais quelque chose attend après le combat, quel qu'en soit le résultat.",
-        "La Brume ne va pas seulement vous séparer. Elle va rendre difficile jusqu'à la preuve que vous vous êtes connus."
-    };
-    lines.insert(lines.end(), endLines.begin(), endLines.end());
-    return lines;
 }
 
 std::vector<std::string> StoryCampaign::buildWhiteFogMemoryLossLines(const Player& player)
 {
     std::vector<std::string> lines = {
-        "La Brume blanche avance.",
-        "Elle touche d'abord les souvenirs qui semblaient solides : la mission, le nombre de compagnons, le chemin du retour.",
-        "Tu essaies de compter les autres. Un. Deux. Trois. Tu sais qu'il y avait trois silhouettes dans la chasse, puis même ce chiffre commence à perdre son sens.",
-        "Un rire disparaît. Une main sur ton épaule disparaît. La phrase « on rentre ensemble » se coupe avant le dernier mot.",
-        "Puis la Brume devient plus précise.",
-        "Ton âge se brouille. Ton origine se replie sur elle-même. Même ton ancienne façon de tenir une arme devient une image sans muscle."
+        "Le blanc recouvre tout.",
+        "Quand tu ouvres les yeux, le froid n'est plus le même. Il n'y a plus de glacier, plus de feu, plus de traces familières.",
+        "Des arbres pâles t'entourent. Tes mains sont vides.",
+        player.getName() + " : « ...Qu'est-ce que... »",
+        "Tu cherches instinctivement le poids de ton arme. Rien. Tu cherches ensuite les deux voix qui marchaient près de toi. Rien non plus.",
+        player.getName() + " : « J'étais avec quelqu'un... non ? »",
+        "Un visage essaie de revenir. Puis deux. Les contours s'effondrent avant que tu puisses les retenir.",
+        player.getName() + " : « Sca... ? --ren... ? »",
+        "Même ces fragments te paraissent incertains.",
+        "Tu repenses au contrat, au glacier, au combat. Les images ont la netteté d'une chose vécue et pourtant elles sont déjà pleines de trous.",
+        player.getName() + " : « Tout ce que je viens de vivre... »",
+        player.getName() + " : « Je crois que c'était un souvenir. Quelque chose qui s'est passé plus tôt. »",
+        player.getName() + " : « Mais quand ? Et eux... qui étaient-ils ? »"
     };
 
     const std::vector<std::string> specialLines = specialMemoryLossAnchorLines(player);
     lines.insert(lines.end(), specialLines.begin(), specialLines.end());
 
     const std::vector<std::string> endLines = {
-        "Tu essaies de penser à ta famille, à ta maison, à la guilde qui vous a envoyés. La Brume répond par un blanc parfait.",
-        "Il reste une seule chose assez lourde pour ne pas partir tout de suite : " + player.getName() + ".",
-        player.getName() + "... Tu répètes ce mot dans ta tête jusqu'à ce qu'il ressemble à une corde au-dessus du vide.",
-        player.getName() + " : « C'est moi... non ? Oui. Je crois. »",
-        player.getName() + " : « J'étais avec... avec qui ? »",
-        "La forêt ne répond pas. La Brume garde les noms des autres comme si elle les avait avalés avant toi.",
-        player.getName() + " : « Je dois sortir. Après, je me souviendrai. Peut-être. »",
-        "Tes épaules cherchent encore le poids d’une arme qui n’existe plus. Tes mains savent qu’elles étaient fortes ; ton corps actuel ne sait plus pourquoi.",
-        "Le prénom est réel. Le reste devra être reconstruit."
+        "Tu essaies de remonter plus loin : une maison, une famille, une guilde, une route. Chaque piste se termine dans le même blanc.",
+        "Une seule chose résiste assez pour que tu puisses t'y accrocher : " + player.getName() + ".",
+        player.getName() + " : « C'est mon nom... ça au moins, j'en suis presque sûr. »",
+        "Ton corps garde des impressions impossibles à expliquer : une garde prise mille fois, une distance de frappe, un réflexe de survie. Mais aucune histoire ne vient avec.",
+        player.getName() + " : « D'abord sortir d'ici. Après... j'essaierai de comprendre. »",
+        "La forêt ne répond pas. Il ne reste qu'à avancer."
     };
     lines.insert(lines.end(), endLines.begin(), endLines.end());
     return lines;
