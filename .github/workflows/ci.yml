@@ -50,6 +50,9 @@ jobs:
             ccache-linux-${{ github.ref }}-
             ccache-linux-
 
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
       - name: Build Dinotofu
         run: make -j$(nproc) TARGET_ARCH=x86-64 OPT_LEVEL=-O3
 

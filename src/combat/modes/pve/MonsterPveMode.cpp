@@ -1984,8 +1984,10 @@ namespace
         }
 
         std::vector<std::string> lines = {TeamLeadershipSystem::leaderDisplayName(player) + " sacrifie son tour pour réorganiser l'escouade."};
-        for (const auto& [outName, inName] : plan)
+        for (const auto& rotation : plan)
         {
+            const std::string outName = rotation.first;
+            const std::string inName = rotation.second;
             auto outIt = std::find_if(activeAllies.begin(), activeAllies.end(), [&](const auto& a) { return a.name == outName; });
             auto inIt = std::find_if(reserveAllies.begin(), reserveAllies.end(), [&](const auto& a) { return a.name == inName; });
             if (outIt == activeAllies.end() || inIt == reserveAllies.end()) continue;

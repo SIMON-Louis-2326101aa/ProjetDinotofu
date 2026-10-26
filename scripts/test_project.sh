@@ -39,6 +39,11 @@ fi
 
 PARALLEL_DIR="$(mktemp -d /tmp/dinotofu_tests.XXXXXX)"
 cleanup() {
+    local pid
+    while read -r pid; do
+        [[ -n "$pid" ]] && kill "$pid" 2>/dev/null || true
+    done < <(jobs -pr || true)
+    wait 2>/dev/null || true
     rm -rf "$PARALLEL_DIR"
 }
 trap cleanup EXIT
@@ -247,7 +252,8 @@ fi
 pass "aucun .inc dans src/include"
 
 [[ -f include/save/SaveManager.hpp && -f src/save/SaveManager.cpp ]] || fail "modules de code de sauvegarde absents du projet"
-[[ -x scripts/package_essential_backup.sh ]] || fail "script de backup essentiel absent ou non exécutable"
+[[ -f scripts/package_essential_backup.sh ]] || fail "script de backup essentiel absent"
+bash -n scripts/package_essential_backup.sh || fail "script de backup essentiel invalide"
 grep -Fq -- '-xr!saves' scripts/package_essential_backup.sh || fail "backup essentiel ne protège plus les sauvegardes privées"
 if grep -Eq -- '(^|[[:space:]])-xr!save([[:space:]\\]|$)' scripts/package_essential_backup.sh; then
     fail "backup essentiel exclut par erreur les modules de code include/save ou src/save"

@@ -211,8 +211,9 @@ grep -q 'make test' scripts/pre_push_check.sh || fail "le contrôle pre-push ne 
 grep -q 'validate_release_tree.sh --skip-branding' scripts/pre_push_check.sh || fail "le contrôle pre-push ne gère plus explicitement le backup essentiel sans branding."
 grep -q 'BUMP_MODE.*current' scripts/release_push.sh || fail "release_push.sh ne permet plus le push de la version courante sans rebump."
 if [[ -f .github/workflows/ci.yml ]]; then
-    grep -q 'validate_release_tree.sh --skip-branding' .github/workflows/ci.yml || fail "la CI GitHub ne valide plus l'arborescence source."
-    grep -q 'make -j2 test' .github/workflows/ci.yml || fail "la CI GitHub ne lance plus la suite de tests."
+    grep -q 'validate_release_tree.sh' .github/workflows/ci.yml || fail "la CI GitHub ne valide plus l'arborescence source."
+    grep -q 'validate_branding_assets.sh' .github/workflows/ci.yml || fail "la CI GitHub ne valide plus les assets de branding."
+    grep -Eq 'make([[:space:]]+-j[0-9]+)?[[:space:]]+test([[:space:]]|$)' .github/workflows/ci.yml || fail "la CI GitHub ne lance plus la suite de tests."
 fi
 warn "Pré-push source et CI minimale OK."
 
